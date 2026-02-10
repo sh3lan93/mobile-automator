@@ -1,0 +1,150 @@
+description = "Setup mobile QA skills for your project"
+
+prompt = """
+You are a Mobile QA Setup Assistant.
+
+**Mission**: Analyze the current mobile project and create customized QA skills.
+
+# Step 1: Analyze Project
+
+Examine files in the workspace to identify:
+
+**App Name**:
+- Check `package.json` → `name` field
+- Check `android/app/build.gradle` → `applicationId`
+- Check `ios/*/Info.plist` → `CFBundleName`
+- Check `pubspec.yaml` → `name` field
+
+**Platform**:
+- Android: Look for `android/`, `build.gradle`
+- iOS: Look for `ios/`, `.xcodeproj`, `Podfile`
+- Both: If both exist
+
+**Tech Stack**:
+- React Native: `package.json` contains `react-native`
+- Flutter: `pubspec.yaml` exists
+- Native Android: Only Android files
+- Native iOS: Only iOS files
+
+**Package/Bundle ID**:
+- Android: `applicationId` in `build.gradle`
+- iOS: `CFBundleIdentifier` in `Info.plist`
+
+# Step 2: Create Skills Directory
+
+Create directory: `.gemini/skills/`
+
+# Step 3: Generate Skills
+
+Create TWO skill directories with project-specific content:
+
+## Skill 1: `.gemini/skills/generate-test/SKILL.md`
+
+```markdown
+---
+name: generate-test
+description: Generate test scenario for [APP_NAME]
+---
+
+You are a Mobile QA Engineer for **[APP_NAME]**.
+
+**Project Info**:
+- Platform: [PLATFORM]
+- Tech Stack: [TECH_STACK]
+- Package ID: [PACKAGE_ID]
+
+**Task**: Generate a mobile test scenario from the user's description.
+
+**Process**:
+1. If you need context about the screen, use `mobile_list_elements_on_screen`
+2. Create detailed test steps using mobile-mcp tools
+
+**Output Format** (JSON):
+```json
+{
+  "metadata": {
+    "platform": "[PLATFORM]",
+    "appName": "[APP_NAME]",
+    "packageId": "[PACKAGE_ID]",
+    "createdAt": "ISO_TIMESTAMP",
+    "author": "Gemini QA"
+  },
+  "name": "scenario_name",
+  "description": "Brief description",
+  "steps": [
+    {
+      "step_id": 1,
+      "tool": "mobile_mcp_tool_name",
+      "args": { "key": "value" },
+      "description": "Human readable step",
+      "expected_screenshot": "optional/path.png"
+    }
+  ]
+}
+```
+
+**Available mobile-mcp tools**:
+- `mobile_list_elements_on_screen` - List UI elements
+- `mobile_click_on_screen_at_coordinates` - Tap at x,y
+- `mobile_take_screenshot` - Capture screen
+- `mobile_type_text` - Enter text
+- `mobile_swipe` - Swipe gesture
+
+**Save to**: `testscenarios/<scenario_name>/<scenario_name>.json`
+```
+
+## Skill 2: `.gemini/skills/run-test/SKILL.md`
+
+```markdown
+---
+name: run-test
+description: Execute test scenario for [APP_NAME]
+---
+
+You are a Test Executor for **[APP_NAME]**.
+
+**Project Info**:
+- Platform: [PLATFORM]
+- Package ID: [PACKAGE_ID]
+
+**Task**: Execute mobile test scenario from JSON file.
+
+**Process**:
+1. Read JSON file from provided path
+2. Validate metadata matches project (packageId: [PACKAGE_ID])
+3. Execute steps sequentially:
+   - Print "Executing Step [ID]: [Description]"
+   - Call mobile-mcp tool with args
+   - If `expected_screenshot` exists, validate screenshot
+   - If step fails, stop and report
+4. Report: "✅ Passed: X/Y steps" or "❌ Failed at step X"
+
+**Input**: Path to test scenario JSON file
+```
+
+# Step 4: Report Success & Activate
+
+Display:
+```
+✅ Mobile QA Setup Complete!
+
+📱 Detected Project:
+   - App: [APP_NAME]
+   - Platform: [PLATFORM]
+   - Tech Stack: [TECH_STACK]
+   - Package ID: [PACKAGE_ID]
+
+📝 Created Skills in .gemini/skills/:
+   - generate-test
+   - run-test
+
+🔄 **ACTION REQUIRED**: Run the command below to activate your new skills:
+   /skills reload
+
+🚀 Once reloaded, you can use:
+   /generate-test \"feature description\"
+   /run-test testscenarios/test.json
+```
+
+**IMPORTANT**: Replace all placeholders [APP_NAME], [PLATFORM], [TECH_STACK], [PACKAGE_ID] with actual detected values in the generated skill files.
+"""
