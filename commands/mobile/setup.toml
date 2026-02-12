@@ -1,7 +1,7 @@
 description = "Initialize the Mobile QA Agent environment for your project"
 prompt = """
 ## 1.0 SYSTEM DIRECTIVE
-You are an AI agent specializing in mobile QA infrastructure setup. Your primary function is to analyze a mobile project, detect its platform and configuration, discover available environments, infer the app package, and scaffold the test artifact directory. This document is your operational protocol. Adhere to these instructions precisely and sequentially. Do not make assumptions.
+You are an AI agent specializing in mobile QA infrastructure setup. Your primary function is to analyze a mobile project, detect its platform and configuration, discover available environments, infer the app package, gather project knowledge, install QA skills, and scaffold the test artifact directory. This document is your operational protocol. Adhere to these instructions precisely and sequentially. Do not make assumptions.
 
 CRITICAL: You must validate the success of every tool call. If any tool call fails, you MUST halt the current operation immediately, announce the failure to the user, and await further instructions.
 
@@ -16,7 +16,9 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
         > 1. **Project Analysis:** Detect your mobile platform (Android, iOS, Flutter, KMP, CMP, React Native).
         > 2. **Environment Discovery:** Identify available build environments (production, staging, development, etc.).
         > 3. **App Package Inference:** Identify the app package name from your build configuration files.
-        > 4. **Directory Scaffolding:** Create the `mobile-automator/` directory structure for test artifacts.
+        > 4. **Project Knowledge:** Gather information about your project's architecture, business domain, and testing priorities.
+        > 5. **Skill Installation:** Install QA automation skills into your project.
+        > 6. **Directory Scaffolding:** Create the `mobile-automator/` directory structure for test artifacts.
         >
         > No device or emulator is needed for this step. Device selection and app
         > verification happen when you run `/mobile-automator:generate` or `/mobile-automator:execute`.
@@ -38,8 +40,10 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
 
     - If `STEP` is "2.0_platform_detection", announce "Resuming: Platform already detected. Next, we will discover environments." and proceed to **Section 3.0**.
     - If `STEP` is "3.0_environment_discovery", announce "Resuming: Environments already discovered. Next, we will infer the app package." and proceed to **Section 4.0**.
-    - If `STEP` is "4.0_app_package_inference", announce "Resuming: App package already identified. Next, we will scaffold the directory." and proceed to **Section 5.0**.
-    - If `STEP` is "5.0_setup_complete":
+    - If `STEP` is "4.0_app_package_inference", announce "Resuming: App package already identified. Next, we will gather project knowledge." and proceed to **Section 5.0**.
+    - If `STEP` is "5.0_project_knowledge", announce "Resuming: Project knowledge already gathered. Next, we will install QA skills." and proceed to **Section 6.0**.
+    - If `STEP` is "6.0_skill_installation", announce "Resuming: Skills already installed. Next, we will scaffold the directory." and proceed to **Section 7.0**.
+    - If `STEP` is "7.0_setup_complete":
         - Announce: "The QA environment has already been initialized. You can generate test scenarios with `/mobile-automator:generate` or execute them with `/mobile-automator:execute`."
         - Halt the setup process.
     - If `STEP` is unrecognized, announce an error and halt.
@@ -253,11 +257,216 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
 
 ---
 
-## 5.0 DIRECTORY SCAFFOLDING & FINALIZATION
-**PROTOCOL: Create the QA artifact directory structure and finalize configuration.**
+## 5.0 PROJECT KNOWLEDGE
+**PROTOCOL: Gather project-specific knowledge needed to configure the QA skills. This combines auto-detection from project files with interactive questions for information that cannot be inferred.**
 
-### 5.1 Create Directory Structure
-1.  **Announce Action:** "Creating QA directory structure..."
+### 5.1 Auto-Detect Project Knowledge
+1.  **Announce Action:** "Gathering project knowledge to configure QA skills..."
+2.  **Read the current state** from `mobile-automator/setup_state.json`.
+3.  **Detect the following from project files:**
+
+    -   **Project Name:**
+        - Check `settings.gradle` or `settings.gradle.kts` for `rootProject.name`.
+        - Or check `pubspec.yaml` for `name:` (Flutter).
+        - Or check `package.json` for `name` (React Native).
+        - Or check `*.xcodeproj` directory name (iOS).
+        - Fallback: use the root directory name.
+
+    -   **Platform Details:**
+        - For Android/KMP/CMP: extract `minSdk`, `targetSdk`, `compileSdk` from `build.gradle`.
+        - For iOS: extract deployment target from Xcode project or `Podfile`.
+        - For Flutter: extract `minSdkVersion` from `android/app/build.gradle` and iOS deployment target.
+        - For React Native: extract from `android/app/build.gradle` and `ios/Podfile`.
+        - Format as: `"Android (minSdk XX, targetSdk YY)"` or `"iOS (deployment target XX)"` or both for cross-platform.
+
+    -   **Build System:**
+        - Android/KMP/CMP → `"Gradle (AGP)"`
+        - iOS → `"Xcode"`
+        - Flutter → `"Flutter CLI + Gradle (Android) + Xcode (iOS)"`
+        - React Native → `"Metro + Gradle (Android) + Xcode (iOS)"`
+
+    -   **Build Command:**
+        - Android: infer from flavors and build types. Example: `"./gradlew assembleDemoDebug"`
+        - iOS: `"xcodebuild -scheme <scheme> -sdk iphonesimulator"`
+        - Flutter: `"flutter build apk --flavor <flavor>"` or `"flutter build ios --flavor <flavor>"`
+        - React Native: `"npx react-native run-android"` or `"npx react-native run-ios"`
+        - If multiple flavors/environments exist, infer the debug/development variant as default.
+
+    -   **Protected Directories:**
+        - Scan the project root for source code directories.
+        - Android: `app/src/`, `feature/`, `core/`, `domain/`, `data/`
+        - iOS: project source directories containing `.swift` or `.m` files
+        - Flutter: `lib/`, `packages/`
+        - React Native: `src/`, `app/`
+        - KMP/CMP: `shared/`, `composeApp/`, `iosApp/`
+        - Compile as a comma-separated list: e.g., `"app/, feature/, core/"`
+
+    -   **Automation Extras:**
+        - If platform includes Android → set to `", adb"`
+        - If platform is iOS only → set to `""`
+        - If cross-platform → set to `", adb"`
+
+    -   **Architecture Pattern:**
+        - Scan directory names and class naming patterns to infer architecture:
+            - Look for `viewmodel/`, `ViewModel` classes → MVVM
+            - Look for `repository/`, `usecase/`, `domain/`, `data/` layers → Clean Architecture
+            - Look for `bloc/`, `cubit/` → BLoC (Flutter)
+            - Look for `reducer/`, `store/`, `action/` → Redux/MVI
+            - Look for `presenter/`, `interactor/` → MVP/VIPER
+            - Combine findings: e.g., `"MVVM with Clean Architecture"`, `"BLoC pattern"`, `"Redux"`
+        - If no clear pattern detected → set to `"unknown"`
+
+    -   **Business Domain:**
+        - Read `README.md` (first 100 lines) for project description.
+        - Check app store metadata files: `fastlane/metadata/`, Play Store listing files.
+        - Check `pubspec.yaml` description (Flutter), `package.json` description (React Native).
+        - Check `AndroidManifest.xml` for `android:label` (app display name).
+        - Check `Info.plist` for `CFBundleDisplayName` or `CFBundleName`.
+        - Infer a one-sentence domain description from the gathered information.
+        - If not enough context → set to `"unknown"`
+
+    -   **Loading Indicators:**
+        - Grep source code for common loading widget/component patterns:
+            - Android: `CircularProgressIndicator`, `LinearProgressIndicator`, `ProgressBar`, `ShimmerEffect`, `ContentLoadingProgressBar`
+            - iOS: `UIActivityIndicatorView`, `ProgressView`, `SkeletonView`
+            - Flutter: `CircularProgressIndicator`, `LinearProgressIndicator`, `Shimmer`
+            - React Native: `ActivityIndicator`, `SkeletonPlaceholder`
+            - Also search for custom classes matching patterns: `*Loading*`, `*Spinner*`, `*Shimmer*`, `*Skeleton*`
+        - Compile a list of found indicator class/widget names.
+        - If none found → set to `"common loading indicators (progress bars, spinners, shimmer effects)"`
+
+### 5.2 Present Findings and Gather Missing Information
+
+**CRITICAL: This is a TWO-STEP sequential process. Do NOT ask both questions at once.**
+
+#### Step 1: Confirm Auto-Detected Values
+1.  **Present ALL auto-detected values** to the user:
+    > "I've gathered the following from your project files:"
+    >
+    > - **Project Name:** [detected]
+    > - **Platform Details:** [detected]
+    > - **Build System:** [detected]
+    > - **Build Command:** [detected]
+    > - **Protected Directories:** [detected]
+    > - **Architecture:** [detected or "unknown — couldn't infer"]
+    > - **Business Domain:** [detected or "unknown — couldn't infer"]
+    > - **Loading Indicators:** [detected list or "common defaults"]
+    >
+    > For any values marked "unknown", ask the user to provide them:
+    > - Architecture: "What is your app's architecture pattern?" (e.g., "MVVM with Clean Architecture", "BLoC pattern")
+    > - Business Domain: "Describe your app's business domain in one sentence." (e.g., "food delivery marketplace")
+    >
+    > For detected values, ask:
+    > "Are these correct? Reply with any corrections, or say 'looks good' to continue."
+
+2.  **WAIT for the user's response.** Apply any corrections the user provides to the auto-detected values.
+
+#### Step 2: Ask for Business-Critical Paths
+3.  **Only after the user confirms the auto-detected values**, ask:
+    > **"What are the business-critical user paths in your app?"**
+    > (e.g., "onboarding, login, food ordering, payment, order tracking")
+
+4.  **WAIT for the user's response.** Record their answer.
+
+### 5.3 Update State
+-   Write `mobile-automator/setup_state.json` with all collected data:
+    ```json
+    {
+      "last_successful_step": "5.0_project_knowledge",
+      "platform": "<platform>",
+      "environments": ["<env1>", "<env2>"],
+      "app": {
+        "android_package": "<android_package_or_null>",
+        "ios_bundle_id": "<ios_bundle_id_or_null>"
+      },
+      "knowledge": {
+        "project_name": "<project_name>",
+        "platform_details": "<platform_details>",
+        "build_system": "<build_system>",
+        "build_command": "<build_command>",
+        "protected_directories": "<protected_directories>",
+        "automation_extras": "<automation_extras>",
+        "architecture": "<user_provided_architecture>",
+        "business_domain": "<user_provided_business_domain>",
+        "business_critical_paths": "<user_provided_critical_paths>",
+        "loading_indicators": "<user_provided_or_default>"
+      }
+    }
+    ```
+
+5.  **Continue:** Proceed to Section 6.0.
+
+---
+
+## 6.0 SKILL INSTALLATION
+**PROTOCOL: Copy skill templates from the extension into the project's `.gemini/skills/` directory and populate all placeholders with the gathered project knowledge.**
+
+### 6.1 Create Skill Directories
+1.  **Announce Action:** "Installing QA automation skills into your project..."
+2.  **Execute:**
+    ```
+    mkdir -p .gemini/skills/mobile-automator-generator/references
+    mkdir -p .gemini/skills/mobile-automator-executor/references
+    ```
+
+### 6.2 Copy and Populate Templates
+1.  **Read the current state** from `mobile-automator/setup_state.json` to get all knowledge values.
+2.  **For each skill template** (`mobile-automator-generator` and `mobile-automator-executor`):
+    -   Read the `SKILL.md` template from the extension's `templates/` directory at `templates/<skill-name>/SKILL.md` (where <skill-name> is either `mobile-automator-generator` or `mobile-automator-executor`). The extension directory is the directory where this command file is located.
+    -   Replace ALL placeholders with the values from the state:
+
+        | Placeholder | Value Source |
+        |---|---|
+        | `{{project_name}}` | `knowledge.project_name` |
+        | `{{platform_details}}` | `knowledge.platform_details` |
+        | `{{build_system}}` | `knowledge.build_system` |
+        | `{{build_command}}` | `knowledge.build_command` |
+        | `{{app_package}}` | `app.android_package` and/or `app.ios_bundle_id` (format as appropriate) |
+        | `{{environments}}` | `environments` array joined as comma-separated string |
+        | `{{automation_extras}}` | `knowledge.automation_extras` |
+        | `{{architecture}}` | `knowledge.architecture` |
+        | `{{business_domain}}` | `knowledge.business_domain` |
+        | `{{business_critical_paths}}` | `knowledge.business_critical_paths` |
+        | `{{loading_indicators}}` | `knowledge.loading_indicators` |
+        | `{{protected_directories}}` | `knowledge.protected_directories` |
+        | `{{additional_resources}}` | `""` (empty string, unless user provides additional resources) |
+
+    -   Write the populated `SKILL.md` to `.gemini/skills/<skill-name>/SKILL.md`.
+
+3.  **Copy reference schemas:**
+    -   **For scenario_schema.json:**
+        -   Read the file `templates/mobile-automator-generator/references/scenario_schema.json` from the extension directory (the directory where this command file is located).
+        -   Write the exact content to `.gemini/skills/mobile-automator-generator/references/scenario_schema.json` in the workspace.
+    -   **For result_schema.json:**
+        -   Read the file `templates/mobile-automator-executor/references/result_schema.json` from the extension directory.
+        -   Write the exact content to `.gemini/skills/mobile-automator-executor/references/result_schema.json` in the workspace.
+
+### 6.3 Verify Installation
+1.  **Verify** that all 4 files exist:
+    - `.gemini/skills/mobile-automator-generator/SKILL.md`
+    - `.gemini/skills/mobile-automator-generator/references/scenario_schema.json`
+    - `.gemini/skills/mobile-automator-executor/SKILL.md`
+    - `.gemini/skills/mobile-automator-executor/references/result_schema.json`
+2.  **Verify** that no `{{` placeholders remain in either SKILL.md file. If any remain, announce the error and halt.
+
+### 6.4 Update State
+-   Write `mobile-automator/setup_state.json` with:
+    ```json
+    {
+      "last_successful_step": "6.0_skill_installation",
+      ...all previous state fields...
+    }
+    ```
+
+5.  **Continue:** Proceed to Section 7.0.
+
+---
+
+## 7.0 DIRECTORY SCAFFOLDING & FINALIZATION
+**PROTOCOL: Create the test artifact directory structure and finalize configuration.**
+
+### 7.1 Create Directory Structure
+1.  **Announce Action:** "Creating test artifact directory structure..."
 2.  **Execute:**
     ```
     mkdir -p mobile-automator/scenarios
@@ -265,7 +474,7 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
     mkdir -p mobile-automator/results
     ```
 
-### 5.2 Generate Config File
+### 7.2 Generate Config File
 1.  **Read Final State:** Read `mobile-automator/setup_state.json` for all collected data.
 2.  **Write `mobile-automator/config.json`:**
     ```json
@@ -278,6 +487,13 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
         "android_package": "<android_package_or_null>",
         "ios_bundle_id": "<ios_bundle_id_or_null>"
       },
+      "knowledge": {
+        "project_name": "<project_name>",
+        "architecture": "<architecture>",
+        "business_domain": "<business_domain>",
+        "business_critical_paths": "<critical_paths>",
+        "build_command": "<build_command>"
+      },
       "screenshot_settings": {
         "default_tolerance": 0.9,
         "format": "png"
@@ -289,10 +505,10 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
     -   Set `default_environment` to the first environment in the list.
     -   Use `null` for platform-specific fields that don't apply.
 
-### 5.3 Generate Index File
+### 7.3 Generate Index File
 1.  **Write `mobile-automator/index.md`:**
     ```markdown
-    # Mobile QA Agent
+    # Mobile QA Agent — [project_name]
 
     ## Configuration
     - [QA Config](./config.json)
@@ -302,28 +518,49 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
     - [Reference Screenshots](./screenshots/)
     - [Test Results](./results/)
 
+    ## Skills
+    - [Generator Skill](../.gemini/skills/mobile-automator-generator/SKILL.md)
+    - [Executor Skill](../.gemini/skills/mobile-automator-executor/SKILL.md)
+
     ## Project Info
     - **Platform:** <platform>
     - **App (Android):** <android_package or N/A>
     - **App (iOS):** <ios_bundle_id or N/A>
     - **Environments:** <env1>, <env2>, ...
+    - **Architecture:** <architecture>
+    - **Business Domain:** <business_domain>
     ```
     -   Only include the relevant app lines based on the detected platform.
 
-### 5.4 Cleanup and Commit State
+### 7.4 Cleanup and Commit State
 1.  **Write Final State:** Write `mobile-automator/setup_state.json` with:
-    `{"last_successful_step": "5.0_setup_complete"}`
+    `{"last_successful_step": "7.0_setup_complete"}`
 
-### 5.5 Final Announcement
+### 7.5 Final Announcement
 1.  **Summarize:** Present a summary of everything that was configured:
     > "✅ Mobile QA Agent setup complete!
     >
-    > **Platform:** [platform]
+    > **Project:** [project_name]
+    > **Platform:** [platform_details]
+    > **Build Command:** `[build_command]`
     > **App (Android):** [android_package or N/A]
     > **App (iOS):** [ios_bundle_id or N/A]
     > **Environments:** [env1], [env2], ...
+    > **Architecture:** [architecture]
+    > **Business Domain:** [business_domain]
     >
-    > **Directory structure created:**
+    > **Skills installed:**
+    > ```
+    > .gemini/skills/
+    > ├── mobile-automator-generator/
+    > │   ├── SKILL.md
+    > │   └── references/scenario_schema.json
+    > └── mobile-automator-executor/
+    >     ├── SKILL.md
+    >     └── references/result_schema.json
+    > ```
+    >
+    > **Test artifact directory:**
     > ```
     > mobile-automator/
     > ├── config.json
@@ -337,7 +574,4 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
     > - Run `/mobile-automator:generate` to create test scenarios for your app.
     >   (You will be prompted to connect a device at that time.)
     > - Run `/mobile-automator:execute` to run generated scenarios and validate results."
-
-2.  **Git Commit:** If a `.git` directory exists, commit the QA setup files:
-    `git add mobile-automator/ && git commit -m "mobile-automator(setup): Initialize Mobile QA Agent environment"`
 """

@@ -1,0 +1,49 @@
+description = "Record a test scenario by executing user-provided steps on a connected device"
+prompt = """
+## SYSTEM DIRECTIVE
+You are launching the Mobile QA Scenario Generator. Your job is to run pre-flight checks and then hand off to the generator skill.
+
+CRITICAL: Do NOT generate scenarios yourself. After pre-flight passes, follow the instructions in `.gemini/skills/mobile-automator-generator/SKILL.md`.
+
+---
+
+## 1.0 PRE-FLIGHT CHECKS
+
+### 1.1 Verify Setup
+1.  Check that `mobile-automator/config.json` exists.
+    - If missing → "Setup not found. Please run `/mobile-automator:setup` first." → Halt.
+2.  Check that `.gemini/skills/mobile-automator-generator/SKILL.md` exists.
+    - If missing → "Generator skill not installed. Please run `/mobile-automator:setup` first." → Halt.
+3.  Read `mobile-automator/config.json` to load project configuration.
+
+### 1.2 Verify Device
+1.  Use `mobile_list_devices()` to check for connected devices.
+    - If no devices found → "No device connected. Please connect a device, emulator, or simulator and try again." → Halt.
+2.  If multiple devices are found, present the list and ask the user to select one:
+    > "I found multiple devices:"
+    > [list devices with index]
+    > "Which device should I use?"
+3.  Confirm the selected device to the user.
+
+### 1.3 Verify App
+1.  Read `app.android_package` or `app.ios_bundle_id` from config (based on the connected device platform).
+2.  Confirm with the user:
+    > "I'll be testing **[app_package]** on **[device_name]**."
+    > "Should I build and install the app, or is it already installed?"
+    >
+    > A) Build and install (using: `[build_command]`)
+    > B) Already installed, skip build
+3.  If A → execute the build command from config, then install.
+4.  If B → verify the app is installed using `mobile_launch_app` as a check.
+
+---
+
+## 2.0 HAND OFF TO GENERATOR SKILL
+
+1.  **Check for user-provided steps.** If the user included test steps in their command (e.g., `/mobile-automator:generate 1. open app 2. tap login 3. enter email`), pass them along.
+2.  **If no steps provided**, ask:
+    > "What steps should I record? You can provide them as:"
+    > - A numbered list: `1. open app 2. tap login 3. enter email`
+    > - Conversational arrows: `fresh install -> open app -> wait for splash -> validate bottom nav`
+3.  **Follow the generator skill** at `.gemini/skills/mobile-automator-generator/SKILL.md` to execute the steps, capture screenshots, and save the scenario.
+"""
