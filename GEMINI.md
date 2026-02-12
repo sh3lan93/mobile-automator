@@ -7,6 +7,7 @@ This extension provides mobile app test scenario generation and execution. It bu
 - **Test Scenario**: A JSON file describing a sequence of user actions and expected outcomes for a specific mobile app flow.
 - **Reference Screenshot**: A baseline screenshot captured during scenario generation that represents the expected visual state at a checkpoint.
 - **Test Run**: An execution of one or more test scenarios, producing a results report with pass/fail status per assertion.
+- **Config**: The `mobile-automator/config.json` file created during `/mobile:setup` that stores project platform, environments, device, and app information.
 
 ## File Resolution Protocol
 
@@ -15,62 +16,26 @@ This extension provides mobile app test scenario generation and execution. It bu
 All test artifacts are stored under the `mobile-automator/` directory in the project root.
 
 **Standard Paths:**
+- **QA Config**: `mobile-automator/config.json`
+- **QA Index**: `mobile-automator/index.md`
 - **Scenarios Directory**: `mobile-automator/scenarios/`
 - **Individual Scenario**: `mobile-automator/scenarios/<scenario_id>.json`
 - **Reference Screenshots**: `mobile-automator/screenshots/<scenario_id>/`
 - **Test Results Directory**: `mobile-automator/results/`
 - **Individual Run Result**: `mobile-automator/results/<run_id>.json`
 - **Run Screenshots**: `mobile-automator/results/<run_id>/screenshots/`
-- **QA Index**: `mobile-automator/index.md`
 
 When resolving a scenario or result file:
 1. Check if the path exists on disk.
 2. If not, check `mobile-automator/index.md` for a matching entry.
 3. If neither exists, inform the user.
 
-## Test Scenario JSON Schema
+## Schemas
 
-All generated scenarios MUST follow this structure:
-```json
-{
-  "scenario_id": "string (unique, snake_case)",
-  "name": "string (human-readable name)",
-  "description": "string (what this scenario tests)",
-  "platform": "android | ios | cross-platform",
-  "app_package": "string (bundle ID or package name)",
-  "preconditions": ["string (required state before test)"],
-  "tags": ["string (e.g., 'smoke', 'regression', 'login')"],
-  "metadata": {
-    "app_version": "string (build variant or version, e.g., '2.4.1-debug')",
-    "device_model": "string (device name, e.g., 'Pixel 8 Pro', 'iPhone 16')",
-    "api_level": "string (Android API level or iOS version, e.g., '34', '18.1')",
-    "environment": "string (target environment, e.g., 'production', 'staging', 'development')",
-    "timestamp": "string (ISO-8601 datetime, e.g., '2026-02-11T14:30:00Z')"
-  },
-  "steps": [
-    {
-      "step_id": "number (sequential)",
-      "action": "string (launch_app | tap | type | swipe | press_button | wait | open_url)",
-      "description": "string (what this step does in plain language)",
-      "target": "string (element description or coordinates)",
-      "value": "string | null (input text, swipe direction, button name, etc.)",
-      "checkpoint": "boolean (whether to capture a reference screenshot)",
-      "expected_state": "string | null (description of expected visual state)"
-    }
-  ],
-  "assertions": [
-    {
-      "assertion_id": "number",
-      "after_step_id": "number (which step to assert after)",
-      "type": "screenshot_match | element_exists | element_text | element_not_exists",
-      "reference_screenshot": "string | null (relative path to reference image)",
-      "element_description": "string | null",
-      "expected_value": "string | null",
-      "tolerance": "number (0.0 - 1.0, for screenshot comparison)"
-    }
-  ]
-}
-```
+Schema definitions are owned by their respective skills:
+
+- **Test Scenario Schema:** `.gemini/skills/mobile-automator-generator/references/scenario_schema.json` — defines the format for generated test scenarios.
+- **Test Run Result Schema:** `.gemini/skills/mobile-automator-executor/references/result_schema.json` — defines the format for execution result reports.
 
 ## Mobile-MCP Tool Mapping
 
@@ -90,8 +55,10 @@ When executing test scenario steps, map actions to mobile-mcp tools as follows:
 
 ## Important Conventions
 
+- The `mobile-automator/config.json` file is the source of truth for project configuration. Commands MUST read this file to populate `metadata` fields automatically.
 - Reference screenshots are captured during `/mobile-automator:generate` and stored in `mobile-automator/screenshots/<scenario_id>/step_<step_id>.png`.
 - During `/mobile-automator:execute`, current screenshots are saved to `mobile-automator/results/<run_id>/screenshots/step_<step_id>.png` for comparison.
 - Screenshot comparison uses visual analysis — describe what should be on screen in `expected_state` so the model can verify semantically, not just pixel-by-pixel.
 - All JSON files MUST be valid and parseable.
 - Scenario IDs use snake_case (e.g., `login_happy_path`, `checkout_flow`).
+- Run IDs use the format `run_YYYYMMDD_HHMMSS`.
