@@ -56,7 +56,7 @@ While executing, you also **passively observe and report** (but never deviate fr
 For each step in the scenario:
 
 1. **Find the target:** Use `mobile_list_elements_on_screen()` to locate the element described in `target`.
-2. **Execute the action:** Use the appropriate mobile-mcp tool (see tool mapping in GEMINI.md).
+2. **Execute the action:** Use the appropriate mobile-mcp tool (see `.gemini/skills/references/mobile-mcp-tools.md` for tool mapping).
 3. **Wait for stability:** Wait for loading indicators ({{loading_indicators}}) to disappear.
 4. **Capture screenshot:** Save to `mobile-automator/results/<run_id>/screenshots/step_<step_id>.png`.
 5. **Verify state:** Compare what you see against the step's `expected_state` description.
@@ -130,6 +130,7 @@ When asked to run multiple scenarios:
 - **mobile-automator/config.json**: Project configuration.
 - **.gemini/skills/mobile-automator-generator/references/scenario_schema.json**: JSON schema for test scenarios.
 - **.gemini/skills/mobile-automator-executor/references/result_schema.json**: JSON schema for execution results.
+- **.gemini/skills/references/mobile-mcp-tools.md**: Mobile-MCP tool mapping reference.
 - **mobile-automator/scenarios/**: Source scenario files.
 - **mobile-automator/screenshots/**: Reference screenshot baselines.
 {{additional_resources}}

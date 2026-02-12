@@ -145,4 +145,5 @@ Translate user language to mobile-mcp tools:
 ## Resources
 - **mobile-automator/config.json**: Project configuration.
 - **.gemini/skills/mobile-automator-generator/references/scenario_schema.json**: JSON schema for test scenarios.
+- **.gemini/skills/references/mobile-mcp-tools.md**: Mobile-MCP tool mapping reference.
 {{additional_resources}}

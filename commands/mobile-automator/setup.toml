@@ -407,6 +407,7 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
     ```
     mkdir -p .gemini/skills/mobile-automator-generator/references
     mkdir -p .gemini/skills/mobile-automator-executor/references
+    mkdir -p .gemini/skills/references
     ```
 
 ### 6.2 Copy and Populate Templates
@@ -433,20 +434,24 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
 
     -   Write the populated `SKILL.md` to `.gemini/skills/<skill-name>/SKILL.md`.
 
-3.  **Copy reference schemas:**
+3.  **Copy reference schemas and documentation:**
     -   **For scenario_schema.json:**
         -   Read the file `templates/mobile-automator-generator/references/scenario_schema.json` from the extension directory (the directory where this command file is located).
         -   Write the exact content to `.gemini/skills/mobile-automator-generator/references/scenario_schema.json` in the workspace.
     -   **For result_schema.json:**
         -   Read the file `templates/mobile-automator-executor/references/result_schema.json` from the extension directory.
         -   Write the exact content to `.gemini/skills/mobile-automator-executor/references/result_schema.json` in the workspace.
+    -   **For mobile-mcp-tools.md:**
+        -   Read the file `templates/references/mobile-mcp-tools.md` from the extension directory.
+        -   Write the exact content to `.gemini/skills/references/mobile-mcp-tools.md` in the workspace.
 
 ### 6.3 Verify Installation
-1.  **Verify** that all 4 files exist:
+1.  **Verify** that all 5 files exist:
     - `.gemini/skills/mobile-automator-generator/SKILL.md`
     - `.gemini/skills/mobile-automator-generator/references/scenario_schema.json`
     - `.gemini/skills/mobile-automator-executor/SKILL.md`
     - `.gemini/skills/mobile-automator-executor/references/result_schema.json`
+    - `.gemini/skills/references/mobile-mcp-tools.md`
 2.  **Verify** that no `{{` placeholders remain in either SKILL.md file. If any remain, announce the error and halt.
 
 ### 6.4 Update State
