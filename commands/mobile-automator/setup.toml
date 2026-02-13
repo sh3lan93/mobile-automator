@@ -686,5 +686,27 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
     > **Next steps:**
     > - Run `/mobile-automator:generate` to create test scenarios for your app.
     >   (You will be prompted to connect a device at that time.)
-    > - Run `/mobile-automator:execute` to run generated scenarios and validate results."
+    > - Run `/mobile-automator:execute` to run generated scenarios and validate results.
+    >
+    > **💡 Pro Tip:** For seamless operation without repeated permission prompts, configure auto-approval for mobile-mcp tools:
+    >
+    > Add to `~/.gemini/settings.json`:
+    > ```json
+    > {
+    >   \"autoApproveTools\": [
+    >     \"mobile_launch_app\",
+    >     \"mobile_click_on_screen_at_coordinates\",
+    >     \"mobile_type_keys\",
+    >     \"mobile_swipe_on_screen\",
+    >     \"mobile_take_screenshot\",
+    >     \"mobile_save_screenshot\",
+    >     \"mobile_list_elements_on_screen\",
+    >     \"mobile_press_button\",
+    >     \"mobile_list_available_devices\",
+    >     \"mobile_open_url\"
+    >   ]
+    > }
+    > ```
+    >
+    > This allows test recording and execution to run smoothly without interruptions."
 """

@@ -49,10 +49,15 @@ CRITICAL: Do NOT generate scenarios yourself. After pre-flight passes, follow th
 
 ## 2.0 HAND OFF TO GENERATOR SKILL
 
-1.  **Check for user-provided steps.** If the user included test steps in their command (e.g., `/mobile-automator:generate 1. open app 2. tap login 3. enter email`), pass them along.
-2.  **If no steps provided**, ask:
+1.  **Announce the hand-off:**
+    > "I will now activate the generator skill to record your test scenario on the device."
+
+2.  **Check for user-provided steps.** If the user included test steps in their command (e.g., `/mobile-automator:generate 1. open app 2. tap login 3. enter email`), pass them along.
+
+3.  **If no steps provided**, ask:
     > "What steps should I record? You can provide them as:"
     > - A numbered list: `1. open app 2. tap login 3. enter email`
     > - Conversational arrows: `fresh install -> open app -> wait for splash -> validate bottom nav`
-3.  **Follow the generator skill** at `.gemini/skills/mobile-automator-generator/SKILL.md` to execute the steps, capture screenshots, and save the scenario.
+
+4.  **Follow the generator skill** at `.gemini/skills/mobile-automator-generator/SKILL.md` to execute the steps, capture screenshots, and save the scenario.
 """

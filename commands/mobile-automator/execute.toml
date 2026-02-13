@@ -63,12 +63,22 @@ CRITICAL: Do NOT execute scenarios yourself. After pre-flight passes, follow the
     - If none found → "No scenarios found. Please run `/mobile-automator:generate` first to create test scenarios." → Halt.
 
 ### 2.2 Resolve Which Scenarios to Execute
-1.  **If the user specified scenarios** in the command (by name, ID, or tag), resolve them:
+
+**CRITICAL: Do NOT auto-select scenarios. If no scenario is specified in the command, ALWAYS show the interactive menu.**
+
+1.  **Check if the user specified scenarios in the command:**
+    - The command format is: `/mobile-automator:execute [scenario_name]` or `/mobile-automator:execute [tag]`
+    - Examples of specified scenarios:
+      - `/mobile-automator:execute login_flow` → scenario specified
+      - `/mobile-automator:execute --tag smoke` → tag specified
+      - `/mobile-automator:execute` → NO scenario specified
+
+2.  **If the user specified scenarios** in the command (by name, ID, or tag), resolve them:
     - By name/ID: match against `scenario_id` in each JSON file.
     - By tag: filter scenarios whose `tags` array contains the specified tag (e.g., `smoke`, `regression`).
     - If no matches → "No scenarios found matching '[query]'. Available scenarios: [list]" → Halt.
 
-2.  **If the user specified no scenarios**, present the available list:
+3.  **If the user specified NO scenarios** (command was just `/mobile-automator:execute`), present the available list:
     > "Available scenarios:"
     > [numbered list with scenario name, description, and tags]
     >
@@ -78,15 +88,23 @@ CRITICAL: Do NOT execute scenarios yourself. After pre-flight passes, follow the
     > B) Select by number (e.g., 1, 3, 5)
     > C) Filter by tag (e.g., `smoke`)
 
-3.  Confirm the final selection:
+4.  **WAIT for user selection.** Do NOT proceed until the user responds with A, B, or C.
+
+5.  **After user selects**, confirm the final selection:
     > "I'll execute the following [N] scenario(s):"
     > [list selected scenario names]
-    > "Proceed?"
+    > "Proceed? (yes/no)"
+
+6.  **WAIT for user confirmation.** Only proceed after explicit "yes" response.
 
 ---
 
 ## 3.0 HAND OFF TO EXECUTOR SKILL
 
-1.  **Pass the resolved scenario list and device context** to the executor skill.
-2.  **Follow the executor skill** at `.gemini/skills/mobile-automator-executor/SKILL.md` to replay steps, validate assertions, and generate the result report.
+1.  **Announce the hand-off:**
+    > "I will now activate the executor skill to begin replaying the selected scenarios and validating the results on the device."
+
+2.  **Pass the resolved scenario list and device context** to the executor skill.
+
+3.  **Follow the executor skill** at `.gemini/skills/mobile-automator-executor/SKILL.md` to replay steps, validate assertions, and generate the result report.
 """
