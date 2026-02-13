@@ -193,14 +193,41 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
 3.  **Infer based on platform:**
 
     -   **If Android:**
-        - Read `applicationId` from `app/build.gradle` or `app/build.gradle.kts`.
-        - Check both `defaultConfig` block and flavor-specific overrides.
-        - Store as `android_package`.
+        - Read base `applicationId` from `app/build.gradle` or `app/build.gradle.kts` in the `defaultConfig` block.
+        - **For each detected environment (from Section 3.0), extract the `applicationIdSuffix`:**
+            - Check the `productFlavors` block for flavor-specific `applicationIdSuffix` (e.g., `demo { applicationIdSuffix = ".demo" }`)
+            - Check the `buildTypes` block for buildType-specific `applicationIdSuffix` (e.g., `debug { applicationIdSuffix = ".debug" }`)
+            - Parse the environment name to identify the flavor and buildType components (e.g., "demoStaging" = "demo" flavor + "staging" buildType)
+            - Construct the full package ID: `base_applicationId + flavor_suffix + buildType_suffix`
+        - **Store as a map:** `android_packages` with environment → full package ID mapping.
+        - Example:
+            ```json
+            "android_packages": {
+              "demoStaging": "com.example.app.demo.staging",
+              "demoProd": "com.example.app.demo",
+              "releaseStaging": "com.example.app.staging",
+              "releaseProduction": "com.example.app"
+            }
+            ```
+        - **Also store the base package** as `android_package_base` for reference.
 
     -   **If iOS:**
-        - Read `PRODUCT_BUNDLE_IDENTIFIER` from the Xcode project `pbxproj` file or from `xcconfig` files.
+        - Read base `PRODUCT_BUNDLE_IDENTIFIER` from the Xcode project `pbxproj` file or from `xcconfig` files.
         - Alternatively, check `Info.plist` for `CFBundleIdentifier`.
-        - Store as `ios_bundle_id`.
+        - **For each detected environment (from Section 3.0), check if there are scheme-specific or configuration-specific bundle ID overrides:**
+            - Check `.xcconfig` files for each configuration (Debug, Release, Staging, etc.)
+            - Check for scheme-specific bundle ID settings in the Xcode project
+            - Parse the environment name to identify the configuration (e.g., "Staging" configuration might use `com.example.app.staging`)
+        - **If multiple bundle IDs found, store as a map:** `ios_bundle_ids` with environment → bundle ID mapping.
+        - **Otherwise, store a single** `ios_bundle_id` for all environments.
+        - Example with multiple configurations:
+            ```json
+            "ios_bundle_ids": {
+              "Debug": "com.example.app.debug",
+              "Staging": "com.example.app.staging",
+              "Release": "com.example.app"
+            }
+            ```
 
     -   **If Flutter:**
         - Read `applicationId` from `android/app/build.gradle` → store as `android_package`.
@@ -226,20 +253,56 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
         > - For cross-platform: provide both if applicable.
 
 5.  **Confirm Findings:** Present the inferred package(s) to the user:
+
+    **For Android with multiple environments (product flavors):**
+    > "Detected app packages for each environment:"
+    > - **demoStaging:** `com.example.myapp.demo.staging`
+    > - **demoProd:** `com.example.myapp.demo`
+    > - **releaseStaging:** `com.example.myapp.staging`
+    > - **releaseProduction:** `com.example.myapp`
+    >
+    > A) Yes, these are correct.
+    > B) No, let me specify the correct packages.
+
+    **For iOS or simple Android (no flavors):**
     > "Detected app package:"
     > - **Android:** `com.example.myapp`
     > - **iOS:** `com.example.myapp`
     >
-    > (Show only the relevant platform(s) based on the detected project platform.)
-    >
     > A) Yes, this is correct.
     > B) No, let me specify the correct package.
-    >
-    > Please respond with A or B.
+
     -   If the user selects B, ask them for the correct package name(s).
+    -   **IMPORTANT:** For Android with flavors, if the user corrects the packages, ask them to provide the full package ID for each environment.
 
 6.  **Update State:**
     -   Write `mobile-automator/setup_state.json` with:
+
+        **For projects with environment-specific package IDs:**
+        ```json
+        {
+          "last_successful_step": "4.0_app_package_inference",
+          "platform": "<platform>",
+          "environments": ["demoStaging", "demoProd", "releaseStaging", "releaseProduction"],
+          "app": {
+            "android_package_base": "com.example.app",
+            "android_packages": {
+              "demoStaging": "com.example.app.demo.staging",
+              "demoProd": "com.example.app.demo",
+              "releaseStaging": "com.example.app.staging",
+              "releaseProduction": "com.example.app"
+            },
+            "ios_bundle_id_base": "com.example.app",
+            "ios_bundle_ids": {
+              "Debug": "com.example.app.debug",
+              "Staging": "com.example.app.staging",
+              "Release": "com.example.app"
+            }
+          }
+        }
+        ```
+
+        **For projects with single package ID:**
         ```json
         {
           "last_successful_step": "4.0_app_package_inference",
@@ -252,6 +315,7 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
         }
         ```
     -   Use `null` for platforms that don't apply (e.g., `ios_bundle_id` is `null` for a pure Android project).
+    -   **Use the appropriate format** based on whether environment-specific package IDs were detected.
 
 7.  **Continue:** Proceed to Section 5.0.
 
@@ -410,10 +474,43 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
     mkdir -p .gemini/skills/references
     ```
 
-### 6.2 Copy and Populate Templates
+### 6.2 Locate Extension Templates
+1.  **Determine the extension installation path:**
+    -   The mobile-automator extension can be installed in two ways:
+
+        **Method 1: Local Development (linked)**
+        - Extension directory: `~/.gemini/extensions/mobile-automator/`
+        - Contains a file: `.gemini-extension-install.json`
+        - This JSON file has a field that contains the actual path to the extension source
+
+        **Method 2: GitHub Installation**
+        - Extension directory: `~/.gemini/extensions/mobile-automator/`
+        - Templates are directly at: `~/.gemini/extensions/mobile-automator/templates/`
+
+2.  **Locate the templates directory:**
+    -   **Step A:** Check if `~/.gemini/extensions/mobile-automator/.gemini-extension-install.json` exists.
+    -   **Step B:** If it exists:
+        -   Read the JSON file.
+        -   Extract the source path from the JSON (this is where the extension was linked from).
+        -   The templates directory is: `<source_path>/templates/`
+    -   **Step C:** If it does NOT exist:
+        -   The templates directory is: `~/.gemini/extensions/mobile-automator/templates/`
+    -   **Step D:** Store the resolved templates path for use in subsequent steps.
+
+3.  **Verify the templates exist:**
+    -   Check that the following files exist at the resolved templates path:
+        - `<templates_path>/mobile-automator-generator/SKILL.md`
+        - `<templates_path>/mobile-automator-executor/SKILL.md`
+        - `<templates_path>/mobile-automator-generator/references/scenario_schema.json`
+        - `<templates_path>/mobile-automator-executor/references/result_schema.json`
+        - `<templates_path>/references/mobile-mcp-tools.md`
+    -   If any file is missing, report the error and halt:
+        > "Template file not found: `<file_path>`. Please ensure the mobile-automator extension is properly installed."
+
+### 6.3 Copy and Populate Templates
 1.  **Read the current state** from `mobile-automator/setup_state.json` to get all knowledge values.
 2.  **For each skill template** (`mobile-automator-generator` and `mobile-automator-executor`):
-    -   Read the `SKILL.md` template from the extension's `templates/` directory at `templates/<skill-name>/SKILL.md` (where <skill-name> is either `mobile-automator-generator` or `mobile-automator-executor`). The extension directory is the directory where this command file is located.
+    -   Read the `SKILL.md` template from `<templates_path>/<skill-name>/SKILL.md` (using the templates path resolved in Section 6.2).
     -   Replace ALL placeholders with the values from the state:
 
         | Placeholder | Value Source |
@@ -436,16 +533,16 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
 
 3.  **Copy reference schemas and documentation:**
     -   **For scenario_schema.json:**
-        -   Read the file `templates/mobile-automator-generator/references/scenario_schema.json` from the extension directory (the directory where this command file is located).
+        -   Read the file `<templates_path>/mobile-automator-generator/references/scenario_schema.json`.
         -   Write the exact content to `.gemini/skills/mobile-automator-generator/references/scenario_schema.json` in the workspace.
     -   **For result_schema.json:**
-        -   Read the file `templates/mobile-automator-executor/references/result_schema.json` from the extension directory.
+        -   Read the file `<templates_path>/mobile-automator-executor/references/result_schema.json`.
         -   Write the exact content to `.gemini/skills/mobile-automator-executor/references/result_schema.json` in the workspace.
     -   **For mobile-mcp-tools.md:**
-        -   Read the file `templates/references/mobile-mcp-tools.md` from the extension directory.
+        -   Read the file `<templates_path>/references/mobile-mcp-tools.md`.
         -   Write the exact content to `.gemini/skills/references/mobile-mcp-tools.md` in the workspace.
 
-### 6.3 Verify Installation
+### 6.4 Verify Installation
 1.  **Verify** that all 5 files exist:
     - `.gemini/skills/mobile-automator-generator/SKILL.md`
     - `.gemini/skills/mobile-automator-generator/references/scenario_schema.json`
@@ -454,7 +551,7 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
     - `.gemini/skills/references/mobile-mcp-tools.md`
 2.  **Verify** that no `{{` placeholders remain in either SKILL.md file. If any remain, announce the error and halt.
 
-### 6.4 Update State
+### 6.5 Update State
 -   Write `mobile-automator/setup_state.json` with:
     ```json
     {
@@ -490,7 +587,15 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
       "default_environment": "<first_environment>",
       "app": {
         "android_package": "<android_package_or_null>",
-        "ios_bundle_id": "<ios_bundle_id_or_null>"
+        "android_packages": {
+          "<env1>": "<full_package_id_for_env1>",
+          "<env2>": "<full_package_id_for_env2>"
+        },
+        "ios_bundle_id": "<ios_bundle_id_or_null>",
+        "ios_bundle_ids": {
+          "<env1>": "<full_bundle_id_for_env1>",
+          "<env2>": "<full_bundle_id_for_env2>"
+        }
       },
       "knowledge": {
         "project_name": "<project_name>",
@@ -508,6 +613,9 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
     ```
     -   Populate all fields from the collected state.
     -   Set `default_environment` to the first environment in the list.
+    -   **Include both single package IDs AND environment-specific maps** (for backward compatibility and flexibility).
+    -   For `android_package` / `ios_bundle_id`: Use the base package ID or the first environment's package ID.
+    -   For `android_packages` / `ios_bundle_ids`: Include the full map from the state if available, otherwise use an empty object `{}`.
     -   Use `null` for platform-specific fields that don't apply.
 
 ### 7.3 Generate Index File

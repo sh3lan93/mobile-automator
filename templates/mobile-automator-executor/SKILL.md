@@ -48,8 +48,11 @@ While executing, you also **passively observe and report** (but never deviate fr
 - Read the `metadata` to compare recording environment vs current execution environment. Note any differences (different device, API level, environment).
 
 ### 3. Verify Preconditions
-- Check each item in the scenario's `preconditions` array.
-- If a precondition requires action (e.g., `"app_not_installed"` → uninstall first), execute it.
+- **Note:** The `/mobile-automator:execute` command has already handled preconditions like `app_uninstalled` and `fresh_install` before invoking this skill.
+- Review the scenario's `preconditions` array to understand the expected starting state.
+- If any preconditions are state-based (e.g., `"user_logged_out"`, `"no_network"`, `"dark_mode_enabled"`), verify or configure them now:
+  - For app state preconditions: Launch the app and check/configure the state
+  - For device preconditions: Use device tools to configure settings (e.g., airplane mode for `"no_network"`)
 - If a precondition cannot be verified or met, report it and ask the user how to proceed.
 
 ### 4. Step-by-Step Replay
