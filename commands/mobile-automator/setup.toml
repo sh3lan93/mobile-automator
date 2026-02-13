@@ -109,14 +109,22 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
         > F) React Native
         >
         > Please respond with A, B, C, D, E, or F.
-    -   Use the user's response to set the platform.
+    -   **ABSOLUTE REQUIREMENT: END YOUR TURN HERE.**
+    -   **DO NOT PROCEED until the user responds with their platform selection.**
+    -   **Your response MUST end after asking this question.**
+    -   The user will respond in the next message, then use their response to set the platform.
 
 5.  **Confirm Detection:** Present the detected platform to the user:
     > "Detected platform: **[platform]**. Is this correct?"
     >
     > A) Yes, this is correct.
     > B) No, let me specify the correct platform.
-    -   If the user selects B, present the platform list from step 4 and let them choose.
+    -   **ABSOLUTE REQUIREMENT: END YOUR TURN HERE.**
+    -   **DO NOT PROCEED until the user responds.**
+    -   **Your response MUST end after asking this question.**
+    -   The user will respond in the next message.
+    -   If the user selects A → proceed to step 6.
+    -   If the user selects B → present the platform list from step 4, END YOUR TURN, wait for their choice, then update the platform.
 
 6.  **Create Initial Directory and State:**
     -   Execute `mkdir -p mobile-automator`.
@@ -174,13 +182,20 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
     >
     > Please respond with A or B.
 
-2.  **Handle Edits:** If the user selects B, ask them to specify the correct environment list.
+2.  **ABSOLUTE REQUIREMENT: END YOUR TURN HERE.**
+    - **DO NOT proceed to step 3 until the user responds.**
+    - **Your response MUST end after asking for A or B.**
+    - The user will respond in the next message.
 
-3.  **Update State:**
+3.  **Handle User Response:**
+    - If the user selects A → proceed to step 4.
+    - If the user selects B → ask them to specify the correct environment list, WAIT for their response, then proceed to step 4.
+
+4.  **Update State:**
     -   Write `mobile-automator/setup_state.json` with:
         `{"last_successful_step": "3.0_environment_discovery", "platform": "<platform>", "environments": ["<env1>", "<env2>", ...]}`
 
-4.  **Continue:** Proceed to Section 4.0.
+5.  **Continue:** Proceed to Section 4.0.
 
 ---
 
@@ -251,6 +266,10 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
         > - For Android: the `applicationId` (e.g., `com.example.myapp`)
         > - For iOS: the `Bundle Identifier` (e.g., `com.example.myapp`)
         > - For cross-platform: provide both if applicable.
+    -   **ABSOLUTE REQUIREMENT: END YOUR TURN HERE.**
+    -   **DO NOT PROCEED until the user responds with the package information.**
+    -   **Your response MUST end after asking for the package name.**
+    -   The user will respond in the next message.
 
 5.  **Confirm Findings:** Present the inferred package(s) to the user:
 
@@ -272,8 +291,13 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
     > A) Yes, this is correct.
     > B) No, let me specify the correct package.
 
-    -   If the user selects B, ask them for the correct package name(s).
-    -   **IMPORTANT:** For Android with flavors, if the user corrects the packages, ask them to provide the full package ID for each environment.
+    -   **ABSOLUTE REQUIREMENT: END YOUR TURN HERE.**
+    -   **DO NOT PROCEED until the user responds with A or B.**
+    -   **Your response MUST end after asking for confirmation.**
+    -   The user will respond in the next message.
+    -   If the user selects A → proceed to step 6.
+    -   If the user selects B → ask them for the correct package name(s), END YOUR TURN, wait for their response, then proceed to step 6.
+    -   **IMPORTANT:** For Android with flavors, if the user corrects the packages, ask them to provide the full package ID for each environment, END YOUR TURN, wait for their response, then proceed to step 6.
 
 6.  **Update State:**
     -   Write `mobile-automator/setup_state.json` with:
@@ -401,10 +425,10 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
 
 ### 5.2 Present Findings and Gather Missing Information
 
-**CRITICAL: This is a TWO-STEP sequential process. Do NOT ask both questions at once.**
+**CRITICAL: This is a TWO-STEP sequential process executed across MULTIPLE conversation turns.**
 
 #### Step 1: Confirm Auto-Detected Values
-1.  **Present ALL auto-detected values** to the user:
+1.  **Present ALL auto-detected values** to the user in a message:
     > "I've gathered the following from your project files:"
     >
     > - **Project Name:** [detected]
@@ -415,22 +439,40 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
     > - **Architecture:** [detected or "unknown — couldn't infer"]
     > - **Business Domain:** [detected or "unknown — couldn't infer"]
     > - **Loading Indicators:** [detected list or "common defaults"]
-    >
-    > For any values marked "unknown", ask the user to provide them:
+
+2.  **If any values are marked "unknown", ask the user to provide them** using natural language:
     > - Architecture: "What is your app's architecture pattern?" (e.g., "MVVM with Clean Architecture", "BLoC pattern")
     > - Business Domain: "Describe your app's business domain in one sentence." (e.g., "food delivery marketplace")
-    >
-    > For detected values, ask:
+
+3.  **For detected values, ask for confirmation:**
     > "Are these correct? Reply with any corrections, or say 'looks good' to continue."
 
-2.  **WAIT for the user's response.** Apply any corrections the user provides to the auto-detected values.
+4.  **ABSOLUTE REQUIREMENT: END YOUR TURN HERE.**
+    - **DO NOT ask any other questions in this turn.**
+    - **DO NOT proceed to Step 2.**
+    - **DO NOT execute any more steps.**
+    - **Your response MUST end after asking for confirmation.**
+    - The user will respond in the next message.
 
-#### Step 2: Ask for Business-Critical Paths
-3.  **Only after the user confirms the auto-detected values**, ask:
+5.  **After receiving the user's response:**
+    - Apply any corrections the user provides.
+    - If the user says "looks good" or confirms → proceed to Step 2.
+
+#### Step 2: Ask for Business-Critical Paths (SEPARATE TURN)
+6.  **Only execute this step AFTER the user has confirmed Step 1 values.**
+
+7.  **Ask the user:**
     > **"What are the business-critical user paths in your app?"**
     > (e.g., "onboarding, login, food ordering, payment, order tracking")
 
-4.  **WAIT for the user's response.** Record their answer.
+8.  **ABSOLUTE REQUIREMENT: END YOUR TURN HERE.**
+    - **DO NOT proceed to section 6.0 or any other steps.**
+    - **Your response MUST end after asking this question.**
+    - The user will respond in the next message.
+
+9.  **After receiving the user's response:**
+    - Record their answer for use in skill generation.
+    - THEN and ONLY THEN proceed to section 5.3.
 
 ### 5.3 Update State
 -   Write `mobile-automator/setup_state.json` with all collected data:
@@ -684,29 +726,12 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
     > ```
     >
     > **Next steps:**
-    > - Run `/mobile-automator:generate` to create test scenarios for your app.
-    >   (You will be prompted to connect a device at that time.)
-    > - Run `/mobile-automator:execute` to run generated scenarios and validate results.
+    > 1. **Reload skills:** Run `/skills reload` to activate the newly installed skills.
+    > 2. **Generate tests:** Run `/mobile-automator:generate` to create test scenarios for your app.
+    >    (You will be prompted to connect a device at that time.)
+    > 3. **Execute tests:** Run `/mobile-automator:execute` to run generated scenarios and validate results.
     >
-    > **💡 Pro Tip:** For seamless operation without repeated permission prompts, configure auto-approval for mobile-mcp tools:
+    > **💡 Auto-Approval:** The mobile-mcp server is pre-configured with `trust: true`, so you won't see permission prompts during test recording and execution. This allows smooth, uninterrupted automation.
     >
-    > Add to `~/.gemini/settings.json`:
-    > ```json
-    > {
-    >   \"autoApproveTools\": [
-    >     \"mobile_launch_app\",
-    >     \"mobile_click_on_screen_at_coordinates\",
-    >     \"mobile_type_keys\",
-    >     \"mobile_swipe_on_screen\",
-    >     \"mobile_take_screenshot\",
-    >     \"mobile_save_screenshot\",
-    >     \"mobile_list_elements_on_screen\",
-    >     \"mobile_press_button\",
-    >     \"mobile_list_available_devices\",
-    >     \"mobile_open_url\"
-    >   ]
-    > }
-    > ```
-    >
-    > This allows test recording and execution to run smoothly without interruptions."
+    > If you need to disable this, see: https://geminicli.com/docs/tools/mcp-server/"
 """
