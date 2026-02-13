@@ -17,7 +17,7 @@ CRITICAL: Do NOT generate scenarios yourself. After pre-flight passes, follow th
 3.  Read `mobile-automator/config.json` to load project configuration.
 
 ### 1.2 Verify Device
-1.  Use `mobile_list_devices()` to check for connected devices.
+1.  Use `mobile_list_available_devices()` to check for connected devices.
     - If no devices found → "No device connected. Please connect a device, emulator, or simulator and try again." → Halt.
 2.  If multiple devices are found, present the list and ask the user to select one:
     > "I found multiple devices:"

@@ -17,7 +17,7 @@ CRITICAL: Do NOT execute scenarios yourself. After pre-flight passes, follow the
 3.  Read `mobile-automator/config.json` to load project configuration.
 
 ### 1.2 Verify Device
-1.  Use `mobile_list_devices()` to check for connected devices.
+1.  Use `mobile_list_available_devices()` to check for connected devices.
     - If no devices found → "No device connected. Please connect a device, emulator, or simulator and try again." → Halt.
 2.  If multiple devices are found, present the list and ask the user to select one:
     > "I found multiple devices:"
@@ -37,7 +37,7 @@ CRITICAL: Do NOT execute scenarios yourself. After pre-flight passes, follow the
 4.  **Handle preconditions automatically:**
     -   **If preconditions include `"app_uninstalled"` or `"fresh_install"`:**
         -   Announce: "Scenario requires fresh install. Uninstalling existing app..."
-        -   Uninstall the app if it exists (use platform tools: `adb uninstall [package]` for Android, or device management for iOS)
+        -   Uninstall the app if it exists (use `mobile_uninstall_app` tool)
         -   Build the app using `[build_command]` from config
         -   Install the app
         -   Do NOT ask the user - this is automatic based on preconditions
