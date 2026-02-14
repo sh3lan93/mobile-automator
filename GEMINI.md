@@ -7,7 +7,7 @@ This extension provides mobile app test scenario generation and execution. It bu
 - **Test Scenario**: A JSON file describing a sequence of user actions and expected outcomes for a specific mobile app flow.
 - **Reference Screenshot**: A baseline screenshot captured during scenario generation that represents the expected visual state at a checkpoint.
 - **Test Run**: An execution of one or more test scenarios, producing a results report with pass/fail status per assertion.
-- **Config**: The `mobile-automator/config.json` file created during `/mobile:setup` that stores project platform, environments, device, and app information.
+- **Config**: The `mobile-automator/config.json` file created during `/mobile-automator:setup` that stores project platform, environments, device, and app information.
 
 ## File Resolution Protocol
 
