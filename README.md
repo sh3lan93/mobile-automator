@@ -50,7 +50,7 @@ Then it generates **AI-powered testing skills** customized specifically for your
 
 Watch Mobile Automator create test scenarios from natural language:
 
-<video src="https://github.com/sh3lan93/mobile-automator/raw/main/media/mobile-automator-generate.mp4" controls width="100%" />
+<iframe src="https://drive.google.com/file/d/1vN-o8THhStYHPzH0GMxYLpOyZh6yljsn/preview" width="100%" height="480" allow="autoplay"></iframe>
 
 **What you see:**
 - 🎮 Describe user flows in plain English
@@ -62,7 +62,7 @@ Watch Mobile Automator create test scenarios from natural language:
 
 Watch Mobile Automator execute tests and provide actionable insights:
 
-<video src="https://github.com/sh3lan93/mobile-automator/raw/main/media/mobile-automator-execute.mp4" controls width="100%" />
+<iframe src="https://drive.google.com/file/d/1dwSbYS9LOpQOkGCMyr9EhA2gTUqSYW5V/preview" width="100%" height="480" allow="autoplay"></iframe>
 
 **What you get:**
 - ✅ Pass/fail status with detailed results
