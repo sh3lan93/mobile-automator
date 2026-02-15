@@ -365,7 +365,6 @@ Apache License 2.0 - See [LICENSE](LICENSE) for details.
 - **[Conductor](https://github.com/gemini-cli-extensions/conductor)** - Inspired the generator pattern and structured workflow approach
 - **[mobile-mcp](https://github.com/mobile-next/mobile-mcp)** - The automation engine powering device control
 - **Gemini CLI** - The AI-powered CLI platform
-- **Anthropic Claude** - AI assistance for test generation and execution
 
 ---
 
