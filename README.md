@@ -60,7 +60,7 @@ https://github.com/user-attachments/assets/6be4adce-4b30-45b1-a025-0e3373e30348
 
 ### ▶️ Execute Tests & Get Intelligent Reports
 
-https://github.com/user-attachments/assets/22a4b10c-e45f-43a1-b061-de0a2128b4f4
+https://github.com/user-attachments/assets/fbc69108-0736-402c-846c-faca237fe4ca
 
 **What you get:**
 - ✅ Pass/fail status with detailed results
