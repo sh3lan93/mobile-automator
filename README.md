@@ -67,7 +67,6 @@ https://github.com/user-attachments/assets/fbc69108-0736-402c-846c-faca237fe4ca
 - 🔍 Regression detection (spots UI changes)
 - ⚡ Flakiness detection (retries on transient failures)
 - 🧠 Contextual insights (device differences, environment details)
-- 📊 Visual diff reports with screenshots
 
 ---
 
