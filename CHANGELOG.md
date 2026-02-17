@@ -7,6 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.1] - 2026-02-18
+
+### ✨ Added
+
+#### Schema v2 — Smarter, More Reliable Test Scenarios
+- **New default scenario format** — all generated scenarios now use schema v2 with `$schema_version: "2.0"` as a required root field
+- **Named step IDs** — steps use descriptive snake_case string IDs (e.g., `"id": "tap_login"`) instead of integers; screenshots are now named accordingly (`step_tap_login.png` vs `step_3.png`)
+- **Smart wait actions** — `wait_for_element`, `wait_for_element_gone`, `wait_for_loading_complete` replace fixed-time `wait`; eliminates the #1 source of test flakiness
+- **Optional steps** — `optional: true` + `on_failure: "skip"` handles non-deterministic UI elements (promotional dialogs, permission prompts) without failing the test
+- **Conditional steps** — `condition` field allows steps to be skipped based on device API level, runtime state, or whether a previous step was skipped
+- **Retry logic** — `on_failure: "retry"` + `retry_policy: {max_attempts, backoff_ms}` distinguishes real bugs from transient failures
+- **Variable capture** — `capture_value` action + `variables` root block captures dynamic values (prices, IDs, amounts) for cross-step verification
+- **Nested conditional sub-flows** — `sub_steps` array expresses branching flows (e.g., "add address only if none exists") without requiring separate scenario files
+- **New assertion types** — `pattern_match` (regex), `value_matches_variable`, `element_count` (with operators), `visual_state`, `text_changed` (state transitions like "Redeem" → "Redeemed")
+- **Structured preconditions** — `preconditions` object with `app_state`, `device_actions`, `device_properties` enables automated pre-test setup
+- **Clean metadata** — execution-time fields (`device_model`, `api_level`, `timestamp`) removed from scenario metadata; they belong in the result JSON
+
+#### `/mobile-automator:migrate` — Interactive v1 → v2 Migration
+- New command to upgrade existing v1 scenarios with a guided, human-supervised process
+- Automatically converts: `$schema_version`, integer step IDs → named strings, assertion IDs, `after_step_id` references, metadata cleanup, preconditions restructuring
+- Interactively handles ambiguous cases (fixed-time `wait` actions — asks what to wait *for*)
+- Always creates a `.v1.bak` backup before writing any changes
+- Lists what must be added manually after migration (intent the tool can't infer)
+
+#### `MIGRATION.md` — Institutional Migration Guide
+- 6 before/after JSON examples covering every major v1 → v2 change
+- Clear breakdown of what the tool handles automatically vs. what requires human review
+- Deprecation timeline table
+
+#### `scenario_schema_v2.json` — Formal JSON Schema
+- JSON Schema Draft-07 definition for all new scenario fields
+- Validated against both prototype scenarios with zero errors
+
+### 🔄 Changed
+
+- **Generator SKILL.md** — updated to always produce v2 scenarios; expanded step translation guide (14 actions), pattern detection guide for smart waits, optional steps, conditional steps, retry, data capture, and nested sub-flows
+- **Executor SKILL.md** — updated with full v2 execution path: condition evaluation, variable capture, sub-flow execution, retry logic, all 9 assertion types
+- **Result schema** — extended additively with optional v2 fields (`schema_version`, `captured_variables`, step-level `retry_count`, `step_duration_ms`, `condition_evaluated`); `step_id` accepts both integer (v1) and string (v2)
+- **`generate.toml`** — deprecation check when `--schema-version 1.0` flag is used
+- **`execute.toml`** — deprecation check when a v1 scenario is detected
+- **`setup.toml`** — copies `scenario_schema_v2.json` to workspace alongside v1 schema
+- **`GEMINI.md`** — dual schema registry (v2 default + v1 legacy), expanded tool mapping table with all 14 action types
+- **`README.md`** — updated schema section to describe v2, added `/mobile-automator:migrate` to commands table, updated project structure tree with named screenshot IDs and `scenario_schema_v2.json`
+- **`CLAUDE.md`** — updated file structure, schema documentation, and namespace list to reflect all new files
+
+### ⚠️ Deprecation Notice
+
+Schema v1 is deprecated as of **2026-02-17**. The 12-month deprecation timeline:
+
+| Phase | Period | Behavior |
+|-------|--------|----------|
+| Phase 1 | Now → 2026-08-17 | Non-blocking warning on v1 generate/execute |
+| Phase 2 | 2026-08-17 → 2027-01-17 | New v1 generation blocked; execution requires acknowledgment |
+| Phase 3 | 2027-01-17+ | Hard fail — v1 scenarios will not execute |
+
+Migrate existing scenarios with `/mobile-automator:migrate <scenario_id>`. See [MIGRATION.md](MIGRATION.md) for the full guide.
+
+---
+
 ## [0.1.0] - 2025-02-13
 
 ### 🎉 First Beta Release
@@ -424,4 +483,4 @@ Apache License 2.0
 
 ---
 
-**Mobile Automator 1.0.0** - Built with ❤️ for mobile QA engineers
+**Mobile Automator 0.1.1** - Built with ❤️ for mobile QA engineers
