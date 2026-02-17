@@ -49,16 +49,19 @@ mobile-automator/
 ├── GEMINI.md                  # AI context (schema registry, tool mappings, conventions)
 ├── CLAUDE.md                  # Developer documentation (this file)
 ├── README.md                  # User-facing documentation
+├── MIGRATION.md               # Schema v1 → v2 migration guide
 ├── commands/
 │   └── mobile-automator/
 │       ├── setup.toml         # 7-section setup workflow with skill installation
 │       ├── generate.toml      # Pre-flight wrapper for generator skill
-│       └── execute.toml       # Pre-flight wrapper for executor skill
+│       ├── execute.toml       # Pre-flight wrapper for executor skill
+│       └── migrate.toml       # Interactive v1→v2 scenario migration tool
 └── templates/
     ├── mobile-automator-generator/
     │   ├── SKILL.md          # Generator skill template with {{placeholders}}
     │   └── references/
-    │       └── scenario_schema.json  # Test scenario JSON schema
+    │       ├── scenario_schema_v2.json  # Test scenario JSON schema (v2, default)
+    │       └── scenario_schema.json     # Test scenario JSON schema (v1, legacy)
     └── mobile-automator-executor/
         ├── SKILL.md          # Executor skill template with {{placeholders}}
         └── references/
@@ -212,15 +215,26 @@ To add a third skill (e.g., `mobile-automator-debugger`):
 ### Test Scenario & Result Schemas
 
 **Schema Locations:**
-- **Test Scenario Schema**: `templates/mobile-automator-generator/references/scenario_schema.json`
-  - Defines format for generated test scenarios
-  - Key fields: `scenario_id`, `platform`, `steps`, `assertions`, `metadata`, `preconditions`, `tags`
-  - Supports 7 action types: `launch_app`, `tap`, `type`, `swipe`, `press_button`, `wait`, `open_url`
-  - Supports 4 assertion types: `screenshot_match`, `element_exists`, `element_text`, `element_not_exists`
+
+- **Test Scenario Schema v2** (default): `templates/mobile-automator-generator/references/scenario_schema_v2.json`
+  - Defines format for all new test scenarios
+  - Required root field: `$schema_version: "2.0"`
+  - Named string step IDs (snake_case) and assertion IDs — not integers
+  - Supports 14 action types: `launch_app`, `tap`, `long_press`, `double_tap`, `type`, `swipe`, `scroll_to_element`, `press_button`, `open_url`, `wait_for_element`, `wait_for_element_gone`, `wait_for_loading_complete`, `capture_value`, `clear_app_data`
+  - Supports 9 assertion types: `element_exists`, `element_not_exists`, `element_text`, `screenshot_match`, `pattern_match`, `value_matches_variable`, `element_count`, `visual_state`, `text_changed`
+  - New step-level fields: `optional`, `condition`, `on_failure`, `retry_policy`, `capture_to`, `sub_steps`, `wait_config`
+  - New root-level fields: `variables`, `preconditions` (structured object, not string array)
+
+- **Test Scenario Schema v1** (legacy, deprecated): `templates/mobile-automator-generator/references/scenario_schema.json`
+  - v1 scenarios use integer step IDs and `after_step_id` integer references
+  - 12-month deprecation: warning (months 0–6), blocked (months 7–11), hard fail (month 12+)
+  - Migrate with `/mobile-automator:migrate <scenario_id>`
 
 - **Test Result Schema**: `templates/mobile-automator-executor/references/result_schema.json`
   - Defines format for execution result reports
-  - Key fields: `run_id`, `status`, `steps_executed`, `assertion_results`, `observations`
+  - Key fields: `run_id`, `schema_version`, `status`, `steps_executed`, `assertion_results`, `observations`, `captured_variables`
+  - `steps_executed[].step_id` accepts both integer (v1) and string (v2)
+  - v2 step fields: `retry_count`, `step_duration_ms`, `condition_evaluated`, `sub_steps_executed`
   - **Advanced feature**: `observations` array with typed categories:
     - `regression` - Spots visual changes beyond assertions
     - `flakiness` - Detects timing issues, flags retry behavior
@@ -228,10 +242,12 @@ To add a third skill (e.g., `mobile-automator-debugger`):
 
 **Schema Distribution:**
 During setup Section 6.0, schemas are copied from:
-- `${extensionPath}/templates/mobile-automator-generator/references/scenario_schema.json`
+- `${extensionPath}/templates/mobile-automator-generator/references/scenario_schema_v2.json` (primary)
+- `${extensionPath}/templates/mobile-automator-generator/references/scenario_schema.json` (legacy)
 - `${extensionPath}/templates/mobile-automator-executor/references/result_schema.json`
 
 To workspace:
+- `.gemini/skills/mobile-automator-generator/references/scenario_schema_v2.json`
 - `.gemini/skills/mobile-automator-generator/references/scenario_schema.json`
 - `.gemini/skills/mobile-automator-executor/references/result_schema.json`
 
@@ -286,11 +302,10 @@ Follow `RELEASE.md` checklist. Key steps:
 
 All commands use the `mobile-automator:` namespace to prevent conflicts with other extensions:
 
-- **Setup command**: `/mobile-automator:setup`
-- **Generate command**: `/mobile-automator:generate`
-- **Execute command**: `/mobile-automator:execute`
-- `/mobile-automator:generate` - Invokes `commands/mobile-automator/generate.toml`
-- `/mobile-automator:execute` - Invokes `commands/mobile-automator/execute.toml`
+- **Setup command**: `/mobile-automator:setup` — Invokes `commands/mobile-automator/setup.toml`
+- **Generate command**: `/mobile-automator:generate` — Invokes `commands/mobile-automator/generate.toml`
+- **Execute command**: `/mobile-automator:execute` — Invokes `commands/mobile-automator/execute.toml`
+- **Migrate command**: `/mobile-automator:migrate` — Invokes `commands/mobile-automator/migrate.toml`
 
 **Skill names** match the command namespace:
 - `.gemini/skills/mobile-automator-generator/` - Used by generate command
