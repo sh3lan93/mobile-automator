@@ -237,8 +237,9 @@ Uses AI vision to compare screenshots semantically, not pixel-by-pixel.
 | Command | Description | Usage | What It Does |
 |---------|-------------|-------|--------------|
 | **`/mobile-automator:setup`** | One-time setup - analyzes project and installs testing skills | `> /mobile-automator:setup` | • Detects platform (Android/iOS/Flutter/React Native/KMP/CMP)<br>• Discovers build environments (staging, production, etc.)<br>• Infers app package IDs from build files<br>• Analyzes architecture patterns and business domain<br>• Installs customized QA skills<br>• Creates `mobile-automator/` test directory<br>• **Resume support:** If interrupted, run again to resume |
-| **`/mobile-automator:generate`** | **Record** test scenarios from natural language (do this once per test) | `> /mobile-automator:generate` | • Connects to your device/emulator<br>• Prompts for test steps in natural language<br>• Executes steps on device while recording<br>• Captures reference screenshots<br>• Generates JSON scenario file<br>**Output:** `mobile-automator/scenarios/<scenario_id>.json` |
+| **`/mobile-automator:generate`** | **Record** test scenarios from natural language (do this once per test) | `> /mobile-automator:generate` | • Connects to your device/emulator<br>• Prompts for test steps in natural language<br>• Executes steps on device while recording<br>• Captures reference screenshots<br>• Generates JSON scenario file (schema v2)<br>**Output:** `mobile-automator/scenarios/<scenario_id>.json` |
 | **`/mobile-automator:execute`** | **Replay** saved test scenarios (run repeatedly for regression testing) | `> /mobile-automator:execute <scenario_id>`<br><br>Examples:<br>• Single: `execute login_flow`<br>• Multiple: `execute login_flow checkout_flow`<br>• All: `execute` (interactive) | • Replays scenario steps on connected device<br>• Captures actual screenshots for comparison<br>• Validates assertions (element exists, text matches, visual state)<br>• Detects flakiness and retries automatically<br>• Generates detailed pass/fail report with diagnostics<br>**Output:** `mobile-automator/results/<run_id>.json` |
+| **`/mobile-automator:migrate`** | **Migrate** a v1 scenario JSON to schema v2 format | `> /mobile-automator:migrate <scenario_id>`<br><br>Examples:<br>• `migrate login_flow`<br>• `migrate` (interactive file selection) | • Analyzes existing v1 scenario<br>• Auto-converts step IDs, assertion IDs, metadata<br>• Interactively resolves ambiguous waits<br>• Creates `.v1.bak` backup before any changes<br>• Outputs valid schema v2 scenario |
 
 ### 📝 The Workflow
 
@@ -261,8 +262,8 @@ your-mobile-project/
 │   │   └── checkout_flow.json
 │   ├── screenshots/                    # Reference screenshots
 │   │   ├── login_flow/
-│   │   │   ├── step_1.png
-│   │   │   └── step_2.png
+│   │   │   ├── step_launch_app.png
+│   │   │   └── step_tap_login.png
 │   │   └── checkout_flow/
 │   └── results/                        # Test execution results
 │       ├── run_20250212_143022.json
@@ -274,7 +275,8 @@ your-mobile-project/
         ├── mobile-automator-generator/
         │   ├── SKILL.md               # Customized for YOUR project
         │   └── references/
-        │       └── scenario_schema.json
+        │       ├── scenario_schema_v2.json  # Schema v2 (default)
+        │       └── scenario_schema.json     # Schema v1 (legacy)
         └── mobile-automator-executor/
             ├── SKILL.md               # Customized for YOUR project
             └── references/
@@ -318,18 +320,26 @@ your-mobile-project/
 
 ## 🎨 Test Scenario Schema
 
-Test scenarios are JSON files stored in `mobile-automator/scenarios/` with the following structure:
+Test scenarios are JSON files stored in `mobile-automator/scenarios/` following **schema v2** (default). Key fields:
 
-- **scenario_id**: Unique identifier (snake_case)
-- **name**: Human-readable description
-- **platform**: "android" | "ios" | "cross-platform"
-- **app_package** / **app_bundle_id**: Target app identifier
-- **preconditions**: Array (e.g., `["fresh_install"]`, `["user_logged_in"]`)
-- **steps**: Array of actions
-  - `launch_app`, `tap`, `type`, `swipe`, `wait`, `take_screenshot`
-  - Each step maps to mobile-mcp tools
-- **assertions**: Validation rules
-  - `element_exists`, `element_not_exists`, `text_matches`, `screenshot_matches`
+- **`$schema_version`**: `"2.0"` — required, enables version routing
+- **`scenario_id`**: Unique identifier (snake_case)
+- **`name`**: Human-readable description
+- **`platform`**: `"android"` | `"ios"` | `"cross-platform"`
+- **`variables`**: Named variables for capturing dynamic values across steps
+- **`preconditions`**: Structured object — `app_state`, `device_actions`, `device_properties`
+- **`steps`**: Array of actions — each step has a **named string `id`** (e.g., `"tap_login"`), plus:
+  - 14 action types: `launch_app`, `tap`, `long_press`, `double_tap`, `type`, `swipe`, `scroll_to_element`, `press_button`, `open_url`, `wait_for_element`, `wait_for_element_gone`, `wait_for_loading_complete`, `capture_value`, `clear_app_data`
+  - `optional: true` + `on_failure: "skip"` — for non-deterministic UI elements (dialogs, banners)
+  - `condition` — execute step only when a device property or runtime condition is met
+  - `retry_policy` — retry on transient failures before marking the step as failed
+  - `capture_to` — store a dynamic value for later assertion
+  - `sub_steps` — nested conditional sub-flow
+  - `wait_config` — smart wait parameters (`type`, `indicator`, `timeout_ms`)
+- **`assertions`**: Validation rules — each has a **named string `id`** and references its step by name (`after_step`):
+  - 9 types: `element_exists`, `element_not_exists`, `element_text`, `screenshot_match`, `pattern_match`, `value_matches_variable`, `element_count`, `visual_state`, `text_changed`
+
+> **Migrating from v1?** Run `/mobile-automator:migrate <scenario_id>` or see [MIGRATION.md](MIGRATION.md).
 
 Generated scenarios are project-specific and include your app's context (business domain, key features).
 
