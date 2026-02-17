@@ -44,8 +44,17 @@ While executing, you also **passively observe and report** (but never deviate fr
 
 ### 2. Load Scenario
 - Read the JSON scenario file from `mobile-automator/scenarios/`.
-- Validate it against the schema.
+- **Detect schema version:** Read the `$schema_version` field.
+  - If `$schema_version` is `"2.0"` → use **v2 execution path** (this document).
+  - If `$schema_version` is absent or `"1.0"` → use **v1 execution path** (legacy; see v1 SKILL.md notes below).
+- Validate the scenario against the appropriate schema.
 - Read the `metadata` to compare recording environment vs current execution environment. Note any differences (different device, API level, environment).
+
+**V1 Legacy Note:** When executing a v1 scenario (no `$schema_version` field):
+- Step IDs are integers — screenshot paths use `step_<integer>.png` format.
+- Assertions reference steps by integer `after_step_id`.
+- No variables, no conditions, no sub_steps, no retry_policy, no wait_config.
+- Show a non-blocking deprecation notice: "⚠️ This scenario uses schema v1 (deprecated). Run `/mobile-automator:migrate <scenario_id>` to upgrade it to v2."
 
 ### 3. Verify Preconditions
 - **Note:** The `/mobile-automator:execute` command has already handled preconditions like `app_uninstalled` and `fresh_install` before invoking this skill.
@@ -55,32 +64,94 @@ While executing, you also **passively observe and report** (but never deviate fr
   - For device preconditions: Use device tools to configure settings (e.g., airplane mode for `"no_network"`)
 - If a precondition cannot be verified or met, report it and ask the user how to proceed.
 
-### 4. Step-by-Step Replay
+### 4. Step-by-Step Replay (v2 Execution Path)
+
+Before executing each step, initialize a **session variable map** (empty object to store captured values).
+
 For each step in the scenario:
 
+**4.0 Pre-step: Evaluate condition**
+- If the step has a `condition` field, evaluate it before executing:
+  - `device_property`: Query the device (e.g., API level) and compare using the operator.
+  - `previous_step_skipped`: Check if the referenced step's status is `skipped`.
+  - `variable_value`: Look up the variable in the session variable map and compare.
+  - `element_visible`: Use `mobile_list_elements_on_screen()` to check element presence.
+  - If condition is **false** → skip this step and all its sub_steps. Mark as `skipped`.
+
+**4.1 Execute the step**
 1. **Find the target:** Use `mobile_list_elements_on_screen()` to locate the element described in `target`.
-2. **Execute the action:** Use the appropriate mobile-mcp tool (see `.gemini/skills/references/mobile-mcp-tools.md` for tool mapping).
-3. **Wait for stability:** Wait for loading indicators ({{loading_indicators}}) to disappear.
-4. **Capture screenshot:** Save to `mobile-automator/results/<run_id>/screenshots/step_<step_id>.png`.
-5. **Verify state:** Compare what you see against the step's `expected_state` description.
-6. **Report progress:**
-   > "Step 3/7: Tapped 'Login' — login form displayed ✅"
+   - If `target_pattern` is set: use it as a regex to filter elements by their text content.
+2. **Execute the action** using the appropriate mobile-mcp tool (see action mapping table below).
+3. **Capture screenshot:** Save to `mobile-automator/results/<run_id>/screenshots/step_<step_id>.png` (where `step_id` is the step's named string ID, e.g., `step_tap_login.png`).
+4. **Verify state:** Compare what you see against the step's `expected_state` description.
+5. **Report progress:**
+   > "Step tap_login (4/12): Tapped 'Login' — login form displayed ✅"
 
-**On step failure:**
-1. Capture a screenshot of the actual state.
-2. Check for flakiness indicators (loading not complete, animation in progress).
-3. If likely timing issue → wait 2 seconds and retry once.
-4. If retry fails → record as failed, report state context, continue to next step.
+**Action-to-tool mapping (v2):**
 
-### 5. Validate Assertions
-For each assertion in the scenario:
+| v2 Action | Mobile-MCP Tool | Notes |
+|---|---|---|
+| `launch_app` | `mobile_launch_app` | |
+| `tap` | `mobile_click_on_screen_at_coordinates` | Find element first |
+| `long_press` | `mobile_long_press_on_screen_at_coordinates` | |
+| `double_tap` | `mobile_double_tap_on_screen` | |
+| `type` | `mobile_type_keys` | |
+| `swipe` | `mobile_swipe_on_screen` | `value` = direction |
+| `scroll_to_element` | `mobile_swipe_on_screen` (repeated) | Poll until target element is visible |
+| `press_button` | `mobile_press_button` | `value` = button name (BACK, HOME, ENTER) |
+| `open_url` | `mobile_open_url` | |
+| `wait_for_element` | Poll `mobile_list_elements_on_screen` | Repeat until element appears or timeout |
+| `wait_for_element_gone` | Poll `mobile_list_elements_on_screen` | Repeat until element is absent or timeout |
+| `wait_for_loading_complete` | Poll `mobile_take_screenshot` + visual check | Wait for loading indicators ({{loading_indicators}}) to be absent |
+| `capture_value` | `mobile_list_elements_on_screen` | Extract text from target element, store in `capture_to` variable |
+| `clear_app_data` | `adb shell pm clear <package>` (Android) | Use precondition device_action instead when possible |
+
+**4.2 Handle step outcome**
+
+**If step succeeds:**
+- Mark as `passed`. Continue to next step.
+- If `sub_steps` are present, execute them in order before continuing (see 4.3).
+
+**If step fails:**
+- Check `on_failure` field:
+  - `"fail"` (default): Capture a failure screenshot. Check for flakiness indicators (loading not complete, animation in progress). Apply flakiness detector logic. Record as failed. Continue to next step.
+  - `"skip"`: Mark step as `skipped`. Continue silently. Do NOT mark scenario as failed.
+  - `"retry"`: Apply retry_policy (attempt up to `max_attempts` total, waiting `backoff_ms` between each). If all retries fail → treat as `"fail"`.
+
+**If `optional: true` and step fails:** Override to `"skip"` behavior regardless of `on_failure` value.
+
+**4.3 Execute sub_steps (Nested Conditional Sub-Flow)**
+If a step has `sub_steps` and the step itself succeeded (or its condition was met):
+1. Execute each sub-step in the `sub_steps` array in order using the same execution rules (4.0–4.2).
+2. Sub-step screenshots are saved as `step_<parent_id>_<sub_step_id>.png`.
+3. When all sub-steps complete (pass or skip), resume execution at the next top-level step.
+4. If a sub-step fails with `on_failure: "fail"`, mark the parent scenario as failed and continue.
+
+**4.4 Variable capture**
+When executing a `capture_value` action:
+1. Locate the element described in `target` using `mobile_list_elements_on_screen()`.
+2. Extract its text content.
+3. Store it in the session variable map: `variables["<capture_to>"] = "<extracted_text>"`.
+4. Report: "Captured '{{capture_to}}' = '<value>'"
+
+### 5. Validate Assertions (v2)
+For each assertion in the scenario (executed after the referenced step):
+
+**V2 Assertion Types:**
 
 - **`screenshot_match`:** Compare the captured screenshot against the reference. Use **semantic visual comparison** — describe what you see in both images and determine if they match. Focus on: screen identity, key elements present/absent, text content, layout structure. Minor rendering differences (anti-aliasing, font smoothing) are acceptable within the tolerance threshold.
 - **`element_exists`:** Use `mobile_list_elements_on_screen()` to verify the element is present.
-- **`element_text`:** Use `mobile_list_elements_on_screen()` to verify the element's text matches the expected value.
 - **`element_not_exists`:** Use `mobile_list_elements_on_screen()` to verify the element is NOT present.
+- **`element_text`:** Use `mobile_list_elements_on_screen()` to verify the element's text matches `expected_value`.
+- **`element_count`:** Use `mobile_list_elements_on_screen()` to count elements matching `element_description`. Compare the count using `operator` and `expected_count` (e.g., `count >= 1`).
+- **`pattern_match`:** Use `mobile_list_elements_on_screen()` to find elements matching `element_description`. Test each element's text against the `pattern` regex. Pass if at least one element matches.
+- **`value_matches_variable`:** Look up `variable_name` in the session variable map. Verify the element described by `element_description` contains text that matches the captured variable value. If `pattern` is also set, use it as a format hint to locate the relevant portion of the text.
+- **`visual_state`:** Take a screenshot. Visually assess whether the screen matches the `expected_visual_state` value: `loaded` (content visible, no loading), `loading` (loading indicator visible), `empty` (no content), `error` (error state visible).
+- **`text_changed`:** Compare the element's current text with its text at the previous assertion checkpoint. Pass if the text is different.
 
 **Dynamic content:** If the reference `expected_state` marks content as `[dynamic:...]`, ignore those regions during comparison.
+
+**Variable substitution in assertions:** Before evaluating any assertion, replace `{{variable_name}}` placeholders in string fields with values from the session variable map.
 
 ### 6. Generate Report
 Write the result JSON to `mobile-automator/results/<run_id>.json` following the result schema in `.gemini/skills/mobile-automator-executor/references/result_schema.json`. Auto-populate metadata from the current session.
@@ -131,7 +202,8 @@ When asked to run multiple scenarios:
 
 ## Resources
 - **mobile-automator/config.json**: Project configuration.
-- **.gemini/skills/mobile-automator-generator/references/scenario_schema.json**: JSON schema for test scenarios.
+- **.gemini/skills/mobile-automator-generator/references/scenario_schema_v2.json**: JSON schema v2 for test scenarios (default).
+- **.gemini/skills/mobile-automator-generator/references/scenario_schema.json**: JSON schema v1 for test scenarios (legacy, deprecated).
 - **.gemini/skills/mobile-automator-executor/references/result_schema.json**: JSON schema for execution results.
 - **.gemini/skills/references/mobile-mcp-tools.md**: Mobile-MCP tool mapping reference.
 - **mobile-automator/scenarios/**: Source scenario files.

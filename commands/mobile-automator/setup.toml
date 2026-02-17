@@ -574,7 +574,10 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
     -   Write the populated `SKILL.md` to `.gemini/skills/<skill-name>/SKILL.md`.
 
 3.  **Copy reference schemas and documentation:**
-    -   **For scenario_schema.json:**
+    -   **For scenario_schema_v2.json (primary):**
+        -   Read the file `<templates_path>/mobile-automator-generator/references/scenario_schema_v2.json`.
+        -   Write the exact content to `.gemini/skills/mobile-automator-generator/references/scenario_schema_v2.json` in the workspace.
+    -   **For scenario_schema.json (legacy v1, kept for backward compatibility):**
         -   Read the file `<templates_path>/mobile-automator-generator/references/scenario_schema.json`.
         -   Write the exact content to `.gemini/skills/mobile-automator-generator/references/scenario_schema.json` in the workspace.
     -   **For result_schema.json:**
@@ -585,8 +588,9 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
         -   Write the exact content to `.gemini/skills/references/mobile-mcp-tools.md` in the workspace.
 
 ### 6.4 Verify Installation
-1.  **Verify** that all 5 files exist:
+1.  **Verify** that all 6 files exist:
     - `.gemini/skills/mobile-automator-generator/SKILL.md`
+    - `.gemini/skills/mobile-automator-generator/references/scenario_schema_v2.json`
     - `.gemini/skills/mobile-automator-generator/references/scenario_schema.json`
     - `.gemini/skills/mobile-automator-executor/SKILL.md`
     - `.gemini/skills/mobile-automator-executor/references/result_schema.json`
@@ -709,7 +713,9 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
     > .gemini/skills/
     > ├── mobile-automator-generator/
     > │   ├── SKILL.md
-    > │   └── references/scenario_schema.json
+    > │   └── references/
+    > │       ├── scenario_schema_v2.json  ← default (v2)
+    > │       └── scenario_schema.json     ← legacy (v1, deprecated)
     > └── mobile-automator-executor/
     >     ├── SKILL.md
     >     └── references/result_schema.json

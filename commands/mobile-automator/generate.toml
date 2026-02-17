@@ -7,6 +7,38 @@ CRITICAL: Do NOT generate scenarios yourself. After pre-flight passes, follow th
 
 ---
 
+## 0.0 SCHEMA VERSION CHECK
+
+1.  **Check if the user specified `--schema-version 1.0`** in their command invocation.
+    - Example: `/mobile-automator:generate --schema-version 1.0 [test steps]`
+
+2.  **If `--schema-version 1.0` is specified:**
+
+    Determine the current deprecation phase based on today's date relative to the v2 launch date of **2026-02-17**:
+
+    - **Phase 1 (months 0–6, until 2026-08-17):** Non-blocking warning:
+      > "⚠️ **Deprecation Notice (Schema v1):** You are generating a v1 scenario. Schema v1 is deprecated as of 2026-02-17 in favor of v2 (the default). v1 will be completely removed in 12 months (2027-02-17).
+      > To migrate existing v1 scenarios: run `/mobile-automator:migrate <scenario_id>`
+      > Continuing with v1 generation as requested..."
+      Continue with v1 generation using `scenario_schema.json`.
+
+    - **Phase 2 (months 7–11, 2026-08-17 to 2027-01-17):** Escalated warning, block new generation:
+      > "🚫 **Schema v1 Generation Blocked:** Schema v1 is in the final deprecation phase (month 7 of 12). New v1 scenario generation is no longer allowed.
+      > Your existing v1 scenarios still work, but new scenarios must use v2.
+      > To migrate existing v1 scenarios: run `/mobile-automator:migrate <scenario_id>`
+      > Remove `--schema-version 1.0` from your command to generate a v2 scenario."
+      **HALT. Do NOT proceed with generation.**
+
+    - **Phase 3 (month 12+, after 2027-01-17):** Hard fail:
+      > "❌ **Schema v1 Removed:** Schema v1 reached end-of-life on 2027-02-17 and is no longer supported.
+      > All scenarios must use schema v2. To migrate existing v1 scenarios: run `/mobile-automator:migrate <scenario_id>`
+      > Remove `--schema-version 1.0` to generate a v2 scenario."
+      **HALT. Do NOT proceed with generation.**
+
+3.  **If no `--schema-version` flag is specified:** Use schema v2 (default). Continue normally.
+
+---
+
 ## 1.0 PRE-FLIGHT CHECKS
 
 ### 1.1 Verify Setup

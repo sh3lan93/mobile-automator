@@ -1,0 +1,58 @@
+name: Version Check
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'gemini-extension.json'
+      - '**'
+
+jobs:
+  check-version:
+    name: Verify version is bumped
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required to fetch all tags
+
+      - name: Read version from gemini-extension.json
+        id: get_version
+        run: |
+          VERSION=$(jq -r '.version' gemini-extension.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "Detected version: $VERSION (tag: v$VERSION)"
+
+      - name: Check version is not already tagged
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          TAG="${{ steps.get_version.outputs.tag }}"
+
+          # Fetch all remote tags
+          git fetch --tags
+
+          if git rev-parse "$TAG" > /dev/null 2>&1; then
+            echo ""
+            echo "❌ Version check failed"
+            echo "────────────────────────────────────────"
+            echo "  Version $VERSION is already released (tag '$TAG' exists)."
+            echo ""
+            echo "  Every PR merged to main must bump the version in"
+            echo "  gemini-extension.json to a value not yet in the tags."
+            echo ""
+            echo "  Current tags:"
+            git tag --sort=-version:refname | head -10
+            echo "────────────────────────────────────────"
+            exit 1
+          else
+            echo ""
+            echo "✅ Version check passed"
+            echo "────────────────────────────────────────"
+            echo "  Version $VERSION (tag '$TAG') is not yet released."
+            echo "  This PR is clear to merge."
+            echo "────────────────────────────────────────"
+          fi
