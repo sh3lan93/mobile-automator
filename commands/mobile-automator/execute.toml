@@ -7,6 +7,36 @@ CRITICAL: Do NOT execute scenarios yourself. After pre-flight passes, follow the
 
 ---
 
+## 0.0 SCHEMA VERSION DEPRECATION CHECK
+
+After loading the scenario file(s) to execute (resolved in section 2.0), for each selected scenario:
+
+1.  **Read `$schema_version` from the scenario JSON.**
+2.  **If `$schema_version` is absent or `"1.0"` (v1 scenario detected):**
+
+    Determine the current deprecation phase based on today's date relative to the v2 launch date of **2026-02-17**:
+
+    - **Phase 1 (months 0–6, until 2026-08-17):** Non-blocking informational warning:
+      > "⚠️ **Deprecation Notice (Schema v1):** Scenario '<scenario_id>' uses schema v1, which is deprecated as of 2026-02-17. v1 scenarios will stop working after 2027-02-17 (12-month deprecation period).
+      > To migrate this scenario to v2: run `/mobile-automator:migrate <scenario_id>`
+      > Continuing execution..."
+      Continue with execution using the v1 execution path.
+
+    - **Phase 2 (months 7–11, 2026-08-17 to 2027-01-17):** Escalated warning, still allow execution but require acknowledgment:
+      > "⚠️ **Final Deprecation Warning (Schema v1):** Scenario '<scenario_id>' uses schema v1, which is in its final deprecation phase (month 7 of 12). This scenario will STOP WORKING after 2027-02-17.
+      > Migrate now to avoid test failures: run `/mobile-automator:migrate <scenario_id>`
+      > Type 'continue' to execute anyway, or 'cancel' to abort and migrate first:"
+      **WAIT for user response.** If 'continue' → proceed. If 'cancel' → halt with migration instructions.
+
+    - **Phase 3 (month 12+, after 2027-01-17):** Hard fail:
+      > "❌ **Schema v1 Execution Blocked:** Scenario '<scenario_id>' uses schema v1, which reached end-of-life on 2027-02-17.
+      > Migrate this scenario to v2 before executing: run `/mobile-automator:migrate <scenario_id>`"
+      **HALT. Do NOT execute this scenario.**
+
+3.  **If `$schema_version` is `"2.0"`:** No action needed. Continue with v2 execution.
+
+---
+
 ## 1.0 PRE-FLIGHT CHECKS
 
 ### 1.1 Verify Setup
