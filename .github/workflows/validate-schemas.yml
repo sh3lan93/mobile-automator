@@ -6,13 +6,11 @@ on:
       - main
     paths:
       - 'templates/**/references/*.json'
-      - 'prototypes/*.json'
   push:
     branches:
       - main
     paths:
       - 'templates/**/references/*.json'
-      - 'prototypes/*.json'
 
 jobs:
   validate-schemas:
