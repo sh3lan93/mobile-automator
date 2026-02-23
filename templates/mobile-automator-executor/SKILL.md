@@ -145,7 +145,7 @@ For each assertion in the scenario (executed after the referenced step):
 
 - **`element_exists`:** Verify the element described in `element_description` is present in the on-screen element list.
 - **`element_not_exists`:** Verify the element is NOT present in the on-screen element list.
-- **`element_visible`:** Query `mobile_list_elements_on_screen()`. Pass if element appears in the result (visible in viewport). Use `expected_visible` field: `true` = must be on screen, `false` = must not be on screen. Differ from `element_exists`/`element_not_exists` which check hierarchy only.
+- **`element_visible`:** Query `mobile_list_elements_on_screen()`. Pass if element appears in the result. Use `expected_visible` field: `true` = must be present, `false` = must be absent. Intended for elements that may be scrolled off or conditionally hidden, as distinct from fully absent elements (`element_exists`/`element_not_exists`). **Note:** `mobile_list_elements_on_screen()` returns elements in the accessibility hierarchy, which may include off-screen elements depending on the platform. If you need to confirm the element is actually visible within the viewport (not clipped or scrolled off), use `element_fully_visible` (Tier 2) instead.
 - **`element_text`:** Use `mobile_list_elements_on_screen()` to verify the element's text exactly matches `expected_value`.
 - **`text_contains`:** Use `mobile_list_elements_on_screen()` to verify the element's text includes `expected_substring` as a substring.
 - **`text_not_empty`:** Use `mobile_list_elements_on_screen()` to find the element and verify its text has length > 0.
