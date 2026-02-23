@@ -485,13 +485,14 @@
           "type": "string",
           "enum": [
             "==",
+            "!=",
             ">=",
             "<=",
             ">",
             "<"
           ],
           "default": "==",
-          "description": "Comparison operator for element_count assertions"
+          "description": "Comparison operator for element_count and list_item_count assertions"
         },
         "expected_count": {
           "type": "integer",
