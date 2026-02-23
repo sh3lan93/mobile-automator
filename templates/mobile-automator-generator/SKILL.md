@@ -150,7 +150,7 @@ Use the most specific type that matches the user's intent.
 | "the screen is loaded / in error / empty state" | `visual_state` | `expected_visual_state: "loaded"` |
 | "the button color is blue / #0057FF" | `color_style` | `color_hex: "#0057FF"` |
 
-**Category 6 — Navigation & Screen (Tier 2: `mobile_take_screenshot` + AI)**
+**Category 5 — Navigation & Screen (Tier 2: `mobile_take_screenshot` + AI)**
 
 | User intent / natural language | Type | Key fields |
 |---|---|---|
@@ -161,7 +161,7 @@ Use the most specific type that matches the user's intent.
 | "the keyboard is visible / showing" | `keyboard_visible` | `expected_visible: true` |
 | "the keyboard is dismissed / hidden" | `keyboard_visible` | `expected_visible: false` |
 
-**Category 9 — Accessibility (Tier 1: `mobile_list_elements_on_screen`)**
+**Category 6 — Accessibility (Tier 1: `mobile_list_elements_on_screen`)**
 
 | User intent / natural language | Type | Key fields |
 |---|---|---|
@@ -173,7 +173,7 @@ Use the most specific type that matches the user's intent.
 |---|---|---|
 | "the value equals the one captured earlier" | `value_matches_variable` | `variable_name: "..."` |
 
-**Category 10 — Platform-Specific (Tier 2: `mobile_take_screenshot` + AI)**
+**Category 8 — Platform-Specific (Tier 2: `mobile_take_screenshot` + AI)**
 
 | User intent / natural language | Type | Key fields |
 |---|---|---|
