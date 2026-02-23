@@ -1,6 +1,6 @@
 {
   "name": "mobile-automator",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Mobile QA automation with test generation and execution using mobile-mcp",
   "author": "Mohamed Shalan",
   "repository": "https://github.com/sh3lan93/mobile-automator",
