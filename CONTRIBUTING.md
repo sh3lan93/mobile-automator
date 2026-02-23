@@ -88,7 +88,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 ### Prerequisites
 
 - **Git** - Version control
-- **Gemini CLI** - `npm install -g @anthropic/gemini-cli`
+- **Gemini CLI** - Install from [geminicli.com](https://geminicli.com) (`npm install -g @anthropic-ai/gemini-cli` or see site for latest instructions)
 - **A test mobile project** - Android, iOS, Flutter, or React Native app for testing
 
 ### Local Development

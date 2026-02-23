@@ -62,4 +62,4 @@ Have a feature request? [Open an issue](https://github.com/sh3lan93/mobile-autom
 
 ---
 
-*Last updated: February 2025*
+*Last updated: February 2026*
