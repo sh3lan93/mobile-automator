@@ -221,7 +221,15 @@ To add a third skill (e.g., `mobile-automator-debugger`):
   - Required root field: `$schema_version: "2.0"`
   - Named string step IDs (snake_case) and assertion IDs — not integers
   - Supports 14 action types: `launch_app`, `tap`, `long_press`, `double_tap`, `type`, `swipe`, `scroll_to_element`, `press_button`, `open_url`, `wait_for_element`, `wait_for_element_gone`, `wait_for_loading_complete`, `capture_value`, `clear_app_data`
-  - Supports 9 assertion types: `element_exists`, `element_not_exists`, `element_text`, `screenshot_match`, `pattern_match`, `value_matches_variable`, `element_count`, `visual_state`, `text_changed`
+  - Supports 27 assertion types across 8 categories:
+    - **Element State:** `element_exists`, `element_not_exists`, `element_visible`, `element_state`
+    - **Text & Content:** `element_text`, `text_contains`, `text_not_empty`, `element_hint`, `pattern_match`, `text_changed`, `content_description`
+    - **Count & Collections:** `element_count`, `list_item_count`, `list_is_empty`
+    - **Visual & Layout:** `screenshot_match`, `visual_state`, `element_fully_visible`, `color_style`
+    - **Navigation & Screen:** `screen_title`, `alert_present`, `alert_text`, `toast_visible`, `keyboard_visible`
+    - **Accessibility:** `has_accessibility_label`
+    - **Data & Variables:** `value_matches_variable`
+    - **Platform-Specific:** `permission_dialog_shown`, `dark_mode_active`
   - New step-level fields: `optional`, `condition`, `on_failure`, `retry_policy`, `capture_to`, `sub_steps`, `wait_config`
   - New root-level fields: `variables`, `preconditions` (structured object, not string array)
 
