@@ -137,17 +137,51 @@ When executing a `capture_value` action:
 ### 5. Validate Assertions (v2)
 For each assertion in the scenario (executed after the referenced step):
 
-**V2 Assertion Types:**
+**V2 Assertion Types (27 total):**
 
-- **`screenshot_match`:** Compare the captured screenshot against the reference. Use **semantic visual comparison** — describe what you see in both images and determine if they match. Focus on: screen identity, key elements present/absent, text content, layout structure. Minor rendering differences (anti-aliasing, font smoothing) are acceptable within the tolerance threshold.
-- **`element_exists`:** Use `mobile_list_elements_on_screen()` to verify the element is present.
-- **`element_not_exists`:** Use `mobile_list_elements_on_screen()` to verify the element is NOT present.
-- **`element_text`:** Use `mobile_list_elements_on_screen()` to verify the element's text matches `expected_value`.
-- **`element_count`:** Use `mobile_list_elements_on_screen()` to count elements matching `element_description`. Compare the count using `operator` and `expected_count` (e.g., `count >= 1`).
-- **`pattern_match`:** Use `mobile_list_elements_on_screen()` to find elements matching `element_description`. Test each element's text against the `pattern` regex. Pass if at least one element matches.
-- **`value_matches_variable`:** Look up `variable_name` in the session variable map. Verify the element described by `element_description` contains text that matches the captured variable value. If `pattern` is also set, use it as a format hint to locate the relevant portion of the text.
-- **`visual_state`:** Take a screenshot. Visually assess whether the screen matches the `expected_visual_state` value: `loaded` (content visible, no loading), `loading` (loading indicator visible), `empty` (no content), `error` (error state visible).
-- **`text_changed`:** Compare the element's current text with its text at the previous assertion checkpoint. Pass if the text is different.
+---
+
+**Tier 1 — Powered by `mobile_list_elements_on_screen()`**
+
+- **`element_exists`:** Verify the element described in `element_description` is present in the on-screen element list.
+- **`element_not_exists`:** Verify the element is NOT present in the on-screen element list.
+- **`element_visible`:** Query `mobile_list_elements_on_screen()`. Pass if element appears in the result (visible in viewport). Use `expected_visible` field: `true` = must be on screen, `false` = must not be on screen. Differ from `element_exists`/`element_not_exists` which check hierarchy only.
+- **`element_text`:** Use `mobile_list_elements_on_screen()` to verify the element's text exactly matches `expected_value`.
+- **`text_contains`:** Use `mobile_list_elements_on_screen()` to verify the element's text includes `expected_substring` as a substring.
+- **`text_not_empty`:** Use `mobile_list_elements_on_screen()` to find the element and verify its text has length > 0.
+- **`element_hint`:** Use `mobile_list_elements_on_screen()` to find the element and check its placeholder/hint attribute matches `expected_text`.
+- **`pattern_match`:** Use `mobile_list_elements_on_screen()`. Test each matching element's text against the `pattern` regex. Pass if at least one element matches.
+- **`element_state`:** Use `mobile_list_elements_on_screen()` to find the element, then inspect its attributes for the `state_property` value:
+  - `enabled` / `disabled` → check `enabled` attribute
+  - `selected` / `not_selected` → check `selected` or `checked` attribute
+  - `focused` → check `focused` attribute
+  - `clickable` → check `clickable` attribute
+  Pass if attribute matches expected state.
+- **`element_count`:** Count elements matching `element_description` from `mobile_list_elements_on_screen()`. Compare using `operator` and `expected_count` (e.g., `count >= 1`).
+- **`list_item_count`:** Count all items in the list/collection described by `element_description`. Compare using `operator` and `expected_count`.
+- **`list_is_empty`:** Use `mobile_list_elements_on_screen()` and verify zero items match the list description.
+- **`content_description`:** Use `mobile_list_elements_on_screen()`. Find the element and verify its `content-desc` (Android) or `accessibilityLabel` (iOS) attribute matches `label_value`.
+- **`has_accessibility_label`:** Use `mobile_list_elements_on_screen()`. Find the element and verify its `content-desc` / `accessibilityLabel` attribute is non-empty. If `label_value` is set, verify it matches exactly.
+- **`value_matches_variable`:** Look up `variable_name` in the session variable map. Verify the element described by `element_description` contains text that matches the captured value. If `pattern` is also set, use it as a format hint to locate the relevant portion.
+- **`text_changed`:** Compare the element's current text (via `mobile_list_elements_on_screen()`) with its text at the previous assertion checkpoint. Pass if text differs.
+
+---
+
+**Tier 2 — Powered by `mobile_take_screenshot()` + AI visual analysis**
+
+For all Tier 2 assertions: take a screenshot, visually analyze it, and report pass/fail with a clear justification of what you observed.
+
+- **`screenshot_match`:** Compare the captured screenshot against the reference baseline. Use **semantic visual comparison** — focus on screen identity, presence/absence of key elements, text content, layout structure. Minor rendering differences (anti-aliasing, font smoothing) are acceptable within the `tolerance` threshold.
+- **`visual_state`:** Visually assess whether the screen is in the `expected_visual_state`: `loaded` (content visible, no spinners), `loading` (loading indicator present), `empty` (no content, empty state UI), or `error` (error message or error state visible).
+- **`element_fully_visible`:** Verify that the element described in `element_description` is fully visible in the viewport — not clipped, not scrolled off, no overlapping elements blocking it.
+- **`color_style`:** Locate the element described in `element_description`. Visually assess its dominant color. If `color_hex` is set, verify the element's color matches approximately. If `expected_theme` is set (`dark`/`light`), verify the element uses colors consistent with that theme.
+- **`screen_title`:** Read the navigation bar or screen title from the screenshot. Verify it matches `expected_text`.
+- **`alert_present`:** Verify that a system alert or modal dialog is visually present on screen.
+- **`alert_text`:** Verify a system alert/dialog is on screen, and read its primary text content. Pass if it matches `expected_text`.
+- **`toast_visible`:** This assertion polls during its step window; the toast may be transient. Take a screenshot at the moment of the step, look for a floating notification overlay. If visible, verify its text matches `expected_text`. If the toast has already disappeared, mark as `failed` and note it was transient.
+- **`keyboard_visible`:** Verify whether the system soft keyboard is visible at the bottom of the screen. Use `expected_visible: true` = must be shown, `false` = must be hidden.
+- **`dark_mode_active`:** Visually assess the overall screen appearance. Pass if the background is dark (dark mode) or light (light mode) as specified by `expected_theme`.
+- **`permission_dialog_shown`:** Verify that an OS-level permission request dialog is visible. If `permission_name` is set (e.g., `"camera"`, `"location"`), verify the dialog requests that specific permission.
 
 **Dynamic content:** If the reference `expected_state` marks content as `[dynamic:...]`, ignore those regions during comparison.
 

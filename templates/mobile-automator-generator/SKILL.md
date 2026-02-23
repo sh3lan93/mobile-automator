@@ -62,10 +62,21 @@ Parse the user's instructions into an ordered list of actions and preconditions.
 > loading (by seeing this message on the home screen 'Hello') -> validate user is
 > able to see the bottom navigation bar with 4 tabs home, orders, offers and more"
 
-**How to parse:**
+**How to parse — Two-Pass Semantic Intent Model:**
+
+**Pass 1 — Action vs. Assertion Classification:**
+For every instruction fragment, determine its grammatical intent:
+- **Action (do this):** Imperative/active verbs describing user interaction → "tap", "enter", "swipe", "scroll to", "wait for", "launch". → Record as a `step`.
+- **Assertion (this is true):** Declarative statements describing app/device state → "the button is disabled", "a toast shows 'Saved'", "the keyboard is visible", "dark mode is active". → Record as an `assertion`.
+
+> **Rule:** If you are unsure whether something is an action or an assertion, ask yourself: *"Does the user want the AI to DO something, or VERIFY something?"* Verification = assertion.
+
+**Pass 2 — Assertion Type Selection:**
+Once identified as an assertion, map to the most specific type using the decision table below.
+
 - Extract **preconditions** from context clues: "fresh install", "user doesn't have app before", "logged out", "no network" → record in `preconditions` array.
 - Extract **actions** from interaction language: "open", "tap", "enter", "swipe", "wait", "uninstall" → record as steps.
-- Extract **assertions** from validation language: "validate", "verify", "confirm", "should see", "is able to see" → record as assertions.
+- Extract **assertions** from ALL declarative state descriptions — not just explicit validation keywords.
 - Infer the **scenario name** from the description: "first app launch" → `first_app_launch`.
 
 ### 3. Execute & Record
@@ -82,23 +93,99 @@ For each step the user provided:
 **CRITICAL:** Always use `mobile_list_elements_on_screen()` before interacting. Never hardcode coordinates.
 
 ### 4. Handle Validation Steps
-When the user provides a validation step (e.g., "validate the welcome message shows 'Hi, there'"):
+When the user provides a validation step, or when a declarative statement about app state is detected:
 
 1. **Do NOT perform a UI action.** This is an assertion, not an interaction.
-2. Use `mobile_list_elements_on_screen()` to find the target element.
+2. Use `mobile_list_elements_on_screen()` or `mobile_take_screenshot()` as required by the assertion tier.
 3. Capture a screenshot as evidence.
-4. Record it as an assertion in the scenario JSON with the appropriate v2 type:
-   - Text verification → `element_text` assertion
-   - Element presence → `element_exists` assertion
-   - Element absence → `element_not_exists` assertion
-   - Visual state (loaded/loading/empty/error) → `visual_state` assertion
-   - Regex/pattern text match → `pattern_match` assertion (e.g., "contains a number followed by SAR")
-   - Count check → `element_count` assertion with an `operator` (e.g., `>=`, `==`)
-   - Cross-step captured value verification → `value_matches_variable` assertion
-   - Screenshot baseline comparison → `screenshot_match` assertion
-   - Button/label state changed (e.g., "Redeem" → "Redeemed") → `text_changed` assertion
+4. Record it as an assertion in the scenario JSON using the full **27-type decision table** below.
 5. Report the result:
-   > "Validation: Found element with text 'Hi, there' ✅ — recorded as assertion_id 'assert_welcome_message'."
+   > "Validation: Found element with text 'Hi, there' ✅ — recorded as `assert_welcome_message` (type: element_text)."
+
+#### Assertion Type Decision Table (27 types)
+
+Use the most specific type that matches the user's intent.
+
+**Category 1 — Element State (Tier 1: `mobile_list_elements_on_screen`)**
+
+| User intent / natural language | Type | Key fields |
+|---|---|---|
+| "the button is disabled / greyed out" | `element_state` | `state_property: "disabled"` |
+| "the button is enabled / active" | `element_state` | `state_property: "enabled"` |
+| "the checkbox is checked / toggle is on" | `element_state` | `state_property: "selected"` |
+| "the checkbox is unchecked / toggle is off" | `element_state` | `state_property: "not_selected"` |
+| "the field has focus / cursor is in the field" | `element_state` | `state_property: "focused"` |
+| "the button is clickable / tappable" | `element_state` | `state_property: "clickable"` |
+| "the element is visible on screen" (in viewport, not just in hierarchy) | `element_visible` | `expected_visible: true` |
+| "the element is not on screen / scrolled off" | `element_visible` | `expected_visible: false` |
+| "element is present / exists" | `element_exists` | — |
+| "element is absent / not present" | `element_not_exists` | — |
+
+**Category 2 — Text & Content (Tier 1: `mobile_list_elements_on_screen`)**
+
+| User intent / natural language | Type | Key fields |
+|---|---|---|
+| "the text is exactly 'X'" | `element_text` | `expected_value: "X"` |
+| "the text contains 'X' / includes 'X'" | `text_contains` | `expected_substring: "X"` |
+| "the field has placeholder / hint 'Enter email'" | `element_hint` | `expected_text: "Enter email"` |
+| "the field is not empty / has some text" | `text_not_empty` | — |
+| "text matches pattern / regex" | `pattern_match` | `pattern: "\\d+"` |
+| "the text changed from before" | `text_changed` | — |
+| "image has accessibility label 'X'" | `content_description` | `label_value: "X"` |
+
+**Category 3 — Count & Collections (Tier 1: `mobile_list_elements_on_screen`)**
+
+| User intent / natural language | Type | Key fields |
+|---|---|---|
+| "there are 3 items / X items in the list" | `list_item_count` | `expected_count: 3`, `operator: "=="` |
+| "the list is empty / no items shown" | `list_is_empty` | — |
+| "there are at least N items" | `element_count` | `operator: ">="`, `expected_count: N` |
+
+**Category 4 — Visual & Layout (Tier 2: `mobile_take_screenshot` + AI)**
+
+| User intent / natural language | Type | Key fields |
+|---|---|---|
+| "the full element is visible, not clipped" | `element_fully_visible` | — |
+| "the element/screen looks the same as before" | `screenshot_match` | `reference_screenshot: "..."` |
+| "the screen is loaded / in error / empty state" | `visual_state` | `expected_visual_state: "loaded"` |
+| "the button color is blue / #0057FF" | `color_style` | `color_hex: "#0057FF"` |
+
+**Category 6 — Navigation & Screen (Tier 2: `mobile_take_screenshot` + AI)**
+
+| User intent / natural language | Type | Key fields |
+|---|---|---|
+| "the screen/page title is 'Settings'" | `screen_title` | `expected_text: "Settings"` |
+| "a dialog / alert appeared" | `alert_present` | — |
+| "the alert says 'Are you sure?'" | `alert_text` | `expected_text: "Are you sure?"` |
+| "a toast / snackbar appeared saying 'Saved'" | `toast_visible` | `expected_text: "Saved"` |
+| "the keyboard is visible / showing" | `keyboard_visible` | `expected_visible: true` |
+| "the keyboard is dismissed / hidden" | `keyboard_visible` | `expected_visible: false` |
+
+**Category 9 — Accessibility (Tier 1: `mobile_list_elements_on_screen`)**
+
+| User intent / natural language | Type | Key fields |
+|---|---|---|
+| "the element has a screen reader label" | `has_accessibility_label` | `label_value: "..."` (optional) |
+
+**Category 7 — Data & Variables (Tier 1: session variable map)**
+
+| User intent / natural language | Type | Key fields |
+|---|---|---|
+| "the value equals the one captured earlier" | `value_matches_variable` | `variable_name: "..."` |
+
+**Category 10 — Platform-Specific (Tier 2: `mobile_take_screenshot` + AI)**
+
+| User intent / natural language | Type | Key fields |
+|---|---|---|
+| "the app asked for camera / location / microphone permission" | `permission_dialog_shown` | `permission_name: "camera"` |
+| "dark mode is active / the screen is dark" | `dark_mode_active` | `expected_theme: "dark"` |
+
+#### Auto-Assertion Rule
+
+After executing any **major state-changing action** (`tap`, `type` on a form submit, `press_button`), automatically observe the resulting screen and generate a `visual_state: "loaded"` or `element_exists` assertion for the new screen that appears — even if the user didn't explicitly ask for one. Mark these assertions with `[auto-generated]` in their `description` field so the user can review or remove them.
+
+> Example: After executing `tap_login`, the screen transitions to the Home dashboard. Auto-generate:
+> `{ "id": "assert_home_loaded", "type": "visual_state", "expected_visual_state": "loaded", "description": "[auto-generated] Home screen loaded after login" }`
 
 ### 5. Save Scenario
 After all steps are executed and recorded:
