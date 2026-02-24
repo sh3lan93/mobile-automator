@@ -71,9 +71,13 @@
     "tags": {
       "type": "array",
       "items": {
-        "type": "string"
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]*$",
+        "maxLength": 20
       },
-      "description": "Categorization tags for filtering (e.g., 'smoke', 'regression', 'loyalty', 'checkout')"
+      "maxItems": 10,
+      "uniqueItems": true,
+      "description": "Categorization tags for filtering. Format: lowercase alphanumeric + hyphens only (e.g., 'smoke', 'regression', 'p0', 'auth'). Max 10 tags per scenario, max 20 characters per tag."
     },
     "variables": {
       "type": "object",
