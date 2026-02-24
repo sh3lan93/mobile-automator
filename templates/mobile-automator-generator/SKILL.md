@@ -190,19 +190,27 @@ After executing any **major state-changing action** (`tap`, `type` on a form sub
 ### 5. Save Scenario
 After all steps are executed and recorded:
 
-1. Assemble the JSON scenario following **schema v2** at `.gemini/skills/mobile-automator-generator/references/scenario_schema_v2.json`.
-2. **Always include `"$schema_version": "2.0"` as the first field in the JSON.**
-3. **Use named string IDs** for all steps and assertions (snake_case, e.g., `"id": "tap_login"`) — never integers.
-4. **Assertions reference steps by name** (`"after_step": "tap_login"`) — never by number.
-5. Auto-populate metadata from the current session:
+1. **Tag Capture:** Ask the user what tags describe this scenario:
+   > "What tags describe this scenario? (optional, press Enter to skip)"
+   > Standard tags: `smoke`, `regression`, `critical`, `p0`, `p1`, `fast`, `slow`, `flaky`, `wip`
+   > Feature tags (examples): `auth`, `checkout`, `profile`, `search`, `onboarding`
+   > You can also define custom tags (lowercase, alphanumeric + hyphens only, max 20 chars each).
+   - Parse user's comma-separated input into a `tags` array.
+   - Validate each tag against `^[a-z0-9][a-z0-9-]*$` and length <= 20. If invalid, show error and re-prompt.
+   - If user skips, set `tags: []`.
+2. Assemble the JSON scenario following **schema v2** at `.gemini/skills/mobile-automator-generator/references/scenario_schema_v2.json`. Include the `tags` array.
+3. **Always include `"$schema_version": "2.0"` as the first field in the JSON.**
+4. **Use named string IDs** for all steps and assertions (snake_case, e.g., `"id": "tap_login"`) — never integers.
+5. **Assertions reference steps by name** (`"after_step": "tap_login"`) — never by number.
+6. Auto-populate metadata from the current session:
    - `app_version` — from the installed app
    - `environment` — ask the user or use `default_environment` from config
    - Do NOT include `device_model`, `api_level`, or `timestamp` in metadata — these belong in the result schema, not the scenario.
-6. Save to `mobile-automator/scenarios/<scenario_id>.json`.
-7. Present summary:
-   > "✅ Scenario saved: `mobile-automator/scenarios/login_happy_path.json`
-   > - Schema: v2 | Steps: 6 | Checkpoints: 6 screenshots | Assertions: 1
-   > - Screenshots: `mobile-automator/screenshots/login_happy_path/`"
+7. Save to `mobile-automator/scenarios/<scenario_id>.json`.
+8. Present summary:
+   > "✅ Scenario saved: `mobile-automator/scenarios/<scenario_id>.json`
+   > - Schema: v2 | Steps: [N] | Checkpoints: [N] screenshots | Assertions: [N] | Tags: [tag1, tag2]
+   > - Screenshots: `mobile-automator/screenshots/<scenario_id>/`"
 
 ## Step Translation Guide (v2)
 Translate user language to mobile-mcp tools and v2 schema actions:

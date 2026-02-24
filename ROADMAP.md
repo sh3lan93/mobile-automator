@@ -7,7 +7,7 @@ Features and improvements currently on the radar for Mobile Automator.
 ## 🎯 Near Term
 
 ### Testing Features
-- [ ] Tag-based test filtering and execution
+- [x] Tag-based test filtering and execution
 - [ ] Test suite organization (folders, groups)
 - [ ] Retry logic for flaky tests
 - [ ] Screenshot comparison improvements
