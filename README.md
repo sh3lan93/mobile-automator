@@ -240,6 +240,44 @@ Uses AI vision to compare screenshots semantically, not pixel-by-pixel.
 | **`/mobile-automator:generate`** | **Record** test scenarios from natural language (do this once per test) | `> /mobile-automator:generate` | • Connects to your device/emulator<br>• Prompts for test steps in natural language<br>• Executes steps on device while recording<br>• Captures reference screenshots<br>• Generates JSON scenario file (schema v2)<br>**Output:** `mobile-automator/scenarios/<scenario_id>.json` |
 | **`/mobile-automator:execute`** | **Replay** saved test scenarios (run repeatedly for regression testing) | `> /mobile-automator:execute <scenario_id>`<br><br>Examples:<br>• Single: `execute login_flow`<br>• Multiple: `execute login_flow checkout_flow`<br>• All: `execute` (interactive) | • Replays scenario steps on connected device<br>• Captures actual screenshots for comparison<br>• Validates assertions (element exists, text matches, visual state)<br>• Detects flakiness and retries automatically<br>• Generates detailed pass/fail report with diagnostics<br>**Output:** `mobile-automator/results/<run_id>.json` |
 | **`/mobile-automator:migrate`** | **Migrate** a v1 scenario JSON to schema v2 format | `> /mobile-automator:migrate <scenario_id>`<br><br>Examples:<br>• `migrate login_flow`<br>• `migrate` (interactive file selection) | • Analyzes existing v1 scenario<br>• Auto-converts step IDs, assertion IDs, metadata<br>• Interactively resolves ambiguous waits<br>• Creates `.v1.bak` backup before any changes<br>• Outputs valid schema v2 scenario |
+| **`/mobile-automator:list-tags`**| Lists all tags currently used in test scenarios | `> /mobile-automator:list-tags` | • Scans all JSON scenarios<br>• Displays tag counts<br>• Differentiates standard vs custom tags |
+
+## 🏷️ Tag-Based Filtering
+
+Mobile Automator supports tagging scenarios logically (e.g. `smoke`, `regression`, `critical`) so you can execute specific subsets of your test suite.
+
+### Adding Tags
+During scenario generation (`/mobile-automator:generate`), the agent will ask you what tags describe the scenario before saving it. You can also manually add tags to the `scenario.json` file:
+
+```json
+{
+  "$schema_version": "2.0",
+  "scenario_id": "login_flow",
+  "tags": ["smoke", "auth", "p0"],
+  // ...
+}
+```
+
+### Filtering Executions
+Use the `--tag` parameter with `/mobile-automator:execute` to filter runs:
+
+- **Single tag:** `/mobile-automator:execute --tag smoke`
+- **Multiple tags (AND):** `/mobile-automator:execute --tag smoke,critical` (matches scenarios with BOTH tags)
+- **Multiple tags (OR):** `/mobile-automator:execute --tag smoke|regression` (matches scenarios with ANY tag)
+- **Exclude tags (NOT):** `/mobile-automator:execute --tag !flaky` (excludes scenarios with this tag)
+
+If you run `/mobile-automator:execute` without arguments, the interactive menu will automatically group your scenarios by their primary tag.
+
+### Standard Tag Registry
+We recommend standardizing on these common tags:
+- `smoke`: Quick validation of critical paths
+- `regression`: Full feature validation
+- `critical`, `p0`, `p1`: Priority levels
+- `fast`, `slow`: Execution time indicators
+- `flaky`: Network/timing dependent tests
+- `wip`: Under development
+
+---
 
 ### 📝 The Workflow
 

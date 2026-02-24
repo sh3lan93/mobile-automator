@@ -74,6 +74,22 @@ xcrun simctl boot "iPhone 15 Pro"
 
 ---
 
+## Tag Filtering Issues
+
+### ❌ "Invalid tag format" error
+- **Cause:** Tags must contain only lowercase letters, numbers, and hyphens (a-z0-9-), and be under 20 characters. Spaces, underscores, and uppercase letters are not allowed.
+- **Fix:** Update your `scenario.json` file to fix the invalid tag (e.g. change `"Smoke_Test"` to `"smoke-test"`).
+
+### ❌ "No scenarios found with tag expression"
+- **Cause:** No scenarios matched your exact tag filter expression.
+- **Fix:** Run `/mobile-automator:list-tags` to see exactly which tags exist in your workspace. Check your spelling. For AND logic (comma), the scenario must have *all* listed tags. Try an OR filter (`|`) if you want scenarios that have *any* of the tags.
+
+### ❌ Scenario doesn't show up in tag groups
+- **Cause:** The scenario does not have a `tags` array in its JSON, or the array is empty.
+- **Fix:** Manually add `"tags": ["some-tag"]` to the scenario's JSON file.
+
+---
+
 ## Getting More Help
 
 If you encounter an issue not listed here:

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.0] - 2026-02-24
+
+### ✨ Added
+
+- **Tag-Based Filtering** — Organize, filter, and execute specific subsets of your scenarios using tags.
+  - Added interactive prompt for tags during test scenario generation.
+  - Added `--tag` filter to `execute` command with support for AND (`smoke,critical`), OR (`smoke|regression`), and NOT (`!flaky`).
+  - Added new `/mobile-automator:list-tags` command to view the tag registry and counts across the testing suite.
+  - Interactive execution menu now groups scenarios by primary tags when run without arguments.
+  - Strict format validation enforcing lowercase alphanumeric + hyphens across schemas and commands.
+
+---
+
 ## [0.2.0] - 2026-02-23
 
 ### ✨ Added
