@@ -97,35 +97,69 @@ After loading the scenario file(s) to execute (resolved in section 2.0), for eac
 **CRITICAL: Do NOT auto-select scenarios. If no scenario is specified in the command, ALWAYS show the interactive menu.**
 
 1.  **Check if the user specified scenarios in the command:**
-    - The command format is: `/mobile-automator:execute [scenario_name]` or `/mobile-automator:execute [tag]`
-    - Examples of specified scenarios:
+    - The command format is: `/mobile-automator:execute [scenario_name]` or `/mobile-automator:execute --tag <expression>`
+    - Examples:
       - `/mobile-automator:execute login_flow` → scenario specified
-      - `/mobile-automator:execute --tag smoke` → tag specified
+      - `/mobile-automator:execute --tag smoke` → single tag filter
+      - `/mobile-automator:execute --tag smoke,critical` → multi-tag AND filter
+      - `/mobile-automator:execute --tag smoke|regression` → multi-tag OR filter
+      - `/mobile-automator:execute --tag !flaky` → NOT filter (exclude tag)
       - `/mobile-automator:execute` → NO scenario specified
 
-2.  **If the user specified scenarios** in the command (by name, ID, or tag), resolve them:
-    - By name/ID: match against `scenario_id` in each JSON file.
-    - By tag: filter scenarios whose `tags` array contains the specified tag (e.g., `smoke`, `regression`).
+2.  **If the user specified a `--tag` parameter:**
+    - **Step A (Format Validation):** Validate each extracted tag string against `^[a-z0-9][a-z0-9-]*$` (max 20 chars). If any tag is invalid, halt with error:
+      > "❌ Invalid tag format: '[invalid_tag]'
+      > Tags must be: lowercase (a-z), alphanumeric + hyphens, max 20 characters
+      > Valid examples: smoke, regression, p0"
+    - **Step B (Filtering):** Filter all available `.json` scenarios based on the tag expression:
+      - `tag1,tag2` (AND): Scenario must have BOTH tags in its `tags` array.
+      - `tag1|tag2` (OR): Scenario must have AT LEAST ONE tag in its `tags` array.
+      - `!tag1` (NOT): Scenario must NOT have the tag in its `tags` array.
+    - **Step C (No Matches):** If the filtered list is empty, halt with error:
+      > "❌ No scenarios found with tag expression: [--tag value]
+      > Available tags in your test suite: [list top 3-5 tags with counts]
+      > Suggestion: Check tag spelling or run `/mobile-automator:list-tags` to see all tags."
+    - **Step D (Confirmation):** If matches found, confirm execution:
+      > "I'll execute [N] scenario(s) matching your tag expression: [--tag value]
+      > Proceed? (yes/no)"
+      WAIT for "yes" before executing.
+
+3.  **If the user specified scenarios by name/ID:**
+    - Match against `scenario_id` in each JSON file.
     - If no matches → "No scenarios found matching '[query]'. Available scenarios: [list]" → Halt.
+    - Confirm execution and WAIT for "yes".
 
-3.  **If the user specified NO scenarios** (command was just `/mobile-automator:execute`), present the available list:
-    > "Available scenarios:"
-    > [numbered list with scenario name, description, and tags]
-    >
-    > "Which scenarios should I execute?"
-    >
-    > A) All scenarios
-    > B) Select by number (e.g., 1, 3, 5)
-    > C) Filter by tag (e.g., `smoke`)
+4.  **If the user specified NO scenarios** (command was just `/mobile-automator:execute`), present a tag-grouped interactive menu:
+    - Group all available scenarios by their primary tag, and tally an "untagged" group.
+    - Present the menu exactly like this example:
+      > "Available scenarios (grouped by tags):
+      > 
+      > 🏷️ smoke (3):
+      >   1. login_flow — Login with valid credentials
+      >   2. checkout_flow — Complete purchase flow
+      >   3. search_basic — Basic product search
+      > 
+      > 🏷️ regression (8):
+      >   4. login_edge_cases — Login with invalid credentials
+      >   ...
+      > 
+      > (untagged) (2):
+      >   12. onboarding_flow — First-time onboarding
+      >   ...
+      > 
+      > A) Run all [tag] tests (e.g., 'A smoke')
+      > B) Filter by multiple tags (e.g., 'B smoke,critical')
+      > C) Select by number (e.g., 'C 1,3,5')
+      > D) Run all scenarios"
 
-4.  **WAIT for user selection.** Do NOT proceed until the user responds with A, B, or C.
+5.  **WAIT for user selection.** Do NOT proceed until the user responds.
 
-5.  **After user selects**, confirm the final selection:
+6.  **After user selects from the menu**, map their choice back to a scenario list. Confirm the final selection:
     > "I'll execute the following [N] scenario(s):"
     > [list selected scenario names]
     > "Proceed? (yes/no)"
 
-6.  **WAIT for user confirmation.** Only proceed after explicit "yes" response.
+7.  **WAIT for user confirmation.** Only proceed after explicit "yes" response.
 
 ---
 
