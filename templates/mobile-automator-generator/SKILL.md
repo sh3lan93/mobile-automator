@@ -68,6 +68,17 @@ If a TestRail URL is detected:
 4. **Resolve element descriptions** using `mobile_list_elements_on_screen()`
 5. **Generate scenario JSON** with `testrail` metadata
 
+### API Error Handling
+
+If `testrail_get_case()` fails:
+
+- **Case not found (404)**: Log error with case ID and project ID. Return error message to user asking them to verify the TestRail case ID and project ID are correct. Do NOT block test execution — allow user to proceed with manual scenario creation as fallback.
+- **Authentication failed (403)**: Log error and ask user to verify `TESTRAIL_API_KEY` and `TESTRAIL_DOMAIN` environment variables are correctly set. Check that API credentials have permission to access the requested project.
+- **Network error or timeout**: Log warning and suggest user check internet connection and verify TestRail instance availability. Ask user if they want to retry or proceed with manual scenario creation.
+- **Other API errors (5xx)**: Log error and suggest contacting TestRail support if the error persists. Allow graceful degradation to manual scenario creation.
+
+**Graceful Degradation:** If TestRail API is unavailable or returns an error, always allow the user to continue with manual scenario creation. The tool should not be blocked by TestRail integration issues.
+
 ### Automation Hint Parsing
 
 TestRail step format:
@@ -81,10 +92,19 @@ Automation Hint: "type | find: username field | text: testuser"
 **Supported Actions:**
 - `launch_app | app: <app_name>`
 - `tap | find: <element_description> | wait_ms: <milliseconds>`
+- `long_press | find: <element_description> | duration_ms: <milliseconds>`
+- `double_tap | find: <element_description>`
 - `type | find: <element_description> | text: <text_to_type>`
 - `assert | find: <element_description> | contains_text: <text>` OR `exact_text: <text>` OR `element_exists: true/false`
 - `swipe | find: <element_description> | direction: up/down/left/right | distance_px: <pixels>`
-- etc.
+- `scroll_to_element | find: <element_description>`
+- `press_button | button: BACK/HOME/VOLUME_UP/VOLUME_DOWN/ENTER`
+- `open_url | url: <url>`
+- `wait_for_element | find: <element_description> | timeout_ms: <milliseconds>`
+- `wait_for_element_gone | find: <element_description> | timeout_ms: <milliseconds>`
+- `wait_for_loading_complete | timeout_ms: <milliseconds>`
+- `capture_value | find: <element_description> | variable: <variable_name>`
+- `clear_app_data`
 
 ### Converting Hints to Actions
 
@@ -101,7 +121,11 @@ For each automation hint, create a scenario action:
 }
 ```
 
-**Critical:** Use `mobile_list_elements_on_screen()` to resolve `find: element_description` to actual `element_id` on the current device/screen.
+**Critical:** Use `mobile_list_elements_on_screen()` to resolve `find: element_description` to actual `element_id` using this strategy:
+1. Search for exact text match (case-insensitive): `find: "Login button"` matches accessibility labels or display text exactly
+2. If no exact match found, search for substring match (case-insensitive)
+3. If multiple matches found, log warning and use the first match
+4. If no match found after both attempts, log error and create placeholder step with `element_id: "element_not_found__{description}"`
 
 ### Handling Element Resolution Failures
 
