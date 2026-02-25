@@ -266,7 +266,7 @@ Gather the following from the execution result JSON before syncing:
    - Blocked: Test could not run (device error, setup failure, precondition unmet)
 
 2. **Duration** → Execution time in milliseconds
-   - Calculate: `result.end_timestamp - result.start_timestamp`
+   - Calculate: `result.duration_seconds * 1000`
    - Ensure duration is a positive integer
 
 3. **Observations** → From execution result `observations` array

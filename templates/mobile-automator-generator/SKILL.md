@@ -90,16 +90,16 @@ Automation Hint: "type | find: username field | text: testuser"
 **Parse format:** `action_type | param1: value1 | param2: value2`
 
 **Supported Actions:**
-- `launch_app | app: <app_name>`
-- `tap | find: <element_description> | wait_ms: <milliseconds>`
-- `long_press | find: <element_description> | duration_ms: <milliseconds>`
+- `launch_app`
+- `tap | find: <element_description>`
+- `long_press | find: <element_description>`
 - `double_tap | find: <element_description>`
 - `type | find: <element_description> | text: <text_to_type>`
 - `assert | find: <element_description> | contains_text: <text>` OR `exact_text: <text>` OR `element_exists: true/false`
-- `swipe | find: <element_description> | direction: up/down/left/right | distance_px: <pixels>`
+- `swipe | find: <element_description> | direction: up/down/left/right`
 - `scroll_to_element | find: <element_description>`
-- `press_button | button: BACK/HOME/VOLUME_UP/VOLUME_DOWN/ENTER`
-- `open_url | url: <url>`
+- `press_button | value: BACK/HOME/VOLUME_UP/VOLUME_DOWN/ENTER`
+- `open_url | value: <url>`
 - `wait_for_element | find: <element_description> | timeout_ms: <milliseconds>`
 - `wait_for_element_gone | find: <element_description> | timeout_ms: <milliseconds>`
 - `wait_for_loading_complete | timeout_ms: <milliseconds>`
@@ -114,10 +114,9 @@ For each automation hint, create a scenario action:
 {
   "id": "step_1",
   "action": "type",
-  "params": {
-    "element_id": "username_field",
-    "text": "testuser"
-  }
+  "description": "Enter testuser in the username field",
+  "target": "username field",
+  "value": "testuser"
 }
 ```
 

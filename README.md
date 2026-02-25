@@ -308,7 +308,7 @@ Step 2: Enter username
 Automation Hint: type | find: username field | text: testuser@example.com
 
 Step 3: Tap Login button
-Automation Hint: tap | find: Login button | wait_ms: 1000
+Automation Hint: tap | find: Login button
 
 Step 4: Verify welcome screen
 Automation Hint: assert | find: welcome message | contains_text: Welcome
