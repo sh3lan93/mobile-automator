@@ -34,6 +34,100 @@ While recording, you also **passively observe and report** (but never add extra 
 - **Environments:** {{environments}}
 - **Automation:** `mobile-mcp` tools{{automation_extras}}.
 
+## TestRail Integration
+
+### Detecting TestRail Input
+
+When the user provides test generation input, determine if it's a TestRail URL:
+
+**TestRail URL Pattern:**
+```
+https://<domain>.testrail.io/index.php?/cases/view/<case_id>
+```
+
+**Extraction:**
+- Regex: `/cases/view\/(\d+)/` → Extract case_id
+- Domain: Extract from URL authority
+- Project ID: Parse from user input or TestRail API response
+
+**Example Detection:**
+```
+Input: "https://my-company.testrail.io/index.php?/cases/view/12345"
+→ Is TestRail URL: YES
+→ Case ID: C12345
+→ Project ID: P1 (from API or user input)
+```
+
+### Handling TestRail Cases
+
+If a TestRail URL is detected:
+
+1. **Fetch the test case** using `testrail_get_case(case_id, project_id)`
+2. **Parse automation hints** from each step's expected/description
+3. **Convert automation hints to actions** using the mapping below
+4. **Resolve element descriptions** using `mobile_list_elements_on_screen()`
+5. **Generate scenario JSON** with `testrail` metadata
+
+### Automation Hint Parsing
+
+TestRail step format:
+```
+Description: "Enter username on the login screen"
+Automation Hint: "type | find: username field | text: testuser"
+```
+
+**Parse format:** `action_type | param1: value1 | param2: value2`
+
+**Supported Actions:**
+- `launch_app | app: <app_name>`
+- `tap | find: <element_description> | wait_ms: <milliseconds>`
+- `type | find: <element_description> | text: <text_to_type>`
+- `assert | find: <element_description> | contains_text: <text>` OR `exact_text: <text>` OR `element_exists: true/false`
+- `swipe | find: <element_description> | direction: up/down/left/right | distance_px: <pixels>`
+- etc.
+
+### Converting Hints to Actions
+
+For each automation hint, create a scenario action:
+
+```json
+{
+  "id": "step_1",
+  "action": "type",
+  "params": {
+    "element_id": "username_field",
+    "text": "testuser"
+  }
+}
+```
+
+**Critical:** Use `mobile_list_elements_on_screen()` to resolve `find: element_description` to actual `element_id` on the current device/screen.
+
+### Handling Element Resolution Failures
+
+If an element cannot be found:
+- Log a warning with the element description
+- Create a step with a placeholder element_id (e.g., `element_description_not_resolved`)
+- Mark the step with a comment: `// WARNING: Element "username field" could not be found on screen`
+- The scenario can still be executed but will likely fail at this step
+
+### Storing TestRail Metadata
+
+When generating from TestRail, add `testrail` object to scenario root:
+
+```json
+{
+  "$schema_version": "2.0",
+  "testrail": {
+    "case_id": "C12345",
+    "project_id": "P1",
+    "case_url": "https://my-company.testrail.io/index.php?/cases/view/12345"
+  },
+  "name": "Login Flow",
+  "steps": [...]
+}
+```
+
 ## Recording Workflow
 
 ### 1. Pre-flight
@@ -234,6 +328,30 @@ Translate user language to mobile-mcp tools and v2 schema actions:
 | "wait until loaded", "wait for shimmer to stop", "wait for loading to complete" | `wait_for_loading_complete` | Poll `mobile_take_screenshot` + visual check | Set `wait_config.indicator` to match project's loading style (shimmer/spinner/skeleton) |
 | "capture the [value/text/amount]", "remember this value" | `capture_value` | `mobile_list_elements_on_screen` | Use `capture_to` to store in a named variable |
 | "validate", "verify", "check", "confirm", "should see", "is able to see" | assertion | `mobile_list_elements_on_screen` + `mobile_take_screenshot` | |
+
+## Implementation Logic
+
+### Main Generation Flow
+
+```pseudocode
+1. Accept user input (TestRail URL or natural language steps)
+2. If input matches TestRail URL pattern:
+   a. Extract case_id and project_id from URL
+   b. Call testrail_mcp.testrail_get_case(case_id, project_id)
+   c. For each step in response:
+      i. Parse automation hint (action_type | params)
+      ii. For each "find: element_description":
+          - Call mobile_list_elements_on_screen()
+          - Match element_description to actual elements
+          - Resolve to element_id (log warnings if ambiguous)
+      iii. Create scenario action from hint
+   d. Generate scenario JSON with testrail metadata
+   e. Return scenario
+3. Else (manual input):
+   a. Parse natural language steps
+   b. Generate scenario JSON without testrail metadata
+   c. Return scenario
+```
 
 ### Detecting and Encoding v2 Patterns
 
