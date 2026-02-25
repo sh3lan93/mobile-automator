@@ -190,14 +190,14 @@ After executing any **major state-changing action** (`tap`, `type` on a form sub
 ### 5. Save Scenario
 After all steps are executed and recorded:
 
-1. **Tag Capture:** Ask the user what tags describe this scenario:
-   > "What tags describe this scenario? (optional, press Enter to skip)"
-   > Standard tags: `smoke`, `regression`, `critical`, `p0`, `p1`, `fast`, `slow`, `flaky`, `wip`
-   > Feature tags (examples): `auth`, `checkout`, `profile`, `search`, `onboarding`
-   > You can also define custom tags (lowercase, alphanumeric + hyphens only, max 20 chars each).
-   - Parse user's comma-separated input into a `tags` array.
-   - Validate each tag against `^[a-z0-9][a-z0-9-]*$` and length <= 20. If invalid, show error and re-prompt.
-   - If user skips, set `tags: []`.
+1. **Tag Capture:** Use the `ask_user` tool to capture tags for the scenario.
+   - Question Type: `text`
+   - Header: `Tags`
+   - Question: `What tags describe this scenario? (optional)`
+   - Placeholder: `e.g., smoke, auth, p0`
+   - When the tool returns the answers, parse the comma-separated input into a `tags` array.
+   - Validate each tag against `^[a-z0-9][a-z0-9-]*$` and length <= 20. If invalid, show an error and re-prompt using `ask_user`.
+   - If user leaves it blank or dismisses, set `tags: []`.
 2. Assemble the JSON scenario following **schema v2** at `.gemini/skills/mobile-automator-generator/references/scenario_schema_v2.json`. Include the `tags` array.
 3. **Always include `"$schema_version": "2.0"` as the first field in the JSON.**
 4. **Use named string IDs** for all steps and assertions (snake_case, e.g., `"id": "tap_login"`) — never integers.

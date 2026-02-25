@@ -7,7 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.1] - 2026-02-25
+
+### 🔄 Changed
+
+- **Native Prompts** — Migrated user interaction prompts across `setup` and `generate` flows to use the structured `ask_user` tool natively.
+
+---
+
 ## [0.3.0] - 2026-02-24
+
 
 ### ✨ Added
 
@@ -513,4 +522,4 @@ Apache License 2.0
 
 ---
 
-**Mobile Automator 0.1.1** - Built with ❤️ for mobile QA engineers
+**Mobile Automator 0.3.1** - Built with ❤️ for mobile QA engineers

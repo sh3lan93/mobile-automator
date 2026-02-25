@@ -98,33 +98,18 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
         - If none of the above match → Platform = `unknown`
 
 4.  **Handle Unknown Platform:**
-    -   If platform is `unknown`, ask the user:
-        > "I couldn't automatically detect your mobile platform. What platform is this project?"
-        >
-        > A) Android
-        > B) iOS
-        > C) Flutter
-        > D) Kotlin Multiplatform (KMP)
-        > E) Compose Multiplatform (CMP)
-        > F) React Native
-        >
-        > Please respond with A, B, C, D, E, or F.
-    -   **ABSOLUTE REQUIREMENT: END YOUR TURN HERE.**
-    -   **DO NOT PROCEED until the user responds with their platform selection.**
-    -   **Your response MUST end after asking this question.**
-    -   The user will respond in the next message, then use their response to set the platform.
+    -   If platform is `unknown`, use the `ask_user` tool (type: `choice`) to ask the user:
+        - Header: `Platform`
+        - Question: `I couldn't automatically detect your mobile platform. What platform is this project?`
+        - Options: Add options for `Android`, `iOS`, `Flutter`, `Kotlin Multiplatform (KMP)`, `Compose Multiplatform (CMP)`, and `React Native`.
+    -   Wait for the tool response in the same turn, and use it to set the platform.
 
-5.  **Confirm Detection:** Present the detected platform to the user:
-    > "Detected platform: **[platform]**. Is this correct?"
-    >
-    > A) Yes, this is correct.
-    > B) No, let me specify the correct platform.
-    -   **ABSOLUTE REQUIREMENT: END YOUR TURN HERE.**
-    -   **DO NOT PROCEED until the user responds.**
-    -   **Your response MUST end after asking this question.**
-    -   The user will respond in the next message.
-    -   If the user selects A → proceed to step 6.
-    -   If the user selects B → present the platform list from step 4, END YOUR TURN, wait for their choice, then update the platform.
+5.  **Confirm Detection:** Use the `ask_user` tool (type: `yesno`) to confirm with the user:
+    - Header: `Platform`
+    - Question: `Detected platform is [platform]. Is this correct?`
+    - Wait for the tool response in the same turn.
+    - If the user selects Yes → proceed to step 6.
+    - If the user selects No → use `ask_user` (type: `choice`) with the platform list from step 4, wait for their choice, then update the platform.
 
 6.  **Create Initial Directory and State:**
     -   Execute `mkdir -p mobile-automator`.
@@ -170,26 +155,18 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
 4.  **Compile Environment List:** From the scan, compile a deduplicated list of environments found. If no environments are detected, use the default set: `["production", "staging", "development"]`.
 
 ### 3.2 User Confirmation
-1.  **Present Findings:**
-    > "I found the following environments in your project:"
-    >
-    > [List of discovered environments]
-    >
-    > "Would you like to proceed with these?"
-    >
-    > A) Yes, these are correct.
-    > B) I need to add or remove environments.
-    >
-    > Please respond with A or B.
+1.  **Present Findings:** Use the `ask_user` tool (type: `choice`) to confirm findings:
+    - Header: `Environments`
+    - Question: `I found the following environments: [List of discovered environments]. Would you like to proceed with these, or specify your own?`
+    - Option 1 Label: `Yes, proceed`
+    - Option 1 Description: `Use the detected environments`
+    - Option 2 Label: `No, specify manually`
+    - Option 2 Description: `Add or remove environments`
 
-2.  **ABSOLUTE REQUIREMENT: END YOUR TURN HERE.**
-    - **DO NOT proceed to step 3 until the user responds.**
-    - **Your response MUST end after asking for A or B.**
-    - The user will respond in the next message.
-
-3.  **Handle User Response:**
-    - If the user selects A → proceed to step 4.
-    - If the user selects B → ask them to specify the correct environment list, WAIT for their response, then proceed to step 4.
+2.  **Handle User Response:**
+    - Wait for the tool response in the same turn.
+    - If the user selects Option 1 → proceed to step 4.
+    - If the user selects Option 2 → use `ask_user` (type: `text`) to ask them to type the correct environment list (comma-separated), wait for their response, then proceed to step 4.
 
 4.  **Update State:**
     -   Write `mobile-automator/setup_state.json` with:
@@ -260,44 +237,18 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
         - Store both.
 
 4.  **Handle Not Found:**
-    -   If the package name could not be inferred, ask the user:
-        > "I couldn't find the app package name in your build files. Please provide it manually."
-        >
-        > - For Android: the `applicationId` (e.g., `com.example.myapp`)
-        > - For iOS: the `Bundle Identifier` (e.g., `com.example.myapp`)
-        > - For cross-platform: provide both if applicable.
-    -   **ABSOLUTE REQUIREMENT: END YOUR TURN HERE.**
-    -   **DO NOT PROCEED until the user responds with the package information.**
-    -   **Your response MUST end after asking for the package name.**
-    -   The user will respond in the next message.
+    -   If the package name could not be inferred, use the `ask_user` tool (type: `text`) to ask for it:
+        - Header: `App Package`
+        - Question: `I couldn't find the app package name. Please provide it (e.g. com.example.myapp).`
+        - Placeholder: `applicationId for Android, Bundle ID for iOS`
+    -   Wait for the tool response in the same turn and use it.
 
-5.  **Confirm Findings:** Present the inferred package(s) to the user:
-
-    **For Android with multiple environments (product flavors):**
-    > "Detected app packages for each environment:"
-    > - **demoStaging:** `com.example.myapp.demo.staging`
-    > - **demoProd:** `com.example.myapp.demo`
-    > - **releaseStaging:** `com.example.myapp.staging`
-    > - **releaseProduction:** `com.example.myapp`
-    >
-    > A) Yes, these are correct.
-    > B) No, let me specify the correct packages.
-
-    **For iOS or simple Android (no flavors):**
-    > "Detected app package:"
-    > - **Android:** `com.example.myapp`
-    > - **iOS:** `com.example.myapp`
-    >
-    > A) Yes, this is correct.
-    > B) No, let me specify the correct package.
-
-    -   **ABSOLUTE REQUIREMENT: END YOUR TURN HERE.**
-    -   **DO NOT PROCEED until the user responds with A or B.**
-    -   **Your response MUST end after asking for confirmation.**
-    -   The user will respond in the next message.
-    -   If the user selects A → proceed to step 6.
-    -   If the user selects B → ask them for the correct package name(s), END YOUR TURN, wait for their response, then proceed to step 6.
-    -   **IMPORTANT:** For Android with flavors, if the user corrects the packages, ask them to provide the full package ID for each environment, END YOUR TURN, wait for their response, then proceed to step 6.
+5.  **Confirm Findings:** Use the `ask_user` tool (type: `yesno`) to present the inferred package(s) to the user:
+    - Header: `App Package`
+    - Question: format it clearly based on whether it is single or multi-environment. Example: `Detected app package(s): [packages]. Is this correct?`
+    - Wait for the tool response in the same turn.
+    - If Yes → proceed to step 6.
+    - If No → use `ask_user` (type: `text`) to ask them to type the correct package name(s), wait for their response, then proceed to step 6.
 
 6.  **Update State:**
     -   Write `mobile-automator/setup_state.json` with:
@@ -423,56 +374,39 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
         - Compile a list of found indicator class/widget names.
         - If none found → set to `"common loading indicators (progress bars, spinners, shimmer effects)"`
 
-### 5.2 Present Findings and Gather Missing Information
+### 5.2 Gather Missing Information and Confirm
 
-**CRITICAL: This is a TWO-STEP sequential process executed across MULTIPLE conversation turns.**
+**CRITICAL: Consolidate data gathering using the `ask_user` tool.**
 
-#### Step 1: Confirm Auto-Detected Values
-1.  **Present ALL auto-detected values** to the user in a message:
-    > "I've gathered the following from your project files:"
-    >
-    > - **Project Name:** [detected]
-    > - **Platform Details:** [detected]
-    > - **Build System:** [detected]
-    > - **Build Command:** [detected]
-    > - **Protected Directories:** [detected]
-    > - **Architecture:** [detected or "unknown — couldn't infer"]
-    > - **Business Domain:** [detected or "unknown — couldn't infer"]
-    > - **Loading Indicators:** [detected list or "common defaults"]
+1.  **Prepare a batch of questions for `ask_user`:** You can send up to 4 questions in a single `ask_user` call. Evaluate what is missing and what needs confirmation.
+    
+    **Question 1: Confirm Auto-Detected Values (type: `yesno` or `choice`)**
+    Present ALL auto-detected values in the `question` field (or `description` if UI permits, else summarize).
+    - Header: `Project Data`
+    - Question: `Gathered: [Project Name], [Platform], [Build Command], [Protected Dirs], [Loading Indicators]. Are these correct? If no, please let me know next.`
 
-2.  **If any values are marked "unknown", ask the user to provide them** using natural language:
-    > - Architecture: "What is your app's architecture pattern?" (e.g., "MVVM with Clean Architecture", "BLoC pattern")
-    > - Business Domain: "Describe your app's business domain in one sentence." (e.g., "food delivery marketplace")
+    **Question 2: Missing 'Architecture' (type: `text`, ONLY IF UNKNOWN)**
+    - Header: `Architecture`
+    - Question: `What is your app's architecture pattern?`
+    - Placeholder: `e.g. MVVM with Clean Architecture`
 
-3.  **For detected values, ask for confirmation:**
-    > "Are these correct? Reply with any corrections, or say 'looks good' to continue."
+    **Question 3: Missing 'Business Domain' (type: `text`, ONLY IF UNKNOWN)**
+    - Header: `Domain`
+    - Question: `Describe your app's business domain in one sentence.`
+    - Placeholder: `e.g. food delivery marketplace`
 
-4.  **ABSOLUTE REQUIREMENT: END YOUR TURN HERE.**
-    - **DO NOT ask any other questions in this turn.**
-    - **DO NOT proceed to Step 2.**
-    - **DO NOT execute any more steps.**
-    - **Your response MUST end after asking for confirmation.**
-    - The user will respond in the next message.
+    **Question 4: Business-Critical Paths (type: `text`, ALWAYS ASK)**
+    - Header: `Critical Paths`
+    - Question: `What are the business-critical user paths in your app?`
+    - Placeholder: `e.g. onboarding, login, checkout`
 
-5.  **After receiving the user's response:**
-    - Apply any corrections the user provides.
-    - If the user says "looks good" or confirms → proceed to Step 2.
-
-#### Step 2: Ask for Business-Critical Paths (SEPARATE TURN)
-6.  **Only execute this step AFTER the user has confirmed Step 1 values.**
-
-7.  **Ask the user:**
-    > **"What are the business-critical user paths in your app?"**
-    > (e.g., "onboarding, login, food ordering, payment, order tracking")
-
-8.  **ABSOLUTE REQUIREMENT: END YOUR TURN HERE.**
-    - **DO NOT proceed to section 6.0 or any other steps.**
-    - **Your response MUST end after asking this question.**
-    - The user will respond in the next message.
-
-9.  **After receiving the user's response:**
-    - Record their answer for use in skill generation.
-    - THEN and ONLY THEN proceed to section 5.3.
+2.  **Execute `ask_user`:** Call the tool with the constructed questions array.
+    - Wait for the tool response in the same turn.
+    - If the user indicated the auto-detected values were incorrect in Q1, follow up with another `ask_user` (type: `text`) asking them for the corrections before proceeding.
+    
+3.  **After receiving all responses:**
+    - Record their answers for use in skill generation.
+    - Proceed to section 5.3.
 
 ### 5.3 Update State
 -   Write `mobile-automator/setup_state.json` with all collected data:
