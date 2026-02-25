@@ -13,6 +13,11 @@
         "@mobilenext/mobile-mcp@latest"
       ],
       "trust": true
+    },
+    "testRailMcpServer": {
+      "command": "uvx",
+      "args": ["testrail-mcp"],
+      "trust": true
     }
   }
 }
