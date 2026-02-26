@@ -234,6 +234,221 @@ When asked to run multiple scenarios:
 - Ignore errors — report build, install, or interaction failures immediately.
 - Assume a failure is a bug — check for flakiness and state context first.
 
+## TestRail Result Syncing
+
+**Format-Agnostic:** The TestRail syncing process works with scenarios generated from natural language TestRail steps, manual user input, or any source. The executor only cares that the scenario has `testrail` metadata — it doesn't depend on how the scenario was originally created.
+
+### Detecting TestRail-Sourced Scenarios
+
+After test execution completes, check if the scenario has `testrail` metadata. Load the executed scenario JSON and inspect its root level:
+
+```json
+{
+  "$schema_version": "2.0",
+  "id": "login_happy_path",
+  "testrail": {
+    "case_id": "C12345",
+    "project_id": "P1",
+    "case_url": "https://your-instance.testrail.io/index.php?/cases/view/12345"
+  },
+  "steps": [...]
+}
+```
+
+**If metadata exists:** Sync results to TestRail
+**If metadata absent:** Store results locally only (current behavior, backward compatible)
+
+### Collecting Execution Data
+
+Gather the following from the execution result JSON before syncing:
+
+1. **Status** → `"passed"` | `"failed"` | `"blocked"`
+   - Passed: All assertions passed, no failures recorded
+   - Failed: At least one assertion marked as failed
+   - Blocked: Test could not run (device error, setup failure, precondition unmet)
+
+2. **Duration** → Execution time in milliseconds
+   - Calculate: `result.duration_seconds * 1000`
+   - Ensure duration is a positive integer
+
+3. **Observations** → From execution result `observations` array
+   ```json
+   [
+     {
+       "type": "flakiness",
+       "message": "Step 4 failed initially — loading indicator was still visible. Passed on retry after 2s."
+     },
+     {
+       "type": "regression",
+       "message": "Step 3 assertion passed, but the 'Forgot Password' link visible in reference is no longer present."
+     }
+   ]
+   ```
+   Include all observations from the result, not just failures.
+
+4. **Device Info** → Collected during execution
+   ```json
+   {
+     "os": "Android 14",
+     "device_model": "Pixel 6",
+     "app_version": "1.2.3"
+   }
+   ```
+   Extract from `result.metadata.device` and `result.metadata.app_info`.
+
+5. **Failure Reason** → If status is `"failed"`
+   - Extract from the first failed assertion in `result.assertion_results[]`
+   - Format: `"Assertion [assertion_type]: [assertion_id] — [details]"`
+   - Example: `"Assertion element_exists: verify_login_button — Login button not found in element list"`
+   - Include the step ID where the failure occurred if available
+   - If multiple failures, include the most critical one (the first that blocked the test)
+
+6. **Screenshots** → If available
+   - Collect paths to all captured screenshots from the result run directory
+   - Array format: `["mobile-automator/results/<run_id>/screenshots/step_tap_login.png", ...]`
+   - Screenshots should be readable by the TestRail API (PNG/JPEG format)
+   - Only include screenshots that exist and are < 10MB each
+   - If a screenshot file is missing, skip it with a warning rather than failing the entire sync
+
+### Syncing to TestRail
+
+Once all data is collected, call the TestRail MCP tool to create a test run:
+
+```pseudocode
+// Call the TestRail MCP endpoint to create a test run
+result = call testrail_mcp.testrail_create_test_run(
+  project_id=scenario.testrail.project_id,
+  case_id=scenario.testrail.case_id,
+  status=determined_status,        // "passed" | "failed" | "blocked"
+  duration_ms=execution_duration,   // milliseconds
+  observations=observations_array,  // Array of {type, message}
+  device_info=device_info_object,   // {os, device_model, app_version}
+  failure_reason=failure_reason_string,  // null if status == "passed"
+  screenshots=screenshot_paths_array     // Array of file paths
+)
+
+// Log success
+Log: "✓ Test run created in TestRail: run_id={result.test_run_id}, case_id={scenario.testrail.case_id}"
+```
+
+**What this accomplishes:**
+- Bridges the gap between mobile-automator execution and TestRail's centralized test management
+- Automatically records execution results without manual entry
+- Preserves rich context (device info, observations, screenshots) in TestRail
+- Creates an audit trail for compliance and reporting
+
+### Error Handling — Graceful Degradation
+
+**If TestRail sync fails:**
+- Log a warning: `"⚠️ Warning: Could not sync results to TestRail (API error: {error_message})"`
+- **CRITICAL:** DO NOT block or fail the test execution
+- Results are still stored locally in `mobile-automator/results/<run_id>.json`
+- Test outcome (passed/failed) is determined by local execution only
+- Continue to display the final execution summary as normal
+- Suggest the user investigate TestRail connectivity (API token, project/case ID validity, network)
+
+**If screenshots are too large or attachment fails:**
+- Compress screenshots (standard PNG optimization, target < 5MB)
+- If still too large after compression, skip the failing screenshot with a warning
+- Continue sync with remaining data (status, duration, observations, device_info)
+- Always include status, duration, observations, and device_info — never fail sync entirely due to screenshot issues
+- Log: `"⚠️ Screenshot 'step_X.png' skipped (too large after compression)"`
+
+**If device_info is incomplete:**
+- Sync with available device fields (e.g., just OS if device model is unavailable)
+- Don't fail the sync due to missing optional metadata
+
+### Sync Verification Output
+
+After successful sync, output a verification message:
+
+```
+✓ Test execution complete
+  Scenario: login_happy_path
+  Status: PASSED
+  Duration: 5243ms
+  Assertions: 8/8 passed
+  ✓ Synced to TestRail
+    Project: P1
+    Case: C12345
+    New Run: TR98765
+    Observations: 2 (1 flakiness, 1 regression)
+```
+
+If TestRail sync failed (but test execution succeeded):
+
+```
+✓ Test execution complete
+  Scenario: checkout_flow
+  Status: FAILED
+  Duration: 3891ms
+  Assertions: 5/7 passed
+  ⚠️ Could not sync to TestRail: API connection error
+    (Results saved locally: mobile-automator/results/run_12345/result.json)
+    (Retry manually: /mobile-automator:sync-results)
+```
+
+### Implementation Logic (Pseudocode)
+
+```pseudocode
+// After all steps and assertions complete:
+
+1. Load execution result JSON from mobile-automator/results/<run_id>/result.json
+2. Determine execution status (passed/failed/blocked) from assertion results
+
+3. Check if scenario has TestRail metadata:
+   IF scenario.testrail exists:
+     a. Collect execution data:
+        i.   status = determined from assertion results
+        ii.  duration_ms = result.duration_seconds * 1000
+        iii. observations = collect all observations from result.observations[]
+        iv.  device_info = extract from result.metadata.device
+        v.   failure_reason = extract from first failed assertion (or null if passed)
+        vi.  screenshots = collect list of screenshot file paths
+
+     b. Prepare TestRail sync request:
+        - Validate all required fields (project_id, case_id, status)
+        - Ensure duration is positive integer
+        - Filter screenshots for existence and size
+
+     c. Call TestRail MCP:
+        result = testrail_mcp.testrail_create_test_run(...)
+
+     d. Handle response:
+        IF result.success:
+          - Log verification message with run_id
+          - Return execution report with sync confirmation
+        ELSE:
+          - Log graceful degradation warning
+          - Return execution report WITHOUT failing
+          - Continue to next scenario (if multi-scenario execution)
+
+   ELSE (no TestRail metadata):
+     - Skip TestRail sync
+     - Store results locally only
+     - Display normal execution summary
+
+4. Return final execution report with TestRail sync status
+```
+
+### TestRail Metadata Validation
+
+Before attempting sync, validate the scenario's TestRail metadata:
+
+```pseudocode
+IF scenario.testrail is missing:
+  SKIP_SYNC = true
+ELSE IF scenario.testrail.case_id is missing or empty:
+  SKIP_SYNC = true
+  Log: "⚠️ Scenario has testrail metadata, but case_id is missing"
+ELSE IF scenario.testrail.project_id is missing or empty:
+  SKIP_SYNC = true
+  Log: "⚠️ Scenario has testrail metadata, but project_id is missing"
+ELSE:
+  SKIP_SYNC = false
+  (Proceed with sync)
+```
+
 ## Resources
 - **mobile-automator/config.json**: Project configuration.
 - **.gemini/skills/mobile-automator-generator/references/scenario_schema_v2.json**: JSON schema v2 for test scenarios (default).

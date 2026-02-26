@@ -37,12 +37,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **New `!=` Comparison Operator** — Added support for the non-equality (`!=`) operator in assertion comparisons.
 - **Two-Pass Semantic Intent Model** — Introduced a two-pass workflow for parsing test generation instructions to yield more reliable test assertions.
 - **Schema Validation CI Workflow** — Added a GitHub Actions workflow that automatically validates the JSON syntax of all schemas, ensures Draft-07 conformance, and validates prototype scenarios against `scenario_schema_v2.json`.
+- **TestRail Integration** — Bi-directional sync with TestRail test case management
+  - Fetch test cases from TestRail via natural language step format with automation hints
+  - Auto-convert TestRail steps to mobile-automator scenario JSON
+  - Automatically sync test execution results back to TestRail
+  - Includes device info, observations, and screenshots in TestRail test runs
+- New MCP server: `testrail-mcp` for TestRail API access
+- Optional `testrail` metadata field in scenario_schema_v2.json for 1:1 case mapping
+- Environment variables `TESTRAIL_API_KEY` and `TESTRAIL_DOMAIN` for project-scoped configuration
 
 ### 🔄 Changed
 
 - **Clarified Assertion Behaviors** — Improved documentation and instructions around `element_visible` and `list_item_count` assertions.
 - **Skill Categories** — Reindexed skill categories within the project framework.
 - **Documentation Updates** — Updated Gemini CLI installation source instructions in `CONTRIBUTING.md` and refreshed the "Last updated" date in `ROADMAP.md`.
+- **Generator Skill Enhanced** — Detects and handles TestRail URLs for automated test case fetching
+- **Executor Skill Enhanced** — Syncs results back to TestRail when scenario has testrail metadata
+
+### ✅ Backward Compatible
+
+- Manual test generation unchanged — TestRail is entirely optional
+- Existing scenarios without `testrail` metadata work exactly as before
 
 ---
 

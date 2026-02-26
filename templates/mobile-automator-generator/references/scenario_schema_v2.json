@@ -79,6 +79,26 @@
       "uniqueItems": true,
       "description": "Categorization tags for filtering. Format: lowercase alphanumeric + hyphens only (e.g., 'smoke', 'regression', 'p0', 'auth'). Max 10 tags per scenario, max 20 characters per tag."
     },
+    "testrail": {
+      "type": "object",
+      "description": "Optional TestRail metadata for 1:1 mapping between scenarios and test cases",
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "description": "TestRail case ID (e.g., 'C12345')"
+        },
+        "project_id": {
+          "type": "string",
+          "description": "TestRail project ID (e.g., 'P1')"
+        },
+        "case_url": {
+          "type": "string",
+          "description": "Full TestRail case URL for reference"
+        }
+      },
+      "required": ["case_id", "project_id", "case_url"],
+      "additionalProperties": false
+    },
     "variables": {
       "type": "object",
       "description": "Declare variables that will be captured during test execution and used in later steps or assertions.",

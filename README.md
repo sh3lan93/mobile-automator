@@ -279,6 +279,14 @@ We recommend standardizing on these common tags:
 
 ---
 
+## Using TestRail
+
+**Optional:** Connect TestRail to auto-generate tests and sync results.
+
+See [TESTRAIL.md](./TESTRAIL.md) for detailed setup and usage instructions.
+
+---
+
 ### 📝 The Workflow
 
 1. **Generate once** - Use `/mobile-automator:generate` to record test scenarios by performing actions on your device

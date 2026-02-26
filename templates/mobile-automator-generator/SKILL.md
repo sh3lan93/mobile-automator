@@ -34,6 +34,137 @@ While recording, you also **passively observe and report** (but never add extra 
 - **Environments:** {{environments}}
 - **Automation:** `mobile-mcp` tools{{automation_extras}}.
 
+## TestRail Integration
+
+### Detecting TestRail Input
+
+When the user provides test generation input, determine if it's a TestRail URL:
+
+**TestRail URL Pattern:**
+```
+https://<domain>.testrail.io/index.php?/cases/view/<case_id>
+```
+
+**Extraction:**
+- Regex: `/cases/view\/(\d+)/` → Extract case_id
+- Domain: Extract from URL authority
+- Project ID: Parse from user input or TestRail API response
+
+**Example Detection:**
+```
+Input: "https://my-company.testrail.io/index.php?/cases/view/12345"
+→ Is TestRail URL: YES
+→ Case ID: C12345
+→ Project ID: P1 (from API or user input)
+```
+
+### Handling TestRail Cases
+
+If a TestRail URL is detected:
+
+1. **Fetch the test case** using `testrail_get_case(case_id, project_id)`
+2. **Extract test steps** from the TestRail case (description + expected result pairs)
+3. **Parse natural language** using the Two-Pass Semantic Intent Model (same as manual generation)
+4. **Execute steps on device** using mobile-mcp tools
+5. **Generate scenario JSON** with `testrail` metadata
+
+### API Error Handling
+
+If `testrail_get_case()` fails:
+
+- **Case not found (404)**: Log error with case ID and project ID. Return error message to user asking them to verify the TestRail case ID and project ID are correct. Do NOT block test execution — allow user to proceed with manual scenario creation as fallback.
+- **Authentication failed (403)**: Log error and ask user to verify `TESTRAIL_API_KEY` and `TESTRAIL_DOMAIN` environment variables are correctly set. Check that API credentials have permission to access the requested project.
+- **Network error or timeout**: Log warning and suggest user check internet connection and verify TestRail instance availability. Ask user if they want to retry or proceed with manual scenario creation.
+- **Other API errors (5xx)**: Log error and suggest contacting TestRail support if the error persists. Allow graceful degradation to manual scenario creation.
+
+**Graceful Degradation:** If TestRail API is unavailable or returns an error, always allow the user to continue with manual scenario creation. The tool should not be blocked by TestRail integration issues.
+
+### Natural Language Parsing from TestRail
+
+When you fetch a test case from TestRail, the API returns a `custom_steps_separated` array. Each step has:
+
+```json
+{
+  "content": "step description in natural language",
+  "expected": "expected result or assertion",
+  "additional_info": "optional notes",
+  "refs": "optional references",
+  "markdown_editor_id": 1
+}
+```
+
+**Real Example from TestRail Case #46:**
+
+```json
+{
+  "content": "<p>launch the app</p>",
+  "expected": ""
+}
+{
+  "content": "<p>Dismiss location dialog if presented</p>",
+  "expected": "<p>Location dialog dismissed</p>"
+}
+{
+  "content": "<p>wait until home screen got loaded</p>",
+  "expected": "<p>the home tab should be selected and allow location button should be visible</p>"
+}
+{
+  "content": "<p>tap on more</p>",
+  "expected": "<p>more tab is selected</p>"
+}
+{
+  "content": "<p>tap on login</p>",
+  "expected": "<p>login bottom sheet presented with this title \"Enter your mobile number\"</p>"
+}
+{
+  "content": "<p>enter this phone number 123456797</p>",
+  "expected": "<p>Continue button should be active</p>"
+}
+```
+
+**Parsing Strategy:**
+
+For each step in `custom_steps_separated`:
+
+1. **Extract content and expected:**
+   - Clean HTML tags from `content` and `expected` fields
+   - Example: `"<p>launch the app</p>"` → `"launch the app"`
+
+2. **Use Two-Pass Semantic Intent Model:**
+   - **Pass 1:** Classify as action or assertion
+     - **Actions:** Imperative verbs in `content` field: "launch", "tap", "enter", "swipe", "wait", "dismiss"
+     - **Assertions:** Declarative statements in `expected` field: "should be active", "is selected", "appeared", "visible"
+   - **Pass 2:** Map to specific action/assertion types using Step Translation Guide
+
+3. **Element Resolution:**
+   - Use `mobile_list_elements_on_screen()` to find elements by natural language description
+   - "tap on more" → find element with text "more" or accessibility label "more"
+   - "login bottom sheet" → find dialog/sheet with title containing "login"
+   - Use fuzzy matching: exact text → substring → pattern matching
+
+4. **Combined Intent:**
+   - `content` + `expected` together provide full context
+   - Example: "enter phone number 123456797" + "Continue button should be active"
+     - Action: `type` with value "123456797"
+     - Assertion: `element_state` with state_property "enabled" for Continue button
+
+### Storing TestRail Metadata
+
+When generating from TestRail, add `testrail` object to scenario root:
+
+```json
+{
+  "$schema_version": "2.0",
+  "testrail": {
+    "case_id": "C12345",
+    "project_id": "P1",
+    "case_url": "https://my-company.testrail.io/index.php?/cases/view/12345"
+  },
+  "name": "Login Flow",
+  "steps": [...]
+}
+```
+
 ## Recording Workflow
 
 ### 1. Pre-flight
@@ -234,6 +365,45 @@ Translate user language to mobile-mcp tools and v2 schema actions:
 | "wait until loaded", "wait for shimmer to stop", "wait for loading to complete" | `wait_for_loading_complete` | Poll `mobile_take_screenshot` + visual check | Set `wait_config.indicator` to match project's loading style (shimmer/spinner/skeleton) |
 | "capture the [value/text/amount]", "remember this value" | `capture_value` | `mobile_list_elements_on_screen` | Use `capture_to` to store in a named variable |
 | "validate", "verify", "check", "confirm", "should see", "is able to see" | assertion | `mobile_list_elements_on_screen` + `mobile_take_screenshot` | |
+
+## Implementation Logic
+
+### Main Generation Flow
+
+```pseudocode
+1. Accept user input (TestRail URL or natural language steps)
+2. If input matches TestRail URL pattern:
+   a. Extract case_id and project_id from URL
+   b. Call testrail_mcp.testrail_get_case(case_id, project_id)
+   c. Extract steps from TestRail API response:
+      - Iterate through custom_steps_separated array
+      - For each step: extract content field (description) and expected field (assertion)
+      - Clean HTML tags from both fields
+      - Example:
+        {content: "<p>tap on login</p>", expected: "<p>login bottom sheet presented</p>"}
+        → content: "tap on login", expected: "login bottom sheet presented"
+   d. For each step, apply Two-Pass Semantic Intent Model:
+      - Pass 1: Classify content as action (imperative verbs)
+      - Pass 1b: Classify expected as assertion (declarative statements)
+      - Pass 2: Map to specific action types (from Step Translation Guide)
+      - Pass 2b: Map to specific assertion types (from Assertion Decision Table)
+   e. For each action:
+      - Use mobile_list_elements_on_screen() to resolve element descriptions in content
+      - Execute on device using mobile-mcp tools
+      - Capture screenshot
+      - Generate scenario step with expected_state
+   f. For assertions derived from expected field:
+      - Create assertion step using mapped type from Pass 2b
+      - Record with appropriate fields for the assertion type
+   g. Combine steps and assertions into ordered scenario
+   h. Generate scenario JSON with testrail metadata:
+      {"testrail": {case_id, project_id, case_url}, ...steps, ...assertions}
+   i. Return scenario
+3. Else (manual input):
+   a. Parse natural language steps using Two-Pass Semantic Intent Model (same as 2d above)
+   b. Generate scenario JSON without testrail metadata
+   c. Return scenario
+```
 
 ### Detecting and Encoding v2 Patterns
 

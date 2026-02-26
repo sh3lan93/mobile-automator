@@ -38,6 +38,22 @@ Schema definitions are owned by their respective skills:
 - **Test Scenario Schema v1 (deprecated):** `.gemini/skills/mobile-automator-generator/references/scenario_schema.json` — legacy schema. Identified by the absence of `$schema_version`. Deprecated as of 2026-02. Will hard-fail after 12 months (2027-02).
 - **Test Run Result Schema:** `.gemini/skills/mobile-automator-executor/references/result_schema.json` — defines the format for execution result reports. Compatible with both v1 and v2 scenarios.
 
+### TestRail Integration
+
+**MCP Server:**
+- `testRailMcpServer`: Provides TestRail API access via `testrail-mcp`
+  - `testrail_get_case(case_id, project_id)` — Fetch test case from TestRail
+  - `testrail_create_test_run(...)` — Create test run with results
+
+**Configuration:**
+- Environment: `TESTRAIL_API_KEY`, `TESTRAIL_DOMAIN` (project-scoped)
+- Example: `.env` in mobile project root sets credentials per project
+
+**Scenario Metadata:**
+- Optional `testrail` field in scenario JSON (schema v2)
+- 1:1 mapping: one scenario per TestRail case
+- Executor uses metadata to sync results after test execution
+
 **Version detection:** When reading a scenario JSON file, check for `$schema_version`:
 - `"2.0"` → v2 execution path with full v2 feature set.
 - Missing or `"1.0"` → v1 execution path (legacy). Show deprecation notice and suggest migration.
