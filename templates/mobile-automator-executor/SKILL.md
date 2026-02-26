@@ -236,6 +236,8 @@ When asked to run multiple scenarios:
 
 ## TestRail Result Syncing
 
+**Format-Agnostic:** The TestRail syncing process works with scenarios generated from natural language TestRail steps, manual user input, or any source. The executor only cares that the scenario has `testrail` metadata — it doesn't depend on how the scenario was originally created.
+
 ### Detecting TestRail-Sourced Scenarios
 
 After test execution completes, check if the scenario has `testrail` metadata. Load the executed scenario JSON and inspect its root level:
@@ -398,7 +400,7 @@ If TestRail sync failed (but test execution succeeded):
    IF scenario.testrail exists:
      a. Collect execution data:
         i.   status = determined from assertion results
-        ii.  duration_ms = result.end_timestamp - result.start_timestamp
+        ii.  duration_ms = result.duration_seconds * 1000
         iii. observations = collect all observations from result.observations[]
         iv.  device_info = extract from result.metadata.device
         v.   failure_reason = extract from first failed assertion (or null if passed)
