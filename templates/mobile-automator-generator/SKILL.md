@@ -63,9 +63,9 @@ Input: "https://my-company.testrail.io/index.php?/cases/view/12345"
 If a TestRail URL is detected:
 
 1. **Fetch the test case** using `testrail_get_case(case_id, project_id)`
-2. **Parse automation hints** from each step's expected/description
-3. **Convert automation hints to actions** using the mapping below
-4. **Resolve element descriptions** using `mobile_list_elements_on_screen()`
+2. **Extract test steps** from the TestRail case (description + expected result pairs)
+3. **Parse natural language** using the Two-Pass Semantic Intent Model (same as manual generation)
+4. **Execute steps on device** using mobile-mcp tools
 5. **Generate scenario JSON** with `testrail` metadata
 
 ### API Error Handling
@@ -79,60 +79,74 @@ If `testrail_get_case()` fails:
 
 **Graceful Degradation:** If TestRail API is unavailable or returns an error, always allow the user to continue with manual scenario creation. The tool should not be blocked by TestRail integration issues.
 
-### Automation Hint Parsing
+### Natural Language Parsing from TestRail
 
-TestRail step format:
-```
-Description: "Enter username on the login screen"
-Automation Hint: "type | find: username field | text: testuser"
-```
-
-**Parse format:** `action_type | param1: value1 | param2: value2`
-
-**Supported Actions:**
-- `launch_app`
-- `tap | find: <element_description>`
-- `long_press | find: <element_description>`
-- `double_tap | find: <element_description>`
-- `type | find: <element_description> | text: <text_to_type>`
-- `assert | find: <element_description> | contains_text: <text>` OR `exact_text: <text>` OR `element_exists: true/false`
-- `swipe | find: <element_description> | direction: up/down/left/right`
-- `scroll_to_element | find: <element_description>`
-- `press_button | value: BACK/HOME/VOLUME_UP/VOLUME_DOWN/ENTER`
-- `open_url | value: <url>`
-- `wait_for_element | find: <element_description> | timeout_ms: <milliseconds>`
-- `wait_for_element_gone | find: <element_description> | timeout_ms: <milliseconds>`
-- `wait_for_loading_complete | timeout_ms: <milliseconds>`
-- `capture_value | find: <element_description> | variable: <variable_name>`
-- `clear_app_data`
-
-### Converting Hints to Actions
-
-For each automation hint, create a scenario action:
+When you fetch a test case from TestRail, the API returns a `custom_steps_separated` array. Each step has:
 
 ```json
 {
-  "id": "step_1",
-  "action": "type",
-  "description": "Enter testuser in the username field",
-  "target": "username field",
-  "value": "testuser"
+  "content": "step description in natural language",
+  "expected": "expected result or assertion",
+  "additional_info": "optional notes",
+  "refs": "optional references",
+  "markdown_editor_id": 1
 }
 ```
 
-**Critical:** Use `mobile_list_elements_on_screen()` to resolve `find: element_description` to actual `element_id` using this strategy:
-1. Search for exact text match (case-insensitive): `find: "Login button"` matches accessibility labels or display text exactly
-2. If no exact match found, search for substring match (case-insensitive)
-3. If multiple matches found, log warning and use the first match
-4. If no match found after both attempts, log error and create placeholder step with `element_id: "element_not_found__{description}"`
+**Real Example from TestRail Case #46:**
 
-### Handling Element Resolution Failures
+```json
+{
+  "content": "<p>launch the app</p>",
+  "expected": ""
+}
+{
+  "content": "<p>Dismiss location dialog if presented</p>",
+  "expected": "<p>Location dialog dismissed</p>"
+}
+{
+  "content": "<p>wait until home screen got loaded</p>",
+  "expected": "<p>the home tab should be selected and allow location button should be visible</p>"
+}
+{
+  "content": "<p>tap on more</p>",
+  "expected": "<p>more tab is selected</p>"
+}
+{
+  "content": "<p>tap on login</p>",
+  "expected": "<p>login bottom sheet presented with this title \"Enter your mobile number\"</p>"
+}
+{
+  "content": "<p>enter this phone number 123456797</p>",
+  "expected": "<p>Continue button should be active</p>"
+}
+```
 
-If an element cannot be found:
-- Log a warning with the element description
-- Create a step with a placeholder element_id (e.g., `element_description_not_resolved`)
-- Mark the step with a comment: `// WARNING: Element "username field" could not be found on screen`
-- The scenario can still be executed but will likely fail at this step
+**Parsing Strategy:**
+
+For each step in `custom_steps_separated`:
+
+1. **Extract content and expected:**
+   - Clean HTML tags from `content` and `expected` fields
+   - Example: `"<p>launch the app</p>"` → `"launch the app"`
+
+2. **Use Two-Pass Semantic Intent Model:**
+   - **Pass 1:** Classify as action or assertion
+     - **Actions:** Imperative verbs in `content` field: "launch", "tap", "enter", "swipe", "wait", "dismiss"
+     - **Assertions:** Declarative statements in `expected` field: "should be active", "is selected", "appeared", "visible"
+   - **Pass 2:** Map to specific action/assertion types using Step Translation Guide
+
+3. **Element Resolution:**
+   - Use `mobile_list_elements_on_screen()` to find elements by natural language description
+   - "tap on more" → find element with text "more" or accessibility label "more"
+   - "login bottom sheet" → find dialog/sheet with title containing "login"
+   - Use fuzzy matching: exact text → substring → pattern matching
+
+4. **Combined Intent:**
+   - `content` + `expected` together provide full context
+   - Example: "enter phone number 123456797" + "Continue button should be active"
+     - Action: `type` with value "123456797"
+     - Assertion: `element_state` with state_property "enabled" for Continue button
 
 ### Storing TestRail Metadata
 
@@ -361,17 +375,32 @@ Translate user language to mobile-mcp tools and v2 schema actions:
 2. If input matches TestRail URL pattern:
    a. Extract case_id and project_id from URL
    b. Call testrail_mcp.testrail_get_case(case_id, project_id)
-   c. For each step in response:
-      i. Parse automation hint (action_type | params)
-      ii. For each "find: element_description":
-          - Call mobile_list_elements_on_screen()
-          - Match element_description to actual elements
-          - Resolve to element_id (log warnings if ambiguous)
-      iii. Create scenario action from hint
-   d. Generate scenario JSON with testrail metadata
-   e. Return scenario
+   c. Extract steps from TestRail API response:
+      - Iterate through custom_steps_separated array
+      - For each step: extract content field (description) and expected field (assertion)
+      - Clean HTML tags from both fields
+      - Example:
+        {content: "<p>tap on login</p>", expected: "<p>login bottom sheet presented</p>"}
+        → content: "tap on login", expected: "login bottom sheet presented"
+   d. For each step, apply Two-Pass Semantic Intent Model:
+      - Pass 1: Classify content as action (imperative verbs)
+      - Pass 1b: Classify expected as assertion (declarative statements)
+      - Pass 2: Map to specific action types (from Step Translation Guide)
+      - Pass 2b: Map to specific assertion types (from Assertion Decision Table)
+   e. For each action:
+      - Use mobile_list_elements_on_screen() to resolve element descriptions in content
+      - Execute on device using mobile-mcp tools
+      - Capture screenshot
+      - Generate scenario step with expected_state
+   f. For assertions derived from expected field:
+      - Create assertion step using mapped type from Pass 2b
+      - Record with appropriate fields for the assertion type
+   g. Combine steps and assertions into ordered scenario
+   h. Generate scenario JSON with testrail metadata:
+      {"testrail": {case_id, project_id, case_url}, ...steps, ...assertions}
+   i. Return scenario
 3. Else (manual input):
-   a. Parse natural language steps
+   a. Parse natural language steps using Two-Pass Semantic Intent Model (same as 2d above)
    b. Generate scenario JSON without testrail metadata
    c. Return scenario
 ```
