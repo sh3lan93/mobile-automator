@@ -4,14 +4,45 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - 'gemini-extension.json'
-      - '**'
 
 jobs:
+  check-docs-only:
+    name: Detect file changes
+    runs-on: ubuntu-latest
+    outputs:
+      is-docs-only: ${{ steps.check.outputs.docs-only }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if only docs files changed
+        id: check
+        run: |
+          # Get list of changed files in this PR
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD)
+
+          # Files that are NOT docs/website related
+          EXTENSION_FILES=$(echo "$CHANGED_FILES" | grep -v -E '^(docs/|\.github/workflows/docs\.yml|mkdocs\.yml|site/|mobile-automator\.pen|requirements\.txt)' || true)
+
+          if [ -z "$EXTENSION_FILES" ]; then
+            echo "docs-only=true" >> $GITHUB_OUTPUT
+            echo "✅ Only documentation files changed - version check skipped"
+          else
+            echo "docs-only=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Extension files changed - version check required"
+            echo ""
+            echo "Files that require version bump:"
+            echo "$EXTENSION_FILES"
+          fi
+
   check-version:
     name: Verify version is bumped
+    needs: check-docs-only
     runs-on: ubuntu-latest
+    if: needs.check-docs-only.outputs.is-docs-only == 'false'
 
     steps:
       - name: Checkout code
@@ -41,7 +72,7 @@ jobs:
             echo "────────────────────────────────────────"
             echo "  Version $VERSION is already released (tag '$TAG' exists)."
             echo ""
-            echo "  Every PR merged to main must bump the version in"
+            echo "  PRs with extension code changes must bump the version in"
             echo "  gemini-extension.json to a value not yet in the tags."
             echo ""
             echo "  Current tags:"
