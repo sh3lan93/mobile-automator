@@ -25,7 +25,7 @@ jobs:
           CHANGED_FILES=$(git diff --name-only origin/main...HEAD)
 
           # Files that are NOT docs/website related
-          EXTENSION_FILES=$(echo "$CHANGED_FILES" | grep -v -E '^(docs/|\.github/workflows/docs\.yml|mkdocs\.yml|site/|mobile-automator\.pen|requirements\.txt)' || true)
+          EXTENSION_FILES=$(echo "$CHANGED_FILES" | grep -v -E '^(docs/|\.github/workflows/docs\.yml|\.github/workflows/version-check\.yml|mkdocs\.yml|site/|mobile-automator\.pen|requirements\.txt|\.mcp\.json|squirrel\.toml)' || true)
 
           if [ -z "$EXTENSION_FILES" ]; then
             echo "docs-only=true" >> $GITHUB_OUTPUT
