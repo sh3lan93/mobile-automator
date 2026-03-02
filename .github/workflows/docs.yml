@@ -41,6 +41,12 @@ jobs:
         run: |
           mkdocs build
 
+      - name: Add robots.txt and sitemap
+        run: |
+          # Copy robots.txt to built site directory
+          cp docs/robots.txt site/robots.txt
+          echo "✓ robots.txt copied to site directory"
+
       - name: Deploy to GitHub Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
