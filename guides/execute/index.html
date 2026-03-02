@@ -1,0 +1,2671 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Intelligent mobile QA automation for Gemini CLI">
+      
+      
+      
+        <link rel="canonical" href="https://sh3lan93.github.io/mobile-automator/guides/execute/">
+      
+      
+        <link rel="prev" href="../generate/">
+      
+      
+        <link rel="next" href="../migrate/">
+      
+      
+      <link rel="icon" href="../../assets/favicon.svg">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.0">
+    
+    
+      
+        <title>Execute Command - mobile-automator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.45e1311d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#execute-command-guide" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="mobile-automator" class="md-header__button md-logo" aria-label="mobile-automator" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            mobile-automator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Execute Command
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-hidden="true"  type="radio" name="__palette" id="__palette_1">
+    
+  
+</form>
+      
+    
+    
+      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/sh3lan93/mobile-automator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sh3lan93/mobile-automator
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="mobile-automator" class="md-nav__button md-logo" aria-label="mobile-automator" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="logo">
+
+    </a>
+    mobile-automator
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/sh3lan93/mobile-automator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sh3lan93/mobile-automator
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Getting Started
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Getting Started
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Installation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quick-start/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Quick Start
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Core Concepts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Core Concepts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/architecture/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Architecture
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/three-tier-design/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    3-Tier Design
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/skills/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How Skills Work
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../setup/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Setup Command
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generate/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Generate Command
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Execute Command
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Execute Command
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      Quick Start
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prerequisites
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pre-flight-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      Pre-Flight Checks
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#execution-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Execution Workflow
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Execution Workflow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Phase 1: Setup
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-step-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      Phase 2: Step Execution
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 2: Step Execution">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#2a-get-current-screen-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      2a. Get Current Screen State
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2b-execute-action" class="md-nav__link">
+    <span class="md-ellipsis">
+      2b. Execute Action
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2c-wait-observe" class="md-nav__link">
+    <span class="md-ellipsis">
+      2c. Wait &amp; Observe
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2d-evaluate-assertions" class="md-nav__link">
+    <span class="md-ellipsis">
+      2d. Evaluate Assertions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2e-intelligent-observations" class="md-nav__link">
+    <span class="md-ellipsis">
+      2e. Intelligent Observations
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-assertion-evaluation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Phase 3: Assertion Evaluation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-results-aggregation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Phase 4: Results Aggregation
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#understanding-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      Understanding Results
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Understanding Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#result-file-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Result File Structure
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#status-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      Status Values
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step Results
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#assertion-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      Assertion Results
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#observations-intelligent-insights" class="md-nav__link">
+    <span class="md-ellipsis">
+      Observations (Intelligent Insights)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#captured-variables-v2-scenarios" class="md-nav__link">
+    <span class="md-ellipsis">
+      Captured Variables (v2 Scenarios)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#retry-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      Retry Behavior
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#timeout-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      Timeout Behavior
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#screenshots" class="md-nav__link">
+    <span class="md-ellipsis">
+      Screenshots
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testrail-sync" class="md-nav__link">
+    <span class="md-ellipsis">
+      TestRail Sync
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      Troubleshooting Execution
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting Execution">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#element-not-found-error" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Element Not Found" Error
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#assertion-failed-expected-x-got-y" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Assertion Failed: Expected X, Got Y"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-timed-out" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Test Timed Out"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#app-crashed-during-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      "App Crashed During Test"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#screenshot-capture-failed" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Screenshot Capture Failed"
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreting-observations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Interpreting Observations
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Interpreting Observations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#flakiness-observation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Flakiness Observation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#regression-observation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Regression Observation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#state-context-observation" class="md-nav__link">
+    <span class="md-ellipsis">
+      State Context Observation
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      Best Practices
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#do-use-descriptive-assertions" class="md-nav__link">
+    <span class="md-ellipsis">
+      ✅ DO: Use Descriptive Assertions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#do-add-retry-policies-for-flaky-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      ✅ DO: Add Retry Policies for Flaky Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#do-capture-dynamic-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      ✅ DO: Capture Dynamic Values
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dont-use-fixed-waits" class="md-nav__link">
+    <span class="md-ellipsis">
+      ❌ DON'T: Use Fixed Waits
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dont-assert-insignificant-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      ❌ DON'T: Assert Insignificant Details
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      Next Steps
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      See Also
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../migrate/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Migrate Command
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Reference
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/assertions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Assertion Types
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/schema-v2/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Test Scenario Schema v2
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/result-schema/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Test Result Schema
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/mcp-tools/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    MCP Tools
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Examples
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Examples
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/android/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Android Examples
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/ios/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    iOS Examples
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ & Troubleshooting
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Contributing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Changelog
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      Quick Start
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prerequisites
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pre-flight-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      Pre-Flight Checks
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#execution-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Execution Workflow
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Execution Workflow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Phase 1: Setup
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-step-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      Phase 2: Step Execution
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 2: Step Execution">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#2a-get-current-screen-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      2a. Get Current Screen State
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2b-execute-action" class="md-nav__link">
+    <span class="md-ellipsis">
+      2b. Execute Action
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2c-wait-observe" class="md-nav__link">
+    <span class="md-ellipsis">
+      2c. Wait &amp; Observe
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2d-evaluate-assertions" class="md-nav__link">
+    <span class="md-ellipsis">
+      2d. Evaluate Assertions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2e-intelligent-observations" class="md-nav__link">
+    <span class="md-ellipsis">
+      2e. Intelligent Observations
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-assertion-evaluation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Phase 3: Assertion Evaluation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-results-aggregation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Phase 4: Results Aggregation
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#understanding-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      Understanding Results
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Understanding Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#result-file-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Result File Structure
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#status-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      Status Values
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step Results
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#assertion-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      Assertion Results
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#observations-intelligent-insights" class="md-nav__link">
+    <span class="md-ellipsis">
+      Observations (Intelligent Insights)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#captured-variables-v2-scenarios" class="md-nav__link">
+    <span class="md-ellipsis">
+      Captured Variables (v2 Scenarios)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#retry-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      Retry Behavior
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#timeout-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      Timeout Behavior
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#screenshots" class="md-nav__link">
+    <span class="md-ellipsis">
+      Screenshots
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testrail-sync" class="md-nav__link">
+    <span class="md-ellipsis">
+      TestRail Sync
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      Troubleshooting Execution
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting Execution">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#element-not-found-error" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Element Not Found" Error
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#assertion-failed-expected-x-got-y" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Assertion Failed: Expected X, Got Y"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-timed-out" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Test Timed Out"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#app-crashed-during-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      "App Crashed During Test"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#screenshot-capture-failed" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Screenshot Capture Failed"
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreting-observations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Interpreting Observations
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Interpreting Observations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#flakiness-observation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Flakiness Observation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#regression-observation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Regression Observation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#state-context-observation" class="md-nav__link">
+    <span class="md-ellipsis">
+      State Context Observation
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      Best Practices
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#do-use-descriptive-assertions" class="md-nav__link">
+    <span class="md-ellipsis">
+      ✅ DO: Use Descriptive Assertions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#do-add-retry-policies-for-flaky-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      ✅ DO: Add Retry Policies for Flaky Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#do-capture-dynamic-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      ✅ DO: Capture Dynamic Values
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dont-use-fixed-waits" class="md-nav__link">
+    <span class="md-ellipsis">
+      ❌ DON'T: Use Fixed Waits
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dont-assert-insignificant-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      ❌ DON'T: Assert Insignificant Details
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      Next Steps
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      See Also
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="execute-command-guide">Execute Command Guide<a class="headerlink" href="#execute-command-guide" title="Permanent link">&para;</a></h1>
+<p>The <strong>Execute Command</strong> runs your test scenarios on a real device or simulator, evaluates assertions, captures screenshots, and generates detailed result reports with intelligent observations about flakiness, regressions, and device context.</p>
+<p><strong>Key benefit</strong>: You get comprehensive test data — not just pass/fail, but detailed insights about why tests failed and how to fix them.</p>
+<h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="c1"># Run the command</span>
+gemini<span class="w"> </span>/mobile-automator:execute
+
+<span class="c1"># Select scenario and device</span>
+<span class="c1"># Watch test execute step-by-step</span>
+<span class="c1"># Review detailed results</span>
+</code></pre></div>
+<p>Results are saved to: <code>mobile-automator/results/run_YYYYMMDD_HHMMSS.json</code></p>
+<hr />
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
+<p>Before running execute, ensure:</p>
+<ol>
+<li><strong>Setup is complete</strong></li>
+<li>
+<p><code>mobile-automator/config.json</code> exists</p>
+</li>
+<li>
+<p><strong>Scenarios exist</strong></p>
+</li>
+<li>
+<p>At least one scenario in <code>mobile-automator/scenarios/*.json</code></p>
+</li>
+<li>
+<p><strong>Device is connected</strong></p>
+</li>
+<li>Android: <code>adb devices</code> shows your device</li>
+<li>
+<p>iOS: Simulator running or physical device connected</p>
+</li>
+<li>
+<p><strong>App is installed</strong></p>
+</li>
+<li>Executor will build/install if needed</li>
+</ol>
+<hr />
+<h2 id="pre-flight-checks">Pre-Flight Checks<a class="headerlink" href="#pre-flight-checks" title="Permanent link">&para;</a></h2>
+<p>When you run <code>/mobile-automator:execute</code>, the wrapper verifies:</p>
+<div class="highlight"><pre><span></span><code>✓ Checking setup state...
+✓ Found: mobile-automator/config.json
+✓ Found: .gemini/skills/mobile-automator-executor/SKILL.md
+
+✓ Detecting devices...
+  Available devices:
+    1. Pixel 6 (Android 34)
+    2. iPhone 14 Pro (iOS 17.2)
+
+  Select device (1-2): 1
+
+✓ Verifying app installation...
+  App: com.example.myapp
+  Status: Not installed
+
+  Build and install now? (y/n): y
+  Building... Installing... ✓
+
+✓ Listing available scenarios...
+  1. login_happy_path.json
+  2. checkout_flow.json
+  3. search_products.json
+
+  Select scenario (1-3): 1
+</code></pre></div>
+<hr />
+<h2 id="execution-workflow">Execution Workflow<a class="headerlink" href="#execution-workflow" title="Permanent link">&para;</a></h2>
+<h3 id="phase-1-setup">Phase 1: Setup<a class="headerlink" href="#phase-1-setup" title="Permanent link">&para;</a></h3>
+<p>Before test execution begins:</p>
+<ol>
+<li><strong>Clear previous runs</strong> (optional)</li>
+<li>Ask: "Clear app data before test? (y/n)"</li>
+<li>
+<p>Ensures clean state for test execution</p>
+</li>
+<li>
+<p><strong>Capture baseline state</strong></p>
+</li>
+<li>Screenshot of initial app screen</li>
+<li>
+<p>Recorded in results for context</p>
+</li>
+<li>
+<p><strong>Initialize execution context</strong></p>
+</li>
+<li>Creates run ID: <code>run_20260301_143000</code></li>
+<li>Records device info, app version, environment</li>
+</ol>
+<h3 id="phase-2-step-execution">Phase 2: Step Execution<a class="headerlink" href="#phase-2-step-execution" title="Permanent link">&para;</a></h3>
+<p>For each step in your scenario:</p>
+<h4 id="2a-get-current-screen-state">2a. Get Current Screen State<a class="headerlink" href="#2a-get-current-screen-state" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code>├─ Call mobile_list_elements_on_screen()
+├─ Get current UI element tree
+└─ Record screenshot
+</code></pre></div>
+<h4 id="2b-execute-action">2b. Execute Action<a class="headerlink" href="#2b-execute-action" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Action Type</th>
+<th>What Happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tap</code></td>
+<td>Clicks element at coordinates</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td>Types text into input field</td>
+</tr>
+<tr>
+<td><code>swipe</code></td>
+<td>Performs swipe gesture (up/down/left/right)</td>
+</tr>
+<tr>
+<td><code>scroll_to_element</code></td>
+<td>Scrolls until element visible</td>
+</tr>
+<tr>
+<td><code>long_press</code></td>
+<td>Holds finger on element</td>
+</tr>
+<tr>
+<td><code>double_tap</code></td>
+<td>Double-click gesture</td>
+</tr>
+<tr>
+<td><code>wait_for_element</code></td>
+<td>Waits up to timeout for element</td>
+</tr>
+<tr>
+<td><code>wait_for_loading_complete</code></td>
+<td>Waits for loading indicators to disappear</td>
+</tr>
+<tr>
+<td><code>press_button</code></td>
+<td>Presses hardware button (back, home)</td>
+</tr>
+<tr>
+<td><code>launch_app</code></td>
+<td>Starts your app</td>
+</tr>
+<tr>
+<td><code>clear_app_data</code></td>
+<td>Resets app to fresh state</td>
+</tr>
+<tr>
+<td><code>capture_value</code></td>
+<td>Extracts text/value from element</td>
+</tr>
+<tr>
+<td><code>open_url</code></td>
+<td>Opens URL in browser</td>
+</tr>
+</tbody>
+</table>
+<h4 id="2c-wait-observe">2c. Wait &amp; Observe<a class="headerlink" href="#2c-wait-observe" title="Permanent link">&para;</a></h4>
+<p>After action executes:
+- Waits for app response (typically 1-2 seconds)
+- Captures screenshot of new state
+- Records timing (how long step took)</p>
+<h4 id="2d-evaluate-assertions">2d. Evaluate Assertions<a class="headerlink" href="#2d-evaluate-assertions" title="Permanent link">&para;</a></h4>
+<p>For assertions targeting this step:
+- Check against new screen state
+- Record: passed, failed, or error
+- Capture expected vs. actual values</p>
+<h4 id="2e-intelligent-observations">2e. Intelligent Observations<a class="headerlink" href="#2e-intelligent-observations" title="Permanent link">&para;</a></h4>
+<p>After step completes, checks for:</p>
+<p><strong>Flakiness:</strong>
+- Did step fail initially then pass on retry?
+- Suggests adding retry policy or longer waits
+- Example: "Step 3 failed initially (timeout), passed on retry after 2s wait"</p>
+<p><strong>Regressions:</strong>
+- Visual differences from baseline?
+- Element missing or relocated?
+- Text changed unexpectedly?
+- Example: "Button color changed from blue to gray"</p>
+<p><strong>Device State:</strong>
+- Is device in airplane mode?
+- Low memory or battery?
+- Network unavailable?
+- Example: "Device in low-power mode"</p>
+<h3 id="phase-3-assertion-evaluation">Phase 3: Assertion Evaluation<a class="headerlink" href="#phase-3-assertion-evaluation" title="Permanent link">&para;</a></h3>
+<p>For each assertion in your scenario:</p>
+<ol>
+<li><strong>Determine target element</strong> — Which UI element to verify</li>
+<li><strong>Get current state</strong> — Current text, visibility, position</li>
+<li><strong>Evaluate condition</strong> — Does it match expected value?</li>
+<li><strong>Record result</strong> — Pass/fail with expected vs. actual</li>
+</ol>
+<p><strong>Common Assertions:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_exists&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_button&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;result&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;passed&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;actual&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Button &#39;Login&#39; visible at (200, 400)&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_text&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;welcome_message&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;expected_exact&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome back!&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;actual&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome back!&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;result&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;passed&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;text_contains&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;error_message&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;expected_contains&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;timeout&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;actual&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Network timeout occurred&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;result&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;passed&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="phase-4-results-aggregation">Phase 4: Results Aggregation<a class="headerlink" href="#phase-4-results-aggregation" title="Permanent link">&para;</a></h3>
+<p>After all steps execute:</p>
+<ol>
+<li><strong>Calculate statistics</strong></li>
+<li>Total steps: 8</li>
+<li>Passed: 7</li>
+<li>Failed: 1</li>
+<li>Errors: 0</li>
+<li>
+<p>Total duration: 45.2 seconds</p>
+</li>
+<li>
+<p><strong>Determine overall status</strong></p>
+</li>
+<li><code>passed</code> — All assertions passed</li>
+<li><code>failed</code> — At least one assertion failed</li>
+<li>
+<p><code>error</code> — Execution error (crash, element not found)</p>
+</li>
+<li>
+<p><strong>Generate observations</strong></p>
+</li>
+<li>Flakiness trends</li>
+<li>Regression patterns</li>
+<li>
+<p>Device/environment issues</p>
+</li>
+<li>
+<p><strong>Create result file</strong></p>
+</li>
+<li>Saved to <code>mobile-automator/results/run_*.json</code></li>
+<li>Ready for analysis and TestRail sync</li>
+</ol>
+<hr />
+<h2 id="understanding-results">Understanding Results<a class="headerlink" href="#understanding-results" title="Permanent link">&para;</a></h2>
+<h3 id="result-file-structure">Result File Structure<a class="headerlink" href="#result-file-structure" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;run_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;run_20260301_143000&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;scenario_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_happy_path&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;passed&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;metadata&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;device_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Pixel 6&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;api_level&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;34&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;app_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.2.3&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;staging&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-03-01T14:30:00Z&quot;</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;total_assertions&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;passed_assertions&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;failed_assertions&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;duration_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">45.2</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;steps_executed&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="err">...</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;assertion_results&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="err">...</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;observations&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="err">...</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;captured_variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;summary&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;✓ Test passed (5/5 assertions passed)&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="status-values">Status Values<a class="headerlink" href="#status-values" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Meaning</th>
+<th>Examples</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>passed</code></td>
+<td>All assertions passed, no errors</td>
+<td>Normal successful test</td>
+</tr>
+<tr>
+<td><code>failed</code></td>
+<td>At least one assertion failed</td>
+<td>Expected text didn't match</td>
+</tr>
+<tr>
+<td><code>error</code></td>
+<td>Execution couldn't continue</td>
+<td>Crash, element not found, timeout</td>
+</tr>
+</tbody>
+</table>
+<h3 id="step-results">Step Results<a class="headerlink" href="#step-results" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;step_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap_login_button&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;passed&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;screenshot&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;screenshots/run_20260301_143000/step_1_tap_login_button.png&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;step_duration_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">245</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;retried&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;retry_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;error_message&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;observations&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>Step fields:</strong>
+- <code>step_id</code> — Step name (e.g., "tap_login_button")
+- <code>status</code> — Outcome (passed, failed, skipped, error)
+- <code>screenshot</code> — Captured screenshot for this step
+- <code>step_duration_ms</code> — Time taken to execute
+- <code>retried</code> — Whether retry was needed (flaky indicator)
+- <code>retry_count</code> — How many retries were attempted
+- <code>error_message</code> — Error details if step failed</p>
+<h3 id="assertion-results">Assertion Results<a class="headerlink" href="#assertion-results" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;assertion_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_success&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome screen is visible after login&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_text&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;passed&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;expected&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome back!&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;actual&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome back!&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Text matches expected value&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;welcome_message&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;reference_screenshot&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;actual_screenshot&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;screenshots/run_20260301_143000/assertion_welcome.png&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>Assertion fields:</strong>
+- <code>assertion_id</code> — Unique ID for assertion
+- <code>description</code> — What this assertion verifies
+- <code>type</code> — Assertion type (element_text, element_exists, etc.)
+- <code>status</code> — Passed or failed
+- <code>expected</code> — What was expected
+- <code>actual</code> — What was actually found
+- <code>element</code> — Target UI element</p>
+<h3 id="observations-intelligent-insights">Observations (Intelligent Insights)<a class="headerlink" href="#observations-intelligent-insights" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;observations&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;flakiness&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;severity&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;medium&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Step 4 failed initially (timeout), passed on retry after 2s wait&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;affected_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_product_list&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;suggestion&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Add retry_policy or increase timeout_seconds&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;regression&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;severity&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;high&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Login button color changed from blue (#0066FF) to gray (#999999)&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;affected_element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_button&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;baseline&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#0066FF&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;current&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#999999&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;state_context&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;severity&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;info&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Device in low-power mode, may affect animation timing&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;context&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;power_mode&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;low_power&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>Observation types:</strong></p>
+<ul>
+<li><strong>Flakiness</strong> — Test passed on retry after initial failure</li>
+<li>Severity: Low (occasionally), Medium (sometimes), High (often)</li>
+<li>
+<p>Suggests: Add retry policy, increase timeouts, add explicit waits</p>
+</li>
+<li>
+<p><strong>Regression</strong> — Visual or functional change from baseline</p>
+</li>
+<li>Severity: Medium (cosmetic), High (functional)</li>
+<li>
+<p>May indicate UI changes, bugs, or environment differences</p>
+</li>
+<li>
+<p><strong>State Context</strong> — Device/environment factors affecting test</p>
+</li>
+<li>Severity: Info (context only), Medium (may affect results)</li>
+<li>Examples: Low power mode, airplane mode, memory pressure, network issues</li>
+</ul>
+<hr />
+<h2 id="captured-variables-v2-scenarios">Captured Variables (v2 Scenarios)<a class="headerlink" href="#captured-variables-v2-scenarios" title="Permanent link">&para;</a></h2>
+<p>If your scenario captures values using <code>capture_value</code> steps:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;captured_variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;user_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;12345&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;order_total&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;99.99&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;receipt_number&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;REC-2026-0042&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>These values are:
+- Extracted during execution
+- Available for later assertions
+- Synced to TestRail if configured
+- Useful for data-driven testing</p>
+<hr />
+<h2 id="retry-behavior">Retry Behavior<a class="headerlink" href="#retry-behavior" title="Permanent link">&para;</a></h2>
+<p>If a step has a retry policy configured:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;product_list&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;retry_policy&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;max_retries&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;wait_between_retries_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Executor will:
+1. Attempt step (max 3 times)
+2. Wait 2 seconds between retries
+3. If 3rd attempt succeeds, marks as <code>retried: true</code>
+4. If all fail, marks as failed
+5. Records retry count in result</p>
+<p><strong>Result example:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;step_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_products&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;passed&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;retried&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;retry_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;observations&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Step failed initially due to loading timeout, passed on 2nd retry&quot;</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h2 id="timeout-behavior">Timeout Behavior<a class="headerlink" href="#timeout-behavior" title="Permanent link">&para;</a></h2>
+<p>For steps with timeouts (waits, element verification):</p>
+<p><strong>Default timeouts:</strong>
+- Element waits: 10 seconds
+- App launch: 15 seconds
+- Loading indicators: 30 seconds</p>
+<p><strong>If timeout is exceeded:</strong>
+- Step status: <code>failed</code> or <code>error</code>
+- Error message: "Timeout waiting for element"
+- Observation: "Consider adding retry_policy or increasing timeout"</p>
+<p><strong>Customizing timeouts:</strong></p>
+<p>Edit scenario JSON:
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;data_grid&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="err">I</span><span class="kc">n</span><span class="err">crease</span><span class="w"> </span><span class="kc">fr</span><span class="err">om</span><span class="w"> </span><span class="err">de</span><span class="kc">fault</span><span class="w"> </span><span class="mi">10</span><span class="err">s</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h2 id="screenshots">Screenshots<a class="headerlink" href="#screenshots" title="Permanent link">&para;</a></h2>
+<p>Executor captures screenshots at strategic points:</p>
+<p><strong>Captured for:</strong>
+- Each step (before and after action)
+- Each failed assertion
+- On errors or exceptions
+- Device state changes</p>
+<p><strong>Storage:</strong>
+<div class="highlight"><pre><span></span><code>mobile-automator/results/
+├── run_20260301_143000/
+│   ├── step_1_tap_login.png
+│   ├── step_2_enter_email.png
+│   ├── assertion_welcome_screen.png
+│   └── ...
+└── run_20260301_143000.json
+</code></pre></div></p>
+<p><strong>Usage:</strong>
+- Visual documentation of test execution
+- Help debug failures
+- Track UI changes over time
+- Create test reports for stakeholders</p>
+<hr />
+<h2 id="testrail-sync">TestRail Sync<a class="headerlink" href="#testrail-sync" title="Permanent link">&para;</a></h2>
+<p>If your scenario includes TestRail metadata:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;scenario_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_happy_path&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;testrail&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;case_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">12345</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;project_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;case_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://testrail.example.com/cases/12345&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>After execution, results automatically sync to TestRail:</p>
+<ol>
+<li>Maps result status to TestRail status</li>
+<li><code>passed</code> → Test case passed</li>
+<li><code>failed</code> → Test case failed</li>
+<li>
+<p><code>error</code> → Test case blocked</p>
+</li>
+<li>
+<p>Uploads screenshots and observations</p>
+</li>
+<li>Records execution time and device info</li>
+<li>Adds result comment with detailed findings</li>
+</ol>
+<p><strong>Manual sync:</strong>
+<div class="highlight"><pre><span></span><code>gemini<span class="w"> </span>/mobile-automator:execute<span class="w"> </span>--testrail-sync
+</code></pre></div></p>
+<hr />
+<h2 id="troubleshooting-execution">Troubleshooting Execution<a class="headerlink" href="#troubleshooting-execution" title="Permanent link">&para;</a></h2>
+<h3 id="element-not-found-error">"Element Not Found" Error<a class="headerlink" href="#element-not-found-error" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> Step failed because element wasn't on screen.</p>
+<p><strong>Solutions:</strong>
+1. <strong>Add explicit wait before action:</strong>
+   <div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;target_element&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span>
+<span class="p">},</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;target_element&quot;</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<ol>
+<li>
+<p><strong>Add retry policy:</strong>
+   <div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;target_element&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;retry_policy&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;max_retries&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;wait_between_retries_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Check element name is correct</strong> — Match exactly as named in scenario</p>
+</li>
+<li>
+<p><strong>Verify app is in expected state</strong> — Screenshot shows what's actually on screen</p>
+</li>
+</ol>
+<h3 id="assertion-failed-expected-x-got-y">"Assertion Failed: Expected X, Got Y"<a class="headerlink" href="#assertion-failed-expected-x-got-y" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> Text didn't match or element had unexpected state.</p>
+<p><strong>Solutions:</strong>
+1. <strong>Update expected value</strong> — If app intentionally changed
+2. <strong>Check for whitespace</strong> — "Welcome back!" vs " Welcome back! "
+3. <strong>Use text_contains instead of element_text</strong> — More forgiving
+4. <strong>Capture and compare variables</strong> — For dynamic values:
+   <div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_value&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dynamic_field&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;capture_to&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;actual_value&quot;</span>
+<span class="p">},</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;value_matches_variable&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;variable&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;actual_value&quot;</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<h3 id="test-timed-out">"Test Timed Out"<a class="headerlink" href="#test-timed-out" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> Step took too long to complete.</p>
+<p><strong>Solutions:</strong>
+1. <strong>Increase timeout:</strong>
+   <div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading_complete&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">60</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="err">I</span><span class="kc">n</span><span class="err">crease</span><span class="w"> </span><span class="kc">fr</span><span class="err">om</span><span class="w"> </span><span class="err">de</span><span class="kc">fault</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<ol>
+<li>
+<p><strong>Check device performance</strong> — Device may be slow or overloaded</p>
+</li>
+<li>
+<p><strong>Check network</strong> — Device may have poor connectivity</p>
+</li>
+<li>
+<p><strong>Add intermediate waits</strong> — Break long operations into steps:
+   <div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;loading_bar&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span>
+<span class="p">},</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;loading_bar&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;optional&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="err">May</span><span class="w"> </span><span class="err">disappear</span>
+<span class="p">},</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;content&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span>
+<span class="p">}</span>
+</code></pre></div></p>
+</li>
+</ol>
+<h3 id="app-crashed-during-test">"App Crashed During Test"<a class="headerlink" href="#app-crashed-during-test" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> Application crashed mid-execution.</p>
+<p><strong>Solutions:</strong>
+1. <strong>Check result file</strong> — <code>mobile-automator/results/run_*.json</code> shows which step caused crash
+2. <strong>Review app logs</strong> — <code>adb logcat</code> (Android) or Xcode debugger (iOS)
+3. <strong>Check if known issue</strong> — May be app bug, not test issue
+4. <strong>Add preconditions</strong> — Clear app data before test:
+   <div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;preconditions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;clear_app_data&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;restart_app&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<h3 id="screenshot-capture-failed">"Screenshot Capture Failed"<a class="headerlink" href="#screenshot-capture-failed" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> Executor couldn't save screenshots.</p>
+<p><strong>Causes:</strong>
+- Device disconnected during execution
+- Insufficient disk space
+- File system permissions issue</p>
+<p><strong>Solutions:</strong>
+1. Check device still connected
+2. Verify free disk space: <code>du -sh mobile-automator/</code>
+3. Check folder permissions: <code>chmod 755 mobile-automator/results/</code></p>
+<hr />
+<h2 id="interpreting-observations">Interpreting Observations<a class="headerlink" href="#interpreting-observations" title="Permanent link">&para;</a></h2>
+<h3 id="flakiness-observation">Flakiness Observation<a class="headerlink" href="#flakiness-observation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;flakiness&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Step 4 failed initially due to timeout, passed on retry&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;suggestion&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Consider adding retry_policy to this step&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>What it means:</strong>
+- Step is unreliable (sometimes fails, sometimes passes)
+- Likely cause: Timing issue, loading variability, network latency</p>
+<p><strong>What to do:</strong>
+- Add retry policy (executor will retry automatically)
+- Increase timeout (give more time for operations)
+- Add explicit wait before step
+- Consider step design (too aggressive, not waiting properly?)</p>
+<h3 id="regression-observation">Regression Observation<a class="headerlink" href="#regression-observation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;regression&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Button color changed from blue to gray&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;affected_element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_button&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;severity&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;medium&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>What it means:</strong>
+- Visual change detected from expected baseline
+- Could be intentional UI update or unintended change</p>
+<p><strong>What to do:</strong>
+- <strong>If intentional:</strong> Update baseline screenshots in <code>mobile-automator/screenshots/</code>
+- <strong>If not intentional:</strong> File bug report, may be rendering issue
+- <strong>If cosmetic:</strong> Consider if assertion is too strict (color matching)</p>
+<h3 id="state-context-observation">State Context Observation<a class="headerlink" href="#state-context-observation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;state_context&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Device in low-power mode, may affect animation timing&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;severity&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;info&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>What it means:</strong>
+- Device or environment factor that could affect results
+- Not a test failure, but useful context</p>
+<p><strong>What to do:</strong>
+- Note for CI/CD: May need device reset between tests
+- Add waits for animations if in low-power mode
+- Re-run test on different device/environment to verify consistency</p>
+<hr />
+<h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
+<h3 id="do-use-descriptive-assertions">✅ DO: Use Descriptive Assertions<a class="headerlink" href="#do-use-descriptive-assertions" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_text&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;welcome_message&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;expected_exact&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome back, John!&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;User is greeted by name after login&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="do-add-retry-policies-for-flaky-operations">✅ DO: Add Retry Policies for Flaky Operations<a class="headerlink" href="#do-add-retry-policies-for-flaky-operations" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading_complete&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;retry_policy&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;max_retries&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;wait_between_retries_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="do-capture-dynamic-values">✅ DO: Capture Dynamic Values<a class="headerlink" href="#do-capture-dynamic-values" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_value&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;order_id&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;capture_to&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;generated_order_id&quot;</span>
+<span class="p">},</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_text&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;confirmation_text&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;expected_contains&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Order captured_to {{generated_order_id}}&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="dont-use-fixed-waits">❌ DON'T: Use Fixed Waits<a class="headerlink" href="#dont-use-fixed-waits" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// Bad</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span><span class="w">  </span><span class="c1">// Uses hardcoded timeout</span>
+<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;data&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span>
+<span class="p">}</span>
+
+<span class="c1">// Good</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading_complete&quot;</span><span class="w">  </span><span class="c1">// Waits for actual loading</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="dont-assert-insignificant-details">❌ DON'T: Assert Insignificant Details<a class="headerlink" href="#dont-assert-insignificant-details" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// Bad</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;screenshot_match&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;reference&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pixel_perfect_baseline.png&quot;</span><span class="w">  </span><span class="c1">// Too strict</span>
+<span class="p">}</span>
+
+<span class="c1">// Good</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_exists&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;success_message&quot;</span><span class="w">  </span><span class="c1">// Functional assertion</span>
+<span class="p">}</span>
+</code></pre></div>
+<hr />
+<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<p>After execution:</p>
+<ol>
+<li><strong>Review result file:</strong> <code>mobile-automator/results/run_*.json</code></li>
+<li><strong>Check observations:</strong> Look for flakiness or regression insights</li>
+<li><strong>View screenshots:</strong> Visual documentation of test flow</li>
+<li><strong>Refine scenario:</strong> Based on observations, improve scenario</li>
+<li><strong>Re-run if needed:</strong> Fix flakiness, update assertions, etc.</li>
+</ol>
+<hr />
+<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../../reference/result-schema/">Test Result Schema Reference</a> — Detailed result format</li>
+<li><a href="../../reference/assertions/">Assertion Types Reference</a> — All assertion types</li>
+<li><a href="../generate/">Generate Command Guide</a> — Creating scenarios</li>
+<li><a href="../../faq/#test-execution">FAQ: Execution Issues</a></li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12Z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7c377c4.min.js"></script>
+      
+    
+  </body>
+</html>

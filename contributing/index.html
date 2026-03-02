@@ -1,0 +1,2641 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Intelligent mobile QA automation for Gemini CLI">
+      
+      
+      
+        <link rel="canonical" href="https://sh3lan93.github.io/mobile-automator/contributing/">
+      
+      
+        <link rel="prev" href="../faq/">
+      
+      
+        <link rel="next" href="../changelog/">
+      
+      
+      <link rel="icon" href="../assets/favicon.svg">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.0">
+    
+    
+      
+        <title>Contributing - mobile-automator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.45e1311d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#contributing" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="mobile-automator" class="md-header__button md-logo" aria-label="mobile-automator" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            mobile-automator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Contributing
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-hidden="true"  type="radio" name="__palette" id="__palette_1">
+    
+  
+</form>
+      
+    
+    
+      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/sh3lan93/mobile-automator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sh3lan93/mobile-automator
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="mobile-automator" class="md-nav__button md-logo" aria-label="mobile-automator" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="logo">
+
+    </a>
+    mobile-automator
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/sh3lan93/mobile-automator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sh3lan93/mobile-automator
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Getting Started
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Getting Started
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/installation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Installation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/quick-start/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Quick Start
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Core Concepts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Core Concepts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/architecture/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Architecture
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/three-tier-design/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    3-Tier Design
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/skills/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How Skills Work
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/setup/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Setup Command
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/generate/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Generate Command
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/execute/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Execute Command
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/migrate/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Migrate Command
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Reference
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/assertions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Assertion Types
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/schema-v2/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Test Scenario Schema v2
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/result-schema/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Test Result Schema
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/mcp-tools/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    MCP Tools
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Examples
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Examples
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/android/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Android Examples
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/ios/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    iOS Examples
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ & Troubleshooting
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Contributing
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Contributing
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#table-of-contents" class="md-nav__link">
+    <span class="md-ellipsis">
+      Table of Contents
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-started" class="md-nav__link">
+    <span class="md-ellipsis">
+      Getting Started
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Getting Started">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prerequisites
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fork-clone" class="md-nav__link">
+    <span class="md-ellipsis">
+      Fork &amp; Clone
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#development-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Development Setup
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Development Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#link-extension-locally" class="md-nav__link">
+    <span class="md-ellipsis">
+      Link Extension Locally
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#directory-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Directory Structure
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#understanding-the-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Understanding the Flow
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#making-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Making Changes
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Making Changes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#feature-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Feature Types
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Feature Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-skill-template-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Skill Template Changes
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-schema-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Schema Changes
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-command-workflow-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Command Workflow Changes
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-documentation-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Documentation Changes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Testing
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Testing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#manual-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Manual Testing
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#regression-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Regression Testing
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#submitting-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Submitting Changes
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Submitting Changes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#create-a-branch" class="md-nav__link">
+    <span class="md-ellipsis">
+      Create a Branch
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#commit-messages" class="md-nav__link">
+    <span class="md-ellipsis">
+      Commit Messages
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#push-open-pr" class="md-nav__link">
+    <span class="md-ellipsis">
+      Push &amp; Open PR
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pr-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      PR Description
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#code-standards" class="md-nav__link">
+    <span class="md-ellipsis">
+      Code Standards
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Code Standards">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#skill-templates-markdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      Skill Templates (Markdown)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schemas-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      Schemas (JSON)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#commands-toml" class="md-nav__link">
+    <span class="md-ellipsis">
+      Commands (TOML)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Documentation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Documentation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#updating-docs" class="md-nav__link">
+    <span class="md-ellipsis">
+      Updating Docs
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#writing-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Writing Examples
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#building-docs" class="md-nav__link">
+    <span class="md-ellipsis">
+      Building Docs
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#types-of-contributions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Types of Contributions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Types of Contributions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bug-reports" class="md-nav__link">
+    <span class="md-ellipsis">
+      Bug Reports
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#feature-requests" class="md-nav__link">
+    <span class="md-ellipsis">
+      Feature Requests
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#documentation-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      Documentation Improvements
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#code-reviews" class="md-nav__link">
+    <span class="md-ellipsis">
+      Code Reviews
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testing-qa" class="md-nav__link">
+    <span class="md-ellipsis">
+      Testing &amp; QA
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#review-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      Review Process
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Review Process">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-we-look-for" class="md-nav__link">
+    <span class="md-ellipsis">
+      What We Look For
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#getting-feedback" class="md-nav__link">
+    <span class="md-ellipsis">
+      Getting Feedback
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#development-workflow-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Development Workflow Example
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#community-communication" class="md-nav__link">
+    <span class="md-ellipsis">
+      Community &amp; Communication
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Community & Communication">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#getting-help" class="md-nav__link">
+    <span class="md-ellipsis">
+      Getting Help
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#code-of-conduct" class="md-nav__link">
+    <span class="md-ellipsis">
+      Code of Conduct
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#release-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      Release Process
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      Resources
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#questions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Questions?
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Changelog
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#table-of-contents" class="md-nav__link">
+    <span class="md-ellipsis">
+      Table of Contents
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-started" class="md-nav__link">
+    <span class="md-ellipsis">
+      Getting Started
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Getting Started">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prerequisites
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fork-clone" class="md-nav__link">
+    <span class="md-ellipsis">
+      Fork &amp; Clone
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#development-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Development Setup
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Development Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#link-extension-locally" class="md-nav__link">
+    <span class="md-ellipsis">
+      Link Extension Locally
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#directory-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Directory Structure
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#understanding-the-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Understanding the Flow
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#making-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Making Changes
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Making Changes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#feature-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Feature Types
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Feature Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-skill-template-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Skill Template Changes
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-schema-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Schema Changes
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-command-workflow-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Command Workflow Changes
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-documentation-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Documentation Changes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Testing
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Testing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#manual-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Manual Testing
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#regression-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Regression Testing
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#submitting-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Submitting Changes
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Submitting Changes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#create-a-branch" class="md-nav__link">
+    <span class="md-ellipsis">
+      Create a Branch
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#commit-messages" class="md-nav__link">
+    <span class="md-ellipsis">
+      Commit Messages
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#push-open-pr" class="md-nav__link">
+    <span class="md-ellipsis">
+      Push &amp; Open PR
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pr-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      PR Description
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#code-standards" class="md-nav__link">
+    <span class="md-ellipsis">
+      Code Standards
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Code Standards">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#skill-templates-markdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      Skill Templates (Markdown)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schemas-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      Schemas (JSON)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#commands-toml" class="md-nav__link">
+    <span class="md-ellipsis">
+      Commands (TOML)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Documentation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Documentation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#updating-docs" class="md-nav__link">
+    <span class="md-ellipsis">
+      Updating Docs
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#writing-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Writing Examples
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#building-docs" class="md-nav__link">
+    <span class="md-ellipsis">
+      Building Docs
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#types-of-contributions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Types of Contributions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Types of Contributions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bug-reports" class="md-nav__link">
+    <span class="md-ellipsis">
+      Bug Reports
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#feature-requests" class="md-nav__link">
+    <span class="md-ellipsis">
+      Feature Requests
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#documentation-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      Documentation Improvements
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#code-reviews" class="md-nav__link">
+    <span class="md-ellipsis">
+      Code Reviews
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testing-qa" class="md-nav__link">
+    <span class="md-ellipsis">
+      Testing &amp; QA
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#review-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      Review Process
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Review Process">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-we-look-for" class="md-nav__link">
+    <span class="md-ellipsis">
+      What We Look For
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#getting-feedback" class="md-nav__link">
+    <span class="md-ellipsis">
+      Getting Feedback
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#development-workflow-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Development Workflow Example
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#community-communication" class="md-nav__link">
+    <span class="md-ellipsis">
+      Community &amp; Communication
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Community & Communication">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#getting-help" class="md-nav__link">
+    <span class="md-ellipsis">
+      Getting Help
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#code-of-conduct" class="md-nav__link">
+    <span class="md-ellipsis">
+      Code of Conduct
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#release-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      Release Process
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      Resources
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#questions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Questions?
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="contributing">Contributing<a class="headerlink" href="#contributing" title="Permanent link">&para;</a></h1>
+<p>We welcome contributions to mobile-automator! This guide explains how to get started developing, submitting changes, and helping improve the project.</p>
+<h2 id="table-of-contents">Table of Contents<a class="headerlink" href="#table-of-contents" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#getting-started">Getting Started</a></li>
+<li><a href="#development-setup">Development Setup</a></li>
+<li><a href="#making-changes">Making Changes</a></li>
+<li><a href="#testing">Testing</a></li>
+<li><a href="#submitting-changes">Submitting Changes</a></li>
+<li><a href="#code-standards">Code Standards</a></li>
+<li><a href="#documentation">Documentation</a></li>
+<li><a href="#types-of-contributions">Types of Contributions</a></li>
+</ol>
+<hr />
+<h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h2>
+<h3 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h3>
+<p>Before contributing, ensure you have:</p>
+<ul>
+<li><strong>Node.js 20+</strong> — Required for Gemini CLI and MCP server</li>
+<li><strong>Git</strong> — For version control</li>
+<li><strong>Mobile tools</strong>:</li>
+<li><strong>Android:</strong> Android SDK, ADB, Android emulator or device</li>
+<li><strong>iOS:</strong> Xcode command-line tools, iOS simulator or device</li>
+<li><strong>A test mobile app</strong> — For testing changes locally</li>
+</ul>
+<h3 id="fork-clone">Fork &amp; Clone<a class="headerlink" href="#fork-clone" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Fork the repository on GitHub</span>
+gh<span class="w"> </span>repo<span class="w"> </span>fork<span class="w"> </span>sh3lan93/mobile-automator<span class="w"> </span>--clone
+
+<span class="c1"># Navigate to directory</span>
+<span class="nb">cd</span><span class="w"> </span>mobile-automator
+
+<span class="c1"># Add upstream remote</span>
+git<span class="w"> </span>remote<span class="w"> </span>add<span class="w"> </span>upstream<span class="w"> </span>https://github.com/sh3lan93/mobile-automator.git
+</code></pre></div>
+<hr />
+<h2 id="development-setup">Development Setup<a class="headerlink" href="#development-setup" title="Permanent link">&para;</a></h2>
+<h3 id="link-extension-locally">Link Extension Locally<a class="headerlink" href="#link-extension-locally" title="Permanent link">&para;</a></h3>
+<p>To test changes while developing:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># From mobile-automator directory</span>
+gemini<span class="w"> </span>extensions<span class="w"> </span>link<span class="w"> </span>.
+
+<span class="c1"># In a test mobile project</span>
+<span class="nb">cd</span><span class="w"> </span>/path/to/test-mobile-app
+gemini<span class="w"> </span>/mobile-automator:setup<span class="w">  </span><span class="c1"># Test the extension</span>
+</code></pre></div>
+<h3 id="directory-structure">Directory Structure<a class="headerlink" href="#directory-structure" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>mobile-automator/
+├── commands/                  # Gemini CLI command definitions
+│   └── mobile-automator/
+│       ├── setup.toml        # Setup workflow
+│       ├── generate.toml      # Generate wrapper command
+│       ├── execute.toml       # Execute wrapper command
+│       └── migrate.toml       # Migration tool
+├── templates/                 # Skill templates
+│   ├── mobile-automator-generator/
+│   │   ├── SKILL.md          # Generator skill with {{placeholders}}
+│   │   └── references/        # Schema files
+│   └── mobile-automator-executor/
+│       ├── SKILL.md          # Executor skill with {{placeholders}}
+│       └── references/        # Schema files
+├── gemini-extension.json      # Extension manifest
+├── GEMINI.md                  # AI context for Gemini
+├── CLAUDE.md                  # Developer documentation
+├── README.md                  # User-facing docs
+└── docs/                      # Website content
+</code></pre></div>
+<h3 id="understanding-the-flow">Understanding the Flow<a class="headerlink" href="#understanding-the-flow" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Extension commands</strong> (<code>commands/mobile-automator/*.toml</code>)</li>
+<li>User-facing commands: <code>/mobile-automator:setup</code>, <code>/mobile-automator:generate</code>, etc.</li>
+<li>Handle pre-flight checks and validation</li>
+<li>
+<p>Delegate to skills for actual work</p>
+</li>
+<li>
+<p><strong>Skill templates</strong> (<code>templates/mobile-automator-*/SKILL.md</code>)</p>
+</li>
+<li>Contain test generation/execution logic</li>
+<li>Use <code>{{placeholders}}</code> for project-specific values</li>
+<li>
+<p>Populated during setup Section 6.0</p>
+</li>
+<li>
+<p><strong>Schemas</strong> (<code>templates/*/references/*.json</code>)</p>
+</li>
+<li>Define test scenario format (v2, v1 legacy)</li>
+<li>Define test result format</li>
+<li>Referenced by skills for validation</li>
+</ol>
+<hr />
+<h2 id="making-changes">Making Changes<a class="headerlink" href="#making-changes" title="Permanent link">&para;</a></h2>
+<h3 id="feature-types">Feature Types<a class="headerlink" href="#feature-types" title="Permanent link">&para;</a></h3>
+<h4 id="1-skill-template-changes">1. Skill Template Changes<a class="headerlink" href="#1-skill-template-changes" title="Permanent link">&para;</a></h4>
+<p>Modifying generator or executor skills:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Edit template</span>
+vim<span class="w"> </span>templates/mobile-automator-generator/SKILL.md
+
+<span class="c1"># Test in a mobile project</span>
+<span class="nb">cd</span><span class="w"> </span>/path/to/test-mobile-app
+gemini<span class="w"> </span>/mobile-automator:setup<span class="w">      </span><span class="c1"># Re-populate skill</span>
+gemini<span class="w"> </span>/mobile-automator:generate<span class="w">   </span><span class="c1"># Test generation</span>
+gemini<span class="w"> </span>/mobile-automator:execute<span class="w">    </span><span class="c1"># Test execution</span>
+</code></pre></div>
+<p><strong>Guidelines:</strong>
+- Keep prompts clear and concise
+- Use section markers for organization
+- Reference <code>{{placeholders}}</code> for project context
+- Add comments for complex logic
+- Test with multiple project types (Android, iOS, Flutter, etc.)</p>
+<h4 id="2-schema-changes">2. Schema Changes<a class="headerlink" href="#2-schema-changes" title="Permanent link">&para;</a></h4>
+<p>Modifying test scenario or result format:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Edit schema</span>
+vim<span class="w"> </span>templates/mobile-automator-generator/references/scenario_schema_v2.json
+
+<span class="c1"># Validate schema syntax</span>
+npm<span class="w"> </span>run<span class="w"> </span>validate-schemas<span class="w">  </span><span class="c1"># If you add this script</span>
+
+<span class="c1"># Update executor to support new fields</span>
+vim<span class="w"> </span>templates/mobile-automator-executor/SKILL.md
+</code></pre></div>
+<p><strong>Guidelines:</strong>
+- Use JSON Schema format (draft-07)
+- Maintain backward compatibility where possible
+- Add <code>description</code> for each new field
+- Provide example in comments
+- Update GEMINI.md schema registry
+- Update reference documentation</p>
+<h4 id="3-command-workflow-changes">3. Command Workflow Changes<a class="headerlink" href="#3-command-workflow-changes" title="Permanent link">&para;</a></h4>
+<p>Modifying setup or command behavior:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Edit command</span>
+vim<span class="w"> </span>commands/mobile-automator/setup.toml
+
+<span class="c1"># For complex changes, test multiple scenarios</span>
+<span class="c1"># - Different platforms (Android, iOS, Flutter, etc.)</span>
+<span class="c1"># - Different project structures</span>
+<span class="c1"># - Different environments (staging, prod, custom)</span>
+</code></pre></div>
+<p><strong>Guidelines:</strong>
+- Changes must not break existing projects
+- Maintain resume capability (save state between sections)
+- Test resume from each section
+- Add new state to <code>mobile-automator/setup_state.json</code></p>
+<h4 id="4-documentation-changes">4. Documentation Changes<a class="headerlink" href="#4-documentation-changes" title="Permanent link">&para;</a></h4>
+<p>Updating guides, examples, or reference:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Edit markdown</span>
+vim<span class="w"> </span>docs/guides/setup.md
+vim<span class="w"> </span>docs/examples/android.md
+vim<span class="w"> </span>docs/faq.md
+
+<span class="c1"># Preview locally (if mkdocs setup)</span>
+mkdocs<span class="w"> </span>serve
+</code></pre></div>
+<p><strong>Guidelines:</strong>
+- Use clear, concise language
+- Include code examples
+- Link to related sections
+- Update table of contents
+- Add to changelog</p>
+<hr />
+<h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
+<h3 id="manual-testing">Manual Testing<a class="headerlink" href="#manual-testing" title="Permanent link">&para;</a></h3>
+<p><strong>Test a new skill template:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. In test mobile project</span>
+<span class="nb">cd</span><span class="w"> </span>/path/to/test-mobile-app
+
+<span class="c1"># 2. Run setup</span>
+gemini<span class="w"> </span>/mobile-automator:setup
+
+<span class="c1"># 3. Verify skill populated correctly</span>
+cat<span class="w"> </span>.gemini/skills/mobile-automator-generator/SKILL.md<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;{{&quot;</span>
+<span class="c1"># ^ Should return nothing (no placeholders remaining)</span>
+
+<span class="c1"># 4. Generate a test</span>
+gemini<span class="w"> </span>/mobile-automator:generate
+
+<span class="c1"># 5. Execute the test</span>
+gemini<span class="w"> </span>/mobile-automator:execute
+
+<span class="c1"># 6. Check results</span>
+cat<span class="w"> </span>mobile-automator/results/run_*.json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.&#39;</span>
+</code></pre></div>
+<p><strong>Test different platforms:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Test on Android</span>
+adb<span class="w"> </span>devices
+<span class="nb">cd</span><span class="w"> </span>/path/to/android-app
+gemini<span class="w"> </span>/mobile-automator:setup
+gemini<span class="w"> </span>/mobile-automator:generate
+
+<span class="c1"># Test on iOS</span>
+xcrun<span class="w"> </span>simctl<span class="w"> </span>list
+<span class="nb">cd</span><span class="w"> </span>/path/to/ios-app
+gemini<span class="w"> </span>/mobile-automator:setup
+gemini<span class="w"> </span>/mobile-automator:generate
+
+<span class="c1"># Test on Flutter</span>
+<span class="nb">cd</span><span class="w"> </span>/path/to/flutter-app
+gemini<span class="w"> </span>/mobile-automator:setup
+gemini<span class="w"> </span>/mobile-automator:generate
+</code></pre></div>
+<h3 id="regression-testing">Regression Testing<a class="headerlink" href="#regression-testing" title="Permanent link">&para;</a></h3>
+<p>After making changes:</p>
+<ol>
+<li><strong>Test full setup workflow</strong> — Run setup to completion</li>
+<li><strong>Test scenario generation</strong> — Generate at least 3 scenarios</li>
+<li><strong>Test execution</strong> — Execute generated scenarios</li>
+<li><strong>Test result collection</strong> — Verify results are valid JSON</li>
+<li><strong>Test resume capability</strong> — Stop setup mid-way, resume it</li>
+<li><strong>Test with different projects</strong> — Android, iOS, Flutter, React Native</li>
+</ol>
+<hr />
+<h2 id="submitting-changes">Submitting Changes<a class="headerlink" href="#submitting-changes" title="Permanent link">&para;</a></h2>
+<h3 id="create-a-branch">Create a Branch<a class="headerlink" href="#create-a-branch" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Create feature branch</span>
+git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>feature/my-feature
+
+<span class="c1"># Or bug fix branch</span>
+git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>fix/issue-description
+</code></pre></div>
+<p><strong>Branch naming conventions:</strong>
+- <code>feature/</code> — New features
+- <code>fix/</code> — Bug fixes
+- <code>docs/</code> — Documentation
+- <code>refactor/</code> — Code cleanup
+- <code>test/</code> — Test improvements</p>
+<h3 id="commit-messages">Commit Messages<a class="headerlink" href="#commit-messages" title="Permanent link">&para;</a></h3>
+<p>Write clear, descriptive commit messages:</p>
+<div class="highlight"><pre><span></span><code># Good commit message format
+feat: add support for custom loading indicators
+fix: handle missing package ID in iOS projects
+docs: improve setup guide with examples
+refactor: simplify placeholder replacement logic
+
+# Format: type(scope): description
+# Types: feat, fix, docs, refactor, test, chore
+</code></pre></div>
+<h3 id="push-open-pr">Push &amp; Open PR<a class="headerlink" href="#push-open-pr" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Push to your fork</span>
+git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>feature/my-feature
+
+<span class="c1"># Create pull request</span>
+gh<span class="w"> </span>pr<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;feat: add custom assertions&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">             </span>--body<span class="w"> </span><span class="s2">&quot;This PR adds support for...&quot;</span>
+
+<span class="c1"># Or use GitHub web interface</span>
+</code></pre></div>
+<h3 id="pr-description">PR Description<a class="headerlink" href="#pr-description" title="Permanent link">&para;</a></h3>
+<p>Include:
+- <strong>What changes?</strong> — Brief description
+- <strong>Why?</strong> — Problem being solved
+- <strong>How tested?</strong> — Testing performed
+- <strong>Links</strong> — Related issues or discussions</p>
+<p>Example:
+<div class="highlight"><pre><span></span><code><span class="gu">## Description</span>
+Add support for custom loading indicators beyond built-in patterns.
+
+<span class="gu">## Problem</span>
+Users with custom loading indicators (spinners, animations) couldn&#39;t
+verify completion. Tests had to use fixed wait times.
+
+<span class="gu">## Solution</span>
+<span class="k">-</span><span class="w"> </span>Scan source for custom loading patterns
+<span class="k">-</span><span class="w"> </span>Add <span class="sb">`custom_loading_indicators`</span> to project config
+<span class="k">-</span><span class="w"> </span>Include in precondition evaluation
+
+<span class="gu">## Testing</span>
+<span class="k">-</span><span class="w"> </span>Tested on Android with custom Shimmer
+<span class="k">-</span><span class="w"> </span>Tested on iOS with custom SkeletonView
+<span class="k">-</span><span class="w"> </span>Tested with project having no custom indicators
+
+<span class="gu">## Related</span>
+Closes <span class="ni">#123</span>
+</code></pre></div></p>
+<hr />
+<h2 id="code-standards">Code Standards<a class="headerlink" href="#code-standards" title="Permanent link">&para;</a></h2>
+<h3 id="skill-templates-markdown">Skill Templates (Markdown)<a class="headerlink" href="#skill-templates-markdown" title="Permanent link">&para;</a></h3>
+<p><strong>Structure:</strong>
+<div class="highlight"><pre><span></span><code>---
+name: skill-name
+<span class="gu">description: What this skill does</span>
+<span class="gu">---</span>
+
+<span class="gh"># Skill Title</span>
+
+[Introduction section]
+
+<span class="gu">## Key Responsibilities</span>
+
+<span class="k">-</span><span class="w"> </span>Responsibility 1
+<span class="k">-</span><span class="w"> </span>Responsibility 2
+
+<span class="gu">## Implementation Details</span>
+
+[Detailed explanation with code examples]
+
+<span class="gu">### Using {{Placeholders}}</span>
+
+Explain what each placeholder means:
+<span class="k">-</span><span class="w"> </span><span class="sb">`{{app_package}}`</span> — Android package or iOS bundle ID
+<span class="k">-</span><span class="w"> </span><span class="sb">`{{architecture}}`</span> — Detected architecture pattern
+
+<span class="gu">## Assertions</span>
+
+List supported assertion types with examples
+
+<span class="gu">## Variables</span>
+
+Explain how to use captured variables
+</code></pre></div></p>
+<p><strong>Style:</strong>
+- Use clear section headings (## or ###)
+- Include code examples in JSON blocks
+- Reference placeholders in text
+- Comment complex logic
+- Keep lines readable (80-100 chars)</p>
+<h3 id="schemas-json">Schemas (JSON)<a class="headerlink" href="#schemas-json" title="Permanent link">&para;</a></h3>
+<p><strong>Structure:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;$schema&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;http://json-schema.org/draft-07/schema#&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Test Scenario Schema v2&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;object&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;required&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;$schema_version&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;scenario_id&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;name&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;steps&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;assertions&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;$schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;enum&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;2.0&quot;</span><span class="p">],</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Schema version identifier&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;new_field&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;What this field does&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;examples&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;example1&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;example2&quot;</span><span class="p">]</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<p><strong>Style:</strong>
+- Use <code>title</code> and <code>description</code> generously
+- Provide <code>examples</code> for complex fields
+- Use <code>required</code> array for mandatory fields
+- Reference other schemas with <code>$ref</code>
+- Document version changes</p>
+<h3 id="commands-toml">Commands (TOML)<a class="headerlink" href="#commands-toml" title="Permanent link">&para;</a></h3>
+<p><strong>Structure:</strong>
+<div class="highlight"><pre><span></span><code><span class="c1"># Command description and purpose</span>
+<span class="c1"># Workflow: Step 1 → Step 2 → Step 3</span>
+
+<span class="k">[[steps]]</span>
+<span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;step_1&quot;</span>
+<span class="n">prompt</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;What should we verify?&quot;</span>
+
+<span class="c1"># Explanation of this step</span>
+<span class="c1"># Include context from previous steps</span>
+
+<span class="k">[[steps]]</span>
+<span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;step_2&quot;</span>
+<span class="n">task</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">${workspacePath}/path/to/skill</span>
+<span class="s2">...skill configuration...</span>
+<span class="s2">&quot;&quot;&quot;</span>
+</code></pre></div></p>
+<p><strong>Style:</strong>
+- Add comments explaining workflow
+- Use descriptive step IDs
+- Include task descriptions
+- Reference workspace paths correctly
+- Handle state between steps</p>
+<hr />
+<h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
+<h3 id="updating-docs">Updating Docs<a class="headerlink" href="#updating-docs" title="Permanent link">&para;</a></h3>
+<p>When making code changes, update corresponding docs:</p>
+<ol>
+<li><strong>Updated skill</strong> → Update <a href="../guides/">Guides</a></li>
+<li><strong>New assertion type</strong> → Update <a href="../reference/assertions/">Assertions</a></li>
+<li><strong>Schema changes</strong> → Update <a href="../reference/schema-v2/">Schema Reference</a></li>
+<li><strong>New feature</strong> → Add example to <a href="../examples/">Examples</a></li>
+<li><strong>Bug fix</strong> → Update <a href="../changelog/">Changelog</a></li>
+</ol>
+<h3 id="writing-examples">Writing Examples<a class="headerlink" href="#writing-examples" title="Permanent link">&para;</a></h3>
+<p>Include complete, runnable examples:</p>
+<div class="highlight"><pre><span></span><code><span class="gu">## Example: Login Flow</span>
+
+Complete scenario showing authentication:
+
+<span class="gu">### Scenario JSON</span>
+
+\`\`\`json
+{
+  &quot;$schema_version&quot;: &quot;2.0&quot;,
+  &quot;scenario_id&quot;: &quot;login_example&quot;,
+  ...
+}
+\`\`\`
+
+<span class="gu">### What This Tests</span>
+
+<span class="k">-</span><span class="w"> </span>Authentication flow
+<span class="k">-</span><span class="w"> </span>Error handling
+<span class="k">-</span><span class="w"> </span>Loading states
+
+<span class="gu">### Adaptation Tips</span>
+
+<span class="k">-</span><span class="w"> </span>Change email for different account
+<span class="k">-</span><span class="w"> </span>Adjust timeouts for network speed
+</code></pre></div>
+<h3 id="building-docs">Building Docs<a class="headerlink" href="#building-docs" title="Permanent link">&para;</a></h3>
+<p>If using mkdocs:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Install dependencies</span>
+pip<span class="w"> </span>install<span class="w"> </span>mkdocs<span class="w"> </span>mkdocs-material
+
+<span class="c1"># Preview locally</span>
+mkdocs<span class="w"> </span>serve
+<span class="c1"># Visit http://localhost:8000</span>
+
+<span class="c1"># Build for production</span>
+mkdocs<span class="w"> </span>build
+</code></pre></div>
+<hr />
+<h2 id="types-of-contributions">Types of Contributions<a class="headerlink" href="#types-of-contributions" title="Permanent link">&para;</a></h2>
+<h3 id="bug-reports">Bug Reports<a class="headerlink" href="#bug-reports" title="Permanent link">&para;</a></h3>
+<p>Found an issue? Please report it:</p>
+<div class="highlight"><pre><span></span><code>gh<span class="w"> </span>issue<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;Bug: tests fail on Android 14&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">                 </span>--body<span class="w"> </span><span class="s2">&quot;Description of the issue...&quot;</span>
+</code></pre></div>
+<p><strong>Include:</strong>
+- Platform (Android, iOS, Flutter, etc.)
+- Reproduction steps
+- Expected vs actual behavior
+- Device/simulator details
+- Test app version</p>
+<h3 id="feature-requests">Feature Requests<a class="headerlink" href="#feature-requests" title="Permanent link">&para;</a></h3>
+<p>Have an idea? Share it:</p>
+<div class="highlight"><pre><span></span><code>gh<span class="w"> </span>issue<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;Feature: add support for video recording&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">                 </span>--body<span class="w"> </span><span class="s2">&quot;Use case and desired behavior...&quot;</span>
+</code></pre></div>
+<p><strong>Include:</strong>
+- Problem you're solving
+- Proposed solution
+- Example usage
+- Why it's useful</p>
+<h3 id="documentation-improvements">Documentation Improvements<a class="headerlink" href="#documentation-improvements" title="Permanent link">&para;</a></h3>
+<p>Help clarify or expand docs:</p>
+<ol>
+<li><strong>Typos &amp; clarity</strong> — Quick edits</li>
+<li><strong>Add examples</strong> — Show real-world usage</li>
+<li><strong>Expand sections</strong> — Detail underexplained topics</li>
+<li><strong>Create guides</strong> — Step-by-step walkthroughs</li>
+<li><strong>Improve FAQs</strong> — Answer common questions</li>
+</ol>
+<h3 id="code-reviews">Code Reviews<a class="headerlink" href="#code-reviews" title="Permanent link">&para;</a></h3>
+<p>Help review pull requests:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># View open PRs</span>
+gh<span class="w"> </span>pr<span class="w"> </span>list
+
+<span class="c1"># Review a PR</span>
+gh<span class="w"> </span>pr<span class="w"> </span>review<span class="w"> </span><span class="m">42</span><span class="w"> </span>--comment<span class="w"> </span><span class="s2">&quot;Consider adding test case for...&quot;</span>
+</code></pre></div>
+<h3 id="testing-qa">Testing &amp; QA<a class="headerlink" href="#testing-qa" title="Permanent link">&para;</a></h3>
+<p>Help test new features:</p>
+<ol>
+<li>Link the development branch: <code>gemini extensions link .</code></li>
+<li>Test with your mobile project</li>
+<li>Report issues: <code>gh issue create</code></li>
+<li>Verify fixes: <code>gh pr list</code> → comment</li>
+</ol>
+<hr />
+<h2 id="review-process">Review Process<a class="headerlink" href="#review-process" title="Permanent link">&para;</a></h2>
+<h3 id="what-we-look-for">What We Look For<a class="headerlink" href="#what-we-look-for" title="Permanent link">&para;</a></h3>
+<p>✅ <strong>Approved when:</strong>
+- Code follows standards
+- Tests pass
+- Documentation updated
+- Backwards compatible
+- No breaking changes</p>
+<p>❌ <strong>Needs work if:</strong>
+- Missing tests
+- Outdated docs
+- Breaking changes
+- Style inconsistencies
+- Unclear implementation</p>
+<h3 id="getting-feedback">Getting Feedback<a class="headerlink" href="#getting-feedback" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Author submits PR</strong></li>
+<li><strong>Maintainers review</strong> (1-3 days)</li>
+<li><strong>CI/CD checks run</strong> automatically</li>
+<li><strong>Discussion in PR comments</strong> if needed</li>
+<li><strong>Requested changes</strong> applied</li>
+<li><strong>Re-review</strong> if significant changes</li>
+<li><strong>Merge</strong> when approved</li>
+</ol>
+<hr />
+<h2 id="development-workflow-example">Development Workflow Example<a class="headerlink" href="#development-workflow-example" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. Fork and clone</span>
+gh<span class="w"> </span>repo<span class="w"> </span>fork<span class="w"> </span>sh3lan93/mobile-automator<span class="w"> </span>--clone
+<span class="nb">cd</span><span class="w"> </span>mobile-automator
+
+<span class="c1"># 2. Create feature branch</span>
+git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>feature/custom-assertions
+
+<span class="c1"># 3. Make changes</span>
+<span class="c1"># - Edit templates/mobile-automator-generator/SKILL.md</span>
+<span class="c1"># - Add assertion example to docs/reference/assertions.md</span>
+<span class="c1"># - Update changelog</span>
+
+<span class="c1"># 4. Test locally</span>
+<span class="nb">cd</span><span class="w"> </span>/path/to/test-app
+gemini<span class="w"> </span>extensions<span class="w"> </span>link<span class="w"> </span>/path/to/mobile-automator
+gemini<span class="w"> </span>/mobile-automator:setup
+gemini<span class="w"> </span>/mobile-automator:generate
+
+<span class="c1"># 5. Commit</span>
+<span class="nb">cd</span><span class="w"> </span>/path/to/mobile-automator
+git<span class="w"> </span>add<span class="w"> </span>-A
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add custom assertion type&quot;</span>
+
+<span class="c1"># 6. Push</span>
+git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>feature/custom-assertions
+
+<span class="c1"># 7. Create PR</span>
+gh<span class="w"> </span>pr<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;feat: add custom assertion support&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">             </span>--body<span class="w"> </span><span class="s2">&quot;Enables users to define custom assertions...&quot;</span>
+
+<span class="c1"># 8. Address review feedback</span>
+git<span class="w"> </span>add<span class="w"> </span>-A
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;Address review feedback&quot;</span>
+git<span class="w"> </span>push
+
+<span class="c1"># 9. Merge (after approval)</span>
+gh<span class="w"> </span>pr<span class="w"> </span>merge<span class="w"> </span><span class="m">42</span>
+</code></pre></div>
+<hr />
+<h2 id="community-communication">Community &amp; Communication<a class="headerlink" href="#community-communication" title="Permanent link">&para;</a></h2>
+<h3 id="getting-help">Getting Help<a class="headerlink" href="#getting-help" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Questions</strong> → <a href="https://github.com/sh3lan93/mobile-automator/discussions">GitHub Discussions</a></li>
+<li><strong>Issues</strong> → <a href="https://github.com/sh3lan93/mobile-automator/issues">GitHub Issues</a></li>
+<li><strong>Ideas</strong> → Share in Discussions</li>
+<li><strong>Feedback</strong> → Welcome all suggestions</li>
+</ul>
+<h3 id="code-of-conduct">Code of Conduct<a class="headerlink" href="#code-of-conduct" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Be respectful and professional</li>
+<li>Value diversity and inclusion</li>
+<li>Assume good intent</li>
+<li>Give constructive feedback</li>
+<li>Help others learn</li>
+</ul>
+<hr />
+<h2 id="release-process">Release Process<a class="headerlink" href="#release-process" title="Permanent link">&para;</a></h2>
+<p>Once your PR is merged, it will be included in the next release. See the <a href="../changelog/">Changelog</a> for version history details.</p>
+<p><strong>Version numbers:</strong> We use Semantic Versioning
+- <strong>Major</strong> (1.0.0) — Breaking changes
+- <strong>Minor</strong> (1.1.0) — New features, backwards compatible
+- <strong>Patch</strong> (1.1.1) — Bug fixes</p>
+<hr />
+<h2 id="resources">Resources<a class="headerlink" href="#resources" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong><a href="https://github.com/google-cloud-ai-research/gemini-cli">Gemini CLI Docs</a></strong> — Extension development</li>
+<li><strong><a href="https://json-schema.org/">JSON Schema Docs</a></strong> — Schema validation</li>
+<li><strong><a href="../">Architecture Documentation</a></strong> — See Core Concepts section for full architecture guide</li>
+</ul>
+<hr />
+<h2 id="questions">Questions?<a class="headerlink" href="#questions" title="Permanent link">&para;</a></h2>
+<p>Don't hesitate to ask:</p>
+<ol>
+<li><strong>GitHub Discussions</strong> — For general questions</li>
+<li><strong>GitHub Issues</strong> — For bugs and features</li>
+<li><strong>PR comments</strong> — For implementation details</li>
+</ol>
+<p>We're here to help make contributing as smooth as possible!</p>
+<hr />
+<p>Thank you for contributing to mobile-automator! 🎉</p>
+<p><a href="../">Back to Docs →</a></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12Z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7c377c4.min.js"></script>
+      
+    
+  </body>
+</html>

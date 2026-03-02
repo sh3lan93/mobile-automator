@@ -1,0 +1,2776 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Intelligent mobile QA automation for Gemini CLI">
+      
+      
+      
+        <link rel="canonical" href="https://sh3lan93.github.io/mobile-automator/reference/schema-v2/">
+      
+      
+        <link rel="prev" href="../assertions/">
+      
+      
+        <link rel="next" href="../result-schema/">
+      
+      
+      <link rel="icon" href="../../assets/favicon.svg">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.0">
+    
+    
+      
+        <title>Test Scenario Schema v2 - mobile-automator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.45e1311d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#test-scenario-schema-v2-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="mobile-automator" class="md-header__button md-logo" aria-label="mobile-automator" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            mobile-automator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Test Scenario Schema v2
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-hidden="true"  type="radio" name="__palette" id="__palette_1">
+    
+  
+</form>
+      
+    
+    
+      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/sh3lan93/mobile-automator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sh3lan93/mobile-automator
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="mobile-automator" class="md-nav__button md-logo" aria-label="mobile-automator" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="logo">
+
+    </a>
+    mobile-automator
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/sh3lan93/mobile-automator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sh3lan93/mobile-automator
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Getting Started
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Getting Started
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Installation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quick-start/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Quick Start
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Core Concepts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Core Concepts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/architecture/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Architecture
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/three-tier-design/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    3-Tier Design
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/skills/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How Skills Work
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/setup/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Setup Command
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/generate/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Generate Command
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/execute/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Execute Command
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/migrate/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Migrate Command
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Reference
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../assertions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Assertion Types
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Test Scenario Schema v2
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Test Scenario Schema v2
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#schema-structure-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Schema Structure Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complete-field-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      Complete Field Reference
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Complete Field Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#root-level-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      Root Level Fields
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-minimal-v2-scenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Minimal v2 Scenario
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#steps-object" class="md-nav__link">
+    <span class="md-ellipsis">
+      Steps Object
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Steps Object">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-id-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step ID Format
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#action-types-14-total" class="md-nav__link">
+    <span class="md-ellipsis">
+      Action Types (14 total)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Action Types (14 total)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-launch_app" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. launch_app
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-tap" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. tap
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-long_press" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. long_press
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-double_tap" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. double_tap
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-type" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. type
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-swipe" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. swipe
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-scroll_to_element" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. scroll_to_element
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-press_button" class="md-nav__link">
+    <span class="md-ellipsis">
+      8. press_button
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-open_url" class="md-nav__link">
+    <span class="md-ellipsis">
+      9. open_url
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-wait_for_element" class="md-nav__link">
+    <span class="md-ellipsis">
+      10. wait_for_element
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11-wait_for_element_gone" class="md-nav__link">
+    <span class="md-ellipsis">
+      11. wait_for_element_gone
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-wait_for_loading_complete" class="md-nav__link">
+    <span class="md-ellipsis">
+      12. wait_for_loading_complete
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-capture_value" class="md-nav__link">
+    <span class="md-ellipsis">
+      13. capture_value
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-clear_app_data" class="md-nav__link">
+    <span class="md-ellipsis">
+      14. clear_app_data
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-field-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step Field Options
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step Field Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      optional
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#retry_policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      retry_policy
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#condition" class="md-nav__link">
+    <span class="md-ellipsis">
+      condition
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#on_failure" class="md-nav__link">
+    <span class="md-ellipsis">
+      on_failure
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sub_steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      sub_steps
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wait_config" class="md-nav__link">
+    <span class="md-ellipsis">
+      wait_config
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#variables-object" class="md-nav__link">
+    <span class="md-ellipsis">
+      Variables Object
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preconditions-object" class="md-nav__link">
+    <span class="md-ellipsis">
+      Preconditions Object
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assertions-array" class="md-nav__link">
+    <span class="md-ellipsis">
+      Assertions Array
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metadata-object" class="md-nav__link">
+    <span class="md-ellipsis">
+      Metadata Object
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testrail-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      TestRail Integration
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tags
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complete-example-login-scenario-with-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Complete Example: Login Scenario with Variables
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration-from-v1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Migration from v1
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validation-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      Validation Rules
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      Related References
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../result-schema/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Test Result Schema
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mcp-tools/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    MCP Tools
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Examples
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Examples
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/android/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Android Examples
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/ios/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    iOS Examples
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ & Troubleshooting
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Contributing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Changelog
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#schema-structure-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Schema Structure Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complete-field-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      Complete Field Reference
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Complete Field Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#root-level-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      Root Level Fields
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-minimal-v2-scenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Minimal v2 Scenario
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#steps-object" class="md-nav__link">
+    <span class="md-ellipsis">
+      Steps Object
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Steps Object">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-id-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step ID Format
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#action-types-14-total" class="md-nav__link">
+    <span class="md-ellipsis">
+      Action Types (14 total)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Action Types (14 total)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-launch_app" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. launch_app
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-tap" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. tap
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-long_press" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. long_press
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-double_tap" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. double_tap
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-type" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. type
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-swipe" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. swipe
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-scroll_to_element" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. scroll_to_element
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-press_button" class="md-nav__link">
+    <span class="md-ellipsis">
+      8. press_button
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-open_url" class="md-nav__link">
+    <span class="md-ellipsis">
+      9. open_url
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-wait_for_element" class="md-nav__link">
+    <span class="md-ellipsis">
+      10. wait_for_element
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11-wait_for_element_gone" class="md-nav__link">
+    <span class="md-ellipsis">
+      11. wait_for_element_gone
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-wait_for_loading_complete" class="md-nav__link">
+    <span class="md-ellipsis">
+      12. wait_for_loading_complete
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-capture_value" class="md-nav__link">
+    <span class="md-ellipsis">
+      13. capture_value
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-clear_app_data" class="md-nav__link">
+    <span class="md-ellipsis">
+      14. clear_app_data
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-field-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step Field Options
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step Field Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      optional
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#retry_policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      retry_policy
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#condition" class="md-nav__link">
+    <span class="md-ellipsis">
+      condition
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#on_failure" class="md-nav__link">
+    <span class="md-ellipsis">
+      on_failure
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sub_steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      sub_steps
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wait_config" class="md-nav__link">
+    <span class="md-ellipsis">
+      wait_config
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#variables-object" class="md-nav__link">
+    <span class="md-ellipsis">
+      Variables Object
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preconditions-object" class="md-nav__link">
+    <span class="md-ellipsis">
+      Preconditions Object
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assertions-array" class="md-nav__link">
+    <span class="md-ellipsis">
+      Assertions Array
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metadata-object" class="md-nav__link">
+    <span class="md-ellipsis">
+      Metadata Object
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testrail-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      TestRail Integration
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tags
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complete-example-login-scenario-with-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Complete Example: Login Scenario with Variables
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration-from-v1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Migration from v1
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validation-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      Validation Rules
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      Related References
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="test-scenario-schema-v2-reference">Test Scenario Schema v2 Reference<a class="headerlink" href="#test-scenario-schema-v2-reference" title="Permanent link">&para;</a></h1>
+<p>The default schema for test scenarios. Defines the complete structure for test steps, assertions, variables, execution metadata, and advanced features like retry policies and conditional branching.</p>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>Schema v2 introduces a modern, feature-rich format for defining mobile test scenarios:</p>
+<ul>
+<li><strong>Named string step IDs</strong> — <code>tap_login</code>, <code>wait_for_home</code> (not integer indices)</li>
+<li><strong>14 action types</strong> — From simple tap/type to advanced waits and variable capture</li>
+<li><strong>27 assertion types</strong> — Comprehensive UI, content, visual, and accessibility checks</li>
+<li><strong>Variables &amp; capture</strong> — Extract dynamic values during execution for later assertions</li>
+<li><strong>Conditional execution</strong> — Optional steps, conditional branching, retry policies</li>
+<li><strong>Structured preconditions</strong> — Setup actions and device state requirements</li>
+<li><strong>TestRail integration</strong> — 1:1 mapping between scenarios and test cases</li>
+</ul>
+<p><strong>Schema version identifier:</strong> All v2 scenarios MUST have <code>"$schema_version": "2.0"</code> as the first field.</p>
+<h2 id="schema-structure-overview">Schema Structure Overview<a class="headerlink" href="#schema-structure-overview" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>Test Scenario v2
+├─ Metadata
+│  ├─ $schema_version (required: &quot;2.0&quot;)
+│  ├─ scenario_id (required: snake_case)
+│  ├─ name (required: human-readable)
+│  ├─ description (required: what it tests)
+│  ├─ platform (required: android/ios/cross-platform)
+│  ├─ app_package (required: bundle/package ID)
+│  └─ metadata (required: app_version, environment)
+├─ Organization
+│  ├─ tags (optional: filtering tags)
+│  └─ testrail (optional: TestRail mapping)
+├─ Setup
+│  ├─ variables (optional: variable definitions)
+│  └─ preconditions (optional: setup actions)
+├─ Execution
+│  ├─ steps (required: test actions)
+│  └─ assertions (required: verification rules)
+└─ Execution Metadata (runtime-only, in result schema)
+</code></pre></div>
+<h2 id="complete-field-reference">Complete Field Reference<a class="headerlink" href="#complete-field-reference" title="Permanent link">&para;</a></h2>
+<h3 id="root-level-fields">Root Level Fields<a class="headerlink" href="#root-level-fields" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>$schema_version</code></td>
+<td>string</td>
+<td><strong>YES</strong></td>
+<td>Must be exactly <code>"2.0"</code> for v2 scenarios</td>
+</tr>
+<tr>
+<td><code>scenario_id</code></td>
+<td>string</td>
+<td><strong>YES</strong></td>
+<td>Unique identifier in snake_case (e.g., <code>login_happy_path</code>)</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>string</td>
+<td><strong>YES</strong></td>
+<td>Human-readable scenario title</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>string</td>
+<td><strong>YES</strong></td>
+<td>What this scenario tests and business value</td>
+</tr>
+<tr>
+<td><code>platform</code></td>
+<td>string</td>
+<td><strong>YES</strong></td>
+<td>Target platform: <code>android</code>, <code>ios</code>, or <code>cross-platform</code></td>
+</tr>
+<tr>
+<td><code>app_package</code></td>
+<td>string</td>
+<td><strong>YES</strong></td>
+<td>Android package name or iOS bundle identifier</td>
+</tr>
+<tr>
+<td><code>metadata</code></td>
+<td>object</td>
+<td><strong>YES</strong></td>
+<td>Design-time metadata with <code>app_version</code> and <code>environment</code></td>
+</tr>
+<tr>
+<td><code>tags</code></td>
+<td>array</td>
+<td>No</td>
+<td>Categorization tags for filtering (max 10 tags, max 20 chars each)</td>
+</tr>
+<tr>
+<td><code>testrail</code></td>
+<td>object</td>
+<td>No</td>
+<td>Optional TestRail integration with <code>case_id</code>, <code>project_id</code>, <code>case_url</code></td>
+</tr>
+<tr>
+<td><code>variables</code></td>
+<td>object</td>
+<td>No</td>
+<td>Variable declarations for capture_value steps</td>
+</tr>
+<tr>
+<td><code>preconditions</code></td>
+<td>object</td>
+<td>No</td>
+<td>Setup requirements and device actions before test</td>
+</tr>
+<tr>
+<td><code>steps</code></td>
+<td>object</td>
+<td><strong>YES</strong></td>
+<td>Named test steps (key = step_id, value = action definition)</td>
+</tr>
+<tr>
+<td><code>assertions</code></td>
+<td>array</td>
+<td><strong>YES</strong></td>
+<td>Array of assertion checks</td>
+</tr>
+</tbody>
+</table>
+<h3 id="example-minimal-v2-scenario">Example Minimal v2 Scenario<a class="headerlink" href="#example-minimal-v2-scenario" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;$schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;scenario_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_happy_path&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;User Login - Happy Path&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Verify user can log in with valid credentials and access dashboard&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;platform&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;android&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;app_package&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;com.example.app&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;metadata&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;app_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.2.3&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;staging&quot;</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;tap_login_button&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_button&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;wait_for_form&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;email_field&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;assertions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_form_visible&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Login form is displayed&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_exists&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;email_field&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<h2 id="steps-object">Steps Object<a class="headerlink" href="#steps-object" title="Permanent link">&para;</a></h2>
+<p>The <code>steps</code> object contains named test actions. Each key is the step ID (snake_case), and the value is an action definition.</p>
+<h3 id="step-id-format">Step ID Format<a class="headerlink" href="#step-id-format" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Must be lowercase alphanumeric with underscores: <code>^[a-z][a-z0-9_]*$</code></li>
+<li>Examples: <code>tap_login</code>, <code>wait_for_home</code>, <code>type_email_address</code></li>
+<li>Max length: 50 characters</li>
+</ul>
+<h3 id="action-types-14-total">Action Types (14 total)<a class="headerlink" href="#action-types-14-total" title="Permanent link">&para;</a></h3>
+<h4 id="1-launch_app">1. launch_app<a class="headerlink" href="#1-launch_app" title="Permanent link">&para;</a></h4>
+<p>Launch the app on the device.</p>
+<p><strong>Fields:</strong>
+- <code>type</code> — <code>"launch_app"</code>
+- <code>app_package</code> (optional) — Override default package (rarely needed)</p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;launch_app_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;launch_app&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h4 id="2-tap">2. tap<a class="headerlink" href="#2-tap" title="Permanent link">&para;</a></h4>
+<p>Tap/click on a UI element.</p>
+<p><strong>Fields:</strong>
+- <code>type</code> — <code>"tap"</code>
+- <code>element</code> — Element ID/locator to tap
+- <code>optional</code> (optional) — If <code>true</code>, step continues even if element not found (default: <code>false</code>)
+- <code>retry_policy</code> (optional) — Retry configuration</p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;tap_login_button&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_button&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h4 id="3-long_press">3. long_press<a class="headerlink" href="#3-long_press" title="Permanent link">&para;</a></h4>
+<p>Long-press on a UI element.</p>
+<p><strong>Fields:</strong>
+- <code>type</code> — <code>"long_press"</code>
+- <code>element</code> — Element to long-press
+- <code>duration_ms</code> (optional) — Press duration in milliseconds (default: 500)</p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;long_press_menu_item&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;long_press&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;menu_item&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;duration_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h4 id="4-double_tap">4. double_tap<a class="headerlink" href="#4-double_tap" title="Permanent link">&para;</a></h4>
+<p>Double-tap on a UI element.</p>
+<p><strong>Fields:</strong>
+- <code>type</code> — <code>"double_tap"</code>
+- <code>element</code> — Element to double-tap</p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;double_tap_zoom&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;double_tap&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;image&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h4 id="5-type">5. type<a class="headerlink" href="#5-type" title="Permanent link">&para;</a></h4>
+<p>Type text into a focused input field.</p>
+<p><strong>Fields:</strong>
+- <code>type</code> — <code>"type"</code>
+- <code>text</code> — Text to type
+- <code>clear_first</code> (optional) — Clear field before typing (default: <code>false</code>)</p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;enter_email&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user@example.com&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;clear_first&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h4 id="6-swipe">6. swipe<a class="headerlink" href="#6-swipe" title="Permanent link">&para;</a></h4>
+<p>Swipe/scroll in a direction.</p>
+<p><strong>Fields:</strong>
+- <code>type</code> — <code>"swipe"</code>
+- <code>direction</code> — <code>up</code>, <code>down</code>, <code>left</code>, or <code>right</code>
+- <code>distance_pixels</code> (optional) — Distance in pixels (default: 400)</p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;scroll_down_page&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;swipe&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;down&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;distance_pixels&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h4 id="7-scroll_to_element">7. scroll_to_element<a class="headerlink" href="#7-scroll_to_element" title="Permanent link">&para;</a></h4>
+<p>Scroll until a specific element is visible.</p>
+<p><strong>Fields:</strong>
+- <code>type</code> — <code>"scroll_to_element"</code>
+- <code>element</code> — Element to scroll to
+- <code>max_swipes</code> (optional) — Maximum scroll attempts (default: 10)
+- <code>direction</code> (optional) — <code>up</code> or <code>down</code> (default: <code>down</code>)</p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;scroll_to_submit&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;scroll_to_element&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;submit_button&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;down&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h4 id="8-press_button">8. press_button<a class="headerlink" href="#8-press_button" title="Permanent link">&para;</a></h4>
+<p>Press a device button.</p>
+<p><strong>Fields:</strong>
+- <code>type</code> — <code>"press_button"</code>
+- <code>button</code> — <code>BACK</code>, <code>HOME</code>, <code>VOLUME_UP</code>, <code>VOLUME_DOWN</code>, <code>ENTER</code></p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;press_back&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;press_button&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;button&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;BACK&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h4 id="9-open_url">9. open_url<a class="headerlink" href="#9-open_url" title="Permanent link">&para;</a></h4>
+<p>Open a URL in the default browser.</p>
+<p><strong>Fields:</strong>
+- <code>type</code> — <code>"open_url"</code>
+- <code>url</code> — URL to open</p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;open_help_page&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;open_url&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://help.example.com&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h4 id="10-wait_for_element">10. wait_for_element<a class="headerlink" href="#10-wait_for_element" title="Permanent link">&para;</a></h4>
+<p>Wait until an element appears on screen.</p>
+<p><strong>Fields:</strong>
+- <code>type</code> — <code>"wait_for_element"</code>
+- <code>element</code> — Element to wait for
+- <code>timeout_seconds</code> (optional) — Max wait time (default: 10)</p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;wait_for_dashboard&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dashboard_content&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">15</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h4 id="11-wait_for_element_gone">11. wait_for_element_gone<a class="headerlink" href="#11-wait_for_element_gone" title="Permanent link">&para;</a></h4>
+<p>Wait until an element disappears from screen.</p>
+<p><strong>Fields:</strong>
+- <code>type</code> — <code>"wait_for_element_gone"</code>
+- <code>element</code> — Element to wait for disappearance
+- <code>timeout_seconds</code> (optional) — Max wait time (default: 10)</p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;wait_for_loading_done&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element_gone&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;loading_spinner&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h4 id="12-wait_for_loading_complete">12. wait_for_loading_complete<a class="headerlink" href="#12-wait_for_loading_complete" title="Permanent link">&para;</a></h4>
+<p>Wait until loading indicators disappear.</p>
+<p><strong>Fields:</strong>
+- <code>type</code> — <code>"wait_for_loading_complete"</code>
+- <code>timeout_seconds</code> (optional) — Max wait time (default: 10)</p>
+<p><strong>Note:</strong> Automatically detects project-specific loading indicators from <code>mobile-automator/config.json</code></p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;wait_for_data_load&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading_complete&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h4 id="13-capture_value">13. capture_value<a class="headerlink" href="#13-capture_value" title="Permanent link">&para;</a></h4>
+<p>Extract text/value from an element and store in a variable.</p>
+<p><strong>Fields:</strong>
+- <code>type</code> — <code>"capture_value"</code>
+- <code>element</code> — Element to extract from
+- <code>capture_to</code> — Variable name to store value (must be declared in <code>variables</code> section)</p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;capture_order_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_value&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;order_confirmation_code&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;capture_to&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;order_id&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h4 id="14-clear_app_data">14. clear_app_data<a class="headerlink" href="#14-clear_app_data" title="Permanent link">&para;</a></h4>
+<p>Clear app data and cache (precondition action).</p>
+<p><strong>Fields:</strong>
+- <code>type</code> — <code>"clear_app_data"</code>
+- <code>app_package</code> (optional) — Package to clear (default: primary app)</p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;reset_app&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;clear_app_data&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h3 id="step-field-options">Step Field Options<a class="headerlink" href="#step-field-options" title="Permanent link">&para;</a></h3>
+<p>Additional fields that can be added to any step:</p>
+<h4 id="optional">optional<a class="headerlink" href="#optional" title="Permanent link">&para;</a></h4>
+<p>If <code>true</code>, step continues even if it fails. Default: <code>false</code></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;optional_feature_check&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;optional_button&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;optional&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<h4 id="retry_policy">retry_policy<a class="headerlink" href="#retry_policy" title="Permanent link">&para;</a></h4>
+<p>Configure automatic retry behavior for flaky steps.</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;flaky_element_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sometimes_slow_element&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;retry_policy&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;max_retries&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;backoff_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;backoff_multiplier&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.5</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<h4 id="condition">condition<a class="headerlink" href="#condition" title="Permanent link">&para;</a></h4>
+<p>Execute step only if condition is true. Reference variables: <code>"${{variable_name}}"</code></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;conditionally_submit&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;submit_button&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;condition&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;${{user_role}} == &#39;admin&#39;&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<h4 id="on_failure">on_failure<a class="headerlink" href="#on_failure" title="Permanent link">&para;</a></h4>
+<p>Action to take if step fails: <code>"skip_remaining"</code>, <code>"retry"</code>, <code>"capture_screenshot"</code>, <code>"continue"</code></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;critical_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;critical_button&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;on_failure&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_screenshot&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<h4 id="sub_steps">sub_steps<a class="headerlink" href="#sub_steps" title="Permanent link">&para;</a></h4>
+<p>Nested steps within a parent step (useful for complex interactions).</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;complex_flow&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;menu&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;sub_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">      </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;tap_submenu&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;submenu_item&quot;</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;verify_result&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;result&quot;</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<h4 id="wait_config">wait_config<a class="headerlink" href="#wait_config" title="Permanent link">&para;</a></h4>
+<p>Configure wait behavior within a step.</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;step_with_custom_wait&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;button&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;implicit_wait_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;explicit_timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<hr />
+<h2 id="variables-object">Variables Object<a class="headerlink" href="#variables-object" title="Permanent link">&para;</a></h2>
+<p>Declare variables that will be captured during test execution and used in assertions or conditions.</p>
+<p><strong>Format:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;variable_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string|integer|number|boolean&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Human-readable description&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;auth_token&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Authentication token captured after login&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;user_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;integer&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;User ID extracted from profile&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;is_premium&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;boolean&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Whether user has premium subscription&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h2 id="preconditions-object">Preconditions Object<a class="headerlink" href="#preconditions-object" title="Permanent link">&para;</a></h2>
+<p>Define setup requirements and device state before test execution.</p>
+<p><strong>Fields:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>app_state</code></td>
+<td>string</td>
+<td>Required app state: <code>fresh_install</code>, <code>logged_in</code>, <code>logged_out</code>, <code>any</code></td>
+</tr>
+<tr>
+<td><code>device_actions</code></td>
+<td>array</td>
+<td>Setup actions to perform (clear data, install app, etc.)</td>
+</tr>
+<tr>
+<td><code>device_properties</code></td>
+<td>object</td>
+<td>Required device properties (network, location, orientation)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;preconditions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;app_state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;logged_out&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;device_actions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">      </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;clear_app_data&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Clear any cached login data&quot;</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">],</span>
+<span class="w">    </span><span class="nt">&quot;device_properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wifi&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;location_services&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;enabled&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;orientation&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;portrait&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h2 id="assertions-array">Assertions Array<a class="headerlink" href="#assertions-array" title="Permanent link">&para;</a></h2>
+<p>Define verification rules that must pass for the test to succeed.</p>
+<p><strong>Fields:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>string</td>
+<td><strong>YES</strong></td>
+<td>Unique assertion ID in snake_case</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>string</td>
+<td><strong>YES</strong></td>
+<td>Human-readable assertion description</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td>string</td>
+<td><strong>YES</strong></td>
+<td>Assertion type (one of 27 types)</td>
+</tr>
+<tr>
+<td><code>element</code></td>
+<td>string</td>
+<td>Depends</td>
+<td>Element to assert (required for most types)</td>
+</tr>
+<tr>
+<td>Additional fields</td>
+<td>varies</td>
+<td>Depends</td>
+<td>Type-specific fields (e.g., <code>expected_exact</code>, <code>expected_contains</code>)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;assertions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;welcome_message&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome message displays user&#39;s name&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_text&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;welcome_label&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;expected_exact&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome, John Doe&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dashboard_visible&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Dashboard content is fully visible&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_fully_visible&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dashboard_content&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;verification_code_format&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Verification code has correct format&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pattern_match&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;code_display&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;expected_pattern&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;^[0-9]{6}$&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<p><strong>See <a href="../assertions/">Assertion Types Reference</a> for complete documentation on all 27 assertion types.</strong></p>
+<hr />
+<h2 id="metadata-object">Metadata Object<a class="headerlink" href="#metadata-object" title="Permanent link">&para;</a></h2>
+<p>Design-time metadata about the scenario. Runtime metadata (device, API level, timestamp) is captured in the result schema.</p>
+<p><strong>Fields:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>app_version</code></td>
+<td>string</td>
+<td><strong>YES</strong></td>
+<td>Target app version (e.g., <code>"1.2.3"</code>, <code>"staging-latest"</code>)</td>
+</tr>
+<tr>
+<td><code>environment</code></td>
+<td>string</td>
+<td><strong>YES</strong></td>
+<td>Target environment: <code>production</code>, <code>staging</code>, <code>development</code>, etc.</td>
+</tr>
+<tr>
+<td><code>target_version</code></td>
+<td>string</td>
+<td>No</td>
+<td>Optional target major version (e.g., <code>"v4.x"</code>) for compatibility</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;metadata&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;app_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.1.0&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;staging&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;target_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;v2.x&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h2 id="testrail-integration">TestRail Integration<a class="headerlink" href="#testrail-integration" title="Permanent link">&para;</a></h2>
+<p>Optional integration with TestRail for 1:1 mapping between scenarios and test cases.</p>
+<p><strong>Fields:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>case_id</code></td>
+<td>string</td>
+<td><strong>YES</strong></td>
+<td>TestRail case ID (e.g., <code>"C12345"</code>)</td>
+</tr>
+<tr>
+<td><code>project_id</code></td>
+<td>string</td>
+<td><strong>YES</strong></td>
+<td>TestRail project ID (e.g., <code>"P1"</code>)</td>
+</tr>
+<tr>
+<td><code>case_url</code></td>
+<td>string</td>
+<td><strong>YES</strong></td>
+<td>Full TestRail case URL for reference</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;testrail&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;case_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;C45678&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;project_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;P12&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;case_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://example.testrail.io/index.php?/cases/view/45678&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<p>When present, the executor automatically syncs test results to TestRail.</p>
+<hr />
+<h2 id="tags">Tags<a class="headerlink" href="#tags" title="Permanent link">&para;</a></h2>
+<p>Categorization tags for filtering and organizing scenarios.</p>
+<p><strong>Format:</strong>
+- Lowercase alphanumeric with hyphens: <code>^[a-z0-9][a-z0-9-]*$</code>
+- Max 10 tags per scenario
+- Max 20 characters per tag</p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;tags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;smoke&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;regression&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;p0&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;auth&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;critical-flow&quot;</span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<p><strong>Common tag categories:</strong>
+- <strong>Priority:</strong> <code>p0</code>, <code>p1</code>, <code>p2</code>, <code>p3</code>
+- <strong>Type:</strong> <code>smoke</code>, <code>regression</code>, <code>integration</code>, <code>sanity</code>
+- <strong>Feature:</strong> <code>auth</code>, <code>checkout</code>, <code>payment</code>, <code>search</code>
+- <strong>Status:</strong> <code>flaky</code>, <code>experimental</code>, <code>deprecated</code></p>
+<hr />
+<h2 id="complete-example-login-scenario-with-variables">Complete Example: Login Scenario with Variables<a class="headerlink" href="#complete-example-login-scenario-with-variables" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;$schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;scenario_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_with_2fa&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Login with 2FA&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Verify user can log in with email/password and complete two-factor authentication&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;platform&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;android&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;app_package&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;com.example.app&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;metadata&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;app_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.1.0&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;staging&quot;</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;tags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;auth&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;p0&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;smoke&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;testrail&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;case_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;C12345&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;project_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;P1&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;case_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://example.testrail.io/index.php?/cases/view/12345&quot;</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;auth_token&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;JWT token received after successful login&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;preconditions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;app_state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;logged_out&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;device_actions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">      </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;clear_app_data&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Clear cached login data&quot;</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;launch_app&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;launch_app&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;wait_for_login_screen&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;email_input&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;enter_email&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;testuser@example.com&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;enter_password&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;password_input&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;type_password&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;SecurePassword123!&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;tap_login&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_button&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;wait_for_2fa_prompt&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2fa_code_input&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;retry_policy&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;max_retries&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;backoff_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;enter_2fa_code&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;123456&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;tap_verify&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;verify_2fa_button&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;wait_for_dashboard&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading_complete&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;capture_auth_token&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_value&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;auth_header_token&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;capture_to&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;auth_token&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;assertions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_success&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;User successfully logged in and dashboard is visible&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_exists&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dashboard_content&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;welcome_message&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome message displays correct user&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;text_contains&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;welcome_label&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;expected_contains&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;auth_token_captured&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Authentication token was captured&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;text_not_empty&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;auth_header_token&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dashboard_fully_loaded&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Dashboard is fully visible&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_fully_visible&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dashboard_content&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<hr />
+<h2 id="migration-from-v1">Migration from v1<a class="headerlink" href="#migration-from-v1" title="Permanent link">&para;</a></h2>
+<p>v1 scenarios are deprecated. To migrate:</p>
+<div class="highlight"><pre><span></span><code>/mobile-automator:migrate<span class="w"> </span>&lt;scenario_id&gt;
+</code></pre></div>
+<p><strong>Key differences:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>v1</th>
+<th>v2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Step IDs</td>
+<td>Integer (1, 2, 3)</td>
+<td>String snake_case (<code>tap_login</code>)</td>
+</tr>
+<tr>
+<td>Step references</td>
+<td><code>after_step_id: 2</code></td>
+<td>Direct step ID in <code>sub_steps</code></td>
+</tr>
+<tr>
+<td>Variables</td>
+<td>Limited</td>
+<td>Full support with types</td>
+</tr>
+<tr>
+<td>Preconditions</td>
+<td>Array of strings</td>
+<td>Structured object</td>
+</tr>
+<tr>
+<td>Actions</td>
+<td>8 types</td>
+<td>14 types</td>
+</tr>
+<tr>
+<td>Assertions</td>
+<td>12 types</td>
+<td>27 types</td>
+</tr>
+<tr>
+<td>Retry policy</td>
+<td>Not supported</td>
+<td>Built-in support</td>
+</tr>
+<tr>
+<td>Conditions</td>
+<td>Not supported</td>
+<td>Full conditional execution</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Timeline:</strong>
+- <strong>Now - 6 months:</strong> v1 supported with deprecation warnings
+- <strong>6-12 months:</strong> v1 blocked from execution (warning → error)
+- <strong>12+ months:</strong> v1 hard fail with migration message</p>
+<hr />
+<h2 id="validation-rules">Validation Rules<a class="headerlink" href="#validation-rules" title="Permanent link">&para;</a></h2>
+<p><strong>schema_version:</strong>
+- Must be exactly <code>"2.0"</code>
+- Required, must be first field</p>
+<p><strong>scenario_id:</strong>
+- Format: <code>^[a-z][a-z0-9_]*$</code>
+- Max 50 characters
+- Unique within project</p>
+<p><strong>platform:</strong>
+- One of: <code>android</code>, <code>ios</code>, <code>cross-platform</code></p>
+<p><strong>app_package:</strong>
+- Android: Java package format (e.g., <code>com.example.app</code>)
+- iOS: Bundle identifier (e.g., <code>com.example.App</code>)
+- Must be valid for target platform</p>
+<p><strong>Steps:</strong>
+- All step IDs must follow format: <code>^[a-z][a-z0-9_]*$</code>
+- Step IDs must be unique within scenario
+- All referenced elements must be valid locators</p>
+<p><strong>Assertions:</strong>
+- All assertion IDs must be unique
+- <code>type</code> must be one of 27 supported types
+- Type-specific fields must be present</p>
+<hr />
+<h2 id="related-references">Related References<a class="headerlink" href="#related-references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../assertions/">Assertion Types</a> — All 27 assertion types with examples</li>
+<li><a href="../mcp-tools/">MCP Tools Reference</a> — Device automation primitives</li>
+<li><a href="../result-schema/">Test Result Schema</a> — How results are structured</li>
+</ul>
+<p><a href="../">← Back to Reference Index</a></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12Z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7c377c4.min.js"></script>
+      
+    
+  </body>
+</html>

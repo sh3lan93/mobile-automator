@@ -1,0 +1,1865 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Intelligent mobile QA automation for Gemini CLI">
+      
+      
+      
+        <link rel="canonical" href="https://sh3lan93.github.io/mobile-automator/concepts/three-tier-design/">
+      
+      
+        <link rel="prev" href="../architecture/">
+      
+      
+        <link rel="next" href="../skills/">
+      
+      
+      <link rel="icon" href="../../assets/favicon.svg">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.0">
+    
+    
+      
+        <title>3-Tier Design - mobile-automator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.45e1311d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#3-tier-architecture" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="mobile-automator" class="md-header__button md-logo" aria-label="mobile-automator" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            mobile-automator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              3-Tier Design
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-hidden="true"  type="radio" name="__palette" id="__palette_1">
+    
+  
+</form>
+      
+    
+    
+      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/sh3lan93/mobile-automator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sh3lan93/mobile-automator
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="mobile-automator" class="md-nav__button md-logo" aria-label="mobile-automator" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="logo">
+
+    </a>
+    mobile-automator
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/sh3lan93/mobile-automator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sh3lan93/mobile-automator
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Getting Started
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Getting Started
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Installation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quick-start/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Quick Start
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Core Concepts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Core Concepts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Architecture
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    3-Tier Design
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    3-Tier Design
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tier-1-extension-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tier 1: Extension Commands
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tier 1: Extension Commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#purpose" class="md-nav__link">
+    <span class="md-ellipsis">
+      Purpose
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Files
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#responsibilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      Responsibilities
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-this-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      Why This Layer?
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tier-2-workspace-skills" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tier 2: Workspace Skills
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tier 2: Workspace Skills">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#purpose_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Purpose
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-files_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Files
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#generator-skill" class="md-nav__link">
+    <span class="md-ellipsis">
+      Generator Skill
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#executor-skill" class="md-nav__link">
+    <span class="md-ellipsis">
+      Executor Skill
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-skills-are-installed-to-workspace" class="md-nav__link">
+    <span class="md-ellipsis">
+      Why Skills Are Installed to Workspace
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tier-3-automation-engine-mobile-mcp" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tier 3: Automation Engine (mobile-mcp)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tier 3: Automation Engine (mobile-mcp)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#purpose_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Purpose
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#provided-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      Provided Tools
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-this-abstraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Why This Abstraction?
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-flow-example-login-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Flow Example: Login Test
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#communication-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      Communication Patterns
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Communication Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tier-1-tier-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tier 1 ↔ Tier 2
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-2-tier-3" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tier 2 ↔ Tier 3
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#state-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      State Management
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extensibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      Extensibility
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Extensibility">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#adding-a-new-skill" class="md-nav__link">
+    <span class="md-ellipsis">
+      Adding a New Skill
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adding-a-new-mcp-tool" class="md-nav__link">
+    <span class="md-ellipsis">
+      Adding a New MCP Tool
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      Next Steps
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skills/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How Skills Work
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/setup/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Setup Command
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/generate/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Generate Command
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/execute/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Execute Command
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/migrate/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Migrate Command
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Reference
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/assertions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Assertion Types
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/schema-v2/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Test Scenario Schema v2
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/result-schema/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Test Result Schema
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/mcp-tools/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    MCP Tools
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Examples
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Examples
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/android/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Android Examples
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/ios/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    iOS Examples
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ & Troubleshooting
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Contributing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Changelog
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tier-1-extension-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tier 1: Extension Commands
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tier 1: Extension Commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#purpose" class="md-nav__link">
+    <span class="md-ellipsis">
+      Purpose
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Files
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#responsibilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      Responsibilities
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-this-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      Why This Layer?
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tier-2-workspace-skills" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tier 2: Workspace Skills
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tier 2: Workspace Skills">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#purpose_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Purpose
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-files_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Files
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#generator-skill" class="md-nav__link">
+    <span class="md-ellipsis">
+      Generator Skill
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#executor-skill" class="md-nav__link">
+    <span class="md-ellipsis">
+      Executor Skill
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-skills-are-installed-to-workspace" class="md-nav__link">
+    <span class="md-ellipsis">
+      Why Skills Are Installed to Workspace
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tier-3-automation-engine-mobile-mcp" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tier 3: Automation Engine (mobile-mcp)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tier 3: Automation Engine (mobile-mcp)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#purpose_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Purpose
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#provided-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      Provided Tools
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-this-abstraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Why This Abstraction?
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-flow-example-login-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Flow Example: Login Test
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#communication-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      Communication Patterns
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Communication Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tier-1-tier-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tier 1 ↔ Tier 2
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-2-tier-3" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tier 2 ↔ Tier 3
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#state-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      State Management
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extensibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      Extensibility
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Extensibility">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#adding-a-new-skill" class="md-nav__link">
+    <span class="md-ellipsis">
+      Adding a New Skill
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adding-a-new-mcp-tool" class="md-nav__link">
+    <span class="md-ellipsis">
+      Adding a New MCP Tool
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      Next Steps
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="3-tier-architecture">3-Tier Architecture<a class="headerlink" href="#3-tier-architecture" title="Permanent link">&para;</a></h1>
+<p>A detailed exploration of how the three-tier design separates concerns and enables customization.</p>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────┐
+│  Tier 1: Extension Commands         │
+│  CLI entry points + validation      │
+│  setup.toml, generate.toml, etc.    │
+└──────────────┬──────────────────────┘
+               │
+      Validates, detects devices,
+      checks configuration
+               │
+┌──────────────▼──────────────────────┐
+│  Tier 2: Workspace Skills           │
+│  Project-specific logic             │
+│  .gemini/skills/mobile-automator-*  │
+└──────────────┬──────────────────────┘
+               │
+      Generates test scenarios,
+      executes tests,
+      captures observations
+               │
+┌──────────────▼──────────────────────┐
+│  Tier 3: Automation Engine          │
+│  Device primitives                  │
+│  mobile-mcp server                  │
+└─────────────────────────────────────┘
+               │
+      Device control,
+      screenshot capture,
+      element inspection
+</code></pre></div>
+<h2 id="tier-1-extension-commands">Tier 1: Extension Commands<a class="headerlink" href="#tier-1-extension-commands" title="Permanent link">&para;</a></h2>
+<h3 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">&para;</a></h3>
+<p>Handle pre-flight checks, infrastructure, and validation before delegating to workspace skills.</p>
+<h3 id="key-files">Key Files<a class="headerlink" href="#key-files" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>commands/mobile-automator/setup.toml</code> — 7-section setup workflow</li>
+<li><code>commands/mobile-automator/generate.toml</code> — Test generation entry point</li>
+<li><code>commands/mobile-automator/execute.toml</code> — Test execution entry point</li>
+<li><code>commands/mobile-automator/migrate.toml</code> — Scenario migration tool</li>
+</ul>
+<h3 id="responsibilities">Responsibilities<a class="headerlink" href="#responsibilities" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Device Detection</strong> — <code>mobile_list_available_devices()</code></li>
+<li><strong>Config Validation</strong> — Check <code>mobile-automator/config.json</code> exists</li>
+<li><strong>App Installation</strong> — Verify app is installed, or trigger build/install</li>
+<li><strong>Skill Verification</strong> — Ensure <code>.gemini/skills/mobile-automator-*/SKILL.md</code> exist</li>
+<li><strong>Scenario Selection</strong> — List and filter available scenarios</li>
+<li><strong>Error Handling</strong> — Clear, actionable error messages</li>
+</ol>
+<h3 id="why-this-layer">Why This Layer?<a class="headerlink" href="#why-this-layer" title="Permanent link">&para;</a></h3>
+<p>Keeps infrastructure concerns separate from test logic. The generator and executor skills don't need to worry about:
+- Whether a device is connected
+- Whether the app is installed
+- Whether their configuration is valid</p>
+<p>These checks happen in Tier 1, making skills simpler and more testable.</p>
+<h2 id="tier-2-workspace-skills">Tier 2: Workspace Skills<a class="headerlink" href="#tier-2-workspace-skills" title="Permanent link">&para;</a></h2>
+<h3 id="purpose_1">Purpose<a class="headerlink" href="#purpose_1" title="Permanent link">&para;</a></h3>
+<p>Contain project-specific testing logic, customized with project knowledge gathered during setup.</p>
+<h3 id="key-files_1">Key Files<a class="headerlink" href="#key-files_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>.gemini/skills/mobile-automator-generator/SKILL.md</code> — Generator skill prompt</li>
+<li><code>.gemini/skills/mobile-automator-executor/SKILL.md</code> — Executor skill prompt</li>
+<li><code>.gemini/skills/mobile-automator-generator/references/scenario_schema_v2.json</code> — Test scenario schema</li>
+<li><code>.gemini/skills/mobile-automator-executor/references/result_schema.json</code> — Result schema</li>
+</ul>
+<h3 id="generator-skill">Generator Skill<a class="headerlink" href="#generator-skill" title="Permanent link">&para;</a></h3>
+<p><strong>Input</strong>: Natural language description of a test</p>
+<p><strong>Output</strong>: JSON test scenario following Schema v2</p>
+<p><strong>Key Capabilities</strong>:
+- Parse user intent
+- Generate realistic action sequences
+- Add contextual assertions
+- Include retry logic for async operations
+- Capture values for later verification</p>
+<p><strong>Customization</strong>: The skill is customized with 13 placeholders:
+- <code>{{project_name}}</code> — App name for context
+- <code>{{architecture}}</code> — Architecture pattern (MVVM, Clean, BLoC, etc.)
+- <code>{{business_domain}}</code> — Domain knowledge (e.g., "E-commerce platform")
+- <code>{{loading_indicators}}</code> — Project-specific loading patterns
+- <code>{{protected_directories}}</code> — Source code paths to never modify
+- ...and 8 more</p>
+<h3 id="executor-skill">Executor Skill<a class="headerlink" href="#executor-skill" title="Permanent link">&para;</a></h3>
+<p><strong>Input</strong>: JSON test scenario + connected device</p>
+<p><strong>Output</strong>: Test result report with observations</p>
+<p><strong>Key Capabilities</strong>:
+- Parse scenario JSON
+- Execute actions step by step using mobile-mcp
+- Perform AI-powered visual assertions
+- Capture observations (flakiness, regressions, context)
+- Handle retries and error recovery
+- Generate detailed result reports</p>
+<p><strong>Customization</strong>: Same 13 placeholders, plus project-specific knowledge about:
+- Build commands for rebuilding if needed
+- Environment URLs and credentials (if applicable)
+- Custom assertion logic</p>
+<h3 id="why-skills-are-installed-to-workspace">Why Skills Are Installed to Workspace<a class="headerlink" href="#why-skills-are-installed-to-workspace" title="Permanent link">&para;</a></h3>
+<p><strong>Benefit 1: Persistence</strong>
+Skills remain even when the extension updates. Users get bug fixes via extension updates but keep their customized skills.</p>
+<p><strong>Benefit 2: Customization</strong>
+Users can edit skills if they want custom behavior:
+- Add project-specific assertion logic
+- Modify how observations are captured
+- Integrate with custom CI/CD systems</p>
+<p><strong>Benefit 3: Multiple Projects</strong>
+Each project can have its own skill versions customized to its platform, architecture, and domain.</p>
+<h2 id="tier-3-automation-engine-mobile-mcp">Tier 3: Automation Engine (mobile-mcp)<a class="headerlink" href="#tier-3-automation-engine-mobile-mcp" title="Permanent link">&para;</a></h2>
+<h3 id="purpose_2">Purpose<a class="headerlink" href="#purpose_2" title="Permanent link">&para;</a></h3>
+<p>Provide platform-agnostic device automation primitives.</p>
+<h3 id="provided-tools">Provided Tools<a class="headerlink" href="#provided-tools" title="Permanent link">&para;</a></h3>
+<p><strong>Device Management</strong>:
+- <code>mobile_list_available_devices()</code> — Enumerate connected devices and simulators
+- <code>mobile_get_screen_size()</code> — Get device resolution
+- <code>mobile_get_orientation()</code> — Current orientation
+- <code>mobile_set_orientation()</code> — Change orientation</p>
+<p><strong>App Control</strong>:
+- <code>mobile_launch_app()</code> — Launch app by package name
+- <code>mobile_install_app()</code> — Install APK/IPA
+- <code>mobile_uninstall_app()</code> — Uninstall app
+- <code>mobile_terminate_app()</code> — Force stop</p>
+<p><strong>Screen Interaction</strong>:
+- <code>mobile_take_screenshot()</code> — Capture screen
+- <code>mobile_click_on_screen_at_coordinates()</code> — Tap at x,y
+- <code>mobile_double_tap_on_screen()</code> — Double tap
+- <code>mobile_long_press_on_screen_at_coordinates()</code> — Long press
+- <code>mobile_type_keys()</code> — Type text
+- <code>mobile_swipe_on_screen()</code> — Swipe in direction
+- <code>mobile_press_button()</code> — Press system button (back, home, etc.)</p>
+<p><strong>Element Inspection</strong>:
+- <code>mobile_list_elements_on_screen()</code> — Get all elements with coordinates
+- <code>mobile_open_url()</code> — Open URL in browser</p>
+<h3 id="why-this-abstraction">Why This Abstraction?<a class="headerlink" href="#why-this-abstraction" title="Permanent link">&para;</a></h3>
+<p>Instead of Tier 2 calling platform-specific commands (adb for Android, xcrun for iOS), it calls these MCP tools. This:</p>
+<ul>
+<li><strong>Enables cross-platform skills</strong> — Same skill code works on Android and iOS</li>
+<li><strong>Simplifies platform support</strong> — Adding new platforms only requires updating mobile-mcp</li>
+<li><strong>Allows offline testing</strong> — Skills can be tested/mocked without real devices</li>
+</ul>
+<h2 id="data-flow-example-login-test">Data Flow Example: Login Test<a class="headerlink" href="#data-flow-example-login-test" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>User: &quot;Test the login flow&quot;
+        ↓
+Tier 1: /mobile-automator:generate
+  - Check device connected ✓
+  - Check app installed ✓
+  - Load config.json ✓
+  - Pass to skill ↓
+        ↓
+Tier 2: mobile-automator-generator skill
+  - Parse: &quot;login flow&quot;
+  - Generate action sequence:
+    * launch_app
+    * wait_for_element (login button)
+    * tap (email field)
+    * type (email)
+    * tap (password field)
+    * type (password)
+    * tap (sign in button)
+    * wait_for_element (home screen)
+  - Add assertions:
+    * home_screen element exists
+    * welcome_text matches &quot;Welcome, {username}&quot;
+  - Output: scenario JSON
+        ↓
+Tier 1: Save to mobile-automator/scenarios/login_flow.json
+        ↓
+User: &quot;Execute login test&quot;
+        ↓
+Tier 1: /mobile-automator:execute
+  - Check device connected ✓
+  - Check config exists ✓
+  - Load scenario ✓
+  - Pass to skill ↓
+        ↓
+Tier 2: mobile-automator-executor skill
+  - For each action:
+    * Call mobile-mcp ↓
+        ↓
+Tier 3: mobile-mcp
+  - launch_app → adb shell am start / xcrun simctl...
+  - wait_for_element → take screenshot, OCR/detect element
+  - tap → convert coordinates to platform-specific command
+  - type → input text via adb/xcrun
+  - ... continue ...
+        ↓
+Tier 3: Returns success/failure
+        ↓
+Tier 2: Perform assertions
+  - home_screen visible? Take screenshot, check with AI vision ✓
+  - welcome_text matches? Extract text, compare ✓
+  - Capture observations: no flakiness, no regressions
+        ↓
+Tier 1: Save result to mobile-automator/results/&lt;run_id&gt;.json
+</code></pre></div>
+<h2 id="communication-patterns">Communication Patterns<a class="headerlink" href="#communication-patterns" title="Permanent link">&para;</a></h2>
+<h3 id="tier-1-tier-2">Tier 1 ↔ Tier 2<a class="headerlink" href="#tier-1-tier-2" title="Permanent link">&para;</a></h3>
+<p><strong>Via</strong>: Gemini CLI skill invocation</p>
+<ul>
+<li>Tier 1 loads config, performs validation</li>
+<li>Tier 1 invokes skill with parameters</li>
+<li>Skill returns structured result (scenario JSON or result JSON)</li>
+<li>Tier 1 saves results to workspace</li>
+</ul>
+<h3 id="tier-2-tier-3">Tier 2 ↔ Tier 3<a class="headerlink" href="#tier-2-tier-3" title="Permanent link">&para;</a></h3>
+<p><strong>Via</strong>: MCP tool calls</p>
+<ul>
+<li>Skill calls <code>mobile_take_screenshot()</code></li>
+<li>mobile-mcp server receives tool call</li>
+<li>Server executes via adb/xcrun/platform CLI</li>
+<li>Server returns result (screenshot bytes, elements list, etc.)</li>
+<li>Skill continues processing</li>
+</ul>
+<h3 id="state-management">State Management<a class="headerlink" href="#state-management" title="Permanent link">&para;</a></h3>
+<p><strong>Config</strong>: Stored in <code>mobile-automator/config.json</code> during setup
+- Accessed by both Tier 1 (validation) and Tier 2 (skill customization)
+- Includes project knowledge, platforms, environments, etc.</p>
+<p><strong>Scenarios</strong>: Stored as JSON files in <code>mobile-automator/scenarios/</code>
+- Created by generator skill (Tier 2)
+- Executed by executor skill (Tier 2)
+- Listed by Tier 1 for user selection</p>
+<p><strong>Results</strong>: Stored as JSON files in <code>mobile-automator/results/</code>
+- Created by executor skill (Tier 2)
+- Listed by Tier 1 for user review</p>
+<h2 id="extensibility">Extensibility<a class="headerlink" href="#extensibility" title="Permanent link">&para;</a></h2>
+<h3 id="adding-a-new-skill">Adding a New Skill<a class="headerlink" href="#adding-a-new-skill" title="Permanent link">&para;</a></h3>
+<p>To add a third tier-2 skill (e.g., <code>mobile-automator-debugger</code>):</p>
+<ol>
+<li>Create template: <code>templates/mobile-automator-debugger/SKILL.md</code></li>
+<li>Include schema if needed: <code>templates/mobile-automator-debugger/references/debug_schema.json</code></li>
+<li>Update setup.toml to install the new skill</li>
+<li>Create command wrapper (optional): <code>commands/mobile-automator/debug.toml</code></li>
+</ol>
+<h3 id="adding-a-new-mcp-tool">Adding a New MCP Tool<a class="headerlink" href="#adding-a-new-mcp-tool" title="Permanent link">&para;</a></h3>
+<p>To add a new mobile-mcp capability:</p>
+<ol>
+<li>Implement in mobile-mcp (outside this project)</li>
+<li>Skills automatically can call it</li>
+<li>No changes needed to mobile-automator extension</li>
+</ol>
+<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../skills/">How Skills Work</a> — Understanding skill placeholders and customization</li>
+<li><a href="../../guides/setup/">Setup Guide</a> — Walkthrough of the 7-section setup workflow</li>
+<li><a href="../../guides/generate/">Generator Guide</a> — How test generation works</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12Z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7c377c4.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,2362 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Intelligent mobile QA automation for Gemini CLI">
+      
+      
+      
+        <link rel="canonical" href="https://sh3lan93.github.io/mobile-automator/guides/generate/">
+      
+      
+        <link rel="prev" href="../setup/">
+      
+      
+        <link rel="next" href="../execute/">
+      
+      
+      <link rel="icon" href="../../assets/favicon.svg">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.0">
+    
+    
+      
+        <title>Generate Command - mobile-automator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.45e1311d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#generate-command-guide" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="mobile-automator" class="md-header__button md-logo" aria-label="mobile-automator" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            mobile-automator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Generate Command
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-hidden="true"  type="radio" name="__palette" id="__palette_1">
+    
+  
+</form>
+      
+    
+    
+      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/sh3lan93/mobile-automator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sh3lan93/mobile-automator
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="mobile-automator" class="md-nav__button md-logo" aria-label="mobile-automator" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="logo">
+
+    </a>
+    mobile-automator
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/sh3lan93/mobile-automator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sh3lan93/mobile-automator
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Getting Started
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Getting Started
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Installation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quick-start/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Quick Start
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Core Concepts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Core Concepts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/architecture/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Architecture
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/three-tier-design/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    3-Tier Design
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/skills/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    How Skills Work
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Guides
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../setup/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Setup Command
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Generate Command
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Generate Command
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      Quick Start
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prerequisites
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pre-flight-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      Pre-Flight Checks
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-generation-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      The Generation Workflow
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The Generation Workflow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-natural-language-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 1: Natural Language Input
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-action-recognition" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 2: Action Recognition
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-element-resolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 3: Element Resolution
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-screenshot-capture" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 4: Screenshot Capture
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-json-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 5: JSON Generation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-6-review-refinement" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 6: Review &amp; Refinement
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced Features
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#testrail-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      TestRail Integration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#variables-dynamic-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      Variables &amp; Dynamic Values
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#conditional-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      Conditional Steps
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#retry-policies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Retry Policies
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices-for-descriptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Best Practices for Descriptions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best Practices for Descriptions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#do-be-specific" class="md-nav__link">
+    <span class="md-ellipsis">
+      ✅ DO: Be Specific
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#do-describe-intent-outcome" class="md-nav__link">
+    <span class="md-ellipsis">
+      ✅ DO: Describe Intent &amp; Outcome
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#do-use-natural-language" class="md-nav__link">
+    <span class="md-ellipsis">
+      ✅ DO: Use Natural Language
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dont-be-too-vague" class="md-nav__link">
+    <span class="md-ellipsis">
+      ❌ DON'T: Be Too Vague
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dont-include-implementation-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      ❌ DON'T: Include Implementation Details
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#understanding-generated-scenarios" class="md-nav__link">
+    <span class="md-ellipsis">
+      Understanding Generated Scenarios
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Understanding Generated Scenarios">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#schema-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      Schema Version
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-ids-named-strings" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step IDs (Named Strings)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#assertion-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Assertion Types
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      Troubleshooting
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#element-not-found" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Element Not Found"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#generated-scenario-doesnt-match-intent" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Generated Scenario Doesn't Match Intent"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#screenshot-capture-failed" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Screenshot Capture Failed"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#too-many-steps-generated" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Too Many Steps Generated"
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generated-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      Generated Files
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      Next Steps
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-editing-generated-scenarios" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced: Editing Generated Scenarios
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      See Also
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../execute/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Execute Command
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../migrate/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Migrate Command
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Reference
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/assertions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Assertion Types
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/schema-v2/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Test Scenario Schema v2
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/result-schema/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Test Result Schema
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/mcp-tools/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    MCP Tools
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Examples
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Examples
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/android/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Android Examples
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/ios/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    iOS Examples
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ & Troubleshooting
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Contributing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Changelog
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      Quick Start
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prerequisites
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pre-flight-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      Pre-Flight Checks
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-generation-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      The Generation Workflow
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The Generation Workflow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-natural-language-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 1: Natural Language Input
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-action-recognition" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 2: Action Recognition
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-element-resolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 3: Element Resolution
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-screenshot-capture" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 4: Screenshot Capture
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-json-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 5: JSON Generation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-6-review-refinement" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step 6: Review &amp; Refinement
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced Features
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#testrail-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      TestRail Integration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#variables-dynamic-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      Variables &amp; Dynamic Values
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#conditional-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      Conditional Steps
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#retry-policies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Retry Policies
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices-for-descriptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Best Practices for Descriptions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best Practices for Descriptions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#do-be-specific" class="md-nav__link">
+    <span class="md-ellipsis">
+      ✅ DO: Be Specific
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#do-describe-intent-outcome" class="md-nav__link">
+    <span class="md-ellipsis">
+      ✅ DO: Describe Intent &amp; Outcome
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#do-use-natural-language" class="md-nav__link">
+    <span class="md-ellipsis">
+      ✅ DO: Use Natural Language
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dont-be-too-vague" class="md-nav__link">
+    <span class="md-ellipsis">
+      ❌ DON'T: Be Too Vague
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dont-include-implementation-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      ❌ DON'T: Include Implementation Details
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#understanding-generated-scenarios" class="md-nav__link">
+    <span class="md-ellipsis">
+      Understanding Generated Scenarios
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Understanding Generated Scenarios">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#schema-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      Schema Version
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-ids-named-strings" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step IDs (Named Strings)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#assertion-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Assertion Types
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      Troubleshooting
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#element-not-found" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Element Not Found"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#generated-scenario-doesnt-match-intent" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Generated Scenario Doesn't Match Intent"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#screenshot-capture-failed" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Screenshot Capture Failed"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#too-many-steps-generated" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Too Many Steps Generated"
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generated-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      Generated Files
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      Next Steps
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-editing-generated-scenarios" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced: Editing Generated Scenarios
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      See Also
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="generate-command-guide">Generate Command Guide<a class="headerlink" href="#generate-command-guide" title="Permanent link">&para;</a></h1>
+<p>The <strong>Generate Command</strong> creates test scenarios using natural language descriptions or TestRail test cases. It understands what you want to test, launches your app on a device, resolves UI elements, and generates a JSON scenario file ready for execution.</p>
+<p><strong>Key benefit</strong>: No need to write complex JSON or learn special syntax — just describe your test in plain English.</p>
+<h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="c1"># Run the command</span>
+gemini<span class="w"> </span>/mobile-automator:generate
+
+<span class="c1"># Select a device and app</span>
+<span class="c1"># Describe your test steps</span>
+<span class="c1"># Review the generated scenario</span>
+</code></pre></div>
+<p>Generated scenarios are saved to: <code>mobile-automator/scenarios/&lt;name&gt;.json</code></p>
+<hr />
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
+<p>Before running generate, ensure:</p>
+<ol>
+<li><strong>Setup is complete</strong></li>
+<li><code>mobile-automator/config.json</code> exists</li>
+<li>
+<p><code>.gemini/skills/mobile-automator-generator/SKILL.md</code> is installed</p>
+</li>
+<li>
+<p><strong>Device is connected</strong></p>
+</li>
+<li>Android: <code>adb devices</code> shows your device</li>
+<li>
+<p>iOS: <code>xcrun simctl list</code> or physical device connected</p>
+</li>
+<li>
+<p><strong>App is installed</strong> (or allow generator to build/install)</p>
+</li>
+<li>Required for element resolution and screenshot capture</li>
+</ol>
+<hr />
+<h2 id="pre-flight-checks">Pre-Flight Checks<a class="headerlink" href="#pre-flight-checks" title="Permanent link">&para;</a></h2>
+<p>When you run <code>/mobile-automator:generate</code>, the wrapper performs these checks:</p>
+<div class="highlight"><pre><span></span><code>✓ Checking setup state...
+✓ Found: mobile-automator/config.json
+✓ Found: .gemini/skills/mobile-automator-generator/SKILL.md
+
+✓ Detecting devices...
+  Available devices:
+    1. Pixel 6 (Android 34)
+    2. iPhone 14 Pro (iOS 17.2)
+
+  Select device (1-2): 1
+
+✓ Verifying app installation...
+  App: com.example.myapp
+  Status: Installed (v1.2.3)
+
+  Ready to generate!
+</code></pre></div>
+<p>If app isn't installed, generator offers to build and install it.</p>
+<hr />
+<h2 id="the-generation-workflow">The Generation Workflow<a class="headerlink" href="#the-generation-workflow" title="Permanent link">&para;</a></h2>
+<h3 id="step-1-natural-language-input">Step 1: Natural Language Input<a class="headerlink" href="#step-1-natural-language-input" title="Permanent link">&para;</a></h3>
+<p>The generator prompts you to describe your test in plain English:</p>
+<div class="highlight"><pre><span></span><code>Describe your test scenario (what do you want to test?):
+</code></pre></div>
+<p>You can provide test steps in natural language:</p>
+<p><strong>Example 1: Simple Login Flow</strong>
+<div class="highlight"><pre><span></span><code>1. Tap the login button
+2. Enter &quot;user@example.com&quot; in the email field
+3. Enter &quot;password123&quot; in the password field
+4. Tap the sign in button
+5. Wait for the loading spinner to disappear
+6. Verify the home screen title says &quot;Welcome back!&quot;
+</code></pre></div></p>
+<p><strong>Example 2: Product Search Flow</strong>
+<div class="highlight"><pre><span></span><code>Launch the app
+Navigate to search
+Enter &quot;blue shoes&quot; in search field
+Wait for results to load
+Verify at least 5 products displayed
+Tap the first product
+Wait for product details to load
+Verify product title and price are visible
+</code></pre></div></p>
+<p><strong>Example 3: Complex User Flow</strong>
+<div class="highlight"><pre><span></span><code>Tap hamburger menu
+Wait for menu to open
+Tap settings option
+Wait for settings screen
+Toggle dark mode on
+Verify app background changed to dark
+Go back to main screen
+Verify dark mode is persisted
+</code></pre></div></p>
+<h3 id="step-2-action-recognition">Step 2: Action Recognition<a class="headerlink" href="#step-2-action-recognition" title="Permanent link">&para;</a></h3>
+<p>The generator parses your natural language and recognizes actions:</p>
+<table>
+<thead>
+<tr>
+<th>Your Input</th>
+<th>Recognized Action</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>"Tap the button"</td>
+<td><code>tap</code></td>
+<td>Finds button element</td>
+</tr>
+<tr>
+<td>"Enter 'text' in field"</td>
+<td><code>type</code></td>
+<td>Inputs text into field</td>
+</tr>
+<tr>
+<td>"Wait for element"</td>
+<td><code>wait_for_element</code></td>
+<td>Waits up to 10s for element</td>
+</tr>
+<tr>
+<td>"Wait for loading"</td>
+<td><code>wait_for_loading_complete</code></td>
+<td>Waits for loading indicators</td>
+</tr>
+<tr>
+<td>"Swipe up/down/left/right"</td>
+<td><code>swipe</code></td>
+<td>Performs swipe gesture</td>
+</tr>
+<tr>
+<td>"Scroll to element"</td>
+<td><code>scroll_to_element</code></td>
+<td>Scrolls until element visible</td>
+</tr>
+<tr>
+<td>"Double tap"</td>
+<td><code>double_tap</code></td>
+<td>Double-tap gesture</td>
+</tr>
+<tr>
+<td>"Long press"</td>
+<td><code>long_press</code></td>
+<td>Long-press gesture</td>
+</tr>
+<tr>
+<td>"Press back/home/enter"</td>
+<td><code>press_button</code></td>
+<td>Hardware button press</td>
+</tr>
+<tr>
+<td>"Launch the app"</td>
+<td><code>launch_app</code></td>
+<td>Starts your app</td>
+</tr>
+<tr>
+<td>"Open URL"</td>
+<td><code>open_url</code></td>
+<td>Opens a web link</td>
+</tr>
+<tr>
+<td>"Clear app data"</td>
+<td><code>clear_app_data</code></td>
+<td>Resets app state</td>
+</tr>
+<tr>
+<td>"Verify/Check/Ensure element"</td>
+<td><code>element_exists</code></td>
+<td>Assertion: element is visible</td>
+</tr>
+<tr>
+<td>"Verify text says"</td>
+<td><code>element_text</code></td>
+<td>Assertion: text content matches</td>
+</tr>
+<tr>
+<td>"Verify text contains"</td>
+<td><code>text_contains</code></td>
+<td>Assertion: text includes value</td>
+</tr>
+<tr>
+<td>"Capture value to X"</td>
+<td><code>capture_value</code></td>
+<td>Variable capture for dynamic values</td>
+</tr>
+</tbody>
+</table>
+<h3 id="step-3-element-resolution">Step 3: Element Resolution<a class="headerlink" href="#step-3-element-resolution" title="Permanent link">&para;</a></h3>
+<p>For each action involving an element (tap, type, verify), the generator:</p>
+<ol>
+<li><strong>Takes a screenshot</strong> — Captures current app screen</li>
+<li><strong>Lists all elements</strong> — Calls <code>mobile_list_elements_on_screen()</code></li>
+<li><strong>Matches your reference</strong> — Fuzzy-matches your description to actual UI elements</li>
+<li><strong>Confirms or asks</strong> — "I found a button labeled 'Login' at (200, 400). Use this? (y/n)"</li>
+</ol>
+<p><strong>Element Resolution Examples:</strong></p>
+<p>Your input → Generator finds:
+- "Tap the login button" → Button with text "Login"
+- "Enter email in the email field" → TextField with hint "Email address"
+- "Verify success message" → Text element containing "Success"
+- "Tap hamburger menu" → Image/Icon matching common menu patterns</p>
+<p><strong>If Element Not Found:</strong>
+- Generator shows available elements on screen
+- Asks for clarification: "Email field not found. Available text fields: [list]"
+- You can select from list or provide more specific description
+- Example: "The email field in the login form" instead of just "email field"</p>
+<h3 id="step-4-screenshot-capture">Step 4: Screenshot Capture<a class="headerlink" href="#step-4-screenshot-capture" title="Permanent link">&para;</a></h3>
+<p>Generator captures screenshots at key points:</p>
+<ul>
+<li><strong>Before each action</strong> — Shows app state before interaction</li>
+<li><strong>After each assertion</strong> — Captures result of verification</li>
+<li><strong>On error</strong> — Captures screen when action fails</li>
+<li><strong>Reference screenshots</strong> — Saved to <code>mobile-automator/screenshots/</code></li>
+</ul>
+<p>Screenshots help you:
+- Verify the test matches your intent
+- Debug failures during execution
+- Create visual test documentation</p>
+<h3 id="step-5-json-generation">Step 5: JSON Generation<a class="headerlink" href="#step-5-json-generation" title="Permanent link">&para;</a></h3>
+<p>The generator creates a v2 scenario JSON file with all information:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;$schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;scenario_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_happy_path&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;User Login - Happy Path&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;User can log in with valid credentials and see home screen&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;platform&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;android&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;app_package&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;com.example.myapp&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;metadata&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;app_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.2.3&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;staging&quot;</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;tap_login_button&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_button&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;coordinates&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">200</span><span class="p">,</span><span class="w"> </span><span class="mi">400</span><span class="p">]</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;enter_email&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;email_field&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user@example.com&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;enter_password&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;password_field&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;password123&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;tap_signin&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;signin_button&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;wait_loading&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading_complete&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;verify_welcome&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_text&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;home_title&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;expected_exact&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome back!&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;assertions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_button_exists&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Login button is visible on startup&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_exists&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_button&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;home_screen_title&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Home screen shows correct greeting&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_text&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;home_title&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;expected_exact&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome back!&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="step-6-review-refinement">Step 6: Review &amp; Refinement<a class="headerlink" href="#step-6-review-refinement" title="Permanent link">&para;</a></h3>
+<p>After generation, you can:</p>
+<p><strong>Review the scenario:</strong>
+- Generator shows summary of steps and assertions
+- Shows captured screenshots
+- Lists any ambiguous element matches</p>
+<p><strong>Edit the JSON directly:</strong>
+- Generated JSON is human-readable
+- You can manually refine step details
+- Add advanced features like retry policies, conditional steps, variables</p>
+<p><strong>Or regenerate:</strong>
+- Re-run generator with clearer description
+- Add more specific element references
+- Provide additional context</p>
+<hr />
+<h2 id="advanced-features">Advanced Features<a class="headerlink" href="#advanced-features" title="Permanent link">&para;</a></h2>
+<h3 id="testrail-integration">TestRail Integration<a class="headerlink" href="#testrail-integration" title="Permanent link">&para;</a></h3>
+<p>If your project uses TestRail, the generator can fetch test cases:</p>
+<p><strong>Input method:</strong>
+<div class="highlight"><pre><span></span><code>Test source (1-2):
+  1. Natural language description
+  2. TestRail test case
+
+Select: 2
+</code></pre></div></p>
+<p><strong>TestRail workflow:</strong>
+1. Generator asks for TestRail credentials (cached securely)
+2. Fetches test case ID or searches by title
+3. Extracts test case steps
+4. Parses steps as natural language
+5. Generates JSON scenario
+6. Includes TestRail metadata for later sync</p>
+<p><strong>Generated scenario includes:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;scenario_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_happy_path&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;testrail&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;case_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">12345</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;project_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;case_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://testrail.example.com/cases/12345&quot;</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="err">...</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<p>After execution, results sync automatically to TestRail.</p>
+<h3 id="variables-dynamic-values">Variables &amp; Dynamic Values<a class="headerlink" href="#variables-dynamic-values" title="Permanent link">&para;</a></h3>
+<p>For tests with dynamic data (usernames, IDs, etc.), use variable capture:</p>
+<div class="highlight"><pre><span></span><code>1. Capture the user ID from the welcome message to variable &quot;user_id&quot;
+2. Tap profile menu
+3. Verify the ID displayed matches variable &quot;user_id&quot;
+</code></pre></div>
+<p>Generator creates:
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;user_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;User ID from welcome message&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;capture_user_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_value&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;welcome_message&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;capture_to&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user_id&quot;</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;verify_id_matches&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;value_matches_variable&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;profile_id&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;variable&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user_id&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<h3 id="conditional-steps">Conditional Steps<a class="headerlink" href="#conditional-steps" title="Permanent link">&para;</a></h3>
+<p>For conditional branching (skip steps if condition not met):</p>
+<div class="highlight"><pre><span></span><code>1. Tap login button
+2. If email field exists, enter &quot;user@example.com&quot;
+3. Otherwise, skip to biometric login
+4. Complete login flow
+</code></pre></div>
+<p>Generator creates:
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;enter_email&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;email_field&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user@example.com&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;optional&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;condition&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_exists&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;email_field&quot;</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<h3 id="retry-policies">Retry Policies<a class="headerlink" href="#retry-policies" title="Permanent link">&para;</a></h3>
+<p>For flaky steps that need retry logic:</p>
+<div class="highlight"><pre><span></span><code>Wait for product list to load (retry up to 3 times if timeout)
+</code></pre></div>
+<p>Generator creates:
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;product_list&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;retry_policy&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;max_retries&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;wait_between_retries_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h2 id="best-practices-for-descriptions">Best Practices for Descriptions<a class="headerlink" href="#best-practices-for-descriptions" title="Permanent link">&para;</a></h2>
+<h3 id="do-be-specific">✅ DO: Be Specific<a class="headerlink" href="#do-be-specific" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Good:  &quot;Tap the &#39;Sign Up&#39; button in the top-right corner of the login screen&quot;
+Bad:   &quot;Tap the button&quot;
+
+Good:  &quot;Enter &#39;test@example.com&#39; in the email field and verify it appears&quot;
+Bad:   &quot;Type in a field&quot;
+</code></pre></div>
+<h3 id="do-describe-intent-outcome">✅ DO: Describe Intent &amp; Outcome<a class="headerlink" href="#do-describe-intent-outcome" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Good:  &quot;Wait for loading spinner to disappear, then verify the product list is visible&quot;
+Bad:   &quot;Wait 5 seconds&quot;
+
+Good:  &quot;Tap the menu icon and verify all menu options are displayed&quot;
+Bad:   &quot;Tap menu&quot;
+</code></pre></div>
+<h3 id="do-use-natural-language">✅ DO: Use Natural Language<a class="headerlink" href="#do-use-natural-language" title="Permanent link">&para;</a></h3>
+<p>The generator understands human language better than special syntax:</p>
+<div class="highlight"><pre><span></span><code>Good:  &quot;Verify the price is not empty&quot;
+Bad:   &quot;assert(price != &#39;&#39;)&quot;
+
+Good:  &quot;Scroll down until the checkout button is visible&quot;
+Bad:   &quot;scroll(0, 500)&quot;
+</code></pre></div>
+<h3 id="dont-be-too-vague">❌ DON'T: Be Too Vague<a class="headerlink" href="#dont-be-too-vague" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Bad:  &quot;Do something with login&quot;
+Bad:  &quot;Test the app&quot;
+Bad:  &quot;Verify stuff works&quot;
+</code></pre></div>
+<h3 id="dont-include-implementation-details">❌ DON'T: Include Implementation Details<a class="headerlink" href="#dont-include-implementation-details" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Bad:  &quot;Tap at coordinates (200, 400)&quot;
+      (Use: &quot;Tap the login button&quot; instead)
+
+Bad:  &quot;Wait 3 seconds&quot;
+      (Use: &quot;Wait for loading spinner to disappear&quot; instead)
+</code></pre></div>
+<hr />
+<h2 id="understanding-generated-scenarios">Understanding Generated Scenarios<a class="headerlink" href="#understanding-generated-scenarios" title="Permanent link">&para;</a></h2>
+<h3 id="schema-version">Schema Version<a class="headerlink" href="#schema-version" title="Permanent link">&para;</a></h3>
+<p>All generated scenarios are v2:
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">&quot;$schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.0&quot;</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div></p>
+<p>v2 provides modern features like variables, retry policies, and better assertions.</p>
+<h3 id="step-ids-named-strings">Step IDs (Named Strings)<a class="headerlink" href="#step-ids-named-strings" title="Permanent link">&para;</a></h3>
+<p>v2 uses descriptive step IDs instead of integers:
+<div class="highlight"><pre><span></span><code><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;tap_login&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;enter_email&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;wait_loading&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="err">...</span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<p>Benefits:
+- More readable and maintainable
+- Easier to reference in assertions
+- Better error messages</p>
+<h3 id="assertion-types">Assertion Types<a class="headerlink" href="#assertion-types" title="Permanent link">&para;</a></h3>
+<p>Generator supports 27 different assertions. Common types:</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>element_exists</code></td>
+<td>Verify button is visible</td>
+</tr>
+<tr>
+<td><code>element_not_exists</code></td>
+<td>Verify loading spinner disappeared</td>
+</tr>
+<tr>
+<td><code>element_text</code></td>
+<td>Verify text says exactly "Welcome"</td>
+</tr>
+<tr>
+<td><code>text_contains</code></td>
+<td>Verify message includes "success"</td>
+</tr>
+<tr>
+<td><code>element_visible</code></td>
+<td>Verify element is in viewport</td>
+</tr>
+<tr>
+<td><code>screenshot_match</code></td>
+<td>Verify screen matches reference</td>
+</tr>
+<tr>
+<td><code>element_count</code></td>
+<td>Verify list has 5 items</td>
+</tr>
+<tr>
+<td><code>list_is_empty</code></td>
+<td>Verify no results shown</td>
+</tr>
+<tr>
+<td><code>value_matches_variable</code></td>
+<td>Verify value matches captured variable</td>
+</tr>
+</tbody>
+</table>
+<p>See <a href="../../reference/assertions/">Assertion Reference</a> for full list.</p>
+<hr />
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="element-not-found">"Element Not Found"<a class="headerlink" href="#element-not-found" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> Generator can't find an element you referenced.</p>
+<p><strong>Solution:</strong>
+- Make sure element is visible on current screen
+- Try more specific description: "Login button in the center" instead of "button"
+- Check for typos in text content
+- Add explicit wait before action: "Wait 2 seconds, then tap login button"</p>
+<h3 id="generated-scenario-doesnt-match-intent">"Generated Scenario Doesn't Match Intent"<a class="headerlink" href="#generated-scenario-doesnt-match-intent" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> Generated JSON has extra or missing steps.</p>
+<p><strong>Solution:</strong>
+- Review generator's summary of recognized actions
+- Edit the JSON manually to refine details
+- Re-run generator with clearer description
+- Use the reference UI elements shown during generation</p>
+<h3 id="screenshot-capture-failed">"Screenshot Capture Failed"<a class="headerlink" href="#screenshot-capture-failed" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> Generator couldn't capture screenshots.</p>
+<p><strong>Causes:</strong>
+- Device connection lost
+- App crashed during test
+- Insufficient disk space</p>
+<p><strong>Solution:</strong>
+- Verify device is still connected: <code>adb devices</code> or <code>xcrun simctl list</code>
+- Restart app: <code>/mobile-automator:generate</code> will rebuild/reinstall
+- Check free disk space</p>
+<h3 id="too-many-steps-generated">"Too Many Steps Generated"<a class="headerlink" href="#too-many-steps-generated" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> Generator created more steps than you described.</p>
+<p><strong>Solution:</strong>
+- Generator may be breaking down complex actions
+- Edit JSON to combine related steps
+- Re-run with simpler, more concise description</p>
+<hr />
+<h2 id="generated-files">Generated Files<a class="headerlink" href="#generated-files" title="Permanent link">&para;</a></h2>
+<p>After generation, check the created files:</p>
+<div class="highlight"><pre><span></span><code>mobile-automator/
+├── scenarios/
+│   └── login_happy_path.json          ← Your scenario
+├── screenshots/
+│   ├── login_happy_path_step1.png
+│   ├── login_happy_path_step2.png
+│   └── ...
+└── config.json
+</code></pre></div>
+<p><strong>Scenario file:</strong> Ready to execute immediately with <code>/mobile-automator:execute</code></p>
+<p><strong>Screenshots:</strong> Reference images for visual verification during execution</p>
+<hr />
+<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Review scenario:</strong> Open <code>mobile-automator/scenarios/&lt;name&gt;.json</code> in editor</li>
+<li><strong>Refine if needed:</strong> Edit JSON or regenerate with different description</li>
+<li><strong>Execute the test:</strong> <code>/mobile-automator:execute</code></li>
+<li><strong>Review results:</strong> Check <code>mobile-automator/results/run_*.json</code></li>
+</ol>
+<p>See <a href="../execute/">Execute Command Guide</a> for running tests.</p>
+<hr />
+<h2 id="advanced-editing-generated-scenarios">Advanced: Editing Generated Scenarios<a class="headerlink" href="#advanced-editing-generated-scenarios" title="Permanent link">&para;</a></h2>
+<p>Generated JSON is fully editable. Common modifications:</p>
+<p><strong>Add retry policy:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;product_list&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;retry_policy&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;max_retries&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;wait_between_retries_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<p><strong>Make step optional:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_text&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;newsletter_prompt&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;optional&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<p><strong>Add condition:</strong>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;premium_feature&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;condition&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_exists&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;premium_badge&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<p>See <a href="../../reference/schema-v2/">Schema v2 Reference</a> for all available options.</p>
+<hr />
+<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../execute/">Execute Command Guide</a> — Running your generated scenarios</li>
+<li><a href="../../reference/schema-v2/">Schema v2 Reference</a> — Detailed scenario format</li>
+<li><a href="../../reference/assertions/">Assertion Types Reference</a> — All assertion types available</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12Z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7c377c4.min.js"></script>
+      
+    
+  </body>
+</html>

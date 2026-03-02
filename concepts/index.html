@@ -10,26 +10,28 @@
       
       
       
-        <link rel="canonical" href="https://sh3lan93.github.io/mobile-automator/">
+        <link rel="canonical" href="https://sh3lan93.github.io/mobile-automator/concepts/">
       
       
+        <link rel="prev" href="../getting-started/quick-start/">
       
-        <link rel="next" href="getting-started/">
+      
+        <link rel="next" href="architecture/">
       
       
-      <link rel="icon" href="assets/favicon.svg">
+      <link rel="icon" href="../assets/favicon.svg">
       <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.0">
     
     
       
-        <title>mobile-automator</title>
+        <title>Overview - mobile-automator</title>
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.45e1311d.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.45e1311d.min.css">
       
         
-        <link rel="stylesheet" href="assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -48,9 +50,9 @@
       
     
     
-      <link rel="stylesheet" href="stylesheets/extra.css">
+      <link rel="stylesheet" href="../stylesheets/extra.css">
     
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#mobile-automator" class="md-skip">
+        <a href="#core-concepts" class="md-skip">
           Skip to content
         </a>
       
@@ -92,9 +94,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="mobile-automator" class="md-header__button md-logo" aria-label="mobile-automator" data-md-component="logo">
+    <a href=".." title="mobile-automator" class="md-header__button md-logo" aria-label="mobile-automator" data-md-component="logo">
       
-  <img src="assets/logo.svg" alt="logo">
+  <img src="../assets/logo.svg" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -111,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Home
+              Overview
             
           </span>
         </div>
@@ -218,9 +220,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="mobile-automator" class="md-nav__button md-logo" aria-label="mobile-automator" data-md-component="logo">
+    <a href=".." title="mobile-automator" class="md-nav__button md-logo" aria-label="mobile-automator" data-md-component="logo">
       
-  <img src="assets/logo.svg" alt="logo">
+  <img src="../assets/logo.svg" alt="logo">
 
     </a>
     mobile-automator
@@ -244,30 +246,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Home
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="." class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -276,149 +258,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#why-mobile-automator" class="md-nav__link">
-    <span class="md-ellipsis">
-      Why mobile-automator?
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#key-features" class="md-nav__link">
-    <span class="md-ellipsis">
-      Key Features
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#quick-start" class="md-nav__link">
-    <span class="md-ellipsis">
-      Quick Start
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Quick Start">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#1-install" class="md-nav__link">
-    <span class="md-ellipsis">
-      1. Install
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#2-setup" class="md-nav__link">
-    <span class="md-ellipsis">
-      2. Setup
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#3-generate-tests" class="md-nav__link">
-    <span class="md-ellipsis">
-      3. Generate Tests
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#4-execute-tests" class="md-nav__link">
-    <span class="md-ellipsis">
-      4. Execute Tests
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#5-view-results" class="md-nav__link">
-    <span class="md-ellipsis">
-      5. View Results
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#how-it-works" class="md-nav__link">
-    <span class="md-ellipsis">
-      How It Works
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#supported-platforms" class="md-nav__link">
-    <span class="md-ellipsis">
-      Supported Platforms
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#whats-included" class="md-nav__link">
-    <span class="md-ellipsis">
-      What's Included
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      Next Steps
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#support" class="md-nav__link">
-    <span class="md-ellipsis">
-      Support
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -467,7 +306,7 @@
   
   
     <li class="md-nav__item">
-      <a href="getting-started/" class="md-nav__link">
+      <a href="../getting-started/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -488,7 +327,7 @@
   
   
     <li class="md-nav__item">
-      <a href="getting-started/installation/" class="md-nav__link">
+      <a href="../getting-started/installation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -509,7 +348,7 @@
   
   
     <li class="md-nav__item">
-      <a href="getting-started/quick-start/" class="md-nav__link">
+      <a href="../getting-started/quick-start/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -534,19 +373,21 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
@@ -560,7 +401,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             Core Concepts
@@ -571,10 +412,30 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="concepts/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -583,6 +444,164 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-mobile-automator" class="md-nav__link">
+    <span class="md-ellipsis">
+      What is mobile-automator?
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-three-tier-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      The Three-Tier Architecture
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The Three-Tier Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tier-1-extension-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tier 1: Extension Commands
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-2-workspace-skills" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tier 2: Workspace Skills
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-3-automation-engine" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tier 3: Automation Engine
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-design-principles" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Design Principles
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Key Design Principles">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#separation-of-concerns" class="md-nav__link">
+    <span class="md-ellipsis">
+      Separation of Concerns
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#project-specific-customization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Project-Specific Customization
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#no-source-code-modification" class="md-nav__link">
+    <span class="md-ellipsis">
+      No Source Code Modification
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#semantic-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Semantic Testing
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-ideas" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Ideas
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#main-topics" class="md-nav__link">
+    <span class="md-ellipsis">
+      Main Topics
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-this-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      Why This Design?
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      Next Steps
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -595,7 +614,7 @@
   
   
     <li class="md-nav__item">
-      <a href="concepts/architecture/" class="md-nav__link">
+      <a href="architecture/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -616,7 +635,7 @@
   
   
     <li class="md-nav__item">
-      <a href="concepts/three-tier-design/" class="md-nav__link">
+      <a href="three-tier-design/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -637,7 +656,7 @@
   
   
     <li class="md-nav__item">
-      <a href="concepts/skills/" class="md-nav__link">
+      <a href="skills/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -702,7 +721,7 @@
   
   
     <li class="md-nav__item">
-      <a href="guides/" class="md-nav__link">
+      <a href="../guides/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -723,7 +742,7 @@
   
   
     <li class="md-nav__item">
-      <a href="guides/setup/" class="md-nav__link">
+      <a href="../guides/setup/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -744,7 +763,7 @@
   
   
     <li class="md-nav__item">
-      <a href="guides/generate/" class="md-nav__link">
+      <a href="../guides/generate/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -765,7 +784,7 @@
   
   
     <li class="md-nav__item">
-      <a href="guides/execute/" class="md-nav__link">
+      <a href="../guides/execute/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -786,7 +805,7 @@
   
   
     <li class="md-nav__item">
-      <a href="guides/migrate/" class="md-nav__link">
+      <a href="../guides/migrate/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -851,7 +870,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/" class="md-nav__link">
+      <a href="../reference/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -872,7 +891,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/assertions/" class="md-nav__link">
+      <a href="../reference/assertions/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -893,7 +912,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/schema-v2/" class="md-nav__link">
+      <a href="../reference/schema-v2/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -914,7 +933,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/result-schema/" class="md-nav__link">
+      <a href="../reference/result-schema/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -935,7 +954,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/mcp-tools/" class="md-nav__link">
+      <a href="../reference/mcp-tools/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1000,7 +1019,7 @@
   
   
     <li class="md-nav__item">
-      <a href="examples/" class="md-nav__link">
+      <a href="../examples/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1021,7 +1040,7 @@
   
   
     <li class="md-nav__item">
-      <a href="examples/android/" class="md-nav__link">
+      <a href="../examples/android/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1042,7 +1061,7 @@
   
   
     <li class="md-nav__item">
-      <a href="examples/ios/" class="md-nav__link">
+      <a href="../examples/ios/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1070,7 +1089,7 @@
   
   
     <li class="md-nav__item">
-      <a href="faq/" class="md-nav__link">
+      <a href="../faq/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1090,7 +1109,7 @@
   
   
     <li class="md-nav__item">
-      <a href="contributing/" class="md-nav__link">
+      <a href="../contributing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1110,7 +1129,7 @@
   
   
     <li class="md-nav__item">
-      <a href="changelog/" class="md-nav__link">
+      <a href="../changelog/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1150,73 +1169,46 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#why-mobile-automator" class="md-nav__link">
+  <a href="#what-is-mobile-automator" class="md-nav__link">
     <span class="md-ellipsis">
-      Why mobile-automator?
+      What is mobile-automator?
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#key-features" class="md-nav__link">
+  <a href="#the-three-tier-architecture" class="md-nav__link">
     <span class="md-ellipsis">
-      Key Features
+      The Three-Tier Architecture
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#quick-start" class="md-nav__link">
-    <span class="md-ellipsis">
-      Quick Start
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Quick Start">
+    <nav class="md-nav" aria-label="The Three-Tier Architecture">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-install" class="md-nav__link">
+  <a href="#tier-1-extension-commands" class="md-nav__link">
     <span class="md-ellipsis">
-      1. Install
+      Tier 1: Extension Commands
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-setup" class="md-nav__link">
+  <a href="#tier-2-workspace-skills" class="md-nav__link">
     <span class="md-ellipsis">
-      2. Setup
+      Tier 2: Workspace Skills
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-generate-tests" class="md-nav__link">
+  <a href="#tier-3-automation-engine" class="md-nav__link">
     <span class="md-ellipsis">
-      3. Generate Tests
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#4-execute-tests" class="md-nav__link">
-    <span class="md-ellipsis">
-      4. Execute Tests
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#5-view-results" class="md-nav__link">
-    <span class="md-ellipsis">
-      5. View Results
+      Tier 3: Automation Engine
     </span>
   </a>
   
@@ -1228,27 +1220,78 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#how-it-works" class="md-nav__link">
+  <a href="#key-design-principles" class="md-nav__link">
     <span class="md-ellipsis">
-      How It Works
+      Key Design Principles
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Key Design Principles">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#separation-of-concerns" class="md-nav__link">
+    <span class="md-ellipsis">
+      Separation of Concerns
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#project-specific-customization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Project-Specific Customization
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#no-source-code-modification" class="md-nav__link">
+    <span class="md-ellipsis">
+      No Source Code Modification
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#semantic-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Semantic Testing
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-ideas" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Ideas
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#supported-platforms" class="md-nav__link">
+  <a href="#main-topics" class="md-nav__link">
     <span class="md-ellipsis">
-      Supported Platforms
+      Main Topics
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#whats-included" class="md-nav__link">
+  <a href="#why-this-design" class="md-nav__link">
     <span class="md-ellipsis">
-      What's Included
+      Why This Design?
     </span>
   </a>
   
@@ -1258,15 +1301,6 @@
   <a href="#next-steps" class="md-nav__link">
     <span class="md-ellipsis">
       Next Steps
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#support" class="md-nav__link">
-    <span class="md-ellipsis">
-      Support
     </span>
   </a>
   
@@ -1290,116 +1324,113 @@
   
 
 
-<h1 id="mobile-automator">mobile-automator<a class="headerlink" href="#mobile-automator" title="Permanent link">&para;</a></h1>
-<p>Intelligent mobile QA automation for Gemini CLI. Analyze your mobile app, auto-generate test scenarios, and execute them with AI-powered assertions.</p>
-<h2 id="why-mobile-automator">Why mobile-automator?<a class="headerlink" href="#why-mobile-automator" title="Permanent link">&para;</a></h2>
-<p>Testing mobile apps manually is <strong>tedious and error-prone</strong>. Cross-platform testing doubles the pain: iOS, Android, Flutter, React Native, Kotlin Multiplatform—all with different build systems, package managers, and ecosystem conventions.</p>
-<p><strong>mobile-automator</strong> changes this. It's a Gemini CLI extension that:</p>
+<h1 id="core-concepts">Core Concepts<a class="headerlink" href="#core-concepts" title="Permanent link">&para;</a></h1>
+<p>Understand the architecture, design patterns, and key concepts behind mobile-automator.</p>
+<h2 id="what-is-mobile-automator">What is mobile-automator?<a class="headerlink" href="#what-is-mobile-automator" title="Permanent link">&para;</a></h2>
+<p>mobile-automator is a <strong>Gemini CLI extension</strong> that provides intelligent mobile QA automation capabilities. But it's not a direct testing tool.</p>
+<p><strong>Key Distinction</strong>: mobile-automator is a <strong>meta-extension</strong> that analyzes your mobile project, learns its architecture and domain, then <strong>generates customized testing skills tailored specifically to your project</strong>.</p>
+<p>This is a fundamentally different approach than traditional test frameworks:</p>
+<table>
+<thead>
+<tr>
+<th>Traditional</th>
+<th>mobile-automator</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>You write tests in code or DSLs</td>
+<td>AI generates tests from your description</td>
+</tr>
+<tr>
+<td>Hard-coded selectors and waits</td>
+<td>Learned from your project structure</td>
+</tr>
+<tr>
+<td>Brittle selectors break with UI changes</td>
+<td>Semantic understanding tolerates UI changes</td>
+</tr>
+<tr>
+<td>Generic across projects</td>
+<td>Customized for YOUR app's architecture</td>
+</tr>
+</tbody>
+</table>
+<h2 id="the-three-tier-architecture">The Three-Tier Architecture<a class="headerlink" href="#the-three-tier-architecture" title="Permanent link">&para;</a></h2>
+<p>mobile-automator uses a <strong>3-tier architecture</strong> to separate concerns and enable customization:</p>
+<div class="highlight"><pre><span></span><code>Tier 1: Extension Commands
+  ↓ (pre-flight checks, infrastructure)
+Tier 2: Workspace Skills
+  ↓ (project-specific test generation &amp; execution)
+Tier 3: MCP Server
+  ↓ (device automation primitives)
+Device/App
+</code></pre></div>
+<h3 id="tier-1-extension-commands">Tier 1: Extension Commands<a class="headerlink" href="#tier-1-extension-commands" title="Permanent link">&para;</a></h3>
+<p>CLI entry points that validate setup, detect devices, and delegate to skills.</p>
+<p><strong>Commands:</strong>
+- <code>/mobile-automator:setup</code> — 7-section analysis, skill installation, project learning
+- <code>/mobile-automator:generate</code> — Convert natural language to test scenarios
+- <code>/mobile-automator:execute</code> — Execute scenarios, collect results
+- <code>/mobile-automator:migrate</code> — Convert v1 scenarios to v2 format</p>
+<h3 id="tier-2-workspace-skills">Tier 2: Workspace Skills<a class="headerlink" href="#tier-2-workspace-skills" title="Permanent link">&para;</a></h3>
+<p>AI-powered prompt templates installed in <code>.gemini/skills/</code>, customized with your project knowledge.</p>
+<p><strong>Skills:</strong>
+- <strong>Generator Skill</strong> — Parses user input, generates test scenarios with project awareness
+- <strong>Executor Skill</strong> — Executes tests, detects patterns (flakiness, regressions), syncs to TestRail</p>
+<h3 id="tier-3-automation-engine">Tier 3: Automation Engine<a class="headerlink" href="#tier-3-automation-engine" title="Permanent link">&para;</a></h3>
+<p>The <code>mobile-mcp</code> server provides 20+ platform-agnostic device automation primitives.</p>
+<p><strong>Primitives:</strong> device detection, app launch, screen interaction (tap, swipe, type), screenshot capture, element inspection, orientation control, and more.</p>
+<h2 id="key-design-principles">Key Design Principles<a class="headerlink" href="#key-design-principles" title="Permanent link">&para;</a></h2>
+<h3 id="separation-of-concerns">Separation of Concerns<a class="headerlink" href="#separation-of-concerns" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Learns your app</strong>: Auto-detects platform, architecture, build system, and business domain</li>
-<li><strong>Generates tests</strong>: Creates realistic test scenarios from natural language descriptions</li>
-<li><strong>Executes intelligently</strong>: Runs tests with AI vision that understands your app, not just pixel matching</li>
-<li><strong>Stays focused</strong>: Works only within your test project—no modifications to your source code</li>
+<li><strong>Tier 1</strong> handles infrastructure (device detection, config validation)</li>
+<li><strong>Tier 2</strong> contains domain logic (test generation, execution)</li>
+<li><strong>Tier 3</strong> provides automation primitives (device control)</li>
 </ul>
-<h2 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h2>
+<h3 id="project-specific-customization">Project-Specific Customization<a class="headerlink" href="#project-specific-customization" title="Permanent link">&para;</a></h3>
+<p>During setup, skills are populated with knowledge about your project:
+- Architecture pattern (MVVM, Clean Architecture, BLoC, etc.)
+- Business domain (what your app does)
+- Loading indicators (how to detect async operations)
+- Critical user flows (business-critical paths)</p>
+<p>This allows skills to make intelligent decisions specific to YOUR app.</p>
+<h3 id="no-source-code-modification">No Source Code Modification<a class="headerlink" href="#no-source-code-modification" title="Permanent link">&para;</a></h3>
+<p>Tests live in <code>mobile-automator/</code> directory, never in your source code. Skills are version-controlled separately.</p>
+<h3 id="semantic-testing">Semantic Testing<a class="headerlink" href="#semantic-testing" title="Permanent link">&para;</a></h3>
+<p>Instead of brittle selectors and pixel-by-pixel comparisons, mobile-automator uses AI vision to understand:
+- Does this screen fulfill its purpose?
+- Are key elements visible and interactive?
+- Does content match expectations?
+- Tolerates minor rendering differences</p>
+<h2 id="key-ideas">Key Ideas<a class="headerlink" href="#key-ideas" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>3-Tier Architecture</strong>: Separation of concerns between CLI commands (pre-flight), workspace skills (test logic), and the MCP automation server</li>
-<li><strong>Platform Detection</strong>: Auto-discovers Android, iOS, Flutter, React Native, Kotlin Multiplatform, and Compose Multiplatform projects</li>
-<li><strong>Smart Setup</strong>: 7-section interactive workflow that learns your project and installs customized skills</li>
-<li><strong>Schema v2</strong>: Next-gen test scenario format with 14 action types, 27 assertion types, and advanced retry/condition logic</li>
-<li><strong>Result Observations</strong>: Captures flakiness, regressions, and state context for smarter debugging</li>
-<li><strong>Semantic Vision</strong>: AI-powered visual assertions that tolerate cosmetic changes</li>
-<li><strong>Built-in Schemas</strong>: Test scenario and result schemas included in workspace for validation and IDE autocomplete</li>
+<li><strong>No source modification</strong> — Tests live in <code>mobile-automator/</code>, never in your source code</li>
+<li><strong>Project learning</strong> — Setup analyzes your codebase to customize skills automatically</li>
+<li><strong>Semantic testing</strong> — AI vision understands your app, not just pixel values</li>
+<li><strong>Schema-based</strong> — Test scenarios and results follow JSON schemas for validation and IDE support</li>
+<li><strong>Observational debugging</strong> — Results capture flakiness, regressions, and execution context</li>
+<li><strong>Meta-extension</strong> — Generates testing tools tailored to your specific project</li>
 </ul>
-<h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<h3 id="1-install">1. Install<a class="headerlink" href="#1-install" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>gemini<span class="w"> </span>extensions<span class="w"> </span>install<span class="w"> </span>https://github.com/sh3lan93/mobile-automator
-</code></pre></div>
-<h3 id="2-setup">2. Setup<a class="headerlink" href="#2-setup" title="Permanent link">&para;</a></h3>
-<p>Navigate to your mobile project and run:</p>
-<div class="highlight"><pre><span></span><code>/mobile-automator:setup
-</code></pre></div>
-<p>This 7-section workflow:
-1. Detects your platform
-2. Discovers environments
-3. Infers app package
-4. Analyzes project knowledge
-5. Installs customized skills
-6. Scaffolds directories
-7. Commits to git (optional)</p>
-<h3 id="3-generate-tests">3. Generate Tests<a class="headerlink" href="#3-generate-tests" title="Permanent link">&para;</a></h3>
-<p>Create test scenarios from natural language:</p>
-<div class="highlight"><pre><span></span><code>/mobile-automator:generate
-</code></pre></div>
-<p>Describe what you want to test. The AI generates structured JSON scenarios following Schema v2.</p>
-<h3 id="4-execute-tests">4. Execute Tests<a class="headerlink" href="#4-execute-tests" title="Permanent link">&para;</a></h3>
-<p>Run scenarios on connected devices:</p>
-<div class="highlight"><pre><span></span><code>/mobile-automator:execute
-</code></pre></div>
-<p>Select which scenarios to run. Tests execute with AI vision and capture observations (flakiness, regressions, etc.).</p>
-<h3 id="5-view-results">5. View Results<a class="headerlink" href="#5-view-results" title="Permanent link">&para;</a></h3>
-<p>Check execution results:</p>
-<div class="highlight"><pre><span></span><code>mobile-automator/results/&lt;run_id&gt;.json
-</code></pre></div>
-<p>Results include step details, assertion outcomes, captured variables, and observations for debugging.</p>
-<h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────┐
-│  Tier 1: CLI Commands               │
-│  /mobile-automator:setup            │
-│  /mobile-automator:generate         │
-│  /mobile-automator:execute          │
-│  (Pre-flight validation)            │
-└──────────────┬──────────────────────┘
-               │ delegates to
-┌──────────────▼──────────────────────┐
-│  Tier 2: Workspace Skills           │
-│  .gemini/skills/mobile-automator-*  │
-│  (Test generation &amp; execution)      │
-└──────────────┬──────────────────────┘
-               │ uses
-┌──────────────▼──────────────────────┐
-│  Tier 3: Automation Engine          │
-│  mobile-mcp                         │
-│  (Device primitives)                │
-└─────────────────────────────────────┘
-</code></pre></div>
-<p><strong>Why this design?</strong> Clear separation:
-- <strong>Tier 1</strong> handles infrastructure (device detection, config validation)
-- <strong>Tier 2</strong> contains project-specific test logic
-- <strong>Tier 3</strong> provides platform-agnostic device automation</p>
-<h2 id="supported-platforms">Supported Platforms<a class="headerlink" href="#supported-platforms" title="Permanent link">&para;</a></h2>
+<h2 id="main-topics">Main Topics<a class="headerlink" href="#main-topics" title="Permanent link">&para;</a></h2>
 <ul>
-<li>✅ <strong>Android</strong> (native, Kotlin, Java)</li>
-<li>✅ <strong>iOS</strong> (native, Swift, Objective-C)</li>
-<li>✅ <strong>Flutter</strong></li>
-<li>✅ <strong>React Native</strong></li>
-<li>✅ <strong>Kotlin Multiplatform</strong> (KMP)</li>
-<li>✅ <strong>Compose Multiplatform</strong> (CMP)</li>
+<li><strong><a href="architecture/">Architecture Overview</a></strong> — Detailed system design and components</li>
+<li><strong><a href="three-tier-design/">3-Tier Design</a></strong> — In-depth explanation of each tier and rationale</li>
+<li><strong><a href="skills/">How Skills Work</a></strong> — Understanding skill generation, customization, and execution</li>
 </ul>
-<h2 id="whats-included">What's Included<a class="headerlink" href="#whats-included" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>7-Section Setup Workflow</strong>: Platform detection, environment discovery, package inference, project analysis</li>
-<li><strong>Customized Skills</strong>: Automatically installed and configured for your project</li>
-<li><strong>Schema v2</strong>: 14 action types, 27 assertion types, advanced retry/condition logic</li>
-<li><strong>Result Observations</strong>: Captures flakiness, regressions, and execution context</li>
-<li><strong>Resume Capability</strong>: Setup can resume if interrupted</li>
-<li><strong>Schema Migration</strong>: Tools to migrate v1 scenarios to v2</li>
-</ul>
+<h2 id="why-this-design">Why This Design?<a class="headerlink" href="#why-this-design" title="Permanent link">&para;</a></h2>
+<p><strong>Benefits:</strong>
+1. <strong>Separation of Concerns</strong> — Each tier has a single responsibility
+2. <strong>Customization</strong> — Skills are generated specifically for your project
+3. <strong>Maintainability</strong> — Changes to one tier don't affect others
+4. <strong>Reusability</strong> — Tier 3 primitives work with any MCP-compatible tool
+5. <strong>Learning</strong> — Setup analyzes your project to provide context to AI</p>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="getting-started/quick-start/">Quick Start Guide</a> — Get up and running in 5 minutes</li>
-<li><a href="concepts/architecture/">Core Concepts</a> — Understand the architecture</li>
-<li><a href="guides/setup/">Setup Guide</a> — Detailed setup workflow documentation</li>
-<li><a href="examples/android/">Examples</a> — Real-world examples for Android and iOS</li>
+<li>Start with <a href="architecture/">Architecture Overview</a> for system components</li>
+<li>Then explore <a href="three-tier-design/">3-Tier Design Deep Dive</a> for detailed rationale</li>
+<li>Finally, learn about <a href="skills/">How Skills Work</a> for skill mechanics</li>
 </ul>
-<h2 id="support">Support<a class="headerlink" href="#support" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>Documentation</strong>: Full guides and reference at <a href="https://mobile-automator.github.io">mobile-automator.github.io</a></li>
-<li><strong>Issues</strong>: Report bugs at <a href="https://github.com/sh3lan93/mobile-automator/issues">GitHub Issues</a></li>
-<li><strong>Contributing</strong>: See <a href="contributing/">Contributing Guide</a></li>
-</ul>
-<hr />
-<p><strong>Ready to automate?</strong> Start with <code>/mobile-automator:setup</code> in your mobile project!</p>
 
 
 
@@ -1452,10 +1483,10 @@
     </div>
     
     
-    <script id="__config" type="application/json">{"base": ".", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="assets/javascripts/bundle.d7c377c4.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7c377c4.min.js"></script>
       
     
   </body>
