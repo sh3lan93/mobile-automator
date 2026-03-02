@@ -273,6 +273,53 @@ a:active {
   cursor: pointer;
 }
 
+/* BADGES AND TAGS */
+.md-typeset .badge,
+.md-typeset span.label {
+  display: inline-block;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid;
+  margin-right: var(--spacing-xs);
+}
+
+/* SUCCESS BADGE */
+.md-typeset .badge.success {
+  background-color: var(--color-green-100);
+  color: var(--color-green-700);
+  border-color: var(--color-green-500);
+}
+
+/* WARNING BADGE */
+.md-typeset .badge.warning {
+  background-color: #FEF3C7;
+  color: #92400E;
+  border-color: var(--color-warning);
+}
+
+/* ERROR BADGE */
+.md-typeset .badge.error {
+  background-color: #FEE2E2;
+  color: #991B1B;
+  border-color: var(--color-error);
+}
+
+/* INFO BADGE */
+.md-typeset .badge.info {
+  background-color: #DBEAFE;
+  color: #1E40AF;
+  border-color: var(--color-info);
+}
+
+/* DEFAULT BADGE */
+.md-typeset .badge {
+  background-color: var(--color-light-gray);
+  color: var(--text-primary);
+  border-color: var(--color-medium-gray);
+}
+
 /* PRIMARY BUTTON */
 .md-button {
   background-color: var(--color-green-500);
