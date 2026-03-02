@@ -54,10 +54,22 @@
   :root {
     --color-white: #0F172A;
     --color-light-gray: #1E293B;
-    --color-black: #F1F5F9;
+    --color-black: #FFFFFF;
     --text-primary: #F1F5F9;
     --text-secondary: #CBD5E1;
     --color-medium-gray: #475569;
+  }
+
+  /* Ensure strong/bold text is white in dark mode */
+  .md-typeset strong {
+    color: #FFFFFF;
+  }
+
+  /* Ensure headings are white in dark mode */
+  .md-typeset h1,
+  .md-typeset h2,
+  .md-typeset h3 {
+    color: #FFFFFF;
   }
 }
 
