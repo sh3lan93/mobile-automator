@@ -1,9 +1,13 @@
 site_name: mobile-automator
-site_description: Intelligent mobile QA automation for Gemini CLI
+site_description: Intelligent mobile QA automation for Gemini CLI - auto-detect mobile app architecture, generate test scenarios, and execute with AI-powered assertions
 site_url: https://sh3lan93.github.io/mobile-automator/
 repo_url: https://github.com/sh3lan93/mobile-automator
 repo_name: sh3lan93/mobile-automator
 edit_uri: edit/main/docs/
+docs_dir: docs
+site_dir: site
+use_directory_urls: true
+strict: false
 
 theme:
   name: material
@@ -22,16 +26,22 @@ theme:
     - navigation.instant
     - navigation.tracking
     - navigation.top
+    - navigation.footer
     - search.suggest
     - search.highlight
     - content.code.copy
     - content.code.annotate
 
+extra:
+  og_image: assets/logo.svg
+
 extra_css:
   - stylesheets/extra.css
 
 plugins:
-  - search
+  - search:
+      lang: en
+  - meta
 
 markdown_extensions:
   - admonition
@@ -40,8 +50,10 @@ markdown_extensions:
   - pymdownx.tabbed
   - pymdownx.highlight
   - pymdownx.inlinehilite
+  - meta
   - toc:
       permalink: true
+      title: Table of Contents
 
 nav:
   - Home: index.md

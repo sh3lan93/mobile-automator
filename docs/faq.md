@@ -694,8 +694,7 @@ Still stuck? We're here to help:
 - **[Guides](guides/index.md)** — Step-by-step walkthroughs
 - **[Examples](examples/index.md)** — Real-world test scenarios
 - **[Reference Docs](reference/index.md)** — Complete specifications
-- **[GitHub Issues](https://github.com/sh3lan93/mobile-automator/issues)** — Report bugs
-- **[GitHub Discussions](https://github.com/sh3lan93/mobile-automator/discussions)** — Ask questions
+- **[GitHub Issues](https://github.com/sh3lan93/mobile-automator/issues)** — Report bugs or ask questions
 
 ---
 

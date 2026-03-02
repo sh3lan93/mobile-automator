@@ -647,7 +647,7 @@ gh pr merge 42
 
 ### Getting Help
 
-- **Questions** → [GitHub Discussions](https://github.com/sh3lan93/mobile-automator/discussions)
+- **Questions** → [GitHub Issues](https://github.com/sh3lan93/mobile-automator/issues)
 - **Issues** → [GitHub Issues](https://github.com/sh3lan93/mobile-automator/issues)
 - **Ideas** → Share in Discussions
 - **Feedback** → Welcome all suggestions
@@ -675,9 +675,9 @@ Once your PR is merged, it will be included in the next release. See the [Change
 
 ## Resources
 
-- **[Gemini CLI Docs](https://github.com/google-cloud-ai-research/gemini-cli)** — Extension development
 - **[JSON Schema Docs](https://json-schema.org/)** — Schema validation
-- **[Architecture Documentation](./index.md)** — See Core Concepts section for full architecture guide
+- **[Architecture Documentation](../concepts/architecture.md)** — Understand the 3-tier design
+- **[Core Concepts](../concepts/index.md)** — Foundation for extension development
 
 ---
 

@@ -386,8 +386,8 @@ Before releasing, ensure:
 Found an issue or have a feature request?
 
 - **Bug Report** → [GitHub Issues](https://github.com/sh3lan93/mobile-automator/issues)
-- **Feature Request** → [GitHub Discussions](https://github.com/sh3lan93/mobile-automator/discussions)
-- **General Questions** → [GitHub Discussions](https://github.com/sh3lan93/mobile-automator/discussions)
+- **Feature Request** → [GitHub Issues](https://github.com/sh3lan93/mobile-automator/issues) (add 'enhancement' label)
+- **General Questions** → [GitHub Issues](https://github.com/sh3lan93/mobile-automator/issues) (add 'question' label)
 
 ---
 

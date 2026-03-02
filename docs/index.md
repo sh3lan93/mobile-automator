@@ -134,7 +134,7 @@ Results include step details, assertion outcomes, captured variables, and observ
 
 ## Support
 
-- **Documentation**: Full guides and reference at [mobile-automator.github.io](https://mobile-automator.github.io)
+- **Documentation**: Full guides and reference at [mobile-automator docs](https://sh3lan93.github.io/mobile-automator/)
 - **Issues**: Report bugs at [GitHub Issues](https://github.com/sh3lan93/mobile-automator/issues)
 - **Contributing**: See [Contributing Guide](contributing.md)
 
