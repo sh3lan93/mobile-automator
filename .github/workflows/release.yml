@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Triggers on version tags like v0.1.0, v1.0.0, etc.
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required to create releases
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for changelog extraction
+
+      - name: Extract version from tag
+        id: get_version
+        run: |
+          # Remove 'v' prefix from tag (v0.1.0 -> 0.1.0)
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          # Extract the changelog section for this specific version
+          VERSION="${{ steps.get_version.outputs.version }}"
+
+          # Find the section between ## [$VERSION] and the next ## [
+          CHANGELOG=$(sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | sed '$d' | tail -n +2)
+
+          # If changelog is empty, use a default message
+          if [ -z "$CHANGELOG" ]; then
+            CHANGELOG="See [CHANGELOG.md](CHANGELOG.md) for details."
+          fi
+
+          # Save to output (handle multiline)
+          echo "content<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_version.outputs.tag }}
+          release_name: Release ${{ steps.get_version.outputs.tag }}
+          body: |
+            ## Mobile Automator ${{ steps.get_version.outputs.tag }}
+
+            ${{ steps.changelog.outputs.content }}
+
+            ---
+
+            ### 📦 Installation
+
+            ```bash
+            gemini extensions install https://github.com/${{ github.repository }}
+            ```
+
+            Or install this specific version:
+
+            ```bash
+            gemini extensions install https://github.com/${{ github.repository }} --ref=${{ steps.get_version.outputs.tag }}
+            ```
+
+            ### 📚 Documentation
+
+            - [README](https://github.com/${{ github.repository }}/blob/${{ steps.get_version.outputs.tag }}/README.md)
+            - [CHANGELOG](https://github.com/${{ github.repository }}/blob/${{ steps.get_version.outputs.tag }}/CHANGELOG.md)
+            - [Troubleshooting Guide](https://github.com/${{ github.repository }}/blob/${{ steps.get_version.outputs.tag }}/TROUBLESHOOTING.md)
+          draft: false
+          prerelease: ${{ contains(steps.get_version.outputs.version, 'beta') || contains(steps.get_version.outputs.version, 'alpha') || startsWith(steps.get_version.outputs.version, '0.') }}

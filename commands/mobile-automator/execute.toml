@@ -1,0 +1,174 @@
+description = "Execute saved test scenarios against a connected device and produce pass/fail reports"
+prompt = """
+## SYSTEM DIRECTIVE
+You are launching the Mobile QA Scenario Executor. Your job is to run pre-flight checks, resolve which scenarios to execute, and then hand off to the executor skill.
+
+CRITICAL: Do NOT execute scenarios yourself. After pre-flight passes, follow the instructions in `.gemini/skills/mobile-automator-executor/SKILL.md`.
+
+---
+
+## 0.0 SCHEMA VERSION DEPRECATION CHECK
+
+After loading the scenario file(s) to execute (resolved in section 2.0), for each selected scenario:
+
+1.  **Read `$schema_version` from the scenario JSON.**
+2.  **If `$schema_version` is absent or `"1.0"` (v1 scenario detected):**
+
+    Determine the current deprecation phase based on today's date relative to the v2 launch date of **2026-02-17**:
+
+    - **Phase 1 (months 0–6, until 2026-08-17):** Non-blocking informational warning:
+      > "⚠️ **Deprecation Notice (Schema v1):** Scenario '<scenario_id>' uses schema v1, which is deprecated as of 2026-02-17. v1 scenarios will stop working after 2027-02-17 (12-month deprecation period).
+      > To migrate this scenario to v2: run `/mobile-automator:migrate <scenario_id>`
+      > Continuing execution..."
+      Continue with execution using the v1 execution path.
+
+    - **Phase 2 (months 7–11, 2026-08-17 to 2027-01-17):** Escalated warning, still allow execution but require acknowledgment:
+      > "⚠️ **Final Deprecation Warning (Schema v1):** Scenario '<scenario_id>' uses schema v1, which is in its final deprecation phase (month 7 of 12). This scenario will STOP WORKING after 2027-02-17.
+      > Migrate now to avoid test failures: run `/mobile-automator:migrate <scenario_id>`
+      > Type 'continue' to execute anyway, or 'cancel' to abort and migrate first:"
+      **WAIT for user response.** If 'continue' → proceed. If 'cancel' → halt with migration instructions.
+
+    - **Phase 3 (month 12+, after 2027-01-17):** Hard fail:
+      > "❌ **Schema v1 Execution Blocked:** Scenario '<scenario_id>' uses schema v1, which reached end-of-life on 2027-02-17.
+      > Migrate this scenario to v2 before executing: run `/mobile-automator:migrate <scenario_id>`"
+      **HALT. Do NOT execute this scenario.**
+
+3.  **If `$schema_version` is `"2.0"`:** No action needed. Continue with v2 execution.
+
+---
+
+## 1.0 PRE-FLIGHT CHECKS
+
+### 1.1 Verify Setup
+1.  Check that `mobile-automator/config.json` exists.
+    - If missing → "Setup not found. Please run `/mobile-automator:setup` first." → Halt.
+2.  Check that `.gemini/skills/mobile-automator-executor/SKILL.md` exists.
+    - If missing → "Executor skill not installed. Please run `/mobile-automator:setup` first." → Halt.
+3.  Read `mobile-automator/config.json` to load project configuration.
+
+### 1.2 Verify Device
+1.  Use `mobile_list_available_devices()` to check for connected devices.
+    - If no devices found → "No device connected. Please connect a device, emulator, or simulator and try again." → Halt.
+2.  If multiple devices are found, present the list and ask the user to select one:
+    > "I found multiple devices:"
+    > [list devices with index]
+    > "Which device should I use?"
+3.  Confirm the selected device to the user.
+
+### 1.3 Check Preconditions and Prepare App
+1.  **Read config:** Load `mobile-automator/config.json`.
+2.  **Read the scenario file** (if executing a specific scenario) to determine:
+    -   The `environment` from `metadata.environment`
+    -   The `preconditions` array
+3.  **Determine the app package ID:**
+    -   If `app.android_packages` or `app.ios_bundle_ids` exists in config (environment-specific mapping):
+        -   Use the package ID for the scenario's environment: `app.android_packages[scenario.metadata.environment]` or `app.ios_bundle_ids[scenario.metadata.environment]`
+    -   Otherwise, use the single package ID: `app.android_package` or `app.ios_bundle_id`
+4.  **Handle preconditions automatically:**
+    -   **If preconditions include `"app_uninstalled"` or `"fresh_install"`:**
+        -   Announce: "Scenario requires fresh install. Uninstalling existing app..."
+        -   Uninstall the app if it exists (use `mobile_uninstall_app` tool)
+        -   Build the app using `[build_command]` from config
+        -   Install the app
+        -   Do NOT ask the user - this is automatic based on preconditions
+    -   **If preconditions include `"app_not_previously_installed"`:**
+        -   Check if the app has ever been installed (check for app data directories)
+        -   If found, uninstall and clear all app data
+    -   **Otherwise (no uninstall preconditions):**
+        -   Ask the user:
+            > "I'll be testing **[app_package]** ([scenario_environment]) on **[device_name]**."
+            > "Should I build and install the app, or is it already installed?"
+            >
+            > A) Build and install (using: `[build_command]`)
+            > B) Already installed, skip build
+        -   If A → execute the build command and install
+        -   If B → verify the app is installed using `mobile_launch_app` as a check
+
+---
+
+## 2.0 SCENARIO SELECTION
+
+### 2.1 Check Available Scenarios
+1.  List all `.json` files in `mobile-automator/scenarios/`.
+    - If none found → "No scenarios found. Please run `/mobile-automator:generate` first to create test scenarios." → Halt.
+
+### 2.2 Resolve Which Scenarios to Execute
+
+**CRITICAL: Do NOT auto-select scenarios. If no scenario is specified in the command, ALWAYS show the interactive menu.**
+
+1.  **Check if the user specified scenarios in the command:**
+    - The command format is: `/mobile-automator:execute [scenario_name]` or `/mobile-automator:execute --tag <expression>`
+    - Examples:
+      - `/mobile-automator:execute login_flow` → scenario specified
+      - `/mobile-automator:execute --tag smoke` → single tag filter
+      - `/mobile-automator:execute --tag smoke,critical` → multi-tag AND filter
+      - `/mobile-automator:execute --tag smoke|regression` → multi-tag OR filter
+      - `/mobile-automator:execute --tag !flaky` → NOT filter (exclude tag)
+      - `/mobile-automator:execute` → NO scenario specified
+
+2.  **If the user specified a `--tag` parameter:**
+    - **Step A (Format Validation):** Validate each extracted tag string against `^[a-z0-9][a-z0-9-]*$` (max 20 chars). If any tag is invalid, halt with error:
+      > "❌ Invalid tag format: '[invalid_tag]'
+      > Tags must be: lowercase (a-z), alphanumeric + hyphens, max 20 characters
+      > Valid examples: smoke, regression, p0"
+    - **Step B (Filtering):** Filter all available `.json` scenarios based on the tag expression:
+      - `tag1,tag2` (AND): Scenario must have BOTH tags in its `tags` array.
+      - `tag1|tag2` (OR): Scenario must have AT LEAST ONE tag in its `tags` array.
+      - `!tag1` (NOT): Scenario must NOT have the tag in its `tags` array.
+    - **Step C (No Matches):** If the filtered list is empty, halt with error:
+      > "❌ No scenarios found with tag expression: [--tag value]
+      > Available tags in your test suite: [list top 3-5 tags with counts]
+      > Suggestion: Check tag spelling or run `/mobile-automator:list-tags` to see all tags."
+    - **Step D (Confirmation):** If matches found, confirm execution:
+      > "I'll execute [N] scenario(s) matching your tag expression: [--tag value]
+      > Proceed? (yes/no)"
+      WAIT for "yes" before executing.
+
+3.  **If the user specified scenarios by name/ID:**
+    - Match against `scenario_id` in each JSON file.
+    - If no matches → "No scenarios found matching '[query]'. Available scenarios: [list]" → Halt.
+    - Confirm execution and WAIT for "yes".
+
+4.  **If the user specified NO scenarios** (command was just `/mobile-automator:execute`), present a tag-grouped interactive menu:
+    - Group all available scenarios by their primary tag, and tally an "untagged" group.
+    - Present the menu exactly like this example:
+      > "Available scenarios (grouped by tags):
+      > 
+      > 🏷️ smoke (3):
+      >   1. login_flow — Login with valid credentials
+      >   2. checkout_flow — Complete purchase flow
+      >   3. search_basic — Basic product search
+      > 
+      > 🏷️ regression (8):
+      >   4. login_edge_cases — Login with invalid credentials
+      >   ...
+      > 
+      > (untagged) (2):
+      >   12. onboarding_flow — First-time onboarding
+      >   ...
+      > 
+      > A) Run all [tag] tests (e.g., 'A smoke')
+      > B) Filter by multiple tags (e.g., 'B smoke,critical')
+      > C) Select by number (e.g., 'C 1,3,5')
+      > D) Run all scenarios"
+
+5.  **WAIT for user selection.** Do NOT proceed until the user responds.
+
+6.  **After user selects from the menu**, map their choice back to a scenario list. Confirm the final selection:
+    > "I'll execute the following [N] scenario(s):"
+    > [list selected scenario names]
+    > "Proceed? (yes/no)"
+
+7.  **WAIT for user confirmation.** Only proceed after explicit "yes" response.
+
+---
+
+## 3.0 HAND OFF TO EXECUTOR SKILL
+
+1.  **Announce the hand-off:**
+    > "I will now activate the executor skill to begin replaying the selected scenarios and validating the results on the device."
+
+2.  **Pass the resolved scenario list and device context** to the executor skill.
+
+3.  **Follow the executor skill** at `.gemini/skills/mobile-automator-executor/SKILL.md` to replay steps, validate assertions, and generate the result report.
+"""
