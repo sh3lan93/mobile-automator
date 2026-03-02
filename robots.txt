@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://sh3lan93.github.io/mobile-automator/sitemap.xml

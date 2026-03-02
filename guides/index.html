@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Intelligent mobile QA automation for Gemini CLI">
+        <meta name="description" content="Intelligent mobile QA automation for Gemini CLI - auto-detect mobile app architecture, generate test scenarios, and execute with AI-powered assertions">
       
       
       
@@ -575,7 +575,9 @@
       
         
 
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of Contents">
   
   
   
@@ -584,7 +586,7 @@
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
-      Table of contents
+      Table of Contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
@@ -598,9 +600,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
+  <a href="#understanding-the-commands" class="md-nav__link">
     <span class="md-ellipsis">
-      Overview
+      Understanding the Commands
     </span>
   </a>
   
@@ -610,6 +612,15 @@
   <a href="#typical-workflow" class="md-nav__link">
     <span class="md-ellipsis">
       Typical Workflow
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-to-use-each-command" class="md-nav__link">
+    <span class="md-ellipsis">
+      When to Use Each Command
     </span>
   </a>
   
@@ -1053,7 +1064,9 @@
                   <div class="md-sidebar__inner">
                     
 
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of Contents">
   
   
   
@@ -1062,7 +1075,7 @@
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
-      Table of contents
+      Table of Contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
@@ -1076,9 +1089,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
+  <a href="#understanding-the-commands" class="md-nav__link">
     <span class="md-ellipsis">
-      Overview
+      Understanding the Commands
     </span>
   </a>
   
@@ -1088,6 +1101,15 @@
   <a href="#typical-workflow" class="md-nav__link">
     <span class="md-ellipsis">
       Typical Workflow
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-to-use-each-command" class="md-nav__link">
+    <span class="md-ellipsis">
+      When to Use Each Command
     </span>
   </a>
   
@@ -1121,16 +1143,16 @@
 
 
 <h1 id="guides">Guides<a class="headerlink" href="#guides" title="Permanent link">&para;</a></h1>
-<p>Detailed walkthroughs for each command and workflow.</p>
+<p>Comprehensive walkthroughs for each Mobile Automator command and workflow. These guides provide step-by-step instructions for analyzing your mobile project, generating test scenarios, executing tests on real devices, and migrating legacy test scenarios to the modern v2 format.</p>
 <h2 id="available-guides">Available Guides<a class="headerlink" href="#available-guides" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong><a href="setup/">Setup Command</a></strong> — 7-section project analysis and skill installation</li>
-<li><strong><a href="generate/">Generate Command</a></strong> — Creating test scenarios from natural language</li>
-<li><strong><a href="execute/">Execute Command</a></strong> — Running tests and reviewing results</li>
-<li><strong><a href="migrate/">Migrate Command</a></strong> — Converting v1 scenarios to v2 format</li>
+<li><strong><a href="setup/">Setup Command</a></strong> — 7-section project analysis and skill installation workflow</li>
+<li><strong><a href="generate/">Generate Command</a></strong> — Creating intelligent test scenarios from natural language descriptions</li>
+<li><strong><a href="execute/">Execute Command</a></strong> — Running tests on connected devices and reviewing results with observations</li>
+<li><strong><a href="migrate/">Migrate Command</a></strong> — Converting legacy v1 test scenarios to the modern v2 format</li>
 </ul>
-<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p>Each command has a specific purpose in the testing workflow:</p>
+<h2 id="understanding-the-commands">Understanding the Commands<a class="headerlink" href="#understanding-the-commands" title="Permanent link">&para;</a></h2>
+<p>Each Mobile Automator command serves a distinct purpose in your testing workflow:</p>
 <table>
 <thead>
 <tr>
@@ -1143,45 +1165,51 @@
 <tbody>
 <tr>
 <td><code>/mobile-automator:setup</code></td>
-<td>Learn your project, install skills</td>
+<td>Learn your project, install customized skills</td>
 <td>Mobile project directory</td>
-<td>Config, skills, scaffolding</td>
+<td>Config file, skills, scaffolding</td>
 </tr>
 <tr>
 <td><code>/mobile-automator:generate</code></td>
-<td>Create test scenarios</td>
+<td>Create test scenarios using AI</td>
 <td>Natural language description</td>
-<td>JSON scenario file</td>
+<td>JSON scenario file following v2 schema</td>
 </tr>
 <tr>
 <td><code>/mobile-automator:execute</code></td>
-<td>Run tests on device</td>
-<td>Scenario selection</td>
+<td>Run tests on connected devices</td>
+<td>Scenario selection and device choice</td>
 <td>Result report with observations</td>
 </tr>
 <tr>
 <td><code>/mobile-automator:migrate</code></td>
-<td>Update legacy scenarios</td>
-<td>v1 scenario file</td>
-<td>v2 scenario file</td>
+<td>Update legacy test scenarios</td>
+<td>v1 scenario JSON file</td>
+<td>v2 scenario JSON file</td>
 </tr>
 </tbody>
 </table>
 <h2 id="typical-workflow">Typical Workflow<a class="headerlink" href="#typical-workflow" title="Permanent link">&para;</a></h2>
+<p>The recommended approach to mobile testing with Mobile Automator follows this pattern:</p>
 <div class="highlight"><pre><span></span><code>1. /mobile-automator:setup
         ↓
-   (One time per project)
+   (Run once per project - analyzes your app)
         ↓
 2. /mobile-automator:generate
         ↓
-   (Repeat for each test)
+   (Run for each test - describe what to test)
         ↓
 3. /mobile-automator:execute
         ↓
-   (Review results)
+   (Run to test - review results and observations)
 </code></pre></div>
+<h2 id="when-to-use-each-command">When to Use Each Command<a class="headerlink" href="#when-to-use-each-command" title="Permanent link">&para;</a></h2>
+<p><strong>Setup</strong> is your starting point. Run it once per mobile project to configure Mobile Automator for your specific app. It auto-detects your platform, discovers build configurations, identifies your app's package ID, and analyzes your project architecture. Setup installs customized skills tailored to your project and scaffolds the directories needed for test scenarios and results.</p>
+<p><strong>Generate</strong> creates test scenarios from natural language. After setup, use this command to describe test cases in plain English. The AI generates structured JSON scenarios following the v2 schema, handling all the technical formatting so you can focus on what to test.</p>
+<p><strong>Execute</strong> runs your test scenarios on connected devices. This command performs pre-flight checks to ensure devices are ready, then runs each scenario step-by-step with AI vision-based assertions. Results capture not just pass/fail status, but also observations about flakiness, regressions, and execution context.</p>
+<p><strong>Migrate</strong> converts existing v1 test scenarios to the modern v2 format. If you have legacy test scenarios from earlier Mobile Automator versions, this command handles the conversion automatically.</p>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
-<p>Start with <a href="setup/">Setup Command</a> to understand the comprehensive project analysis workflow.</p>
+<p>Start with <a href="setup/">Setup Command</a> to understand the comprehensive project analysis workflow and get your project configured.</p>
 
 
 
@@ -1212,6 +1240,46 @@
       
         <footer class="md-footer">
   
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../concepts/skills/" class="md-footer__link md-footer__link--prev" aria-label="Previous: How Skills Work">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                How Skills Work
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="setup/" class="md-footer__link md-footer__link--next" aria-label="Next: Setup Command">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Setup Command
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4Z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
   <div class="md-footer-meta md-typeset">
     <div class="md-footer-meta__inner md-grid">
       <div class="md-copyright">
@@ -1234,7 +1302,7 @@
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
       <script src="../assets/javascripts/bundle.d7c377c4.min.js"></script>
