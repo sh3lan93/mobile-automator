@@ -30,8 +30,46 @@ code {
   background-color: #059669;
 }
 
-/* Sidebar active item */
+/* Navigation items - unselected */
+.md-nav__link {
+  color: #ffffff;
+}
+
+.md-nav__link:hover {
+  color: #ffffff;
+}
+
+/* Navigation items - selected/active */
 .md-nav__link--active {
   color: #10B981;
   font-weight: 600;
+}
+
+/* Table of Contents - unselected */
+.md-toc__link {
+  color: #ffffff;
+}
+
+.md-toc__link:hover {
+  color: #ffffff;
+}
+
+/* Table of Contents - active/selected */
+.md-toc__link--active {
+  color: #10B981;
+  font-weight: 600;
+}
+
+/* Sidebar items - unselected */
+.md-sidebar__scrollwrap a {
+  color: #ffffff;
+}
+
+.md-sidebar__scrollwrap a:hover {
+  color: #ffffff;
+}
+
+/* Active/selected text styling */
+.md-nav__item--active .md-nav__link {
+  color: #10B981;
 }
