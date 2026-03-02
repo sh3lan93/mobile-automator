@@ -5,5 +5,3 @@ mkdocs-material==9.5.0
 # Markdown extensions for advanced formatting (required by mkdocs.yml)
 pymdown-extensions==10.5
 
-# Versioning support for multiple documentation versions
-mike==2.0.0
