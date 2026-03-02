@@ -123,6 +123,89 @@ a:active {
   font-size: 12px;
 }
 
+/* STRONG/EMPHASIS */
+.md-typeset strong {
+  color: var(--color-black);
+  font-weight: 600;
+}
+
+.md-typeset em {
+  color: var(--text-primary);
+  font-style: italic;
+}
+
+/* TABLES */
+.md-typeset table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: var(--spacing-lg);
+  border: 1px solid var(--color-medium-gray);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.md-typeset thead {
+  background-color: var(--color-light-gray);
+}
+
+.md-typeset th {
+  color: var(--color-black);
+  font-weight: 600;
+  padding: var(--spacing-md);
+  text-align: left;
+  border-bottom: 2px solid var(--color-medium-gray);
+}
+
+.md-typeset td {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--color-medium-gray);
+  color: var(--text-primary);
+}
+
+.md-typeset tr:hover {
+  background-color: var(--color-light-gray);
+}
+
+/* STRIPED TABLE ROWS */
+.md-typeset tbody tr:nth-child(even) {
+  background-color: #FAFBFC;
+}
+
+/* LISTS */
+.md-typeset ul,
+.md-typeset ol {
+  margin-bottom: var(--spacing-lg);
+  padding-left: var(--spacing-lg);
+}
+
+.md-typeset li {
+  margin-bottom: var(--spacing-sm);
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+.md-typeset ul li::marker {
+  color: var(--color-green-500);
+}
+
+.md-typeset ol li::marker {
+  color: var(--color-green-500);
+  font-weight: 600;
+}
+
+/* DEFINITION LIST */
+.md-typeset dt {
+  font-weight: 600;
+  color: var(--color-black);
+  margin-top: var(--spacing-md);
+}
+
+.md-typeset dd {
+  margin-left: var(--spacing-lg);
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-sm);
+}
+
 /* PRIMARY BUTTON */
 .md-button {
   background-color: var(--color-green-500);
