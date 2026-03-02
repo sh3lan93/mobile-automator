@@ -206,6 +206,73 @@ a:active {
   margin-bottom: var(--spacing-sm);
 }
 
+/* INPUT FIELDS */
+.md-typeset input[type="text"],
+.md-typeset input[type="email"],
+.md-typeset input[type="search"],
+.md-typeset textarea {
+  border: 1px solid var(--color-medium-gray);
+  background-color: var(--color-white);
+  color: var(--text-primary);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: 6px;
+  font-size: 14px;
+  transition: var(--transition-standard);
+  width: 100%;
+  max-width: 100%;
+}
+
+.md-typeset input:focus,
+.md-typeset textarea:focus {
+  border-color: var(--color-green-500);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.md-typeset input:disabled,
+.md-typeset textarea:disabled {
+  background-color: var(--color-light-gray);
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+
+/* LABELS */
+.md-typeset label {
+  display: block;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: var(--spacing-xs);
+}
+
+/* HELPER TEXT */
+.md-typeset .form-help,
+.md-typeset .hint {
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin-top: var(--spacing-xs);
+}
+
+/* ERROR STATE */
+.md-typeset input.error,
+.md-typeset textarea.error {
+  border-color: var(--color-error);
+  background-color: #FEF2F2;
+}
+
+.md-typeset .error-message {
+  color: var(--color-error);
+  font-size: 12px;
+  margin-top: var(--spacing-xs);
+}
+
+/* CHECKBOXES & RADIO */
+.md-typeset input[type="checkbox"],
+.md-typeset input[type="radio"] {
+  accent-color: var(--color-green-500);
+  cursor: pointer;
+}
+
 /* PRIMARY BUTTON */
 .md-button {
   background-color: var(--color-green-500);
