@@ -4,14 +4,33 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - 'gemini-extension.json'
-      - '**'
 
 jobs:
+  check-docs-only:
+    name: Detect documentation branch
+    runs-on: ubuntu-latest
+    outputs:
+      is-docs-only: ${{ steps.check.outputs.docs-only }}
+
+    steps:
+      - name: Check if branch starts with docs/
+        id: check
+        run: |
+          BRANCH_NAME="${{ github.head_ref }}"
+
+          if [[ "$BRANCH_NAME" == docs/* ]]; then
+            echo "docs-only=true" >> $GITHUB_OUTPUT
+            echo "✅ Documentation branch detected - version check skipped"
+          else
+            echo "docs-only=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Feature branch detected - version check required"
+          fi
+
   check-version:
     name: Verify version is bumped
+    needs: check-docs-only
     runs-on: ubuntu-latest
+    if: needs.check-docs-only.outputs.is-docs-only == 'false'
 
     steps:
       - name: Checkout code
@@ -41,7 +60,7 @@ jobs:
             echo "────────────────────────────────────────"
             echo "  Version $VERSION is already released (tag '$TAG' exists)."
             echo ""
-            echo "  Every PR merged to main must bump the version in"
+            echo "  PRs with extension code changes must bump the version in"
             echo "  gemini-extension.json to a value not yet in the tags."
             echo ""
             echo "  Current tags:"
