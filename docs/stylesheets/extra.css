@@ -1,8 +1,62 @@
 :root {
+  /* PRIMARY COLORS - Base Palette */
+  --color-white: #FFFFFF;
+  --color-light-gray: #F3F4F6;
+  --color-medium-gray: #D1D5DB;
+  --color-dark-gray: #1F2937;
+  --color-black: #000000;
+
+  /* ACCENT COLORS - Green */
+  --color-green-100: #D1FAE5;
+  --color-green-500: #10B981;
+  --color-green-600: #059669;
+  --color-green-700: #047857;
+
+  /* SEMANTIC COLORS */
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --color-info: #3B82F6;
+  --color-neutral: #6B7280;
+
+  /* TEXT COLORS */
+  --text-primary: #1F2937;
+  --text-secondary: #6B7280;
+  --text-disabled: #9CA3AF;
+  --text-light: #D1D5DB;
+
+  /* SPACING SCALE (base: 4px) */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+
+  /* SHADOWS */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
+  --shadow-green: 0 4px 12px rgba(16, 185, 129, 0.15);
+
+  /* TRANSITIONS */
+  --transition-standard: all 200ms ease-in-out;
+
+  /* MkDocs Material Theme Variables (for compatibility) */
   --md-primary-fg-color: #000000;
   --md-primary-bg-color: #ffffff;
   --md-accent-fg-color: #10B981;
   --md-accent-bg-color: #f0fdf4;
+}
+
+/* DARK MODE OVERRIDES */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-white: #0F172A;
+    --color-light-gray: #1E293B;
+    --text-primary: #F1F5F9;
+    --text-secondary: #CBD5E1;
+  }
 }
 
 /* Accent color for links and highlights */
