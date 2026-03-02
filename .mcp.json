@@ -1,0 +1,15 @@
+{
+    "mcpServers": {
+        "testrail": {
+            "command": "uvx",
+            "args": [
+                "testrail-mcp"
+            ],
+            "env": {
+                "TESTRAIL_URL": "https://shalan.testrail.io",
+                "TESTRAIL_USERNAME": "mohamed.sh3lan.93@gmail.com",
+                "TESTRAIL_API_KEY": "cLTFUer7eWjBn6o2zH7L-4cKBcPZ8SXWPYv7rOYl0"
+            }
+        }
+    }
+}
