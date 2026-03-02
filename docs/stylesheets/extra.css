@@ -62,14 +62,32 @@
 
   /* Ensure strong/bold text is white in dark mode */
   .md-typeset strong {
-    color: #FFFFFF;
+    color: #FFFFFF !important;
   }
 
   /* Ensure headings are white in dark mode */
   .md-typeset h1,
   .md-typeset h2,
-  .md-typeset h3 {
-    color: #FFFFFF;
+  .md-typeset h3,
+  .md-typeset h4,
+  .md-typeset h5,
+  .md-typeset h6 {
+    color: #FFFFFF !important;
+  }
+
+  /* Ensure body text is light in dark mode */
+  .md-typeset {
+    color: #F1F5F9 !important;
+  }
+
+  /* Ensure links are visible */
+  .md-typeset a {
+    color: #10B981 !important;
+  }
+
+  /* Ensure dt (definition terms) are white */
+  .md-typeset dt {
+    color: #FFFFFF !important;
   }
 }
 
