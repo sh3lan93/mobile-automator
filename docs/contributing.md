@@ -678,6 +678,7 @@ Once your PR is merged, it will be included in the next release. See the [Change
 - **[JSON Schema Docs](https://json-schema.org/)** — Schema validation
 - **[Architecture Documentation](../concepts/architecture.md)** — Understand the 3-tier design
 - **[Core Concepts](../concepts/index.md)** — Foundation for extension development
+- **[Full Guides](../guides/index.md)** — Detailed command walkthroughs
 
 ---
 

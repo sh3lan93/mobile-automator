@@ -41,9 +41,6 @@ extra_css:
 plugins:
   - search:
       lang: en
-  - meta
-  - sitemap:
-      priority: 1.0
 
 markdown_extensions:
   - admonition
@@ -52,7 +49,6 @@ markdown_extensions:
   - pymdownx.tabbed
   - pymdownx.highlight
   - pymdownx.inlinehilite
-  - meta
   - toc:
       permalink: true
       title: Table of Contents
