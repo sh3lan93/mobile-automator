@@ -59,13 +59,68 @@
   }
 }
 
-/* Accent color for links and highlights */
+/* LINKS */
 a {
-  color: #10B981;
+  color: var(--color-green-500);
+  text-decoration: none;
+  transition: var(--transition-standard);
 }
 
 a:hover {
-  color: #059669;
+  color: var(--color-green-600);
+  text-decoration: underline;
+}
+
+a:visited {
+  color: var(--text-secondary);
+}
+
+a:active {
+  color: var(--color-green-700);
+}
+
+/* HEADINGS */
+.md-typeset h1 {
+  color: var(--color-black);
+  font-weight: 700;
+  font-size: 32px;
+  margin-top: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+.md-typeset h2 {
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 24px;
+  margin-top: var(--spacing-xl);
+  margin-bottom: var(--spacing-md);
+  border-bottom: 2px solid var(--color-light-gray);
+  padding-bottom: var(--spacing-sm);
+}
+
+.md-typeset h3 {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 20px;
+  margin-top: var(--spacing-lg);
+  margin-bottom: var(--spacing-sm);
+}
+
+/* BODY TEXT */
+.md-typeset {
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+.md-typeset p {
+  margin-bottom: var(--spacing-md);
+}
+
+/* SECONDARY TEXT */
+.md-typeset small,
+.md-typeset .footnote {
+  color: var(--text-secondary);
+  font-size: 12px;
 }
 
 /* PRIMARY BUTTON */
