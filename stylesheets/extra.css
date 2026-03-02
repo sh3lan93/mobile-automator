@@ -54,8 +54,10 @@
   :root {
     --color-white: #0F172A;
     --color-light-gray: #1E293B;
+    --color-black: #F1F5F9;
     --text-primary: #F1F5F9;
     --text-secondary: #CBD5E1;
+    --color-medium-gray: #475569;
   }
 }
 
