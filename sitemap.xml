@@ -96,6 +96,16 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://sh3lan93.github.io/mobile-automator/plans/2026-03-03-ui-ux-design-system/</loc>
+         <lastmod>2026-03-02</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://sh3lan93.github.io/mobile-automator/plans/2026-03-03-ui-ux-implementation/</loc>
+         <lastmod>2026-03-02</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://sh3lan93.github.io/mobile-automator/reference/</loc>
          <lastmod>2026-03-02</lastmod>
          <changefreq>daily</changefreq>
