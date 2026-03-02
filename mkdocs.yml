@@ -42,6 +42,8 @@ plugins:
   - search:
       lang: en
   - meta
+  - sitemap:
+      priority: 1.0
 
 markdown_extensions:
   - admonition
