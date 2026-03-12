@@ -1,0 +1,272 @@
+description = "Generate aggregated test execution reports from result files"
+prompt = """
+## SYSTEM DIRECTIVE
+You are launching the Mobile QA Report Generator. Your job is to scan test execution results, aggregate metrics, and present formatted reports.
+
+---
+
+## 1.0 PRE-FLIGHT CHECKS
+
+### 1.1 Verify Results Directory
+1. Check that `mobile-automator/results/` directory exists.
+   - If missing → "No results directory found. Run `/mobile-automator:execute` first to generate test results." → Halt.
+2. List all `run_*.json` files in `mobile-automator/results/`.
+   - If no result files found → "No test results found. Run `/mobile-automator:execute` first to generate test results." → Halt.
+
+---
+
+## 2.0 LOAD AND PARSE RESULTS
+
+### 2.1 Collect All Result Files
+1. Read all JSON files matching pattern `mobile-automator/results/run_*.json`.
+2. For each file, parse the complete JSON content.
+
+### 2.2 Extract Key Metrics
+For each result file, extract:
+- `run_id` — from filename or `run_id` field
+- `scenario_id` — which scenario was tested
+- `status` — "passed", "failed", or "error"
+- `metadata.timestamp` — ISO-8601 datetime
+- `metadata.device_model` — device used
+- `metadata.environment` — target environment
+- `duration_seconds` — execution time
+- `total_assertions`, `passed_assertions`, `failed_assertions` — assertion counts
+- `steps_executed[]` — array of step results with `retry_count`, `retried` fields
+- `assertion_results[]` — array of assertion results
+- `observations[]` — regression, flakiness, state_context observations
+
+### 2.3 Sort Chronologically
+1. Parse timestamps from each result's `metadata.timestamp` field.
+2. Sort results from newest to oldest (descending order).
+
+---
+
+## 3.0 FILTER BY TIME RANGE
+
+### 3.1 Apply --last Filter
+1. Check if the command included `--last N` option.
+2. If specified, limit results to the most recent N runs.
+3. If not specified, default to `--last 10`.
+
+### 3.2 Calculate Date Range
+1. From the filtered results, determine:
+   - `oldest_date` — timestamp of oldest run in the set
+   - `newest_date` — timestamp of newest run in the set
+
+---
+
+## 4.0 AGGREGATE METRICS
+
+### 4.1 Calculate Summary Statistics
+From the filtered result set, compute:
+
+| Metric | Calculation |
+|--------|-------------|
+| `total_runs` | Count of result files |
+| `passed_runs` | Count where `status === \"passed\"` |
+| `failed_runs` | Count where `status === \"failed\"` |
+| `error_runs` | Count where `status === \"error\"` |
+| `pass_rate` | `(passed_runs / total_runs) * 100`, round to 1 decimal |
+| `total_assertions` | Sum of `total_assertions` across all runs |
+| `total_passed` | Sum of `passed_assertions` across all runs |
+| `total_failed` | Sum of `failed_assertions` across all runs |
+| `avg_duration` | Average of `duration_seconds`, round to 1 decimal |
+| `flaky_step_count` | Count of steps where `retry_count > 0` OR `retried === true` |
+
+### 4.2 Identify Failed Scenarios
+1. Build a map of `scenario_id` → failure count.
+2. For each run with `status === \"failed\"`, increment the count for that scenario.
+3. Sort by failure count descending, take top 5.
+
+### 4.3 Identify Flaky Steps
+1. For each run, iterate through `steps_executed[]`.
+2. Count steps where `retry_count > 0` OR `retried === true`.
+3. Group by step_id and count occurrences.
+4. Sort by occurrence count descending, take top 5.
+
+---
+
+## 5.0 DETECT RECENT REGRESSIONS
+
+### 5.1 Find Regression Observations
+1. Iterate through all `observations[]` arrays in results.
+2. Filter for objects where `type === \"regression\"`.
+3. Collect the step_id and message.
+4. Present the 3 most recent regressions.
+
+---
+
+## 6.0 FORMAT OUTPUT
+
+### 6.1 Determine Output Format
+1. Check command options for `--format table|json|html`.
+2. Default to `table` if not specified.
+3. Also check for `--junit` flag.
+
+### 6.2 Generate Table Output
+If format is `table`, display:
+
+```
+═══════════════════════════════════════════════════
+  Mobile Automator — Test Health Report
+  Last {N} runs ({oldest_date} → {newest_date})
+═══════════════════════════════════════════════════
+
+  Overall Pass Rate:  {pass_rate}% ({passed_runs}/{total_runs})
+  Failed Runs:        {failed_runs}
+  Error Runs:         {error_runs}
+  Total Assertions:   {total_assertions} ({total_passed} passed, {total_failed} failed)
+  Avg Duration:      {avg_duration}s
+  Flaky Steps:       {flaky_step_count} occurrences
+
+  ┌─────────────────────────────────┐
+  │  Failed Scenarios (Top 5)       │
+  ├─────────────────────────────────┤
+{scenario_failures_table}
+  └─────────────────────────────────┘
+
+  ┌─────────────────────────────────┐
+  │  Flakiest Steps                 │
+  ├─────────────────────────────────┤
+{flaky_steps_table}
+  └─────────────────────────────────┘
+```
+
+### 6.3 Generate JSON Output
+If format is `json`, output:
+
+```json
+{
+  "report_generated": "{ISO_timestamp}",
+  "date_range": {
+    "oldest": "{oldest_date}",
+    "newest": "{newest_date}"
+  },
+  "summary": {
+    "total_runs": {total_runs},
+    "passed_runs": {passed_runs},
+    "failed_runs": {failed_runs},
+    "error_runs": {error_runs},
+    "pass_rate": {pass_rate},
+    "total_assertions": {total_assertions},
+    "passed_assertions": {total_passed},
+    "failed_assertions": {total_failed},
+    "avg_duration_seconds": {avg_duration},
+    "flaky_step_count": {flaky_step_count}
+  },
+  "failed_scenarios": [
+    { "scenario_id": "...", "failure_count": N }
+  ],
+  "flaky_steps": [
+    { "step_id": "...", "occurrence_count": N }
+  ],
+  "recent_regressions": [
+    { "run_id": "...", "step_id": "...", "message": "..." }
+  ]
+}
+```
+
+### 6.4 Generate HTML Output
+If format is `html`:
+
+1. Generate a single-file HTML document with embedded CSS.
+2. Save to `mobile-automator/results/report.html` (or path specified with `--output`).
+3. Include:
+   - Summary statistics in a header card
+   - Pass/fail pie chart (CSS-only)
+   - Failed scenarios table
+   - Flaky steps table
+   - Recent regressions list
+4. Use a clean, modern design with green accents (#2e7d32).
+
+Example HTML structure:
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset=\"UTF-8\">
+  <title>Mobile Automator — Test Report</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 40px; background: #f5f5f5; }
+    .card { background: white; border-radius: 8px; padding: 24px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .stat { display: inline-block; margin-right: 40px; }
+    .stat-value { font-size: 32px; font-weight: bold; color: #2e7d32; }
+    .stat-label { font-size: 14px; color: #666; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+    th { background: #f9f9f9; font-weight: 600; }
+    .pass { color: #2e7d32; }
+    .fail { color: #c62828; }
+  </style>
+</head>
+<body>
+  <h1>Mobile Automator — Test Health Report</h1>
+  <p>Last {N} runs ({oldest_date} → {newest_date})</p>
+  
+  <div class=\"card\">
+    <h2>Summary</h2>
+    <!-- Stats here -->
+  </div>
+  
+  <div class=\"card\">
+    <h2>Failed Scenarios</h2>
+    <!-- Table here -->
+  </div>
+  
+  <div class=\"card\">
+    <h2>Flaky Steps</h2>
+    <!-- Table here -->
+  </div>
+</body>
+</html>
+```
+
+### 6.5 Generate JUnit XML Output
+If `--junit` flag is present:
+
+```xml
+<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<testsuite name=\"mobile-automator\" tests=\"{total_assertions}\" failures=\"{total_failed}\" errors=\"{error_runs}\" time=\"{avg_duration}\">
+{testcases}
+</testsuite>
+```
+
+Where each testcase is:
+```xml
+  <testcase name=\"{scenario_id}\" classname=\"run_{timestamp}\" time=\"{duration_seconds}\">
+    {failure_element_if_any}
+  </testcase>
+```
+
+---
+
+## 7.0 SAVE OUTPUT
+
+### 7.1 Check --output Option
+1. If `--output <path>` was specified:
+   - Write the formatted output to the specified file path.
+   - Confirm: \"Report saved to {path}.\"
+2. If not specified:
+   - For `table` format: display directly in terminal.
+   - For `json` or `html` format: save to `mobile-automator/results/report.json` or `mobile-automator/results/report.html`.
+   - Confirm: \"Report saved to mobile-automator/results/report.{json|html}.\"
+
+### 7.2 JUnit XML Special Case
+1. For `--junit` output, save to `mobile-automator/results/TEST-mobile-automator.xml`.
+2. This follows the common JUnit XML naming convention for CI systems.
+
+---
+
+## 8.0 FINAL OUTPUT
+
+Display the generated report to the user. If there are no failures or flaky steps, show a success message:
+
+```
+✅ All tests passing in the last {N} runs!
+```
+
+Include a tip at the end:
+```
+💡 Tip: Run `/mobile-automator:execute` to run more tests and build history.
+```
+"""

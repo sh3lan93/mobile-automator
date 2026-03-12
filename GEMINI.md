@@ -24,6 +24,8 @@ All test artifacts are stored under the `mobile-automator/` directory in the pro
 - **Test Results Directory**: `mobile-automator/results/`
 - **Individual Run Result**: `mobile-automator/results/<run_id>.json`
 - **Run Screenshots**: `mobile-automator/results/<run_id>/screenshots/`
+- **Aggregated Reports**: `mobile-automator/results/report.json`, `mobile-automator/results/report.html`
+- **JUnit XML**: `mobile-automator/results/TEST-mobile-automator.xml`
 
 When resolving a scenario or result file:
 1. Check if the path exists on disk.

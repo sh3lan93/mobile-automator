@@ -20,6 +20,7 @@ Mobile Automator is a **Gemini CLI extension** that provides intelligent mobile 
 │  /mobile-automator:setup                      │
 │  /mobile-automator:generate         │
 │  /mobile-automator:execute          │
+│  /mobile-automator:report           │
 │  (Pre-flight checks, validation)    │
 └──────────────┬──────────────────────┘
                │ delegates to
@@ -313,7 +314,9 @@ All commands use the `mobile-automator:` namespace to prevent conflicts with oth
 - **Setup command**: `/mobile-automator:setup` — Invokes `commands/mobile-automator/setup.toml`
 - **Generate command**: `/mobile-automator:generate` — Invokes `commands/mobile-automator/generate.toml`
 - **Execute command**: `/mobile-automator:execute` — Invokes `commands/mobile-automator/execute.toml`
+- **Report command**: `/mobile-automator:report` — Invokes `commands/mobile-automator/report.toml`
 - **Migrate command**: `/mobile-automator:migrate` — Invokes `commands/mobile-automator/migrate.toml`
+- **List-tags command**: `/mobile-automator:list-tags` — Invokes `commands/mobile-automator/list-tags.toml`
 
 **Skill names** match the command namespace:
 - `.gemini/skills/mobile-automator-generator/` - Used by generate command
