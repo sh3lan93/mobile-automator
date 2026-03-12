@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.0] - 2026-03-13
+
+### ✨ Added
+
+- **Test Report Command** — New `/mobile-automator:report` command generates aggregated test execution reports.
+  - Supports multiple output formats: table (terminal), JSON, HTML
+  - JUnit XML export for CI integration
+  - Shows pass rate, failed scenarios, flaky steps, average duration
+  - Filter by recent runs with `--last N` option (default: 10)
+
+---
+
 ## [0.3.1] - 2026-02-25
 
 ### 🔄 Changed
