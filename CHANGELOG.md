@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.6.0] - 2026-03-20
+
+### ✨ Added
+
+- **Environment Persistence** — The generate command now remembers your last-used environment and skips the prompt on subsequent runs.
+  - First run (or after clearing preferences): interactive prompt asks for environment and saves the selection to `mobile-automator/generate_preferences.json`
+  - Subsequent runs: saved environment is used automatically with an `ℹ️` notice
+  - `--set-environment="X"` — use environment X **and** save it as the new default preference
+  - `--environment="X"` — one-time override, uses X for this run only without changing the saved preference
+  - Stale preferences (environment removed from config) are detected automatically with a `⚠️` warning and the prompt re-appears
+  - Single-environment projects skip the prompt entirely (always has, now also ignores flags cleanly)
+
+---
+
 ## [0.5.0] - 2026-03-13
 
 ### ✨ Added

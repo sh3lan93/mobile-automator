@@ -39,6 +39,59 @@ CRITICAL: Do NOT generate scenarios yourself. After pre-flight passes, follow th
 
 ---
 
+## 0.1 ENVIRONMENT RESOLUTION
+
+**Purpose:** Resolve `selected_environment` before pre-flight checks. This value is used throughout Section 1.3.
+
+**config.json absence:** If `mobile-automator/config.json` does not exist, skip Section 0.1 entirely — do not attempt to resolve the environment. Section 1.1 will handle the missing config error with the appropriate message.
+
+**Single-environment short-circuit:** First, read `mobile-automator/config.json` (if it exists). If `config.environments` exists and has exactly **one** entry, use it as `selected_environment` directly. Do NOT write to `mobile-automator/generate_preferences.json`. **Any flags (`--environment`, `--set-environment`) are silently ignored in this case** — there is only one valid choice. Skip the rest of Section 0.1 and proceed to Section 1.0. If `config.environments` exists but is **empty** (`[]`), treat it as absent — skip environment validation for flags and proceed to the multi-environment resolution steps below.
+
+**Multi-environment resolution** (in priority order):
+
+1. **Both flags present:** If both `--set-environment` and `--environment` are provided in the command, halt immediately:
+   > "❌ Cannot use --set-environment and --environment together. Use one or the other."
+   **HALT.**
+
+2. **`--set-environment="X"` is present:**
+   - If `config.environments` exists: check that `X` is in the list. If not, halt:
+     > "❌ Unknown environment: \"X\"\n   Valid options: [comma-separated list of config.environments values]"
+   - Set `selected_environment = X`.
+   - Write `{ "environment": "X" }` to `mobile-automator/generate_preferences.json` (create or overwrite).
+   - Announce:
+     > "✅ Environment set to: X (saved as default preference)"
+   - Proceed to Section 1.0.
+
+3. **`--environment="X"` is present:**
+   - If `config.environments` exists: check that `X` is in the list. If not, halt:
+     > "❌ Unknown environment: \"X\"\n   Valid options: [comma-separated list of config.environments values]"
+   - Set `selected_environment = X`. Do NOT write to `mobile-automator/generate_preferences.json`.
+   - Announce:
+     > "ℹ️  Using environment: X (one-time override, saved preference unchanged)"
+   - Proceed to Section 1.0.
+
+4. **Check `mobile-automator/generate_preferences.json`:**
+   - If the file exists and has an `"environment"` key:
+     - If `config.environments` **exists** and the saved value is **NOT** in the list:
+       > "⚠️  Saved environment \"[saved_value]\" is no longer valid (not found in available environments).\n    Please select a new default environment."
+       Fall through to step 5.
+     - Otherwise (value is valid, or `config.environments` is absent): set `selected_environment` to the saved value. Announce:
+       > "ℹ️  Using saved environment: [saved_value]\n    (override with --environment=\"X\" or update saved preference with --set-environment=\"X\")"
+       Proceed to Section 1.0.
+
+5. **Interactive prompt (no flag, no valid preference):**
+   - If `config.environments` has multiple entries, use the `ask_user` tool (type: `choice`) to ask:
+     - Header: `Environment`
+     - Question: `Which environment should I use for this test?`
+     - Options: Create options from the available environments in `config.environments`.
+   - After the user selects, set `selected_environment` to the chosen value.
+   - Write `{ "environment": "selected_value" }` to `mobile-automator/generate_preferences.json` (create or overwrite).
+   - Announce:
+     > "ℹ️  Environment \"[selected_value]\" saved as default preference. Use --set-environment=\"X\" to change it later."
+   - Proceed to Section 1.0.
+
+---
+
 ## 1.0 PRE-FLIGHT CHECKS
 
 ### 1.1 Verify Setup
@@ -59,12 +112,7 @@ CRITICAL: Do NOT generate scenarios yourself. After pre-flight passes, follow th
 
 ### 1.3 Select Environment and Verify App
 1.  **Read config:** Load `mobile-automator/config.json`.
-2.  **Select environment:**
-    -   If the config has multiple environments, use the `ask_user` tool (type: `choice`) to ask the user:
-        - Header: `Environment`
-        - Question: `Which environment should I use for this test?`
-        - Options: Create options from the available environments in `config.environments`.
-    -   Store the selected environment for use in the scenario metadata.
+2.  **Use resolved environment:** The `selected_environment` value was already resolved in Section 0.1. Use it directly for all subsequent steps in this section (package ID lookup, build command, scenario metadata). If `selected_environment` is not set (because Section 0.1 was skipped due to a missing `config.json`), do not proceed — Section 1.1 will have already halted with the appropriate error.
 3.  **Determine the app package ID:**
     -   If `app.android_packages` or `app.ios_bundle_ids` exists in config (environment-specific mapping):
         -   Use the package ID for the selected environment: `app.android_packages[selected_environment]` or `app.ios_bundle_ids[selected_environment]`
