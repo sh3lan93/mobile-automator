@@ -150,11 +150,14 @@ Asks user for:
 `commands/mobile-automator/generate.toml` is a **pre-flight wrapper** that:
 1. Verifies `mobile-automator/config.json` exists
 2. Checks that `.gemini/skills/mobile-automator-generator/SKILL.md` is installed
-3. Detects connected devices via `mobile_list_available_devices()`
-4. Confirms app installation (offers to build/install if needed)
-5. Delegates to the generator skill at `.gemini/skills/mobile-automator-generator/SKILL.md`
+3. Resolves the target environment (Section 0.1) — reads saved preference from `mobile-automator/generate_preferences.json`, or prompts once and saves the selection; supports `--environment="X"` (ephemeral override) and `--set-environment="X"` (update saved preference)
+4. Detects connected devices via `mobile_list_available_devices()`
+5. Confirms app installation (offers to build/install if needed)
+6. Delegates to the generator skill at `.gemini/skills/mobile-automator-generator/SKILL.md`
 
-**Why the wrapper?** Separates infrastructure concerns (device detection, config validation) from domain logic (test generation).
+**Why the wrapper?** Separates infrastructure concerns (device detection, config validation, environment resolution) from domain logic (test generation).
+
+**Preferences file:** `mobile-automator/generate_preferences.json` — stores the developer's last-chosen environment. Created/updated by the generate command only; never touched by setup or execute.
 
 ### The Execute Command (Wrapper Pattern)
 
