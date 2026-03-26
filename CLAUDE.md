@@ -164,9 +164,9 @@ Asks user for:
 `commands/mobile-automator/execute.toml` is a **pre-flight wrapper** that:
 1. Verifies `mobile-automator/config.json` exists
 2. Checks that `.gemini/skills/mobile-automator-executor/SKILL.md` is installed
-3. Detects connected devices
+3. Detects connected devices (supports `--device` flag or interactive selection via `ask_user` tool)
 4. Confirms app installation
-5. Resolves which scenarios to execute (by name, ID, or tag)
+5. Resolves which scenarios to execute (supports `--all`, `--tag`, specific names/IDs, or interactive selection via `ask_user` tool)
 6. Delegates to the executor skill at `.gemini/skills/mobile-automator-executor/SKILL.md`
 
 ### Modifying Skill Templates

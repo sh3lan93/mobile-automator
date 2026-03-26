@@ -238,7 +238,7 @@ Uses AI vision to compare screenshots semantically, not pixel-by-pixel.
 |---------|-------------|-------|--------------|
 | **`/mobile-automator:setup`** | One-time setup - analyzes project and installs testing skills | `> /mobile-automator:setup` | • Detects platform (Android/iOS/Flutter/React Native/KMP/CMP)<br>• Discovers build environments (staging, production, etc.)<br>• Infers app package IDs from build files<br>• Analyzes architecture patterns and business domain<br>• Installs customized QA skills<br>• Creates `mobile-automator/` test directory<br>• **Resume support:** If interrupted, run again to resume |
 | **`/mobile-automator:generate`** | **Record** test scenarios from natural language (do this once per test) | `> /mobile-automator:generate`<br><br>Options:<br>• `--set-environment="X"` (use X and save as default)<br>• `--environment="X"` (one-time override, no save) | • Connects to your device/emulator<br>• Asks for environment once, saves preference for future runs<br>• Prompts for test steps in natural language<br>• Executes steps on device while recording<br>• Captures reference screenshots<br>• Generates JSON scenario file (schema v2)<br>**Output:** `mobile-automator/scenarios/<scenario_id>.json` |
-| **`/mobile-automator:execute`** | **Replay** saved test scenarios (run repeatedly for regression testing) | `> /mobile-automator:execute <scenario_id>`<br><br>Examples:<br>• Single: `execute login_flow`<br>• Multiple: `execute login_flow checkout_flow`<br>• All: `execute` (interactive) | • Replays scenario steps on connected device<br>• Captures actual screenshots for comparison<br>• Validates assertions (element exists, text matches, visual state)<br>• Detects flakiness and retries automatically<br>• Generates detailed pass/fail report with diagnostics<br>**Output:** `mobile-automator/results/<run_id>.json` |
+| **`/mobile-automator:execute`** | **Replay** saved test scenarios (run repeatedly for regression testing) | `> /mobile-automator:execute <scenario_id>`<br><br>Examples:<br>• Single: `execute login_flow`<br>• Multiple: `execute login_flow checkout_flow`<br>• All: `execute --all`<br>• Interactive: `execute`<br><br>Options:<br>• `--device="id"` (specify device) | • Replays scenario steps on connected device<br>• Captures actual screenshots for comparison<br>• Validates assertions (element exists, text matches, visual state)<br>• Detects flakiness and retries automatically<br>• Generates detailed pass/fail report with diagnostics<br>**Output:** `mobile-automator/results/<run_id>.json` |
 | **`/mobile-automator:migrate`** | **Migrate** a v1 scenario JSON to schema v2 format | `> /mobile-automator:migrate <scenario_id>`<br><br>Examples:<br>• `migrate login_flow`<br>• `migrate` (interactive file selection) | • Analyzes existing v1 scenario<br>• Auto-converts step IDs, assertion IDs, metadata<br>• Interactively resolves ambiguous waits<br>• Creates `.v1.bak` backup before any changes<br>• Outputs valid schema v2 scenario |
 | **`/mobile-automator:list-tags`**| Lists all tags currently used in test scenarios | `> /mobile-automator:list-tags` | • Scans all JSON scenarios<br>• Displays tag counts<br>• Differentiates standard vs custom tags |
 | **`/mobile-automator:report`** | Generate aggregated test reports | `> /mobile-automator:report`<br><br>Options:<br>• `--last N` (default 10)<br>• `--format table\|json\|html`<br>• `--junit` (JUnit XML) | • Aggregates all test results<br>• Shows pass rate, flaky steps, failures<br>• Exports to JSON, HTML, or JUnit XML<br>**Output:** `mobile-automator/results/report.{json,html,xml}` |
@@ -268,6 +268,12 @@ Use the `--tag` parameter with `/mobile-automator:execute` to filter runs:
 - **Exclude tags (NOT):** `/mobile-automator:execute --tag !flaky` (excludes scenarios with this tag)
 
 If you run `/mobile-automator:execute` without arguments, the interactive menu will automatically group your scenarios by their primary tag.
+
+### Selecting a Specific Device
+Use the `--device` parameter if you have multiple devices connected and want to bypass the interactive device selection prompt:
+```bash
+> /mobile-automator:execute login_flow --device="emulator-5554"
+```
 
 ### Standard Tag Registry
 We recommend standardizing on these common tags:
