@@ -74,7 +74,6 @@ See our [examples](examples/index.md) for Android and iOS patterns.
 - 14 action types, 27 assertion types
 - Variables and capture_value support
 - Retry policies and conditional steps
-- TestRail integration
 - **Recommended for all new tests**
 
 **Migration:** Use `/mobile-automator:migrate <scenario_id>` to upgrade v1 → v2.
@@ -417,47 +416,6 @@ Parallel execution is on the roadmap.
 
 ## Integration
 
-### How do I sync results to TestRail?
-
-**Answer:** Mobile Automator integrates with TestRail v1+. Setup during test generation:
-
-```json
-{
-  "testrail": {
-    "case_id": 1001,
-    "project_id": 1,
-    "case_url": "https://testrail.example.com/index.php?/cases/view/1001"
-  }
-}
-```
-
-**Requirements:**
-- TestRail API enabled
-- Test case exists in TestRail
-- Run ID provided during execution
-- Executor skill has TestRail credentials
-
-After test execution, results are synced automatically if TestRail settings are configured in skill.
-
-### What if TestRail sync fails?
-
-**Cause:** API configuration or network issue.
-
-**Solutions:**
-1. **Verify API key** — Check executor skill has correct TestRail API key
-2. **Check case exists** — Verify case ID in TestRail
-3. **Check run exists** — Verify run ID is active
-4. **Check network** — Ensure connectivity to TestRail server
-5. **Check result format** — Ensure result JSON is valid
-
-**Debug:**
-```bash
-# Check result structure
-cat mobile-automator/results/run_*.json | jq '.testrail'
-
-# Look for sync errors in skill output
-```
-
 ### How do I integrate with CI/CD?
 
 **Answer:** Mobile Automator works in CI/CD pipelines:
@@ -482,7 +440,6 @@ cat mobile-automator/results/latest.json | jq '.status'
 - Connect device in CI environment
 - Run commands with proper error handling
 - Archive result files as CI artifacts
-- Sync to TestRail for reporting
 
 ### Can I use mobile-automator with GitHub Actions?
 

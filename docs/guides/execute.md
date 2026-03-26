@@ -216,7 +216,7 @@ After all steps execute:
 
 4. **Create result file**
    - Saved to `mobile-automator/results/run_*.json`
-   - Ready for analysis and TestRail sync
+   - Ready for analysis
 
 ---
 
@@ -370,7 +370,6 @@ If your scenario captures values using `capture_value` steps:
 These values are:
 - Extracted during execution
 - Available for later assertions
-- Synced to TestRail if configured
 - Useful for data-driven testing
 
 ---
@@ -463,39 +462,6 @@ mobile-automator/results/
 - Help debug failures
 - Track UI changes over time
 - Create test reports for stakeholders
-
----
-
-## TestRail Sync
-
-If your scenario includes TestRail metadata:
-
-```json
-{
-  "scenario_id": "login_happy_path",
-  "testrail": {
-    "case_id": 12345,
-    "project_id": 1,
-    "case_url": "https://testrail.example.com/cases/12345"
-  }
-}
-```
-
-After execution, results automatically sync to TestRail:
-
-1. Maps result status to TestRail status
-   - `passed` → Test case passed
-   - `failed` → Test case failed
-   - `error` → Test case blocked
-
-2. Uploads screenshots and observations
-3. Records execution time and device info
-4. Adds result comment with detailed findings
-
-**Manual sync:**
-```bash
-gemini /mobile-automator:execute --testrail-sync
-```
 
 ---
 

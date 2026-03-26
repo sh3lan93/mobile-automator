@@ -38,11 +38,6 @@ Demonstrates handling biometric authentication with Face ID and fallback to pass
     "environment": "staging"
   },
   "tags": ["authentication", "biometric", "face-id", "ios"],
-  "testrail": {
-    "case_id": 2001,
-    "project_id": 1,
-    "case_url": "https://testrail.example.com/index.php?/cases/view/2001"
-  },
   "variables": {
     "test_password": {
       "type": "string",
