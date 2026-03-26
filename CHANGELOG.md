@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.6.1] - 2026-03-27
+
+### 🗑️ Removed
+
+- **TestRail Integration** — Removed all TestRail MCP server configuration, environment variables, and integration code.
+  - Removed `testrail-mcp` MCP server from `gemini-extension.json`
+  - Removed `TESTRAIL_API_KEY` and `TESTRAIL_DOMAIN` environment variables
+  - Removed `testrail` metadata field from scenario schema
+  - Removed TestRail result syncing from executor
+  - Updated documentation to remove TestRail references
+  - Migration path: scenarios without TestRail metadata continue to work unchanged
+
+---
+
 ## [0.6.0] - 2026-03-20
 
 ### ✨ Added
