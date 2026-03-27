@@ -1,3 +1,7 @@
+---
+description: "Install mobile-automator for Gemini CLI with prerequisites, platform-specific requirements for Android and iOS, and troubleshooting tips."
+---
+
 # Installation
 
 ## Prerequisites

@@ -1,3 +1,7 @@
+---
+description: "Intelligent mobile QA automation for Gemini CLI. Auto-detect your mobile app architecture, generate test scenarios, and execute them with AI-powered assertions."
+---
+
 # mobile-automator
 
 Intelligent mobile QA automation for Gemini CLI. Analyze your mobile app, auto-generate test scenarios, and execute them with AI-powered assertions.
@@ -80,26 +84,18 @@ Results include step details, assertion outcomes, captured variables, and observ
 
 ## How It Works
 
-```
-┌─────────────────────────────────────┐
-│  Tier 1: CLI Commands               │
-│  /mobile-automator:setup            │
-│  /mobile-automator:generate         │
-│  /mobile-automator:execute          │
-│  (Pre-flight validation)            │
-└──────────────┬──────────────────────┘
-               │ delegates to
-┌──────────────▼──────────────────────┐
-│  Tier 2: Workspace Skills           │
-│  .gemini/skills/mobile-automator-*  │
-│  (Test generation & execution)      │
-└──────────────┬──────────────────────┘
-               │ uses
-┌──────────────▼──────────────────────┐
-│  Tier 3: Automation Engine          │
-│  mobile-mcp                         │
-│  (Device primitives)                │
-└─────────────────────────────────────┘
+```mermaid
+graph TD
+    T1["<b>Tier 1: CLI Commands</b><br/>/mobile-automator:setup<br/>/mobile-automator:generate<br/>/mobile-automator:execute<br/><i>Pre-flight validation</i>"]
+    T2["<b>Tier 2: Workspace Skills</b><br/>.gemini/skills/mobile-automator-*<br/><i>Test generation & execution</i>"]
+    T3["<b>Tier 3: Automation Engine</b><br/>mobile-mcp<br/><i>Device primitives</i>"]
+
+    T1 -->|delegates to| T2
+    T2 -->|uses| T3
+
+    style T1 fill:#1a1a2e,stroke:#10B981,color:#fff
+    style T2 fill:#1a1a2e,stroke:#10B981,color:#fff
+    style T3 fill:#1a1a2e,stroke:#10B981,color:#fff
 ```
 
 **Why this design?** Clear separation:

@@ -1,3 +1,7 @@
+---
+description: "Get started with mobile-automator - install the extension, set up your project, and run your first automated test in minutes."
+---
+
 # Getting Started with mobile-automator
 
 Welcome! This section will help you get up and running with mobile-automator in just a few minutes.

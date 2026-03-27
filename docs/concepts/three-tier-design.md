@@ -1,3 +1,7 @@
+---
+description: "Deep dive into mobile-automator's 3-tier architecture - CLI commands for pre-flight, workspace skills for test logic, and mobile-mcp for device control."
+---
+
 # 3-Tier Architecture
 
 A detailed exploration of how the three-tier design separates concerns and enables customization.

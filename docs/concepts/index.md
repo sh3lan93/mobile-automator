@@ -1,3 +1,7 @@
+---
+description: "Core concepts behind mobile-automator - understand the architecture, 3-tier design, and how workspace skills power intelligent test automation."
+---
+
 # Core Concepts
 
 Understand the architecture, design patterns, and key concepts behind mobile-automator.

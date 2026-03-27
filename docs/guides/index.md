@@ -1,3 +1,7 @@
+---
+description: "Step-by-step command guides for mobile-automator - setup, generate, execute, and migrate commands with detailed walkthroughs."
+---
+
 # Guides
 
 Comprehensive walkthroughs for each Mobile Automator command and workflow. These guides provide step-by-step instructions for analyzing your mobile project, generating test scenarios, executing tests on real devices, and migrating legacy test scenarios to the modern v2 format.

@@ -1,3 +1,7 @@
+---
+description: "Test Scenario Schema v2 reference - named step IDs, 14 action types, 27 assertion types, variables, retry policies, and conditional logic."
+---
+
 # Test Scenario Schema v2 Reference
 
 The default schema for test scenarios. Defines the complete structure for test steps, assertions, variables, execution metadata, and advanced features like retry policies and conditional branching.

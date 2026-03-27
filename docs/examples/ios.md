@@ -1,3 +1,7 @@
+---
+description: "iOS test scenario examples - Face ID authentication, tab bar navigation, swipe-to-go-back gestures, alert handling, and background sync."
+---
+
 # iOS Examples
 
 Complete test scenario examples for iOS applications. Each example demonstrates iOS-specific patterns and best practices.
@@ -17,6 +21,7 @@ Complete test scenario examples for iOS applications. Each example demonstrates 
 Demonstrates handling biometric authentication with Face ID and fallback to password entry.
 
 **Key Features:**
+
 - Biometric prompt detection and interaction
 - Face ID/Touch ID authentication
 - Password fallback mechanism
@@ -190,6 +195,7 @@ Demonstrates handling biometric authentication with Face ID and fallback to pass
 Demonstrates tab bar navigation, tab switching, and state persistence across tabs.
 
 **Key Features:**
+
 - Tab bar element interaction
 - Tab switching and content update
 - Active tab indication
@@ -393,6 +399,7 @@ Demonstrates tab bar navigation, tab switching, and state persistence across tab
 Demonstrates gesture-based screen dismissal using iOS swipe-to-pop navigation gesture.
 
 **Key Features:**
+
 - Interactive dismissal gesture
 - Gesture animation
 - Navigation stack management
@@ -557,6 +564,7 @@ Demonstrates gesture-based screen dismissal using iOS swipe-to-pop navigation ge
 Demonstrates UIAlertController handling, including different button actions and alert content.
 
 **Key Features:**
+
 - Alert presentation and dismissal
 - Alert button interaction
 - Alert content verification
@@ -726,6 +734,7 @@ Demonstrates UIAlertController handling, including different button actions and 
 Demonstrates handling background tasks and silent notifications during app usage and backgrounding.
 
 **Key Features:**
+
 - Background task initiation
 - Silent notification handling
 - Data sync verification

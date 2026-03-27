@@ -1,3 +1,7 @@
+---
+description: "Architecture overview of mobile-automator's 3-tier system - extension commands, workspace skills, and the mobile-mcp automation engine."
+---
+
 # Architecture Overview
 
 mobile-automator is designed as a meta-testing extension that analyzes your mobile project, learns its structure and domain, then generates customized testing skills.

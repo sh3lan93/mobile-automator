@@ -1,3 +1,7 @@
+---
+description: "Real-world test scenario examples for Android and iOS - login flows, list navigation, permissions, toasts, gestures, and more."
+---
+
 # Examples
 
 Real-world test scenario examples for Android and iOS platforms. These comprehensive examples demonstrate best practices for mobile test automation using Mobile Automator's v2 scenario format and showcase how to structure test scenarios for common mobile app workflows and user interactions.

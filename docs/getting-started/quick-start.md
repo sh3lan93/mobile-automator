@@ -1,3 +1,7 @@
+---
+description: "Run your first mobile test in 5 minutes - from setup to test generation and execution with mobile-automator."
+---
+
 # Quick Start
 
 Get mobile-automator working in 5 minutes with a real test scenario.

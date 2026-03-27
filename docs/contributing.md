@@ -1,3 +1,7 @@
+---
+description: "Contributing guide for mobile-automator - development setup, code standards, testing workflow, PR guidelines, and project architecture."
+---
+
 # Contributing
 
 We welcome contributions to mobile-automator! This guide explains how to get started developing, submitting changes, and helping improve the project.
@@ -676,9 +680,9 @@ Once your PR is merged, it will be included in the next release. See the [Change
 ## Resources
 
 - **[JSON Schema Docs](https://json-schema.org/)** — Schema validation
-- **[Architecture Documentation](../../concepts/architecture.md)** — Understand the 3-tier design
-- **[Core Concepts](../../concepts/index.md)** — Foundation for extension development
-- **[Full Guides](../../guides/index.md)** — Detailed command walkthroughs
+- **[Architecture Documentation](concepts/architecture.md)** — Understand the 3-tier design
+- **[Core Concepts](concepts/index.md)** — Foundation for extension development
+- **[Full Guides](guides/index.md)** — Detailed command walkthroughs
 
 ---
 

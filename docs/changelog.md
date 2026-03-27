@@ -1,3 +1,7 @@
+---
+description: "Changelog for mobile-automator - version history, new features, breaking changes, and migration notes from v0.1.0 to latest."
+---
+
 # Changelog
 
 All notable changes to mobile-automator are documented here. Follow [Semantic Versioning](https://semver.org/).

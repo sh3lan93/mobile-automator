@@ -1,3 +1,7 @@
+---
+description: "Execute test scenarios on real devices and simulators with AI vision assertions, flakiness detection, and detailed result reports."
+---
+
 # Execute Command Guide
 
 The **Execute Command** runs your test scenarios on a real device or simulator, evaluates assertions, captures screenshots, and generates detailed result reports with intelligent observations about flakiness, regressions, and device context.

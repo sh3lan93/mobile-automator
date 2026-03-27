@@ -1,3 +1,7 @@
+---
+description: "All 27 assertion types in mobile-automator Schema v2 - element state, text content, visual layout, navigation, accessibility, and platform-specific checks."
+---
+
 # Assertion Types Reference
 
 mobile-automator supports 27 assertion types organized in 8 categories for comprehensive test verification.

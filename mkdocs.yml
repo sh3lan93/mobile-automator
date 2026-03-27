@@ -13,15 +13,22 @@ theme:
   name: material
   logo: assets/logo.svg
   favicon: assets/favicon.svg
+  custom_dir: docs/overrides
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
       primary: custom
       accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
       primary: custom
       accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
   features:
     - navigation.instant
     - navigation.tracking
@@ -33,7 +40,9 @@ theme:
     - content.code.annotate
 
 extra:
-  og_image: assets/logo.svg
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/sh3lan93/mobile-automator
 
 extra_css:
   - stylesheets/extra.css
@@ -45,7 +54,11 @@ plugins:
 markdown_extensions:
   - admonition
   - pymdownx.details
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed
   - pymdownx.highlight
   - pymdownx.inlinehilite
@@ -56,28 +69,28 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting Started:
-      - Overview: getting-started/index.md
+      - Getting Started: getting-started/index.md
       - Installation: getting-started/installation.md
       - Quick Start: getting-started/quick-start.md
   - Core Concepts:
-      - Overview: concepts/index.md
+      - Core Concepts: concepts/index.md
       - Architecture: concepts/architecture.md
       - 3-Tier Design: concepts/three-tier-design.md
       - How Skills Work: concepts/skills.md
   - Guides:
-      - Overview: guides/index.md
+      - Command Guides: guides/index.md
       - Setup Command: guides/setup.md
       - Generate Command: guides/generate.md
       - Execute Command: guides/execute.md
       - Migrate Command: guides/migrate.md
   - Reference:
-      - Overview: reference/index.md
+      - Reference: reference/index.md
       - Assertion Types: reference/assertions.md
       - Test Scenario Schema v2: reference/schema-v2.md
       - Test Result Schema: reference/result-schema.md
       - MCP Tools: reference/mcp-tools.md
   - Examples:
-      - Overview: examples/index.md
+      - Example Scenarios: examples/index.md
       - Android Examples: examples/android.md
       - iOS Examples: examples/ios.md
   - FAQ & Troubleshooting: faq.md

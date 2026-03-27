@@ -1,3 +1,7 @@
+---
+description: "Android test scenario examples - login flow, RecyclerView scrolling, permission dialogs, toast notifications, and error handling patterns."
+---
+
 # Android Examples
 
 Complete test scenario examples for Android applications. Each example demonstrates key patterns and best practices.
@@ -17,6 +21,7 @@ Complete test scenario examples for Android applications. Each example demonstra
 A realistic login scenario demonstrating email validation, password entry, loading states, and dashboard access.
 
 **Key Features:**
+
 - Email field interaction and validation
 - Password entry
 - Loading indicator handling
@@ -170,6 +175,7 @@ A realistic login scenario demonstrating email validation, password entry, loadi
 Demonstrates handling of RecyclerView/ListViews, scrolling to elements, and selecting items from lists.
 
 **Key Features:**
+
 - List item scrolling and visibility
 - Item selection and tap handling
 - List scrolling to specific element
@@ -309,6 +315,7 @@ Demonstrates handling of RecyclerView/ListViews, scrolling to elements, and sele
 Demonstrates handling Android runtime permission dialogs and permission-dependent features.
 
 **Key Features:**
+
 - Permission dialog detection
 - Permission grant/deny handling
 - Feature availability after permission grant
@@ -436,6 +443,7 @@ Demonstrates handling Android runtime permission dialogs and permission-dependen
 Demonstrates verification of toast messages during user interactions.
 
 **Key Features:**
+
 - Toast message appearance detection
 - Toast message text verification
 - Toast display timing
@@ -590,6 +598,7 @@ Demonstrates verification of toast messages during user interactions.
 Demonstrates verification of error states, network errors, and validation error messages.
 
 **Key Features:**
+
 - Network error detection
 - Validation error messages
 - Error recovery actions

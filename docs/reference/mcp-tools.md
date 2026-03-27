@@ -1,3 +1,7 @@
+---
+description: "MCP tool reference for mobile-automator - device automation primitives including tap, swipe, type, screenshot, and element inspection."
+---
+
 # MCP Tool Reference
 
 The Mobile MCP Server (`mobile-mcp`) provides 20+ device automation primitives for controlling mobile devices and simulators. These tools are used internally by the executor skill but can also be called directly for custom test logic.

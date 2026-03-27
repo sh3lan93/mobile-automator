@@ -1,3 +1,7 @@
+---
+description: "Generate test scenarios from natural language descriptions using mobile-automator's AI-powered test generation with Schema v2."
+---
+
 # Generate Command Guide
 
 The **Generate Command** creates test scenarios using natural language descriptions. It understands what you want to test, launches your app on a device, resolves UI elements, and generates a JSON scenario file ready for execution.

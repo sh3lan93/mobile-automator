@@ -1,3 +1,7 @@
+---
+description: "Migrate test scenarios from Schema v1 to v2 format with the interactive migration tool and automatic ID conversion."
+---
+
 # Migrate Command Guide
 
 The **Migrate Command** converts test scenarios from legacy v1 format to modern v2 format, enabling access to advanced features like variables, retry policies, conditional execution, and improved assertions.

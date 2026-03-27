@@ -1,3 +1,7 @@
+---
+description: "How mobile-automator workspace skills work - template placeholders, skill installation, customization, and the generator/executor skill lifecycle."
+---
+
 # How Skills Work
 
 Understanding workspace skills: how they're installed, customized, and executed.

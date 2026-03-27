@@ -1,3 +1,7 @@
+---
+description: "Frequently asked questions and troubleshooting for mobile-automator - setup issues, device detection, test generation, and execution problems."
+---
+
 # FAQ & Troubleshooting
 
 Comprehensive guide to common questions, issues, and solutions when using mobile-automator.

@@ -1,3 +1,7 @@
+---
+description: "Complete guide to the 7-section setup workflow - platform detection, environment discovery, package inference, and skill installation."
+---
+
 # Setup Command Guide
 
 The **Setup Command** is your entry point to mobile-automator. It analyzes your mobile project, detects its architecture and configuration, then automatically installs customized testing skills tailored specifically to your app.
