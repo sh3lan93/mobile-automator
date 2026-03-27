@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.7.1] - 2026-03-27
+## [0.8.0] - 2026-03-27
 
 ### 🗑️ Removed
 
@@ -18,6 +18,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed TestRail result syncing from executor
   - Updated documentation to remove TestRail references
   - Migration path: scenarios without TestRail metadata continue to work unchanged
+
+---
+
+## [0.7.0] - 2026-03-27
+
+### ✨ Added
+
+- **Execute Command Enhancements** — Major UX and structural improvements to the `/mobile-automator:execute` command.
+  - Added `--device="ID"` flag to bypass the interactive device selection menu and target a specific device.
+  - Added `--all` flag to unconditionally execute all available scenarios without manual selection prompts.
+  - Fully integrated structured `ask_user` tool calls natively for all interactive prompts (device selection, execution menu, confirmations).
+  - Refined deprecation logic to evaluate v1 schema warnings early, *before* establishing device connections or running preconditions.
 
 ---
 
