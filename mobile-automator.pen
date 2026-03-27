@@ -1,337 +1,775 @@
 {
-  "version": "2.8",
+  "version": "2.9",
   "children": [
     {
       "type": "frame",
-      "id": "GaZNk",
-      "x": 600,
-      "y": 1680,
-      "name": "Option C - Rocket (Dark)",
-      "enabled": false,
-      "width": 500,
-      "height": 500,
-      "fill": "#0D0D0D",
-      "layout": "vertical",
-      "gap": 20,
-      "padding": 40,
-      "justifyContent": "center",
-      "alignItems": "center",
+      "id": "GXKPy",
+      "x": 0,
+      "y": 0,
+      "name": "Mobile Automator Logo",
+      "width": 512,
+      "height": 512,
+      "fill": "$bg-dark",
+      "cornerRadius": 56,
+      "layout": "none",
       "children": [
         {
-          "type": "text",
-          "id": "VLjhE",
-          "name": "dlC",
-          "fill": "#6B7280",
-          "content": "OPTION C — DARK",
-          "textAlign": "center",
-          "fontFamily": "Inter",
-          "fontSize": 11,
-          "fontWeight": "600",
-          "letterSpacing": 3
+          "type": "rectangle",
+          "cornerRadius": 32,
+          "id": "cq1ey",
+          "x": 168,
+          "y": 96,
+          "name": "Phone Glow",
+          "fill": "$glow-green",
+          "width": 176,
+          "height": 320,
+          "effect": {
+            "type": "blur",
+            "radius": 30
+          }
+        },
+        {
+          "type": "rectangle",
+          "cornerRadius": 26,
+          "id": "gqgHT",
+          "x": 180,
+          "y": 108,
+          "name": "Phone Body",
+          "fill": "$slate-dark",
+          "width": 152,
+          "height": 296,
+          "stroke": {
+            "align": "inside",
+            "thickness": 2,
+            "fill": "$neon-green"
+          }
+        },
+        {
+          "type": "rectangle",
+          "cornerRadius": 3,
+          "id": "Lkgtx",
+          "x": 232,
+          "y": 116,
+          "name": "Phone Notch",
+          "fill": "$slate-mid",
+          "width": 48,
+          "height": 6
         },
         {
           "type": "frame",
-          "id": "1QFl4",
-          "name": "diC",
-          "width": 240,
-          "height": 240,
+          "id": "jP5c7",
+          "x": 194,
+          "y": 134,
+          "name": "Terminal Window",
+          "width": 124,
+          "height": 248,
+          "fill": "$terminal-bg",
+          "cornerRadius": 8,
+          "stroke": {
+            "align": "inside",
+            "thickness": 1,
+            "fill": "$neon-green-dim"
+          },
           "layout": "none",
           "children": [
             {
+              "type": "frame",
+              "id": "tAMB4",
+              "x": 0,
+              "y": 0,
+              "name": "Terminal Header",
+              "width": 124,
+              "height": 20,
+              "fill": "$slate-mid",
+              "cornerRadius": [
+                8,
+                8,
+                0,
+                0
+              ],
+              "gap": 5,
+              "padding": [
+                0,
+                0,
+                0,
+                10
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "IKDUy",
+                  "name": "Dot Red",
+                  "fill": "#FF5F57",
+                  "width": 6,
+                  "height": 6
+                },
+                {
+                  "type": "ellipse",
+                  "id": "i2dsO",
+                  "name": "Dot Yellow",
+                  "fill": "#FEBC2E",
+                  "width": 6,
+                  "height": 6
+                },
+                {
+                  "type": "ellipse",
+                  "id": "FWGP7",
+                  "name": "Dot Green",
+                  "fill": "#28C840",
+                  "width": 6,
+                  "height": 6
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Y7Yce",
+              "x": 10,
+              "y": 30,
+              "name": "Prompt Line",
+              "width": 104,
+              "height": 10,
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "hIiax",
+                  "name": "chevron",
+                  "fill": "$neon-green",
+                  "content": ">_",
+                  "fontFamily": "monospace",
+                  "fontSize": 8,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 2,
+                  "id": "iTnBB",
+                  "name": "Command",
+                  "fill": "$neon-green",
+                  "width": 50,
+                  "height": 4
+                }
+              ]
+            },
+            {
               "type": "rectangle",
               "cornerRadius": 2,
-              "id": "5Gd36",
-              "x": 30,
-              "y": 55,
-              "name": "speedLine1C",
-              "rotation": 14.999999999999998,
-              "fill": "#22C55E50",
-              "width": 35,
+              "id": "nHqvO",
+              "x": 10,
+              "y": 50,
+              "name": "Code Line 1",
+              "fill": "$code-cyan",
+              "width": 70,
               "height": 3
             },
             {
               "type": "rectangle",
               "cornerRadius": 2,
-              "id": "lwcRE",
-              "x": 25,
-              "y": 75,
-              "name": "speedLine2C",
-              "rotation": 14.999999999999998,
-              "fill": "#22C55E35",
-              "width": 28,
-              "height": 2.5
+              "id": "ww32u",
+              "x": 10,
+              "y": 60,
+              "name": "Code Line 2",
+              "opacity": 0.8,
+              "fill": "$code-green",
+              "width": 90,
+              "height": 3
             },
             {
               "type": "rectangle",
               "cornerRadius": 2,
-              "id": "twKD8",
-              "x": 35,
-              "y": 95,
-              "name": "speedLine3C",
-              "rotation": 14.999999999999998,
-              "fill": "#22C55E20",
-              "width": 20,
-              "height": 2
+              "id": "oCT52",
+              "x": 18,
+              "y": 70,
+              "name": "Code Line 3",
+              "opacity": 0.6,
+              "fill": "$code-cyan",
+              "width": 55,
+              "height": 3
             },
             {
-              "type": "ellipse",
-              "id": "Ff3Ku",
-              "x": 200,
-              "y": 15,
-              "name": "starDot1",
-              "fill": "#22C55E",
-              "width": 6,
-              "height": 6
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "GhjFX",
+              "x": 18,
+              "y": 80,
+              "name": "Code Line 4",
+              "opacity": 0.7,
+              "fill": "$code-green",
+              "width": 72,
+              "height": 3
             },
             {
-              "type": "ellipse",
-              "id": "RonTX",
-              "x": 20,
-              "y": 30,
-              "name": "starDot2",
-              "fill": "#4ADE8070",
-              "width": 4,
-              "height": 4
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "1qzFT",
+              "x": 10,
+              "y": 90,
+              "name": "Code Line 5",
+              "opacity": 0.5,
+              "fill": "$code-cyan",
+              "width": 40,
+              "height": 3
             },
             {
-              "type": "ellipse",
-              "id": "m6YsW",
-              "x": 215,
-              "y": 65,
-              "name": "starDot3",
-              "fill": "#16A34A80",
-              "width": 5,
-              "height": 5
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "NDUQQ",
+              "x": 10,
+              "y": 106,
+              "name": "Code Line 6",
+              "fill": "$code-green",
+              "width": 85,
+              "height": 3
             },
             {
-              "type": "frame",
-              "id": "lUlYW",
-              "x": 60,
-              "y": 5,
-              "name": "rocketPhone",
-              "rotation": 14.999999999999998,
-              "width": 120,
-              "height": 170,
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "bsYuZ",
+              "x": 18,
+              "y": 116,
+              "name": "Code Line 7",
+              "opacity": 0.7,
+              "fill": "$code-cyan",
+              "width": 60,
+              "height": 3
+            },
+            {
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "gmjRy",
+              "x": 18,
+              "y": 126,
+              "name": "Code Line 8",
+              "opacity": 0.6,
+              "fill": "$code-green",
+              "width": 48,
+              "height": 3
+            },
+            {
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "uD7VR",
+              "x": 10,
+              "y": 136,
+              "name": "Code Line 9",
+              "opacity": 0.5,
+              "fill": "$code-cyan",
+              "width": 65,
+              "height": 3
+            },
+            {
+              "type": "rectangle",
+              "id": "H3LgM",
+              "x": 0,
+              "y": 150,
+              "name": "Scan Beam",
               "fill": {
                 "type": "gradient",
                 "gradientType": "linear",
                 "enabled": true,
-                "rotation": 170,
+                "rotation": 90,
                 "size": {
                   "height": 1
                 },
                 "colors": [
                   {
-                    "color": "#22C55E",
+                    "color": "#00E5FF00",
                     "position": 0
                   },
                   {
-                    "color": "#16A34A",
+                    "color": "#00E5FF",
                     "position": 0.5
                   },
                   {
-                    "color": "#0F2A1A",
+                    "color": "#00E5FF00",
                     "position": 1
                   }
                 ]
               },
-              "cornerRadius": 24
+              "width": 124,
+              "height": 3
             },
             {
-              "type": "frame",
-              "id": "PbRb6",
-              "x": 73,
-              "y": 14,
-              "name": "screenInner",
-              "rotation": 14.999999999999998,
-              "width": 96,
-              "height": 120,
-              "fill": "#0D0D0D20",
-              "cornerRadius": 14
+              "type": "rectangle",
+              "id": "bnZcU",
+              "x": 0,
+              "y": 142,
+              "name": "Scan Glow",
+              "fill": {
+                "type": "gradient",
+                "gradientType": "linear",
+                "enabled": true,
+                "rotation": 0,
+                "size": {
+                  "height": 1
+                },
+                "colors": [
+                  {
+                    "color": "#00E5FF00",
+                    "position": 0
+                  },
+                  {
+                    "color": "#00E5FF22",
+                    "position": 0.5
+                  },
+                  {
+                    "color": "#00E5FF00",
+                    "position": 1
+                  }
+                ]
+              },
+              "width": 124,
+              "height": 20
             },
             {
-              "type": "icon_font",
-              "id": "CNMVy",
-              "x": 98,
-              "y": 52,
-              "name": "rocketIcon",
-              "rotation": 14.999999999999998,
-              "width": 48,
-              "height": 48,
-              "iconFontName": "rocket",
-              "iconFontFamily": "lucide",
-              "fill": "#FFFFFF"
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "zuDjd",
+              "x": 10,
+              "y": 170,
+              "name": "Code Line 10",
+              "opacity": 0.4,
+              "fill": "$code-green",
+              "width": 80,
+              "height": 3
+            },
+            {
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "aaBtw",
+              "x": 18,
+              "y": 180,
+              "name": "Code Line 11",
+              "opacity": 0.3,
+              "fill": "$code-cyan",
+              "width": 55,
+              "height": 3
+            },
+            {
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "dly2c",
+              "x": 18,
+              "y": 190,
+              "name": "Code Line 12",
+              "opacity": 0.3,
+              "fill": "$code-green",
+              "width": 68,
+              "height": 3
+            },
+            {
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "7mquy",
+              "x": 10,
+              "y": 200,
+              "name": "Code Line 13",
+              "opacity": 0.25,
+              "fill": "$code-cyan",
+              "width": 45,
+              "height": 3
+            },
+            {
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "hmLoQ",
+              "x": 10,
+              "y": 216,
+              "name": "Code Line 14",
+              "opacity": 0.2,
+              "fill": "$code-green",
+              "width": 75,
+              "height": 3
+            },
+            {
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "bsesh",
+              "x": 18,
+              "y": 226,
+              "name": "Code Line 15",
+              "opacity": 0.15,
+              "fill": "$code-cyan",
+              "width": 50,
+              "height": 3
             }
           ]
         },
         {
-          "type": "frame",
-          "id": "rrYoT",
-          "name": "dwC",
-          "layout": "vertical",
-          "gap": 6,
-          "alignItems": "center",
-          "children": [
-            {
-              "type": "text",
-              "id": "UjFtj",
-              "name": "dnC",
-              "fill": "#FFFFFF",
-              "content": "Mobile Automator",
-              "fontFamily": "Space Grotesk",
-              "fontSize": 28,
-              "fontWeight": "600",
-              "letterSpacing": -0.5
-            },
-            {
-              "type": "text",
-              "id": "jmVky",
-              "name": "dtC",
-              "fill": "#9CA3AF",
-              "content": "Intelligent Mobile QA",
-              "fontFamily": "Inter",
-              "fontSize": 13,
-              "fontWeight": "normal",
-              "letterSpacing": 1
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "frame",
-      "id": "ToTVc",
-      "x": 1200,
-      "y": 1680,
-      "name": "Rocket Illustration",
-      "width": 240,
-      "height": 240,
-      "layout": "none",
-      "children": [
-        {
           "type": "rectangle",
-          "cornerRadius": 2,
-          "id": "L13cn",
-          "x": 30,
-          "y": 55,
-          "name": "speedLine1C",
-          "rotation": 14.999999999999998,
-          "fill": "#22C55E50",
-          "width": 35,
-          "height": 3
-        },
-        {
-          "type": "rectangle",
-          "cornerRadius": 2,
-          "id": "ekbQ1",
-          "x": 25,
-          "y": 75,
-          "name": "speedLine2C",
-          "rotation": 14.999999999999998,
-          "fill": "#22C55E35",
-          "width": 28,
-          "height": 2.5
-        },
-        {
-          "type": "rectangle",
-          "cornerRadius": 2,
-          "id": "8wUEc",
-          "x": 35,
-          "y": 95,
-          "name": "speedLine3C",
-          "rotation": 14.999999999999998,
-          "fill": "#22C55E20",
-          "width": 20,
+          "id": "iYRUi",
+          "x": 318,
+          "y": 148,
+          "name": "Scan Line to Phone",
+          "opacity": 0.6,
+          "fill": "$neon-cyan",
+          "width": 14,
           "height": 2
         },
         {
-          "type": "ellipse",
-          "id": "3hJWV",
-          "x": 200,
-          "y": 15,
-          "name": "starDot1",
-          "fill": "#22C55E",
-          "width": 6,
-          "height": 6
+          "type": "text",
+          "id": "5gROr",
+          "x": 100,
+          "y": 220,
+          "name": "Bracket Left",
+          "opacity": 0.15,
+          "fill": "$neon-green",
+          "content": "<",
+          "fontFamily": "Inter",
+          "fontSize": 32,
+          "fontWeight": "700"
+        },
+        {
+          "type": "text",
+          "id": "Q56LJ",
+          "x": 380,
+          "y": 300,
+          "name": "Bracket Right",
+          "opacity": 0.12,
+          "fill": "$neon-cyan",
+          "content": "/>",
+          "fontFamily": "Inter",
+          "fontSize": 28,
+          "fontWeight": "700"
+        },
+        {
+          "type": "text",
+          "id": "1ZO5t",
+          "x": 80,
+          "y": 340,
+          "name": "Hash Symbol",
+          "opacity": 0.1,
+          "fill": "$neon-green",
+          "content": "#",
+          "fontFamily": "Inter",
+          "fontSize": 24,
+          "fontWeight": "700"
+        },
+        {
+          "type": "text",
+          "id": "KWQYA",
+          "x": 400,
+          "y": 220,
+          "name": "Curly Brace",
+          "opacity": 0.1,
+          "fill": "$neon-cyan",
+          "content": "{",
+          "fontFamily": "Inter",
+          "fontSize": 36,
+          "fontWeight": "700"
         },
         {
           "type": "ellipse",
-          "id": "MaTjI",
-          "x": 20,
-          "y": 30,
-          "name": "starDot2",
-          "fill": "#4ADE8070",
+          "id": "EJ8HU",
+          "x": 120,
+          "y": 160,
+          "name": "Data Particle 1",
+          "opacity": 0.4,
+          "fill": "$neon-green",
           "width": 4,
           "height": 4
         },
         {
           "type": "ellipse",
-          "id": "FeYuL",
-          "x": 215,
-          "y": 65,
-          "name": "starDot3",
-          "fill": "#16A34A80",
+          "id": "Mfvis",
+          "x": 140,
+          "y": 200,
+          "name": "Data Particle 2",
+          "opacity": 0.3,
+          "fill": "$neon-cyan",
+          "width": 3,
+          "height": 3
+        },
+        {
+          "type": "ellipse",
+          "id": "tQIdL",
+          "x": 370,
+          "y": 260,
+          "name": "Data Particle 3",
+          "opacity": 0.35,
+          "fill": "$neon-green",
           "width": 5,
           "height": 5
         },
         {
-          "type": "frame",
-          "id": "NIPqE",
-          "x": 60,
-          "y": 5,
-          "name": "rocketPhone",
-          "rotation": 14.999999999999998,
-          "width": 120,
-          "height": 170,
+          "type": "ellipse",
+          "id": "7rxAR",
+          "x": 390,
+          "y": 180,
+          "name": "Data Particle 4",
+          "opacity": 0.25,
+          "fill": "$neon-cyan",
+          "width": 3,
+          "height": 3
+        },
+        {
+          "type": "ellipse",
+          "id": "pzaFT",
+          "x": 150,
+          "y": 310,
+          "name": "Data Particle 5",
+          "opacity": 0.2,
+          "fill": "$neon-green",
+          "width": 4,
+          "height": 4
+        },
+        {
+          "type": "path",
+          "id": "O2Oty",
+          "x": 100,
+          "y": 120,
+          "name": "Sparkle 1",
+          "opacity": 0.3,
+          "geometry": "M12 0l2 10 10 2-10 2-2 10-2-10-10-2 10-2z",
+          "fill": "$neon-green",
+          "width": 24,
+          "height": 24
+        },
+        {
+          "type": "path",
+          "id": "NhEyE",
+          "x": 360,
+          "y": 340,
+          "name": "Sparkle 2",
+          "opacity": 0.25,
+          "geometry": "M8 0l1.5 6.5 6.5 1.5-6.5 1.5-1.5 6.5-1.5-6.5-6.5-1.5 6.5-1.5z",
+          "fill": "$neon-cyan",
+          "width": 16,
+          "height": 16
+        },
+        {
+          "type": "ellipse",
+          "id": "dE5ky",
+          "x": 320,
+          "y": 100,
+          "name": "AI Eye Glow",
+          "fill": "$neon-cyan-dim",
+          "width": 100,
+          "height": 100,
+          "effect": {
+            "type": "blur",
+            "radius": 20
+          }
+        },
+        {
+          "type": "ellipse",
+          "id": "2RD2f",
+          "x": 330,
+          "y": 110,
+          "name": "AI Eye Outer",
+          "opacity": 0.5,
+          "fill": "#00000000",
+          "width": 80,
+          "height": 80,
+          "stroke": {
+            "align": "center",
+            "thickness": 3,
+            "fill": "$neon-cyan"
+          }
+        },
+        {
+          "type": "ellipse",
+          "id": "hu0lI",
+          "x": 352,
+          "y": 132,
+          "name": "AI Eye Inner",
+          "opacity": 0.8,
+          "fill": "$neon-cyan",
+          "width": 36,
+          "height": 36
+        },
+        {
+          "type": "ellipse",
+          "id": "g8PUn",
+          "x": 360,
+          "y": 140,
+          "name": "AI Eye Pupil",
+          "fill": "$bg-dark",
+          "width": 20,
+          "height": 20
+        },
+        {
+          "type": "ellipse",
+          "id": "ofooC",
+          "x": 365,
+          "y": 145,
+          "name": "AI Eye Dot",
+          "fill": "$neon-cyan",
+          "width": 10,
+          "height": 10
+        },
+        {
+          "type": "rectangle",
+          "id": "AezXx",
+          "x": 180,
+          "y": 282,
+          "name": "Scan Beam Extended",
           "fill": {
             "type": "gradient",
             "gradientType": "linear",
             "enabled": true,
-            "rotation": 170,
+            "rotation": 90,
             "size": {
               "height": 1
             },
             "colors": [
               {
-                "color": "#22C55E",
+                "color": "#00E5FF00",
                 "position": 0
               },
               {
-                "color": "#16A34A",
+                "color": "#00E5FF66",
+                "position": 0.3
+              },
+              {
+                "color": "#00E5FF",
                 "position": 0.5
               },
               {
-                "color": "#0F2A1A",
+                "color": "#00E5FF66",
+                "position": 0.7
+              },
+              {
+                "color": "#00E5FF00",
                 "position": 1
               }
             ]
           },
-          "cornerRadius": 24
+          "width": 152,
+          "height": 2
         },
         {
-          "type": "frame",
-          "id": "VkbzI",
-          "x": 73,
-          "y": 14,
-          "name": "screenInner",
-          "rotation": 14.999999999999998,
-          "width": 96,
-          "height": 120,
-          "fill": "#0D0D0D20",
-          "cornerRadius": 14
+          "type": "rectangle",
+          "id": "eybQt",
+          "x": 180,
+          "y": 274,
+          "name": "Scan Glow Extended",
+          "fill": {
+            "type": "gradient",
+            "gradientType": "linear",
+            "enabled": true,
+            "rotation": 0,
+            "size": {
+              "height": 1
+            },
+            "colors": [
+              {
+                "color": "#00E5FF00",
+                "position": 0
+              },
+              {
+                "color": "#00E5FF15",
+                "position": 0.5
+              },
+              {
+                "color": "#00E5FF00",
+                "position": 1
+              }
+            ]
+          },
+          "width": 152,
+          "height": 18
         },
         {
-          "type": "icon_font",
-          "id": "yWAqX",
-          "x": 98,
-          "y": 52,
-          "name": "rocketIcon",
-          "rotation": 14.999999999999998,
-          "width": 48,
-          "height": 48,
-          "iconFontName": "rocket",
-          "iconFontFamily": "lucide",
-          "fill": "#FFFFFF"
+          "type": "rectangle",
+          "cornerRadius": 2,
+          "id": "35lQN",
+          "x": 230,
+          "y": 388,
+          "name": "Home Indicator",
+          "opacity": 0.4,
+          "fill": "$neon-green",
+          "width": 52,
+          "height": 4
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "02s1Z",
+      "x": 612,
+      "y": 0,
+      "name": "Mobile Automator Logo V2",
+      "width": 512,
+      "height": 512,
+      "fill": "#1E293B",
+      "cornerRadius": 24,
+      "layout": "none",
+      "children": [
+        {
+          "type": "path",
+          "id": "FIi47",
+          "x": 156,
+          "y": 56,
+          "name": "Device Outline",
+          "geometry": "M40 0l120 0c22 0 40 18 40 40l0 320c0 22-18 40-40 40l-120 0c-22 0-40-18-40-40l0-320c0-22 18-40 40-40z",
+          "fill": {
+            "type": "color",
+            "color": "#10B981",
+            "enabled": false
+          },
+          "width": 200,
+          "height": 400,
+          "stroke": {
+            "align": "center",
+            "thickness": 8,
+            "fill": "#10B981"
+          }
+        },
+        {
+          "type": "line",
+          "id": "7sc0k",
+          "x": 226,
+          "y": 76,
+          "name": "Speaker Notch",
+          "width": 60,
+          "height": 0,
+          "stroke": {
+            "align": "center",
+            "thickness": 4,
+            "cap": "round",
+            "fill": "#10B981"
+          }
+        },
+        {
+          "type": "path",
+          "id": "uc9IO",
+          "x": 192,
+          "y": 200,
+          "name": "Terminal Chevron",
+          "geometry": "M0 0l26 32-26 32",
+          "fill": {
+            "type": "color",
+            "color": "#10B981",
+            "enabled": false
+          },
+          "width": 52,
+          "height": 64,
+          "stroke": {
+            "align": "center",
+            "thickness": 8,
+            "join": "round",
+            "cap": "round",
+            "fill": "#10B981"
+          }
+        },
+        {
+          "type": "line",
+          "id": "AtWpF",
+          "x": 258,
+          "y": 240,
+          "name": "Terminal Cursor",
+          "width": 44,
+          "height": 0,
+          "stroke": {
+            "align": "center",
+            "thickness": 8,
+            "cap": "round",
+            "fill": "#10B981"
+          }
         }
       ]
     }
@@ -368,6 +806,70 @@
     "secondary-black": {
       "type": "color",
       "value": "#0D0D0D"
+    },
+    "indigo": {
+      "type": "color",
+      "value": "#14133D"
+    },
+    "mint": {
+      "type": "color",
+      "value": "#34EDAB"
+    },
+    "white": {
+      "type": "color",
+      "value": "#FFFFFF"
+    },
+    "bg-dark": {
+      "type": "color",
+      "value": "#0B1120"
+    },
+    "code-cyan": {
+      "type": "color",
+      "value": "#67E8F9"
+    },
+    "code-dim": {
+      "type": "color",
+      "value": "#00FF8840"
+    },
+    "code-green": {
+      "type": "color",
+      "value": "#4ADE80"
+    },
+    "glow-green": {
+      "type": "color",
+      "value": "#00FF8833"
+    },
+    "neon-cyan": {
+      "type": "color",
+      "value": "#00E5FF"
+    },
+    "neon-cyan-dim": {
+      "type": "color",
+      "value": "#00E5FF44"
+    },
+    "neon-green": {
+      "type": "color",
+      "value": "#00FF88"
+    },
+    "neon-green-dim": {
+      "type": "color",
+      "value": "#00FF8866"
+    },
+    "scan-beam": {
+      "type": "color",
+      "value": "#00E5FF88"
+    },
+    "slate-dark": {
+      "type": "color",
+      "value": "#131B2E"
+    },
+    "slate-mid": {
+      "type": "color",
+      "value": "#1E293B"
+    },
+    "terminal-bg": {
+      "type": "color",
+      "value": "#0A0F1A"
     }
   }
 }
