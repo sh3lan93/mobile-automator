@@ -1234,24 +1234,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#how-do-i-sync-results-to-testrail" class="md-nav__link">
-    <span class="md-ellipsis">
-      How do I sync results to TestRail?
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#what-if-testrail-sync-fails" class="md-nav__link">
-    <span class="md-ellipsis">
-      What if TestRail sync fails?
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#how-do-i-integrate-with-cicd" class="md-nav__link">
     <span class="md-ellipsis">
       How do I integrate with CI/CD?
@@ -1766,24 +1748,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#how-do-i-sync-results-to-testrail" class="md-nav__link">
-    <span class="md-ellipsis">
-      How do I sync results to TestRail?
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#what-if-testrail-sync-fails" class="md-nav__link">
-    <span class="md-ellipsis">
-      What if TestRail sync fails?
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#how-do-i-integrate-with-cicd" class="md-nav__link">
     <span class="md-ellipsis">
       How do I integrate with CI/CD?
@@ -2061,7 +2025,6 @@ Executed Automatically: Tap fields, type text, verify dashboard
 - 14 action types, 27 assertion types
 - Variables and capture_value support
 - Retry policies and conditional steps
-- TestRail integration
 - <strong>Recommended for all new tests</strong></p>
 <p><strong>Migration:</strong> Use <code>/mobile-automator:migrate &lt;scenario_id&gt;</code> to upgrade v1 → v2.</p>
 <h3 id="can-i-use-mobile-automator-with-my-existing-tests">Can I use mobile-automator with my existing tests?<a class="headerlink" href="#can-i-use-mobile-automator-with-my-existing-tests" title="Permanent link">&para;</a></h3>
@@ -2325,36 +2288,6 @@ xcrun<span class="w"> </span>simctl<span class="w"> </span>list<span class="w"> 
 <p>Parallel execution is on the roadmap.</p>
 <hr />
 <h2 id="integration">Integration<a class="headerlink" href="#integration" title="Permanent link">&para;</a></h2>
-<h3 id="how-do-i-sync-results-to-testrail">How do I sync results to TestRail?<a class="headerlink" href="#how-do-i-sync-results-to-testrail" title="Permanent link">&para;</a></h3>
-<p><strong>Answer:</strong> Mobile Automator integrates with TestRail v1+. Setup during test generation:</p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;testrail&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;case_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1001</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;project_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;case_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://testrail.example.com/index.php?/cases/view/1001&quot;</span>
-<span class="w">  </span><span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div>
-<p><strong>Requirements:</strong>
-- TestRail API enabled
-- Test case exists in TestRail
-- Run ID provided during execution
-- Executor skill has TestRail credentials</p>
-<p>After test execution, results are synced automatically if TestRail settings are configured in skill.</p>
-<h3 id="what-if-testrail-sync-fails">What if TestRail sync fails?<a class="headerlink" href="#what-if-testrail-sync-fails" title="Permanent link">&para;</a></h3>
-<p><strong>Cause:</strong> API configuration or network issue.</p>
-<p><strong>Solutions:</strong>
-1. <strong>Verify API key</strong> — Check executor skill has correct TestRail API key
-2. <strong>Check case exists</strong> — Verify case ID in TestRail
-3. <strong>Check run exists</strong> — Verify run ID is active
-4. <strong>Check network</strong> — Ensure connectivity to TestRail server
-5. <strong>Check result format</strong> — Ensure result JSON is valid</p>
-<p><strong>Debug:</strong>
-<div class="highlight"><pre><span></span><code><span class="c1"># Check result structure</span>
-cat<span class="w"> </span>mobile-automator/results/run_*.json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.testrail&#39;</span>
-
-<span class="c1"># Look for sync errors in skill output</span>
-</code></pre></div></p>
 <h3 id="how-do-i-integrate-with-cicd">How do I integrate with CI/CD?<a class="headerlink" href="#how-do-i-integrate-with-cicd" title="Permanent link">&para;</a></h3>
 <p><strong>Answer:</strong> Mobile Automator works in CI/CD pipelines:</p>
 <div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
@@ -2374,8 +2307,7 @@ cat<span class="w"> </span>mobile-automator/results/latest.json<span class="w"> 
 - Install extension: <code>gemini extensions install &lt;url&gt;</code>
 - Connect device in CI environment
 - Run commands with proper error handling
-- Archive result files as CI artifacts
-- Sync to TestRail for reporting</p>
+- Archive result files as CI artifacts</p>
 <h3 id="can-i-use-mobile-automator-with-github-actions">Can I use mobile-automator with GitHub Actions?<a class="headerlink" href="#can-i-use-mobile-automator-with-github-actions" title="Permanent link">&para;</a></h3>
 <p><strong>Answer:</strong> Yes! Example workflow:</p>
 <div class="highlight"><pre><span></span><code><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Mobile Tests</span>

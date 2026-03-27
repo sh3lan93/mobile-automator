@@ -10,28 +10,24 @@
       
       
       
-        <link rel="canonical" href="https://sh3lan93.github.io/mobile-automator/concepts/">
+        <link rel="canonical" href="https://sh3lan93.github.io/mobile-automator/superpowers/specs/2026-03-20-execute-toml-improvements-design/">
       
       
-        <link rel="prev" href="../getting-started/quick-start/">
       
       
-        <link rel="next" href="architecture/">
-      
-      
-      <link rel="icon" href="../assets/favicon.svg">
+      <link rel="icon" href="../../../assets/favicon.svg">
       <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.0">
     
     
       
-        <title>Overview - mobile-automator</title>
+        <title>Design: execute.toml Improvements - mobile-automator</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.45e1311d.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.45e1311d.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -50,9 +46,9 @@
       
     
     
-      <link rel="stylesheet" href="../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../../stylesheets/extra.css">
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -78,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#core-concepts" class="md-skip">
+        <a href="#design-executetoml-improvements" class="md-skip">
           Skip to content
         </a>
       
@@ -94,9 +90,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="mobile-automator" class="md-header__button md-logo" aria-label="mobile-automator" data-md-component="logo">
+    <a href="../../.." title="mobile-automator" class="md-header__button md-logo" aria-label="mobile-automator" data-md-component="logo">
       
-  <img src="../assets/logo.svg" alt="logo">
+  <img src="../../../assets/logo.svg" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -113,7 +109,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Overview
+              Design: execute.toml Improvements
             
           </span>
         </div>
@@ -220,9 +216,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="mobile-automator" class="md-nav__button md-logo" aria-label="mobile-automator" data-md-component="logo">
+    <a href="../../.." title="mobile-automator" class="md-nav__button md-logo" aria-label="mobile-automator" data-md-component="logo">
       
-  <img src="../assets/logo.svg" alt="logo">
+  <img src="../../../assets/logo.svg" alt="logo">
 
     </a>
     mobile-automator
@@ -249,7 +245,7 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -306,7 +302,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/" class="md-nav__link">
+      <a href="../../../getting-started/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -327,7 +323,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/installation/" class="md-nav__link">
+      <a href="../../../getting-started/installation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -348,7 +344,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/quick-start/" class="md-nav__link">
+      <a href="../../../getting-started/quick-start/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -373,21 +369,19 @@
       
   
   
-    
   
   
-  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
@@ -401,7 +395,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             Core Concepts
@@ -412,30 +406,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Overview
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../../concepts/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -444,166 +418,6 @@
   
 
       </a>
-      
-        
-
-  
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of Contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of Contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#what-is-mobile-automator" class="md-nav__link">
-    <span class="md-ellipsis">
-      What is mobile-automator?
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#the-three-tier-architecture" class="md-nav__link">
-    <span class="md-ellipsis">
-      The Three-Tier Architecture
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="The Three-Tier Architecture">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#tier-1-extension-commands" class="md-nav__link">
-    <span class="md-ellipsis">
-      Tier 1: Extension Commands
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#tier-2-workspace-skills" class="md-nav__link">
-    <span class="md-ellipsis">
-      Tier 2: Workspace Skills
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#tier-3-automation-engine" class="md-nav__link">
-    <span class="md-ellipsis">
-      Tier 3: Automation Engine
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#key-design-principles" class="md-nav__link">
-    <span class="md-ellipsis">
-      Key Design Principles
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Key Design Principles">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#separation-of-concerns" class="md-nav__link">
-    <span class="md-ellipsis">
-      Separation of Concerns
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#project-specific-customization" class="md-nav__link">
-    <span class="md-ellipsis">
-      Project-Specific Customization
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#no-source-code-modification" class="md-nav__link">
-    <span class="md-ellipsis">
-      No Source Code Modification
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#semantic-testing" class="md-nav__link">
-    <span class="md-ellipsis">
-      Semantic Testing
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#key-ideas" class="md-nav__link">
-    <span class="md-ellipsis">
-      Key Ideas
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#main-topics" class="md-nav__link">
-    <span class="md-ellipsis">
-      Main Topics
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#why-this-design" class="md-nav__link">
-    <span class="md-ellipsis">
-      Why This Design?
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      Next Steps
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -616,7 +430,7 @@
   
   
     <li class="md-nav__item">
-      <a href="architecture/" class="md-nav__link">
+      <a href="../../../concepts/architecture/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -637,7 +451,7 @@
   
   
     <li class="md-nav__item">
-      <a href="three-tier-design/" class="md-nav__link">
+      <a href="../../../concepts/three-tier-design/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -658,7 +472,7 @@
   
   
     <li class="md-nav__item">
-      <a href="skills/" class="md-nav__link">
+      <a href="../../../concepts/skills/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -723,7 +537,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../guides/" class="md-nav__link">
+      <a href="../../../guides/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -744,7 +558,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../guides/setup/" class="md-nav__link">
+      <a href="../../../guides/setup/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -765,7 +579,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../guides/generate/" class="md-nav__link">
+      <a href="../../../guides/generate/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -786,7 +600,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../guides/execute/" class="md-nav__link">
+      <a href="../../../guides/execute/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -807,7 +621,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../guides/migrate/" class="md-nav__link">
+      <a href="../../../guides/migrate/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -872,7 +686,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/" class="md-nav__link">
+      <a href="../../../reference/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -893,7 +707,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/assertions/" class="md-nav__link">
+      <a href="../../../reference/assertions/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -914,7 +728,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/schema-v2/" class="md-nav__link">
+      <a href="../../../reference/schema-v2/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -935,7 +749,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/result-schema/" class="md-nav__link">
+      <a href="../../../reference/result-schema/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -956,7 +770,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/mcp-tools/" class="md-nav__link">
+      <a href="../../../reference/mcp-tools/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1021,7 +835,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../examples/" class="md-nav__link">
+      <a href="../../../examples/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1042,7 +856,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../examples/android/" class="md-nav__link">
+      <a href="../../../examples/android/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1063,7 +877,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../examples/ios/" class="md-nav__link">
+      <a href="../../../examples/ios/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1091,7 +905,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../faq/" class="md-nav__link">
+      <a href="../../../faq/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1111,7 +925,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../contributing/" class="md-nav__link">
+      <a href="../../../contributing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1131,7 +945,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../changelog/" class="md-nav__link">
+      <a href="../../../changelog/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1173,46 +987,82 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#what-is-mobile-automator" class="md-nav__link">
+  <a href="#background" class="md-nav__link">
     <span class="md-ellipsis">
-      What is mobile-automator?
+      Background
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-three-tier-architecture" class="md-nav__link">
+  <a href="#goals" class="md-nav__link">
     <span class="md-ellipsis">
-      The Three-Tier Architecture
+      Goals
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="The Three-Tier Architecture">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#non-goals" class="md-nav__link">
+    <span class="md-ellipsis">
+      Non-Goals
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#changes-by-section" class="md-nav__link">
+    <span class="md-ellipsis">
+      Changes by Section
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Changes by Section">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#tier-1-extension-commands" class="md-nav__link">
+  <a href="#section-00-deprecation-gate-restructured" class="md-nav__link">
     <span class="md-ellipsis">
-      Tier 1: Extension Commands
+      Section 0.0 — Deprecation Gate (restructured)
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#tier-2-workspace-skills" class="md-nav__link">
+  <a href="#section-01-device-resolution-new" class="md-nav__link">
     <span class="md-ellipsis">
-      Tier 2: Workspace Skills
+      Section 0.1 — Device Resolution (new)
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#tier-3-automation-engine" class="md-nav__link">
+  <a href="#section-12-verify-device-updated" class="md-nav__link">
     <span class="md-ellipsis">
-      Tier 3: Automation Engine
+      Section 1.2 — Verify Device (updated)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#section-13-check-preconditions-and-prepare-app-updated" class="md-nav__link">
+    <span class="md-ellipsis">
+      Section 1.3 — Check Preconditions and Prepare App (updated)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#section-22-resolve-which-scenarios-to-execute-updated" class="md-nav__link">
+    <span class="md-ellipsis">
+      Section 2.2 — Resolve Which Scenarios to Execute (updated)
     </span>
   </a>
   
@@ -1224,87 +1074,36 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#key-design-principles" class="md-nav__link">
+  <a href="#section-30-hand-off-to-executor-skill" class="md-nav__link">
     <span class="md-ellipsis">
-      Key Design Principles
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Key Design Principles">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#separation-of-concerns" class="md-nav__link">
-    <span class="md-ellipsis">
-      Separation of Concerns
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#project-specific-customization" class="md-nav__link">
-    <span class="md-ellipsis">
-      Project-Specific Customization
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#no-source-code-modification" class="md-nav__link">
-    <span class="md-ellipsis">
-      No Source Code Modification
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#semantic-testing" class="md-nav__link">
-    <span class="md-ellipsis">
-      Semantic Testing
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#key-ideas" class="md-nav__link">
-    <span class="md-ellipsis">
-      Key Ideas
+      Section 3.0 — Hand Off to Executor Skill
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#main-topics" class="md-nav__link">
+  <a href="#summary-of-changes" class="md-nav__link">
     <span class="md-ellipsis">
-      Main Topics
+      Summary of Changes
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#why-this-design" class="md-nav__link">
+  <a href="#ux-message-consistency" class="md-nav__link">
     <span class="md-ellipsis">
-      Why This Design?
+      UX Message Consistency
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
+  <a href="#risks" class="md-nav__link">
     <span class="md-ellipsis">
-      Next Steps
+      Risks
     </span>
   </a>
   
@@ -1328,112 +1127,175 @@
   
 
 
-<h1 id="core-concepts">Core Concepts<a class="headerlink" href="#core-concepts" title="Permanent link">&para;</a></h1>
-<p>Understand the architecture, design patterns, and key concepts behind mobile-automator.</p>
-<h2 id="what-is-mobile-automator">What is mobile-automator?<a class="headerlink" href="#what-is-mobile-automator" title="Permanent link">&para;</a></h2>
-<p>mobile-automator is a <strong>Gemini CLI extension</strong> that provides intelligent mobile QA automation capabilities. But it's not a direct testing tool.</p>
-<p><strong>Key Distinction</strong>: mobile-automator is a <strong>meta-extension</strong> that analyzes your mobile project, learns its architecture and domain, then <strong>generates customized testing skills tailored specifically to your project</strong>.</p>
-<p>This is a fundamentally different approach than traditional test frameworks:</p>
+<h1 id="design-executetoml-improvements">Design: execute.toml Improvements<a class="headerlink" href="#design-executetoml-improvements" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-03-20
+<strong>Status:</strong> Approved
+<strong>File:</strong> <code>commands/mobile-automator/execute.toml</code></p>
+<hr />
+<h2 id="background">Background<a class="headerlink" href="#background" title="Permanent link">&para;</a></h2>
+<p>The <code>execute.toml</code> command has diverged from <code>generate.toml</code> since the environment persistence feature was added in March 2026. Several UX patterns were standardised in <code>generate.toml</code> (structured <code>ask_user</code> tool calls, upfront resolution sections) that were never back-ported to <code>execute.toml</code>. This spec covers a parity + quality pass to bring both commands into alignment.</p>
+<hr />
+<h2 id="goals">Goals<a class="headerlink" href="#goals" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Bring <code>execute.toml</code> to structural and UX parity with <code>generate.toml</code></li>
+<li>Fix a logical ordering contradiction in Section 0.0</li>
+<li>Add <code>--device</code> flag support for ephemeral device pre-selection</li>
+<li>Add <code>--all</code> flag support for skipping the interactive scenario menu</li>
+<li>Replace prose prompts with structured <code>ask_user</code> tool calls throughout</li>
+</ol>
+<h2 id="non-goals">Non-Goals<a class="headerlink" href="#non-goals" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Environment filtering via <code>--environment</code> flag (not needed; execute reads environment from scenario metadata)</li>
+<li>Device preference persistence via <code>--set-device</code> flag (ephemeral only is sufficient)</li>
+<li>Changes to the executor skill (SKILL.md) or result schema</li>
+<li>Changes to tag filtering syntax or the interactive scenario menu structure</li>
+</ul>
+<hr />
+<h2 id="changes-by-section">Changes by Section<a class="headerlink" href="#changes-by-section" title="Permanent link">&para;</a></h2>
+<h3 id="section-00-deprecation-gate-restructured">Section 0.0 — Deprecation Gate (restructured)<a class="headerlink" href="#section-00-deprecation-gate-restructured" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> Section 0.0 is numbered before pre-flight checks but its own instruction says <em>"After loading the scenario file(s) to execute (resolved in Section 2.0)"</em> — a direct contradiction. An AI model executing this command cannot resolve which behaviour is intended.</p>
+<p><strong>Solution:</strong> Restructure Section 0.0 as a pure <strong>upfront gate</strong> that checks for explicit user intent (a flag), matching <code>generate.toml</code>'s Section 0.0 pattern exactly.</p>
+<p><strong>New behaviour:</strong>
+1. Check if the user specified <code>--schema-version 1.0</code> in their command.
+2. Apply the existing 3-phase deprecation logic based on today's date vs 2026-02-17:
+   - Phase 1 (until 2026-08-17): Non-blocking warning, continue.
+   - Phase 2 (2026-08-17 to 2027-01-17): Block new execution with escalated warning.
+   - Phase 3 (after 2027-01-17): Hard fail.
+3. If no <code>--schema-version</code> flag → proceed normally. Per-scenario schema version checking remains in the executor skill (SKILL.md).</p>
+<p><strong>Key change:</strong> Remove all references to "after loading the scenario file(s) to execute (resolved in Section 2.0)". This section no longer touches scenario content.</p>
+<hr />
+<h3 id="section-01-device-resolution-new">Section 0.1 — Device Resolution (new)<a class="headerlink" href="#section-01-device-resolution-new" title="Permanent link">&para;</a></h3>
+<p><strong>Purpose:</strong> Resolve <code>selected_device</code> before pre-flight checks, so Section 1.2 can consume a pre-validated value cleanly. Mirrors <code>generate.toml</code>'s Section 0.1 ENVIRONMENT RESOLUTION pattern.</p>
+<p><strong>config.json absence guard:</strong> If <code>mobile-automator/config.json</code> does not exist, skip Section 0.1 entirely. Section 1.1 handles the missing config error.</p>
+<p><strong>Resolution logic:</strong></p>
+<ol>
+<li><strong><code>--device="&lt;device_id&gt;"</code> flag present:</strong></li>
+<li>Call <code>mobile_list_available_devices()</code> to get the list of connected devices.</li>
+<li>Validate that the specified device ID exists in the returned list.</li>
+<li>If not found → halt:
+     &gt; "❌ Device not found: \"[device_id]\"\n   Connected devices: [list of connected device names/IDs]"</li>
+<li>If valid → set <code>selected_device</code> to the matched device. Announce:
+     &gt; "ℹ️  Using device: [device_name] (--device flag)"</li>
+<li>
+<p>Proceed to Section 1.0.</p>
+</li>
+<li>
+<p><strong>No <code>--device</code> flag:</strong> Leave <code>selected_device</code> unset. Section 1.2 handles interactive discovery.</p>
+</li>
+</ol>
+<p><strong>Design notes:</strong>
+- <code>--device</code> is ephemeral only — no persistence, no <code>--set-device</code> counterpart.
+- Device IDs change frequently (emulators restart, physical devices reconnect with new identifiers), making persistence unreliable.</p>
+<hr />
+<h3 id="section-12-verify-device-updated">Section 1.2 — Verify Device (updated)<a class="headerlink" href="#section-12-verify-device-updated" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> Current prose instructions don't distinguish between single and multiple device cases clearly, and use no structured tooling.</p>
+<p><strong>New behaviour:</strong></p>
+<ol>
+<li>If <code>selected_device</code> is already set (resolved via <code>--device</code> in Section 0.1) → announce and proceed. No prompt.<blockquote>
+<p>"✅ Using device: [device_name]"</p>
+</blockquote>
+</li>
+<li>Call <code>mobile_list_available_devices()</code>.</li>
+<li>If no devices found → halt with existing message.</li>
+<li>If exactly <strong>one</strong> device found → announce and proceed. No prompt.<blockquote>
+<p>"✅ Using device: [device_name]"</p>
+</blockquote>
+</li>
+<li>If <strong>multiple</strong> devices found → use <code>ask_user</code> tool (type: <code>choice</code>):</li>
+<li>Header: <code>Device</code></li>
+<li>Question: <code>Which device should I use?</code></li>
+<li>Options: Dynamically list all connected devices.</li>
+</ol>
+<p><strong>Key change:</strong> Single-device auto-selection is now explicit. The <code>ask_user</code> tool replaces prose instructions for multi-device scenarios.</p>
+<hr />
+<h3 id="section-13-check-preconditions-and-prepare-app-updated">Section 1.3 — Check Preconditions and Prepare App (updated)<a class="headerlink" href="#section-13-check-preconditions-and-prepare-app-updated" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> The build/install confirmation uses plain prose (<code>Ask the user: "..."</code>) instead of the structured <code>ask_user</code> tool.</p>
+<p><strong>Change:</strong> Replace the prose build/install prompt with an <code>ask_user</code> tool call (type: <code>choice</code>) matching <code>generate.toml</code>'s Section 1.3 pattern:</p>
+<ul>
+<li>Header: <code>Build &amp; Install</code></li>
+<li>Question: <code>I'll be testing [app_package] ([scenario_environment]) on [device_name]. Should I build and install the app?</code></li>
+<li>Options:</li>
+<li><code>Build and install</code> (description: <code>using: [build_command]</code>)</li>
+<li><code>Already installed, skip build</code></li>
+</ul>
+<p>All other logic in Section 1.3 (precondition handling, package ID resolution, uninstall flows) remains unchanged.</p>
+<hr />
+<h3 id="section-22-resolve-which-scenarios-to-execute-updated">Section 2.2 — Resolve Which Scenarios to Execute (updated)<a class="headerlink" href="#section-22-resolve-which-scenarios-to-execute-updated" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> No way to run all scenarios without going through the interactive menu.</p>
+<p><strong>Change:</strong> Add <code>--all</code> flag support. Insert a new step <strong>before</strong> the existing tag/name/menu logic:</p>
+<p><strong>Updated command format line:</strong>
+<div class="highlight"><pre><span></span><code>/mobile-automator:execute [scenario_name]
+/mobile-automator:execute --tag &lt;expression&gt;
+/mobile-automator:execute --all
+/mobile-automator:execute
+</code></pre></div></p>
+<p><strong>New step (inserted first in Section 2.2):</strong></p>
+<ol>
+<li><strong>If <code>--all</code> flag is present:</strong></li>
+<li>Load all <code>.json</code> files from <code>mobile-automator/scenarios/</code>.</li>
+<li>Show confirmation before executing:
+     &gt; "I'll execute all [N] scenario(s):\n[list all scenario names]\nProceed? (yes/no)"</li>
+<li><strong>WAIT for "yes".</strong> If anything else → halt.</li>
+<li>If confirmed → skip remaining selection logic and proceed to Section 3.0.</li>
+</ol>
+<p>All existing logic (tag filter → name filter → interactive menu) follows unchanged after this step.</p>
+<hr />
+<h2 id="section-30-hand-off-to-executor-skill">Section 3.0 — Hand Off to Executor Skill<a class="headerlink" href="#section-30-hand-off-to-executor-skill" title="Permanent link">&para;</a></h2>
+<p>Unchanged.</p>
+<hr />
+<h2 id="summary-of-changes">Summary of Changes<a class="headerlink" href="#summary-of-changes" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Traditional</th>
-<th>mobile-automator</th>
+<th>Section</th>
+<th>Type</th>
+<th>Change</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>You write tests in code or DSLs</td>
-<td>AI generates tests from your description</td>
+<td>0.0</td>
+<td>Fix</td>
+<td>Restructured as upfront flag gate; removed contradictory Section 2.0 reference</td>
 </tr>
 <tr>
-<td>Hard-coded selectors and waits</td>
-<td>Learned from your project structure</td>
+<td>0.1</td>
+<td>New</td>
+<td>Device resolution with <code>--device</code> flag support (ephemeral)</td>
 </tr>
 <tr>
-<td>Brittle selectors break with UI changes</td>
-<td>Semantic understanding tolerates UI changes</td>
+<td>1.2</td>
+<td>Update</td>
+<td>Explicit single-device auto-selection; <code>ask_user</code> tool for multi-device</td>
 </tr>
 <tr>
-<td>Generic across projects</td>
-<td>Customized for YOUR app's architecture</td>
+<td>1.3</td>
+<td>Update</td>
+<td><code>ask_user</code> tool for build/install confirmation</td>
+</tr>
+<tr>
+<td>2.2</td>
+<td>Update</td>
+<td><code>--all</code> flag with confirmation prompt</td>
+</tr>
+<tr>
+<td>3.0</td>
+<td>None</td>
+<td>Unchanged</td>
 </tr>
 </tbody>
 </table>
-<h2 id="the-three-tier-architecture">The Three-Tier Architecture<a class="headerlink" href="#the-three-tier-architecture" title="Permanent link">&para;</a></h2>
-<p>mobile-automator uses a <strong>3-tier architecture</strong> to separate concerns and enable customization:</p>
-<div class="highlight"><pre><span></span><code>Tier 1: Extension Commands
-  ↓ (pre-flight checks, infrastructure)
-Tier 2: Workspace Skills
-  ↓ (project-specific test generation &amp; execution)
-Tier 3: MCP Server
-  ↓ (device automation primitives)
-Device/App
-</code></pre></div>
-<h3 id="tier-1-extension-commands">Tier 1: Extension Commands<a class="headerlink" href="#tier-1-extension-commands" title="Permanent link">&para;</a></h3>
-<p>CLI entry points that validate setup, detect devices, and delegate to skills.</p>
-<p><strong>Commands:</strong>
-- <code>/mobile-automator:setup</code> — 7-section analysis, skill installation, project learning
-- <code>/mobile-automator:generate</code> — Convert natural language to test scenarios
-- <code>/mobile-automator:execute</code> — Execute scenarios, collect results
-- <code>/mobile-automator:migrate</code> — Convert v1 scenarios to v2 format</p>
-<h3 id="tier-2-workspace-skills">Tier 2: Workspace Skills<a class="headerlink" href="#tier-2-workspace-skills" title="Permanent link">&para;</a></h3>
-<p>AI-powered prompt templates installed in <code>.gemini/skills/</code>, customized with your project knowledge.</p>
-<p><strong>Skills:</strong>
-- <strong>Generator Skill</strong> — Parses user input, generates test scenarios with project awareness
-- <strong>Executor Skill</strong> — Executes tests, detects patterns (flakiness, regressions)</p>
-<h3 id="tier-3-automation-engine">Tier 3: Automation Engine<a class="headerlink" href="#tier-3-automation-engine" title="Permanent link">&para;</a></h3>
-<p>The <code>mobile-mcp</code> server provides 20+ platform-agnostic device automation primitives.</p>
-<p><strong>Primitives:</strong> device detection, app launch, screen interaction (tap, swipe, type), screenshot capture, element inspection, orientation control, and more.</p>
-<h2 id="key-design-principles">Key Design Principles<a class="headerlink" href="#key-design-principles" title="Permanent link">&para;</a></h2>
-<h3 id="separation-of-concerns">Separation of Concerns<a class="headerlink" href="#separation-of-concerns" title="Permanent link">&para;</a></h3>
+<hr />
+<h2 id="ux-message-consistency">UX Message Consistency<a class="headerlink" href="#ux-message-consistency" title="Permanent link">&para;</a></h2>
+<p>All new announce messages follow the conventions already established in <code>generate.toml</code>:
+- <code>✅</code> for auto-resolved selections (no user action needed)
+- <code>ℹ️</code> for flag-driven selections (user explicitly set this)
+- <code>❌</code> for validation failures that halt execution</p>
+<hr />
+<h2 id="risks">Risks<a class="headerlink" href="#risks" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Tier 1</strong> handles infrastructure (device detection, config validation)</li>
-<li><strong>Tier 2</strong> contains domain logic (test generation, execution)</li>
-<li><strong>Tier 3</strong> provides automation primitives (device control)</li>
-</ul>
-<h3 id="project-specific-customization">Project-Specific Customization<a class="headerlink" href="#project-specific-customization" title="Permanent link">&para;</a></h3>
-<p>During setup, skills are populated with knowledge about your project:
-- Architecture pattern (MVVM, Clean Architecture, BLoC, etc.)
-- Business domain (what your app does)
-- Loading indicators (how to detect async operations)
-- Critical user flows (business-critical paths)</p>
-<p>This allows skills to make intelligent decisions specific to YOUR app.</p>
-<h3 id="no-source-code-modification">No Source Code Modification<a class="headerlink" href="#no-source-code-modification" title="Permanent link">&para;</a></h3>
-<p>Tests live in <code>mobile-automator/</code> directory, never in your source code. Skills are version-controlled separately.</p>
-<h3 id="semantic-testing">Semantic Testing<a class="headerlink" href="#semantic-testing" title="Permanent link">&para;</a></h3>
-<p>Instead of brittle selectors and pixel-by-pixel comparisons, mobile-automator uses AI vision to understand:
-- Does this screen fulfill its purpose?
-- Are key elements visible and interactive?
-- Does content match expectations?
-- Tolerates minor rendering differences</p>
-<h2 id="key-ideas">Key Ideas<a class="headerlink" href="#key-ideas" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>No source modification</strong> — Tests live in <code>mobile-automator/</code>, never in your source code</li>
-<li><strong>Project learning</strong> — Setup analyzes your codebase to customize skills automatically</li>
-<li><strong>Semantic testing</strong> — AI vision understands your app, not just pixel values</li>
-<li><strong>Schema-based</strong> — Test scenarios and results follow JSON schemas for validation and IDE support</li>
-<li><strong>Observational debugging</strong> — Results capture flakiness, regressions, and execution context</li>
-<li><strong>Meta-extension</strong> — Generates testing tools tailored to your specific project</li>
-</ul>
-<h2 id="main-topics">Main Topics<a class="headerlink" href="#main-topics" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong><a href="architecture/">Architecture Overview</a></strong> — Detailed system design and components</li>
-<li><strong><a href="three-tier-design/">3-Tier Design</a></strong> — In-depth explanation of each tier and rationale</li>
-<li><strong><a href="skills/">How Skills Work</a></strong> — Understanding skill generation, customization, and execution</li>
-</ul>
-<h2 id="why-this-design">Why This Design?<a class="headerlink" href="#why-this-design" title="Permanent link">&para;</a></h2>
-<p><strong>Benefits:</strong>
-1. <strong>Separation of Concerns</strong> — Each tier has a single responsibility
-2. <strong>Customization</strong> — Skills are generated specifically for your project
-3. <strong>Maintainability</strong> — Changes to one tier don't affect others
-4. <strong>Reusability</strong> — Tier 3 primitives work with any MCP-compatible tool
-5. <strong>Learning</strong> — Setup analyzes your project to provide context to AI</p>
-<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Start with <a href="architecture/">Architecture Overview</a> for system components</li>
-<li>Then explore <a href="three-tier-design/">3-Tier Design Deep Dive</a> for detailed rationale</li>
-<li>Finally, learn about <a href="skills/">How Skills Work</a> for skill mechanics</li>
+<li><strong>None structural</strong> — no changes to the executor skill, scenario schema, or result schema.</li>
+<li><strong>Regression risk is low</strong> — changes are additive (<code>--all</code>, <code>--device</code>, new section 0.1) or cosmetic replacements of prose with equivalent <code>ask_user</code> calls.</li>
 </ul>
 
 
@@ -1466,44 +1328,6 @@ Device/App
         <footer class="md-footer">
   
     
-      
-      <nav class="md-footer__inner md-grid" aria-label="Footer" >
-        
-          
-          <a href="../getting-started/quick-start/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Quick Start">
-            <div class="md-footer__button md-icon">
-              
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
-            </div>
-            <div class="md-footer__title">
-              <span class="md-footer__direction">
-                Previous
-              </span>
-              <div class="md-ellipsis">
-                Quick Start
-              </div>
-            </div>
-          </a>
-        
-        
-          
-          <a href="architecture/" class="md-footer__link md-footer__link--next" aria-label="Next: Architecture">
-            <div class="md-footer__title">
-              <span class="md-footer__direction">
-                Next
-              </span>
-              <div class="md-ellipsis">
-                Architecture
-              </div>
-            </div>
-            <div class="md-footer__button md-icon">
-              
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4Z"/></svg>
-            </div>
-          </a>
-        
-      </nav>
-    
   
   <div class="md-footer-meta md-typeset">
     <div class="md-footer-meta__inner md-grid">
@@ -1527,10 +1351,10 @@ Device/App
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.d7c377c4.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7c377c4.min.js"></script>
       
     
   </body>

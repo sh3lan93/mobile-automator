@@ -1103,15 +1103,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#testrail-integration" class="md-nav__link">
-    <span class="md-ellipsis">
-      TestRail Integration
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#tags" class="md-nav__link">
     <span class="md-ellipsis">
       Tags
@@ -1731,15 +1722,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#testrail-integration" class="md-nav__link">
-    <span class="md-ellipsis">
-      TestRail Integration
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#tags" class="md-nav__link">
     <span class="md-ellipsis">
       Tags
@@ -1813,7 +1795,6 @@
 <li><strong>Variables &amp; capture</strong> — Extract dynamic values during execution for later assertions</li>
 <li><strong>Conditional execution</strong> — Optional steps, conditional branching, retry policies</li>
 <li><strong>Structured preconditions</strong> — Setup actions and device state requirements</li>
-<li><strong>TestRail integration</strong> — 1:1 mapping between scenarios and test cases</li>
 </ul>
 <p><strong>Schema version identifier:</strong> All v2 scenarios MUST have <code>"$schema_version": "2.0"</code> as the first field.</p>
 <h2 id="schema-structure-overview">Schema Structure Overview<a class="headerlink" href="#schema-structure-overview" title="Permanent link">&para;</a></h2>
@@ -1827,8 +1808,7 @@
 │  ├─ app_package (required: bundle/package ID)
 │  └─ metadata (required: app_version, environment)
 ├─ Organization
-│  ├─ tags (optional: filtering tags)
-│  └─ testrail (optional: TestRail mapping)
+│  └─ tags (optional: filtering tags)
 ├─ Setup
 │  ├─ variables (optional: variable definitions)
 │  └─ preconditions (optional: setup actions)
@@ -1896,12 +1876,6 @@
 <td>array</td>
 <td>No</td>
 <td>Categorization tags for filtering (max 10 tags, max 20 chars each)</td>
-</tr>
-<tr>
-<td><code>testrail</code></td>
-<td>object</td>
-<td>No</td>
-<td>Optional TestRail integration with <code>case_id</code>, <code>project_id</code>, <code>case_url</code></td>
 </tr>
 <tr>
 <td><code>variables</code></td>
@@ -2451,50 +2425,6 @@
 <span class="p">}</span>
 </code></pre></div></p>
 <hr />
-<h2 id="testrail-integration">TestRail Integration<a class="headerlink" href="#testrail-integration" title="Permanent link">&para;</a></h2>
-<p>Optional integration with TestRail for 1:1 mapping between scenarios and test cases.</p>
-<p><strong>Fields:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Type</th>
-<th>Required</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>case_id</code></td>
-<td>string</td>
-<td><strong>YES</strong></td>
-<td>TestRail case ID (e.g., <code>"C12345"</code>)</td>
-</tr>
-<tr>
-<td><code>project_id</code></td>
-<td>string</td>
-<td><strong>YES</strong></td>
-<td>TestRail project ID (e.g., <code>"P1"</code>)</td>
-</tr>
-<tr>
-<td><code>case_url</code></td>
-<td>string</td>
-<td><strong>YES</strong></td>
-<td>Full TestRail case URL for reference</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Example:</strong>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;testrail&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;case_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;C45678&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;project_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;P12&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;case_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://example.testrail.io/index.php?/cases/view/45678&quot;</span>
-<span class="w">  </span><span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div></p>
-<p>When present, the executor automatically syncs test results to TestRail.</p>
-<hr />
 <h2 id="tags">Tags<a class="headerlink" href="#tags" title="Permanent link">&para;</a></h2>
 <p>Categorization tags for filtering and organizing scenarios.</p>
 <p><strong>Format:</strong>
@@ -2525,11 +2455,6 @@
 <span class="w">    </span><span class="nt">&quot;environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;staging&quot;</span>
 <span class="w">  </span><span class="p">},</span>
 <span class="w">  </span><span class="nt">&quot;tags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;auth&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;p0&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;smoke&quot;</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;testrail&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;case_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;C12345&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;project_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;P1&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;case_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://example.testrail.io/index.php?/cases/view/12345&quot;</span>
-<span class="w">  </span><span class="p">},</span>
 <span class="w">  </span><span class="nt">&quot;variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;auth_token&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>

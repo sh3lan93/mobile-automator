@@ -739,15 +739,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#testrail-integration" class="md-nav__link">
-    <span class="md-ellipsis">
-      TestRail Integration
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#variables-dynamic-values" class="md-nav__link">
     <span class="md-ellipsis">
       Variables &amp; Dynamic Values
@@ -1477,15 +1468,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#testrail-integration" class="md-nav__link">
-    <span class="md-ellipsis">
-      TestRail Integration
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#variables-dynamic-values" class="md-nav__link">
     <span class="md-ellipsis">
       Variables &amp; Dynamic Values
@@ -1725,7 +1707,7 @@
 
 
 <h1 id="generate-command-guide">Generate Command Guide<a class="headerlink" href="#generate-command-guide" title="Permanent link">&para;</a></h1>
-<p>The <strong>Generate Command</strong> creates test scenarios using natural language descriptions or TestRail test cases. It understands what you want to test, launches your app on a device, resolves UI elements, and generates a JSON scenario file ready for execution.</p>
+<p>The <strong>Generate Command</strong> creates test scenarios using natural language descriptions. It understands what you want to test, launches your app on a device, resolves UI elements, and generates a JSON scenario file ready for execution.</p>
 <p><strong>Key benefit</strong>: No need to write complex JSON or learn special syntax — just describe your test in plain English.</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="c1"># Run the command</span>
@@ -2013,34 +1995,6 @@ Verify dark mode is persisted
 - Provide additional context</p>
 <hr />
 <h2 id="advanced-features">Advanced Features<a class="headerlink" href="#advanced-features" title="Permanent link">&para;</a></h2>
-<h3 id="testrail-integration">TestRail Integration<a class="headerlink" href="#testrail-integration" title="Permanent link">&para;</a></h3>
-<p>If your project uses TestRail, the generator can fetch test cases:</p>
-<p><strong>Input method:</strong>
-<div class="highlight"><pre><span></span><code>Test source (1-2):
-  1. Natural language description
-  2. TestRail test case
-
-Select: 2
-</code></pre></div></p>
-<p><strong>TestRail workflow:</strong>
-1. Generator asks for TestRail credentials (cached securely)
-2. Fetches test case ID or searches by title
-3. Extracts test case steps
-4. Parses steps as natural language
-5. Generates JSON scenario
-6. Includes TestRail metadata for later sync</p>
-<p><strong>Generated scenario includes:</strong>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;scenario_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_happy_path&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;testrail&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;case_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">12345</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;project_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;case_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://testrail.example.com/cases/12345&quot;</span>
-<span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="err">...</span>
-<span class="p">}</span>
-</code></pre></div></p>
-<p>After execution, results sync automatically to TestRail.</p>
 <h3 id="variables-dynamic-values">Variables &amp; Dynamic Values<a class="headerlink" href="#variables-dynamic-values" title="Permanent link">&para;</a></h3>
 <p>For tests with dynamic data (usernames, IDs, etc.), use variable capture:</p>
 <div class="highlight"><pre><span></span><code>1. Capture the user ID from the welcome message to variable &quot;user_id&quot;
