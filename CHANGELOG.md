@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.9.0] - 2026-03-28
+
+### ✨ Added
+
+- **Auto-Detect Business-Critical Paths** — Setup Section 5.0 now uses the `@codebase_investigator` subagent to automatically identify critical user paths from the codebase before asking the user.
+  - Analyzes navigation graphs, route definitions, screen/Activity/Fragment definitions, feature modules, and README documentation
+  - Presents detected paths for user confirmation (`yesno` prompt) instead of requiring manual input
+  - Falls back to manual text input if auto-detection finds nothing or the user rejects the detected paths
+  - Reduces setup friction — users confirm instead of typing
+
+---
+
 ## [0.8.1] - 2026-03-28
 
 ### 🐛 Fixed
@@ -604,4 +616,4 @@ Apache License 2.0
 
 ---
 
-**Mobile Automator 0.3.1** - Built with ❤️ for mobile QA engineers
+**Mobile Automator 0.9.0** - Built with ❤️ for mobile QA engineers

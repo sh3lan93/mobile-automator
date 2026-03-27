@@ -205,10 +205,12 @@ This is where mobile-automator learns the deep details of your project:
 - Helps skills focus on business-critical flows
 
 **Business-Critical User Paths:**
-- You list the most important user flows to test
+- Setup uses the `@codebase_investigator` subagent to automatically analyze your codebase for critical user flows
+- It examines navigation graphs, screen definitions, feature modules, and documentation
+- If paths are detected, you'll see them listed for confirmation (yes/no)
+- If auto-detection fails, you're asked to type them manually (same as before)
 - Examples: "onboarding, login, product search, add-to-cart, checkout, payment"
 - Skills prioritize these paths in test generation
-- Setup asks: "Enter critical user flows (comma-separated):"
 
 **Example Section 5 Interaction:**
 ```
@@ -227,8 +229,10 @@ Corrections needed? (y/n): n
 Business domain (one sentence):
 E-commerce mobile shopping app with product catalog and checkout flow
 
-Critical user paths (comma-separated):
-onboarding, login, product-search, add-to-cart, checkout, payment
+Analyzing your codebase to identify business-critical user paths...
+I analyzed your codebase and identified these business-critical paths:
+  onboarding, login, product-search, add-to-cart, checkout, payment
+Are these correct? (y/n): y
 ```
 
 **Output:** All project knowledge stored in `mobile-automator/setup_state.json`.
