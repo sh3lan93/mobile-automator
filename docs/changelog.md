@@ -4,414 +4,206 @@ description: "Changelog for mobile-automator - version history, new features, br
 
 # Changelog
 
-All notable changes to mobile-automator are documented here. Follow [Semantic Versioning](https://semver.org/).
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## Unreleased — TestRail Integration Removed
+## [0.8.0] - 2026-03-27
 
 ### 🗑️ Removed
 
-- **TestRail Integration** — Complete removal of TestRail MCP server and all related functionality
-  - Removed `testrail-mcp` MCP server configuration
+- **TestRail Integration** — Removed all TestRail MCP server configuration, environment variables, and integration code.
+  - Removed `testrail-mcp` MCP server from `gemini-extension.json`
   - Removed `TESTRAIL_API_KEY` and `TESTRAIL_DOMAIN` environment variables
   - Removed `testrail` metadata field from scenario schema
-  - Removed TestRail result syncing capabilities
-  - **Migration**: Existing scenarios without TestRail metadata continue to work unchanged
+  - Removed TestRail result syncing from executor
+  - Updated documentation to remove TestRail references
+  - Migration path: scenarios without TestRail metadata continue to work unchanged
 
 ---
 
-## [1.0.0] - 2026-03-01
+## [0.7.0] - 2026-03-27
 
 ### ✨ Added
 
+- **Execute Command Enhancements** — Major UX and structural improvements to the `/mobile-automator:execute` command.
+  - Added `--device="ID"` flag to bypass the interactive device selection menu and target a specific device.
+  - Added `--all` flag to unconditionally execute all available scenarios without manual selection prompts.
+  - Fully integrated structured `ask_user` tool calls natively for all interactive prompts (device selection, execution menu, confirmations).
+  - Refined deprecation logic to evaluate v1 schema warnings early, *before* establishing device connections or running preconditions.
+
+---
+
+## [0.6.0] - 2026-03-20
+
+### ✨ Added
+
+- **Environment Persistence** — The generate command now remembers your last-used environment and skips the prompt on subsequent runs.
+  - First run (or after clearing preferences): interactive prompt asks for environment and saves the selection to `mobile-automator/generate_preferences.json`
+  - Subsequent runs: saved environment is used automatically with an `ℹ️` notice
+  - `--set-environment="X"` — use environment X **and** save it as the new default preference
+  - `--environment="X"` — one-time override, uses X for this run only without changing the saved preference
+  - Stale preferences (environment removed from config) are detected automatically with a `⚠️` warning and the prompt re-appears
+  - Single-environment projects skip the prompt entirely (always has, now also ignores flags cleanly)
+
+---
+
+## [0.5.0] - 2026-03-13
+
+### ✨ Added
+
+- **Test Report Command** — New `/mobile-automator:report` command generates aggregated test execution reports.
+  - Supports multiple output formats: table (terminal), JSON, HTML
+  - JUnit XML export for CI integration
+  - Shows pass rate, failed scenarios, flaky steps, average duration
+  - Filter by recent runs with `--last N` option (default: 10)
+
+---
+
+## [0.3.1] - 2026-02-25
+
+### 🔄 Changed
+
+- **Native Prompts** — Migrated user interaction prompts across `setup` and `generate` flows to use the structured `ask_user` tool natively.
+
+---
+
+## [0.3.0] - 2026-02-24
+
+
+### ✨ Added
+
+- **Tag-Based Filtering** — Organize, filter, and execute specific subsets of your scenarios using tags.
+  - Added interactive prompt for tags during test scenario generation.
+  - Added `--tag` filter to `execute` command with support for AND (`smoke,critical`), OR (`smoke|regression`), and NOT (`!flaky`).
+  - Added new `/mobile-automator:list-tags` command to view the tag registry and counts across the testing suite.
+  - Interactive execution menu now groups scenarios by primary tags when run without arguments.
+  - Strict format validation enforcing lowercase alphanumeric + hyphens across schemas and commands.
+
+---
+
+## [0.2.0] - 2026-02-23
+
+### ✨ Added
+
+- **Expanded Assertion Types** — Supported assertion types increased to 27, organized with tiered categorization to handle simpler and complex edge cases.
+- **New `!=` Comparison Operator** — Added support for the non-equality (`!=`) operator in assertion comparisons.
+- **Two-Pass Semantic Intent Model** — Introduced a two-pass workflow for parsing test generation instructions to yield more reliable test assertions.
+- **Schema Validation CI Workflow** — Added a GitHub Actions workflow that automatically validates the JSON syntax of all schemas, ensures Draft-07 conformance, and validates prototype scenarios against `scenario_schema_v2.json`.
+- **TestRail Integration** — Bi-directional sync with TestRail test case management
+  - Fetch test cases from TestRail via natural language step format with automation hints
+  - Auto-convert TestRail steps to mobile-automator scenario JSON
+  - Automatically sync test execution results back to TestRail
+  - Includes device info, observations, and screenshots in TestRail test runs
+- New MCP server: `testrail-mcp` for TestRail API access
+- Optional `testrail` metadata field in scenario_schema_v2.json for 1:1 case mapping
+- Environment variables `TESTRAIL_API_KEY` and `TESTRAIL_DOMAIN` for project-scoped configuration
+
+### 🔄 Changed
+
+- **Clarified Assertion Behaviors** — Improved documentation and instructions around `element_visible` and `list_item_count` assertions.
+- **Skill Categories** — Reindexed skill categories within the project framework.
+- **Documentation Updates** — Updated Gemini CLI installation source instructions in `CONTRIBUTING.md` and refreshed the "Last updated" date in `ROADMAP.md`.
+- **Generator Skill Enhanced** — Detects and handles TestRail URLs for automated test case fetching
+- **Executor Skill Enhanced** — Syncs results back to TestRail when scenario has testrail metadata
+
+### ✅ Backward Compatible
+
+- Manual test generation unchanged — TestRail is entirely optional
+- Existing scenarios without `testrail` metadata work exactly as before
+
+---
+
+## [0.1.1] - 2026-02-18
+
+### ✨ Added
+
+#### Schema v2 — Smarter, More Reliable Test Scenarios
+- **New default scenario format** — all generated scenarios now use schema v2 with `$schema_version: "2.0"` as a required root field
+- **Named step IDs** — steps use descriptive snake_case string IDs (e.g., `"id": "tap_login"`) instead of integers; screenshots are now named accordingly (`step_tap_login.png` vs `step_3.png`)
+- **Smart wait actions** — `wait_for_element`, `wait_for_element_gone`, `wait_for_loading_complete` replace fixed-time `wait`; eliminates the #1 source of test flakiness
+- **Optional steps** — `optional: true` + `on_failure: "skip"` handles non-deterministic UI elements (promotional dialogs, permission prompts) without failing the test
+- **Conditional steps** — `condition` field allows steps to be skipped based on device API level, runtime state, or whether a previous step was skipped
+- **Retry logic** — `on_failure: "retry"` + `retry_policy: {max_attempts, backoff_ms}` distinguishes real bugs from transient failures
+- **Variable capture** — `capture_value` action + `variables` root block captures dynamic values (prices, IDs, amounts) for cross-step verification
+- **Nested conditional sub-flows** — `sub_steps` array expresses branching flows (e.g., "add address only if none exists") without requiring separate scenario files
+- **New assertion types** — `pattern_match` (regex), `value_matches_variable`, `element_count` (with operators), `visual_state`, `text_changed` (state transitions like "Redeem" → "Redeemed")
+- **Structured preconditions** — `preconditions` object with `app_state`, `device_actions`, `device_properties` enables automated pre-test setup
+- **Clean metadata** — execution-time fields (`device_model`, `api_level`, `timestamp`) removed from scenario metadata; they belong in the result JSON
+
+#### `/mobile-automator:migrate` — Interactive v1 → v2 Migration
+- New command to upgrade existing v1 scenarios with a guided, human-supervised process
+- Automatically converts: `$schema_version`, integer step IDs → named strings, assertion IDs, `after_step_id` references, metadata cleanup, preconditions restructuring
+- Interactively handles ambiguous cases (fixed-time `wait` actions — asks what to wait *for*)
+- Always creates a `.v1.bak` backup before writing any changes
+- Lists what must be added manually after migration (intent the tool can't infer)
+
+#### `MIGRATION.md` — Institutional Migration Guide
+- 6 before/after JSON examples covering every major v1 → v2 change
+- Clear breakdown of what the tool handles automatically vs. what requires human review
+- Deprecation timeline table
+
+#### `scenario_schema_v2.json` — Formal JSON Schema
+- JSON Schema Draft-07 definition for all new scenario fields
+- Validated against both prototype scenarios with zero errors
+
+### 🔄 Changed
+
+- **Generator SKILL.md** — updated to always produce v2 scenarios; expanded step translation guide (14 actions), pattern detection guide for smart waits, optional steps, conditional steps, retry, data capture, and nested sub-flows
+- **Executor SKILL.md** — updated with full v2 execution path: condition evaluation, variable capture, sub-flow execution, retry logic, all 9 assertion types
+- **Result schema** — extended additively with optional v2 fields (`schema_version`, `captured_variables`, step-level `retry_count`, `step_duration_ms`, `condition_evaluated`); `step_id` accepts both integer (v1) and string (v2)
+- **`generate.toml`** — deprecation check when `--schema-version 1.0` flag is used
+- **`execute.toml`** — deprecation check when a v1 scenario is detected
+- **`setup.toml`** — copies `scenario_schema_v2.json` to workspace alongside v1 schema
+- **`GEMINI.md`** — dual schema registry (v2 default + v1 legacy), expanded tool mapping table with all 14 action types
+- **`README.md`** — updated schema section to describe v2, added `/mobile-automator:migrate` to commands table, updated project structure tree with named screenshot IDs and `scenario_schema_v2.json`
+- **`CLAUDE.md`** — updated file structure, schema documentation, and namespace list to reflect all new files
+
+### ⚠️ Deprecation Notice
+
+Schema v1 is deprecated as of **2026-02-17**. The 12-month deprecation timeline:
+
+| Phase | Period | Behavior |
+|-------|--------|----------|
+| Phase 1 | Now → 2026-08-17 | Non-blocking warning on v1 generate/execute |
+| Phase 2 | 2026-08-17 → 2027-01-17 | New v1 generation blocked; execution requires acknowledgment |
+| Phase 3 | 2027-01-17+ | Hard fail — v1 scenarios will not execute |
+
+Migrate existing scenarios with `/mobile-automator:migrate <scenario_id>`. See [MIGRATION.md](https://github.com/sh3lan93/mobile-automator/blob/main/MIGRATION.md) for the full guide.
+
+---
+
+## [0.1.0] - 2025-02-13
+
+### 🎉 First Beta Release
+
+Mobile Automator's first beta release brings **intelligent mobile QA automation** to Gemini CLI.
+
 #### Core Features
-- **Natural Language Test Generation** — Describe tests in plain English, generator creates JSON scenarios
-- **3-Tier Architecture** — Extension commands → Workspace skills → Mobile MCP server
-- **7-Section Setup Workflow** — Comprehensive project analysis and skill installation
-  - Pre-initialization and overview
-  - Platform auto-detection (Android, iOS, Flutter, React Native, KMP, CMP)
-  - Environment discovery (production, staging, development, custom)
-  - App package inference (Android applicationId, iOS bundle identifier)
-  - Project knowledge gathering (architecture, domain, loading indicators, protected directories)
-  - Automatic skill installation with 13 placeholder replacements
-  - Directory scaffolding and finalization with git commit
-
-#### Test Scenario Schema v2
-- **Named string step IDs** — Human-readable step identifiers (tap_login, wait_for_home)
-- **14 Action Types**:
-  - Navigation: `launch_app`, `open_url`, `press_button`
-  - Interaction: `tap`, `long_press`, `double_tap`, `type`, `swipe`, `scroll_to_element`
-  - Waiting: `wait_for_element`, `wait_for_element_gone`, `wait_for_loading_complete`
-  - Data capture: `capture_value`, `clear_app_data`
-
-- **27 Assertion Types**:
-  - Element State: `element_exists`, `element_not_exists`, `element_visible`, `element_state`
-  - Text & Content: `element_text`, `text_contains`, `text_not_empty`, `element_hint`, `pattern_match`, `text_changed`, `content_description`
-  - Count & Collections: `element_count`, `list_item_count`, `list_is_empty`
-  - Visual & Layout: `screenshot_match`, `visual_state`, `element_fully_visible`, `color_style`
-  - Navigation & Screen: `screen_title`, `alert_present`, `alert_text`, `toast_visible`, `keyboard_visible`
-  - Accessibility: `has_accessibility_label`
-  - Data & Variables: `value_matches_variable`
-  - Platform-Specific: `permission_dialog_shown`, `dark_mode_active`
-
-- **Advanced Features**:
-  - Variables and dynamic value capture
-  - Preconditions with setup actions
-  - Optional steps with `optional: true`
-  - Conditional execution with `condition` field
-  - Retry policies with `retry_policy` configuration
-  - Sub-steps for complex interactions
-  - Wait configuration with timeout customization
-  - Structured error handling with `on_failure` callbacks
-
-#### Test Result Schema
-- Comprehensive result reporting with:
-  - Execution metadata (`run_id`, `duration_ms`, `timestamp`)
-  - Step-by-step execution tracking
-  - Assertion pass/fail status
-  - Variable capture tracking
-  - Screenshot collection
-  - **Advanced Observations**:
-    - Flakiness detection (timing issues, retry behavior)
-    - Regression detection (visual changes beyond assertions)
-    - State context (device state, app version, environment data)
-
-#### Test Execution Engine
-- Automatic element fuzzy matching and resolution
-- Intelligent wait strategies with exponential backoff
-- Screenshot analysis and visual comparison
-- Step-by-step failure diagnostics
-- Semantic visual testing (not pixel-perfect)
-- Concurrent assertion validation
-- Detailed execution logging
+- **7-Section Setup Workflow** — Comprehensive project analysis with platform detection, environment discovery, package inference, and automatic skill installation
+- **Natural Language Test Generation** — Describe tests in plain English, generator creates structured JSON scenarios
+- **Intelligent Test Execution** — AI-powered test runner with flakiness detection, regression spotting, and semantic visual testing
+- **3-Tier Architecture** — Extension commands, workspace skills, and mobile-mcp automation engine
 
 #### Platform Support
-- ✅ Android (minSdk 21+)
-- ✅ iOS (iOS 12+)
-- ✅ Flutter (Dart 2.18+)
-- ✅ React Native (0.66+)
-- ✅ Kotlin Multiplatform (1.7+)
-- ✅ Compose Multiplatform (1.0+)
+- Android (native, Kotlin, Java)
+- iOS (native, Swift, Objective-C)
+- Flutter
+- React Native
+- Kotlin Multiplatform (KMP)
+- Compose Multiplatform (CMP)
 
-#### Command-Line Interface
-- `/mobile-automator:setup` — Interactive project analysis and skill installation
-- `/mobile-automator:generate` — Natural language test generation
-- `/mobile-automator:execute` — Test execution with result collection
-- `/mobile-automator:migrate` — v1 → v2 scenario migration tool
-
-#### MCP Server Integration
-- **Bundled mobile-mcp** — Device automation primitives:
-  - Device management: `mobile_list_available_devices`, `mobile_get_screen_size`, `mobile_get_orientation`
-  - App management: `mobile_launch_app`, `mobile_install_app`, `mobile_uninstall_app`, `mobile_terminate_app`
-  - Interaction: `mobile_click_on_screen_at_coordinates`, `mobile_long_press_on_screen_at_coordinates`, `mobile_double_tap_on_screen`, `mobile_type_keys`
-  - Navigation: `mobile_swipe_on_screen`, `mobile_press_button`
-  - UI analysis: `mobile_list_elements_on_screen`, `mobile_take_screenshot`
-  - System: `mobile_open_url`, `mobile_set_orientation`
-
-#### Documentation
-- Comprehensive user guides:
-  - Quick start guide
-  - Installation instructions
-  - Setup workflow walkthrough
-  - Test generation guide
-  - Test execution guide
-  - Migration guide (v1 → v2)
-
-- Reference documentation:
-  - Complete schema v2 specification
-  - Action types catalog
-  - Assertion types catalog
-  - MCP tools reference
-  - Architecture overview
-  - Skills documentation
-
-- Example scenarios:
-  - 5 Android examples (login, list scrolling, permissions, toast, errors)
-  - 5 iOS examples (biometric auth, tab navigation, swipe gestures, alerts, background sync)
-  - Full JSON for each with explanations
-
-- Additional resources:
-  - FAQ with 30+ Q&A
-  - Contributing guide
-  - Architecture documentation (3-tier design)
-  - Concepts guide (skills, schema, workflow)
-  - Changelog (this document)
-
-#### Extension Configuration
-- Manifest: `gemini-extension.json` with:
-  - Extension metadata (name, version, description)
-  - Context file reference (`GEMINI.md`)
-  - MCP server bundling
-  - Command definitions
-
-- AI Context: `GEMINI.md` with:
-  - Schema registry pointing to workspace locations
-  - Tool mappings for generation/execution
-  - Prompt guidance for AI skills
-  - Reference documentation
-
-- Developer Context: `CLAUDE.md` with:
-  - Architecture explanation
-  - Implementation details
-  - Development workflows
-  - Troubleshooting guide
-
-#### Project Analysis Features
-- **Architecture Pattern Detection**:
-  - MVVM, Clean Architecture, BLoC, Redux/MVI, MVP, VIPER
-  - Combined patterns (e.g., "MVVM with Clean Architecture")
-  - Custom pattern recognition
-
-- **Loading Indicator Detection**:
-  - Android: CircularProgressIndicator, LinearProgressIndicator, ProgressBar, ShimmerEffect, ContentLoadingProgressBar
-  - iOS: UIActivityIndicatorView, ProgressView, SkeletonView
-  - Flutter: CircularProgressIndicator, LinearProgressIndicator, Shimmer
-  - React Native: ActivityIndicator, SkeletonPlaceholder
-  - Custom patterns matching *Loading*, *Spinner*, *Shimmer*, *Skeleton*
-
-- **Environment Discovery**:
-  - Android: productFlavors, buildTypes
-  - iOS: Xcode schemes, xcconfig files
-  - Flutter: flavor configs, .env files
-  - React Native: .env.* files, react-native-config
-
-### 🎯 Features
-
-#### Test Generation
-- Natural language parsing with AI context
-- Element fuzzy matching (visible text, labels, positions)
-- Automatic timeout calibration
-- Step validation before scenario completion
-- Visual feedback with screenshots
-- Scenario preview and editing
-
-#### Test Execution
-- Device detection and validation
-- Pre-flight checks (app installation, device state)
-- Step-by-step execution with retries
-- Visual assertion support
-- Result collection and reporting
-- Error diagnostics with suggestions
-
-#### TestRail Integration
-- Automatic result syncing to TestRail
-- Case ID mapping in scenarios
-- Test run linking
-- Result status updates
-- Case linking in scenario JSON
-
-#### Workspace Organization
-```
-mobile-automator/
-├── config.json              # Project configuration
-├── setup_state.json         # Resume capability state
-├── index.md                 # Auto-generated documentation
-├── scenarios/               # Generated test scenarios
-│   ├── *.json              # v2 scenarios (default)
-│   └── *_v1.json           # v1 scenarios (legacy)
-├── results/                 # Execution results
-│   └── run_*.json          # Result reports with observations
-├── screenshots/             # Reference screenshots
-│   └── scenario_*.png       # Test screenshots
-```
-
-#### Resume Capability
-- Setup can be interrupted and resumed
-- State saved after each section
-- Automatic recovery on re-run
-- No data loss between sessions
-
-### 🔧 Technical Improvements
-
-- **Robust Error Handling**:
-  - Graceful fallbacks for failed detection
-  - User prompts for missing information
-  - Detailed error messages with solutions
-  - Logging for debugging
-
-- **Performance**:
-  - Efficient element resolution (no exhaustive search)
-  - Optimized screenshot capture
-  - Smart timeout strategies
-  - Caching of project metadata
-
-- **Reliability**:
-  - Automatic retry on transient failures
-  - Flakiness detection and reporting
-  - State validation between steps
-  - Device health checks
+#### Test Capabilities
+- 7 action types (`launch_app`, `tap`, `type`, `swipe`, `press_button`, `wait`, `open_url`)
+- 4 assertion types (`screenshot_match`, `element_exists`, `element_text`, `element_not_exists`)
+- Automatic precondition handling
+- Environment-aware package selection
+- Flakiness detection with automatic retry
+- Semantic visual testing (AI vision, not pixel matching)
 
 ---
 
-## [0.1.0] - 2026-02-01
-
-### ✨ Initial Release
-
-First production release of mobile-automator with core functionality:
-
-- Basic test scenario generation
-- Test execution engine
-- Schema v1 support (legacy)
-- 12 action types
-- 12 assertion types
-- MCP server integration
-- Setup command (basic version)
-- Android and iOS support
-- Documentation skeleton
-
----
-
-## [0.0.1] - 2026-01-15
-
-### 🎬 Project Inception
-
-- Initial development started
-- Architecture designed (3-tier pattern)
-- Gemini CLI integration explored
-- MCP server communication established
-
----
-
-## Unreleased (Upcoming)
-
-### 🚀 Planned Features
-
-#### Short Term (0-3 months)
-- [ ] Parallel test execution
-- [ ] Test flakiness analysis and reporting
-- [ ] Custom assertion library support
-- [ ] Advanced visual regression testing
-- [ ] Performance benchmarking assertions
-
-#### Medium Term (3-6 months)
-- [ ] Cloud device farm support (BrowserStack, Sauce Labs)
-- [ ] Extended video recording and analysis
-- [ ] Accessibility testing assertions
-- [ ] API mocking integration
-- [ ] Database state assertions
-
-#### Long Term (6-12 months)
-- [ ] AI-powered test recommendations
-- [ ] Intelligent test case generation from user behavior
-- [ ] Cross-platform scenario optimization
-- [ ] Advanced CI/CD pipeline integration
-- [ ] Test impact analysis
-
-### 🐛 Known Issues
-
-- Performance testing not yet supported (planned)
-- Cannot test network calls directly (workaround: use TestRail observations)
-- Limited WebView testing (only basic navigation)
-- No native code instrumentation (alternative: use Appium alongside)
-
-### 🔄 Migration Path
-
-#### v1 → v2 Scenarios
-- Automatic migration available: `/mobile-automator:migrate`
-- 12-month deprecation timeline:
-  - Months 0-6: Warning on v1 scenario execution
-  - Months 7-11: Execution blocked with migration instructions
-  - Month 12+: v1 scenarios no longer supported
-- No data loss during migration
-
----
-
-## Contributing to Changelog
-
-When submitting PRs:
-
-1. **Add entry to "Unreleased"** section with your change
-2. **Use categories**:
-   - ✨ Added (new features)
-   - 🎯 Features (enhancements)
-   - 🔧 Improved (improvements to existing)
-   - 🐛 Fixed (bug fixes)
-   - 📚 Documentation
-   - 🔄 Changed (breaking changes)
-   - ⚠️ Deprecated
-   - 🗑️ Removed
-
-3. **Be specific**: Include concrete examples
-4. **Link to issues**: Reference GitHub issues when relevant
-
----
-
-## Release Checklist
-
-Before releasing, ensure:
-
-- [ ] All tests pass
-- [ ] No `console.warn` or `console.error` statements
-- [ ] Documentation updated
-- [ ] Examples tested in real projects
-- [ ] Version bumped in `gemini-extension.json`
-- [ ] Changelog updated
-- [ ] GitHub release created with notes
-- [ ] Extension tested via `gemini extensions install`
-
----
-
-## Version Support
-
-### Current Version
-- **v1.0.0** — Fully supported, production-ready
-
-### Legacy Versions
-- **v0.x.x** — No longer supported, recommend upgrade
-
-### Supported Node.js Versions
-- Node.js 20.x (LTS)
-- Node.js 22.x (Latest)
-
-### Supported Gemini CLI Versions
-- Gemini CLI 1.0.0+
-- Recommend latest version for best compatibility
-
-### Supported Mobile Platforms
-- Android 8.0 (API 26) - 15.0 (API 35)
-- iOS 12.0 - 17.x
-- Flutter 2.18+
-- React Native 0.66+
-- KMP 1.7+
-- CMP 1.0+
-
----
-
-## Security & Maintenance
-
-### Security Policy
-- Report security issues privately to maintainers
-- No public disclosure until patch released
-- Security patches released as patch versions
-
-### Maintenance
-- Monthly patch releases (bug fixes)
-- Quarterly minor releases (new features)
-- Annual major releases (breaking changes)
-- Security updates as needed
-
-### Dependencies
-- Mobile MCP: Latest version (auto-updated)
-- Node.js: Recommend 20+ LTS
-- Gemini CLI: 1.0.0+
-
----
-
-## Feedback & Bug Reports
-
-Found an issue or have a feature request?
-
-- **Bug Report** → [GitHub Issues](https://github.com/sh3lan93/mobile-automator/issues)
-- **Feature Request** → [GitHub Issues](https://github.com/sh3lan93/mobile-automator/issues) (add 'enhancement' label)
-- **General Questions** → [GitHub Issues](https://github.com/sh3lan93/mobile-automator/issues) (add 'question' label)
-
----
-
-## License
-
-Mobile Automator is licensed under Apache 2.0. See LICENSE file for details.
-
----
-
-[Back to Docs →](index.md) | [View on GitHub →](https://github.com/sh3lan93/mobile-automator)
+[Back to Docs](index.md) | [View on GitHub](https://github.com/sh3lan93/mobile-automator)
