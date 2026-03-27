@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.1] - 2026-03-28
+
+### 🐛 Fixed
+
+- **Deterministic Skill Installation** — Replaced the AI-mediated file copy/replace in setup Section 6.0 with a Node.js script (`scripts/install-skills.js`) that handles all template operations deterministically.
+  - Fixes silent file corruption (truncation, missing sections, garbled schemas) during skill installation
+  - Placeholder replacement now uses `split().join()` in Node.js instead of in-memory AI reproduction
+  - Schema files copied byte-perfect with `fs.copyFileSync` instead of AI read/write
+  - Runtime placeholders (`{{capture_to}}`, `{{variable_name}}`) in executor skill are now correctly preserved
+  - Added `scenario_schema_v2.json` to template verification (was previously missing)
+  - Verification now checks file existence, non-zero size, and setup-placeholder absence
+  - Setup Section 6.0 reduced from ~100 lines to ~30 lines
+
+---
+
 ## [0.8.0] - 2026-03-27
 
 ### 🗑️ Removed
