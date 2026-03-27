@@ -259,10 +259,6 @@ Here's exactly what happens when you generate and execute a login test:
      ],
      "observations": []
    }
-
-7. Optional: Sync to TestRail
-   - If configured, executor uploads results
-   - Includes duration, status, observations
 ```
 
 ## Next Steps

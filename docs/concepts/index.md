@@ -45,7 +45,7 @@ AI-powered prompt templates installed in `.gemini/skills/`, customized with your
 
 **Skills:**
 - **Generator Skill** — Parses user input, generates test scenarios with project awareness
-- **Executor Skill** — Executes tests, detects patterns (flakiness, regressions), syncs to TestRail
+- **Executor Skill** — Executes tests, detects patterns (flakiness, regressions)
 
 ### Tier 3: Automation Engine
 The `mobile-mcp` server provides 20+ platform-agnostic device automation primitives.

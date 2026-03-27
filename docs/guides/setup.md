@@ -99,7 +99,7 @@ Do you test against any other environments? (y/n): n
 Primary environment for testing: staging
 ```
 
-**Output:** Stored list of environments for later use in build commands and TestRail metadata.
+**Output:** Stored list of environments for later use in build commands.
 
 ---
 

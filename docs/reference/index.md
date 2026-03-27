@@ -71,7 +71,6 @@ The default schema for test scenarios. Defines structure for steps, assertions, 
 - 14 action types and 27 assertion types
 - Variables and value capture
 - Conditional execution and retry policies
-- TestRail integration
 - Structured preconditions
 
 **[Schema v2 Reference →](schema-v2.md)**

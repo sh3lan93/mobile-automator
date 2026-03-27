@@ -246,15 +246,3 @@ Run `/mobile-automator:migrate` to upgrade your scenarios before Phase 3.
 
 ---
 
-## TestRail Integration (v0.2.0+)
-
-New in version 0.2.0: bi-directional TestRail integration.
-
-If your team uses TestRail:
-1. Set `TESTRAIL_API_KEY` and `TESTRAIL_DOMAIN` in `.env` for your mobile project
-2. When generating tests, provide TestRail case URL instead of manual steps
-3. Test results automatically sync back to TestRail after execution
-
-See README.md "Using TestRail" section for detailed guide.
-
-**For existing teams:** Manual test generation continues to work exactly as before. TestRail integration is entirely optional.

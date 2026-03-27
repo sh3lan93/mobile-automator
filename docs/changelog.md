@@ -4,6 +4,19 @@ All notable changes to mobile-automator are documented here. Follow [Semantic Ve
 
 ---
 
+## Unreleased — TestRail Integration Removed
+
+### 🗑️ Removed
+
+- **TestRail Integration** — Complete removal of TestRail MCP server and all related functionality
+  - Removed `testrail-mcp` MCP server configuration
+  - Removed `TESTRAIL_API_KEY` and `TESTRAIL_DOMAIN` environment variables
+  - Removed `testrail` metadata field from scenario schema
+  - Removed TestRail result syncing capabilities
+  - **Migration**: Existing scenarios without TestRail metadata continue to work unchanged
+
+---
+
 ## [1.0.0] - 2026-03-01
 
 ### ✨ Added

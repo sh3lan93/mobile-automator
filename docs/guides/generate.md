@@ -1,6 +1,6 @@
 # Generate Command Guide
 
-The **Generate Command** creates test scenarios using natural language descriptions or TestRail test cases. It understands what you want to test, launches your app on a device, resolves UI elements, and generates a JSON scenario file ready for execution.
+The **Generate Command** creates test scenarios using natural language descriptions. It understands what you want to test, launches your app on a device, resolves UI elements, and generates a JSON scenario file ready for execution.
 
 **Key benefit**: No need to write complex JSON or learn special syntax — just describe your test in plain English.
 
@@ -255,42 +255,6 @@ After generation, you can:
 ---
 
 ## Advanced Features
-
-### TestRail Integration
-
-If your project uses TestRail, the generator can fetch test cases:
-
-**Input method:**
-```
-Test source (1-2):
-  1. Natural language description
-  2. TestRail test case
-
-Select: 2
-```
-
-**TestRail workflow:**
-1. Generator asks for TestRail credentials (cached securely)
-2. Fetches test case ID or searches by title
-3. Extracts test case steps
-4. Parses steps as natural language
-5. Generates JSON scenario
-6. Includes TestRail metadata for later sync
-
-**Generated scenario includes:**
-```json
-{
-  "scenario_id": "login_happy_path",
-  "testrail": {
-    "case_id": 12345,
-    "project_id": 1,
-    "case_url": "https://testrail.example.com/cases/12345"
-  },
-  ...
-}
-```
-
-After execution, results sync automatically to TestRail.
 
 ### Variables & Dynamic Values
 

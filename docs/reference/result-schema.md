@@ -464,17 +464,6 @@ for filename in os.listdir("mobile-automator/results/"):
 print(f"Found {len(failed_runs)} failed runs")
 ```
 
-## TestRail Integration
-
-When using the TestRail integration, the executor automatically syncs results to TestRail:
-
-- **run_id** → TestRail test case ID
-- **status** → TestRail result status (Passed, Failed, Blocked)
-- **assertion_results** → TestRail custom result fields
-- **observations** → TestRail custom comments with flakiness/regression tags
-
-See the [Execute Command Guide](../guides/execute.md) for information about TestRail sync during test execution.
-
 ## Schema Versioning
 
 ### v2.0 (Current, Recommended)

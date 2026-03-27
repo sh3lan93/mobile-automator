@@ -12,7 +12,6 @@ Schema v2 introduces a modern, feature-rich format for defining mobile test scen
 - **Variables & capture** — Extract dynamic values during execution for later assertions
 - **Conditional execution** — Optional steps, conditional branching, retry policies
 - **Structured preconditions** — Setup actions and device state requirements
-- **TestRail integration** — 1:1 mapping between scenarios and test cases
 
 **Schema version identifier:** All v2 scenarios MUST have `"$schema_version": "2.0"` as the first field.
 
@@ -29,8 +28,7 @@ Test Scenario v2
 │  ├─ app_package (required: bundle/package ID)
 │  └─ metadata (required: app_version, environment)
 ├─ Organization
-│  ├─ tags (optional: filtering tags)
-│  └─ testrail (optional: TestRail mapping)
+│  └─ tags (optional: filtering tags)
 ├─ Setup
 │  ├─ variables (optional: variable definitions)
 │  └─ preconditions (optional: setup actions)
@@ -54,7 +52,6 @@ Test Scenario v2
 | `app_package` | string | **YES** | Android package name or iOS bundle identifier |
 | `metadata` | object | **YES** | Design-time metadata with `app_version` and `environment` |
 | `tags` | array | No | Categorization tags for filtering (max 10 tags, max 20 chars each) |
-| `testrail` | object | No | Optional TestRail integration with `case_id`, `project_id`, `case_url` |
 | `variables` | object | No | Variable declarations for capture_value steps |
 | `preconditions` | object | No | Setup requirements and device actions before test |
 | `steps` | object | **YES** | Named test steps (key = step_id, value = action definition) |
@@ -628,33 +625,6 @@ Design-time metadata about the scenario. Runtime metadata (device, API level, ti
 
 ---
 
-## TestRail Integration
-
-Optional integration with TestRail for 1:1 mapping between scenarios and test cases.
-
-**Fields:**
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `case_id` | string | **YES** | TestRail case ID (e.g., `"C12345"`) |
-| `project_id` | string | **YES** | TestRail project ID (e.g., `"P1"`) |
-| `case_url` | string | **YES** | Full TestRail case URL for reference |
-
-**Example:**
-```json
-{
-  "testrail": {
-    "case_id": "C45678",
-    "project_id": "P12",
-    "case_url": "https://example.testrail.io/index.php?/cases/view/45678"
-  }
-}
-```
-
-When present, the executor automatically syncs test results to TestRail.
-
----
-
 ## Tags
 
 Categorization tags for filtering and organizing scenarios.
@@ -694,11 +664,6 @@ Categorization tags for filtering and organizing scenarios.
     "environment": "staging"
   },
   "tags": ["auth", "p0", "smoke"],
-  "testrail": {
-    "case_id": "C12345",
-    "project_id": "P1",
-    "case_url": "https://example.testrail.io/index.php?/cases/view/12345"
-  },
   "variables": {
     "auth_token": {
       "type": "string",

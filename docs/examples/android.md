@@ -38,11 +38,6 @@ A realistic login scenario demonstrating email validation, password entry, loadi
     "environment": "staging"
   },
   "tags": ["authentication", "login", "happy-path"],
-  "testrail": {
-    "case_id": 1001,
-    "project_id": 1,
-    "case_url": "https://testrail.example.com/index.php?/cases/view/1001"
-  },
   "variables": {
     "user_email": {
       "type": "string",
