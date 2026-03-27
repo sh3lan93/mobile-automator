@@ -439,99 +439,37 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
 ---
 
 ## 6.0 SKILL INSTALLATION
-**PROTOCOL: Copy skill templates from the extension into the project's `.gemini/skills/` directory and populate all placeholders with the gathered project knowledge.**
+**PROTOCOL: Install skill templates from the extension into the project's `.gemini/skills/` directory using the automated installation script.**
 
-### 6.1 Create Skill Directories
+### 6.1 Run Installation Script
 1.  **Announce Action:** "Installing QA automation skills into your project..."
-2.  **Execute:**
-    ```
-    mkdir -p .gemini/skills/mobile-automator-generator/references
-    mkdir -p .gemini/skills/mobile-automator-executor/references
-    mkdir -p .gemini/skills/references
-    ```
+2.  **Execute the installation script:**
+    -   First, try running:
+        ```
+        node ~/.gemini/extensions/mobile-automator/scripts/install-skills.js
+        ```
+    -   If the command fails because the script file does not exist:
+        -   Read `~/.gemini/extensions/mobile-automator/.gemini-extension-install.json`.
+        -   If the JSON contains a `path` or `localPath` field, try:
+            ```
+            node <path_value>/scripts/install-skills.js
+            ```
+        -   If neither path works, announce:
+            > "Skill installation script not found. Please update the extension: `gemini extensions install https://github.com/sh3lan93/mobile-automator`"
+            **HALT.**
 
-### 6.2 Locate Extension Templates
-1.  **Determine the extension installation path:**
-    -   The mobile-automator extension can be installed in two ways:
+3.  **The script will automatically:**
+    -   Read project knowledge from `mobile-automator/setup_state.json`
+    -   Create `.gemini/skills/` directories
+    -   Copy skill templates with placeholder replacement
+    -   Copy reference schemas verbatim
+    -   Verify all files are installed correctly
 
-        **Method 1: Local Development (linked)**
-        - Extension directory: `~/.gemini/extensions/mobile-automator/`
-        - Contains a file: `.gemini-extension-install.json`
-        - This JSON file has a field that contains the actual path to the extension source
+### 6.2 Check Script Output
+1.  **If the script exits successfully** (exit code 0) and prints "All skills installed and verified successfully" → proceed to Section 6.3.
+2.  **If the script exits with an error** (non-zero exit code) → report the error message from the script output to the user and **HALT**.
 
-        **Method 2: GitHub Installation**
-        - Extension directory: `~/.gemini/extensions/mobile-automator/`
-        - Templates are directly at: `~/.gemini/extensions/mobile-automator/templates/`
-
-2.  **Locate the templates directory:**
-    -   **Step A:** Check if `~/.gemini/extensions/mobile-automator/.gemini-extension-install.json` exists.
-    -   **Step B:** If it exists:
-        -   Read the JSON file.
-        -   Extract the source path from the JSON (this is where the extension was linked from).
-        -   The templates directory is: `<source_path>/templates/`
-    -   **Step C:** If it does NOT exist:
-        -   The templates directory is: `~/.gemini/extensions/mobile-automator/templates/`
-    -   **Step D:** Store the resolved templates path for use in subsequent steps.
-
-3.  **Verify the templates exist:**
-    -   Check that the following files exist at the resolved templates path:
-        - `<templates_path>/mobile-automator-generator/SKILL.md`
-        - `<templates_path>/mobile-automator-executor/SKILL.md`
-        - `<templates_path>/mobile-automator-generator/references/scenario_schema.json`
-        - `<templates_path>/mobile-automator-executor/references/result_schema.json`
-        - `<templates_path>/references/mobile-mcp-tools.md`
-    -   If any file is missing, report the error and halt:
-        > "Template file not found: `<file_path>`. Please ensure the mobile-automator extension is properly installed."
-
-### 6.3 Copy and Populate Templates
-1.  **Read the current state** from `mobile-automator/setup_state.json` to get all knowledge values.
-2.  **For each skill template** (`mobile-automator-generator` and `mobile-automator-executor`):
-    -   Read the `SKILL.md` template from `<templates_path>/<skill-name>/SKILL.md` (using the templates path resolved in Section 6.2).
-    -   Replace ALL placeholders with the values from the state:
-
-        | Placeholder | Value Source |
-        |---|---|
-        | `{{project_name}}` | `knowledge.project_name` |
-        | `{{platform_details}}` | `knowledge.platform_details` |
-        | `{{build_system}}` | `knowledge.build_system` |
-        | `{{build_command}}` | `knowledge.build_command` |
-        | `{{app_package}}` | `app.android_package` and/or `app.ios_bundle_id` (format as appropriate) |
-        | `{{environments}}` | `environments` array joined as comma-separated string |
-        | `{{automation_extras}}` | `knowledge.automation_extras` |
-        | `{{architecture}}` | `knowledge.architecture` |
-        | `{{business_domain}}` | `knowledge.business_domain` |
-        | `{{business_critical_paths}}` | `knowledge.business_critical_paths` |
-        | `{{loading_indicators}}` | `knowledge.loading_indicators` |
-        | `{{protected_directories}}` | `knowledge.protected_directories` |
-        | `{{additional_resources}}` | `""` (empty string, unless user provides additional resources) |
-
-    -   Write the populated `SKILL.md` to `.gemini/skills/<skill-name>/SKILL.md`.
-
-3.  **Copy reference schemas and documentation:**
-    -   **For scenario_schema_v2.json (primary):**
-        -   Read the file `<templates_path>/mobile-automator-generator/references/scenario_schema_v2.json`.
-        -   Write the exact content to `.gemini/skills/mobile-automator-generator/references/scenario_schema_v2.json` in the workspace.
-    -   **For scenario_schema.json (legacy v1, kept for backward compatibility):**
-        -   Read the file `<templates_path>/mobile-automator-generator/references/scenario_schema.json`.
-        -   Write the exact content to `.gemini/skills/mobile-automator-generator/references/scenario_schema.json` in the workspace.
-    -   **For result_schema.json:**
-        -   Read the file `<templates_path>/mobile-automator-executor/references/result_schema.json`.
-        -   Write the exact content to `.gemini/skills/mobile-automator-executor/references/result_schema.json` in the workspace.
-    -   **For mobile-mcp-tools.md:**
-        -   Read the file `<templates_path>/references/mobile-mcp-tools.md`.
-        -   Write the exact content to `.gemini/skills/references/mobile-mcp-tools.md` in the workspace.
-
-### 6.4 Verify Installation
-1.  **Verify** that all 6 files exist:
-    - `.gemini/skills/mobile-automator-generator/SKILL.md`
-    - `.gemini/skills/mobile-automator-generator/references/scenario_schema_v2.json`
-    - `.gemini/skills/mobile-automator-generator/references/scenario_schema.json`
-    - `.gemini/skills/mobile-automator-executor/SKILL.md`
-    - `.gemini/skills/mobile-automator-executor/references/result_schema.json`
-    - `.gemini/skills/references/mobile-mcp-tools.md`
-2.  **Verify** that no `{{` placeholders remain in either SKILL.md file. If any remain, announce the error and halt.
-
-### 6.5 Update State
+### 6.3 Update State
 -   Write `mobile-automator/setup_state.json` with:
     ```json
     {
@@ -540,7 +478,7 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
     }
     ```
 
-5.  **Continue:** Proceed to Section 7.0.
+4.  **Continue:** Proceed to Section 7.0.
 
 ---
 
