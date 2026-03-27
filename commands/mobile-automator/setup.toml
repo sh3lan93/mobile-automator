@@ -374,6 +374,19 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
         - Compile a list of found indicator class/widget names.
         - If none found → set to `"common loading indicators (progress bars, spinners, shimmer effects)"`
 
+### 5.1.1 Auto-Detect Business-Critical Paths
+1.  **Announce Action:** "Analyzing your codebase to identify business-critical user paths..."
+2.  **Invoke `@codebase_investigator`** with the following prompt:
+
+    ```
+    @codebase_investigator Analyze this mobile app codebase to identify the business-critical user paths (the most important user-facing flows). Look at: (1) Navigation graphs, route definitions, and deep link handlers to find the main user flow destinations. (2) Screen, Activity, Fragment, ViewController, or page definitions to identify major app sections. (3) Feature module or package structure to understand the app's functional areas. (4) Patterns indicating key flows like authentication (login, signup, password reset), onboarding, checkout, payment, search, profile management, and content consumption. (5) README or documentation files describing key features. Return a concise comma-separated list of the critical user paths you identified (e.g., "onboarding, login, product search, checkout, payment"). If you cannot determine any critical paths with reasonable confidence, say "NONE_DETECTED".
+    ```
+
+3.  **Process the investigation result:**
+    -   Let the response from `@codebase_investigator` be `INVESTIGATION_RESULT`.
+    -   If `INVESTIGATION_RESULT` contains "NONE_DETECTED", is empty, or the invocation failed → set `detected_critical_paths` to `null`.
+    -   Otherwise → set `detected_critical_paths` to the comma-separated path list returned by the investigator. Clean up the list: trim whitespace, remove duplicates, and ensure it reads as a human-friendly comma-separated string (e.g., `"onboarding, login, checkout, payment"`).
+
 ### 5.2 Gather Missing Information and Confirm
 
 **CRITICAL: Consolidate data gathering using the `ask_user` tool.**
@@ -395,14 +408,30 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
     - Question: `Describe your app's business domain in one sentence.`
     - Placeholder: `e.g. food delivery marketplace`
 
-    **Question 4: Business-Critical Paths (type: `text`, ALWAYS ASK)**
-    - Header: `Critical Paths`
-    - Question: `What are the business-critical user paths in your app?`
-    - Placeholder: `e.g. onboarding, login, checkout`
+    **Question 4: Business-Critical Paths (CONDITIONAL based on Section 5.1.1 result)**
+
+    -   **If `detected_critical_paths` is NOT null** (paths were auto-detected):
+        -   Use type: `yesno`
+        -   Header: `Critical Paths`
+        -   Question: `I analyzed your codebase and identified these business-critical paths: [detected_critical_paths]. Are these correct?`
+
+    -   **If `detected_critical_paths` is null** (detection failed or returned nothing):
+        -   Use type: `text`
+        -   Header: `Critical Paths`
+        -   Question: `I couldn't auto-detect critical user paths from your codebase. What are the business-critical user paths in your app?`
+        -   Placeholder: `e.g. onboarding, login, checkout`
 
 2.  **Execute `ask_user`:** Call the tool with the constructed questions array.
     - Wait for the tool response in the same turn.
     - If the user indicated the auto-detected values were incorrect in Q1, follow up with another `ask_user` (type: `text`) asking them for the corrections before proceeding.
+    - **Handle Q4 response (Critical Paths):**
+        - If Q4 was `yesno` and user selected **Yes** → use `detected_critical_paths` as the final value for `business_critical_paths`.
+        - If Q4 was `yesno` and user selected **No** → follow up with an additional `ask_user` call (type: `text`):
+            - Header: `Critical Paths`
+            - Question: `Please provide the correct business-critical user paths for your app.`
+            - Placeholder: `e.g. onboarding, login, checkout`
+            - Wait for the response and use it as the final value for `business_critical_paths`.
+        - If Q4 was `text` (fallback case) → use the user's text response as `business_critical_paths`.
     
 3.  **After receiving all responses:**
     - Record their answers for use in skill generation.
