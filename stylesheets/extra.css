@@ -49,65 +49,60 @@
   --md-accent-bg-color: #f0fdf4;
 }
 
-/* DARK MODE OVERRIDES */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-white: #0F172A;
-    --color-light-gray: #1E293B;
-    --color-black: #FFFFFF;
-    --text-primary: #F1F5F9;
-    --text-secondary: #CBD5E1;
-    --color-medium-gray: #475569;
-  }
-
-  /* Ensure strong/bold text is white in dark mode */
-  .md-typeset strong {
-    color: #FFFFFF !important;
-  }
-
-  /* Ensure headings are white in dark mode */
-  .md-typeset h1,
-  .md-typeset h2,
-  .md-typeset h3,
-  .md-typeset h4,
-  .md-typeset h5,
-  .md-typeset h6 {
-    color: #FFFFFF !important;
-  }
-
-  /* Ensure body text is light in dark mode */
-  .md-typeset {
-    color: #F1F5F9 !important;
-  }
-
-  /* Ensure links are visible */
-  .md-typeset a {
-    color: #10B981 !important;
-  }
-
-  /* Ensure dt (definition terms) are white */
-  .md-typeset dt {
-    color: #FFFFFF !important;
-  }
+/* DARK MODE OVERRIDES - using data attribute for mkdocs-material */
+[data-md-color-scheme="slate"] {
+  --color-white: #0F172A;
+  --color-light-gray: #1E293B;
+  --color-black: #FFFFFF;
+  --text-primary: #F1F5F9;
+  --text-secondary: #CBD5E1;
+  --color-medium-gray: #475569;
 }
 
-/* LINKS */
-a {
+[data-md-color-scheme="slate"] .md-typeset strong {
+  color: #FFFFFF !important;
+}
+
+[data-md-color-scheme="slate"] .md-typeset h1,
+[data-md-color-scheme="slate"] .md-typeset h2,
+[data-md-color-scheme="slate"] .md-typeset h3,
+[data-md-color-scheme="slate"] .md-typeset h4,
+[data-md-color-scheme="slate"] .md-typeset h5,
+[data-md-color-scheme="slate"] .md-typeset h6 {
+  color: #FFFFFF !important;
+}
+
+[data-md-color-scheme="slate"] .md-typeset {
+  color: #F1F5F9 !important;
+}
+
+[data-md-color-scheme="slate"] .md-typeset a {
+  color: #10B981 !important;
+}
+
+[data-md-color-scheme="slate"] .md-typeset dt {
+  color: #FFFFFF !important;
+}
+
+/* Dark mode variables scoped to slate scheme only - never override :root */
+
+/* CONTENT LINKS - scoped to article content only */
+.md-typeset a:not(.md-nav__link):not(.md-source):not(.md-header__button) {
   color: var(--color-green-500);
   text-decoration: none;
   transition: var(--transition-standard);
 }
 
-a:hover {
+.md-typeset a:not(.md-nav__link):hover {
   color: var(--color-green-600);
   text-decoration: underline;
 }
 
-a:visited {
-  color: var(--text-secondary);
+.md-typeset a:not(.md-nav__link):visited {
+  color: var(--color-green-600);
 }
 
-a:active {
+.md-typeset a:not(.md-nav__link):active {
   color: var(--color-green-700);
 }
 
@@ -201,6 +196,26 @@ a:active {
 /* STRIPED TABLE ROWS */
 .md-typeset tbody tr:nth-child(even) {
   background-color: #FAFBFC;
+}
+
+[data-md-color-scheme="slate"] .md-typeset tbody tr:nth-child(even) {
+  background-color: #1E293B;
+}
+
+[data-md-color-scheme="slate"] .md-typeset tbody tr:nth-child(odd) {
+  background-color: #0F172A;
+}
+
+[data-md-color-scheme="slate"] .md-typeset tr:hover {
+  background-color: #334155;
+}
+
+[data-md-color-scheme="slate"] .md-typeset td {
+  color: #F1F5F9;
+}
+
+[data-md-color-scheme="slate"] .md-typeset th {
+  color: #FFFFFF;
 }
 
 /* LISTS */
@@ -387,15 +402,7 @@ a:active {
   outline-offset: 2px;
 }
 
-/* DEFAULT CARD */
-.md-typeset .md-content__inner > * {
-  background-color: var(--color-light-gray);
-  border: 1px solid var(--color-medium-gray);
-  border-radius: 8px;
-  padding: var(--spacing-lg);
-  margin-bottom: var(--spacing-lg);
-  box-shadow: var(--shadow-sm);
-}
+/* DEFAULT CARD - only apply to admonitions and special blocks, not all content */
 
 /* ADMONITION (NOTE/WARNING/TIP) CARDS */
 .md-typeset .admonition {
@@ -435,18 +442,18 @@ a:active {
 
 /* NAVIGATION ITEMS - Unselected */
 .md-nav__link {
-  color: var(--color-white);
+  color: var(--text-primary) !important;
   transition: var(--transition-standard);
 }
 
 .md-nav__link:hover {
-  color: var(--color-white);
+  color: var(--color-green-500) !important;
   background-color: rgba(16, 185, 129, 0.1);
 }
 
 /* NAVIGATION ITEMS - Selected/Active */
 .md-nav__link--active {
-  color: var(--color-green-500);
+  color: var(--color-green-500) !important;
   font-weight: 600;
   background-color: rgba(16, 185, 129, 0.1);
   border-left: 3px solid var(--color-green-500);
@@ -454,35 +461,81 @@ a:active {
 }
 
 /* TABLE OF CONTENTS - Unselected */
-.md-toc__link {
-  color: var(--color-white);
+.md-nav--secondary .md-nav__link {
+  color: var(--text-secondary) !important;
   transition: var(--transition-standard);
 }
 
-.md-toc__link:hover {
-  color: var(--color-white);
-  background-color: rgba(16, 185, 129, 0.1);
+.md-nav--secondary .md-nav__link:hover {
+  color: var(--text-primary) !important;
 }
 
 /* TABLE OF CONTENTS - Active/Selected */
-.md-toc__link--active {
-  color: var(--color-green-500);
+.md-nav--secondary .md-nav__link--active {
+  color: var(--color-green-500) !important;
   font-weight: 600;
-  background-color: rgba(16, 185, 129, 0.1);
 }
 
 /* SIDEBAR ITEMS - Unselected */
 .md-sidebar__scrollwrap a {
-  color: var(--color-white);
+  color: var(--text-primary) !important;
   transition: var(--transition-standard);
 }
 
 .md-sidebar__scrollwrap a:hover {
-  color: var(--color-white);
+  color: var(--color-green-500) !important;
   background-color: rgba(16, 185, 129, 0.1);
 }
 
 /* ACTIVE/SELECTED NAV ITEM */
-.md-nav__item--active .md-nav__link {
-  color: var(--color-green-500);
+.md-nav__item--active > .md-nav__link {
+  color: var(--color-green-500) !important;
+}
+
+/* DARK MODE NAV OVERRIDES */
+[data-md-color-scheme="slate"] .md-nav__link {
+  color: #CBD5E1;
+}
+
+[data-md-color-scheme="slate"] .md-nav__link:hover {
+  color: #10B981;
+}
+
+[data-md-color-scheme="slate"] .md-nav__link--active {
+  color: #10B981 !important;
+}
+
+[data-md-color-scheme="slate"] .md-nav--secondary .md-nav__link {
+  color: #94A3B8;
+}
+
+[data-md-color-scheme="slate"] .md-nav--secondary .md-nav__link:hover {
+  color: #E2E8F0;
+}
+
+[data-md-color-scheme="slate"] .md-nav--secondary .md-nav__link--active {
+  color: #10B981 !important;
+}
+
+[data-md-color-scheme="slate"] .md-sidebar__scrollwrap a {
+  color: #CBD5E1;
+}
+
+[data-md-color-scheme="slate"] .md-sidebar__scrollwrap a:hover {
+  color: #10B981;
+}
+
+/* HEADER - Move theme toggle to the end (after repo link) */
+.md-header__inner {
+  display: flex;
+  align-items: center;
+}
+
+.md-header__option[data-md-component="palette"] {
+  order: 10;
+  margin-left: 0.4rem;
+}
+
+.md-header__source {
+  order: 9;
 }
