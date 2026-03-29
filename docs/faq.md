@@ -66,8 +66,9 @@ Executed Automatically: Tap fields, type text, verify dashboard
 
 See our [examples](examples/index.md) for Android and iOS patterns.
 
-### What is the schema_version field?
+### What is the `$schema_version` field?
 
+**Answer:** Every test scenario JSON file includes `"$schema_version": "2.0"` as its first field. This enables version detection for future schema evolution. All scenarios must include this field.
 **Answer:** Every test scenario JSON file includes `"$schema_version": "2.0"` as its first field. This enables version detection for future schema evolution. All scenarios must include this field.
 
 ### Can I use mobile-automator with my existing tests?
@@ -210,6 +211,7 @@ Generated: `mobile-automator/scenarios/android_login_happy_path.json`
 1. **Review generated scenario** — Check `mobile-automator/scenarios/`
 2. **Edit JSON manually** — Fix element IDs, actions, assertions
 3. **Validate schema** — Ensure it matches [schema reference](reference/schema.md)
+3. **Validate schema** — Ensure it matches [schema reference](reference/schema.md)
 4. **Re-execute** — Run `/mobile-automator:execute` with corrected scenario
 
 **Common edits:**
@@ -229,6 +231,7 @@ For cross-platform apps, generate scenario on each platform to capture platform-
 
 ### How do I parameterize tests (different data)?
 
+**Answer:** Use the `variables` section in scenarios:
 **Answer:** Use the `variables` section in scenarios:
 
 ```json
