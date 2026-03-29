@@ -1,5 +1,5 @@
 ---
-description: "Generate test scenarios from natural language descriptions using mobile-automator's AI-powered test generation with Schema v2."
+description: "Generate test scenarios from natural language descriptions using mobile-automator's AI-powered test generation."
 ---
 
 # Generate Command Guide
@@ -175,7 +175,7 @@ Screenshots help you:
 
 ### Step 5: JSON Generation
 
-The generator creates a v2 scenario JSON file with all information:
+The generator creates a scenario JSON file with all information:
 
 ```json
 {
@@ -404,16 +404,16 @@ Bad:  "Wait 3 seconds"
 
 ### Schema Version
 
-All generated scenarios are v2:
+All generated scenarios use the current schema:
 ```json
 { "$schema_version": "2.0" }
 ```
 
-v2 provides modern features like variables, retry policies, and better assertions.
+The schema provides features like variables, retry policies, and comprehensive assertions.
 
 ### Step IDs (Named Strings)
 
-v2 uses descriptive step IDs instead of integers:
+The schema uses descriptive step IDs:
 ```json
 "steps": {
   "tap_login": {...},
@@ -563,12 +563,12 @@ Generated JSON is fully editable. Common modifications:
 }
 ```
 
-See [Schema v2 Reference](../reference/schema-v2.md) for all available options.
+See [Schema Reference](../reference/schema.md) for all available options.
 
 ---
 
 ## See Also
 
 - [Execute Command Guide](execute.md) — Running your generated scenarios
-- [Schema v2 Reference](../reference/schema-v2.md) — Detailed scenario format
+- [Schema Reference](../reference/schema.md) — Detailed scenario format
 - [Assertion Types Reference](../reference/assertions.md) — All assertion types available

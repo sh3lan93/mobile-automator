@@ -7,40 +7,11 @@ CRITICAL: Do NOT execute scenarios yourself. After pre-flight passes, follow the
 
 ---
 
-## 0.0 SCHEMA VERSION DEPRECATION CHECK
-
-1.  **Check if the user specified `--schema-version 1.0`** in their command invocation.
-    - Example: `/mobile-automator:execute --schema-version 1.0`
-
-2.  **If `--schema-version 1.0` is specified:**
-
-    Determine the current deprecation phase based on today's date relative to the v2 launch date of **2026-02-17**:
-
-    - **Phase 1 (months 0–6, until 2026-08-17):** Non-blocking informational warning:
-      > "⚠️ **Deprecation Notice (Schema v1):** You are requesting execution in schema v1 mode. Schema v1 is deprecated as of 2026-02-17 in favor of v2 (the default). v1 will be completely removed in 12 months (2027-02-17).
-      > To migrate existing v1 scenarios: run `/mobile-automator:migrate <scenario_id>`
-      > Continuing..."
-      Continue with execution.
-
-    - **Phase 2 (months 7–11, 2026-08-17 to 2027-01-17):** Escalated warning, block execution:
-      > "🚫 **Schema v1 Execution Blocked:** Schema v1 is in the final deprecation phase (month 7 of 12). Execution with `--schema-version 1.0` is no longer allowed.
-      > To migrate existing v1 scenarios: run `/mobile-automator:migrate <scenario_id>`"
-      **HALT.**
-
-    - **Phase 3 (month 12+, after 2027-01-17):** Hard fail:
-      > "❌ **Schema v1 Removed:** Schema v1 reached end-of-life on 2027-02-17 and is no longer supported.
-      > Remove `--schema-version 1.0` from your command. To migrate existing v1 scenarios: run `/mobile-automator:migrate <scenario_id>`"
-      **HALT.**
-
-3.  **If no `--schema-version` flag is specified:** Proceed normally. Per-scenario schema version checking is handled by the executor skill at `.gemini/skills/mobile-automator-executor/SKILL.md`.
-
----
-
-## 0.1 DEVICE RESOLUTION
+## 0.0 DEVICE RESOLUTION
 
 **Purpose:** Resolve `selected_device` before pre-flight checks. This value is consumed by Section 1.2.
 
-**config.json absence guard:** If `mobile-automator/config.json` does not exist, skip Section 0.1 entirely — the `--device` flag is effectively unused because Section 1.1 will halt before device selection is needed. This is intentional: the user will receive the "Setup not found. Please run `/mobile-automator:setup` first." error from Section 1.1, which is the appropriate and actionable message. No additional warning about `--device` being ignored is needed.
+**config.json absence guard:** If `mobile-automator/config.json` does not exist, skip Section 0.0 entirely — the `--device` flag is effectively unused because Section 1.1 will halt before device selection is needed. This is intentional: the user will receive the "Setup not found. Please run `/mobile-automator:setup` first." error from Section 1.1, which is the appropriate and actionable message. No additional warning about `--device` being ignored is needed.
 
 1.  **If `--device="<device_id>"` is present in the command:**
     -   Call `mobile_list_available_devices()` to get the list of connected devices.
@@ -68,7 +39,7 @@ CRITICAL: Do NOT execute scenarios yourself. After pre-flight passes, follow the
 3.  Read `mobile-automator/config.json` to load project configuration.
 
 ### 1.2 Verify Device
-1.  **If `selected_device` is already set** (resolved via `--device` in Section 0.1) → announce and proceed. No additional device check needed.
+1.  **If `selected_device` is already set** (resolved via `--device` in Section 0.0) → announce and proceed. No additional device check needed.
     > "ℹ️  Using device: [device_name or device_id] (--device flag)"
 2.  Use `mobile_list_available_devices()` to check for connected devices.
     - If no devices found → "No device connected. Please connect a device, emulator, or simulator and try again." → Halt.

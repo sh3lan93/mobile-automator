@@ -198,7 +198,7 @@ After all steps are executed and recorded:
    - When the tool returns the answers, parse the comma-separated input into a `tags` array.
    - Validate each tag against `^[a-z0-9][a-z0-9-]*$` and length <= 20. If invalid, show an error and re-prompt using `ask_user`.
    - If user leaves it blank or dismisses, set `tags: []`.
-2. Assemble the JSON scenario following **schema v2** at `.gemini/skills/mobile-automator-generator/references/scenario_schema_v2.json`. Include the `tags` array.
+2. Assemble the JSON scenario following the schema at `.gemini/skills/mobile-automator-generator/references/scenario_schema.json`. Include the `tags` array.
 3. **Always include `"$schema_version": "2.0"` as the first field in the JSON.**
 4. **Use named string IDs** for all steps and assertions (snake_case, e.g., `"id": "tap_login"`) — never integers.
 5. **Assertions reference steps by name** (`"after_step": "tap_login"`) — never by number.
@@ -209,13 +209,13 @@ After all steps are executed and recorded:
 7. Save to `mobile-automator/scenarios/<scenario_id>.json`.
 8. Present summary:
    > "✅ Scenario saved: `mobile-automator/scenarios/<scenario_id>.json`
-   > - Schema: v2 | Steps: [N] | Checkpoints: [N] screenshots | Assertions: [N] | Tags: [tag1, tag2]
+   > - Steps: [N] | Checkpoints: [N] screenshots | Assertions: [N] | Tags: [tag1, tag2]
    > - Screenshots: `mobile-automator/screenshots/<scenario_id>/`"
 
-## Step Translation Guide (v2)
-Translate user language to mobile-mcp tools and v2 schema actions:
+## Step Translation Guide
+Translate user language to mobile-mcp tools and schema actions:
 
-| User says | v2 Action | Mobile-MCP Tool | Notes |
+| User says | Action | Mobile-MCP Tool | Notes |
 |---|---|---|---|
 | "open the app", "launch" | `launch_app` | `mobile_launch_app` | |
 | "uninstall", "remove the app" | (precondition device_action) | Uninstall via platform tools before scenario | Use `device_actions` in `preconditions` block |
@@ -258,7 +258,7 @@ Translate user language to mobile-mcp tools and v2 schema actions:
 7. Generate scenario JSON
 ```
 
-### Detecting and Encoding v2 Patterns
+### Detecting and Encoding Patterns
 
 **Dynamic waits** (steps tagged `[DYNAMIC_WAIT]` by the user):
 → Use `wait_for_loading_complete` with `wait_config.indicator: "shimmer"` if shimmer is the loading style.
@@ -310,7 +310,6 @@ Translate user language to mobile-mcp tools and v2 schema actions:
 
 ## Resources
 - **mobile-automator/config.json**: Project configuration.
-- **.gemini/skills/mobile-automator-generator/references/scenario_schema_v2.json**: JSON schema v2 for test scenarios (default). Use this when generating new scenarios.
-- **.gemini/skills/mobile-automator-generator/references/scenario_schema.json**: JSON schema v1 for test scenarios (legacy, deprecated). Only reference when explicitly asked to use `--schema-version 1.0`.
+- **.gemini/skills/mobile-automator-generator/references/scenario_schema.json**: JSON schema for test scenarios. Use this when generating new scenarios.
 - **.gemini/skills/references/mobile-mcp-tools.md**: Mobile-MCP tool mapping reference.
 {{additional_resources}}

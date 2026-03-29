@@ -615,8 +615,7 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
     > ├── mobile-automator-generator/
     > │   ├── SKILL.md
     > │   └── references/
-    > │       ├── scenario_schema_v2.json  ← default (v2)
-    > │       └── scenario_schema.json     ← legacy (v1, deprecated)
+    > │       └── scenario_schema.json
     > └── mobile-automator-executor/
     >     ├── SKILL.md
     >     └── references/result_schema.json

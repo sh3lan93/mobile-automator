@@ -707,7 +707,7 @@ All tools work on both simulators/emulators and real devices.
 
 ## Related References
 
-- [Test Scenario Schema v2](schema-v2.md) — How action types map to MCP tools
+- [Test Scenario Schema](schema.md) — How action types map to MCP tools
 - [Assertion Types](assertions.md) — Verification after tool operations
 - [Test Result Schema](result-schema.md) — How tool operations are logged
 

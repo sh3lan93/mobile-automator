@@ -1,5 +1,5 @@
 ---
-description: "All 27 assertion types in mobile-automator Schema v2 - element state, text content, visual layout, navigation, accessibility, and platform-specific checks."
+description: "All 27 assertion types in mobile-automator - element state, text content, visual layout, navigation, accessibility, and platform-specific checks."
 ---
 
 # Assertion Types Reference
@@ -726,7 +726,7 @@ Actual: Login screen with email input only (password input missing)
 
 ## Related References
 
-- [Test Scenario Schema v2](schema-v2.md) — How to define assertions in JSON
+- [Test Scenario Schema](schema.md) — How to define assertions in JSON
 - [MCP Tools Reference](mcp-tools.md) — Device automation primitives
 - [Test Result Schema](result-schema.md) — How assertion results are stored
 

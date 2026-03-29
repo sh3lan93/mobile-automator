@@ -46,7 +46,7 @@ Comprehensive guide to common questions, issues, and solutions when using mobile
 **Answer:** No. Tests are described in plain English. The generator converts them to JSON. The executor handles all automation using MCP tools. You never touch code unless you want to customize skills.
 
 **Example flow:**
-```
+```text
 Natural Language: "User logs in with email and password"
 ↓
 Generated JSON: scenario_login_happy_path.json
@@ -66,27 +66,14 @@ Executed Automatically: Tap fields, type text, verify dashboard
 
 See our [examples](examples/index.md) for Android and iOS patterns.
 
-### What's the difference between v1 and v2 scenarios?
+### What is the schema_version field?
 
-**v1 (Legacy):**
-- Integer step IDs (step 0, 1, 2)
-- Integer after_step_id references
-- Deprecated (12-month transition period)
-
-**v2 (Current):**
-- Named string step IDs (tap_login, wait_for_home)
-- 14 action types, 27 assertion types
-- Variables and capture_value support
-- Retry policies and conditional steps
-- **Recommended for all new tests**
-
-**Migration:** Use `/mobile-automator:migrate <scenario_id>` to upgrade v1 → v2.
+**Answer:** Every test scenario JSON file includes `"$schema_version": "2.0"` as its first field. This enables version detection for future schema evolution. All scenarios must include this field.
 
 ### Can I use mobile-automator with my existing tests?
 
 **Answer:** Partially. If you have:
 - **Appium/Espresso/XCTest tests** → No direct import, but use mobile-automator for *new* tests
-- **v1 mobile-automator scenarios** → Yes, migrate to v2 with `/mobile-automator:migrate`
 - **Custom test infrastructure** → Yes, mobile-automator complements existing tools
 
 Best approach: Run mobile-automator alongside existing tests for new features.
@@ -134,7 +121,7 @@ If stuck, delete `setup_state.json` and restart fresh.
 3. **Provide platform details manually** if auto-detection fails
 
 **Example:** If setup can't detect iOS, you'll be prompted:
-```
+```text
 Platform detection failed.
 Supported: android, ios, flutter, react-native, kmp, cmp
 Enter your platform: ios
@@ -198,7 +185,7 @@ grep "{{" .gemini/skills/mobile-automator-*/SKILL.md
 5. Review the generated JSON in `mobile-automator/scenarios/`
 
 **Example prompt:**
-```
+```text
 Describe the test scenario:
 > User logs in with email and password, verifies dashboard loads
 ```
@@ -222,7 +209,7 @@ Generated: `mobile-automator/scenarios/android_login_happy_path.json`
 
 1. **Review generated scenario** — Check `mobile-automator/scenarios/`
 2. **Edit JSON manually** — Fix element IDs, actions, assertions
-3. **Validate schema** — Ensure it matches [schema v2 reference](reference/schema-v2.md)
+3. **Validate schema** — Ensure it matches [schema reference](reference/schema.md)
 4. **Re-execute** — Run `/mobile-automator:execute` with corrected scenario
 
 **Common edits:**
@@ -242,7 +229,7 @@ For cross-platform apps, generate scenario on each platform to capture platform-
 
 ### How do I parameterize tests (different data)?
 
-**Answer:** Use the `variables` section in v2 scenarios:
+**Answer:** Use the `variables` section in scenarios:
 
 ```json
 {
@@ -260,7 +247,7 @@ For cross-platform apps, generate scenario on each platform to capture platform-
     "enter_email": {
       "type": "type",
       "element": "email_input",
-      "text": "{{test_email}}"  // ← Use variable reference
+      "text": "{{test_email}}"
     }
   }
 }
@@ -489,10 +476,7 @@ jobs:
 
 **Answer:** Test execution speed depends on app, network, and device:
 
-1. **Reduce waits** — Use shorter timeouts for fast-responding apps:
-   ```json
-   "timeout_seconds": 3  // Instead of 10
-   ```
+1. **Reduce waits** — Use shorter timeouts for fast-responding apps (e.g., `"timeout_seconds": 3` instead of 10)
 
 2. **Remove unnecessary assertions** — Only assert critical checks
 3. **Optimize element selection** — Use unique, visible elements

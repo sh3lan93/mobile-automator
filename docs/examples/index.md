@@ -4,7 +4,7 @@ description: "Real-world test scenario examples for Android and iOS - login flow
 
 # Examples
 
-Real-world test scenario examples for Android and iOS platforms. These comprehensive examples demonstrate best practices for mobile test automation using Mobile Automator's v2 scenario format and showcase how to structure test scenarios for common mobile app workflows and user interactions.
+Real-world test scenario examples for Android and iOS platforms. These comprehensive examples demonstrate best practices for mobile test automation using Mobile Automator's scenario format and showcase how to structure test scenarios for common mobile app workflows and user interactions.
 
 ## Available Examples
 
@@ -29,7 +29,7 @@ Our examples cover a wide range of mobile testing scenarios that you'll encounte
 
 ## Why These Examples Matter
 
-Mobile testing involves unique challenges compared to web testing. Mobile apps must handle diverse device sizes, orientations, network conditions, and user interactions. Our examples show you how to write tests that account for these variables. By studying these scenarios, you'll learn how to write clear, maintainable test scenarios using the v2 JSON schema, structure steps logically to match actual user behavior patterns, create assertions that verify functionality without being brittle, handle asynchronous operations like network requests and animations, and account for platform-specific behavior differences.
+Mobile testing involves unique challenges compared to web testing. Mobile apps must handle diverse device sizes, orientations, network conditions, and user interactions. Our examples show you how to write tests that account for these variables. By studying these scenarios, you'll learn how to write clear, maintainable test scenarios using the JSON schema, structure steps logically to match actual user behavior patterns, create assertions that verify functionality without being brittle, handle asynchronous operations like network requests and animations, and account for platform-specific behavior differences.
 
 ## How to Use These Examples
 

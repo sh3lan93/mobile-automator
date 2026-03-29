@@ -68,7 +68,7 @@ Example prompt:
 
 > "Test the login flow: 1) Launch the app, 2) Tap the login button, 3) Enter email 'test@example.com', 4) Enter password 'password123', 5) Tap Sign In, 6) Wait for home screen to load, 7) Verify welcome message appears"
 
-The AI will generate a complete test scenario in JSON format following Schema v2, including:
+The AI will generate a complete test scenario in JSON format including:
 - Step definitions (launch, tap, type, wait, etc.)
 - Assertions (element visibility, text content, etc.)
 - Capture values for later verification
@@ -166,16 +166,6 @@ The executor can run without the interactive prompts:
 ```bash
 /mobile-automator:execute --scenario login_flow --headless
 ```
-
-### Migrate Old Tests (v1 → v2)
-
-If you have legacy v1 scenarios:
-
-```bash
-/mobile-automator:migrate login_flow_v1
-```
-
-This converts the scenario to the modern v2 format with enhanced assertions and retry logic.
 
 ## Troubleshooting
 

@@ -42,7 +42,7 @@ CLI entry points that validate setup, detect devices, and delegate to skills.
 - `/mobile-automator:setup` — 7-section analysis, skill installation, project learning
 - `/mobile-automator:generate` — Convert natural language to test scenarios
 - `/mobile-automator:execute` — Execute scenarios, collect results
-- `/mobile-automator:migrate` — Convert v1 scenarios to v2 format
+- `/mobile-automator:migrate` — Migrate legacy scenarios to the current format
 
 ### Tier 2: Workspace Skills
 AI-powered prompt templates installed in `.gemini/skills/`, customized with your project knowledge.
