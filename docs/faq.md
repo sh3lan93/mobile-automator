@@ -476,10 +476,7 @@ jobs:
 
 **Answer:** Test execution speed depends on app, network, and device:
 
-1. **Reduce waits** — Use shorter timeouts for fast-responding apps:
-   ```json
-   "timeout_seconds": 3  // Instead of 10
-   ```
+1. **Reduce waits** — Use shorter timeouts for fast-responding apps (e.g., `"timeout_seconds": 3` instead of 10)
 
 2. **Remove unnecessary assertions** — Only assert critical checks
 3. **Optimize element selection** — Use unique, visible elements
