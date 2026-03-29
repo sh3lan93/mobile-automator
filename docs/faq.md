@@ -46,7 +46,7 @@ Comprehensive guide to common questions, issues, and solutions when using mobile
 **Answer:** No. Tests are described in plain English. The generator converts them to JSON. The executor handles all automation using MCP tools. You never touch code unless you want to customize skills.
 
 **Example flow:**
-```
+```text
 Natural Language: "User logs in with email and password"
 ↓
 Generated JSON: scenario_login_happy_path.json
@@ -121,7 +121,7 @@ If stuck, delete `setup_state.json` and restart fresh.
 3. **Provide platform details manually** if auto-detection fails
 
 **Example:** If setup can't detect iOS, you'll be prompted:
-```
+```text
 Platform detection failed.
 Supported: android, ios, flutter, react-native, kmp, cmp
 Enter your platform: ios
@@ -185,7 +185,7 @@ grep "{{" .gemini/skills/mobile-automator-*/SKILL.md
 5. Review the generated JSON in `mobile-automator/scenarios/`
 
 **Example prompt:**
-```
+```text
 Describe the test scenario:
 > User logs in with email and password, verifies dashboard loads
 ```
