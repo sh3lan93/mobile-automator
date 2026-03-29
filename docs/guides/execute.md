@@ -357,7 +357,7 @@ After all steps execute:
 
 ---
 
-## Captured Variables (v2 Scenarios)
+## Captured Variables
 
 If your scenario captures values using `capture_value` steps:
 

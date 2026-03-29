@@ -42,10 +42,6 @@ const SKILL_TEMPLATES = [
 /** Schema and reference files — copied verbatim (byte-perfect). */
 const SCHEMA_COPIES = [
   {
-    src: 'mobile-automator-generator/references/scenario_schema_v2.json',
-    dest: '.gemini/skills/mobile-automator-generator/references/scenario_schema_v2.json',
-  },
-  {
     src: 'mobile-automator-generator/references/scenario_schema.json',
     dest: '.gemini/skills/mobile-automator-generator/references/scenario_schema.json',
   },

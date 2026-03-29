@@ -1,14 +1,14 @@
 ---
-description: "Test Scenario Schema v2 reference - named step IDs, 14 action types, 27 assertion types, variables, retry policies, and conditional logic."
+description: "Test Scenario Schema reference - named step IDs, 14 action types, 27 assertion types, variables, retry policies, and conditional logic."
 ---
 
-# Test Scenario Schema v2 Reference
+# Test Scenario Schema Reference
 
-The default schema for test scenarios. Defines the complete structure for test steps, assertions, variables, execution metadata, and advanced features like retry policies and conditional branching.
+The schema for test scenarios. Defines the complete structure for test steps, assertions, variables, execution metadata, and advanced features like retry policies and conditional branching.
 
 ## Overview
 
-Schema v2 introduces a modern, feature-rich format for defining mobile test scenarios:
+The scenario schema defines the format for mobile test scenarios:
 
 - **Named string step IDs** — `tap_login`, `wait_for_home` (not integer indices)
 - **14 action types** — From simple tap/type to advanced waits and variable capture
@@ -17,12 +17,12 @@ Schema v2 introduces a modern, feature-rich format for defining mobile test scen
 - **Conditional execution** — Optional steps, conditional branching, retry policies
 - **Structured preconditions** — Setup actions and device state requirements
 
-**Schema version identifier:** All v2 scenarios MUST have `"$schema_version": "2.0"` as the first field.
+**Schema version identifier:** All scenarios MUST have `"$schema_version": "2.0"` as the first field.
 
 ## Schema Structure Overview
 
 ```
-Test Scenario v2
+Test Scenario
 ├─ Metadata
 │  ├─ $schema_version (required: "2.0")
 │  ├─ scenario_id (required: snake_case)
@@ -48,7 +48,7 @@ Test Scenario v2
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `$schema_version` | string | **YES** | Must be exactly `"2.0"` for v2 scenarios |
+| `$schema_version` | string | **YES** | Must be exactly `"2.0"` |
 | `scenario_id` | string | **YES** | Unique identifier in snake_case (e.g., `login_happy_path`) |
 | `name` | string | **YES** | Human-readable scenario title |
 | `description` | string | **YES** | What this scenario tests and business value |
@@ -61,7 +61,7 @@ Test Scenario v2
 | `steps` | object | **YES** | Named test steps (key = step_id, value = action definition) |
 | `assertions` | array | **YES** | Array of assertion checks |
 
-### Example Minimal v2 Scenario
+### Example Minimal Scenario
 
 ```json
 {
@@ -622,7 +622,7 @@ Design-time metadata about the scenario. Runtime metadata (device, API level, ti
   "metadata": {
     "app_version": "2.1.0",
     "environment": "staging",
-    "target_version": "v2.x"
+    "target_version": "2.x"
   }
 }
 ```
@@ -767,33 +767,6 @@ Categorization tags for filtering and organizing scenarios.
 
 ---
 
-## Migration from v1
-
-v1 scenarios are deprecated. To migrate:
-
-```bash
-/mobile-automator:migrate <scenario_id>
-```
-
-**Key differences:**
-
-| Feature | v1 | v2 |
-|---------|-----|------|
-| Step IDs | Integer (1, 2, 3) | String snake_case (`tap_login`) |
-| Step references | `after_step_id: 2` | Direct step ID in `sub_steps` |
-| Variables | Limited | Full support with types |
-| Preconditions | Array of strings | Structured object |
-| Actions | 8 types | 14 types |
-| Assertions | 12 types | 27 types |
-| Retry policy | Not supported | Built-in support |
-| Conditions | Not supported | Full conditional execution |
-
-**Timeline:**
-- **Now - 6 months:** v1 supported with deprecation warnings
-- **6-12 months:** v1 blocked from execution (warning → error)
-- **12+ months:** v1 hard fail with migration message
-
----
 
 ## Validation Rules
 

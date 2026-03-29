@@ -99,7 +99,7 @@ mobile-automator/
    - Populated during setup Section 6.0
 
 3. **Schemas** (`templates/*/references/*.json`)
-   - Define test scenario format (v2, v1 legacy)
+   - Define test scenario format
    - Define test result format
    - Referenced by skills for validation
 
@@ -137,7 +137,7 @@ Modifying test scenario or result format:
 
 ```bash
 # Edit schema
-vim templates/mobile-automator-generator/references/scenario_schema_v2.json
+vim templates/mobile-automator-generator/references/scenario_schema.json
 
 # Validate schema syntax
 npm run validate-schemas  # If you add this script
@@ -390,7 +390,7 @@ Explain how to use captured variables
 ```json
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Test Scenario Schema v2",
+  "title": "Test Scenario Schema",
   "type": "object",
   "required": ["$schema_version", "scenario_id", "name", "steps", "assertions"],
   "properties": {
@@ -454,7 +454,7 @@ When making code changes, update corresponding docs:
 
 1. **Updated skill** → Update [Guides](guides/index.md)
 2. **New assertion type** → Update [Assertions](reference/assertions.md)
-3. **Schema changes** → Update [Schema Reference](reference/schema-v2.md)
+3. **Schema changes** → Update [Schema Reference](reference/schema.md)
 4. **New feature** → Add example to [Examples](examples/index.md)
 5. **Bug fix** → Update [Changelog](changelog.md)
 

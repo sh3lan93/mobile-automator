@@ -33,16 +33,13 @@ CLI entry points that perform pre-flight checks and validation:
   - Resolves scenarios
   - Delegates to executor skill
 
-- **`/mobile-automator:migrate`** — Scenario migration tool
-  - Converts v1 scenarios to v2 format
-
 ### Tier 2: Workspace Skills
 
 Project-specific testing logic installed in `.gemini/skills/`:
 
 - **`mobile-automator-generator`** — Converts natural language to test scenarios
   - Takes user description
-  - Generates JSON following Schema v2
+  - Generates JSON following the test scenario schema
   - Creates realistic test flows
   - Includes assertions and capture values
 
@@ -119,8 +116,7 @@ mobile-automator/
     ├── mobile-automator-generator/
     │   ├── SKILL.md                     # Generator prompt template
     │   └── references/
-    │       ├── scenario_schema_v2.json  # Latest schema (default)
-    │       ├── scenario_schema.json     # Legacy schema (v1)
+    │       ├── scenario_schema.json     # Test scenario schema
     │       └── ...
     └── mobile-automator-executor/
         ├── SKILL.md                     # Executor prompt template
@@ -172,16 +168,16 @@ Skills are installed into the user's `.gemini/` workspace directory, not the ext
 - **Isolation**: Multiple projects can have different skill versions
 - **Version control**: Skills are part of your project's git repository
 
-### Why Schema v2?
+### Why This Schema Design?
 
-Schema v2 is a significant upgrade from v1:
+The test scenario schema provides rich, expressive capabilities:
 
-- **14 action types** instead of 8 (added scroll, scroll_to_element, wait_for_loading_complete, capture_value, clear_app_data)
-- **27 assertion types** instead of 12 (expanded coverage across text, visibility, collections, visual, navigation)
+- **14 action types** — scroll, scroll_to_element, wait_for_loading_complete, capture_value, clear_app_data, and more
+- **27 assertion types** — comprehensive coverage across text, visibility, collections, visual, navigation
 - **Advanced control** — retry policies, conditions, sub-steps
 - **Better debugging** — capture values for later assertion, detailed step context
 - **Flakiness handling** — explicit retry policies for async operations
-- **String step IDs** instead of integers (more readable: `tap_login` instead of `1`)
+- **String step IDs** — readable names (`tap_login` instead of `1`)
 
 ### Why Not Modify Your Source Code?
 

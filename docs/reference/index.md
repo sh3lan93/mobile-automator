@@ -12,8 +12,8 @@ Complete reference for all schemas, assertion types, and automation tools used b
 
 **Create test scenarios with:**
 - [27 Assertion Types](assertions.md) — Element visibility, text content, visual state, and more
-- [14 Action Types](schema-v2.md#action-types-14-total) — Launch app, tap, type, wait, capture values, etc.
-- [Schema v2 Documentation](schema-v2.md) — Complete scenario structure and all fields
+- [14 Action Types](schema.md#action-types-14-total) — Launch app, tap, type, wait, capture values, etc.
+- [Schema Documentation](schema.md) — Complete scenario structure and all fields
 
 ### For Test Executors
 
@@ -24,7 +24,7 @@ Complete reference for all schemas, assertion types, and automation tools used b
 ### For Schema Developers
 
 **Extend mobile-automator:**
-- [Full Schema v2](schema-v2.md) — Complete JSON schema definition
+- [Full Schema](schema.md) — Complete JSON schema definition
 - [Assertion Types Reference](assertions.md) — All 27 types with examples
 - [MCP Tool Reference](mcp-tools.md) — All automation primitives
 
@@ -51,7 +51,7 @@ mobile-automator supports 27 assertion types organized in 8 categories for compr
 
 ---
 
-### Test Scenario Schema v2
+### Test Scenario Schema
 
 The default schema for test scenarios. Defines structure for steps, assertions, variables, and execution metadata.
 
@@ -77,7 +77,7 @@ The default schema for test scenarios. Defines structure for steps, assertions, 
 - Conditional execution and retry policies
 - Structured preconditions
 
-**[Schema v2 Reference →](schema-v2.md)**
+**[Schema Reference →](schema.md)**
 
 ---
 
@@ -138,16 +138,16 @@ Low-level device automation primitives for screen interaction, app management, a
 
 ### New to mobile-automator?
 
-1. Start with [Schema v2](schema-v2.md) — Understand test scenario structure
+1. Start with [Schema](schema.md) — Understand test scenario structure
 2. Review [Assertion Types](assertions.md) — Learn what you can verify
 3. Explore [MCP Tools](mcp-tools.md) — See what device automation is available
 4. Check [Result Schema](result-schema.md) — Understand execution output
 
 ### Creating test scenarios?
 
-1. [Schema v2 — Step Reference](schema-v2.md#action-types-14-total) — All 14 action types
+1. [Schema — Step Reference](schema.md#action-types-14-total) — All 14 action types
 2. [Assertion Types](assertions.md) — All 27 assertion types with examples
-3. [Schema v2 — Complete Example](schema-v2.md#complete-example-login-scenario-with-variables) — Full working scenario
+3. [Schema — Complete Example](schema.md#complete-example-login-scenario-with-variables) — Full working scenario
 
 ### Executing tests?
 
@@ -234,20 +234,12 @@ Low-level device automation primitives for screen interaction, app management, a
 
 ## Schema Versioning
 
-### v2.0 (Current, Recommended)
+### Current (2.0)
 
 - **Identifier:** `"$schema_version": "2.0"`
 - **Step IDs:** String snake_case (`tap_login`, `verify_message`)
 - **Features:** Variables, retry policies, conditions, sub-steps, observations
 - **Status:** Fully supported and recommended for new scenarios
-
-### v1.0 (Deprecated, Legacy)
-
-- **Identifier:** No `$schema_version` field or `"1.0"`
-- **Step IDs:** Integer indices (1, 2, 3)
-- **Features:** Basic actions and assertions only
-- **Status:** Supported with deprecation warnings, will be hard-deprecated in 12 months
-- **Migration:** Use `/mobile-automator:migrate <scenario_id>` to upgrade
 
 ---
 

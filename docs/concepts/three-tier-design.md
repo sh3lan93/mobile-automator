@@ -80,14 +80,14 @@ Contain project-specific testing logic, customized with project knowledge gather
 
 - `.gemini/skills/mobile-automator-generator/SKILL.md` — Generator skill prompt
 - `.gemini/skills/mobile-automator-executor/SKILL.md` — Executor skill prompt
-- `.gemini/skills/mobile-automator-generator/references/scenario_schema_v2.json` — Test scenario schema
+- `.gemini/skills/mobile-automator-generator/references/scenario_schema.json` — Test scenario schema
 - `.gemini/skills/mobile-automator-executor/references/result_schema.json` — Result schema
 
 ### Generator Skill
 
 **Input**: Natural language description of a test
 
-**Output**: JSON test scenario following Schema v2
+**Output**: JSON test scenario following the scenario schema
 
 **Key Capabilities**:
 - Parse user intent

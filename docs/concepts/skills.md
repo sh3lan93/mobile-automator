@@ -105,7 +105,7 @@ Generate realistic test scenarios...
 
 ### Purpose
 
-Convert natural language descriptions into structured test scenarios (JSON following Schema v2).
+Convert natural language descriptions into structured test scenarios (JSON following the test scenario schema).
 
 ### Inputs
 
@@ -527,7 +527,7 @@ If a skill isn't behaving as expected:
 
 1. **Check placeholders were replaced**: Ensure no `{{` in skill file
 2. **Review config.json**: Verify project knowledge was detected correctly
-3. **Check schemas**: Review scenario_schema_v2.json and result_schema.json
+3. **Check schemas**: Review scenario_schema.json and result_schema.json
 4. **Test manually**: Use Gemini CLI to invoke skill directly
 5. **Edit for debugging**: Add comments in skill file temporarily
 

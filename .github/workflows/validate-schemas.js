@@ -88,20 +88,20 @@ if (errors > 0) {
   console.log('────────────────────────────────────────\n');
 }
 
-// 3. Validate all prototype scenarios against schema v2
-console.log('Validating prototype scenarios against scenario_schema_v2.json...\n');
+// 3. Validate all prototype scenarios against scenario schema
+console.log('Validating prototype scenarios against scenario_schema.json...\n');
 
-// Find the schema v2 file dynamically
-const schemaV2Files = findJsonFiles('templates').filter(f => f.includes('scenario_schema_v2'));
-if (schemaV2Files.length === 0) {
-  console.log('⚠️  No scenario_schema_v2.json found');
+// Find the scenario schema file dynamically
+const scenarioSchemaFiles = findJsonFiles('templates').filter(f => f.endsWith('scenario_schema.json'));
+if (scenarioSchemaFiles.length === 0) {
+  console.log('⚠️  No scenario_schema.json found');
   console.log('────────────────────────────────────────');
   process.exit(1);
 }
 
-const schemaV2File = schemaV2Files[0];
-const schemaV2 = JSON.parse(fs.readFileSync(schemaV2File, 'utf8'));
-const validate = ajv.compile(schemaV2);
+const scenarioSchemaFile = scenarioSchemaFiles[0];
+const scenarioSchema = JSON.parse(fs.readFileSync(scenarioSchemaFile, 'utf8'));
+const validate = ajv.compile(scenarioSchema);
 
 // Find all prototype scenario files
 const prototypesDir = 'prototypes';
@@ -139,6 +139,6 @@ if (errors > 0) {
   process.exit(1);
 } else {
   console.log('────────────────────────────────────────');
-  console.log('  ✅ All prototype scenarios conform to schema v2');
+  console.log('  ✅ All prototype scenarios conform to the scenario schema');
   console.log('────────────────────────────────────────');
 }

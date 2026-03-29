@@ -272,7 +272,7 @@ Are these correct? (y/n): y
 - Location: `.gemini/skills/mobile-automator-generator/SKILL.md`
 - Purpose: Generate test scenarios from natural language
 - Includes: All 13 placeholders populated with your project details
-- Schemas: `references/scenario_schema_v2.json`, `references/scenario_schema.json`
+- Schemas: `references/scenario_schema.json`
 
 **2. Executor Skill**
 - Location: `.gemini/skills/mobile-automator-executor/SKILL.md`
@@ -317,7 +317,6 @@ Critical paths: onboarding, login, checkout, payment
 ✓ Installing generator skill (SKILL.md)
 ✓ Replacing 13 placeholders...
 ✓ Verifying no placeholders remain: PASSED
-✓ Copying scenario_schema_v2.json
 ✓ Copying scenario_schema.json
 
 ✓ Creating .gemini/skills/mobile-automator-executor/

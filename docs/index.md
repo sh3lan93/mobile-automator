@@ -22,7 +22,7 @@ Testing mobile apps manually is **tedious and error-prone**. Cross-platform test
 - **3-Tier Architecture**: Separation of concerns between CLI commands (pre-flight), workspace skills (test logic), and the MCP automation server
 - **Platform Detection**: Auto-discovers Android, iOS, Flutter, React Native, Kotlin Multiplatform, and Compose Multiplatform projects
 - **Smart Setup**: 7-section interactive workflow that learns your project and installs customized skills
-- **Schema v2**: Next-gen test scenario format with 14 action types, 27 assertion types, and advanced retry/condition logic
+- **Schema**: 14 action types, 27 assertion types, and advanced retry/condition logic
 - **Result Observations**: Captures flakiness, regressions, and state context for smarter debugging
 - **Semantic Vision**: AI-powered visual assertions that tolerate cosmetic changes
 - **Built-in Schemas**: Test scenario and result schemas included in workspace for validation and IDE autocomplete
@@ -60,7 +60,7 @@ Create test scenarios from natural language:
 /mobile-automator:generate
 ```
 
-Describe what you want to test. The AI generates structured JSON scenarios following Schema v2.
+Describe what you want to test. The AI generates structured JSON scenarios.
 
 ### 4. Execute Tests
 
@@ -116,10 +116,9 @@ graph TD
 
 - **7-Section Setup Workflow**: Platform detection, environment discovery, package inference, project analysis
 - **Customized Skills**: Automatically installed and configured for your project
-- **Schema v2**: 14 action types, 27 assertion types, advanced retry/condition logic
+- **Schema**: 14 action types, 27 assertion types, advanced retry/condition logic
 - **Result Observations**: Captures flakiness, regressions, and execution context
 - **Resume Capability**: Setup can resume if interrupted
-- **Schema Migration**: Tools to migrate v1 scenarios to v2
 
 ## Next Steps
 

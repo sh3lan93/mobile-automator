@@ -237,9 +237,8 @@ Uses AI vision to compare screenshots semantically, not pixel-by-pixel.
 | Command | Description | Usage | What It Does |
 |---------|-------------|-------|--------------|
 | **`/mobile-automator:setup`** | One-time setup - analyzes project and installs testing skills | `> /mobile-automator:setup` | • Detects platform (Android/iOS/Flutter/React Native/KMP/CMP)<br>• Discovers build environments (staging, production, etc.)<br>• Infers app package IDs from build files<br>• Analyzes architecture patterns and business domain<br>• Installs customized QA skills<br>• Creates `mobile-automator/` test directory<br>• **Resume support:** If interrupted, run again to resume |
-| **`/mobile-automator:generate`** | **Record** test scenarios from natural language (do this once per test) | `> /mobile-automator:generate`<br><br>Options:<br>• `--set-environment="X"` (use X and save as default)<br>• `--environment="X"` (one-time override, no save) | • Connects to your device/emulator<br>• Asks for environment once, saves preference for future runs<br>• Prompts for test steps in natural language<br>• Executes steps on device while recording<br>• Captures reference screenshots<br>• Generates JSON scenario file (schema v2)<br>**Output:** `mobile-automator/scenarios/<scenario_id>.json` |
+| **`/mobile-automator:generate`** | **Record** test scenarios from natural language (do this once per test) | `> /mobile-automator:generate`<br><br>Options:<br>• `--set-environment="X"` (use X and save as default)<br>• `--environment="X"` (one-time override, no save) | • Connects to your device/emulator<br>• Asks for environment once, saves preference for future runs<br>• Prompts for test steps in natural language<br>• Executes steps on device while recording<br>• Captures reference screenshots<br>• Generates JSON scenario file<br>**Output:** `mobile-automator/scenarios/<scenario_id>.json` |
 | **`/mobile-automator:execute`** | **Replay** saved test scenarios (run repeatedly for regression testing) | `> /mobile-automator:execute <scenario_id>`<br><br>Examples:<br>• Single: `execute login_flow`<br>• Multiple: `execute login_flow checkout_flow`<br>• All: `execute --all`<br>• Interactive: `execute`<br><br>Options:<br>• `--device="id"` (specify device) | • Replays scenario steps on connected device<br>• Captures actual screenshots for comparison<br>• Validates assertions (element exists, text matches, visual state)<br>• Detects flakiness and retries automatically<br>• Generates detailed pass/fail report with diagnostics<br>**Output:** `mobile-automator/results/<run_id>.json` |
-| **`/mobile-automator:migrate`** | **Migrate** a v1 scenario JSON to schema v2 format | `> /mobile-automator:migrate <scenario_id>`<br><br>Examples:<br>• `migrate login_flow`<br>• `migrate` (interactive file selection) | • Analyzes existing v1 scenario<br>• Auto-converts step IDs, assertion IDs, metadata<br>• Interactively resolves ambiguous waits<br>• Creates `.v1.bak` backup before any changes<br>• Outputs valid schema v2 scenario |
 | **`/mobile-automator:list-tags`**| Lists all tags currently used in test scenarios | `> /mobile-automator:list-tags` | • Scans all JSON scenarios<br>• Displays tag counts<br>• Differentiates standard vs custom tags |
 | **`/mobile-automator:report`** | Generate aggregated test reports | `> /mobile-automator:report`<br><br>Options:<br>• `--last N` (default 10)<br>• `--format table\|json\|html`<br>• `--junit` (JUnit XML) | • Aggregates all test results<br>• Shows pass rate, flaky steps, failures<br>• Exports to JSON, HTML, or JUnit XML<br>**Output:** `mobile-automator/results/report.{json,html,xml}` |
 
@@ -320,8 +319,7 @@ your-mobile-project/
         ├── mobile-automator-generator/
         │   ├── SKILL.md               # Customized for YOUR project
         │   └── references/
-        │       ├── scenario_schema_v2.json  # Schema v2 (default)
-        │       └── scenario_schema.json     # Schema v1 (legacy)
+        │       └── scenario_schema.json     # Test scenario schema
         └── mobile-automator-executor/
             ├── SKILL.md               # Customized for YOUR project
             └── references/
@@ -365,7 +363,7 @@ your-mobile-project/
 
 ## 🎨 Test Scenario Schema
 
-Test scenarios are JSON files stored in `mobile-automator/scenarios/` following **schema v2** (default). Key fields:
+Test scenarios are JSON files stored in `mobile-automator/scenarios/`. Key fields:
 
 - **`$schema_version`**: `"2.0"` — required, enables version routing
 - **`scenario_id`**: Unique identifier (snake_case)
@@ -383,8 +381,6 @@ Test scenarios are JSON files stored in `mobile-automator/scenarios/` following 
   - `wait_config` — smart wait parameters (`type`, `indicator`, `timeout_ms`)
 - **`assertions`**: Validation rules — each has a **named string `id`** and references its step by name (`after_step`):
   - 9 types: `element_exists`, `element_not_exists`, `element_text`, `screenshot_match`, `pattern_match`, `value_matches_variable`, `element_count`, `visual_state`, `text_changed`
-
-> **Migrating from v1?** Run `/mobile-automator:migrate <scenario_id>` or see [MIGRATION.md](MIGRATION.md).
 
 Generated scenarios are project-specific and include your app's context (business domain, key features).
 

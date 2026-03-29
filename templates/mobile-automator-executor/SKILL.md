@@ -44,17 +44,9 @@ While executing, you also **passively observe and report** (but never deviate fr
 
 ### 2. Load Scenario
 - Read the JSON scenario file from `mobile-automator/scenarios/`.
-- **Detect schema version:** Read the `$schema_version` field.
-  - If `$schema_version` is `"2.0"` → use **v2 execution path** (this document).
-  - If `$schema_version` is absent or `"1.0"` → use **v1 execution path** (legacy; see v1 SKILL.md notes below).
-- Validate the scenario against the appropriate schema.
+- **Validate schema version:** Read the `$schema_version` field. It must be `"2.0"`. If absent or unrecognized, report an error and halt.
+- Validate the scenario against the schema at `.gemini/skills/mobile-automator-generator/references/scenario_schema.json`.
 - Read the `metadata` to compare recording environment vs current execution environment. Note any differences (different device, API level, environment).
-
-**V1 Legacy Note:** When executing a v1 scenario (no `$schema_version` field):
-- Step IDs are integers — screenshot paths use `step_<integer>.png` format.
-- Assertions reference steps by integer `after_step_id`.
-- No variables, no conditions, no sub_steps, no retry_policy, no wait_config.
-- Show a non-blocking deprecation notice: "⚠️ This scenario uses schema v1 (deprecated). Run `/mobile-automator:migrate <scenario_id>` to upgrade it to v2."
 
 ### 3. Verify Preconditions
 - **Note:** The `/mobile-automator:execute` command has already handled preconditions like `app_uninstalled` and `fresh_install` before invoking this skill.
@@ -64,7 +56,7 @@ While executing, you also **passively observe and report** (but never deviate fr
   - For device preconditions: Use device tools to configure settings (e.g., airplane mode for `"no_network"`)
 - If a precondition cannot be verified or met, report it and ask the user how to proceed.
 
-### 4. Step-by-Step Replay (v2 Execution Path)
+### 4. Step-by-Step Replay
 
 Before executing each step, initialize a **session variable map** (empty object to store captured values).
 
@@ -87,9 +79,9 @@ For each step in the scenario:
 5. **Report progress:**
    > "Step tap_login (4/12): Tapped 'Login' — login form displayed ✅"
 
-**Action-to-tool mapping (v2):**
+**Action-to-tool mapping:**
 
-| v2 Action | Mobile-MCP Tool | Notes |
+| Action | Mobile-MCP Tool | Notes |
 |---|---|---|
 | `launch_app` | `mobile_launch_app` | |
 | `tap` | `mobile_click_on_screen_at_coordinates` | Find element first |
@@ -134,10 +126,10 @@ When executing a `capture_value` action:
 3. Store it in the session variable map: `variables["<capture_to>"] = "<extracted_text>"`.
 4. Report: "Captured '{{capture_to}}' = '<value>'"
 
-### 5. Validate Assertions (v2)
+### 5. Validate Assertions
 For each assertion in the scenario (executed after the referenced step):
 
-**V2 Assertion Types (27 total):**
+**Assertion Types (27 total):**
 
 ---
 
@@ -236,8 +228,7 @@ When asked to run multiple scenarios:
 
 ## Resources
 - **mobile-automator/config.json**: Project configuration.
-- **.gemini/skills/mobile-automator-generator/references/scenario_schema_v2.json**: JSON schema v2 for test scenarios (default).
-- **.gemini/skills/mobile-automator-generator/references/scenario_schema.json**: JSON schema v1 for test scenarios (legacy, deprecated).
+- **.gemini/skills/mobile-automator-generator/references/scenario_schema.json**: JSON schema for test scenarios.
 - **.gemini/skills/mobile-automator-executor/references/result_schema.json**: JSON schema for execution results.
 - **.gemini/skills/references/mobile-mcp-tools.md**: Mobile-MCP tool mapping reference.
 - **mobile-automator/scenarios/**: Source scenario files.

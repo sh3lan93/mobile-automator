@@ -13,7 +13,7 @@ A test result is a comprehensive record of a single scenario execution, capturin
 - **Step-by-step outcomes** — status and duration of each test step
 - **Assertion verdicts** — whether each assertion passed or failed, with expected vs. actual values
 - **Intelligent observations** — regression detection, flakiness flags, and device/environment context
-- **Variable captures** — dynamic values extracted during execution (v2 scenarios only)
+- **Variable captures** — dynamic values extracted during execution
 
 Results are stored as JSON files in `mobile-automator/results/` with the naming pattern `run_YYYYMMDD_HHMMSS.json`.
 
@@ -42,14 +42,14 @@ Run Result
 |-------|------|----------|-------------|
 | `run_id` | string | Yes | Unique run identifier in format `run_YYYYMMDD_HHMMSS`. Example: `run_20260227_145230` |
 | `scenario_id` | string | Yes | ID of the scenario that was executed |
-| `schema_version` | string | No | Version of the scenario schema: "1.0" or "2.0". Optional for backward compatibility with v1 results. |
+| `schema_version` | string | No | Version of the scenario schema: "2.0". |
 | `status` | string | Yes | Overall result status: `"passed"`, `"failed"`, or `"error"` |
 | `metadata` | object | Yes | Execution context including device, app version, environment, timestamp |
 | `total_assertions` | integer | Yes | Total count of assertions in the execution |
 | `passed_assertions` | integer | Yes | Count of assertions that passed |
 | `failed_assertions` | integer | Yes | Count of assertions that failed |
 | `duration_seconds` | number | Yes | Total execution time in seconds (minimum 0) |
-| `captured_variables` | object | No | (v2 only) Variables captured during test execution. Keys are variable names from the scenario, values are string/number/boolean/null |
+| `captured_variables` | object | No | Variables captured during test execution via `capture_value` steps. Keys are variable names from the scenario. |
 | `steps_executed` | array | Yes | Array of executed steps with outcomes and details |
 | `assertion_results` | array | Yes | Array of assertion verdicts with expected vs. actual values |
 | `observations` | array | Yes | Array of intelligent observations (regression, flakiness, state context) |
@@ -73,15 +73,15 @@ Each step execution object captures what happened during that test step:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `step_id` | integer \| string | Yes | Step identifier. Integer (1, 2, 3...) for v1 scenarios, snake_case string (e.g., "tap_login") for v2 scenarios |
+| `step_id` | string | Yes | Step identifier. Snake_case string (e.g., "tap_login"). |
 | `status` | string | Yes | Step execution status: `"passed"`, `"failed"`, `"skipped"`, or `"error"` |
 | `screenshot` | string \| null | No | Path to captured screenshot for this step (relative to results directory) |
 | `error_message` | string \| null | No | Error details if step failed |
 | `retried` | boolean | No | Whether this step was retried due to suspected flakiness (default: false) |
-| `retry_count` | integer | No | (v2 only) Number of retry attempts made for this step (0 = no retries) |
-| `step_duration_ms` | integer | No | (v2 only) Actual time taken to execute this step in milliseconds |
-| `condition_evaluated` | boolean \| null | No | (v2 only) Result of the step's condition evaluation. Null if no condition was set. |
-| `sub_steps_executed` | array | No | (v2 only) Execution results for nested sub-steps if this step had `sub_steps` |
+| `retry_count` | integer | No | Number of retry attempts made for this step (0 = no retries) |
+| `step_duration_ms` | integer | No | Actual time taken to execute this step in milliseconds |
+| `condition_evaluated` | boolean \| null | No | Result of the step's condition evaluation. Null if no condition was set. |
+| `sub_steps_executed` | array | No | Execution results for nested sub-steps if this step had `sub_steps` |
 | `observations` | string \| null | No | Observer trait notes (regression, flakiness, state context) |
 
 ### assertion_results[] Array Items
@@ -90,7 +90,7 @@ Each assertion result object captures whether an assertion passed or failed:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `assertion_id` | integer \| string | Yes | Assertion identifier. Integer (1, 2, 3...) for v1 scenarios, snake_case string (e.g., "assert_login_success") for v2 scenarios |
+| `assertion_id` | string | Yes | Assertion identifier. Snake_case string (e.g., "assert_login_success"). |
 | `status` | string | Yes | Assertion status: `"passed"` or `"failed"` |
 | `expected` | string \| null | No | What was expected (e.g., "Login button visible") |
 | `actual` | string \| null | No | What was actually found (e.g., "Button not found after 5 seconds") |
@@ -106,7 +106,7 @@ Intelligent observations detected during execution using observer traits:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `type` | string | Yes | Observer trait type: `"regression"`, `"flakiness"`, or `"state_context"` |
-| `step_id` | integer \| string \| null | No | Related step if applicable. Integer for v1 scenarios, string for v2 scenarios, null if not step-specific |
+| `step_id` | string \| null | No | Related step if applicable, null if not step-specific. |
 | `message` | string | Yes | Observation detail (human-readable explanation) |
 
 **Observation Types:**
@@ -118,7 +118,7 @@ Intelligent observations detected during execution using observer traits:
 ## Field Validation Rules
 
 - **run_id** — Must match pattern `^run_\d{8}_\d{6}$` (format: run_YYYYMMDD_HHMMSS)
-- **schema_version** — Must be "1.0" or "2.0"
+- **schema_version** — Must be "2.0"
 - **status** (root level) — One of: "passed", "failed", "error"
 - **status** (steps) — One of: "passed", "failed", "skipped", "error"
 - **status** (assertions) — One of: "passed", "failed"
@@ -130,7 +130,7 @@ Intelligent observations detected during execution using observer traits:
 
 ## Examples
 
-### Passed Test Result (v2 Scenario)
+### Passed Test Result
 
 A successful execution of a login scenario with all steps and assertions passing:
 
@@ -219,7 +219,7 @@ A successful execution of a login scenario with all steps and assertions passing
 }
 ```
 
-### Failed Test Result with Flakiness Detection (v2 Scenario)
+### Failed Test Result with Flakiness Detection
 
 A failed execution where a step was retried and flakiness was detected:
 
@@ -319,7 +319,7 @@ A failed execution where a step was retried and flakiness was detected:
 }
 ```
 
-### Error During Execution (v1 Scenario)
+### Error During Execution
 
 An execution that encountered an unexpected error:
 
@@ -327,7 +327,7 @@ An execution that encountered an unexpected error:
 {
   "run_id": "run_20260227_150000",
   "scenario_id": "search_flow",
-  "schema_version": "1.0",
+  "schema_version": "2.0",
   "status": "error",
   "metadata": {
     "app_version": "1.2.2",
@@ -342,39 +342,39 @@ An execution that encountered an unexpected error:
   "duration_seconds": 8.32,
   "steps_executed": [
     {
-      "step_id": 1,
+      "step_id": "enter_search",
       "status": "passed",
-      "screenshot": "steps/step_1.png",
+      "screenshot": "steps/enter_search.png",
       "error_message": null
     },
     {
-      "step_id": 2,
+      "step_id": "submit_search",
       "status": "passed",
-      "screenshot": "steps/step_2.png"
+      "screenshot": "steps/submit_search.png"
     },
     {
-      "step_id": 3,
+      "step_id": "wait_for_results",
       "status": "error",
       "error_message": "MCP server disconnected unexpectedly. Failed to execute mobile_click_on_screen_at_coordinates"
     }
   ],
   "assertion_results": [
     {
-      "assertion_id": 1,
+      "assertion_id": "assert_search_field",
       "status": "passed",
       "message": "Search field visible",
       "expected": "Search field present",
       "actual": "Search field present"
     },
     {
-      "assertion_id": 2,
+      "assertion_id": "assert_search_text",
       "status": "passed",
       "message": "Entered search text correctly",
       "expected": "Text: 'pizza'",
       "actual": "Text: 'pizza'"
     },
     {
-      "assertion_id": 3,
+      "assertion_id": "assert_results_loaded",
       "status": "failed",
       "message": "Search results not loaded due to execution error",
       "expected": "Results displayed",
@@ -387,7 +387,7 @@ An execution that encountered an unexpected error:
       "message": "MCP server lost connection. Device may have disconnected or server crashed."
     }
   ],
-  "summary": "Test encountered an error during execution. MCP server disconnected during step 3. Completed 2 of 5 assertions before failure. Execution completed in 8.32 seconds."
+  "summary": "Test encountered an error during execution. MCP server disconnected during wait_for_results step. Completed 2 of 5 assertions before failure. Execution completed in 8.32 seconds."
 }
 ```
 
@@ -404,8 +404,7 @@ mobile-automator/results/run_YYYYMMDD_HHMMSS.json
 - `mobile-automator/results/run_20260227_150000.json`
 
 Related screenshot files are stored in:
-- `mobile-automator/results/steps/<step_id>.png` (v2)
-- `mobile-automator/results/steps/<step_number>.png` (v1)
+- `mobile-automator/results/steps/<step_id>.png`
 
 ## Connecting Results to Scenarios
 
@@ -468,25 +467,9 @@ for filename in os.listdir("mobile-automator/results/"):
 print(f"Found {len(failed_runs)} failed runs")
 ```
 
-## Schema Versioning
-
-### v2.0 (Current, Recommended)
-
-- String step IDs: `"tap_login"`, `"verify_message"`, etc.
-- Enhanced fields: `retry_count`, `step_duration_ms`, `condition_evaluated`, `sub_steps_executed`
-- Captured variables support: `captured_variables` object
-- Observations support: `regression`, `flakiness`, `state_context`
-
-### v1.0 (Legacy, Deprecated)
-
-- Integer step IDs: `1`, `2`, `3`, etc.
-- Limited retry/timing information
-- No direct captured variable support
-- Results from v1 scenarios are still compatible (integer IDs accepted)
-
 ## Related References
 
-- [Test Scenario Schema v2](schema-v2.md) — The schema for defining test scenarios
+- [Test Scenario Schema](schema.md) — The schema for defining test scenarios
 - [Assertion Types](assertions.md) — Detailed documentation of all assertion types
 - [Execute Command Guide](../guides/execute.md) — How to run tests and generate results
 - [MCP Tools Reference](mcp-tools.md) — Mobile automation primitives available to test steps

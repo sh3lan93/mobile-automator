@@ -918,7 +918,7 @@ When adapting these examples:
 ## Next Steps
 
 - [Android Examples](android.md) — View Android-specific examples
-- [Schema v2 Reference](../reference/schema-v2.md) — Full schema documentation
+- [Schema Reference](../reference/schema.md) — Full schema documentation
 - [Generate Tests](../guides/generate.md) — Create similar tests for your app
 - [Execute Tests](../guides/execute.md) — Run generated tests
 
