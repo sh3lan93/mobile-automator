@@ -11,6 +11,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.0] - 2026-03-30
+
+### 🗑️ Removed
+
+- **Schema v1 Support** — Completely removed legacy v1 schema, migration tooling, and all dual-version routing logic.
+  - Deleted `scenario_schema.json` (v1), `migrate.toml`, `MIGRATION.md`, `docs/guides/migrate.md`
+  - Removed deprecation phase checks from `generate.toml` and `execute.toml`
+  - Removed v1 detection/routing from executor skill template
+  - Removed `/mobile-automator:migrate` command
+
+### 🔄 Changed
+
+- **Schema Rename** — Renamed `scenario_schema_v2.json` → `scenario_schema.json` and `docs/reference/schema-v2.md` → `docs/reference/schema.md` (the `_v2` suffix was vestigial with only one schema version).
+- **Result Schema** — `step_id` and `assertion_id` are now `string`-only (previously accepted both `integer` and `string` for v1 backward compatibility). `schema_version` changed from `enum: ["1.0", "2.0"]` to `const: "2.0"`.
+- **Install Script** — `scripts/install-skills.js` no longer copies the v1 schema to workspace.
+- **CI Validation** — `.github/workflows/validate-schemas.js` updated to reference `scenario_schema.json` instead of `scenario_schema_v2.json`.
+- **Documentation** — Removed all v1/v2/legacy/deprecated/migration references across 30+ files. All "v2" qualifiers dropped — the schema is now just "the schema".
+
+### ✅ Kept
+
+- `$schema_version: "2.0"` field preserved in all schemas for future extensibility.
+- `CHANGELOG.md` historical entries unchanged — they are a record of what happened.
+
+---
+
 ## [0.9.0] - 2026-03-28
 
 ### ✨ Added
