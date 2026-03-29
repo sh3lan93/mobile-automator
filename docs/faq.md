@@ -66,7 +66,7 @@ Executed Automatically: Tap fields, type text, verify dashboard
 
 See our [examples](examples/index.md) for Android and iOS patterns.
 
-### What is the `$schema_version` field?
+### What is the schema_version field?
 
 **Answer:** Every test scenario JSON file includes `"$schema_version": "2.0"` as its first field. This enables version detection for future schema evolution. All scenarios must include this field.
 
@@ -247,7 +247,7 @@ For cross-platform apps, generate scenario on each platform to capture platform-
     "enter_email": {
       "type": "type",
       "element": "email_input",
-      "text": "{{test_email}}"  // ← Use variable reference
+      "text": "{{test_email}}"
     }
   }
 }
