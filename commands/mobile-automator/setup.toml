@@ -695,6 +695,7 @@ After successful Phase 2:
 2.  **Write `mobile-automator/config.json`:**
     ```json
     {
+      "mode": "platform-aware",
       "version": "1.0.0",
       "platform": "<detected_platform>",
       "environments": ["<env1>", "<env2>"],
