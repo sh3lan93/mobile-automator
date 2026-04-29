@@ -73,6 +73,69 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
 
 ---
 
+## 1.5 MODE SELECTION
+**PROTOCOL:** Determine which mode this project will use. Mode is durable in `config.json`; once chosen, it shapes every subsequent setup section and all command branching.
+
+The mode controls:
+- `platform-aware`: today's behavior. Setup branches per platform (Android/iOS/Flutter/RN/KMP/CMP). Skills bake in 13 platform-specific placeholders. Build commands are captured.
+- `platform-agnostic`: NEW. Scenarios are portable across Android and iOS. Setup is shorter (~3 sections). Skills carry only project facts; per-OS resolution happens at runtime via `platform-resolutions.md`. App install is user-managed.
+
+### 1.5.1 — Greenfield path (no existing config)
+
+If `is_existing_setup` is `false`:
+
+1. Use `ask_user` (type: `choice`):
+   - Header: `Mode`
+   - Question: `Which mode would you like to use?`
+   - Options:
+     - `Platform-agnostic (recommended) — portable scenarios across Android & iOS`
+     - `Platform-aware (legacy) — single-OS focus with platform-specific testing logic`
+   - Default: `Platform-agnostic`
+
+2. Set `selected_mode = "platform-agnostic"` or `"platform-aware"` based on the answer.
+3. Set `is_mode_switch = false`.
+4. Persist to `setup_state.json`:
+   ```json
+   {
+     "is_existing_setup": false,
+     "selected_mode": "<chosen>",
+     "is_mode_switch": false
+   }
+   ```
+5. Skip § 1.6 (no migration needed). Branch on `selected_mode`:
+   - `platform-aware` → continue to § 2.0 (existing aware flow).
+   - `platform-agnostic` → jump to § A.1 (new agnostic flow).
+
+### 1.5.2 — Existing-project path
+
+If `is_existing_setup` is `true`:
+
+1. Use `ask_user` (type: `choice`):
+   - Header: `Mode`
+   - Question: `This project is currently configured in [current_mode] mode. What would you like to do?`
+   - Options:
+     - `Resume / re-verify current setup ([current_mode])`
+     - `Switch to [the other mode]`
+     - `Cancel`
+   - Default: `Resume / re-verify current setup`
+
+2. Branch on the answer:
+   - **Resume current**: set `selected_mode = current_mode`, `is_mode_switch = false`. Skip § 1.6. Branch on `selected_mode` as in § 1.5.1.
+   - **Switch**: set `selected_mode = the other mode`, `is_mode_switch = true`. Continue to § 1.6 (Migration sub-flow).
+   - **Cancel**: halt setup. Print: `Setup cancelled. Existing configuration is unchanged.`
+
+3. Persist:
+   ```json
+   {
+     "is_existing_setup": true,
+     "current_mode": "<previous>",
+     "selected_mode": "<chosen>",
+     "is_mode_switch": <true|false>
+   }
+   ```
+
+---
+
 ## 2.0 PLATFORM DETECTION
 **PROTOCOL: Analyze the project files to determine the mobile platform.**
 
