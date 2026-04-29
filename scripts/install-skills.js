@@ -302,8 +302,34 @@ function main() {
   const projectRoot = process.cwd();
   const extensionPath = path.resolve(__dirname, '..');
   const templatesPath = path.join(extensionPath, 'templates');
+  const argv = process.argv.slice(2);
 
-  const args = parseArgs(process.argv.slice(2));
+  // Subcommand: migrate-helpers
+  if (argv[0] === 'migrate-helpers') {
+    const oldMode = (argv.find(a => a.startsWith('--old-mode=')) || '').split('=')[1];
+    if (!oldMode) {
+      console.error('ERROR: --old-mode=<mode> is required for migrate-helpers');
+      process.exit(1);
+    }
+    // Phase 1: lint scenarios (read-only)
+    const scenariosDir = path.join(projectRoot, 'mobile-automator', 'scenarios');
+    const findings = lintScenariosForAgnostic(scenariosDir);
+    if (findings.length > 0) {
+      console.log(`\n⚠ Lint findings (${findings.length}) — informational, scenarios were NOT modified:`);
+      for (const f of findings) {
+        console.log(`  • ${f.file}: ${f.finding}\n    → ${f.suggestion}`);
+      }
+    } else {
+      console.log('\n✓ Lint: no portability concerns found in existing scenarios.');
+    }
+    // Phase 2: backup config + archive skills
+    backupConfig(projectRoot, oldMode);
+    archiveExistingSkills(projectRoot, oldMode);
+    console.log('\n✅ migrate-helpers complete. Run install-skills.js with the destination mode next.');
+    process.exit(0);
+  }
+
+  const args = parseArgs(argv);
 
   let mode;
   try {
