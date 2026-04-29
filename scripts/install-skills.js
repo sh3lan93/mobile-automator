@@ -263,6 +263,37 @@ function backupConfig(projectRoot, oldMode) {
   console.log(`✓ Backed up config → ${bak}`);
 }
 
+function lintScenariosForAgnostic(scenariosDir) {
+  if (!fs.existsSync(scenariosDir)) return [];
+  const files = fs.readdirSync(scenariosDir).filter(f => f.endsWith('.json'));
+  const findings = [];
+
+  for (const f of files) {
+    const fullPath = path.join(scenariosDir, f);
+    let scenario;
+    try {
+      scenario = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
+    } catch {
+      continue; // malformed JSON — out of scope for this lint
+    }
+
+    const steps = Array.isArray(scenario.steps) ? scenario.steps : [];
+    steps.forEach((step, idx) => {
+      // press_button("BACK") on Android — suggest press_back
+      if (step.action === 'press_button' && step.value === 'BACK') {
+        findings.push({
+          file: fullPath,
+          line: idx + 1, // approximate; we don't parse JSON line-by-line
+          finding: `press_button("BACK") (Android-only) at step "${step.id || idx}"`,
+          suggestion: 'replace with action: "press_back" (semantic, portable across Android/iOS)',
+        });
+      }
+    });
+  }
+
+  return findings;
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -411,6 +442,7 @@ module.exports = {
   buildAgnosticPlaceholderMap,
   archiveExistingSkills,
   backupConfig,
+  lintScenariosForAgnostic,
 };
 
 if (require.main === module) main();
