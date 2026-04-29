@@ -29,6 +29,20 @@ CRITICAL: Do NOT execute scenarios yourself. After pre-flight passes, follow the
 
 ---
 
+## 0.5 MODE READ
+
+**Purpose:** Determine which operating mode the project uses. This value drives branching in Section 1.3.
+
+**config.json absence guard:** If `mobile-automator/config.json` does not exist, skip Section 0.5 entirely. Section 1.1 will handle the missing config error with the appropriate message.
+
+1. Read `mobile-automator/config.json`.
+2. Set `MODE = config.mode`. If the `mode` key is absent, default `MODE = "platform-aware"` (v0.10 implicit default — pre-agnostic projects are treated as platform-aware).
+3. If `MODE` is not one of `platform-aware` / `platform-agnostic`, halt immediately:
+   > "ERROR: Unknown mode `<value>` in config.json. Expected `platform-aware` or `platform-agnostic`. Re-run setup or fix the config manually."
+   **HALT.**
+
+---
+
 ## 1.0 PRE-FLIGHT CHECKS
 
 ### 1.1 Verify Setup
@@ -59,25 +73,42 @@ CRITICAL: Do NOT execute scenarios yourself. After pre-flight passes, follow the
     -   If `app.android_packages` or `app.ios_bundle_ids` exists in config (environment-specific mapping):
         -   Use the package ID for the scenario's environment: `app.android_packages[scenario.metadata.environment]` or `app.ios_bundle_ids[scenario.metadata.environment]`
     -   Otherwise, use the single package ID: `app.android_package` or `app.ios_bundle_id`
-4.  **Handle preconditions automatically:**
-    -   **If preconditions include `"app_uninstalled"` or `"fresh_install"`:**
-        -   Announce: "Scenario requires fresh install. Uninstalling existing app..."
-        -   Uninstall the app if it exists (use `mobile_uninstall_app` tool)
-        -   Build the app using `[build_command]` from config
-        -   Install the app
-        -   Do NOT ask the user - this is automatic based on preconditions
-    -   **If preconditions include `"app_not_previously_installed"`:**
-        -   Check if the app has ever been installed (check for app data directories)
-        -   If found, uninstall and clear all app data
-    -   **Otherwise (no uninstall preconditions):**
-        -   Use the `ask_user` tool (type: `choice`) to confirm:
-            - Header: `Build & Install`
-            - Question: If the original command used `--all`, ask: `I'll be testing [app_package] on [device_name]. Should I build and install the app?` (omit environment — scenarios may span multiple environments). Otherwise ask: `I'll be testing [app_package] ([scenario_environment]) on [device_name]. Should I build and install the app?`
-            - Options:
-              - `Build and install` (description: `using: [build_command]`)
-              - `Already installed` (description: `skip build`)
-        -   If `Build and install` → execute the build command and install
-        -   If `Already installed` → verify the app is installed using `mobile_launch_app` as a check
+4.  **Branch on MODE:**
+
+    **If MODE = platform-aware:**
+    - **Handle preconditions automatically:**
+        -   **If preconditions include `"app_uninstalled"` or `"fresh_install"`:**
+            -   Announce: "Scenario requires fresh install. Uninstalling existing app..."
+            -   Uninstall the app if it exists (use `mobile_uninstall_app` tool)
+            -   Build the app using `[build_command]` from config
+            -   Install the app
+            -   Do NOT ask the user - this is automatic based on preconditions
+        -   **If preconditions include `"app_not_previously_installed"`:**
+            -   Check if the app has ever been installed (check for app data directories)
+            -   If found, uninstall and clear all app data
+        -   **Otherwise (no uninstall preconditions):**
+            -   Use the `ask_user` tool (type: `choice`) to confirm:
+                - Header: `Build & Install`
+                - Question: If the original command used `--all`, ask: `I'll be testing [app_package] on [device_name]. Should I build and install the app?` (omit environment — scenarios may span multiple environments). Otherwise ask: `I'll be testing [app_package] ([scenario_environment]) on [device_name]. Should I build and install the app?`
+                - Options:
+                  - `Build and install` (description: `using: [build_command]`)
+                  - `Already installed` (description: `skip build`)
+            -   If `Build and install` → execute the build command and install
+            -   If `Already installed` → verify the app is installed using `mobile_launch_app` as a check
+
+    **If MODE = platform-agnostic:**
+    - Probe app presence on the selected device:
+        - Android: run `adb shell pm list packages | grep <android_package>` (or equivalent via MCP tool).
+        - iOS: check via simctl or the MCP tool equivalent.
+    - If the app is present → announce: `"✅ App detected on device. Proceeding."` and continue.
+    - If the app is absent → use the `ask_user` tool (type: `choice`) to prompt:
+        - Header: `App not installed`
+        - Question: `Mobile-automator (agnostic mode) does not auto-install apps. Please install [project_name] on the device, then choose:`
+        - Options:
+          - `App is now installed` (description: `re-check device`)
+          - `Cancel` (description: `abort the command`)
+    - If `Cancel` → halt immediately. **HALT.**
+    - If `App is now installed` → re-probe; if still absent, repeat the prompt.
 
 ---
 
