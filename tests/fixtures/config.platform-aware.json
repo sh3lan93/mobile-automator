@@ -1,17 +1,28 @@
 {
   "mode": "platform-aware",
-  "project_name": "Sample",
+  "version": "1.0.0",
   "platform": "android",
-  "platform_details": "Android (minSdk 24, targetSdk 34)",
-  "build_system": "Gradle",
-  "build_command": "./gradlew assembleStaging",
-  "android_package": "com.example.app",
-  "ios_bundle_id": null,
   "environments": ["production", "staging"],
   "default_environment": "staging",
-  "architecture": "MVVM with Clean Architecture",
-  "business_domain": "Sample app",
-  "business_critical_paths": ["login", "checkout"],
-  "loading_indicators": ["CircularProgressIndicator"],
-  "protected_directories": ["app/src/main"]
+  "app": {
+    "android_package": "com.example.app",
+    "android_packages": {
+      "production": "com.example.app",
+      "staging": "com.example.app.staging"
+    },
+    "ios_bundle_id": null,
+    "ios_bundle_ids": {}
+  },
+  "knowledge": {
+    "project_name": "Sample",
+    "architecture": "MVVM with Clean Architecture",
+    "business_domain": "Sample app",
+    "business_critical_paths": "login, checkout",
+    "build_command": "./gradlew assembleStaging"
+  },
+  "screenshot_settings": {
+    "default_tolerance": 0.9,
+    "format": "png"
+  },
+  "created_at": "2024-01-01T00:00:00.000Z"
 }

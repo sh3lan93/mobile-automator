@@ -9,16 +9,29 @@ describe('config.json shape per mode', () => {
   const agnostic = JSON.parse(fs.readFileSync(path.join(FIX, 'config.platform-agnostic.json'), 'utf8'));
 
   it('aware mode has the documented field set', () => {
+    // Top-level shape matches what setup.toml § 7.2 actually writes
     expect(Object.keys(aware).sort()).toEqual([
-      'android_package', 'architecture', 'build_command', 'build_system',
-      'business_critical_paths', 'business_domain', 'default_environment',
-      'environments', 'ios_bundle_id', 'loading_indicators', 'mode',
-      'platform', 'platform_details', 'project_name', 'protected_directories',
+      'app', 'created_at', 'default_environment', 'environments',
+      'knowledge', 'mode', 'platform', 'screenshot_settings', 'version',
     ]);
     expect(aware.mode).toBe('platform-aware');
+    // Nested app shape
+    expect(Object.keys(aware.app).sort()).toEqual([
+      'android_package', 'android_packages', 'ios_bundle_id', 'ios_bundle_ids',
+    ]);
+    // Nested knowledge shape
+    expect(Object.keys(aware.knowledge).sort()).toEqual([
+      'architecture', 'build_command', 'business_critical_paths',
+      'business_domain', 'project_name',
+    ]);
+    // screenshot_settings shape
+    expect(Object.keys(aware.screenshot_settings).sort()).toEqual([
+      'default_tolerance', 'format',
+    ]);
   });
 
-  it('agnostic mode is a strict subset of aware fields plus mode', () => {
+  it('agnostic mode has the documented flat field set', () => {
+    // Agnostic config (§ A.7) uses a flat shape — no nested app/knowledge blocks
     const expected = [
       'android_package', 'business_critical_paths', 'business_domain',
       'default_environment', 'environments', 'ios_bundle_id',
@@ -28,8 +41,10 @@ describe('config.json shape per mode', () => {
     expect(agnostic.mode).toBe('platform-agnostic');
   });
 
-  it('agnostic does NOT include aware-only fields', () => {
-    for (const f of ['platform', 'platform_details', 'build_system', 'build_command', 'architecture']) {
+  it('agnostic does NOT include aware-only top-level keys', () => {
+    // Aware-only concerns live inside app{} and knowledge{} — not at root in either shape.
+    // The agnostic root should not expose nested aware-only sub-objects.
+    for (const f of ['app', 'knowledge', 'screenshot_settings', 'version', 'platform']) {
       expect(agnostic[f]).toBeUndefined();
     }
   });
