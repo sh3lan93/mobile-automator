@@ -36,8 +36,21 @@ describe('Schema additive over v2.0', () => {
     }
   });
 
-  it('current schema_version is at least 2.0', () => {
-    const text = fs.readFileSync(currentPath, 'utf8');
-    expect(text).toMatch(/2\.\d+/);
+  it('current schema preserves "2.0" in $schema_version enum', () => {
+    // Walk the schema to find the $schema_version property's enum.
+    function findEnum(node) {
+      if (node && typeof node === 'object') {
+        if (node.properties && node.properties.$schema_version && Array.isArray(node.properties.$schema_version.enum)) {
+          return node.properties.$schema_version.enum;
+        }
+        for (const v of Object.values(node)) {
+          const found = findEnum(v);
+          if (found) return found;
+        }
+      }
+      return null;
+    }
+    const enumValues = findEnum(cur);
+    expect(enumValues).toContain('2.0');
   });
 });
