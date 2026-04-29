@@ -90,6 +90,31 @@ xcrun simctl boot "iPhone 15 Pro"
 
 ---
 
+## Manual Restore from Archive
+
+If a migration leaves your project in an unexpected state, you can restore the previous skills and config manually:
+
+```bash
+# 1. Find the archive
+ls .gemini/skills/.archive/
+
+# 2. Restore the skills
+rm -rf .gemini/skills/mobile-automator-generator
+rm -rf .gemini/skills/mobile-automator-executor
+mv .gemini/skills/.archive/generator-<old-mode>-<timestamp> \
+   .gemini/skills/mobile-automator-generator
+mv .gemini/skills/.archive/executor-<old-mode>-<timestamp> \
+   .gemini/skills/mobile-automator-executor
+
+# 3. Restore the config
+mv mobile-automator/config.json.<old-mode>.bak \
+   mobile-automator/config.json
+```
+
+Replace `<old-mode>` with `platform-aware` or `platform-agnostic` and `<timestamp>` with the timestamp shown in the archive directory listing.
+
+---
+
 ## Getting More Help
 
 If you encounter an issue not listed here:

@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.11.0] — 2026-04-29
+
+### ✨ Added
+
+- **Platform-agnostic mode** — scenarios are portable across Android and iOS.
+  - New `mode` field in `config.json` (`platform-aware` | `platform-agnostic`).
+  - New § 1.5 (Mode Selection) in setup; new agnostic setup flow at §§ A.1–A.7.
+  - New `templates/references/platform-resolutions.md` runtime contract for OS-shaped affordances.
+  - Four new semantic actions: `press_back`, `dismiss_keyboard`, `grant_permission`, `deny_permission`.
+  - Schema 2.1 (additive over 2.0 — adds `mode` metadata field and semantic actions; all 2.0 scenarios are valid 2.1 without changes).
+  - Migration sub-flow (§ 1.6) with 3-phase atomicity, archive, and manual restore.
+
+### 🔄 Changed
+
+- `install-skills.js` is now mode-aware via `--mode=<mode>` flag.
+- Aware-mode skill templates moved to `templates/mobile-automator-{role}/aware/`; agnostic templates added at `templates/mobile-automator-{role}/agnostic/`.
+
+### 🔁 Migration
+
+- v0.10 projects continue to work without change (config without `mode` field is treated as implicit `platform-aware`).
+- To migrate to agnostic mode, re-run `/mobile-automator:setup` and select "Switch to platform-agnostic" at § 1.5.
+
+---
+
 ## [0.10.0] - 2026-03-30
 
 ### 🗑️ Removed
