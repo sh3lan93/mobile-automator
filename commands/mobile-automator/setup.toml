@@ -816,4 +816,38 @@ If `is_existing_setup` is `true`:
    - Set `setup_state.environments = []` and `setup_state.default_environment = null`.
 
 4. Persist `setup_state.json` with `last_successful_step: "A.5"`.
+
+### A.6 — Skill Installation (Agnostic)
+
+**PROTOCOL:** Install the agnostic-mode skills by invoking the deterministic Node.js script with `--mode=platform-agnostic`.
+
+1. **Persist `selected_mode` into `setup_state.json`** if not already present (it should be from § 1.5):
+   ```json
+   { "selected_mode": "platform-agnostic" }
+   ```
+
+2. **Invoke the installer:**
+   - First, try running:
+     ```
+     node ~/.gemini/extensions/mobile-automator/scripts/install-skills.js --mode=platform-agnostic
+     ```
+   - If the command fails because the script file does not exist:
+     - Read `~/.gemini/extensions/mobile-automator/.gemini-extension-install.json`.
+     - If the JSON contains a `path` or `localPath` field, try:
+       ```
+       node <path_value>/scripts/install-skills.js --mode=platform-agnostic
+       ```
+     - If neither path works, announce:
+       > "Skill installation script not found. Please update the extension: `gemini extensions install https://github.com/sh3lan93/mobile-automator`"
+       **HALT.**
+
+3. **Verify success:**
+   - `.gemini/skills/mobile-automator-generator/SKILL.md` exists, no `{{` remaining.
+   - `.gemini/skills/mobile-automator-executor/SKILL.md` exists, no `{{` remaining.
+   - `.gemini/skills/references/platform-resolutions.md` exists.
+   - `.gemini/skills/references/mobile-mcp-tools.md` exists.
+
+4. If the script exits non-zero, surface the error to the user and halt — do NOT continue to § A.7.
+
+5. Persist `setup_state.json` with `last_successful_step: "A.6"`.
 """
