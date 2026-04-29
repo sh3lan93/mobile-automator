@@ -2,6 +2,30 @@
 
 This extension provides mobile app test scenario generation and execution. It bundles the `mobile-mcp` MCP server for device interaction (screenshots, taps, swipes, text input, app management) across iOS and Android — simulators, emulators, and real devices.
 
+## Modes
+
+Mobile Automator supports two modes stored in `mobile-automator/config.json` under the `"mode"` key:
+
+- **`platform-aware`** — skills are generated with full OS-specific knowledge (Android or iOS). Default for single-platform projects and legacy v0.10 configs that predate this field.
+- **`platform-agnostic`** — skills are generated without hard-coding OS details; scenarios are portable across Android and iOS. Used by cross-platform projects (Flutter, React Native, KMP, CMP).
+
+### Four semantic actions (agnostic mode only)
+
+When `mode` is `"platform-agnostic"`, scenarios may use four semantic actions instead of OS-specific primitives. The executor resolves each action using the runtime contract defined in `templates/references/platform-resolutions.md` (also distributed to `.gemini/skills/mobile-automator-executor/references/platform-resolutions.md`):
+
+| Semantic action | Runtime resolution |
+|---|---|
+| `press_back` | Android: BACK key; iOS: swipe-right or nav-bar back button |
+| `dismiss_keyboard` | Android: BACK key; iOS: Keyboard Dismiss / tap outside |
+| `grant_permission` | Both: tap the "Allow" button in the OS permission dialog |
+| `deny_permission` | Android: tap "Deny"; iOS: tap "Don't Allow" |
+
+### Schema 2.1
+
+`$schema_version: "2.1"` is additive over `"2.0"`: it adds the optional `mode` metadata field and the four semantic actions listed above. Any `"2.0"` scenario is a valid `"2.1"` document with no changes required.
+
+---
+
 ## Terminology
 
 - **Test Scenario**: A JSON file describing a sequence of user actions and expected outcomes for a specific mobile app flow.
@@ -36,7 +60,8 @@ When resolving a scenario or result file:
 
 Schema definitions are owned by their respective skills:
 
-- **Test Scenario Schema:** `.gemini/skills/mobile-automator-generator/references/scenario_schema.json` — schema for generated test scenarios. Required field `$schema_version: "2.0"`.
+- **Test Scenario Schema:** `.gemini/skills/mobile-automator-generator/references/scenario_schema.json` — schema for generated test scenarios. Required field `$schema_version: "2.0"` (or `"2.1"` for scenarios using agnostic mode or semantic actions).
+- **Platform Resolutions:** `.gemini/skills/mobile-automator-executor/references/platform-resolutions.md` — runtime contract for OS-shaped semantic actions in agnostic mode.
 - **Test Run Result Schema:** `.gemini/skills/mobile-automator-executor/references/result_schema.json` — defines the format for execution result reports.
 
 ## Mobile-MCP Tool Mapping

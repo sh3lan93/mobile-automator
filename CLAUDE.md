@@ -10,6 +10,65 @@ Mobile Automator is a **Gemini CLI extension** that provides intelligent mobile 
 
 **Implementation Status**: ✅ **Production-ready and feature-complete.** The extension includes comprehensive project analysis (7-section setup workflow), automatic skill installation with placeholder replacement, and intelligent test generation/execution.
 
+## Modes
+
+Mobile Automator supports two operating modes, selected during setup and stored in `mobile-automator/config.json`:
+
+| Mode | `config.json` value | Best for |
+|------|---------------------|----------|
+| **Platform-aware** | `"platform-aware"` | Single-OS projects or tests that rely on OS-specific UI patterns |
+| **Platform-agnostic** | `"platform-agnostic"` | Cross-platform apps (Flutter, React Native, KMP, CMP) shipping to both Android and iOS |
+
+### Mode field in config.json
+
+```json
+{
+  "mode": "platform-agnostic",
+  ...
+}
+```
+
+**Backward compatibility**: v0.10 configs that predate this field are treated as `"platform-aware"` at runtime. No manual migration is needed to keep existing behaviour.
+
+### Placeholder count by mode
+
+- **Platform-aware mode** — 13 placeholders (including `{{platform_details}}`, `{{build_command}}`, `{{automation_extras}}`)
+- **Platform-agnostic mode** — 6 placeholders (project-level only: `{{project_name}}`, `{{architecture}}`, `{{business_domain}}`, `{{business_critical_paths}}`, `{{environments}}`, `{{additional_resources}}`)
+
+### Four semantic actions (agnostic mode)
+
+Instead of OS-specific primitives, agnostic scenarios use four semantic actions resolved at runtime via `templates/references/platform-resolutions.md`:
+
+| Semantic action | Android resolution | iOS resolution |
+|---|---|---|
+| `press_back` | `BACK` hardware key | Swipe-right gesture or nav-bar back |
+| `dismiss_keyboard` | `BACK` key / tap outside | Keyboard Dismiss button / tap outside |
+| `grant_permission` | Dialog "Allow" tap | Dialog "Allow" tap |
+| `deny_permission` | Dialog "Deny" tap | Dialog "Don't Allow" tap |
+
+### Schema 2.1
+
+Schema version `2.1` is additive over `2.0`: it introduces the `mode` metadata field and the four semantic actions. Scenarios without these fields are valid 2.1 documents.
+
+### Setup flow by mode
+
+- **Section 1.5** (new) — Mode Selection prompt. After platform detection, setup asks whether to configure in `platform-aware` (default) or `platform-agnostic` mode.
+- **Sections A.1–A.7** — Agnostic-mode setup flow. Runs in place of the platform-aware sections when agnostic mode is chosen.
+
+### Migration UX (§ 1.6)
+
+When re-running setup on an existing project and switching modes, setup executes a 3-phase atomic migration:
+
+1. **Carry-forward** — values that apply to both modes (project name, business domain, environments, architecture) are preserved.
+2. **Drop** — OS-specific values (build command, platform SDK details, automation extras) are dropped from the new config.
+3. **Re-ask** — agnostic-only fields not present in the old config are prompted interactively.
+4. **Archive** — the previous skills are moved to `.gemini/skills/.archive/` and the previous config is backed up as `mobile-automator/config.json.<old-mode>.bak`.
+5. **Manual restore** — see TROUBLESHOOTING.md § "Manual Restore from Archive" if the migration leaves the project in an unexpected state.
+
+The migration is fully reversible.
+
+---
+
 ## Architecture
 
 ### Three-Tier Design
@@ -55,15 +114,23 @@ mobile-automator/
 │       ├── setup.toml         # 7-section setup workflow with skill installation
 │       ├── generate.toml      # Pre-flight wrapper for generator skill
 │       └── execute.toml       # Pre-flight wrapper for executor skill
-└── templates/
-    ├── mobile-automator-generator/
-    │   ├── SKILL.md          # Generator skill template with {{placeholders}}
-    │   └── references/
-    │       └── scenario_schema.json     # Test scenario JSON schema
-    └── mobile-automator-executor/
-        ├── SKILL.md          # Executor skill template with {{placeholders}}
-        └── references/
-            └── result_schema.json    # Test result JSON schema
+├── templates/
+│   ├── references/
+│   │   └── platform-resolutions.md   # Runtime contract for OS-shaped semantic actions
+│   ├── mobile-automator-generator/
+│   │   ├── aware/
+│   │   │   └── SKILL.md      # Aware-mode generator skill template
+│   │   ├── agnostic/
+│   │   │   └── SKILL.md      # Agnostic-mode generator skill template
+│   │   └── references/
+│   │       └── scenario_schema.json  # Test scenario JSON schema (v2.1)
+│   └── mobile-automator-executor/
+│       ├── aware/
+│       │   └── SKILL.md      # Aware-mode executor skill template
+│       ├── agnostic/
+│       │   └── SKILL.md      # Agnostic-mode executor skill template
+│       └── references/
+│           └── result_schema.json    # Test result JSON schema
 ```
 
 ### MCP Server Integration
@@ -125,13 +192,11 @@ Asks user for:
 
 **Section 6: Skill Installation** (⭐ Fully automated)
 - Creates `.gemini/skills/mobile-automator-generator/` and `.../mobile-automator-executor/`
-- Reads skill templates from `${extensionPath}/templates/`
-- **Replaces ALL 13 placeholders** with detected/gathered values:
-  - `{{project_name}}`, `{{platform_details}}`, `{{build_system}}`, `{{build_command}}`
-  - `{{app_package}}`, `{{environments}}`, `{{automation_extras}}`
-  - `{{architecture}}`, `{{business_domain}}`, `{{business_critical_paths}}`
-  - `{{loading_indicators}}`, `{{protected_directories}}`, `{{additional_resources}}`
-- Copies schema files from templates to workspace
+- Reads skill templates from `${extensionPath}/templates/<mode>/` (mode-aware via `--mode=<mode>` flag on `install-skills.js`)
+- **Replaces placeholders** with detected/gathered values:
+  - *Platform-aware (13 placeholders)*: `{{project_name}}`, `{{platform_details}}`, `{{build_system}}`, `{{build_command}}`, `{{app_package}}`, `{{environments}}`, `{{automation_extras}}`, `{{architecture}}`, `{{business_domain}}`, `{{business_critical_paths}}`, `{{loading_indicators}}`, `{{protected_directories}}`, `{{additional_resources}}`
+  - *Platform-agnostic (6 placeholders)*: `{{project_name}}`, `{{architecture}}`, `{{business_domain}}`, `{{business_critical_paths}}`, `{{environments}}`, `{{additional_resources}}`
+- Copies schema files and `platform-resolutions.md` from templates to workspace
 - Verifies no `{{` placeholders remain in generated skills
 
 **Section 7: Directory Scaffolding & Finalization**
@@ -168,7 +233,9 @@ Asks user for:
 
 ### Modifying Skill Templates
 
-Skill templates are in `templates/mobile-automator-generator/SKILL.md` and `templates/mobile-automator-executor/SKILL.md`.
+Skill templates are organized by mode:
+- `templates/mobile-automator-generator/aware/SKILL.md` and `templates/mobile-automator-executor/aware/SKILL.md` — platform-aware templates
+- `templates/mobile-automator-generator/agnostic/SKILL.md` and `templates/mobile-automator-executor/agnostic/SKILL.md` — platform-agnostic templates
 
 **Available Placeholders** (automatically populated during setup):
 - `{{project_name}}` - Detected app name
@@ -321,8 +388,8 @@ This naming convention makes it clear which extension provides these capabilitie
 Skill templates use double-brace syntax: `{{placeholder_name}}`.
 
 **Replacement happens automatically** during setup Section 6.0:
-1. Setup gathers all placeholder values (13 total)
-2. Reads template SKILL.md files
+1. Setup gathers placeholder values (13 in aware mode, 6 in agnostic mode)
+2. Reads template SKILL.md files from the mode-specific subdirectory (`aware/` or `agnostic/`)
 3. Performs string replacement for each `{{placeholder}}`
 4. Writes populated files to `.gemini/skills/`
 5. Verifies no `{{` remains in the output
@@ -447,7 +514,7 @@ Tolerates: minor rendering differences (anti-aliasing, font smoothing).
 ## Extension Metadata
 
 - **Repository**: https://github.com/sh3lan93/mobile-automator
-- **Version**: 1.0.0 (see `gemini-extension.json`)
+- **Version**: 0.11.0 (see `gemini-extension.json`)
 - **License**: Apache 2.0
 - **Context File**: `GEMINI.md` (specified in `gemini-extension.json`)
 - **Status**: Production-ready, feature-complete
