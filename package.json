@@ -10,6 +10,7 @@
     "lint:halt": "jest tests/lint/halt-patterns.test.js",
     "lint:placeholders": "jest tests/lint/placeholder-leak.test.js",
     "lint:references": "jest tests/lint/cross-reference.test.js",
+    "lint:resolutions-coverage": "jest tests/lint/platform-resolutions-coverage.test.js",
     "lint:schema-additive": "jest tests/lint/schema-additive.test.js",
     "lint:structure": "jest tests/lint/toml-structure.test.js",
     "lint:toml": "jest tests/lint/toml-syntax.test.js"
