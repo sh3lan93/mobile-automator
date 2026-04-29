@@ -33,7 +33,7 @@ Mobile Automator supports two operating modes, selected during setup and stored 
 ### Placeholder count by mode
 
 - **Platform-aware mode** — 13 placeholders (including `{{platform_details}}`, `{{build_command}}`, `{{automation_extras}}`)
-- **Platform-agnostic mode** — 6 placeholders (project-level only: `{{project_name}}`, `{{architecture}}`, `{{business_domain}}`, `{{business_critical_paths}}`, `{{environments}}`, `{{additional_resources}}`)
+- **Platform-agnostic mode** — 6 placeholders (project-level only: `{{project_name}}`, `{{business_domain}}`, `{{business_critical_paths}}`, `{{loading_indicators}}`, `{{protected_directories}}`, `{{additional_resources}}`)
 
 ### Four semantic actions (agnostic mode)
 
@@ -195,7 +195,7 @@ Asks user for:
 - Reads skill templates from `${extensionPath}/templates/<mode>/` (mode-aware via `--mode=<mode>` flag on `install-skills.js`)
 - **Replaces placeholders** with detected/gathered values:
   - *Platform-aware (13 placeholders)*: `{{project_name}}`, `{{platform_details}}`, `{{build_system}}`, `{{build_command}}`, `{{app_package}}`, `{{environments}}`, `{{automation_extras}}`, `{{architecture}}`, `{{business_domain}}`, `{{business_critical_paths}}`, `{{loading_indicators}}`, `{{protected_directories}}`, `{{additional_resources}}`
-  - *Platform-agnostic (6 placeholders)*: `{{project_name}}`, `{{architecture}}`, `{{business_domain}}`, `{{business_critical_paths}}`, `{{environments}}`, `{{additional_resources}}`
+  - *Platform-agnostic (6 placeholders)*: `{{project_name}}`, `{{business_domain}}`, `{{business_critical_paths}}`, `{{loading_indicators}}`, `{{protected_directories}}`, `{{additional_resources}}`
 - Copies schema files and `platform-resolutions.md` from templates to workspace
 - Verifies no `{{` placeholders remain in generated skills
 
