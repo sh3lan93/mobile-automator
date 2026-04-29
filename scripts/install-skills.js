@@ -6,12 +6,10 @@ const fs = require('fs');
 const path = require('path');
 
 // ---------------------------------------------------------------------------
-// Constants
+// Mode-aware constants
 // ---------------------------------------------------------------------------
 
-/** The 13 setup-time placeholders. Only these are replaced in SKILL.md files.
- *  Runtime placeholders like {{capture_to}} and {{variable_name}} are preserved. */
-const SETUP_PLACEHOLDERS = [
+const PLACEHOLDERS_AWARE = [
   'project_name',
   'platform_details',
   'build_system',
@@ -27,17 +25,33 @@ const SETUP_PLACEHOLDERS = [
   'additional_resources',
 ];
 
-/** SKILL.md templates — copied with placeholder replacement. */
-const SKILL_TEMPLATES = [
-  {
-    src: 'mobile-automator-generator/aware/SKILL.md',
-    dest: '.gemini/skills/mobile-automator-generator/SKILL.md',
-  },
-  {
-    src: 'mobile-automator-executor/aware/SKILL.md',
-    dest: '.gemini/skills/mobile-automator-executor/SKILL.md',
-  },
+const PLACEHOLDERS_AGNOSTIC = [
+  'project_name',
+  'business_domain',
+  'business_critical_paths',
+  'loading_indicators',
+  'protected_directories',
+  'additional_resources',
 ];
+
+function placeholderNamesForMode(mode) {
+  if (mode === 'platform-aware') return PLACEHOLDERS_AWARE.slice();
+  if (mode === 'platform-agnostic') return PLACEHOLDERS_AGNOSTIC.slice();
+  throw new Error(`Unknown mode: ${mode}`);
+}
+
+function skillTemplatesForMode(mode) {
+  return [
+    {
+      src: `mobile-automator-generator/${mode === 'platform-aware' ? 'aware' : 'agnostic'}/SKILL.md`,
+      dest: '.gemini/skills/mobile-automator-generator/SKILL.md',
+    },
+    {
+      src: `mobile-automator-executor/${mode === 'platform-aware' ? 'aware' : 'agnostic'}/SKILL.md`,
+      dest: '.gemini/skills/mobile-automator-executor/SKILL.md',
+    },
+  ];
+}
 
 /** Schema and reference files — copied verbatim (byte-perfect). */
 const SCHEMA_COPIES = [
@@ -53,6 +67,10 @@ const SCHEMA_COPIES = [
     src: 'references/mobile-mcp-tools.md',
     dest: '.gemini/skills/references/mobile-mcp-tools.md',
   },
+  {
+    src: 'references/platform-resolutions.md',
+    dest: '.gemini/skills/references/platform-resolutions.md',
+  },
 ];
 
 /** Destination directories to create. */
@@ -61,6 +79,50 @@ const DEST_DIRS = [
   '.gemini/skills/mobile-automator-executor/references',
   '.gemini/skills/references',
 ];
+
+// ---------------------------------------------------------------------------
+// Argument parsing & mode resolution
+// ---------------------------------------------------------------------------
+
+function parseArgs(argv) {
+  const out = { mode: null, dryRun: false };
+  for (const a of argv) {
+    if (a.startsWith('--mode=')) out.mode = a.slice('--mode='.length);
+    else if (a === '--dry-run') out.dryRun = true;
+  }
+  return out;
+}
+
+function resolveMode(projectRoot, flagMode) {
+  if (flagMode) {
+    // Normalize shorthand aliases
+    const normalised =
+      flagMode === 'aware' ? 'platform-aware'
+      : flagMode === 'agnostic' ? 'platform-agnostic'
+      : flagMode;
+    if (normalised !== 'platform-aware' && normalised !== 'platform-agnostic') {
+      throw new Error(`Invalid --mode value: ${flagMode}`);
+    }
+    return normalised;
+  }
+  // Try setup_state.json
+  const stateFile = path.join(projectRoot, 'mobile-automator', 'setup_state.json');
+  if (fs.existsSync(stateFile)) {
+    try {
+      const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+      if (state.selected_mode) return state.selected_mode;
+    } catch { /* fall through */ }
+  }
+  // Try config.json
+  const configFile = path.join(projectRoot, 'mobile-automator', 'config.json');
+  if (fs.existsSync(configFile)) {
+    try {
+      const config = JSON.parse(fs.readFileSync(configFile, 'utf8'));
+      if (config.mode) return config.mode;
+    } catch { /* fall through */ }
+  }
+  return null;
+}
 
 // ---------------------------------------------------------------------------
 // Helper functions
@@ -87,7 +149,7 @@ function buildAppPackage(app) {
 }
 
 /**
- * Build the placeholder → value map from setup state.
+ * Build the placeholder → value map from setup state (aware mode, 13 placeholders).
  * Any undefined/null value defaults to '' with a warning.
  */
 function buildPlaceholderMap(state) {
@@ -125,6 +187,31 @@ function buildPlaceholderMap(state) {
 }
 
 /**
+ * Build the placeholder → value map from setup state (agnostic mode, 6 placeholders).
+ */
+function buildAgnosticPlaceholderMap(state) {
+  const k = state.knowledge || {};
+  const raw = {
+    '{{project_name}}': k.project_name,
+    '{{business_domain}}': k.business_domain,
+    '{{business_critical_paths}}': k.business_critical_paths,
+    '{{loading_indicators}}': k.loading_indicators,
+    '{{protected_directories}}': k.protected_directories,
+    '{{additional_resources}}': k.additional_resources,
+  };
+  const map = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (value == null) {
+      console.warn(`  ⚠ Warning: ${key} resolved to empty (missing in setup state)`);
+      map[key] = '';
+    } else {
+      map[key] = String(value);
+    }
+  }
+  return map;
+}
+
+/**
  * Replace placeholders using split/join (safe for special characters).
  */
 function replacePlaceholders(content, map) {
@@ -136,16 +223,11 @@ function replacePlaceholders(content, map) {
 }
 
 /**
- * Check if any of the 13 setup placeholders remain unreplaced.
+ * Check if any of the setup placeholders for the given mode remain unreplaced.
  */
-function findUnreplacedSetupPlaceholders(content) {
-  const remaining = [];
-  for (const name of SETUP_PLACEHOLDERS) {
-    if (content.includes(`{{${name}}}`)) {
-      remaining.push(`{{${name}}}`);
-    }
-  }
-  return remaining;
+function findUnreplacedSetupPlaceholders(content, mode) {
+  const names = placeholderNamesForMode(mode);
+  return names.filter(n => content.includes(`{{${n}}}`)).map(n => `{{${n}}}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -156,16 +238,35 @@ function main() {
   const projectRoot = process.cwd();
   const extensionPath = path.resolve(__dirname, '..');
   const templatesPath = path.join(extensionPath, 'templates');
-  const stateFile = path.join(projectRoot, 'mobile-automator', 'setup_state.json');
+
+  const args = parseArgs(process.argv.slice(2));
+
+  let mode;
+  try {
+    mode = resolveMode(projectRoot, args.mode);
+  } catch (e) {
+    console.error(`ERROR: ${e.message}`);
+    process.exit(1);
+  }
+  if (!mode) {
+    console.error('ERROR: Cannot determine mode. Provide --mode=platform-aware or --mode=platform-agnostic, or run setup first.');
+    process.exit(1);
+  }
+  console.log(`mode: ${mode}`);
+
+  if (args.dryRun) {
+    console.log('(dry-run) exiting before filesystem writes.');
+    process.exit(0);
+  }
 
   console.log(`Project root: ${projectRoot}`);
   console.log(`Extension path: ${extensionPath}`);
   console.log(`Templates path: ${templatesPath}\n`);
 
-  // --- 1. Validate setup state ---
+  const stateFile = path.join(projectRoot, 'mobile-automator', 'setup_state.json');
   if (!fs.existsSync(stateFile)) {
     console.error(`ERROR: Setup state file not found: ${stateFile}`);
-    console.error('Please complete setup sections 1-5 first.');
+    console.error('Please complete setup interview first.');
     process.exit(1);
   }
 
@@ -176,45 +277,39 @@ function main() {
     console.error(`ERROR: Failed to parse setup state: ${e.message}`);
     process.exit(1);
   }
-
   if (!state.knowledge) {
     console.error('ERROR: Setup state is missing the "knowledge" section.');
-    console.error('Please complete section 5.0 (Project Knowledge) first.');
     process.exit(1);
   }
 
-  // --- 2. Verify all source templates exist ---
+  const SKILL_TEMPLATES = skillTemplatesForMode(mode);
   const allEntries = [...SKILL_TEMPLATES, ...SCHEMA_COPIES];
+
   for (const entry of allEntries) {
     const fullPath = path.join(templatesPath, entry.src);
     if (!fs.existsSync(fullPath)) {
       console.error(`ERROR: Template not found: ${fullPath}`);
-      console.error(
-        'Please ensure the mobile-automator extension is properly installed.'
-      );
       process.exit(1);
     }
   }
   console.log(`✓ All ${allEntries.length} source templates verified\n`);
 
-  // --- 3. Create destination directories ---
   for (const dir of DEST_DIRS) {
     fs.mkdirSync(path.join(projectRoot, dir), { recursive: true });
   }
   console.log('✓ Skill directories created\n');
 
-  // --- 4. Build placeholder map ---
-  const placeholderMap = buildPlaceholderMap(state);
+  const placeholderMap = mode === 'platform-aware'
+    ? buildPlaceholderMap(state)
+    : buildAgnosticPlaceholderMap(state);
 
   console.log('Placeholder values:');
   for (const [key, value] of Object.entries(placeholderMap)) {
-    const display =
-      value.length > 60 ? value.substring(0, 60) + '...' : value;
+    const display = value.length > 60 ? value.substring(0, 60) + '...' : value;
     console.log(`  ${key} → ${display || '(empty)'}`);
   }
   console.log('');
 
-  // --- 5. Copy + replace SKILL.md templates ---
   for (const skill of SKILL_TEMPLATES) {
     const srcPath = path.join(templatesPath, skill.src);
     const destPath = path.join(projectRoot, skill.dest);
@@ -222,11 +317,9 @@ function main() {
     const template = fs.readFileSync(srcPath, 'utf8');
     const populated = replacePlaceholders(template, placeholderMap);
 
-    const unreplaced = findUnreplacedSetupPlaceholders(populated);
+    const unreplaced = findUnreplacedSetupPlaceholders(populated, mode);
     if (unreplaced.length > 0) {
-      console.error(
-        `ERROR: Unreplaced setup placeholders in ${skill.src}: ${unreplaced.join(', ')}`
-      );
+      console.error(`ERROR: Unreplaced placeholders in ${skill.src}: ${unreplaced.join(', ')}`);
       process.exit(1);
     }
 
@@ -234,21 +327,17 @@ function main() {
     console.log(`✓ Installed ${skill.dest}`);
   }
 
-  // --- 6. Copy schema/reference files verbatim ---
   for (const schema of SCHEMA_COPIES) {
     const srcPath = path.join(templatesPath, schema.src);
     const destPath = path.join(projectRoot, schema.dest);
-
     fs.copyFileSync(srcPath, destPath);
     console.log(`✓ Copied ${schema.dest}`);
   }
 
-  // --- 7. Verify installation ---
+  // Verification
   console.log('\nVerification:');
   let hasErrors = false;
-
-  const skillDestPaths = new Set(SKILL_TEMPLATES.map((s) => s.dest));
-
+  const skillDestPaths = new Set(SKILL_TEMPLATES.map(s => s.dest));
   for (const entry of allEntries) {
     const fullPath = path.join(projectRoot, entry.dest);
     if (!fs.existsSync(fullPath)) {
@@ -257,17 +346,15 @@ function main() {
     } else {
       const stats = fs.statSync(fullPath);
       if (stats.size === 0) {
-        console.error(`  ✗ EMPTY: ${entry.dest} (0 bytes)`);
+        console.error(`  ✗ EMPTY: ${entry.dest}`);
         hasErrors = true;
       } else {
         console.log(`  ✓ ${entry.dest} (${stats.size} bytes)`);
         if (skillDestPaths.has(entry.dest)) {
           const writtenContent = fs.readFileSync(fullPath, 'utf8');
-          const unreplaced = findUnreplacedSetupPlaceholders(writtenContent);
+          const unreplaced = findUnreplacedSetupPlaceholders(writtenContent, mode);
           if (unreplaced.length > 0) {
-            console.error(
-              `  ✗ UNREPLACED PLACEHOLDERS in ${entry.dest}: ${unreplaced.join(', ')}`
-            );
+            console.error(`  ✗ UNREPLACED: ${entry.dest}: ${unreplaced.join(', ')}`);
             hasErrors = true;
           }
         }
@@ -279,8 +366,16 @@ function main() {
     console.error('\nERROR: Skill installation completed with errors.');
     process.exit(1);
   }
-
   console.log('\n✅ All skills installed and verified successfully.');
 }
 
-main();
+// Export helpers for unit tests; only run main when invoked directly.
+module.exports = {
+  parseArgs,
+  resolveMode,
+  placeholderNamesForMode,
+  skillTemplatesForMode,
+  buildAgnosticPlaceholderMap,
+};
+
+if (require.main === module) main();
