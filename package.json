@@ -1,0 +1,23 @@
+{
+  "name": "mobile-automator",
+  "version": "0.10.0",
+  "private": true,
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint:toml": "jest tests/lint/toml-syntax.test.js",
+    "lint:structure": "jest tests/lint/toml-structure.test.js",
+    "lint:placeholders": "jest tests/lint/placeholder-leak.test.js",
+    "lint:references": "jest tests/lint/cross-reference.test.js",
+    "lint:ask-user": "jest tests/lint/ask-user-format.test.js",
+    "lint:halt": "jest tests/lint/halt-patterns.test.js"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "toml": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
