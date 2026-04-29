@@ -50,6 +50,29 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
 
 ---
 
+### 1.0.5 Existing Configuration Detection (NEW for platform-agnostic mode)
+
+**PROTOCOL:** Detect whether this project already has a mobile-automator configuration. This determines the options shown in § 1.5 (Mode Selection).
+
+1. **Check for `mobile-automator/config.json`:**
+   - If file exists, read it and extract `mode` field.
+   - If `mode` field is missing, treat as `platform-aware` (v0.10 implicit default). Log: "ℹ Existing v0.10 config detected (no `mode` field); treating as platform-aware."
+   - Set state variables: `is_existing_setup = true`, `current_mode = <detected>`.
+   - If file does NOT exist: `is_existing_setup = false`, `current_mode = null`.
+
+2. **Persist these values** in `mobile-automator/setup_state.json` so § 1.5 can read them:
+
+   ```json
+   {
+     "is_existing_setup": true,
+     "current_mode": "platform-aware"
+   }
+   ```
+
+3. **Continue to § 1.5.**
+
+---
+
 ## 2.0 PLATFORM DETECTION
 **PROTOCOL: Analyze the project files to determine the mobile platform.**
 
