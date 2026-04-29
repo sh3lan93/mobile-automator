@@ -726,4 +726,47 @@ If `is_existing_setup` is `true`:
     > **💡 Auto-Approval:** The mobile-mcp server is pre-configured with `trust: true`, so you won't see permission prompts during test recording and execution. This allows smooth, uninterrupted automation.
     >
     > If you need to disable this, see: https://geminicli.com/docs/tools/mcp-server/"
+
+---
+
+# ============================================================================
+# AGNOSTIC FLOW (§§ A.1–A.7) — runs when selected_mode = "platform-agnostic"
+# ============================================================================
+
+### A.1 — Project Basics
+
+**PROTOCOL:** Gather project name and (optionally) Android applicationId and iOS Bundle ID. Either, both, or neither may be provided.
+
+1. **Project name:**
+   - Auto-detect: try `package.json` `name`, `pubspec.yaml` `name`, root build file's project name, or the directory basename.
+   - Confirm with `ask_user` (type: `text`, default: detected value).
+   - Persist to `setup_state.knowledge.project_name`.
+
+2. **Android applicationId (optional):**
+   - Auto-detect: scan `android/app/build.gradle*`, `composeApp/build.gradle.kts`, or root `build.gradle*` for `applicationId`.
+   - Use `ask_user` (type: `text`, allow blank) to confirm or enter manually.
+   - Persist to `setup_state.app.android_package` (or null if blank).
+
+3. **iOS Bundle ID (optional):**
+   - Auto-detect: read `PRODUCT_BUNDLE_IDENTIFIER` from `*.xcodeproj/project.pbxproj` or `Info.plist`.
+   - Use `ask_user` (type: `text`, allow blank).
+   - Persist to `setup_state.app.ios_bundle_id` (or null if blank).
+
+4. Persist `setup_state.json` with `last_successful_step: "A.1"`.
+
+### A.2 — Business Knowledge
+
+**PROTOCOL:** Capture the project's domain and the user flows that are critical for QA.
+
+1. **Business domain:**
+   - Try to extract from `README.md`, app store description, or app `displayName`.
+   - Use `ask_user` (type: `text`) to confirm a one-sentence description.
+   - Persist to `setup_state.knowledge.business_domain`.
+
+2. **Business-critical paths:**
+   - Use `ask_user` (type: `text`) with placeholder `e.g., onboarding, login, checkout, payment`.
+   - Parse comma-separated input into an array.
+   - Persist to `setup_state.knowledge.business_critical_paths` (joined with commas for the placeholder substitution).
+
+3. Persist `setup_state.json` with `last_successful_step: "A.2"`.
 """
