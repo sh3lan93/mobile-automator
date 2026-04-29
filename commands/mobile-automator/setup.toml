@@ -169,6 +169,52 @@ If `is_existing_setup` is `true`:
    ```
    This subcommand lints scenarios (read-only, informational) and runs Phase 2 (backup + archive). The user has explicitly confirmed in step 3 above. If the command exits non-zero, halt and instruct the user to follow the manual restore steps in TROUBLESHOOTING.md.
 
+### 1.6.2 — Phase 2: Archive (reversible mutations)
+
+Triggered by the `migrate-helpers` invocation in 1.6.1 step 6:
+
+1. **Backup** `mobile-automator/config.json` → `mobile-automator/config.json.<old_mode>.bak`.
+2. **Archive** `.gemini/skills/mobile-automator-generator/` and `.../mobile-automator-executor/` → `.gemini/skills/.archive/<role>-<old_mode>-<ISO>/`.
+
+If the migrate-helpers command exits non-zero, halt and tell the user:
+> "Migration failed during Phase 2. Backup and archive may be partially complete. Run `node ${extensionPath}/scripts/install-skills.js migrate-helpers --old-mode=<old_mode>` again, or follow the manual restore steps in TROUBLESHOOTING.md."
+
+### 1.6.3 — Phase 3: Install (commit) — Hand-off to destination flow
+
+After successful Phase 2:
+
+1. **Pre-fill `setup_state.json` with carried-forward fields** from `migration_state.json` so the destination flow's prompts default to the carried values:
+   ```json
+   {
+     "is_existing_setup": true,
+     "selected_mode": "platform-agnostic",
+     "is_mode_switch": true,
+     "knowledge": {
+       "project_name": "<carried>",
+       "business_domain": "<carried>",
+       "business_critical_paths": "<carried>",
+       "loading_indicators": "<re-asked>",
+       "protected_directories": "<carried>"
+     },
+     "app": {
+       "android_package": "<carried>",
+       "ios_bundle_id": "<carried>"
+     }
+   }
+   ```
+
+2. **Branch on `selected_mode`:**
+   - `platform-agnostic` → § A.1 (each prompt defaults to carried value; user typically confirms quickly).
+   - `platform-aware` → § 2.0 (existing aware flow; aware-only fields are re-asked).
+
+3. The destination flow's installation step (§ A.6 or § 6.0 of aware) runs `install-skills.js --mode=<selected_mode>` and writes the new `config.json`.
+
+4. **On successful completion** of the destination flow:
+   - Remove `mobile-automator/setup_state.json` (transient).
+   - Remove `mobile-automator/migration_state.json` (transient).
+   - Print:
+     > "Migration complete. Old skills archived at `.gemini/skills/.archive/`. Old config backed up at `mobile-automator/config.json.<old_mode>.bak`. Your scenarios are unchanged."
+
 ---
 
 ## 2.0 PLATFORM DETECTION
