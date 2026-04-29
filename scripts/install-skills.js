@@ -251,6 +251,18 @@ function archiveExistingSkills(projectRoot, oldMode) {
   }
 }
 
+function backupConfig(projectRoot, oldMode) {
+  const configPath = path.join(projectRoot, 'mobile-automator', 'config.json');
+  if (!fs.existsSync(configPath)) return;
+  let bak = path.join(projectRoot, 'mobile-automator', `config.json.${oldMode}.bak`);
+  let suffix = 2;
+  while (fs.existsSync(bak)) {
+    bak = path.join(projectRoot, 'mobile-automator', `config.json.${oldMode}.bak.${suffix++}`);
+  }
+  fs.copyFileSync(configPath, bak);
+  console.log(`✓ Backed up config → ${bak}`);
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -398,6 +410,7 @@ module.exports = {
   skillTemplatesForMode,
   buildAgnosticPlaceholderMap,
   archiveExistingSkills,
+  backupConfig,
 };
 
 if (require.main === module) main();
