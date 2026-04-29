@@ -17,8 +17,9 @@
   "properties": {
     "$schema_version": {
       "type": "string",
-      "const": "2.0",
-      "description": "Schema version identifier. Must be '2.0'."
+      "enum": ["2.0", "2.1"],
+      "default": "2.0",
+      "description": "Schema version identifier. '2.0' or '2.1'."
     },
     "scenario_id": {
       "type": "string",
@@ -240,9 +241,13 @@
             "wait_for_loading_complete",
             "capture_value",
             "clear_app_data",
-            "open_url"
+            "open_url",
+            "press_back",
+            "dismiss_keyboard",
+            "grant_permission",
+            "deny_permission"
           ],
-          "description": "The automation action to perform. Supported types: wait_for_element, wait_for_element_gone, wait_for_loading_complete, capture_value, clear_app_data, long_press, double_tap, scroll_to_element."
+          "description": "The automation action to perform. Supported types: wait_for_element, wait_for_element_gone, wait_for_loading_complete, capture_value, clear_app_data, long_press, double_tap, scroll_to_element, press_back, dismiss_keyboard, grant_permission, deny_permission."
         },
         "description": {
           "type": "string",
@@ -404,6 +409,10 @@
           "type": "string",
           "pattern": "^[a-z][a-z0-9_]*$",
           "description": "Variable name to store the captured value in. Must match a variable declared in the root 'variables' block. Used with capture_value action."
+        },
+        "permission_name": {
+          "type": "string",
+          "description": "Optional. Names a specific permission for grant_permission/deny_permission actions (e.g., 'camera', 'location'). Semantic-only — does not affect runtime resolution."
         },
         "sub_steps": {
           "type": "array",
