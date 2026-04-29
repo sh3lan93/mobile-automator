@@ -1,0 +1,17 @@
+{
+  "mode": "platform-aware",
+  "project_name": "Sample",
+  "platform": "android",
+  "platform_details": "Android (minSdk 24, targetSdk 34)",
+  "build_system": "Gradle",
+  "build_command": "./gradlew assembleStaging",
+  "android_package": "com.example.app",
+  "ios_bundle_id": null,
+  "environments": ["production", "staging"],
+  "default_environment": "staging",
+  "architecture": "MVVM with Clean Architecture",
+  "business_domain": "Sample app",
+  "business_critical_paths": ["login", "checkout"],
+  "loading_indicators": ["CircularProgressIndicator"],
+  "protected_directories": ["app/src/main"]
+}
