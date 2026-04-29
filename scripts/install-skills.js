@@ -230,6 +230,27 @@ function findUnreplacedSetupPlaceholders(content, mode) {
   return names.filter(n => content.includes(`{{${n}}}`)).map(n => `{{${n}}}`);
 }
 
+function archiveExistingSkills(projectRoot, oldMode) {
+  const skillsRoot = path.join(projectRoot, '.gemini', 'skills');
+  const archiveRoot = path.join(skillsRoot, '.archive');
+  const ts = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z').replace(/[:.]/g, '-');
+  const roles = ['mobile-automator-generator', 'mobile-automator-executor'];
+
+  for (const role of roles) {
+    const src = path.join(skillsRoot, role);
+    if (!fs.existsSync(src)) continue;
+    const baseName = role.replace('mobile-automator-', '');
+    let dest = path.join(archiveRoot, `${baseName}-${oldMode}-${ts}`);
+    let suffix = 2;
+    while (fs.existsSync(dest)) {
+      dest = path.join(archiveRoot, `${baseName}-${oldMode}-${ts}-${suffix++}`);
+    }
+    fs.mkdirSync(archiveRoot, { recursive: true });
+    fs.renameSync(src, dest);
+    console.log(`✓ Archived ${role} → ${dest}`);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -376,6 +397,7 @@ module.exports = {
   placeholderNamesForMode,
   skillTemplatesForMode,
   buildAgnosticPlaceholderMap,
+  archiveExistingSkills,
 };
 
 if (require.main === module) main();
