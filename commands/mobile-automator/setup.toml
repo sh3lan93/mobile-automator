@@ -850,4 +850,44 @@ If `is_existing_setup` is `true`:
 4. If the script exits non-zero, surface the error to the user and halt — do NOT continue to § A.7.
 
 5. Persist `setup_state.json` with `last_successful_step: "A.6"`.
+
+### A.7 — Directory Scaffolding & Finalization
+
+**PROTOCOL:** Create test-artifact directories, write `config.json`, and clean up state.
+
+1. **Create directories:**
+   - `mobile-automator/scenarios/`
+   - `mobile-automator/screenshots/`
+   - `mobile-automator/results/`
+
+2. **Write `mobile-automator/config.json`:**
+   ```json
+   {
+     "mode": "platform-agnostic",
+     "project_name": "<from setup_state>",
+     "android_package": "<from setup_state, or null>",
+     "ios_bundle_id": "<from setup_state, or null>",
+     "environments": ["<from setup_state>"],
+     "default_environment": "<from setup_state, or null>",
+     "business_domain": "<from setup_state>",
+     "business_critical_paths": ["<parsed array>"],
+     "loading_indicators": "<from setup_state>",
+     "protected_directories": ["<parsed array>"]
+   }
+   ```
+
+3. **Generate `mobile-automator/index.md`** documenting the project's setup.
+
+4. **Remove `mobile-automator/setup_state.json`** (transient — no longer needed).
+
+5. **Commit to git** if a git repository is detected:
+   ```bash
+   git add mobile-automator/ .gemini/
+   git commit -m "feat: install mobile-automator (agnostic mode)"
+   ```
+   Skip silently if not a git repo.
+
+6. **Print success summary** with next-step pointers:
+   > "✅ Mobile Automator (platform-agnostic) installed.
+   > Try: `/mobile-automator:generate <your test steps>` to record your first scenario."
 """
