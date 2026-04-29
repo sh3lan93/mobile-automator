@@ -30,11 +30,11 @@ const SETUP_PLACEHOLDERS = [
 /** SKILL.md templates — copied with placeholder replacement. */
 const SKILL_TEMPLATES = [
   {
-    src: 'mobile-automator-generator/SKILL.md',
+    src: 'mobile-automator-generator/aware/SKILL.md',
     dest: '.gemini/skills/mobile-automator-generator/SKILL.md',
   },
   {
-    src: 'mobile-automator-executor/SKILL.md',
+    src: 'mobile-automator-executor/aware/SKILL.md',
     dest: '.gemini/skills/mobile-automator-executor/SKILL.md',
   },
 ];

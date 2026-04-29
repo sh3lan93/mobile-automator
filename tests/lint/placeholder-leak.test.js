@@ -15,8 +15,8 @@ describe('Placeholder Leak', () => {
   it('templates should contain placeholders', () => {
     const templatesDir = path.resolve(__dirname, '..', '..', 'templates');
     const skillFiles = [
-      'mobile-automator-generator/SKILL.md',
-      'mobile-automator-executor/SKILL.md',
+      'mobile-automator-generator/aware/SKILL.md',
+      'mobile-automator-executor/aware/SKILL.md',
     ];
     skillFiles.forEach(file => {
       const content = fs.readFileSync(path.join(templatesDir, file), 'utf8');
