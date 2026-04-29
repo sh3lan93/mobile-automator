@@ -13,7 +13,8 @@
     "lint:resolutions-coverage": "jest tests/lint/platform-resolutions-coverage.test.js",
     "lint:schema-additive": "jest tests/lint/schema-additive.test.js",
     "lint:structure": "jest tests/lint/toml-structure.test.js",
-    "lint:toml": "jest tests/lint/toml-syntax.test.js"
+    "lint:toml": "jest tests/lint/toml-syntax.test.js",
+    "lint:agnostic-words": "jest tests/lint/agnostic-no-platform-words.test.js"
   },
   "devDependencies": {
     "jest": "^29.7.0",
