@@ -136,6 +136,41 @@ If `is_existing_setup` is `true`:
 
 ---
 
+## 1.6 MIGRATION SUB-FLOW
+**PROTOCOL:** This section runs ONLY when `is_mode_switch = true` (set by § 1.5). Structure: 3-phase commit (validate → archive → install). Any failure before Phase 3 leaves the project recoverable.
+
+### 1.6.1 — Phase 1: Validate (read-only, no mutations)
+
+1. **Build `migration_state.json` with carry-forward analysis:**
+   - Read `mobile-automator/config.json`.
+   - For each field in the source mode, decide: carry-forward / drop / re-ask.
+   - When migrating **aware → agnostic**:
+     - Carry-forward: `project_name`, `business_domain`, `business_critical_paths`, `protected_directories`, `android_package`, `ios_bundle_id`, `environments`, `default_environment`.
+     - Drop: `platform`, `build_system`, `build_command`, `architecture`, `automation_extras`, `platform_details`.
+     - Re-ask: `loading_indicators` (existing values are class names; agnostic mode wants semantic descriptions).
+   - When migrating **agnostic → aware**:
+     - Carry-forward: `project_name`, `business_domain`, `business_critical_paths`, `protected_directories`, `android_package`, `ios_bundle_id`, `environments`, `default_environment`, `loading_indicators`.
+     - Re-ask: `platform`, `build_system`, `build_command`, `architecture`, `automation_extras` (aware-only fields).
+
+2. **Show the user a summary** with three lists (carry-forward, drop, re-ask).
+
+3. Use `ask_user` (type: `choice`):
+   - Header: `Confirm migration`
+   - Question: `Proceed with migration to [selected_mode]?`
+   - Options: `Yes, proceed` / `Cancel`
+
+4. If `Cancel`: halt. No mutations happened.
+
+5. **Re-ask the fields in the re-ask list** (if any) and update `migration_state.json`.
+
+6. **Run scenarios lint and Phase 2 backup+archive** by invoking:
+   ```bash
+   node ${extensionPath}/scripts/install-skills.js migrate-helpers --old-mode=<current_mode>
+   ```
+   This subcommand lints scenarios (read-only, informational) and runs Phase 2 (backup + archive). The user has explicitly confirmed in step 3 above. If the command exits non-zero, halt and instruct the user to follow the manual restore steps in TROUBLESHOOTING.md.
+
+---
+
 ## 2.0 PLATFORM DETECTION
 **PROTOCOL: Analyze the project files to determine the mobile platform.**
 
