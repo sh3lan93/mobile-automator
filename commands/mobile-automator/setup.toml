@@ -795,4 +795,25 @@ If `is_existing_setup` is `true`:
 3. Persist to `setup_state.knowledge.protected_directories`.
 
 4. Persist `setup_state.json` with `last_successful_step: "A.4"`.
+
+### A.5 — Environments (Optional)
+
+**PROTOCOL:** Capture named environments (production, staging, dev). In agnostic mode, environments are decoupled from build flavors — they're just labels for the test target.
+
+1. Use `ask_user` (type: `choice`):
+   - Header: `Environments`
+   - Question: `Does your project have named environments (e.g., production, staging, dev)?`
+   - Options: `Yes` / `No`
+
+2. If `Yes`:
+   - Use `ask_user` (type: `text`) with placeholder `e.g., production, staging, dev`.
+   - Parse comma-separated input into an array.
+   - Persist to `setup_state.environments`.
+   - Use `ask_user` (type: `choice`) for the default environment.
+   - Persist to `setup_state.default_environment`.
+
+3. If `No`:
+   - Set `setup_state.environments = []` and `setup_state.default_environment = null`.
+
+4. Persist `setup_state.json` with `last_successful_step: "A.5"`.
 """
