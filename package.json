@@ -1,6 +1,6 @@
 {
   "name": "mobile-automator",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "private": true,
   "scripts": {
     "test": "jest",
@@ -17,7 +17,8 @@
     "lint:agnostic-words": "jest tests/lint/agnostic-no-platform-words.test.js",
     "lint:config-shape": "jest tests/lint/mode-config-shape.test.js",
     "test:unit": "jest tests/unit",
-    "test:integration": "jest tests/integration"
+    "test:integration": "jest tests/integration",
+    "test:all": "jest"
   },
   "devDependencies": {
     "jest": "^29.7.0",
