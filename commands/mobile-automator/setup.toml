@@ -769,4 +769,30 @@ If `is_existing_setup` is `true`:
    - Persist to `setup_state.knowledge.business_critical_paths` (joined with commas for the placeholder substitution).
 
 3. Persist `setup_state.json` with `last_successful_step: "A.2"`.
+
+### A.3 — Loading Indicators (Semantic Descriptions)
+
+**PROTOCOL:** Capture how loading appears in the app, in plain English. Unlike platform-aware mode (which collects class names like `CircularProgressIndicator`), agnostic mode captures **semantic descriptions** so the AI can identify loading visually regardless of platform.
+
+1. Use `ask_user` (type: `text`) with the prompt:
+   > "Describe what loading looks like in your app, in plain English. Examples:
+   > - `a centered spinner overlay during full-screen loads`
+   > - `shimmer placeholders for cards on the home screen`
+   > - `a small spinner inside the Login button while authenticating`"
+2. Persist user's input verbatim to `setup_state.knowledge.loading_indicators`.
+3. Persist `setup_state.json` with `last_successful_step: "A.3"`.
+
+### A.4 — Protected Directories
+
+**PROTOCOL:** Capture source directories that should NEVER be modified by mobile-automator (the skill operates on test artifacts, not source code).
+
+1. **Auto-detect candidates:**
+   - Common patterns: `app/src/main/`, `ios/`, `lib/`, `src/`, `composeApp/src/`.
+   - Build a default list from directories that exist in the project.
+
+2. Use `ask_user` (type: `text`, default: detected list joined with commas) to confirm.
+
+3. Persist to `setup_state.knowledge.protected_directories`.
+
+4. Persist `setup_state.json` with `last_successful_step: "A.4"`.
 """
