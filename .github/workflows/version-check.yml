@@ -6,31 +6,42 @@ on:
       - main
 
 jobs:
-  check-docs-only:
-    name: Detect documentation branch
+  detect-extension-changes:
+    name: Detect extension code changes
     runs-on: ubuntu-latest
     outputs:
-      is-docs-only: ${{ steps.check.outputs.docs-only }}
+      ships-code: ${{ steps.filter.outputs.extension }}
 
     steps:
-      - name: Check if branch starts with docs/
-        id: check
-        run: |
-          BRANCH_NAME="${{ github.head_ref }}"
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-          if [[ "$BRANCH_NAME" == docs/* ]]; then
-            echo "docs-only=true" >> $GITHUB_OUTPUT
-            echo "✅ Documentation branch detected - version check skipped"
+      - name: Filter changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          base: ${{ github.event.pull_request.base.ref }}
+          filters: |
+            extension:
+              - 'gemini-extension.json'
+              - 'GEMINI.md'
+              - 'templates/**'
+              - 'commands/**'
+              - 'scripts/**'
+
+      - name: Report decision
+        run: |
+          if [[ "${{ steps.filter.outputs.extension }}" == "true" ]]; then
+            echo "⚠️ Extension code changed - version bump required"
           else
-            echo "docs-only=false" >> $GITHUB_OUTPUT
-            echo "⚠️ Feature branch detected - version check required"
+            echo "✅ No extension code changes - version check skipped"
           fi
 
   check-version:
     name: Verify version is bumped
-    needs: check-docs-only
+    needs: detect-extension-changes
     runs-on: ubuntu-latest
-    if: needs.check-docs-only.outputs.is-docs-only == 'false'
+    if: needs.detect-extension-changes.outputs.ships-code == 'true'
 
     steps:
       - name: Checkout code
@@ -60,8 +71,11 @@ jobs:
             echo "────────────────────────────────────────"
             echo "  Version $VERSION is already released (tag '$TAG' exists)."
             echo ""
-            echo "  PRs with extension code changes must bump the version in"
+            echo "  PRs that change extension code must bump the version in"
             echo "  gemini-extension.json to a value not yet in the tags."
+            echo ""
+            echo "  Extension code paths:"
+            echo "    gemini-extension.json, GEMINI.md, templates/, commands/, scripts/"
             echo ""
             echo "  Current tags:"
             git tag --sort=-version:refname | head -10
