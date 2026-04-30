@@ -28,11 +28,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Scoping is configured in .vale.ini via path globs - PromptHygiene
+      # only attaches to templates/**/*.md, commands/**/*.toml, and
+      # GEMINI.md. Human-facing docs are scanned but unscoped, so they
+      # never produce errors. Running on '.' (default) keeps CI and
+      # pre-commit behavior identical.
       - name: Run Vale
         uses: errata-ai/vale-action@v2
         with:
           version: 3.14.1
-          files: 'templates commands GEMINI.md'
           fail_on_error: true
           reporter: github-pr-check
         env:
