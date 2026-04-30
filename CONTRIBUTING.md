@@ -121,6 +121,36 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
    gemini extensions unlink mobile-automator
    ```
 
+### Prompt Linting (Vale + pre-commit)
+
+Prompt files (`commands/**/*.toml`, `templates/**/*.md`, `GEMINI.md`) are linted by [Vale](https://vale.sh) with a `PromptHygiene` style that catches characters known to confuse AI agents or downstream parsers: the section sign (`§`), smart/curly quotes, non-breaking spaces, and zero-width characters. The same rules run in CI on every PR.
+
+To run the same checks locally before you push:
+
+1. **Install Vale** (one-time):
+   ```bash
+   brew install vale          # macOS
+   # or follow https://vale.sh/docs/install for Linux/Windows
+   ```
+
+2. **Install the pre-commit framework** (one-time):
+   ```bash
+   pip install pre-commit     # or: brew install pre-commit
+   ```
+
+3. **Wire up the git hook** (one-time per clone):
+   ```bash
+   pre-commit install
+   ```
+
+After that, `git commit` automatically runs Vale on staged prompt files. To run it manually against everything:
+
+```bash
+vale --config .vale.ini templates commands GEMINI.md
+```
+
+If a rule fires, the message tells you what to replace it with. If you need to add a new rule, drop a YAML file into `.vale/styles/PromptHygiene/`.
+
 ---
 
 ## 📝 Coding Guidelines
