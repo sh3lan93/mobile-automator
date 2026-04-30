@@ -1,0 +1,12 @@
+{
+  "mode": "platform-agnostic",
+  "project_name": "Sample",
+  "android_package": "com.example.app",
+  "ios_bundle_id": "com.example.app.ios",
+  "environments": ["production", "staging"],
+  "default_environment": "staging",
+  "business_domain": "Sample app",
+  "business_critical_paths": ["login", "checkout"],
+  "loading_indicators": "a centered spinner overlay",
+  "protected_directories": ["app/src/main", "ios"]
+}

@@ -66,8 +66,31 @@ Executed Automatically: Tap fields, type text, verify dashboard
 
 See our [examples](examples/index.md) for Android and iOS patterns.
 
-### What is the schema_version field?
+### When should I use agnostic vs aware mode?
 
+**Answer:** Choose **platform-agnostic** when your app ships to both Android and iOS from a shared codebase (Flutter, React Native, Kotlin Multiplatform, Compose Multiplatform) and you want a single set of test scenarios that run on either platform without modification.
+
+Choose **platform-aware** when:
+- Your project targets only one OS (pure Android or pure iOS native app)
+- Your tests intentionally exercise OS-specific behaviour or UI patterns
+- You have a legacy project already configured in aware mode and you don't need cross-platform portability
+
+In practice: if you are using Flutter, React Native, KMP, or CMP, start with agnostic. For native Android-only or iOS-only apps, use aware.
+
+### How do I migrate an existing project to agnostic mode?
+
+**Answer:** Re-run `/mobile-automator:setup` in your project. At setup section § 1.5 (Mode Selection), choose **"Switch to platform-agnostic"**. The migration is handled automatically:
+
+1. Values that apply to both modes (project name, business domain, environments, architecture) are carried forward.
+2. OS-specific values (build command, platform SDK details) are dropped.
+3. Agnostic-specific fields not present in your old config are prompted interactively.
+4. Your previous skills are archived to `.gemini/skills/.archive/` and your previous config is backed up as `mobile-automator/config.json.platform-aware.bak`.
+
+The migration is fully reversible — see [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) for the manual restore procedure.
+
+### What is the `$schema_version` field?
+
+**Answer:** Every test scenario JSON file includes `"$schema_version": "2.0"` as its first field. This enables version detection for future schema evolution. All scenarios must include this field.
 **Answer:** Every test scenario JSON file includes `"$schema_version": "2.0"` as its first field. This enables version detection for future schema evolution. All scenarios must include this field.
 
 ### Can I use mobile-automator with my existing tests?
@@ -210,6 +233,7 @@ Generated: `mobile-automator/scenarios/android_login_happy_path.json`
 1. **Review generated scenario** — Check `mobile-automator/scenarios/`
 2. **Edit JSON manually** — Fix element IDs, actions, assertions
 3. **Validate schema** — Ensure it matches [schema reference](reference/schema.md)
+3. **Validate schema** — Ensure it matches [schema reference](reference/schema.md)
 4. **Re-execute** — Run `/mobile-automator:execute` with corrected scenario
 
 **Common edits:**
@@ -229,6 +253,7 @@ For cross-platform apps, generate scenario on each platform to capture platform-
 
 ### How do I parameterize tests (different data)?
 
+**Answer:** Use the `variables` section in scenarios:
 **Answer:** Use the `variables` section in scenarios:
 
 ```json

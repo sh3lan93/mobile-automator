@@ -12,6 +12,31 @@
 
 ---
 
+## 🔀 Two Modes: Platform-Aware & Platform-Agnostic
+
+Mobile Automator ships with two operating modes so you can match your testing strategy to your tech stack:
+
+| Mode | Best for | How to enable |
+|------|----------|---------------|
+| **Platform-aware** (default) | Single-OS apps or tests that exercise OS-specific UI | Default — just run `/mobile-automator:setup` |
+| **Platform-agnostic** | Cross-platform apps (Flutter, React Native, KMP, CMP) shipping to both Android and iOS | Select "platform-agnostic" at the Mode Selection step during setup |
+
+### Platform-agnostic quick start
+
+```bash
+cd ~/projects/my-cross-platform-app
+gemini
+
+> /mobile-automator:setup
+# When prompted at § 1.5 "Mode Selection", choose: platform-agnostic
+```
+
+Agnostic scenarios are portable — the same JSON runs on Android and iOS without modification. OS-shaped gestures (back navigation, keyboard dismissal, permission dialogs) are expressed as four semantic actions (`press_back`, `dismiss_keyboard`, `grant_permission`, `deny_permission`) that the executor resolves to the correct native primitive at runtime.
+
+**Switching modes later:** Re-run `/mobile-automator:setup` and pick a different mode at § 1.5. Your previous skills are archived to `.gemini/skills/.archive/` and can be restored manually if needed (see [TROUBLESHOOTING.md](TROUBLESHOOTING.md)).
+
+---
+
 ## 💡 Why Mobile Automator?
 
 **The story behind this tool:**

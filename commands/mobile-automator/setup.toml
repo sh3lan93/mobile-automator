@@ -50,6 +50,173 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
 
 ---
 
+### 1.0.5 Existing Configuration Detection (NEW for platform-agnostic mode)
+
+**PROTOCOL:** Detect whether this project already has a mobile-automator configuration. This determines the options shown in Section 1.5 (Mode Selection).
+
+1. **Check for `mobile-automator/config.json`:**
+   - If file exists, read it and extract `mode` field.
+   - If `mode` field is missing, treat as `platform-aware` (v0.10 implicit default). Log: "ℹ Existing v0.10 config detected (no `mode` field); treating as platform-aware."
+   - Set state variables: `is_existing_setup = true`, `current_mode = <detected>`.
+   - If file does NOT exist: `is_existing_setup = false`, `current_mode = null`.
+
+2. **Persist these values** in `mobile-automator/setup_state.json` so Section 1.5 can read them:
+
+   ```json
+   {
+     "is_existing_setup": true,
+     "current_mode": "platform-aware"
+   }
+   ```
+
+3. **Continue to Section 1.5.**
+
+---
+
+## 1.5 MODE SELECTION
+**PROTOCOL:** Determine which mode this project will use. Mode is durable in `config.json`; once chosen, it shapes every subsequent setup section and all command branching.
+
+The mode controls:
+- `platform-aware`: today's behavior. Setup branches per platform (Android/iOS/Flutter/RN/KMP/CMP). Skills bake in 13 platform-specific placeholders. Build commands are captured.
+- `platform-agnostic`: NEW. Scenarios are portable across Android and iOS. Setup is shorter (~3 sections). Skills carry only project facts; per-OS resolution happens at runtime via `platform-resolutions.md`. App install is user-managed.
+
+### 1.5.1 — Greenfield path (no existing config)
+
+If `is_existing_setup` is `false`:
+
+1. Use `ask_user` (type: `choice`):
+   - Header: `Mode`
+   - Question: `Which mode would you like to use?`
+   - Options:
+     - `Platform-agnostic (recommended) — portable scenarios across Android & iOS`
+     - `Platform-aware (legacy) — single-OS focus with platform-specific testing logic`
+   - Default: `Platform-agnostic`
+
+2. Set `selected_mode = "platform-agnostic"` or `"platform-aware"` based on the answer.
+3. Set `is_mode_switch = false`.
+4. Persist to `setup_state.json`:
+   ```json
+   {
+     "is_existing_setup": false,
+     "selected_mode": "<chosen>",
+     "is_mode_switch": false
+   }
+   ```
+5. Skip Section 1.6 (no migration needed). Branch on `selected_mode`:
+   - `platform-aware` → continue to Section 2.0 (existing aware flow).
+   - `platform-agnostic` → jump to Section A.1 (new agnostic flow).
+
+### 1.5.2 — Existing-project path
+
+If `is_existing_setup` is `true`:
+
+1. Use `ask_user` (type: `choice`):
+   - Header: `Mode`
+   - Question: `This project is currently configured in [current_mode] mode. What would you like to do?`
+   - Options:
+     - `Resume / re-verify current setup ([current_mode])`
+     - `Switch to [the other mode]`
+     - `Cancel`
+   - Default: `Resume / re-verify current setup`
+
+2. Branch on the answer:
+   - **Resume current**: set `selected_mode = current_mode`, `is_mode_switch = false`. Skip Section 1.6. Branch on `selected_mode` as in Section 1.5.1.
+   - **Switch**: set `selected_mode = the other mode`, `is_mode_switch = true`. Continue to Section 1.6 (Migration sub-flow).
+   - **Cancel**: halt setup. Print: `Setup cancelled. Existing configuration is unchanged.`
+
+3. Persist:
+   ```json
+   {
+     "is_existing_setup": true,
+     "current_mode": "<previous>",
+     "selected_mode": "<chosen>",
+     "is_mode_switch": <true|false>
+   }
+   ```
+
+---
+
+## 1.6 MIGRATION SUB-FLOW
+**PROTOCOL:** This section runs ONLY when `is_mode_switch = true` (set by Section 1.5). Structure: 3-phase commit (validate → archive → install). Any failure before Phase 3 leaves the project recoverable.
+
+### 1.6.1 — Phase 1: Validate (read-only, no mutations)
+
+1. **Build `migration_state.json` with carry-forward analysis:**
+   - Read `mobile-automator/config.json`.
+   - For each field in the source mode, decide: carry-forward / drop / re-ask.
+   - When migrating **aware → agnostic**:
+     - Carry-forward: `project_name`, `business_domain`, `business_critical_paths`, `protected_directories`, `android_package`, `ios_bundle_id`, `environments`, `default_environment`.
+     - Drop: `platform`, `build_system`, `build_command`, `architecture`, `automation_extras`, `platform_details`.
+     - Re-ask: `loading_indicators` (existing values are class names; agnostic mode wants semantic descriptions).
+   - When migrating **agnostic → aware**:
+     - Carry-forward: `project_name`, `business_domain`, `business_critical_paths`, `protected_directories`, `android_package`, `ios_bundle_id`, `environments`, `default_environment`, `loading_indicators`.
+     - Re-ask: `platform`, `build_system`, `build_command`, `architecture`, `automation_extras` (aware-only fields).
+
+2. **Show the user a summary** with three lists (carry-forward, drop, re-ask).
+
+3. Use `ask_user` (type: `choice`):
+   - Header: `Confirm migration`
+   - Question: `Proceed with migration to [selected_mode]?`
+   - Options: `Yes, proceed` / `Cancel`
+
+4. If `Cancel`: halt. No mutations happened.
+
+5. **Re-ask the fields in the re-ask list** (if any) and update `migration_state.json`.
+
+6. **Run scenarios lint and Phase 2 backup+archive** by invoking:
+   ```bash
+   node ${extensionPath}/scripts/install-skills.js migrate-helpers --old-mode=<current_mode>
+   ```
+   This subcommand lints scenarios (read-only, informational) and runs Phase 2 (backup + archive). The user has explicitly confirmed in step 3 above. If the command exits non-zero, halt and instruct the user to follow the manual restore steps in TROUBLESHOOTING.md.
+
+### 1.6.2 — Phase 2: Archive (reversible mutations)
+
+Triggered by the `migrate-helpers` invocation in 1.6.1 step 6:
+
+1. **Backup** `mobile-automator/config.json` → `mobile-automator/config.json.<old_mode>.bak`.
+2. **Archive** `.gemini/skills/mobile-automator-generator/` and `.../mobile-automator-executor/` → `.gemini/skills/.archive/<role>-<old_mode>-<ISO>/`.
+
+If the migrate-helpers command exits non-zero, halt and tell the user:
+> "Migration failed during Phase 2. Backup and archive may be partially complete. Run `node ${extensionPath}/scripts/install-skills.js migrate-helpers --old-mode=<old_mode>` again, or follow the manual restore steps in TROUBLESHOOTING.md."
+
+### 1.6.3 — Phase 3: Install (commit) — Hand-off to destination flow
+
+After successful Phase 2:
+
+1. **Pre-fill `setup_state.json` with carried-forward fields** from `migration_state.json` so the destination flow's prompts default to the carried values:
+   ```json
+   {
+     "is_existing_setup": true,
+     "selected_mode": "platform-agnostic",
+     "is_mode_switch": true,
+     "knowledge": {
+       "project_name": "<carried>",
+       "business_domain": "<carried>",
+       "business_critical_paths": "<carried>",
+       "loading_indicators": "<re-asked>",
+       "protected_directories": "<carried>"
+     },
+     "app": {
+       "android_package": "<carried>",
+       "ios_bundle_id": "<carried>"
+     }
+   }
+   ```
+
+2. **Branch on `selected_mode`:**
+   - `platform-agnostic` → Section A.1 (each prompt defaults to carried value; user typically confirms quickly).
+   - `platform-aware` → Section 2.0 (existing aware flow; aware-only fields are re-asked).
+
+3. The destination flow's installation step (Section A.6 or Section 6.0 of aware) runs `install-skills.js --mode=<selected_mode>` and writes the new `config.json`.
+
+4. **On successful completion** of the destination flow:
+   - Remove `mobile-automator/setup_state.json` (transient).
+   - Remove `mobile-automator/migration_state.json` (transient).
+   - Print:
+     > "Migration complete. Old skills archived at `.gemini/skills/.archive/`. Old config backed up at `mobile-automator/config.json.<old_mode>.bak`. Your scenarios are unchanged."
+
+---
+
 ## 2.0 PLATFORM DETECTION
 **PROTOCOL: Analyze the project files to determine the mobile platform.**
 
@@ -528,6 +695,7 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
 2.  **Write `mobile-automator/config.json`:**
     ```json
     {
+      "mode": "platform-aware",
       "version": "1.0.0",
       "platform": "<detected_platform>",
       "environments": ["<env1>", "<env2>"],
@@ -640,4 +808,168 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
     > **💡 Auto-Approval:** The mobile-mcp server is pre-configured with `trust: true`, so you won't see permission prompts during test recording and execution. This allows smooth, uninterrupted automation.
     >
     > If you need to disable this, see: https://geminicli.com/docs/tools/mcp-server/"
+
+---
+
+# ============================================================================
+# AGNOSTIC FLOW (Sections A.1–A.7) — runs when selected_mode = "platform-agnostic"
+# ============================================================================
+
+### A.1 — Project Basics
+
+**PROTOCOL:** Gather project name and (optionally) Android applicationId and iOS Bundle ID. Either, both, or neither may be provided.
+
+1. **Project name:**
+   - Auto-detect: try `package.json` `name`, `pubspec.yaml` `name`, root build file's project name, or the directory basename.
+   - Confirm with `ask_user` (type: `text`, default: detected value).
+   - Persist to `setup_state.knowledge.project_name`.
+
+2. **Android applicationId (optional):**
+   - Auto-detect: scan `android/app/build.gradle*`, `composeApp/build.gradle.kts`, or root `build.gradle*` for `applicationId`.
+   - Use `ask_user` (type: `text`, allow blank) to confirm or enter manually.
+   - Persist to `setup_state.app.android_package` (or null if blank).
+
+3. **iOS Bundle ID (optional):**
+   - Auto-detect: read `PRODUCT_BUNDLE_IDENTIFIER` from `*.xcodeproj/project.pbxproj` or `Info.plist`.
+   - Use `ask_user` (type: `text`, allow blank).
+   - Persist to `setup_state.app.ios_bundle_id` (or null if blank).
+
+4. Persist `setup_state.json` with `last_successful_step: "A.1"`.
+
+### A.2 — Business Knowledge
+
+**PROTOCOL:** Capture the project's domain and the user flows that are critical for QA.
+
+1. **Business domain:**
+   - Try to extract from `README.md`, app store description, or app `displayName`.
+   - Use `ask_user` (type: `text`) to confirm a one-sentence description.
+   - Persist to `setup_state.knowledge.business_domain`.
+
+2. **Business-critical paths:**
+   - Use `ask_user` (type: `text`) with placeholder `e.g., onboarding, login, checkout, payment`.
+   - Parse comma-separated input into an array.
+   - Persist to `setup_state.knowledge.business_critical_paths` (joined with commas for the placeholder substitution).
+
+3. Persist `setup_state.json` with `last_successful_step: "A.2"`.
+
+### A.3 — Loading Indicators (Semantic Descriptions)
+
+**PROTOCOL:** Capture how loading appears in the app, in plain English. Unlike platform-aware mode (which collects class names like `CircularProgressIndicator`), agnostic mode captures **semantic descriptions** so the AI can identify loading visually regardless of platform.
+
+1. Use `ask_user` (type: `text`) with the prompt:
+   > "Describe what loading looks like in your app, in plain English. Examples:
+   > - `a centered spinner overlay during full-screen loads`
+   > - `shimmer placeholders for cards on the home screen`
+   > - `a small spinner inside the Login button while authenticating`"
+2. Persist user's input verbatim to `setup_state.knowledge.loading_indicators`.
+3. Persist `setup_state.json` with `last_successful_step: "A.3"`.
+
+### A.4 — Protected Directories
+
+**PROTOCOL:** Capture source directories that should NEVER be modified by mobile-automator (the skill operates on test artifacts, not source code).
+
+1. **Auto-detect candidates:**
+   - Common patterns: `app/src/main/`, `ios/`, `lib/`, `src/`, `composeApp/src/`.
+   - Build a default list from directories that exist in the project.
+
+2. Use `ask_user` (type: `text`, default: detected list joined with commas) to confirm.
+
+3. Persist to `setup_state.knowledge.protected_directories`.
+
+4. Persist `setup_state.json` with `last_successful_step: "A.4"`.
+
+### A.5 — Environments (Optional)
+
+**PROTOCOL:** Capture named environments (production, staging, dev). In agnostic mode, environments are decoupled from build flavors — they're just labels for the test target.
+
+1. Use `ask_user` (type: `choice`):
+   - Header: `Environments`
+   - Question: `Does your project have named environments (e.g., production, staging, dev)?`
+   - Options: `Yes` / `No`
+
+2. If `Yes`:
+   - Use `ask_user` (type: `text`) with placeholder `e.g., production, staging, dev`.
+   - Parse comma-separated input into an array.
+   - Persist to `setup_state.environments`.
+   - Use `ask_user` (type: `choice`) for the default environment.
+   - Persist to `setup_state.default_environment`.
+
+3. If `No`:
+   - Set `setup_state.environments = []` and `setup_state.default_environment = null`.
+
+4. Persist `setup_state.json` with `last_successful_step: "A.5"`.
+
+### A.6 — Skill Installation (Agnostic)
+
+**PROTOCOL:** Install the agnostic-mode skills by invoking the deterministic Node.js script with `--mode=platform-agnostic`.
+
+1. **Persist `selected_mode` into `setup_state.json`** if not already present (it should be from Section 1.5):
+   ```json
+   { "selected_mode": "platform-agnostic" }
+   ```
+
+2. **Invoke the installer:**
+   - First, try running:
+     ```
+     node ~/.gemini/extensions/mobile-automator/scripts/install-skills.js --mode=platform-agnostic
+     ```
+   - If the command fails because the script file does not exist:
+     - Read `~/.gemini/extensions/mobile-automator/.gemini-extension-install.json`.
+     - If the JSON contains a `path` or `localPath` field, try:
+       ```
+       node <path_value>/scripts/install-skills.js --mode=platform-agnostic
+       ```
+     - If neither path works, announce:
+       > "Skill installation script not found. Please update the extension: `gemini extensions install https://github.com/sh3lan93/mobile-automator`"
+       **HALT.**
+
+3. **Verify success:**
+   - `.gemini/skills/mobile-automator-generator/SKILL.md` exists, no `{{` remaining.
+   - `.gemini/skills/mobile-automator-executor/SKILL.md` exists, no `{{` remaining.
+   - `.gemini/skills/references/platform-resolutions.md` exists.
+   - `.gemini/skills/references/mobile-mcp-tools.md` exists.
+
+4. If the script exits non-zero, surface the error to the user and halt — do NOT continue to Section A.7.
+
+5. Persist `setup_state.json` with `last_successful_step: "A.6"`.
+
+### A.7 — Directory Scaffolding & Finalization
+
+**PROTOCOL:** Create test-artifact directories, write `config.json`, and clean up state.
+
+1. **Create directories:**
+   - `mobile-automator/scenarios/`
+   - `mobile-automator/screenshots/`
+   - `mobile-automator/results/`
+
+2. **Write `mobile-automator/config.json`:**
+   ```json
+   {
+     "mode": "platform-agnostic",
+     "project_name": "<from setup_state>",
+     "android_package": "<from setup_state, or null>",
+     "ios_bundle_id": "<from setup_state, or null>",
+     "environments": ["<from setup_state>"],
+     "default_environment": "<from setup_state, or null>",
+     "business_domain": "<from setup_state>",
+     "business_critical_paths": ["<parsed array>"],
+     "loading_indicators": "<from setup_state>",
+     "protected_directories": ["<parsed array>"]
+   }
+   ```
+
+3. **Generate `mobile-automator/index.md`** documenting the project's setup.
+
+4. **Remove `mobile-automator/setup_state.json`** (transient — no longer needed).
+
+5. **Commit to git** if a git repository is detected:
+   ```bash
+   git add mobile-automator/ .gemini/
+   git commit -m "feat: install mobile-automator (agnostic mode)"
+   ```
+   Skip silently if not a git repo.
+
+6. **Print success summary** with next-step pointers:
+   > "✅ Mobile Automator (platform-agnostic) installed.
+   > Try: `/mobile-automator:generate <your test steps>` to record your first scenario."
 """
