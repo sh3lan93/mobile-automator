@@ -1,0 +1,6 @@
+extends: existence
+message: "Zero-width or invisible character detected. Remove it - these are almost always copy-paste artifacts and they confuse both models and downstream parsers."
+level: error
+nonword: true
+tokens:
+  - '[\x{200B}\x{200C}\x{200D}\x{2060}\x{FEFF}]'

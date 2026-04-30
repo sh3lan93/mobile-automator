@@ -1,0 +1,6 @@
+extends: existence
+message: "Avoid '§' in AI-prompt files; use 'Section N' or 'Sections N-M' instead. The section sign is non-ASCII and can be ambiguous across encodings or copy-paste paths."
+level: error
+nonword: true
+tokens:
+  - '§'

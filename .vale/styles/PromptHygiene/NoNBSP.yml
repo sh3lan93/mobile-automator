@@ -1,0 +1,6 @@
+extends: existence
+message: "Non-breaking space (U+00A0) detected. Use a regular ASCII space - NBSP looks identical but breaks string matching and token boundaries."
+level: error
+nonword: true
+tokens:
+  - '\x{00A0}'

@@ -1,0 +1,6 @@
+extends: existence
+message: "Use straight quotes (\" and ') in AI-prompt files. Smart/curly quotes can break exact-string matchers in tools the agent invokes."
+level: error
+nonword: true
+tokens:
+  - '[\x{201C}\x{201D}\x{2018}\x{2019}]'

@@ -1,0 +1,39 @@
+name: Lint Prompts (Vale)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'templates/**'
+      - 'commands/**'
+      - 'GEMINI.md'
+      - '.vale.ini'
+      - '.vale/**'
+      - '.github/workflows/lint-prompts.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'templates/**'
+      - 'commands/**'
+      - 'GEMINI.md'
+      - '.vale.ini'
+      - '.vale/**'
+      - '.github/workflows/lint-prompts.yml'
+
+jobs:
+  vale:
+    name: Vale prompt-hygiene check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Vale
+        uses: errata-ai/vale-action@v2
+        with:
+          version: 3.14.1
+          files: 'templates commands GEMINI.md'
+          fail_on_error: true
+          reporter: github-pr-check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
