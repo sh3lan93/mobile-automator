@@ -143,13 +143,15 @@ To run the same checks locally before you push:
    pre-commit install
    ```
 
-After that, `git commit` automatically runs Vale on staged prompt files. To run it manually against everything:
+After that, `git commit` automatically runs Vale on staged prompt files. To run it manually against the whole repo:
 
 ```bash
-vale --config .vale.ini templates commands GEMINI.md
+vale .
 ```
 
-If a rule fires, the message tells you what to replace it with. If you need to add a new rule, drop a YAML file into `.vale/styles/PromptHygiene/`.
+Path scoping lives in `.vale.ini` - `PromptHygiene` only attaches to `templates/**/*.md`, `commands/**/*.toml`, and `GEMINI.md`. Human-facing docs are scanned but unscoped, so they never produce errors.
+
+If a rule fires, the message tells you what to replace it with. To add a new rule, drop a YAML file into `.vale/styles/PromptHygiene/`.
 
 ---
 
