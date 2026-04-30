@@ -52,7 +52,7 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
 
 ### 1.0.5 Existing Configuration Detection (NEW for platform-agnostic mode)
 
-**PROTOCOL:** Detect whether this project already has a mobile-automator configuration. This determines the options shown in § 1.5 (Mode Selection).
+**PROTOCOL:** Detect whether this project already has a mobile-automator configuration. This determines the options shown in Section 1.5 (Mode Selection).
 
 1. **Check for `mobile-automator/config.json`:**
    - If file exists, read it and extract `mode` field.
@@ -60,7 +60,7 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
    - Set state variables: `is_existing_setup = true`, `current_mode = <detected>`.
    - If file does NOT exist: `is_existing_setup = false`, `current_mode = null`.
 
-2. **Persist these values** in `mobile-automator/setup_state.json` so § 1.5 can read them:
+2. **Persist these values** in `mobile-automator/setup_state.json` so Section 1.5 can read them:
 
    ```json
    {
@@ -69,7 +69,7 @@ CRITICAL: This setup process is entirely file-based. It does NOT require a conne
    }
    ```
 
-3. **Continue to § 1.5.**
+3. **Continue to Section 1.5.**
 
 ---
 
@@ -102,9 +102,9 @@ If `is_existing_setup` is `false`:
      "is_mode_switch": false
    }
    ```
-5. Skip § 1.6 (no migration needed). Branch on `selected_mode`:
-   - `platform-aware` → continue to § 2.0 (existing aware flow).
-   - `platform-agnostic` → jump to § A.1 (new agnostic flow).
+5. Skip Section 1.6 (no migration needed). Branch on `selected_mode`:
+   - `platform-aware` → continue to Section 2.0 (existing aware flow).
+   - `platform-agnostic` → jump to Section A.1 (new agnostic flow).
 
 ### 1.5.2 — Existing-project path
 
@@ -120,8 +120,8 @@ If `is_existing_setup` is `true`:
    - Default: `Resume / re-verify current setup`
 
 2. Branch on the answer:
-   - **Resume current**: set `selected_mode = current_mode`, `is_mode_switch = false`. Skip § 1.6. Branch on `selected_mode` as in § 1.5.1.
-   - **Switch**: set `selected_mode = the other mode`, `is_mode_switch = true`. Continue to § 1.6 (Migration sub-flow).
+   - **Resume current**: set `selected_mode = current_mode`, `is_mode_switch = false`. Skip Section 1.6. Branch on `selected_mode` as in Section 1.5.1.
+   - **Switch**: set `selected_mode = the other mode`, `is_mode_switch = true`. Continue to Section 1.6 (Migration sub-flow).
    - **Cancel**: halt setup. Print: `Setup cancelled. Existing configuration is unchanged.`
 
 3. Persist:
@@ -137,7 +137,7 @@ If `is_existing_setup` is `true`:
 ---
 
 ## 1.6 MIGRATION SUB-FLOW
-**PROTOCOL:** This section runs ONLY when `is_mode_switch = true` (set by § 1.5). Structure: 3-phase commit (validate → archive → install). Any failure before Phase 3 leaves the project recoverable.
+**PROTOCOL:** This section runs ONLY when `is_mode_switch = true` (set by Section 1.5). Structure: 3-phase commit (validate → archive → install). Any failure before Phase 3 leaves the project recoverable.
 
 ### 1.6.1 — Phase 1: Validate (read-only, no mutations)
 
@@ -204,10 +204,10 @@ After successful Phase 2:
    ```
 
 2. **Branch on `selected_mode`:**
-   - `platform-agnostic` → § A.1 (each prompt defaults to carried value; user typically confirms quickly).
-   - `platform-aware` → § 2.0 (existing aware flow; aware-only fields are re-asked).
+   - `platform-agnostic` → Section A.1 (each prompt defaults to carried value; user typically confirms quickly).
+   - `platform-aware` → Section 2.0 (existing aware flow; aware-only fields are re-asked).
 
-3. The destination flow's installation step (§ A.6 or § 6.0 of aware) runs `install-skills.js --mode=<selected_mode>` and writes the new `config.json`.
+3. The destination flow's installation step (Section A.6 or Section 6.0 of aware) runs `install-skills.js --mode=<selected_mode>` and writes the new `config.json`.
 
 4. **On successful completion** of the destination flow:
    - Remove `mobile-automator/setup_state.json` (transient).
@@ -812,7 +812,7 @@ After successful Phase 2:
 ---
 
 # ============================================================================
-# AGNOSTIC FLOW (§§ A.1–A.7) — runs when selected_mode = "platform-agnostic"
+# AGNOSTIC FLOW (Sections A.1–A.7) — runs when selected_mode = "platform-agnostic"
 # ============================================================================
 
 ### A.1 — Project Basics
@@ -903,7 +903,7 @@ After successful Phase 2:
 
 **PROTOCOL:** Install the agnostic-mode skills by invoking the deterministic Node.js script with `--mode=platform-agnostic`.
 
-1. **Persist `selected_mode` into `setup_state.json`** if not already present (it should be from § 1.5):
+1. **Persist `selected_mode` into `setup_state.json`** if not already present (it should be from Section 1.5):
    ```json
    { "selected_mode": "platform-agnostic" }
    ```
@@ -929,7 +929,7 @@ After successful Phase 2:
    - `.gemini/skills/references/platform-resolutions.md` exists.
    - `.gemini/skills/references/mobile-mcp-tools.md` exists.
 
-4. If the script exits non-zero, surface the error to the user and halt — do NOT continue to § A.7.
+4. If the script exits non-zero, surface the error to the user and halt — do NOT continue to Section A.7.
 
 5. Persist `setup_state.json` with `last_successful_step: "A.6"`.
 
