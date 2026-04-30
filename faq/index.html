@@ -1236,10 +1236,32 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#when-should-i-use-agnostic-vs-aware-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When should I use agnostic vs aware mode?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-do-i-migrate-an-existing-project-to-agnostic-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How do I migrate an existing project to agnostic mode?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#what-is-the-schema_version-field" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What is the schema_version field?
+        What is the $schema_version field?
       
     </span>
   </a>
@@ -1852,10 +1874,32 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#when-should-i-use-agnostic-vs-aware-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When should I use agnostic vs aware mode?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-do-i-migrate-an-existing-project-to-agnostic-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How do I migrate an existing project to agnostic mode?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#what-is-the-schema_version-field" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What is the schema_version field?
+        What is the $schema_version field?
       
     </span>
   </a>
@@ -2419,8 +2463,25 @@ Executed Automatically: Tap fields, type text, verify dashboard
 - ✅ <strong>Kotlin Multiplatform (KMP)</strong> (Android &amp; iOS)
 - ✅ <strong>Compose Multiplatform (CMP)</strong> (Android &amp; iOS)</p>
 <p>See our <a href="../examples/">examples</a> for Android and iOS patterns.</p>
-<h3 id="what-is-the-schema_version-field">What is the schema_version field?<a class="headerlink" href="#what-is-the-schema_version-field" title="Permanent link">&para;</a></h3>
-<p><strong>Answer:</strong> Every test scenario JSON file includes <code>"$schema_version": "2.0"</code> as its first field. This enables version detection for future schema evolution. All scenarios must include this field.</p>
+<h3 id="when-should-i-use-agnostic-vs-aware-mode">When should I use agnostic vs aware mode?<a class="headerlink" href="#when-should-i-use-agnostic-vs-aware-mode" title="Permanent link">&para;</a></h3>
+<p><strong>Answer:</strong> Choose <strong>platform-agnostic</strong> when your app ships to both Android and iOS from a shared codebase (Flutter, React Native, Kotlin Multiplatform, Compose Multiplatform) and you want a single set of test scenarios that run on either platform without modification.</p>
+<p>Choose <strong>platform-aware</strong> when:
+- Your project targets only one OS (pure Android or pure iOS native app)
+- Your tests intentionally exercise OS-specific behaviour or UI patterns
+- You have a legacy project already configured in aware mode and you don't need cross-platform portability</p>
+<p>In practice: if you are using Flutter, React Native, KMP, or CMP, start with agnostic. For native Android-only or iOS-only apps, use aware.</p>
+<h3 id="how-do-i-migrate-an-existing-project-to-agnostic-mode">How do I migrate an existing project to agnostic mode?<a class="headerlink" href="#how-do-i-migrate-an-existing-project-to-agnostic-mode" title="Permanent link">&para;</a></h3>
+<p><strong>Answer:</strong> Re-run <code>/mobile-automator:setup</code> in your project. At setup section § 1.5 (Mode Selection), choose <strong>"Switch to platform-agnostic"</strong>. The migration is handled automatically:</p>
+<ol>
+<li>Values that apply to both modes (project name, business domain, environments, architecture) are carried forward.</li>
+<li>OS-specific values (build command, platform SDK details) are dropped.</li>
+<li>Agnostic-specific fields not present in your old config are prompted interactively.</li>
+<li>Your previous skills are archived to <code>.gemini/skills/.archive/</code> and your previous config is backed up as <code>mobile-automator/config.json.platform-aware.bak</code>.</li>
+</ol>
+<p>The migration is fully reversible — see <a href="../TROUBLESHOOTING.md">TROUBLESHOOTING.md</a> for the manual restore procedure.</p>
+<h3 id="what-is-the-schema_version-field">What is the <code>$schema_version</code> field?<a class="headerlink" href="#what-is-the-schema_version-field" title="Permanent link">&para;</a></h3>
+<p><strong>Answer:</strong> Every test scenario JSON file includes <code>"$schema_version": "2.0"</code> as its first field. This enables version detection for future schema evolution. All scenarios must include this field.
+<strong>Answer:</strong> Every test scenario JSON file includes <code>"$schema_version": "2.0"</code> as its first field. This enables version detection for future schema evolution. All scenarios must include this field.</p>
 <h3 id="can-i-use-mobile-automator-with-my-existing-tests">Can I use mobile-automator with my existing tests?<a class="headerlink" href="#can-i-use-mobile-automator-with-my-existing-tests" title="Permanent link">&para;</a></h3>
 <p><strong>Answer:</strong> Partially. If you have:
 - <strong>Appium/Espresso/XCTest tests</strong> → No direct import, but use mobile-automator for <em>new</em> tests
@@ -2519,6 +2580,7 @@ grep<span class="w"> </span><span class="s2">&quot;{{&quot;</span><span class="w
 <li><strong>Review generated scenario</strong> — Check <code>mobile-automator/scenarios/</code></li>
 <li><strong>Edit JSON manually</strong> — Fix element IDs, actions, assertions</li>
 <li><strong>Validate schema</strong> — Ensure it matches <a href="../reference/schema/">schema reference</a></li>
+<li><strong>Validate schema</strong> — Ensure it matches <a href="../reference/schema/">schema reference</a></li>
 <li><strong>Re-execute</strong> — Run <code>/mobile-automator:execute</code> with corrected scenario</li>
 </ol>
 <p><strong>Common edits:</strong>
@@ -2533,7 +2595,8 @@ grep<span class="w"> </span><span class="s2">&quot;{{&quot;</span><span class="w
 3. <strong>Mark platform field</strong> — Set <code>"platform": "android"</code> or <code>"platform": "ios"</code></p>
 <p>For cross-platform apps, generate scenario on each platform to capture platform-specific behaviors.</p>
 <h3 id="how-do-i-parameterize-tests-different-data">How do I parameterize tests (different data)?<a class="headerlink" href="#how-do-i-parameterize-tests-different-data" title="Permanent link">&para;</a></h3>
-<p><strong>Answer:</strong> Use the <code>variables</code> section in scenarios:</p>
+<p><strong>Answer:</strong> Use the <code>variables</code> section in scenarios:
+<strong>Answer:</strong> Use the <code>variables</code> section in scenarios:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;test_email&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
