@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
     "toml": "^3.0.0"
   },
   "engines": {
