@@ -693,6 +693,16 @@ The installer is mode-aware:
     mkdir -p mobile-automator/screenshots
     mkdir -p mobile-automator/results
     ```
+3.  **Ensure `.gitignore` excludes the recorder working directory:**
+    The recorder writes per-session working state under `mobile-automator/.recorder/` (in-flight scenarios, captured credentials, evidence) which must never be committed. Make sure the project's `.gitignore` ignores that path:
+    ```bash
+    if [ -f .gitignore ]; then
+      grep -qxF 'mobile-automator/.recorder/' .gitignore || printf '\n# Mobile Automator recorder per-session working directory\nmobile-automator/.recorder/\n' >> .gitignore
+    else
+      printf '# Mobile Automator recorder per-session working directory\nmobile-automator/.recorder/\n' > .gitignore
+    fi
+    ```
+    If the line is already present, leave `.gitignore` untouched.
 
 ### 7.2 Generate Config File
 1.  **Read Final State:** Read `mobile-automator/setup_state.json` for all collected data.
@@ -945,6 +955,16 @@ The installer is mode-aware:
    - `mobile-automator/scenarios/`
    - `mobile-automator/screenshots/`
    - `mobile-automator/results/`
+
+   Then ensure the project's `.gitignore` excludes the recorder's per-session working directory `mobile-automator/.recorder/` (in-flight scenarios, captured credentials, evidence — must never be committed):
+   ```bash
+   if [ -f .gitignore ]; then
+     grep -qxF 'mobile-automator/.recorder/' .gitignore || printf '\n# Mobile Automator recorder per-session working directory\nmobile-automator/.recorder/\n' >> .gitignore
+   else
+     printf '# Mobile Automator recorder per-session working directory\nmobile-automator/.recorder/\n' > .gitignore
+   fi
+   ```
+   Leave `.gitignore` untouched if the line is already present.
 
 2. **Write `mobile-automator/config.json`:**
    ```json
