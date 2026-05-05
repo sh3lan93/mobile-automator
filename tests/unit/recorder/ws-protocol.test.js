@@ -71,4 +71,13 @@ describe('ws-protocol', () => {
     await new Promise((r) => setTimeout(r, 50));
     expect(disconnected).toBe(true);
   });
+
+  test('onConnect callback fires when client connects', async () => {
+    let connected = false;
+    wsCtx.onConnect(() => { connected = true; });
+    const ws = await connect(httpSrv.port);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(connected).toBe(true);
+    ws.close();
+  });
 });

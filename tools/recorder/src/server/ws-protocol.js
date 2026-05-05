@@ -7,10 +7,12 @@ function attachWsServer({ httpServer }) {
   const clients = new Set();
   const messageHandlers = [];
   const disconnectHandlers = [];
+  const connectHandlers = [];
   let lastBroadcast = null;
 
   wss.on('connection', (ws) => {
     clients.add(ws);
+    for (const h of connectHandlers) h();
     if (lastBroadcast) {
       const cached = JSON.stringify(lastBroadcast);
       // Deferred so the client's 'open' event resolves and the test/consumer
@@ -39,6 +41,7 @@ function attachWsServer({ httpServer }) {
       }
     },
     onMessage(fn) { messageHandlers.push(fn); },
+    onConnect(fn) { connectHandlers.push(fn); },
     onDisconnect(fn) { disconnectHandlers.push(fn); },
     clientCount() { return clients.size; },
     close() { wss.close(); },
