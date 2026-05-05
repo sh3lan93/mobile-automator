@@ -68,14 +68,40 @@
     return ws;
   }
 
+  function wireButtons(options) {
+    const opts = options || {};
+    const doc = opts.document;
+    const sendWs = opts.sendWs;
+    if (!doc || typeof sendWs !== 'function') {
+      throw new Error('wireButtons: requires {document, sendWs}');
+    }
+    function bindOnce(id, message) {
+      const btn = doc.getElementById(id);
+      if (!btn) return;
+      if (btn.getAttribute('data-recorder-wired') === '1') return;
+      btn.setAttribute('data-recorder-wired', '1');
+      btn.addEventListener('click', function () {
+        sendWs(message);
+      });
+    }
+    bindOnce('btn-save', { type: 'save' });
+    bindOnce('btn-cancel', { type: 'cancel' });
+  }
+
   // Expose to the browser global.
   root.renderStepRow = renderStepRow;
   root.appendStep = appendStep;
   root.attachWsClient = attachWsClient;
+  root.wireButtons = wireButtons;
 
   // Expose to CommonJS (jest).
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { renderStepRow: renderStepRow, appendStep: appendStep, attachWsClient: attachWsClient };
+    module.exports = {
+      renderStepRow: renderStepRow,
+      appendStep: appendStep,
+      attachWsClient: attachWsClient,
+      wireButtons: wireButtons,
+    };
   }
 
   // Auto-connect only in a real browser, never under tests.
