@@ -411,6 +411,56 @@ Generated scenarios are project-specific and include your app's context (busines
 
 ---
 
+## 🧪 Recording scenarios (experimental)
+
+> ⚠️ **In active development.** This is a tracer-bullet slice ([#22](https://github.com/sh3lan93/mobile-automator/issues/22)) of [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21). The feature is being built incrementally, lives behind an opt-in env var, and will graduate to a stable release only once the slice ladder is complete. **Do not rely on it for day-to-day testing yet.**
+
+### What is recording?
+
+Instead of describing each step in natural language for `/mobile-automator:generate`, the recorder lets you **capture user interactions on a device and have the AI synthesize a scenario JSON from the captured trace**. You drive the app the way a real user would; the recorder reconstructs the scenario afterwards.
+
+### Opt in
+
+The command is hidden until you set the env-var gate. Track progress and discussion in [#21](https://github.com/sh3lan93/mobile-automator/issues/21).
+
+```bash
+export MOBILE_AUTOMATOR_RECORDER=1
+```
+
+### Quick start
+
+```bash
+MOBILE_AUTOMATOR_RECORDER=1 gemini
+
+> /mobile-automator:record <scenario_name>
+```
+
+The command launches a small local sidecar that hosts a browser-based recorder GUI. As you interact with the connected device, your taps appear in the GUI's step list. When you click **Save & Generate**, the recorder skill runs and writes a scenario JSON to `mobile-automator/scenarios/<scenario_name>.json` — the same format that `/mobile-automator:generate` produces. **Cancel** discards the session.
+
+### What works in this slice (#22)
+
+- **Tap gestures only.** The classifier internally understands more, but only tap is wired into the GUI.
+- **Android emulator only.**
+- **Platform-aware mode only** — the agnostic recorder template lands in a later slice.
+- Browser-disconnect tolerance (60-second reconnect window) and clean teardown on Ctrl+C.
+
+### What does NOT work yet
+
+These are tracked as separate slices under [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21):
+
+- Additional gestures (long-press, swipe, type, scroll, etc.) surfaced in the GUI — [#24](https://github.com/sh3lan93/mobile-automator/issues/24), [#25](https://github.com/sh3lan93/mobile-automator/issues/25), [#26](https://github.com/sh3lan93/mobile-automator/issues/26).
+- Authoring assertions from the GUI — [#27](https://github.com/sh3lan93/mobile-automator/issues/27).
+- Sensitive-input redaction (`--allow-sensitive-input`) — [#28](https://github.com/sh3lan93/mobile-automator/issues/28).
+- Platform-agnostic recorder — [#29](https://github.com/sh3lan93/mobile-automator/issues/29).
+- iOS support — [#30](https://github.com/sh3lan93/mobile-automator/issues/30).
+- `--verify` (re-run the recorded scenario before saving) — [#31](https://github.com/sh3lan93/mobile-automator/issues/31).
+- `--overwrite` (replace an existing scenario by name) — [#32](https://github.com/sh3lan93/mobile-automator/issues/32).
+- Multi-touch, cross-platform polish, and graduation work — [#33](https://github.com/sh3lan93/mobile-automator/issues/33), [#34](https://github.com/sh3lan93/mobile-automator/issues/34), [#35](https://github.com/sh3lan93/mobile-automator/issues/35).
+
+If you hit a rough edge, please file it against [#21](https://github.com/sh3lan93/mobile-automator/issues/21) so it lands in the right slice.
+
+---
+
 ## 🐛 Troubleshooting
 
 For common issues and solutions, see **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)**.

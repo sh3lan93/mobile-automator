@@ -259,6 +259,33 @@ Skill templates are organized by mode:
 4. Writes populated SKILL.md to `.gemini/skills/`
 5. Verifies no placeholders remain
 
+### Recorder Skill Template (experimental — gated behind `MOBILE_AUTOMATOR_RECORDER=1`)
+
+Tracked under [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21); landed as the tracer-bullet slice in [#22](https://github.com/sh3lan93/mobile-automator/issues/22). Lives alongside the generator and executor templates.
+
+- **Template path:** `templates/mobile-automator-recorder/aware/SKILL.md`
+- **Installed to:** `.gemini/skills/mobile-automator-recorder/SKILL.md` (only when `install-skills.js` runs in **platform-aware** mode).
+- **Purpose:** Runs at the end of `/mobile-automator:record` to synthesise the final scenario JSON from the artifact bundle the sidecar produces under `mobile-automator/.recorder/<session>/`. The recorder skill does **not** re-derive scenario style — it cross-references the generator skill's rules so the generator stays the single source of truth for scenario shape.
+- **Placeholders used (10 of the 13 aware-mode placeholders):**
+  - `{{project_name}}`
+  - `{{platform_details}}`
+  - `{{build_system}}`
+  - `{{app_package}}`
+  - `{{environments}}`
+  - `{{architecture}}`
+  - `{{business_critical_paths}}`
+  - `{{loading_indicators}}`
+  - `{{protected_directories}}`
+  - `{{additional_resources}}`
+
+  The three aware-mode placeholders **not** consumed by the recorder template — `{{build_command}}`, `{{automation_extras}}`, `{{business_domain}}` — are not load-bearing for scenario synthesis from a captured trace. They may be added in a later slice if the synthesiser grows new responsibilities.
+
+- **Install behaviour by mode:**
+  - **Platform-aware:** the recorder skill is installed alongside the generator and executor.
+  - **Platform-agnostic:** the recorder install is **skipped**. The agnostic recorder template lands in slice [#29](https://github.com/sh3lan93/mobile-automator/issues/29). Until then, a project set up in agnostic mode will not have a recorder skill at `.gemini/skills/mobile-automator-recorder/`, and `/mobile-automator:record` is not expected to run there.
+
+- **Reachability:** the entire recorder surface (the `/mobile-automator:record` command, the sidecar, the GUI, and this skill) is hidden unless `MOBILE_AUTOMATOR_RECORDER=1` is set in the environment. With the gate off, this template is still copied during setup but is never invoked.
+
 ### Adding New Skills
 
 To add a third skill (e.g., `mobile-automator-debugger`):
