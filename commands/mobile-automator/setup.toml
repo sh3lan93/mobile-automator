@@ -637,6 +637,10 @@ After successful Phase 2:
 ## 6.0 SKILL INSTALLATION
 **PROTOCOL: Install skill templates from the extension into the project's `.gemini/skills/` directory using the automated installation script.**
 
+The installer is mode-aware:
+-   **Platform-aware mode:** three skills are installed — generator, executor, and recorder.
+-   **Platform-agnostic mode:** two skills are installed — generator and executor. The recorder skill is **skipped** in agnostic mode because the agnostic recorder template ships in a later slice (#29); attempting to install it now would fail with a missing-source-file error.
+
 ### 6.1 Run Installation Script
 1.  **Announce Action:** "Installing QA automation skills into your project..."
 2.  **Execute the installation script:**
@@ -657,9 +661,9 @@ After successful Phase 2:
 3.  **The script will automatically:**
     -   Read project knowledge from `mobile-automator/setup_state.json`
     -   Create `.gemini/skills/` directories
-    -   Copy skill templates with placeholder replacement
+    -   Copy skill templates with placeholder replacement (generator + executor in both modes; recorder additionally in platform-aware mode)
     -   Copy reference schemas verbatim
-    -   Verify all files are installed correctly
+    -   Verify all files are installed correctly, including a check that no `{{` placeholders remain in any installed skill file — this covers the generator and executor SKILL.md in both modes, plus the recorder SKILL.md when running in platform-aware mode
 
 ### 6.2 Check Script Output
 1.  **If the script exits successfully** (exit code 0) and prints "All skills installed and verified successfully" → proceed to Section 6.3.
