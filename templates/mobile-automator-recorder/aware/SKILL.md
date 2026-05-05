@@ -69,11 +69,11 @@ Apply these steps in order. Most rules referenced here are defined in the genera
 
 5. **Generate step IDs.** For each step, derive a snake_case `step_id` from `<action>_<short_target>` (e.g., `tap_login`, `type_email`, `swipe_carousel_left`). Ensure IDs are unique within the scenario; if a collision occurs, suffix with `_2`, `_3`, etc.
 
-6. **Insert loading waits.** Between any two consecutive effective events, scan the hierarchy snapshots that fall in the gap. If snapshots in that interval contain elements whose class or text matches `{{loading_indicators}}` continuously for ≥300ms, insert a `wait_for_loading_complete` step before the second event. This mirrors the generator skill's loading-wait policy — see § "Detecting and Encoding Patterns" in the generator skill for the canonical rule.
+6. **Insert loading waits.** Between any two consecutive effective events, scan the hierarchy snapshots that fall in the gap. If snapshots in that interval contain elements whose class or text matches `{{loading_indicators}}` continuously for ≥300ms, insert a `wait_for_loading_complete` step before the second event. This mirrors the generator skill's loading-wait policy — see Section "Detecting and Encoding Patterns" in the generator skill for the canonical rule.
 
-7. **Apply auto-assertion rule.** After every state-changing action (`tap`, `type` on submit-style inputs, `press_button`), automatically emit a `visual_state: "loaded"` or `element_exists` assertion for the resulting screen, marked `[auto-generated]` in its `description`. The full rule lives in the generator skill at § "Auto-Assertion Rule" — do not re-derive it here.
+7. **Apply auto-assertion rule.** After every state-changing action (`tap`, `type` on submit-style inputs, `press_button`), automatically emit a `visual_state: "loaded"` or `element_exists` assertion for the resulting screen, marked `[auto-generated]` in its `description`. The full rule lives in the generator skill at Section "Auto-Assertion Rule" — do not re-derive it here.
 
-8. **Ingest user assertions (if any).** If `assertions.json` is non-empty, append each entry as an assertion in the scenario, anchoring it via `after_step` to the step that immediately preceded it in the recording timeline. Validate that the assertion's `type` is one of the 27 documented assertion types (see § "Assertion Type Decision Table" in the generator skill). Discard malformed entries and report them. If `assertions.json` is empty, emit an empty `assertions` array — this is a valid scenario.
+8. **Ingest user assertions (if any).** If `assertions.json` is non-empty, append each entry as an assertion in the scenario, anchoring it via `after_step` to the step that immediately preceded it in the recording timeline. Validate that the assertion's `type` is one of the 27 documented assertion types (see Section "Assertion Type Decision Table" in the generator skill). Discard malformed entries and report them. If `assertions.json` is empty, emit an empty `assertions` array — this is a valid scenario.
 
 9. **Generate tags.** Produce 1–5 kebab-case tags by intersecting `{{business_critical_paths}}` with the action verbs in the recording and the screen titles observed in hierarchy snapshots. Each tag MUST match the regex `^[a-z0-9][a-z0-9-]*$` and be ≤20 characters. Discard any candidate that fails validation. If you cannot produce at least one valid tag, emit `"tags": []` — that is acceptable.
 
@@ -94,12 +94,12 @@ Apply these steps in order. Most rules referenced here are defined in the genera
 
 The following rules are inherited from the generator skill — **do not duplicate or re-decide** them in this skill:
 
-- **Two-pass action/assertion classification** — see `.gemini/skills/mobile-automator-generator/SKILL.md` § "How to parse — Two-Pass Semantic Intent Model" (Pass 1 — Action vs. Assertion Classification; Pass 2 — Assertion Type Selection).
-- **Step Translation Guide** — see `.gemini/skills/mobile-automator-generator/SKILL.md` § "Step Translation Guide" for the canonical event-kind → schema-action mapping.
-- **Auto-Assertion Rule** — see `.gemini/skills/mobile-automator-generator/SKILL.md` § "Auto-Assertion Rule".
-- **Assertion Type Decision Table (27 types)** — see `.gemini/skills/mobile-automator-generator/SKILL.md` § "Assertion Type Decision Table".
-- **Detecting and Encoding Patterns** (loading waits, optional steps, conditional steps, retry policy, capture variables, dynamic targets, nested sub-flows) — see `.gemini/skills/mobile-automator-generator/SKILL.md` § "Detecting and Encoding Patterns".
-- **Schema emission conventions** (named string IDs, `after_step` references, `$schema_version` placement, metadata field policy) — see `.gemini/skills/mobile-automator-generator/SKILL.md` § "Save Scenario".
+- **Two-pass action/assertion classification** — see `.gemini/skills/mobile-automator-generator/SKILL.md` Section "How to parse — Two-Pass Semantic Intent Model" (Pass 1 — Action vs. Assertion Classification; Pass 2 — Assertion Type Selection).
+- **Step Translation Guide** — see `.gemini/skills/mobile-automator-generator/SKILL.md` Section "Step Translation Guide" for the canonical event-kind → schema-action mapping.
+- **Auto-Assertion Rule** — see `.gemini/skills/mobile-automator-generator/SKILL.md` Section "Auto-Assertion Rule".
+- **Assertion Type Decision Table (27 types)** — see `.gemini/skills/mobile-automator-generator/SKILL.md` Section "Assertion Type Decision Table".
+- **Detecting and Encoding Patterns** (loading waits, optional steps, conditional steps, retry policy, capture variables, dynamic targets, nested sub-flows) — see `.gemini/skills/mobile-automator-generator/SKILL.md` Section "Detecting and Encoding Patterns".
+- **Schema emission conventions** (named string IDs, `after_step` references, `$schema_version` placement, metadata field policy) — see `.gemini/skills/mobile-automator-generator/SKILL.md` Section "Save Scenario".
 
 When a recorded event is ambiguous between an action and an assertion (rare — the recorder normally tags assertions explicitly), defer to the generator skill's classification rule: *"Does the user want the AI to DO something, or VERIFY something?"*
 
