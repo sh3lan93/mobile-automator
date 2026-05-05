@@ -41,16 +41,27 @@ function placeholderNamesForMode(mode) {
 }
 
 function skillTemplatesForMode(mode) {
-  return [
+  const subdir = mode === 'platform-aware' ? 'aware' : 'agnostic';
+  const templates = [
     {
-      src: `mobile-automator-generator/${mode === 'platform-aware' ? 'aware' : 'agnostic'}/SKILL.md`,
+      src: `mobile-automator-generator/${subdir}/SKILL.md`,
       dest: '.gemini/skills/mobile-automator-generator/SKILL.md',
     },
     {
-      src: `mobile-automator-executor/${mode === 'platform-aware' ? 'aware' : 'agnostic'}/SKILL.md`,
+      src: `mobile-automator-executor/${subdir}/SKILL.md`,
       dest: '.gemini/skills/mobile-automator-executor/SKILL.md',
     },
   ];
+  // Recorder skill: aware-only for now. The agnostic recorder template
+  // ships in slice #29; including it here would crash agnostic-mode
+  // setup with a missing-source-file error.
+  if (mode === 'platform-aware') {
+    templates.push({
+      src: 'mobile-automator-recorder/aware/SKILL.md',
+      dest: '.gemini/skills/mobile-automator-recorder/SKILL.md',
+    });
+  }
+  return templates;
 }
 
 /** Schema and reference files — copied verbatim (byte-perfect). */
@@ -234,7 +245,10 @@ function archiveExistingSkills(projectRoot, oldMode) {
   const skillsRoot = path.join(projectRoot, '.gemini', 'skills');
   const archiveRoot = path.join(skillsRoot, '.archive');
   const ts = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z').replace(/[:.]/g, '-');
-  const roles = ['mobile-automator-generator', 'mobile-automator-executor'];
+  // Derive roles from the active mode's templates so we don't try to
+  // archive a non-existent recorder in agnostic mode (the agnostic
+  // recorder template ships in slice #29).
+  const roles = skillTemplatesForMode(oldMode).map(t => t.dest.split('/')[2]);
 
   for (const role of roles) {
     const src = path.join(skillsRoot, role);
@@ -403,6 +417,8 @@ function main() {
   for (const skill of SKILL_TEMPLATES) {
     const srcPath = path.join(templatesPath, skill.src);
     const destPath = path.join(projectRoot, skill.dest);
+
+    fs.mkdirSync(path.dirname(destPath), { recursive: true });
 
     const template = fs.readFileSync(srcPath, 'utf8');
     const populated = replacePlaceholders(template, placeholderMap);
