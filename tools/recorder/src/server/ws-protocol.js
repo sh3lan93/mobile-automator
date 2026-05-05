@@ -13,7 +13,11 @@ function attachWsServer({ httpServer }) {
     clients.add(ws);
     if (lastBroadcast) {
       const cached = JSON.stringify(lastBroadcast);
-      setTimeout(() => { if (ws.readyState === 1) ws.send(cached); }, 0);
+      // Deferred so the client's 'open' event resolves and the test/consumer
+      // can attach its 'message' listener before the cached payload arrives.
+      // setTimeout(0) loses this race under jest's full-suite load; 25ms is
+      // generous enough to win reliably while staying invisible to the user.
+      setTimeout(() => { if (ws.readyState === 1) ws.send(cached); }, 25);
     }
     ws.on('message', (data) => {
       let msg;
