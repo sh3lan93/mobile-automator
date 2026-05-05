@@ -1,0 +1,158 @@
+description = "Record a test scenario via the recorder sidecar (experimental — see issue #21)"
+prompt = """
+## SYSTEM DIRECTIVE
+You are launching the Mobile QA Scenario **Recorder** — a sidecar-driven flow that streams events from a tethered device, then hands the captured timeline to the recorder skill for AI synthesis of a final scenario JSON.
+
+CRITICAL: Do NOT generate scenarios yourself. The sidecar (`tools/recorder/src/index.js`) drives the recording. After the sidecar exits successfully, follow the instructions in `.gemini/skills/mobile-automator-recorder/SKILL.md` — that skill performs the AI synthesis of the captured timeline.
+
+CRITICAL: You must validate the success of every tool call. If any tool call fails, you MUST halt the current operation immediately, announce the failure to the user, and await further instructions.
+
+---
+
+## 0.0 EXPERIMENTAL GATE
+
+**Purpose:** This command is in active development. Until the recorder feature graduates, it is gated behind an opt-in environment variable so non-participating users do not stumble into a half-built workflow.
+
+1.  **Read the environment variable** `MOBILE_AUTOMATOR_RECORDER` from the user's shell.
+2.  **If the value is unset, empty, or anything other than `1`**, announce the following message verbatim and HALT:
+    > "The `/mobile-automator:record` command is in active development per https://github.com/sh3lan93/mobile-automator/issues/21. To opt in to the experimental version, set the environment variable `MOBILE_AUTOMATOR_RECORDER=1` in your shell and re-run."
+
+    **HALT.** Do not proceed to argument parsing, do not run pre-flight, do not invoke the sidecar.
+3.  **If the value is exactly `1`**, announce briefly:
+    > "ℹ️  Experimental recorder enabled (MOBILE_AUTOMATOR_RECORDER=1). Tracking issue: https://github.com/sh3lan93/mobile-automator/issues/21"
+    Then proceed to Section 0.1.
+
+---
+
+## 0.1 ARGUMENT PARSING
+
+**Purpose:** Parse the user's invocation of `/mobile-automator:record`. The first positional argument is `<scenario_name>` (required). Recognised flags (passed through to the sidecar verbatim):
+
+- `--environment="X"` — one-time environment override (resolved in Section 0.5).
+- `--mode=c3` — sidecar capture mode (forwarded as-is).
+- `--preconditions-modal` — sidecar UX flag (forwarded as-is).
+- `--allow-sensitive-input` — sidecar redaction toggle (forwarded as-is).
+- `--verify` — sidecar verify pass (forwarded as-is).
+- `--overwrite` — allow overwriting an existing scenario file (forwarded as-is).
+
+1.  **Extract `scenario_name`** from the first positional argument. If missing, use the `ask_user` tool (type: `text`):
+    - Header: `Scenario name`
+    - Question: `What name should the recorded scenario be saved under?`
+    - Placeholder: `e.g. login_happy_path`
+2.  **Collect all remaining flags** verbatim into a single `${flags}` string (preserve order). Do not interpret unknown flags — pass them through to the sidecar.
+
+---
+
+## 0.5 ENVIRONMENT RESOLUTION
+
+**Purpose:** Resolve `selected_environment` before pre-flight checks.
+
+**config.json absence:** If `mobile-automator/config.json` does not exist, skip Section 0.5 entirely — Section 1.1 will halt with the missing-config error.
+
+**Single-environment short-circuit:** Read `mobile-automator/config.json`. If `config.environments` exists and has exactly **one** entry, use it as `selected_environment`. Any `--environment` flag is silently ignored. Skip the rest of Section 0.5 and proceed to Section 1.0.
+
+**Multi-environment resolution:**
+
+1.  If `--environment="X"` is present:
+    - Verify `X` is in `config.environments`. If not, halt with:
+      > "❌ Unknown environment: \"X\"\n   Valid options: [comma-separated list of config.environments values]"
+      **HALT.**
+    - Set `selected_environment = X` (one-time override; do not persist).
+    - Proceed to Section 1.0.
+2.  Otherwise, read `mobile-automator/generate_preferences.json`. If it has a valid `"environment"` value, use it. Announce:
+    > "ℹ️  Using saved environment: [saved_value]"
+3.  If neither is set and `config.environments` has multiple entries, use the `ask_user` tool (type: `choice`):
+    - Header: `Environment`
+    - Question: `Which environment should I use for this recording?`
+    - Options: derived from `config.environments`.
+    Set `selected_environment` to the chosen value. Do **not** persist (this command is non-destructive of the saved preference).
+
+---
+
+## 0.7 MODE READ
+
+**Purpose:** Determine which operating mode the project uses. Drives behaviour in Section 1.3.
+
+**config.json absence guard:** If `mobile-automator/config.json` does not exist, skip Section 0.7. Section 1.1 will handle the error.
+
+1.  Read `mobile-automator/config.json`.
+2.  Set `MODE = config.mode`. If absent, default `MODE = "platform-aware"` (v0.10 implicit default).
+3.  If `MODE` is not one of `platform-aware` / `platform-agnostic`, halt:
+    > "ERROR: Unknown mode `<value>` in config.json. Expected `platform-aware` or `platform-agnostic`. Re-run setup or fix the config manually."
+    **HALT.**
+
+---
+
+## 1.0 PRE-FLIGHT CHECKS
+
+### 1.1 Verify Setup
+1.  Check that `mobile-automator/config.json` exists.
+    - If missing → "Setup not found. Please run `/mobile-automator:setup` first." → Halt.
+2.  Check that `.gemini/skills/mobile-automator-recorder/SKILL.md` exists.
+    - If missing → "Recorder skill not installed. Please run `/mobile-automator:setup` first." → Halt.
+3.  Read `mobile-automator/config.json` to load project configuration.
+
+### 1.2 Verify Device
+1.  Use `mobile_list_available_devices()` to check for connected devices.
+    - If no devices found → "No device connected. Please connect a device, emulator, or simulator and try again." → Halt.
+2.  If multiple devices are found, use the `ask_user` tool (type: `choice`) to ask the user to select one:
+    - Header: `Device`
+    - Question: `Which device should I use?`
+    - Options: Dynamically list the available devices as options.
+3.  Confirm the selected device to the user.
+
+### 1.3 Verify App
+1.  **Read config:** Load `mobile-automator/config.json`.
+2.  **Use resolved environment:** The `selected_environment` value was resolved in Section 0.5. Use it for the package ID lookup. If unset (Section 0.5 was skipped), Section 1.1 will already have halted.
+3.  **Determine the app package ID:**
+    -   If `app.android_packages` or `app.ios_bundle_ids` exists in config: use the package ID for `selected_environment`.
+    -   Otherwise, use the single package ID: `app.android_package` or `app.ios_bundle_id`.
+4.  **Branch on MODE:**
+
+    **If MODE = platform-aware:**
+    - Confirm with the user via `ask_user` (type: `choice`):
+        - Header: `Build & Install`
+        - Question: `I'll be recording against [app_package] on [device_name]. Should I build and install the app?`
+        - Options:
+          - `Build and install` (description: `using: [build_command]`)
+          - `Already installed` (description: `skip build`)
+    - On `Build and install`: execute the build command and install.
+    - On `Already installed`: verify via `mobile_launch_app`.
+
+    **If MODE = platform-agnostic:**
+    - Probe app presence on the selected device (Android: `adb shell pm list packages | grep <package>`; iOS: simctl equivalent).
+    - If absent → use `ask_user` (type: `choice`):
+        - Options: `App is now installed` / `Cancel`.
+    - On `Cancel` → **HALT.**
+
+---
+
+## 2.0 RUN THE SIDECAR
+
+**Purpose:** Hand control to the recorder sidecar. The sidecar drives the device, streams events, and writes a raw timeline artifact to `mobile-automator/recordings/<scenario_name>/`. This command WAITS for the sidecar to exit before proceeding.
+
+1.  **Announce the hand-off:**
+    > "Starting recorder sidecar for scenario `[scenario_name]` on `[device_name]` (env: `[selected_environment]`). Interact with the device — the sidecar will capture each step. Press Ctrl-C in the sidecar terminal (or follow the sidecar's stop instructions) when finished."
+
+2.  **Invoke the sidecar** as a subprocess:
+    ```
+    node ${extensionPath}/tools/recorder/src/index.js --scenario "${scenario_name}" ${flags}
+    ```
+    Stream the sidecar's stdout/stderr to the user verbatim. Do not interpret intermediate output — the sidecar owns the recording UX.
+
+3.  **Wait for the sidecar to exit.** Capture its exit code.
+
+4.  **On non-zero exit code:** announce the failure and **HALT.**
+    > "❌ Recorder sidecar exited with code `[exit_code]`. The recording was not completed. See the sidecar output above for details. Re-run `/mobile-automator:record [scenario_name]` after addressing the issue."
+
+5.  **On exit code 0:** proceed to Section 3.0.
+
+---
+
+## 3.0 HAND OFF TO RECORDER SKILL
+
+1.  **Announce the hand-off:**
+    > "✅ Sidecar exit 0. Activating the recorder skill to synthesise the captured timeline into a final scenario JSON."
+
+2.  **Follow the recorder skill** at `.gemini/skills/mobile-automator-recorder/SKILL.md`. Pass the captured artifact path (`mobile-automator/recordings/[scenario_name]/`), the resolved environment, the mode, and the original `scenario_name` so the skill can write the final scenario file under `mobile-automator/scenarios/`.
+"""
