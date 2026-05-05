@@ -20,6 +20,10 @@
     "test:integration": "jest tests/integration",
     "test:all": "jest"
   },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "ws": "^8.18.0"
+  },
   "devDependencies": {
     "jest": "^29.7.0",
     "toml": "^3.0.0"
