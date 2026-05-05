@@ -392,7 +392,11 @@ Follow `RELEASE.md` checklist. Key steps:
 4. Commit and push to GitHub
 5. Users install via `gemini extensions install https://github.com/sh3lan93/mobile-automator`
 
-**Multi-issue features (gate-then-graduate pattern):** When a feature spans many PRs (e.g., the recorder per PRD #21), do **not** bump `gemini-extension.json` in slice PRs. Gate the new command behind an opt-in env var (e.g., `MOBILE_AUTOMATOR_RECORDER=1` checked at the top of the command's `.toml`) so partial states are invisible to users. Append slice-by-slice changelog entries under `## [Unreleased]`. Cut the public version in a small dedicated graduation PR that removes the gate, bumps the version, collapses `[Unreleased]` into the new release section, and tags. This keeps `main` mergeable without long-lived branches and preserves the "fully-formed feature per release" pattern visible in v0.10/v0.11.
+**Multi-issue features (gate-then-graduate pattern):** When a feature spans many PRs (e.g., the recorder per PRD #21), do **not** ship the feature publicly in slice PRs. Gate the new command behind an opt-in env var (e.g., `MOBILE_AUTOMATOR_RECORDER=1` checked at the top of the command's `.toml`) so partial states are invisible to users who haven't opted in. Append slice-by-slice changelog entries under `## [Unreleased]`.
+
+**Version handling under the gate.** The repo's `Verify version is bumped` CI check fails any PR touching extension-code paths (`gemini-extension.json`, `GEMINI.md`, `templates/`, `commands/`, `scripts/`) without bumping the version to a value not yet in `git tag`. To satisfy this without graduating the feature, **the first slice PR bumps `gemini-extension.json` to a release-candidate semver** (e.g., `0.12.0-rc.0`). Subsequent slice PRs increment the rc counter (`0.12.0-rc.1`, `0.12.0-rc.2`, …). The `vX.Y.Z` git-tag namespace is reserved for graduated releases — the rc.N values are never tagged.
+
+**Graduation.** Cut the public version in a small dedicated graduation PR that removes the env-var gate, bumps `gemini-extension.json` from `vX.Y.Z-rc.N` to the final `vX.Y.Z`, collapses `[Unreleased]` into the new release section, and creates the `vX.Y.Z` tag. This keeps `main` mergeable without long-lived branches and preserves the "fully-formed feature per release" pattern visible in v0.10/v0.11 — at any given tag, the feature is whole.
 
 ## Important Conventions
 
