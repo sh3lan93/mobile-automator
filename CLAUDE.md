@@ -365,6 +365,8 @@ Follow `RELEASE.md` checklist. Key steps:
 4. Commit and push to GitHub
 5. Users install via `gemini extensions install https://github.com/sh3lan93/mobile-automator`
 
+**Multi-issue features (gate-then-graduate pattern):** When a feature spans many PRs (e.g., the recorder per PRD #21), do **not** bump `gemini-extension.json` in slice PRs. Gate the new command behind an opt-in env var (e.g., `MOBILE_AUTOMATOR_RECORDER=1` checked at the top of the command's `.toml`) so partial states are invisible to users. Append slice-by-slice changelog entries under `## [Unreleased]`. Cut the public version in a small dedicated graduation PR that removes the gate, bumps the version, collapses `[Unreleased]` into the new release section, and tags. This keeps `main` mergeable without long-lived branches and preserves the "fully-formed feature per release" pattern visible in v0.10/v0.11.
+
 ## Important Conventions
 
 ### Namespace Usage

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+The `/mobile-automator:record` recorder feature is being built incrementally per [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21). Slices land here under `[Unreleased]` and are gated behind `MOBILE_AUTOMATOR_RECORDER=1` until the v0.12.0 graduation cut. Entries collapse into a single coherent v0.12.0 note when the feature graduates.
+
+---
+
 ## [0.11.0] — 2026-04-29
 
 ### ✨ Added
