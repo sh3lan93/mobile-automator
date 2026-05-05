@@ -42,14 +42,18 @@ The `/mobile-automator:record` recorder feature is being built incrementally per
 - **Experimental gate.** Everything above is reachable only when `MOBILE_AUTOMATOR_RECORDER=1` is set in the environment. With the gate off, behaviour is identical to v0.11.0.
 - **Gate-then-graduate convention.** This `[Unreleased]` block accumulates the recorder slices in flight. When the recorder is feature-complete and ungated, all slice entries collapse into a single coherent `[0.12.0]` note in a dedicated graduation PR. No version is bumped during the slice work.
 - **Out of scope for slice [#22](https://github.com/sh3lan93/mobile-automator/issues/22)** — tracked by the rest of the slice ladder under [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21):
-  - [#24](https://github.com/sh3lan93/mobile-automator/issues/24), [#25](https://github.com/sh3lan93/mobile-automator/issues/25), [#26](https://github.com/sh3lan93/mobile-automator/issues/26) — additional gestures (long-press, swipe, type, etc.) wired through to the GUI.
-  - [#27](https://github.com/sh3lan93/mobile-automator/issues/27) — assertion authoring inside the GUI.
-  - [#28](https://github.com/sh3lan93/mobile-automator/issues/28) — sensitive-input redaction (`--allow-sensitive-input`).
-  - [#29](https://github.com/sh3lan93/mobile-automator/issues/29) — platform-agnostic recorder template.
-  - [#30](https://github.com/sh3lan93/mobile-automator/issues/30) — iOS support.
-  - [#31](https://github.com/sh3lan93/mobile-automator/issues/31) — `--verify` opt-in (re-execute the recorded scenario before saving).
-  - [#32](https://github.com/sh3lan93/mobile-automator/issues/32) — `--overwrite` opt-in (replace an existing scenario by name).
-  - [#33](https://github.com/sh3lan93/mobile-automator/issues/33), [#34](https://github.com/sh3lan93/mobile-automator/issues/34), [#35](https://github.com/sh3lan93/mobile-automator/issues/35) — multi-touch, cross-platform UI affordances, and graduation polish.
+  - [#35](https://github.com/sh3lan93/mobile-automator/issues/35) — type detection (text input + keyboard coalescing).
+  - [#24](https://github.com/sh3lan93/mobile-automator/issues/24) — long-press, double-tap, and swipe detection wired through to the GUI.
+  - [#25](https://github.com/sh3lan93/mobile-automator/issues/25) — iOS Simulator parity.
+  - [#26](https://github.com/sh3lan93/mobile-automator/issues/26) — Android hardware keys via `adb getevent`.
+  - [#27](https://github.com/sh3lan93/mobile-automator/issues/27) — Add Assertion modal + AI classification at Save (HITL).
+  - [#28](https://github.com/sh3lan93/mobile-automator/issues/28) — edit affordances (rename / delete / edit-value / edit-assertion-text) (HITL).
+  - [#29](https://github.com/sh3lan93/mobile-automator/issues/29) — agnostic-mode emit + semantic action detection (and the agnostic recorder skill template).
+  - [#30](https://github.com/sh3lan93/mobile-automator/issues/30) — sensitive-input caution markers + Save-time confirmation.
+  - [#31](https://github.com/sh3lan93/mobile-automator/issues/31) — failure modes (device disconnect / app crash / browser disconnect beyond the 60s window).
+  - [#32](https://github.com/sh3lan93/mobile-automator/issues/32) — `--overwrite` (re-record) and `--verify` (replay-on-save) flags.
+  - [#33](https://github.com/sh3lan93/mobile-automator/issues/33) — C3 protocol listener + spec + B-mode fallback.
+  - [#34](https://github.com/sh3lan93/mobile-automator/issues/34) — documentation polish at graduation time.
 
 ---
 

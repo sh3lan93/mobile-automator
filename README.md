@@ -448,14 +448,18 @@ The command launches a small local sidecar that hosts a browser-based recorder G
 
 These are tracked as separate slices under [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21):
 
-- Additional gestures (long-press, swipe, type, scroll, etc.) surfaced in the GUI — [#24](https://github.com/sh3lan93/mobile-automator/issues/24), [#25](https://github.com/sh3lan93/mobile-automator/issues/25), [#26](https://github.com/sh3lan93/mobile-automator/issues/26).
-- Authoring assertions from the GUI — [#27](https://github.com/sh3lan93/mobile-automator/issues/27).
-- Sensitive-input redaction (`--allow-sensitive-input`) — [#28](https://github.com/sh3lan93/mobile-automator/issues/28).
-- Platform-agnostic recorder — [#29](https://github.com/sh3lan93/mobile-automator/issues/29).
-- iOS support — [#30](https://github.com/sh3lan93/mobile-automator/issues/30).
-- `--verify` (re-run the recorded scenario before saving) — [#31](https://github.com/sh3lan93/mobile-automator/issues/31).
-- `--overwrite` (replace an existing scenario by name) — [#32](https://github.com/sh3lan93/mobile-automator/issues/32).
-- Multi-touch, cross-platform polish, and graduation work — [#33](https://github.com/sh3lan93/mobile-automator/issues/33), [#34](https://github.com/sh3lan93/mobile-automator/issues/34), [#35](https://github.com/sh3lan93/mobile-automator/issues/35).
+- Type detection (text input + keyboard coalescing) — [#35](https://github.com/sh3lan93/mobile-automator/issues/35).
+- Long-press, double-tap, and swipe detection surfaced in the GUI — [#24](https://github.com/sh3lan93/mobile-automator/issues/24).
+- iOS Simulator parity — [#25](https://github.com/sh3lan93/mobile-automator/issues/25).
+- Android hardware keys via `adb getevent` — [#26](https://github.com/sh3lan93/mobile-automator/issues/26).
+- Authoring assertions from the GUI (Add Assertion modal + AI classification) — [#27](https://github.com/sh3lan93/mobile-automator/issues/27).
+- Edit affordances (rename / delete / edit-value / edit-assertion-text) — [#28](https://github.com/sh3lan93/mobile-automator/issues/28).
+- Platform-agnostic recorder + semantic-action detection — [#29](https://github.com/sh3lan93/mobile-automator/issues/29).
+- Sensitive-input caution markers + Save-time confirmation — [#30](https://github.com/sh3lan93/mobile-automator/issues/30).
+- Failure modes (device disconnect / app crash / browser disconnect beyond the 60s window) — [#31](https://github.com/sh3lan93/mobile-automator/issues/31).
+- `--overwrite` (replace an existing scenario) and `--verify` (replay-on-save) flags — [#32](https://github.com/sh3lan93/mobile-automator/issues/32).
+- C3 protocol listener + spec + B-mode fallback — [#33](https://github.com/sh3lan93/mobile-automator/issues/33).
+- Documentation polish at graduation time — [#34](https://github.com/sh3lan93/mobile-automator/issues/34).
 
 If you hit a rough edge, please file it against [#21](https://github.com/sh3lan93/mobile-automator/issues/21) so it lands in the right slice.
 
