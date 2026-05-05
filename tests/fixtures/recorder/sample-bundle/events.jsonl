@@ -1,0 +1,3 @@
+{"seq":1,"kind":"tap","t":1000,"timestamp_ms":1000,"x":540,"y":1090,"target":"Login","step_id":"tap_login","screenshot_ref":"screenshots/step_1.png","hierarchy_ref":"hierarchy/0001000.json"}
+{"seq":2,"kind":"tap","t":2000,"timestamp_ms":2000,"x":540,"y":1240,"target":"Continue","step_id":"tap_continue","screenshot_ref":"screenshots/step_2.png","hierarchy_ref":"hierarchy/0002000.json"}
+{"seq":3,"kind":"tap","t":3000,"timestamp_ms":3000,"x":540,"y":1390,"target":"Submit","step_id":"tap_submit","screenshot_ref":"screenshots/step_3.png","hierarchy_ref":"hierarchy/0002000.json"}

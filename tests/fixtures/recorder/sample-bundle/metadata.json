@@ -1,0 +1,10 @@
+{
+  "scenario_id": "login_flow",
+  "mode": "platform-aware",
+  "recorded_at": "2026-05-05T10:00:00.000Z",
+  "device": "Android Emulator API 34",
+  "app_version": "1.0.0",
+  "environment": "staging",
+  "app_package": "com.example.app",
+  "started_at": "2026-05-05T10:00:00.000Z"
+}
