@@ -381,10 +381,11 @@ describe('recorder end-to-end (gesture variety: long-press / double-tap / swipe)
     expect(errors).toEqual([]);
   });
 
-  test('scenario contains exactly one step per gesture kind', () => {
+  test('scenario steps preserve chronological emission order from the fixture', () => {
+    // Array-equality (not set-equality) so a reordering bug in either the
+    // lifecycle's emit path or the synthesizer's step mapping shows up here.
     const actions = scenario.steps.map((s) => s.action);
-    expect(new Set(actions)).toEqual(new Set(['tap', 'long_press', 'double_tap', 'swipe']));
-    expect(actions.length).toBe(4);
+    expect(actions).toEqual(['tap', 'long_press', 'double_tap', 'swipe']);
   });
 
   test('swipe step carries direction in the value field', () => {
