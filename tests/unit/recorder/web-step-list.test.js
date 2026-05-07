@@ -101,7 +101,7 @@ describe('recorder GUI: step-list rendering', () => {
       expect(li.getAttribute('data-action')).toBe('type');
     });
 
-    test('renders sensitive type values verbatim in this slice (caution UI lands in #30)', () => {
+    test('masks sensitive type values with bullet characters (full caution UI in #30)', () => {
       const li = app.renderStepRow({
         id: 'type_password',
         index: 5,
@@ -111,11 +111,32 @@ describe('recorder GUI: step-list rendering', () => {
         sensitive: true,
       });
 
-      expect(li.textContent).toContain('"p4ssw0rd!"');
+      // The literal value must NOT appear in the rendered DOM.
+      expect(li.textContent).not.toContain('p4ssw0rd!');
+      // The field label is still shown (not sensitive).
       expect(li.textContent).toContain('"Password"');
-      expect(li.textContent).toMatch(
-        /^\s*\d+\.\s*Type\s*"p4ssw0rd!"\s*into\s*"Password"\s*$/,
-      );
+
+      // The value span should contain only bullet characters, length matching
+      // the original value length.
+      const valueSpan = li.querySelector('.step-value');
+      expect(valueSpan).not.toBeNull();
+      const inner = valueSpan.textContent.replace(/^"|"$/g, '');
+      expect(inner.length).toBe('p4ssw0rd!'.length);
+      expect(inner).toMatch(/^•+$/);
+    });
+
+    test('renders non-sensitive type values literally (regression guard)', () => {
+      const li = app.renderStepRow({
+        id: 'type_email_plain',
+        index: 6,
+        action: 'type',
+        value: 'user@example.com',
+        field_label: 'Email',
+        sensitive: false,
+      });
+
+      expect(li.textContent).toContain('"user@example.com"');
+      expect(li.textContent).not.toMatch(/•/);
     });
   });
 
