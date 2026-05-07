@@ -259,6 +259,33 @@ Skill templates are organized by mode:
 4. Writes populated SKILL.md to `.gemini/skills/`
 5. Verifies no placeholders remain
 
+### Recorder Skill Template (experimental — gated behind `MOBILE_AUTOMATOR_RECORDER=1`)
+
+Tracked under [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21); landed as the tracer-bullet slice in [#22](https://github.com/sh3lan93/mobile-automator/issues/22). Lives alongside the generator and executor templates.
+
+- **Template path:** `templates/mobile-automator-recorder/aware/SKILL.md`
+- **Installed to:** `.gemini/skills/mobile-automator-recorder/SKILL.md` (only when `install-skills.js` runs in **platform-aware** mode).
+- **Purpose:** Runs at the end of `/mobile-automator:record` to synthesise the final scenario JSON from the artifact bundle the sidecar produces under `mobile-automator/.recorder/<session>/`. The recorder skill does **not** re-derive scenario style — it cross-references the generator skill's rules so the generator stays the single source of truth for scenario shape.
+- **Placeholders used (10 of the 13 aware-mode placeholders):**
+  - `{{project_name}}`
+  - `{{platform_details}}`
+  - `{{build_system}}`
+  - `{{app_package}}`
+  - `{{environments}}`
+  - `{{architecture}}`
+  - `{{business_critical_paths}}`
+  - `{{loading_indicators}}`
+  - `{{protected_directories}}`
+  - `{{additional_resources}}`
+
+  The three aware-mode placeholders **not** consumed by the recorder template — `{{build_command}}`, `{{automation_extras}}`, `{{business_domain}}` — are not load-bearing for scenario synthesis from a captured trace. They may be added in a later slice if the synthesiser grows new responsibilities.
+
+- **Install behaviour by mode:**
+  - **Platform-aware:** the recorder skill is installed alongside the generator and executor.
+  - **Platform-agnostic:** the recorder install is **skipped**. The agnostic recorder template lands in slice [#29](https://github.com/sh3lan93/mobile-automator/issues/29). Until then, a project set up in agnostic mode will not have a recorder skill at `.gemini/skills/mobile-automator-recorder/`, and `/mobile-automator:record` is not expected to run there.
+
+- **Reachability:** the entire recorder surface (the `/mobile-automator:record` command, the sidecar, the GUI, and this skill) is hidden unless `MOBILE_AUTOMATOR_RECORDER=1` is set in the environment. With the gate off, this template is still copied during setup but is never invoked.
+
 ### Adding New Skills
 
 To add a third skill (e.g., `mobile-automator-debugger`):
@@ -364,6 +391,12 @@ Follow `RELEASE.md` checklist. Key steps:
 3. Test full workflow in a real mobile project
 4. Commit and push to GitHub
 5. Users install via `gemini extensions install https://github.com/sh3lan93/mobile-automator`
+
+**Multi-issue features (gate-then-graduate pattern):** When a feature spans many PRs (e.g., the recorder per PRD #21), do **not** ship the feature publicly in slice PRs. Gate the new command behind an opt-in env var (e.g., `MOBILE_AUTOMATOR_RECORDER=1` checked at the top of the command's `.toml`) so partial states are invisible to users who haven't opted in. Append slice-by-slice changelog entries under `## [Unreleased]`.
+
+**Version handling under the gate.** The repo's `Verify version is bumped` CI check fails any PR touching extension-code paths (`gemini-extension.json`, `GEMINI.md`, `templates/`, `commands/`, `scripts/`) without bumping the version to a value not yet in `git tag`. To satisfy this without graduating the feature, **the first slice PR bumps `gemini-extension.json` to a release-candidate semver** (e.g., `0.12.0-rc.0`). Subsequent slice PRs increment the rc counter (`0.12.0-rc.1`, `0.12.0-rc.2`, …). The `vX.Y.Z` git-tag namespace is reserved for graduated releases — the rc.N values are never tagged.
+
+**Graduation.** Cut the public version in a small dedicated graduation PR that removes the env-var gate, bumps `gemini-extension.json` from `vX.Y.Z-rc.N` to the final `vX.Y.Z`, collapses `[Unreleased]` into the new release section, and creates the `vX.Y.Z` tag. This keeps `main` mergeable without long-lived branches and preserves the "fully-formed feature per release" pattern visible in v0.10/v0.11 — at any given tag, the feature is whole.
 
 ## Important Conventions
 

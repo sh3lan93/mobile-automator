@@ -637,6 +637,10 @@ After successful Phase 2:
 ## 6.0 SKILL INSTALLATION
 **PROTOCOL: Install skill templates from the extension into the project's `.gemini/skills/` directory using the automated installation script.**
 
+The installer is mode-aware:
+-   **Platform-aware mode:** three skills are installed — generator, executor, and recorder.
+-   **Platform-agnostic mode:** two skills are installed — generator and executor. The recorder skill is **skipped** in agnostic mode because the agnostic recorder template ships in a later slice (#29); attempting to install it now would fail with a missing-source-file error.
+
 ### 6.1 Run Installation Script
 1.  **Announce Action:** "Installing QA automation skills into your project..."
 2.  **Execute the installation script:**
@@ -657,9 +661,9 @@ After successful Phase 2:
 3.  **The script will automatically:**
     -   Read project knowledge from `mobile-automator/setup_state.json`
     -   Create `.gemini/skills/` directories
-    -   Copy skill templates with placeholder replacement
+    -   Copy skill templates with placeholder replacement (generator + executor in both modes; recorder additionally in platform-aware mode)
     -   Copy reference schemas verbatim
-    -   Verify all files are installed correctly
+    -   Verify all files are installed correctly, including a check that no `{{` placeholders remain in any installed skill file — this covers the generator and executor SKILL.md in both modes, plus the recorder SKILL.md when running in platform-aware mode
 
 ### 6.2 Check Script Output
 1.  **If the script exits successfully** (exit code 0) and prints "All skills installed and verified successfully" → proceed to Section 6.3.
@@ -689,6 +693,16 @@ After successful Phase 2:
     mkdir -p mobile-automator/screenshots
     mkdir -p mobile-automator/results
     ```
+3.  **Ensure `.gitignore` excludes the recorder working directory:**
+    The recorder writes per-session working state under `mobile-automator/.recorder/` (in-flight scenarios, captured credentials, evidence) which must never be committed. Make sure the project's `.gitignore` ignores that path:
+    ```bash
+    if [ -f .gitignore ]; then
+      grep -qxF 'mobile-automator/.recorder/' .gitignore || printf '\n# Mobile Automator recorder per-session working directory\nmobile-automator/.recorder/\n' >> .gitignore
+    else
+      printf '# Mobile Automator recorder per-session working directory\nmobile-automator/.recorder/\n' > .gitignore
+    fi
+    ```
+    If the line is already present, leave `.gitignore` untouched.
 
 ### 7.2 Generate Config File
 1.  **Read Final State:** Read `mobile-automator/setup_state.json` for all collected data.
@@ -941,6 +955,16 @@ After successful Phase 2:
    - `mobile-automator/scenarios/`
    - `mobile-automator/screenshots/`
    - `mobile-automator/results/`
+
+   Then ensure the project's `.gitignore` excludes the recorder's per-session working directory `mobile-automator/.recorder/` (in-flight scenarios, captured credentials, evidence — must never be committed):
+   ```bash
+   if [ -f .gitignore ]; then
+     grep -qxF 'mobile-automator/.recorder/' .gitignore || printf '\n# Mobile Automator recorder per-session working directory\nmobile-automator/.recorder/\n' >> .gitignore
+   else
+     printf '# Mobile Automator recorder per-session working directory\nmobile-automator/.recorder/\n' > .gitignore
+   fi
+   ```
+   Leave `.gitignore` untouched if the line is already present.
 
 2. **Write `mobile-automator/config.json`:**
    ```json

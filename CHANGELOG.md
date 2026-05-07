@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+The `/mobile-automator:record` recorder feature is being built incrementally per [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21). Slices land here under `[Unreleased]` and are gated behind `MOBILE_AUTOMATOR_RECORDER=1` until the v0.12.0 graduation cut. Entries collapse into a single coherent v0.12.0 note when the feature graduates.
+
+### ✨ Added
+
+- **`/mobile-automator:record <scenario_name>` command** — experimental tracer-bullet slice ([#22](https://github.com/sh3lan93/mobile-automator/issues/22)) of the recorder workflow.
+  - Gated behind the `MOBILE_AUTOMATOR_RECORDER=1` environment variable. The command is hidden / refuses to run without the flag set.
+  - Wraps a Node.js sidecar at `tools/recorder/` (Node ≥ 18, commander entry) that serves the recorder UI over HTTP and streams device events to it over WebSocket.
+  - Sidecar performs port discovery on launch, tolerates browser disconnects with a 60-second reconnect window, and tears down cleanly on Ctrl+C.
+  - Captures device events via two collaborating subsystems:
+    - **Hierarchy poller** — periodically pulls the on-device view tree and feeds the resolver.
+    - **Video-tap detector** — PNG centroid scan over the screen-mirror frames to localise taps.
+  - **Gesture classifier** with the full v1 vocabulary wired internally; only `tap` is surfaced in the GUI for this slice.
+  - **Element resolver** with the display-name cascade (resource-id → text → content-desc → bounds fallback) so step descriptions read naturally.
+  - **Artifacts store** under `mobile-automator/.recorder/<session>/` with cleanup-on-Save (artifacts deleted after scenario synthesis) and cleanup-on-Cancel (artifacts deleted on abort).
+- **Recorder GUI** — minimal browser surface served by the sidecar.
+  - Step list (taps only in this slice).
+  - **Save & Generate** and **Cancel** buttons.
+  - No "Add Assertion" affordance yet — that lands in slice [#27](https://github.com/sh3lan93/mobile-automator/issues/27).
+- **Aware-mode recorder skill template** at `templates/mobile-automator-recorder/aware/SKILL.md`.
+  - Runs at the end of `/mobile-automator:record` to synthesise the final scenario JSON from the artifact bundle.
+  - Cross-references the generator skill's rules rather than duplicating them — generator remains the single source of truth for scenario style / shape.
+- **`mobile-automator/.recorder/`** is now ignored from git in this repo and added to the workspace `.gitignore` whenever setup runs in a project.
+- **System dependency: `ffmpeg`.** The recorder sidecar shells out to `ffmpeg` to extract per-frame PNGs from the screen recording produced by `mobile_start_screen_recording`; without it, no taps can be detected. `commands/mobile-automator/record.toml` § 0.8 pre-flights the binary on `PATH` and halts cleanly with platform-specific install hints (`brew` / `apt` / `pacman` / [ffmpeg.org](https://ffmpeg.org/download.html)) if it's missing — so the failure surfaces before the sidecar spawns rather than mid-session. The README's `Recording scenarios → Requirements` block documents this.
+
+### 🔄 Changed
+
+- `scripts/install-skills.js` now installs the recorder skill alongside the generator and executor in **platform-aware mode**. In platform-agnostic mode the recorder install is skipped (the agnostic recorder template lands in slice [#29](https://github.com/sh3lan93/mobile-automator/issues/29)).
+- `commands/mobile-automator/setup.toml` § 6 reflects the new mode-aware install behaviour and lists the recorder as one of the installed skills when applicable.
+
+### 📝 Notes
+
+- **Experimental gate.** Everything above is reachable only when `MOBILE_AUTOMATOR_RECORDER=1` is set in the environment. With the gate off, behaviour is identical to v0.11.0.
+- **Gate-then-graduate convention.** This `[Unreleased]` block accumulates the recorder slices in flight. When the recorder is feature-complete and ungated, all slice entries collapse into a single coherent `[0.12.0]` note in a dedicated graduation PR. No version is bumped during the slice work.
+- **Out of scope for slice [#22](https://github.com/sh3lan93/mobile-automator/issues/22)** — tracked by the rest of the slice ladder under [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21):
+  - [#35](https://github.com/sh3lan93/mobile-automator/issues/35) — type detection (text input + keyboard coalescing).
+  - [#24](https://github.com/sh3lan93/mobile-automator/issues/24) — long-press, double-tap, and swipe detection wired through to the GUI.
+  - [#25](https://github.com/sh3lan93/mobile-automator/issues/25) — iOS Simulator parity.
+  - [#26](https://github.com/sh3lan93/mobile-automator/issues/26) — Android hardware keys via `adb getevent`.
+  - [#27](https://github.com/sh3lan93/mobile-automator/issues/27) — Add Assertion modal + AI classification at Save (HITL).
+  - [#28](https://github.com/sh3lan93/mobile-automator/issues/28) — edit affordances (rename / delete / edit-value / edit-assertion-text) (HITL).
+  - [#29](https://github.com/sh3lan93/mobile-automator/issues/29) — agnostic-mode emit + semantic action detection (and the agnostic recorder skill template).
+  - [#30](https://github.com/sh3lan93/mobile-automator/issues/30) — sensitive-input caution markers + Save-time confirmation.
+  - [#31](https://github.com/sh3lan93/mobile-automator/issues/31) — failure modes (device disconnect / app crash / browser disconnect beyond the 60s window).
+  - [#32](https://github.com/sh3lan93/mobile-automator/issues/32) — `--overwrite` (re-record) and `--verify` (replay-on-save) flags.
+  - [#33](https://github.com/sh3lan93/mobile-automator/issues/33) — C3 protocol listener + spec + B-mode fallback.
+  - [#34](https://github.com/sh3lan93/mobile-automator/issues/34) — documentation polish at graduation time.
+
+---
+
 ## [0.11.0] — 2026-04-29
 
 ### ✨ Added

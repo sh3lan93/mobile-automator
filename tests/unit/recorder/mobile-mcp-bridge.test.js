@@ -1,0 +1,46 @@
+'use strict';
+
+const { McpBridge } = require('../../../tools/recorder/src/capture/mobile-mcp-bridge');
+
+describe('McpBridge', () => {
+  test('forwards listElementsOnScreen to underlying call', async () => {
+    const calls = [];
+    const fakeCall = async (toolName, args) => {
+      calls.push({ toolName, args });
+      return { elements: [{ type: 'Button', bounds: [0, 0, 100, 100], text: 'OK' }] };
+    };
+    const bridge = new McpBridge({ call: fakeCall });
+    const result = await bridge.listElementsOnScreen();
+    expect(calls).toHaveLength(1);
+    expect(calls[0].toolName).toBe('mobile_list_elements_on_screen');
+    expect(result.elements[0].text).toBe('OK');
+  });
+
+  test('takeScreenshot returns path string from mobile-mcp call', async () => {
+    const fakeCall = async () => ({ path: '/tmp/screenshot.png' });
+    const bridge = new McpBridge({ call: fakeCall });
+    const out = await bridge.takeScreenshot('/tmp/screenshot.png');
+    expect(out).toBe('/tmp/screenshot.png');
+  });
+
+  test('startScreenRecording / stopScreenRecording happy path', async () => {
+    const calls = [];
+    const fakeCall = async (toolName) => {
+      calls.push(toolName);
+      if (toolName === 'mobile_start_screen_recording') return { ok: true };
+      if (toolName === 'mobile_stop_screen_recording') return { path: '/tmp/rec.mp4' };
+    };
+    const bridge = new McpBridge({ call: fakeCall });
+    await bridge.startScreenRecording();
+    const path = await bridge.stopScreenRecording();
+    expect(path).toBe('/tmp/rec.mp4');
+    expect(calls).toEqual(['mobile_start_screen_recording', 'mobile_stop_screen_recording']);
+  });
+
+  test('throws descriptive error if underlying call rejects', async () => {
+    const fakeCall = async () => { throw new Error('device disconnected'); };
+    const bridge = new McpBridge({ call: fakeCall });
+    await expect(bridge.listElementsOnScreen())
+      .rejects.toThrow(/device disconnected/);
+  });
+});

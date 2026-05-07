@@ -1,0 +1,293 @@
+'use strict';
+
+// End-to-end integration test for the #22 tracer-bullet recorder slice.
+//
+// Drives the recorder pipeline end-to-end at the contract level:
+//
+//   1. `runScriptedSession` (the real lifecycle entry point from Task 1.11)
+//      consumes a scripted-session fixture and produces an artifact bundle
+//      under `mobile-automator/.recorder/<scenario_id>/`.
+//   2. A test-fixture deterministic synthesizer ("mock AI") reads the
+//      bundle's `events.jsonl` and writes a v2.1 scenario JSON, mirroring
+//      the contract that the real recorder skill template fulfils. It also
+//      promotes the bundle's screenshots/ directory to the public location
+//      and calls `cleanupOnSuccess` (the same hook the skill calls after
+//      successful synthesis).
+//   3. `handleSaveMessage` (Task 2.6) is invoked with an injected `onDone`
+//      callback to capture the signalled exit code without `process.exit`.
+//
+// The test then pins three invariants from the issue's acceptance criteria:
+//
+//   A. `mobile-automator/scenarios/<id>.json` exists and validates against
+//      the v2.1 scenario schema.
+//   B. `mobile-automator/screenshots/<id>/` exists.
+//   C. `mobile-automator/.recorder/<id>/` is gone (cleanup-on-Success).
+//
+// Per #22 scope: tap-only flow, no real AI, no real browser. This test does
+// NOT validate the real AI's behaviour — that contract is covered by the
+// structural test in `ai-skill-ingestion.test.js`. The synthesize helper
+// here is a test-only stand-in that fixes the contract: the bundle the
+// lifecycle produces is, by shape, sufficient for an AI-shaped consumer to
+// produce a schema-valid scenario JSON.
+
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+
+const { runScriptedSession } = require('../../../tools/recorder/src/lifecycle');
+const { ArtifactsStore } = require('../../../tools/recorder/src/artifacts');
+const { handleSaveMessage } = require('../../../tools/recorder/src/session-handlers');
+
+const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
+const SCENARIO_SCHEMA_PATH = path.join(
+  REPO_ROOT,
+  'templates',
+  'mobile-automator-generator',
+  'references',
+  'scenario_schema.json'
+);
+const SCRIPTED_SESSION_FIXTURE_PATH = path.join(
+  REPO_ROOT,
+  'tests',
+  'fixtures',
+  'recorder',
+  'scripted-session.json'
+);
+
+// --- Inline JSON-schema validator -------------------------------------------
+//
+// Matches the validator used in `ai-skill-ingestion.test.js`. It covers the
+// invariants the v2.1 scenario schema relies on: required-fields, enums,
+// regex patterns, type tags, item recursion, and local $ref resolution. This
+// is intentionally narrow — it is not a general JSON-Schema engine. Kept
+// inline here to avoid a one-consumer refactor; the duplication is small.
+
+function resolveRef(rootSchema, ref) {
+  const parts = ref.replace(/^#\//, '').split('/');
+  let node = rootSchema;
+  for (const p of parts) node = node[p];
+  return node;
+}
+
+function jsTypeOf(value) {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'array';
+  if (Number.isInteger(value)) return 'integer';
+  return typeof value;
+}
+
+function typeMatches(typeSpec, value) {
+  const actual = jsTypeOf(value);
+  const allowed = Array.isArray(typeSpec) ? typeSpec : [typeSpec];
+  if (allowed.includes(actual)) return true;
+  if (allowed.includes('number') && actual === 'integer') return true;
+  return false;
+}
+
+function validate(rootSchema, schema, value, pathStr, errors) {
+  if (schema.$ref) schema = resolveRef(rootSchema, schema.$ref);
+
+  if (schema.type && !typeMatches(schema.type, value)) {
+    errors.push(`${pathStr}: expected type ${JSON.stringify(schema.type)}, got ${jsTypeOf(value)}`);
+    return;
+  }
+  if (schema.enum && !schema.enum.includes(value)) {
+    errors.push(`${pathStr}: value ${JSON.stringify(value)} not in enum ${JSON.stringify(schema.enum)}`);
+  }
+  if (schema.pattern && typeof value === 'string') {
+    const re = new RegExp(schema.pattern);
+    if (!re.test(value)) errors.push(`${pathStr}: value ${JSON.stringify(value)} does not match pattern ${schema.pattern}`);
+  }
+  if (schema.maxLength != null && typeof value === 'string' && value.length > schema.maxLength) {
+    errors.push(`${pathStr}: string longer than maxLength ${schema.maxLength}`);
+  }
+
+  if (
+    schema.type === 'object' ||
+    (Array.isArray(schema.type) && schema.type.includes('object')) ||
+    (!schema.type && (schema.required || schema.properties))
+  ) {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      if (Array.isArray(schema.required)) {
+        for (const k of schema.required) {
+          if (!(k in value)) errors.push(`${pathStr}: missing required field "${k}"`);
+        }
+      }
+      if (schema.properties) {
+        for (const [k, sub] of Object.entries(schema.properties)) {
+          if (k in value) validate(rootSchema, sub, value[k], `${pathStr}.${k}`, errors);
+        }
+      }
+    }
+  }
+
+  if (schema.type === 'array' && Array.isArray(value)) {
+    if (schema.minItems != null && value.length < schema.minItems) {
+      errors.push(`${pathStr}: fewer than minItems ${schema.minItems}`);
+    }
+    if (schema.maxItems != null && value.length > schema.maxItems) {
+      errors.push(`${pathStr}: more than maxItems ${schema.maxItems}`);
+    }
+    if (schema.items) {
+      value.forEach((item, i) => validate(rootSchema, schema.items, item, `${pathStr}[${i}]`, errors));
+    }
+  }
+}
+
+function validateScenarioAgainstSchema(scenario, schema) {
+  const errors = [];
+  validate(schema, schema, scenario, '$', errors);
+  return errors;
+}
+
+// --- Test-fixture deterministic synthesizer ("mock AI") --------------------
+//
+// Mirrors the recorder skill's contract: read the artifact bundle, emit a
+// v2.1 scenario JSON, move screenshots to the public location, and call
+// cleanupOnSuccess. Lives here (not in production code) on purpose — the
+// real synthesis is the AI's job; this stand-in exists only to pin the
+// shape-of-the-bundle contract.
+
+function synthesizeScenario(projectRoot, scenarioId) {
+  const bundleRoot = path.join(projectRoot, 'mobile-automator', '.recorder', scenarioId);
+  const eventsRaw = fs.readFileSync(path.join(bundleRoot, 'events.jsonl'), 'utf8');
+  const events = eventsRaw
+    .split('\n')
+    .filter((l) => l.length > 0)
+    .map((l) => JSON.parse(l))
+    .filter((e) => e.kind === 'tap'); // #22 tap-only
+
+  const steps = events.map((ev, i) => ({
+    id: ev.step_id || `tap_step_${i + 1}`,
+    action: 'tap',
+    description: `Tap ${ev.target || 'element'}.`,
+    target: ev.target || 'element',
+  }));
+
+  const scenario = {
+    $schema_version: '2.1',
+    scenario_id: scenarioId,
+    name: 'End-to-end synthesized scenario',
+    description: 'Tap-only scenario synthesized by the test-fixture mock AI.',
+    platform: 'android',
+    app_package: 'com.example.app',
+    metadata: { app_version: '1.0.0', environment: 'staging' },
+    tags: ['smoke'],
+    steps,
+    assertions: [],
+  };
+
+  // Promote screenshots/ from the bundle to the public location.
+  const publicScreenshotsDir = path.join(projectRoot, 'mobile-automator', 'screenshots', scenarioId);
+  fs.mkdirSync(publicScreenshotsDir, { recursive: true });
+  const bundleScreenshotsDir = path.join(bundleRoot, 'screenshots');
+  if (fs.existsSync(bundleScreenshotsDir)) {
+    for (const f of fs.readdirSync(bundleScreenshotsDir)) {
+      fs.copyFileSync(path.join(bundleScreenshotsDir, f), path.join(publicScreenshotsDir, f));
+    }
+  }
+
+  // Write scenario JSON.
+  const scenariosDir = path.join(projectRoot, 'mobile-automator', 'scenarios');
+  fs.mkdirSync(scenariosDir, { recursive: true });
+  const scenarioPath = path.join(scenariosDir, `${scenarioId}.json`);
+  fs.writeFileSync(scenarioPath, JSON.stringify(scenario, null, 2));
+
+  // Cleanup: the real skill does this in step 13 of its Process.
+  const store = new ArtifactsStore({ projectRoot, scenarioId });
+  store.cleanupOnSuccess();
+
+  return { scenarioPath, store };
+}
+
+// --- Tests ------------------------------------------------------------------
+
+describe('recorder end-to-end (record → save → cleanup)', () => {
+  let tmp;
+  let scenarioId;
+  let scenarioPath;
+  let scenariosDir;
+  let publicScreenshotsDir;
+  let bundleRoot;
+  let exitCode;
+
+  beforeAll(async () => {
+    scenarioId = 'login_flow';
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'rec-e2e-'));
+
+    // Seed config.json — the project-root contract setup writes.
+    fs.mkdirSync(path.join(tmp, 'mobile-automator'), { recursive: true });
+    fs.writeFileSync(
+      path.join(tmp, 'mobile-automator', 'config.json'),
+      JSON.stringify({ mode: 'platform-aware', project_name: 'demo' })
+    );
+
+    // (1) Drive the real lifecycle to produce the artifact bundle.
+    const script = JSON.parse(fs.readFileSync(SCRIPTED_SESSION_FIXTURE_PATH, 'utf8'));
+    await runScriptedSession({ projectRoot: tmp, scenarioId, script });
+
+    bundleRoot = path.join(tmp, 'mobile-automator', '.recorder', scenarioId);
+    expect(fs.existsSync(bundleRoot)).toBe(true); // sanity — lifecycle ran
+
+    // (2) Mock-AI synthesis: bundle → scenario JSON + screenshots; then
+    //     cleanupOnSuccess (mirrors what the recorder skill does).
+    const out = synthesizeScenario(tmp, scenarioId);
+    scenarioPath = out.scenarioPath;
+    scenariosDir = path.join(tmp, 'mobile-automator', 'scenarios');
+    publicScreenshotsDir = path.join(tmp, 'mobile-automator', 'screenshots', scenarioId);
+
+    // (3) Drive handleSaveMessage with an injected onDone — captures the
+    //     signalled exit code without invoking process.exit (forbidden in
+    //     test path per Task 2.6).
+    handleSaveMessage({
+      store: out.store,
+      onDone: (code) => {
+        exitCode = code;
+      },
+    });
+  });
+
+  afterAll(() => {
+    if (tmp && fs.existsSync(tmp)) fs.rmSync(tmp, { recursive: true, force: true });
+  });
+
+  test('A. mobile-automator/scenarios/<id>.json exists', () => {
+    expect(fs.existsSync(scenarioPath)).toBe(true);
+    expect(fs.statSync(scenarioPath).isFile()).toBe(true);
+  });
+
+  test('A. scenario JSON validates against the v2.1 schema', () => {
+    const schema = JSON.parse(fs.readFileSync(SCENARIO_SCHEMA_PATH, 'utf8'));
+    const scenario = JSON.parse(fs.readFileSync(scenarioPath, 'utf8'));
+    const errors = validateScenarioAgainstSchema(scenario, schema);
+    if (errors.length > 0) {
+      // eslint-disable-next-line no-console
+      console.error('Schema errors:', errors);
+    }
+    expect(errors).toEqual([]);
+    expect(scenario.$schema_version).toBe('2.1');
+    expect(scenario.scenario_id).toBe(scenarioId);
+    // The lifecycle emits one tap event for the scripted-session fixture
+    // (one down/up pair coalesced into a single tap), so at least one step.
+    expect(scenario.steps.length).toBeGreaterThanOrEqual(1);
+    for (const step of scenario.steps) expect(step.action).toBe('tap');
+  });
+
+  test('B. mobile-automator/screenshots/<id>/ exists', () => {
+    expect(fs.existsSync(publicScreenshotsDir)).toBe(true);
+    expect(fs.statSync(publicScreenshotsDir).isDirectory()).toBe(true);
+  });
+
+  test('C. mobile-automator/.recorder/<id>/ is gone after Save flow', () => {
+    expect(fs.existsSync(bundleRoot)).toBe(false);
+  });
+
+  test('handleSaveMessage signalled exit code 0 (no process.exit)', () => {
+    expect(exitCode).toBe(0);
+  });
+
+  test('public scenarios/ directory holds exactly the expected scenario file', () => {
+    const entries = fs.readdirSync(scenariosDir);
+    expect(entries).toContain(`${scenarioId}.json`);
+  });
+});

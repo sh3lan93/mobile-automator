@@ -1,0 +1,37 @@
+{
+  "$schema_version": "2.1",
+  "scenario_id": "login_flow",
+  "name": "Login Flow",
+  "description": "Login flow tap-only recording: Login -> Continue -> Submit on the authenticate screen.",
+  "platform": "android",
+  "app_package": "com.example.app",
+  "metadata": {
+    "app_version": "1.0.0",
+    "environment": "staging"
+  },
+  "tags": ["smoke", "auth", "login"],
+  "steps": [
+    {
+      "id": "tap_login",
+      "action": "tap",
+      "description": "Tap the Login button to begin authentication.",
+      "target": "Login button",
+      "checkpoint": true
+    },
+    {
+      "id": "tap_continue",
+      "action": "tap",
+      "description": "Tap Continue to advance through the auth flow.",
+      "target": "Continue button",
+      "checkpoint": true
+    },
+    {
+      "id": "tap_submit",
+      "action": "tap",
+      "description": "Tap Submit to finalize login.",
+      "target": "Submit button",
+      "checkpoint": true
+    }
+  ],
+  "assertions": []
+}

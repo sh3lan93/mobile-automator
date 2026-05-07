@@ -34,3 +34,6 @@ prototypes/
 site/
 .worktrees/
 docs/superpowers/
+
+# Mobile Automator recorder per-session working directory
+mobile-automator/.recorder/
