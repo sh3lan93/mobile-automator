@@ -71,6 +71,73 @@ describe('recorder GUI: step-list rendering', () => {
       });
       expect(li.classList.contains('unnamed')).toBe(false);
     });
+
+    test('renders a type step as `Type "<value>" into "<field_label>"`', () => {
+      const li = app.renderStepRow({
+        id: 'type_email',
+        index: 4,
+        action: 'type',
+        value: 'test@example.com',
+        field_label: 'Email',
+      });
+
+      expect(li).toBeInstanceOf(window.HTMLLIElement);
+      expect(li.classList.contains('step-row')).toBe(true);
+      expect(li.getAttribute('data-step-id')).toBe('type_email');
+      expect(li.getAttribute('data-index')).toBe('4');
+      expect(li.textContent).toMatch(
+        /^\s*\d+\.\s*Type\s*"test@example\.com"\s*into\s*"Email"\s*$/,
+      );
+    });
+
+    test('marks type-step <li> with data-action="type" for CSS targeting', () => {
+      const li = app.renderStepRow({
+        id: 'type_email',
+        index: 4,
+        action: 'type',
+        value: 'hello',
+        field_label: 'Email',
+      });
+      expect(li.getAttribute('data-action')).toBe('type');
+    });
+
+    test('masks sensitive type values with bullet characters (full caution UI in #30)', () => {
+      const li = app.renderStepRow({
+        id: 'type_password',
+        index: 5,
+        action: 'type',
+        value: 'p4ssw0rd!',
+        field_label: 'Password',
+        sensitive: true,
+      });
+
+      // The literal value must NOT appear in the rendered DOM.
+      expect(li.textContent).not.toContain('p4ssw0rd!');
+      // The field label is still shown (not sensitive).
+      expect(li.textContent).toContain('"Password"');
+
+      // The value span should contain only bullet characters, length matching
+      // the original value length.
+      const valueSpan = li.querySelector('.step-value');
+      expect(valueSpan).not.toBeNull();
+      const inner = valueSpan.textContent.replace(/^"|"$/g, '');
+      expect(inner.length).toBe('p4ssw0rd!'.length);
+      expect(inner).toMatch(/^•+$/);
+    });
+
+    test('renders non-sensitive type values literally (regression guard)', () => {
+      const li = app.renderStepRow({
+        id: 'type_email_plain',
+        index: 6,
+        action: 'type',
+        value: 'user@example.com',
+        field_label: 'Email',
+        sensitive: false,
+      });
+
+      expect(li.textContent).toContain('"user@example.com"');
+      expect(li.textContent).not.toMatch(/•/);
+    });
   });
 
   describe('appendStep', () => {

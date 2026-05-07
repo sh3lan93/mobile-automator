@@ -31,17 +31,27 @@ describe('archiveExistingSkills', () => {
   });
 
   it('numeric-suffixes if archive target already exists', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'arch-'));
-    setupSkills(dir);
-    archiveExistingSkills(dir, 'platform-aware');
+    // Freeze time so both archive calls compute the same ISO timestamp; the
+    // -2 suffix only kicks in when the second archive's target dir already
+    // exists, which requires identical timestamps. Without this, CI's slower
+    // runs can cross a second boundary between the two calls and produce two
+    // distinct timestamps with no collision.
+    jest.useFakeTimers({ now: new Date('2026-05-07T17:39:00.000Z') });
+    try {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'arch-'));
+      setupSkills(dir);
+      archiveExistingSkills(dir, 'platform-aware');
 
-    setupSkills(dir);
-    archiveExistingSkills(dir, 'platform-aware');
+      setupSkills(dir);
+      archiveExistingSkills(dir, 'platform-aware');
 
-    const archived = fs.readdirSync(path.join(dir, '.gemini/skills/.archive'));
-    const generators = archived.filter(n => n.startsWith('generator-'));
-    expect(generators.length).toBe(2);
-    expect(generators.some(n => /-2$/.test(n))).toBe(true);
+      const archived = fs.readdirSync(path.join(dir, '.gemini/skills/.archive'));
+      const generators = archived.filter(n => n.startsWith('generator-'));
+      expect(generators.length).toBe(2);
+      expect(generators.some(n => /-2$/.test(n))).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('is a no-op if no skills exist', () => {

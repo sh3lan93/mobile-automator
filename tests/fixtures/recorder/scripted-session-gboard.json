@@ -7,7 +7,7 @@
       "t": 2000,
       "elements": [
         { "type": "android.widget.EditText", "bounds": [100, 500, 980, 580], "text": "", "focused": true, "id": "email_input", "accessibility_label": "Email" },
-        { "type": "android.inputmethodservice.SoftInputWindow", "bounds": [0, 1500, 1080, 2400] },
+        { "type": "com.google.android.inputmethod.latin.LatinIME", "bounds": [0, 1500, 1080, 2400] },
         { "type": "android.view.View", "bounds": [100, 1700, 200, 1800], "text": "t" },
         { "type": "android.view.View", "bounds": [250, 1700, 350, 1800], "text": "e" },
         { "type": "android.view.View", "bounds": [400, 1700, 500, 1800], "text": "s" },

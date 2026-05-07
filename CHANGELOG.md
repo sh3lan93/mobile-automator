@@ -32,6 +32,12 @@ The `/mobile-automator:record` recorder feature is being built incrementally per
   - Cross-references the generator skill's rules rather than duplicating them — generator remains the single source of truth for scenario style / shape.
 - **`mobile-automator/.recorder/`** is now ignored from git in this repo and added to the workspace `.gitignore` whenever setup runs in a project.
 - **System dependency: `ffmpeg`.** The recorder sidecar shells out to `ffmpeg` to extract per-frame PNGs from the screen recording produced by `mobile_start_screen_recording`; without it, no taps can be detected. `commands/mobile-automator/record.toml` § 0.8 pre-flights the binary on `PATH` and halts cleanly with platform-specific install hints (`brew` / `apt` / `pacman` / [ffmpeg.org](https://ffmpeg.org/download.html)) if it's missing — so the failure surfaces before the sidecar spawns rather than mid-session. The README's `Recording scenarios → Requirements` block documents this.
+- **Type detection** (text input + keyboard coalescing) — slice [#35](https://github.com/sh3lan93/mobile-automator/issues/35).
+  - New `TypeBuffer` deep module at `tools/recorder/src/coalesce/type-buffer.js`. Coalesces sequential keyboard taps into one `type` event when focus leaves the field, when Enter is pressed, when 1500ms of silence elapses, or on session-end `flush()`.
+  - New focus-detector and keyboard-region helpers at `tools/recorder/src/capture/focus-detector.js` and `tools/recorder/src/capture/keyboard-region.js`. Used by the lifecycle to identify the focused input field and to test whether a tap landed inside a keyboard subtree.
+  - Lifecycle wiring in `tools/recorder/src/lifecycle.js` routes taps inside the keyboard region to the type buffer (with focused-field observation) instead of writing them as raw taps. Non-keyboard taps follow the existing element-resolver path unchanged.
+  - GUI step list now renders `Type "<value>" into "<field_label>"` for `action: 'type'` steps (with a `data-action="type"` attribute on the row). The existing tap rendering is unchanged.
+  - The `sensitive` flag is propagated end-to-end (Android `inputType=textPassword` / iOS `secureTextEntry` → field → buffer → emitted event). The caution UI / mask-on-display lands in slice [#30](https://github.com/sh3lan93/mobile-automator/issues/30).
 
 ### 🔄 Changed
 
@@ -42,8 +48,7 @@ The `/mobile-automator:record` recorder feature is being built incrementally per
 
 - **Experimental gate.** Everything above is reachable only when `MOBILE_AUTOMATOR_RECORDER=1` is set in the environment. With the gate off, behaviour is identical to v0.11.0.
 - **Gate-then-graduate convention.** This `[Unreleased]` block accumulates the recorder slices in flight. When the recorder is feature-complete and ungated, all slice entries collapse into a single coherent `[0.12.0]` note in a dedicated graduation PR. No version is bumped during the slice work.
-- **Out of scope for slice [#22](https://github.com/sh3lan93/mobile-automator/issues/22)** — tracked by the rest of the slice ladder under [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21):
-  - [#35](https://github.com/sh3lan93/mobile-automator/issues/35) — type detection (text input + keyboard coalescing).
+- **Still out of scope for slices [#22](https://github.com/sh3lan93/mobile-automator/issues/22) + [#35](https://github.com/sh3lan93/mobile-automator/issues/35)** — tracked by the rest of the slice ladder under [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21):
   - [#24](https://github.com/sh3lan93/mobile-automator/issues/24) — long-press, double-tap, and swipe detection wired through to the GUI.
   - [#25](https://github.com/sh3lan93/mobile-automator/issues/25) — iOS Simulator parity.
   - [#26](https://github.com/sh3lan93/mobile-automator/issues/26) — Android hardware keys via `adb getevent`.

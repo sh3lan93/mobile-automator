@@ -24,6 +24,50 @@
     num.className = 'step-num';
     num.textContent = String(step.index) + '.';
 
+    if (step && step.action === 'type') {
+      // Render: <num>. Type "<value>" into "<field_label>"
+      // Slice #35 review fix: when step.sensitive === true the value is
+      // masked here in the GUI render path with bullet characters of
+      // matching length. The full sensitive-input UX (caution badges,
+      // Save-time confirmation modal, --allow-sensitive-input flag, and
+      // on-disk redaction) still lands in slice #30.
+      li.setAttribute('data-action', 'type');
+
+      const action = doc.createElement('span');
+      action.className = 'step-action';
+      action.textContent = 'Type';
+
+      const rawValue = step.value == null ? '' : String(step.value);
+      let displayValue;
+      if (step.sensitive === true) {
+        // Cap the bullet count so a degenerate (very long or zero-length)
+        // value renders sensibly. Min 1 bullet so an empty sensitive value
+        // doesn't betray its zero length.
+        const len = Math.min(Math.max(rawValue.length, 1), 32);
+        displayValue = '•'.repeat(len);
+      } else {
+        displayValue = rawValue;
+      }
+      const value = doc.createElement('span');
+      value.className = 'step-value';
+      value.textContent = '"' + displayValue + '"';
+
+      const into = doc.createElement('span');
+      into.className = 'step-into';
+      into.textContent = 'into';
+
+      const target = doc.createElement('span');
+      target.className = 'step-target';
+      target.textContent = '"' + (step.field_label == null ? '' : String(step.field_label)) + '"';
+
+      li.appendChild(num);
+      li.appendChild(action);
+      li.appendChild(value);
+      li.appendChild(into);
+      li.appendChild(target);
+      return li;
+    }
+
     const action = doc.createElement('span');
     action.className = 'step-action';
     action.textContent = String(step.action);
