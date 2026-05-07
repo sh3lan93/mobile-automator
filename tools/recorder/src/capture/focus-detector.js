@@ -1,6 +1,6 @@
 'use strict';
 
-const INPUT_CLASS_RE = /(EditText|UITextField|UISecureTextField|XCUIElementTypeTextField|XCUIElementTypeSecureTextField)/;
+const INPUT_CLASS_RE = /(EditText|UITextField|UISecureTextField|XCUIElementTypeTextField|XCUIElementTypeSecureTextField|XCUIElementTypeTextView|AutoCompleteTextView)/;
 const SECURE_CLASS_RE = /(UISecureTextField|XCUIElementTypeSecureTextField|SecureTextField)/;
 
 function isInputClass(typeOrClass) {

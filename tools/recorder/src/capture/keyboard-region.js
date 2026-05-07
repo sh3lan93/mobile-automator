@@ -1,6 +1,6 @@
 'use strict';
 
-const KEYBOARD_RE = /(InputMethod|Keyboard|UIKeyboard|SoftInput)/;
+const KEYBOARD_RE = /(InputMethod|Keyboard|UIKeyboard|SoftInput)/i;
 
 function area(el) {
   const [x1, y1, x2, y2] = el.bounds;

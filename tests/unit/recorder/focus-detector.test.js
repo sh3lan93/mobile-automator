@@ -87,6 +87,44 @@ describe('findFocusedField', () => {
     });
   });
 
+  test('returns sensitive=false for focused XCUIElementTypeTextView (iOS multi-line)', () => {
+    const snap = {
+      elements: [
+        {
+          type: 'XCUIElementTypeTextView',
+          bounds: [10, 10, 320, 240],
+          id: 'notes_field',
+          accessibility_label: 'Notes',
+          focused: true,
+        },
+      ],
+    };
+    expect(findFocusedField(snap)).toEqual({
+      id: 'notes_field',
+      label: 'Notes',
+      sensitive: false,
+    });
+  });
+
+  test('returns sensitive=false for focused AutoCompleteTextView (Android autocomplete)', () => {
+    const snap = {
+      elements: [
+        {
+          type: 'android.widget.AutoCompleteTextView',
+          bounds: [10, 10, 320, 90],
+          id: 'city_input',
+          accessibility_label: 'City',
+          focused: true,
+        },
+      ],
+    };
+    expect(findFocusedField(snap)).toEqual({
+      id: 'city_input',
+      label: 'City',
+      sensitive: false,
+    });
+  });
+
   test('ignores non-input classes that have focused: true', () => {
     const snap = {
       elements: [

@@ -47,4 +47,26 @@ describe('capture pipeline integration', () => {
 
     fs.rmSync(tmp, { recursive: true, force: true });
   });
+
+  test('coalesces keyboard taps with a real-world Gboard hierarchy class name', async () => {
+    // Locks in the case-insensitive keyboard-region regex against actual
+    // production class names (Gboard's `com.google.android.inputmethod.latin.LatinIME`)
+    // rather than the synthetic `SoftInputWindow` used in the original fixture.
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'rec-int-'));
+    fs.mkdirSync(path.join(tmp, 'mobile-automator'));
+    fs.writeFileSync(path.join(tmp, 'mobile-automator/config.json'), JSON.stringify({ mode: 'platform-aware', project_name: 'demo' }));
+
+    const script = JSON.parse(fs.readFileSync(path.join(__dirname, '../../fixtures/recorder/scripted-session-gboard.json'), 'utf8'));
+    await runScriptedSession({ projectRoot: tmp, scenarioId: 's', script });
+
+    const events = fs.readFileSync(path.join(tmp, 'mobile-automator/.recorder/s/events.jsonl'), 'utf8');
+    const lines = events.trim().split('\n').map((l) => JSON.parse(l));
+
+    const typeEvents = lines.filter((e) => e.kind === 'type');
+    expect(typeEvents).toHaveLength(1);
+    expect(typeEvents[0].value).toBe('test');
+    expect(typeEvents[0].field_id).toBe('email_input');
+
+    fs.rmSync(tmp, { recursive: true, force: true });
+  });
 });

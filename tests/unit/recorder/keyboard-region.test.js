@@ -42,6 +42,28 @@ describe('isInKeyboardRegion', () => {
     };
     expect(isInKeyboardRegion(snap, 540, 1800)).toBe(true);
   });
+
+  test('matches real-world Gboard class (lowercase inputmethod)', () => {
+    const snap = {
+      elements: [
+        { type: 'com.google.android.inputmethod.latin.LatinIME', bounds: [0, 1500, 1080, 2400] },
+      ],
+    };
+    expect(isInKeyboardRegion(snap, 540, 1800)).toBe(true);
+  });
+
+  test('matches an iOS keyboard class with mixed-case casing (case-insensitive match)', () => {
+    // Real iOS keyboard hierarchies sometimes surface classes like
+    // `_uiKeyboardImpl` or `UIInputMethodView` with non-canonical casing
+    // (varies by iOS version + private headers). The case-insensitive
+    // regex must accept these without canonicalising case.
+    const snap = {
+      elements: [
+        { type: 'UIINPUTMETHODview', bounds: [0, 600, 414, 896] },
+      ],
+    };
+    expect(isInKeyboardRegion(snap, 100, 750)).toBe(true);
+  });
 });
 
 describe('keyAtCoordinate', () => {

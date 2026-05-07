@@ -59,6 +59,28 @@ describe('TypeBuffer', () => {
     expect(out[0].value).toBe('ab');
   });
 
+  test.each([
+    ['Enter'],
+    ['Return'],
+    ['Done'],
+    ['Search'],
+    ['Send'],
+    ['Go'],
+    ['↵'],
+    ['enter'],
+    ['return'],
+    ['DONE'],
+  ])('label "%s" flushes the buffer immediately and is NOT appended to value', (label) => {
+    const out = [];
+    const buf = new TypeBuffer({ emit: (e) => out.push(e), silenceTimeoutMs: 9999 });
+    buf.observeFocus({ t: 100, field: FIELD_EMAIL });
+    buf.observeKeyboardTap({ t: 110, key: 'a' });
+    buf.observeKeyboardTap({ t: 130, key: 'b' });
+    buf.observeKeyboardTap({ t: 150, key: label });
+    expect(out).toHaveLength(1);
+    expect(out[0].value).toBe('ab');
+  });
+
   test('flush() commits any pending buffer at session end', () => {
     const out = [];
     const buf = new TypeBuffer({ emit: (e) => out.push(e), silenceTimeoutMs: 9999 });

@@ -1,5 +1,13 @@
 'use strict';
 
+const ENTER_LABELS = new Set(['enter', 'return', 'done', 'search', 'send', 'go', '↵']);
+
+function isEnterKey(key) {
+  if (key === '\n') return true;
+  if (typeof key !== 'string') return false;
+  return ENTER_LABELS.has(key.toLowerCase());
+}
+
 class TypeBuffer {
   constructor({ emit, silenceTimeoutMs = 1500, now = () => Date.now() }) {
     this._emit = emit;
@@ -20,8 +28,11 @@ class TypeBuffer {
 
   observeKeyboardTap({ t, key }) {
     if (!this._field) return;
-    if (key === '\n') {
-      this._appendKey(t, '');
+    if (isEnterKey(key)) {
+      // Enter-shaped key: flush whatever's buffered, but do NOT append the
+      // label/control-char to the value. Real keyboards surface this key as
+      // 'Enter' / 'Return' / 'Done' / 'Search' / 'Send' / 'Go' / '↵' (varies
+      // by IME and form context); '\n' is the synthetic test shape.
       this._commit();
       return;
     }
