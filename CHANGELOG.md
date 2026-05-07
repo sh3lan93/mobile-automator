@@ -31,6 +31,7 @@ The `/mobile-automator:record` recorder feature is being built incrementally per
   - Runs at the end of `/mobile-automator:record` to synthesise the final scenario JSON from the artifact bundle.
   - Cross-references the generator skill's rules rather than duplicating them — generator remains the single source of truth for scenario style / shape.
 - **`mobile-automator/.recorder/`** is now ignored from git in this repo and added to the workspace `.gitignore` whenever setup runs in a project.
+- **System dependency: `ffmpeg`.** The recorder sidecar shells out to `ffmpeg` to extract per-frame PNGs from the screen recording produced by `mobile_start_screen_recording`; without it, no taps can be detected. `commands/mobile-automator/record.toml` § 0.8 pre-flights the binary on `PATH` and halts cleanly with platform-specific install hints (`brew` / `apt` / `pacman` / [ffmpeg.org](https://ffmpeg.org/download.html)) if it's missing — so the failure surfaces before the sidecar spawns rather than mid-session. The README's `Recording scenarios → Requirements` block documents this.
 
 ### 🔄 Changed
 

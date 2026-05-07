@@ -59,4 +59,32 @@ describe('record.toml experimental gate', () => {
     expect(preflightIdx).toBeGreaterThanOrEqual(0);
     expect(gateIdx).toBeLessThan(preflightIdx);
   });
+
+  it('pre-flight checks for ffmpeg and provides at least one install command', () => {
+    // The recorder sidecar shells out to ffmpeg to extract frames from
+    // the screen recording. Without it, no taps can be detected, so the
+    // command must halt cleanly with install guidance instead of
+    // crashing mid-session with `spawn ffmpeg ENOENT`.
+    expect(record.prompt).toMatch(/\bffmpeg\b/);
+
+    // At least one platform-specific install command must appear so the
+    // halt message is actionable. Accept brew, apt, pacman, or a link to
+    // ffmpeg.org/download.
+    const installPatterns = [
+      /brew install ffmpeg/,
+      /apt(-get)?\s+install\s+ffmpeg/,
+      /pacman\s+-S\s+ffmpeg/,
+      /ffmpeg\.org\/download/,
+    ];
+    const hasAnyInstallHint = installPatterns.some((p) => p.test(record.prompt));
+    expect(hasAnyInstallHint).toBe(true);
+  });
+
+  it('places the ffmpeg check before the sidecar is spawned (before Section 2.0)', () => {
+    const ffmpegIdx = record.prompt.indexOf('ffmpeg');
+    const sidecarIdx = record.prompt.search(/^##\s+2\.0\b/m);
+    expect(ffmpegIdx).toBeGreaterThanOrEqual(0);
+    expect(sidecarIdx).toBeGreaterThanOrEqual(0);
+    expect(ffmpegIdx).toBeLessThan(sidecarIdx);
+  });
 });

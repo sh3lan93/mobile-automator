@@ -83,6 +83,25 @@ CRITICAL: You must validate the success of every tool call. If any tool call fai
 
 ---
 
+## 0.8 SYSTEM TOOLS PRE-FLIGHT (FFMPEG)
+
+**Purpose:** Verify the `ffmpeg` binary is reachable on `PATH` before the sidecar is spawned. The recorder sidecar shells out to `ffmpeg` to extract frames from the screen recording produced by `mobile_start_screen_recording`; without it, no taps can be detected and the session is unrecoverable. Failing here keeps the user out of a half-recorded state.
+
+1.  Run `command -v ffmpeg` (or equivalent — capture exit code and stdout).
+2.  If exit code is non-zero (binary not found), halt:
+    > **HALT.** The recorder requires `ffmpeg`, which was not found on your `PATH`.
+    >
+    > Install it for your platform:
+    > - **macOS (Homebrew):** `brew install ffmpeg`
+    > - **Debian / Ubuntu:** `sudo apt-get install ffmpeg`
+    > - **Arch Linux:** `sudo pacman -S ffmpeg`
+    > - **Other / manual:** https://ffmpeg.org/download.html
+    >
+    > After installation, confirm with `ffmpeg -version` and re-run `/mobile-automator:record <scenario_name>`.
+3.  If exit code is zero, log a one-line confirmation (`ffmpeg detected at <path>`) and continue to Section 1.0.
+
+---
+
 ## 1.0 PRE-FLIGHT CHECKS
 
 ### 1.1 Verify Setup

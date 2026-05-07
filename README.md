@@ -427,6 +427,26 @@ The command is hidden until you set the env-var gate. Track progress and discuss
 export MOBILE_AUTOMATOR_RECORDER=1
 ```
 
+### Requirements
+
+The recorder needs **`ffmpeg` on your `PATH`** to extract frames from the screen recording it captures during a session. Without it, `/mobile-automator:record` halts cleanly with an install hint before spawning the sidecar.
+
+```bash
+# macOS (Homebrew)
+brew install ffmpeg
+
+# Debian / Ubuntu
+sudo apt-get install ffmpeg
+
+# Arch Linux
+sudo pacman -S ffmpeg
+
+# Other / manual
+# https://ffmpeg.org/download.html
+```
+
+Confirm with `ffmpeg -version`. The standard `gemini extensions install` flow handles the Node-side dependencies (`commander`, `ws`, `pngjs`) automatically; `ffmpeg` is the only system-level binary you need to install yourself.
+
 ### Quick start
 
 ```bash
