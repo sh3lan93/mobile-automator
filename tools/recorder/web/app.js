@@ -24,6 +24,36 @@
     num.className = 'step-num';
     num.textContent = String(step.index) + '.';
 
+    if (step && step.action === 'type') {
+      // Render: <num>. Type "<value>" into "<field_label>"
+      // Per slice #35 AC: sensitive values are rendered verbatim here; the
+      // mask-on-display / caution UI lands in slice #30.
+      li.setAttribute('data-action', 'type');
+
+      const action = doc.createElement('span');
+      action.className = 'step-action';
+      action.textContent = 'Type';
+
+      const value = doc.createElement('span');
+      value.className = 'step-value';
+      value.textContent = '"' + (step.value == null ? '' : String(step.value)) + '"';
+
+      const into = doc.createElement('span');
+      into.className = 'step-into';
+      into.textContent = 'into';
+
+      const target = doc.createElement('span');
+      target.className = 'step-target';
+      target.textContent = '"' + (step.field_label == null ? '' : String(step.field_label)) + '"';
+
+      li.appendChild(num);
+      li.appendChild(action);
+      li.appendChild(value);
+      li.appendChild(into);
+      li.appendChild(target);
+      return li;
+    }
+
     const action = doc.createElement('span');
     action.className = 'step-action';
     action.textContent = String(step.action);

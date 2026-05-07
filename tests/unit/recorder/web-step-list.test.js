@@ -71,6 +71,52 @@ describe('recorder GUI: step-list rendering', () => {
       });
       expect(li.classList.contains('unnamed')).toBe(false);
     });
+
+    test('renders a type step as `Type "<value>" into "<field_label>"`', () => {
+      const li = app.renderStepRow({
+        id: 'type_email',
+        index: 4,
+        action: 'type',
+        value: 'test@example.com',
+        field_label: 'Email',
+      });
+
+      expect(li).toBeInstanceOf(window.HTMLLIElement);
+      expect(li.classList.contains('step-row')).toBe(true);
+      expect(li.getAttribute('data-step-id')).toBe('type_email');
+      expect(li.getAttribute('data-index')).toBe('4');
+      expect(li.textContent).toMatch(
+        /^\s*\d+\.\s*Type\s*"test@example\.com"\s*into\s*"Email"\s*$/,
+      );
+    });
+
+    test('marks type-step <li> with data-action="type" for CSS targeting', () => {
+      const li = app.renderStepRow({
+        id: 'type_email',
+        index: 4,
+        action: 'type',
+        value: 'hello',
+        field_label: 'Email',
+      });
+      expect(li.getAttribute('data-action')).toBe('type');
+    });
+
+    test('renders sensitive type values verbatim in this slice (caution UI lands in #30)', () => {
+      const li = app.renderStepRow({
+        id: 'type_password',
+        index: 5,
+        action: 'type',
+        value: 'p4ssw0rd!',
+        field_label: 'Password',
+        sensitive: true,
+      });
+
+      expect(li.textContent).toContain('"p4ssw0rd!"');
+      expect(li.textContent).toContain('"Password"');
+      expect(li.textContent).toMatch(
+        /^\s*\d+\.\s*Type\s*"p4ssw0rd!"\s*into\s*"Password"\s*$/,
+      );
+    });
   });
 
   describe('appendStep', () => {
