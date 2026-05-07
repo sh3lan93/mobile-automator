@@ -24,6 +24,48 @@
     num.className = 'step-num';
     num.textContent = String(step.index) + '.';
 
+    // Slice #24: long-press / double-tap render as `<verb> "<target>"`. The
+    // target comes in unquoted; the renderer wraps with literal `"` chars to
+    // match the issue's user-visible spec (mirrors the type branch's quoting
+    // contract, not the legacy tap branch's caller-pre-quotes expectation).
+    if (step && (step.action === 'long_press' || step.action === 'double_tap')) {
+      const verb = step.action === 'long_press' ? 'Long press' : 'Double tap';
+      li.setAttribute('data-action', step.action);
+
+      const action = doc.createElement('span');
+      action.className = 'step-action';
+      action.textContent = verb;
+
+      const target = doc.createElement('span');
+      target.className = 'step-target';
+      target.textContent = '"' + (step.target == null ? '' : String(step.target)) + '"';
+
+      li.appendChild(num);
+      li.appendChild(action);
+      li.appendChild(target);
+      return li;
+    }
+
+    // Slice #24: swipe renders as `Swipe <direction>` — no target span. The
+    // direction lives in its own span so CSS can style it independently of the
+    // verb.
+    if (step && step.action === 'swipe') {
+      li.setAttribute('data-action', 'swipe');
+
+      const action = doc.createElement('span');
+      action.className = 'step-action';
+      action.textContent = 'Swipe';
+
+      const direction = doc.createElement('span');
+      direction.className = 'step-direction';
+      direction.textContent = step.direction == null ? '' : String(step.direction);
+
+      li.appendChild(num);
+      li.appendChild(action);
+      li.appendChild(direction);
+      return li;
+    }
+
     if (step && step.action === 'type') {
       // Render: <num>. Type "<value>" into "<field_label>"
       // Slice #35 review fix: when step.sensitive === true the value is

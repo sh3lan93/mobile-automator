@@ -138,6 +138,72 @@ describe('recorder GUI: step-list rendering', () => {
       expect(li.textContent).toContain('"user@example.com"');
       expect(li.textContent).not.toMatch(/•/);
     });
+
+    // Slice #24: long-press / double-tap / swipe rendering. The classifier
+    // already detects all three (slice #22); these tests pin the user-visible
+    // surface — the human-readable labels the issue spec calls for.
+
+    test('renders a long_press step as `Long press "<target>"`', () => {
+      const li = app.renderStepRow({
+        id: 'long_press_settings_icon',
+        index: 7,
+        action: 'long_press',
+        target: 'Settings Icon',
+      });
+
+      expect(li).toBeInstanceOf(window.HTMLLIElement);
+      expect(li.classList.contains('step-row')).toBe(true);
+      expect(li.getAttribute('data-step-id')).toBe('long_press_settings_icon');
+      expect(li.getAttribute('data-action')).toBe('long_press');
+      expect(li.textContent).toMatch(
+        /^\s*\d+\.\s*Long press\s*"Settings Icon"\s*$/,
+      );
+      const action = li.querySelector('.step-action');
+      const target = li.querySelector('.step-target');
+      expect(action).not.toBeNull();
+      expect(action.textContent).toBe('Long press');
+      expect(target).not.toBeNull();
+      expect(target.textContent).toBe('"Settings Icon"');
+    });
+
+    test('renders a double_tap step as `Double tap "<target>"`', () => {
+      const li = app.renderStepRow({
+        id: 'double_tap_like_button',
+        index: 8,
+        action: 'double_tap',
+        target: 'Like Button',
+      });
+
+      expect(li.getAttribute('data-action')).toBe('double_tap');
+      expect(li.textContent).toMatch(
+        /^\s*\d+\.\s*Double tap\s*"Like Button"\s*$/,
+      );
+      const action = li.querySelector('.step-action');
+      const target = li.querySelector('.step-target');
+      expect(action.textContent).toBe('Double tap');
+      expect(target.textContent).toBe('"Like Button"');
+    });
+
+    test('renders a swipe step as `Swipe <direction>` with no target span', () => {
+      const li = app.renderStepRow({
+        id: 'swipe_feed',
+        index: 9,
+        action: 'swipe',
+        direction: 'up',
+        target: 'Feed',
+      });
+
+      expect(li.getAttribute('data-action')).toBe('swipe');
+      expect(li.textContent).toMatch(/^\s*\d+\.\s*Swipe\s*up\s*$/);
+      const action = li.querySelector('.step-action');
+      expect(action.textContent).toBe('Swipe');
+      // Per the issue spec the swipe label is direction-only: no target span.
+      expect(li.querySelector('.step-target')).toBeNull();
+      // The direction text lives in its own span for CSS targeting.
+      const direction = li.querySelector('.step-direction');
+      expect(direction).not.toBeNull();
+      expect(direction.textContent).toBe('up');
+    });
   });
 
   describe('appendStep', () => {

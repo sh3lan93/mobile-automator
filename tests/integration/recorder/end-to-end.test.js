@@ -151,18 +151,49 @@ function validateScenarioAgainstSchema(scenario, schema) {
 function synthesizeScenario(projectRoot, scenarioId) {
   const bundleRoot = path.join(projectRoot, 'mobile-automator', '.recorder', scenarioId);
   const eventsRaw = fs.readFileSync(path.join(bundleRoot, 'events.jsonl'), 'utf8');
+  const SUPPORTED_KINDS = new Set(['tap', 'long_press', 'double_tap', 'swipe']);
   const events = eventsRaw
     .split('\n')
     .filter((l) => l.length > 0)
     .map((l) => JSON.parse(l))
-    .filter((e) => e.kind === 'tap'); // #22 tap-only
+    .filter((e) => SUPPORTED_KINDS.has(e.kind));
 
-  const steps = events.map((ev, i) => ({
-    id: ev.step_id || `tap_step_${i + 1}`,
-    action: 'tap',
-    description: `Tap ${ev.target || 'element'}.`,
-    target: ev.target || 'element',
-  }));
+  const steps = events.map((ev, i) => {
+    const target = ev.target || 'element';
+    if (ev.kind === 'long_press') {
+      return {
+        id: ev.step_id || `long_press_step_${i + 1}`,
+        action: 'long_press',
+        description: `Long press ${target}.`,
+        target,
+      };
+    }
+    if (ev.kind === 'double_tap') {
+      return {
+        id: ev.step_id || `double_tap_step_${i + 1}`,
+        action: 'double_tap',
+        description: `Double tap ${target}.`,
+        target,
+      };
+    }
+    if (ev.kind === 'swipe') {
+      const direction = ev.direction || 'up';
+      return {
+        id: ev.step_id || `swipe_step_${i + 1}`,
+        action: 'swipe',
+        description: `Swipe ${direction}.`,
+        target,
+        value: direction,
+      };
+    }
+    // Default: tap.
+    return {
+      id: ev.step_id || `tap_step_${i + 1}`,
+      action: 'tap',
+      description: `Tap ${target}.`,
+      target,
+    };
+  });
 
   const scenario = {
     $schema_version: '2.1',
@@ -289,5 +320,93 @@ describe('recorder end-to-end (record → save → cleanup)', () => {
   test('public scenarios/ directory holds exactly the expected scenario file', () => {
     const entries = fs.readdirSync(scenariosDir);
     expect(entries).toContain(`${scenarioId}.json`);
+  });
+});
+
+// Slice #24: gesture variety. Drives the same lifecycle + synthesis pipeline
+// against a fixture that exercises one of each v1 gesture (tap, long_press,
+// double_tap, swipe) and pins the invariant that all four flow through to a
+// schema-valid scenario JSON. This sits as a sibling describe to preserve
+// the existing tap-only block as a focused regression guard.
+
+const GESTURES_FIXTURE_PATH = path.join(
+  REPO_ROOT,
+  'tests',
+  'fixtures',
+  'recorder',
+  'scripted-session-gestures.json'
+);
+
+describe('recorder end-to-end (gesture variety: long-press / double-tap / swipe)', () => {
+  let tmp;
+  let scenarioId;
+  let scenarioPath;
+  let bundleRoot;
+  let scenario;
+
+  beforeAll(async () => {
+    scenarioId = 'gesture_variety';
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'rec-e2e-gestures-'));
+
+    fs.mkdirSync(path.join(tmp, 'mobile-automator'), { recursive: true });
+    fs.writeFileSync(
+      path.join(tmp, 'mobile-automator', 'config.json'),
+      JSON.stringify({ mode: 'platform-aware', project_name: 'demo' })
+    );
+
+    const script = JSON.parse(fs.readFileSync(GESTURES_FIXTURE_PATH, 'utf8'));
+    await runScriptedSession({ projectRoot: tmp, scenarioId, script });
+
+    bundleRoot = path.join(tmp, 'mobile-automator', '.recorder', scenarioId);
+    expect(fs.existsSync(bundleRoot)).toBe(true);
+
+    const out = synthesizeScenario(tmp, scenarioId);
+    scenarioPath = out.scenarioPath;
+    scenario = JSON.parse(fs.readFileSync(scenarioPath, 'utf8'));
+
+    handleSaveMessage({ store: out.store, onDone: () => {} });
+  });
+
+  afterAll(() => {
+    if (tmp && fs.existsSync(tmp)) fs.rmSync(tmp, { recursive: true, force: true });
+  });
+
+  test('scenario JSON validates against the v2.1 schema', () => {
+    const schema = JSON.parse(fs.readFileSync(SCENARIO_SCHEMA_PATH, 'utf8'));
+    const errors = validateScenarioAgainstSchema(scenario, schema);
+    if (errors.length > 0) {
+      // eslint-disable-next-line no-console
+      console.error('Schema errors:', errors);
+    }
+    expect(errors).toEqual([]);
+  });
+
+  test('scenario steps preserve chronological emission order from the fixture', () => {
+    // Array-equality (not set-equality) so a reordering bug in either the
+    // lifecycle's emit path or the synthesizer's step mapping shows up here.
+    const actions = scenario.steps.map((s) => s.action);
+    expect(actions).toEqual(['tap', 'long_press', 'double_tap', 'swipe']);
+  });
+
+  test('swipe step carries direction in the value field', () => {
+    const swipe = scenario.steps.find((s) => s.action === 'swipe');
+    expect(swipe).toBeDefined();
+    expect(swipe.value).toBe('up');
+  });
+
+  test('each step targets the element under its gesture coords', () => {
+    const byAction = Object.fromEntries(scenario.steps.map((s) => [s.action, s]));
+    expect(byAction.tap.target).toBe('Item Card');
+    expect(byAction.long_press.target).toBe('Settings Icon');
+    expect(byAction.double_tap.target).toBe('Like Button');
+    expect(byAction.swipe.target).toBe('Feed');
+  });
+
+  test('step ids encode gesture kind and target', () => {
+    const ids = scenario.steps.map((s) => s.id);
+    expect(ids).toContain('tap_item_card');
+    expect(ids).toContain('long_press_settings_icon');
+    expect(ids).toContain('double_tap_like_button');
+    expect(ids).toContain('swipe_feed');
   });
 });

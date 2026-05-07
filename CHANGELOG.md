@@ -38,6 +38,9 @@ The `/mobile-automator:record` recorder feature is being built incrementally per
   - Lifecycle wiring in `tools/recorder/src/lifecycle.js` routes taps inside the keyboard region to the type buffer (with focused-field observation) instead of writing them as raw taps. Non-keyboard taps follow the existing element-resolver path unchanged.
   - GUI step list now renders `Type "<value>" into "<field_label>"` for `action: 'type'` steps (with a `data-action="type"` attribute on the row). The existing tap rendering is unchanged.
   - The `sensitive` flag is propagated end-to-end (Android `inputType=textPassword` / iOS `secureTextEntry` → field → buffer → emitted event). The caution UI / mask-on-display lands in slice [#30](https://github.com/sh3lan93/mobile-automator/issues/30).
+- **Gesture vocabulary surfaced in the GUI** — slice [#24](https://github.com/sh3lan93/mobile-automator/issues/24).
+  - GUI step list now renders `Long press "<target>"`, `Double tap "<target>"`, and `Swipe <direction>` for the corresponding gestures (with `data-action` attributes on each row for CSS targeting). The classifier already detected these in slice [#22](https://github.com/sh3lan93/mobile-automator/issues/22); this slice wires them through to the user-visible surface.
+  - Integration test `tests/integration/recorder/end-to-end.test.js` exercises the full v1 gesture vocabulary via a new `tests/fixtures/recorder/scripted-session-gestures.json` fixture, asserting the synthesized scenario JSON contains all four gesture step types (tap / long_press / double_tap / swipe) and validates against the v2.1 schema. The swipe step carries its direction in the schema's `value` field.
 
 ### 🔄 Changed
 
@@ -47,9 +50,8 @@ The `/mobile-automator:record` recorder feature is being built incrementally per
 ### 📝 Notes
 
 - **Experimental gate.** Everything above is reachable only when `MOBILE_AUTOMATOR_RECORDER=1` is set in the environment. With the gate off, behaviour is identical to v0.11.0.
-- **Gate-then-graduate convention.** This `[Unreleased]` block accumulates the recorder slices in flight. When the recorder is feature-complete and ungated, all slice entries collapse into a single coherent `[0.12.0]` note in a dedicated graduation PR. No version is bumped during the slice work.
-- **Still out of scope for slices [#22](https://github.com/sh3lan93/mobile-automator/issues/22) + [#35](https://github.com/sh3lan93/mobile-automator/issues/35)** — tracked by the rest of the slice ladder under [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21):
-  - [#24](https://github.com/sh3lan93/mobile-automator/issues/24) — long-press, double-tap, and swipe detection wired through to the GUI.
+- **Gate-then-graduate convention.** This `[Unreleased]` block accumulates the recorder slices in flight. Each slice bumps `gemini-extension.json` to `0.12.0-rc.N` (incrementing N) so the version-check CI gate passes against the existing `v0.11.0` tag without prematurely graduating the feature; the `vX.Y.Z` git-tag namespace is reserved for graduated releases. When the recorder is feature-complete and ungated, the rc series collapses into a single coherent `[0.12.0]` note in a dedicated graduation PR.
+- **Still out of scope for slices [#22](https://github.com/sh3lan93/mobile-automator/issues/22) + [#35](https://github.com/sh3lan93/mobile-automator/issues/35) + [#24](https://github.com/sh3lan93/mobile-automator/issues/24)** — tracked by the rest of the slice ladder under [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21):
   - [#25](https://github.com/sh3lan93/mobile-automator/issues/25) — iOS Simulator parity.
   - [#26](https://github.com/sh3lan93/mobile-automator/issues/26) — Android hardware keys via `adb getevent`.
   - [#27](https://github.com/sh3lan93/mobile-automator/issues/27) — Add Assertion modal + AI classification at Save (HITL).
