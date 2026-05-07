@@ -2,10 +2,29 @@
   "duration_ms": 5000,
   "hierarchy_snapshots": [
     { "t": 0, "elements": [{ "type": "android.widget.Button", "bounds": [320, 1050, 760, 1130], "text": "Login" }] },
-    { "t": 1500, "elements": [{ "type": "android.widget.EditText", "bounds": [100, 500, 980, 580], "text": "", "focused": true, "id": "email_input" }] }
+    { "t": 1500, "elements": [{ "type": "android.widget.EditText", "bounds": [100, 500, 980, 580], "text": "", "focused": true, "id": "email_input" }] },
+    {
+      "t": 2000,
+      "elements": [
+        { "type": "android.widget.EditText", "bounds": [100, 500, 980, 580], "text": "", "focused": true, "id": "email_input", "accessibility_label": "Email" },
+        { "type": "android.inputmethodservice.SoftInputWindow", "bounds": [0, 1500, 1080, 2400] },
+        { "type": "android.view.View", "bounds": [100, 1700, 200, 1800], "text": "t" },
+        { "type": "android.view.View", "bounds": [250, 1700, 350, 1800], "text": "e" },
+        { "type": "android.view.View", "bounds": [400, 1700, 500, 1800], "text": "s" },
+        { "type": "android.view.View", "bounds": [550, 1700, 650, 1800], "text": "t" }
+      ]
+    }
   ],
   "tap_events": [
     { "kind": "down", "t": 1000, "x": 540, "y": 1090 },
-    { "kind": "up", "t": 1100, "x": 540, "y": 1090 }
+    { "kind": "up", "t": 1100, "x": 540, "y": 1090 },
+    { "kind": "down", "t": 2100, "x": 150, "y": 1750 },
+    { "kind": "up", "t": 2200, "x": 150, "y": 1750 },
+    { "kind": "down", "t": 2300, "x": 300, "y": 1750 },
+    { "kind": "up", "t": 2400, "x": 300, "y": 1750 },
+    { "kind": "down", "t": 2500, "x": 450, "y": 1750 },
+    { "kind": "up", "t": 2600, "x": 450, "y": 1750 },
+    { "kind": "down", "t": 2700, "x": 600, "y": 1750 },
+    { "kind": "up", "t": 2800, "x": 600, "y": 1750 }
   ]
 }
