@@ -5,7 +5,16 @@ const path = require('path');
 const fs = require('fs');
 
 const COLOR_RANGES = {
+  // Android "Show taps": cyan/light-blue circle.
   light_blue: { rMin: 80, rMax: 180, gMin: 140, gMax: 220, bMin: 200, bMax: 255 },
+  // iOS Simulator "Show Single Touches": translucent gray disk rendered by
+  // the macOS host atop the iOS guest screen, intrinsic fill ~RGB(170,170,170).
+  // The narrow brightness band (158–185) plus low `maxChannelDelta` (10)
+  // isolates the disk's near-uniform mid-gray from real iOS UI pixels —
+  // most app chrome is colour-tinted (channel delta > 10) or far outside
+  // the brightness window, so background pollution is minimal.
+  // Calibrated against `tests/fixtures/recorder/video-frames/ios-real-touch.png`.
+  ios_simulator: { rMin: 158, rMax: 185, gMin: 158, gMax: 185, bMin: 158, bMax: 185, maxChannelDelta: 10 },
 };
 
 function readPngPixels(buf) {
@@ -22,11 +31,17 @@ function detectIndicatorInFrame(buf, { color = 'light_blue', minPixels = 6 } = {
   const { width, height, data } = readPngPixels(buf);
   const rng = COLOR_RANGES[color];
   let sumX = 0, sumY = 0, count = 0;
+  const maxDelta = typeof rng.maxChannelDelta === 'number' ? rng.maxChannelDelta : null;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const idx = (y * width + x) * 4;
       const r = data[idx], g = data[idx + 1], b = data[idx + 2];
       if (r >= rng.rMin && r <= rng.rMax && g >= rng.gMin && g <= rng.gMax && b >= rng.bMin && b <= rng.bMax) {
+        if (maxDelta !== null) {
+          const minc = r < g ? (r < b ? r : b) : (g < b ? g : b);
+          const maxc = r > g ? (r > b ? r : b) : (g > b ? g : b);
+          if (maxc - minc > maxDelta) continue;
+        }
         sumX += x; sumY += y; count += 1;
       }
     }

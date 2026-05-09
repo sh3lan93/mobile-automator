@@ -19,7 +19,11 @@ function lastResourceIdSegment(rid) {
 function shortClass(type) {
   if (!type) return 'view';
   const segs = type.split('.');
-  return segs[segs.length - 1].toLowerCase();
+  const last = segs[segs.length - 1];
+  // iOS class names look like `XCUIElementTypeButton`; strip the prefix so the
+  // unnamed-fallback reads `unnamed_button`, not `unnamed_xcuielementtypebutton`.
+  const stripped = last.replace(/^XCUIElementType/, '');
+  return (stripped || last).toLowerCase();
 }
 
 function resolveElement(snapshot, x, y) {

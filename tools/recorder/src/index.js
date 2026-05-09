@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 'use strict';
 
-const { Command } = require('commander');
+const { Command, Option } = require('commander');
+
+const SUPPORTED_PLATFORMS = ['android', 'ios'];
 
 function buildProgram() {
   const program = new Command();
@@ -10,6 +12,9 @@ function buildProgram() {
     .description('Sidecar for /mobile-automator:record')
     .requiredOption('--scenario <name>', 'scenario name (snake_case)')
     .option('--mode <mode>', 'capture mode: b | c3', 'b')
+    .addOption(
+      new Option('--platform <platform>', 'target device platform').choices(SUPPORTED_PLATFORMS).default('android'),
+    )
     .option('--no-gui', 'run without launching browser (test mode)')
     .option('--preconditions-modal', 'show preconditions modal before recording')
     .option('--allow-sensitive-input', 'opt-out of sensitive-input warnings')
@@ -23,7 +28,7 @@ async function main(argv) {
   program.parse(argv);
   const opts = program.opts();
   // Phase 1 implementation arrives in subsequent tasks.
-  console.log(`recorder: scenario=${opts.scenario} mode=${opts.mode}`);
+  console.log(`recorder: scenario=${opts.scenario} mode=${opts.mode} platform=${opts.platform}`);
   process.exit(0);
 }
 

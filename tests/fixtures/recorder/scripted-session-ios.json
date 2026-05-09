@@ -1,0 +1,32 @@
+{
+  "duration_ms": 1500,
+  "hierarchy_snapshots": [
+    {
+      "t": 0,
+      "elements": [
+        {
+          "type": "XCUIElementTypeWindow",
+          "bounds": [0, 0, 390, 844]
+        },
+        {
+          "type": "XCUIElementTypeNavigationBar",
+          "bounds": [0, 47, 390, 91]
+        },
+        {
+          "type": "XCUIElementTypeButton",
+          "bounds": [16, 50, 70, 88],
+          "accessibility_label": "Back"
+        },
+        {
+          "type": "XCUIElementTypeStaticText",
+          "bounds": [120, 55, 270, 85],
+          "text": "Settings"
+        }
+      ]
+    }
+  ],
+  "tap_events": [
+    { "kind": "down", "t": 500, "x": 40, "y": 70 },
+    { "kind": "up", "t": 600, "x": 40, "y": 70 }
+  ]
+}

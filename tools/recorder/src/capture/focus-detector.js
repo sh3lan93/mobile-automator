@@ -23,6 +23,13 @@ function findFocusedField(snapshot) {
     if (!sensitive && typeof el.inputType === 'string' && /password/i.test(el.inputType)) {
       sensitive = true;
     }
+    // Modern XCUITest exposes secure input as a trait or boolean rather than a class.
+    if (!sensitive && Array.isArray(el.accessibility_traits) && el.accessibility_traits.includes('secureTextField')) {
+      sensitive = true;
+    }
+    if (!sensitive && el.secureTextEntry === true) {
+      sensitive = true;
+    }
     const label =
       (el.accessibility_label && String(el.accessibility_label).trim()) ||
       (el.content_description && String(el.content_description).trim()) ||

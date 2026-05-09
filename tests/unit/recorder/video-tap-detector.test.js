@@ -6,52 +6,78 @@ const { detectIndicatorInFrame, VideoTapDetector } = require('../../../tools/rec
 
 const FRAMES = path.resolve(__dirname, '../../fixtures/recorder/video-frames');
 
+const PROFILES = [
+  { color: 'light_blue', no: 'no-indicator.png', dot1: 'dot-at-50-30.png', dot2: 'dot-at-100-50.png' },
+  { color: 'ios_simulator', no: 'ios-no-indicator.png', dot1: 'ios-dot-at-50-30.png', dot2: 'ios-dot-at-100-50.png' },
+];
+
 describe('detectIndicatorInFrame', () => {
-  // Note: fixture frames are tiny (200x100 PNG) for fast tests.
-  // Each fixture is hand-crafted with a colored dot at a known location.
-  test('returns null when no indicator visible', () => {
-    const buf = fs.readFileSync(path.join(FRAMES, 'no-indicator.png'));
-    expect(detectIndicatorInFrame(buf, { color: 'light_blue' })).toBeNull();
+  // Fixture frames are tiny (200x100 PNG) for fast tests.
+  // Each fixture is hand-crafted with a coloured dot at a known location.
+  describe.each(PROFILES)('color=$color', ({ color, no, dot1 }) => {
+    test('returns null when no indicator visible', () => {
+      const buf = fs.readFileSync(path.join(FRAMES, no));
+      expect(detectIndicatorInFrame(buf, { color })).toBeNull();
+    });
+
+    test('returns center coordinates of the indicator dot', () => {
+      const buf = fs.readFileSync(path.join(FRAMES, dot1));
+      const out = detectIndicatorInFrame(buf, { color });
+      expect(out).not.toBeNull();
+      expect(out.x).toBeGreaterThanOrEqual(45);
+      expect(out.x).toBeLessThanOrEqual(55);
+      expect(out.y).toBeGreaterThanOrEqual(25);
+      expect(out.y).toBeLessThanOrEqual(35);
+    });
   });
 
-  test('returns center coordinates of the indicator dot', () => {
+  test('ios_simulator profile rejects coloured pixels via maxChannelDelta (excludes Android cyan dot)', () => {
+    // Cross-profile guard: the cyan Android indicator should NOT register as an iOS gray-disk hit.
     const buf = fs.readFileSync(path.join(FRAMES, 'dot-at-50-30.png'));
-    const out = detectIndicatorInFrame(buf, { color: 'light_blue' });
+    expect(detectIndicatorInFrame(buf, { color: 'ios_simulator' })).toBeNull();
+  });
+
+  test('ios_simulator profile extracts the touch centroid from a real iOS Sim background composite', () => {
+    // ios-real-touch.png is a 200x100 crop of a real `xcrun simctl io booted screenshot`
+    // with a calibrated mid-grey disk composited at (100, 50) — see
+    // scripts/fixtures/composite-ios-touch-overlay.js. This locks in that the
+    // colour band isolates the indicator's intrinsic fill from real iOS UI pixels.
+    const buf = fs.readFileSync(path.join(FRAMES, 'ios-real-touch.png'));
+    const out = detectIndicatorInFrame(buf, { color: 'ios_simulator' });
     expect(out).not.toBeNull();
-    expect(out.x).toBeGreaterThanOrEqual(45);
-    expect(out.x).toBeLessThanOrEqual(55);
-    expect(out.y).toBeGreaterThanOrEqual(25);
-    expect(out.y).toBeLessThanOrEqual(35);
+    const dist = Math.sqrt((out.x - 100) ** 2 + (out.y - 50) ** 2);
+    expect(dist).toBeLessThan(10);
   });
 });
 
 describe('VideoTapDetector.processFrames', () => {
-  test('emits down/up around frames with/without indicator', async () => {
-    const out = [];
-    const det = new VideoTapDetector({ emit: (e) => out.push(e), color: 'light_blue', fps: 30 });
-    const frames = [
-      { t: 0, buf: fs.readFileSync(path.join(FRAMES, 'no-indicator.png')) },
-      { t: 33, buf: fs.readFileSync(path.join(FRAMES, 'dot-at-50-30.png')) },
-      { t: 66, buf: fs.readFileSync(path.join(FRAMES, 'dot-at-50-30.png')) },
-      { t: 99, buf: fs.readFileSync(path.join(FRAMES, 'no-indicator.png')) },
-    ];
-    det.processFrames(frames);
-    const kinds = out.map((e) => e.kind);
-    expect(kinds).toEqual(['down', 'move', 'up']);
-    expect(out[0]).toMatchObject({ x: expect.any(Number), y: expect.any(Number), t: 33 });
-    expect(out[2].t).toBe(99);
-  });
+  describe.each(PROFILES)('color=$color', ({ color, no, dot1, dot2 }) => {
+    test('emits down/up around frames with/without indicator', () => {
+      const out = [];
+      const det = new VideoTapDetector({ emit: (e) => out.push(e), color, fps: 30 });
+      const frames = [
+        { t: 0, buf: fs.readFileSync(path.join(FRAMES, no)) },
+        { t: 33, buf: fs.readFileSync(path.join(FRAMES, dot1)) },
+        { t: 66, buf: fs.readFileSync(path.join(FRAMES, dot1)) },
+        { t: 99, buf: fs.readFileSync(path.join(FRAMES, no)) },
+      ];
+      det.processFrames(frames);
+      const kinds = out.map((e) => e.kind);
+      expect(kinds).toEqual(['down', 'move', 'up']);
+      expect(out[0]).toMatchObject({ x: expect.any(Number), y: expect.any(Number), t: 33 });
+      expect(out[2].t).toBe(99);
+    });
 
-  test('emits move when indicator is visible across consecutive frames at different coords', async () => {
-    // Synthesize a moving-dot path in two different frame fixtures.
-    const out = [];
-    const det = new VideoTapDetector({ emit: (e) => out.push(e), color: 'light_blue', fps: 30 });
-    det.processFrames([
-      { t: 0, buf: fs.readFileSync(path.join(FRAMES, 'dot-at-50-30.png')) },
-      { t: 33, buf: fs.readFileSync(path.join(FRAMES, 'dot-at-100-50.png')) },
-      { t: 66, buf: fs.readFileSync(path.join(FRAMES, 'no-indicator.png')) },
-    ]);
-    expect(out.map((e) => e.kind)).toEqual(['down', 'move', 'up']);
-    expect(out[1].x).toBeGreaterThan(out[0].x);
+    test('emits move when indicator is visible across consecutive frames at different coords', () => {
+      const out = [];
+      const det = new VideoTapDetector({ emit: (e) => out.push(e), color, fps: 30 });
+      det.processFrames([
+        { t: 0, buf: fs.readFileSync(path.join(FRAMES, dot1)) },
+        { t: 33, buf: fs.readFileSync(path.join(FRAMES, dot2)) },
+        { t: 66, buf: fs.readFileSync(path.join(FRAMES, no)) },
+      ]);
+      expect(out.map((e) => e.kind)).toEqual(['down', 'move', 'up']);
+      expect(out[1].x).toBeGreaterThan(out[0].x);
+    });
   });
 });
