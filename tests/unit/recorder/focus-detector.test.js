@@ -125,6 +125,68 @@ describe('findFocusedField', () => {
     });
   });
 
+  test('returns sensitive=true for iOS XCUIElementTypeTextField with accessibility_traits=["secureTextField"]', () => {
+    // Modern XCUITest exposes secure-text input as a trait on a regular text field,
+    // not as a separate class. We must detect both shapes.
+    const snap = {
+      elements: [
+        {
+          type: 'XCUIElementTypeTextField',
+          bounds: [10, 10, 200, 80],
+          id: 'pwd_field',
+          accessibility_label: 'Password',
+          accessibility_traits: ['secureTextField'],
+          focused: true,
+        },
+      ],
+    };
+    expect(findFocusedField(snap)).toEqual({
+      id: 'pwd_field',
+      label: 'Password',
+      sensitive: true,
+    });
+  });
+
+  test('returns sensitive=true for iOS field with secureTextEntry=true boolean', () => {
+    const snap = {
+      elements: [
+        {
+          type: 'XCUIElementTypeTextField',
+          bounds: [10, 10, 200, 80],
+          id: 'pin_field',
+          accessibility_label: 'PIN',
+          secureTextEntry: true,
+          focused: true,
+        },
+      ],
+    };
+    expect(findFocusedField(snap)).toEqual({
+      id: 'pin_field',
+      label: 'PIN',
+      sensitive: true,
+    });
+  });
+
+  test('returns sensitive=false when accessibility_traits exists but does not include secureTextField', () => {
+    const snap = {
+      elements: [
+        {
+          type: 'XCUIElementTypeTextField',
+          bounds: [10, 10, 200, 80],
+          id: 'name_field',
+          accessibility_label: 'Name',
+          accessibility_traits: ['searchField', 'staticText'],
+          focused: true,
+        },
+      ],
+    };
+    expect(findFocusedField(snap)).toEqual({
+      id: 'name_field',
+      label: 'Name',
+      sensitive: false,
+    });
+  });
+
   test('ignores non-input classes that have focused: true', () => {
     const snap = {
       elements: [
