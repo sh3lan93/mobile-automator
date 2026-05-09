@@ -112,13 +112,15 @@ CRITICAL: You must validate the success of every tool call. If any tool call fai
 3.  Read `mobile-automator/config.json` to load project configuration.
 
 ### 1.2 Verify Device
-1.  Use `mobile_list_available_devices()` to check for connected devices.
-    - If no devices found → "No device connected. Please connect a device, emulator, or simulator and try again." → Halt.
+1.  Use `mobile_list_available_devices()` to check for connected devices. The recorder supports Android emulators, Android physical devices, and **iOS Simulator** targets (iOS physical devices are out of scope per PRD #21).
+    - If no devices found → "No device connected. Please connect an Android device, Android emulator, or iOS Simulator and try again." → Halt.
 2.  If multiple devices are found, use the `ask_user` tool (type: `choice`) to ask the user to select one:
     - Header: `Device`
     - Question: `Which device should I use?`
     - Options: Dynamically list the available devices as options.
 3.  Confirm the selected device to the user.
+4.  **Capture the device's `os` field** from the entry returned by `mobile_list_available_devices()` for the selected device. Lowercase it. Map `"android"` → `${platform_flag} = "android"`, `"ios"` → `${platform_flag} = "ios"`. If the value is anything else, halt with:
+    > "❌ Unsupported device platform: `<value>`. The recorder supports Android and iOS Simulator only." **HALT.**
 
 ### 1.3 Verify App
 1.  **Read config:** Load `mobile-automator/config.json`.
@@ -153,9 +155,9 @@ CRITICAL: You must validate the success of every tool call. If any tool call fai
 1.  **Announce the hand-off:**
     > "Starting recorder sidecar for scenario `[scenario_name]` on `[device_name]` (env: `[selected_environment]`). Interact with the device — the sidecar will capture each step. Press Ctrl-C in the sidecar terminal (or follow the sidecar's stop instructions) when finished."
 
-2.  **Invoke the sidecar** as a subprocess:
+2.  **Invoke the sidecar** as a subprocess. Pass the resolved platform from § 1.2 so the sidecar can pick the right video tap-detector profile (Android's "Show taps" cyan vs iOS Simulator's "Show Single Touches" gray disk) and gate Android-only modules:
     ```
-    node ${extensionPath}/tools/recorder/src/index.js --scenario "${scenario_name}" ${flags}
+    node ${extensionPath}/tools/recorder/src/index.js --scenario "${scenario_name}" --platform "${platform_flag}" ${flags}
     ```
     Stream the sidecar's stdout/stderr to the user verbatim. Do not interpret intermediate output — the sidecar owns the recording UX.
 
