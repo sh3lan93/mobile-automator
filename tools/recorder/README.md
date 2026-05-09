@@ -1,1 +1,79 @@
-Sidecar process that drives the recorder GUI and captures device interactions. Invoked by `/mobile-automator:record`.
+# Recorder sidecar
+
+Sidecar process that drives the recorder GUI and captures device interactions for the experimental `/mobile-automator:record` command. The sidecar is invoked by `commands/mobile-automator/record.toml` after pre-flight (config, environment, device, app install) succeeds.
+
+The recorder feature is being built incrementally per [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21) and is gated behind the `MOBILE_AUTOMATOR_RECORDER=1` environment variable until graduation.
+
+## Supported targets
+
+| Target | Status | Notes |
+|---|---|---|
+| Android emulator | Supported | Captures via `mobile_start_screen_recording` + visible-touch indicator + UI hierarchy polling. |
+| Android physical device | Supported | Same capture pipeline as emulator; hardware keys captured via `adb getevent`. |
+| iOS Simulator | Supported | Captures via screen recording + "Show Single Touches" overlay + UI hierarchy polling. |
+| iOS physical device | **Not supported** | Apple does not expose a touch event stream to processes outside the app's own sandbox. Out of scope per PRD. |
+
+## Recording on iOS Simulator
+
+The recorder works against a booted iOS Simulator with the same UX and same output schema as Android. A few iOS-specific notes:
+
+### Prerequisite: enable "Show Single Touches"
+
+The iOS Simulator's macOS host app draws a translucent gray disk wherever a touch lands — the recorder's video tap detector picks up that disk. Enable it before recording:
+
+- **Simulator menu → I/O → Show Single Touches** (toggle on)
+
+This is a Simulator-app preference (`com.apple.iphonesimulator` defaults key `ShowSingleTouches`), not a device setting — the indicator is rendered by the macOS host on top of the iOS guest screen and survives device reboots.
+
+### Launching the recorder
+
+```bash
+# Boot a simulator (any iPhone or iPad will do)
+xcrun simctl boot "iPhone 16 Pro"
+open -a Simulator
+
+# Opt in to the experimental recorder
+export MOBILE_AUTOMATOR_RECORDER=1
+
+# Record a scenario — the pre-flight will detect the booted simulator
+gemini  # then: /mobile-automator:record my_scenario_name
+```
+
+The pre-flight reads the device's `os` field returned by `mobile_list_available_devices()`, lowercases it, and forwards `--platform=ios` to the sidecar. The sidecar uses that to pick the iOS-tuned video tap-detector colour profile (`ios_simulator`, calibrated to the Simulator's mid-grey indicator) instead of the Android cyan-circle profile.
+
+### Limitations on iOS
+
+- **No hardware keys.** iOS has no equivalent to Android's `BACK` / `HOME` button stream; the recorder cannot capture key events on iOS.
+- **Aware-mode back navigation = literal tap.** When you tap the navigation-bar back chevron, the recorder captures it as a regular `tap` step on the button (named via `accessibility_label`, e.g. `tap "Back"`) — not a special-cased `press_back` semantic action. This is intentional: aware mode preserves what you actually did.
+- **Multi-touch gestures (pinch, rotate) not supported.** The single-touch indicator can only show one touch at a time. Same limitation on Android.
+- **Mode B only.** The instrumentation-SDK Mode C3 protocol contract ships in v1.0; the iOS Swift Package SDK is v1.1 work.
+
+## Capture-pipeline internals
+
+The sidecar coordinates several deep modules under `src/`:
+
+| Module | Responsibility |
+|---|---|
+| `capture/mobile-mcp-bridge.js` | Wraps mobile-mcp tool calls (screen recording, screenshots, hierarchy listing). |
+| `capture/hierarchy-poller.js` | Polls `mobile_list_elements_on_screen` on a timer, retains a ring buffer for temporal lookup. |
+| `capture/element-resolver.js` | Resolves a `(snapshot, x, y)` to a display name. Handles Android (`android.widget.*`, `resource_id`) and iOS (`XCUIElementType*`, `accessibility_label`, `accessibility_traits`) hierarchy shapes. |
+| `capture/focus-detector.js` | Identifies the focused input field and whether it is sensitive (Android `inputType=textPassword`, iOS `XCUIElementTypeSecureTextField` class, iOS `accessibility_traits` containing `secureTextField`, iOS `secureTextEntry: true` boolean). |
+| `capture/video-tap-detector.js` | Scans extracted video frames for the visible-touch indicator. Android uses the `light_blue` colour profile; iOS Simulator uses `ios_simulator` (mid-grey, low channel-delta). |
+| `capture/keyboard-region.js` | Identifies whether a tap landed inside the on-screen keyboard subtree. Android-only for now; iOS keyboard region detection is deferred. |
+| `coalesce/gesture-classifier.js` | Coalesces raw down/move/up events into the v1 gesture vocabulary (tap, long-press, double-tap, swipe). |
+| `coalesce/type-buffer.js` | Coalesces sequential keyboard taps into a single `type` event when focus leaves the field, on Enter, on silence-timeout, or at session end. |
+| `server/http-server.js` | Serves the recorder GUI over HTTP. |
+| `server/ws-protocol.js` | Streams events to the GUI and receives Save/Cancel commands. |
+
+Test fixtures live under `tests/fixtures/recorder/`:
+
+- `video-frames/{light_blue,ios_simulator}-*.png` — synthetic frames for colour-profile detection.
+- `video-frames/ios-real-touch.png` — calibrated against a real `xcrun simctl io booted screenshot` (regenerate via `scripts/fixtures/capture-ios-real-touch.sh`).
+- `scripted-session*.json` — scripted-session inputs for the capture-pipeline integration test.
+- `sample-bundle/` — end-to-end artifact bundle for the AI-skill ingestion test.
+
+## See also
+
+- `commands/mobile-automator/record.toml` — pre-flight wrapper command.
+- `templates/mobile-automator-recorder/aware/SKILL.md` — AI synthesis of the captured timeline at Save time.
+- `docs/superpowers/plans/2026-05-05-mobile-automator-recording.md` — phased build plan.
