@@ -5,7 +5,13 @@ const path = require('path');
 const fs = require('fs');
 
 const COLOR_RANGES = {
+  // Android "Show taps": cyan/light-blue circle.
   light_blue: { rMin: 80, rMax: 180, gMin: 140, gMax: 220, bMin: 200, bMax: 255 },
+  // iOS Simulator "Show Single Touches": translucent gray disk. The
+  // `maxChannelDelta` constraint excludes coloured pixels from common app
+  // UIs (e.g. blue links, green buttons) that happen to fall inside the
+  // brightness band — a true gray indicator pixel has R≈G≈B.
+  ios_simulator: { rMin: 120, rMax: 235, gMin: 120, gMax: 235, bMin: 120, bMax: 235, maxChannelDelta: 25 },
 };
 
 function readPngPixels(buf) {
@@ -22,11 +28,17 @@ function detectIndicatorInFrame(buf, { color = 'light_blue', minPixels = 6 } = {
   const { width, height, data } = readPngPixels(buf);
   const rng = COLOR_RANGES[color];
   let sumX = 0, sumY = 0, count = 0;
+  const maxDelta = typeof rng.maxChannelDelta === 'number' ? rng.maxChannelDelta : null;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const idx = (y * width + x) * 4;
       const r = data[idx], g = data[idx + 1], b = data[idx + 2];
       if (r >= rng.rMin && r <= rng.rMax && g >= rng.gMin && g <= rng.gMax && b >= rng.bMin && b <= rng.bMax) {
+        if (maxDelta !== null) {
+          const minc = r < g ? (r < b ? r : b) : (g < b ? g : b);
+          const maxc = r > g ? (r > b ? r : b) : (g > b ? g : b);
+          if (maxc - minc > maxDelta) continue;
+        }
         sumX += x; sumY += y; count += 1;
       }
     }
