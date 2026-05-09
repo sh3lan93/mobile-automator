@@ -1,0 +1,2 @@
+[       3.456789] /dev/input/event4: EV_KEY       KEY_VOLUMEDOWN       DOWN
+[       3.512345] /dev/input/event4: EV_KEY       KEY_VOLUMEDOWN       UP
