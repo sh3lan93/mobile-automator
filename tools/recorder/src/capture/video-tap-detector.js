@@ -7,11 +7,14 @@ const fs = require('fs');
 const COLOR_RANGES = {
   // Android "Show taps": cyan/light-blue circle.
   light_blue: { rMin: 80, rMax: 180, gMin: 140, gMax: 220, bMin: 200, bMax: 255 },
-  // iOS Simulator "Show Single Touches": translucent gray disk. The
-  // `maxChannelDelta` constraint excludes coloured pixels from common app
-  // UIs (e.g. blue links, green buttons) that happen to fall inside the
-  // brightness band — a true gray indicator pixel has R≈G≈B.
-  ios_simulator: { rMin: 120, rMax: 235, gMin: 120, gMax: 235, bMin: 120, bMax: 235, maxChannelDelta: 25 },
+  // iOS Simulator "Show Single Touches": translucent gray disk rendered by
+  // the macOS host atop the iOS guest screen, intrinsic fill ~RGB(170,170,170).
+  // The narrow brightness band (158–185) plus low `maxChannelDelta` (10)
+  // isolates the disk's near-uniform mid-gray from real iOS UI pixels —
+  // most app chrome is colour-tinted (channel delta > 10) or far outside
+  // the brightness window, so background pollution is minimal.
+  // Calibrated against `tests/fixtures/recorder/video-frames/ios-real-touch.png`.
+  ios_simulator: { rMin: 158, rMax: 185, gMin: 158, gMax: 185, bMin: 158, bMax: 185, maxChannelDelta: 10 },
 };
 
 function readPngPixels(buf) {

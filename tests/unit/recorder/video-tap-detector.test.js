@@ -36,6 +36,18 @@ describe('detectIndicatorInFrame', () => {
     const buf = fs.readFileSync(path.join(FRAMES, 'dot-at-50-30.png'));
     expect(detectIndicatorInFrame(buf, { color: 'ios_simulator' })).toBeNull();
   });
+
+  test('ios_simulator profile extracts the touch centroid from a real iOS Sim background composite', () => {
+    // ios-real-touch.png is a 200x100 crop of a real `xcrun simctl io booted screenshot`
+    // with a calibrated mid-grey disk composited at (100, 50) — see
+    // scripts/fixtures/composite-ios-touch-overlay.js. This locks in that the
+    // colour band isolates the indicator's intrinsic fill from real iOS UI pixels.
+    const buf = fs.readFileSync(path.join(FRAMES, 'ios-real-touch.png'));
+    const out = detectIndicatorInFrame(buf, { color: 'ios_simulator' });
+    expect(out).not.toBeNull();
+    const dist = Math.sqrt((out.x - 100) ** 2 + (out.y - 50) ** 2);
+    expect(dist).toBeLessThan(10);
+  });
 });
 
 describe('VideoTapDetector.processFrames', () => {
