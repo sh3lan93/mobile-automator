@@ -76,6 +76,39 @@ describe('capture pipeline integration', () => {
     fs.rmSync(tmp, { recursive: true, force: true });
   });
 
+  test('merges hardware-key events into events.jsonl ordered by timestamp', async () => {
+    // Locks in slice #26's acceptance contract: a key UP event arriving
+    // between two video-detected taps shows up in events.jsonl in t-order
+    // (tap@200, press_button BACK@380, tap@500). Aware mode emits one
+    // press_button step per key release — DOWN frames are absorbed.
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'rec-int-'));
+    fs.mkdirSync(path.join(tmp, 'mobile-automator'));
+    fs.writeFileSync(path.join(tmp, 'mobile-automator/config.json'), JSON.stringify({ mode: 'platform-aware', project_name: 'demo' }));
+
+    const script = JSON.parse(fs.readFileSync(path.join(__dirname, '../../fixtures/recorder/scripted-session-keys.json'), 'utf8'));
+    await runScriptedSession({ projectRoot: tmp, scenarioId: 's', script });
+
+    const events = fs.readFileSync(path.join(tmp, 'mobile-automator/.recorder/s/events.jsonl'), 'utf8');
+    const lines = events.trim().split('\n').map((l) => JSON.parse(l));
+
+    // Three steps emerge: two taps and one press_button (BACK release only).
+    expect(lines).toHaveLength(3);
+
+    expect(lines[0]).toMatchObject({ kind: 'tap', target: 'Login' });
+    expect(lines[0].t).toBeLessThanOrEqual(250);
+
+    expect(lines[1]).toMatchObject({ kind: 'press_button', value: 'BACK', step_id: 'press_button_back', t: 380 });
+
+    expect(lines[2]).toMatchObject({ kind: 'tap', target: 'Sign Up' });
+    expect(lines[2].t).toBeGreaterThanOrEqual(500);
+
+    // Locks in the t-order invariant explicitly, not just by index.
+    const ts = lines.map((e) => e.t);
+    expect(ts).toEqual([...ts].sort((a, b) => a - b));
+
+    fs.rmSync(tmp, { recursive: true, force: true });
+  });
+
   test('coalesces keyboard taps with a real-world Gboard hierarchy class name', async () => {
     // Locks in the case-insensitive keyboard-region regex against actual
     // production class names (Gboard's `com.google.android.inputmethod.latin.LatinIME`)
