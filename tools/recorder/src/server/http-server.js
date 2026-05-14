@@ -8,6 +8,26 @@ const WEB_ROOT = path.resolve(__dirname, '..', '..', 'web');
 
 const MIME = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.png': 'image/png', '.json': 'application/json' };
 
+function serveScreenshot(req, res, screenshotsDir) {
+  const urlPath = req.url.split('?')[0];
+  if (!urlPath.startsWith('/screenshots/')) return false;
+  if (!urlPath.endsWith('.png')) {
+    res.statusCode = 404;
+    res.end('Not Found');
+    return true;
+  }
+  const filePath = path.join(screenshotsDir, urlPath.slice('/screenshots/'.length));
+  if (!filePath.startsWith(screenshotsDir) || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+    res.statusCode = 404;
+    res.end('Not Found');
+    return true;
+  }
+  res.statusCode = 200;
+  res.setHeader('Content-Type', 'image/png');
+  fs.createReadStream(filePath).pipe(res);
+  return true;
+}
+
 function serveStatic(req, res) {
   let urlPath = req.url.split('?')[0];
   if (urlPath === '/') urlPath = '/index.html';
@@ -23,7 +43,9 @@ function serveStatic(req, res) {
 }
 
 async function startHttpServer({ projectRoot, scenarioId, requestHandler = null }) {
+  const screenshotsDir = path.join(projectRoot, 'mobile-automator', '.recorder', scenarioId, 'screenshots');
   const server = http.createServer((req, res) => {
+    if (serveScreenshot(req, res, screenshotsDir)) return;
     if (requestHandler) { try { if (requestHandler(req, res)) return; } catch (e) { /* fall through */ } }
     serveStatic(req, res);
   });
