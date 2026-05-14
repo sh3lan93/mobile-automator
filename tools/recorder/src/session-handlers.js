@@ -28,12 +28,20 @@ function handleCancelMessage({ store, onDone }) {
 
 async function handleRequestAssertionScreenshot({ store, mcp, broadcast, allocateId }) {
   const assertion_id = allocateId();
-  await mcp.takeScreenshot(store.assertScreenshotPath(assertion_id));
-  broadcast({
-    type: 'assertion-screenshot-ready',
-    assertion_id,
-    image_url: '/screenshots/assert_' + assertion_id + '.png'
-  });
+  try {
+    await mcp.takeScreenshot(store.assertScreenshotPath(assertion_id));
+    broadcast({
+      type: 'assertion-screenshot-ready',
+      assertion_id,
+      image_url: '/screenshots/assert_' + assertion_id + '.png'
+    });
+  } catch (err) {
+    broadcast({
+      type: 'assertion-screenshot-error',
+      assertion_id,
+      error: err.message
+    });
+  }
 }
 
 function handleSaveAssertion({ store, broadcast, msg }) {
