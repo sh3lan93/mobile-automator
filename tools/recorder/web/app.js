@@ -142,6 +142,7 @@
     const url = opts.url;
     const onStepAdded = opts.onStepAdded || function () {};
     const onAssertionScreenshotReady = opts.onAssertionScreenshotReady || null;
+    const onAssertionScreenshotError = opts.onAssertionScreenshotError || null;
     const onAssertionAdded = opts.onAssertionAdded || null;
     const Ctor = opts.WebSocketCtor || root.WebSocket;
     if (!Ctor) {
@@ -162,6 +163,10 @@
       }
       if (payload.type === 'assertion-screenshot-ready' && typeof onAssertionScreenshotReady === 'function') {
         onAssertionScreenshotReady(payload);
+        return;
+      }
+      if (payload.type === 'assertion-screenshot-error' && typeof onAssertionScreenshotError === 'function') {
+        onAssertionScreenshotError(payload);
         return;
       }
       if (payload.type === 'assertion-added' && typeof onAssertionAdded === 'function') {
@@ -220,7 +225,11 @@
     panel.className = 'modal-panel';
 
     var img = doc.createElement('img');
-    img.src = opts.screenshot_url;
+    var screenshotUrl = String(opts.screenshot_url || '');
+    if (!/^\/screenshots\/[^/]+\.png$/.test(screenshotUrl)) {
+      throw new Error('renderAssertionModal: invalid screenshot_url: ' + screenshotUrl);
+    }
+    img.src = screenshotUrl;
     img.alt = 'Assertion screenshot';
     img.className = 'modal-screenshot';
 
@@ -269,6 +278,7 @@
 
     var modalRoot = doc.getElementById('modal-root');
     if (modalRoot) modalRoot.appendChild(overlay);
+    setTimeout(function () { textarea.focus(); }, 0);
     return overlay;
   }
 
@@ -333,6 +343,12 @@
     try {
       var pendingAnchorStepId = null;
 
+      function onAssertionError() {
+        pendingAnchorStepId = null;
+        var btn = document.getElementById('btn-add-assertion');
+        if (btn) btn.disabled = false;
+      }
+
       var ws = attachWsClient({
         url: 'ws://localhost:' + port + '/ws',
         onStepAdded: appendStep,
@@ -340,6 +356,8 @@
           if (pendingAnchorStepId === null) return;
           var anchor = pendingAnchorStepId;
           pendingAnchorStepId = null;
+          var assertBtn = document.getElementById('btn-add-assertion');
+          if (assertBtn) assertBtn.disabled = false;
           renderAssertionModal({
             assertion_id: payload.assertion_id,
             screenshot_url: payload.image_url,
@@ -352,13 +370,19 @@
             },
           });
         },
+        onAssertionScreenshotError: onAssertionError,
         onAssertionAdded: appendAssertionRow,
       });
 
       wireButtons({
         document: document,
         sendWs: function (msg) { ws.send(JSON.stringify(msg)); },
-        onAssertionScreenshotRequested: function (anchor) { pendingAnchorStepId = anchor; },
+        onAssertionScreenshotRequested: function (anchor) {
+          pendingAnchorStepId = anchor;
+          var btn = document.getElementById('btn-add-assertion');
+          if (btn) btn.disabled = true;
+        },
+        onAssertionScreenshotError: onAssertionError,
       });
     } catch (_err) {
       // Swallow connection setup errors — the GUI will still render manually-

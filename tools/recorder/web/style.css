@@ -11,6 +11,15 @@ button { padding: 8px 16px; }
 .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; }
 .modal-card { background: white; padding: 24px; border-radius: 8px; max-width: 600px; }
 
+#btn-add-assertion {
+  padding: 4px 12px;
+  cursor: pointer;
+}
+#btn-add-assertion:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* Assertion modal */
 .modal-overlay {
   position: fixed;
