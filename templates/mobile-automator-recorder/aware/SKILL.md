@@ -33,7 +33,7 @@ mobile-automator/.recorder/<scenario_id>/
 ├── metadata.json              # session metadata (scenario_id, started_at, device, app_package, environment)
 ├── events.jsonl               # one JSON object per line: device-side action events
 ├── edits.jsonl                # one JSON object per line: user edits applied during recording
-├── assertions.json            # array of user-added assertions (may be empty in current scope)
+├── assertions.json            # array of NL assertions: [{id, nl_text, screenshot, anchor_step_id, captured_at}, …]
 ├── hierarchy/
 │   ├── 0000001234.json        # padded-millis filename; element hierarchy snapshot at that timestamp
 │   ├── 0000002468.json
@@ -47,7 +47,7 @@ mobile-automator/.recorder/<scenario_id>/
 1. `metadata.json` first — gives you `scenario_id`, `app_version`, `environment`, `started_at`, `app_package`, recording mode.
 2. `events.jsonl` — primary timeline; each line is `{seq, timestamp_ms, kind, target_hint, value?, screenshot_ref, hierarchy_ref, ...}`.
 3. `edits.jsonl` — user mutations: `{seq, timestamp_ms, op: "rename" | "delete" | "reorder" | "annotate", target_seq, payload}`.
-4. `assertions.json` — array of assertion objects already typed by the user. **In the current scope this array may be empty**; handle the empty case gracefully and emit a scenario with no assertions if so.
+4. `assertions.json` — array of natural-language assertions added by the user during recording. Each entry has `{ id, nl_text, screenshot, anchor_step_id, captured_at }`. The AI classifies the NL text in step 8. Handle the empty case gracefully.
 
 If any required file is **missing or unreadable**, HALT and report which file is missing. Do not attempt to synthesize a partial scenario.
 
@@ -73,7 +73,14 @@ Apply these steps in order. Most rules referenced here are defined in the genera
 
 7. **Apply auto-assertion rule.** After every state-changing action (`tap`, `type` on submit-style inputs, `press_button`), automatically emit a `visual_state: "loaded"` or `element_exists` assertion for the resulting screen, marked `[auto-generated]` in its `description`. The full rule lives in the generator skill at Section "Auto-Assertion Rule" — do not re-derive it here.
 
-8. **Ingest user assertions (if any).** If `assertions.json` is non-empty, append each entry as an assertion in the scenario, anchoring it via `after_step` to the step that immediately preceded it in the recording timeline. Validate that the assertion's `type` is one of the 27 documented assertion types (see Section "Assertion Type Decision Table" in the generator skill). Discard malformed entries and report them. If `assertions.json` is empty, emit an empty `assertions` array — this is a valid scenario.
+8. **Classify user assertions.** Each entry in `assertions.json` has shape `{ id, nl_text, screenshot, anchor_step_id, captured_at }` — the user provided natural language, not a pre-typed assertion. For each entry:
+   1. Apply the generator skill's **Two-Pass Semantic Intent Model** (see cross-reference below). Pass 1 always classifies as Assertion here — the recorder GUI already separated actions from assertions. Run Pass 2 to select the best-fit type from the **Assertion Type Decision Table** (see cross-reference).
+   2. Emit the typed assertion with the correct fields for the selected type.
+   3. **For visual assertion types** (`screenshot_match`, `visual_state`, `element_fully_visible`, `color_style`) — populate `reference_screenshot` with the path `mobile-automator/screenshots/<scenario_id>/assert_<id>.png`. This is the screenshot the executor will use for image comparison at replay time.
+   4. **For non-visual types** — do NOT include `reference_screenshot`. The PNG is preserved in the screenshots directory as evidence but is not referenced in the assertion.
+   5. Anchor the assertion via `after_step: <anchor_step_id>` from the entry. Validate that `anchor_step_id` matches a step ID in the effective event list; if it does not (e.g., the anchored step was deleted by a user edit), drop the assertion and report it.
+
+   If `assertions.json` is empty, emit `"assertions": []` — this is a valid scenario.
 
 9. **Generate tags.** Produce 1–5 kebab-case tags by intersecting `{{business_critical_paths}}` with the action verbs in the recording and the screen titles observed in hierarchy snapshots. Each tag MUST match the regex `^[a-z0-9][a-z0-9-]*$` and be ≤20 characters. Discard any candidate that fails validation. If you cannot produce at least one valid tag, emit `"tags": []` — that is acceptable.
 
@@ -81,7 +88,9 @@ Apply these steps in order. Most rules referenced here are defined in the genera
 
 11. **Emit the scenario JSON.** Always include `"$schema_version": "2.0"` as the first field. Use named string IDs (snake_case) for all steps and assertions; reference steps by name in `after_step`, never by integer. Validate the assembled JSON against `.gemini/skills/mobile-automator-generator/references/scenario_schema.json`. Write the result to `mobile-automator/scenarios/<scenario_id>.json`. If schema validation fails, HALT and report the validation errors — do not write a malformed file.
 
-12. **Move screenshots.** Copy or move the per-step screenshots from `mobile-automator/.recorder/<scenario_id>/screenshots/` into `mobile-automator/screenshots/<scenario_id>/`, renaming each to match the synthesized step IDs (`step_<step_id>.png`).
+12. **Move screenshots.** Copy or move screenshots from `mobile-automator/.recorder/<scenario_id>/screenshots/` into `mobile-automator/screenshots/<scenario_id>/`:
+    - Per-step screenshots: rename each to `step_<step_id>.png` matching the synthesized step IDs.
+    - Assertion screenshots: copy `assert_<id>.png` files **preserving their filenames** so that any `reference_screenshot` paths in the scenario JSON resolve correctly at execute time.
 
 13. **Cleanup on success.** Once the scenario JSON has been written AND schema validation has passed AND screenshots have been moved, delete the bundle at `mobile-automator/.recorder/<scenario_id>/`. This is the `cleanupOnSuccess` semantic — only delete after a successful synthesis. If any prior step failed or halted, **leave the bundle in place** so the user can retry or inspect the artifacts.
 
