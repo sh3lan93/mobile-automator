@@ -328,3 +328,81 @@ describe('recorder AI-skill ingestion contract (structural)', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// NL assertion fixture bundle — structural ingestion contract
+// ---------------------------------------------------------------------------
+//
+// Verifies that `sample-bundle-with-assertions/` is well-formed for an AI
+// skill to ingest: the assertions.json entries carry NL text (not pre-typed
+// assertion types) and the assert_*.png screenshots are present on disk.
+// The actual NL→type classification is the AI's job at runtime, so we do NOT
+// mock the AI here.
+
+const SAMPLE_BUNDLE_WITH_ASSERTIONS_DIR = path.join(
+  REPO_ROOT,
+  'tests',
+  'fixtures',
+  'recorder',
+  'sample-bundle-with-assertions'
+);
+
+describe('with NL assertions', () => {
+  test('reads assertions.json entries as NL text to classify', () => {
+    const assertionsPath = path.join(SAMPLE_BUNDLE_WITH_ASSERTIONS_DIR, 'assertions.json');
+    expect(fs.existsSync(assertionsPath)).toBe(true);
+
+    const entries = JSON.parse(fs.readFileSync(assertionsPath, 'utf8'));
+    expect(Array.isArray(entries)).toBe(true);
+    expect(entries.length).toBeGreaterThanOrEqual(1);
+
+    for (const entry of entries) {
+      // Each entry must carry a free-form NL text string — not a typed enum.
+      expect(typeof entry.id).toBe('string');
+      expect(entry.id.length).toBeGreaterThan(0);
+
+      expect(typeof entry.nl_text).toBe('string');
+      expect(entry.nl_text.length).toBeGreaterThan(0);
+
+      expect(typeof entry.screenshot).toBe('string');
+      expect(entry.screenshot.length).toBeGreaterThan(0);
+
+      expect(typeof entry.anchor_step_id).toBe('string');
+      expect(entry.anchor_step_id.length).toBeGreaterThan(0);
+
+      expect(typeof entry.captured_at).toBe('string');
+      // Must be a valid ISO 8601 datetime.
+      expect(() => new Date(entry.captured_at).toISOString()).not.toThrow();
+
+      // Must NOT have a pre-classified 'type' field — classification is the
+      // AI's job at synthesis time.
+      expect(entry.type).toBeUndefined();
+    }
+  });
+
+  test('assert_*.png files are present alongside step screenshots', () => {
+    const screenshotsDir = path.join(SAMPLE_BUNDLE_WITH_ASSERTIONS_DIR, 'screenshots');
+    expect(fs.existsSync(screenshotsDir)).toBe(true);
+    expect(fs.statSync(screenshotsDir).isDirectory()).toBe(true);
+
+    const files = fs.readdirSync(screenshotsDir);
+
+    // Must contain at least one step screenshot and at least one assert screenshot.
+    const stepScreenshots = files.filter((f) => /^step_\d+\.png$/.test(f));
+    const assertScreenshots = files.filter((f) => /^assert_.+\.png$/.test(f));
+
+    expect(stepScreenshots.length).toBeGreaterThanOrEqual(1);
+    expect(assertScreenshots.length).toBeGreaterThanOrEqual(1);
+
+    // Each screenshot referenced in assertions.json must exist on disk.
+    const assertionsPath = path.join(SAMPLE_BUNDLE_WITH_ASSERTIONS_DIR, 'assertions.json');
+    const entries = JSON.parse(fs.readFileSync(assertionsPath, 'utf8'));
+    for (const entry of entries) {
+      const screenshotFile = path.basename(entry.screenshot);
+      expect(files).toContain(screenshotFile);
+      expect(
+        fs.statSync(path.join(screenshotsDir, screenshotFile)).isFile()
+      ).toBe(true);
+    }
+  });
+});

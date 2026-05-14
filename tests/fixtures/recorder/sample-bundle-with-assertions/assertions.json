@@ -1,0 +1,16 @@
+[
+  {
+    "id": "a1",
+    "nl_text": "the welcome banner appears",
+    "screenshot": "screenshots/assert_a1.png",
+    "anchor_step_id": "tap_login",
+    "captured_at": "2026-05-14T00:00:10.000Z"
+  },
+  {
+    "id": "a2",
+    "nl_text": "the Login button is visible",
+    "screenshot": "screenshots/assert_a2.png",
+    "anchor_step_id": "tap_email",
+    "captured_at": "2026-05-14T00:00:20.000Z"
+  }
+]

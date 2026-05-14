@@ -1,0 +1,19 @@
+{
+  "t": 2000,
+  "screen": "LoginScreen",
+  "elements": [
+    {
+      "id": "email_field",
+      "text": "",
+      "hint": "Email",
+      "class": "android.widget.EditText",
+      "bounds": {"x": 100, "y": 750, "width": 880, "height": 120}
+    },
+    {
+      "id": "welcome_banner",
+      "text": "Welcome",
+      "class": "android.widget.TextView",
+      "bounds": {"x": 100, "y": 200, "width": 880, "height": 80}
+    }
+  ]
+}
