@@ -1,553 +1,114 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Developer guide for maintaining this extension. User-facing docs live in `README.md`; runtime contract for Gemini lives in `GEMINI.md`; debugging recipes live in `TROUBLESHOOTING.md`.
 
-## Project Overview
+## What this is
 
-Mobile Automator is a **Gemini CLI extension** that provides intelligent mobile QA automation capabilities. It uses a **3-Tier Architecture**: extension commands handle pre-flight checks, workspace skills contain testing logic, and the mobile-mcp server provides device automation.
+Mobile Automator is a **Gemini CLI extension** for mobile QA automation. It is *not* a direct testing tool — it analyzes a mobile project, then generates project-specific testing skills. Production-ready and feature-complete.
 
-**Key Distinction**: This is NOT a direct testing tool. It's a meta-extension that analyzes your mobile project, learns its architecture and domain, then generates customized testing skills tailored specifically to that project.
+## Three-tier architecture
 
-**Implementation Status**: ✅ **Production-ready and feature-complete.** The extension includes comprehensive project analysis (7-section setup workflow), automatic skill installation with placeholder replacement, and intelligent test generation/execution.
+```
+Tier 1 — Extension commands (commands/mobile-automator/*.toml)
+         Pre-flight: device detection, app install, scenario selection.
+Tier 2 — Workspace skills (.gemini/skills/mobile-automator-*)
+         Project-customized test generation & execution logic.
+Tier 3 — mobile-mcp (bundled via gemini-extension.json)
+         Platform-agnostic device automation primitives.
+```
+
+Tier 1 wraps Tier 2 so infrastructure concerns are separated from domain logic.
+
+## File layout
+
+```
+commands/mobile-automator/    setup, generate, execute, report, list-tags (.toml)
+templates/
+  mobile-automator-generator/{aware,agnostic}/SKILL.md
+  mobile-automator-executor/{aware,agnostic}/SKILL.md
+  mobile-automator-recorder/aware/SKILL.md          # gated; agnostic in slice #29
+  mobile-automator-generator/references/scenario_schema.json   # v2.1
+  mobile-automator-executor/references/result_schema.json
+  references/platform-resolutions.md                 # agnostic-mode runtime contract
+mobile-automator/             (created in user projects) scenarios/, screenshots/, results/, config.json
+```
 
 ## Modes
 
-Mobile Automator supports two operating modes, selected during setup and stored in `mobile-automator/config.json`:
+Selected during setup; stored as `mode` in `mobile-automator/config.json`. Configs predating the field are treated as `platform-aware` at runtime.
 
-| Mode | `config.json` value | Best for |
-|------|---------------------|----------|
-| **Platform-aware** | `"platform-aware"` | Single-OS projects or tests that rely on OS-specific UI patterns |
-| **Platform-agnostic** | `"platform-agnostic"` | Cross-platform apps (Flutter, React Native, KMP, CMP) shipping to both Android and iOS |
-
-### Mode field in config.json
-
-```json
-{
-  "mode": "platform-agnostic",
-  ...
-}
-```
-
-**Backward compatibility**: v0.10 configs that predate this field are treated as `"platform-aware"` at runtime. No manual migration is needed to keep existing behaviour.
-
-### Placeholder count by mode
-
-- **Platform-aware mode** — 13 placeholders (including `{{platform_details}}`, `{{build_command}}`, `{{automation_extras}}`)
-- **Platform-agnostic mode** — 6 placeholders (project-level only: `{{project_name}}`, `{{business_domain}}`, `{{business_critical_paths}}`, `{{loading_indicators}}`, `{{protected_directories}}`, `{{additional_resources}}`)
-
-### Four semantic actions (agnostic mode)
-
-Instead of OS-specific primitives, agnostic scenarios use four semantic actions resolved at runtime via `templates/references/platform-resolutions.md`:
-
-| Semantic action | Android resolution | iOS resolution |
+| Mode | Placeholders | Use for |
 |---|---|---|
-| `press_back` | `BACK` hardware key | Swipe-right gesture or nav-bar back |
-| `dismiss_keyboard` | `BACK` key / tap outside | Keyboard Dismiss button / tap outside |
-| `grant_permission` | Dialog "Allow" tap | Dialog "Allow" tap |
-| `deny_permission` | Dialog "Deny" tap | Dialog "Don't Allow" tap |
+| `platform-aware` | 13 | Single-OS or OS-specific UI tests |
+| `platform-agnostic` | 6 | Cross-platform (Flutter/RN/KMP/CMP) |
 
-### Schema 2.1
+Agnostic mode replaces OS-specific primitives with four semantic actions resolved at runtime via `templates/references/platform-resolutions.md`: `press_back`, `dismiss_keyboard`, `grant_permission`, `deny_permission`. Schema 2.1 is additive over 2.0 (adds `mode` field + semantic actions).
 
-Schema version `2.1` is additive over `2.0`: it introduces the `mode` metadata field and the four semantic actions. Scenarios without these fields are valid 2.1 documents.
+Switching modes on re-setup runs an atomic 3-phase migration (carry-forward shared values, drop OS-specifics, re-ask agnostic-only fields, archive prior skills to `.gemini/skills/.archive/`). See TROUBLESHOOTING.md for manual restore.
 
-### Setup flow by mode
+## Commands
 
-- **Section 1.5** (new) — Mode Selection prompt. After platform detection, setup asks whether to configure in `platform-aware` (default) or `platform-agnostic` mode.
-- **Sections A.1–A.7** — Agnostic-mode setup flow. Runs in place of the platform-aware sections when agnostic mode is chosen.
+Each command lives in `commands/mobile-automator/<name>.toml` and is namespaced as `/mobile-automator:<name>`.
 
-### Migration UX (§ 1.6)
+- **setup** — 7-section workflow: pre-init → platform detect → environment discovery → app package inference → project knowledge (architecture, business domain, loading indicators, protected dirs) → skill installation → scaffolding. Resumable via `mobile-automator/setup_state.json`. Section 6 reads templates from `${extensionPath}/templates/<mode>/`, replaces `{{placeholders}}`, writes to `.gemini/skills/`, and asserts no `{{` remains.
+- **generate** — Pre-flight wrapper. Validates config, resolves environment (saved in `mobile-automator/generate_preferences.json`; `--environment=` ephemeral, `--set-environment=` persists), confirms device + app install, delegates to generator skill.
+- **execute** — Pre-flight wrapper. Validates config, picks device (`--device` or interactive), resolves scenarios (`--all`, `--tag`, names, or interactive), delegates to executor skill.
+- **report**, **list-tags** — see their `.toml` files.
 
-When re-running setup on an existing project and switching modes, setup executes a 3-phase atomic migration:
+## Placeholder contract
 
-1. **Carry-forward** — values that apply to both modes (project name, business domain, environments, architecture) are preserved.
-2. **Drop** — OS-specific values (build command, platform SDK details, automation extras) are dropped from the new config.
-3. **Re-ask** — agnostic-only fields not present in the old config are prompted interactively.
-4. **Archive** — the previous skills are moved to `.gemini/skills/.archive/` and the previous config is backed up as `mobile-automator/config.json.<old-mode>.bak`.
-5. **Manual restore** — see TROUBLESHOOTING.md § "Manual Restore from Archive" if the migration leaves the project in an unexpected state.
+Skill templates use `{{name}}` syntax. Setup gathers values, performs string replacement, writes populated `SKILL.md` to `.gemini/skills/`, then verifies no `{{` remains. Authoritative list of placeholder names lives in `setup.toml` Section 6 — don't re-document here, it'll drift.
 
-The migration is fully reversible.
+Runtime fallback: skills can read `mobile-automator/config.json` if a placeholder wasn't populated.
 
----
+## Recorder (gated experimental)
 
-## Architecture
+PRD [#21](https://github.com/sh3lan93/mobile-automator/issues/21). The entire recorder surface (`/mobile-automator:record`, sidecar, GUI, recorder skill) is hidden unless `MOBILE_AUTOMATOR_RECORDER=1`.
 
-### Three-Tier Design
+- Aware-mode recorder skill installs at `.gemini/skills/mobile-automator-recorder/SKILL.md`. Uses 10 of 13 aware placeholders (skips `build_command`, `automation_extras`, `business_domain` — not load-bearing for synthesis from a captured trace).
+- Agnostic-mode recorder is **skipped** during install; lands in slice [#29](https://github.com/sh3lan93/mobile-automator/issues/29).
+- The recorder skill synthesises scenario JSON from sidecar artifacts under `mobile-automator/.recorder/<session>/`. It defers to the generator skill for scenario shape — generator stays single source of truth.
 
-```
-┌─────────────────────────────────────┐
-│  TIER 1: Extension Commands         │
-│  /mobile-automator:setup                      │
-│  /mobile-automator:generate         │
-│  /mobile-automator:execute          │
-│  /mobile-automator:report           │
-│  (Pre-flight checks, validation)    │
-└──────────────┬──────────────────────┘
-               │ delegates to
-┌──────────────▼──────────────────────┐
-│  TIER 2: Workspace Skills           │
-│  .gemini/skills/mobile-automator-*/ │
-│  (Test generation & execution logic)│
-└──────────────┬──────────────────────┘
-               │ uses
-┌──────────────▼──────────────────────┐
-│  TIER 3: Automation Engine          │
-│  mobile-mcp                         │
-│  (Device control primitives)        │
-└─────────────────────────────────────┘
-```
+## Schemas
 
-**Why this design:**
-- **Tier 1** (Extension Commands): Handle infrastructure concerns (device detection, app installation, scenario selection)
-- **Tier 2** (Workspace Skills): Contain project-specific testing logic customized with placeholders
-- **Tier 3** (MCP Server): Provides platform-agnostic device automation primitives
+- Scenario: `templates/mobile-automator-generator/references/scenario_schema.json` (v2.1, 14 actions, 27 assertions, named string IDs, root-level `variables`/`preconditions`).
+- Result: `templates/mobile-automator-executor/references/result_schema.json` (includes typed `observations`: `regression`, `flakiness`, `state_context`).
 
-### File Structure
+Setup copies both to `.gemini/skills/mobile-automator-{generator,executor}/references/`. `GEMINI.md` is the registry that points skills at the workspace copies.
 
-```
-mobile-automator/
-├── gemini-extension.json      # Extension manifest + MCP server config
-├── GEMINI.md                  # AI context (schema registry, tool mappings, conventions)
-├── CLAUDE.md                  # Developer documentation (this file)
-├── README.md                  # User-facing documentation
-├── commands/
-│   └── mobile-automator/
-│       ├── setup.toml         # 7-section setup workflow with skill installation
-│       ├── generate.toml      # Pre-flight wrapper for generator skill
-│       └── execute.toml       # Pre-flight wrapper for executor skill
-├── templates/
-│   ├── references/
-│   │   └── platform-resolutions.md   # Runtime contract for OS-shaped semantic actions
-│   ├── mobile-automator-generator/
-│   │   ├── aware/
-│   │   │   └── SKILL.md      # Aware-mode generator skill template
-│   │   ├── agnostic/
-│   │   │   └── SKILL.md      # Agnostic-mode generator skill template
-│   │   └── references/
-│   │       └── scenario_schema.json  # Test scenario JSON schema (v2.1)
-│   └── mobile-automator-executor/
-│       ├── aware/
-│       │   └── SKILL.md      # Aware-mode executor skill template
-│       ├── agnostic/
-│       │   └── SKILL.md      # Agnostic-mode executor skill template
-│       └── references/
-│           └── result_schema.json    # Test result JSON schema
-```
+## Adding a new skill
 
-### MCP Server Integration
+1. Create `templates/mobile-automator-<name>/{aware,agnostic}/SKILL.md` with frontmatter + `{{placeholders}}`.
+2. Add any new schema under `references/`.
+3. Wire it into `setup.toml` Section 6's install loop.
+4. Reference new schema paths from `GEMINI.md`.
+5. Optionally add a `commands/mobile-automator/<name>.toml` wrapper.
 
-The extension bundles `mobile-mcp` via `gemini-extension.json`:
-```json
-"mcpServers": {
-  "mobileMcpServer": {
-    "command": "npx",
-    "args": ["-y", "@mobilenext/mobile-mcp@latest"]
-  }
-}
-```
+## Releasing & version handling
 
-This provides mobile automation primitives: `mobile_launch_app`, `mobile_click_on_screen_at_coordinates`, `mobile_take_screenshot`, `mobile_type_keys`, `mobile_swipe_on_screen`, `mobile_list_elements_on_screen`, etc.
+Follow `RELEASE.md`. Users install via `gemini extensions install https://github.com/sh3lan93/mobile-automator`.
 
-## Key Workflows
+**Gate-then-graduate** for multi-PR features: ship behind an opt-in env var (e.g. `MOBILE_AUTOMATOR_RECORDER=1`) so partial states are invisible. Append slice entries under `## [Unreleased]`.
 
-### The Setup Command (7-Section Workflow)
+**CI version-bump gate.** The `Verify version is bumped` workflow fails any PR touching extension paths (`gemini-extension.json`, `GEMINI.md`, `templates/`, `commands/`, `scripts/`) without bumping `gemini-extension.json` to a value not yet in `git tag`. Under the gate, **the first slice PR bumps to a release-candidate semver** (e.g. `0.12.0-rc.0`); each subsequent slice increments the rc counter (`-rc.1`, `-rc.2`, …). The `vX.Y.Z` tag namespace is reserved for graduated releases — rc.N values are never tagged.
 
-The setup logic is in `commands/mobile-automator/setup.toml`. It performs a comprehensive 7-section analysis:
+**Graduation PR** removes the env-var gate, bumps `vX.Y.Z-rc.N` → `vX.Y.Z`, collapses `[Unreleased]` into the new release section, and creates the tag. Keeps `main` mergeable and preserves the "fully-formed feature per release" pattern (see v0.10/v0.11).
 
-**Section 1: Pre-Initialization**
-- Presents overview to user
-- Checks for existing `mobile-automator/setup_state.json` for resume capability
-
-**Section 2: Platform Detection**
-- Auto-detects: Android, iOS, Flutter, React Native, Kotlin Multiplatform (KMP), Compose Multiplatform (CMP)
-- Uses file pattern matching (`package.json`, `build.gradle`, `pubspec.yaml`, `.xcodeproj`, etc.)
-- Fallback: Prompts user if detection fails
-
-**Section 3: Environment Discovery**
-- Scans build configurations for environments (production, staging, development, etc.)
-- Platform-specific detection:
-  - Android/KMP/CMP: `productFlavors`, `buildTypes`
-  - iOS: Xcode schemes, `xcconfig` files
-  - Flutter: `--dart-define`, flavor configs, `.env` files
-  - React Native: `.env.*` files, `react-native-config`
-
-**Section 4: App Package Inference**
-- Extracts Android `applicationId` from `build.gradle`
-- Extracts iOS `PRODUCT_BUNDLE_IDENTIFIER` from Xcode project or `Info.plist`
-- Prompts user if auto-detection fails
-
-**Section 5: Project Knowledge** (⭐ This is where the magic happens)
-Auto-detects from codebase:
-- **Project name** - from build files or directory name
-- **Platform details** - SDK versions, deployment targets
-- **Build system** - Gradle, Xcode, Flutter CLI, Metro
-- **Build command** - Inferred from flavors and build types
-- **Architecture pattern** - Scans for MVVM, Clean Architecture, BLoC, Redux, MVP, VIPER patterns
-- **Business domain** - Extracted from README, app manifests, store listings
-- **Loading indicators** - Greps source code for `CircularProgressIndicator`, `Shimmer`, `ActivityIndicator`, `SkeletonView`, etc.
-- **Protected directories** - Identifies source code directories to avoid modification
-
-Asks user for:
-- Corrections to auto-detected values
-- Business-critical user paths (e.g., "onboarding, login, checkout, payment")
-
-**Section 6: Skill Installation** (⭐ Fully automated)
-- Creates `.gemini/skills/mobile-automator-generator/` and `.../mobile-automator-executor/`
-- Reads skill templates from `${extensionPath}/templates/<mode>/` (mode-aware via `--mode=<mode>` flag on `install-skills.js`)
-- **Replaces placeholders** with detected/gathered values:
-  - *Platform-aware (13 placeholders)*: `{{project_name}}`, `{{platform_details}}`, `{{build_system}}`, `{{build_command}}`, `{{app_package}}`, `{{environments}}`, `{{automation_extras}}`, `{{architecture}}`, `{{business_domain}}`, `{{business_critical_paths}}`, `{{loading_indicators}}`, `{{protected_directories}}`, `{{additional_resources}}`
-  - *Platform-agnostic (6 placeholders)*: `{{project_name}}`, `{{business_domain}}`, `{{business_critical_paths}}`, `{{loading_indicators}}`, `{{protected_directories}}`, `{{additional_resources}}`
-- Copies schema files and `platform-resolutions.md` from templates to workspace
-- Verifies no `{{` placeholders remain in generated skills
-
-**Section 7: Directory Scaffolding & Finalization**
-- Creates `mobile-automator/scenarios/`, `screenshots/`, `results/`
-- Generates `mobile-automator/config.json` with all collected data
-- Generates `mobile-automator/index.md` documentation
-- Commits to git if repository exists
-
-**Resume Capability**: If setup is interrupted, run `/mobile-automator:setup` again and it will resume from the last successful section using `mobile-automator/setup_state.json`.
-
-### The Generate Command (Wrapper Pattern)
-
-`commands/mobile-automator/generate.toml` is a **pre-flight wrapper** that:
-1. Verifies `mobile-automator/config.json` exists
-2. Checks that `.gemini/skills/mobile-automator-generator/SKILL.md` is installed
-3. Resolves the target environment (Section 0.1) — reads saved preference from `mobile-automator/generate_preferences.json`, or prompts once and saves the selection; supports `--environment="X"` (ephemeral override) and `--set-environment="X"` (update saved preference)
-4. Detects connected devices via `mobile_list_available_devices()`
-5. Confirms app installation (offers to build/install if needed)
-6. Delegates to the generator skill at `.gemini/skills/mobile-automator-generator/SKILL.md`
-
-**Why the wrapper?** Separates infrastructure concerns (device detection, config validation, environment resolution) from domain logic (test generation).
-
-**Preferences file:** `mobile-automator/generate_preferences.json` — stores the developer's last-chosen environment. Created/updated by the generate command only; never touched by setup or execute.
-
-### The Execute Command (Wrapper Pattern)
-
-`commands/mobile-automator/execute.toml` is a **pre-flight wrapper** that:
-1. Verifies `mobile-automator/config.json` exists
-2. Checks that `.gemini/skills/mobile-automator-executor/SKILL.md` is installed
-3. Detects connected devices (supports `--device` flag or interactive selection via `ask_user` tool)
-4. Confirms app installation
-5. Resolves which scenarios to execute (supports `--all`, `--tag`, specific names/IDs, or interactive selection via `ask_user` tool)
-6. Delegates to the executor skill at `.gemini/skills/mobile-automator-executor/SKILL.md`
-
-### Modifying Skill Templates
-
-Skill templates are organized by mode:
-- `templates/mobile-automator-generator/aware/SKILL.md` and `templates/mobile-automator-executor/aware/SKILL.md` — platform-aware templates
-- `templates/mobile-automator-generator/agnostic/SKILL.md` and `templates/mobile-automator-executor/agnostic/SKILL.md` — platform-agnostic templates
-
-**Available Placeholders** (automatically populated during setup):
-- `{{project_name}}` - Detected app name
-- `{{platform_details}}` - Platform SDK versions (e.g., "Android (minSdk 24, targetSdk 34)")
-- `{{architecture}}` - Detected or user-provided architecture pattern
-- `{{build_system}}` - Gradle, Xcode, Flutter CLI, Metro
-- `{{build_command}}` - Platform-specific build command
-- `{{app_package}}` - Android applicationId and/or iOS Bundle Identifier
-- `{{environments}}` - Comma-separated list of environments
-- `{{loading_indicators}}` - Project-specific loading patterns
-- `{{protected_directories}}` - Source directories to avoid modification
-- `{{automation_extras}}` - Platform-specific automation notes
-- `{{business_domain}}` - One-sentence description of app domain
-- `{{business_critical_paths}}` - User-provided critical user flows
-- `{{additional_resources}}` - Optional extra resource links
-
-**How placeholders work:**
-1. Setup detects/gathers values for each placeholder
-2. Section 6.0 reads template files
-3. Replaces `{{placeholder}}` with actual values
-4. Writes populated SKILL.md to `.gemini/skills/`
-5. Verifies no placeholders remain
-
-### Recorder Skill Template (experimental — gated behind `MOBILE_AUTOMATOR_RECORDER=1`)
-
-Tracked under [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21); landed as the tracer-bullet slice in [#22](https://github.com/sh3lan93/mobile-automator/issues/22). Lives alongside the generator and executor templates.
-
-- **Template path:** `templates/mobile-automator-recorder/aware/SKILL.md`
-- **Installed to:** `.gemini/skills/mobile-automator-recorder/SKILL.md` (only when `install-skills.js` runs in **platform-aware** mode).
-- **Purpose:** Runs at the end of `/mobile-automator:record` to synthesise the final scenario JSON from the artifact bundle the sidecar produces under `mobile-automator/.recorder/<session>/`. The recorder skill does **not** re-derive scenario style — it cross-references the generator skill's rules so the generator stays the single source of truth for scenario shape.
-- **Placeholders used (10 of the 13 aware-mode placeholders):**
-  - `{{project_name}}`
-  - `{{platform_details}}`
-  - `{{build_system}}`
-  - `{{app_package}}`
-  - `{{environments}}`
-  - `{{architecture}}`
-  - `{{business_critical_paths}}`
-  - `{{loading_indicators}}`
-  - `{{protected_directories}}`
-  - `{{additional_resources}}`
-
-  The three aware-mode placeholders **not** consumed by the recorder template — `{{build_command}}`, `{{automation_extras}}`, `{{business_domain}}` — are not load-bearing for scenario synthesis from a captured trace. They may be added in a later slice if the synthesiser grows new responsibilities.
-
-- **Install behaviour by mode:**
-  - **Platform-aware:** the recorder skill is installed alongside the generator and executor.
-  - **Platform-agnostic:** the recorder install is **skipped**. The agnostic recorder template lands in slice [#29](https://github.com/sh3lan93/mobile-automator/issues/29). Until then, a project set up in agnostic mode will not have a recorder skill at `.gemini/skills/mobile-automator-recorder/`, and `/mobile-automator:record` is not expected to run there.
-
-- **Reachability:** the entire recorder surface (the `/mobile-automator:record` command, the sidecar, the GUI, and this skill) is hidden unless `MOBILE_AUTOMATOR_RECORDER=1` is set in the environment. With the gate off, this template is still copied during setup but is never invoked.
-
-### Adding New Skills
-
-To add a third skill (e.g., `mobile-automator-debugger`):
-
-1. **Create template directory**: `templates/mobile-automator-debugger/`
-2. **Create SKILL.md** with frontmatter:
-   ```markdown
-   ---
-   name: mobile-automator-debugger
-   description: Debug failed tests for {{project_name}}
-   ---
-
-   # Mobile Automator — Test Debugger
-
-   [Skill prompt content with {{placeholders}}]
-   ```
-3. **Add schema if needed**: `references/debug_report_schema.json`
-4. **Update setup.toml Section 6.0** to include the new skill in the copy loop
-5. **Update GEMINI.md** to reference the new schema location
-6. **Create command wrapper** (optional): `commands/mobile-automator/debug.toml`
-
-### Test Scenario & Result Schemas
-
-**Schema Locations:**
-
-- **Test Scenario Schema**: `templates/mobile-automator-generator/references/scenario_schema.json`
-  - Defines format for all new test scenarios
-  - Required root field: `$schema_version: "2.0"`
-  - Named string step IDs (snake_case) and assertion IDs — not integers
-  - Supports 14 action types: `launch_app`, `tap`, `long_press`, `double_tap`, `type`, `swipe`, `scroll_to_element`, `press_button`, `open_url`, `wait_for_element`, `wait_for_element_gone`, `wait_for_loading_complete`, `capture_value`, `clear_app_data`
-  - Supports 27 assertion types across 8 categories:
-    - **Element State:** `element_exists`, `element_not_exists`, `element_visible`, `element_state`
-    - **Text & Content:** `element_text`, `text_contains`, `text_not_empty`, `element_hint`, `pattern_match`, `text_changed`, `content_description`
-    - **Count & Collections:** `element_count`, `list_item_count`, `list_is_empty`
-    - **Visual & Layout:** `screenshot_match`, `visual_state`, `element_fully_visible`, `color_style`
-    - **Navigation & Screen:** `screen_title`, `alert_present`, `alert_text`, `toast_visible`, `keyboard_visible`
-    - **Accessibility:** `has_accessibility_label`
-    - **Data & Variables:** `value_matches_variable`
-    - **Platform-Specific:** `permission_dialog_shown`, `dark_mode_active`
-  - Step-level fields: `optional`, `condition`, `on_failure`, `retry_policy`, `capture_to`, `sub_steps`, `wait_config`
-  - Root-level fields: `variables`, `preconditions` (structured object, not string array)
-
-- **Test Result Schema**: `templates/mobile-automator-executor/references/result_schema.json`
-  - Defines format for execution result reports
-  - Key fields: `run_id`, `schema_version`, `status`, `steps_executed`, `assertion_results`, `observations`, `captured_variables`
-  - `steps_executed[].step_id` is a string (snake_case)
-  - Step fields: `retry_count`, `step_duration_ms`, `condition_evaluated`, `sub_steps_executed`
-  - **Advanced feature**: `observations` array with typed categories:
-    - `regression` - Spots visual changes beyond assertions
-    - `flakiness` - Detects timing issues, flags retry behavior
-    - `state_context` - Provides device/environment context for failures
-
-**Schema Distribution:**
-During setup Section 6.0, schemas are copied from:
-- `${extensionPath}/templates/mobile-automator-generator/references/scenario_schema.json`
-- `${extensionPath}/templates/mobile-automator-executor/references/result_schema.json`
-
-To workspace:
-- `.gemini/skills/mobile-automator-generator/references/scenario_schema.json`
-- `.gemini/skills/mobile-automator-executor/references/result_schema.json`
-
-GEMINI.md acts as a registry pointing to these workspace-level schema locations.
-
-## Development Commands
-
-### Testing the Extension Locally
+## Local development
 
 ```bash
-# Link the extension for local development
-cd /path/to/mobile-automator
-gemini extensions link .
-
-# In a test mobile project
-cd /path/to/test-mobile-app
-gemini
-
-# Verify commands are available
-> /mobile-automator:setup
-> /mobile-automator:generate
-> /mobile-automator:execute
+gemini extensions link .                              # in this repo
+cd /path/to/test-mobile-app && gemini                 # then /mobile-automator:setup, etc.
 ```
 
-### Testing the Full Workflow
+Pin a specific `mobile-mcp` version by editing `args` in `gemini-extension.json` (default is `@latest`).
 
-1. **Setup**: Run `/mobile-automator:setup` in a test mobile project
-2. **Verify**: Check that `.gemini/skills/mobile-automator-*/SKILL.md` exist and have no `{{` placeholders
-3. **Generate**: Connect a device and run `/mobile-automator:generate` with test steps
-4. **Execute**: Run `/mobile-automator:execute` on the generated scenario
-5. **Validate**: Check that `mobile-automator/results/<run_id>.json` contains observations and context
+## Conventions
 
-### Updating the MCP Server Version
+- All commands and skill names use the `mobile-automator` / `mobile-automator-*` namespace to avoid extension collisions.
+- Workspace paths in skills (`mobile-automator/scenarios/`, etc.) are relative to the user's project root, not this extension's directory.
+- **GEMINI.md vs CLAUDE.md**: GEMINI.md = runtime context for Gemini executing skills (schema registry, tool mappings). CLAUDE.md = this file, for humans maintaining the extension.
 
-The `mobile-mcp` version is pinned to `@latest` in `gemini-extension.json`. To use a specific version:
-```json
-"args": ["-y", "@mobilenext/mobile-mcp@1.2.3"]
-```
+## Metadata
 
-### Releasing
-
-Follow `RELEASE.md` checklist. Key steps:
-1. Update version in `gemini-extension.json`
-2. Update `CHANGELOG.md`
-3. Test full workflow in a real mobile project
-4. Commit and push to GitHub
-5. Users install via `gemini extensions install https://github.com/sh3lan93/mobile-automator`
-
-**Multi-issue features (gate-then-graduate pattern):** When a feature spans many PRs (e.g., the recorder per PRD #21), do **not** ship the feature publicly in slice PRs. Gate the new command behind an opt-in env var (e.g., `MOBILE_AUTOMATOR_RECORDER=1` checked at the top of the command's `.toml`) so partial states are invisible to users who haven't opted in. Append slice-by-slice changelog entries under `## [Unreleased]`.
-
-**Version handling under the gate.** The repo's `Verify version is bumped` CI check fails any PR touching extension-code paths (`gemini-extension.json`, `GEMINI.md`, `templates/`, `commands/`, `scripts/`) without bumping the version to a value not yet in `git tag`. To satisfy this without graduating the feature, **the first slice PR bumps `gemini-extension.json` to a release-candidate semver** (e.g., `0.12.0-rc.0`). Subsequent slice PRs increment the rc counter (`0.12.0-rc.1`, `0.12.0-rc.2`, …). The `vX.Y.Z` git-tag namespace is reserved for graduated releases — the rc.N values are never tagged.
-
-**Graduation.** Cut the public version in a small dedicated graduation PR that removes the env-var gate, bumps `gemini-extension.json` from `vX.Y.Z-rc.N` to the final `vX.Y.Z`, collapses `[Unreleased]` into the new release section, and creates the `vX.Y.Z` tag. This keeps `main` mergeable without long-lived branches and preserves the "fully-formed feature per release" pattern visible in v0.10/v0.11 — at any given tag, the feature is whole.
-
-## Important Conventions
-
-### Namespace Usage
-
-All commands use the `mobile-automator:` namespace to prevent conflicts with other extensions:
-
-- **Setup command**: `/mobile-automator:setup` — Invokes `commands/mobile-automator/setup.toml`
-- **Generate command**: `/mobile-automator:generate` — Invokes `commands/mobile-automator/generate.toml`
-- **Execute command**: `/mobile-automator:execute` — Invokes `commands/mobile-automator/execute.toml`
-- **Report command**: `/mobile-automator:report` — Invokes `commands/mobile-automator/report.toml`
-- **List-tags command**: `/mobile-automator:list-tags` — Invokes `commands/mobile-automator/list-tags.toml`
-
-**Skill names** match the command namespace:
-- `.gemini/skills/mobile-automator-generator/` - Used by generate command
-- `.gemini/skills/mobile-automator-executor/` - Used by execute command
-
-This naming convention makes it clear which extension provides these capabilities.
-
-### Placeholder Replacement
-
-Skill templates use double-brace syntax: `{{placeholder_name}}`.
-
-**Replacement happens automatically** during setup Section 6.0:
-1. Setup gathers placeholder values (13 in aware mode, 6 in agnostic mode)
-2. Reads template SKILL.md files from the mode-specific subdirectory (`aware/` or `agnostic/`)
-3. Performs string replacement for each `{{placeholder}}`
-4. Writes populated files to `.gemini/skills/`
-5. Verifies no `{{` remains in the output
-
-**Runtime fallback**: If a placeholder wasn't populated during setup (rare edge case), skills can read `mobile-automator/config.json` for project configuration.
-
-### Directory Paths in Skills
-
-Generated skills reference workspace paths:
-- `mobile-automator/scenarios/` - Test scenario JSON files
-- `mobile-automator/screenshots/` - Reference screenshots
-- `mobile-automator/results/` - Execution result reports
-- `mobile-automator/config.json` - Project configuration
-
-These are relative to the user's mobile project root, NOT the extension directory. The directory name matches the extension name for clear ownership.
-
-### GEMINI.md vs CLAUDE.md
-
-- **GEMINI.md**: Loaded by Gemini CLI when executing skills. Contains schema registry, tool mappings, file resolution protocol. Audience: Gemini AI during test generation/execution.
-- **CLAUDE.md**: This file. For developers maintaining the extension. Contains architecture, development workflows, implementation details.
-
-## Troubleshooting Extension Development
-
-### Setup Issues
-
-**Platform detection failing**:
-- Check that you're in the root of a mobile project
-- Supported platforms: Android, iOS, Flutter, React Native, KMP, CMP
-- For non-standard project structures, setup will prompt for manual selection
-
-**Package ID not found**:
-- Setup will prompt user to enter manually
-- This is expected behavior for some project configurations
-
-**Skills not installed after setup**:
-- Check `.gemini/skills/mobile-automator-*/SKILL.md` exist
-- Verify no `{{` placeholders remain (means replacement failed)
-- Re-run `/mobile-automator:setup` - it will resume from Section 6.0
-
-**Placeholders not replaced**:
-- Check `mobile-automator/setup_state.json` for gathered knowledge
-- Verify template paths in setup.toml Section 6.2 point to `${extensionPath}/templates/`
-- Common issue: Path mismatch (should be `templates/` not `skill-templates/`)
-
-### Command Issues
-
-**Generate/execute command fails pre-flight**:
-- Check `mobile-automator/config.json` exists (run setup first)
-- Verify device connected: `adb devices` (Android) or `xcrun simctl list` (iOS)
-- Check app installed or allow commands to build/install
-
-**Wrapper commands can't find skills**:
-- Verify `.gemini/skills/mobile-automator-generator/SKILL.md` exists
-- Verify `.gemini/skills/mobile-automator-executor/SKILL.md` exists
-- These should be created automatically by Section 6.0 of setup
-
-### MCP Server Issues
-
-**mobile-mcp not loading**:
-- Check `npx` is available and can fetch `@mobilenext/mobile-mcp`
-- Test manually: `npx -y @mobilenext/mobile-mcp@latest --version`
-
-**Device automation failing**:
-- Android: Ensure ADB is installed and device authorized
-- iOS: Ensure Xcode command-line tools installed
-- Check device shows in `mobile_list_available_devices()` output
-
-## Advanced Features
-
-### Architecture Pattern Detection (Section 5.0)
-
-Setup scans your codebase for common patterns:
-- **MVVM**: Looks for `viewmodel/`, `ViewModel` classes, `LiveData`
-- **Clean Architecture**: Looks for `repository/`, `usecase/`, `domain/`, `data/` layers
-- **BLoC**: Looks for `bloc/`, `cubit/` (Flutter)
-- **Redux/MVI**: Looks for `reducer/`, `store/`, `action/`
-- **MVP/VIPER**: Looks for `presenter/`, `interactor/`
-
-Combines findings intelligently: e.g., "MVVM with Clean Architecture"
-
-**Why this matters**: Skills are customized to understand your app's structure and naming conventions.
-
-### Loading Indicator Detection (Section 5.0)
-
-Setup greps source code for platform-specific loading patterns:
-- Android: `CircularProgressIndicator`, `LinearProgressIndicator`, `ProgressBar`, `ShimmerEffect`, `ContentLoadingProgressBar`
-- iOS: `UIActivityIndicatorView`, `ProgressView`, `SkeletonView`
-- Flutter: `CircularProgressIndicator`, `LinearProgressIndicator`, `Shimmer`
-- React Native: `ActivityIndicator`, `SkeletonPlaceholder`
-- Custom: Any class matching `*Loading*`, `*Spinner*`, `*Shimmer*`, `*Skeleton*`
-
-**Why this matters**: Test executor knows exactly what to wait for during test execution.
-
-### Flakiness Detection (Result Schema)
-
-The result schema includes:
-```json
-{
-  "steps_executed": [{
-    "retried": true,
-    "observations": "Loading indicator still visible on first attempt"
-  }],
-  "observations": [{
-    "type": "flakiness",
-    "message": "Step 4 failed initially, passed on retry after 2s wait"
-  }]
-}
-```
-
-**Why this matters**: Distinguishes real bugs from timing issues, suggests test improvements.
-
-### Semantic Visual Testing (Executor Skill)
-
-Instead of pixel-by-pixel comparison, uses AI vision to answer:
-> "Does this screen fulfill the same purpose as the reference?"
-
-Focuses on: screen identity, key elements present/absent, text content, layout structure.
-Tolerates: minor rendering differences (anti-aliasing, font smoothing).
-
-**Why this matters**: Tests are resilient to cosmetic changes while catching functional regressions.
-
-## Extension Metadata
-
-- **Repository**: https://github.com/sh3lan93/mobile-automator
-- **Version**: 0.11.0 (see `gemini-extension.json`)
-- **License**: Apache 2.0
-- **Context File**: `GEMINI.md` (specified in `gemini-extension.json`)
-- **Status**: Production-ready, feature-complete
+Repo: https://github.com/sh3lan93/mobile-automator · Version: see `gemini-extension.json` · License: Apache 2.0 · Status: production-ready.
