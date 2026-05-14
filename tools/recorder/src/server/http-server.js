@@ -17,11 +17,15 @@ function serveScreenshot(req, res, screenshotsDir) {
     return true;
   }
   const filePath = path.join(screenshotsDir, urlPath.slice('/screenshots/'.length));
-  if (!filePath.startsWith(screenshotsDir) || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+  const rel = path.relative(screenshotsDir, filePath);
+  if (rel.startsWith('..') || path.isAbsolute(rel)) {
     res.statusCode = 404;
     res.end('Not Found');
     return true;
   }
+  let stat;
+  try { stat = fs.statSync(filePath); } catch { res.statusCode = 404; res.end('Not Found'); return true; }
+  if (!stat.isFile()) { res.statusCode = 404; res.end('Not Found'); return true; }
   res.statusCode = 200;
   res.setHeader('Content-Type', 'image/png');
   fs.createReadStream(filePath).pipe(res);
