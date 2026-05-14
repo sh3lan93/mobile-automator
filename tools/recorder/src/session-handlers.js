@@ -26,4 +26,37 @@ function handleCancelMessage({ store, onDone }) {
   if (typeof onDone === 'function') onDone(130);
 }
 
-module.exports = { handleSaveMessage, handleCancelMessage };
+async function handleRequestAssertionScreenshot({ store, mcp, broadcast, allocateId }) {
+  const assertion_id = allocateId();
+  await mcp.takeScreenshot(store.assertScreenshotPath(assertion_id));
+  broadcast({
+    type: 'assertion-screenshot-ready',
+    assertion_id,
+    image_url: '/screenshots/assert_' + assertion_id + '.png'
+  });
+}
+
+function handleSaveAssertion({ store, broadcast, msg }) {
+  const entry = {
+    id: msg.assertion_id,
+    nl_text: msg.nl_text,
+    screenshot: 'screenshots/assert_' + msg.assertion_id + '.png',
+    anchor_step_id: msg.anchor_step_id,
+    captured_at: new Date().toISOString()
+  };
+  store.appendAssertion(entry);
+  broadcast({
+    type: 'assertion-added',
+    assertion: {
+      id: msg.assertion_id,
+      nl_text: msg.nl_text,
+      anchor_step_id: msg.anchor_step_id
+    }
+  });
+}
+
+function handleCancelAssertion({ store, msg }) {
+  store.deleteAssertScreenshot(msg.assertion_id);
+}
+
+module.exports = { handleSaveMessage, handleCancelMessage, handleRequestAssertionScreenshot, handleSaveAssertion, handleCancelAssertion };
