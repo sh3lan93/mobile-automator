@@ -452,7 +452,89 @@
     }
   }
 
-  function _beginDelete(doc, li, sendWs) { /* Task 6 */ }
+  function _renderDeletePrompt(doc, opts) {
+    const overlay = doc.createElement('div');
+    overlay.className = 'modal-overlay delete-prompt';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    const panel = doc.createElement('div');
+    panel.className = 'modal-panel';
+
+    const title = doc.createElement('h4');
+    title.textContent = 'Delete this step?';
+    panel.appendChild(title);
+
+    let getPolicy = function () { return 'none'; };
+
+    if (opts.anchoredCount > 0) {
+      const warn = doc.createElement('div');
+      warn.className = 'delete-warn';
+      warn.textContent = '⚠ ' + opts.anchoredCount + ' assertion(s) are anchored to this step.';
+      panel.appendChild(warn);
+      const policies = [
+        ['reanchor', 'Re-anchor to previous step'],
+        ['cascade', 'Cascade-delete the assertions'],
+      ];
+      policies.forEach(function (p, i) {
+        const row = doc.createElement('label');
+        row.className = 'delete-option';
+        row.setAttribute('data-policy', p[0]);
+        const radio = doc.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'delete-policy';
+        radio.value = p[0];
+        if (i === 0) radio.checked = true;
+        const span = doc.createElement('span');
+        span.textContent = p[1];
+        row.appendChild(radio);
+        row.appendChild(span);
+        panel.appendChild(row);
+      });
+      getPolicy = function () {
+        const checked = panel.querySelector('input[name="delete-policy"]:checked');
+        return checked ? checked.value : 'reanchor';
+      };
+    }
+
+    const btnRow = doc.createElement('div');
+    btnRow.className = 'modal-btn-row';
+    const confirm = doc.createElement('button');
+    confirm.type = 'button';
+    confirm.setAttribute('data-delete-confirm', '1');
+    confirm.textContent = opts.anchoredCount > 0 ? 'Apply' : 'Delete';
+    const cancel = doc.createElement('button');
+    cancel.type = 'button';
+    cancel.setAttribute('data-delete-cancel', '1');
+    cancel.textContent = 'Cancel';
+
+    function close() { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }
+    confirm.addEventListener('click', function () { const p = getPolicy(); close(); opts.onConfirm(p); });
+    cancel.addEventListener('click', function () { close(); opts.onCancel(); });
+
+    btnRow.appendChild(confirm);
+    btnRow.appendChild(cancel);
+    panel.appendChild(btnRow);
+    overlay.appendChild(panel);
+    const modalRoot = doc.getElementById('modal-root') || doc.body;
+    modalRoot.appendChild(overlay);
+    return overlay;
+  }
+
+  function _beginDelete(doc, li, sendWs) {
+    const stepId = li.getAttribute('data-step-id');
+    const list = doc.getElementById('step-list');
+    const anchored = list
+      ? list.querySelectorAll('.assertion-row[data-anchor-step-id="' + stepId + '"]').length
+      : 0;
+    _renderDeletePrompt(doc, {
+      step_id: stepId,
+      anchoredCount: anchored,
+      onConfirm: function (policy) {
+        sendWs({ type: 'delete-step', step_id: stepId, assertion_policy: policy });
+      },
+      onCancel: function () {},
+    });
+  }
 
   // Expose to the browser global.
   root.renderStepRow = renderStepRow;

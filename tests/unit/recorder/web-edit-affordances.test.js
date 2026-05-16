@@ -127,3 +127,64 @@ describe('inline editors send the correct WS message', () => {
     expect(sendWs).not.toHaveBeenCalled();
   });
 });
+
+describe('delete prompt', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="modal-root"></div><ul id="step-list"></ul>';
+  });
+  function openDelete(stepSel) {
+    document.querySelector(stepSel + ' button.step-menu').click();
+    [...document.querySelectorAll('.step-menu-popover .menu-item')]
+      .find((b) => b.getAttribute('data-edit-action') === 'delete').click();
+  }
+
+  test('no anchored assertions → plain confirm → delete-step policy none', () => {
+    const sendWs = jest.fn();
+    app.appendStep({ id: 'tap_skip', index: 1, action: 'tap', target: '"Skip"' });
+    app.attachEditAffordances({ document, sendWs });
+    openDelete('[data-step-id="tap_skip"]');
+    const prompt = document.querySelector('.delete-prompt');
+    expect(prompt).not.toBeNull();
+    expect(prompt.querySelectorAll('.delete-option').length).toBe(0);
+    prompt.querySelector('[data-delete-confirm]').click();
+    expect(sendWs).toHaveBeenCalledWith({ type: 'delete-step', step_id: 'tap_skip', assertion_policy: 'none' });
+  });
+
+  test('anchored assertions → 3-option prompt, reanchor is the default', () => {
+    const sendWs = jest.fn();
+    app.appendStep({ id: 'tap_submit', index: 1, action: 'tap', target: '"Submit"' });
+    app.appendAssertionRow({ id: 'a1', nl_text: 'Dashboard', anchor_step_id: 'tap_submit' });
+    app.appendAssertionRow({ id: 'a2', nl_text: 'Toast', anchor_step_id: 'tap_submit' });
+    app.attachEditAffordances({ document, sendWs });
+    openDelete('[data-step-id="tap_submit"]');
+    const prompt = document.querySelector('.delete-prompt');
+    const opts = [...prompt.querySelectorAll('.delete-option')].map((o) => o.getAttribute('data-policy'));
+    expect(opts).toEqual(['reanchor', 'cascade']);
+    expect(prompt.querySelector('input[name="delete-policy"]:checked').value).toBe('reanchor');
+    prompt.querySelector('[data-delete-confirm]').click();
+    expect(sendWs).toHaveBeenCalledWith({ type: 'delete-step', step_id: 'tap_submit', assertion_policy: 'reanchor' });
+  });
+
+  test('choosing cascade sends cascade', () => {
+    const sendWs = jest.fn();
+    app.appendStep({ id: 'tap_submit', index: 1, action: 'tap', target: '"Submit"' });
+    app.appendAssertionRow({ id: 'a1', nl_text: 'Dashboard', anchor_step_id: 'tap_submit' });
+    app.attachEditAffordances({ document, sendWs });
+    openDelete('[data-step-id="tap_submit"]');
+    const prompt = document.querySelector('.delete-prompt');
+    prompt.querySelector('input[name="delete-policy"][value="cascade"]').checked = true;
+    prompt.querySelector('[data-delete-confirm]').click();
+    expect(sendWs).toHaveBeenCalledWith({ type: 'delete-step', step_id: 'tap_submit', assertion_policy: 'cascade' });
+  });
+
+  test('cancel sends nothing and removes the prompt', () => {
+    const sendWs = jest.fn();
+    app.appendStep({ id: 'tap_submit', index: 1, action: 'tap', target: '"Submit"' });
+    app.appendAssertionRow({ id: 'a1', nl_text: 'Dashboard', anchor_step_id: 'tap_submit' });
+    app.attachEditAffordances({ document, sendWs });
+    openDelete('[data-step-id="tap_submit"]');
+    document.querySelector('.delete-prompt [data-delete-cancel]').click();
+    expect(sendWs).not.toHaveBeenCalled();
+    expect(document.querySelector('.delete-prompt')).toBeNull();
+  });
+});
