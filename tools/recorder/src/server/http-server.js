@@ -32,6 +32,15 @@ function serveScreenshot(req, res, screenshotsDir) {
   return true;
 }
 
+function serveApiMode(req, res, mode) {
+  const urlPath = req.url.split('?')[0];
+  if (urlPath !== '/api/mode') return false;
+  res.statusCode = 200;
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify({ mode }));
+  return true;
+}
+
 function serveStatic(req, res) {
   let urlPath = req.url.split('?')[0];
   if (urlPath === '/') urlPath = '/index.html';
@@ -46,10 +55,11 @@ function serveStatic(req, res) {
   fs.createReadStream(filePath).pipe(res);
 }
 
-async function startHttpServer({ projectRoot, scenarioId, requestHandler = null }) {
+async function startHttpServer({ projectRoot, scenarioId, requestHandler = null, mode = 'platform-aware' }) {
   const screenshotsDir = path.join(projectRoot, 'mobile-automator', '.recorder', scenarioId, 'screenshots');
   const server = http.createServer((req, res) => {
     if (serveScreenshot(req, res, screenshotsDir)) return;
+    if (serveApiMode(req, res, mode)) return;
     if (requestHandler) { try { if (requestHandler(req, res)) return; } catch (e) { /* fall through */ } }
     serveStatic(req, res);
   });
