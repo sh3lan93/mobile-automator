@@ -1,1 +1,14 @@
-[]
+[
+  { "id": "p001", "title": "Wireless Earbuds", "price": 59.99, "categorySlug": "electronics", "featured": true },
+  { "id": "p002", "title": "Smart Watch", "price": 129.0, "categorySlug": "electronics", "featured": true },
+  { "id": "p003", "title": "Bluetooth Speaker", "price": 39.5, "categorySlug": "electronics", "featured": false },
+  { "id": "p004", "title": "Ceramic Mug Set", "price": 24.0, "categorySlug": "home", "featured": true },
+  { "id": "p005", "title": "Chef Knife", "price": 45.0, "categorySlug": "home", "featured": false },
+  { "id": "p006", "title": "Throw Blanket", "price": 32.75, "categorySlug": "home", "featured": false },
+  { "id": "p007", "title": "Dune", "price": 14.99, "categorySlug": "books", "featured": true },
+  { "id": "p008", "title": "Clean Code", "price": 33.2, "categorySlug": "books", "featured": false },
+  { "id": "p009", "title": "Atomic Habits", "price": 18.0, "categorySlug": "books", "featured": false },
+  { "id": "p010", "title": "Building Blocks", "price": 27.5, "categorySlug": "toys", "featured": true },
+  { "id": "p011", "title": "Puzzle 1000pc", "price": 16.0, "categorySlug": "toys", "featured": false },
+  { "id": "p012", "title": "RC Car", "price": 49.99, "categorySlug": "toys", "featured": false }
+]

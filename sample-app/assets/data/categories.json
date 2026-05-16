@@ -1,1 +1,6 @@
-[]
+[
+  { "slug": "electronics", "title": "Electronics" },
+  { "slug": "home", "title": "Home & Kitchen" },
+  { "slug": "books", "title": "Books" },
+  { "slug": "toys", "title": "Toys & Games" }
+]
