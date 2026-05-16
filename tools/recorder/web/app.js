@@ -12,6 +12,15 @@
 
   var latestStepId = null;
 
+  function _makeStepMenuButton(doc) {
+    const btn = doc.createElement('button');
+    btn.className = 'step-menu';
+    btn.type = 'button';
+    btn.setAttribute('aria-label', 'Edit step');
+    btn.textContent = '⋯';
+    return btn;
+  }
+
   function renderStepRow(step) {
     const doc = root.document;
     const li = doc.createElement('li');
@@ -45,6 +54,7 @@
       li.appendChild(num);
       li.appendChild(action);
       li.appendChild(target);
+      li.appendChild(_makeStepMenuButton(doc));
       return li;
     }
 
@@ -65,6 +75,7 @@
       li.appendChild(num);
       li.appendChild(action);
       li.appendChild(direction);
+      li.appendChild(_makeStepMenuButton(doc));
       return li;
     }
 
@@ -109,8 +120,11 @@
       li.appendChild(value);
       li.appendChild(into);
       li.appendChild(target);
+      li.appendChild(_makeStepMenuButton(doc));
       return li;
     }
+
+    li.setAttribute('data-action', String(step.action));
 
     const action = doc.createElement('span');
     action.className = 'step-action';
@@ -123,6 +137,7 @@
     li.appendChild(num);
     li.appendChild(action);
     li.appendChild(target);
+    li.appendChild(_makeStepMenuButton(doc));
     return li;
   }
 
@@ -288,6 +303,7 @@
     var li = doc.createElement('li');
     li.className = 'assertion-row';
     li.setAttribute('data-assertion-id', String(assertion.id));
+    li.setAttribute('data-anchor-step-id', String(assertion.anchor_step_id));
 
     var label = doc.createElement('span');
     label.className = 'assertion-label';
@@ -299,6 +315,7 @@
 
     li.appendChild(label);
     li.appendChild(text);
+    li.appendChild(_makeStepMenuButton(doc));
 
     var list = doc.getElementById('step-list');
     if (!list) return null;
@@ -315,6 +332,62 @@
     return li;
   }
 
+  function _closeAnyPopover(doc) {
+    const open = doc.querySelector('.step-menu-popover');
+    if (open && open.parentNode) open.parentNode.removeChild(open);
+  }
+
+  function _menuActionsForRow(li) {
+    if (li.classList.contains('assertion-row')) return [['edit-assertion-text', 'Edit text']];
+    const base = [['rename', 'Rename'], ['delete', 'Delete']];
+    if (li.getAttribute('data-action') === 'type') base.push(['edit-value', 'Edit value']);
+    return base;
+  }
+
+  function attachEditAffordances(options) {
+    const opts = options || {};
+    const doc = opts.document;
+    const sendWs = opts.sendWs;
+    if (!doc || typeof sendWs !== 'function') {
+      throw new Error('attachEditAffordances: requires {document, sendWs}');
+    }
+    const list = doc.getElementById('step-list');
+    if (!list) return;
+    if (list.getAttribute('data-edit-wired') === '1') return;
+    list.setAttribute('data-edit-wired', '1');
+
+    list.addEventListener('click', function (e) {
+      const menuBtn = e.target.closest && e.target.closest('button.step-menu');
+      if (menuBtn) {
+        const li = menuBtn.closest('li');
+        const wasOpen = !!doc.querySelector('.step-menu-popover');
+        _closeAnyPopover(doc);
+        if (wasOpen) return;
+        const pop = doc.createElement('div');
+        pop.className = 'step-menu-popover';
+        for (const pair of _menuActionsForRow(li)) {
+          const item = doc.createElement('button');
+          item.type = 'button';
+          item.className = 'menu-item';
+          item.setAttribute('data-edit-action', pair[0]);
+          item.textContent = pair[1];
+          pop.appendChild(item);
+        }
+        li.appendChild(pop);
+        return;
+      }
+      const item = e.target.closest && e.target.closest('.step-menu-popover .menu-item');
+      if (item) {
+        const li = item.closest('li');
+        const action = item.getAttribute('data-edit-action');
+        _closeAnyPopover(doc);
+        _dispatchEditAction(doc, li, action, sendWs);
+      }
+    });
+  }
+
+  function _dispatchEditAction(doc, li, action, sendWs) { /* rename/edit-value/edit-assertion-text: Task 5; delete: Task 6 */ }
+
   // Expose to the browser global.
   root.renderStepRow = renderStepRow;
   root.appendStep = appendStep;
@@ -322,6 +395,7 @@
   root.wireButtons = wireButtons;
   root.renderAssertionModal = renderAssertionModal;
   root.appendAssertionRow = appendAssertionRow;
+  root.attachEditAffordances = attachEditAffordances;
 
   // Expose to CommonJS (jest).
   if (typeof module !== 'undefined' && module.exports) {
@@ -332,6 +406,7 @@
       wireButtons: wireButtons,
       renderAssertionModal: renderAssertionModal,
       appendAssertionRow: appendAssertionRow,
+      attachEditAffordances: attachEditAffordances,
     };
   }
 
