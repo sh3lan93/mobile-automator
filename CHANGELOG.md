@@ -11,6 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 The `/mobile-automator:record` recorder feature is being built incrementally per [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21). Slices land here under `[Unreleased]` and are gated behind `MOBILE_AUTOMATOR_RECORDER=1` until the v0.12.0 graduation cut. Entries collapse into a single coherent v0.12.0 note when the feature graduates.
 
+### Recorder Slice #6 — Add Assertion modal + AI classification at Save (#27)
+
+- GUI: **Add Assertion** button in the recorder header (disabled until first step is captured).
+- GUI: modal with fresh device screenshot and NL text input, anchored to the most-recent step at click time (Q5-2 contract).
+- GUI: assertion row rendered under the anchor step after Save.
+- Sidecar: `request-assertion-screenshot` / `save-assertion` / `cancel-assertion` WS message handlers.
+- Sidecar: `/screenshots/` HTTP route serves `assert_*.png` files from the artifact bundle.
+- Artifact: `assertions.json` entries now have shape `{id, nl_text, screenshot, anchor_step_id, captured_at}`.
+- Skill (aware): step 8 rewritten — AI applies two-pass classifier to convert NL → schema-typed assertion; visual types get `reference_screenshot`; step 12 also moves `assert_*.png` to the scenario screenshots dir.
+- Tests: 29 new unit tests, 16 new integration tests, new `sample-bundle-with-assertions` fixture.
+
 ### ✨ Added
 
 - **`/mobile-automator:record <scenario_name>` command** — experimental tracer-bullet slice ([#22](https://github.com/sh3lan93/mobile-automator/issues/22)) of the recorder workflow.

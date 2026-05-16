@@ -49,6 +49,17 @@ class ArtifactsStore {
     return this._root;
   }
 
+  assertScreenshotPath(assertion_id) {
+    return path.join(this._root, 'screenshots', 'assert_' + assertion_id + '.png');
+  }
+
+  deleteAssertScreenshot(assertion_id) {
+    const filePath = this.assertScreenshotPath(assertion_id);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  }
+
   cleanupOnSuccess() {
     if (fs.existsSync(this._root)) fs.rmSync(this._root, { recursive: true, force: true });
   }
