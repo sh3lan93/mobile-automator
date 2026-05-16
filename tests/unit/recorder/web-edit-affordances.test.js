@@ -188,3 +188,68 @@ describe('delete prompt', () => {
     expect(document.querySelector('.delete-prompt')).toBeNull();
   });
 });
+
+describe('confirmation display-effect', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="modal-root"></div><ul id="step-list"></ul>';
+  });
+
+  test('applyStepRenamed relabels the row target, keeps data-step-id', () => {
+    app.appendStep({ id: 'tap_login', index: 1, action: 'tap', target: '"Login"' });
+    app.applyStepRenamed(document, { step_id: 'tap_login', new_display_name: 'Tap the Login button' });
+    const li = document.querySelector('[data-step-id="tap_login"]');
+    expect(li.querySelector('.step-target').textContent).toBe('Tap the Login button');
+    expect(li.getAttribute('data-step-id')).toBe('tap_login');
+  });
+
+  test('applyValueEdited updates the type step value span', () => {
+    app.appendStep({ id: 'type_email', index: 1, action: 'type', value: 'a@b', field_label: 'Email' });
+    app.applyValueEdited(document, { step_id: 'type_email', new_value: 'user@acme.io' });
+    expect(document.querySelector('[data-step-id="type_email"] .step-value').textContent).toBe('"user@acme.io"');
+  });
+
+  test('applyAssertionTextEdited updates the assertion text span', () => {
+    app.appendStep({ id: 'tap_login', index: 1, action: 'tap', target: '"Login"' });
+    app.appendAssertionRow({ id: 'a1', nl_text: 'old', anchor_step_id: 'tap_login' });
+    app.applyAssertionTextEdited(document, { assertion_id: 'a1', new_nl_text: 'new text' });
+    expect(document.querySelector('[data-assertion-id="a1"] .assertion-text').textContent).toBe('new text');
+  });
+
+  test('applyStepDeleted cascade removes the step and its anchored assertions', () => {
+    app.appendStep({ id: 'tap_a', index: 1, action: 'tap', target: '"A"' });
+    app.appendStep({ id: 'tap_b', index: 2, action: 'tap', target: '"B"' });
+    app.appendAssertionRow({ id: 'a1', nl_text: 'x', anchor_step_id: 'tap_b' });
+    app.applyStepDeleted(document, { step_id: 'tap_b', assertion_policy: 'cascade' });
+    expect(document.querySelector('[data-step-id="tap_b"]')).toBeNull();
+    expect(document.querySelector('[data-assertion-id="a1"]')).toBeNull();
+  });
+
+  test('applyStepDeleted reanchor moves assertions to the previous surviving step', () => {
+    app.appendStep({ id: 'tap_a', index: 1, action: 'tap', target: '"A"' });
+    app.appendStep({ id: 'tap_b', index: 2, action: 'tap', target: '"B"' });
+    app.appendStep({ id: 'tap_c', index: 3, action: 'tap', target: '"C"' });
+    app.appendAssertionRow({ id: 'a1', nl_text: 'x', anchor_step_id: 'tap_b' });
+    app.applyStepDeleted(document, { step_id: 'tap_b', assertion_policy: 'reanchor' });
+    const a = document.querySelector('[data-assertion-id="a1"]');
+    expect(a).not.toBeNull();
+    expect(a.getAttribute('data-anchor-step-id')).toBe('tap_a');
+    expect(document.querySelector('[data-step-id="tap_b"]')).toBeNull();
+  });
+
+  test('attachWsClient routes the 4 confirmations to their handlers', () => {
+    const calls = [];
+    const FakeWS = function () { this.addEventListener = (t, fn) => { this._fn = fn; }; };
+    const ws = app.attachWsClient({
+      url: 'ws://x', WebSocketCtor: FakeWS,
+      onStepRenamed: (p) => calls.push(['r', p.step_id]),
+      onStepDeleted: (p) => calls.push(['d', p.step_id]),
+      onValueEdited: (p) => calls.push(['v', p.step_id]),
+      onAssertionTextEdited: (p) => calls.push(['a', p.assertion_id]),
+    });
+    ws._fn({ data: JSON.stringify({ type: 'step-renamed', step_id: 'tap_x', new_display_name: 'X' }) });
+    ws._fn({ data: JSON.stringify({ type: 'step-deleted', step_id: 'tap_y', assertion_policy: 'none' }) });
+    ws._fn({ data: JSON.stringify({ type: 'value-edited', step_id: 'type_z', new_value: 'v' }) });
+    ws._fn({ data: JSON.stringify({ type: 'assertion-text-edited', assertion_id: 'a9', new_nl_text: 't' }) });
+    expect(calls).toEqual([['r', 'tap_x'], ['d', 'tap_y'], ['v', 'type_z'], ['a', 'a9']]);
+  });
+});

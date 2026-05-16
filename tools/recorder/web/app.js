@@ -159,6 +159,10 @@
     const onAssertionScreenshotReady = opts.onAssertionScreenshotReady || null;
     const onAssertionScreenshotError = opts.onAssertionScreenshotError || null;
     const onAssertionAdded = opts.onAssertionAdded || null;
+    const onStepRenamed = opts.onStepRenamed || null;
+    const onStepDeleted = opts.onStepDeleted || null;
+    const onValueEdited = opts.onValueEdited || null;
+    const onAssertionTextEdited = opts.onAssertionTextEdited || null;
     const Ctor = opts.WebSocketCtor || root.WebSocket;
     if (!Ctor) {
       throw new Error('attachWsClient: no WebSocket constructor available');
@@ -188,6 +192,10 @@
         onAssertionAdded(payload.assertion);
         return;
       }
+      if (payload.type === 'step-renamed' && typeof onStepRenamed === 'function') { onStepRenamed(payload); return; }
+      if (payload.type === 'step-deleted' && typeof onStepDeleted === 'function') { onStepDeleted(payload); return; }
+      if (payload.type === 'value-edited' && typeof onValueEdited === 'function') { onValueEdited(payload); return; }
+      if (payload.type === 'assertion-text-edited' && typeof onAssertionTextEdited === 'function') { onAssertionTextEdited(payload); return; }
     });
     return ws;
   }
@@ -536,6 +544,53 @@
     });
   }
 
+  function applyStepRenamed(doc, p) {
+    const li = doc.querySelector('[data-step-id="' + p.step_id + '"]');
+    if (!li) return;
+    const span = li.querySelector('.step-target') || li.querySelector('.step-action');
+    if (span) span.textContent = p.new_display_name;
+  }
+
+  function applyValueEdited(doc, p) {
+    const li = doc.querySelector('[data-step-id="' + p.step_id + '"]');
+    if (!li) return;
+    const span = li.querySelector('.step-value');
+    if (span) span.textContent = '"' + p.new_value + '"';
+  }
+
+  function applyAssertionTextEdited(doc, p) {
+    const li = doc.querySelector('[data-assertion-id="' + p.assertion_id + '"]');
+    if (!li) return;
+    const span = li.querySelector('.assertion-text');
+    if (span) span.textContent = p.new_nl_text;
+  }
+
+  function applyStepDeleted(doc, p) {
+    const list = doc.getElementById('step-list');
+    if (!list) return;
+    const li = list.querySelector('[data-step-id="' + p.step_id + '"]');
+    if (!li) return;
+    const anchored = [].slice.call(list.querySelectorAll('.assertion-row[data-anchor-step-id="' + p.step_id + '"]'));
+    if (p.assertion_policy === 'cascade') {
+      anchored.forEach(function (a) { if (a.parentNode) a.parentNode.removeChild(a); });
+    } else if (p.assertion_policy === 'reanchor' && anchored.length > 0) {
+      const steps = [].slice.call(list.querySelectorAll('li.step-row'));
+      const pos = steps.indexOf(li);
+      const target = (pos > 0 ? steps[pos - 1] : null) || (pos + 1 < steps.length ? steps[pos + 1] : null);
+      if (target) {
+        const targetId = target.getAttribute('data-step-id');
+        anchored.forEach(function (a) {
+          a.setAttribute('data-anchor-step-id', targetId);
+          if (target.nextSibling) list.insertBefore(a, target.nextSibling);
+          else list.appendChild(a);
+        });
+      } else {
+        anchored.forEach(function (a) { if (a.parentNode) a.parentNode.removeChild(a); });
+      }
+    }
+    if (li.parentNode) li.parentNode.removeChild(li);
+  }
+
   // Expose to the browser global.
   root.renderStepRow = renderStepRow;
   root.appendStep = appendStep;
@@ -544,6 +599,10 @@
   root.renderAssertionModal = renderAssertionModal;
   root.appendAssertionRow = appendAssertionRow;
   root.attachEditAffordances = attachEditAffordances;
+  root.applyStepRenamed = applyStepRenamed;
+  root.applyValueEdited = applyValueEdited;
+  root.applyAssertionTextEdited = applyAssertionTextEdited;
+  root.applyStepDeleted = applyStepDeleted;
 
   // Expose to CommonJS (jest).
   if (typeof module !== 'undefined' && module.exports) {
@@ -555,6 +614,10 @@
       renderAssertionModal: renderAssertionModal,
       appendAssertionRow: appendAssertionRow,
       attachEditAffordances: attachEditAffordances,
+      applyStepRenamed: applyStepRenamed,
+      applyValueEdited: applyValueEdited,
+      applyAssertionTextEdited: applyAssertionTextEdited,
+      applyStepDeleted: applyStepDeleted,
     };
   }
 
@@ -595,6 +658,10 @@
         },
         onAssertionScreenshotError: onAssertionError,
         onAssertionAdded: appendAssertionRow,
+        onStepRenamed: function (p) { applyStepRenamed(document, p); },
+        onStepDeleted: function (p) { applyStepDeleted(document, p); },
+        onValueEdited: function (p) { applyValueEdited(document, p); },
+        onAssertionTextEdited: function (p) { applyAssertionTextEdited(document, p); },
       });
 
       wireButtons({
@@ -607,6 +674,7 @@
         },
         onAssertionScreenshotError: onAssertionError,
       });
+      attachEditAffordances({ document: document, sendWs: function (msg) { ws.send(JSON.stringify(msg)); } });
     } catch (_err) {
       // Swallow connection setup errors — the GUI will still render manually-
       // appended rows.
