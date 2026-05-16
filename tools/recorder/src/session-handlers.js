@@ -67,4 +67,34 @@ function handleCancelAssertion({ store, msg }) {
   store.deleteAssertScreenshot(msg.assertion_id);
 }
 
-module.exports = { handleSaveMessage, handleCancelMessage, handleRequestAssertionScreenshot, handleSaveAssertion, handleCancelAssertion };
+function _nonEmpty(s) {
+  return typeof s === 'string' && s.trim().length > 0;
+}
+
+const _DELETE_POLICIES = ['none', 'reanchor', 'cascade'];
+
+function handleRenameStep({ store, broadcast, msg }) {
+  if (!_nonEmpty(msg && msg.step_id) || !_nonEmpty(msg && msg.new_display_name)) return;
+  store.appendEdit({ op: 'rename', target_step_id: msg.step_id, new_display_name: msg.new_display_name, ts: new Date().toISOString() });
+  broadcast({ type: 'step-renamed', step_id: msg.step_id, new_display_name: msg.new_display_name });
+}
+
+function handleEditValue({ store, broadcast, msg }) {
+  if (!_nonEmpty(msg && msg.step_id) || !_nonEmpty(msg && msg.new_value)) return;
+  store.appendEdit({ op: 'edit-value', target_step_id: msg.step_id, new_value: msg.new_value, ts: new Date().toISOString() });
+  broadcast({ type: 'value-edited', step_id: msg.step_id, new_value: msg.new_value });
+}
+
+function handleEditAssertionText({ store, broadcast, msg }) {
+  if (!_nonEmpty(msg && msg.assertion_id) || !_nonEmpty(msg && msg.new_nl_text)) return;
+  store.appendEdit({ op: 'edit-assertion-text', target_assertion_id: msg.assertion_id, new_nl_text: msg.new_nl_text, ts: new Date().toISOString() });
+  broadcast({ type: 'assertion-text-edited', assertion_id: msg.assertion_id, new_nl_text: msg.new_nl_text });
+}
+
+function handleDeleteStep({ store, broadcast, msg }) {
+  if (!_nonEmpty(msg && msg.step_id) || !_DELETE_POLICIES.includes(msg && msg.assertion_policy)) return;
+  store.appendEdit({ op: 'delete', target_step_id: msg.step_id, assertion_policy: msg.assertion_policy, ts: new Date().toISOString() });
+  broadcast({ type: 'step-deleted', step_id: msg.step_id, assertion_policy: msg.assertion_policy });
+}
+
+module.exports = { handleSaveMessage, handleCancelMessage, handleRequestAssertionScreenshot, handleSaveAssertion, handleCancelAssertion, handleRenameStep, handleEditValue, handleEditAssertionText, handleDeleteStep };
