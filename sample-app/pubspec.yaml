@@ -1,0 +1,25 @@
+name: sample_shop
+description: "Sample Shop — deterministic Flutter e-commerce fixture for mobile-automator (PRD #44)."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.9.0 <4.0.0'
+  flutter: '>=3.35.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.2
+  permission_handler: ^11.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/data/products.json
+    - assets/data/categories.json
