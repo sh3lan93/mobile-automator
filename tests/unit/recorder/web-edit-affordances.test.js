@@ -32,12 +32,12 @@ describe('"⋯" menu rendering & per-row-type filtering', () => {
     expect(items).toEqual(['rename', 'delete']);
   });
 
-  test('opening the menu on a type step also shows Edit value', () => {
+  test('type step menu is Delete + Edit value (no Rename — slug derives from field)', () => {
     app.appendStep({ id: 'type_email', index: 1, action: 'type', value: 'a@b', field_label: 'Email' });
     app.attachEditAffordances({ document, sendWs: jest.fn() });
     document.querySelector('[data-step-id="type_email"] button.step-menu').click();
     const items = [...document.querySelectorAll('.step-menu-popover .menu-item')].map((b) => b.getAttribute('data-edit-action'));
-    expect(items).toEqual(['rename', 'delete', 'edit-value']);
+    expect(items).toEqual(['delete', 'edit-value']);
   });
 
   test('assertion row menu shows Edit text only (no reorder/insert/type-change anywhere)', () => {
@@ -234,6 +234,22 @@ describe('confirmation display-effect', () => {
     expect(a).not.toBeNull();
     expect(a.getAttribute('data-anchor-step-id')).toBe('tap_a');
     expect(document.querySelector('[data-step-id="tap_b"]')).toBeNull();
+  });
+
+  test('applyStepDeleted reanchor preserves relative order of multiple assertions', () => {
+    app.appendStep({ id: 'tap_a', index: 1, action: 'tap', target: '"A"' });
+    app.appendStep({ id: 'tap_b', index: 2, action: 'tap', target: '"B"' });
+    app.appendAssertionRow({ id: 'a1', nl_text: 'first', anchor_step_id: 'tap_b' });
+    app.appendAssertionRow({ id: 'a2', nl_text: 'second', anchor_step_id: 'tap_b' });
+    const before = [...document.querySelectorAll('.assertion-row')].map((r) => r.getAttribute('data-assertion-id'));
+    app.applyStepDeleted(document, { step_id: 'tap_b', assertion_policy: 'reanchor' });
+    const after = [...document.querySelectorAll('.assertion-row')].map((r) => r.getAttribute('data-assertion-id'));
+    // The move must not reorder the assertions relative to each other.
+    expect(after).toEqual(before);
+    expect(after).toHaveLength(2);
+    after.forEach((id) => {
+      expect(document.querySelector('[data-assertion-id="' + id + '"]').getAttribute('data-anchor-step-id')).toBe('tap_a');
+    });
   });
 
   test('attachWsClient routes the 4 confirmations to their handlers', () => {

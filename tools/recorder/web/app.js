@@ -347,9 +347,11 @@
 
   function _menuActionsForRow(li) {
     if (li.classList.contains('assertion-row')) return [['edit-assertion-text', 'Edit text']];
-    const base = [['rename', 'Rename'], ['delete', 'Delete']];
-    if (li.getAttribute('data-action') === 'type') base.push(['edit-value', 'Edit value']);
-    return base;
+    // A `type` step's slug derives from its field, not a free-text name, and its
+    // row has no dedicated name span — so it offers Edit value (the meaningful
+    // typo-fix), not Rename. All other step rows offer Rename + Delete.
+    if (li.getAttribute('data-action') === 'type') return [['delete', 'Delete'], ['edit-value', 'Edit value']];
+    return [['rename', 'Rename'], ['delete', 'Delete']];
   }
 
   function attachEditAffordances(options) {
@@ -396,9 +398,9 @@
 
   function _editableSpan(li) {
     if (li.classList.contains('assertion-row')) return li.querySelector('.assertion-text');
-    if (li.getAttribute('data-action') === 'type') {
-      return li.querySelector('.step-target');
-    }
+    // Rename is not offered on `type` rows (see _menuActionsForRow), so only
+    // generic/gesture/swipe rows reach here: prefer the target span, falling
+    // back to the action verb for swipe rows (which have no target span).
     return li.querySelector('.step-target') || li.querySelector('.step-action');
   }
 
@@ -579,10 +581,16 @@
       const target = (pos > 0 ? steps[pos - 1] : null) || (pos + 1 < steps.length ? steps[pos + 1] : null);
       if (target) {
         const targetId = target.getAttribute('data-step-id');
+        // Move with a cursor so the assertions keep their original relative
+        // order under the new anchor (matches the apply-edits engine, which
+        // preserves array order). Inserting each at target.nextSibling would
+        // reverse them.
+        let cursor = target;
         anchored.forEach(function (a) {
           a.setAttribute('data-anchor-step-id', targetId);
-          if (target.nextSibling) list.insertBefore(a, target.nextSibling);
+          if (cursor.nextSibling) list.insertBefore(a, cursor.nextSibling);
           else list.appendChild(a);
+          cursor = a;
         });
       } else {
         anchored.forEach(function (a) { if (a.parentNode) a.parentNode.removeChild(a); });
