@@ -14,7 +14,7 @@ You inherit the rules of the generator skill by reference. **Do not re-decide as
 
 ## Persona: Mobile QA Synthesizer
 - **Faithful to the recording:** Translate exactly what the sidecar captured — no extra steps, no inferred user intent beyond what events express.
-- **Edit-aware:** The user may have renamed steps, deleted events, reordered, or annotated assertions during the recording session. Apply edits in chronological order before reasoning about the effective event list.
+- **Edit-aware:** During recording the user may have renamed a step, deleted a step, edited a typed value, or edited an assertion's text. Apply edits in chronological order to derive the effective event and assertion lists before any other reasoning.
 - **Schema-driven:** Every emitted scenario must validate against the v2.0 schema. If you cannot produce a valid scenario, halt and report what blocked synthesis.
 
 ## Tech Stack & Environment
@@ -46,7 +46,7 @@ mobile-automator/.recorder/<scenario_id>/
 **Read order:**
 1. `metadata.json` first — gives you `scenario_id`, `app_version`, `environment`, `started_at`, `app_package`, recording mode.
 2. `events.jsonl` — primary timeline; each line is `{seq, timestamp_ms, kind, target_hint, value?, screenshot_ref, hierarchy_ref, ...}`.
-3. `edits.jsonl` — user mutations: `{seq, timestamp_ms, op: "rename" | "delete" | "reorder" | "annotate", target_seq, payload}`.
+3. `edits.jsonl` — append-only user edits, one JSON object per line. Canonical record: `{op, target_step_id | target_assertion_id, op-specific fields, ts}` where `op` is one of `rename | delete | edit-value | edit-assertion-text` and `ts` is an ISO-8601 timestamp. Apply edits in `ts` chronological order.
 4. `assertions.json` — array of natural-language assertions added by the user during recording. Each entry has `{ id, nl_text, screenshot, anchor_step_id, captured_at }`. The AI classifies the NL text in step 8. Handle the empty case gracefully.
 
 If any required file is **missing or unreadable**, HALT and report which file is missing. Do not attempt to synthesize a partial scenario.
@@ -57,28 +57,30 @@ Apply these steps in order. Most rules referenced here are defined in the genera
 
 1. **Load metadata.** Read `metadata.json` and use it to populate the scenario's top-level metadata block (`app_version`, `environment`). Do NOT include `device_model`, `api_level`, or `timestamp` in scenario metadata — those belong in result reports, not scenarios.
 
-2. **Reconcile edits.** Read `events.jsonl` and `edits.jsonl` into memory. Apply edits in `timestamp_ms` order to derive the **effective event list**:
-   - `rename` → update the target event's `display_name`.
-   - `delete` → remove the target event from the effective list.
-   - `reorder` → move the target event to its new position.
-   - `annotate` → attach the annotation payload to the target event for later use in `expected_state`.
+2. **Reconcile edits.** Read `events.jsonl`, `assertions.json`, and `edits.jsonl` into memory. Apply edits in `ts` chronological order to derive the **effective event list** and **effective assertion list**. Resolve every target by the capture-time `step_id` slug (or `assertion_id`) — never by integer position:
+   - `rename` → set the target step's effective `display_name` to `new_display_name`. The `step_id` itself is re-derived in step 5 from this new display name.
+   - `delete` → remove the target step from the effective event list, then resolve its anchored assertions by `assertion_policy`: `none` → nothing; `cascade` → those assertions are not emitted; `reanchor` → re-point them to the **previous surviving step**; if the deleted step was the first (no previous surviving step), re-point to the **next surviving step**; if no step survives at all, drop those assertions and report it.
+   - `edit-value` → set the target `type` step's effective typed value to `new_value`.
+   - `edit-assertion-text` → set the target assertion's effective `nl_text` to `new_nl_text` (consumed before classification in step 8).
+   - Any unrecognized `op` → ignore it and report it (forward-compatible with future slices).
+   - Replay semantics: a later edit on the same target supersedes an earlier one; an edit targeting an already-deleted or already-cascaded entity is a silent no-op; re-anchor and rename resolve against the effective list at that edit's position in the chronological replay, not the original capture. If a line in `edits.jsonl` is not valid JSON (e.g. a partial trailing line from an interrupted write), skip that line and report it — do not halt synthesis for one unparseable edit.
 
 3. **Resolve element identity.** For each effective event, locate the hierarchy snapshot in `hierarchy/` whose padded-millis filename is the **most recent** at or before the event's `timestamp_ms`. Use `target_hint` from the event plus this snapshot to confirm the element. If the event's `display_name` is missing or marked `is_unnamed: true`, use AI vision over the event's screenshot (referenced by `screenshot_ref`) to suggest a concise descriptive name (e.g., "Login button", "Email input"). Never invent a target that has no evidence in the hierarchy snapshot.
 
 4. **Map events to schema actions.** For each effective event, use the **Step Translation Guide** in `.gemini/skills/mobile-automator-generator/SKILL.md` to map the event `kind` to a schema action type (`tap`, `type`, `swipe`, `press_button`, `launch_app`, `open_url`, `long_press`, `double_tap`, `scroll_to_element`, `clear_app_data`, etc.). Do not invent action types — only emit values that appear in the generator skill's translation guide.
 
-5. **Generate step IDs.** For each step, derive a snake_case `step_id` from `<action>_<short_target>` (e.g., `tap_login`, `type_email`, `swipe_carousel_left`). Ensure IDs are unique within the scenario; if a collision occurs, suffix with `_2`, `_3`, etc.
+5. **Generate step IDs.** For each effective step, derive a snake_case `step_id` from `<action>_<short_target>` (e.g., `tap_login`, `type_email`, `swipe_carousel_left`). A renamed step's effective `display_name` feeds this derivation, so a rename naturally produces a new `step_id` at Save. Ensure IDs are unique within the scenario; if a collision occurs (including two capture-time same-named steps), suffix with `_2`, `_3`, etc.
 
 6. **Insert loading waits.** Between any two consecutive effective events, scan the hierarchy snapshots that fall in the gap. If snapshots in that interval contain elements whose class or text matches `{{loading_indicators}}` continuously for ≥300ms, insert a `wait_for_loading_complete` step before the second event. This mirrors the generator skill's loading-wait policy — see Section "Detecting and Encoding Patterns" in the generator skill for the canonical rule.
 
 7. **Apply auto-assertion rule.** After every state-changing action (`tap`, `type` on submit-style inputs, `press_button`), automatically emit a `visual_state: "loaded"` or `element_exists` assertion for the resulting screen, marked `[auto-generated]` in its `description`. The full rule lives in the generator skill at Section "Auto-Assertion Rule" — do not re-derive it here.
 
-8. **Classify user assertions.** Each entry in `assertions.json` has shape `{ id, nl_text, screenshot, anchor_step_id, captured_at }` — the user provided natural language, not a pre-typed assertion. For each entry:
+8. **Classify user assertions.** Each entry in `assertions.json` has shape `{ id, nl_text, screenshot, anchor_step_id, captured_at }`. First apply any `edit-assertion-text` edit so `nl_text` reflects the user's correction, then classify — the user provided natural language, not a pre-typed assertion. For each entry:
    1. Apply the generator skill's **Two-Pass Semantic Intent Model** (see cross-reference below). Pass 1 always classifies as Assertion here — the recorder GUI already separated actions from assertions. Run Pass 2 to select the best-fit type from the **Assertion Type Decision Table** (see cross-reference).
    2. Emit the typed assertion with the correct fields for the selected type.
    3. **For visual assertion types** (`screenshot_match`, `visual_state`, `element_fully_visible`, `color_style`) — populate `reference_screenshot` with the path `mobile-automator/screenshots/<scenario_id>/assert_<id>.png`. This is the screenshot the executor will use for image comparison at replay time.
    4. **For non-visual types** — do NOT include `reference_screenshot`. The PNG is preserved in the screenshots directory as evidence but is not referenced in the assertion.
-   5. Anchor the assertion via `after_step: <anchor_step_id>` from the entry. Validate that `anchor_step_id` matches a step ID in the effective event list; if it does not (e.g., the anchored step was deleted by a user edit), drop the assertion and report it.
+   5. Resolve the assertion's effective `anchor_step_id` through edit reconciliation (honoring `reanchor` moves and the rename ⇒ new-slug derivation), then anchor it via `after_step: <resolved_step_id>`. If after reconciliation the anchor still matches no step in the effective event list (e.g., it was cascade-deleted or genuinely orphaned), drop the assertion and report it.
 
    If `assertions.json` is empty, emit `"assertions": []` — this is a valid scenario.
 
