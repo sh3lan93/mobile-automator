@@ -56,3 +56,74 @@ describe('"⋯" menu rendering & per-row-type filtering', () => {
     expect(li.getAttribute('data-anchor-step-id')).toBe('tap_login');
   });
 });
+
+describe('inline editors send the correct WS message', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="modal-root"></div><ul id="step-list"></ul>';
+  });
+
+  function openMenuAndClick(selectorRoot, action) {
+    document.querySelector(selectorRoot + ' button.step-menu').click();
+    [...document.querySelectorAll('.step-menu-popover .menu-item')]
+      .find((b) => b.getAttribute('data-edit-action') === action).click();
+  }
+
+  test('rename: commit with Enter sends rename-step', () => {
+    const sendWs = jest.fn();
+    app.appendStep({ id: 'tap_login', index: 1, action: 'tap', target: '"Login"' });
+    app.attachEditAffordances({ document, sendWs });
+    openMenuAndClick('[data-step-id="tap_login"]', 'rename');
+    const input = document.querySelector('[data-step-id="tap_login"] input.inline-edit');
+    expect(input).not.toBeNull();
+    input.value = 'Tap the Login button';
+    input.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(sendWs).toHaveBeenCalledWith({ type: 'rename-step', step_id: 'tap_login', new_display_name: 'Tap the Login button' });
+  });
+
+  test('rename: Escape cancels — no WS, input removed', () => {
+    const sendWs = jest.fn();
+    app.appendStep({ id: 'tap_login', index: 1, action: 'tap', target: '"Login"' });
+    app.attachEditAffordances({ document, sendWs });
+    openMenuAndClick('[data-step-id="tap_login"]', 'rename');
+    const input = document.querySelector('[data-step-id="tap_login"] input.inline-edit');
+    input.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(sendWs).not.toHaveBeenCalled();
+    expect(document.querySelector('[data-step-id="tap_login"] input.inline-edit')).toBeNull();
+  });
+
+  test('edit-value on type step sends edit-value', () => {
+    const sendWs = jest.fn();
+    app.appendStep({ id: 'type_email', index: 1, action: 'type', value: 'usr@acme', field_label: 'Email' });
+    app.attachEditAffordances({ document, sendWs });
+    openMenuAndClick('[data-step-id="type_email"]', 'edit-value');
+    const input = document.querySelector('[data-step-id="type_email"] input.inline-edit');
+    expect(input.value).toBe('usr@acme');
+    input.value = 'user@acme.io';
+    input.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(sendWs).toHaveBeenCalledWith({ type: 'edit-value', step_id: 'type_email', new_value: 'user@acme.io' });
+  });
+
+  test('edit-assertion-text sends edit-assertion-text', () => {
+    const sendWs = jest.fn();
+    app.appendStep({ id: 'tap_login', index: 1, action: 'tap', target: '"Login"' });
+    app.appendAssertionRow({ id: 'a1', nl_text: 'old text', anchor_step_id: 'tap_login' });
+    app.attachEditAffordances({ document, sendWs });
+    openMenuAndClick('[data-assertion-id="a1"]', 'edit-assertion-text');
+    const input = document.querySelector('[data-assertion-id="a1"] input.inline-edit');
+    expect(input.value).toBe('old text');
+    input.value = 'new text';
+    input.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(sendWs).toHaveBeenCalledWith({ type: 'edit-assertion-text', assertion_id: 'a1', new_nl_text: 'new text' });
+  });
+
+  test('blank commit is ignored (no WS)', () => {
+    const sendWs = jest.fn();
+    app.appendStep({ id: 'tap_login', index: 1, action: 'tap', target: '"Login"' });
+    app.attachEditAffordances({ document, sendWs });
+    openMenuAndClick('[data-step-id="tap_login"]', 'rename');
+    const input = document.querySelector('[data-step-id="tap_login"] input.inline-edit');
+    input.value = '   ';
+    input.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(sendWs).not.toHaveBeenCalled();
+  });
+});

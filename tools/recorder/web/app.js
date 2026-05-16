@@ -386,7 +386,73 @@
     });
   }
 
-  function _dispatchEditAction(doc, li, action, sendWs) { /* rename/edit-value/edit-assertion-text: Task 5; delete: Task 6 */ }
+  function _editableSpan(li) {
+    if (li.classList.contains('assertion-row')) return li.querySelector('.assertion-text');
+    if (li.getAttribute('data-action') === 'type') {
+      return li.querySelector('.step-target');
+    }
+    return li.querySelector('.step-target') || li.querySelector('.step-action');
+  }
+
+  function _beginInlineEdit(doc, li, span, currentValue, onCommit) {
+    if (!span) return;
+    const input = doc.createElement('input');
+    input.type = 'text';
+    input.className = 'inline-edit';
+    input.value = currentValue == null ? '' : String(currentValue);
+    const prevDisplay = span.style.display;
+    span.style.display = 'none';
+    span.parentNode.insertBefore(input, span.nextSibling);
+    let done = false;
+    function cleanup() {
+      if (input.parentNode) input.parentNode.removeChild(input);
+      span.style.display = prevDisplay;
+    }
+    function commit() {
+      if (done) return;
+      done = true;
+      const v = input.value.trim();
+      cleanup();
+      if (v.length > 0) onCommit(v);
+    }
+    function cancel() {
+      if (done) return;
+      done = true;
+      cleanup();
+    }
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); commit(); }
+      else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+    });
+    input.addEventListener('blur', commit);
+    setTimeout(function () { input.focus(); }, 0);
+  }
+
+  function _dispatchEditAction(doc, li, action, sendWs) {
+    if (action === 'rename') {
+      const span = _editableSpan(li);
+      const stepId = li.getAttribute('data-step-id');
+      _beginInlineEdit(doc, li, span, span ? span.textContent.replace(/^"|"$/g, '') : '', function (v) {
+        sendWs({ type: 'rename-step', step_id: stepId, new_display_name: v });
+      });
+    } else if (action === 'edit-value') {
+      const span = li.querySelector('.step-value');
+      const stepId = li.getAttribute('data-step-id');
+      _beginInlineEdit(doc, li, span, span ? span.textContent.replace(/^"|"$/g, '') : '', function (v) {
+        sendWs({ type: 'edit-value', step_id: stepId, new_value: v });
+      });
+    } else if (action === 'edit-assertion-text') {
+      const span = li.querySelector('.assertion-text');
+      const aid = li.getAttribute('data-assertion-id');
+      _beginInlineEdit(doc, li, span, span ? span.textContent : '', function (v) {
+        sendWs({ type: 'edit-assertion-text', assertion_id: aid, new_nl_text: v });
+      });
+    } else if (action === 'delete') {
+      _beginDelete(doc, li, sendWs);
+    }
+  }
+
+  function _beginDelete(doc, li, sendWs) { /* Task 6 */ }
 
   // Expose to the browser global.
   root.renderStepRow = renderStepRow;
