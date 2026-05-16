@@ -374,7 +374,7 @@
     if (action === 'swipe') return [['delete', 'Delete']];
     // A `tap` row in agnostic mode gets the additional Mark as dismiss_keyboard item.
     if (action === 'tap') {
-      var items = [['rename', 'Rename'], ['delete', 'Delete']];
+      const items = [['rename', 'Rename'], ['delete', 'Delete']];
       if (_mode === 'platform-agnostic') {
         items.push(['mark-as-semantic', 'Mark as dismiss_keyboard']);
       }
@@ -488,7 +488,7 @@
         sendWs({ type: 'edit-assertion-text', assertion_id: aid, new_nl_text: v });
       });
     } else if (action === 'mark-as-semantic') {
-      var stepId = li.getAttribute('data-step-id');
+      const stepId = li.getAttribute('data-step-id');
       sendWs({ type: 'mark-as-semantic', step_id: stepId, semantic_action: 'dismiss_keyboard' });
     } else if (action === 'delete') {
       _beginDelete(doc, li, sendWs);
@@ -580,10 +580,10 @@
   }
 
   function applyStepMarkedSemantic(doc, p) {
-    var li = doc.querySelector('[data-step-id="' + p.step_id + '"]');
+    const li = doc.querySelector('[data-step-id="' + p.step_id + '"]');
     if (!li) return;
     li.setAttribute('data-action', p.semantic_action);
-    var span = li.querySelector('.step-action');
+    const span = li.querySelector('.step-action');
     if (span) span.textContent = p.semantic_action;
   }
 

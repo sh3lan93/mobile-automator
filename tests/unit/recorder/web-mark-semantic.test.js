@@ -75,6 +75,32 @@ describe('Mark as dismiss_keyboard — agnostic mode', () => {
     expect(typeActions).not.toContain('mark-as-semantic');
   });
 
+  test('agnostic mode: long_press, double_tap, press_button rows do NOT expose mark-as-semantic', () => {
+    app._setMode('platform-agnostic');
+    app.appendStep({ id: 'lp_1', index: 1, action: 'long_press', target: '"Icon"' });
+    app.appendStep({ id: 'dt_1', index: 2, action: 'double_tap', target: '"Logo"' });
+    app.appendStep({ id: 'pb_1', index: 3, action: 'press_button', target: '"OK"' });
+    app.attachEditAffordances({ document, sendWs: jest.fn() });
+
+    const lpActions = openMenuActions('[data-step-id="lp_1"]');
+    expect(lpActions).not.toContain('mark-as-semantic');
+    expect(lpActions).toEqual(['rename', 'delete']);
+
+    const open1 = document.querySelector('.step-menu-popover');
+    if (open1 && open1.parentNode) open1.parentNode.removeChild(open1);
+
+    const dtActions = openMenuActions('[data-step-id="dt_1"]');
+    expect(dtActions).not.toContain('mark-as-semantic');
+    expect(dtActions).toEqual(['rename', 'delete']);
+
+    const open2 = document.querySelector('.step-menu-popover');
+    if (open2 && open2.parentNode) open2.parentNode.removeChild(open2);
+
+    const pbActions = openMenuActions('[data-step-id="pb_1"]');
+    expect(pbActions).not.toContain('mark-as-semantic');
+    expect(pbActions).toEqual(['rename', 'delete']);
+  });
+
   test('agnostic mode: clicking mark-as-semantic sends correct WS message', () => {
     app._setMode('platform-agnostic');
     const sendWs = jest.fn();
