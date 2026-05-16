@@ -40,6 +40,14 @@ describe('"⋯" menu rendering & per-row-type filtering', () => {
     expect(items).toEqual(['delete', 'edit-value']);
   });
 
+  test('swipe step menu is Delete only (no Rename — row has no name span)', () => {
+    app.appendStep({ id: 'swipe_left', index: 1, action: 'swipe', direction: 'left' });
+    app.attachEditAffordances({ document, sendWs: jest.fn() });
+    document.querySelector('[data-step-id="swipe_left"] button.step-menu').click();
+    const items = [...document.querySelectorAll('.step-menu-popover .menu-item')].map((b) => b.getAttribute('data-edit-action'));
+    expect(items).toEqual(['delete']);
+  });
+
   test('assertion row menu shows Edit text only (no reorder/insert/type-change anywhere)', () => {
     app.appendStep({ id: 'tap_login', index: 1, action: 'tap', target: '"Login"' });
     app.appendAssertionRow({ id: 'a1', nl_text: 'Shown', anchor_step_id: 'tap_login' });

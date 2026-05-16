@@ -347,10 +347,15 @@
 
   function _menuActionsForRow(li) {
     if (li.classList.contains('assertion-row')) return [['edit-assertion-text', 'Edit text']];
-    // A `type` step's slug derives from its field, not a free-text name, and its
-    // row has no dedicated name span — so it offers Edit value (the meaningful
-    // typo-fix), not Rename. All other step rows offer Rename + Delete.
-    if (li.getAttribute('data-action') === 'type') return [['delete', 'Delete'], ['edit-value', 'Edit value']];
+    const action = li.getAttribute('data-action');
+    // A `type` step's slug derives from its field, not a free-text name, and
+    // its row has no dedicated name span — so it offers Edit value (the
+    // meaningful typo-fix), not Rename.
+    if (action === 'type') return [['delete', 'Delete'], ['edit-value', 'Edit value']];
+    // A `swipe` row has no target/name span (renders "Swipe <direction>"), so
+    // Rename has nothing sensible to edit — Delete only, same rationale as type.
+    if (action === 'swipe') return [['delete', 'Delete']];
+    // tap / long_press / double_tap / press_button rows have a target span.
     return [['rename', 'Rename'], ['delete', 'Delete']];
   }
 
