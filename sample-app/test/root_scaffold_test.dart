@@ -1,14 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:sample_shop/data/product_repository.dart';
 import 'package:sample_shop/state/cart_model.dart';
+import 'package:sample_shop/state/favorites_model.dart';
 import 'package:sample_shop/ui/root_scaffold.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   testWidgets('tabs switch via bottom nav; cart icon present', (tester) async {
+    final repo = ProductRepository();
+    await repo.load();
     await tester.pumpWidget(
-      ChangeNotifierProvider(
-        create: (_) => CartModel(),
+      MultiProvider(
+        providers: [
+          Provider<ProductRepository>.value(value: repo),
+          ChangeNotifierProvider(create: (_) => CartModel()),
+          ChangeNotifierProvider(create: (_) => FavoritesModel()),
+        ],
         child: const MaterialApp(home: RootScaffold()),
       ),
     );
