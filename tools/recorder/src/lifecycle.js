@@ -11,6 +11,7 @@ const { isInKeyboardRegion, keyAtCoordinate } = require('./capture/keyboard-regi
 const { TypeBuffer } = require('./coalesce/type-buffer');
 const { GeteventStreamParser } = require('./capture/adb-getevent');
 const { loadProjectConfig, resolveModeAndDefaults } = require('./config');
+const { reinterpret } = require('./coalesce/semantic-reinterpreter');
 
 function snakeCase(s) {
   return String(s || '')
@@ -44,7 +45,7 @@ async function runScriptedSession({ projectRoot, scenarioId, script }) {
   const typeBuffer = new TypeBuffer({
     emit: (e) => {
       const stepId = `type_${snakeCase(e.field_label || e.field_id)}`.slice(0, 60);
-      pending.push({ ...e, step_id: stepId });
+      pending.push(reinterpret({ ...e, step_id: stepId }, null, mode));
     },
     silenceTimeoutMs: 9999,
   });
@@ -66,7 +67,7 @@ async function runScriptedSession({ projectRoot, scenarioId, script }) {
       }
       const resolved = snap ? resolveElement(snap, g.x || g.from?.[0], g.y || g.from?.[1]) : null;
       const stepId = resolved ? `${g.kind}_${resolved.display_name.replace(/\s+/g, '_').toLowerCase()}`.slice(0, 60) : `${g.kind}_unknown`;
-      pending.push({ ...g, target: resolved?.display_name, step_id: stepId });
+      pending.push(reinterpret({ ...g, target: resolved?.display_name, step_id: stepId }, snap, mode));
     },
   });
 
@@ -82,12 +83,12 @@ async function runScriptedSession({ projectRoot, scenarioId, script }) {
     const keyParser = new GeteventStreamParser({
       emit: (k) => {
         if (k.state !== 'up') return;
-        pending.push({
+        pending.push(reinterpret({
           kind: 'press_button',
           t: k.t,
           value: k.key,
           step_id: `press_button_${k.key.toLowerCase()}`.slice(0, 60),
-        });
+        }, null, mode));
       },
       tStart: 0,
     });
