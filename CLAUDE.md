@@ -69,6 +69,18 @@ PRD [#21](https://github.com/sh3lan93/mobile-automator/issues/21). The entire re
 - Agnostic-mode recorder is **skipped** during install; lands in slice [#29](https://github.com/sh3lan93/mobile-automator/issues/29).
 - The recorder skill synthesises scenario JSON from sidecar artifacts under `mobile-automator/.recorder/<session>/`. It defers to the generator skill for scenario shape — generator stays single source of truth.
 
+## Sample-app milestone workflow (mandatory for any agent)
+
+PRD [#44](https://github.com/sh3lan93/mobile-automator/issues/44) · milestone `sample-app` · slices #45–#49. **Any agent picking up a `sample-app`-milestone issue MUST follow this workflow in order — it is not optional:**
+
+1. **Load full context first.** Fetch the slice issue **and** PRD #44 together (`gh issue view <slice>` + `gh issue view 44`) before doing anything. Slice bodies are deliberately thin; the PRD holds the locked decisions, the slice ladder, and cross-slice constraints. Never act on a slice issue alone.
+2. **Isolate the workspace.** Before any edit, create a dedicated worktree on a new branch named `sample-app/<issue-number>-<short-slug>` (mirrors the recorder branch convention). Do not work directly in an existing checkout or on a shared branch.
+3. **Plan before code.** Produce a written implementation plan (file structure, deps, screen/widget tree, CI changes, test list) and surface it for explicit user approval. No implementation before the user confirms the plan.
+4. **Implement via subagents.** After plan approval, dispatch the implementation through subagents so the main agent's context window stays unbloated. The main agent orchestrates and reviews; it does not hand-write the bulk of the slice itself.
+5. **Open a draft PR.** When implementation is complete, open a GitHub PR in **draft** status with a full description (what/why, test plan). Put `Closes #<slice-issue>` on its own line with no intervening words; reference the PRD as `Refs #44` (never `Closes #44` — the PRD closes only when slice 5 merges).
+
+This workflow lives here (not in per-slice issue bodies) so it applies uniformly and survives issue edits.
+
 ## Schemas
 
 - Scenario: `templates/mobile-automator-generator/references/scenario_schema.json` (v2.1, 14 actions, 27 assertions, named string IDs, root-level `variables`/`preconditions`).
