@@ -48,15 +48,33 @@ describe('reinterpret (agnostic mode)', () => {
   test('Android permission Allow tap -> grant_permission', () => {
     const out = reinterpret({ kind: 'tap', target: 'Allow', x: 470, y: 1440, t: 30 }, ANDROID_PERM_SNAP, M);
     expect(out.kind).toBe('grant_permission');
+    expect(out.derived_from).toMatchObject({ kind: 'tap', target: 'Allow' });
   });
 
   test("Android permission Don't allow tap -> deny_permission", () => {
     const out = reinterpret({ kind: 'tap', target: "Don't allow", x: 190, y: 1440, t: 31 }, ANDROID_PERM_SNAP, M);
     expect(out.kind).toBe('deny_permission');
+    expect(out.derived_from).toMatchObject({ kind: 'tap', target: "Don't allow" });
   });
 
   test('iOS _UIAlertController Allow tap -> grant_permission', () => {
     const out = reinterpret({ kind: 'tap', target: 'Allow', x: 200, y: 530, t: 32 }, IOS_PERM_SNAP, M);
+    expect(out.kind).toBe('grant_permission');
+    expect(out.derived_from).toMatchObject({ kind: 'tap', target: 'Allow' });
+  });
+
+  test("iOS _UIAlertController Don't Allow tap -> deny_permission", () => {
+    const out = reinterpret({ kind: 'tap', target: "Don't Allow", x: 200, y: 600, t: 34 }, IOS_PERM_SNAP, M);
+    expect(out.kind).toBe('deny_permission');
+    expect(out.derived_from).toMatchObject({ kind: 'tap', target: "Don't Allow" });
+  });
+
+  test('Android systemui-package dialog Allow tap -> grant_permission', () => {
+    const snap = { elements: [
+      { type: 'android.widget.Button', bounds: [340, 1400, 600, 1480], text: 'Allow',
+        resource_id: 'com.android.systemui:id/permission_allow_button' },
+    ] };
+    const out = reinterpret({ kind: 'tap', target: 'Allow', x: 470, y: 1440, t: 35 }, snap, M);
     expect(out.kind).toBe('grant_permission');
   });
 

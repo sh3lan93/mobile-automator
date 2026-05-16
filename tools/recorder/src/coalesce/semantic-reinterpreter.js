@@ -1,15 +1,22 @@
 'use strict';
 
 // Edge-swipe threshold (px) for iOS Simulator back gesture (PRD #21 / #29).
+// Heuristic: only x is checked (not y, not velocity) — favours a false
+// press_back over missing a real back gesture; tune against real devices later.
 const EDGE_X_MAX = 16;
 
-// Label vocab kept in sync with templates/references/platform-resolutions.md.
+// Superset of the allow/deny labels in templates/references/platform-resolutions.md,
+// normalised to lowercase. Combined (not OS-partitioned) — the snapshot alone
+// does not reliably tell us the OS, and cross-matching is harmless here.
 const ALLOW_LABELS = [
   'allow', 'allow while using app', 'allow once', 'while using the app',
   'only this time', 'allow only while using the app', 'ok',
 ];
 const DENY_LABELS = ["don't allow", 'deny', 'cancel'];
 
+// Android system permission dialogs live in one of these packages (PRD #21 / #29).
+// permissioncontroller is the modern runtime-permission UI; systemui covers
+// older / OEM surfaces that still host the grant dialog.
 const ANDROID_PERM_RID_PREFIXES = [
   'com.android.permissioncontroller:',
   'com.android.systemui:',
@@ -31,6 +38,8 @@ function isIosAlertSnapshot(snapshot) {
   const els = (snapshot && snapshot.elements) || [];
   return els.some((e) => {
     const t = e && e.type ? String(e.type) : '';
+    // `=== ` is the documented SpringBoard shape; `endsWith` is a defensive
+    // hedge for unverified real-device type strings (heuristic, tune later).
     return t === '_UIAlertController' || t.endsWith('_UIAlertController');
   });
 }
