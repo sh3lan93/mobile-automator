@@ -97,4 +97,10 @@ function handleDeleteStep({ store, broadcast, msg }) {
   broadcast({ type: 'step-deleted', step_id: msg.step_id, assertion_policy: msg.assertion_policy });
 }
 
-module.exports = { handleSaveMessage, handleCancelMessage, handleRequestAssertionScreenshot, handleSaveAssertion, handleCancelAssertion, handleRenameStep, handleEditValue, handleEditAssertionText, handleDeleteStep };
+function handleMarkAsSemantic({ store, broadcast, msg }) {
+  if (!_nonEmpty(msg && msg.step_id) || !_nonEmpty(msg && msg.semantic_action)) return;
+  store.appendEdit({ op: 'mark-as-semantic', target_step_id: msg.step_id, semantic_action: msg.semantic_action, ts: new Date().toISOString() });
+  broadcast({ type: 'step-marked-semantic', step_id: msg.step_id, semantic_action: msg.semantic_action });
+}
+
+module.exports = { handleSaveMessage, handleCancelMessage, handleRequestAssertionScreenshot, handleSaveAssertion, handleCancelAssertion, handleRenameStep, handleEditValue, handleEditAssertionText, handleDeleteStep, handleMarkAsSemantic };
