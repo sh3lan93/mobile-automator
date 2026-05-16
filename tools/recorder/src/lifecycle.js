@@ -10,6 +10,7 @@ const { findFocusedField } = require('./capture/focus-detector');
 const { isInKeyboardRegion, keyAtCoordinate } = require('./capture/keyboard-region');
 const { TypeBuffer } = require('./coalesce/type-buffer');
 const { GeteventStreamParser } = require('./capture/adb-getevent');
+const { loadProjectConfig, resolveModeAndDefaults } = require('./config');
 
 function snakeCase(s) {
   return String(s || '')
@@ -20,8 +21,10 @@ function snakeCase(s) {
 }
 
 async function runScriptedSession({ projectRoot, scenarioId, script }) {
+  const cfg = resolveModeAndDefaults(loadProjectConfig(projectRoot));
+  const mode = cfg.mode;
   const store = new ArtifactsStore({ projectRoot, scenarioId });
-  store.init({ mode: 'platform-aware', scenario_id: scenarioId });
+  store.init({ mode, scenario_id: scenarioId });
 
   for (const snap of script.hierarchy_snapshots) {
     store.writeHierarchySnapshot(snap.t, snap);
