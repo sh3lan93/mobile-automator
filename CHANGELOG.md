@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 The `/mobile-automator:record` recorder feature is being built incrementally per [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21). Slices land here under `[Unreleased]` and are gated behind `MOBILE_AUTOMATOR_RECORDER=1` until the v0.12.0 graduation cut. Entries collapse into a single coherent v0.12.0 note when the feature graduates.
 
+### Recorder Slice #7 — Edit affordances: rename / delete / edit-value / edit-assertion-text (#28)
+
+- GUI: per-row "⋯" menu with type-filtered actions (Rename, Delete, Edit value on `type` steps, Edit text on assertion rows). No reorder / insert / type-change is ever surfaced.
+- GUI: inline editors (Enter/blur commit, Escape cancel); delete prompt — plain confirm with no anchored assertions, 3-option (re-anchor default / cascade / cancel) when assertions are anchored.
+- GUI: display-only mutation on server confirmation; `data-step-id` never rewritten client-side; `data-anchor-step-id` added to assertion rows.
+- Sidecar: `rename-step` / `delete-step` / `edit-value` / `edit-assertion-text` WS handlers append a canonical `edits.jsonl` record (`{op, target_step_id|target_assertion_id, …, ts}`); boundary validation rejects empty text and unknown policy.
+- Reconcile: new pure `apply-edits.js` engine — chronological replay deriving the effective event/assertion lists; the executable spec the aware recorder SKILL.md mirrors.
+- Skill (aware): step 2 rewritten for the 4 ops with cascade/reanchor (first-step ⇒ next-surviving fallback) and unparseable-line skip; steps 5 & 8 note rename ⇒ new slug and edit-text-before-classify; integer-position identity purged in favour of the `step_id` slug.
+- Tests: `apply-edits`, `session-handlers-edits`, `web-edit-affordances` unit suites + `edit-affordances-flow` integration; stale artifacts edit fixture aligned to the canonical shape.
+
 ### Recorder Slice #6 — Add Assertion modal + AI classification at Save (#27)
 
 - GUI: **Add Assertion** button in the recorder header (disabled until first step is captured).

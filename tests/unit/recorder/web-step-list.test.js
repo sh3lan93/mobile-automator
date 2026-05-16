@@ -19,7 +19,7 @@ describe('recorder GUI: step-list rendering', () => {
   });
 
   describe('renderStepRow', () => {
-    test('returns an <li> with data attributes and three child spans (no step-menu)', () => {
+    test('returns an <li> with data attributes, three child spans, and a step-menu button (slice #28)', () => {
       const li = app.renderStepRow({
         id: 'tap_login',
         index: 3,
@@ -45,8 +45,8 @@ describe('recorder GUI: step-list rendering', () => {
       expect(action.textContent).toBe('Tap');
       expect(target.textContent).toBe('"Login"');
 
-      // Per #22 AC the step-menu (edit affordances) is intentionally NOT rendered.
-      expect(li.querySelector('.step-menu')).toBeNull();
+      // Per #28 the always-visible step-menu (⋯) button is now rendered on every row.
+      expect(li.querySelector('button.step-menu')).not.toBeNull();
     });
 
     test('adds "unnamed" class when is_unnamed is true', () => {
@@ -86,7 +86,7 @@ describe('recorder GUI: step-list rendering', () => {
       expect(li.getAttribute('data-step-id')).toBe('type_email');
       expect(li.getAttribute('data-index')).toBe('4');
       expect(li.textContent).toMatch(
-        /^\s*\d+\.\s*Type\s*"test@example\.com"\s*into\s*"Email"\s*$/,
+        /^\s*\d+\.\s*Type\s*"test@example\.com"\s*into\s*"Email"\s*⋯\s*$/,
       );
     });
 
@@ -156,7 +156,7 @@ describe('recorder GUI: step-list rendering', () => {
       expect(li.getAttribute('data-step-id')).toBe('long_press_settings_icon');
       expect(li.getAttribute('data-action')).toBe('long_press');
       expect(li.textContent).toMatch(
-        /^\s*\d+\.\s*Long press\s*"Settings Icon"\s*$/,
+        /^\s*\d+\.\s*Long press\s*"Settings Icon"\s*⋯\s*$/,
       );
       const action = li.querySelector('.step-action');
       const target = li.querySelector('.step-target');
@@ -176,7 +176,7 @@ describe('recorder GUI: step-list rendering', () => {
 
       expect(li.getAttribute('data-action')).toBe('double_tap');
       expect(li.textContent).toMatch(
-        /^\s*\d+\.\s*Double tap\s*"Like Button"\s*$/,
+        /^\s*\d+\.\s*Double tap\s*"Like Button"\s*⋯\s*$/,
       );
       const action = li.querySelector('.step-action');
       const target = li.querySelector('.step-target');
@@ -194,7 +194,7 @@ describe('recorder GUI: step-list rendering', () => {
       });
 
       expect(li.getAttribute('data-action')).toBe('swipe');
-      expect(li.textContent).toMatch(/^\s*\d+\.\s*Swipe\s*up\s*$/);
+      expect(li.textContent).toMatch(/^\s*\d+\.\s*Swipe\s*up\s*⋯\s*$/);
       const action = li.querySelector('.step-action');
       expect(action.textContent).toBe('Swipe');
       // Per the issue spec the swipe label is direction-only: no target span.

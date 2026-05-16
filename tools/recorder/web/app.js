@@ -12,6 +12,15 @@
 
   var latestStepId = null;
 
+  function _makeStepMenuButton(doc) {
+    const btn = doc.createElement('button');
+    btn.className = 'step-menu';
+    btn.type = 'button';
+    btn.setAttribute('aria-label', 'Edit step');
+    btn.textContent = '⋯';
+    return btn;
+  }
+
   function renderStepRow(step) {
     const doc = root.document;
     const li = doc.createElement('li');
@@ -45,6 +54,7 @@
       li.appendChild(num);
       li.appendChild(action);
       li.appendChild(target);
+      li.appendChild(_makeStepMenuButton(doc));
       return li;
     }
 
@@ -65,6 +75,7 @@
       li.appendChild(num);
       li.appendChild(action);
       li.appendChild(direction);
+      li.appendChild(_makeStepMenuButton(doc));
       return li;
     }
 
@@ -109,8 +120,11 @@
       li.appendChild(value);
       li.appendChild(into);
       li.appendChild(target);
+      li.appendChild(_makeStepMenuButton(doc));
       return li;
     }
+
+    li.setAttribute('data-action', String(step.action));
 
     const action = doc.createElement('span');
     action.className = 'step-action';
@@ -123,6 +137,7 @@
     li.appendChild(num);
     li.appendChild(action);
     li.appendChild(target);
+    li.appendChild(_makeStepMenuButton(doc));
     return li;
   }
 
@@ -144,6 +159,10 @@
     const onAssertionScreenshotReady = opts.onAssertionScreenshotReady || null;
     const onAssertionScreenshotError = opts.onAssertionScreenshotError || null;
     const onAssertionAdded = opts.onAssertionAdded || null;
+    const onStepRenamed = opts.onStepRenamed || null;
+    const onStepDeleted = opts.onStepDeleted || null;
+    const onValueEdited = opts.onValueEdited || null;
+    const onAssertionTextEdited = opts.onAssertionTextEdited || null;
     const Ctor = opts.WebSocketCtor || root.WebSocket;
     if (!Ctor) {
       throw new Error('attachWsClient: no WebSocket constructor available');
@@ -173,6 +192,10 @@
         onAssertionAdded(payload.assertion);
         return;
       }
+      if (payload.type === 'step-renamed' && typeof onStepRenamed === 'function') { onStepRenamed(payload); return; }
+      if (payload.type === 'step-deleted' && typeof onStepDeleted === 'function') { onStepDeleted(payload); return; }
+      if (payload.type === 'value-edited' && typeof onValueEdited === 'function') { onValueEdited(payload); return; }
+      if (payload.type === 'assertion-text-edited' && typeof onAssertionTextEdited === 'function') { onAssertionTextEdited(payload); return; }
     });
     return ws;
   }
@@ -288,6 +311,7 @@
     var li = doc.createElement('li');
     li.className = 'assertion-row';
     li.setAttribute('data-assertion-id', String(assertion.id));
+    li.setAttribute('data-anchor-step-id', String(assertion.anchor_step_id));
 
     var label = doc.createElement('span');
     label.className = 'assertion-label';
@@ -299,6 +323,7 @@
 
     li.appendChild(label);
     li.appendChild(text);
+    li.appendChild(_makeStepMenuButton(doc));
 
     var list = doc.getElementById('step-list');
     if (!list) return null;
@@ -315,6 +340,270 @@
     return li;
   }
 
+  function _closeAnyPopover(doc) {
+    const open = doc.querySelector('.step-menu-popover');
+    if (open && open.parentNode) open.parentNode.removeChild(open);
+  }
+
+  function _menuActionsForRow(li) {
+    if (li.classList.contains('assertion-row')) return [['edit-assertion-text', 'Edit text']];
+    const action = li.getAttribute('data-action');
+    // A `type` step's slug derives from its field, not a free-text name, and
+    // its row has no dedicated name span — so it offers Edit value (the
+    // meaningful typo-fix), not Rename.
+    if (action === 'type') return [['delete', 'Delete'], ['edit-value', 'Edit value']];
+    // A `swipe` row has no target/name span (renders "Swipe <direction>"), so
+    // Rename has nothing sensible to edit — Delete only, same rationale as type.
+    if (action === 'swipe') return [['delete', 'Delete']];
+    // tap / long_press / double_tap / press_button rows have a target span.
+    return [['rename', 'Rename'], ['delete', 'Delete']];
+  }
+
+  function attachEditAffordances(options) {
+    const opts = options || {};
+    const doc = opts.document;
+    const sendWs = opts.sendWs;
+    if (!doc || typeof sendWs !== 'function') {
+      throw new Error('attachEditAffordances: requires {document, sendWs}');
+    }
+    const list = doc.getElementById('step-list');
+    if (!list) return;
+    if (list.getAttribute('data-edit-wired') === '1') return;
+    list.setAttribute('data-edit-wired', '1');
+
+    list.addEventListener('click', function (e) {
+      const menuBtn = e.target.closest && e.target.closest('button.step-menu');
+      if (menuBtn) {
+        const li = menuBtn.closest('li');
+        const wasOpen = !!doc.querySelector('.step-menu-popover');
+        _closeAnyPopover(doc);
+        if (wasOpen) return;
+        const pop = doc.createElement('div');
+        pop.className = 'step-menu-popover';
+        for (const pair of _menuActionsForRow(li)) {
+          const item = doc.createElement('button');
+          item.type = 'button';
+          item.className = 'menu-item';
+          item.setAttribute('data-edit-action', pair[0]);
+          item.textContent = pair[1];
+          pop.appendChild(item);
+        }
+        li.appendChild(pop);
+        return;
+      }
+      const item = e.target.closest && e.target.closest('.step-menu-popover .menu-item');
+      if (item) {
+        const li = item.closest('li');
+        const action = item.getAttribute('data-edit-action');
+        _closeAnyPopover(doc);
+        _dispatchEditAction(doc, li, action, sendWs);
+      }
+    });
+  }
+
+  function _editableSpan(li) {
+    if (li.classList.contains('assertion-row')) return li.querySelector('.assertion-text');
+    // Rename is not offered on `type` rows (see _menuActionsForRow), so only
+    // generic/gesture/swipe rows reach here: prefer the target span, falling
+    // back to the action verb for swipe rows (which have no target span).
+    return li.querySelector('.step-target') || li.querySelector('.step-action');
+  }
+
+  function _beginInlineEdit(doc, li, span, currentValue, onCommit) {
+    if (!span) return;
+    const input = doc.createElement('input');
+    input.type = 'text';
+    input.className = 'inline-edit';
+    input.value = currentValue == null ? '' : String(currentValue);
+    const prevDisplay = span.style.display;
+    span.style.display = 'none';
+    span.parentNode.insertBefore(input, span.nextSibling);
+    let done = false;
+    function cleanup() {
+      if (input.parentNode) input.parentNode.removeChild(input);
+      span.style.display = prevDisplay;
+    }
+    function commit() {
+      if (done) return;
+      done = true;
+      const v = input.value.trim();
+      cleanup();
+      if (v.length > 0) onCommit(v);
+    }
+    function cancel() {
+      if (done) return;
+      done = true;
+      cleanup();
+    }
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); commit(); }
+      else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+    });
+    input.addEventListener('blur', commit);
+    setTimeout(function () { input.focus(); }, 0);
+  }
+
+  function _dispatchEditAction(doc, li, action, sendWs) {
+    if (action === 'rename') {
+      const span = _editableSpan(li);
+      const stepId = li.getAttribute('data-step-id');
+      _beginInlineEdit(doc, li, span, span ? span.textContent.replace(/^"|"$/g, '') : '', function (v) {
+        sendWs({ type: 'rename-step', step_id: stepId, new_display_name: v });
+      });
+    } else if (action === 'edit-value') {
+      const span = li.querySelector('.step-value');
+      const stepId = li.getAttribute('data-step-id');
+      _beginInlineEdit(doc, li, span, span ? span.textContent.replace(/^"|"$/g, '') : '', function (v) {
+        sendWs({ type: 'edit-value', step_id: stepId, new_value: v });
+      });
+    } else if (action === 'edit-assertion-text') {
+      const span = li.querySelector('.assertion-text');
+      const aid = li.getAttribute('data-assertion-id');
+      _beginInlineEdit(doc, li, span, span ? span.textContent : '', function (v) {
+        sendWs({ type: 'edit-assertion-text', assertion_id: aid, new_nl_text: v });
+      });
+    } else if (action === 'delete') {
+      _beginDelete(doc, li, sendWs);
+    }
+  }
+
+  function _renderDeletePrompt(doc, opts) {
+    const overlay = doc.createElement('div');
+    overlay.className = 'modal-overlay delete-prompt';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    const panel = doc.createElement('div');
+    panel.className = 'modal-panel';
+
+    const title = doc.createElement('h4');
+    title.textContent = 'Delete this step?';
+    panel.appendChild(title);
+
+    let getPolicy = function () { return 'none'; };
+
+    if (opts.anchoredCount > 0) {
+      const warn = doc.createElement('div');
+      warn.className = 'delete-warn';
+      warn.textContent = '⚠ ' + opts.anchoredCount + ' assertion(s) are anchored to this step.';
+      panel.appendChild(warn);
+      const policies = [
+        ['reanchor', 'Re-anchor to previous step'],
+        ['cascade', 'Cascade-delete the assertions'],
+      ];
+      policies.forEach(function (p, i) {
+        const row = doc.createElement('label');
+        row.className = 'delete-option';
+        row.setAttribute('data-policy', p[0]);
+        const radio = doc.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'delete-policy';
+        radio.value = p[0];
+        if (i === 0) radio.checked = true;
+        const span = doc.createElement('span');
+        span.textContent = p[1];
+        row.appendChild(radio);
+        row.appendChild(span);
+        panel.appendChild(row);
+      });
+      getPolicy = function () {
+        const checked = panel.querySelector('input[name="delete-policy"]:checked');
+        return checked ? checked.value : 'reanchor';
+      };
+    }
+
+    const btnRow = doc.createElement('div');
+    btnRow.className = 'modal-btn-row';
+    const confirm = doc.createElement('button');
+    confirm.type = 'button';
+    confirm.setAttribute('data-delete-confirm', '1');
+    confirm.textContent = opts.anchoredCount > 0 ? 'Apply' : 'Delete';
+    const cancel = doc.createElement('button');
+    cancel.type = 'button';
+    cancel.setAttribute('data-delete-cancel', '1');
+    cancel.textContent = 'Cancel';
+
+    function close() { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }
+    confirm.addEventListener('click', function () { const p = getPolicy(); close(); opts.onConfirm(p); });
+    cancel.addEventListener('click', function () { close(); opts.onCancel(); });
+
+    btnRow.appendChild(confirm);
+    btnRow.appendChild(cancel);
+    panel.appendChild(btnRow);
+    overlay.appendChild(panel);
+    const modalRoot = doc.getElementById('modal-root') || doc.body;
+    modalRoot.appendChild(overlay);
+    return overlay;
+  }
+
+  function _beginDelete(doc, li, sendWs) {
+    const stepId = li.getAttribute('data-step-id');
+    const list = doc.getElementById('step-list');
+    const anchored = list
+      ? list.querySelectorAll('.assertion-row[data-anchor-step-id="' + stepId + '"]').length
+      : 0;
+    _renderDeletePrompt(doc, {
+      step_id: stepId,
+      anchoredCount: anchored,
+      onConfirm: function (policy) {
+        sendWs({ type: 'delete-step', step_id: stepId, assertion_policy: policy });
+      },
+      onCancel: function () {},
+    });
+  }
+
+  function applyStepRenamed(doc, p) {
+    const li = doc.querySelector('[data-step-id="' + p.step_id + '"]');
+    if (!li) return;
+    const span = li.querySelector('.step-target') || li.querySelector('.step-action');
+    if (span) span.textContent = p.new_display_name;
+  }
+
+  function applyValueEdited(doc, p) {
+    const li = doc.querySelector('[data-step-id="' + p.step_id + '"]');
+    if (!li) return;
+    const span = li.querySelector('.step-value');
+    if (span) span.textContent = '"' + p.new_value + '"';
+  }
+
+  function applyAssertionTextEdited(doc, p) {
+    const li = doc.querySelector('[data-assertion-id="' + p.assertion_id + '"]');
+    if (!li) return;
+    const span = li.querySelector('.assertion-text');
+    if (span) span.textContent = p.new_nl_text;
+  }
+
+  function applyStepDeleted(doc, p) {
+    const list = doc.getElementById('step-list');
+    if (!list) return;
+    const li = list.querySelector('[data-step-id="' + p.step_id + '"]');
+    if (!li) return;
+    const anchored = [].slice.call(list.querySelectorAll('.assertion-row[data-anchor-step-id="' + p.step_id + '"]'));
+    if (p.assertion_policy === 'cascade') {
+      anchored.forEach(function (a) { if (a.parentNode) a.parentNode.removeChild(a); });
+    } else if (p.assertion_policy === 'reanchor' && anchored.length > 0) {
+      const steps = [].slice.call(list.querySelectorAll('li.step-row'));
+      const pos = steps.indexOf(li);
+      const target = (pos > 0 ? steps[pos - 1] : null) || (pos + 1 < steps.length ? steps[pos + 1] : null);
+      if (target) {
+        const targetId = target.getAttribute('data-step-id');
+        // Move with a cursor so the assertions keep their original relative
+        // order under the new anchor (matches the apply-edits engine, which
+        // preserves array order). Inserting each at target.nextSibling would
+        // reverse them.
+        let cursor = target;
+        anchored.forEach(function (a) {
+          a.setAttribute('data-anchor-step-id', targetId);
+          if (cursor.nextSibling) list.insertBefore(a, cursor.nextSibling);
+          else list.appendChild(a);
+          cursor = a;
+        });
+      } else {
+        anchored.forEach(function (a) { if (a.parentNode) a.parentNode.removeChild(a); });
+      }
+    }
+    if (li.parentNode) li.parentNode.removeChild(li);
+  }
+
   // Expose to the browser global.
   root.renderStepRow = renderStepRow;
   root.appendStep = appendStep;
@@ -322,6 +611,11 @@
   root.wireButtons = wireButtons;
   root.renderAssertionModal = renderAssertionModal;
   root.appendAssertionRow = appendAssertionRow;
+  root.attachEditAffordances = attachEditAffordances;
+  root.applyStepRenamed = applyStepRenamed;
+  root.applyValueEdited = applyValueEdited;
+  root.applyAssertionTextEdited = applyAssertionTextEdited;
+  root.applyStepDeleted = applyStepDeleted;
 
   // Expose to CommonJS (jest).
   if (typeof module !== 'undefined' && module.exports) {
@@ -332,6 +626,11 @@
       wireButtons: wireButtons,
       renderAssertionModal: renderAssertionModal,
       appendAssertionRow: appendAssertionRow,
+      attachEditAffordances: attachEditAffordances,
+      applyStepRenamed: applyStepRenamed,
+      applyValueEdited: applyValueEdited,
+      applyAssertionTextEdited: applyAssertionTextEdited,
+      applyStepDeleted: applyStepDeleted,
     };
   }
 
@@ -372,6 +671,10 @@
         },
         onAssertionScreenshotError: onAssertionError,
         onAssertionAdded: appendAssertionRow,
+        onStepRenamed: function (p) { applyStepRenamed(document, p); },
+        onStepDeleted: function (p) { applyStepDeleted(document, p); },
+        onValueEdited: function (p) { applyValueEdited(document, p); },
+        onAssertionTextEdited: function (p) { applyAssertionTextEdited(document, p); },
       });
 
       wireButtons({
@@ -384,6 +687,7 @@
         },
         onAssertionScreenshotError: onAssertionError,
       });
+      attachEditAffordances({ document: document, sendWs: function (msg) { ws.send(JSON.stringify(msg)); } });
     } catch (_err) {
       // Swallow connection setup errors — the GUI will still render manually-
       // appended rows.

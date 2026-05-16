@@ -100,3 +100,33 @@ button { padding: 8px 16px; }
 .assertion-text {
   color: #444;
 }
+
+/* Slice #28 — edit affordances */
+.step-row, .assertion-row { position: relative; }
+button.step-menu {
+  margin-left: auto; background: transparent; border: 0; cursor: pointer;
+  font-weight: 700; letter-spacing: 1px; opacity: 0.55; padding: 2px 8px;
+  border-radius: 5px; color: inherit;
+}
+button.step-menu:hover { opacity: 1; background: rgba(127,127,127,0.18); }
+.step-menu-popover {
+  position: absolute; right: 8px; top: 100%; z-index: 20; min-width: 170px;
+  background: #1f2433; color: #fff; border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 7px; padding: 5px; box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+}
+.step-menu-popover .menu-item {
+  display: block; width: 100%; text-align: left; background: transparent;
+  border: 0; color: inherit; padding: 7px 10px; border-radius: 5px;
+  cursor: pointer; font: inherit;
+}
+.step-menu-popover .menu-item:hover { background: rgba(255,255,255,0.12); }
+input.inline-edit { font: inherit; padding: 3px 6px; min-width: 12rem; }
+.delete-prompt .modal-panel h4 { margin: 0 0 8px; }
+.delete-warn {
+  color: #b45309; background: #fef3c7; border-radius: 6px;
+  padding: 6px 9px; font-size: 0.85rem; margin-bottom: 10px;
+}
+.delete-option {
+  display: flex; gap: 8px; align-items: center; padding: 7px 9px;
+  border: 1px solid rgba(127,127,127,0.3); border-radius: 6px; margin-bottom: 6px;
+}

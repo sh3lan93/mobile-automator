@@ -56,10 +56,11 @@ describe('ArtifactsStore', () => {
   test('appendEdit and appendAssertion build their respective files', () => {
     const store = new ArtifactsStore({ projectRoot, scenarioId: 's' });
     store.init({ mode: 'platform-aware' });
-    store.appendEdit({ t: 1, kind: 'rename', step_id: 'tap_x', new_name: 'tap_login' });
+    store.appendEdit({ op: 'rename', target_step_id: 'tap_x', new_display_name: 'Tap Login', ts: '2026-05-16T10:00:00.000Z' });
     store.appendAssertion({ id: 'a1', anchor_step_id: 'tap_login', nl_text: 'welcome shown' });
     const editsContent = fs.readFileSync(path.join(projectRoot, 'mobile-automator/.recorder/s/edits.jsonl'), 'utf8');
-    expect(editsContent.trim()).toContain('rename');
+    const rec = JSON.parse(editsContent.trim().split('\n')[0]);
+    expect(rec).toEqual({ op: 'rename', target_step_id: 'tap_x', new_display_name: 'Tap Login', ts: '2026-05-16T10:00:00.000Z' });
     const assertions = JSON.parse(fs.readFileSync(path.join(projectRoot, 'mobile-automator/.recorder/s/assertions.json'), 'utf8'));
     expect(assertions).toHaveLength(1);
     expect(assertions[0].nl_text).toBe('welcome shown');
