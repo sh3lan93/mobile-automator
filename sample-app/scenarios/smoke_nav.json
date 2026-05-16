@@ -1,0 +1,85 @@
+{
+  "$schema_version": "2.1",
+  "scenario_id": "smoke_nav",
+  "name": "Bottom-nav smoke",
+  "description": "Launches Sample Shop and taps each bottom-nav tab. Proves the extension can drive the fixture app end-to-end.",
+  "platform": "android",
+  "app_package": "io.github.sh3lan93.mobile_automator.sample_shop",
+  "mode": "platform-aware",
+  "metadata": {
+    "app_version": "debug",
+    "environment": "ci"
+  },
+  "tags": ["smoke", "navigation", "p0"],
+  "preconditions": {
+    "app_state": "fresh_install"
+  },
+  "steps": [
+    {
+      "id": "launch",
+      "action": "launch_app",
+      "description": "Launch Sample Shop on the connected Android device"
+    },
+    {
+      "id": "wait_home",
+      "action": "wait_for_element",
+      "description": "Wait for the Home bottom-nav tab to appear (confirms app has launched and rendered)",
+      "target": "bottom_nav_home",
+      "wait_config": { "type": "element_visible", "timeout_ms": 30000 },
+      "on_failure": "fail"
+    },
+    {
+      "id": "tap_home",
+      "action": "tap",
+      "description": "Tap the Home bottom-nav tab",
+      "target": "bottom_nav_home",
+      "checkpoint": true,
+      "expected_state": "Home tab is selected, showing the product grid",
+      "on_failure": "retry",
+      "retry_policy": { "max_attempts": 3, "backoff_ms": 2000 }
+    },
+    {
+      "id": "tap_categories",
+      "action": "tap",
+      "description": "Tap the Categories bottom-nav tab",
+      "target": "bottom_nav_categories",
+      "checkpoint": true,
+      "expected_state": "Categories tab is selected, showing the categories list",
+      "on_failure": "retry",
+      "retry_policy": { "max_attempts": 3, "backoff_ms": 2000 }
+    },
+    {
+      "id": "tap_more",
+      "action": "tap",
+      "description": "Tap the More bottom-nav tab",
+      "target": "bottom_nav_more",
+      "checkpoint": true,
+      "expected_state": "More tab is selected, showing the profile form and settings",
+      "on_failure": "retry",
+      "retry_policy": { "max_attempts": 3, "backoff_ms": 2000 }
+    }
+  ],
+  "assertions": [
+    {
+      "id": "home_tab_active",
+      "after_step": "tap_home",
+      "type": "element_exists",
+      "description": "Home tab nav element is present after tapping it",
+      "element_description": "bottom_nav_home"
+    },
+    {
+      "id": "categories_tab_active",
+      "after_step": "tap_categories",
+      "type": "element_exists",
+      "description": "Categories tab nav element is present after tapping it",
+      "element_description": "bottom_nav_categories"
+    },
+    {
+      "id": "more_tab_active",
+      "after_step": "tap_more",
+      "type": "element_exists",
+      "description": "More tab nav element is present after tapping it",
+      "element_description": "bottom_nav_more"
+    }
+  ]
+}
