@@ -24,7 +24,7 @@
       "id": "wait_home",
       "action": "wait_for_element",
       "description": "Wait for the Home bottom-nav tab to appear (confirms app has launched and rendered)",
-      "target": "bottom_nav_home_BROKEN",
+      "target": "bottom_nav_home",
       "wait_config": { "type": "element_visible", "timeout_ms": 30000 },
       "on_failure": "fail"
     },
