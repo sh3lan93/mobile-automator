@@ -19,26 +19,24 @@ function log(msg) {
 /**
  * Parse the result of a tool call.
  *
- * Most mobile-mcp tools return plain-text responses with a prose prefix, e.g.:
- *   "Found these elements on screen: [{...}]"
- *   "Found 1 connected device: [{...}]"
- *   "Screenshot taken: {...}"
+ * Handles two response shapes from mobile-mcp:
+ *   1. Plain JSON  — e.g. '{"devices":[...]}' (mobile_list_available_devices)
+ *   2. Prose-prefixed JSON — e.g. 'Found these elements on screen: [{...}]'
+ *      (mobile_list_elements_on_screen)
  *
- * Strip everything up to and including the first ": " then JSON-parse the rest.
  * Image content items are returned as-is.
  */
 function parseToolResult(result) {
-  const item = result.content[0];
+  const item = result.content?.[0];
   if (!item) throw new Error('Empty tool result');
   if (item.type === 'image') return item;
-  if (item.type === 'text') {
-    const text = item.text.trim();
-    // Strip prose prefix "Any text here: <json>"
-    const colonIdx = text.indexOf(': ');
-    const jsonStr = colonIdx !== -1 ? text.slice(colonIdx + 2) : text;
-    return JSON.parse(jsonStr);
-  }
-  throw new Error(`Unexpected content type: ${item.type}`);
+  const text = item.text ?? '';
+  // Try plain JSON first (handles {"devices":[...]}, etc.)
+  try { return JSON.parse(text); } catch {}
+  // Extract first JSON array or object from prose-prefixed responses
+  const match = text.match(/([\[{][\s\S]*[\]}])\s*$/);
+  if (match) return JSON.parse(match[1]);
+  throw new Error(`Cannot parse tool result: ${text.slice(0, 120)}`);
 }
 
 async function callTool(client, name, args = {}) {
@@ -192,14 +190,15 @@ async function main() {
   try {
     // Confirm device availability and capture the deviceId for all subsequent calls
     const devResult = await callTool(client, 'mobile_list_available_devices');
-    // Response is a flat array: "[{...}]" prefixed with prose "Found N connected device(s): "
-    const devices = parseToolResult(devResult);
-    if (!devices || !Array.isArray(devices) || devices.length === 0) {
+    // Response is {devices:[...]} not a flat array
+    const parsed = parseToolResult(devResult);
+    const devices = Array.isArray(parsed) ? parsed : (parsed.devices ?? []);
+    if (!devices || devices.length === 0) {
       throw new Error('No connected devices found');
     }
     const deviceId = devices[0].id ?? devices[0].udid ?? devices[0].deviceId;
     if (!deviceId) {
-      throw new Error(`Could not determine device identifier from: ${JSON.stringify(devices[0])}`);
+      throw new Error(`Device found but no id field: ${JSON.stringify(devices[0])}`);
     }
     log(`devices found: ${devices.map((d) => d.name ?? d.id ?? JSON.stringify(d)).join(', ')}`);
     log(`using device: ${deviceId}`);
