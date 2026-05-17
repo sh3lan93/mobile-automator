@@ -1,0 +1,23 @@
+{
+  "duration_ms": 2000,
+  "hierarchy_snapshots": [
+    {
+      "t": 0,
+      "elements": [
+        { "type": "android.widget.EditText", "bounds": [40, 300, 700, 380], "resource_id": "com.example:id/search", "text": "" },
+        { "type": "android.widget.Button", "bounds": [340, 1400, 600, 1480], "text": "Allow",
+          "resource_id": "com.android.permissioncontroller:id/permission_allow_button" }
+      ]
+    }
+  ],
+  "tap_events": [
+    { "kind": "down", "t": 100, "x": 470, "y": 1440 },
+    { "kind": "up", "t": 150, "x": 470, "y": 1440 },
+    { "kind": "down", "t": 600, "x": 360, "y": 340 },
+    { "kind": "up", "t": 650, "x": 360, "y": 340 }
+  ],
+  "key_events": [
+    { "key": "BACK", "state": "down", "t_seconds": 1.000 },
+    { "key": "BACK", "state": "up", "t_seconds": 1.020 }
+  ]
+}
