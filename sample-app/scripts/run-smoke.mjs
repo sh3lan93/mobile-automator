@@ -20,7 +20,8 @@ function parseToolResult(result) {
   const item = result.content[0];
   if (!item) throw new Error('Empty tool result');
   if (item.type === 'text') return JSON.parse(item.text);
-  return item; // image or other types returned as-is
+  if (item.type === 'image') return item;
+  throw new Error(`Unexpected content type: ${item.type}`);
 }
 
 async function callTool(client, name, args = {}) {
@@ -167,8 +168,7 @@ async function main() {
     const devResult = await callTool(client, 'mobile_list_available_devices');
     const { devices } = parseToolResult(devResult);
     if (!devices || devices.length === 0) {
-      console.error('[smoke] No devices found. Exiting.');
-      process.exit(1);
+      throw new Error('No connected devices found');
     }
     log(`devices found: ${devices.map((d) => d.name ?? d.id ?? JSON.stringify(d)).join(', ')}`);
 
@@ -191,6 +191,7 @@ async function main() {
 (async () => {
   try {
     await main();
+    process.exit(0);
   } catch (err) {
     console.error(`[smoke] Fatal error: ${err.message}`);
     process.exit(1);
