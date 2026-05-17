@@ -26,7 +26,7 @@ commands/mobile-automator/    setup, generate, execute, report, list-tags (.toml
 templates/
   mobile-automator-generator/{aware,agnostic}/SKILL.md
   mobile-automator-executor/{aware,agnostic}/SKILL.md
-  mobile-automator-recorder/aware/SKILL.md          # gated; agnostic in slice #29
+  mobile-automator-recorder/{aware,agnostic}/SKILL.md # gated; both modes (aware + agnostic)
   mobile-automator-generator/references/scenario_schema.json   # v2.1
   mobile-automator-executor/references/result_schema.json
   references/platform-resolutions.md                 # agnostic-mode runtime contract
@@ -65,8 +65,8 @@ Runtime fallback: skills can read `mobile-automator/config.json` if a placeholde
 
 PRD [#21](https://github.com/sh3lan93/mobile-automator/issues/21). The entire recorder surface (`/mobile-automator:record`, sidecar, GUI, recorder skill) is hidden unless `MOBILE_AUTOMATOR_RECORDER=1`.
 
-- Aware-mode recorder skill installs at `.gemini/skills/mobile-automator-recorder/SKILL.md`. Uses 10 of 13 aware placeholders (skips `build_command`, `automation_extras`, `business_domain` — not load-bearing for synthesis from a captured trace).
-- Agnostic-mode recorder is **skipped** during install; lands in slice [#29](https://github.com/sh3lan93/mobile-automator/issues/29).
+- Aware-mode recorder skill installs at `.gemini/skills/mobile-automator-recorder/SKILL.md` from the `aware/` template. Uses 10 of 13 aware placeholders (skips `build_command`, `automation_extras`, `business_domain`).
+- Agnostic-mode recorder installs from the `agnostic/` template (slice #29). It uses only the 6 agnostic placeholders; per-OS facts resolve at runtime via `templates/references/platform-resolutions.md`. The sidecar reinterprets OS gestures into the four semantic actions; `dismiss_keyboard` is a manual GUI mark.
 - The recorder skill synthesises scenario JSON from sidecar artifacts under `mobile-automator/.recorder/<session>/`. It defers to the generator skill for scenario shape — generator stays single source of truth.
 
 ## Sample-app milestone workflow (mandatory for any agent)

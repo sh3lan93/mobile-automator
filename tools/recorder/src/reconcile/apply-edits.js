@@ -65,6 +65,11 @@ function applyEdits({ events, assertions, edits }) {
         }
       }
       steps.splice(idx, 1);
+    } else if (ed.op === 'mark-as-semantic') {
+      const s = steps.find((x) => x.step_id === ed.target_step_id);
+      if (!s) { report.push({ ignored: 'mark-as-semantic', target: ed.target_step_id }); continue; }
+      if (s.derived_from === undefined) s.derived_from = { kind: s.kind, target: s.target };
+      s.kind = ed.semantic_action;
     } else {
       report.push({ ignored: 'unrecognized-op', op: ed.op });
     }

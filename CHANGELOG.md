@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 The `/mobile-automator:record` recorder feature is being built incrementally per [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21). Slices land here under `[Unreleased]` and are gated behind `MOBILE_AUTOMATOR_RECORDER=1` until the v0.12.0 graduation cut. Entries collapse into a single coherent v0.12.0 note when the feature graduates.
 
+### Recorder Slice #8 — Agnostic mode emit + semantic action detection (#29)
+
+- Sidecar: `runScriptedSession` reads `mobile-automator/config.json` mode at startup (was hardcoded `platform-aware`); pre-field configs still default to `platform-aware`.
+- Sidecar: new pure `semantic-reinterpreter` — in agnostic mode rewrites Android BACK / iOS left-edge right-swipe → `press_back`, and permission-dialog Allow/Deny taps → `grant_permission` / `deny_permission` (Android `permissioncontroller`/`systemui` resource-id or iOS `_UIAlertController`, exact label match against the `platform-resolutions.md` vocab). Aware mode is an identity pass-through — recordings unchanged.
+- GUI: agnostic-mode banner; per-tap-row "Mark as dismiss_keyboard" ⋯-menu item (tap rows only, agnostic only) → `mark-as-semantic` edit; mode delivered via new `GET /api/mode`.
+- Reconcile: `apply-edits.js` gains the `mark-as-semantic` op (sets the step's effective `kind`, preserves provenance under `derived_from`).
+- Skill: new `templates/mobile-automator-recorder/agnostic/SKILL.md` (semantic-action contract, `platform-resolutions.md` cross-reference, `mark-as-semantic` reconcile prose; uses only the 6 agnostic placeholders, schema v2.1). `scripts/install-skills.js` now installs the recorder skill in **both** modes; `setup.toml` Section 6 prose updated.
+- Tests: `semantic-reinterpreter`, `http-server-mode`, `session-handlers-mark-semantic`, `apply-edits-mark-semantic`, `web-mark-semantic`, `lifecycle-mode`, `recorder-agnostic-skill` (lint), `install-skills-recorder-agnostic` unit suites + `agnostic-emit` and `agnostic-mark-semantic-flow` integration; new `scripted-session-agnostic` fixture.
+
 ### Recorder Slice #7 — Edit affordances: rename / delete / edit-value / edit-assertion-text (#28)
 
 - GUI: per-row "⋯" menu with type-filtered actions (Rename, Delete, Edit value on `type` steps, Edit text on assertion rows). No reorder / insert / type-change is ever surfaced.

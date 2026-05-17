@@ -11,6 +11,10 @@
   'use strict';
 
   var latestStepId = null;
+  var _mode = 'platform-aware';
+
+  var AGNOSTIC_BANNER_TEXT =
+    "Recording in agnostic mode. press_back / grant_permission / deny_permission auto-detected; click 'Mark as dismiss_keyboard' on a tap step to mark it manually.";
 
   function _makeStepMenuButton(doc) {
     const btn = doc.createElement('button');
@@ -163,6 +167,7 @@
     const onStepDeleted = opts.onStepDeleted || null;
     const onValueEdited = opts.onValueEdited || null;
     const onAssertionTextEdited = opts.onAssertionTextEdited || null;
+    const onStepMarkedSemantic = opts.onStepMarkedSemantic || null;
     const Ctor = opts.WebSocketCtor || root.WebSocket;
     if (!Ctor) {
       throw new Error('attachWsClient: no WebSocket constructor available');
@@ -196,6 +201,7 @@
       if (payload.type === 'step-deleted' && typeof onStepDeleted === 'function') { onStepDeleted(payload); return; }
       if (payload.type === 'value-edited' && typeof onValueEdited === 'function') { onValueEdited(payload); return; }
       if (payload.type === 'assertion-text-edited' && typeof onAssertionTextEdited === 'function') { onAssertionTextEdited(payload); return; }
+      if (payload.type === 'step-marked-semantic' && typeof onStepMarkedSemantic === 'function') { onStepMarkedSemantic(payload); return; }
     });
     return ws;
   }
@@ -345,6 +351,17 @@
     if (open && open.parentNode) open.parentNode.removeChild(open);
   }
 
+  function applyModeBanner(doc) {
+    var banner = doc.getElementById('mode-banner');
+    if (!banner) return;
+    if (_mode === 'platform-agnostic') {
+      banner.textContent = AGNOSTIC_BANNER_TEXT;
+      banner.hidden = false;
+    } else {
+      banner.hidden = true;
+    }
+  }
+
   function _menuActionsForRow(li) {
     if (li.classList.contains('assertion-row')) return [['edit-assertion-text', 'Edit text']];
     const action = li.getAttribute('data-action');
@@ -355,7 +372,15 @@
     // A `swipe` row has no target/name span (renders "Swipe <direction>"), so
     // Rename has nothing sensible to edit — Delete only, same rationale as type.
     if (action === 'swipe') return [['delete', 'Delete']];
-    // tap / long_press / double_tap / press_button rows have a target span.
+    // A `tap` row in agnostic mode gets the additional Mark as dismiss_keyboard item.
+    if (action === 'tap') {
+      const items = [['rename', 'Rename'], ['delete', 'Delete']];
+      if (_mode === 'platform-agnostic') {
+        items.push(['mark-as-semantic', 'Mark as dismiss_keyboard']);
+      }
+      return items;
+    }
+    // long_press / double_tap / press_button rows have a target span.
     return [['rename', 'Rename'], ['delete', 'Delete']];
   }
 
@@ -462,6 +487,9 @@
       _beginInlineEdit(doc, li, span, span ? span.textContent : '', function (v) {
         sendWs({ type: 'edit-assertion-text', assertion_id: aid, new_nl_text: v });
       });
+    } else if (action === 'mark-as-semantic') {
+      const stepId = li.getAttribute('data-step-id');
+      sendWs({ type: 'mark-as-semantic', step_id: stepId, semantic_action: 'dismiss_keyboard' });
     } else if (action === 'delete') {
       _beginDelete(doc, li, sendWs);
     }
@@ -551,6 +579,14 @@
     });
   }
 
+  function applyStepMarkedSemantic(doc, p) {
+    const li = doc.querySelector('[data-step-id="' + p.step_id + '"]');
+    if (!li) return;
+    li.setAttribute('data-action', p.semantic_action);
+    const span = li.querySelector('.step-action');
+    if (span) span.textContent = p.semantic_action;
+  }
+
   function applyStepRenamed(doc, p) {
     const li = doc.querySelector('[data-step-id="' + p.step_id + '"]');
     if (!li) return;
@@ -604,6 +640,10 @@
     if (li.parentNode) li.parentNode.removeChild(li);
   }
 
+  function _setMode(m) {
+    _mode = m;
+  }
+
   // Expose to the browser global.
   root.renderStepRow = renderStepRow;
   root.appendStep = appendStep;
@@ -616,6 +656,9 @@
   root.applyValueEdited = applyValueEdited;
   root.applyAssertionTextEdited = applyAssertionTextEdited;
   root.applyStepDeleted = applyStepDeleted;
+  root.applyStepMarkedSemantic = applyStepMarkedSemantic;
+  root.applyModeBanner = applyModeBanner;
+  root._setMode = _setMode;
 
   // Expose to CommonJS (jest).
   if (typeof module !== 'undefined' && module.exports) {
@@ -631,6 +674,9 @@
       applyValueEdited: applyValueEdited,
       applyAssertionTextEdited: applyAssertionTextEdited,
       applyStepDeleted: applyStepDeleted,
+      applyStepMarkedSemantic: applyStepMarkedSemantic,
+      applyModeBanner: applyModeBanner,
+      _setMode: _setMode,
     };
   }
 
@@ -675,6 +721,15 @@
         onStepDeleted: function (p) { applyStepDeleted(document, p); },
         onValueEdited: function (p) { applyValueEdited(document, p); },
         onAssertionTextEdited: function (p) { applyAssertionTextEdited(document, p); },
+        onStepMarkedSemantic: function (p) { applyStepMarkedSemantic(document, p); },
+      });
+
+      // Fetch the session mode and show the banner if agnostic.
+      fetch('/api/mode').then(function (res) { return res.json(); }).then(function (data) {
+        if (data && data.mode) _setMode(data.mode);
+        applyModeBanner(document);
+      }).catch(function () {
+        // Failed fetch — leave _mode as 'platform-aware', banner stays hidden.
       });
 
       wireButtons({
