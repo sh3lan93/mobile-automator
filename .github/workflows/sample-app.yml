@@ -1,0 +1,50 @@
+name: Sample App
+
+on:
+  pull_request:
+    paths:
+      - 'sample-app/**'
+      - '.github/workflows/sample-app.yml'
+
+jobs:
+  build-test:
+    name: Analyze, test, build APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sample-app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.6'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Build debug APK
+        run: flutter build apk --debug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sample-app-debug-apk
+          path: sample-app/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error

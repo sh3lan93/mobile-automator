@@ -37,3 +37,13 @@ docs/superpowers/
 
 # Mobile Automator recorder per-session working directory
 mobile-automator/.recorder/
+
+# sample-app (Flutter) build artifacts
+sample-app/build/
+sample-app/.dart_tool/
+sample-app/.flutter-plugins
+sample-app/.flutter-plugins-dependencies
+sample-app/ios/Pods/
+sample-app/ios/.symlinks/
+sample-app/android/.gradle/
+sample-app/android/local.properties
