@@ -52,15 +52,12 @@ function skillTemplatesForMode(mode) {
       dest: '.gemini/skills/mobile-automator-executor/SKILL.md',
     },
   ];
-  // Recorder skill: aware-only for now. The agnostic recorder template
-  // ships in slice #29; including it here would crash agnostic-mode
-  // setup with a missing-source-file error.
-  if (mode === 'platform-aware') {
-    templates.push({
-      src: 'mobile-automator-recorder/aware/SKILL.md',
-      dest: '.gemini/skills/mobile-automator-recorder/SKILL.md',
-    });
-  }
+  // Recorder skill: installed in both modes. Aware and agnostic templates
+  // both exist as of slice #29; `subdir` selects the right one.
+  templates.push({
+    src: `mobile-automator-recorder/${subdir}/SKILL.md`,
+    dest: '.gemini/skills/mobile-automator-recorder/SKILL.md',
+  });
   return templates;
 }
 
