@@ -8,6 +8,7 @@
     "smoke": "node run-smoke.mjs"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.0"
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@mobilenext/mobile-mcp": "0.0.55"
   }
 }

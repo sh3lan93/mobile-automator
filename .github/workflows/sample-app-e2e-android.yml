@@ -7,11 +7,13 @@ on:
       - 'templates/mobile-automator-executor/**'
       - 'commands/mobile-automator/execute.toml'
       - '.github/workflows/sample-app-e2e-android.yml'
+  workflow_dispatch: {}
 
 jobs:
   smoke-android:
     name: Android emulator smoke (API 33)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v4
