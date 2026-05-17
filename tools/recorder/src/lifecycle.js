@@ -22,6 +22,9 @@ function snakeCase(s) {
 }
 
 async function runScriptedSession({ projectRoot, scenarioId, script }) {
+  // Contract change since slice #29: loadProjectConfig throws if
+  // mobile-automator/config.json is absent (the recording path now requires
+  // it to resolve aware vs. agnostic emit). Pre-#29 this path never read config.
   const cfg = resolveModeAndDefaults(loadProjectConfig(projectRoot));
   const mode = cfg.mode;
   const store = new ArtifactsStore({ projectRoot, scenarioId });
