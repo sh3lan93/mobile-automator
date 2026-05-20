@@ -33,6 +33,10 @@ class McpBridge {
   async listAvailableDevices() {
     return this._call('mobile_list_available_devices', {});
   }
+
+  async launchApp(packageName, locale) {
+    return this._call('mobile_launch_app', { packageName, locale });
+  }
 }
 
 module.exports = { McpBridge };
