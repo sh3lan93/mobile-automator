@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 The `/mobile-automator:record` recorder feature is being built incrementally per [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21). Slices land here under `[Unreleased]` and are gated behind `MOBILE_AUTOMATOR_RECORDER=1` until the v0.12.0 graduation cut. Entries collapse into a single coherent v0.12.0 note when the feature graduates.
 
+### Recorder Slice #9 — Sensitive-input caution markers + Save-time confirmation (#30)
+
+- GUI: `type` step rows where the underlying event has `sensitive: true` render an inline ⚠ `.caution` span with the tooltip *"Sensitive input. Click to edit value before Save."* placed between the masked value and the `into` span.
+- GUI: on Save with one or more flagged steps still holding their captured literal, an inline `#save-sensitive-confirm` panel appears in `<footer>` (`role="alert"`, `[data-action="save-anyway"|"cancel"]`) with the count — *"N sensitive step(s) captured as literal value(s). Save anyway?"* Cancel suppresses the WS frame; Save anyway sends `{type:'save'}`. The handler is idempotent against rapid double-click.
+- GUI: editing a flagged step's value via the existing ⋯ → **Edit value** affordance (slice #7) clears its caution marker. Intent-based — the act of opening the editor is the user's affirmation, independent of whether the new string differs from the literal.
+- Server: `startHttpServer` accepts an `allowSensitiveInput` option and threads it into the `/api/mode` JSON payload as `allow_sensitive_input`. Piggybacks on the existing endpoint instead of adding a sibling.
+- Flag: `--allow-sensitive-input` (already declared in `tools/recorder/src/index.js` and forwarded by `commands/mobile-automator/record.toml`) reaches the GUI via the `/api/mode` payload and suppresses both the markers and the Save-time confirmation. Bullet-masking from slice #35 still applies — that's an orthogonal "never render the literal in the DOM" guarantee.
+- Docs: `README.md` and `tools/recorder/README.md` document the UX, the `${env.VAR}` runtime-substitution convention being user-owned, and the `--allow-sensitive-input` escape hatch.
+- Tests: `web-sensitive-markers`, `web-save-sensitive-confirm` unit suites + extended `http-server-mode` payload assertions.
+
 ### Recorder Slice #8 — Agnostic mode emit + semantic action detection (#29)
 
 - Sidecar: `runScriptedSession` reads `mobile-automator/config.json` mode at startup (was hardcoded `platform-aware`); pre-field configs still default to `platform-aware`.

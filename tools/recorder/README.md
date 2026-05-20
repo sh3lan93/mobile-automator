@@ -62,8 +62,21 @@ The sidecar coordinates several deep modules under `src/`:
 | `capture/keyboard-region.js` | Identifies whether a tap landed inside the on-screen keyboard subtree. Android-only for now; iOS keyboard region detection is deferred. |
 | `coalesce/gesture-classifier.js` | Coalesces raw down/move/up events into the v1 gesture vocabulary (tap, long-press, double-tap, swipe). |
 | `coalesce/type-buffer.js` | Coalesces sequential keyboard taps into a single `type` event when focus leaves the field, on Enter, on silence-timeout, or at session end. |
-| `server/http-server.js` | Serves the recorder GUI over HTTP. |
+| `server/http-server.js` | Serves the recorder GUI over HTTP. Exposes `GET /api/mode` returning `{ mode, allow_sensitive_input }` (slice #9). |
 | `server/ws-protocol.js` | Streams events to the GUI and receives Save/Cancel commands. |
+
+## Sensitive input handling (slice #9)
+
+When `capture/focus-detector.js` flags a focused field as sensitive, `coalesce/type-buffer.js` carries `sensitive: true` through to the emitted `type` event. The GUI then:
+
+1. **Masks** the value in the step list with bullet characters (`web/app.js` render path, slice #35).
+2. **Tracks** the step in an in-memory `Map<step_id, dirty:boolean>` and renders a ⚠ `.caution` span between the value and `into` spans.
+3. **Gates Save**: on `#btn-save` click, counts entries where `dirty === true`. If non-zero (and `_allowSensitiveInput` is false), renders `#save-sensitive-confirm` inline in `<footer>` instead of sending `{type:'save'}`.
+4. **Clears on edit**: `applyValueEdited` flips the dirty flag to `false` and removes the caution span. This is **intent-based** — the act of opening edit-value is the user's affirmation, independent of whether the new string differs from the captured literal. Edit-then-retype-the-same-literal still clears the caution.
+
+`--allow-sensitive-input` (CLI flag declared in `src/index.js`, forwarded by `commands/mobile-automator/record.toml`) reaches the GUI via the `/api/mode` payload's `allow_sensitive_input` boolean and suppresses both the dirty-tracking AND the inline confirmation. The bullet-masking from slice #35 still applies — that's an orthogonal "never render the literal in the DOM" guarantee.
+
+The `${env.VAR}` syntax users typically substitute is a **runtime convention enforced by the executor**, not a schema construct. The recorder neither validates nor resolves it.
 
 Test fixtures live under `tests/fixtures/recorder/`:
 
