@@ -13,6 +13,15 @@
   var latestStepId = null;
   var _mode = 'platform-aware';
 
+  // Slice #9: per-step "still holds its captured literal" tracker.
+  // Map<step_id, true> — true means the caution still applies. Cleared on
+  // edit-value (intent-based: the act of editing is the user's affirmation,
+  // independent of whether the new string differs from the captured literal).
+  var _sensitiveDirty = new Map();
+  var _allowSensitiveInput = false;
+
+  var CAUTION_TOOLTIP = 'Sensitive input. Click to edit value before Save.';
+
   var AGNOSTIC_BANNER_TEXT =
     "Recording in agnostic mode. press_back / grant_permission / deny_permission auto-detected; click 'Mark as dismiss_keyboard' on a tap step to mark it manually.";
 
@@ -84,12 +93,11 @@
     }
 
     if (step && step.action === 'type') {
-      // Render: <num>. Type "<value>" into "<field_label>"
-      // Slice #35 review fix: when step.sensitive === true the value is
-      // masked here in the GUI render path with bullet characters of
-      // matching length. The full sensitive-input UX (caution badges,
-      // Save-time confirmation modal, --allow-sensitive-input flag, and
-      // on-disk redaction) still lands in slice #30.
+      // Render: <num>. Type "<value>" [⚠] into "<field_label>"
+      // Slice #35 masks sensitive values with bullets in the rendered DOM.
+      // Slice #9 adds the ⚠ caution span between the value and "into" spans
+      // (suppressed when _allowSensitiveInput is true) and tracks the step in
+      // _sensitiveDirty so the Save handler can prompt before sending.
       li.setAttribute('data-action', 'type');
 
       const action = doc.createElement('span');
@@ -97,8 +105,9 @@
       action.textContent = 'Type';
 
       const rawValue = step.value == null ? '' : String(step.value);
+      const isSensitive = step.sensitive === true;
       let displayValue;
-      if (step.sensitive === true) {
+      if (isSensitive) {
         // Cap the bullet count so a degenerate (very long or zero-length)
         // value renders sensibly. Min 1 bullet so an empty sensitive value
         // doesn't betray its zero length.
@@ -122,6 +131,16 @@
       li.appendChild(num);
       li.appendChild(action);
       li.appendChild(value);
+      if (isSensitive && !_allowSensitiveInput) {
+        _sensitiveDirty.set(step.id, true);
+        const caution = doc.createElement('span');
+        caution.className = 'caution';
+        caution.setAttribute('role', 'img');
+        caution.setAttribute('aria-label', CAUTION_TOOLTIP);
+        caution.setAttribute('title', CAUTION_TOOLTIP);
+        caution.textContent = '⚠';
+        li.appendChild(caution);
+      }
       li.appendChild(into);
       li.appendChild(target);
       li.appendChild(_makeStepMenuButton(doc));
@@ -599,6 +618,14 @@
     if (!li) return;
     const span = li.querySelector('.step-value');
     if (span) span.textContent = '"' + p.new_value + '"';
+    // Slice #9: the act of editing is the user's affirmation that they own
+    // this value (typical replacement is "${env.PASSWORD}"). Drop the caution
+    // marker and the dirty flag so the Save handler stops counting this step.
+    if (_sensitiveDirty.get(p.step_id) === true) {
+      _sensitiveDirty.set(p.step_id, false);
+      const caution = li.querySelector('.caution');
+      if (caution && caution.parentNode) caution.parentNode.removeChild(caution);
+    }
   }
 
   function applyAssertionTextEdited(doc, p) {
@@ -638,10 +665,22 @@
       }
     }
     if (li.parentNode) li.parentNode.removeChild(li);
+    // Slice #9: drop the dirty entry so a subsequent Save doesn't count the
+    // deleted step as still-pending.
+    _sensitiveDirty.delete(p.step_id);
   }
 
   function _setMode(m) {
     _mode = m;
+  }
+
+  function _setAllowSensitiveInput(v) {
+    _allowSensitiveInput = !!v;
+  }
+
+  function _resetSensitiveState() {
+    _sensitiveDirty = new Map();
+    _allowSensitiveInput = false;
   }
 
   // Expose to the browser global.
@@ -659,6 +698,8 @@
   root.applyStepMarkedSemantic = applyStepMarkedSemantic;
   root.applyModeBanner = applyModeBanner;
   root._setMode = _setMode;
+  root._setAllowSensitiveInput = _setAllowSensitiveInput;
+  root._resetSensitiveState = _resetSensitiveState;
 
   // Expose to CommonJS (jest).
   if (typeof module !== 'undefined' && module.exports) {
@@ -677,6 +718,8 @@
       applyStepMarkedSemantic: applyStepMarkedSemantic,
       applyModeBanner: applyModeBanner,
       _setMode: _setMode,
+      _setAllowSensitiveInput: _setAllowSensitiveInput,
+      _resetSensitiveState: _resetSensitiveState,
     };
   }
 
@@ -727,9 +770,10 @@
       // Fetch the session mode and show the banner if agnostic.
       fetch('/api/mode').then(function (res) { return res.json(); }).then(function (data) {
         if (data && data.mode) _setMode(data.mode);
+        if (data) _setAllowSensitiveInput(!!data.allow_sensitive_input);
         applyModeBanner(document);
       }).catch(function () {
-        // Failed fetch — leave _mode as 'platform-aware', banner stays hidden.
+        // Failed fetch — leave defaults (platform-aware, allow_sensitive_input=false).
       });
 
       wireButtons({

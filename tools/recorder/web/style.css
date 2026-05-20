@@ -5,7 +5,9 @@ header h1 { margin: 0; flex: 1; }
 main { padding: 16px; }
 #step-list { list-style: none; padding: 0; margin: 0; }
 #step-list li { padding: 8px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 8px; }
-.step-row .caution { color: #d4a72c; }
+.step-row .caution { color: #d4a72c; cursor: help; font-size: 1.05em; }
+#save-sensitive-confirm { background: #fef3c7; border: 1px solid #d4a72c; border-radius: 6px; padding: 8px 12px; margin-right: auto; display: flex; gap: 8px; align-items: center; font-size: 0.9rem; }
+#save-sensitive-confirm button { padding: 4px 10px; font-size: 0.85rem; }
 footer { padding: 12px 16px; border-top: 1px solid #ddd; display: flex; gap: 8px; }
 button { padding: 8px 16px; }
 .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; }
