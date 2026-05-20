@@ -464,6 +464,19 @@ The command launches a small local sidecar that hosts a browser-based recorder G
 - **Platform-aware mode only** — the agnostic recorder template lands in a later slice.
 - Browser-disconnect tolerance (60-second reconnect window) and clean teardown on Ctrl+C.
 
+### Sensitive input handling
+
+The recorder detects password fields (Android `secureTextEntry` / iOS `XCUIElementTypeSecureTextField`) and marks captured `type` events with `sensitive: true`. In the GUI:
+
+- The typed value is **masked with bullet characters** in the step list, never the literal — even before Save.
+- A **⚠ caution marker** sits next to the masked value with the tooltip *"Sensitive input. Click to edit value before Save."*
+- On **Save & Generate**, if any flagged step still holds its captured literal, the GUI prompts inline: *"N sensitive step(s) captured as literal value(s). Save anyway?"* You must confirm or cancel before the scenario is generated.
+- Clicking **Edit value** on a flagged step's ⋯ menu clears its caution marker. The typical replacement is `${env.PASSWORD}` (or any `${env.VAR}`) syntax.
+
+`${env.VAR}` is a **runtime convention enforced by the executor**, not a schema construct — the recorder neither validates nor substitutes references; whether your test runner resolves `${env.PASSWORD}` at replay time is your responsibility.
+
+For users with intentionally-hardcoded test fixtures, `--allow-sensitive-input` suppresses both the marker and the Save-time prompt (the value-masking is unaffected — that always applies once `sensitive: true` reaches the renderer).
+
 ### What does NOT work yet
 
 These are tracked as separate slices under [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21):
@@ -475,7 +488,6 @@ These are tracked as separate slices under [PRD #21](https://github.com/sh3lan93
 - Authoring assertions from the GUI (Add Assertion modal + AI classification) — [#27](https://github.com/sh3lan93/mobile-automator/issues/27).
 - Edit affordances (rename / delete / edit-value / edit-assertion-text) — [#28](https://github.com/sh3lan93/mobile-automator/issues/28).
 - Platform-agnostic recorder + semantic-action detection — [#29](https://github.com/sh3lan93/mobile-automator/issues/29).
-- Sensitive-input caution markers + Save-time confirmation — [#30](https://github.com/sh3lan93/mobile-automator/issues/30).
 - Failure modes (device disconnect / app crash / browser disconnect beyond the 60s window) — [#31](https://github.com/sh3lan93/mobile-automator/issues/31).
 - `--overwrite` (replace an existing scenario) and `--verify` (replay-on-save) flags — [#32](https://github.com/sh3lan93/mobile-automator/issues/32).
 - C3 protocol listener + spec + B-mode fallback — [#33](https://github.com/sh3lan93/mobile-automator/issues/33).
