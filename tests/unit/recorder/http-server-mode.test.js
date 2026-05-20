@@ -24,18 +24,32 @@ describe('GET /api/mode', () => {
   });
   afterEach(() => fs.rmSync(root, { recursive: true, force: true }));
 
-  test('returns the session mode as JSON', async () => {
+  test('returns the session mode as JSON (allow_sensitive_input defaults to false)', async () => {
     const srv = await startHttpServer({ projectRoot: root, scenarioId: 's', mode: 'platform-agnostic' });
     const res = await get(srv.port, '/api/mode');
     expect(res.status).toBe(200);
-    expect(JSON.parse(res.body)).toEqual({ mode: 'platform-agnostic' });
+    expect(JSON.parse(res.body)).toEqual({ mode: 'platform-agnostic', allow_sensitive_input: false });
     await srv.close();
   });
 
-  test('defaults to platform-aware when mode not supplied', async () => {
+  test('defaults to platform-aware when mode not supplied (allow_sensitive_input defaults to false)', async () => {
     const srv = await startHttpServer({ projectRoot: root, scenarioId: 's' });
     const res = await get(srv.port, '/api/mode');
-    expect(JSON.parse(res.body)).toEqual({ mode: 'platform-aware' });
+    expect(JSON.parse(res.body)).toEqual({ mode: 'platform-aware', allow_sensitive_input: false });
+    await srv.close();
+  });
+
+  test('reflects allowSensitiveInput=true in the payload (slice #9)', async () => {
+    const srv = await startHttpServer({ projectRoot: root, scenarioId: 's', allowSensitiveInput: true });
+    const res = await get(srv.port, '/api/mode');
+    expect(JSON.parse(res.body)).toEqual({ mode: 'platform-aware', allow_sensitive_input: true });
+    await srv.close();
+  });
+
+  test('coerces truthy/falsy allowSensitiveInput to a boolean', async () => {
+    const srv = await startHttpServer({ projectRoot: root, scenarioId: 's', allowSensitiveInput: 1 });
+    const res = await get(srv.port, '/api/mode');
+    expect(JSON.parse(res.body).allow_sensitive_input).toBe(true);
     await srv.close();
   });
 });
