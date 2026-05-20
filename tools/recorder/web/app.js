@@ -241,7 +241,27 @@
         sendWs(message);
       });
     }
-    bindOnce('btn-save', { type: 'save' });
+
+    function bindSaveOnce() {
+      const btn = doc.getElementById('btn-save');
+      if (!btn) return;
+      if (btn.getAttribute('data-recorder-wired') === '1') return;
+      btn.setAttribute('data-recorder-wired', '1');
+      btn.addEventListener('click', function () {
+        // Slice #9: count sensitive steps still holding their captured literal.
+        // _allowSensitiveInput suppresses the gate entirely; an empty map (zero
+        // sensitive steps OR all already edited) means the legacy direct-save
+        // path is taken.
+        if (_allowSensitiveInput) { sendWs({ type: 'save' }); return; }
+        let pending = 0;
+        _sensitiveDirty.forEach(function (v) { if (v === true) pending++; });
+        if (pending === 0) { sendWs({ type: 'save' }); return; }
+        // Idempotent: if the prompt is already open, do nothing.
+        if (doc.getElementById('save-sensitive-confirm')) return;
+        _renderSaveSensitiveConfirm(doc, pending, function () { sendWs({ type: 'save' }); });
+      });
+    }
+    bindSaveOnce();
     bindOnce('btn-cancel', { type: 'cancel' });
 
     function bindAddAssertion() {
@@ -668,6 +688,44 @@
     // Slice #9: drop the dirty entry so a subsequent Save doesn't count the
     // deleted step as still-pending.
     _sensitiveDirty.delete(p.step_id);
+  }
+
+  function _renderSaveSensitiveConfirm(doc, pending, onSaveAnyway) {
+    const footer = doc.querySelector('footer');
+    if (!footer) return null;
+    const panel = doc.createElement('div');
+    panel.id = 'save-sensitive-confirm';
+    panel.setAttribute('role', 'alert');
+
+    const noun = pending === 1 ? 'sensitive step' : 'sensitive steps';
+    const tail = pending === 1 ? 'as literal value.' : 'as literal values.';
+    const message = doc.createElement('span');
+    message.textContent = pending + ' ' + noun + ' captured ' + tail + ' Save anyway?';
+    panel.appendChild(message);
+
+    const saveAnyway = doc.createElement('button');
+    saveAnyway.type = 'button';
+    saveAnyway.setAttribute('data-action', 'save-anyway');
+    saveAnyway.textContent = 'Save anyway';
+    saveAnyway.addEventListener('click', function () {
+      if (panel.parentNode) panel.parentNode.removeChild(panel);
+      onSaveAnyway();
+    });
+
+    const cancel = doc.createElement('button');
+    cancel.type = 'button';
+    cancel.setAttribute('data-action', 'cancel');
+    cancel.textContent = 'Cancel';
+    cancel.addEventListener('click', function () {
+      if (panel.parentNode) panel.parentNode.removeChild(panel);
+    });
+
+    panel.appendChild(saveAnyway);
+    panel.appendChild(cancel);
+    // Prepend so the inline alert sits to the left of the existing buttons.
+    if (footer.firstChild) footer.insertBefore(panel, footer.firstChild);
+    else footer.appendChild(panel);
+    return panel;
   }
 
   function _setMode(m) {
