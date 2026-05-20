@@ -60,6 +60,17 @@ class ArtifactsStore {
     }
   }
 
+  writeCrashLog({ timestampISO, body, persistentRoot }) {
+    const crashesDir = path.join(this._root, 'crashes');
+    fs.mkdirSync(crashesDir, { recursive: true });
+    fs.mkdirSync(persistentRoot, { recursive: true });
+    const inBundlePath = path.join(crashesDir, `${timestampISO}.log`);
+    const persistentPath = path.join(persistentRoot, `${this._scenarioId}-${timestampISO}.log`);
+    fs.writeFileSync(inBundlePath, body, 'utf8');
+    fs.writeFileSync(persistentPath, body, 'utf8');
+    return { inBundlePath, persistentPath };
+  }
+
   cleanupOnSuccess() {
     if (fs.existsSync(this._root)) fs.rmSync(this._root, { recursive: true, force: true });
   }
