@@ -27,9 +27,21 @@ async function main(argv) {
   const program = buildProgram();
   program.parse(argv);
   const opts = program.opts();
-  // Phase 1 implementation arrives in subsequent tasks.
-  console.log(`recorder: scenario=${opts.scenario} mode=${opts.mode} platform=${opts.platform}`);
-  process.exit(0);
+  const { startLiveCapture } = require('./lifecycle/live');
+  const exitCode = await startLiveCapture({
+    projectRoot: process.cwd(),
+    scenarioId: opts.scenario,
+    platform: opts.platform,
+    mode: opts.mode,
+    opts: {
+      noGui: !opts.gui,
+      preconditionsModal: !!opts.preconditionsModal,
+      allowSensitiveInput: !!opts.allowSensitiveInput,
+      verify: !!opts.verify,
+      overwrite: !!opts.overwrite,
+    },
+  });
+  process.exit(exitCode);
 }
 
 if (require.main === module) {

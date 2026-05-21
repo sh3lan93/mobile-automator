@@ -40,7 +40,7 @@ The sidecar advertises the chosen TCP port through two channels. SDK
 authors MUST pick at least one.
 
 1. **Port file.** The sidecar writes a JSON file at
-   `mobile-automator/.recorder/<session_id>/recorder.port` containing:
+   `mobile-automator/.recorder/<session_id>/recorder-c3.port` containing:
 
    ```json
    {
@@ -51,10 +51,12 @@ authors MUST pick at least one.
    ```
 
    The file is written before the listener accepts connections and
-   removed during sidecar shutdown.
+   removed during sidecar shutdown. The HTTP/WS sidecar uses a separate
+   file (`recorder.port`) for the GUI's port, so the two channels do
+   not collide.
 
 2. **Environment variable.** The sidecar exports
-   `MOBILE_AUTOMATOR_RECORDER_PORT` in its own process tree. Child
+   `MOBILE_AUTOMATOR_RECORDER_C3_PORT` in its own process tree. Child
    processes the sidecar spawns inherit this value. Host-side dev
    tooling that runs inside the same process tree as the sidecar MAY
    read it directly.
