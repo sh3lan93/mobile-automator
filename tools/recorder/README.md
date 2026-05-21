@@ -85,6 +85,33 @@ Test fixtures live under `tests/fixtures/recorder/`:
 - `scripted-session*.json` — scripted-session inputs for the capture-pipeline integration test.
 - `sample-bundle/` — end-to-end artifact bundle for the AI-skill ingestion test.
 
+## Failure modes (slice #10)
+
+Three policies guard the recording apparatus. All three watchdogs live under `tools/recorder/src/failure/` and report into a single orchestrator (`failure/orchestrator.js`) that owns every side effect.
+
+| Failure | Detected by | Exit code | What the user sees |
+|---|---|---|---|
+| Device disconnect | 3 consecutive `mobile_list_elements_on_screen` / `mobile_take_screenshot` failures within 5s | `2` | Red non-dismissible banner in the GUI naming the device; CLI prints `device '<label>' disconnected — rerun /mobile-automator:record`. |
+| App crash | `mobile_get_crash` returns a `{ log: ... }` payload (polled every 5s) | depends on user choice | Sticky modal with three buttons: **Relaunch** / **Save partial** / **Discard**. |
+| Browser disconnect (close tab / network drop) | Last WS client gone + 60s no-reconnect | `130` (treated as cancel) | None — the GUI is gone by definition. |
+
+Device-disconnect and browser-disconnect both run `cleanupOnCancel` and delete the in-bundle artifact tree under `mobile-automator/.recorder/<scenario_id>/`.
+
+### Crash log persistence
+
+Whenever a crash is detected, the log body is written **twice**:
+
+1. `mobile-automator/.recorder/<scenario_id>/crashes/<ts>.log` — in-bundle. Goes with the bundle on Save partial; deleted by `cleanupOnCancel` on Discard.
+2. `mobile-automator/crash-logs/<scenario_id>-<ts>.log` — **persistent**. Lives outside the recording bundle so it survives both `cleanupOnCancel` and `cleanupOnSuccess`. The path is gitignored.
+
+The three crash-choice options:
+
+- **Relaunch and resume** — calls `mobile_launch_app(<appPackage>)`. On success the recorder inserts a synthetic `launch_app` event into `events.jsonl` with `expected_state: "app relaunched after crash; see crash-logs/<basename>"`, then resumes the hierarchy poller and re-arms the crash watchdog. If the launch itself fails, the GUI shows `app-relaunch-failed` and the orchestrator falls through to Discard.
+- **Save partial** — broadcasts `save-partial-ready` and hands off to the normal save flow with whatever steps were captured pre-crash. Both crash-log copies are preserved.
+- **Discard** — deletes the recording bundle but leaves the persistent log behind for inspection.
+
+The watchdogs themselves are pure state machines — they never call `process.exit`, never touch the artifact store, never broadcast. All policy lives in the orchestrator so the wiring is auditable in one place. The live `index.js` lifecycle doesn't host the orchestrator yet; the integration test at `tests/integration/recorder/failure-modes.test.js` drives the same plumbing the eventual lifecycle will adopt.
+
 ## See also
 
 - `commands/mobile-automator/record.toml` — pre-flight wrapper command.

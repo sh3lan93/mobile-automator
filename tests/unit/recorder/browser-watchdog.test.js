@@ -1,6 +1,6 @@
 'use strict';
 
-const { BrowserWatchdog } = require('../../../tools/recorder/src/server/browser-watchdog');
+const { BrowserWatchdog } = require('../../../tools/recorder/src/failure/browser-watchdog');
 
 function makeFakeWsCtx() {
   let count = 0;

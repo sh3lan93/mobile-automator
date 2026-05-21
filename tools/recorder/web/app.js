@@ -187,11 +187,16 @@
     const onValueEdited = opts.onValueEdited || null;
     const onAssertionTextEdited = opts.onAssertionTextEdited || null;
     const onStepMarkedSemantic = opts.onStepMarkedSemantic || null;
+    const onDeviceDisconnected = opts.onDeviceDisconnected || null;
+    const onAppCrashed = opts.onAppCrashed || null;
     const Ctor = opts.WebSocketCtor || root.WebSocket;
     if (!Ctor) {
       throw new Error('attachWsClient: no WebSocket constructor available');
     }
     const ws = new Ctor(url);
+    // Slice #10: failure-mode messages have a default handler that mutates the
+    // DOM so tests (and the browser) get the banner/modal even when the caller
+    // didn't wire an explicit callback. Callers can still override.
     ws.addEventListener('message', function (event) {
       let payload;
       try {
@@ -200,6 +205,18 @@
         return;
       }
       if (!payload) return;
+      if (payload.type === 'device-disconnected') {
+        if (typeof onDeviceDisconnected === 'function') onDeviceDisconnected(payload);
+        else applyDeviceDisconnected(root.document, payload);
+        return;
+      }
+      if (payload.type === 'app-crashed') {
+        if (typeof onAppCrashed === 'function') onAppCrashed(payload);
+        else applyAppCrashed(root.document, payload, function (msg) {
+          ws.send(JSON.stringify(msg));
+        });
+        return;
+      }
       if (payload.type === 'step-added') {
         onStepAdded(payload.step);
         return;
@@ -690,6 +707,122 @@
     _sensitiveDirty.delete(p.step_id);
   }
 
+  function applyDeviceDisconnected(doc, payload) {
+    // Idempotent: a second device-disconnected message must not stack banners.
+    var existing = doc.getElementById('device-disconnected-banner');
+    if (existing) return existing;
+    var label = payload && payload.device_label != null ? String(payload.device_label) : 'unknown device';
+    var banner = doc.createElement('div');
+    banner.id = 'device-disconnected-banner';
+    banner.className = 'device-disconnected-banner';
+    banner.setAttribute('role', 'alert');
+    banner.setAttribute('data-non-dismissible', 'true');
+    banner.setAttribute('aria-live', 'assertive');
+    // Single text node so callers can assert .textContent contains both the
+    // device label and the rerun hint. No close button — non-dismissible.
+    banner.textContent =
+      "Device '" + label + "' disconnected. Recording ended. " +
+      'Rerun /mobile-automator:record to resume.';
+
+    var header = doc.querySelector('header');
+    if (header && header.parentNode) header.parentNode.insertBefore(banner, header.nextSibling);
+    else doc.body.insertBefore(banner, doc.body.firstChild);
+
+    // Hide the live step list — recording is dead, the rows are stale.
+    var list = doc.getElementById('step-list');
+    if (list) list.hidden = true;
+    return banner;
+  }
+
+  function applyAppCrashed(doc, payload, sendWs) {
+    // The GUI is idempotent per message: orchestrator gates server-side dupes,
+    // but if a modal is somehow already open we reuse it.
+    var existing = doc.getElementById('crash-modal');
+    if (existing) return existing;
+    var logPath = payload && payload.log_path != null ? String(payload.log_path) : '';
+
+    var modal = doc.createElement('div');
+    modal.id = 'crash-modal';
+    modal.className = 'modal-overlay crash-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('data-sticky', 'true');
+
+    // Sticky semantics: swallow backdrop clicks so they don't bubble to any
+    // outer close-on-overlay handler. The handler does nothing — modal stays.
+    modal.addEventListener('click', function (e) {
+      // Only stop propagation when the click hit the overlay itself, not the
+      // inner panel (panel buttons still need to receive their events).
+      if (e.target === modal) e.stopPropagation();
+    });
+
+    var panel = doc.createElement('div');
+    panel.className = 'modal-panel crash-modal-panel';
+
+    var title = doc.createElement('h4');
+    title.textContent = 'App crashed during recording';
+    panel.appendChild(title);
+
+    var info = doc.createElement('p');
+    info.className = 'crash-modal-info';
+    info.textContent = 'Crash log saved to:';
+    panel.appendChild(info);
+
+    var code = doc.createElement('code');
+    code.className = 'crash-modal-log-path';
+    code.textContent = logPath;
+    panel.appendChild(code);
+
+    var question = doc.createElement('p');
+    question.className = 'crash-modal-question';
+    question.textContent = 'How would you like to proceed?';
+    panel.appendChild(question);
+
+    var btnRow = doc.createElement('div');
+    btnRow.className = 'modal-btn-row';
+
+    var choices = [
+      ['relaunch', 'Relaunch'],
+      ['save', 'Save partial'],
+      ['discard', 'Discard'],
+    ];
+
+    function close() {
+      if (modal.parentNode) modal.parentNode.removeChild(modal);
+      doc.removeEventListener('keydown', onKeyDown, true);
+    }
+
+    // Sticky: capture-phase keydown listener that *swallows* Escape so any
+    // other listener (e.g. the assertion modal's Escape-to-close) can't close
+    // this dialog either. The crash modal can only be dismissed by a button.
+    function onKeyDown(e) {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    }
+    doc.addEventListener('keydown', onKeyDown, true);
+
+    choices.forEach(function (pair) {
+      var b = doc.createElement('button');
+      b.type = 'button';
+      b.setAttribute('data-crash-choice', pair[0]);
+      b.textContent = pair[1];
+      b.addEventListener('click', function () {
+        close();
+        if (typeof sendWs === 'function') sendWs({ type: 'crash-choice', choice: pair[0] });
+      });
+      btnRow.appendChild(b);
+    });
+
+    panel.appendChild(btnRow);
+    modal.appendChild(panel);
+
+    var modalRoot = doc.getElementById('modal-root') || doc.body;
+    modalRoot.appendChild(modal);
+    return modal;
+  }
+
   function _renderSaveSensitiveConfirm(doc, pending, onSaveAnyway) {
     const footer = doc.querySelector('footer');
     if (!footer) return null;
@@ -755,6 +888,8 @@
   root.applyStepDeleted = applyStepDeleted;
   root.applyStepMarkedSemantic = applyStepMarkedSemantic;
   root.applyModeBanner = applyModeBanner;
+  root.applyDeviceDisconnected = applyDeviceDisconnected;
+  root.applyAppCrashed = applyAppCrashed;
   root._setMode = _setMode;
   root._setAllowSensitiveInput = _setAllowSensitiveInput;
   root._resetSensitiveState = _resetSensitiveState;
@@ -775,6 +910,8 @@
       applyStepDeleted: applyStepDeleted,
       applyStepMarkedSemantic: applyStepMarkedSemantic,
       applyModeBanner: applyModeBanner,
+      applyDeviceDisconnected: applyDeviceDisconnected,
+      applyAppCrashed: applyAppCrashed,
       _setMode: _setMode,
       _setAllowSensitiveInput: _setAllowSensitiveInput,
       _resetSensitiveState: _resetSensitiveState,

@@ -43,4 +43,38 @@ describe('McpBridge', () => {
     await expect(bridge.listElementsOnScreen())
       .rejects.toThrow(/device disconnected/);
   });
+
+  test('launchApp forwards packageName and locale to mobile_launch_app and returns result', async () => {
+    const calls = [];
+    const fakeCall = async (toolName, args) => {
+      calls.push({ toolName, args });
+      return { ok: true };
+    };
+    const bridge = new McpBridge({ call: fakeCall });
+    const result = await bridge.launchApp('com.example.app', 'en-US');
+    expect(calls).toHaveLength(1);
+    expect(calls[0].toolName).toBe('mobile_launch_app');
+    expect(calls[0].args).toEqual({ packageName: 'com.example.app', locale: 'en-US' });
+    expect(result).toEqual({ ok: true });
+  });
+
+  test('launchApp propagates rejection from underlying call', async () => {
+    const fakeCall = async () => { throw new Error('device disconnected'); };
+    const bridge = new McpBridge({ call: fakeCall });
+    await expect(bridge.launchApp('com.example.app', 'en-US'))
+      .rejects.toThrow(/device disconnected/);
+  });
+
+  test('launchApp works without a locale argument (locale undefined)', async () => {
+    const calls = [];
+    const fakeCall = async (toolName, args) => {
+      calls.push({ toolName, args });
+      return { ok: true };
+    };
+    const bridge = new McpBridge({ call: fakeCall });
+    await bridge.launchApp('com.example.app');
+    expect(calls).toHaveLength(1);
+    expect(calls[0].toolName).toBe('mobile_launch_app');
+    expect(calls[0].args).toEqual({ packageName: 'com.example.app', locale: undefined });
+  });
 });

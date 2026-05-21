@@ -132,3 +132,32 @@ input.inline-edit { font: inherit; padding: 3px 6px; min-width: 12rem; }
   display: flex; gap: 8px; align-items: center; padding: 7px 9px;
   border: 1px solid rgba(127,127,127,0.3); border-radius: 6px; margin-bottom: 6px;
 }
+
+/* Slice #10 — failure-mode banner + crash modal */
+.device-disconnected-banner {
+  background: #fee2e2;
+  color: #7f1d1d;
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin: 8px 16px;
+  font-weight: 500;
+}
+.crash-modal {
+  /* Sticky modal: re-use the .modal-overlay backdrop look but cannot be
+     dismissed by clicking outside (handled in JS — backdrop click is a no-op). */
+  z-index: 2000;
+}
+.crash-modal-panel h4 { margin: 0 0 12px; color: #7f1d1d; }
+.crash-modal-info { margin: 0 0 4px; font-size: 0.9rem; color: #555; }
+.crash-modal-log-path {
+  display: block;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+  word-break: break-all;
+  margin-bottom: 12px;
+}
+.crash-modal-question { margin: 0 0 12px; font-size: 0.95rem; }

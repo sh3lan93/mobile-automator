@@ -54,4 +54,91 @@ describe('HierarchyPoller', () => {
     await new Promise((r) => setTimeout(r, 60));
     expect(count).toBe(countAtStop);
   });
+
+  test('onError fires when bridge rejects, with the err object', async () => {
+    const errors = [];
+    const boom = new Error('device disconnected');
+    const fakeBridge = { listElementsOnScreen: async () => { throw boom; } };
+    const poller = new HierarchyPoller({
+      bridge: fakeBridge,
+      intervalMs: 9999,
+      capacity: 4,
+      onError: (err) => errors.push(err),
+    });
+    poller.start();
+    await new Promise((r) => setTimeout(r, 20));
+    poller.stop();
+    expect(errors.length).toBeGreaterThanOrEqual(1);
+    expect(errors[0]).toBe(boom);
+  });
+
+  test('onSuccess fires when bridge resolves', async () => {
+    let successes = 0;
+    const fakeBridge = { listElementsOnScreen: async () => ({ elements: [] }) };
+    const poller = new HierarchyPoller({
+      bridge: fakeBridge,
+      intervalMs: 9999,
+      capacity: 4,
+      onSuccess: () => { successes += 1; },
+    });
+    poller.start();
+    await new Promise((r) => setTimeout(r, 20));
+    poller.stop();
+    expect(successes).toBeGreaterThanOrEqual(1);
+  });
+
+  test('a throwing onError does not break the poller', async () => {
+    let tickCount = 0;
+    const fakeBridge = {
+      listElementsOnScreen: async () => { tickCount += 1; throw new Error('fail'); },
+    };
+    const poller = new HierarchyPoller({
+      bridge: fakeBridge,
+      intervalMs: 20,
+      capacity: 4,
+      onError: () => { throw new Error('hook blew up'); },
+    });
+    poller.start();
+    await new Promise((r) => setTimeout(r, 80));
+    poller.stop();
+    expect(tickCount).toBeGreaterThanOrEqual(2);
+  });
+
+  test('a throwing onSuccess does not break the poller', async () => {
+    let tickCount = 0;
+    const fakeBridge = {
+      listElementsOnScreen: async () => { tickCount += 1; return { elements: [] }; },
+    };
+    const poller = new HierarchyPoller({
+      bridge: fakeBridge,
+      intervalMs: 20,
+      capacity: 10,
+      onSuccess: () => { throw new Error('hook blew up'); },
+    });
+    poller.start();
+    await new Promise((r) => setTimeout(r, 80));
+    poller.stop();
+    expect(tickCount).toBeGreaterThanOrEqual(2);
+    // Snapshots are still appended despite the throwing hook.
+    expect(poller.size()).toBeGreaterThanOrEqual(2);
+  });
+
+  test('back-compat: no hooks provided, append/swallow contract preserved', async () => {
+    // Mix of resolves and rejects; default hooks (no-op) must not interfere.
+    let call = 0;
+    const fakeBridge = {
+      listElementsOnScreen: async () => {
+        call += 1;
+        if (call % 2 === 0) throw new Error('intermittent');
+        return { elements: [{ id: `snap-${call}` }] };
+      },
+    };
+    const poller = new HierarchyPoller({ bridge: fakeBridge, intervalMs: 20, capacity: 10 });
+    poller.start();
+    await new Promise((r) => setTimeout(r, 120));
+    poller.stop();
+    // Only successful ticks append snapshots; failures are swallowed.
+    expect(poller.size()).toBeGreaterThanOrEqual(1);
+    expect(poller.size()).toBeLessThanOrEqual(call);
+  });
 });

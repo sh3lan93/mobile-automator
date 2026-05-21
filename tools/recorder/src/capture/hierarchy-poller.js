@@ -1,11 +1,20 @@
 'use strict';
 
 class HierarchyPoller {
-  constructor({ bridge, intervalMs = 250, capacity = 40, now = () => Date.now() }) {
+  constructor({
+    bridge,
+    intervalMs = 250,
+    capacity = 40,
+    now = () => Date.now(),
+    onError = () => {},
+    onSuccess = () => {},
+  }) {
     this._bridge = bridge;
     this._intervalMs = intervalMs;
     this._capacity = capacity;
     this._now = now;
+    this._onError = onError;
+    this._onSuccess = onSuccess;
     this._buffer = [];
     this._timer = null;
   }
@@ -16,8 +25,18 @@ class HierarchyPoller {
       try {
         const snap = await this._bridge.listElementsOnScreen();
         this._appendForTest({ t: this._now(), elements: snap.elements || [] });
+        try {
+          this._onSuccess();
+        } catch (_hookErr) {
+          // Hook errors must never break the poller.
+        }
       } catch (err) {
         // Swallow here; device-watchdog observes failures separately.
+        try {
+          this._onError(err);
+        } catch (_hookErr) {
+          // Hook errors must never break the poller.
+        }
       }
     };
     this._timer = setInterval(tick, this._intervalMs);
