@@ -51,6 +51,16 @@ mobile-automator/.recorder/<scenario_id>/
 
 If any required file is **missing or unreadable**, HALT and report which file is missing. Do not attempt to synthesize a partial scenario.
 
+## Inputs — Pre-flight values from `/mobile-automator:record`
+
+The `/mobile-automator:record` command resolves these values before activating this skill (see Section 1.4 and Section 3.0 of `commands/mobile-automator/record.toml`):
+
+- **`overwrite_existing`** (boolean) — `true` when the user passed `--overwrite` AND a prior `mobile-automator/scenarios/<scenario_id>.json` exists. Drives the screenshot-archival branch in step 12.
+- **`verify_on_save`** (boolean) — `true` when the user passed `--verify`. Drives the executor-skill delegation in step 15.
+- **`selected_device`** — the device chosen during Section 1.2 pre-flight. Required by the executor skill when `verify_on_save = true`. Pass it through unchanged.
+
+If these values are not supplied (e.g., the skill is invoked outside the `/record` flow), default both booleans to `false` and skip the gated steps.
+
 ## Process
 
 Apply these steps in order. Most rules referenced here are defined in the generator skill — do not redefine them.
@@ -90,7 +100,21 @@ Apply these steps in order. Most rules referenced here are defined in the genera
 
 11. **Emit the scenario JSON.** Always include `"$schema_version": "2.0"` as the first field. Use named string IDs (snake_case) for all steps and assertions; reference steps by name in `after_step`, never by integer. Validate the assembled JSON against `.gemini/skills/mobile-automator-generator/references/scenario_schema.json`. Write the result to `mobile-automator/scenarios/<scenario_id>.json`. If schema validation fails, HALT and report the validation errors — do not write a malformed file.
 
-12. **Move screenshots.** Copy or move screenshots from `mobile-automator/.recorder/<scenario_id>/screenshots/` into `mobile-automator/screenshots/<scenario_id>/`:
+12. **Move screenshots.**
+
+    **12a. Archive prior screenshots (only if `overwrite_existing = true`).**
+    Before writing any new file into `mobile-automator/screenshots/<scenario_id>/`, check whether that directory already exists. If it does, move it aside:
+    - Compute `ts` = current UTC time formatted as ISO-8601 with milliseconds stripped and colons/dots replaced by `-` (e.g., `2026-05-21T20-31-09Z`).
+    - Set `archive_target` = `mobile-automator/screenshots/.archive/<scenario_id>-<ts>/`.
+    - If `archive_target` already exists, append `-2`, `-3`, ... until the path is unique.
+    - `mkdir -p mobile-automator/screenshots/.archive/`.
+    - Atomic move: `mv mobile-automator/screenshots/<scenario_id>/ <archive_target>/`.
+    - Announce: `"📦 Archived prior screenshots → <archive_target>"`.
+
+    If `overwrite_existing = false` and the directory exists anyway, do NOT archive — that's a pre-existing state outside the slice #11 contract, and the move below will silently merge into it.
+
+    **12b. Move bundle screenshots into the final location.**
+    Copy or move screenshots from `mobile-automator/.recorder/<scenario_id>/screenshots/` into `mobile-automator/screenshots/<scenario_id>/`:
     - Per-step screenshots: rename each to `step_<step_id>.png` matching the synthesized step IDs.
     - Assertion screenshots: copy `assert_<id>.png` files **preserving their filenames** so that any `reference_screenshot` paths in the scenario JSON resolve correctly at execute time.
 
@@ -100,6 +124,26 @@ Apply these steps in order. Most rules referenced here are defined in the genera
     > "✅ Scenario saved: `mobile-automator/scenarios/<scenario_id>.json`
     > - Steps: [N] | Checkpoints: [N] screenshots | Assertions: [N] | Tags: [tag1, tag2]
     > - Screenshots: `mobile-automator/screenshots/<scenario_id>/`"
+
+15. **Verify (opt-in — only when `verify_on_save = true`).**
+
+    Default behavior is no replay — if `verify_on_save = false` or unset, this step is a no-op and synthesis ends after step 14.
+
+    When `verify_on_save = true`, replay the freshly-written scenario by delegating to the executor skill:
+
+    1. Announce:
+       > "▶️  `--verify` was passed. Replaying the recorded scenario via the executor skill…"
+    2. Follow `.gemini/skills/mobile-automator-executor/SKILL.md` inline against the just-written scenario. Pass it:
+       - `scenario_id` = the ID you just wrote in step 11.
+       - `selected_device` = the device passed in from `/mobile-automator:record` pre-flight (Section 1.2).
+       - `environment` = the resolved environment from `/mobile-automator:record` (Section 0.5).
+       Do NOT re-run device/app pre-flight — those checks have already happened. The executor skill should load the scenario JSON from `mobile-automator/scenarios/<scenario_id>.json`, validate it, and replay it on `selected_device`.
+    3. Report the result:
+       - **PASS:** announce `"✅ Scenario verified — replay PASS."` and exit.
+       - **FAIL:** announce the executor's failure summary verbatim, followed by:
+         > "⚠️  Verify replay FAILED. The scenario JSON is preserved at `mobile-automator/scenarios/<scenario_id>.json` so you can review and edit before re-recording. Run `/mobile-automator:execute <scenario_id>` after fixes to re-verify."
+
+    **CRITICAL:** Replay failure must NOT delete the scenario JSON. The user owns the decision to keep, edit, or re-record. Do NOT roll back the screenshot move or the archive from step 12 either — those represent the new recording's evidence and are independent of replay success.
 
 ## Cross-references — Single Source of Truth
 
