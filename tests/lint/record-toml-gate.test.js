@@ -87,4 +87,31 @@ describe('record.toml experimental gate', () => {
     expect(sidecarIdx).toBeGreaterThanOrEqual(0);
     expect(ffmpegIdx).toBeLessThan(sidecarIdx);
   });
+
+  it('hard-halts when adb is missing on Android (live tap source requires adb screenrecord)', () => {
+    // adb on Android is no longer optional — it sources the frame stream via
+    // `adb exec-out screenrecord -`. The current soft-warn must be promoted
+    // to a HALT when platform=android.
+    const adbHaltSection = record.prompt.match(/[Aa]ndroid[^]{0,2000}?\bcommand\s+-v\s+adb\b[^]{0,2000}?\*\*HALT\.\*\*/);
+    expect(adbHaltSection).not.toBeNull();
+  });
+
+  it('hard-halts when xcrun is missing on iOS (live tap source uses simctl recordVideo)', () => {
+    const xcrunHaltSection = record.prompt.match(/\bios\b[^]{0,2000}?\bcommand\s+-v\s+xcrun\b[^]{0,2000}?\*\*HALT\.\*\*/i);
+    expect(xcrunHaltSection).not.toBeNull();
+  });
+
+  it('places the adb/xcrun platform-tools check after device platform is known (after Section 1.2)', () => {
+    // The check must come AFTER the platform_flag is captured in 1.2 and
+    // BEFORE the sidecar is spawned in 2.0.
+    const section12Idx = record.prompt.search(/^###\s+1\.2\b/m);
+    const adbIdx = record.prompt.search(/\bcommand\s+-v\s+adb\b/);
+    const xcrunIdx = record.prompt.search(/\bcommand\s+-v\s+xcrun\b/);
+    const sidecarIdx = record.prompt.search(/^##\s+2\.0\b/m);
+    expect(section12Idx).toBeGreaterThanOrEqual(0);
+    expect(adbIdx).toBeGreaterThan(section12Idx);
+    expect(xcrunIdx).toBeGreaterThan(section12Idx);
+    expect(adbIdx).toBeLessThan(sidecarIdx);
+    expect(xcrunIdx).toBeLessThan(sidecarIdx);
+  });
 });
