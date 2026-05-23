@@ -413,23 +413,28 @@ Generated scenarios are project-specific and include your app's context (busines
 
 ## 🧪 Recording scenarios (experimental)
 
-> ⚠️ **In active development.** This is a tracer-bullet slice ([#22](https://github.com/sh3lan93/mobile-automator/issues/22)) of [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21). The feature is being built incrementally, lives behind an opt-in env var, and will graduate to a stable release only once the slice ladder is complete. **Do not rely on it for day-to-day testing yet.**
+> 🧪 **Feature-complete, gated as experimental.** The recorder shipped in v0.12.0 as a soft launch — every slice of [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21) is on `main`, but the command stays behind an opt-in env var while it gets real-world mileage. File rough edges against [#21](https://github.com/sh3lan93/mobile-automator/issues/21).
 
 ### What is recording?
 
-Instead of describing each step in natural language for `/mobile-automator:generate`, the recorder lets you **capture user interactions on a device and have the AI synthesize a scenario JSON from the captured trace**. You drive the app the way a real user would; the recorder reconstructs the scenario afterwards.
+Instead of describing each step in natural language for `/mobile-automator:generate`, the recorder lets you **capture user interactions on a device and have the AI synthesize a scenario JSON from the captured trace**. You drive the app the way a real user would; an in-browser GUI shows the steps materialising in real time; on **Save & Generate** the AI synthesises a schema-conformant scenario JSON to `mobile-automator/scenarios/<scenario_name>.json` — the same format that `/mobile-automator:generate` produces and that `/mobile-automator:execute` replays.
 
 ### Opt in
 
-The command is hidden until you set the env-var gate. Track progress and discussion in [#21](https://github.com/sh3lan93/mobile-automator/issues/21).
+The command is hidden until you set the env-var gate:
 
 ```bash
 export MOBILE_AUTOMATOR_RECORDER=1
 ```
 
+With the gate off, behaviour is identical to v0.11.0 — `/mobile-automator:record` is not registered, the setup install loop skips the recorder skill, and nothing else changes.
+
 ### Requirements
 
-The recorder needs **`ffmpeg` on your `PATH`** to extract frames from the screen recording it captures during a session. Without it, `/mobile-automator:record` halts cleanly with an install hint before spawning the sidecar.
+- **Node ≥ 18** — required by the local sidecar (`commander`, `ws`, `pngjs` are installed by `gemini extensions install`).
+- **`ffmpeg` on your `PATH`** — used to extract per-frame PNGs from the screen recording captured during a session. The command halts cleanly with an install hint before spawning the sidecar if `ffmpeg` is missing.
+- **A connected device** — Android emulator, Android physical device, or iOS Simulator. iOS physical devices are out of scope.
+- **`adb` on your `PATH`** (Android only, optional) — used to capture hardware-key events (`BACK`, `HOME`, `VOLUMEUP`, `VOLUMEDOWN`, `POWER`). The recorder degrades gracefully if `adb` is absent: a one-line warning prints and hardware-key capture is disabled for the session; gesture capture is unaffected.
 
 ```bash
 # macOS (Homebrew)
@@ -445,55 +450,115 @@ sudo pacman -S ffmpeg
 # https://ffmpeg.org/download.html
 ```
 
-Confirm with `ffmpeg -version`. The standard `gemini extensions install` flow handles the Node-side dependencies (`commander`, `ws`, `pngjs`) automatically; `ffmpeg` is the only system-level binary you need to install yourself.
+Confirm with `ffmpeg -version`.
 
 ### Quick start
 
 ```bash
 MOBILE_AUTOMATOR_RECORDER=1 gemini
 
-> /mobile-automator:record <scenario_name>
+> /mobile-automator:record login_flow
 ```
 
-The command launches a small local sidecar that hosts a browser-based recorder GUI. As you interact with the connected device, your taps appear in the GUI's step list. When you click **Save & Generate**, the recorder skill runs and writes a scenario JSON to `mobile-automator/scenarios/<scenario_name>.json` — the same format that `/mobile-automator:generate` produces. **Cancel** discards the session.
+A typical session looks like:
 
-### What works in this slice (#22)
+1. The command pre-flights config, device, app install, and environment, then opens your default browser to a localhost recorder GUI.
+2. You interact with the device. Each tap, type, long-press, double-tap, swipe, and hardware-key press appears in the GUI's step list as it's captured.
+3. At any moment you can click **Add Assertion** to capture a verification — a fresh device screenshot is taken, you describe the expected outcome in natural language (*"welcome message appears"*), and the assertion is anchored to the most-recent step.
+4. You can **rename**, **delete** (with confirm), **edit a typed value**, or **edit an assertion text** on any step before Save. Reorder, insert, and arbitrary action-type changes are deliberately not allowed — every step's element identity comes from the hierarchy snapshot taken at capture time.
+5. Click **Save & Generate**. The recorder skill ingests the artifact bundle, applies the existing generator skill's rules, and writes the scenario JSON. **Cancel** discards everything.
 
-- **Tap gestures only.** The classifier internally understands more, but only tap is wired into the GUI.
-- **Android emulator only.**
-- **Platform-aware mode only** — the agnostic recorder template lands in a later slice.
-- Browser-disconnect tolerance (60-second reconnect window) and clean teardown on Ctrl+C.
+The resulting scenario runs via `/mobile-automator:execute` exactly like one produced by `/mobile-automator:generate`.
+
+### Flags
+
+| Flag | Default | Effect |
+|------|---------|--------|
+| `--mode=b\|c3` | `b` | Capture mechanism. **Mode B** (default) uses screen recording + UI hierarchy polling + `adb getevent` for hardware keys. **Mode C3** waits 10 s for an instrumentation SDK to connect over loopback TCP, then falls back to Mode B if none does. The C3 protocol contract is documented at [`templates/references/c3-protocol.md`](templates/references/c3-protocol.md); SDKs ship in v1.1. |
+| `--preconditions-modal` | off | Opens a modal before recording begins so you can declare the initial app state (e.g. *"fresh install"*, *"logged out"*) as a structured precondition on the resulting scenario. |
+| `--allow-sensitive-input` | off | Suppresses the inline caution markers and Save-time confirmation for sensitive fields. Useful when fixture credentials are intentionally hardcoded. The bullet-mask on display still applies. |
+| `--verify` | off | After a successful Save, immediately replays the scenario via `/mobile-automator:execute`. Off by default because non-idempotent flows (login OTPs, payments) must not auto-replay. Verify failure preserves the scenario JSON and points you back at `/mobile-automator:execute`. |
+| `--overwrite` | off | Required when re-recording an existing scenario name. Prior screenshots are archived to `mobile-automator/screenshots/.archive/<name>-<timestamp>/` on Save; the new screenshots only promote when Save succeeds. |
+
+### What gets captured
+
+**Gesture vocabulary (Mode B, v1.0):**
+
+- `tap` — primary single-touch.
+- `long_press` — touch held ≥ 500 ms.
+- `double_tap` — two taps within 300 ms at the same coordinates.
+- `swipe` — path with displacement > 50 px; direction (`up`/`down`/`left`/`right`) is carried in the scenario step's `value` field.
+- `type` — keyboard input coalesced per focused field. Tabs out of focus, an Enter press, 1500 ms of silence, or session-end all flush the buffer into a single `type` event.
+- `press_button` — Android hardware keys via `adb shell getevent -lt` (`BACK`, `HOME`, `VOLUMEUP`, `VOLUMEDOWN`, `POWER`). iOS hardware keys are not supported (no equivalent stream).
+
+Multi-touch gestures (pinch, rotate, two-finger pan) are out of scope.
+
+**Assertions:**
+
+The **Add Assertion** modal opens with a fresh device screenshot. You type the assertion in natural language; on Save the AI runs the same two-pass classifier used by `/mobile-automator:generate` to convert your text into a schema-typed assertion (any of the 27 assertion types). Visual-state assertions also carry a `reference_screenshot` path pointing at the captured PNG.
+
+**Edit affordances:**
+
+Each step row has a `⋯` menu offering type-filtered actions:
+
+- **Rename** (any step) — change the display label; the underlying `step_id` slug is regenerated.
+- **Delete** (any step, with confirm) — anchored assertions get a 3-option prompt: re-anchor to next surviving step (default), cascade-delete with the step, or cancel.
+- **Edit value** (`type` steps only) — fix typos or replace literal credentials with a `${env.VAR}` reference.
+- **Edit text** (assertion rows only) — refine ambiguous NL phrasing before classification runs at Save.
+
+### Mode awareness
+
+The recorder respects the `mode` set in `mobile-automator/config.json`:
+
+- **Platform-aware** — captures OS-literal actions. iOS nav-bar back is a literal tap on the Back button. Android BACK key is a literal `press_button` step.
+- **Platform-agnostic** — semantic actions are auto-detected so the resulting scenario works on both OSs:
+  - **`press_back`** — Android BACK key release or iOS left-edge right-swipe.
+  - **`grant_permission`** / **`deny_permission`** — taps on system permission-dialog Allow/Deny buttons, identified by the Android `permissioncontroller`/`systemui` resource-ids or iOS `_UIAlertController` class with exact-label match against [`templates/references/platform-resolutions.md`](templates/references/platform-resolutions.md).
+  - **`dismiss_keyboard`** — **manual only**. The agnostic-mode GUI surfaces a *Mark as dismiss_keyboard* item in any tap row's `⋯` menu. Auto-detection heuristics for keyboard dismiss are too lossy to ship.
+
+A banner in the agnostic-mode GUI reminds you that element names must work on both OSs.
 
 ### Sensitive input handling
 
-The recorder detects password fields (Android `secureTextEntry` / iOS `XCUIElementTypeSecureTextField`) and marks captured `type` events with `sensitive: true`. In the GUI:
+The recorder detects password fields (Android `inputType=textPassword` / iOS `XCUIElementTypeSecureTextField`, `accessibility_traits` containing `secureTextField`, or `secureTextEntry: true`) and marks captured `type` events with `sensitive: true`. In the GUI:
 
 - The typed value is **masked with bullet characters** in the step list, never the literal — even before Save.
 - A **⚠ caution marker** sits next to the masked value with the tooltip *"Sensitive input. Click to edit value before Save."*
 - On **Save & Generate**, if any flagged step still holds its captured literal, the GUI prompts inline: *"N sensitive step(s) captured as literal value(s). Save anyway?"* You must confirm or cancel before the scenario is generated.
-- Clicking **Edit value** on a flagged step's ⋯ menu clears its caution marker. The typical replacement is `${env.PASSWORD}` (or any `${env.VAR}`) syntax.
+- Clicking **Edit value** on a flagged step's `⋯` menu clears its caution marker. The typical replacement is `${env.PASSWORD}` (or any `${env.VAR}`) syntax.
 
 `${env.VAR}` is a **runtime convention enforced by the executor**, not a schema construct — the recorder neither validates nor substitutes references; whether your test runner resolves `${env.PASSWORD}` at replay time is your responsibility.
 
 For users with intentionally-hardcoded test fixtures, `--allow-sensitive-input` suppresses both the marker and the Save-time prompt (the value-masking is unaffected — that always applies once `sensitive: true` reaches the renderer).
 
-### What does NOT work yet
+### Failure modes
 
-These are tracked as separate slices under [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21):
+| Failure | Behaviour |
+|---------|-----------|
+| **Device disconnect** | Hard fail after 3 consecutive capture failures within a 5 s rolling window. Sidecar broadcasts a non-dismissible banner, runs cleanup, exits **code 2**. Recording is purely apparatus — no salvage. |
+| **App crash** | Detected by `mobile_get_crash` polling every 5 s. The crash log is dual-written to `<artifacts>/crashes/<ts>.log` (included in save-partial) and `mobile-automator/crash-logs/<scenario_id>-<ts>.log` (persists across discard). A sticky modal offers three choices: **Relaunch + resume**, **Save partial**, **Discard**. |
+| **Browser disconnect** | 60 s reconnect window. Reattaching the tab resumes the session unchanged; timing out is treated as cancel (exit **130**) and artifacts are cleaned up. |
+| **Cancel** | Intentional Cancel deletes the entire `mobile-automator/.recorder/<scenario_id>/` tree — no draft files accumulate. |
 
-- Type detection (text input + keyboard coalescing) — [#35](https://github.com/sh3lan93/mobile-automator/issues/35).
-- Long-press, double-tap, and swipe detection surfaced in the GUI — [#24](https://github.com/sh3lan93/mobile-automator/issues/24).
-- iOS Simulator parity — [#25](https://github.com/sh3lan93/mobile-automator/issues/25).
-- Android hardware keys via `adb getevent` — [#26](https://github.com/sh3lan93/mobile-automator/issues/26).
-- Authoring assertions from the GUI (Add Assertion modal + AI classification) — [#27](https://github.com/sh3lan93/mobile-automator/issues/27).
-- Edit affordances (rename / delete / edit-value / edit-assertion-text) — [#28](https://github.com/sh3lan93/mobile-automator/issues/28).
-- Platform-agnostic recorder + semantic-action detection — [#29](https://github.com/sh3lan93/mobile-automator/issues/29).
-- Failure modes (device disconnect / app crash / browser disconnect beyond the 60s window) — [#31](https://github.com/sh3lan93/mobile-automator/issues/31).
-- `--overwrite` (replace an existing scenario) and `--verify` (replay-on-save) flags — [#32](https://github.com/sh3lan93/mobile-automator/issues/32).
-- C3 protocol listener + spec + B-mode fallback — [#33](https://github.com/sh3lan93/mobile-automator/issues/33).
-- Documentation polish at graduation time — [#34](https://github.com/sh3lan93/mobile-automator/issues/34).
+### Verifying a recording
 
-If you hit a rough edge, please file it against [#21](https://github.com/sh3lan93/mobile-automator/issues/21) so it lands in the right slice.
+`--verify` is opt-in:
+
+```bash
+> /mobile-automator:record checkout_flow --verify
+```
+
+After Save, the executor skill replays the just-written scenario against the same device. **Do not pass `--verify` for non-idempotent flows** — login OTPs, one-shot payment links, and email-send actions cannot safely auto-replay. Verify failure preserves the scenario JSON and points you at `/mobile-automator:execute` for diagnosis; it never rolls back the Save.
+
+### Current limitations
+
+- **iOS physical devices** — not supported in v0.12.0. iOS Simulator is fully supported.
+- **Multi-touch gestures** (pinch, rotate, two-finger pan) — deferred. Mode B's single touch indicator can't see two simultaneous touches as two paths.
+- **C3 instrumentation SDKs** — the protocol contract ships in v0.12.0 (see [`templates/references/c3-protocol.md`](templates/references/c3-protocol.md)); the iOS Swift Package and Android AAR are v1.1 work.
+- **Resume-from-draft** after intentional cancel or browser-disconnect timeout — device state moves on between sessions and a half-recording can't be cleanly re-attached.
+- **Reorder / insert / arbitrary action-type change** — deliberately not surfaced. Every step's element identity is tied to its hierarchy snapshot at capture time.
+- **First-run tutorial inside the GUI** — v0.12.0 ships this README plus a CLI tip; an in-product tutorial is not included.
+- **Localization** — the GUI is English-only in v0.12.0.
 
 ---
 

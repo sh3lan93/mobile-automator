@@ -798,9 +798,11 @@ The installer is mode-aware:
     > │   ├── SKILL.md
     > │   └── references/
     > │       └── scenario_schema.json
-    > └── mobile-automator-executor/
-    >     ├── SKILL.md
-    >     └── references/result_schema.json
+    > ├── mobile-automator-executor/
+    > │   ├── SKILL.md
+    > │   └── references/result_schema.json
+    > └── mobile-automator-recorder/      # installed when MOBILE_AUTOMATOR_RECORDER=1
+    >     └── SKILL.md
     > ```
     >
     > **Test artifact directory:**
