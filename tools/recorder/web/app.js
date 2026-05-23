@@ -153,9 +153,12 @@
     action.className = 'step-action';
     action.textContent = String(step.action);
 
+    // Issue #40: wrap target in literal `"` at render time so the generic
+    // branch matches the long_press/double_tap (slice #24) and type
+    // (slice #35) branches. Callers pass `display_name` unquoted.
     const target = doc.createElement('span');
     target.className = 'step-target';
-    target.textContent = step.target == null ? '' : String(step.target);
+    target.textContent = '"' + (step.target == null ? '' : String(step.target)) + '"';
 
     li.appendChild(num);
     li.appendChild(action);
