@@ -6,11 +6,17 @@ on:
       - main
     paths:
       - 'templates/**/references/*.json'
+      - 'sample-app/mobile-automator/scenarios/**'
+      - 'sample-app/mobile-automator/results/**'
+      - '.github/workflows/validate-schemas.js'
   push:
     branches:
       - main
     paths:
       - 'templates/**/references/*.json'
+      - 'sample-app/mobile-automator/scenarios/**'
+      - 'sample-app/mobile-automator/results/**'
+      - '.github/workflows/validate-schemas.js'
 
 jobs:
   validate-schemas:
