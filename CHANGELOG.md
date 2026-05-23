@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 Fixed
+
+- **Recorder sidecar — auto-open GUI in default browser** ([#65](https://github.com/sh3lan93/mobile-automator/issues/65)). The README has long claimed `/mobile-automator:record` *"opens your default browser to a localhost recorder GUI"*, but the sidecar never actually launched one — it started its HTTP server and waited for a WebSocket connection that would never arrive unless the user found the port file by hand. The sidecar now spawns the platform-native launcher (`open` on darwin, `xdg-open` on linux, `cmd /c start "" <url>` on win32) detached/unrefed after the HTTP server starts, and prints `🌐 Recorder GUI: http://127.0.0.1:<port>/` to stdout unconditionally so the URL stays recoverable if auto-open fails silently or the tab gets closed. `--no-gui` short-circuits the launch so CI / headless mode is unaffected. Unsupported platforms and `ENOENT` from the launcher are logged once and swallowed — the printed URL is the fallback.
+
 ## [0.12.1] — 2026-05-23
 
 ### 🐛 Fixed

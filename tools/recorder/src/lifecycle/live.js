@@ -3,6 +3,7 @@
 const { ArtifactsStore } = require('../artifacts');
 const { startHttpServer } = require('../server/http-server');
 const { attachWsServer } = require('../server/ws-protocol');
+const { openInBrowser } = require('../server/browser-opener');
 const { loadProjectConfig, resolveModeAndDefaults } = require('../config');
 
 /**
@@ -28,6 +29,7 @@ async function startLiveCapture({
   const StoreCtor = deps.ArtifactsStore || ArtifactsStore;
   const _startHttp = deps.startHttpServer || startHttpServer;
   const _attachWs = deps.attachWsServer || attachWsServer;
+  const _openBrowser = deps.openInBrowser || openInBrowser;
   const _startC3 = deps.startC3 || require('./c3').startC3;
   const _startModeB = deps.startModeB || require('./mode-b').startModeB;
 
@@ -53,6 +55,15 @@ async function startLiveCapture({
     allowSensitiveInput: !!opts.allowSensitiveInput,
   });
   const wsCtx = _attachWs({ httpServer: httpSrv.server });
+
+  // Print the recorder GUI URL and auto-launch the default browser (#65).
+  // The URL is logged unconditionally so the user always has a fallback if
+  // auto-open fails silently (unsupported platform, ENOENT, etc.) or if the
+  // tab is closed mid-recording. `--no-gui` (threaded as opts.noGui) skips
+  // the launch so CI / headless / test mode stays browser-free.
+  const guiUrl = `http://127.0.0.1:${httpSrv.port}/`;
+  console.log(`🌐 Recorder GUI: ${guiUrl}`);
+  _openBrowser({ url: guiUrl, noGui: !!opts.noGui });
 
   // Broadcast the initial mode message so any client that connects sees the
   // emit mode without an extra round-trip.

@@ -30,8 +30,8 @@ function makeFakeWsCtx() {
   };
 }
 
-function makeFakeHttpSrv() {
-  return { port: 0, server: {}, close: jest.fn().mockResolvedValue(undefined) };
+function makeFakeHttpSrv(port = 0) {
+  return { port, server: {}, close: jest.fn().mockResolvedValue(undefined) };
 }
 
 describe('startLiveCapture (lifecycle/live)', () => {
@@ -164,6 +164,82 @@ describe('startLiveCapture (lifecycle/live)', () => {
       },
     });
     expect(wsCtx._broadcasts).toContainEqual({ type: 'mode', mode: 'platform-aware' });
+  });
+
+  test('opens the GUI in the default browser after HTTP server starts (#65)', async () => {
+    const openInBrowser = jest.fn();
+    const httpSrv = makeFakeHttpSrv(54321);
+    const startModeB = jest.fn().mockImplementation(() => {
+      // assert auto-open happened BEFORE the mode handler runs
+      expect(openInBrowser).toHaveBeenCalledTimes(1);
+      return Promise.resolve(0);
+    });
+    await startLiveCapture({
+      projectRoot,
+      scenarioId: 'scn',
+      platform: 'android',
+      mode: 'b',
+      opts: { noGui: false },
+      deps: {
+        startHttpServer: jest.fn().mockResolvedValue(httpSrv),
+        attachWsServer: jest.fn().mockReturnValue(makeFakeWsCtx()),
+        startC3: jest.fn().mockResolvedValue(0),
+        startModeB,
+        openInBrowser,
+      },
+    });
+    expect(openInBrowser).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: 'http://127.0.0.1:54321/',
+        noGui: false,
+      }),
+    );
+  });
+
+  test('passes noGui=true through to openInBrowser when --no-gui is set', async () => {
+    const openInBrowser = jest.fn();
+    await startLiveCapture({
+      projectRoot,
+      scenarioId: 'scn',
+      platform: 'android',
+      mode: 'b',
+      opts: { noGui: true },
+      deps: {
+        startHttpServer: jest.fn().mockResolvedValue(makeFakeHttpSrv(54321)),
+        attachWsServer: jest.fn().mockReturnValue(makeFakeWsCtx()),
+        startC3: jest.fn().mockResolvedValue(0),
+        startModeB: jest.fn().mockResolvedValue(0),
+        openInBrowser,
+      },
+    });
+    expect(openInBrowser).toHaveBeenCalledTimes(1);
+    expect(openInBrowser).toHaveBeenCalledWith(
+      expect.objectContaining({ noGui: true }),
+    );
+  });
+
+  test('always prints the recorder GUI URL to stdout (#65 AC bullet 3)', async () => {
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await startLiveCapture({
+        projectRoot,
+        scenarioId: 'scn',
+        platform: 'android',
+        mode: 'b',
+        opts: { noGui: true },
+        deps: {
+          startHttpServer: jest.fn().mockResolvedValue(makeFakeHttpSrv(54321)),
+          attachWsServer: jest.fn().mockReturnValue(makeFakeWsCtx()),
+          startC3: jest.fn().mockResolvedValue(0),
+          startModeB: jest.fn().mockResolvedValue(0),
+          openInBrowser: jest.fn(),
+        },
+      });
+      const printed = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+      expect(printed).toContain('http://127.0.0.1:54321/');
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 
   test('closes WS + HTTP server on completion', async () => {
