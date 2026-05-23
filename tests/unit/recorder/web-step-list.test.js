@@ -184,6 +184,24 @@ describe('recorder GUI: step-list rendering', () => {
       expect(target.textContent).toBe('"Like Button"');
     });
 
+    // Issue #40: pin the contract that the generic/legacy branch wraps
+    // target in literal `"` chars at render time (matching slice #24's
+    // long_press/double_tap branch and slice #35's type branch). The live
+    // lifecycle producer at lifecycle.js passes `display_name` unquoted —
+    // pre-quoted fixtures were the only reason this branch ever "worked".
+    test('renders a generic tap row by wrapping unquoted target in quotes (#40)', () => {
+      const li = app.renderStepRow({
+        id: 'tap_login_40',
+        index: 10,
+        action: 'tap',
+        target: 'Login',
+      });
+
+      const target = li.querySelector('.step-target');
+      expect(target).not.toBeNull();
+      expect(target.textContent).toBe('"Login"');
+    });
+
     test('renders a swipe step as `Swipe <direction>` with no target span', () => {
       const li = app.renderStepRow({
         id: 'swipe_feed',
