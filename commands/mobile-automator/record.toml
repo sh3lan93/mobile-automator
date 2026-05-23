@@ -181,12 +181,24 @@ CRITICAL: You must validate the success of every tool call. If any tool call fai
     ```
     Stream the sidecar's stdout/stderr to the user verbatim. Do not interpret intermediate output — the sidecar owns the recording UX.
 
-3.  **Wait for the sidecar to exit.** Capture its exit code.
+3.  **Print the GUI URL fallback.** The sidecar writes its bound port to a file once the HTTP server is listening, but it does not echo the URL to stdout. Surface the URL here so the user always has a paste-able fallback when browser auto-open fails (SSH sessions, CI/headless, `--no-gui`, closed tab, etc.):
 
-4.  **On non-zero exit code:** announce the failure and **HALT.**
+    a.  **Compute the port-file path:** `port_file = mobile-automator/.recorder/[scenario_name]/recorder.port` (relative to the user's project root).
+    b.  **Bounded retry loop:** poll the path every 250ms for up to 3 seconds (12 attempts total). The sidecar may not have bound its port yet on slow machines or first-run installs.
+    c.  **On success** (the file exists and is non-empty), read the port (trim whitespace) and announce verbatim:
+        > "🌐 Recorder GUI: http://127.0.0.1:[port]/
+        >    (If your browser didn't open automatically, paste this URL into a new tab.)"
+    d.  **On timeout** (the file never appears after 3 seconds), announce the failure and **HALT.**
+        > "❌ Recorder sidecar did not write its port file at `[port_file]` after 3 seconds. Check the sidecar logs above."
+
+        Do not proceed; do not wait for the sidecar to exit. The sidecar is in an unrecoverable state if it cannot publish its port.
+
+4.  **Wait for the sidecar to exit.** Capture its exit code.
+
+5.  **On non-zero exit code:** announce the failure and **HALT.**
     > "❌ Recorder sidecar exited with code `[exit_code]`. The recording was not completed. See the sidecar output above for details. Re-run `/mobile-automator:record [scenario_name]` after addressing the issue."
 
-5.  **On exit code 0:** proceed to Section 3.0.
+6.  **On exit code 0:** proceed to Section 3.0.
 
 ---
 
