@@ -87,7 +87,7 @@ describe('recorder GUI: device-disconnected error banner (slice #10)', () => {
     app.attachWsClient({ url: 'ws://x', WebSocketCtor: FakeWS });
 
     // Pre-existing steps must visually disappear when the device drops.
-    app.appendStep({ id: 'tap_x', index: 1, action: 'tap', target: '"Login"' });
+    app.appendStep({ id: 'tap_x', index: 1, action: 'tap', target: 'Login' });
 
     fire({ type: 'device-disconnected', device_label: 'Pixel_7', reason: null });
 

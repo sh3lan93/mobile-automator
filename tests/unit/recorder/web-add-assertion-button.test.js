@@ -32,14 +32,14 @@ describe('Add Assertion button', () => {
     const btn = document.getElementById('btn-add-assertion');
     expect(btn.disabled).toBe(true);
 
-    app.appendStep({ id: 'tap_login', index: 1, action: 'Tap', target: '"Login"' });
+    app.appendStep({ id: 'tap_login', index: 1, action: 'Tap', target: 'Login' });
 
     expect(btn.disabled).toBe(false);
   });
 
   test('clicking the button sends {type: "request-assertion-screenshot"} over the stub WS', () => {
     // First add a step so the button is enabled and latestStepId is set.
-    app.appendStep({ id: 'tap_login', index: 1, action: 'Tap', target: '"Login"' });
+    app.appendStep({ id: 'tap_login', index: 1, action: 'Tap', target: 'Login' });
 
     const sent = [];
     const sendWs = (msg) => sent.push(msg);

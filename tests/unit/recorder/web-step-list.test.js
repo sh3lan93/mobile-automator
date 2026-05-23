@@ -24,7 +24,7 @@ describe('recorder GUI: step-list rendering', () => {
         id: 'tap_login',
         index: 3,
         action: 'Tap',
-        target: '"Login"',
+        target: 'Login',
       });
 
       expect(li).toBeInstanceOf(window.HTMLLIElement);
@@ -233,7 +233,7 @@ describe('recorder GUI: step-list rendering', () => {
         id: 'tap_login',
         index: 1,
         action: 'Tap',
-        target: '"Login"',
+        target: 'Login',
       });
 
       expect(list.children.length).toBe(1);
@@ -282,7 +282,7 @@ describe('recorder GUI: step-list rendering', () => {
       handlers.message({
         data: JSON.stringify({
           type: 'step-added',
-          step: { id: 'tap_login', index: 1, action: 'Tap', target: '"Login"' },
+          step: { id: 'tap_login', index: 1, action: 'Tap', target: 'Login' },
         }),
       });
 
@@ -291,7 +291,7 @@ describe('recorder GUI: step-list rendering', () => {
         id: 'tap_login',
         index: 1,
         action: 'Tap',
-        target: '"Login"',
+        target: 'Login',
       });
     });
 
