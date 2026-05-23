@@ -649,8 +649,14 @@
   function applyStepRenamed(doc, p) {
     const li = doc.querySelector('[data-step-id="' + p.step_id + '"]');
     if (!li) return;
-    const span = li.querySelector('.step-target') || li.querySelector('.step-action');
-    if (span) span.textContent = p.new_display_name;
+    const targetSpan = li.querySelector('.step-target');
+    if (targetSpan) {
+      // Issue #40: same wrap contract as renderStepRow's target spans.
+      targetSpan.textContent = '"' + p.new_display_name + '"';
+      return;
+    }
+    const actionSpan = li.querySelector('.step-action');
+    if (actionSpan) actionSpan.textContent = p.new_display_name;
   }
 
   function applyValueEdited(doc, p) {

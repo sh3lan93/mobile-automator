@@ -202,11 +202,11 @@ describe('confirmation display-effect', () => {
     document.body.innerHTML = '<div id="modal-root"></div><ul id="step-list"></ul>';
   });
 
-  test('applyStepRenamed relabels the row target, keeps data-step-id', () => {
+  test('applyStepRenamed relabels the row target with the same quote-wrap contract as renderStepRow (#40)', () => {
     app.appendStep({ id: 'tap_login', index: 1, action: 'tap', target: 'Login' });
     app.applyStepRenamed(document, { step_id: 'tap_login', new_display_name: 'Tap the Login button' });
     const li = document.querySelector('[data-step-id="tap_login"]');
-    expect(li.querySelector('.step-target').textContent).toBe('Tap the Login button');
+    expect(li.querySelector('.step-target').textContent).toBe('"Tap the Login button"');
     expect(li.getAttribute('data-step-id')).toBe('tap_login');
   });
 
