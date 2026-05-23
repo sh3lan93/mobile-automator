@@ -61,13 +61,14 @@ Skill templates use `{{name}}` syntax. Setup gathers values, performs string rep
 
 Runtime fallback: skills can read `mobile-automator/config.json` if a placeholder wasn't populated.
 
-## Recorder (gated experimental)
+## Recorder (gated soft-launch, v0.12.0)
 
-PRD [#21](https://github.com/sh3lan93/mobile-automator/issues/21). The entire recorder surface (`/mobile-automator:record`, sidecar, GUI, recorder skill) is hidden unless `MOBILE_AUTOMATOR_RECORDER=1`.
+PRD [#21](https://github.com/sh3lan93/mobile-automator/issues/21). Feature-complete across 13 slices (see `CHANGELOG.md` `## [0.12.0]`). The entire recorder surface (`/mobile-automator:record`, sidecar at `tools/recorder/`, GUI, recorder skill) is hidden unless `MOBILE_AUTOMATOR_RECORDER=1` is set in the environment — the env-var gate remains in v0.12.0 so the feature can mature in real-world use before being removed.
 
 - Aware-mode recorder skill installs at `.gemini/skills/mobile-automator-recorder/SKILL.md` from the `aware/` template. Uses 10 of 13 aware placeholders (skips `build_command`, `automation_extras`, `business_domain`).
-- Agnostic-mode recorder installs from the `agnostic/` template (slice #29). It uses only the 6 agnostic placeholders; per-OS facts resolve at runtime via `templates/references/platform-resolutions.md`. The sidecar reinterprets OS gestures into the four semantic actions; `dismiss_keyboard` is a manual GUI mark.
-- The recorder skill synthesises scenario JSON from sidecar artifacts under `mobile-automator/.recorder/<session>/`. It defers to the generator skill for scenario shape — generator stays single source of truth.
+- Agnostic-mode recorder installs from the `agnostic/` template. It uses only the 6 agnostic placeholders; per-OS facts resolve at runtime via `templates/references/platform-resolutions.md`. The sidecar reinterprets OS gestures into the four semantic actions; `dismiss_keyboard` is a manual GUI mark.
+- The recorder skill synthesises scenario JSON from sidecar artifacts under `mobile-automator/.recorder/<scenario_id>/` — `metadata.json`, `events.jsonl`, `hierarchy/<t>.json`, `screenshots/`, `assertions.json`, `edits.jsonl`, and optional `crashes/`. The bundle is deleted on successful Save and on Cancel; persistent crash logs survive at `mobile-automator/crash-logs/` (separate from the bundle). The skill defers to the generator skill for scenario shape — generator stays single source of truth.
+- The C3 protocol contract for future v1.1 instrumentation SDKs lives at `templates/references/c3-protocol.md` (TCP-over-loopback, line-delimited JSON, versioned handshake, six event kinds). The reference listener is `tools/recorder/src/c3/tcp-listener.js`. No SDKs ship in v0.12.0.
 
 ## Sample-app milestone workflow (mandatory for any agent)
 

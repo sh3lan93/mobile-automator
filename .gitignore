@@ -38,7 +38,7 @@ docs/superpowers/
 # Mobile Automator recorder per-session working directory
 mobile-automator/.recorder/
 
-# Mobile Automator recorder persistent crash logs (slice #10)
+# Mobile Automator recorder persistent crash logs (survive discard / save-partial)
 mobile-automator/crash-logs/
 
 # sample-app (Flutter) build artifacts
