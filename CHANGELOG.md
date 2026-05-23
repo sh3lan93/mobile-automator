@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ✨ Added
+
+- **Recorder — GUI URL fallback printed from `record.toml`** ([#66](https://github.com/sh3lan93/mobile-automator/issues/66)). After the sidecar is spawned, `commands/mobile-automator/record.toml § 2.0` now reads the `mobile-automator/.recorder/<scenario>/recorder.port` file the HTTP server writes and prints `🌐 Recorder GUI: http://127.0.0.1:<port>/` with a one-line hint to paste the URL into a browser. A bounded retry loop (250ms × 12 = 3s) absorbs the spawn-vs-bind race; if the port file never appears the agent HALTs with a concrete error instead of hanging silently. Gives users a paste-able fallback for SSH sessions, CI/headless runs, `--no-gui`, and reopening a closed GUI tab within the 60s reconnect window.
+
 ## [0.12.1] — 2026-05-23
 
 ### 🐛 Fixed
