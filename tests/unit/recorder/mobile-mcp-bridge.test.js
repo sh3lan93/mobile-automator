@@ -65,6 +65,26 @@ describe('McpBridge', () => {
       .rejects.toThrow(/device disconnected/);
   });
 
+  test('getScreenSize forwards to mobile_get_screen_size and returns the result', async () => {
+    const calls = [];
+    const fakeCall = async (toolName, args) => {
+      calls.push({ toolName, args });
+      return { width: 1080, height: 2400 };
+    };
+    const bridge = new McpBridge({ call: fakeCall });
+    const out = await bridge.getScreenSize();
+    expect(calls).toHaveLength(1);
+    expect(calls[0].toolName).toBe('mobile_get_screen_size');
+    expect(calls[0].args).toEqual({});
+    expect(out).toEqual({ width: 1080, height: 2400 });
+  });
+
+  test('getScreenSize propagates rejection from underlying call', async () => {
+    const fakeCall = async () => { throw new Error('device offline'); };
+    const bridge = new McpBridge({ call: fakeCall });
+    await expect(bridge.getScreenSize()).rejects.toThrow(/device offline/);
+  });
+
   test('launchApp works without a locale argument (locale undefined)', async () => {
     const calls = [];
     const fakeCall = async (toolName, args) => {
