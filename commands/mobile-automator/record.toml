@@ -170,7 +170,7 @@ CRITICAL: You must validate the success of every tool call. If any tool call fai
 
 ## 2.0 RUN THE SIDECAR
 
-**Purpose:** Hand control to the recorder sidecar. The sidecar drives the device, streams events, and writes a raw timeline artifact to `mobile-automator/recordings/<scenario_name>/`. This command WAITS for the sidecar to exit before proceeding.
+**Purpose:** Hand control to the recorder sidecar. The sidecar drives the device, streams events, and writes a raw timeline artifact to `mobile-automator/.recorder/<scenario_name>/`. This command WAITS for the sidecar to exit before proceeding.
 
 1.  **Announce the hand-off:**
     > "Starting recorder sidecar for scenario `[scenario_name]` on `[device_name]` (env: `[selected_environment]`). Interact with the device — the sidecar will capture each step. Press Ctrl-C in the sidecar terminal (or follow the sidecar's stop instructions) when finished."
@@ -196,7 +196,7 @@ CRITICAL: You must validate the success of every tool call. If any tool call fai
     > "✅ Sidecar exit 0. Activating the recorder skill to synthesise the captured timeline into a final scenario JSON."
 
 2.  **Follow the recorder skill** at `.gemini/skills/mobile-automator-recorder/SKILL.md`. Pass the following inputs so the skill can perform Save-time work correctly:
-    - The captured artifact path (`mobile-automator/recordings/[scenario_name]/`).
+    - The captured artifact path (`mobile-automator/.recorder/[scenario_name]/`).
     - The resolved environment, the mode, and the original `scenario_name`.
     - `overwrite_existing` (boolean) from Section 1.4 — controls whether the skill archives the prior `mobile-automator/screenshots/<scenario_name>/` before moving new screenshots in.
     - `verify_on_save` (boolean) from Section 1.4 — controls whether the skill invokes the executor skill against the freshly-written scenario after Save.
