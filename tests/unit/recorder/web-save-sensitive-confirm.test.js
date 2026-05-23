@@ -37,7 +37,7 @@ describe('recorder GUI: Save-time sensitive-input confirmation (slice #9)', () =
     const sent = [];
     app.wireButtons({ document, sendWs: (m) => sent.push(m) });
 
-    app.appendStep({ id: 'tap_login', index: 1, action: 'tap', target: '"Login"' });
+    app.appendStep({ id: 'tap_login', index: 1, action: 'tap', target: 'Login' });
 
     clickSave();
     expect(sent).toEqual([{ type: 'save' }]);
@@ -164,7 +164,7 @@ describe('recorder GUI: Save-time sensitive-input confirmation (slice #9)', () =
     const sent = [];
     app.wireButtons({ document, sendWs: (m) => sent.push(m) });
 
-    app.appendStep({ id: 'tap_login', index: 1, action: 'tap', target: '"Login"' });
+    app.appendStep({ id: 'tap_login', index: 1, action: 'tap', target: 'Login' });
     app.appendStep({ id: 'type_email', index: 2, action: 'type', value: 'a@b.com', field_label: 'Email', sensitive: false });
     app.appendStep({ id: 'type_pw', index: 3, action: 'type', value: 'secret', field_label: 'Password', sensitive: true });
 

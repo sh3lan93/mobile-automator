@@ -21,8 +21,8 @@ describe('appendAssertionRow', () => {
   test('inserts <li class="assertion-row"> after the anchor step row', () => {
     // Add an anchor step row manually.
     const list = document.getElementById('step-list');
-    app.appendStep({ id: 'tap_login', index: 1, action: 'Tap', target: '"Login"' });
-    app.appendStep({ id: 'tap_submit', index: 2, action: 'Tap', target: '"Submit"' });
+    app.appendStep({ id: 'tap_login', index: 1, action: 'Tap', target: 'Login' });
+    app.appendStep({ id: 'tap_submit', index: 2, action: 'Tap', target: 'Submit' });
 
     app.appendAssertionRow({
       id: 'a1',
@@ -39,7 +39,7 @@ describe('appendAssertionRow', () => {
   });
 
   test('renders "Verifies:" label and nl_text', () => {
-    app.appendStep({ id: 'tap_login', index: 1, action: 'Tap', target: '"Login"' });
+    app.appendStep({ id: 'tap_login', index: 1, action: 'Tap', target: 'Login' });
 
     const li = app.appendAssertionRow({
       id: 'a1',
@@ -57,7 +57,7 @@ describe('appendAssertionRow', () => {
   });
 
   test('falls back to append-at-end when anchor step not found', () => {
-    app.appendStep({ id: 'tap_login', index: 1, action: 'Tap', target: '"Login"' });
+    app.appendStep({ id: 'tap_login', index: 1, action: 'Tap', target: 'Login' });
 
     const list = document.getElementById('step-list');
     const beforeCount = list.children.length;

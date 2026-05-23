@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.1] — 2026-05-23
+
+### 🐛 Fixed
+
+- **Recorder GUI — unified tap target quote-wrap contract** ([#40](https://github.com/sh3lan93/mobile-automator/issues/40)). The legacy generic branch in `renderStepRow` and its sibling `applyStepRenamed` now wrap `step.target` in literal `"` characters at render time, matching the `long_press` / `double_tap` branches (slice [#24](https://github.com/sh3lan93/mobile-automator/issues/24)) and the `type` branch (slice [#35](https://github.com/sh3lan93/mobile-automator/issues/35)). Aligns the user-visible rendering with what the live lifecycle producer at `tools/recorder/src/lifecycle.js` actually sends (unquoted `display_name`). Pre-baked-quote test fixtures across the recorder unit suite were corrected accordingly. Bug was latent — the live `step-added` broadcast producer is not yet wired in production.
+
 ## [0.12.0] — 2026-05-23
 
 > **Soft-launch graduation of `/mobile-automator:record`** — the cross-platform interactive scenario recorder designed in [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21) and built across 13 slices. The recorder is feature-complete and stays gated behind `MOBILE_AUTOMATOR_RECORDER=1` so it can collect real-world mileage before the env-var gate is removed in a future release. With the gate off, behaviour is identical to v0.11.0.

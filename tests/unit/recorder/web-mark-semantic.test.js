@@ -33,7 +33,7 @@ describe('Mark as dismiss_keyboard — agnostic mode', () => {
 
   test('agnostic mode: tap row menu contains mark-as-semantic item with correct text', () => {
     app._setMode('platform-agnostic');
-    app.appendStep({ id: 'tap_x', index: 1, action: 'tap', target: '"Button"' });
+    app.appendStep({ id: 'tap_x', index: 1, action: 'tap', target: 'Button' });
     app.attachEditAffordances({ document, sendWs: jest.fn() });
 
     // Open the menu and inspect the items in one operation.
@@ -50,7 +50,7 @@ describe('Mark as dismiss_keyboard — agnostic mode', () => {
 
   test('aware mode: tap row menu has Rename + Delete only (no mark-as-semantic)', () => {
     app._setMode('platform-aware');
-    app.appendStep({ id: 'tap_x', index: 1, action: 'tap', target: '"Button"' });
+    app.appendStep({ id: 'tap_x', index: 1, action: 'tap', target: 'Button' });
     app.attachEditAffordances({ document, sendWs: jest.fn() });
 
     const actions = openMenuActions('[data-step-id="tap_x"]');
@@ -77,9 +77,9 @@ describe('Mark as dismiss_keyboard — agnostic mode', () => {
 
   test('agnostic mode: long_press, double_tap, press_button rows do NOT expose mark-as-semantic', () => {
     app._setMode('platform-agnostic');
-    app.appendStep({ id: 'lp_1', index: 1, action: 'long_press', target: '"Icon"' });
-    app.appendStep({ id: 'dt_1', index: 2, action: 'double_tap', target: '"Logo"' });
-    app.appendStep({ id: 'pb_1', index: 3, action: 'press_button', target: '"OK"' });
+    app.appendStep({ id: 'lp_1', index: 1, action: 'long_press', target: 'Icon' });
+    app.appendStep({ id: 'dt_1', index: 2, action: 'double_tap', target: 'Logo' });
+    app.appendStep({ id: 'pb_1', index: 3, action: 'press_button', target: 'OK' });
     app.attachEditAffordances({ document, sendWs: jest.fn() });
 
     const lpActions = openMenuActions('[data-step-id="lp_1"]');
@@ -104,7 +104,7 @@ describe('Mark as dismiss_keyboard — agnostic mode', () => {
   test('agnostic mode: clicking mark-as-semantic sends correct WS message', () => {
     app._setMode('platform-agnostic');
     const sendWs = jest.fn();
-    app.appendStep({ id: 'tap_x', index: 1, action: 'tap', target: '"Button"' });
+    app.appendStep({ id: 'tap_x', index: 1, action: 'tap', target: 'Button' });
     app.attachEditAffordances({ document, sendWs });
 
     openMenuAndClick('[data-step-id="tap_x"]', 'mark-as-semantic');
@@ -118,7 +118,7 @@ describe('Mark as dismiss_keyboard — agnostic mode', () => {
 
   test('step-marked-semantic WS message updates row data-action and .step-action text', () => {
     app._setMode('platform-agnostic');
-    app.appendStep({ id: 'tap_x', index: 1, action: 'tap', target: '"Button"' });
+    app.appendStep({ id: 'tap_x', index: 1, action: 'tap', target: 'Button' });
 
     // Simulate receiving step-marked-semantic from the server.
     app.applyStepMarkedSemantic(document, {

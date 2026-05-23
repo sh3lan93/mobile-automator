@@ -153,9 +153,12 @@
     action.className = 'step-action';
     action.textContent = String(step.action);
 
+    // Issue #40: wrap target in literal `"` at render time so the generic
+    // branch matches the long_press/double_tap (slice #24) and type
+    // (slice #35) branches. Callers pass `display_name` unquoted.
     const target = doc.createElement('span');
     target.className = 'step-target';
-    target.textContent = step.target == null ? '' : String(step.target);
+    target.textContent = '"' + (step.target == null ? '' : String(step.target)) + '"';
 
     li.appendChild(num);
     li.appendChild(action);
@@ -646,8 +649,14 @@
   function applyStepRenamed(doc, p) {
     const li = doc.querySelector('[data-step-id="' + p.step_id + '"]');
     if (!li) return;
-    const span = li.querySelector('.step-target') || li.querySelector('.step-action');
-    if (span) span.textContent = p.new_display_name;
+    const targetSpan = li.querySelector('.step-target');
+    if (targetSpan) {
+      // Issue #40: same wrap contract as renderStepRow's target spans.
+      targetSpan.textContent = '"' + p.new_display_name + '"';
+      return;
+    }
+    const actionSpan = li.querySelector('.step-action');
+    if (actionSpan) actionSpan.textContent = p.new_display_name;
   }
 
   function applyValueEdited(doc, p) {
