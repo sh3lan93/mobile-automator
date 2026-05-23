@@ -50,6 +50,38 @@ function detectIndicatorInFrame(buf, { color = 'light_blue', minPixels = 6 } = {
   return { x: Math.round(sumX / count), y: Math.round(sumY / count) };
 }
 
+class StreamingVideoTapDetector {
+  constructor({ emit, color = 'light_blue', minPixels = 6 }) {
+    this._emit = emit;
+    this._color = color;
+    this._minPixels = minPixels;
+    this._active = null;
+    this._lastT = 0;
+  }
+
+  feedFrame({ t, buf }) {
+    this._lastT = t;
+    const dot = detectIndicatorInFrame(buf, { color: this._color, minPixels: this._minPixels });
+    if (dot && !this._active) {
+      this._emit({ kind: 'down', t, x: dot.x, y: dot.y });
+      this._active = { x: dot.x, y: dot.y };
+    } else if (dot && this._active) {
+      this._emit({ kind: 'move', t, x: dot.x, y: dot.y });
+      this._active = { x: dot.x, y: dot.y };
+    } else if (!dot && this._active) {
+      this._emit({ kind: 'up', t, x: this._active.x, y: this._active.y });
+      this._active = null;
+    }
+  }
+
+  flush() {
+    if (this._active) {
+      this._emit({ kind: 'up', t: this._lastT, x: this._active.x, y: this._active.y });
+      this._active = null;
+    }
+  }
+}
+
 class VideoTapDetector {
   constructor({ emit, color = 'light_blue', fps = 30 }) {
     this._emit = emit;
@@ -58,24 +90,11 @@ class VideoTapDetector {
   }
 
   processFrames(frames) {
-    let active = null;
+    const streaming = new StreamingVideoTapDetector({ emit: this._emit, color: this._color });
     for (const frame of frames) {
-      const dot = detectIndicatorInFrame(frame.buf, { color: this._color });
-      if (dot && !active) {
-        this._emit({ kind: 'down', t: frame.t, x: dot.x, y: dot.y });
-        active = { x: dot.x, y: dot.y };
-      } else if (dot && active) {
-        this._emit({ kind: 'move', t: frame.t, x: dot.x, y: dot.y });
-        active = { x: dot.x, y: dot.y };
-      } else if (!dot && active) {
-        this._emit({ kind: 'up', t: frame.t, x: active.x, y: active.y });
-        active = null;
-      }
+      streaming.feedFrame(frame);
     }
-    if (active) {
-      const last = frames[frames.length - 1];
-      this._emit({ kind: 'up', t: last.t, x: active.x, y: active.y });
-    }
+    streaming.flush();
   }
 
   /** Run ffmpeg to extract frames; returns Promise<Array<{t, buf}>>. Used in integration tests. */
@@ -90,4 +109,4 @@ class VideoTapDetector {
   }
 }
 
-module.exports = { detectIndicatorInFrame, VideoTapDetector };
+module.exports = { detectIndicatorInFrame, VideoTapDetector, StreamingVideoTapDetector };
