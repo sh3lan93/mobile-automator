@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { EventEmitter } = require('events');
+const { PassThrough } = require('stream');
 const { startModeB } = require('../../../tools/recorder/src/lifecycle/mode-b');
 
 function setupProject({ mode = 'platform-aware' } = {}) {
@@ -129,6 +130,83 @@ describe('startModeB (lifecycle/mode-b)', () => {
 
     const code = await exit;
     expect(code).toBe(2);
+  });
+
+  test('auto-constructs a live tap source when mcpBridge.getScreenSize is available; spawns adb + ffmpeg', async () => {
+    const fakeProcs = [];
+    const spawn = jest.fn(() => {
+      const proc = new EventEmitter();
+      proc.stdout = new PassThrough();
+      proc.stderr = new PassThrough();
+      proc.stdin = new PassThrough();
+      proc.kill = jest.fn();
+      fakeProcs.push(proc);
+      return proc;
+    });
+
+    const mcpBridge = makeFakeMcpBridge();
+    mcpBridge.getScreenSize = jest.fn(async () => ({ width: 400, height: 200 }));
+
+    const wsCtx = makeFakeWsCtx();
+    const store = makeFakeStore();
+
+    const exit = startModeB({
+      store, wsCtx, httpSrv: {}, projectRoot, scenarioId: 's',
+      platform: 'android', appPackage: 'com.example.app',
+      deps: { mcpBridge, pollIntervalMs: 9999, spawn },
+    });
+
+    await wait(30); // allow async getScreenSize → spawn chain to settle
+    expect(mcpBridge.getScreenSize).toHaveBeenCalled();
+    expect(spawn).toHaveBeenCalledTimes(2);
+    expect(spawn.mock.calls[0][0]).toBe('adb');
+    expect(spawn.mock.calls[1][0]).toBe('ffmpeg');
+
+    wsCtx._simulateMessage({ type: 'save' });
+    await exit;
+
+    // Save → finish() → tapSource.stop() → SIGTERM both procs
+    expect(fakeProcs[0].kill).toHaveBeenCalledWith('SIGTERM');
+    expect(fakeProcs[1].kill).toHaveBeenCalledWith('SIGTERM');
+  });
+
+  test('does NOT auto-construct a live tap source when an explicit deps.tapSource is provided', async () => {
+    const spawn = jest.fn();
+    const mcpBridge = makeFakeMcpBridge();
+    mcpBridge.getScreenSize = jest.fn(async () => ({ width: 400, height: 200 }));
+    const tapSource = new EventEmitter();
+
+    const wsCtx = makeFakeWsCtx();
+    const store = makeFakeStore();
+    const exit = startModeB({
+      store, wsCtx, httpSrv: {}, projectRoot, scenarioId: 's',
+      platform: 'android', appPackage: 'com.example.app',
+      deps: { mcpBridge, pollIntervalMs: 9999, spawn, tapSource },
+    });
+
+    await wait(20);
+    expect(spawn).not.toHaveBeenCalled();
+    expect(mcpBridge.getScreenSize).not.toHaveBeenCalled();
+
+    wsCtx._simulateMessage({ type: 'save' });
+    await exit;
+  });
+
+  test('does NOT auto-construct a live tap source when mcpBridge lacks getScreenSize (back-compat)', async () => {
+    const spawn = jest.fn();
+    // makeFakeMcpBridge() intentionally has no getScreenSize
+    const mcpBridge = makeFakeMcpBridge();
+    const wsCtx = makeFakeWsCtx();
+    const store = makeFakeStore();
+    const exit = startModeB({
+      store, wsCtx, httpSrv: {}, projectRoot, scenarioId: 's',
+      platform: 'android', appPackage: 'com.example.app',
+      deps: { mcpBridge, pollIntervalMs: 9999, spawn },
+    });
+    await wait(20);
+    expect(spawn).not.toHaveBeenCalled();
+    wsCtx._simulateMessage({ type: 'save' });
+    await exit;
   });
 
   test('tapSource feeds the classifier (live taps land in store.appendEvent)', async () => {

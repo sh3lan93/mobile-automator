@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ✨ Added
+
+- **Recorder — live tap capture (Mode B)** ([#63](https://github.com/sh3lan93/mobile-automator/issues/63)). Wires the previously-stubbed live tap source at `tools/recorder/src/lifecycle/mode-b.js:46-52,133-142`. The sidecar now spawns a parallel platform-native screen pipe (`adb exec-out screenrecord --output-format=h264 -` on Android, `xcrun simctl io booted recordVideo --codec=h264 -` on iOS Simulator), pipes it through `ffmpeg -vf fps=15,scale=-1:1200 -f image2pipe -vcodec png -`, threads the PNG frames through a new `PngFramer`, and feeds them into a new `StreamingVideoTapDetector`. Detected centroids are rescaled from the ffmpeg-downsampled space back to the device's logical screen using a new `McpBridge.getScreenSize()` wrapper, then handed to the existing `GestureClassifier`. mobile-mcp's own `mobile_start_screen_recording` continues to produce the artifact-bundle saved video independently — the two streams target the same device but do not interfere. Taps, long-presses, double-taps, swipes, typing (via keyboard-region taps), and agnostic-mode `grant_permission` / `deny_permission` detection now all work against real Android emulators/devices and the iOS Simulator. **The `MOBILE_AUTOMATOR_RECORDER=1` soft-launch gate remains in place;** gate removal is tracked separately and blocked on the sample-app integration runner (PRD [#44](https://github.com/sh3lan93/mobile-automator/issues/44) slice 2).
+- **Pre-flight halt on missing `adb` / `xcrun`** ([#63](https://github.com/sh3lan93/mobile-automator/issues/63)). With live capture wired, the platform-native capture binary is no longer optional. `commands/mobile-automator/record.toml § 1.2.5` runs `command -v adb` on Android sessions and `command -v xcrun` on iOS sessions, halting cleanly with platform-specific install guidance before the sidecar spawns.
+
 ## [0.12.1] — 2026-05-23
 
 ### 🐛 Fixed

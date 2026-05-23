@@ -10,6 +10,7 @@ const { findFocusedField } = require('../capture/focus-detector');
 const { isInKeyboardRegion, keyAtCoordinate } = require('../capture/keyboard-region');
 const { loadProjectConfig, resolveModeAndDefaults } = require('../config');
 const { attachFailureModes } = require('../failure/orchestrator');
+const { createLiveTapSource } = require('../capture/live-tap-source');
 const {
   handleSaveMessage,
   handleCancelMessage,
@@ -64,7 +65,7 @@ async function startModeB({
   httpSrv, // eslint-disable-line no-unused-vars
   projectRoot,
   scenarioId,
-  platform, // eslint-disable-line no-unused-vars
+  platform,
   appPackage,
   opts = {}, // eslint-disable-line no-unused-vars
   deps = {},
@@ -130,11 +131,18 @@ async function startModeB({
     },
   });
 
-  // ---- Live tap source (TODO) ---------------------------------------------
-  // See the file-level doc comment: the real tap source plugs into mobile-mcp
-  // frame streaming + capture/video-tap-detector. For now we honour the
-  // injected `deps.tapSource` so tests can drive the pipeline, but a missing
-  // tapSource is fine — it just means no live taps are captured this slice.
+  // ---- Live tap source -----------------------------------------------------
+  // Two paths:
+  //   • Injected `deps.tapSource` (EventEmitter-shaped) — used by unit tests
+  //     that drive synthetic taps directly. No spawn happens.
+  //   • Auto-construct via createLiveTapSource — the production path. Gated on
+  //     mcpBridge supporting `getScreenSize` so the existing tests (whose fake
+  //     bridge lacks it) keep their current "no live taps" behaviour without
+  //     change.
+  // The auto-constructed source is captured into `liveTapSource` so finish()
+  // can stop the spawned processes; the injected EventEmitter is GC-managed
+  // by the test.
+  let liveTapSource = null;
   if (deps.tapSource && typeof deps.tapSource.on === 'function') {
     deps.tapSource.on('tap', (ev) => {
       try { classifier.feed(ev); } catch (_e) { /* swallow */ }
@@ -152,6 +160,10 @@ async function startModeB({
     try { hierarchyPoller.stop(); } catch (_e) { /* swallow */ }
     try { classifier.flush(); } catch (_e) { /* swallow */ }
     try { typeBuffer.flush(); } catch (_e) { /* swallow */ }
+    // Stop the auto-constructed live tap source (SIGTERM → SIGKILL).
+    if (liveTapSource && typeof liveTapSource.stop === 'function') {
+      try { liveTapSource.stop(); } catch (_e) { /* swallow */ }
+    }
     // Tear down failure-orchestrator watchdogs (crash + browser timers).
     if (failureCtx && typeof failureCtx.stopAll === 'function') {
       try { failureCtx.stopAll(); } catch (_e) { /* swallow */ }
@@ -223,6 +235,29 @@ async function startModeB({
         break;
     }
   });
+
+  // ---- Auto-construct live tap source (production path) ------------------
+  // Only when (a) no explicit tapSource was injected, and (b) the bridge
+  // supports getScreenSize (real McpBridge does; the fake bridges in legacy
+  // unit tests don't, so this branch is inert for them).
+  if (!deps.tapSource && mcpBridge && typeof mcpBridge.getScreenSize === 'function') {
+    liveTapSource = createLiveTapSource({
+      platform,
+      mcpBridge,
+      deviceLabel: deps.deviceLabel,
+      fps: deps.tapSourceFps || 15,
+      scaleHeight: deps.tapSourceScaleHeight || 1200,
+      onEvent: (ev) => { try { classifier.feed(ev); } catch (_e) { /* swallow */ } },
+      onError: (err) => {
+        if (failureCtx && failureCtx.deviceWatchdog && typeof failureCtx.deviceWatchdog.observeFailure === 'function') {
+          try { failureCtx.deviceWatchdog.observeFailure(err); } catch (_e) { /* swallow */ }
+        }
+      },
+      spawn: deps.spawn,
+    });
+    // Fire-and-forget start; getScreenSize errors are routed to onError.
+    Promise.resolve(liveTapSource.start()).catch(() => { /* already on onError */ });
+  }
 
   // ---- Start the poller and yield -----------------------------------------
 

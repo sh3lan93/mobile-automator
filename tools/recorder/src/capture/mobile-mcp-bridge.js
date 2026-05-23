@@ -37,6 +37,10 @@ class McpBridge {
   async launchApp(packageName, locale) {
     return this._call('mobile_launch_app', { packageName, locale });
   }
+
+  async getScreenSize() {
+    return this._call('mobile_get_screen_size', {});
+  }
 }
 
 module.exports = { McpBridge };
