@@ -170,23 +170,33 @@ CRITICAL: You must validate the success of every tool call. If any tool call fai
 
 ## 2.0 RUN THE SIDECAR
 
-**Purpose:** Hand control to the recorder sidecar. The sidecar drives the device, streams events, and writes a raw timeline artifact to `mobile-automator/.recorder/<scenario_name>/`. This command WAITS for the sidecar to exit before proceeding.
+**Purpose:** Hand control to the recorder sidecar. The sidecar is spawned as a **background** subprocess so this command can concurrently surface the GUI URL while the sidecar is alive and serving the recorder UI. The command then awaits the background process's completion (via Save & Generate or Cancel in the GUI) before proceeding to Section 3.0.
 
 1.  **Announce the hand-off:**
-    > "Starting recorder sidecar for scenario `[scenario_name]` on `[device_name]` (env: `[selected_environment]`). Interact with the device — the sidecar will capture each step. Press Ctrl-C in the sidecar terminal (or follow the sidecar's stop instructions) when finished."
+    > "Starting recorder sidecar for scenario `[scenario_name]` on `[device_name]` (env: `[selected_environment]`). Interact with the device — the sidecar will capture each step. Use **Save & Generate** or **Cancel** in the GUI to finish. (Avoid Ctrl-C in this terminal — it kills the agent without a graceful sidecar shutdown.)"
 
-2.  **Invoke the sidecar** as a subprocess. Pass the resolved platform from Section 1.2 so the sidecar can pick the right video tap-detector profile (Android's "Show taps" cyan vs iOS Simulator's "Show Single Touches" gray disk) and gate Android-only modules:
+2.  **Invoke the sidecar as a non-blocking BACKGROUND subprocess.** The agent must NOT block on this call. Use your shell tool's background-execution primitive (e.g., `run_in_background: true`, `nohup … &`, or your runtime's equivalent) so steps 3 and 4 can run while the sidecar is alive. Capture the background task identifier (PID, task handle, or task id) so step 4 can await its completion. Pass the resolved platform from Section 1.2 so the sidecar can pick the right video tap-detector profile (Android's "Show taps" cyan vs iOS Simulator's "Show Single Touches" gray disk) and gate Android-only modules:
     ```
     node ${extensionPath}/tools/recorder/src/index.js --scenario "${scenario_name}" --platform "${platform_flag}" ${flags}
     ```
-    Stream the sidecar's stdout/stderr to the user verbatim. Do not interpret intermediate output — the sidecar owns the recording UX.
+    Use your streaming / tail / monitor primitive (e.g., `Monitor` on the background task, periodic `Read` of the captured output) to surface the sidecar's stdout/stderr to the user verbatim as the recording progresses. Do not interpret intermediate output — the sidecar owns the recording UX.
 
-3.  **Wait for the sidecar to exit.** Capture its exit code.
+3.  **Print the GUI URL fallback.** As soon as step 2 has issued the background spawn (do not wait for it to finish), poll for the port file the sidecar writes once its HTTP server binds. Surfacing the URL here gives the user a paste-able fallback when browser auto-open fails (SSH sessions, CI/headless, `--no-gui`, closed tab during the 60-second reconnect window, etc.):
 
-4.  **On non-zero exit code:** announce the failure and **HALT.**
+    a.  **Compute the port-file path:** `port_file = mobile-automator/.recorder/[scenario_name]/recorder.port` (relative to the user's project root).
+    b.  **Bounded retry loop:** poll the path every 250ms for up to 3 seconds (12 attempts total). The sidecar may not have bound its port yet on slow machines or first-run installs.
+    c.  **On success** (the file exists and is non-empty), read the port (trim whitespace) and announce verbatim:
+        > "🌐 Recorder GUI: http://127.0.0.1:[port]/
+        >    (If your browser didn't open automatically, paste this URL into a new tab.)"
+    d.  **On timeout** (the file never appears after 3 seconds), announce a warning and CONTINUE to step 4 — do **NOT** halt and do **NOT** kill the sidecar. The sidecar may still be doing slow first-run work; a genuinely broken sidecar will surface as a non-zero exit code in step 5.
+        > "⚠️ Recorder sidecar has not yet written its port file at `[port_file]` after 3 seconds. The GUI URL will not be printed automatically; if you need it, check that path manually. Continuing to wait for the sidecar to finish."
+
+4.  **Await the background sidecar's completion.** Block here until the background subprocess from step 2 finishes — use your runtime's task-notification mechanism (e.g., wait on the captured PID / task handle, or block until the `run_in_background` task reports complete). Capture its exit code.
+
+5.  **On non-zero exit code:** announce the failure and **HALT.**
     > "❌ Recorder sidecar exited with code `[exit_code]`. The recording was not completed. See the sidecar output above for details. Re-run `/mobile-automator:record [scenario_name]` after addressing the issue."
 
-5.  **On exit code 0:** proceed to Section 3.0.
+6.  **On exit code 0:** proceed to Section 3.0.
 
 ---
 
