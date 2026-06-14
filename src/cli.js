@@ -6,6 +6,27 @@ const { Command } = require('commander');
 const { ok, fail, render, exitCodeFor } = require('./output/envelope');
 const { DeviceBridge } = require('./device/bridge');
 const { ScenarioValidator } = require('./scenario/validator');
+const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
+const { ResultStore } = require('./result/store');
+
+const KNOWN_ASSERTION_TYPES = new Set([
+  ...MECHANICAL_TYPES,
+  // Tier-2 visual types the agent must judge.
+  'screenshot_match',
+  'visual_state',
+  'element_fully_visible',
+  'color_style',
+  'screen_title',
+  'alert_present',
+  'alert_text',
+  'toast_visible',
+  'keyboard_visible',
+  'dark_mode_active',
+  'permission_dialog_shown',
+  'element_state',
+]);
+
+const SWIPE_DIRECTIONS = new Set(['up', 'down', 'left', 'right']);
 
 // ---------------------------------------------------------------------------
 // Handlers — pure-ish: accept injected deps, return { envelope, exitKind }.
@@ -87,6 +108,157 @@ function handleValidate({ validator }, file) {
   return { envelope: env, exitKind: 'invalid_input' };
 }
 
+function deviceFail(err) {
+  return {
+    envelope: fail(
+      'device',
+      err.message || String(err),
+      'Ensure a device or simulator is connected and the app is running.'
+    ),
+    exitKind: 'device',
+  };
+}
+
+async function handleTap({ deviceBridge }, raw) {
+  const parts = String(raw == null ? '' : raw).split(',');
+  if (parts.length !== 2) {
+    return {
+      envelope: fail('invalid_input', `expected coordinates as "x,y", got "${raw}"`, 'Pass --at <x,y>, e.g. --at 100,250.'),
+      exitKind: 'invalid_input',
+    };
+  }
+  const x = Number(parts[0]);
+  const y = Number(parts[1]);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    return {
+      envelope: fail('invalid_input', `coordinates must be numbers, got "${raw}"`, 'Pass --at <x,y>, e.g. --at 100,250.'),
+      exitKind: 'invalid_input',
+    };
+  }
+  const ix = Math.round(x);
+  const iy = Math.round(y);
+  try {
+    await deviceBridge.tap({ x: ix, y: iy });
+    return { envelope: ok({ tapped: [ix, iy] }), exitKind: 'ok' };
+  } catch (err) {
+    return deviceFail(err);
+  }
+}
+
+async function handleType({ deviceBridge }, text) {
+  const str = text == null ? '' : String(text);
+  try {
+    await deviceBridge.type(str);
+    return { envelope: ok({ typed: str.length }), exitKind: 'ok' };
+  } catch (err) {
+    return deviceFail(err);
+  }
+}
+
+async function handleSwipe({ deviceBridge }, direction) {
+  const dir = String(direction || '').toLowerCase();
+  if (!SWIPE_DIRECTIONS.has(dir)) {
+    return {
+      envelope: fail('invalid_input', `invalid swipe direction "${direction}"`, 'Use one of: up, down, left, right.'),
+      exitKind: 'invalid_input',
+    };
+  }
+  try {
+    await deviceBridge.swipe({ direction: dir });
+    return { envelope: ok({ swiped: dir }), exitKind: 'ok' };
+  } catch (err) {
+    return deviceFail(err);
+  }
+}
+
+async function handlePress({ deviceBridge }, button) {
+  const b = String(button || '');
+  if (!b) {
+    return {
+      envelope: fail('invalid_input', 'a button name is required', 'e.g. mauto press BACK'),
+      exitKind: 'invalid_input',
+    };
+  }
+  try {
+    await deviceBridge.pressButton(b);
+    return { envelope: ok({ pressed: b }), exitKind: 'ok' };
+  } catch (err) {
+    return deviceFail(err);
+  }
+}
+
+// Build an assertion object from CLI flags, fetch the current element list,
+// and run the pure evaluator. A failed assertion is a valid RESULT (exit 0);
+// only an unknown assertion type is a structural (invalid_input) error.
+async function handleAssert({ deviceBridge }, type, flags = {}) {
+  if (!KNOWN_ASSERTION_TYPES.has(type)) {
+    return {
+      envelope: fail('invalid_input', `unknown assertion type "${type}"`, 'See the executor SKILL for the supported assertion types.'),
+      exitKind: 'invalid_input',
+    };
+  }
+
+  let elements;
+  try {
+    elements = await deviceBridge.listElements();
+  } catch (err) {
+    return deviceFail(err);
+  }
+
+  const assertion = { type };
+  if (flags.target !== undefined) assertion.target = flags.target;
+  if (flags.expected !== undefined) assertion.expected = flags.expected;
+  if (flags.operator !== undefined) assertion.operator = flags.operator;
+  if (flags.count !== undefined) assertion.count = Number(flags.count);
+  if (flags.pattern !== undefined) assertion.pattern = flags.pattern;
+  if (flags.variable !== undefined) assertion.variable_name = flags.variable;
+
+  const r = evaluate(assertion, { elements });
+  return {
+    envelope: ok({
+      type: r.type,
+      mechanical: r.mechanical,
+      pass: r.pass,
+      needs_agent: r.needs_agent,
+      message: r.message,
+    }),
+    exitKind: 'ok',
+  };
+}
+
+function handleResultAddStep({ resultStoreFactory, projectRoot }, opts) {
+  const { runId, scenarioId, stepId, status, attempts } = opts;
+  if (!runId || !stepId || !status) {
+    return {
+      envelope: fail('invalid_input', '--run-id, --step-id and --status are required', null),
+      exitKind: 'invalid_input',
+    };
+  }
+  const store = resultStoreFactory({ runId, scenarioId, projectRoot });
+  const step = store.addStep({
+    step_id: stepId,
+    status,
+    attempts: attempts === undefined ? 1 : Number(attempts),
+  });
+  return { envelope: ok({ run_id: runId, step }), exitKind: 'ok' };
+}
+
+function handleResultFinalize({ resultStoreFactory, projectRoot }, opts) {
+  const { runId, scenarioId, status, duration } = opts;
+  if (!runId) {
+    return {
+      envelope: fail('invalid_input', '--run-id is required', null),
+      exitKind: 'invalid_input',
+    };
+  }
+  const store = resultStoreFactory({ runId, scenarioId, projectRoot });
+  const result = store.finalize({
+    status,
+    durationSeconds: duration === undefined ? 0 : Number(duration),
+  });
+  return { envelope: ok(result), exitKind: 'ok' };
+}
+
 // ---------------------------------------------------------------------------
 // Program wiring
 // ---------------------------------------------------------------------------
@@ -105,6 +277,10 @@ function buildProgram(deps = {}) {
     // Factory returning { bridge, close }. Overridable in tests.
     deviceBridgeFactory = realDeviceBridge,
     validator = new ScenarioValidator(),
+    // Factory for the incremental result store. Overridable in tests.
+    resultStoreFactory = (args) => new ResultStore(args),
+    // Project root used to resolve mobile-automator/results/.
+    projectRoot = process.cwd(),
     // Sink used to emit the rendered envelope + drive the exit code.
     emit = defaultEmit,
   } = deps;
@@ -153,6 +329,113 @@ function buildProgram(deps = {}) {
       emit(r, humanFlag());
     });
 
+  // --- Action verbs (one-shot; CLI owns the mechanical work) ---------------
+
+  const withBridge = async (device, fn) => {
+    const { bridge, close } = await deviceBridgeFactory({ device });
+    try {
+      const r = await fn(bridge);
+      emit(r, humanFlag());
+    } finally {
+      if (typeof close === 'function') await close();
+    }
+  };
+
+  program
+    .command('tap')
+    .description('Tap at absolute screen coordinates')
+    .requiredOption('--at <x,y>', 'coordinates as "x,y"')
+    .option('--device <id>', 'target device id')
+    .action((opts) => withBridge(opts.device, (bridge) => handleTap({ deviceBridge: bridge }, opts.at)));
+
+  program
+    .command('type <text>')
+    .description('Type text into the focused element')
+    .option('--device <id>', 'target device id')
+    .action((text, opts) => withBridge(opts.device, (bridge) => handleType({ deviceBridge: bridge }, text)));
+
+  program
+    .command('swipe')
+    .description('Swipe in a cardinal direction')
+    .requiredOption('--direction <dir>', 'up | down | left | right')
+    .option('--device <id>', 'target device id')
+    .action((opts) => withBridge(opts.device, (bridge) => handleSwipe({ deviceBridge: bridge }, opts.direction)));
+
+  program
+    .command('press <button>')
+    .description('Press a system/hardware button (BACK, HOME, ENTER, ...)')
+    .option('--device <id>', 'target device id')
+    .action((button, opts) => withBridge(opts.device, (bridge) => handlePress({ deviceBridge: bridge }, button)));
+
+  program
+    .command('assert <type>')
+    .description('Evaluate an assertion against the current screen (mechanical types decided by the CLI; visual types deferred to the agent)')
+    .option('--target <s>', 'element/target description')
+    .option('--expected <s>', 'expected value')
+    .option('--operator <op>', 'comparison operator for count assertions')
+    .option('--count <n>', 'expected count')
+    .option('--pattern <re>', 'regex pattern')
+    .option('--variable <name>', 'captured variable name')
+    .option('--device <id>', 'target device id')
+    .action((type, opts) =>
+      withBridge(opts.device, (bridge) =>
+        handleAssert({ deviceBridge: bridge }, type, {
+          target: opts.target,
+          expected: opts.expected,
+          operator: opts.operator,
+          count: opts.count,
+          pattern: opts.pattern,
+          variable: opts.variable,
+        })
+      )
+    );
+
+  // --- Result persistence verbs --------------------------------------------
+
+  const result = program.command('result').description('Incremental result file operations');
+
+  result
+    .command('add-step')
+    .description('Append a step result to the run file')
+    .requiredOption('--run-id <id>', 'run identifier (run_YYYYMMDD_HHMMSS)')
+    .option('--scenario-id <id>', 'scenario identifier')
+    .requiredOption('--step-id <id>', 'step identifier')
+    .requiredOption('--status <s>', 'pass | fail | skipped | error')
+    .option('--attempts <n>', 'number of attempts (>1 records flakiness on pass)')
+    .action((opts) => {
+      const r = handleResultAddStep(
+        { resultStoreFactory, projectRoot },
+        {
+          runId: opts.runId,
+          scenarioId: opts.scenarioId,
+          stepId: opts.stepId,
+          status: opts.status,
+          attempts: opts.attempts,
+        }
+      );
+      emit(r, humanFlag());
+    });
+
+  result
+    .command('finalize')
+    .description('Assemble and write the final result file')
+    .requiredOption('--run-id <id>', 'run identifier')
+    .option('--scenario-id <id>', 'scenario identifier')
+    .option('--status <s>', 'passed | failed | error')
+    .option('--duration <secs>', 'total duration in seconds')
+    .action((opts) => {
+      const r = handleResultFinalize(
+        { resultStoreFactory, projectRoot },
+        {
+          runId: opts.runId,
+          scenarioId: opts.scenarioId,
+          status: opts.status,
+          duration: opts.duration,
+        }
+      );
+      emit(r, humanFlag());
+    });
+
   return program;
 }
 
@@ -172,4 +455,11 @@ module.exports = {
   handleElements,
   handleScreenshot,
   handleValidate,
+  handleTap,
+  handleType,
+  handleSwipe,
+  handlePress,
+  handleAssert,
+  handleResultAddStep,
+  handleResultFinalize,
 };

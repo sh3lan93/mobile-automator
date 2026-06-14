@@ -68,4 +68,44 @@ describe('DeviceBridge', () => {
       expect(p).toBe('/tmp/req.png');
     });
   });
+
+  describe('tap', () => {
+    test('invokes mobile_click_on_screen_at_coordinates with x,y', async () => {
+      const calls = [];
+      const call = async (tool, args) => { calls.push([tool, args]); return {}; };
+      const bridge = new DeviceBridge({ call });
+      await bridge.tap({ x: 12, y: 34 });
+      expect(calls).toEqual([['mobile_click_on_screen_at_coordinates', { x: 12, y: 34 }]]);
+    });
+  });
+
+  describe('type', () => {
+    test('invokes mobile_type_keys with text and submit=false', async () => {
+      const calls = [];
+      const call = async (tool, args) => { calls.push([tool, args]); return {}; };
+      const bridge = new DeviceBridge({ call });
+      await bridge.type('hello');
+      expect(calls).toEqual([['mobile_type_keys', { text: 'hello', submit: false }]]);
+    });
+  });
+
+  describe('swipe', () => {
+    test('invokes mobile_swipe_on_screen with the direction', async () => {
+      const calls = [];
+      const call = async (tool, args) => { calls.push([tool, args]); return {}; };
+      const bridge = new DeviceBridge({ call });
+      await bridge.swipe({ direction: 'up' });
+      expect(calls).toEqual([['mobile_swipe_on_screen', { direction: 'up' }]]);
+    });
+  });
+
+  describe('pressButton', () => {
+    test('invokes mobile_press_button with the button name', async () => {
+      const calls = [];
+      const call = async (tool, args) => { calls.push([tool, args]); return {}; };
+      const bridge = new DeviceBridge({ call });
+      await bridge.pressButton('BACK');
+      expect(calls).toEqual([['mobile_press_button', { button: 'BACK' }]]);
+    });
+  });
 });
