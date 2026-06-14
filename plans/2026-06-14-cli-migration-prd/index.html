@@ -1,0 +1,1613 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Intelligent mobile QA automation for Gemini CLI - auto-detect mobile app architecture, generate test scenarios, and execute with AI-powered assertions">
+      
+      
+      
+        <link rel="canonical" href="https://sh3lan93.github.io/mobile-automator/plans/2026-06-14-cli-migration-prd/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>2026 06 14 cli migration prd - mobile-automator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="2026 06 14 cli migration prd - mobile-automator" />
+  <meta property="og:description" content="Intelligent mobile QA automation for Gemini CLI - auto-detect mobile app architecture, generate test scenarios, and execute with AI-powered assertions" />
+  <meta property="og:url" content="https://sh3lan93.github.io/mobile-automator/plans/2026-06-14-cli-migration-prd/" />
+  <meta property="og:site_name" content="mobile-automator" />
+  <meta property="og:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="2026 06 14 cli migration prd - mobile-automator" />
+  <meta name="twitter:description" content="Intelligent mobile QA automation for Gemini CLI - auto-detect mobile app architecture, generate test scenarios, and execute with AI-powered assertions" />
+  <meta name="twitter:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
+  
+
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#problem-statement" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="mobile-automator" class="md-header__button md-logo" aria-label="mobile-automator" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            mobile-automator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              2026 06 14 cli migration prd
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/sh3lan93/mobile-automator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sh3lan93/mobile-automator
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="mobile-automator" class="md-nav__button md-logo" aria-label="mobile-automator" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="logo">
+
+    </a>
+    mobile-automator
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/sh3lan93/mobile-automator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sh3lan93/mobile-automator
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Core Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/three-tier-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3-Tier Design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How Skills Work
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command Guides
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup Command
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/generate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Generate Command
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/execute/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execute Command
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/assertions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Assertion Types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test Scenario Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/result-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test Result Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/mcp-tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Example Scenarios
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/android/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Android Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/ios/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    iOS Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ & Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of Contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of Contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#problem-statement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Problem Statement
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#solution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Solution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#user-stories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User Stories
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation Decisions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing Decisions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#out-of-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Out of Scope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#further-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Further Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#slices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slices
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#70-cli-spine-router-json-envelope-devicebridge-elements-validate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        70 — CLI spine: router + JSON envelope + DeviceBridge + elements + validate
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#71-execute-verbs-assertionevaluator-resultstore" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        71 — execute verbs + AssertionEvaluator + ResultStore
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#72-config-setup-scaffold-guideschemabootstrap-floor-lint-harness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        72 — config + setup scaffold + guide/schema/bootstrap floor + lint harness
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#73-guide-port-generator-aware-agnostic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        73 — guide port: generator (aware + agnostic)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#74-guide-port-executor-aware-agnostic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        74 — guide port: executor (aware + agnostic)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#75-guide-port-recorder-setup-guides" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        75 — guide port: recorder + setup guides
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#76-vendoradapters-init-mcp-prompts-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        76 — VendorAdapters (init) + MCP prompts server
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#77-recorder-decoupling-persist-bundle-record-bundle-live-tap-source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        77 — recorder decoupling: persist bundle + record-bundle + live tap source
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#78-gemini-removal-cirelease-re-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        78 — Gemini removal + CI/release re-point
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<blockquote>
+<p><strong>Status:</strong> Draft PRD — locked design from a 2026-06-14 design session. Apply normal triage.</p>
+</blockquote>
+<h2 id="problem-statement">Problem Statement<a class="headerlink" href="#problem-statement" title="Permanent link">&para;</a></h2>
+<p>Mobile Automator today ships as a <strong>Gemini CLI extension</strong>. Its value — the project-aware reasoning that turns natural-language test intent into schema-conformant scenarios, replays them on real devices, and synthesizes recordings — is locked to one host. A developer who uses Claude Code, Cursor, Codex, Cline, Windsurf, or any other AI coding agent cannot use the tool at all. The reasoning lives in Gemini-shaped <code>SKILL.md</code> + <code>.toml</code> command files, the device layer is wired through Gemini's mobile-mcp connection, and the whole surface is namespaced as <code>/mobile-automator:*</code> Gemini commands.</p>
+<p>From the developer's perspective: <em>"I have a mobile app and an AI agent I already use. I want this tool to drive my testing through that agent — whichever vendor it is — and I want it to engage only when I deliberately ask, never to wander into automating my device on its own."</em></p>
+<h2 id="solution">Solution<a class="headerlink" href="#solution" title="Permanent link">&para;</a></h2>
+<p>Replace the Gemini extension with <strong><code>mauto</code>, a standalone Node CLI</strong> that any AI agent or vendor can drive, plus a thin MCP <strong>prompts</strong> server that exposes the workflows as explicit, user-invoked slash commands across MCP-capable hosts.</p>
+<p>The CLI owns the device (wrapping mobile-mcp), exposes every mechanical operation as a one-shot, JSON-emitting verb, and delivers its reasoning as version-matched <strong>guides</strong> the host agent pulls at invocation time. Because the tool is platform-agnostic and never relies on platform-specific element IDs, the irreducible reasoning (resolving a semantic target to a tap, judging a visual assertion) stays in the host agent; the CLI is the deterministic spine and the hands.</p>
+<p>The developer installs <code>mauto</code>, registers the MCP server (or just calls the CLI directly), and invokes a workflow <strong>by intention</strong> — e.g. <code>/mauto:record login_flow</code> or <code>/mauto:generate</code> — which injects the relevant guide and begins the work. Existing <code>mobile-automator/</code> workspaces, scenarios, and schemas keep working unchanged.</p>
+<h2 id="user-stories">User Stories<a class="headerlink" href="#user-stories" title="Permanent link">&para;</a></h2>
+<ol>
+<li>As a mobile QA developer, I want to drive Mobile Automator from my own AI agent (Claude Code, Cursor, Codex, Cline, Windsurf, etc.), so that I am not forced onto Gemini.</li>
+<li>As a developer on an agent with no skill system, I want to run <code>mauto</code> commands directly in my shell, so that I can still use the tool with zero host integration.</li>
+<li>As a developer, I want the tool to engage only when I explicitly invoke a command, so that my agent never starts automating my device because I happened to mention "test".</li>
+<li>As a developer, I want a single <code>mauto bootstrap</code>/<code>mauto guide</code> command that prints how to use the tool, so that any agent can be taught the workflow on demand.</li>
+<li>As an AI agent, I want every <code>mauto</code> command to return a uniform JSON envelope, so that I can parse results reliably regardless of vendor.</li>
+<li>As an AI agent, I want failures to carry a corrective <code>hint</code> and a meaningful exit code, so that I can recover (e.g. re-resolve a target) without extra prompting.</li>
+<li>As an AI agent, I want <code>mauto elements</code> to return on-screen elements with text, accessibility label, bounds, and a precomputed center — and never a platform-specific resource id — so that target resolution stays portable across Android and iOS.</li>
+<li>As an AI agent, I want one-shot device verbs (<code>tap</code>, <code>type</code>, <code>swipe</code>, <code>press</code>, <code>screenshot</code>), so that I can drive the device without an interactive protocol my harness may not support.</li>
+<li>As an AI agent generating a scenario, I want <code>mauto validate</code> to check my JSON against the scenario schema, so that I catch shape errors before saving.</li>
+<li>As an AI agent executing a scenario, I want to own the step loop while calling the CLI for all mechanical work (<code>mauto assert</code>, <code>mauto result</code>), so that results are schema-correct and retry/flake logic is consistent across runs.</li>
+<li>As an AI agent, I want <code>mauto assert &lt;type&gt;</code> to evaluate the mechanical assertion types and return pass/fail, so that I only have to judge the genuinely visual/semantic ones myself.</li>
+<li>As an AI agent, I want <code>mauto result add-step</code> and <code>mauto result finalize</code> to assemble the run report, so that I do not re-derive the result schema in prose each run.</li>
+<li>As a developer, I want a web recorder I can launch with <code>mauto record &lt;name&gt;</code>, so that I can tap through my app and capture a scenario.</li>
+<li>As a developer, I want to add assertions in between steps in the recorder GUI by describing them in natural language, so that I can specify expectations without writing JSON.</li>
+<li>As a developer, I want to record without any AI agent attached, so that capture works as a standalone human tool.</li>
+<li>As a developer, I want my recording persisted as a bundle on Save, so that synthesis into a scenario can happen later, by any agent.</li>
+<li>As an AI agent, I want <code>mauto record-bundle &lt;id&gt;</code> to stream a persisted recording's artifacts, so that I can synthesize a schema-conformant scenario from it following <code>mauto guide record</code>.</li>
+<li>As a developer, I want recorded sensitive inputs masked and flagged, so that captured credentials are not silently written in cleartext.</li>
+<li>As a developer, I want the recorder to detect device disconnects and app crashes, so that a failed session does not corrupt or silently drop my recording.</li>
+<li>As a developer, I want <code>mauto setup</code> to scaffold the <code>mobile-automator/</code> workspace, so that I have the standard directory layout and a config skeleton.</li>
+<li>As an AI agent, I want <code>mauto guide setup</code> to tell me to analyze the codebase and write findings (business domain, critical paths, app package, loading indicators) via <code>mauto config set</code>, so that project knowledge is captured without a monolithic interactive command.</li>
+<li>As a developer, I want <code>mauto init --agent &lt;x&gt;</code> to register the tool for my host (MCP server registration and/or dedicated command files), so that the workflows appear as explicit slash commands.</li>
+<li>As a developer on an MCP-capable host, I want the <code>mauto</code> workflows to appear as user-invoked MCP prompts, so that I get <code>/</code>-commands across the MCP ecosystem from one server without per-vendor files.</li>
+<li>As a developer, I want <code>init</code> to never modify a file I authored (no edits to a shared <code>AGENTS.md</code> or instructions file), so that the tool stays within its own namespace.</li>
+<li>As a developer with an existing <code>mobile-automator/</code> workspace from the Gemini extension, I want my scenarios, screenshots, results, and config to keep working, so that migrating to the CLI loses no data.</li>
+<li>As an AI agent, I want <code>mauto guide &lt;topic&gt;</code> to emit the reasoning for generate/execute/record/setup tuned to my project's mode (platform-aware vs platform-agnostic), so that I get the right instructions for cross-platform vs single-OS projects.</li>
+<li>As an AI agent in an agnostic project, I want the guides and scenarios to use the four semantic actions (<code>press_back</code>, <code>dismiss_keyboard</code>, <code>grant_permission</code>, <code>deny_permission</code>), so that scenarios remain portable across Android and iOS.</li>
+<li>As a developer, I want <code>mauto schema &lt;name&gt;</code> to print the scenario/result JSON schema, so that my agent always references the schema bundled with the installed CLI version.</li>
+<li>As a maintainer, I want the guide content ported from the existing <code>SKILL.md</code> templates rather than rewritten, so that the tool's hard-won testing IP is preserved.</li>
+<li>As a maintainer, I want lint guards on the emitted guides (no leftover <code>{{placeholders}}</code>, no leaked <code>mobile_*</code> tool names, agnostic guides naming no OS), so that the port does not silently regress behavior.</li>
+<li>As a developer running CI, I want <code>mauto</code> to be installable via <code>npx</code>/<code>npm</code>, so that I can use it in pipelines without a Gemini runtime.</li>
+<li>As a human running a <code>mauto</code> command directly, I want an optional <code>--human</code> flag for readable output, so that JSON-by-default does not hurt occasional interactive use.</li>
+<li>As a maintainer, I want the Gemini extension surface (<code>.toml</code> commands, <code>gemini-extension.json</code>, <code>GEMINI.md</code>) removed, so that there is a single source of truth and no dual maintenance.</li>
+</ol>
+<h2 id="implementation-decisions">Implementation Decisions<a class="headerlink" href="#implementation-decisions" title="Permanent link">&para;</a></h2>
+<p><strong>Foundational constraint.</strong> The tool is platform-agnostic and never uses platform-specific element identifiers (<code>resource-id</code> / <code>accessibilityIdentifier</code>). The only portable anchors are visible text and semantic role, and many controls are icon-only — so deterministic selector-based replay is impossible. Tap-target resolution and visual/semantic assertion judgment are therefore irreducibly LLM work performed by the host agent at replay time ("Model A"). The CLI provides the deterministic spine and the device hands; it is not a deterministic test runner.</p>
+<p><strong>Distribution / runtime.</strong> Node, distributed via <code>npx mobile-automator</code> / <code>npm i -g</code>. mobile-mcp is bundled and spawned by the CLI.</p>
+<p><strong>Device ownership (Approach 1).</strong> The CLI spawns and owns a single mobile-mcp instance and exposes device primitives as one-shot, JSON-emitting verbs (<code>elements</code>, <code>tap</code>, <code>type</code>, <code>swipe</code>, <code>press</code>, <code>screenshot</code>, <code>launch</code>). The recorder reuses this same owned connection. Any agent — MCP-capable or not — drives the device through the shell, so MCP support is never required to use the tool.</p>
+<p><strong>Agent↔CLI contract.</strong> Every verb emits a uniform JSON envelope <code>{ ok, data, error, hint, schema_version }</code>. Exit codes are meaningful: <code>0</code> success, <code>2</code> device/environment fault, <code>3</code> invalid input, <code>4</code> target-not-found, <code>130</code> cancel. Errors carry a <code>hint</code> describing the corrective action. <code>mauto elements</code> output carries <code>{ text, accessibility_label, bounds, center, type }</code> and never a resource id. JSON is the default; <code>--human</code> is an opt-in.</p>
+<p><strong>Execute model (agent owns the loop).</strong> There is no interactive <code>mauto run</code> co-routine — one-shot shell is the portable primitive. The agent orchestrates the scenario loop, calling <code>mauto elements</code> and reasoning to resolve targets, then <code>mauto tap</code>/etc.; all mechanical work is discrete verbs: <code>mauto assert &lt;type&gt;</code> evaluates the mechanical assertion subset, and <code>mauto result add-step|finalize</code> owns result-schema assembly plus retry/flake bookkeeping. The agent's only irreducible jobs are target resolution and visual/semantic assertion judgment.</p>
+<p><strong>Reasoning delivery.</strong> Reasoning is injected at explicit invocation via <code>mauto guide &lt;topic&gt;</code> (generate/execute/record/setup), with <code>mauto schema &lt;name&gt;</code> and <code>mauto bootstrap</code> as the runtime floor. Guides read <code>config.json</code> and emit the variant matching <code>config.mode</code> (platform-aware vs platform-agnostic). No always-loaded ambient skill — the tool engages only on deliberate invocation.</p>
+<p><strong>Invocation surface (MCP prompts).</strong> <code>mauto mcp</code> runs a thin MCP server exposing the workflows as <strong>prompts only</strong> (user-controlled by spec), which surface as explicit <code>/</code>-commands across MCP hosts. Device primitives are deliberately not exposed as MCP tools (tools are model-controlled and could fire unintentionally). Non-MCP hosts use the runtime floor.</p>
+<p><strong>Recorder (decoupled).</strong> Capture is LLM-free and remains a standalone service launched by <code>mauto record</code>. On Save the artifact bundle is persisted (not deleted) under the workspace; synthesis becomes a separate, later agent step that reads the bundle via <code>mauto record-bundle &lt;id&gt;</code> and follows <code>mauto guide record</code>; cleanup occurs after successful synthesis. The existing <code>tools/recorder/</code> capture stack is reused; the live tap-source (currently a TODO) is implemented against mobile-mcp frame streaming + the existing video-tap detector.</p>
+<p><strong>Setup.</strong> Split into <code>mauto init --agent &lt;x&gt;</code> (per-vendor registration: MCP server entry and/or dedicated command files; idempotent; never mutates user-owned shared files), <code>mauto setup</code> (mechanical workspace scaffold + config skeleton with mode), <code>mauto guide setup</code> (agent reads the codebase and writes analysis fields), and <code>mauto config get|set</code>.</p>
+<p><strong>Gemini deprecation.</strong> Same repo, evolved in place. Remove <code>commands/mobile-automator/*.toml</code>, <code>gemini-extension.json</code>, <code>GEMINI.md</code>, and the <code>/mobile-automator:*</code> surface. Preserve the <code>mobile-automator/</code> workspace layout, scenario schema 2.1, and result schema so existing data keeps working. Repurpose <code>templates/*/SKILL.md</code> reasoning prose into guide content.</p>
+<p><strong>Modules.</strong> Deep, isolatable modules: DeviceBridge (owns mobile-mcp, injectable call), ElementModel (agnostic element shape + center computation, strips resource id), AssertionEvaluator (mechanical assertion subset), ResultStore (result schema + retry/flake), ScenarioValidator (schema 2.1), GuideEmitter (config-aware, per-mode guide/schema/bootstrap emission), ConfigManager (config read/write + mode resolution), VendorAdapters (per-adapter behind one interface), McpPromptsServer (thin shim over GuideEmitter), OutputEnvelope (envelope + exit-code mapping), RecorderService (decoupled save + bundle reader + tap source). Shallow glue: the CLI router (commander entry, JSON output, <code>--human</code>). DeviceBridge, ElementModel, ConfigManager extend existing recorder modules.</p>
+<h2 id="testing-decisions">Testing Decisions<a class="headerlink" href="#testing-decisions" title="Permanent link">&para;</a></h2>
+<p>Good tests assert <strong>external behavior, not implementation details</strong>: given inputs, the module returns the documented output/JSON shape; refactors that preserve behavior should not break them. The codebase already has prior art for this: the <code>tests/lint/</code> suite asserts properties of generated text (e.g. <code>placeholder-leak</code>, <code>agnostic-no-platform-words</code>, <code>schema-additive</code>), and <code>tests/integration/</code> covers migration paths; the recorder suite injects fakes (<code>deps.mcpCall</code>, <code>deps.tapSource</code>) to exercise pipelines without a device.</p>
+<p>Modules to be tested (correctness-critical and pure/near-pure, plus adapters):</p>
+<ul>
+<li><strong>AssertionEvaluator</strong> — fixture-driven: an elements snapshot + assertion spec → expected pass/fail, across the mechanical assertion types.</li>
+<li><strong>ElementModel</strong> — element normalization, center computation, and the invariant that no resource id appears in agnostic output.</li>
+<li><strong>ScenarioValidator</strong> — valid/invalid scenarios against schema 2.1, including the additive 2.0→2.1 cases.</li>
+<li><strong>OutputEnvelope</strong> — envelope shape and exit-code mapping for success and each error class.</li>
+<li><strong>GuideEmitter</strong> — lint guards mirroring the existing suite: no surviving <code>{{placeholders}}</code>, no leaked <code>mobile_*</code> tool names, agnostic guides name no OS, and correct variant selected per <code>config.mode</code>.</li>
+<li><strong>ConfigManager</strong> — read/write round-trips, mode resolution (legacy configs default to platform-aware), schema preservation.</li>
+<li><strong>VendorAdapters</strong> — golden-file output per adapter, idempotency on re-run, and the guarantee that no user-authored shared file is modified.</li>
+<li><strong>ResultStore</strong> — result assembly and retry/flake bookkeeping.</li>
+<li><strong>RecorderService</strong> — extended tests for the decoupled save (bundle persisted on Save, cleanup only after synthesis) and the <code>record-bundle</code> reader.</li>
+</ul>
+<p>Smoke-tested only (thin I/O glue): <strong>DeviceBridge</strong> (with an injected fake <code>call</code>) and the <strong>CLI router</strong>.</p>
+<h2 id="out-of-scope">Out of Scope<a class="headerlink" href="#out-of-scope" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Deterministic selector-based replay or any move away from semantic-description targets (ruled out by the agnostic / no-resource-id constraint).</li>
+<li>iOS physical-device recording (Apple exposes no external touch stream; inherited limitation).</li>
+<li>Exposing device primitives as MCP tools (kept as CLI verbs to preserve intentional, shell-portable invocation).</li>
+<li>A self-contained agentic CLI that bundles its own LLM — the tool is driven by the host agent, not its own model.</li>
+<li>C3 instrumentation SDKs (iOS Swift Package, Android AAR) — future work; the C3 protocol contract is unchanged.</li>
+<li>New assertion types or scenario-schema changes beyond what already exists in 2.1.</li>
+<li>A backward-compatibility shim that keeps the <code>/mobile-automator:*</code> Gemini commands alive — Gemini is deprecated outright.</li>
+</ul>
+<h2 id="further-notes">Further Notes<a class="headerlink" href="#further-notes" title="Permanent link">&para;</a></h2>
+<ul>
+<li>The largest execution risk is <strong>time, not decision</strong>: porting the reasoning prose from the six <code>SKILL.md</code> templates (generator/executor/recorder × aware/agnostic) into guides. Each file is entangled with Gemini on several axes (placeholders → config lookups, mobile-mcp tool names → <code>mauto</code> verbs including the action-mapping table, <code>ask_user</code>/Gemini framing, <code>.gemini/</code> paths + <code>GEMINI.md</code> references → <code>mauto schema</code>/inlined protocol) and additionally needs a brain/hands re-partition (mechanical bits become verbs, reasoning stays in the guide). This is correctness-critical — a botched guide silently yields bad scenarios — and likely warrants 2–3 dedicated slices with the new lint guards.</li>
+<li>The CI version-bump gate and release flow currently key off extension paths and <code>gemini-extension.json</code>; they must be re-pointed at the CLI package.</li>
+<li>Suggested slicing follows the repo's tracer-bullet convention: a thin end-to-end vertical (CLI router + OutputEnvelope + DeviceBridge + one device verb + <code>validate</code>) first, then execute verbs + AssertionEvaluator/ResultStore, the guide port (per skill-pair), VendorAdapters + McpPromptsServer, and finally the recorder decoupling, with the Gemini removal as a clearly-scoped cleanup slice.</li>
+</ul>
+<h2 id="slices">Slices<a class="headerlink" href="#slices" title="Permanent link">&para;</a></h2>
+<p>Tracer-bullet vertical slices (tracked as sub-issues, milestone <code>cli</code>):</p>
+<ol>
+<li>
+<h1 id="70-cli-spine-router-json-envelope-devicebridge-elements-validate">70 — CLI spine: router + JSON envelope + DeviceBridge + <code>elements</code> + <code>validate</code><a class="headerlink" href="#70-cli-spine-router-json-envelope-devicebridge-elements-validate" title="Permanent link">&para;</a></h1>
+</li>
+<li>
+<h1 id="71-execute-verbs-assertionevaluator-resultstore">71 — execute verbs + AssertionEvaluator + ResultStore<a class="headerlink" href="#71-execute-verbs-assertionevaluator-resultstore" title="Permanent link">&para;</a></h1>
+</li>
+<li>
+<h1 id="72-config-setup-scaffold-guideschemabootstrap-floor-lint-harness">72 — config + setup scaffold + guide/schema/bootstrap floor + lint harness<a class="headerlink" href="#72-config-setup-scaffold-guideschemabootstrap-floor-lint-harness" title="Permanent link">&para;</a></h1>
+</li>
+<li>
+<h1 id="73-guide-port-generator-aware-agnostic">73 — guide port: generator (aware + agnostic)<a class="headerlink" href="#73-guide-port-generator-aware-agnostic" title="Permanent link">&para;</a></h1>
+</li>
+<li>
+<h1 id="74-guide-port-executor-aware-agnostic">74 — guide port: executor (aware + agnostic)<a class="headerlink" href="#74-guide-port-executor-aware-agnostic" title="Permanent link">&para;</a></h1>
+</li>
+<li>
+<h1 id="75-guide-port-recorder-setup-guides">75 — guide port: recorder + setup guides<a class="headerlink" href="#75-guide-port-recorder-setup-guides" title="Permanent link">&para;</a></h1>
+</li>
+<li>
+<h1 id="76-vendoradapters-init-mcp-prompts-server">76 — VendorAdapters (<code>init</code>) + MCP prompts server<a class="headerlink" href="#76-vendoradapters-init-mcp-prompts-server" title="Permanent link">&para;</a></h1>
+</li>
+<li>
+<h1 id="77-recorder-decoupling-persist-bundle-record-bundle-live-tap-source">77 — recorder decoupling: persist bundle + <code>record-bundle</code> + live tap source<a class="headerlink" href="#77-recorder-decoupling-persist-bundle-record-bundle-live-tap-source" title="Permanent link">&para;</a></h1>
+</li>
+<li>
+<h1 id="78-gemini-removal-cirelease-re-point">78 — Gemini removal + CI/release re-point<a class="headerlink" href="#78-gemini-removal-cirelease-re-point" title="Permanent link">&para;</a></h1>
+</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/sh3lan93/mobile-automator" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
