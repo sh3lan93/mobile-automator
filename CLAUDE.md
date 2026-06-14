@@ -82,6 +82,21 @@ PRD [#44](https://github.com/sh3lan93/mobile-automator/issues/44) · milestone `
 
 This workflow lives here (not in per-slice issue bodies) so it applies uniformly and survives issue edits.
 
+## CLI migration milestone workflow (mandatory for any agent)
+
+PRD [#69](https://github.com/sh3lan93/mobile-automator/issues/69) · milestone `cli` · slices #70–#78. This milestone migrates the tool from a Gemini extension to a host-agnostic **`mauto` CLI** usable by any AI agent. **Any agent picking up a `cli`-milestone issue MUST follow this workflow in order — it is not optional:**
+
+1. **Load full context first.** Fetch the slice issue **and** PRD #69 together (`gh issue view <slice>` + `gh issue view 69`) before doing anything. Slice bodies are deliberately thin; the PRD holds the locked design decisions and cross-slice constraints. Never act on a slice issue alone.
+2. **Isolate the workspace.** Before any edit, create a dedicated worktree on a new branch named `cli/<issue-number>-<short-slug>`. Do not work directly in an existing checkout or on a shared branch. (Dispatched subagents start at the repo root, not the worktree — force `cd` into the worktree and verify before any commit.)
+3. **Plan before code.** Produce a written implementation plan (file structure, deps, module interfaces, test list) and surface it for explicit user approval. No implementation before the user confirms the plan.
+4. **Implement via subagents (TDD for non-trivial work).** Dispatch implementation through subagents so the main agent's context stays lean. The main agent orchestrates and reviews; it does not hand-write the bulk of the slice.
+5. **Honor the locked invariants — non-negotiable.** Platform-agnostic; **never** use `resource-id` / OS-specific element IDs. Every CLI verb emits the uniform JSON envelope `{ok,data,error,hint,schema_version}` (a `--human` flag is opt-in). One-shot verbs only — no interactive `run` co-routine. Reasoning is delivered via `mauto guide <topic>` at explicit invocation, never an ambient always-loaded skill. The device is driven **only** through `mauto` verbs (which wrap mobile-mcp). Preserve the `mobile-automator/` workspace layout + scenario schema 2.1 + result schema (existing data must keep working).
+6. **Guide ports must pass lint guards.** When porting `SKILL.md` prose into `mauto guide` content: no surviving `{{placeholders}}`, no leaked `mobile_*` tool names, agnostic guides name no OS. Add/extend the lint tests alongside the port.
+7. **Verify before claiming done.** Run the test suite and the lint guards and show the output before any success claim or PR.
+8. **Per-task commits; open a draft PR early** with a full description (what/why, test plan). Put `Closes #<slice-issue>` on its own line with no intervening words; reference the PRD as `Refs #69` (never `Closes #69` — the PRD closes only when slice #78 merges). Re-point the CI version-bump gate from extension paths to the CLI package where a slice touches it.
+
+This workflow lives here (not in per-slice issue bodies) so it applies uniformly and survives issue edits.
+
 ## Schemas
 
 - Scenario: `templates/mobile-automator-generator/references/scenario_schema.json` (v2.1, 14 actions, 27 assertions, named string IDs, root-level `variables`/`preconditions`).
