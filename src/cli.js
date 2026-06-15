@@ -12,6 +12,7 @@ const configManager = require('./config/manager');
 const { scaffold } = require('./setup/scaffold');
 const guideEmitter = require('./guide/emitter');
 const { ADAPTERS } = require('./init/adapters');
+const bundleReader = require('./recorder/bundle-reader');
 
 // Map the user-facing --mode flag onto the stored config mode values.
 const MODE_ALIASES = {
@@ -367,6 +368,37 @@ function handleInit({ projectRoot, adapters = ADAPTERS }, agent) {
   };
 }
 
+// --- Slice 8: decoupled recorder bundle reader ----------------------------
+//
+// `mauto record-bundle <id>` reads the artifact bundle the recorder PERSISTED
+// on a successful Save (under mobile-automator/.recorder/<id>/) so an agent can
+// synthesize a scenario offline. `--consume` deletes the bundle after a
+// successful read (post-synthesis cleanup). A missing bundle is an
+// invalid_input error (exit 3) — there is nothing to read.
+function handleRecordBundle({ projectRoot, reader = bundleReader }, scenarioId, opts = {}) {
+  let bundle;
+  try {
+    bundle = reader.readBundle(projectRoot, scenarioId);
+  } catch (err) {
+    return {
+      envelope: fail(
+        'invalid_input',
+        err.message || `no recording bundle for ${scenarioId}`,
+        'record one first with mauto record'
+      ),
+      exitKind: 'invalid_input',
+    };
+  }
+
+  let consumed = false;
+  if (opts.consume) {
+    reader.consume(projectRoot, scenarioId);
+    consumed = true;
+  }
+
+  return { envelope: ok({ ...bundle, consumed }), exitKind: 'ok' };
+}
+
 // ---------------------------------------------------------------------------
 // Program wiring
 // ---------------------------------------------------------------------------
@@ -603,6 +635,15 @@ function buildProgram(deps = {}) {
     });
 
   program
+    .command('record-bundle <id>')
+    .description('Read the persisted recorder artifact bundle for a scenario (for offline synthesis)')
+    .option('--consume', 'delete the bundle after a successful read', false)
+    .action((id, opts) => {
+      const r = handleRecordBundle({ projectRoot }, id, { consume: Boolean(opts.consume) });
+      emit(r, humanFlag());
+    });
+
+  program
     .command('mcp')
     .description('Run the MCP prompts server (stdio) exposing the mauto workflows as prompts')
     .action(async () => {
@@ -652,4 +693,5 @@ module.exports = {
   handleSchema,
   handleBootstrap,
   handleInit,
+  handleRecordBundle,
 };

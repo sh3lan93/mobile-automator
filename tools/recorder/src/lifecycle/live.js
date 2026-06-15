@@ -58,6 +58,13 @@ async function startLiveCapture({
   // emit mode without an extra round-trip.
   wsCtx.broadcast({ type: 'mode', mode: emitMode });
 
+  // Slice 8: the live path drives a real device by default. Tests that inject a
+  // fake startModeB/startC3 never reach the device wiring; tests that exercise
+  // the real handler can still opt out by setting deps.useLiveDevice === false.
+  const handlerDeps = deps.useLiveDevice === undefined
+    ? { ...deps, useLiveDevice: true }
+    : deps;
+
   const handlerArgs = {
     store,
     wsCtx,
@@ -67,7 +74,7 @@ async function startLiveCapture({
     platform,
     appPackage,
     opts,
-    deps,
+    deps: handlerDeps,
   };
 
   let exitCode;

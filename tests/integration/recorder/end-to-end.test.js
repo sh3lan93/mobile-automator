@@ -10,18 +10,24 @@
 //   2. A test-fixture deterministic synthesizer ("mock AI") reads the
 //      bundle's `events.jsonl` and writes a v2.1 scenario JSON, mirroring
 //      the contract that the real recorder skill template fulfils. It also
-//      promotes the bundle's screenshots/ directory to the public location
-//      and calls `cleanupOnSuccess` (the same hook the skill calls after
-//      successful synthesis).
+//      promotes the bundle's screenshots/ directory to the public location.
 //   3. `handleSaveMessage` (Task 2.6) is invoked with an injected `onDone`
 //      callback to capture the signalled exit code without `process.exit`.
 //
-// The test then pins three invariants from the issue's acceptance criteria:
+// Slice 8 (recorder decoupling, #77): a SUCCESSFUL Save now PERSISTS the
+// artifact bundle under `mobile-automator/.recorder/<id>/` — recording is a
+// standalone step and synthesis (which reads + consumes the bundle) is
+// decoupled. The synthesizer below therefore no longer deletes the bundle, and
+// invariant C asserts the bundle PERSISTS after Save (cleanup is the separate
+// `consume` step exercised by the bundle-reader tests). CANCEL still removes.
+//
+// The test then pins these invariants from the issue's acceptance criteria:
 //
 //   A. `mobile-automator/scenarios/<id>.json` exists and validates against
 //      the v2.1 scenario schema.
 //   B. `mobile-automator/screenshots/<id>/` exists.
-//   C. `mobile-automator/.recorder/<id>/` is gone (cleanup-on-Success).
+//   C. `mobile-automator/.recorder/<id>/` PERSISTS after the Save flow, and a
+//      subsequent Cancel removes it.
 //
 // Per #22 scope: tap-only flow, no real AI, no real browser. This test does
 // NOT validate the real AI's behaviour — that contract is covered by the
@@ -36,7 +42,7 @@ const os = require('os');
 
 const { runScriptedSession } = require('../../../tools/recorder/src/lifecycle');
 const { ArtifactsStore } = require('../../../tools/recorder/src/artifacts');
-const { handleSaveMessage } = require('../../../tools/recorder/src/session-handlers');
+const { handleSaveMessage, handleCancelMessage } = require('../../../tools/recorder/src/session-handlers');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const SCENARIO_SCHEMA_PATH = path.join(
@@ -143,10 +149,11 @@ function validateScenarioAgainstSchema(scenario, schema) {
 // --- Test-fixture deterministic synthesizer ("mock AI") --------------------
 //
 // Mirrors the recorder skill's contract: read the artifact bundle, emit a
-// v2.1 scenario JSON, move screenshots to the public location, and call
-// cleanupOnSuccess. Lives here (not in production code) on purpose — the
-// real synthesis is the AI's job; this stand-in exists only to pin the
-// shape-of-the-bundle contract.
+// v2.1 scenario JSON, and move screenshots to the public location. Lives here
+// (not in production code) on purpose — the real synthesis is the AI's job;
+// this stand-in exists only to pin the shape-of-the-bundle contract. Post
+// slice 8 it does NOT delete the bundle: Save persists it, and consuming the
+// bundle is a separate decoupled step (covered by the bundle-reader tests).
 
 function synthesizeScenario(projectRoot, scenarioId) {
   const bundleRoot = path.join(projectRoot, 'mobile-automator', '.recorder', scenarioId);
@@ -224,9 +231,10 @@ function synthesizeScenario(projectRoot, scenarioId) {
   const scenarioPath = path.join(scenariosDir, `${scenarioId}.json`);
   fs.writeFileSync(scenarioPath, JSON.stringify(scenario, null, 2));
 
-  // Cleanup: the real skill does this in step 13 of its Process.
+  // Slice 8: the bundle PERSISTS on Save — no cleanupOnSuccess here. The
+  // store is returned so the Save handler can run and the test can later
+  // exercise the explicit Cancel-removes path.
   const store = new ArtifactsStore({ projectRoot, scenarioId });
-  store.cleanupOnSuccess();
 
   return { scenarioPath, store };
 }
@@ -241,6 +249,7 @@ describe('recorder end-to-end (record → save → cleanup)', () => {
   let publicScreenshotsDir;
   let bundleRoot;
   let exitCode;
+  let store;
 
   beforeAll(async () => {
     scenarioId = 'login_flow';
@@ -260,10 +269,11 @@ describe('recorder end-to-end (record → save → cleanup)', () => {
     bundleRoot = path.join(tmp, 'mobile-automator', '.recorder', scenarioId);
     expect(fs.existsSync(bundleRoot)).toBe(true); // sanity — lifecycle ran
 
-    // (2) Mock-AI synthesis: bundle → scenario JSON + screenshots; then
-    //     cleanupOnSuccess (mirrors what the recorder skill does).
+    // (2) Mock-AI synthesis: bundle → scenario JSON + screenshots. Slice 8:
+    //     synthesis no longer deletes the bundle (Save persists it).
     const out = synthesizeScenario(tmp, scenarioId);
     scenarioPath = out.scenarioPath;
+    store = out.store;
     scenariosDir = path.join(tmp, 'mobile-automator', 'scenarios');
     publicScreenshotsDir = path.join(tmp, 'mobile-automator', 'screenshots', scenarioId);
 
@@ -309,7 +319,16 @@ describe('recorder end-to-end (record → save → cleanup)', () => {
     expect(fs.statSync(publicScreenshotsDir).isDirectory()).toBe(true);
   });
 
-  test('C. mobile-automator/.recorder/<id>/ is gone after Save flow', () => {
+  test('C. mobile-automator/.recorder/<id>/ PERSISTS after the Save flow', () => {
+    // Slice 8 decouples recording from synthesis: a successful Save keeps the
+    // bundle so the offline `mauto record-bundle <id>` step can read it.
+    expect(fs.existsSync(bundleRoot)).toBe(true);
+  });
+
+  test('C. a subsequent Cancel removes the persisted bundle', () => {
+    // Runs after the persist assertion (Jest preserves declaration order).
+    // CANCEL is still the destructive path: cleanupOnCancel nukes the tree.
+    handleCancelMessage({ store, onDone: () => {} });
     expect(fs.existsSync(bundleRoot)).toBe(false);
   });
 
