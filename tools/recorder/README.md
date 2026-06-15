@@ -114,6 +114,6 @@ The watchdogs themselves are pure state machines — they never call `process.ex
 
 ## See also
 
-- `commands/mobile-automator/record.toml` — pre-flight wrapper command.
-- `templates/mobile-automator-recorder/aware/SKILL.md` — AI synthesis of the captured timeline at Save time.
+- `mauto guide record` — reasoning floor for AI synthesis of the captured timeline at Save time.
+- `docs/references/platform-resolutions.md` — semantic-action resolutions used by the agnostic capture path.
 - `docs/superpowers/plans/2026-05-05-mobile-automator-recording.md` — phased build plan.

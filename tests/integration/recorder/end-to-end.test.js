@@ -47,9 +47,8 @@ const { handleSaveMessage, handleCancelMessage } = require('../../../tools/recor
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const SCENARIO_SCHEMA_PATH = path.join(
   REPO_ROOT,
-  'templates',
-  'mobile-automator-generator',
-  'references',
+  'src',
+  'schemas',
   'scenario_schema.json'
 );
 const SCRIPTED_SESSION_FIXTURE_PATH = path.join(

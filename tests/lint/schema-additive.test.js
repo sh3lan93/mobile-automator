@@ -8,7 +8,7 @@ describe('Schema additive over v2.0', () => {
   );
   const currentPath = path.resolve(
     __dirname, '..', '..',
-    'templates', 'mobile-automator-generator', 'references', 'scenario_schema.json'
+    'src', 'schemas', 'scenario_schema.json'
   );
   const v2 = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
   const cur = JSON.parse(fs.readFileSync(currentPath, 'utf8'));

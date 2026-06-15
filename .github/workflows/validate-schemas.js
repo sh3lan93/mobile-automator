@@ -33,9 +33,9 @@ function findJsonFiles(dir) {
 // 1. Validate all schema files are valid JSON
 console.log('Checking JSON validity of schema files...\n');
 
-const schemaFiles = findJsonFiles('templates');
+const schemaFiles = findJsonFiles('src/schemas');
 if (schemaFiles.length === 0) {
-  console.log('⚠️  No schema files found in templates/');
+  console.log('⚠️  No schema files found in src/schemas/');
 }
 
 for (const file of schemaFiles) {
@@ -92,7 +92,7 @@ if (errors > 0) {
 console.log('Validating prototype scenarios against scenario_schema.json...\n');
 
 // Find the scenario schema file dynamically
-const scenarioSchemaFiles = findJsonFiles('templates').filter(f => f.endsWith('scenario_schema.json'));
+const scenarioSchemaFiles = findJsonFiles('src/schemas').filter(f => f.endsWith('scenario_schema.json'));
 if (scenarioSchemaFiles.length === 0) {
   console.log('⚠️  No scenario_schema.json found');
   console.log('────────────────────────────────────────');

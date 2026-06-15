@@ -5,12 +5,12 @@ on:
     branches:
       - main
     paths:
-      - 'templates/**/references/*.json'
+      - 'src/schemas/*.json'
   push:
     branches:
       - main
     paths:
-      - 'templates/**/references/*.json'
+      - 'src/schemas/*.json'
 
 jobs:
   validate-schemas:

@@ -1,6 +1,6 @@
 {
   "name": "mobile-automator",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "private": true,
   "bin": {
     "mauto": "bin/mauto.js"
@@ -9,16 +9,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "lint:ask-user": "jest tests/lint/ask-user-format.test.js",
-    "lint:halt": "jest tests/lint/halt-patterns.test.js",
-    "lint:placeholders": "jest tests/lint/placeholder-leak.test.js",
-    "lint:references": "jest tests/lint/cross-reference.test.js",
-    "lint:resolutions-coverage": "jest tests/lint/platform-resolutions-coverage.test.js",
+    "lint:guides": "jest tests/lint/guide-no-mcp-tool-leak.test.js tests/lint/guide-no-placeholder-leak.test.js tests/lint/guide-agnostic-no-os.test.js",
     "lint:schema-additive": "jest tests/lint/schema-additive.test.js",
-    "lint:structure": "jest tests/lint/toml-structure.test.js",
-    "lint:toml": "jest tests/lint/toml-syntax.test.js",
-    "lint:agnostic-words": "jest tests/lint/agnostic-no-platform-words.test.js",
-    "lint:config-shape": "jest tests/lint/mode-config-shape.test.js",
     "test:unit": "jest tests/unit",
     "test:integration": "jest tests/integration",
     "test:all": "jest"

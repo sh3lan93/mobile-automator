@@ -4,12 +4,9 @@ const fs = require('fs');
 const path = require('path');
 const Ajv = require('ajv');
 
-// Repo-root-relative default path to the canonical scenario schema.
-// src/scenario/validator.js -> repo root is two directories up.
-const DEFAULT_SCHEMA_PATH = path.resolve(
-  __dirname,
-  '../../templates/mobile-automator-generator/references/scenario_schema.json'
-);
+// Path to the canonical scenario schema, bundled inside the package.
+// src/scenario/validator.js -> ../schemas/scenario_schema.json
+const DEFAULT_SCHEMA_PATH = path.resolve(__dirname, '../schemas/scenario_schema.json');
 
 function formatError(err) {
   const where = err.instancePath || '(root)';

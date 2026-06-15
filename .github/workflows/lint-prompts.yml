@@ -4,18 +4,14 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'templates/**'
-      - 'commands/**'
-      - 'GEMINI.md'
+      - 'src/guide/content/**'
       - '.vale.ini'
       - '.vale/**'
       - '.github/workflows/lint-prompts.yml'
   push:
     branches: [main]
     paths:
-      - 'templates/**'
-      - 'commands/**'
-      - 'GEMINI.md'
+      - 'src/guide/content/**'
       - '.vale.ini'
       - '.vale/**'
       - '.github/workflows/lint-prompts.yml'
@@ -29,10 +25,10 @@ jobs:
         uses: actions/checkout@v4
 
       # Scoping is configured in .vale.ini via path globs - PromptHygiene
-      # only attaches to templates/**/*.md, commands/**/*.toml, and
-      # GEMINI.md. Human-facing docs are scanned but unscoped, so they
-      # never produce errors. Running on '.' (default) keeps CI and
-      # pre-commit behavior identical.
+      # only attaches to src/guide/content/**/*.md (the CLI guide prose).
+      # Human-facing docs are scanned but unscoped, so they never produce
+      # errors. Running on '.' (default) keeps CI and pre-commit behavior
+      # identical.
       - name: Run Vale
         uses: errata-ai/vale-action@v2
         with:

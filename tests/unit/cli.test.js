@@ -28,13 +28,13 @@ const Ajv = require('ajv');
 
 const RESULT_SCHEMA_PATH = path.resolve(
   __dirname,
-  '../../templates/mobile-automator-executor/references/result_schema.json'
+  '../../src/schemas/result_schema.json'
 );
 const { ScenarioValidator } = require('../../src/scenario/validator');
 
 const SCHEMA_PATH = path.resolve(
   __dirname,
-  '../../templates/mobile-automator-generator/references/scenario_schema.json'
+  '../../src/schemas/scenario_schema.json'
 );
 
 function validScenario() {

@@ -5,7 +5,7 @@
 // press_back over missing a real back gesture; tune against real devices later.
 const EDGE_X_MAX = 16;
 
-// Superset of the allow/deny labels in templates/references/platform-resolutions.md,
+// Superset of the allow/deny labels in docs/references/platform-resolutions.md,
 // normalised to lowercase. Combined (not OS-partitioned) — the snapshot alone
 // does not reliably tell us the OS, and cross-matching is harmless here.
 const ALLOW_LABELS = [
