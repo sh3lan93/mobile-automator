@@ -17,6 +17,16 @@
 const fs = require('fs');
 const path = require('path');
 
+const { interpolate } = require('./placeholders');
+
+// Topics with REAL ported prose live as markdown content files (carrying
+// `{{placeholder}}` tokens lifted from the Gemini SKILLs). They are emitted by
+// loading the mode-appropriate file and running it through interpolate(...),
+// which fills tokens from the workspace config and applies a fallback so no
+// `{{` survives. Topics absent from this map fall through to the stub emitter.
+const CONTENT_DIR = path.resolve(__dirname, 'content');
+const PORTED_TOPICS = new Set(['generate']);
+
 const SCENARIO_SCHEMA = path.resolve(
   __dirname,
   '../../templates/mobile-automator-generator/references/scenario_schema.json'
@@ -39,10 +49,17 @@ const TOPICS = {
 
 const SEMANTIC_ACTIONS = ['press_back', 'dismiss_keyboard', 'grant_permission', 'deny_permission'];
 
-function emitGuide(topic, { mode = 'platform-aware' } = {}) {
+function emitGuide(topic, { mode = 'platform-aware', projectRoot } = {}) {
   const summary = TOPICS[topic];
   if (!summary) {
     throw new Error(`unknown guide topic: ${topic}`);
+  }
+
+  if (PORTED_TOPICS.has(topic)) {
+    const variant = mode === 'platform-agnostic' ? 'agnostic' : 'aware';
+    const file = path.join(CONTENT_DIR, `${topic}.${variant}.md`);
+    const template = fs.readFileSync(file, 'utf8');
+    return interpolate(template, { projectRoot, mode });
   }
 
   const lines = [];

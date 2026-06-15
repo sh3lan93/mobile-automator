@@ -317,7 +317,7 @@ function handleGuide({ projectRoot, emitter = guideEmitter, config = configManag
   const mode = config.resolveMode(cfg);
   let raw;
   try {
-    raw = emitter.emitGuide(topic, { mode });
+    raw = emitter.emitGuide(topic, { mode, projectRoot });
   } catch (err) {
     return {
       envelope: fail('invalid_input', `unknown guide topic "${topic}"`, 'Topics: generate, execute, record, setup.'),
