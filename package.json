@@ -2,6 +2,9 @@
   "name": "mobile-automator",
   "version": "0.12.0",
   "private": true,
+  "bin": {
+    "mauto": "bin/mauto.js"
+  },
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
@@ -21,6 +24,8 @@
     "test:all": "jest"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "ajv": "^8.20.0",
     "commander": "^12.1.0",
     "pngjs": "^7.0.0",
     "ws": "^8.18.0"
