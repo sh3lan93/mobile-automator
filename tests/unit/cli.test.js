@@ -21,6 +21,7 @@ const {
   handleGuide,
   handleSchema,
   handleBootstrap,
+  handleInit,
 } = require('../../src/cli');
 const Ajv = require('ajv');
 
@@ -389,6 +390,35 @@ describe('cli handlers', () => {
       expect(r.raw).toContain('elements');
       expect(r.raw).toContain('schema');
       expect(r.raw).not.toMatch(/\bmobile_[a-z_]+/);
+    });
+  });
+
+  describe('handleInit (vendor adapters)', () => {
+    test('claude applies into the injected projectRoot and returns written/merged', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-init-h-'));
+      const { envelope, exitKind } = handleInit({ projectRoot }, 'claude');
+      expect(exitKind).toBe('ok');
+      expect(envelope.ok).toBe(true);
+      expect(envelope.data.agent).toBe('claude');
+      expect(Array.isArray(envelope.data.written)).toBe(true);
+      expect(Array.isArray(envelope.data.merged)).toBe(true);
+      expect(fs.existsSync(path.join(projectRoot, '.mcp.json'))).toBe(true);
+    });
+
+    test('cursor applies and returns the cursor agent', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-init-h-'));
+      const { envelope, exitKind } = handleInit({ projectRoot }, 'cursor');
+      expect(exitKind).toBe('ok');
+      expect(envelope.data.agent).toBe('cursor');
+    });
+
+    test('unknown agent -> invalid_input', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-init-h-'));
+      const { envelope, exitKind } = handleInit({ projectRoot }, 'bogus');
+      expect(exitKind).toBe('invalid_input');
+      expect(envelope.ok).toBe(false);
+      expect(envelope.error.kind).toBe('invalid_input');
+      expect(envelope.hint).toContain('claude');
     });
   });
 });
