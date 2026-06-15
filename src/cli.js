@@ -399,6 +399,60 @@ function handleRecordBundle({ projectRoot, reader = bundleReader }, scenarioId, 
   return { envelope: ok({ ...bundle, consumed }), exitKind: 'ok' };
 }
 
+// --- Slice 10: launch the web recorder ------------------------------------
+//
+// `mauto record <name>` launches the recorder sidecar (the live web GUI) so a
+// human can record a scenario. The sidecar is long-lived: the handler simply
+// awaits it and maps its numeric exit code onto the envelope contract.
+//
+// `startLiveCapture` is injected. It defaults to the REAL recorder, lazily
+// required so tests (which inject a fake) never load or launch the sidecar.
+async function handleRecord({
+  scenarioId,
+  opts = {},
+  projectRoot,
+  startLiveCapture = require('../tools/recorder/src/lifecycle/live').startLiveCapture,
+}) {
+  const mode = opts.mode
+    ? MODE_ALIASES[opts.mode]
+    : configManager.resolveMode(configManager.load(projectRoot));
+
+  const code = await startLiveCapture({
+    projectRoot,
+    scenarioId,
+    platform: opts.platform || 'android',
+    mode,
+    opts: {
+      noGui: opts.gui === false,
+      preconditionsModal: !!opts.preconditionsModal,
+      allowSensitiveInput: !!opts.allowSensitiveInput,
+      verify: !!opts.verify,
+      overwrite: !!opts.overwrite,
+    },
+  });
+
+  if (code === 0) {
+    return {
+      envelope: ok({
+        scenario_id: scenarioId,
+        recorded: true,
+        next: `mauto record-bundle ${scenarioId} then follow mauto guide record to synthesize`,
+      }),
+      exitKind: 'ok',
+    };
+  }
+  if (code === 130) {
+    return { envelope: fail('cancel', 'recording cancelled', null), exitKind: 'cancel' };
+  }
+  if (code === 2) {
+    return {
+      envelope: fail('device', 'device disconnected during recording', 'reconnect the device and rerun mauto record'),
+      exitKind: 'device',
+    };
+  }
+  return { envelope: fail('internal', `recorder exited with code ${code}`, null), exitKind: 'internal' };
+}
+
 // ---------------------------------------------------------------------------
 // Program wiring
 // ---------------------------------------------------------------------------
@@ -635,6 +689,21 @@ function buildProgram(deps = {}) {
     });
 
   program
+    .command('record <name>')
+    .description('Launch the web recorder to capture a scenario interactively')
+    .option('--platform <platform>', 'android | ios', 'android')
+    .option('--mode <mode>', 'aware | agnostic (override the workspace config mode)')
+    .option('--overwrite', 'overwrite an existing scenario', false)
+    .option('--verify', 'replay the scenario via execute after Save', false)
+    .option('--allow-sensitive-input', 'opt out of sensitive-input warnings', false)
+    .option('--no-gui', 'run without launching the browser GUI')
+    .option('--preconditions-modal', 'show the preconditions modal before recording', false)
+    .action(async (name, opts) => {
+      const r = await handleRecord({ scenarioId: name, opts, projectRoot });
+      emit(r, humanFlag());
+    });
+
+  program
     .command('record-bundle <id>')
     .description('Read the persisted recorder artifact bundle for a scenario (for offline synthesis)')
     .option('--consume', 'delete the bundle after a successful read', false)
@@ -694,4 +763,5 @@ module.exports = {
   handleBootstrap,
   handleInit,
   handleRecordBundle,
+  handleRecord,
 };
