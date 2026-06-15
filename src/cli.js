@@ -8,6 +8,17 @@ const { DeviceBridge } = require('./device/bridge');
 const { ScenarioValidator } = require('./scenario/validator');
 const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
 const { ResultStore } = require('./result/store');
+const configManager = require('./config/manager');
+const { scaffold } = require('./setup/scaffold');
+const guideEmitter = require('./guide/emitter');
+
+// Map the user-facing --mode flag onto the stored config mode values.
+const MODE_ALIASES = {
+  aware: 'platform-aware',
+  agnostic: 'platform-agnostic',
+  'platform-aware': 'platform-aware',
+  'platform-agnostic': 'platform-agnostic',
+};
 
 const KNOWN_ASSERTION_TYPES = new Set([
   ...MECHANICAL_TYPES,
@@ -259,6 +270,82 @@ function handleResultFinalize({ resultStoreFactory, projectRoot }, opts) {
   return { envelope: ok(result), exitKind: 'ok' };
 }
 
+// --- Slice 3: workspace + reasoning-delivery floor -----------------------
+//
+// Contract split: the action/result verbs above emit the JSON envelope. The
+// content-emitting verbs `guide`/`schema`/`bootstrap` instead emit RAW content
+// (markdown / JSON schema / text) on stdout, because an agent injects that text
+// directly into its own context. Their handlers return `{ raw, exitKind:'ok' }`
+// on success; only their ERROR paths (unknown topic/name) fall back to the
+// `fail(...)` envelope + exit 3.
+
+function handleSetup({ projectRoot }, opts = {}) {
+  const raw = opts.mode === undefined ? 'aware' : String(opts.mode);
+  const mode = MODE_ALIASES[raw];
+  if (!mode) {
+    return {
+      envelope: fail('invalid_input', `unknown mode "${opts.mode}"`, 'Use --mode aware or --mode agnostic.'),
+      exitKind: 'invalid_input',
+    };
+  }
+  const r = scaffold(projectRoot, { mode });
+  return {
+    envelope: ok({ created: r.created, mode: r.mode, next: 'run `mauto guide setup`' }),
+    exitKind: 'ok',
+  };
+}
+
+function handleConfigGet({ projectRoot }, key) {
+  const value = configManager.get(projectRoot, key);
+  return { envelope: ok({ key, value }), exitKind: 'ok' };
+}
+
+function handleConfigSet({ projectRoot }, key, rawValue) {
+  let value = rawValue;
+  try {
+    value = JSON.parse(rawValue);
+  } catch (_) {
+    // Not JSON — keep the literal string.
+  }
+  configManager.set(projectRoot, key, value);
+  return { envelope: ok({ key, value }), exitKind: 'ok' };
+}
+
+// RAW content on success; fail envelope only when the topic is unknown.
+function handleGuide({ projectRoot, emitter = guideEmitter, config = configManager }, topic) {
+  const cfg = config.load(projectRoot);
+  const mode = config.resolveMode(cfg);
+  let raw;
+  try {
+    raw = emitter.emitGuide(topic, { mode });
+  } catch (err) {
+    return {
+      envelope: fail('invalid_input', `unknown guide topic "${topic}"`, 'Topics: generate, execute, record, setup.'),
+      exitKind: 'invalid_input',
+    };
+  }
+  return { raw, exitKind: 'ok' };
+}
+
+// RAW JSON schema on success; fail envelope only when the name is unknown.
+function handleSchema({ emitter = guideEmitter } = {}, name) {
+  let raw;
+  try {
+    raw = emitter.emitSchema(name);
+  } catch (err) {
+    return {
+      envelope: fail('invalid_input', `unknown schema "${name}"`, 'Names: scenario, result.'),
+      exitKind: 'invalid_input',
+    };
+  }
+  return { raw, exitKind: 'ok' };
+}
+
+// RAW bootstrap text; no error path.
+function handleBootstrap({ emitter = guideEmitter } = {}) {
+  return { raw: emitter.emitBootstrap(), exitKind: 'ok' };
+}
+
 // ---------------------------------------------------------------------------
 // Program wiring
 // ---------------------------------------------------------------------------
@@ -436,11 +523,65 @@ function buildProgram(deps = {}) {
       emit(r, humanFlag());
     });
 
+  // --- Slice 3 verbs --------------------------------------------------------
+
+  // Emit a handler result that may be either an envelope (success/error) OR
+  // raw content. Raw content with exitKind 'ok' prints verbatim (exit 0);
+  // anything else is an envelope error and goes through the normal emit path.
+  const emitMaybeRaw = (r) => {
+    if (r.raw !== undefined && r.exitKind === 'ok') {
+      emitRaw(r.raw, r.exitKind);
+    } else {
+      emit(r, humanFlag());
+    }
+  };
+
+  program
+    .command('setup')
+    .description('Scaffold the workspace (mobile-automator/) and write a config')
+    .option('--mode <mode>', 'aware (platform-aware, default) | agnostic (platform-agnostic)')
+    .action((opts) => {
+      const r = handleSetup({ projectRoot }, { mode: opts.mode });
+      emit(r, humanFlag());
+    });
+
+  const config = program.command('config').description('Read or update the workspace config');
+  config
+    .command('get <key>')
+    .description('Get a dotted-path config value')
+    .action((key) => emit(handleConfigGet({ projectRoot }, key), humanFlag()));
+  config
+    .command('set <key> <value>')
+    .description('Set a dotted-path config value (JSON-parsed when possible)')
+    .action((key, value) => emit(handleConfigSet({ projectRoot }, key, value), humanFlag()));
+
+  program
+    .command('guide <topic>')
+    .description('Print the RAW workflow guide for a topic (generate|execute|record|setup)')
+    .action((topic) => emitMaybeRaw(handleGuide({ projectRoot }, topic)));
+
+  program
+    .command('schema <name>')
+    .description('Print the RAW JSON schema (scenario|result)')
+    .action((name) => emitMaybeRaw(handleSchema({}, name)));
+
+  program
+    .command('bootstrap')
+    .description('Print the RAW bootstrap (verb map + invariants)')
+    .action(() => emitMaybeRaw(handleBootstrap({})));
+
   return program;
 }
 
 function defaultEmit({ envelope, exitKind }, human) {
   process.stdout.write(render(envelope, { human }) + '\n');
+  process.exit(exitCodeFor(exitKind));
+}
+
+// Print raw content (markdown / JSON schema / text) verbatim — no envelope
+// wrapping — then exit. Used by guide/schema/bootstrap success paths.
+function emitRaw(content, exitKind) {
+  process.stdout.write(content.endsWith('\n') ? content : content + '\n');
   process.exit(exitCodeFor(exitKind));
 }
 
@@ -462,4 +603,10 @@ module.exports = {
   handleAssert,
   handleResultAddStep,
   handleResultFinalize,
+  handleSetup,
+  handleConfigGet,
+  handleConfigSet,
+  handleGuide,
+  handleSchema,
+  handleBootstrap,
 };

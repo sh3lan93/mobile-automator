@@ -15,6 +15,12 @@ const {
   handleAssert,
   handleResultAddStep,
   handleResultFinalize,
+  handleSetup,
+  handleConfigGet,
+  handleConfigSet,
+  handleGuide,
+  handleSchema,
+  handleBootstrap,
 } = require('../../src/cli');
 const Ajv = require('ajv');
 
@@ -274,6 +280,115 @@ describe('cli handlers', () => {
       const schema = JSON.parse(fs.readFileSync(RESULT_SCHEMA_PATH, 'utf8'));
       const validate = new Ajv({ allErrors: true, strict: false }).compile(schema);
       expect(validate(f.envelope.data)).toBe(true);
+    });
+  });
+
+  // --- Slice 3: workspace + reasoning-delivery floor ----------------------
+
+  describe('handleSetup', () => {
+    test('scaffolds into an injected projectRoot and maps aware->platform-aware', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-'));
+      const { envelope, exitKind } = handleSetup({ projectRoot }, { mode: 'aware' });
+      expect(exitKind).toBe('ok');
+      expect(envelope.ok).toBe(true);
+      expect(envelope.data.mode).toBe('platform-aware');
+      expect(envelope.data.next).toContain('mauto guide setup');
+      expect(fs.existsSync(path.join(projectRoot, 'mobile-automator', 'scenarios'))).toBe(true);
+    });
+
+    test('maps agnostic->platform-agnostic and writes config mode', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-'));
+      const { envelope } = handleSetup({ projectRoot }, { mode: 'agnostic' });
+      expect(envelope.data.mode).toBe('platform-agnostic');
+      const cfg = JSON.parse(fs.readFileSync(path.join(projectRoot, 'mobile-automator', 'config.json'), 'utf8'));
+      expect(cfg.mode).toBe('platform-agnostic');
+    });
+
+    test('defaults to platform-aware when no --mode given', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-'));
+      const { envelope } = handleSetup({ projectRoot }, {});
+      expect(envelope.data.mode).toBe('platform-aware');
+    });
+
+    test('rejects an unknown mode', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-'));
+      const { exitKind } = handleSetup({ projectRoot }, { mode: 'windows' });
+      expect(exitKind).toBe('invalid_input');
+    });
+  });
+
+  describe('config get/set', () => {
+    test('set then get round-trips with JSON-parsed values', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-'));
+      const setR = handleConfigSet({ projectRoot }, 'app_package', 'com.example.app');
+      expect(setR.exitKind).toBe('ok');
+      const getR = handleConfigGet({ projectRoot }, 'app_package');
+      expect(getR.envelope.data).toEqual({ key: 'app_package', value: 'com.example.app' });
+    });
+
+    test('set parses JSON arrays/numbers when possible', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-'));
+      handleConfigSet({ projectRoot }, 'business_critical_paths', '["checkout","login"]');
+      const getR = handleConfigGet({ projectRoot }, 'business_critical_paths');
+      expect(getR.envelope.data.value).toEqual(['checkout', 'login']);
+    });
+
+    test('get of a missing key returns undefined value', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-'));
+      const getR = handleConfigGet({ projectRoot }, 'nope');
+      expect(getR.exitKind).toBe('ok');
+      expect(getR.envelope.data.value).toBeUndefined();
+    });
+  });
+
+  describe('handleGuide (raw content / fail on unknown)', () => {
+    test('returns raw markdown for a known topic resolving mode from config', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-guide-'));
+      handleConfigSet({ projectRoot }, 'mode', 'platform-agnostic');
+      const r = handleGuide({ projectRoot }, 'execute');
+      expect(r.exitKind).toBe('ok');
+      expect(r.raw).toContain('mauto');
+      expect(r.raw).toContain('press_back');
+      expect(r.envelope).toBeUndefined();
+    });
+
+    test('defaults to platform-aware when no config present', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-guide-'));
+      const r = handleGuide({ projectRoot }, 'setup');
+      expect(r.exitKind).toBe('ok');
+      expect(typeof r.raw).toBe('string');
+    });
+
+    test('unknown topic -> fail envelope + invalid_input exit 3', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-guide-'));
+      const r = handleGuide({ projectRoot }, 'bogus');
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.error.kind).toBe('invalid_input');
+      expect(r.raw).toBeUndefined();
+    });
+  });
+
+  describe('handleSchema (raw JSON / fail on unknown)', () => {
+    test('returns raw JSON for scenario', () => {
+      const r = handleSchema({}, 'scenario');
+      expect(r.exitKind).toBe('ok');
+      expect(() => JSON.parse(r.raw)).not.toThrow();
+    });
+
+    test('unknown name -> fail envelope exit 3', () => {
+      const r = handleSchema({}, 'bogus');
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.error.kind).toBe('invalid_input');
+    });
+  });
+
+  describe('handleBootstrap (raw text)', () => {
+    test('returns the verb map as raw text', () => {
+      const r = handleBootstrap({});
+      expect(r.exitKind).toBe('ok');
+      expect(r.raw).toContain('elements');
+      expect(r.raw).toContain('schema');
+      expect(r.raw).not.toMatch(/\bmobile_[a-z_]+/);
     });
   });
 });
