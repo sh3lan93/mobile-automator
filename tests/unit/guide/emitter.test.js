@@ -31,8 +31,9 @@ describe('guide/emitter', () => {
       }
     });
 
-    it('notes that full content lands later', () => {
-      expect(emitGuide('generate', { mode: 'platform-aware' }).toLowerCase()).toContain('later slice');
+    it('notes that full content lands later for not-yet-ported topics', () => {
+      // generate is fully ported in this slice; execute/record/setup are still stubs.
+      expect(emitGuide('execute', { mode: 'platform-aware' }).toLowerCase()).toContain('later slice');
     });
 
     it('agnostic stubs mention the four semantic actions', () => {
