@@ -23,6 +23,7 @@ const {
   handleBootstrap,
   handleInit,
   handleRecordBundle,
+  handleRecord,
 } = require('../../src/cli');
 const Ajv = require('ajv');
 
@@ -471,6 +472,166 @@ describe('cli handlers', () => {
       expect(envelope.error.kind).toBe('invalid_input');
       expect(envelope.error.message).toContain('no recording bundle for nope');
       expect(envelope.hint).toContain('mauto record');
+    });
+  });
+
+  describe('handleRecord (launch the web recorder)', () => {
+    // A fake startLiveCapture that records its call args and returns a fixed
+    // exit code. It proves the REAL recorder is never launched: if a test ever
+    // reached the real sidecar it would try to bring up the HTTP/WS server.
+    function fakeCapture(code) {
+      const calls = [];
+      const fn = async (args) => {
+        calls.push(args);
+        return code;
+      };
+      fn.calls = calls;
+      return fn;
+    }
+
+    function writeConfig(projectRoot, cfg) {
+      const dir = path.join(projectRoot, 'mobile-automator');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify(cfg));
+    }
+
+    test('exit 0 -> ok envelope with scenario_id + recorded:true; forwards resolved args', async () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-record-'));
+      writeConfig(projectRoot, { mode: 'platform-agnostic' });
+      const startLiveCapture = fakeCapture(0);
+
+      const { envelope, exitKind } = await handleRecord({
+        scenarioId: 'login_flow',
+        opts: {
+          platform: 'ios',
+          verify: true,
+          overwrite: true,
+          allowSensitiveInput: true,
+          gui: false,
+          preconditionsModal: true,
+        },
+        projectRoot,
+        startLiveCapture,
+      });
+
+      expect(exitKind).toBe('ok');
+      expect(envelope.ok).toBe(true);
+      expect(envelope.data.scenario_id).toBe('login_flow');
+      expect(envelope.data.recorded).toBe(true);
+      expect(envelope.data.next).toContain('mauto record-bundle login_flow');
+
+      // The real recorder was never launched — only the fake was called.
+      expect(startLiveCapture.calls).toHaveLength(1);
+      const call = startLiveCapture.calls[0];
+      expect(call.projectRoot).toBe(projectRoot);
+      expect(call.scenarioId).toBe('login_flow');
+      expect(call.platform).toBe('ios');
+      // Mode resolved from the config file.
+      expect(call.mode).toBe('platform-agnostic');
+      expect(call.opts).toEqual({
+        noGui: true,
+        preconditionsModal: true,
+        allowSensitiveInput: true,
+        verify: true,
+        overwrite: true,
+      });
+    });
+
+    test('platform defaults to android and flags default to false', async () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-record-'));
+      const startLiveCapture = fakeCapture(0);
+
+      await handleRecord({
+        scenarioId: 'cart',
+        opts: {},
+        projectRoot,
+        startLiveCapture,
+      });
+
+      const call = startLiveCapture.calls[0];
+      expect(call.platform).toBe('android');
+      // No config -> platform-aware default.
+      expect(call.mode).toBe('platform-aware');
+      expect(call.opts).toEqual({
+        noGui: false,
+        preconditionsModal: false,
+        allowSensitiveInput: false,
+        verify: false,
+        overwrite: false,
+      });
+    });
+
+    test('--mode agnostic overrides config', async () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-record-'));
+      writeConfig(projectRoot, { mode: 'platform-aware' });
+      const startLiveCapture = fakeCapture(0);
+
+      await handleRecord({
+        scenarioId: 'flow',
+        opts: { mode: 'agnostic' },
+        projectRoot,
+        startLiveCapture,
+      });
+
+      expect(startLiveCapture.calls[0].mode).toBe('platform-agnostic');
+    });
+
+    test('--mode aware maps to platform-aware', async () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-record-'));
+      writeConfig(projectRoot, { mode: 'platform-agnostic' });
+      const startLiveCapture = fakeCapture(0);
+
+      await handleRecord({
+        scenarioId: 'flow',
+        opts: { mode: 'aware' },
+        projectRoot,
+        startLiveCapture,
+      });
+
+      expect(startLiveCapture.calls[0].mode).toBe('platform-aware');
+    });
+
+    test('exit 130 -> cancel envelope', async () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-record-'));
+      const { envelope, exitKind } = await handleRecord({
+        scenarioId: 'flow',
+        opts: {},
+        projectRoot,
+        startLiveCapture: fakeCapture(130),
+      });
+      expect(exitKind).toBe('cancel');
+      expect(envelope.ok).toBe(false);
+      expect(envelope.error.kind).toBe('cancel');
+      expect(envelope.error.message).toContain('cancelled');
+    });
+
+    test('exit 2 -> device envelope with reconnect hint', async () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-record-'));
+      const { envelope, exitKind } = await handleRecord({
+        scenarioId: 'flow',
+        opts: {},
+        projectRoot,
+        startLiveCapture: fakeCapture(2),
+      });
+      expect(exitKind).toBe('device');
+      expect(envelope.ok).toBe(false);
+      expect(envelope.error.kind).toBe('device');
+      expect(envelope.error.message).toContain('disconnected');
+      expect(envelope.hint).toContain('reconnect');
+    });
+
+    test('other non-zero exit -> internal envelope', async () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-record-'));
+      const { envelope, exitKind } = await handleRecord({
+        scenarioId: 'flow',
+        opts: {},
+        projectRoot,
+        startLiveCapture: fakeCapture(7),
+      });
+      expect(exitKind).toBe('internal');
+      expect(envelope.ok).toBe(false);
+      expect(envelope.error.kind).toBe('internal');
+      expect(envelope.error.message).toContain('code 7');
     });
   });
 });
