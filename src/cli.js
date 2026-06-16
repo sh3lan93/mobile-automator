@@ -11,6 +11,7 @@ const { ResultStore } = require('./result/store');
 const configManager = require('./config/manager');
 const { scaffold } = require('./setup/scaffold');
 const guideEmitter = require('./guide/emitter');
+const { ADAPTERS } = require('./init/adapters');
 
 // Map the user-facing --mode flag onto the stored config mode values.
 const MODE_ALIASES = {
@@ -346,6 +347,26 @@ function handleBootstrap({ emitter = guideEmitter } = {}) {
   return { raw: emitter.emitBootstrap(), exitKind: 'ok' };
 }
 
+// --- Slice 7: vendor init -------------------------------------------------
+//
+// `mauto init --agent <claude|cursor>` writes per-vendor artifacts in the
+// vendor's own namespace. Adapters are injectable for tests; the device is
+// never exposed as MCP tools — the `mauto mcp` server advertises prompts only.
+function handleInit({ projectRoot, adapters = ADAPTERS }, agent) {
+  const adapter = adapters[agent];
+  if (!adapter) {
+    return {
+      envelope: fail('invalid_input', `unknown agent "${agent}"`, 'supported: claude, cursor'),
+      exitKind: 'invalid_input',
+    };
+  }
+  const r = adapter.apply({ projectRoot });
+  return {
+    envelope: ok({ agent: r.agent, written: r.written, merged: r.merged }),
+    exitKind: 'ok',
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Program wiring
 // ---------------------------------------------------------------------------
@@ -570,6 +591,27 @@ function buildProgram(deps = {}) {
     .description('Print the RAW bootstrap (verb map + invariants)')
     .action(() => emitMaybeRaw(handleBootstrap({})));
 
+  // --- Slice 7: vendor init + MCP prompts server ---------------------------
+
+  program
+    .command('init')
+    .description('Write per-vendor agent artifacts (slash commands/rules + MCP server entry)')
+    .requiredOption('--agent <name>', 'claude | cursor')
+    .action((opts) => {
+      const r = handleInit({ projectRoot }, opts.agent);
+      emit(r, humanFlag());
+    });
+
+  program
+    .command('mcp')
+    .description('Run the MCP prompts server (stdio) exposing the mauto workflows as prompts')
+    .action(async () => {
+      // Long-lived: connect the stdio transport and serve until the client
+      // closes. Loaded lazily so the MCP SDK is only required for `mauto mcp`.
+      const { runServer } = require('./mcp/server');
+      await runServer({ projectRoot });
+    });
+
   return program;
 }
 
@@ -609,4 +651,5 @@ module.exports = {
   handleGuide,
   handleSchema,
   handleBootstrap,
+  handleInit,
 };
