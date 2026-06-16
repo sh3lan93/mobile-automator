@@ -43,13 +43,14 @@ function snakeCase(s) {
  * resolves with the exit code (0 on Save, 130 on Cancel or browser timeout,
  * 2 on device disconnect, etc.).
  *
- * NOTE — live tap source is a TODO. The first "live" run won't actually
- * capture taps until the tap source is implemented properly: mobile-mcp's
- * frame-streaming surface is the natural source (combined with the existing
- * `capture/video-tap-detector.js` module) but the deep integration is out of
- * scope for this slice. Tests inject taps via `deps.tapSource` (an emitter
- * that fires `{t, kind:'down'|'up'|'move', x, y}` events) so the rest of the
- * pipeline can be exercised end-to-end.
+ * Slice 8 — the live tap source is now wired by default in the live path
+ * (`deps.useLiveDevice`): `capture/tap-source.js` drives mobile-mcp screen
+ * recording through `capture/video-tap-detector.js` and emits
+ * `{t, kind:'down'|'up'|'move', x, y}` taps. That end-to-end live path is
+ * BEST-EFFORT and needs on-device validation (the known PRD build risk — see
+ * tap-source.js). Tests still inject `deps.tapSource` to drive the pipeline
+ * deterministically without a device; a missing tap source in non-live mode is
+ * fine — it just means no live taps are captured.
  *
  * `deps` is the seam for tests:
  *   • mcpBridge — pre-constructed bridge (skip the default ctor)
@@ -75,9 +76,24 @@ async function startModeB({
   const emitMode = cfg.mode;
 
   // ---- Bridge + poller -----------------------------------------------------
+  //
+  // Slice 8: the live device `call` is backed by the CLI-owned mobile-mcp
+  // connection (capture/recorder-device-io → src/device/mobile-mcp-client).
+  // Tests keep injecting fakes via `deps.mcpBridge` or `deps.mcpCall`, which
+  // short-circuit the live wiring so nothing spawns. When neither is provided
+  // and a `deps.deviceLabel` is available, the live path opens a real
+  // connection (kept injectable through `deps.createRecorderCall`).
+  let deviceConn = null;
+  let mcpCall = deps.mcpCall;
+  if (!deps.mcpBridge && !mcpCall && deps.useLiveDevice) {
+    const { createRecorderCall } = require('../capture/recorder-device-io');
+    const _createRecorderCall = deps.createRecorderCall || createRecorderCall;
+    deviceConn = await _createRecorderCall({ device: deps.deviceLabel });
+    mcpCall = deviceConn.call;
+  }
 
   const mcpBridge = deps.mcpBridge || new McpBridge({
-    call: deps.mcpCall || (async () => ({ elements: [] })),
+    call: mcpCall || (async () => ({ elements: [] })),
   });
 
   const pollIntervalMs = deps.pollIntervalMs || DEFAULT_POLL_INTERVAL_MS;
@@ -130,13 +146,21 @@ async function startModeB({
     },
   });
 
-  // ---- Live tap source (TODO) ---------------------------------------------
-  // See the file-level doc comment: the real tap source plugs into mobile-mcp
-  // frame streaming + capture/video-tap-detector. For now we honour the
-  // injected `deps.tapSource` so tests can drive the pipeline, but a missing
-  // tapSource is fine — it just means no live taps are captured this slice.
-  if (deps.tapSource && typeof deps.tapSource.on === 'function') {
-    deps.tapSource.on('tap', (ev) => {
+  // ---- Live tap source -----------------------------------------------------
+  // Tests inject `deps.tapSource` to drive the pipeline. The live path (slice 8)
+  // defaults to capture/tap-source, which plugs mobile-mcp screen recording into
+  // video-tap-detector to produce {t, kind, x, y} taps. This end-to-end live
+  // path is BEST-EFFORT and needs on-device validation (see tap-source.js).
+  let tapSource = deps.tapSource;
+  let ownsTapSource = false;
+  if (!tapSource && deps.useLiveDevice) {
+    const { createTapSource } = require('../capture/tap-source');
+    const _createTapSource = deps.createTapSource || createTapSource;
+    tapSource = _createTapSource({ bridge: mcpBridge });
+    ownsTapSource = true;
+  }
+  if (tapSource && typeof tapSource.on === 'function') {
+    tapSource.on('tap', (ev) => {
       try { classifier.feed(ev); } catch (_e) { /* swallow */ }
     });
   }
@@ -155,6 +179,15 @@ async function startModeB({
     // Tear down failure-orchestrator watchdogs (crash + browser timers).
     if (failureCtx && typeof failureCtx.stopAll === 'function') {
       try { failureCtx.stopAll(); } catch (_e) { /* swallow */ }
+    }
+    // Stop a tap source we own (the live one). Best-effort + async; we don't
+    // await it here since finish() is sync, but errors must not leak.
+    if (ownsTapSource && tapSource && typeof tapSource.stop === 'function') {
+      try { Promise.resolve(tapSource.stop()).catch(() => {}); } catch (_e) { /* swallow */ }
+    }
+    // Close the live device connection (no-op when tests injected a fake).
+    if (deviceConn && typeof deviceConn.close === 'function') {
+      try { deviceConn.close(); } catch (_e) { /* swallow */ }
     }
     resolveExit(code);
   }
@@ -224,9 +257,14 @@ async function startModeB({
     }
   });
 
-  // ---- Start the poller and yield -----------------------------------------
+  // ---- Start the poller (and live tap source) and yield -------------------
 
   try { hierarchyPoller.start(); } catch (_e) { /* swallow */ }
+  // Start a tap source we own. Best-effort: a device/recording failure here is
+  // swallowed so the rest of the session (hierarchy, assertions) still runs.
+  if (ownsTapSource && tapSource && typeof tapSource.start === 'function') {
+    try { Promise.resolve(tapSource.start()).catch(() => {}); } catch (_e) { /* swallow */ }
+  }
 
   return exitPromise;
 }

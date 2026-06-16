@@ -22,6 +22,7 @@ const {
   handleSchema,
   handleBootstrap,
   handleInit,
+  handleRecordBundle,
 } = require('../../src/cli');
 const Ajv = require('ajv');
 
@@ -419,6 +420,57 @@ describe('cli handlers', () => {
       expect(envelope.ok).toBe(false);
       expect(envelope.error.kind).toBe('invalid_input');
       expect(envelope.hint).toContain('claude');
+    });
+  });
+
+  describe('handleRecordBundle (read persisted recorder bundle)', () => {
+    const REPO_ROOT = path.resolve(__dirname, '..', '..');
+    const FIXTURE = path.join(REPO_ROOT, 'tests', 'fixtures', 'recorder', 'sample-bundle');
+
+    function copyTree(src, dest) {
+      fs.mkdirSync(dest, { recursive: true });
+      for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+        const s = path.join(src, entry.name);
+        const d = path.join(dest, entry.name);
+        if (entry.isDirectory()) copyTree(s, d);
+        else fs.copyFileSync(s, d);
+      }
+    }
+
+    function seed(scenarioId) {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-recbundle-'));
+      copyTree(FIXTURE, path.join(projectRoot, 'mobile-automator', '.recorder', scenarioId));
+      return projectRoot;
+    }
+
+    test('reads the bundle envelope (events parsed, hierarchy listed)', () => {
+      const projectRoot = seed('login_flow');
+      const { envelope, exitKind } = handleRecordBundle({ projectRoot }, 'login_flow', {});
+      expect(exitKind).toBe('ok');
+      expect(envelope.ok).toBe(true);
+      expect(envelope.data.scenario_id).toBe('login_flow');
+      expect(envelope.data.events).toHaveLength(3);
+      expect(envelope.data.hierarchy).toHaveLength(2);
+      // Without --consume the bundle is left in place.
+      expect(fs.existsSync(path.join(projectRoot, 'mobile-automator', '.recorder', 'login_flow'))).toBe(true);
+    });
+
+    test('--consume deletes the bundle after a successful read', () => {
+      const projectRoot = seed('login_flow');
+      const { envelope, exitKind } = handleRecordBundle({ projectRoot }, 'login_flow', { consume: true });
+      expect(exitKind).toBe('ok');
+      expect(envelope.data.consumed).toBe(true);
+      expect(fs.existsSync(path.join(projectRoot, 'mobile-automator', '.recorder', 'login_flow'))).toBe(false);
+    });
+
+    test('missing bundle -> invalid_input (exit 3) with a record hint', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-recbundle-missing-'));
+      const { envelope, exitKind } = handleRecordBundle({ projectRoot }, 'nope', {});
+      expect(exitKind).toBe('invalid_input');
+      expect(envelope.ok).toBe(false);
+      expect(envelope.error.kind).toBe('invalid_input');
+      expect(envelope.error.message).toContain('no recording bundle for nope');
+      expect(envelope.hint).toContain('mauto record');
     });
   });
 });
