@@ -18,10 +18,10 @@ jobs:
         with:
           fetch-depth: 0  # Required to fetch all existing tags
 
-      - name: Read version from gemini-extension.json
+      - name: Read version from package.json
         id: get_version
         run: |
-          VERSION=$(jq -r '.version' gemini-extension.json)
+          VERSION=$(jq -r '.version' package.json)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
           echo "Detected version: $VERSION (tag: v$VERSION)"

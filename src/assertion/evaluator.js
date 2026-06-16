@@ -2,19 +2,19 @@
 
 // Pure assertion evaluator.
 //
-// The executor SKILL (templates/mobile-automator-executor/aware/SKILL.md) splits
-// the 27 assertion types into two tiers:
+// The `mauto guide execute` reasoning floor splits the 27 assertion types into
+// two tiers:
 //
-//   Tier 1 — "Powered by mobile_list_elements_on_screen()". These are purely
-//            MECHANICAL: a deterministic check over the agnostic element list
-//            (+ captured variables / a previous snapshot). The CLI owns them.
+//   Tier 1 — element-list-powered. These are purely MECHANICAL: a deterministic
+//            check over the agnostic element list (+ captured variables / a
+//            previous snapshot). The CLI owns them.
 //
-//   Tier 2 — "Powered by mobile_take_screenshot() + AI visual analysis". These
-//            require an agent to judge a screenshot, so the CLI cannot decide
-//            pass/fail. We surface them as needs_agent with pass = null.
+//   Tier 2 — screenshot + AI visual analysis. These require an agent to judge a
+//            screenshot, so the CLI cannot decide pass/fail. We surface them as
+//            needs_agent with pass = null.
 //
-// MECHANICAL_TYPES is the verbatim Tier-1 list from that SKILL section
-// (SKILL.md "Tier 1" bullets), minus `element_state` whose per-attribute state
+// MECHANICAL_TYPES is the verbatim Tier-1 list from that guide section,
+// minus `element_state` whose per-attribute state
 // inspection is not represented in the agnostic element model (no enabled/
 // focused/checked fields survive normalization), so it cannot be decided
 // mechanically here and falls through to needs_agent.

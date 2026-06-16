@@ -5,7 +5,7 @@ const { ScenarioValidator } = require('../../../src/scenario/validator');
 
 const SCHEMA_PATH = path.resolve(
   __dirname,
-  '../../../templates/mobile-automator-generator/references/scenario_schema.json'
+  '../../../src/schemas/scenario_schema.json'
 );
 
 // Minimal schema-conformant scenario built from the schema `required` fields.

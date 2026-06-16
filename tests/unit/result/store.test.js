@@ -9,7 +9,7 @@ const { ResultStore } = require('../../../src/result/store');
 
 const RESULT_SCHEMA_PATH = path.resolve(
   __dirname,
-  '../../../templates/mobile-automator-executor/references/result_schema.json'
+  '../../../src/schemas/result_schema.json'
 );
 
 function ajvValidator() {

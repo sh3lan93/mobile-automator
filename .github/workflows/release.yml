@@ -62,13 +62,13 @@ jobs:
             ### 📦 Installation
 
             ```bash
-            gemini extensions install https://github.com/${{ github.repository }}
+            npm i -g mobile-automator
             ```
 
-            Or install this specific version:
+            Or run without installing:
 
             ```bash
-            gemini extensions install https://github.com/${{ github.repository }} --ref=${{ steps.get_version.outputs.tag }}
+            npx mobile-automator init --agent claude
             ```
 
             ### 📚 Documentation

@@ -27,14 +27,8 @@ const { interpolate } = require('./placeholders');
 const CONTENT_DIR = path.resolve(__dirname, 'content');
 const PORTED_TOPICS = new Set(['generate', 'execute', 'record', 'setup']);
 
-const SCENARIO_SCHEMA = path.resolve(
-  __dirname,
-  '../../templates/mobile-automator-generator/references/scenario_schema.json'
-);
-const RESULT_SCHEMA = path.resolve(
-  __dirname,
-  '../../templates/mobile-automator-executor/references/result_schema.json'
-);
+const SCENARIO_SCHEMA = path.resolve(__dirname, '../schemas/scenario_schema.json');
+const RESULT_SCHEMA = path.resolve(__dirname, '../schemas/result_schema.json');
 
 const TOPICS = {
   generate:

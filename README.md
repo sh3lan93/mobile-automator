@@ -1,6 +1,8 @@
 # 🚀 Mobile Automator
 
-> **The intelligent mobile QA extension that learns your app and writes tests for you.**
+> **The intelligent mobile QA CLI that learns your app and writes tests for you.**
+
+Mobile Automator is a command-line tool (`mauto`) that drives your coding agent (Claude Code, Cursor) to analyze a mobile project, generate project-specific testing skills, and run them.
 
 <div align="center">
 
@@ -18,22 +20,21 @@ Mobile Automator ships with two operating modes so you can match your testing st
 
 | Mode | Best for | How to enable |
 |------|----------|---------------|
-| **Platform-aware** (default) | Single-OS apps or tests that exercise OS-specific UI | Default — just run `/mobile-automator:setup` |
+| **Platform-aware** (default) | Single-OS apps or tests that exercise OS-specific UI | Default — just run `mauto setup` |
 | **Platform-agnostic** | Cross-platform apps (Flutter, React Native, KMP, CMP) shipping to both Android and iOS | Select "platform-agnostic" at the Mode Selection step during setup |
 
 ### Platform-agnostic quick start
 
 ```bash
 cd ~/projects/my-cross-platform-app
-gemini
-
-> /mobile-automator:setup
-# When prompted at § 1.5 "Mode Selection", choose: platform-agnostic
+mauto init --agent claude
+mauto setup
+# At the Mode Selection step, choose: platform-agnostic
 ```
 
 Agnostic scenarios are portable — the same JSON runs on Android and iOS without modification. OS-shaped gestures (back navigation, keyboard dismissal, permission dialogs) are expressed as four semantic actions (`press_back`, `dismiss_keyboard`, `grant_permission`, `deny_permission`) that the executor resolves to the correct native primitive at runtime.
 
-**Switching modes later:** Re-run `/mobile-automator:setup` and pick a different mode at § 1.5. Your previous skills are archived to `.gemini/skills/.archive/` and can be restored manually if needed (see [TROUBLESHOOTING.md](TROUBLESHOOTING.md)).
+**Switching modes later:** Re-run `mauto setup` and pick a different mode at the Mode Selection step.
 
 ---
 
@@ -98,22 +99,20 @@ https://github.com/user-attachments/assets/fbc69108-0736-402c-846c-faca237fe4ca
 ## 🎯 Quick Start
 
 ### Prerequisites
-- **Gemini CLI** installed ([Get it here](https://geminicli.com))
+- **A coding agent** — Claude Code or Cursor
 - **Mobile project** (Android, iOS, Flutter, React Native, KMP, or CMP)
-- **Node.js** v16+ (for mobile-mcp automation engine)
+- **Node.js** v16+ (for the `mauto` CLI and the mobile-mcp automation engine)
 
 ### Installation
 
-**From GitHub:**
+Install globally:
 ```bash
-gemini extensions install https://github.com/sh3lan93/mobile-automator
+npm i -g mobile-automator
 ```
 
-**Local Development:**
+Or run without installing:
 ```bash
-git clone https://github.com/sh3lan93/mobile-automator
-cd mobile-automator
-gemini extensions link .
+npx mobile-automator init --agent claude
 ```
 
 ### Setup Your Project
@@ -122,12 +121,14 @@ gemini extensions link .
 # Navigate to your mobile project
 cd ~/projects/my-awesome-app
 
-# Launch Gemini CLI
-gemini
+# Wire Mobile Automator into your agent (claude or cursor)
+mauto init --agent claude
 
-# Run setup
-> /mobile-automator:setup
+# Run setup — analyzes the project and installs custom skills
+mauto setup
 ```
+
+Once set up, drive the workflow with the verb surface — `mauto generate`, `mauto execute`, `mauto report` — and read any topic's guidance with `mauto guide <topic>` (e.g. `mauto guide execute`).
 
 The setup wizard will guide you through:
 1. ✅ **Platform Detection** - Identifies your tech stack
@@ -431,7 +432,7 @@ With the gate off, behaviour is identical to v0.11.0 — `/mobile-automator:reco
 
 ### Requirements
 
-- **Node ≥ 18** — required by the local sidecar (`commander`, `ws`, `pngjs` are installed by `gemini extensions install`).
+- **Node ≥ 18** — required by the local sidecar (`commander`, `ws`, `pngjs` are installed with the `mobile-automator` package).
 - **`ffmpeg` on your `PATH`** — used to extract per-frame PNGs from the screen recording captured during a session. The command halts cleanly with an install hint before spawning the sidecar if `ffmpeg` is missing.
 - **A connected device** — Android emulator, Android physical device, or iOS Simulator. iOS physical devices are out of scope.
 - **`adb` on your `PATH`** (Android only, optional) — used to capture hardware-key events (`BACK`, `HOME`, `VOLUMEUP`, `VOLUMEDOWN`, `POWER`). The recorder degrades gracefully if `adb` is absent: a one-line warning prints and hardware-key capture is disabled for the session; gesture capture is unaffected.

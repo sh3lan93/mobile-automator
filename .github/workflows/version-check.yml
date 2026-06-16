@@ -6,11 +6,11 @@ on:
       - main
 
 jobs:
-  detect-extension-changes:
-    name: Detect extension code changes
+  detect-cli-changes:
+    name: Detect CLI code changes
     runs-on: ubuntu-latest
     outputs:
-      ships-code: ${{ steps.filter.outputs.extension }}
+      ships-code: ${{ steps.filter.outputs.cli }}
 
     steps:
       - name: Checkout code
@@ -22,26 +22,25 @@ jobs:
         with:
           base: ${{ github.event.pull_request.base.ref }}
           filters: |
-            extension:
-              - 'gemini-extension.json'
-              - 'GEMINI.md'
-              - 'templates/**'
-              - 'commands/**'
-              - 'scripts/**'
+            cli:
+              - 'src/**'
+              - 'bin/**'
+              - 'tools/**'
+              - 'package.json'
 
       - name: Report decision
         run: |
-          if [[ "${{ steps.filter.outputs.extension }}" == "true" ]]; then
-            echo "⚠️ Extension code changed - version bump required"
+          if [[ "${{ steps.filter.outputs.cli }}" == "true" ]]; then
+            echo "⚠️ CLI code changed - version bump required"
           else
-            echo "✅ No extension code changes - version check skipped"
+            echo "✅ No CLI code changes - version check skipped"
           fi
 
   check-version:
     name: Verify version is bumped
-    needs: detect-extension-changes
+    needs: detect-cli-changes
     runs-on: ubuntu-latest
-    if: needs.detect-extension-changes.outputs.ships-code == 'true'
+    if: needs.detect-cli-changes.outputs.ships-code == 'true'
 
     steps:
       - name: Checkout code
@@ -49,10 +48,10 @@ jobs:
         with:
           fetch-depth: 0  # Required to fetch all tags
 
-      - name: Read version from gemini-extension.json
+      - name: Read version from package.json
         id: get_version
         run: |
-          VERSION=$(jq -r '.version' gemini-extension.json)
+          VERSION=$(jq -r '.version' package.json)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
           echo "Detected version: $VERSION (tag: v$VERSION)"
@@ -71,11 +70,11 @@ jobs:
             echo "────────────────────────────────────────"
             echo "  Version $VERSION is already released (tag '$TAG' exists)."
             echo ""
-            echo "  PRs that change extension code must bump the version in"
-            echo "  gemini-extension.json to a value not yet in the tags."
+            echo "  PRs that change CLI code must bump the version in"
+            echo "  package.json to a value not yet in the tags."
             echo ""
-            echo "  Extension code paths:"
-            echo "    gemini-extension.json, GEMINI.md, templates/, commands/, scripts/"
+            echo "  CLI code paths:"
+            echo "    src/, bin/, tools/, package.json"
             echo ""
             echo "  Current tags:"
             git tag --sort=-version:refname | head -10

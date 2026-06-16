@@ -4,8 +4,8 @@ on:
   pull_request:
     paths:
       - 'sample-app/**'
-      - 'templates/mobile-automator-executor/**'
-      - 'commands/mobile-automator/execute.toml'
+      - 'src/guide/content/execute.*.md'
+      - 'src/**'
       - '.github/workflows/sample-app-e2e-android.yml'
   workflow_dispatch: {}
 
