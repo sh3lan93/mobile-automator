@@ -31,12 +31,15 @@ describe('guide/emitter', () => {
       }
     });
 
-    it('notes that full content lands later for not-yet-ported topics', () => {
-      // generate + execute are fully ported; record/setup are still stubs.
-      expect(emitGuide('record', { mode: 'platform-aware' }).toLowerCase()).toContain('later slice');
+    it('every topic is now fully ported — no "later slice" stub remains', () => {
+      for (const topic of TOPICS) {
+        for (const mode of MODES) {
+          expect(emitGuide(topic, { mode }).toLowerCase()).not.toContain('later slice');
+        }
+      }
     });
 
-    it('agnostic stubs mention the four semantic actions', () => {
+    it('agnostic guides mention the four semantic actions', () => {
       for (const topic of TOPICS) {
         const out = emitGuide(topic, { mode: 'platform-agnostic' });
         for (const act of ['press_back', 'dismiss_keyboard', 'grant_permission', 'deny_permission']) {

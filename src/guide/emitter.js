@@ -25,7 +25,7 @@ const { interpolate } = require('./placeholders');
 // which fills tokens from the workspace config and applies a fallback so no
 // `{{` survives. Topics absent from this map fall through to the stub emitter.
 const CONTENT_DIR = path.resolve(__dirname, 'content');
-const PORTED_TOPICS = new Set(['generate', 'execute']);
+const PORTED_TOPICS = new Set(['generate', 'execute', 'record', 'setup']);
 
 const SCENARIO_SCHEMA = path.resolve(
   __dirname,
