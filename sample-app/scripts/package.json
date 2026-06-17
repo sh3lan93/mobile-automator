@@ -1,14 +1,10 @@
 {
   "name": "smoke-runner",
-  "version": "1.0.0",
-  "description": "MCP client driver for the smoke scenario CI run",
+  "version": "2.0.0",
+  "description": "Drives the smoke scenario through the shipped `mauto` CLI (no parallel mobile-mcp client). See run-smoke.mjs header for what it proves.",
   "type": "module",
   "private": true,
   "scripts": {
     "smoke": "node run-smoke.mjs"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.0",
-    "@mobilenext/mobile-mcp": "0.0.55"
   }
 }
