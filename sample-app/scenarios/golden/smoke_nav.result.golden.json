@@ -1,0 +1,21 @@
+{
+  "_comment": "Golden projection for the smoke_nav E2E. Compared MECHANICAL-FIELDS-ONLY by run-smoke.mjs: the comparator projects both the produced result and this fixture to a stable key set (scenario_id, status, counts, step ids+status, assertion ids+status, schema_version) and deepStrictEquals them. Volatile fields (run_id, timestamps, durations, device_model/api_level, screenshot paths) are intentionally NOT represented here and are ignored by the comparator. This anchors the guide/brain seam: a guide-driven flow through the shipped mauto verbs must produce exactly these mechanical outcomes.",
+  "scenario_id": "smoke_nav",
+  "schema_version": "2.0",
+  "status": "passed",
+  "total_assertions": 3,
+  "passed_assertions": 3,
+  "failed_assertions": 0,
+  "steps": [
+    { "step_id": "launch", "status": "passed" },
+    { "step_id": "wait_home", "status": "passed" },
+    { "step_id": "tap_home", "status": "passed" },
+    { "step_id": "tap_categories", "status": "passed" },
+    { "step_id": "tap_more", "status": "passed" }
+  ],
+  "assertions": [
+    { "assertion_id": "home_tab_active", "status": "passed" },
+    { "assertion_id": "categories_tab_active", "status": "passed" },
+    { "assertion_id": "more_tab_active", "status": "passed" }
+  ]
+}
