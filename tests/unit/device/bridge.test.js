@@ -48,6 +48,35 @@ describe('DeviceBridge', () => {
     });
   });
 
+  describe('listDevices', () => {
+    test('invokes mobile_list_available_devices with {} and returns normalized devices', async () => {
+      const calls = [];
+      const call = async (tool, args) => {
+        calls.push([tool, args]);
+        return {
+          devices: [
+            { id: 'emulator-5554', name: 'Pixel', os: 'android', state: 'running', resource_id: 'leak' },
+          ],
+        };
+      };
+      const bridge = new DeviceBridge({ call });
+      const devices = await bridge.listDevices();
+
+      expect(calls).toEqual([['mobile_list_available_devices', {}]]);
+      expect(devices).toEqual([
+        { id: 'emulator-5554', name: 'Pixel', platform: 'android', state: 'running' },
+      ]);
+      expect(JSON.stringify(devices)).not.toMatch(/resource_id/);
+    });
+
+    test('tolerates the result being a bare array', async () => {
+      const call = async () => [{ id: 'a' }, { id: 'b' }];
+      const bridge = new DeviceBridge({ call });
+      const devices = await bridge.listDevices();
+      expect(devices.map((d) => d.id)).toEqual(['a', 'b']);
+    });
+  });
+
   describe('screenshot', () => {
     test('invokes mobile_save_screenshot with the dest path and returns result.path', async () => {
       const calls = [];

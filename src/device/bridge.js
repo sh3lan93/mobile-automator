@@ -1,6 +1,7 @@
 'use strict';
 
 const { normalize } = require('./element-model');
+const { normalizeDevices } = require('./device-model');
 
 // Thin wrapper over an injected mobile-mcp `call(toolName, args)` function.
 // Mirrors tools/recorder/src/capture/mobile-mcp-bridge.js but returns the
@@ -11,6 +12,14 @@ class DeviceBridge {
       throw new TypeError('DeviceBridge requires a `call` function (toolName, args) => Promise');
     }
     this._call = call;
+  }
+
+  // Enumerate connected devices/simulators via mobile-mcp and return the
+  // agnostic device model (id/name/platform/state only). Tolerates both a bare
+  // array and the { devices: [...] } envelope mobile-mcp may return.
+  async listDevices() {
+    const result = await this._call('mobile_list_available_devices', {});
+    return normalizeDevices(result);
   }
 
   async listElements() {
