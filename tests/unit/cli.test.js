@@ -14,6 +14,7 @@ const {
   handlePress,
   handleAssert,
   handleResultAddStep,
+  handleResultAddAssertion,
   handleResultFinalize,
   handleSetup,
   handleConfigGet,
@@ -291,6 +292,41 @@ describe('cli handlers', () => {
       const schema = JSON.parse(fs.readFileSync(RESULT_SCHEMA_PATH, 'utf8'));
       const validate = new Ajv({ allErrors: true, strict: false }).compile(schema);
       expect(validate(f.envelope.data)).toBe(true);
+    });
+
+    test('add-assertion persists a verdict that finalize counts', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cli-assert-'));
+      const runId = 'run_20260614_130000';
+      const factory = ({ runId: rid, scenarioId, projectRoot: pr }) =>
+        new (require('../../src/result/store').ResultStore)({ runId: rid, scenarioId, projectRoot: pr });
+      const deps = { resultStoreFactory: factory, projectRoot };
+
+      handleResultAddStep(deps, { runId, scenarioId: 's', stepId: 'tap_home', status: 'pass' });
+      const a = handleResultAddAssertion(deps, {
+        runId,
+        scenarioId: 's',
+        stepId: 'tap_home',
+        assertionId: 'home_active',
+        type: 'element_exists',
+        pass: true,
+        message: 'present',
+      });
+      expect(a.exitKind).toBe('ok');
+      expect(a.envelope.data.assertion.status).toBe('passed');
+
+      const f = handleResultFinalize(deps, { runId, status: 'passed', duration: 1 });
+      expect(f.envelope.data.total_assertions).toBe(1);
+      expect(f.envelope.data.passed_assertions).toBe(1);
+      expect(f.envelope.data.assertion_results[0].assertion_id).toBe('home_active');
+    });
+
+    test('add-assertion requires --run-id and --pass', () => {
+      const { exitKind, envelope } = handleResultAddAssertion(
+        { resultStoreFactory: () => ({}), projectRoot: '/tmp' },
+        { runId: 'run_x' }
+      );
+      expect(exitKind).toBe('invalid_input');
+      expect(envelope.error.kind).toBe('invalid_input');
     });
   });
 

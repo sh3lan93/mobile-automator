@@ -257,6 +257,28 @@ function handleResultAddStep({ resultStoreFactory, projectRoot }, opts) {
   return { envelope: ok({ run_id: runId, step }), exitKind: 'ok' };
 }
 
+function handleResultAddAssertion({ resultStoreFactory, projectRoot }, opts) {
+  const { runId, scenarioId, stepId, assertionId, type, pass } = opts;
+  if (!runId || pass === undefined) {
+    return {
+      envelope: fail('invalid_input', '--run-id and --pass are required', null),
+      exitKind: 'invalid_input',
+    };
+  }
+  const store = resultStoreFactory({ runId, scenarioId, projectRoot });
+  const passed = pass === true || pass === 'true';
+  const assertion = store.addAssertion({
+    step_id: stepId,
+    assertion_id: assertionId,
+    type,
+    pass: passed,
+    message: opts.message,
+    expected: opts.expected,
+    actual: opts.actual,
+  });
+  return { envelope: ok({ run_id: runId, assertion }), exitKind: 'ok' };
+}
+
 function handleResultFinalize({ resultStoreFactory, projectRoot }, opts) {
   const { runId, scenarioId, status, duration } = opts;
   if (!runId) {
@@ -755,6 +777,36 @@ function buildProgram(deps = {}) {
     });
 
   result
+    .command('add-assertion')
+    .description('Append an assertion verdict to the run file')
+    .requiredOption('--run-id <id>', 'run identifier (run_YYYYMMDD_HHMMSS)')
+    .option('--scenario-id <id>', 'scenario identifier')
+    .option('--step-id <id>', 'step the assertion belongs to')
+    .option('--assertion-id <id>', 'assertion identifier')
+    .option('--type <t>', 'assertion type (e.g. element_exists)')
+    .requiredOption('--pass <bool>', 'true | false')
+    .option('--expected <s>', 'expected value (for the report)')
+    .option('--actual <s>', 'actual value (for the report)')
+    .option('--message <s>', 'human-readable verdict message')
+    .action((opts) => {
+      const r = handleResultAddAssertion(
+        { resultStoreFactory, projectRoot },
+        {
+          runId: opts.runId,
+          scenarioId: opts.scenarioId,
+          stepId: opts.stepId,
+          assertionId: opts.assertionId,
+          type: opts.type,
+          pass: opts.pass,
+          expected: opts.expected,
+          actual: opts.actual,
+          message: opts.message,
+        }
+      );
+      emit(r, humanFlag());
+    });
+
+  result
     .command('finalize')
     .description('Assemble and write the final result file')
     .requiredOption('--run-id <id>', 'run identifier')
@@ -966,6 +1018,7 @@ module.exports = {
   handlePress,
   handleAssert,
   handleResultAddStep,
+  handleResultAddAssertion,
   handleResultFinalize,
   handleSetup,
   handleConfigGet,
