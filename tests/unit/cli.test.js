@@ -24,6 +24,9 @@ const {
   handleInit,
   handleRecordBundle,
   handleRecord,
+  handleSessionStart,
+  handleSessionStatus,
+  handleSessionEnd,
 } = require('../../src/cli');
 const Ajv = require('ajv');
 
@@ -632,6 +635,79 @@ describe('cli handlers', () => {
       expect(envelope.ok).toBe(false);
       expect(envelope.error.kind).toBe('internal');
       expect(envelope.error.message).toContain('code 7');
+    });
+  });
+
+  // --- Issue #91: session lifecycle handlers (injected deps, no real spawn) -
+  describe('handleSessionStart', () => {
+    const projectRoot = '/tmp/proj91';
+
+    test('spawns a daemon and returns started:true', async () => {
+      let spawned = null;
+      const spawn = { spawnDaemon: async (a) => { spawned = a; return true; } };
+      const client = { isAlive: async () => false };
+      const { envelope, exitKind } = await handleSessionStart(
+        { projectRoot, spawn, client },
+        { device: 'A', idle: '1000' }
+      );
+      expect(exitKind).toBe('ok');
+      expect(envelope.data).toEqual({ started: true, device: 'A' });
+      expect(spawned.device).toBe('A');
+      expect(spawned.idleMs).toBe(1000);
+    });
+
+    test('is idempotent when a daemon is already running', async () => {
+      const spawn = { spawnDaemon: async () => { throw new Error('should not spawn'); } };
+      const client = { isAlive: async () => true };
+      const { envelope, exitKind } = await handleSessionStart({ projectRoot, spawn, client }, {});
+      expect(exitKind).toBe('ok');
+      expect(envelope.data.already_running).toBe(true);
+      expect(envelope.data.started).toBe(false);
+    });
+
+    test('returns a device error when spawn fails', async () => {
+      const spawn = { spawnDaemon: async () => false };
+      const client = { isAlive: async () => false };
+      const { envelope, exitKind } = await handleSessionStart({ projectRoot, spawn, client }, {});
+      expect(exitKind).toBe('device');
+      expect(envelope.ok).toBe(false);
+      expect(envelope.error.kind).toBe('device');
+    });
+
+    test('rejects an invalid --idle value', async () => {
+      const spawn = { spawnDaemon: async () => true };
+      const client = { isAlive: async () => false };
+      const { envelope, exitKind } = await handleSessionStart(
+        { projectRoot, spawn, client },
+        { idle: 'soon' }
+      );
+      expect(exitKind).toBe('invalid_input');
+      expect(envelope.error.kind).toBe('invalid_input');
+    });
+  });
+
+  describe('handleSessionStatus', () => {
+    test('reports running:true/false from the client', async () => {
+      const up = await handleSessionStatus({ projectRoot: '/x', client: { isAlive: async () => true } });
+      expect(up.exitKind).toBe('ok');
+      expect(up.envelope.data.running).toBe(true);
+      const down = await handleSessionStatus({ projectRoot: '/x', client: { isAlive: async () => false } });
+      expect(down.envelope.data.running).toBe(false);
+    });
+  });
+
+  describe('handleSessionEnd', () => {
+    test('stopped:true when a daemon acknowledged shutdown', async () => {
+      const r = await handleSessionEnd({ projectRoot: '/x', client: { requestShutdown: async () => true } });
+      expect(r.exitKind).toBe('ok');
+      expect(r.envelope.data.stopped).toBe(true);
+      expect(r.envelope.data.already_stopped).toBe(false);
+    });
+
+    test('already_stopped:true when no daemon was reachable', async () => {
+      const r = await handleSessionEnd({ projectRoot: '/x', client: { requestShutdown: async () => false } });
+      expect(r.envelope.data.stopped).toBe(false);
+      expect(r.envelope.data.already_stopped).toBe(true);
     });
   });
 });
