@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0]
+
+### ✨ Added
+
+- **Persistent device session daemon** ([#91](https://github.com/sh3lan93/mobile-automator/issues/91), Refs [#69](https://github.com/sh3lan93/mobile-automator/issues/69)). The first device verb (or an explicit `mauto session start`) now spawns a long-lived background daemon that builds the mobile-mcp connection **once** and serves every subsequent one-shot verb over a per-workspace Unix domain socket (`mobile-automator/.session/`). A 40-step scenario pays the spawn+handshake tax once instead of 40 times. Verbs stay one-shot from the shell's perspective — this is not the rejected interactive `run` co-routine. `mauto session start|status|end` give explicit lifecycle control; an idle timeout reaps an abandoned daemon and stale socket/pidfiles are detected and replaced on next start. Graceful fallback: when no daemon is reachable, verbs fall back to today's one-shot spawn. **Device-pin safety:** if the daemon is pinned to device A and a verb passes `--device B`, the verb bypasses the daemon and uses a one-shot connection rather than silently driving the wrong device.
+
 ## [0.14.0]
 
 > **The `mobile-automator` package is now npm-publishable and CI-reproducible.** ([#93](https://github.com/sh3lan93/mobile-automator/issues/93), Refs [#69](https://github.com/sh3lan93/mobile-automator/issues/69))
