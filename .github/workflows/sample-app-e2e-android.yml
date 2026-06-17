@@ -6,6 +6,9 @@ on:
       - 'sample-app/**'
       - 'src/guide/content/execute.*.md'
       - 'src/**'
+      - 'bin/**'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/sample-app-e2e-android.yml'
   workflow_dispatch: {}
 
@@ -42,10 +45,12 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-          cache-dependency-path: sample-app/scripts/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Install smoke runner deps
-        working-directory: sample-app/scripts
+      # The smoke runner drives the SHIPPED mauto CLI (node bin/mauto.js ...), so
+      # the ROOT deps (commander, MCP SDK that powers the real DeviceBridge) must
+      # be installed. The runner itself has no dependencies of its own.
+      - name: Install CLI deps (root)
         run: npm ci
 
       - name: Enable KVM
@@ -62,6 +67,9 @@ jobs:
           target: default
           disable-animations: true
           emulator-boot-timeout: 300
+          # Runs from the repo root: the runner shells `node bin/mauto.js <verb>`
+          # so the device is driven only through the real CLI (which wraps
+          # mobile-mcp via its own DeviceBridge). No parallel mobile-mcp client.
           script: |
             adb install sample-app/build/app/outputs/flutter-apk/app-debug.apk
             node sample-app/scripts/run-smoke.mjs
@@ -72,4 +80,12 @@ jobs:
         with:
           name: smoke-screenshots-android
           path: sample-app/screenshots/smoke_nav/
+          if-no-files-found: warn
+
+      - name: Upload result files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-results-android
+          path: sample-app/mobile-automator/results/
           if-no-files-found: warn
