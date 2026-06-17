@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0]
+
+### ✨ Added
+
+- **`mauto result add-assertion` verb** ([#94](https://github.com/sh3lan93/mobile-automator/issues/94)). Wires the existing `ResultStore.addAssertion` to the CLI so an agent (the "brain") can persist an assertion verdict into the run file between `result add-step` and `result finalize`. Without it the shipped CLI could record steps but never `assertion_results[]`, so `finalize` always reported zero assertions — a gap surfaced by the real-device E2E. Refs [#69](https://github.com/sh3lan93/mobile-automator/issues/69).
+
+### 🔄 Changed
+
+- **Real-device E2E now drives the shipped `mauto` CLI** ([#94](https://github.com/sh3lan93/mobile-automator/issues/94)). `sample-app/scripts/run-smoke.mjs` was rewritten to shell the real CLI as subprocesses (`node bin/mauto.js <verb>`), so the Android emulator job exercises the actual `realDeviceBridge` → `createCall` → `parseToolResult` → element-model chain against live mobile-mcp instead of a parallel hand-rolled client. Target resolution is agnostic text/label only (no `resource-id`/`identifier`); the runner hard-fails if any returned element leaks an OS identifier. A new golden fixture (`sample-app/scenarios/golden/smoke_nav.result.golden.json`) anchors the guide/brain seam via a mechanical-fields-only comparison of the produced result JSON. The smoke scenario switched to `platform-agnostic` mode with visible-text targets. Refs [#69](https://github.com/sh3lan93/mobile-automator/issues/69).
+
 ## [0.16.0]
 
 ### ✨ Added
