@@ -1,15 +1,36 @@
 'use strict';
 
+const path = require('path');
 const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
 const { StdioClientTransport } = require('@modelcontextprotocol/sdk/client/stdio.js');
+
+// Resolve the mobile-mcp server entry point from the bundled, pinned
+// dependency rather than fetching `@latest` at runtime. We read the package's
+// own `bin` map (mcp-server-mobile -> lib/index.js) so the path stays correct
+// across mobile-mcp versions, then spawn it with the current Node binary.
+//
+// Resolution is done lazily inside createCall (not at module load) so that the
+// module can be required without mobile-mcp installed — the smoke test only
+// asserts the module loads and exports createCall.
+function resolveServerEntry() {
+  const pkgPath = require.resolve('@mobilenext/mobile-mcp/package.json');
+  const pkg = require('@mobilenext/mobile-mcp/package.json');
+  const pkgDir = path.dirname(pkgPath);
+  const binRel =
+    typeof pkg.bin === 'string'
+      ? pkg.bin
+      : (pkg.bin && pkg.bin['mcp-server-mobile']) || pkg.main || 'lib/index.js';
+  return path.join(pkgDir, binRel);
+}
 
 // Integration glue: spawns mobile-mcp over stdio and returns a `call`
 // function shaped exactly like the one DeviceBridge expects.
 // NOT unit-tested (would require spawning mobile-mcp); see the smoke test.
 async function createCall({ device } = {}) {
+  const serverEntry = resolveServerEntry();
   const transport = new StdioClientTransport({
-    command: 'npx',
-    args: ['-y', '@mobilenext/mobile-mcp@latest'],
+    command: process.execPath,
+    args: [serverEntry],
     // mobile-mcp reads the target device from the environment / its own
     // selection; we pass it through when provided so callers can pin a device.
     env: device ? { ...process.env, MOBILE_MCP_DEVICE: device } : process.env,
