@@ -114,22 +114,23 @@ Setup copies both to `.gemini/skills/mobile-automator-{generator,executor}/refer
 
 ## Releasing & version handling
 
-Follow `RELEASE.md`. Users install via `gemini extensions install https://github.com/sh3lan93/mobile-automator`.
+Follow `RELEASE.md`. Users install via `npm i -g mobile-automator` (or run ad-hoc with `npx mobile-automator <verb>`). mobile-mcp ships as a pinned dependency (`@mobilenext/mobile-mcp@0.0.55`) and is spawned from `node_modules` — never fetched at runtime.
 
 **Gate-then-graduate** for multi-PR features: ship behind an opt-in env var (e.g. `MOBILE_AUTOMATOR_RECORDER=1`) so partial states are invisible. Append slice entries under `## [Unreleased]`.
 
-**CI version-bump gate.** The `Verify version is bumped` workflow fails any PR touching extension paths (`gemini-extension.json`, `GEMINI.md`, `templates/`, `commands/`, `scripts/`) without bumping `gemini-extension.json` to a value not yet in `git tag`. Under the gate, **the first slice PR bumps to a release-candidate semver** (e.g. `0.12.0-rc.0`); each subsequent slice increments the rc counter (`-rc.1`, `-rc.2`, …). The `vX.Y.Z` tag namespace is reserved for graduated releases — rc.N values are never tagged.
+**CI version-bump gate.** The `Verify version is bumped` workflow fails any PR touching CLI paths (`src/`, `bin/`, `tools/`, `package.json`) without bumping `package.json`'s `version` to a value not yet in `git tag` (tags are `vX.Y.Z`). Under the gate, **the first slice PR bumps to a release-candidate semver** (e.g. `0.12.0-rc.0`); each subsequent slice increments the rc counter (`-rc.1`, `-rc.2`, …). The `vX.Y.Z` tag namespace is reserved for graduated releases — rc.N values are never tagged.
 
 **Graduation PR** removes the env-var gate, bumps `vX.Y.Z-rc.N` → `vX.Y.Z`, collapses `[Unreleased]` into the new release section, and creates the tag. Keeps `main` mergeable and preserves the "fully-formed feature per release" pattern (see v0.10/v0.11).
 
 ## Local development
 
 ```bash
-gemini extensions link .                              # in this repo
-cd /path/to/test-mobile-app && gemini                 # then /mobile-automator:setup, etc.
+npm install                                           # in this repo (installs the pinned mobile-mcp)
+npm link                                              # exposes `mauto` / `mobile-automator` on PATH
+cd /path/to/test-mobile-app && mauto <verb>           # drive a device, e.g. mauto list-devices
 ```
 
-Pin a specific `mobile-mcp` version by editing `args` in `gemini-extension.json` (default is `@latest`).
+The mobile-mcp version is pinned in `package.json` (`@mobilenext/mobile-mcp`) and resolved from `node_modules` at runtime (see `src/device/mobile-mcp-client.js`). Bump the pin there if you need a newer engine.
 
 ## Conventions
 
@@ -139,4 +140,4 @@ Pin a specific `mobile-mcp` version by editing `args` in `gemini-extension.json`
 
 ## Metadata
 
-Repo: https://github.com/sh3lan93/mobile-automator · Version: see `gemini-extension.json` · License: Apache 2.0 · Status: production-ready.
+Repo: https://github.com/sh3lan93/mobile-automator · Version: see `package.json` · License: Apache 2.0 · Status: production-ready.

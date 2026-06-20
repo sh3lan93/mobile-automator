@@ -101,7 +101,9 @@ https://github.com/user-attachments/assets/fbc69108-0736-402c-846c-faca237fe4ca
 ### Prerequisites
 - **A coding agent** — Claude Code or Cursor
 - **Mobile project** (Android, iOS, Flutter, React Native, KMP, or CMP)
-- **Node.js** v16+ (for the `mauto` CLI and the mobile-mcp automation engine)
+- **Node.js** v18+ (for the `mauto` CLI and the mobile-mcp automation engine)
+
+> mobile-mcp is now bundled as a pinned dependency (`@mobilenext/mobile-mcp@0.0.55`) and spawned from your `node_modules` — it is no longer fetched from the network at runtime, so installs and CI runs are reproducible.
 
 ### Installation
 

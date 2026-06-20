@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0]
+
+> **The `mobile-automator` package is now npm-publishable and CI-reproducible.** ([#93](https://github.com/sh3lan93/mobile-automator/issues/93), Refs [#69](https://github.com/sh3lan93/mobile-automator/issues/69))
+
+### ✨ Added
+
+- **Publish metadata + `files` whitelist** — `package.json` is un-privatized (`"private": true` removed) and gains `description`, `repository`, `homepage`, `bugs`, `license` (`Apache-2.0`), and `author`. A `"files": ["bin/", "src/"]` allowlist ships only the runtime surface (no `tests/`, `sample-app/`, `tools/`, or `docs/`).
+- **`mobile-automator` bin alias** — both `mauto` and `mobile-automator` now map to `bin/mauto.js`, so the documented `npx mobile-automator <verb>` resolves.
+
+### ♻️ Changed
+
+- **mobile-mcp is bundled, not fetched at runtime** — `@mobilenext/mobile-mcp` is now a declared dependency pinned at `0.0.55` (matching the CI smoke runner). `src/device/mobile-mcp-client.js` resolves the installed server entry via `require.resolve('@mobilenext/mobile-mcp/package.json')` and spawns it with the current Node binary instead of `npx -y @mobilenext/mobile-mcp@latest`. This removes the per-cold-start network version check and makes clean installs / CI runs reproducible.
+- **Node ≥ 18 clarified** — README prerequisite corrected from "v16+" to "v18+", matching `engines.node`.
+
 ## [0.12.1] — 2026-05-23
 
 ### 🐛 Fixed
