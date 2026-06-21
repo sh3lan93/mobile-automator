@@ -1,11 +1,16 @@
 'use strict';
 
 // Pure streaming parser for `adb shell getevent -lt` output. Accumulates
-// ABS_MT_POSITION_X/Y and BTN_TOUCH state, and on each SYN_REPORT emits a
+// ABS_MT_POSITION_X/Y and touch contact state, and on each SYN_REPORT emits a
 // touch event ({kind:'down'|'move'|'up', t, x, y}) with coordinates scaled
 // from raw input-device units to screen pixels. Hardware keys (EV_KEY KEY_*)
 // are emitted as {kind:'key', t, key, state}. Timestamps are ms relative to
 // tStart. No device access here — feed it raw stdout chunks.
+//
+// Contact state is derived from EITHER BTN_TOUCH (type A / older devices) OR
+// ABS_MT_TRACKING_ID (type B multitouch, common on emulators): a tracking ID
+// of 0xffffffff signals lift; any other value signals a new contact. Both
+// signals are OR-ed so the parser handles either protocol transparently.
 
 const LINE_RE = /^\[\s*(\d+\.\d+)\]\s+\/dev\/input\/event\d+:\s+(EV_\w+)\s+(\w+)\s+(\S+)\s*$/;
 
@@ -23,8 +28,9 @@ class GeteventTouchParser {
     this._y = null;
     this._lastX = 0;
     this._lastY = 0;
-    this._touching = false;   // BTN_TOUCH state
-    this._active = false;     // whether we've emitted a down for the current touch
+    this._btnTouch = false;       // BTN_TOUCH state (type A / older devices)
+    this._trackingContact = false; // ABS_MT_TRACKING_ID active (type B, e.g. emulators)
+    this._active = false;         // whether we've emitted a down for the current touch
     this._frameT = 0;
   }
 
@@ -55,7 +61,12 @@ class GeteventTouchParser {
       return;
     }
     if (type === 'EV_KEY' && code === 'BTN_TOUCH') {
-      this._touching = value.toUpperCase() === 'DOWN';
+      this._btnTouch = value.toUpperCase() === 'DOWN';
+      return;
+    }
+    if (type === 'EV_ABS' && code === 'ABS_MT_TRACKING_ID') {
+      // 0xffffffff (lifted) → contact ends; any other value → new contact active
+      this._trackingContact = parseInt(value, 16) !== 0xffffffff;
       return;
     }
     if (type === 'EV_KEY' && code.startsWith('KEY_')) {
@@ -71,16 +82,17 @@ class GeteventTouchParser {
   _flushFrame() {
     const x = this._scaled(this._x, this._scaleX);
     const y = this._scaled(this._y, this._scaleY);
-    if (this._touching && !this._active) {
+    const touching = this._btnTouch || this._trackingContact;
+    if (touching && !this._active) {
       this._active = true;
       this._lastX = x; this._lastY = y;
       this._emit({ kind: 'down', t: this._frameT, x, y });
-    } else if (this._touching && this._active) {
+    } else if (touching && this._active) {
       if (x !== this._lastX || y !== this._lastY) {
         this._lastX = x; this._lastY = y;
         this._emit({ kind: 'move', t: this._frameT, x, y });
       }
-    } else if (!this._touching && this._active) {
+    } else if (!touching && this._active) {
       this._active = false;
       this._emit({ kind: 'up', t: this._frameT, x: this._lastX, y: this._lastY });
     }

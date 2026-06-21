@@ -79,4 +79,47 @@ describe('GeteventTouchParser', () => {
       { kind: 'key', t: 0, key: 'BACK', state: 'up' },
     ]);
   });
+
+  // --- MT protocol type B (ABS_MT_TRACKING_ID, no BTN_TOUCH) ---
+  // Real emulator getevent output: contact start = TRACKING_ID 00000000,
+  // contact end = TRACKING_ID ffffffff. No BTN_TOUCH emitted at all.
+
+  test('type-B tracking-id: emits down then up for a real-emulator tap (no BTN_TOUCH)', () => {
+    // 0x1c32 = 7218, 0x3805 = 14341
+    const events = collect([
+      '[    8359.139808] /dev/input/event1: EV_ABS       ABS_MT_TRACKING_ID   00000000',
+      '[    8359.139808] /dev/input/event1: EV_ABS       ABS_MT_POSITION_X    00001c32',
+      '[    8359.139808] /dev/input/event1: EV_ABS       ABS_MT_POSITION_Y    00003805',
+      '[    8359.139808] /dev/input/event1: EV_ABS       ABS_MT_PRESSURE      00000400',
+      '[    8359.139808] /dev/input/event1: EV_SYN       SYN_REPORT           00000000',
+      '[    8359.226292] /dev/input/event1: EV_ABS       ABS_MT_PRESSURE      00000000',
+      '[    8359.226292] /dev/input/event1: EV_ABS       ABS_MT_TRACKING_ID   ffffffff',
+      '[    8359.226292] /dev/input/event1: EV_SYN       SYN_REPORT           00000000',
+    ]);
+    expect(events).toEqual([
+      { kind: 'down', t: 0, x: 7218, y: 14341 },
+      { kind: 'up', t: 86, x: 7218, y: 14341 },
+    ]);
+  });
+
+  test('type-B tracking-id: emits down, move, up for a drag (no BTN_TOUCH)', () => {
+    const events = collect([
+      // Frame 1: contact start at (10, 10)
+      '[   500.000000] /dev/input/event1: EV_ABS       ABS_MT_TRACKING_ID   00000000',
+      '[   500.000000] /dev/input/event1: EV_ABS       ABS_MT_POSITION_X    0000000a',
+      '[   500.000000] /dev/input/event1: EV_ABS       ABS_MT_POSITION_Y    0000000a',
+      '[   500.000000] /dev/input/event1: EV_SYN       SYN_REPORT           00000000',
+      // Frame 2: position changes → move
+      '[   500.050000] /dev/input/event1: EV_ABS       ABS_MT_POSITION_X    00000014',
+      '[   500.050000] /dev/input/event1: EV_ABS       ABS_MT_POSITION_Y    0000001e',
+      '[   500.050000] /dev/input/event1: EV_SYN       SYN_REPORT           00000000',
+      // Frame 3: contact end → up
+      '[   500.100000] /dev/input/event1: EV_ABS       ABS_MT_TRACKING_ID   ffffffff',
+      '[   500.100000] /dev/input/event1: EV_SYN       SYN_REPORT           00000000',
+    ]);
+    expect(events.map((e) => e.kind)).toEqual(['down', 'move', 'up']);
+    expect(events[0]).toEqual({ kind: 'down', t: 0, x: 10, y: 10 });
+    expect(events[1]).toEqual({ kind: 'move', t: 50, x: 20, y: 30 });
+    expect(events[2]).toEqual({ kind: 'up', t: 100, x: 20, y: 30 });
+  });
 });
