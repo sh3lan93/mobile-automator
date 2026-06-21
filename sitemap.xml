@@ -2,122 +2,138 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/changelog/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/contributing/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/faq/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/concepts/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/concepts/architecture/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/concepts/skills/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/concepts/three-tier-design/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/examples/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/examples/android/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/examples/ios/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/getting-started/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/getting-started/installation/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/getting-started/quick-start/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/guides/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/guides/execute/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/guides/generate/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/guides/setup/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
+    </url>
+    <url>
+         <loc>https://sh3lan93.github.io/mobile-automator/manual-tests/recorder-android/</loc>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/manual-tests/recorder-ios-simulator/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
+    </url>
+    <url>
+         <loc>https://sh3lan93.github.io/mobile-automator/manual-tests/recorder-live-capture/</loc>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/plans/2026-03-03-ui-ux-design-system/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/plans/2026-03-03-ui-ux-implementation/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/plans/2026-06-14-cli-migration-prd/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
+    </url>
+    <url>
+         <loc>https://sh3lan93.github.io/mobile-automator/plans/2026-06-21-recorder-live-capture-design/</loc>
+         <lastmod>2026-06-21</lastmod>
+    </url>
+    <url>
+         <loc>https://sh3lan93.github.io/mobile-automator/plans/2026-06-21-recorder-live-capture-plan/</loc>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/reference/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/reference/assertions/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/reference/mcp-tools/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/reference/result-schema/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/reference/schema/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/references/c3-protocol/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/references/mobile-mcp-tools/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
     <url>
          <loc>https://sh3lan93.github.io/mobile-automator/references/platform-resolutions/</loc>
-         <lastmod>2026-06-16</lastmod>
+         <lastmod>2026-06-21</lastmod>
     </url>
 </urlset>
