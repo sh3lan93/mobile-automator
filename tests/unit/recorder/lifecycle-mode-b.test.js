@@ -181,6 +181,27 @@ describe('startModeB (lifecycle/mode-b)', () => {
     await exit;
   });
 
+  test('ios live path selects the screenshot tap source (#103)', async () => {
+    const fakeSource = Object.assign(new EventEmitter(), { start: jest.fn(), stop: jest.fn() });
+    const createScreenshotTapSource = jest.fn(() => fakeSource);
+    const wsCtx = makeFakeWsCtx();
+    const exit = startModeB({
+      store: makeFakeStore(), wsCtx, httpSrv: {},
+      projectRoot: setupProject(), scenarioId: 'scn', platform: 'ios',
+      appPackage: 'com.example.app', opts: {},
+      deps: {
+        useLiveDevice: true, createScreenshotTapSource,
+        mcpCall: async () => ({ elements: [] }), pollIntervalMs: 10_000,
+        attachFailureModes: () => ({ stopAll() {} }),
+      },
+    });
+    await wait(5);
+    expect(createScreenshotTapSource).toHaveBeenCalledTimes(1);
+    expect(fakeSource.start).toHaveBeenCalled();
+    wsCtx._simulateMessage({ type: 'cancel' });
+    await exit;
+  });
+
   test('broadcasts step-added when a tap is captured (#103 defect B)', async () => {
     const tapSource = new EventEmitter();
     const wsCtx = makeFakeWsCtx();

@@ -166,9 +166,9 @@ async function startModeB({
       const _create = deps.createGeteventTapSource || createGeteventTapSource;
       tapSource = _create({ deviceLabel: deps.deviceLabel });
     } else {
-      const { createTapSource } = require('../capture/tap-source');
-      const _createTapSource = deps.createTapSource || createTapSource;
-      tapSource = _createTapSource({ bridge: mcpBridge });
+      const { createScreenshotTapSource } = require('../capture/screenshot-tap-source');
+      const _create = deps.createScreenshotTapSource || createScreenshotTapSource;
+      tapSource = _create({ deviceLabel: deps.deviceLabel });
     }
     ownsTapSource = true;
   }
