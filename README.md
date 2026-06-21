@@ -2,7 +2,9 @@
 
 > **Turn your AI coding agent into a mobile QA engineer.**
 
-`mauto` is a host-agnostic CLI that lets an AI coding agent (Claude Code, Cursor) author and run UI tests on a real device or emulator. The agent decides *what* to do; `mauto` does it — tap, type, swipe, assert — through [mobile-mcp](https://github.com/mobile-next/mobile-mcp). Tests are plain JSON scenarios, **platform-agnostic** by default, so the same scenario runs on Android and iOS.
+`mauto` is a host-agnostic CLI that lets **any** AI coding agent author and run UI tests on a real device or emulator. The agent decides *what* to do; `mauto` does it — tap, type, swipe, assert — through [mobile-mcp](https://github.com/mobile-next/mobile-mcp). Tests are plain JSON scenarios, **platform-agnostic** by default, so the same scenario runs on Android and iOS.
+
+Claude Code and Cursor have one-command setup (`mauto init --agent …`); any other MCP-capable agent connects via the `mauto mcp` prompts server. See [Using another agent](#-using-another-agent).
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Flutter%20%7C%20RN%20%7C%20KMP%20%7C%20CMP-green.svg)](#)
@@ -12,7 +14,9 @@
 
 ## ⏱️ Quick start (5 minutes)
 
-**You need:** Node ≥ 18 · a coding agent ([Claude Code](https://claude.com/claude-code) or Cursor) · a running emulator/simulator or a connected device.
+**You need:** Node ≥ 18 · an AI coding agent · a running emulator/simulator or a connected device.
+
+> This quick start uses **Claude Code** as the example agent. For Cursor, swap `--agent claude` → `--agent cursor`. For any other agent, see [Using another agent](#-using-another-agent).
 
 **1. Install `mauto`** (from source — not yet on npm):
 
@@ -50,7 +54,7 @@ Open your agent in the project. In **Claude Code**, `init` installs slash comman
                                  pass/fail with diagnostics
 ```
 
-In **Cursor**, `init` installs a project rule instead — just ask the agent in plain language (e.g. *"generate a login test"* / *"execute the login scenario"*) and it follows the same workflow.
+In **Cursor**, `init` installs a project rule instead — just ask the agent in plain language (e.g. *"generate a login test"* / *"execute the login scenario"*) and it follows the same workflow. **Any other agent:** see [Using another agent](#-using-another-agent) below.
 
 That's it. Scenarios land in `mobile-automator/scenarios/`, results in `mobile-automator/results/`.
 
@@ -69,6 +73,19 @@ Targets are always **visible text + semantic role + coordinates** — never brit
    Your agent  ──drives──▶  mauto verbs  ──wrap──▶  mobile-mcp  ──▶  device
    (decisions)             (deterministic)        (automation)
 ```
+
+Because the contract is just verbs + JSON, **no agent is special** — `mauto init` ships first-class adapters for Claude Code and Cursor, but any agent that can run a shell command or speak MCP can drive the same tool.
+
+---
+
+## 🤖 Using another agent
+
+`mauto init` only has built-in adapters for **Claude Code** and **Cursor**. Any other AI agent can drive `mauto` through one of these, no adapter required:
+
+- **MCP (recommended):** point your MCP-capable agent at the prompts server — `mauto mcp` (stdio) — which exposes the `generate` / `execute` / `record` / `setup` workflows as prompts. Register it like any MCP server: command `mauto`, args `["mcp"]`.
+- **Plain shell:** have the agent read `mauto bootstrap` once (the verb map + invariants), then read `mauto guide <topic>` for a workflow and call the verbs (`mauto elements`, `tap`, `type`, `assert`, …) directly. Every verb returns the `{ok, data, error, hint}` envelope, so the agent can act on results programmatically.
+
+Either way the workspace, scenarios, and schemas are identical — the agent is just a different driver for the same `mauto` hands.
 
 ---
 
@@ -91,10 +108,12 @@ Most low-level verbs are called **by the agent**, not by you. The ones you'll ru
 
 | Command | What it does |
 |---------|--------------|
-| `mauto init --agent <claude\|cursor>` | Write agent command files + register the MCP server |
+| `mauto init --agent <claude\|cursor>` | Install adapter files for a supported agent (commands/rule + MCP entry) |
 | `mauto setup [--mode aware\|agnostic]` | Scaffold the `mobile-automator/` workspace + config |
 | `mauto devices` · `devices use <id>` · `devices clear` | List / pin / unpin the target device |
 | `mauto guide <generate\|execute\|record\|setup>` | Print the workflow guidance for a topic |
+| `mauto mcp` | Run the MCP prompts server (for any MCP-capable agent) |
+| `mauto bootstrap` | Print the verb map + invariants (onboarding for any agent) |
 | `mauto validate <file>` | Validate a scenario JSON against the schema |
 | `mauto config get\|set <key> [value]` | Read / update workspace config |
 | `mauto record <name>` | Launch the interactive web recorder (experimental) |
