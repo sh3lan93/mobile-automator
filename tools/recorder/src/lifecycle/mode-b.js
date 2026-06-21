@@ -189,7 +189,8 @@ async function startModeB({
     try { hierarchyPoller.stop(); } catch (_e) { /* swallow */ }
     // Stop the live tap source FIRST and AWAIT it so any final up/gesture is
     // delivered to the classifier before we flush (defect C fix — #103).
-    if (tapSource && typeof tapSource.stop === 'function') {
+    // Only stop a source we created — never stop a caller-injected source.
+    if (ownsTapSource && tapSource && typeof tapSource.stop === 'function') {
       try { await tapSource.stop(); } catch (_e) { /* swallow */ }
     }
     try { classifier.flush(); } catch (_e) { /* swallow */ }

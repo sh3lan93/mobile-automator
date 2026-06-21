@@ -204,20 +204,25 @@ describe('startModeB (lifecycle/mode-b)', () => {
 
   test('finish awaits tapSource.stop before flushing (#103 defect C)', async () => {
     const order = [];
-    const tapSource = Object.assign(new EventEmitter(), {
+    // Use an EventEmitter so the tap listener wiring inside mode-b.js works.
+    const fakeTapSource = Object.assign(new EventEmitter(), {
       start: jest.fn(),
-      stop: jest.fn(async () => { await Promise.resolve(); order.push('stop'); }),
+      stop: async () => { await Promise.resolve(); order.push('stop'); },
     });
     const classifier = { feed: () => {}, flush: jest.fn(() => order.push('flush')) };
 
     let savedFinish;
     const wsCtx = makeFakeWsCtx();
+    // Inject via the android factory seam (createGeteventTapSource + useLiveDevice)
+    // so ownsTapSource is set to true — the production ownership path.
     const exit = startModeB({
       store: makeFakeStore(), wsCtx, httpSrv: {},
       projectRoot: setupProject(), scenarioId: 'scn', platform: 'android',
       appPackage: 'com.example.app', opts: {},
       deps: {
-        tapSource, classifier,                 // inject classifier (seam added in mode-b.js)
+        useLiveDevice: true,
+        createGeteventTapSource: () => fakeTapSource,  // factory seam → ownsTapSource = true
+        classifier,
         mcpCall: async () => ({ elements: [] }), pollIntervalMs: 10_000,
         attachFailureModes: ({ onDone }) => { savedFinish = onDone; return { stopAll() {} }; },
       },
