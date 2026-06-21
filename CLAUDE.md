@@ -26,7 +26,7 @@ commands/mobile-automator/    setup, generate, execute, report, list-tags (.toml
 templates/
   mobile-automator-generator/{aware,agnostic}/SKILL.md
   mobile-automator-executor/{aware,agnostic}/SKILL.md
-  mobile-automator-recorder/{aware,agnostic}/SKILL.md # gated; both modes (aware + agnostic)
+  mobile-automator-recorder/{aware,agnostic}/SKILL.md # both modes (aware + agnostic)
   mobile-automator-generator/references/scenario_schema.json   # v2.1
   mobile-automator-executor/references/result_schema.json
   references/platform-resolutions.md                 # agnostic-mode runtime contract
@@ -61,9 +61,9 @@ Skill templates use `{{name}}` syntax. Setup gathers values, performs string rep
 
 Runtime fallback: skills can read `mobile-automator/config.json` if a placeholder wasn't populated.
 
-## Recorder (gated soft-launch, v0.12.0)
+## Recorder (graduated v0.17.0)
 
-PRD [#21](https://github.com/sh3lan93/mobile-automator/issues/21). Feature-complete across 13 slices (see `CHANGELOG.md` `## [0.12.0]`). The entire recorder surface (`/mobile-automator:record`, sidecar at `tools/recorder/`, GUI, recorder skill) is hidden unless `MOBILE_AUTOMATOR_RECORDER=1` is set in the environment — the env-var gate remains in v0.12.0 so the feature can mature in real-world use before being removed.
+PRD [#21](https://github.com/sh3lan93/mobile-automator/issues/21). Feature-complete across 13 slices (see `CHANGELOG.md` `## [0.12.0]`). The entire recorder surface (`mauto record`, sidecar at `tools/recorder/`, GUI) graduated in v0.17.0: it ships in the npm package (`tools/recorder/src/` + `tools/recorder/web/` are in `package.json`'s `files` allowlist) and is no longer gated. The `MOBILE_AUTOMATOR_RECORDER` env var is retired — it was never enforced in the CLI.
 
 - Aware-mode recorder skill installs at `.gemini/skills/mobile-automator-recorder/SKILL.md` from the `aware/` template. Uses 10 of 13 aware placeholders (skips `build_command`, `automation_extras`, `business_domain`).
 - Agnostic-mode recorder installs from the `agnostic/` template. It uses only the 6 agnostic placeholders; per-OS facts resolve at runtime via `templates/references/platform-resolutions.md`. The sidecar reinterprets OS gestures into the four semantic actions; `dismiss_keyboard` is a manual GUI mark.

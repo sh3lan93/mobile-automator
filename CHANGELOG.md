@@ -9,9 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0]
+
+> **The interactive recorder graduates to generally available.** `mauto record` now ships in the npm package and is no longer flagged experimental. (Refs [#21](https://github.com/sh3lan93/mobile-automator/issues/21))
+
+### ✨ Added
+
+- **Recorder ships in the npm package** (Refs [#21](https://github.com/sh3lan93/mobile-automator/issues/21)). `package.json`'s `files` allowlist now includes `tools/recorder/src/` and `tools/recorder/web/`, so `mauto record` works on a plain `npm i -g mobile-automator` install — previously the sidecar was excluded from the published tarball and the command only ran in linked local checkouts. A new packaging guard test (`tests/unit/packaging.test.js`) asserts the sidecar entrypoint and GUI assets are present in `npm pack` output, preventing silent re-exclusion.
+
 ### 🐛 Fixed
 
 - **Recorder GUI now auto-opens (no more silent hang)** ([#65](https://github.com/sh3lan93/mobile-automator/issues/65), Refs [#21](https://github.com/sh3lan93/mobile-automator/issues/21)). `mauto record <name>` previously started the HTTP+WebSocket sidecar and the mobile-mcp device connection but never opened the browser GUI nor printed its URL, so the terminal hung on `mobile-mcp server running on stdio` waiting for a WebSocket message that could never arrive. `startLiveCapture` now prints `🌐 Recorder GUI: http://127.0.0.1:<port>/` to **stderr** (stdout stays reserved for the JSON envelope) and auto-launches the host's default browser (`open`/`xdg-open`/`start`) immediately after the HTTP server binds. The URL is always printed as a fallback when auto-open fails silently; `--no-gui` skips the launch for CI/headless runs. New `tools/recorder/src/server/browser-opener.js` helper, dependency-injected for tests.
+
+### 🔧 Changed
+
+- **Recorder is no longer experimental/gated.** The `MOBILE_AUTOMATOR_RECORDER=1` opt-in (already a no-op in the CLI — it was never enforced in code) and the "experimental" framing are removed from `README.md`, `tools/recorder/README.md`, and `CLAUDE.md`.
 
 ## [0.16.0]
 
