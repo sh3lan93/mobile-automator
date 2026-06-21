@@ -11,6 +11,12 @@ function resolveBounds(raw) {
   if (Array.isArray(raw.coordinates) && raw.coordinates.length === 4) {
     return raw.coordinates.map(Number);
   }
+  if (raw.coordinates && typeof raw.coordinates === 'object' && !Array.isArray(raw.coordinates)) {
+    const { x, y, width, height } = raw.coordinates;
+    if ([x, y, width, height].every((v) => typeof v === 'number')) {
+      return [x, y, x + width, y + height];
+    }
+  }
   if (raw.rect && typeof raw.rect === 'object') {
     const { x, y, width, height } = raw.rect;
     if ([x, y, width, height].every((v) => typeof v === 'number')) {

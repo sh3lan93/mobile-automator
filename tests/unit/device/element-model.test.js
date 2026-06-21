@@ -77,6 +77,20 @@ describe('element-model.normalize', () => {
   });
 });
 
+describe('normalize with mobile-mcp coordinates object', () => {
+  test('maps coordinates:{x,y,width,height} to bounds + center, label to accessibility_label', () => {
+    const out = normalize([{ type: 'android.widget.Button', text: '', label: 'Wireless Earbuds', identifier: 'home_product_card_p001', coordinates: { x: 10, y: 20, width: 100, height: 50 } }]);
+    expect(out).toHaveLength(1);
+    expect(out[0].bounds).toEqual([10, 20, 110, 70]);
+    expect(out[0].center).toEqual([60, 45]);
+    expect(out[0].accessibility_label).toBe('Wireless Earbuds');
+  });
+  test('never surfaces identifier (resource-id) as a field', () => {
+    const out = normalize([{ label: 'x', identifier: 'res_id_secret', coordinates: { x: 0, y: 0, width: 2, height: 2 } }]);
+    expect(JSON.stringify(out)).not.toContain('res_id_secret');
+  });
+});
+
 describe('parseElements', () => {
   const FIXTURE = 'Found these elements on screen: ' + JSON.stringify([
     { type: 'android.view.View', text: '', label: 'Sample Shop', coordinates: { x: 48, y: 198, width: 388, height: 84 } },
