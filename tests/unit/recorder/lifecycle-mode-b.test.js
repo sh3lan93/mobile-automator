@@ -5,6 +5,7 @@ const path = require('path');
 const os = require('os');
 const { EventEmitter } = require('events');
 const { startModeB } = require('../../../tools/recorder/src/lifecycle/mode-b');
+const { HierarchyPoller } = require('../../../tools/recorder/src/capture/hierarchy-poller');
 
 function setupProject({ mode = 'platform-aware' } = {}) {
   const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mode-b-'));
@@ -202,6 +203,79 @@ describe('startModeB (lifecycle/mode-b)', () => {
     await exit;
   });
 
+  test('deps.now is threaded to the poller and both tap-source factories (#107)', async () => {
+    // A shared fake clock that lets us verify the same reference is passed around.
+    const sharedNow = jest.fn(() => Date.now());
+
+    // Android path — inject a fake getevent factory and capture its call args.
+    const fakeAndroidSource = Object.assign(new EventEmitter(), { start: jest.fn(), stop: jest.fn() });
+    const createGeteventTapSource = jest.fn(() => fakeAndroidSource);
+
+    const fakePoller = {
+      start: jest.fn(),
+      stop: jest.fn(),
+      findSnapshotBefore: jest.fn(() => null),
+      _buffer: [],
+    };
+
+    const wsCtx = makeFakeWsCtx();
+    const exit = startModeB({
+      store: makeFakeStore(), wsCtx, httpSrv: {},
+      projectRoot: setupProject(), scenarioId: 'scn', platform: 'android',
+      appPackage: 'com.example.app', opts: {},
+      deps: {
+        useLiveDevice: true,
+        now: sharedNow,
+        createGeteventTapSource,
+        hierarchyPoller: fakePoller,   // pre-constructed; skip ctor but keep the seam
+        mcpCall: async () => ({ elements: [] }),
+        pollIntervalMs: 10_000,
+        attachFailureModes: () => ({ stopAll() {} }),
+      },
+    });
+
+    await wait(5);
+
+    // The getevent factory MUST have been called with the same now reference.
+    expect(createGeteventTapSource).toHaveBeenCalledTimes(1);
+    const factoryArg = createGeteventTapSource.mock.calls[0][0];
+    expect(factoryArg).toHaveProperty('now', sharedNow);
+
+    wsCtx._simulateMessage({ type: 'cancel' });
+    await exit;
+  });
+
+  test('deps.now is threaded to the screenshot tap-source factory on iOS (#107)', async () => {
+    const sharedNow = jest.fn(() => Date.now());
+
+    const fakeIosSource = Object.assign(new EventEmitter(), { start: jest.fn(), stop: jest.fn() });
+    const createScreenshotTapSource = jest.fn(() => fakeIosSource);
+
+    const wsCtx = makeFakeWsCtx();
+    const exit = startModeB({
+      store: makeFakeStore(), wsCtx, httpSrv: {},
+      projectRoot: setupProject(), scenarioId: 'scn', platform: 'ios',
+      appPackage: 'com.example.app', opts: {},
+      deps: {
+        useLiveDevice: true,
+        now: sharedNow,
+        createScreenshotTapSource,
+        mcpCall: async () => ({ elements: [] }),
+        pollIntervalMs: 10_000,
+        attachFailureModes: () => ({ stopAll() {} }),
+      },
+    });
+
+    await wait(5);
+
+    expect(createScreenshotTapSource).toHaveBeenCalledTimes(1);
+    const factoryArg = createScreenshotTapSource.mock.calls[0][0];
+    expect(factoryArg).toHaveProperty('now', sharedNow);
+
+    wsCtx._simulateMessage({ type: 'cancel' });
+    await exit;
+  });
+
   test('finish awaits tapSource.stop before flushing (#103 defect C)', async () => {
     const order = [];
     // Use an EventEmitter so the tap listener wiring inside mode-b.js works.
@@ -232,6 +306,73 @@ describe('startModeB (lifecycle/mode-b)', () => {
     await savedFinish(0);                       // simulate a watchdog/save completion
     await exit;
     expect(order).toEqual(['stop', 'flush']);
+  });
+
+  test('shared clock: tap resolves a target — NOT tap_unknown (#107 regression)', async () => {
+    // Controllable monotonic clock shared by the poller and tap source.
+    let clock = 1_000_000;
+    const now = () => clock;
+
+    // A fake bridge that returns one element whose bounds contain (320, 1200).
+    const mcpBridge = {
+      listElementsOnScreen: jest.fn().mockResolvedValue({
+        elements: [
+          { accessibility_label: 'Wireless Earbuds', bounds: [0, 800, 640, 1660] },
+        ],
+      }),
+      takeScreenshot: jest.fn().mockResolvedValue('/tmp/foo.png'),
+      launchApp: jest.fn().mockResolvedValue(undefined),
+      getCrash: jest.fn().mockResolvedValue(null),
+    };
+
+    // Wire a REAL HierarchyPoller with the shared clock so findSnapshotBefore
+    // runs against a clock-aligned snapshot. pollIntervalMs=10 so the initial
+    // tick fires promptly (it fires immediately on start() then every interval).
+    const realPoller = new HierarchyPoller({
+      bridge: mcpBridge,
+      intervalMs: 10,
+      capacity: 40,
+      now,
+    });
+
+    // A tap source the test controls.
+    const tapSource = new EventEmitter();
+
+    const wsCtx = makeFakeWsCtx();
+    const store = makeFakeStore();
+
+    const exit = startModeB({
+      store, wsCtx, httpSrv: {}, projectRoot, scenarioId: 's',
+      platform: 'android', appPackage: 'com.example.app',
+      deps: {
+        now,
+        mcpBridge,
+        hierarchyPoller: realPoller,
+        tapSource,
+        attachFailureModes: () => ({ stopAll() {} }),
+      },
+    });
+
+    // Let the poller capture at least one snapshot at clock=1_000_000.
+    await wait(30);
+
+    // Advance the clock so the tap timestamp is AFTER the snapshot.
+    clock = 1_000_100;
+
+    // Emit a canonical down+up tap inside the element bounds.
+    tapSource.emit('tap', { t: clock, kind: 'down', x: 320, y: 1200 });
+    tapSource.emit('tap', { t: clock + 50, kind: 'up', x: 320, y: 1200 });
+
+    // Finish the session so classifier.flush() emits the gesture.
+    wsCtx._simulateMessage({ type: 'save' });
+    await exit;
+
+    // The appended event must identify the resolved element, not tap_unknown.
+    expect(store.appendEvent).toHaveBeenCalled();
+    const ev = store.appendEvent.mock.calls[0][0];
+    // step_id is built as `${kind}_${display_name lowercased+underscored}`
+    expect(ev.step_id).toBe('tap_wireless_earbuds');
+    expect(ev.target).toBe('Wireless Earbuds');
   });
 
   test('broadcasts step-added when a tap is captured (#103 defect B)', async () => {
