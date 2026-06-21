@@ -35,4 +35,37 @@ describe('createScreenshotTapSource', () => {
     expect(emitted).toEqual(['down', 'move', 'up']);
     expect(fakeClearInterval).toHaveBeenCalled();
   });
+
+  test('stop() before start() is a safe no-op', async () => {
+    const fakeClearInterval = jest.fn();
+    const captureFrame = jest.fn(async () => ({ buf: Buffer.from('X') }));
+    const fakeDetector = { feed: jest.fn(), flush: jest.fn() };
+
+    const src = createScreenshotTapSource({
+      deviceLabel: 'UDID', intervalMs: 125, captureFrame,
+      setInterval: () => 1, clearInterval: fakeClearInterval,
+      makeDetector: () => fakeDetector,
+    });
+
+    // stop() without start() must not throw and must not call clearInterval
+    await expect(src.stop()).resolves.toBeUndefined();
+    expect(fakeClearInterval).not.toHaveBeenCalled();
+  });
+
+  test('double start() registers only one interval', async () => {
+    const fakeSetInterval = jest.fn(() => 1);
+    const captureFrame = jest.fn(async () => ({ buf: Buffer.from('X') }));
+    const fakeDetector = { feed: jest.fn(), flush: jest.fn() };
+
+    const src = createScreenshotTapSource({
+      deviceLabel: 'UDID', intervalMs: 125, captureFrame,
+      setInterval: fakeSetInterval, clearInterval: jest.fn(),
+      makeDetector: () => fakeDetector,
+    });
+
+    await src.start();
+    await src.start();  // second call must be a no-op
+
+    expect(fakeSetInterval).toHaveBeenCalledTimes(1);
+  });
 });

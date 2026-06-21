@@ -33,7 +33,6 @@ function createScreenshotTapSource({
   const capture = captureFrame || defaultCaptureFrame({ deviceLabel });
   let timer = null;
   let busy = false;
-  const tStart = 0;
   let t = 0;
 
   emitter.start = async () => {
@@ -42,8 +41,9 @@ function createScreenshotTapSource({
       if (busy) return;               // skip if a capture is still in flight
       busy = true;
       try {
+        t += intervalMs;
         const frame = await capture();
-        if (frame && frame.buf) { t += intervalMs; detector.feed({ t: t + tStart, buf: frame.buf }); }
+        if (frame && frame.buf) { detector.feed({ t, buf: frame.buf }); }
       } catch (_e) { /* best-effort: drop this frame */ }
       busy = false;
     }, intervalMs);
