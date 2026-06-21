@@ -66,7 +66,7 @@ async function startModeB({
   httpSrv, // eslint-disable-line no-unused-vars
   projectRoot,
   scenarioId,
-  platform, // eslint-disable-line no-unused-vars
+  platform,
   appPackage,
   opts = {}, // eslint-disable-line no-unused-vars
   deps = {},
@@ -161,9 +161,15 @@ async function startModeB({
   let tapSource = deps.tapSource;
   let ownsTapSource = false;
   if (!tapSource && deps.useLiveDevice) {
-    const { createTapSource } = require('../capture/tap-source');
-    const _createTapSource = deps.createTapSource || createTapSource;
-    tapSource = _createTapSource({ bridge: mcpBridge });
+    if (platform === 'android') {
+      const { createGeteventTapSource } = require('../capture/getevent-tap-source');
+      const _create = deps.createGeteventTapSource || createGeteventTapSource;
+      tapSource = _create({ deviceLabel: deps.deviceLabel });
+    } else {
+      const { createTapSource } = require('../capture/tap-source');
+      const _createTapSource = deps.createTapSource || createTapSource;
+      tapSource = _createTapSource({ bridge: mcpBridge });
+    }
     ownsTapSource = true;
   }
   if (tapSource && typeof tapSource.on === 'function') {

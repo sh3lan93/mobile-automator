@@ -153,6 +153,34 @@ describe('startModeB (lifecycle/mode-b)', () => {
     expect(store.appendEvent).toHaveBeenCalled();
   });
 
+  test('android live path selects the getevent tap source (#103)', async () => {
+    const fakeSource = Object.assign(new EventEmitter(), { start: jest.fn(), stop: jest.fn() });
+    const createGeteventTapSource = jest.fn(() => fakeSource);
+    const wsCtx = makeFakeWsCtx();
+    const exit = startModeB({
+      store: makeFakeStore(),
+      wsCtx,
+      httpSrv: {},
+      projectRoot: setupProject(),
+      scenarioId: 'scn',
+      platform: 'android',
+      appPackage: 'com.example.app',
+      opts: {},
+      deps: {
+        useLiveDevice: true,
+        createGeteventTapSource,
+        mcpCall: async () => ({ elements: [] }),
+        pollIntervalMs: 10_000,
+        attachFailureModes: () => ({ stopAll() {} }),
+      },
+    });
+    await wait(5);
+    expect(createGeteventTapSource).toHaveBeenCalledTimes(1);
+    expect(fakeSource.start).toHaveBeenCalled();
+    wsCtx._simulateMessage({ type: 'cancel' });
+    await exit;
+  });
+
   test('broadcasts step-added when a tap is captured (#103 defect B)', async () => {
     const tapSource = new EventEmitter();
     const wsCtx = makeFakeWsCtx();
