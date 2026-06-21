@@ -16,7 +16,8 @@ describe('resolveSingleDevice', () => {
   });
   test('throws an actionable error listing ids when multiple are active', () => {
     const devices = [{ id: 'emulator-5554', name: 'Pixel' }, { id: 'AAAA-BBBB', name: 'iPhone 16' }];
-    try { resolveSingleDevice(devices); throw new Error('did not throw'); } catch (e) {
+    expect(() => resolveSingleDevice(devices)).toThrow(DeviceResolutionError);
+    try { resolveSingleDevice(devices); throw new Error('expected resolveSingleDevice to throw'); } catch (e) {
       expect(e).toBeInstanceOf(DeviceResolutionError);
       expect(e.message).toContain('emulator-5554');
       expect(e.message).toContain('AAAA-BBBB');
