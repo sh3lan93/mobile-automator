@@ -50,4 +50,25 @@ function normalize(rawElements) {
   return out;
 }
 
-module.exports = { normalize };
+// mobile-mcp 0.0.55 returns elements as the string
+// `Found these elements on screen: <JSON array>`. Earlier/other shapes may be
+// a bare array or `{elements:[...]}`. Parse all three into the raw element
+// array. Parse the WHOLE JSON array (never per-element regex) so labels
+// containing brackets/quotes/newlines survive.
+function parseElements(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (raw && Array.isArray(raw.elements)) return raw.elements;
+  if (typeof raw === 'string') {
+    const start = raw.indexOf('[');
+    const end = raw.lastIndexOf(']');
+    if (start !== -1 && end > start) {
+      try {
+        const parsed = JSON.parse(raw.slice(start, end + 1));
+        if (Array.isArray(parsed)) return parsed;
+      } catch (_e) { /* fall through */ }
+    }
+  }
+  return [];
+}
+
+module.exports = { normalize, parseElements };

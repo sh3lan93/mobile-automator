@@ -1,6 +1,6 @@
 'use strict';
 
-const { normalize } = require('./element-model');
+const { normalize, parseElements } = require('./element-model');
 const { normalizeDevices } = require('./device-model');
 
 // Thin wrapper over an injected mobile-mcp `call(toolName, args)` function.
@@ -24,8 +24,7 @@ class DeviceBridge {
 
   async listElements() {
     const result = await this._call('mobile_list_elements_on_screen', {});
-    const raw = Array.isArray(result) ? result : (result && result.elements) || [];
-    return normalize(raw);
+    return normalize(parseElements(result));
   }
 
   async screenshot(destPath) {
