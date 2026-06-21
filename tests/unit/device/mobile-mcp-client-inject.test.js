@@ -44,4 +44,14 @@ describe('makeCall device threading', () => {
     const { call } = makeCall({ rawCall, device: null });
     await expect(call('mobile_save_screenshot', { path: '/tmp/x.png' })).rejects.toBeInstanceOf(DeviceResolutionError);
   });
+
+  test('concurrent action calls trigger only one discovery', async () => {
+    const { rawCall, calls } = rawWith([{ id: 'emulator-5554' }]);
+    const { call } = makeCall({ rawCall, device: null });
+    await Promise.all([
+      call('mobile_type_keys', { text: 'a' }),
+      call('mobile_swipe_on_screen', { direction: 'up' }),
+    ]);
+    expect(calls.filter((c) => c.tool === 'mobile_list_available_devices')).toHaveLength(1);
+  });
 });

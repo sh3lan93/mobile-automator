@@ -69,12 +69,13 @@ async function createCall({ device } = {}) {
 // the first resolution). Extracted from createCall so it is unit-testable
 // without spawning mobile-mcp.
 function makeCall({ rawCall, device = null }) {
-  let resolved = device || null;
-  async function ensureDevice() {
-    if (resolved) return resolved;
-    const listed = await rawCall('mobile_list_available_devices', {});
-    resolved = resolveSingleDevice(normalizeDevices(listed)); // throws DeviceResolutionError on 0/many
-    return resolved;
+  let resolvedPromise = device != null ? Promise.resolve(device) : null;
+  function ensureDevice() {
+    if (!resolvedPromise) {
+      resolvedPromise = rawCall('mobile_list_available_devices', {})
+        .then((listed) => resolveSingleDevice(normalizeDevices(listed))); // throws DeviceResolutionError on 0/many
+    }
+    return resolvedPromise;
   }
   async function call(toolName, args = {}) {
     if (toolName === 'mobile_list_available_devices') {
