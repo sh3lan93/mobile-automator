@@ -116,16 +116,16 @@ Most low-level verbs are called **by the agent**, not by you. The ones you'll ru
 | `mauto bootstrap` | Print the verb map + invariants (onboarding for any agent) |
 | `mauto validate <file>` | Validate a scenario JSON against the schema |
 | `mauto config get\|set <key> [value]` | Read / update workspace config |
-| `mauto record <name>` | Launch the interactive web recorder (experimental) |
+| `mauto record <name>` | Launch the interactive web recorder |
 | **Agent-driven verbs** | `elements`, `tap`, `type`, `swipe`, `press`, `screenshot`, `assert`, `result`, `schema` |
 
 Run `mauto <command> --help` for full flags.
 
 ---
 
-## 🎥 Recording (experimental)
+## 🎥 Recording
 
-`mauto record <name>` opens a browser GUI that captures live device interaction (taps, typing, swipes, hardware keys) and synthesizes a scenario JSON — the same format `generate` produces and `execute` replays. Requires `ffmpeg` on your `PATH` (and `adb` for Android hardware-key capture). It's feature-complete but still maturing; file rough edges against [#21](https://github.com/sh3lan93/mobile-automator/issues/21).
+`mauto record <name>` opens a browser GUI that captures live device interaction (taps, typing, swipes, hardware keys) and synthesizes a scenario JSON — the same format `generate` produces and `execute` replays. Requires `ffmpeg` on your `PATH` (and `adb` for Android hardware-key capture). Report issues at [#21](https://github.com/sh3lan93/mobile-automator/issues/21).
 
 ---
 

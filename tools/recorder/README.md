@@ -1,8 +1,6 @@
 # Recorder sidecar
 
-Sidecar process that drives the recorder GUI and captures device interactions for the experimental `/mobile-automator:record` command. The sidecar is invoked by `commands/mobile-automator/record.toml` after pre-flight (config, environment, device, app install) succeeds.
-
-The recorder feature is being built incrementally per [PRD #21](https://github.com/sh3lan93/mobile-automator/issues/21) and is gated behind the `MOBILE_AUTOMATOR_RECORDER=1` environment variable until graduation.
+Sidecar process that drives the recorder GUI and captures device interactions for `mauto record`. The `mauto` CLI spawns the sidecar after pre-flight (config, device, app install) succeeds.
 
 ## Supported targets
 
@@ -32,11 +30,8 @@ This is a Simulator-app preference (`com.apple.iphonesimulator` defaults key `Sh
 xcrun simctl boot "iPhone 16 Pro"
 open -a Simulator
 
-# Opt in to the experimental recorder
-export MOBILE_AUTOMATOR_RECORDER=1
-
-# Record a scenario — the pre-flight will detect the booted simulator
-gemini  # then: /mobile-automator:record my_scenario_name
+# Record a scenario — the pre-flight detects the booted simulator
+mauto record my_scenario_name --platform ios
 ```
 
 The pre-flight reads the device's `os` field returned by `mobile_list_available_devices()`, lowercases it, and forwards `--platform=ios` to the sidecar. The sidecar uses that to pick the iOS-tuned video tap-detector colour profile (`ios_simulator`, calibrated to the Simulator's mid-grey indicator) instead of the Android cyan-circle profile.
