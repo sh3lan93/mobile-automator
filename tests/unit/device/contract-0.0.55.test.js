@@ -23,6 +23,10 @@ describe('mobile-mcp 0.0.55 contract (recorded fixtures)', () => {
     const els = normalize(parseElements(elementsRaw));
     expect(JSON.stringify(els)).not.toContain('home_product_card_p001');
     expect(JSON.stringify(els)).not.toContain('bottom_nav_home');
+    // The label-less cart button is the most likely to leak its identifier.
+    expect(JSON.stringify(els)).not.toContain('appbar_icon_cart');
+    // And the `identifier` key itself must never appear on any element.
+    els.forEach((e) => { expect(e).not.toHaveProperty('identifier'); });
   });
   test('device is injected for action tools, not for discovery', () => {
     const id = resolveSingleDevice(normalizeDevices(devicesRaw));
