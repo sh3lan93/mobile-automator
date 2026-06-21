@@ -89,6 +89,14 @@ describe('normalize with mobile-mcp coordinates object', () => {
     const out = normalize([{ label: 'x', identifier: 'res_id_secret', coordinates: { x: 0, y: 0, width: 2, height: 2 } }]);
     expect(JSON.stringify(out)).not.toContain('res_id_secret');
   });
+
+  test('rejects non-finite coordinates (NaN/garbage)', () => {
+    const out = normalize([
+      { label: 'bad', coordinates: { x: NaN, y: 0, width: 10, height: 10 } },
+      { label: 'bad2', bounds: ['x', 'y', 1, 2] },
+    ]);
+    expect(out).toEqual([]);
+  });
 });
 
 describe('parseElements', () => {

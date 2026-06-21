@@ -6,20 +6,22 @@
 
 function resolveBounds(raw) {
   if (Array.isArray(raw.bounds) && raw.bounds.length === 4) {
-    return raw.bounds.map(Number);
+    const b = raw.bounds.map(Number);
+    if (b.every(Number.isFinite)) return b;
   }
   if (Array.isArray(raw.coordinates) && raw.coordinates.length === 4) {
-    return raw.coordinates.map(Number);
+    const c = raw.coordinates.map(Number);
+    if (c.every(Number.isFinite)) return c;
   }
   if (raw.coordinates && typeof raw.coordinates === 'object' && !Array.isArray(raw.coordinates)) {
     const { x, y, width, height } = raw.coordinates;
-    if ([x, y, width, height].every((v) => typeof v === 'number')) {
+    if ([x, y, width, height].every((v) => Number.isFinite(v))) {
       return [x, y, x + width, y + height];
     }
   }
   if (raw.rect && typeof raw.rect === 'object') {
     const { x, y, width, height } = raw.rect;
-    if ([x, y, width, height].every((v) => typeof v === 'number')) {
+    if ([x, y, width, height].every((v) => Number.isFinite(v))) {
       return [x, y, x + width, y + height];
     }
   }
