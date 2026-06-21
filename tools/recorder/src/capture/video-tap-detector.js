@@ -83,7 +83,12 @@ class VideoTapDetector {
 
   processFrames(frames) {
     // Back-compat batch API: a fresh, self-contained detection over `frames`.
+    // Save and restore both _active and _lastT so a batch call cannot corrupt
+    // the streaming state — without restoring _lastT a subsequent flush() would
+    // emit an `up` at the batch's last-frame timestamp instead of the correct
+    // streaming timestamp.
     const saved = this._active; this._active = null;
+    const savedLastT = this._lastT;
     for (const frame of frames) this.feed(frame);
     if (this._active) {
       const last = frames[frames.length - 1];
@@ -91,6 +96,7 @@ class VideoTapDetector {
       this._active = null;
     }
     this._active = saved;
+    this._lastT = savedLastT;
   }
 
   /** Run ffmpeg to extract frames; returns Promise<Array<{t, buf}>>. Used in integration tests. */

@@ -53,6 +53,11 @@ describe('detectIndicatorInFrame', () => {
 // Fixture helpers for streaming tests: reuse the same PNG files the
 // processFrames suite uses, scoped to the light_blue (Android) profile.
 function frameWithDot(x, y) {
+  // NOTE: (x,y) args are nominal labels used to pick between the two available
+  // fixture PNGs — they are NOT pixel coordinates injected into the image.
+  // The underlying PNG has its indicator baked at the fixture's fixed location
+  // (near (50,30) or (100,50)). Tests that call frameWithDot assert on event
+  // `kind` and `t`, not on exact pixel coords.
   // dot-at-50-30.png has the indicator near (50,30); dot-at-100-50.png near (100,50).
   // We pick whichever file is closest to the requested coordinate.
   const file = (x <= 75 && y <= 40) ? 'dot-at-50-30.png' : 'dot-at-100-50.png';
@@ -79,6 +84,36 @@ describe('VideoTapDetector.streaming feed()', () => {
     det.feed({ t: 0, buf: frameWithDot(10, 10) });
     det.flush();
     expect(events.map((e) => e.kind)).toEqual(['down', 'up']);
+  });
+
+  test('processFrames() does not corrupt _lastT; flush() still carries the streaming timestamp', () => {
+    // Scenario: a streaming touch starts at t=100 via feed(), then processFrames()
+    // is called on a separate batch whose last frame is at t=999.  After the
+    // batch, flush() must emit the trailing `up` at t=100 (the streaming _lastT)
+    // — NOT t=999 (the batch's last frame timestamp).  This directly exercises
+    // the _lastT save/restore added to processFrames().
+    const events = [];
+    const det = new VideoTapDetector({ emit: (e) => events.push(e), color: 'light_blue' });
+
+    // 1. Start a streaming touch — _lastT becomes 100.
+    det.feed({ t: 100, buf: frameWithDot(10, 10) });
+    expect(events.map((e) => e.kind)).toEqual(['down']);
+
+    // 2. Run a self-contained batch that ends at t=999.
+    //    processFrames() must not clobber _lastT=100.
+    det.processFrames([
+      { t: 500, buf: frameWithDot(100, 100) },
+      { t: 999, buf: frameBlank() },
+    ]);
+
+    // 3. Flush the still-active streaming touch.
+    det.flush();
+
+    const upEvents = events.filter((e) => e.kind === 'up');
+    // The batch emits its own up at t=999 (inside processFrames).
+    // The streaming flush must emit an up at t=100 — NOT t=999.
+    const streamingUp = upEvents[upEvents.length - 1];
+    expect(streamingUp.t).toBe(100);
   });
 });
 
