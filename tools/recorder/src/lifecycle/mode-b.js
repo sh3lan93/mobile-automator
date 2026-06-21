@@ -5,6 +5,7 @@ const { HierarchyPoller } = require('../capture/hierarchy-poller');
 const { GestureClassifier } = require('../coalesce/gesture-classifier');
 const { TypeBuffer } = require('../coalesce/type-buffer');
 const { reinterpret } = require('../coalesce/semantic-reinterpreter');
+const { toStepView } = require('../coalesce/step-view');
 const { resolveElement } = require('../capture/element-resolver');
 const { findFocusedField } = require('../capture/focus-detector');
 const { isInKeyboardRegion, keyAtCoordinate } = require('../capture/keyboard-region');
@@ -65,7 +66,7 @@ async function startModeB({
   httpSrv, // eslint-disable-line no-unused-vars
   projectRoot,
   scenarioId,
-  platform, // eslint-disable-line no-unused-vars
+  platform,
   appPackage,
   opts = {}, // eslint-disable-line no-unused-vars
   deps = {},
@@ -115,17 +116,25 @@ async function startModeB({
   // ---- Coalescing pipeline -------------------------------------------------
   // Mirrors `runScriptedSession` in lifecycle.js, but driven by live sources.
 
+  // Persist a captured step AND broadcast it so the GUI renders it live
+  // (defect B fix — #103). The store write is the source of truth; we only
+  // broadcast on a successful append. The index is a 1-based running counter
+  // matching the order steps land in events.jsonl.
+  let stepIndex = 0;
+  const recordStep = (ev) => {
+    try { store.appendEvent(ev); } catch (_e) { return; }
+    try { wsCtx.broadcast({ type: 'step-added', step: toStepView(ev, ++stepIndex) }); } catch (_e) { /* swallow */ }
+  };
+
   const typeBuffer = new TypeBuffer({
     emit: (e) => {
       const stepId = `type_${snakeCase(e.field_label || e.field_id)}`.slice(0, 60);
-      try {
-        store.appendEvent(reinterpret({ ...e, step_id: stepId }, null, emitMode));
-      } catch (_e) { /* swallow */ }
+      recordStep(reinterpret({ ...e, step_id: stepId }, null, emitMode));
     },
     silenceTimeoutMs: 1500,
   });
 
-  const classifier = new GestureClassifier({
+  const classifier = deps.classifier || new GestureClassifier({
     emit: (g) => {
       const snap = hierarchyPoller.findSnapshotBefore(g.t);
       // Route keyboard-region taps to TypeBuffer rather than emitting them.
@@ -140,23 +149,33 @@ async function startModeB({
       const stepId = resolved
         ? `${g.kind}_${resolved.display_name.replace(/\s+/g, '_').toLowerCase()}`.slice(0, 60)
         : `${g.kind}_unknown`;
-      try {
-        store.appendEvent(reinterpret({ ...g, target: resolved?.display_name, step_id: stepId }, snap, emitMode));
-      } catch (_e) { /* swallow */ }
+      recordStep(reinterpret({ ...g, target: resolved?.display_name, step_id: stepId }, snap, emitMode));
     },
   });
 
   // ---- Live tap source -----------------------------------------------------
-  // Tests inject `deps.tapSource` to drive the pipeline. The live path (slice 8)
-  // defaults to capture/tap-source, which plugs mobile-mcp screen recording into
-  // video-tap-detector to produce {t, kind, x, y} taps. This end-to-end live
-  // path is BEST-EFFORT and needs on-device validation (see tap-source.js).
+  // Tests inject `deps.tapSource` to drive the pipeline. The live path selects
+  // a source by platform:
+  //   - Android: `getevent-tap-source` streams `adb getevent -lt` output and
+  //     parses real-time ABS_MT touch events + hardware key presses into the
+  //     {t, kind, x, y} shape that the coalescing classifier expects.
+  //   - Other (iOS Simulator): `screenshot-tap-source` polls screenshots at a
+  //     fixed interval and feeds each frame through the streaming VideoTapDetector,
+  //     which detects the OS touch-indicator overlay and emits the same event shape.
+  // Tests may also inject `deps.createGeteventTapSource` / `deps.createScreenshotTapSource`
+  // to substitute fakes without touching the platform branch.
   let tapSource = deps.tapSource;
   let ownsTapSource = false;
   if (!tapSource && deps.useLiveDevice) {
-    const { createTapSource } = require('../capture/tap-source');
-    const _createTapSource = deps.createTapSource || createTapSource;
-    tapSource = _createTapSource({ bridge: mcpBridge });
+    if (platform === 'android') {
+      const { createGeteventTapSource } = require('../capture/getevent-tap-source');
+      const _create = deps.createGeteventTapSource || createGeteventTapSource;
+      tapSource = _create({ deviceLabel: deps.deviceLabel });
+    } else {
+      const { createScreenshotTapSource } = require('../capture/screenshot-tap-source');
+      const _create = deps.createScreenshotTapSource || createScreenshotTapSource;
+      tapSource = _create({ deviceLabel: deps.deviceLabel });
+    }
     ownsTapSource = true;
   }
   if (tapSource && typeof tapSource.on === 'function') {
@@ -170,20 +189,21 @@ async function startModeB({
   let resolveExit;
   const exitPromise = new Promise((res) => { resolveExit = res; });
   let resolved = false;
-  function finish(code) {
+  async function finish(code) {
     if (resolved) return;
     resolved = true;
     try { hierarchyPoller.stop(); } catch (_e) { /* swallow */ }
+    // Stop the live tap source FIRST and AWAIT it so any final up/gesture is
+    // delivered to the classifier before we flush (defect C fix — #103).
+    // Only stop a source we created — never stop a caller-injected source.
+    if (ownsTapSource && tapSource && typeof tapSource.stop === 'function') {
+      try { await tapSource.stop(); } catch (_e) { /* swallow */ }
+    }
     try { classifier.flush(); } catch (_e) { /* swallow */ }
     try { typeBuffer.flush(); } catch (_e) { /* swallow */ }
     // Tear down failure-orchestrator watchdogs (crash + browser timers).
     if (failureCtx && typeof failureCtx.stopAll === 'function') {
       try { failureCtx.stopAll(); } catch (_e) { /* swallow */ }
-    }
-    // Stop a tap source we own (the live one). Best-effort + async; we don't
-    // await it here since finish() is sync, but errors must not leak.
-    if (ownsTapSource && tapSource && typeof tapSource.stop === 'function') {
-      try { Promise.resolve(tapSource.stop()).catch(() => {}); } catch (_e) { /* swallow */ }
     }
     // Close the live device connection (no-op when tests injected a fake).
     if (deviceConn && typeof deviceConn.close === 'function') {
