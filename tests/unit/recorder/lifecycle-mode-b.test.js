@@ -152,4 +152,31 @@ describe('startModeB (lifecycle/mode-b)', () => {
     // At least one event flushed (taps land via classifier.flush() on finish).
     expect(store.appendEvent).toHaveBeenCalled();
   });
+
+  test('broadcasts step-added when a tap is captured (#103 defect B)', async () => {
+    const tapSource = new EventEmitter();
+    const wsCtx = makeFakeWsCtx();
+    const store = makeFakeStore();
+
+    const exit = startModeB({
+      store, wsCtx, httpSrv: {}, projectRoot, scenarioId: 's',
+      platform: 'android', appPackage: 'com.example.app',
+      deps: { mcpBridge: makeFakeMcpBridge(), pollIntervalMs: 9999, tapSource },
+    });
+
+    await wait(5);
+    // Drive a canonical tap: down then up at the same coordinate.
+    // The gesture classifier buffers a single tap as _pending until flush().
+    // finish() calls classifier.flush() synchronously before resolveExit,
+    // so the step-added broadcast fires before the exit promise resolves.
+    tapSource.emit('tap', { t: 0, kind: 'down', x: 100, y: 200 });
+    tapSource.emit('tap', { t: 80, kind: 'up', x: 100, y: 200 });
+
+    wsCtx._simulateMessage({ type: 'save' });
+    await exit;
+
+    const added = wsCtx._broadcasts.filter((m) => m.type === 'step-added');
+    expect(added).toHaveLength(1);
+    expect(added[0].step).toMatchObject({ index: 1, action: 'tap' });
+  });
 });

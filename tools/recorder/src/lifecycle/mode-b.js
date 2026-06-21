@@ -5,6 +5,7 @@ const { HierarchyPoller } = require('../capture/hierarchy-poller');
 const { GestureClassifier } = require('../coalesce/gesture-classifier');
 const { TypeBuffer } = require('../coalesce/type-buffer');
 const { reinterpret } = require('../coalesce/semantic-reinterpreter');
+const { toStepView } = require('../coalesce/step-view');
 const { resolveElement } = require('../capture/element-resolver');
 const { findFocusedField } = require('../capture/focus-detector');
 const { isInKeyboardRegion, keyAtCoordinate } = require('../capture/keyboard-region');
@@ -115,12 +116,20 @@ async function startModeB({
   // ---- Coalescing pipeline -------------------------------------------------
   // Mirrors `runScriptedSession` in lifecycle.js, but driven by live sources.
 
+  // Persist a captured step AND broadcast it so the GUI renders it live
+  // (defect B fix — #103). The store write is the source of truth; we only
+  // broadcast on a successful append. The index is a 1-based running counter
+  // matching the order steps land in events.jsonl.
+  let stepIndex = 0;
+  const recordStep = (ev) => {
+    try { store.appendEvent(ev); } catch (_e) { return; }
+    try { wsCtx.broadcast({ type: 'step-added', step: toStepView(ev, ++stepIndex) }); } catch (_e) { /* swallow */ }
+  };
+
   const typeBuffer = new TypeBuffer({
     emit: (e) => {
       const stepId = `type_${snakeCase(e.field_label || e.field_id)}`.slice(0, 60);
-      try {
-        store.appendEvent(reinterpret({ ...e, step_id: stepId }, null, emitMode));
-      } catch (_e) { /* swallow */ }
+      recordStep(reinterpret({ ...e, step_id: stepId }, null, emitMode));
     },
     silenceTimeoutMs: 1500,
   });
@@ -140,9 +149,7 @@ async function startModeB({
       const stepId = resolved
         ? `${g.kind}_${resolved.display_name.replace(/\s+/g, '_').toLowerCase()}`.slice(0, 60)
         : `${g.kind}_unknown`;
-      try {
-        store.appendEvent(reinterpret({ ...g, target: resolved?.display_name, step_id: stepId }, snap, emitMode));
-      } catch (_e) { /* swallow */ }
+      recordStep(reinterpret({ ...g, target: resolved?.display_name, step_id: stepId }, snap, emitMode));
     },
   });
 
