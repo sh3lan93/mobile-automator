@@ -4,7 +4,7 @@ const { GeteventTouchParser } = require('../../../tools/recorder/src/capture/get
 
 function collect(lines, opts = {}) {
   const events = [];
-  const p = new GeteventTouchParser({ emit: (e) => events.push(e), scaleX: 1, scaleY: 1, tStart: 0, ...opts });
+  const p = new GeteventTouchParser({ emit: (e) => events.push(e), scaleX: 1, scaleY: 1, tStart: null, ...opts });
   p.feedChunk(lines.join('\n') + '\n');
   p.end();
   return events;
@@ -51,6 +51,22 @@ describe('GeteventTouchParser', () => {
       '[   300.010000] /dev/input/event3: EV_SYN       SYN_REPORT           00000000',
     ], { scaleX: 2, scaleY: 3 });
     expect(events[0]).toEqual({ kind: 'down', t: 0, x: 200, y: 300 });
+  });
+
+  test('honors a literal tStart of 100 (not swallowed by falsy check)', () => {
+    // tStart:100 means timestamps are relative to t=100s; events at 100.000 → t=0, 100.080 → t=80
+    const events = collect([
+      '[   100.000000] /dev/input/event3: EV_ABS       ABS_MT_POSITION_X    00000064',
+      '[   100.000000] /dev/input/event3: EV_ABS       ABS_MT_POSITION_Y    000000c8',
+      '[   100.000000] /dev/input/event3: EV_KEY       BTN_TOUCH            DOWN',
+      '[   100.000000] /dev/input/event3: EV_SYN       SYN_REPORT           00000000',
+      '[   100.080000] /dev/input/event3: EV_KEY       BTN_TOUCH            UP',
+      '[   100.080000] /dev/input/event3: EV_SYN       SYN_REPORT           00000000',
+    ], { tStart: 100 });
+    expect(events).toEqual([
+      { kind: 'down', t: 0, x: 100, y: 200 },
+      { kind: 'up', t: 80, x: 100, y: 200 },
+    ]);
   });
 
   test('emits hardware key events', () => {

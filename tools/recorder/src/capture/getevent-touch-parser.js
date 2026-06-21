@@ -14,12 +14,15 @@ class GeteventTouchParser {
     this._emit = emit;
     this._scaleX = scaleX;
     this._scaleY = scaleY;
-    // tStart is the epoch (seconds) of the first event; when null or 0 it is
+    // tStart is the epoch (seconds) of the first event; when null it is
     // auto-detected from the first line seen so that t=0 maps to first event.
-    this._tStart = tStart || null;
+    // Use nullish coalescing so a literal tStart:0 is honored, not swallowed.
+    this._tStart = tStart != null ? tStart : null;
     this._tail = '';
     this._x = null;
     this._y = null;
+    this._lastX = 0;
+    this._lastY = 0;
     this._touching = false;   // BTN_TOUCH state
     this._active = false;     // whether we've emitted a down for the current touch
     this._frameT = 0;

@@ -23,7 +23,7 @@ function createGeteventTapSource({
     if (proc) return;
     let scale;
     try {
-      scale = await computeScale({ deviceLabel, spawn });
+      scale = await computeScale({ deviceLabel });
     } catch (_e) {
       scale = { scaleX: 1, scaleY: 1 };
     }
