@@ -3,6 +3,9 @@
 const path = require('path');
 const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
 const { StdioClientTransport } = require('@modelcontextprotocol/sdk/client/stdio.js');
+const { injectDeviceArg } = require('./tool-args');
+const { resolveSingleDevice } = require('./device-resolver');
+const { normalizeDevices } = require('./device-model');
 
 // Resolve the mobile-mcp server entry point from the bundled, pinned
 // dependency rather than fetching `@latest` at runtime. We read the package's
@@ -43,10 +46,11 @@ async function createCall({ device } = {}) {
 
   await client.connect(transport);
 
-  async function call(toolName, args = {}) {
+  async function rawCall(toolName, args = {}) {
     const res = await client.callTool({ name: toolName, arguments: args });
     return parseToolResult(res);
   }
+  const { call } = makeCall({ rawCall, device });
 
   async function close() {
     try {
@@ -57,6 +61,29 @@ async function createCall({ device } = {}) {
   }
 
   return { call, close };
+}
+
+// Pure orchestration over a low-level rawCall(toolName, args) => Promise<parsed>.
+// Threads a concrete device id into every tool call except the discovery verb,
+// lazily auto-discovering a single device when none was pinned (cached after
+// the first resolution). Extracted from createCall so it is unit-testable
+// without spawning mobile-mcp.
+function makeCall({ rawCall, device = null }) {
+  let resolved = device || null;
+  async function ensureDevice() {
+    if (resolved) return resolved;
+    const listed = await rawCall('mobile_list_available_devices', {});
+    resolved = resolveSingleDevice(normalizeDevices(listed)); // throws DeviceResolutionError on 0/many
+    return resolved;
+  }
+  async function call(toolName, args = {}) {
+    if (toolName === 'mobile_list_available_devices') {
+      return rawCall(toolName, args);
+    }
+    const deviceId = await ensureDevice();
+    return rawCall(toolName, injectDeviceArg(toolName, args, deviceId));
+  }
+  return { call };
 }
 
 // mobile-mcp returns its payload as text content that is itself JSON.
@@ -82,4 +109,4 @@ function parseToolResult(res) {
   return res;
 }
 
-module.exports = { createCall };
+module.exports = { createCall, makeCall };
