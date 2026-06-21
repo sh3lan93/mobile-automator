@@ -9,7 +9,10 @@ class McpBridge {
   }
 
   async listElementsOnScreen() {
-    return this._call('mobile_list_elements_on_screen', {});
+    const { parseElements } = require('../../../../src/device/element-model');
+    const { mapMcpElement } = require('./mcp-element-map');
+    const raw = await this._call('mobile_list_elements_on_screen', {});
+    return { elements: parseElements(raw).map(mapMcpElement).filter((e) => Array.isArray(e.bounds)) };
   }
 
   async takeScreenshot(destPath) {

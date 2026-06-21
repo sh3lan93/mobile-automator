@@ -1,6 +1,6 @@
 'use strict';
 
-const { normalize } = require('../../../src/device/element-model');
+const { normalize, parseElements } = require('../../../src/device/element-model');
 
 describe('element-model.normalize', () => {
   test('normalizes a bounds-based element and computes center midpoint', () => {
@@ -74,5 +74,53 @@ describe('element-model.normalize', () => {
     const out = normalize([{ text: 'no-bounds' }, { bounds: [0, 0, 4, 4] }]);
     expect(out).toHaveLength(1);
     expect(out[0].bounds).toEqual([0, 0, 4, 4]);
+  });
+});
+
+describe('normalize with mobile-mcp coordinates object', () => {
+  test('maps coordinates:{x,y,width,height} to bounds + center, label to accessibility_label', () => {
+    const out = normalize([{ type: 'android.widget.Button', text: '', label: 'Wireless Earbuds', identifier: 'home_product_card_p001', coordinates: { x: 10, y: 20, width: 100, height: 50 } }]);
+    expect(out).toHaveLength(1);
+    expect(out[0].bounds).toEqual([10, 20, 110, 70]);
+    expect(out[0].center).toEqual([60, 45]);
+    expect(out[0].accessibility_label).toBe('Wireless Earbuds');
+  });
+  test('never surfaces identifier (resource-id) as a field', () => {
+    const out = normalize([{ label: 'x', identifier: 'res_id_secret', coordinates: { x: 0, y: 0, width: 2, height: 2 } }]);
+    expect(JSON.stringify(out)).not.toContain('res_id_secret');
+  });
+
+  test('rejects non-finite coordinates (NaN/garbage)', () => {
+    const out = normalize([
+      { label: 'bad', coordinates: { x: NaN, y: 0, width: 10, height: 10 } },
+      { label: 'bad2', bounds: ['x', 'y', 1, 2] },
+    ]);
+    expect(out).toEqual([]);
+  });
+});
+
+describe('parseElements', () => {
+  const FIXTURE = 'Found these elements on screen: ' + JSON.stringify([
+    { type: 'android.view.View', text: '', label: 'Sample Shop', coordinates: { x: 48, y: 198, width: 388, height: 84 } },
+    { type: 'android.widget.Button', text: '', label: '', identifier: 'home_product_card_p001', coordinates: { x: 0, y: 804, width: 640, height: 853 } },
+  ]);
+  test('parses the prefixed string form', () => {
+    const els = parseElements(FIXTURE);
+    expect(els).toHaveLength(2);
+    expect(els[0].label).toBe('Sample Shop');
+  });
+  test('passes a bare array through', () => {
+    expect(parseElements([{ label: 'x' }])).toEqual([{ label: 'x' }]);
+  });
+  test('handles the {elements:[...]} envelope', () => {
+    expect(parseElements({ elements: [{ label: 'y' }] })).toEqual([{ label: 'y' }]);
+  });
+  test('returns [] for unparseable input', () => {
+    expect(parseElements('totally not elements')).toEqual([]);
+    expect(parseElements(null)).toEqual([]);
+  });
+  test('tolerates labels containing brackets/quotes', () => {
+    const tricky = 'Found these elements on screen: ' + JSON.stringify([{ label: 'a]b"c', coordinates: { x: 0, y: 0, width: 1, height: 1 } }]);
+    expect(parseElements(tricky)[0].label).toBe('a]b"c');
   });
 });

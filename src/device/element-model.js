@@ -6,14 +6,22 @@
 
 function resolveBounds(raw) {
   if (Array.isArray(raw.bounds) && raw.bounds.length === 4) {
-    return raw.bounds.map(Number);
+    const b = raw.bounds.map(Number);
+    if (b.every(Number.isFinite)) return b;
   }
   if (Array.isArray(raw.coordinates) && raw.coordinates.length === 4) {
-    return raw.coordinates.map(Number);
+    const c = raw.coordinates.map(Number);
+    if (c.every(Number.isFinite)) return c;
+  }
+  if (raw.coordinates && typeof raw.coordinates === 'object' && !Array.isArray(raw.coordinates)) {
+    const { x, y, width, height } = raw.coordinates;
+    if ([x, y, width, height].every((v) => Number.isFinite(v))) {
+      return [x, y, x + width, y + height];
+    }
   }
   if (raw.rect && typeof raw.rect === 'object') {
     const { x, y, width, height } = raw.rect;
-    if ([x, y, width, height].every((v) => typeof v === 'number')) {
+    if ([x, y, width, height].every((v) => Number.isFinite(v))) {
       return [x, y, x + width, y + height];
     }
   }
@@ -50,4 +58,25 @@ function normalize(rawElements) {
   return out;
 }
 
-module.exports = { normalize };
+// mobile-mcp 0.0.55 returns elements as the string
+// `Found these elements on screen: <JSON array>`. Earlier/other shapes may be
+// a bare array or `{elements:[...]}`. Parse all three into the raw element
+// array. Parse the WHOLE JSON array (never per-element regex) so labels
+// containing brackets/quotes/newlines survive.
+function parseElements(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (raw && Array.isArray(raw.elements)) return raw.elements;
+  if (typeof raw === 'string') {
+    const start = raw.indexOf('[');
+    const end = raw.lastIndexOf(']');
+    if (start !== -1 && end > start) {
+      try {
+        const parsed = JSON.parse(raw.slice(start, end + 1));
+        if (Array.isArray(parsed)) return parsed;
+      } catch (_e) { /* fall through */ }
+    }
+  }
+  return [];
+}
+
+module.exports = { normalize, parseElements };

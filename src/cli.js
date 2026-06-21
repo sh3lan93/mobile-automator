@@ -56,7 +56,7 @@ async function handleElements({ deviceBridge }) {
       envelope: fail(
         'device',
         err.message || String(err),
-        'Ensure a device or simulator is connected and the app is running.'
+        err.hint || 'Ensure a device or simulator is connected and the app is running.'
       ),
       exitKind: 'device',
     };
@@ -72,7 +72,7 @@ async function handleScreenshot({ deviceBridge }, destPath) {
       envelope: fail(
         'device',
         err.message || String(err),
-        'Ensure a device or simulator is connected.'
+        err.hint || 'Ensure a device or simulator is connected.'
       ),
       exitKind: 'device',
     };
@@ -127,7 +127,7 @@ function deviceFail(err) {
     envelope: fail(
       'device',
       err.message || String(err),
-      'Ensure a device or simulator is connected and the app is running.'
+      err.hint || 'Ensure a device or simulator is connected and the app is running.'
     ),
     exitKind: 'device',
   };
@@ -530,7 +530,7 @@ async function handleDevices({ deviceBridge }) {
       envelope: fail(
         'device',
         err.message || String(err),
-        'Ensure a device or simulator is connected and reachable.'
+        err.hint || 'Ensure a device or simulator is connected and reachable.'
       ),
       exitKind: 'device',
     };
@@ -554,7 +554,7 @@ async function handleDevicesUse({ deviceBridge, store = selectionStore, projectR
     devices = await deviceBridge.listDevices();
   } catch (err) {
     return {
-      envelope: fail('device', err.message || String(err), 'Ensure a device or simulator is connected and reachable.'),
+      envelope: fail('device', err.message || String(err), err.hint || 'Ensure a device or simulator is connected and reachable.'),
       exitKind: 'device',
     };
   }

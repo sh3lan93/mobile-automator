@@ -100,6 +100,16 @@ describe('cli handlers', () => {
       expect(envelope.error.kind).toBe('device');
       expect(envelope.error.message).toMatch(/no device connected/);
     });
+
+    test('handleElements surfaces a DeviceResolutionError hint into the envelope', async () => {
+      const { DeviceResolutionError } = require('../../src/device/device-resolver');
+      const deviceBridge = { listElements: async () => { throw new DeviceResolutionError('No active device or emulator found.', 'Start an emulator/simulator (or connect a device), or pass --device <id>.'); } };
+      const { envelope, exitKind } = await handleElements({ deviceBridge });
+      expect(exitKind).toBe('device');
+      expect(envelope.ok).toBe(false);
+      expect(envelope.error.kind).toBe('device');
+      expect(envelope.hint).toContain('--device');
+    });
   });
 
   describe('handleScreenshot', () => {
