@@ -453,17 +453,78 @@ async function handleRecord({
   return { envelope: fail('internal', `recorder exited with code ${code}`, null), exitKind: 'internal' };
 }
 
+// --- Issue #91: persistent device session daemon -------------------------
+//
+// `mauto session start|status|end` manage the per-workspace daemon that holds
+// ONE mobile-mcp connection and serves every one-shot device verb over a Unix
+// domain socket. Device verbs still autostart a daemon transparently; these
+// verbs give an agent explicit lifecycle control. All session deps are
+// injectable so the handlers are unit-testable without spawning a real daemon.
+
+async function handleSessionStart(
+  { projectRoot, spawn = require('./device/session-spawn'), client = require('./device/session-client') },
+  opts = {}
+) {
+  const device = opts.device || null;
+  let idleMs;
+  if (opts.idle !== undefined) {
+    idleMs = Number(opts.idle);
+    if (!Number.isFinite(idleMs) || idleMs < 0) {
+      return {
+        envelope: fail('invalid_input', `invalid --idle value "${opts.idle}"`, 'Pass a non-negative number of milliseconds.'),
+        exitKind: 'invalid_input',
+      };
+    }
+  }
+
+  if (await client.isAlive(projectRoot)) {
+    return {
+      envelope: ok({ started: false, already_running: true, device }),
+      exitKind: 'ok',
+    };
+  }
+
+  const started = await spawn.spawnDaemon({ projectRoot, device, idleMs });
+  if (!started) {
+    return {
+      envelope: fail('device', 'failed to start the device session daemon', 'Ensure a device or simulator is connected, or run verbs directly (they fall back to one-shot).'),
+      exitKind: 'device',
+    };
+  }
+  return { envelope: ok({ started: true, device }), exitKind: 'ok' };
+}
+
+async function handleSessionStatus(
+  { projectRoot, client = require('./device/session-client') } = {}
+) {
+  const running = await client.isAlive(projectRoot);
+  return { envelope: ok({ running }), exitKind: 'ok' };
+}
+
+async function handleSessionEnd(
+  { projectRoot, client = require('./device/session-client') } = {}
+) {
+  const stopped = await client.requestShutdown(projectRoot);
+  return {
+    envelope: ok({ stopped, already_stopped: !stopped }),
+    exitKind: 'ok',
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Program wiring
 // ---------------------------------------------------------------------------
 
-// Lazily build a DeviceBridge backed by a real mobile-mcp connection. Returns
-// the bridge plus a close() to tear the transport down. Imported lazily so the
-// MCP SDK is only loaded when an on-device command actually runs.
-async function realDeviceBridge({ device } = {}) {
-  const { createCall } = require('./device/mobile-mcp-client');
-  const { call, close } = await createCall({ device });
-  return { bridge: new DeviceBridge({ call }), close };
+// Build a DeviceBridge, transparently reusing the per-workspace device session
+// daemon when one fits and falling back to a one-shot mobile-mcp spawn
+// otherwise. Returns { bridge, close } — the `deviceBridgeFactory` seam +
+// contract are preserved so existing handler tests stay green. When the bridge
+// is daemon-backed, close() only releases this verb's socket; it never tears
+// the shared daemon down.
+async function realDeviceBridge({ device, projectRoot = process.cwd() } = {}) {
+  const { resolveDeviceConnection } = require('./device/resolve-connection');
+  const { bridge, close } = await resolveDeviceConnection({ device, projectRoot });
+  return { bridge, close };
 }
 
 function buildProgram(deps = {}) {
@@ -492,7 +553,7 @@ function buildProgram(deps = {}) {
     .description('List the agnostic UI elements currently on screen')
     .option('--device <id>', 'target device id')
     .action(async (opts) => {
-      const { bridge, close } = await deviceBridgeFactory({ device: opts.device });
+      const { bridge, close } = await deviceBridgeFactory({ device: opts.device, projectRoot });
       try {
         const r = await handleElements({ deviceBridge: bridge });
         emit(r, humanFlag());
@@ -506,7 +567,7 @@ function buildProgram(deps = {}) {
     .description('Save a screenshot to the given path')
     .option('--device <id>', 'target device id')
     .action(async (destPath, opts) => {
-      const { bridge, close } = await deviceBridgeFactory({ device: opts.device });
+      const { bridge, close } = await deviceBridgeFactory({ device: opts.device, projectRoot });
       try {
         const r = await handleScreenshot({ deviceBridge: bridge }, destPath);
         emit(r, humanFlag());
@@ -526,7 +587,7 @@ function buildProgram(deps = {}) {
   // --- Action verbs (one-shot; CLI owns the mechanical work) ---------------
 
   const withBridge = async (device, fn) => {
-    const { bridge, close } = await deviceBridgeFactory({ device });
+    const { bridge, close } = await deviceBridgeFactory({ device, projectRoot });
     try {
       const r = await fn(bridge);
       emit(r, humanFlag());
@@ -712,6 +773,38 @@ function buildProgram(deps = {}) {
       emit(r, humanFlag());
     });
 
+  // --- Issue #91: device session lifecycle ---------------------------------
+
+  const session = program
+    .command('session')
+    .description('Manage the persistent device session daemon (one reused mobile-mcp connection)');
+
+  session
+    .command('start')
+    .description('Start the device session daemon (subsequent verbs reuse its connection)')
+    .option('--device <id>', 'pin the daemon to a target device id')
+    .option('--idle <ms>', 'idle timeout in milliseconds before the daemon self-reaps')
+    .action(async (opts) => {
+      const r = await handleSessionStart({ projectRoot }, { device: opts.device, idle: opts.idle });
+      emit(r, humanFlag());
+    });
+
+  session
+    .command('status')
+    .description('Report whether a device session daemon is running')
+    .action(async () => {
+      const r = await handleSessionStatus({ projectRoot });
+      emit(r, humanFlag());
+    });
+
+  session
+    .command('end')
+    .description('Stop the device session daemon and remove its socket/pidfile')
+    .action(async () => {
+      const r = await handleSessionEnd({ projectRoot });
+      emit(r, humanFlag());
+    });
+
   program
     .command('mcp')
     .description('Run the MCP prompts server (stdio) exposing the mauto workflows as prompts')
@@ -764,4 +857,7 @@ module.exports = {
   handleInit,
   handleRecordBundle,
   handleRecord,
+  handleSessionStart,
+  handleSessionStatus,
+  handleSessionEnd,
 };

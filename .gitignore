@@ -35,6 +35,9 @@ site/
 .worktrees/
 docs/superpowers/
 
+# Mobile Automator device session daemon (socket / pidfile / handle)
+mobile-automator/.session/
+
 # Mobile Automator recorder per-session working directory
 mobile-automator/.recorder/
 
