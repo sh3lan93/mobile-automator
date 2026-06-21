@@ -202,6 +202,82 @@ describe('startModeB (lifecycle/mode-b)', () => {
     await exit;
   });
 
+  test('deps.now is threaded to the poller and both tap-source factories (#107)', async () => {
+    // A shared fake clock that lets us verify the same reference is passed around.
+    const sharedNow = jest.fn(() => Date.now());
+
+    // Android path — inject a fake getevent factory and capture its call args.
+    const fakeAndroidSource = Object.assign(new EventEmitter(), { start: jest.fn(), stop: jest.fn() });
+    const createGeteventTapSource = jest.fn(() => fakeAndroidSource);
+
+    // Also inject a fake hierarchy poller so we can verify now is passed to it.
+    let pollerOpts = null;
+    const fakePoller = {
+      start: jest.fn(),
+      stop: jest.fn(),
+      findSnapshotBefore: jest.fn(() => null),
+      _buffer: [],
+    };
+    const FakeHierarchyPoller = jest.fn((opts) => { pollerOpts = opts; return fakePoller; });
+
+    const wsCtx = makeFakeWsCtx();
+    const exit = startModeB({
+      store: makeFakeStore(), wsCtx, httpSrv: {},
+      projectRoot: setupProject(), scenarioId: 'scn', platform: 'android',
+      appPackage: 'com.example.app', opts: {},
+      deps: {
+        useLiveDevice: true,
+        now: sharedNow,
+        createGeteventTapSource,
+        hierarchyPoller: fakePoller,   // pre-constructed; skip ctor but keep the seam
+        mcpCall: async () => ({ elements: [] }),
+        pollIntervalMs: 10_000,
+        attachFailureModes: () => ({ stopAll() {} }),
+      },
+    });
+
+    await wait(5);
+
+    // The getevent factory MUST have been called with the same now reference.
+    expect(createGeteventTapSource).toHaveBeenCalledTimes(1);
+    const factoryArg = createGeteventTapSource.mock.calls[0][0];
+    expect(factoryArg).toHaveProperty('now', sharedNow);
+
+    wsCtx._simulateMessage({ type: 'cancel' });
+    await exit;
+  });
+
+  test('deps.now is threaded to the screenshot tap-source factory on iOS (#107)', async () => {
+    const sharedNow = jest.fn(() => Date.now());
+
+    const fakeIosSource = Object.assign(new EventEmitter(), { start: jest.fn(), stop: jest.fn() });
+    const createScreenshotTapSource = jest.fn(() => fakeIosSource);
+
+    const wsCtx = makeFakeWsCtx();
+    const exit = startModeB({
+      store: makeFakeStore(), wsCtx, httpSrv: {},
+      projectRoot: setupProject(), scenarioId: 'scn', platform: 'ios',
+      appPackage: 'com.example.app', opts: {},
+      deps: {
+        useLiveDevice: true,
+        now: sharedNow,
+        createScreenshotTapSource,
+        mcpCall: async () => ({ elements: [] }),
+        pollIntervalMs: 10_000,
+        attachFailureModes: () => ({ stopAll() {} }),
+      },
+    });
+
+    await wait(5);
+
+    expect(createScreenshotTapSource).toHaveBeenCalledTimes(1);
+    const factoryArg = createScreenshotTapSource.mock.calls[0][0];
+    expect(factoryArg).toHaveProperty('now', sharedNow);
+
+    wsCtx._simulateMessage({ type: 'cancel' });
+    await exit;
+  });
+
   test('finish awaits tapSource.stop before flushing (#103 defect C)', async () => {
     const order = [];
     // Use an EventEmitter so the tap listener wiring inside mode-b.js works.

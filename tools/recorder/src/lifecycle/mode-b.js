@@ -97,11 +97,13 @@ async function startModeB({
     call: mcpCall || (async () => ({ elements: [] })),
   });
 
+  const now = deps.now || (() => Date.now());
   const pollIntervalMs = deps.pollIntervalMs || DEFAULT_POLL_INTERVAL_MS;
   const hierarchyPoller = deps.hierarchyPoller || new HierarchyPoller({
     bridge: mcpBridge,
     intervalMs: pollIntervalMs,
     capacity: 40,
+    now,
     onSuccess: () => {
       // Each successful poll feeds the most recent snapshot to disk so the
       // generator can reconstruct UI context at any timestamp.
@@ -170,11 +172,11 @@ async function startModeB({
     if (platform === 'android') {
       const { createGeteventTapSource } = require('../capture/getevent-tap-source');
       const _create = deps.createGeteventTapSource || createGeteventTapSource;
-      tapSource = _create({ deviceLabel: deps.deviceLabel });
+      tapSource = _create({ deviceLabel: deps.deviceLabel, now });
     } else {
       const { createScreenshotTapSource } = require('../capture/screenshot-tap-source');
       const _create = deps.createScreenshotTapSource || createScreenshotTapSource;
-      tapSource = _create({ deviceLabel: deps.deviceLabel });
+      tapSource = _create({ deviceLabel: deps.deviceLabel, now });
     }
     ownsTapSource = true;
   }

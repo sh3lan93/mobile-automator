@@ -14,6 +14,7 @@ function createGeteventTapSource({
   spawn = defaultSpawn,
   computeScale = computeAndroidScale,
   warn = console.warn,
+  now = () => Date.now(),
 } = {}) {
   const emitter = new EventEmitter();
   let proc = null;
@@ -28,7 +29,7 @@ function createGeteventTapSource({
       scale = { scaleX: 1, scaleY: 1 };
     }
     parser = new GeteventTouchParser({
-      emit: (e) => emitter.emit('tap', e),
+      emit: (e) => emitter.emit('tap', { ...e, t: now() }),
       scaleX: scale.scaleX,
       scaleY: scale.scaleY,
       tStart: null,
