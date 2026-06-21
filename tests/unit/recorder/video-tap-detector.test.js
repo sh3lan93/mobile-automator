@@ -50,6 +50,38 @@ describe('detectIndicatorInFrame', () => {
   });
 });
 
+// Fixture helpers for streaming tests: reuse the same PNG files the
+// processFrames suite uses, scoped to the light_blue (Android) profile.
+function frameWithDot(x, y) {
+  // dot-at-50-30.png has the indicator near (50,30); dot-at-100-50.png near (100,50).
+  // We pick whichever file is closest to the requested coordinate.
+  const file = (x <= 75 && y <= 40) ? 'dot-at-50-30.png' : 'dot-at-100-50.png';
+  return fs.readFileSync(path.join(FRAMES, file));
+}
+
+function frameBlank() {
+  return fs.readFileSync(path.join(FRAMES, 'no-indicator.png'));
+}
+
+describe('VideoTapDetector.streaming feed()', () => {
+  test('emits down on first dot frame, up after dot disappears', () => {
+    const events = [];
+    const det = new VideoTapDetector({ emit: (e) => events.push(e), color: 'light_blue' });
+    det.feed({ t: 0, buf: frameWithDot(100, 200) });
+    det.feed({ t: 30, buf: frameWithDot(100, 200) });
+    det.feed({ t: 60, buf: frameBlank() });
+    expect(events.map((e) => e.kind)).toEqual(['down', 'move', 'up']);
+  });
+
+  test('flush() emits a trailing up if a touch is still active', () => {
+    const events = [];
+    const det = new VideoTapDetector({ emit: (e) => events.push(e), color: 'light_blue' });
+    det.feed({ t: 0, buf: frameWithDot(10, 10) });
+    det.flush();
+    expect(events.map((e) => e.kind)).toEqual(['down', 'up']);
+  });
+});
+
 describe('VideoTapDetector.processFrames', () => {
   describe.each(PROFILES)('color=$color', ({ color, no, dot1, dot2 }) => {
     test('emits down/up around frames with/without indicator', () => {

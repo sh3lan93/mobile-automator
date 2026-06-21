@@ -55,27 +55,42 @@ class VideoTapDetector {
     this._emit = emit;
     this._color = color;
     this._fps = fps;
+    this._active = null;  // {x,y} of in-progress touch, or null
+    this._lastT = 0;
+  }
+
+  feed(frame) {
+    this._lastT = frame.t;
+    const dot = detectIndicatorInFrame(frame.buf, { color: this._color });
+    if (dot && !this._active) {
+      this._emit({ kind: 'down', t: frame.t, x: dot.x, y: dot.y });
+      this._active = { x: dot.x, y: dot.y };
+    } else if (dot && this._active) {
+      this._emit({ kind: 'move', t: frame.t, x: dot.x, y: dot.y });
+      this._active = { x: dot.x, y: dot.y };
+    } else if (!dot && this._active) {
+      this._emit({ kind: 'up', t: frame.t, x: this._active.x, y: this._active.y });
+      this._active = null;
+    }
+  }
+
+  flush() {
+    if (this._active) {
+      this._emit({ kind: 'up', t: this._lastT, x: this._active.x, y: this._active.y });
+      this._active = null;
+    }
   }
 
   processFrames(frames) {
-    let active = null;
-    for (const frame of frames) {
-      const dot = detectIndicatorInFrame(frame.buf, { color: this._color });
-      if (dot && !active) {
-        this._emit({ kind: 'down', t: frame.t, x: dot.x, y: dot.y });
-        active = { x: dot.x, y: dot.y };
-      } else if (dot && active) {
-        this._emit({ kind: 'move', t: frame.t, x: dot.x, y: dot.y });
-        active = { x: dot.x, y: dot.y };
-      } else if (!dot && active) {
-        this._emit({ kind: 'up', t: frame.t, x: active.x, y: active.y });
-        active = null;
-      }
-    }
-    if (active) {
+    // Back-compat batch API: a fresh, self-contained detection over `frames`.
+    const saved = this._active; this._active = null;
+    for (const frame of frames) this.feed(frame);
+    if (this._active) {
       const last = frames[frames.length - 1];
-      this._emit({ kind: 'up', t: last.t, x: active.x, y: active.y });
+      this._emit({ kind: 'up', t: last.t, x: this._active.x, y: this._active.y });
+      this._active = null;
     }
+    this._active = saved;
   }
 
   /** Run ffmpeg to extract frames; returns Promise<Array<{t, buf}>>. Used in integration tests. */
