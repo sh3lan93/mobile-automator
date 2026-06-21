@@ -44,9 +44,16 @@ describe('toStepView', () => {
 
   test('maps a swipe event with direction (no target/unnamed)', () => {
     const ev = { kind: 'swipe', step_id: 'swipe_unknown', direction: 'up' };
-    const view = toStepView(ev, 3);
-    expect(view.action).toBe('swipe');
-    expect(view.direction).toBe('up');
-    expect(view.is_unnamed).toBe(false);
+    expect(toStepView(ev, 3)).toEqual({
+      id: 'swipe_unknown',
+      index: 3,
+      action: 'swipe',
+      target: null,
+      value: null,
+      field_label: null,
+      direction: 'up',
+      sensitive: false,
+      is_unnamed: false,
+    });
   });
 });

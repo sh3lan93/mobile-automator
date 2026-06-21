@@ -161,7 +161,10 @@ describe('startModeB (lifecycle/mode-b)', () => {
     const exit = startModeB({
       store, wsCtx, httpSrv: {}, projectRoot, scenarioId: 's',
       platform: 'android', appPackage: 'com.example.app',
-      deps: { mcpBridge: makeFakeMcpBridge(), pollIntervalMs: 9999, tapSource },
+      deps: {
+        mcpBridge: makeFakeMcpBridge(), pollIntervalMs: 9999, tapSource,
+        attachFailureModes: () => ({ stopAll() {} }),
+      },
     });
 
     await wait(5);
@@ -177,6 +180,16 @@ describe('startModeB (lifecycle/mode-b)', () => {
 
     const added = wsCtx._broadcasts.filter((m) => m.type === 'step-added');
     expect(added).toHaveLength(1);
-    expect(added[0].step).toMatchObject({ index: 1, action: 'tap' });
+    expect(added[0].step).toEqual({
+      id: 'tap_unknown',
+      index: 1,
+      action: 'tap',
+      target: null,
+      value: null,
+      field_label: null,
+      direction: null,
+      sensitive: false,
+      is_unnamed: true,
+    });
   });
 });
