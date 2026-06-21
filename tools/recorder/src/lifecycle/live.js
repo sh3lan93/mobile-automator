@@ -3,6 +3,7 @@
 const { ArtifactsStore } = require('../artifacts');
 const { startHttpServer } = require('../server/http-server');
 const { attachWsServer } = require('../server/ws-protocol');
+const { openInBrowser } = require('../server/browser-opener');
 const { loadProjectConfig, resolveModeAndDefaults } = require('../config');
 
 /**
@@ -30,6 +31,7 @@ async function startLiveCapture({
   const _attachWs = deps.attachWsServer || attachWsServer;
   const _startC3 = deps.startC3 || require('./c3').startC3;
   const _startModeB = deps.startModeB || require('./mode-b').startModeB;
+  const _openBrowser = deps.openInBrowser || openInBrowser;
 
   // Project config drives aware-vs-agnostic emit downstream. Pre-#29 configs
   // are coerced to platform-aware by resolveModeAndDefaults.
@@ -53,6 +55,16 @@ async function startLiveCapture({
     allowSensitiveInput: !!opts.allowSensitiveInput,
   });
   const wsCtx = _attachWs({ httpServer: httpSrv.server });
+
+  // Print the recorder GUI URL and auto-launch the default browser (#65).
+  // The URL is written to STDERR (never stdout) so the verb's JSON envelope on
+  // stdout stays clean; it is logged unconditionally so the user always has a
+  // fallback if auto-open fails silently (unsupported platform, ENOENT) or if
+  // the tab is closed mid-recording. `--no-gui` (opts.noGui) skips the launch
+  // so CI / headless / test mode stays browser-free.
+  const guiUrl = `http://127.0.0.1:${httpSrv.port}/`;
+  console.error(`🌐 Recorder GUI: ${guiUrl}`);
+  _openBrowser({ url: guiUrl, noGui: !!opts.noGui });
 
   // Broadcast the initial mode message so any client that connects sees the
   // emit mode without an extra round-trip.
