@@ -5,6 +5,7 @@ const { Command } = require('commander');
 
 const { ok, fail, render, exitCodeFor } = require('./output/envelope');
 const { DeviceBridge } = require('./device/bridge');
+const selectionStore = require('./device/selection');
 const { ScenarioValidator } = require('./scenario/validator');
 const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
 const { ResultStore } = require('./result/store');
@@ -511,6 +512,79 @@ async function handleSessionEnd(
   };
 }
 
+// --- Issue #92: device discovery + persisted selection -------------------
+//
+// `mauto devices` lists connected devices/simulators (id/name/platform/state)
+// via mobile-mcp. `mauto devices use <id>` persists a selection so subsequent
+// one-shot verbs don't need --device; `mauto devices clear` removes it. A
+// per-verb --device flag remains a per-call OVERRIDE that never writes the
+// store. All deps (deviceBridge, store) are injectable for testing.
+
+async function handleDevices({ deviceBridge }) {
+  try {
+    const devices = await deviceBridge.listDevices();
+    // Zero devices is a valid result, not an error (exit 0 with an empty list).
+    return { envelope: ok(devices), exitKind: 'ok' };
+  } catch (err) {
+    return {
+      envelope: fail(
+        'device',
+        err.message || String(err),
+        'Ensure a device or simulator is connected and reachable.'
+      ),
+      exitKind: 'device',
+    };
+  }
+}
+
+// Persist a device selection. Validates the id against the live device list so
+// using a non-existent id (or selecting against zero devices) fails clearly
+// with a hint instead of pinning the workspace to a phantom device.
+async function handleDevicesUse({ deviceBridge, store = selectionStore, projectRoot }, id) {
+  const wanted = String(id == null ? '' : id);
+  if (!wanted) {
+    return {
+      envelope: fail('invalid_input', 'a device id is required', 'Run `mauto devices` to see ids, then `mauto devices use <id>`.'),
+      exitKind: 'invalid_input',
+    };
+  }
+
+  let devices;
+  try {
+    devices = await deviceBridge.listDevices();
+  } catch (err) {
+    return {
+      envelope: fail('device', err.message || String(err), 'Ensure a device or simulator is connected and reachable.'),
+      exitKind: 'device',
+    };
+  }
+
+  if (!devices.length) {
+    return {
+      envelope: fail('device', 'no devices are connected', 'Connect a device or simulator, then run `mauto devices`.'),
+      exitKind: 'device',
+    };
+  }
+
+  const match = devices.find((d) => d.id === wanted);
+  if (!match) {
+    const ids = devices.map((d) => d.id).join(', ');
+    return {
+      envelope: fail('device', `no connected device matches id "${wanted}"`, `Choose one of: ${ids}`),
+      exitKind: 'device',
+    };
+  }
+
+  store.write(projectRoot, match.id);
+  return { envelope: ok({ selected: match.id, device: match }), exitKind: 'ok' };
+}
+
+function handleDevicesClear({ store = selectionStore, projectRoot }) {
+  const previous = store.read(projectRoot);
+  store.clear(projectRoot);
+  return { envelope: ok({ cleared: previous || null }), exitKind: 'ok' };
+}
+
 // ---------------------------------------------------------------------------
 // Program wiring
 // ---------------------------------------------------------------------------
@@ -548,12 +622,19 @@ function buildProgram(deps = {}) {
 
   const humanFlag = () => Boolean(program.opts().human);
 
+  // Resolve which device a verb targets: explicit --device wins, else the
+  // persisted selection, else null (mobile-mcp auto-selects a single device).
+  // Keeping the no-selection fast path returning null preserves zero-config use.
+  const resolveVerbDevice = (explicit) =>
+    selectionStore.resolveDevice({ explicit, projectRoot, store: selectionStore }).device;
+
   program
     .command('elements')
     .description('List the agnostic UI elements currently on screen')
     .option('--device <id>', 'target device id')
     .action(async (opts) => {
-      const { bridge, close } = await deviceBridgeFactory({ device: opts.device, projectRoot });
+      const device = resolveVerbDevice(opts.device);
+      const { bridge, close } = await deviceBridgeFactory({ device, projectRoot });
       try {
         const r = await handleElements({ deviceBridge: bridge });
         emit(r, humanFlag());
@@ -567,7 +648,8 @@ function buildProgram(deps = {}) {
     .description('Save a screenshot to the given path')
     .option('--device <id>', 'target device id')
     .action(async (destPath, opts) => {
-      const { bridge, close } = await deviceBridgeFactory({ device: opts.device, projectRoot });
+      const device = resolveVerbDevice(opts.device);
+      const { bridge, close } = await deviceBridgeFactory({ device, projectRoot });
       try {
         const r = await handleScreenshot({ deviceBridge: bridge }, destPath);
         emit(r, humanFlag());
@@ -586,7 +668,8 @@ function buildProgram(deps = {}) {
 
   // --- Action verbs (one-shot; CLI owns the mechanical work) ---------------
 
-  const withBridge = async (device, fn) => {
+  const withBridge = async (explicitDevice, fn) => {
+    const device = resolveVerbDevice(explicitDevice);
     const { bridge, close } = await deviceBridgeFactory({ device, projectRoot });
     try {
       const r = await fn(bridge);
@@ -805,6 +888,42 @@ function buildProgram(deps = {}) {
       emit(r, humanFlag());
     });
 
+  // --- Issue #92: device discovery + persisted selection -------------------
+
+  const devices = program
+    .command('devices')
+    .description('List connected devices/simulators (id/name/platform/state)')
+    .action(async () => {
+      const { bridge, close } = await deviceBridgeFactory({ device: null, projectRoot });
+      try {
+        const r = await handleDevices({ deviceBridge: bridge });
+        emit(r, humanFlag());
+      } finally {
+        if (typeof close === 'function') await close();
+      }
+    });
+
+  devices
+    .command('use <id>')
+    .description('Persist a device selection so subsequent verbs reuse it (--device still overrides per-call)')
+    .action(async (id) => {
+      const { bridge, close } = await deviceBridgeFactory({ device: null, projectRoot });
+      try {
+        const r = await handleDevicesUse({ deviceBridge: bridge, projectRoot }, id);
+        emit(r, humanFlag());
+      } finally {
+        if (typeof close === 'function') await close();
+      }
+    });
+
+  devices
+    .command('clear')
+    .description('Remove the persisted device selection')
+    .action(() => {
+      const r = handleDevicesClear({ projectRoot });
+      emit(r, humanFlag());
+    });
+
   program
     .command('mcp')
     .description('Run the MCP prompts server (stdio) exposing the mauto workflows as prompts')
@@ -860,4 +979,7 @@ module.exports = {
   handleSessionStart,
   handleSessionStatus,
   handleSessionEnd,
+  handleDevices,
+  handleDevicesUse,
+  handleDevicesClear,
 };

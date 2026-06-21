@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0]
+
+### ✨ Added
+
+- **Device discovery + persisted selection** ([#92](https://github.com/sh3lan93/mobile-automator/issues/92), Refs [#69](https://github.com/sh3lan93/mobile-automator/issues/69)). `mauto devices` lists connected devices/simulators (`id`, `name`, `platform`, `state` only — no OS-specific identifiers) in the standard JSON envelope; an empty list is a valid `ok([])` result. `mauto devices use <id>` persists a selection (validated against the live device list) so subsequent one-shot verbs reuse it without re-passing `--device`; `mauto devices clear` removes it. The selection is stored alongside #91's session layout at `mobile-automator/.session/selection.json` (separate from `config.json` and the daemon handle). Precedence is explicit `--device` flag > persisted selection > none — `--device` is always a per-call override and never writes the store, and a verb with no selection still passes `null` so mobile-mcp auto-selects a single device. Selecting against zero or an unknown device fails clearly (`error.kind = "device"`, exit 2) with a `hint` listing the available ids.
+
 ## [0.15.0]
 
 ### ✨ Added

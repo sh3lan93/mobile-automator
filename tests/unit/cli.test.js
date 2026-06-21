@@ -27,7 +27,12 @@ const {
   handleSessionStart,
   handleSessionStatus,
   handleSessionEnd,
+  handleDevices,
+  handleDevicesUse,
+  handleDevicesClear,
+  buildProgram,
 } = require('../../src/cli');
+const selectionStore = require('../../src/device/selection');
 const Ajv = require('ajv');
 
 const RESULT_SCHEMA_PATH = path.resolve(
@@ -708,6 +713,178 @@ describe('cli handlers', () => {
       const r = await handleSessionEnd({ projectRoot: '/x', client: { requestShutdown: async () => false } });
       expect(r.envelope.data.stopped).toBe(false);
       expect(r.envelope.data.already_stopped).toBe(true);
+    });
+  });
+
+  describe('handleDevices', () => {
+    test('returns ok envelope with the normalized device list', async () => {
+      const deviceBridge = {
+        listDevices: async () => [
+          { id: 'emulator-5554', name: 'Pixel', platform: 'android', state: 'running' },
+        ],
+      };
+      const { envelope, exitKind } = await handleDevices({ deviceBridge });
+      expect(exitKind).toBe('ok');
+      expect(envelope.ok).toBe(true);
+      expect(envelope.data).toHaveLength(1);
+      expect(JSON.stringify(envelope)).not.toMatch(/resource_id/);
+    });
+
+    test('an empty device list is ok([]) with exit 0', async () => {
+      const deviceBridge = { listDevices: async () => [] };
+      const { envelope, exitKind } = await handleDevices({ deviceBridge });
+      expect(exitKind).toBe('ok');
+      expect(envelope.ok).toBe(true);
+      expect(envelope.data).toEqual([]);
+    });
+
+    test('a bridge error -> device fail (exit 2)', async () => {
+      const deviceBridge = {
+        listDevices: async () => {
+          throw new Error('mobile-mcp unreachable');
+        },
+      };
+      const { envelope, exitKind } = await handleDevices({ deviceBridge });
+      expect(exitKind).toBe('device');
+      expect(envelope.ok).toBe(false);
+      expect(envelope.error.kind).toBe('device');
+      expect(envelope.error.message).toMatch(/unreachable/);
+    });
+  });
+
+  describe('handleDevicesUse', () => {
+    test('persists a valid id via the injected store and returns the device', async () => {
+      const writes = [];
+      const store = { write: (root, id) => writes.push([root, id]) };
+      const deviceBridge = {
+        listDevices: async () => [
+          { id: 'A', name: 'Phone A', platform: 'android', state: 'running' },
+          { id: 'B', name: 'Phone B', platform: 'ios', state: 'booted' },
+        ],
+      };
+      const { envelope, exitKind } = await handleDevicesUse(
+        { deviceBridge, store, projectRoot: '/x' },
+        'B'
+      );
+      expect(exitKind).toBe('ok');
+      expect(envelope.data.selected).toBe('B');
+      expect(writes).toEqual([['/x', 'B']]);
+    });
+
+    test('zero devices -> device fail with a hint (exit 2), store not written', async () => {
+      const writes = [];
+      const store = { write: (...a) => writes.push(a) };
+      const deviceBridge = { listDevices: async () => [] };
+      const { envelope, exitKind } = await handleDevicesUse(
+        { deviceBridge, store, projectRoot: '/x' },
+        'A'
+      );
+      expect(exitKind).toBe('device');
+      expect(envelope.ok).toBe(false);
+      expect(envelope.hint).toBeTruthy();
+      expect(writes).toEqual([]);
+    });
+
+    test('unknown id (ambiguous/no match) -> device fail with a hint, store not written', async () => {
+      const writes = [];
+      const store = { write: (...a) => writes.push(a) };
+      const deviceBridge = {
+        listDevices: async () => [
+          { id: 'A', name: null, platform: null, state: null },
+          { id: 'B', name: null, platform: null, state: null },
+        ],
+      };
+      const { envelope, exitKind } = await handleDevicesUse(
+        { deviceBridge, store, projectRoot: '/x' },
+        'C'
+      );
+      expect(exitKind).toBe('device');
+      expect(envelope.error.kind).toBe('device');
+      expect(envelope.hint).toMatch(/A, B/);
+      expect(writes).toEqual([]);
+    });
+
+    test('missing id -> invalid_input', async () => {
+      const deviceBridge = { listDevices: async () => [{ id: 'A' }] };
+      const { exitKind } = await handleDevicesUse(
+        { deviceBridge, store: {}, projectRoot: '/x' },
+        ''
+      );
+      expect(exitKind).toBe('invalid_input');
+    });
+  });
+
+  describe('handleDevicesClear', () => {
+    test('clears via the injected store and reports the previous selection', () => {
+      const cleared = [];
+      const store = { read: () => 'A', clear: (root) => cleared.push(root) };
+      const { envelope, exitKind } = handleDevicesClear({ store, projectRoot: '/x' });
+      expect(exitKind).toBe('ok');
+      expect(envelope.data.cleared).toBe('A');
+      expect(cleared).toEqual(['/x']);
+    });
+
+    test('reports cleared:null when nothing was selected', () => {
+      const store = { read: () => null, clear: () => {} };
+      const { envelope } = handleDevicesClear({ store, projectRoot: '/x' });
+      expect(envelope.data.cleared).toBeNull();
+    });
+  });
+
+  // Verb-level wiring: --device override vs persisted selection precedence.
+  describe('device verb selection precedence (buildProgram)', () => {
+    function tmpRoot() {
+      return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-devsel-'));
+    }
+
+    // Run `argv` through a program with an injected bridge factory that records
+    // the device it was asked for, and an injected emit that swallows output.
+    async function runVerb(argv, projectRoot) {
+      const seen = [];
+      const deviceBridgeFactory = async ({ device }) => {
+        seen.push(device);
+        return {
+          bridge: {
+            listElements: async () => [],
+            tap: async () => ({}),
+          },
+          close: async () => {},
+        };
+      };
+      const program = buildProgram({
+        projectRoot,
+        deviceBridgeFactory,
+        emit: () => {},
+      });
+      await program.parseAsync(['node', 'mauto', ...argv]);
+      return seen;
+    }
+
+    test('--device on a verb overrides the persisted selection', async () => {
+      const root = tmpRoot();
+      selectionStore.write(root, 'persisted-id');
+      const seen = await runVerb(['elements', '--device', 'flag-id'], root);
+      expect(seen).toEqual(['flag-id']);
+    });
+
+    test('a verb with no flag uses the persisted selection', async () => {
+      const root = tmpRoot();
+      selectionStore.write(root, 'persisted-id');
+      const seen = await runVerb(['elements'], root);
+      expect(seen).toEqual(['persisted-id']);
+    });
+
+    test('a verb with no flag and no selection passes null (fast path)', async () => {
+      const root = tmpRoot();
+      const seen = await runVerb(['elements'], root);
+      expect(seen).toEqual([null]);
+    });
+
+    test('an action verb (tap) also honors the persisted selection', async () => {
+      const root = tmpRoot();
+      selectionStore.write(root, 'persisted-id');
+      const seen = await runVerb(['tap', '--at', '1,2'], root);
+      expect(seen).toEqual(['persisted-id']);
     });
   });
 });
