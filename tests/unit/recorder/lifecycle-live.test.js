@@ -30,8 +30,8 @@ function makeFakeWsCtx() {
   };
 }
 
-function makeFakeHttpSrv() {
-  return { port: 0, server: {}, close: jest.fn().mockResolvedValue(undefined) };
+function makeFakeHttpSrv(port = 0) {
+  return { port, server: {}, close: jest.fn().mockResolvedValue(undefined) };
 }
 
 describe('startLiveCapture (lifecycle/live)', () => {
@@ -53,6 +53,7 @@ describe('startLiveCapture (lifecycle/live)', () => {
         attachWsServer: jest.fn().mockReturnValue(wsCtx),
         startC3: jest.fn().mockResolvedValue(0),
         startModeB: jest.fn().mockResolvedValue(0),
+        openInBrowser: jest.fn(),
       },
     });
 
@@ -79,6 +80,7 @@ describe('startLiveCapture (lifecycle/live)', () => {
         attachWsServer: attachWs,
         startC3: jest.fn().mockResolvedValue(0),
         startModeB: jest.fn().mockResolvedValue(0),
+        openInBrowser: jest.fn(),
       },
     });
     expect(startHttp).toHaveBeenCalledWith(expect.objectContaining({
@@ -107,6 +109,7 @@ describe('startLiveCapture (lifecycle/live)', () => {
         attachWsServer: jest.fn().mockReturnValue(wsCtx),
         startC3,
         startModeB,
+        openInBrowser: jest.fn(),
       },
     });
 
@@ -140,6 +143,7 @@ describe('startLiveCapture (lifecycle/live)', () => {
         attachWsServer: jest.fn().mockReturnValue(wsCtx),
         startC3,
         startModeB,
+        openInBrowser: jest.fn(),
       },
     });
 
@@ -161,9 +165,93 @@ describe('startLiveCapture (lifecycle/live)', () => {
         attachWsServer: jest.fn().mockReturnValue(wsCtx),
         startC3: jest.fn().mockResolvedValue(0),
         startModeB: jest.fn().mockResolvedValue(0),
+        openInBrowser: jest.fn(),
       },
     });
     expect(wsCtx._broadcasts).toContainEqual({ type: 'mode', mode: 'platform-aware' });
+  });
+
+  test('auto-opens browser after HTTP server starts (before mode handler)', async () => {
+    const wsCtx = makeFakeWsCtx();
+    const httpSrv = makeFakeHttpSrv(54321);
+    const openInBrowser = jest.fn();
+    const startModeB = jest.fn().mockImplementation(() => {
+      // Order proof: the browser must already be opened by the time the mode
+      // handler runs.
+      expect(openInBrowser).toHaveBeenCalledTimes(1);
+      return Promise.resolve(0);
+    });
+
+    await startLiveCapture({
+      projectRoot,
+      scenarioId: 'scn',
+      platform: 'android',
+      mode: 'b',
+      opts: { noGui: false },
+      deps: {
+        startHttpServer: jest.fn().mockResolvedValue(httpSrv),
+        attachWsServer: jest.fn().mockReturnValue(wsCtx),
+        startC3: jest.fn().mockResolvedValue(0),
+        startModeB,
+        openInBrowser,
+      },
+    });
+
+    expect(openInBrowser).toHaveBeenCalledWith(expect.objectContaining({
+      url: 'http://127.0.0.1:54321/',
+      noGui: false,
+    }));
+  });
+
+  test('passes noGui:true through to the browser opener', async () => {
+    const wsCtx = makeFakeWsCtx();
+    const httpSrv = makeFakeHttpSrv(54321);
+    const openInBrowser = jest.fn();
+
+    await startLiveCapture({
+      projectRoot,
+      scenarioId: 'scn',
+      platform: 'android',
+      mode: 'b',
+      opts: { noGui: true },
+      deps: {
+        startHttpServer: jest.fn().mockResolvedValue(httpSrv),
+        attachWsServer: jest.fn().mockReturnValue(wsCtx),
+        startC3: jest.fn().mockResolvedValue(0),
+        startModeB: jest.fn().mockResolvedValue(0),
+        openInBrowser,
+      },
+    });
+
+    expect(openInBrowser).toHaveBeenCalledWith(expect.objectContaining({ noGui: true }));
+  });
+
+  test('always prints the GUI URL to stderr', async () => {
+    const wsCtx = makeFakeWsCtx();
+    const httpSrv = makeFakeHttpSrv(54321);
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      await startLiveCapture({
+        projectRoot,
+        scenarioId: 'scn',
+        platform: 'android',
+        mode: 'b',
+        opts: {},
+        deps: {
+          startHttpServer: jest.fn().mockResolvedValue(httpSrv),
+          attachWsServer: jest.fn().mockReturnValue(wsCtx),
+          startC3: jest.fn().mockResolvedValue(0),
+          startModeB: jest.fn().mockResolvedValue(0),
+          openInBrowser: jest.fn(),
+        },
+      });
+
+      const printed = errSpy.mock.calls.map((c) => String(c[0])).join('\n');
+      expect(printed).toContain('http://127.0.0.1:54321/');
+    } finally {
+      errSpy.mockRestore();
+    }
   });
 
   test('closes WS + HTTP server on completion', async () => {
@@ -180,6 +268,7 @@ describe('startLiveCapture (lifecycle/live)', () => {
         attachWsServer: jest.fn().mockReturnValue(wsCtx),
         startC3: jest.fn().mockResolvedValue(0),
         startModeB: jest.fn().mockResolvedValue(0),
+        openInBrowser: jest.fn(),
       },
     });
     expect(wsCtx.close).toHaveBeenCalled();

@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 Fixed
+
+- **Recorder GUI now auto-opens (no more silent hang)** ([#65](https://github.com/sh3lan93/mobile-automator/issues/65), Refs [#21](https://github.com/sh3lan93/mobile-automator/issues/21)). `mauto record <name>` previously started the HTTP+WebSocket sidecar and the mobile-mcp device connection but never opened the browser GUI nor printed its URL, so the terminal hung on `mobile-mcp server running on stdio` waiting for a WebSocket message that could never arrive. `startLiveCapture` now prints `🌐 Recorder GUI: http://127.0.0.1:<port>/` to **stderr** (stdout stays reserved for the JSON envelope) and auto-launches the host's default browser (`open`/`xdg-open`/`start`) immediately after the HTTP server binds. The URL is always printed as a fallback when auto-open fails silently; `--no-gui` skips the launch for CI/headless runs. New `tools/recorder/src/server/browser-opener.js` helper, dependency-injected for tests.
+
 ## [0.16.0]
 
 ### ✨ Added
