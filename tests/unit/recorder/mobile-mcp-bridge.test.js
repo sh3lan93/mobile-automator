@@ -93,4 +93,5 @@ test('listElementsOnScreen parses mobile-mcp string + maps to resolver shape', a
   expect(snap.elements).toHaveLength(1);
   expect(snap.elements[0].accessibility_label).toBe('Smart Watch');
   expect(snap.elements[0].bounds).toEqual([640, 804, 1280, 1657]);
+  expect(snap.elements[0].resource_id).toBeUndefined();  // agnostic invariant: identifier must never leak as resource_id
 });

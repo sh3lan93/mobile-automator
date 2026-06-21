@@ -9,6 +9,14 @@ describe('mapMcpElement', () => {
     expect(el.accessibility_label).toBe('Wireless Earbuds');
     expect(el.resource_id).toBeUndefined();        // agnostic: never carry identifier
   });
+  test('handles null/empty input without throwing', () => {
+    expect(() => mapMcpElement(null)).not.toThrow();
+    expect(mapMcpElement(null).bounds).toBeNull();
+    expect(mapMcpElement({}).bounds).toBeNull();
+  });
+  test('non-numeric coordinates yield null bounds', () => {
+    expect(mapMcpElement({ label: 'x', coordinates: { x: 'bad', y: 0, width: 1, height: 1 } }).bounds).toBeNull();
+  });
   test('resolveElement resolves a tapped target from a mapped element (no tap_unknown)', () => {
     const snapshot = { elements: [mapMcpElement({ type: 'android.widget.Button', label: 'Wireless Earbuds', identifier: 'x', coordinates: { x: 0, y: 804, width: 640, height: 853 } })] };
     const r = resolveElement(snapshot, 320, 1100);
