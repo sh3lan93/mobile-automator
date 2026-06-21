@@ -134,7 +134,7 @@ async function startModeB({
     silenceTimeoutMs: 1500,
   });
 
-  const classifier = new GestureClassifier({
+  const classifier = deps.classifier || new GestureClassifier({
     emit: (g) => {
       const snap = hierarchyPoller.findSnapshotBefore(g.t);
       // Route keyboard-region taps to TypeBuffer rather than emitting them.
@@ -183,20 +183,20 @@ async function startModeB({
   let resolveExit;
   const exitPromise = new Promise((res) => { resolveExit = res; });
   let resolved = false;
-  function finish(code) {
+  async function finish(code) {
     if (resolved) return;
     resolved = true;
     try { hierarchyPoller.stop(); } catch (_e) { /* swallow */ }
+    // Stop the live tap source FIRST and AWAIT it so any final up/gesture is
+    // delivered to the classifier before we flush (defect C fix — #103).
+    if (tapSource && typeof tapSource.stop === 'function') {
+      try { await tapSource.stop(); } catch (_e) { /* swallow */ }
+    }
     try { classifier.flush(); } catch (_e) { /* swallow */ }
     try { typeBuffer.flush(); } catch (_e) { /* swallow */ }
     // Tear down failure-orchestrator watchdogs (crash + browser timers).
     if (failureCtx && typeof failureCtx.stopAll === 'function') {
       try { failureCtx.stopAll(); } catch (_e) { /* swallow */ }
-    }
-    // Stop a tap source we own (the live one). Best-effort + async; we don't
-    // await it here since finish() is sync, but errors must not leak.
-    if (ownsTapSource && tapSource && typeof tapSource.stop === 'function') {
-      try { Promise.resolve(tapSource.stop()).catch(() => {}); } catch (_e) { /* swallow */ }
     }
     // Close the live device connection (no-op when tests injected a fake).
     if (deviceConn && typeof deviceConn.close === 'function') {

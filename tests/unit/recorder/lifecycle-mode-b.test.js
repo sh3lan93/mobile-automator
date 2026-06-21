@@ -202,6 +202,33 @@ describe('startModeB (lifecycle/mode-b)', () => {
     await exit;
   });
 
+  test('finish awaits tapSource.stop before flushing (#103 defect C)', async () => {
+    const order = [];
+    const tapSource = Object.assign(new EventEmitter(), {
+      start: jest.fn(),
+      stop: jest.fn(async () => { await Promise.resolve(); order.push('stop'); }),
+    });
+    const classifier = { feed: () => {}, flush: jest.fn(() => order.push('flush')) };
+
+    let savedFinish;
+    const wsCtx = makeFakeWsCtx();
+    const exit = startModeB({
+      store: makeFakeStore(), wsCtx, httpSrv: {},
+      projectRoot: setupProject(), scenarioId: 'scn', platform: 'android',
+      appPackage: 'com.example.app', opts: {},
+      deps: {
+        tapSource, classifier,                 // inject classifier (seam added in mode-b.js)
+        mcpCall: async () => ({ elements: [] }), pollIntervalMs: 10_000,
+        attachFailureModes: ({ onDone }) => { savedFinish = onDone; return { stopAll() {} }; },
+      },
+    });
+
+    await wait(5);
+    await savedFinish(0);                       // simulate a watchdog/save completion
+    await exit;
+    expect(order).toEqual(['stop', 'flush']);
+  });
+
   test('broadcasts step-added when a tap is captured (#103 defect B)', async () => {
     const tapSource = new EventEmitter();
     const wsCtx = makeFakeWsCtx();
