@@ -5,9 +5,14 @@ const { McpBridge } = require('../../../tools/recorder/src/capture/mobile-mcp-br
 describe('McpBridge', () => {
   test('forwards listElementsOnScreen to underlying call', async () => {
     const calls = [];
+    // Return a properly-shaped mobile-mcp 0.0.55 fixture (string format + coordinates)
+    // so the parse+map+filter pipeline produces a visible element.
+    const fixture = 'Found these elements on screen: ' + JSON.stringify([
+      { type: 'Button', text: 'OK', label: '', identifier: 'btn_ok', coordinates: { x: 0, y: 0, width: 100, height: 100 } },
+    ]);
     const fakeCall = async (toolName, args) => {
       calls.push({ toolName, args });
-      return { elements: [{ type: 'Button', bounds: [0, 0, 100, 100], text: 'OK' }] };
+      return fixture;
     };
     const bridge = new McpBridge({ call: fakeCall });
     const result = await bridge.listElementsOnScreen();
@@ -77,4 +82,15 @@ describe('McpBridge', () => {
     expect(calls[0].toolName).toBe('mobile_launch_app');
     expect(calls[0].args).toEqual({ packageName: 'com.example.app', locale: undefined });
   });
+});
+
+test('listElementsOnScreen parses mobile-mcp string + maps to resolver shape', async () => {
+  const fixture = 'Found these elements on screen: ' + JSON.stringify([
+    { type: 'android.widget.Button', text: '', label: 'Smart Watch', identifier: 'home_product_card_p002', coordinates: { x: 640, y: 804, width: 640, height: 853 } },
+  ]);
+  const bridge = new McpBridge({ call: async () => fixture });
+  const snap = await bridge.listElementsOnScreen();
+  expect(snap.elements).toHaveLength(1);
+  expect(snap.elements[0].accessibility_label).toBe('Smart Watch');
+  expect(snap.elements[0].bounds).toEqual([640, 804, 1280, 1657]);
 });
