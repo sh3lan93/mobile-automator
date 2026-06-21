@@ -154,10 +154,16 @@ async function startModeB({
   });
 
   // ---- Live tap source -----------------------------------------------------
-  // Tests inject `deps.tapSource` to drive the pipeline. The live path (slice 8)
-  // defaults to capture/tap-source, which plugs mobile-mcp screen recording into
-  // video-tap-detector to produce {t, kind, x, y} taps. This end-to-end live
-  // path is BEST-EFFORT and needs on-device validation (see tap-source.js).
+  // Tests inject `deps.tapSource` to drive the pipeline. The live path selects
+  // a source by platform:
+  //   - Android: `getevent-tap-source` streams `adb getevent -lt` output and
+  //     parses real-time ABS_MT touch events + hardware key presses into the
+  //     {t, kind, x, y} shape that the coalescing classifier expects.
+  //   - Other (iOS Simulator): `screenshot-tap-source` polls screenshots at a
+  //     fixed interval and feeds each frame through the streaming VideoTapDetector,
+  //     which detects the OS touch-indicator overlay and emits the same event shape.
+  // Tests may also inject `deps.createGeteventTapSource` / `deps.createScreenshotTapSource`
+  // to substitute fakes without touching the platform branch.
   let tapSource = deps.tapSource;
   let ownsTapSource = false;
   if (!tapSource && deps.useLiveDevice) {
