@@ -870,6 +870,11 @@
     return panel;
   }
 
+  function recorderWsUrl(location) {
+    var scheme = (location && location.protocol === 'https:') ? 'wss:' : 'ws:';
+    return scheme + '//' + location.host + '/ws';
+  }
+
   function _setMode(m) {
     _mode = m;
   }
@@ -884,6 +889,7 @@
   }
 
   // Expose to the browser global.
+  root.recorderWsUrl = recorderWsUrl;
   root.renderStepRow = renderStepRow;
   root.appendStep = appendStep;
   root.attachWsClient = attachWsClient;
@@ -906,6 +912,7 @@
   // Expose to CommonJS (jest).
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
+      recorderWsUrl: recorderWsUrl,
       renderStepRow: renderStepRow,
       appendStep: appendStep,
       attachWsClient: attachWsClient,
@@ -929,9 +936,6 @@
 
   // Auto-connect only in a real browser, never under tests.
   if (typeof window !== 'undefined' && !window.__RECORDER_TEST__ && typeof window.WebSocket !== 'undefined') {
-    const port = (typeof process !== 'undefined' && process.env && process.env.MOBILE_AUTOMATOR_RECORDER_PORT)
-      || (window.MOBILE_AUTOMATOR_RECORDER_PORT)
-      || '7681';
     try {
       var pendingAnchorStepId = null;
 
@@ -942,7 +946,7 @@
       }
 
       var ws = attachWsClient({
-        url: 'ws://localhost:' + port + '/ws',
+        url: recorderWsUrl(window.location),
         onStepAdded: appendStep,
         onAssertionScreenshotReady: function (payload) {
           if (pendingAnchorStepId === null) return;
