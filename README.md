@@ -4,7 +4,7 @@
 
 `mauto` is a host-agnostic CLI that lets **any** AI coding agent author and run UI tests on a real device or emulator. The agent decides *what* to do; `mauto` does it — tap, type, swipe, assert — through [mobile-mcp](https://github.com/mobile-next/mobile-mcp). Tests are plain JSON scenarios, **platform-agnostic** by default, so the same scenario runs on Android and iOS.
 
-Claude Code and Cursor have one-command setup (`mauto init --agent …`); any other MCP-capable agent connects via the `mauto mcp` prompts server. See [Using another agent](#-using-another-agent).
+Claude Code, Cursor, Gemini CLI, GitHub Copilot, and OpenAI Agents all have one-command setup via `mauto init --agent <claude|cursor|gemini|copilot|agents|all>`, which installs native Agent Skills into each host's skills directory (claude and cursor also get slash-commands/rules and the `mauto` MCP entry); any other MCP-capable agent connects via the `mauto mcp` prompts server. See [Using another agent](#-using-another-agent).
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Flutter%20%7C%20RN%20%7C%20KMP%20%7C%20CMP-green.svg)](#)
@@ -30,11 +30,11 @@ npm install && npm link        # exposes `mauto` globally
 
 ```bash
 cd ~/projects/my-app
-mauto init --agent claude      # or: --agent cursor
+mauto init --agent claude      # or: cursor | gemini | copilot | agents | all
 mauto setup                    # scaffolds mobile-automator/ + config
 ```
 
-`init` writes agent command files and registers the `mauto` MCP server (`.claude/commands/` + `.mcp.json`, or `.cursor/` for Cursor). `setup` creates the `mobile-automator/` workspace. Add `--mode agnostic` to `setup` for cross-platform apps (Flutter/RN/KMP/CMP).
+`init` installs native Agent Skills into each host's skills directory and writes agent command files + MCP server entry (`.claude/commands/` + `.mcp.json` for Claude Code; `.cursor/` for Cursor). `setup` creates the `mobile-automator/` workspace. Add `--mode agnostic` to `setup` for cross-platform apps (Flutter/RN/KMP/CMP).
 
 **3. Check your device is visible:**
 
@@ -74,13 +74,13 @@ Targets are always **visible text + semantic role + coordinates** — never brit
    (decisions)             (deterministic)        (automation)
 ```
 
-Because the contract is just verbs + JSON, **no agent is special** — `mauto init` ships first-class adapters for Claude Code and Cursor, but any agent that can run a shell command or speak MCP can drive the same tool.
+Because the contract is just verbs + JSON, **no agent is special** — `mauto init` ships native Agent Skills for Claude Code, Cursor, Gemini CLI, GitHub Copilot, and OpenAI Agents, but any agent that can run a shell command or speak MCP can drive the same tool.
 
 ---
 
 ## 🤖 Using another agent
 
-`mauto init` only has built-in adapters for **Claude Code** and **Cursor**. Any other AI agent can drive `mauto` through one of these, no adapter required:
+`mauto init` ships native Agent Skills for **Claude Code**, **Cursor**, **Gemini CLI**, **GitHub Copilot** (`copilot`), and **OpenAI Agents** (`agents`); use `--agent all` to install for all hosts at once. Any other AI agent can drive `mauto` through one of these, no adapter required:
 
 - **MCP (recommended):** point your MCP-capable agent at the prompts server — `mauto mcp` (stdio) — which exposes the `generate` / `execute` / `setup` workflows as prompts. Register it like any MCP server: command `mauto`, args `["mcp"]`.
 - **Plain shell:** have the agent read `mauto bootstrap` once (the verb map + invariants), then read `mauto guide <topic>` for a workflow and call the verbs (`mauto elements`, `tap`, `type`, `assert`, …) directly. Every verb returns the `{ok, data, error, hint}` envelope, so the agent can act on results programmatically.
@@ -108,7 +108,7 @@ Most low-level verbs are called **by the agent**, not by you. The ones you'll ru
 
 | Command | What it does |
 |---------|--------------|
-| `mauto init --agent <claude\|cursor>` | Install adapter files for a supported agent (commands/rule + MCP entry) |
+| `mauto init --agent <claude\|cursor\|gemini\|copilot\|agents\|all>` | Install native Agent Skills into each host's skills directory; also writes slash-commands/rules + MCP entry for claude/cursor |
 | `mauto setup [--mode aware\|agnostic]` | Scaffold the `mobile-automator/` workspace + config |
 | `mauto devices` · `devices use <id>` · `devices clear` | List / pin / unpin the target device |
 | `mauto guide <generate\|execute\|setup>` | Print the workflow guidance for a topic |
