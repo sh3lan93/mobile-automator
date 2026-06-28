@@ -13,9 +13,11 @@ const DENY_LABELS = {
 };
 
 function norm(s) {
-  // Map the curly apostrophe U+2019 (written as an escape so the byte cannot be
-  // silently flattened to a straight quote) onto a straight quote, so "Don’t
-  // Allow" matches the straight-quoted entries in the label sets above.
+  // Map the curly apostrophe (U+2019, the ’ glyph in the regex below) onto a
+  // straight quote, so "Don’t Allow" matches the straight-quoted entries in the
+  // label sets above. The U+2019 byte must be preserved literally here; the
+  // guard assertion in labels.test.js fails loudly if it is ever flattened to a
+  // straight quote by editor/transport tooling.
   return String(s == null ? '' : s).replace(/’/g, "'").trim().toLowerCase();
 }
 

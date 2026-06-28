@@ -18,6 +18,7 @@ describe('findByLabels', () => {
     expect(deny[0].text).toContain('’'); // guard: the input really is curly
     const hit = findByLabels(deny, DENY_LABELS.ios);
     expect(hit.element).toBe(deny[0]);
+    expect(hit.label).toBe('Don’t Allow'); // original, un-normalized label returned
   });
 
   test('returns null when nothing matches', () => {
