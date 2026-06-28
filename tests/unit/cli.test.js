@@ -684,4 +684,45 @@ describe('cli handlers', () => {
       expect(seen).toEqual(['persisted-id']);
     });
   });
+
+  describe('handleInit — five agents + all', () => {
+    const fsForInit = fs;
+    const pathForInit = path;
+    function initTmpRoot() {
+      return fsForInit.mkdtempSync(pathForInit.join(os.tmpdir(), 'mauto-cliinit-'));
+    }
+
+    test('unknown agent fails with a hint listing all five', () => {
+      const r = handleInit({ projectRoot: initTmpRoot() }, 'frobnicator');
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.hint).toMatch(/claude.*cursor.*gemini.*copilot.*agents/);
+    });
+
+    test('a single agent installs its skills', () => {
+      const projectRoot = initTmpRoot();
+      const r = handleInit({ projectRoot }, 'gemini');
+      expect(r.exitKind).toBe('ok');
+      const f = pathForInit.join(projectRoot, '.gemini', 'skills', 'mobile-automator-execute', 'SKILL.md');
+      expect(fsForInit.existsSync(f)).toBe(true);
+    });
+
+    test('all installs skills for every agent', () => {
+      const projectRoot = initTmpRoot();
+      const r = handleInit({ projectRoot }, 'all');
+      expect(r.exitKind).toBe('ok');
+      expect(r.envelope.data.agents.sort()).toEqual(
+        ['agents', 'claude', 'copilot', 'cursor', 'gemini']
+      );
+      for (const [agent, dir] of [
+        ['claude', '.claude/skills'],
+        ['cursor', '.cursor/skills'],
+        ['gemini', '.gemini/skills'],
+        ['copilot', '.github/skills'],
+        ['agents', '.agents/skills'],
+      ]) {
+        const f = pathForInit.join(projectRoot, dir, 'mobile-automator-generate', 'SKILL.md');
+        expect(fsForInit.existsSync(f)).toBe(true);
+      }
+    });
+  });
 });

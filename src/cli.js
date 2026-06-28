@@ -354,10 +354,26 @@ function handleBootstrap({ emitter = guideEmitter } = {}) {
 // vendor's own namespace. Adapters are injectable for tests; the device is
 // never exposed as MCP tools — the `mauto mcp` server advertises prompts only.
 function handleInit({ projectRoot, adapters = ADAPTERS }, agent) {
+  const known = Object.keys(adapters);
+  if (agent === 'all') {
+    const results = known.map((a) => adapters[a].apply({ projectRoot }));
+    return {
+      envelope: ok({
+        agents: results.map((r) => r.agent),
+        written: results.flatMap((r) => r.written),
+        merged: results.flatMap((r) => r.merged),
+      }),
+      exitKind: 'ok',
+    };
+  }
   const adapter = adapters[agent];
   if (!adapter) {
     return {
-      envelope: fail('invalid_input', `unknown agent "${agent}"`, 'supported: claude, cursor'),
+      envelope: fail(
+        'invalid_input',
+        `unknown agent "${agent}"`,
+        `supported: ${known.join(', ')}, all`
+      ),
       exitKind: 'invalid_input',
     };
   }
@@ -739,8 +755,8 @@ function buildProgram(deps = {}) {
 
   program
     .command('init')
-    .description('Write per-vendor agent artifacts (slash commands/rules + MCP server entry)')
-    .requiredOption('--agent <name>', 'claude | cursor')
+    .description('Install native Agent Skills (+ slash commands/rules + MCP entry) for an agent')
+    .requiredOption('--agent <name>', 'claude | cursor | gemini | copilot | agents | all')
     .action((opts) => {
       const r = handleInit({ projectRoot }, opts.agent);
       emit(r, humanFlag());
