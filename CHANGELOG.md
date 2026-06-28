@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ✨ Added
+
+- **`mauto init` installs native Agent Skills.** `mauto init --agent <claude|cursor|gemini|copilot|agents|all>` now installs an Agent Skill (open standard: `SKILL.md` + `name`/`description` frontmatter) per workflow into each host's skills directory (`.claude/skills/`, `.cursor/skills/`, `.gemini/skills/`, `.github/skills/`, `.agents/skills/`). Skills are always discovered by the host and, on activation, inline the non-negotiable QA disciplines (follow scenario exactly, device only via `mauto` verbs, screenshot-backed assertions) while deferring the full mode-aware workflow to `mauto guide <topic>`. Restores guaranteed behavior-forcing without context bloat (progressive disclosure). The existing thin slash-commands/rules and MCP-server entry are still written for claude/cursor. (Refs [#69](https://github.com/sh3lan93/mobile-automator/issues/69))
+
 ## [0.20.0]
 
 ### Removed
