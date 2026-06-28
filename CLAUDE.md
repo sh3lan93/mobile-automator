@@ -1,64 +1,66 @@
 # CLAUDE.md
 
-Developer guide for maintaining this extension. User-facing docs live in `README.md`; runtime contract for Gemini lives in `GEMINI.md`; debugging recipes live in `TROUBLESHOOTING.md`.
+Developer guide for maintaining the `mauto` CLI. User-facing docs live in `README.md`; debugging recipes live in `TROUBLESHOOTING.md`.
 
 ## What this is
 
-Mobile Automator is a **Gemini CLI extension** for mobile QA automation. It is *not* a direct testing tool — it analyzes a mobile project, then generates project-specific testing skills. Production-ready and feature-complete.
+mobile-automator is a **host-agnostic `mauto` CLI** for AI-driven mobile QA automation. Any AI agent drives a device through `mauto` verbs (which wrap mobile-mcp); reasoning is pulled on demand via `mauto guide`. Production-ready.
 
-## Three-tier architecture
+## Architecture
 
 ```
-Tier 1 — Extension commands (commands/mobile-automator/*.toml)
-         Pre-flight: device detection, app install, scenario selection.
-Tier 2 — Workspace skills (.gemini/skills/mobile-automator-*)
-         Project-customized test generation & execution logic.
-Tier 3 — mobile-mcp (bundled via gemini-extension.json)
-         Platform-agnostic device automation primitives.
-```
+AI agent (any) → pulls reasoning via `mauto guide` / `bootstrap` / MCP prompts
+               → drives the device through `mauto` verbs (uniform JSON envelope)
+               → `src/device/` wraps mobile-mcp via one persistent session daemon
+               → real device / emulator
 
-Tier 1 wraps Tier 2 so infrastructure concerns are separated from domain logic.
+Artifacts live in the `mobile-automator/` workspace (created in the user's project).
+```
 
 ## File layout
 
 ```
-commands/mobile-automator/    setup, generate, execute, report, list-tags (.toml)
-templates/
-  mobile-automator-generator/{aware,agnostic}/SKILL.md
-  mobile-automator-executor/{aware,agnostic}/SKILL.md
-  mobile-automator-generator/references/scenario_schema.json   # v2.1
-  mobile-automator-executor/references/result_schema.json
-  references/platform-resolutions.md                 # agnostic-mode runtime contract
-mobile-automator/             (created in user projects) scenarios/, screenshots/, results/, config.json
+bin/
+  mauto.js                    # entry point for `mauto` and `mobile-automator` bin aliases
+  mauto-session-daemon.js     # entry point for `mauto-session-daemon`
+src/
+  cli.js                      # verb registration + handlers
+  assertion/  config/  device/  guide/  init/  mcp/  output/  result/  scenario/  schemas/  setup/
+  guide/content/
+    <topic>.aware.md          # guide prose for platform-aware mode
+    <topic>.agnostic.md       # guide prose for platform-agnostic mode
+  schemas/
+    scenario_schema.json      # v2.1
+    result_schema.json
+mobile-automator/             # created in user's project by `mauto setup`
+  config.json  scenarios/  screenshots/  results/  .session/
 ```
 
 ## Modes
 
-Selected during setup; stored as `mode` in `mobile-automator/config.json`. Configs predating the field are treated as `platform-aware` at runtime.
+Selected during setup; stored as `mode` in `mobile-automator/config.json`. Configs predating the field are treated as `platform-aware`.
 
-| Mode | Placeholders | Use for |
-|---|---|---|
-| `platform-aware` | 13 | Single-OS or OS-specific UI tests |
-| `platform-agnostic` | 6 | Cross-platform (Flutter/RN/KMP/CMP) |
+| Mode | Use for |
+|---|---|
+| `platform-aware` | Single-OS or OS-specific UI tests |
+| `platform-agnostic` | Cross-platform (Flutter/RN/KMP/CMP) |
 
-Agnostic mode replaces OS-specific primitives with four semantic actions resolved at runtime via `templates/references/platform-resolutions.md`: `press_back`, `dismiss_keyboard`, `grant_permission`, `deny_permission`. Schema 2.1 is additive over 2.0 (adds `mode` field + semantic actions).
+Agnostic mode maps OS gestures to four semantic actions resolved to per-platform mechanics at replay time: `press_back`, `dismiss_keyboard`, `grant_permission`, `deny_permission`. Schema 2.1 is additive over 2.0 (adds `mode` field + semantic actions). Each guide topic has `.aware.md` and `.agnostic.md` variants in `src/guide/content/`.
 
-Switching modes on re-setup runs an atomic 3-phase migration (carry-forward shared values, drop OS-specifics, re-ask agnostic-only fields, archive prior skills to `.gemini/skills/.archive/`). See TROUBLESHOOTING.md for manual restore.
+## Verbs
 
-## Commands
+All verbs emit `{ok,data,error,hint,schema_version}`; `--human` is an opt-in readable flag.
 
-Each command lives in `commands/mobile-automator/<name>.toml` and is namespaced as `/mobile-automator:<name>`.
-
-- **setup** — 7-section workflow: pre-init → platform detect → environment discovery → app package inference → project knowledge (architecture, business domain, loading indicators, protected dirs) → skill installation → scaffolding. Resumable via `mobile-automator/setup_state.json`. Section 6 reads templates from `${extensionPath}/templates/<mode>/`, replaces `{{placeholders}}`, writes to `.gemini/skills/`, and asserts no `{{` remains.
-- **generate** — Pre-flight wrapper. Validates config, resolves environment (saved in `mobile-automator/generate_preferences.json`; `--environment=` ephemeral, `--set-environment=` persists), confirms device + app install, delegates to generator skill.
-- **execute** — Pre-flight wrapper. Validates config, picks device (`--device` or interactive), resolves scenarios (`--all`, `--tag`, names, or interactive), delegates to executor skill.
-- **report**, **list-tags** — see their `.toml` files.
+- **Device actions:** `elements`, `tap`, `type <text>`, `swipe`, `press <button>`, `screenshot <path>`
+- **Author & verify:** `validate <file>`, `assert <type>`, `result add-step`, `result finalize`
+- **Workspace:** `setup`, `config get <key>`, `config set <key> <value>`
+- **Reasoning** (agent pulls on demand): `guide <topic>` (topics: `generate`, `execute`, `setup`); `bootstrap` (verb map + invariants); `schema <name>` (names: `scenario`, `result`)
+- **Agent integration:** `init --agent <claude|cursor>` (writes per-vendor slash-commands + MCP server entry); `mcp` (runs an MCP prompts server exposing guide topics)
+- **Device session:** `session start|status|end`; `devices` (list); `devices use <id>`; `devices clear`
 
 ## Placeholder contract
 
-Skill templates use `{{name}}` syntax. Setup gathers values, performs string replacement, writes populated `SKILL.md` to `.gemini/skills/`, then verifies no `{{` remains. Authoritative list of placeholder names lives in `setup.toml` Section 6 — don't re-document here, it'll drift.
-
-Runtime fallback: skills can read `mobile-automator/config.json` if a placeholder wasn't populated.
+Guide content in `src/guide/content/<topic>.<aware|agnostic>.md` carries `{{placeholder}}` tokens filled by `src/guide/placeholders.js` (`interpolate`) from `mobile-automator/config.json` at emit time. A fallback ensures no `{{` survives in emitted output. Lint guards in `tests/lint/guide-*.test.js` enforce: no surviving `{{placeholders}}`, no leaked `mobile_*` tool names, and (agnostic files) no OS names.
 
 ## Sample-app milestone workflow (mandatory for any agent)
 
@@ -89,26 +91,23 @@ This workflow lives here (not in per-slice issue bodies) so it applies uniformly
 
 ## Schemas
 
-- Scenario: `templates/mobile-automator-generator/references/scenario_schema.json` (v2.1, 14 actions, 27 assertions, named string IDs, root-level `variables`/`preconditions`).
-- Result: `templates/mobile-automator-executor/references/result_schema.json` (includes typed `observations`: `regression`, `flakiness`, `state_context`).
+- Scenario: `src/schemas/scenario_schema.json` (v2.1, 14 actions, 27 assertions, named string IDs, root-level `variables`/`preconditions`). Print with `mauto schema scenario`; validate a file with `mauto validate <file>`.
+- Result: `src/schemas/result_schema.json` (typed `observations`: `regression`, `flakiness`, `state_context`). Print with `mauto schema result`.
 
-Setup copies both to `.gemini/skills/mobile-automator-{generator,executor}/references/`. `GEMINI.md` is the registry that points skills at the workspace copies.
+## Adding a verb or guide topic
 
-## Adding a new skill
-
-1. Create `templates/mobile-automator-<name>/{aware,agnostic}/SKILL.md` with frontmatter + `{{placeholders}}`.
-2. Add any new schema under `references/`.
-3. Wire it into `setup.toml` Section 6's install loop.
-4. Reference new schema paths from `GEMINI.md`.
-5. Optionally add a `commands/mobile-automator/<name>.toml` wrapper.
+1. Register the verb handler in `src/cli.js`.
+2. For a new guide topic, add `src/guide/content/<topic>.aware.md` and `<topic>.agnostic.md`.
+3. Register the topic in `src/guide/emitter.js`, `src/mcp/prompts.js`, and `src/init/adapters.js`.
+4. Extend the lint guards in `tests/lint/`.
 
 ## Releasing & version handling
 
-Follow `RELEASE.md`. Users install via `npm i -g mobile-automator` (or run ad-hoc with `npx mobile-automator <verb>`). mobile-mcp ships as a pinned dependency (`@mobilenext/mobile-mcp@0.0.55`) and is spawned from `node_modules` — never fetched at runtime.
+Users install via `npm i -g mobile-automator` (or run ad-hoc with `npx mobile-automator <verb>`). mobile-mcp is pinned as a dependency (`@mobilenext/mobile-mcp@0.0.55`) and spawned from `node_modules` — never fetched at runtime.
 
 **Gate-then-graduate** for multi-PR features: ship behind an opt-in env var so partial states are invisible. Append slice entries under `## [Unreleased]`.
 
-**CI version-bump gate.** The `Verify version is bumped` workflow fails any PR touching CLI paths (`src/`, `bin/`, `package.json`) without bumping `package.json`'s `version` to a value not yet in `git tag` (tags are `vX.Y.Z`). Under the gate, **the first slice PR bumps to a release-candidate semver** (e.g. `0.12.0-rc.0`); each subsequent slice increments the rc counter (`-rc.1`, `-rc.2`, …). The `vX.Y.Z` tag namespace is reserved for graduated releases — rc.N values are never tagged.
+**CI version-bump gate.** The `Verify version is bumped` workflow fails any PR touching `src/`, `bin/`, or `package.json` without bumping `package.json`'s `version` to a value not yet in `git tag` (tags are `vX.Y.Z`). Under the gate, **the first slice PR bumps to a release-candidate semver** (e.g. `0.12.0-rc.0`); each subsequent slice increments the rc counter (`-rc.1`, `-rc.2`, …). The `vX.Y.Z` tag namespace is reserved for graduated releases — rc.N values are never tagged.
 
 **Graduation PR** removes the env-var gate, bumps `vX.Y.Z-rc.N` → `vX.Y.Z`, collapses `[Unreleased]` into the new release section, and creates the tag. Keeps `main` mergeable and preserves the "fully-formed feature per release" pattern (see v0.10/v0.11).
 
@@ -117,16 +116,16 @@ Follow `RELEASE.md`. Users install via `npm i -g mobile-automator` (or run ad-ho
 ```bash
 npm install                                           # in this repo (installs the pinned mobile-mcp)
 npm link                                              # exposes `mauto` / `mobile-automator` on PATH
-cd /path/to/test-mobile-app && mauto <verb>           # drive a device, e.g. mauto list-devices
+cd /path/to/test-mobile-app && mauto <verb>           # drive a device, e.g. mauto devices
 ```
 
 The mobile-mcp version is pinned in `package.json` (`@mobilenext/mobile-mcp`) and resolved from `node_modules` at runtime (see `src/device/mobile-mcp-client.js`). Bump the pin there if you need a newer engine.
 
 ## Conventions
 
-- All commands and skill names use the `mobile-automator` / `mobile-automator-*` namespace to avoid extension collisions.
-- Workspace paths in skills (`mobile-automator/scenarios/`, etc.) are relative to the user's project root, not this extension's directory.
-- **GEMINI.md vs CLAUDE.md**: GEMINI.md = runtime context for Gemini executing skills (schema registry, tool mappings). CLAUDE.md = this file, for humans maintaining the extension.
+- The `mobile-automator` namespace is used for workspace paths and the npm package.
+- Workspace paths (`mobile-automator/scenarios/`, etc.) are relative to the user's project root, not this repo.
+- CLAUDE.md is for humans maintaining the CLI.
 
 ## Metadata
 
