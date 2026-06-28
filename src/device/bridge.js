@@ -4,8 +4,7 @@ const { normalize, parseElements } = require('./element-model');
 const { normalizeDevices } = require('./device-model');
 
 // Thin wrapper over an injected mobile-mcp `call(toolName, args)` function.
-// Mirrors tools/recorder/src/capture/mobile-mcp-bridge.js but returns the
-// agnostic element model and exposes only the primitives Slice 1 needs.
+// Returns the agnostic element model and exposes only the primitives the CLI needs.
 class DeviceBridge {
   constructor({ call }) {
     if (typeof call !== 'function') {

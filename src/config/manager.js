@@ -2,9 +2,8 @@
 
 // Workspace config manager for the `mauto` CLI.
 //
-// Reads/writes mobile-automator/config.json under a project root. Mode
-// resolution mirrors the recorder's prior art (tools/recorder/src/config.js):
-// a config without an explicit `mode` is treated as `platform-aware`.
+// Reads/writes mobile-automator/config.json under a project root.
+// A config without an explicit `mode` is treated as `platform-aware`.
 
 const fs = require('fs');
 const path = require('path');

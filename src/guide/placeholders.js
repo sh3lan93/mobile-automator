@@ -10,7 +10,7 @@
 // enforce.
 //
 // PLACEHOLDER_KEYS maps each placeholder name to the config lookup(s) used to
-// resolve it. It is exported so the execute/record ports (slices 5/6) reuse the
+// resolve it. It is exported so the execute port (slice 5) reuses the
 // same contract instead of re-deriving it.
 
 const configManager = require('../config/manager');

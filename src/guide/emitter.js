@@ -25,7 +25,7 @@ const { interpolate } = require('./placeholders');
 // which fills tokens from the workspace config and applies a fallback so no
 // `{{` survives. Topics absent from this map fall through to the stub emitter.
 const CONTENT_DIR = path.resolve(__dirname, 'content');
-const PORTED_TOPICS = new Set(['generate', 'execute', 'record', 'setup']);
+const PORTED_TOPICS = new Set(['generate', 'execute', 'setup']);
 
 const SCENARIO_SCHEMA = path.resolve(__dirname, '../schemas/scenario_schema.json');
 const RESULT_SCHEMA = path.resolve(__dirname, '../schemas/result_schema.json');
@@ -35,8 +35,6 @@ const TOPICS = {
     'Author a test scenario. The agent drives `mauto elements`/`tap`/`type`/`swipe`/`press` to explore the app, then assembles a scenario JSON validated with `mauto validate` against `mauto schema scenario`.',
   execute:
     'Run a scenario. The agent replays each step through `mauto` action verbs, evaluates checks with `mauto assert`, and records progress with `mauto result add-step` / `mauto result finalize`.',
-  record:
-    'Capture a scenario from live interaction. The agent observes the session and emits scenario JSON through `mauto` verbs.',
   setup:
     'Initialise the workspace. `mauto setup` scaffolds the mobile-automator tree and a config; `mauto config get/set` reads and updates it.',
 };
@@ -103,7 +101,6 @@ function emitBootstrap() {
     ['config', 'get/set values in the workspace config'],
     ['guide', 'print the guide for a workflow topic'],
     ['schema', 'print the scenario or result JSON schema'],
-    ['record', 'capture a scenario from live interaction'],
   ];
 
   const lines = [];

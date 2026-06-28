@@ -9,18 +9,17 @@
 // would get from `mauto guide generate`.
 //
 // Naming scheme: prompts are named by the BARE topic (`generate`, `execute`,
-// `record`, `setup`) — identical to the `mauto guide <topic>` argument, so the
+// `setup`) — identical to the `mauto guide <topic>` argument, so the
 // two surfaces stay one-to-one and self-documenting.
 
 const guideEmitter = require('../guide/emitter');
 const configManager = require('../config/manager');
 
-const PROMPT_TOPICS = ['generate', 'execute', 'record', 'setup'];
+const PROMPT_TOPICS = ['generate', 'execute', 'setup'];
 
 const DESCRIPTIONS = {
   generate: 'Author a mobile test scenario by exploring the app with mauto verbs.',
   execute: 'Replay a scenario step-by-step and record the run results.',
-  record: 'Capture a scenario from a live interaction session.',
   setup: 'Initialise the mobile-automator workspace and config.',
 };
 

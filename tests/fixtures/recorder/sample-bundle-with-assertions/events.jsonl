@@ -1,2 +1,0 @@
-{"seq":1,"kind":"tap","t":1000,"timestamp_ms":1000,"x":540,"y":1090,"target":"Login","step_id":"tap_login","screenshot_ref":"screenshots/step_1.png","hierarchy_ref":"hierarchy/0001000.json"}
-{"seq":2,"kind":"tap","t":2000,"timestamp_ms":2000,"x":540,"y":800,"target":"Email","step_id":"tap_email","screenshot_ref":"screenshots/step_2.png","hierarchy_ref":"hierarchy/0002000.json"}

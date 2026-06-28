@@ -13,7 +13,6 @@ const configManager = require('./config/manager');
 const { scaffold } = require('./setup/scaffold');
 const guideEmitter = require('./guide/emitter');
 const { ADAPTERS } = require('./init/adapters');
-const bundleReader = require('./recorder/bundle-reader');
 
 // Map the user-facing --mode flag onto the stored config mode values.
 const MODE_ALIASES = {
@@ -323,7 +322,7 @@ function handleGuide({ projectRoot, emitter = guideEmitter, config = configManag
     raw = emitter.emitGuide(topic, { mode, projectRoot });
   } catch (err) {
     return {
-      envelope: fail('invalid_input', `unknown guide topic "${topic}"`, 'Topics: generate, execute, record, setup.'),
+      envelope: fail('invalid_input', `unknown guide topic "${topic}"`, 'Topics: generate, execute, setup.'),
       exitKind: 'invalid_input',
     };
   }
@@ -367,91 +366,6 @@ function handleInit({ projectRoot, adapters = ADAPTERS }, agent) {
     envelope: ok({ agent: r.agent, written: r.written, merged: r.merged }),
     exitKind: 'ok',
   };
-}
-
-// --- Slice 8: decoupled recorder bundle reader ----------------------------
-//
-// `mauto record-bundle <id>` reads the artifact bundle the recorder PERSISTED
-// on a successful Save (under mobile-automator/.recorder/<id>/) so an agent can
-// synthesize a scenario offline. `--consume` deletes the bundle after a
-// successful read (post-synthesis cleanup). A missing bundle is an
-// invalid_input error (exit 3) — there is nothing to read.
-function handleRecordBundle({ projectRoot, reader = bundleReader }, scenarioId, opts = {}) {
-  let bundle;
-  try {
-    bundle = reader.readBundle(projectRoot, scenarioId);
-  } catch (err) {
-    return {
-      envelope: fail(
-        'invalid_input',
-        err.message || `no recording bundle for ${scenarioId}`,
-        'record one first with mauto record'
-      ),
-      exitKind: 'invalid_input',
-    };
-  }
-
-  let consumed = false;
-  if (opts.consume) {
-    reader.consume(projectRoot, scenarioId);
-    consumed = true;
-  }
-
-  return { envelope: ok({ ...bundle, consumed }), exitKind: 'ok' };
-}
-
-// --- Slice 10: launch the web recorder ------------------------------------
-//
-// `mauto record <name>` launches the recorder sidecar (the live web GUI) so a
-// human can record a scenario. The sidecar is long-lived: the handler simply
-// awaits it and maps its numeric exit code onto the envelope contract.
-//
-// `startLiveCapture` is injected. It defaults to the REAL recorder, lazily
-// required so tests (which inject a fake) never load or launch the sidecar.
-async function handleRecord({
-  scenarioId,
-  opts = {},
-  projectRoot,
-  startLiveCapture = require('../tools/recorder/src/lifecycle/live').startLiveCapture,
-}) {
-  const mode = opts.mode
-    ? MODE_ALIASES[opts.mode]
-    : configManager.resolveMode(configManager.load(projectRoot));
-
-  const code = await startLiveCapture({
-    projectRoot,
-    scenarioId,
-    platform: opts.platform || 'android',
-    mode,
-    opts: {
-      noGui: opts.gui === false,
-      preconditionsModal: !!opts.preconditionsModal,
-      allowSensitiveInput: !!opts.allowSensitiveInput,
-      verify: !!opts.verify,
-      overwrite: !!opts.overwrite,
-    },
-  });
-
-  if (code === 0) {
-    return {
-      envelope: ok({
-        scenario_id: scenarioId,
-        recorded: true,
-        next: `mauto record-bundle ${scenarioId} then follow mauto guide record to synthesize`,
-      }),
-      exitKind: 'ok',
-    };
-  }
-  if (code === 130) {
-    return { envelope: fail('cancel', 'recording cancelled', null), exitKind: 'cancel' };
-  }
-  if (code === 2) {
-    return {
-      envelope: fail('device', 'device disconnected during recording', 'reconnect the device and rerun mauto record'),
-      exitKind: 'device',
-    };
-  }
-  return { envelope: fail('internal', `recorder exited with code ${code}`, null), exitKind: 'internal' };
 }
 
 // --- Issue #91: persistent device session daemon -------------------------
@@ -808,7 +722,7 @@ function buildProgram(deps = {}) {
 
   program
     .command('guide <topic>')
-    .description('Print the RAW workflow guide for a topic (generate|execute|record|setup)')
+    .description('Print the RAW workflow guide for a topic (generate|execute|setup)')
     .action((topic) => emitMaybeRaw(handleGuide({ projectRoot }, topic)));
 
   program
@@ -829,30 +743,6 @@ function buildProgram(deps = {}) {
     .requiredOption('--agent <name>', 'claude | cursor')
     .action((opts) => {
       const r = handleInit({ projectRoot }, opts.agent);
-      emit(r, humanFlag());
-    });
-
-  program
-    .command('record <name>')
-    .description('Launch the web recorder to capture a scenario interactively')
-    .option('--platform <platform>', 'android | ios', 'android')
-    .option('--mode <mode>', 'aware | agnostic (override the workspace config mode)')
-    .option('--overwrite', 'overwrite an existing scenario', false)
-    .option('--verify', 'replay the scenario via execute after Save', false)
-    .option('--allow-sensitive-input', 'opt out of sensitive-input warnings', false)
-    .option('--no-gui', 'run without launching the browser GUI')
-    .option('--preconditions-modal', 'show the preconditions modal before recording', false)
-    .action(async (name, opts) => {
-      const r = await handleRecord({ scenarioId: name, opts, projectRoot });
-      emit(r, humanFlag());
-    });
-
-  program
-    .command('record-bundle <id>')
-    .description('Read the persisted recorder artifact bundle for a scenario (for offline synthesis)')
-    .option('--consume', 'delete the bundle after a successful read', false)
-    .action((id, opts) => {
-      const r = handleRecordBundle({ projectRoot }, id, { consume: Boolean(opts.consume) });
       emit(r, humanFlag());
     });
 
@@ -974,8 +864,6 @@ module.exports = {
   handleSchema,
   handleBootstrap,
   handleInit,
-  handleRecordBundle,
-  handleRecord,
   handleSessionStart,
   handleSessionStatus,
   handleSessionEnd,

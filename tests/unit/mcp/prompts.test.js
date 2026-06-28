@@ -29,9 +29,9 @@ describe('buildPromptHandlers', () => {
       });
       const prompts = listPrompts();
       expect(prompts.map((p) => p.name).sort()).toEqual(
-        ['execute', 'generate', 'record', 'setup'].sort()
+        ['execute', 'generate', 'setup'].sort()
       );
-      expect(PROMPT_TOPICS.sort()).toEqual(['execute', 'generate', 'record', 'setup'].sort());
+      expect(PROMPT_TOPICS.sort()).toEqual(['execute', 'generate', 'setup'].sort());
     });
 
     test('each prompt has a non-empty description and empty arguments', () => {
@@ -90,7 +90,7 @@ describe('buildPromptHandlers', () => {
       const calls = [];
       const projectRoot = tmpRoot();
       const { getPrompt } = buildPromptHandlers({ projectRoot, emitGuide: fakeEmitGuide(calls) });
-      getPrompt('record');
+      getPrompt('setup');
       expect(calls[0].opts.projectRoot).toBe(projectRoot);
     });
 
