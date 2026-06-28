@@ -60,6 +60,14 @@ class IOSResolver extends SemanticResolver {
   // No hardware back on iOS: left-edge interactive-pop gesture.
   async pressBack() {
     const { width, height } = await this.bridge.getScreenSize();
+    // Without a real screen size the swipe would be a degenerate no-op that
+    // still reports success — hard-fail instead of silently doing nothing.
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+      throw new SemanticResolutionError(
+        `Cannot perform the iOS back gesture without a valid screen size (got ${width}x${height}).`,
+        'Ensure a device or simulator is connected.'
+      );
+    }
     await this.bridge.swipe({
       direction: 'right',
       x: 1,

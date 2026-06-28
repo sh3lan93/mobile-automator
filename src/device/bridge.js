@@ -73,10 +73,23 @@ class DeviceBridge {
     return String(match.platform).toLowerCase();
   }
 
-  // Physical screen size in pixels, for geometry-based gestures.
+  // Physical screen size in pixels, for geometry-based gestures. mobile-mcp
+  // returns this as the human string "Screen size is <w>x<h> pixels" (not an
+  // object), so we parse the WxH out of it; a structured {width,height} shape is
+  // also accepted in case a future engine returns one. An unreadable size is a
+  // hard error — never silently 0/NaN, which would make geometry gestures no-ops.
   async getScreenSize() {
     const r = await this._call('mobile_get_screen_size', {});
-    return { width: Number(r && r.width), height: Number(r && r.height) };
+    if (r && typeof r === 'object' && r.width != null && r.height != null) {
+      return { width: Number(r.width), height: Number(r.height) };
+    }
+    const m = /(\d+)\s*x\s*(\d+)/i.exec(String(r));
+    if (!m) {
+      const err = new Error(`Could not read the device screen size from "${r}".`);
+      err.hint = 'Ensure a device or simulator is connected.';
+      throw err;
+    }
+    return { width: Number(m[1]), height: Number(m[2]) };
   }
 
   // Press a hardware/system button (BACK, HOME, ENTER, ...).

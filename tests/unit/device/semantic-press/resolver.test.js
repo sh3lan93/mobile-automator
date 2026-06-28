@@ -55,6 +55,12 @@ describe('IOSResolver', () => {
     expect(b.calls).toEqual([['swipe', { direction: 'right', x: 1, y: 1000, distance: 600 }]]);
   });
 
+  test('press_back hard-fails (no swipe) when the screen size is unreadable', async () => {
+    const b = fakeBridge({ size: { width: NaN, height: NaN } });
+    await expect(new IOSResolver(b).pressBack()).rejects.toThrow(SemanticResolutionError);
+    expect(b.calls).toEqual([]); // never emit a degenerate no-op swipe
+  });
+
   test('dismiss_keyboard taps a return key when present', async () => {
     const b = fakeBridge({ elements: [{ text: 'Done', center: [900, 1200] }] });
     const r = await new IOSResolver(b).dismissKeyboard();
