@@ -72,8 +72,9 @@ For each step in the scenario:
 1. **Wait for prior stability:** poll `mauto elements` until loading indicators ({{loading_indicators}}) are absent before continuing.
 2. **Resolve the target:** for actions with a target, run `mauto elements` to locate by semantic description; never use stored coordinates. If `target_pattern` is set, use it as a regex to filter elements by text.
 3. **Execute the action:**
-   - Standard actions (`tap`, `swipe`, `type`, `long_press`, `double_tap`, `scroll_to_element`, `launch_app`, `open_url`, `wait_for_*`, `capture_value`, `clear_app_data`, `press_button`) → run the corresponding `mauto` verb (`mauto tap --at <x,y>`, `mauto swipe --direction <dir>`, `mauto type <text>`, `mauto press <button>`, etc.). Resolve coordinates from the latest `mauto elements` output.
+   - Standard actions → run the corresponding `mauto` verb: `tap` → `mauto tap --at <x,y>`, `long_press` → `mauto long-press --at <x,y>` (optional `--duration <ms>`), `double_tap` → `mauto double-tap --at <x,y>`, `swipe` / `scroll_to_element` → `mauto swipe --direction <dir>`, `type` → `mauto type <text>`, `press_button` → `mauto press <button>`, `launch_app` → `mauto launch <appId>`, `open_url` → `mauto open-url <url>`, `wait_for_*` → poll `mauto elements`, `capture_value` → `mauto elements` (extract text). Resolve coordinates from the latest `mauto elements` output.
    - Semantic actions → run `mauto press <action>` and let the CLI resolve them for the connected device.
+   - Not mechanically executable → `clear_app_data` (and the precondition device actions `enable_wifi` / `disable_wifi`) have no verb and no underlying primitive. Do NOT substitute a gesture: report them honestly as unsupported on this run, or perform them manually out of band if the run depends on them.
 4. **Capture screenshot:** Run `mauto screenshot mobile-automator/screenshots/<scenario_id>/<run_id>/step_<step_id>.png`.
 5. **Evaluate assertions** attached to the step (see section 4).
 6. **Record** the step result with `mauto result add-step`: status, screenshot path, retry count, observations, and captured variable values.
