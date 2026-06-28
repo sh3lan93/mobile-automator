@@ -1,105 +1,41 @@
 'use strict';
 
-// VendorAdapters — `mauto init --agent <claude|cursor>`.
+// VendorAdapters — `mauto init --agent <claude|cursor|gemini|copilot|agents>`.
 //
-// Each adapter writes artifacts in the VENDOR'S OWN namespace, is idempotent
-// (re-running yields identical files), and NEVER clobbers a user-authored file.
-// The only shared file either adapter touches is the MCP config (`.mcp.json`
-// for Claude, `.cursor/mcp.json` for Cursor): there we MERGE — owning only the
-// `mauto` key under `mcpServers` and preserving every other server and field.
+// Each adapter installs native Agent Skills (open standard: a SKILL.md folder
+// per topic) into the agent's skills directory, and is idempotent (re-running
+// yields byte-identical files). claude/cursor additionally keep writing their
+// thin slash-command/rule and merging the shared `mauto` MCP server entry.
+// Adapters never clobber a file they don't own.
 
 const fs = require('fs');
 const path = require('path');
 
 const guideEmitter = require('../guide/emitter');
+const { renderSkill, SKILL_TOPICS } = require('./skill-renderer');
 
 const TOPICS = ['generate', 'execute', 'setup'];
 
 // The single mauto MCP server entry merged into a vendor's mcp config.
 const MAUTO_SERVER = { command: 'mauto', args: ['mcp'] };
 
-// Thin slash-command body: a trigger that points the agent at the version-
-// matched guide and reasserts the device-only-via-mauto invariant. Deliberately
-// free of {{placeholders}} and mobile_* tool names.
+// Per-agent skills directory (relative to projectRoot). claude uses its own
+// namespace; cursor/gemini/copilot read their native dir; `agents` targets the
+// universal open-standard location read by cursor/gemini/copilot too.
+const SKILL_DEST = {
+  claude: path.join('.claude', 'skills'),
+  cursor: path.join('.cursor', 'skills'),
+  gemini: path.join('.gemini', 'skills'),
+  copilot: path.join('.github', 'skills'),
+  agents: path.join('.agents', 'skills'),
+};
+
 function claudeCommandBody(topic) {
   return (
     `Run \`mauto guide ${topic}\` and follow it. ` +
     'Drive the device only through `mauto` verbs (never assume resource-ids).\n'
   );
 }
-
-// Merge MAUTO_SERVER under mcpServers.mauto in a JSON file, preserving every
-// other server and top-level field. Creates the file (and parents) if absent.
-// Returns { changed } so the caller can report write-vs-merge accurately and
-// stay idempotent (no rewrite when the content is byte-identical).
-function mergeMcpConfig(filePath) {
-  let doc = {};
-  if (fs.existsSync(filePath)) {
-    doc = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    if (doc == null || typeof doc !== 'object' || Array.isArray(doc)) doc = {};
-  }
-  if (doc.mcpServers == null || typeof doc.mcpServers !== 'object') {
-    doc.mcpServers = {};
-  }
-  doc.mcpServers.mauto = { ...MAUTO_SERVER };
-
-  const next = JSON.stringify(doc, null, 2) + '\n';
-  const prev = fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : null;
-  if (prev === next) {
-    return { changed: false };
-  }
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, next);
-  return { changed: true };
-}
-
-// Write a file only when its content differs — keeps re-runs idempotent and
-// avoids touching a file a user may have customised to identical content.
-function writeIfChanged(filePath, content) {
-  const prev = fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : null;
-  if (prev === content) return false;
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, content);
-  return true;
-}
-
-const claude = {
-  apply({ projectRoot }) {
-    const written = [];
-    const merged = [];
-
-    const commandsDir = path.join(projectRoot, '.claude', 'commands');
-    for (const topic of TOPICS) {
-      const file = path.join(commandsDir, `mobile-automator-${topic}.md`);
-      writeIfChanged(file, claudeCommandBody(topic));
-      written.push(file);
-    }
-
-    const mcpPath = path.join(projectRoot, '.mcp.json');
-    mergeMcpConfig(mcpPath);
-    merged.push(mcpPath);
-
-    return { agent: 'claude', written, merged };
-  },
-};
-
-const cursor = {
-  apply({ projectRoot }) {
-    const written = [];
-    const merged = [];
-
-    // Cursor rule: a bootstrap pointer to the mauto CLI workflow surface.
-    const rulePath = path.join(projectRoot, '.cursor', 'rules', 'mobile-automator.mdc');
-    writeIfChanged(rulePath, cursorRuleBody());
-    written.push(rulePath);
-
-    const mcpPath = path.join(projectRoot, '.cursor', 'mcp.json');
-    mergeMcpConfig(mcpPath);
-    merged.push(mcpPath);
-
-    return { agent: 'cursor', written, merged };
-  },
-};
 
 function cursorRuleBody() {
   return (
@@ -113,6 +49,81 @@ function cursorRuleBody() {
   );
 }
 
-const ADAPTERS = { claude, cursor };
+function writeIfChanged(filePath, content) {
+  const prev = fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : null;
+  if (prev === content) return false;
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, content);
+  return true;
+}
 
-module.exports = { ADAPTERS, MAUTO_SERVER };
+function mergeMcpConfig(filePath) {
+  let doc = {};
+  if (fs.existsSync(filePath)) {
+    doc = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    if (doc == null || typeof doc !== 'object' || Array.isArray(doc)) doc = {};
+  }
+  if (doc.mcpServers == null || typeof doc.mcpServers !== 'object') {
+    doc.mcpServers = {};
+  }
+  doc.mcpServers.mauto = { ...MAUTO_SERVER };
+  const next = JSON.stringify(doc, null, 2) + '\n';
+  const prev = fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : null;
+  if (prev === next) return { changed: false };
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, next);
+  return { changed: true };
+}
+
+// Install one SKILL.md folder per topic under the agent's skills dir. Only the
+// folders we own are written; foreign skill folders are never touched.
+function writeSkills(projectRoot, agent, written) {
+  const root = path.join(projectRoot, SKILL_DEST[agent]);
+  for (const topic of SKILL_TOPICS) {
+    const { dirName, content } = renderSkill(topic);
+    const file = path.join(root, dirName, 'SKILL.md');
+    writeIfChanged(file, content);
+    written.push(file);
+  }
+}
+
+function makeAdapter(agent, extra) {
+  return {
+    apply({ projectRoot }) {
+      const written = [];
+      const merged = [];
+      if (extra) extra({ projectRoot, written, merged });
+      writeSkills(projectRoot, agent, written);
+      return { agent, written, merged };
+    },
+  };
+}
+
+const ADAPTERS = {
+  claude: makeAdapter('claude', ({ projectRoot, written, merged }) => {
+    const commandsDir = path.join(projectRoot, '.claude', 'commands');
+    for (const topic of TOPICS) {
+      const file = path.join(commandsDir, `mobile-automator-${topic}.md`);
+      writeIfChanged(file, claudeCommandBody(topic));
+      written.push(file);
+    }
+    const mcpPath = path.join(projectRoot, '.mcp.json');
+    mergeMcpConfig(mcpPath);
+    merged.push(mcpPath);
+  }),
+
+  cursor: makeAdapter('cursor', ({ projectRoot, written, merged }) => {
+    const rulePath = path.join(projectRoot, '.cursor', 'rules', 'mobile-automator.mdc');
+    writeIfChanged(rulePath, cursorRuleBody());
+    written.push(rulePath);
+    const mcpPath = path.join(projectRoot, '.cursor', 'mcp.json');
+    mergeMcpConfig(mcpPath);
+    merged.push(mcpPath);
+  }),
+
+  gemini: makeAdapter('gemini'),
+  copilot: makeAdapter('copilot'),
+  agents: makeAdapter('agents'),
+};
+
+module.exports = { ADAPTERS, MAUTO_SERVER, SKILL_DEST };
