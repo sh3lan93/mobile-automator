@@ -12,7 +12,7 @@ describe('findByLabels', () => {
   });
 
   test('normalizes curly apostrophes so "Don\'t Allow" matches', () => {
-    const deny = [{ text: 'Don\'t Allow', accessibility_label: null, center: [1, 2] }];
+    const deny = [{ text: "Don't Allow", accessibility_label: null, center: [1, 2] }];
     const hit = findByLabels(deny, DENY_LABELS.ios);
     expect(hit.element).toBe(deny[0]);
   });
