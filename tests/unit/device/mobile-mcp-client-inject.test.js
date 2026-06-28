@@ -1,5 +1,5 @@
 'use strict';
-const { makeCall } = require('../../../src/device/mobile-mcp-client');
+const { makeCall, parseToolResult } = require('../../../src/device/mobile-mcp-client');
 const { DeviceResolutionError } = require('../../../src/device/device-resolver');
 
 function rawWith(devices) {
@@ -53,5 +53,39 @@ describe('makeCall device threading', () => {
       call('mobile_swipe_on_screen', { direction: 'up' }),
     ]);
     expect(calls.filter((c) => c.tool === 'mobile_list_available_devices')).toHaveLength(1);
+  });
+});
+
+describe('parseToolResult error surfacing', () => {
+  test('throws with the mobile-mcp message when isError is set', () => {
+    const res = { isError: true, content: [{ type: 'text', text: 'Error: boom' }] };
+    expect(() => parseToolResult(res)).toThrow('Error: boom');
+  });
+
+  test('throws on an ActionableError returned as plain text without isError', () => {
+    // mobile-mcp returns ActionableError failures as text + this sentinel suffix
+    // and NO isError flag (e.g. an unsupported press button). Must still fail.
+    const res = {
+      content: [{ type: 'text', text: 'Button "press_back" is not supported. Please fix the issue and try again.' }],
+    };
+    expect(() => parseToolResult(res)).toThrow(/not supported/);
+  });
+
+  test('does not throw on ordinary success text', () => {
+    const res = { content: [{ type: 'text', text: 'Screenshot saved to: /tmp/x.png' }] };
+    expect(parseToolResult(res)).toBe('Screenshot saved to: /tmp/x.png');
+  });
+
+  test('throws a generic message when isError is set without text content', () => {
+    expect(() => parseToolResult({ isError: true, content: [] })).toThrow(/mobile-mcp/i);
+  });
+
+  test('returns parsed JSON text content on success', () => {
+    const res = { content: [{ type: 'text', text: '{"path":"/tmp/x.png"}' }] };
+    expect(parseToolResult(res)).toEqual({ path: '/tmp/x.png' });
+  });
+
+  test('returns structuredContent when present on success', () => {
+    expect(parseToolResult({ structuredContent: { a: 1 } })).toEqual({ a: 1 });
   });
 });

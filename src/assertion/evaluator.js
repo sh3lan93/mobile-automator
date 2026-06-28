@@ -36,12 +36,18 @@ const MECHANICAL_TYPES = new Set([
   'text_changed',
 ]);
 
-function textOf(e) {
-  return (e && typeof e.text === 'string') ? e.text : '';
-}
-
 function labelOf(e) {
   return (e && typeof e.accessibility_label === 'string') ? e.accessibility_label : '';
+}
+
+// The element's displayed content for content assertions. A real text node
+// wins; when an element carries none (common in agnostic UIs that expose
+// content through Semantics/accessibility labels rather than text), fall back
+// to the accessibility label so content assertions work on label-driven apps
+// instead of always seeing an empty string.
+function textOf(e) {
+  if (e && typeof e.text === 'string' && e.text.length > 0) return e.text;
+  return labelOf(e);
 }
 
 // An element "matches" a target string if the target appears (case-insensitive)
