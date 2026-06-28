@@ -116,13 +116,33 @@ describe('evaluate — mechanical types', () => {
     ).toBe(false);
   });
 
+  test('text_contains reads accessibility_label when text is null (agnostic apps)', () => {
+    // Agnostic UIs (Flutter/RN/etc.) commonly expose visible content through
+    // Semantics labels with no text node; content assertions must see it.
+    const cartItem = el(null, { accessibility_label: 'Wireless Earbuds\nQty 1\n$59.99' });
+    expect(
+      evaluate(
+        { type: 'text_contains', target: 'Wireless Earbuds', expected: 'Qty 1' },
+        { elements: [cartItem] }
+      ).pass
+    ).toBe(true);
+    expect(
+      evaluate(
+        { type: 'text_contains', target: 'Wireless Earbuds', expected: 'Qty 9' },
+        { elements: [cartItem] }
+      ).pass
+    ).toBe(false);
+  });
+
   test('text_not_empty', () => {
     expect(
       evaluate({ type: 'text_not_empty', target: 'Hello' }, { elements: [el('Hello')] }).pass
     ).toBe(true);
+    // An element whose only content is its accessibility label counts as
+    // non-empty in agnostic mode (the label is the displayed content).
     expect(
       evaluate({ type: 'text_not_empty', target: 'X' }, { elements: [el('', { accessibility_label: 'X' })] }).pass
-    ).toBe(false);
+    ).toBe(true);
   });
 
   test('pattern_match against element text', () => {

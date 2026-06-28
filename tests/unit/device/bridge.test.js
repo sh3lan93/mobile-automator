@@ -78,7 +78,7 @@ describe('DeviceBridge', () => {
   });
 
   describe('screenshot', () => {
-    test('invokes mobile_save_screenshot with the dest path and returns result.path', async () => {
+    test('invokes mobile_save_screenshot with the dest path under the saveTo key', async () => {
       const calls = [];
       const call = async (tool, args) => {
         calls.push([tool, args]);
@@ -86,7 +86,7 @@ describe('DeviceBridge', () => {
       };
       const bridge = new DeviceBridge({ call });
       const p = await bridge.screenshot('/tmp/req.png');
-      expect(calls).toEqual([['mobile_save_screenshot', { path: '/tmp/req.png' }]]);
+      expect(calls).toEqual([['mobile_save_screenshot', { saveTo: '/tmp/req.png' }]]);
       expect(p).toBe('/tmp/actual.png');
     });
 

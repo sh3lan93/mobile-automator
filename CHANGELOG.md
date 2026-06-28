@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`mauto init` installs native Agent Skills.** `mauto init --agent <claude|cursor|gemini|copilot|agents|all>` now installs an Agent Skill (open standard: `SKILL.md` + `name`/`description` frontmatter) per workflow into each host's skills directory (`.claude/skills/`, `.cursor/skills/`, `.gemini/skills/`, `.github/skills/`, `.agents/skills/`). Skills are always discovered by the host and, on activation, inline the non-negotiable QA disciplines (follow scenario exactly, device only via `mauto` verbs, screenshot-backed assertions) while deferring the full mode-aware workflow to `mauto guide <topic>`. Restores guaranteed behavior-forcing without context bloat (progressive disclosure). The existing thin slash-commands/rules and MCP-server entry are still written for claude/cursor. (Refs [#69](https://github.com/sh3lan93/mobile-automator/issues/69))
 
+## [0.20.1]
+
+### 🐛 Fixed
+
+- Device verbs no longer report `ok:true` for failed mobile-mcp calls. `parseToolResult` now surfaces both MCP `isError` results and mobile-mcp's `ActionableError` failures (returned as plain text with the sentinel `". Please fix the issue and try again."` and no `isError` flag), so `tap`/`press`/`screenshot`/etc. fail honestly instead of laundering the error into a success envelope. This also fixes `mauto screenshot` silently writing no file (`bridge.js` passed `path` instead of mobile-mcp's `saveTo`).
+- Content assertions (`text_contains`, `element_text`, `text_not_empty`, `pattern_match`, `value_matches_variable`, `text_changed`) now read an element's `accessibility_label` when it has no text node. Previously they inspected only `text`, so they silently failed on label-driven UIs (Flutter/RN and other agnostic targets) where visible content is exposed through accessibility labels.
+
 ## [0.20.0]
 
 ### Removed
