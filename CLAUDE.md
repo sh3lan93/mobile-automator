@@ -108,7 +108,7 @@ Follow `RELEASE.md`. Users install via `npm i -g mobile-automator` (or run ad-ho
 
 **Gate-then-graduate** for multi-PR features: ship behind an opt-in env var so partial states are invisible. Append slice entries under `## [Unreleased]`.
 
-**CI version-bump gate.** The `Verify version is bumped` workflow fails any PR touching CLI paths (`src/`, `bin/`, `tools/`, `package.json`) without bumping `package.json`'s `version` to a value not yet in `git tag` (tags are `vX.Y.Z`). Under the gate, **the first slice PR bumps to a release-candidate semver** (e.g. `0.12.0-rc.0`); each subsequent slice increments the rc counter (`-rc.1`, `-rc.2`, …). The `vX.Y.Z` tag namespace is reserved for graduated releases — rc.N values are never tagged.
+**CI version-bump gate.** The `Verify version is bumped` workflow fails any PR touching CLI paths (`src/`, `bin/`, `package.json`) without bumping `package.json`'s `version` to a value not yet in `git tag` (tags are `vX.Y.Z`). Under the gate, **the first slice PR bumps to a release-candidate semver** (e.g. `0.12.0-rc.0`); each subsequent slice increments the rc counter (`-rc.1`, `-rc.2`, …). The `vX.Y.Z` tag namespace is reserved for graduated releases — rc.N values are never tagged.
 
 **Graduation PR** removes the env-var gate, bumps `vX.Y.Z-rc.N` → `vX.Y.Z`, collapses `[Unreleased]` into the new release section, and creates the tag. Keeps `main` mergeable and preserves the "fully-formed feature per release" pattern (see v0.10/v0.11).
 

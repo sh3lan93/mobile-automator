@@ -25,7 +25,6 @@ jobs:
             cli:
               - 'src/**'
               - 'bin/**'
-              - 'tools/**'
               - 'package.json'
 
       - name: Report decision
@@ -74,7 +73,7 @@ jobs:
             echo "  package.json to a value not yet in the tags."
             echo ""
             echo "  CLI code paths:"
-            echo "    src/, bin/, tools/, package.json"
+            echo "    src/, bin/, package.json"
             echo ""
             echo "  Current tags:"
             git tag --sort=-version:refname | head -10
