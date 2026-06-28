@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`mauto init` installs native Agent Skills.** `mauto init --agent <claude|cursor|gemini|copilot|agents|all>` now installs an Agent Skill (open standard: `SKILL.md` + `name`/`description` frontmatter) per workflow into each host's skills directory (`.claude/skills/`, `.cursor/skills/`, `.gemini/skills/`, `.github/skills/`, `.agents/skills/`). Skills are always discovered by the host and, on activation, inline the non-negotiable QA disciplines (follow scenario exactly, device only via `mauto` verbs, screenshot-backed assertions) while deferring the full mode-aware workflow to `mauto guide <topic>`. Restores guaranteed behavior-forcing without context bloat (progressive disclosure). The existing thin slash-commands/rules and MCP-server entry are still written for claude/cursor. (Refs [#69](https://github.com/sh3lan93/mobile-automator/issues/69))
 
+### 🐛 Fixed
+
+- `mauto press` now resolves the four platform-agnostic semantic actions (`press_back`, `dismiss_keyboard`, `grant_permission`, `deny_permission`) to per-platform mechanics on Android and iOS instead of forwarding the raw token to mobile-mcp (which only understands hardware buttons). Android `press_back`/`dismiss_keyboard` map to the `BACK` button; iOS `press_back` is the left-edge interactive-pop swipe; permission actions tap the system dialog's Allow/Deny affordance by label; iOS keyboard dismissal taps a return key or swipes down. An action that cannot be resolved on the connected platform now fails honestly (`ok:false`, `device` error) rather than as a silent no-op or a bogus button press. Hardware buttons (`BACK`/`HOME`/`ENTER`) keep their existing passthrough. (#112)
+
 ## [0.20.1]
 
 ### 🐛 Fixed

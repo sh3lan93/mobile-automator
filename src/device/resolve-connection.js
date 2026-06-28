@@ -65,17 +65,20 @@ async function resolveDeviceConnection({
 } = {}) {
   const oneShot = async () => {
     const { call, close } = await createCall({ device });
-    return { bridge: new DeviceBridge({ call }), close, source: 'oneshot' };
+    return { bridge: new DeviceBridge({ call, device }), close, source: 'oneshot' };
   };
 
   const daemonBacked = async () => {
     const conn = await client.tryConnect(projectRoot);
     if (!conn) return null;
+    // The verb's `device` may be null while the daemon is pinned to a device;
+    // fall back to the live handle's pin so getPlatform() resolves correctly.
+    const pinned = device || readHandleDevice(projectRoot);
     // close() is a no-op AND we must release our socket so the daemon's idle
     // timer can fire — wrap close to end the underlying socket but never stop
     // the shared daemon.
     return {
-      bridge: new DeviceBridge({ call: conn.call }),
+      bridge: new DeviceBridge({ call: conn.call, device: pinned }),
       close: async () => {
         try {
           await conn.close();
