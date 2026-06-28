@@ -38,12 +38,6 @@ docs/superpowers/
 # Mobile Automator device session daemon (socket / pidfile / handle)
 mobile-automator/.session/
 
-# Mobile Automator recorder per-session working directory
-mobile-automator/.recorder/
-
-# Mobile Automator recorder persistent crash logs (survive discard / save-partial)
-mobile-automator/crash-logs/
-
 # sample-app (Flutter) build artifacts
 sample-app/build/
 sample-app/.dart_tool/

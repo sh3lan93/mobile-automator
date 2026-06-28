@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.0]
+
+### Removed
+- The recorder feature in full: `mauto record` / `mauto record-bundle` verbs, the `record` guide topic, the `tools/recorder/` sidecar + web GUI, the C3 instrumentation-protocol spec, and the `ws`/`pngjs` dependencies. The host-agnostic `mauto` CLI and all other verbs are unchanged. Recover the recorder from history at tag `v0.19.2` if needed.
+
 ## [0.17.0]
 
 > **The interactive recorder graduates to generally available.** `mauto record` now ships in the npm package and is no longer flagged experimental. (Refs [#21](https://github.com/sh3lan93/mobile-automator/issues/21))

@@ -9,7 +9,7 @@
 // would get from `mauto guide generate`.
 //
 // Naming scheme: prompts are named by the BARE topic (`generate`, `execute`,
-// `record`, `setup`) — identical to the `mauto guide <topic>` argument, so the
+// `setup`) — identical to the `mauto guide <topic>` argument, so the
 // two surfaces stay one-to-one and self-documenting.
 
 const guideEmitter = require('../guide/emitter');

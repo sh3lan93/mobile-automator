@@ -26,7 +26,6 @@ commands/mobile-automator/    setup, generate, execute, report, list-tags (.toml
 templates/
   mobile-automator-generator/{aware,agnostic}/SKILL.md
   mobile-automator-executor/{aware,agnostic}/SKILL.md
-  mobile-automator-recorder/{aware,agnostic}/SKILL.md # both modes (aware + agnostic)
   mobile-automator-generator/references/scenario_schema.json   # v2.1
   mobile-automator-executor/references/result_schema.json
   references/platform-resolutions.md                 # agnostic-mode runtime contract
@@ -61,21 +60,12 @@ Skill templates use `{{name}}` syntax. Setup gathers values, performs string rep
 
 Runtime fallback: skills can read `mobile-automator/config.json` if a placeholder wasn't populated.
 
-## Recorder (graduated v0.17.0)
-
-PRD [#21](https://github.com/sh3lan93/mobile-automator/issues/21). Feature-complete across 13 slices (see `CHANGELOG.md` `## [0.12.0]`). The entire recorder surface (`mauto record`, sidecar at `tools/recorder/`, GUI) graduated in v0.17.0: it ships in the npm package (`tools/recorder/src/` + `tools/recorder/web/` are in `package.json`'s `files` allowlist) and is no longer gated. The `MOBILE_AUTOMATOR_RECORDER` env var is retired — it was never enforced in the CLI.
-
-- Aware-mode recorder skill installs at `.gemini/skills/mobile-automator-recorder/SKILL.md` from the `aware/` template. Uses 10 of 13 aware placeholders (skips `build_command`, `automation_extras`, `business_domain`).
-- Agnostic-mode recorder installs from the `agnostic/` template. It uses only the 6 agnostic placeholders; per-OS facts resolve at runtime via `templates/references/platform-resolutions.md`. The sidecar reinterprets OS gestures into the four semantic actions; `dismiss_keyboard` is a manual GUI mark.
-- The recorder skill synthesises scenario JSON from sidecar artifacts under `mobile-automator/.recorder/<scenario_id>/` — `metadata.json`, `events.jsonl`, `hierarchy/<t>.json`, `screenshots/`, `assertions.json`, `edits.jsonl`, and optional `crashes/`. The bundle is deleted on successful Save and on Cancel; persistent crash logs survive at `mobile-automator/crash-logs/` (separate from the bundle). The skill defers to the generator skill for scenario shape — generator stays single source of truth.
-- The C3 protocol contract for future v1.1 instrumentation SDKs lives at `templates/references/c3-protocol.md` (TCP-over-loopback, line-delimited JSON, versioned handshake, six event kinds). The reference listener is `tools/recorder/src/c3/tcp-listener.js`. No SDKs ship in v0.12.0.
-
 ## Sample-app milestone workflow (mandatory for any agent)
 
 PRD [#44](https://github.com/sh3lan93/mobile-automator/issues/44) · milestone `sample-app` · slices #45–#49. **Any agent picking up a `sample-app`-milestone issue MUST follow this workflow in order — it is not optional:**
 
 1. **Load full context first.** Fetch the slice issue **and** PRD #44 together (`gh issue view <slice>` + `gh issue view 44`) before doing anything. Slice bodies are deliberately thin; the PRD holds the locked decisions, the slice ladder, and cross-slice constraints. Never act on a slice issue alone.
-2. **Isolate the workspace.** Before any edit, create a dedicated worktree on a new branch named `sample-app/<issue-number>-<short-slug>` (mirrors the recorder branch convention). Do not work directly in an existing checkout or on a shared branch.
+2. **Isolate the workspace.** Before any edit, create a dedicated worktree on a new branch named `sample-app/<issue-number>-<short-slug>`. Do not work directly in an existing checkout or on a shared branch.
 3. **Plan before code.** Produce a written implementation plan (file structure, deps, screen/widget tree, CI changes, test list) and surface it for explicit user approval. No implementation before the user confirms the plan.
 4. **Implement via subagents.** After plan approval, dispatch the implementation through subagents so the main agent's context window stays unbloated. The main agent orchestrates and reviews; it does not hand-write the bulk of the slice itself.
 5. **Open a draft PR.** When implementation is complete, open a GitHub PR in **draft** status with a full description (what/why, test plan). Put `Closes #<slice-issue>` on its own line with no intervening words; reference the PRD as `Refs #44` (never `Closes #44` — the PRD closes only when slice 5 merges).
@@ -116,7 +106,7 @@ Setup copies both to `.gemini/skills/mobile-automator-{generator,executor}/refer
 
 Follow `RELEASE.md`. Users install via `npm i -g mobile-automator` (or run ad-hoc with `npx mobile-automator <verb>`). mobile-mcp ships as a pinned dependency (`@mobilenext/mobile-mcp@0.0.55`) and is spawned from `node_modules` — never fetched at runtime.
 
-**Gate-then-graduate** for multi-PR features: ship behind an opt-in env var (e.g. `MOBILE_AUTOMATOR_RECORDER=1`) so partial states are invisible. Append slice entries under `## [Unreleased]`.
+**Gate-then-graduate** for multi-PR features: ship behind an opt-in env var so partial states are invisible. Append slice entries under `## [Unreleased]`.
 
 **CI version-bump gate.** The `Verify version is bumped` workflow fails any PR touching CLI paths (`src/`, `bin/`, `tools/`, `package.json`) without bumping `package.json`'s `version` to a value not yet in `git tag` (tags are `vX.Y.Z`). Under the gate, **the first slice PR bumps to a release-candidate semver** (e.g. `0.12.0-rc.0`); each subsequent slice increments the rc counter (`-rc.1`, `-rc.2`, …). The `vX.Y.Z` tag namespace is reserved for graduated releases — rc.N values are never tagged.
 

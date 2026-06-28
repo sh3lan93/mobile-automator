@@ -82,7 +82,7 @@ Because the contract is just verbs + JSON, **no agent is special** — `mauto in
 
 `mauto init` only has built-in adapters for **Claude Code** and **Cursor**. Any other AI agent can drive `mauto` through one of these, no adapter required:
 
-- **MCP (recommended):** point your MCP-capable agent at the prompts server — `mauto mcp` (stdio) — which exposes the `generate` / `execute` / `record` / `setup` workflows as prompts. Register it like any MCP server: command `mauto`, args `["mcp"]`.
+- **MCP (recommended):** point your MCP-capable agent at the prompts server — `mauto mcp` (stdio) — which exposes the `generate` / `execute` / `setup` workflows as prompts. Register it like any MCP server: command `mauto`, args `["mcp"]`.
 - **Plain shell:** have the agent read `mauto bootstrap` once (the verb map + invariants), then read `mauto guide <topic>` for a workflow and call the verbs (`mauto elements`, `tap`, `type`, `assert`, …) directly. Every verb returns the `{ok, data, error, hint}` envelope, so the agent can act on results programmatically.
 
 Either way the workspace, scenarios, and schemas are identical — the agent is just a different driver for the same `mauto` hands.
@@ -111,21 +111,14 @@ Most low-level verbs are called **by the agent**, not by you. The ones you'll ru
 | `mauto init --agent <claude\|cursor>` | Install adapter files for a supported agent (commands/rule + MCP entry) |
 | `mauto setup [--mode aware\|agnostic]` | Scaffold the `mobile-automator/` workspace + config |
 | `mauto devices` · `devices use <id>` · `devices clear` | List / pin / unpin the target device |
-| `mauto guide <generate\|execute\|record\|setup>` | Print the workflow guidance for a topic |
+| `mauto guide <generate\|execute\|setup>` | Print the workflow guidance for a topic |
 | `mauto mcp` | Run the MCP prompts server (for any MCP-capable agent) |
 | `mauto bootstrap` | Print the verb map + invariants (onboarding for any agent) |
 | `mauto validate <file>` | Validate a scenario JSON against the schema |
 | `mauto config get\|set <key> [value]` | Read / update workspace config |
-| `mauto record <name>` | Launch the interactive web recorder |
 | **Agent-driven verbs** | `elements`, `tap`, `type`, `swipe`, `press`, `screenshot`, `assert`, `result`, `schema` |
 
 Run `mauto <command> --help` for full flags.
-
----
-
-## 🎥 Recording
-
-`mauto record <name>` opens a browser GUI that captures live device interaction (taps, typing, swipes, hardware keys) and synthesizes a scenario JSON — the same format `generate` produces and `execute` replays. Requires `ffmpeg` on your `PATH` (and `adb` for Android hardware-key capture). Report issues at [#21](https://github.com/sh3lan93/mobile-automator/issues/21).
 
 ---
 

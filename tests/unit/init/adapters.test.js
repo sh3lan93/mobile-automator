@@ -15,7 +15,7 @@ function readJson(p) {
 }
 
 describe('ADAPTERS.claude.apply', () => {
-  test('writes the four slash-command files with thin triggers', () => {
+  test('writes the three slash-command files with thin triggers', () => {
     const projectRoot = tmpRoot();
     const res = ADAPTERS.claude.apply({ projectRoot });
     expect(res.agent).toBe('claude');
