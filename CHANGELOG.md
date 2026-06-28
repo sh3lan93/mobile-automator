@@ -14,6 +14,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - The recorder feature in full: `mauto record` / `mauto record-bundle` verbs, the `record` guide topic, the `tools/recorder/` sidecar + web GUI, the C3 instrumentation-protocol spec, and the `ws`/`pngjs` dependencies. The host-agnostic `mauto` CLI and all other verbs are unchanged. Recover the recorder from history at tag `v0.19.2` if needed.
 
+## [0.19.2]
+
+### 🐛 Fixed
+
+- Recorder GUI WebSocket now connects to the served port instead of a hardcoded one ([#109](https://github.com/sh3lan93/mobile-automator/issues/109)).
+
+## [0.19.1]
+
+### 🐛 Fixed
+
+- Recorder shares one clock between tap sources and the hierarchy poller so taps resolve to the right target ([#108](https://github.com/sh3lan93/mobile-automator/issues/108), [#107](https://github.com/sh3lan93/mobile-automator/issues/107)).
+
+## [0.19.0]
+
+### 🐛 Fixed
+
+- Device layer matches the mobile-mcp 0.0.55 element/coordinate contract (single-device auto-resolve, coordinate→bounds mapping) ([#106](https://github.com/sh3lan93/mobile-automator/issues/106)).
+
+## [0.18.0]
+
+### ✨ Added
+
+- Recorder live interaction capture (Android `getevent` + iOS screenshot polling) ([#104](https://github.com/sh3lan93/mobile-automator/issues/104)).
+
 ## [0.17.0]
 
 > **The interactive recorder graduates to generally available.** `mauto record` now ships in the npm package and is no longer flagged experimental. (Refs [#21](https://github.com/sh3lan93/mobile-automator/issues/21))
@@ -29,6 +53,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🔧 Changed
 
 - **Recorder is no longer experimental/gated.** The `MOBILE_AUTOMATOR_RECORDER=1` opt-in (already a no-op in the CLI — it was never enforced in code) and the "experimental" framing are removed from `README.md`, `tools/recorder/README.md`, and `CLAUDE.md`.
+
+## [0.16.1]
+
+### 🐛 Fixed
+
+- Recorder GUI connects to the CLI-served port on auto-open ([#101](https://github.com/sh3lan93/mobile-automator/issues/101)).
 
 ## [0.16.0]
 

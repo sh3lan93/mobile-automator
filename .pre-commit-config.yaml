@@ -7,6 +7,6 @@ repos:
         language: system
         entry: vale
         args: ['--config=.vale.ini']
-        files: '^(templates/|commands/|GEMINI\.md$)'
-        types_or: [markdown, toml, plain-text]
+        files: '^src/guide/content/.*\.md$'
+        types_or: [markdown]
         require_serial: true

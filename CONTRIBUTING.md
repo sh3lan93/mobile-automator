@@ -123,7 +123,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 
 ### Prompt Linting (Vale + pre-commit)
 
-Prompt files (`commands/**/*.toml`, `templates/**/*.md`, `GEMINI.md`) are linted by [Vale](https://vale.sh) with a `PromptHygiene` style that catches characters known to confuse AI agents or downstream parsers: the section sign (`§`), smart/curly quotes, non-breaking spaces, and zero-width characters. The same rules run in CI on every PR.
+The CLI guide prose under `src/guide/content/**/*.md` is linted by [Vale](https://vale.sh) with a `PromptHygiene` style that catches characters known to confuse AI agents or downstream parsers: the section sign (`§`), smart/curly quotes, non-breaking spaces, and zero-width characters. The same rules run in CI on every PR.
 
 To run the same checks locally before you push:
 
@@ -149,7 +149,7 @@ After that, `git commit` automatically runs Vale on staged prompt files. To run 
 vale .
 ```
 
-Path scoping lives in `.vale.ini` - `PromptHygiene` only attaches to `templates/**/*.md`, `commands/**/*.toml`, and `GEMINI.md`. Human-facing docs are scanned but unscoped, so they never produce errors.
+Path scoping lives in `.vale.ini` - `PromptHygiene` only attaches to `src/guide/content/**/*.md`. Human-facing docs are scanned but unscoped, so they never produce errors.
 
 If a rule fires, the message tells you what to replace it with. To add a new rule, drop a YAML file into `.vale/styles/PromptHygiene/`.
 
