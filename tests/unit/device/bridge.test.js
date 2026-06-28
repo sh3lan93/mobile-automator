@@ -108,6 +108,34 @@ describe('DeviceBridge', () => {
     });
   });
 
+  describe('longPress', () => {
+    test('invokes mobile_long_press_on_screen_at_coordinates with x,y and omits duration when absent', async () => {
+      const calls = [];
+      const call = async (tool, args) => { calls.push([tool, args]); return {}; };
+      const bridge = new DeviceBridge({ call });
+      await bridge.longPress({ x: 12, y: 34 });
+      expect(calls).toEqual([['mobile_long_press_on_screen_at_coordinates', { x: 12, y: 34 }]]);
+    });
+
+    test('forwards duration when provided', async () => {
+      const calls = [];
+      const call = async (tool, args) => { calls.push([tool, args]); return {}; };
+      const bridge = new DeviceBridge({ call });
+      await bridge.longPress({ x: 12, y: 34, duration: 1200 });
+      expect(calls).toEqual([['mobile_long_press_on_screen_at_coordinates', { x: 12, y: 34, duration: 1200 }]]);
+    });
+  });
+
+  describe('doubleTap', () => {
+    test('invokes mobile_double_tap_on_screen with x,y', async () => {
+      const calls = [];
+      const call = async (tool, args) => { calls.push([tool, args]); return {}; };
+      const bridge = new DeviceBridge({ call });
+      await bridge.doubleTap({ x: 12, y: 34 });
+      expect(calls).toEqual([['mobile_double_tap_on_screen', { x: 12, y: 34 }]]);
+    });
+  });
+
   describe('type', () => {
     test('invokes mobile_type_keys with text and submit=false', async () => {
       const calls = [];
@@ -135,6 +163,56 @@ describe('DeviceBridge', () => {
       const bridge = new DeviceBridge({ call });
       await bridge.pressButton('BACK');
       expect(calls).toEqual([['mobile_press_button', { button: 'BACK' }]]);
+    });
+  });
+
+  describe('launchApp', () => {
+    test('invokes mobile_launch_app with the packageName', async () => {
+      const calls = [];
+      const call = async (tool, args) => { calls.push([tool, args]); return {}; };
+      const bridge = new DeviceBridge({ call });
+      await bridge.launchApp('com.example.app');
+      expect(calls).toEqual([['mobile_launch_app', { packageName: 'com.example.app' }]]);
+    });
+  });
+
+  describe('installApp', () => {
+    test('invokes mobile_install_app with the artifact path', async () => {
+      const calls = [];
+      const call = async (tool, args) => { calls.push([tool, args]); return {}; };
+      const bridge = new DeviceBridge({ call });
+      await bridge.installApp('/tmp/app.apk');
+      expect(calls).toEqual([['mobile_install_app', { path: '/tmp/app.apk' }]]);
+    });
+  });
+
+  describe('uninstallApp', () => {
+    test('invokes mobile_uninstall_app with the bundle_id', async () => {
+      const calls = [];
+      const call = async (tool, args) => { calls.push([tool, args]); return {}; };
+      const bridge = new DeviceBridge({ call });
+      await bridge.uninstallApp('com.example.app');
+      expect(calls).toEqual([['mobile_uninstall_app', { bundle_id: 'com.example.app' }]]);
+    });
+  });
+
+  describe('openUrl', () => {
+    test('invokes mobile_open_url with the url', async () => {
+      const calls = [];
+      const call = async (tool, args) => { calls.push([tool, args]); return {}; };
+      const bridge = new DeviceBridge({ call });
+      await bridge.openUrl('https://example.com');
+      expect(calls).toEqual([['mobile_open_url', { url: 'https://example.com' }]]);
+    });
+  });
+
+  describe('setOrientation', () => {
+    test('invokes mobile_set_orientation with the orientation', async () => {
+      const calls = [];
+      const call = async (tool, args) => { calls.push([tool, args]); return {}; };
+      const bridge = new DeviceBridge({ call });
+      await bridge.setOrientation('landscape');
+      expect(calls).toEqual([['mobile_set_orientation', { orientation: 'landscape' }]]);
     });
   });
 });
