@@ -19,9 +19,7 @@
   },
   "files": [
     "bin/",
-    "src/",
-    "tools/recorder/src/",
-    "tools/recorder/web/"
+    "src/"
   ],
   "scripts": {
     "test": "jest",
