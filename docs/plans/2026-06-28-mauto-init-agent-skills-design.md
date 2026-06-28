@@ -149,8 +149,11 @@ Consequently:
 `src/guide/content/<topic>.invariants.md` — **mode-agnostic, placeholder-free,
 OS-name-free** (so a single snippet is safe in both aware and agnostic installs).
 The skill renderer reads these. Anti-drift is enforced by a lint guard
-asserting each invariant line also appears in the corresponding guide content
-file (§7), rather than refactoring the six existing content files now.
+asserting a representative per-topic anchor phrase appears in both the
+invariants snippet and the corresponding guide content files (§7) — a
+representative anchor is the practical drift signal because the guide phrases
+those disciplines differently by design, making a full line-by-line check
+unreliable. Rather than refactoring the six existing content files now.
 
 *Alternative considered:* physically extract the invariant lines out of the
 content files and have `emitGuide` compose `invariants + body`. Cleaner DRY but
@@ -185,8 +188,11 @@ unrelated files. The MCP-config merge keeps owning only the `mauto` key.
 - `skill-no-mcp-tool-leak` — no `mobile_*` tool names (reuse existing pattern).
 - `skill-frontmatter-valid` — name/description meet the standard + Claude's
   reserved-word/length rules; folder name == `name`.
-- `skill-invariants-in-guide` — every invariant line is a substring of the
-  matching `<topic>.<mode>.md` guide content (drift guard).
+- `skill-invariants-in-guide` — one representative anchor phrase per topic
+  appears verbatim in both the invariants snippet and the matching
+  `<topic>.<aware|agnostic>.md` guide content (drift guard; the guide phrases
+  disciplines differently by design, so a per-topic anchor is the practical
+  drift signal rather than a full line-by-line check).
 - `skill-agnostic-no-os` — invariants name no OS (safe for agnostic installs).
 
 ## §8. Testing

@@ -20,8 +20,8 @@ const TOPICS = ['generate', 'execute', 'setup'];
 const MAUTO_SERVER = { command: 'mauto', args: ['mcp'] };
 
 // Per-agent skills directory (relative to projectRoot). claude uses its own
-// namespace; cursor/gemini/copilot read their native dir; `agents` targets the
-// universal open-standard location read by cursor/gemini/copilot too.
+// namespace; cursor/gemini/copilot each use their native dir; `agents` targets
+// the open-standard location.
 const SKILL_DEST = {
   claude: path.join('.claude', 'skills'),
   cursor: path.join('.cursor', 'skills'),

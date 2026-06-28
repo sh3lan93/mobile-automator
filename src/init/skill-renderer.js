@@ -24,6 +24,9 @@ function renderSkill(topic) {
   if (!meta) {
     throw new Error(`unknown skill topic: ${topic}`);
   }
+  if (!TITLES[topic]) {
+    throw new Error(`unknown skill topic title: ${topic}`);
+  }
   const invariants = fs
     .readFileSync(path.join(CONTENT_DIR, `${topic}.invariants.md`), 'utf8')
     .trim();
