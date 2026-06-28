@@ -214,13 +214,45 @@ describe('cli handlers', () => {
   });
 
   describe('handlePress', () => {
-    test('presses a button', async () => {
+    test('hardware button still passes straight through to pressButton', async () => {
       const calls = [];
       const bridge = { pressButton: async (b) => { calls.push(b); } };
       const { envelope, exitKind } = await handlePress({ deviceBridge: bridge }, 'BACK');
       expect(exitKind).toBe('ok');
       expect(envelope.data).toEqual({ pressed: 'BACK' });
       expect(calls).toEqual(['BACK']);
+    });
+
+    test('semantic press_back resolves per platform and reports the mechanism', async () => {
+      const calls = [];
+      const bridge = {
+        getPlatform: async () => 'android',
+        pressButton: async (b) => { calls.push(['pressButton', b]); },
+      };
+      const { envelope, exitKind } = await handlePress({ deviceBridge: bridge }, 'press_back');
+      expect(exitKind).toBe('ok');
+      expect(envelope.data).toEqual({
+        pressed: 'press_back',
+        resolved: { platform: 'android', mechanism: 'button:BACK' },
+      });
+      expect(calls).toEqual([['pressButton', 'BACK']]);
+    });
+
+    test('an unresolvable semantic action hard-fails (ok:false), never forwards', async () => {
+      const bridge = {
+        getPlatform: async () => 'android',
+        listElements: async () => [], // no Allow button on screen
+        tap: async () => {},
+      };
+      const { envelope, exitKind } = await handlePress({ deviceBridge: bridge }, 'grant_permission');
+      expect(exitKind).toBe('device');
+      expect(envelope.ok).toBe(false);
+      expect(envelope.error.kind).toBe('device');
+    });
+
+    test('empty action is invalid input', async () => {
+      const { exitKind } = await handlePress({ deviceBridge: {} }, '');
+      expect(exitKind).toBe('invalid_input');
     });
   });
 

@@ -13,6 +13,7 @@ const configManager = require('./config/manager');
 const { scaffold } = require('./setup/scaffold');
 const guideEmitter = require('./guide/emitter');
 const { ADAPTERS } = require('./init/adapters');
+const { isSemanticAction, ACTION_METHOD, selectResolver } = require('./device/semantic-press');
 
 // Map the user-facing --mode flag onto the stored config mode values.
 const MODE_ALIASES = {
@@ -192,6 +193,24 @@ async function handlePress({ deviceBridge }, button) {
       exitKind: 'invalid_input',
     };
   }
+
+  // Semantic actions are resolved to per-platform mechanics; a missing
+  // resolution is a hard error, never a bogus token forwarded to mobile-mcp.
+  if (isSemanticAction(b)) {
+    try {
+      const platform = await deviceBridge.getPlatform();
+      const resolver = selectResolver(platform, deviceBridge);
+      const { mechanism } = await resolver[ACTION_METHOD[b]]();
+      return {
+        envelope: ok({ pressed: b, resolved: { platform, mechanism } }),
+        exitKind: 'ok',
+      };
+    } catch (err) {
+      return deviceFail(err);
+    }
+  }
+
+  // Hardware/system button passthrough (BACK/HOME/ENTER…) — unchanged.
   try {
     await deviceBridge.pressButton(b);
     return { envelope: ok({ pressed: b }), exitKind: 'ok' };
