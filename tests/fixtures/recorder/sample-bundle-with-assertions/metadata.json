@@ -1,6 +1,0 @@
-{
-  "scenario_id": "assert_smoke",
-  "started_at": "2026-05-14T00:00:00.000Z",
-  "mode": "platform-aware",
-  "app_package": "com.example.testapp"
-}

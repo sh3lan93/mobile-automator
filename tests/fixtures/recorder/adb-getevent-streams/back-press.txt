@@ -1,2 +1,0 @@
-[   17236.789012] /dev/input/event0: EV_KEY       KEY_BACK             DOWN
-[   17236.834521] /dev/input/event0: EV_KEY       KEY_BACK             UP
