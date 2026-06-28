@@ -11,8 +11,11 @@ describe('findByLabels', () => {
     expect(hit).toEqual({ element: els[1], label: 'Allow' });
   });
 
-  test('normalizes curly apostrophes so "Don\'t Allow" matches', () => {
-    const deny = [{ text: "Don't Allow", accessibility_label: null, center: [1, 2] }];
+  test('normalizes curly apostrophes so "Don’t Allow" matches', () => {
+    // U+2019 (curly apostrophe) written as an escape so the byte cannot be
+    // silently normalized to a straight quote by editor/transport tooling.
+    const deny = [{ text: 'Don’t Allow', accessibility_label: null, center: [1, 2] }];
+    expect(deny[0].text).toContain('’'); // guard: the input really is curly
     const hit = findByLabels(deny, DENY_LABELS.ios);
     expect(hit.element).toBe(deny[0]);
   });

@@ -13,7 +13,10 @@ const DENY_LABELS = {
 };
 
 function norm(s) {
-  return String(s == null ? '' : s).replace(/'/g, "'").trim().toLowerCase();
+  // Map the curly apostrophe U+2019 (written as an escape so the byte cannot be
+  // silently flattened to a straight quote) onto a straight quote, so "Don’t
+  // Allow" matches the straight-quoted entries in the label sets above.
+  return String(s == null ? '' : s).replace(/’/g, "'").trim().toLowerCase();
 }
 
 // First element whose visible text or accessibility label exactly equals one of
