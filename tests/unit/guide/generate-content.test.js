@@ -25,8 +25,8 @@ describe('guide emitter — real generate content', () => {
       out = emitGuide('generate', { mode: 'platform-aware' });
     });
 
-    it('preserves the Mobile QA Automator persona', () => {
-      expect(out).toMatch(/Mobile QA Automator/);
+    it('preserves the Mobile QA Recorder persona', () => {
+      expect(out).toMatch(/Mobile QA Recorder/);
     });
 
     it('preserves the Observer Traits (Regression Spotter / State Detective / Platform-Aware)', () => {
@@ -84,8 +84,8 @@ describe('guide emitter — real generate content', () => {
       out = emitGuide('generate', { mode: 'platform-agnostic' });
     });
 
-    it('preserves the QA Automator persona', () => {
-      expect(out).toMatch(/QA Automator/);
+    it('preserves the QA Recorder persona', () => {
+      expect(out).toMatch(/QA Recorder/);
     });
 
     it('preserves Observer Traits (Regression Spotter / State Detective)', () => {
