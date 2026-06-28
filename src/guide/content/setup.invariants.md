@@ -1,0 +1,3 @@
+- Inspect real project files before inferring any value; never invent a value you cannot find evidence for — ask the user instead.
+- Persist every finding with `mauto config set <key> <value>` and verify it with `mauto config get <key>`.
+- Do not modify app source code, and do not re-scaffold the workspace — `mauto setup` already created it. This guide only reads the project and writes the workspace config.

@@ -55,7 +55,7 @@ All verbs emit `{ok,data,error,hint,schema_version}`; `--human` is an opt-in rea
 - **Author & verify:** `validate <file>`, `assert <type>`, `result add-step`, `result finalize`
 - **Workspace:** `setup`, `config get <key>`, `config set <key> <value>`
 - **Reasoning** (agent pulls on demand): `guide <topic>` (topics: `generate`, `execute`, `setup`); `bootstrap` (verb map + invariants); `schema <name>` (names: `scenario`, `result`)
-- **Agent integration:** `init --agent <claude|cursor>` (writes per-vendor slash-commands + MCP server entry); `mcp` (runs an MCP prompts server exposing guide topics)
+- **Agent integration:** `init --agent <claude|cursor|gemini|copilot|agents|all>` (installs native Agent Skills per host + writes slash-commands/rules + MCP entry for claude/cursor); `mcp` (runs an MCP prompts server exposing guide topics)
 - **Device session:** `session start|status|end`; `devices` (list); `devices use <id>`; `devices clear`
 
 ## Placeholder contract
@@ -99,7 +99,8 @@ This workflow lives here (not in per-slice issue bodies) so it applies uniformly
 1. Register the verb handler in `src/cli.js`.
 2. For a new guide topic, add `src/guide/content/<topic>.aware.md` and `<topic>.agnostic.md`.
 3. Register the topic in `src/guide/emitter.js`, `src/mcp/prompts.js`, and `src/init/adapters.js`.
-4. Extend the lint guards in `tests/lint/`.
+4. For a topic exposed as a skill, add `src/guide/content/<topic>.invariants.md` (placeholder-free, OS-free) and register the topic in `src/init/skill-meta.js` + `src/init/skill-renderer.js`.
+5. Extend the lint guards in `tests/lint/`.
 
 ## Releasing & version handling
 

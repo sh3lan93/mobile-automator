@@ -117,3 +117,45 @@ describe('ADAPTERS.cursor.apply', () => {
     expect(second).toBe(first);
   });
 });
+
+const { SKILL_DEST } = require('../../../src/init/adapters');
+
+const ALL_AGENTS = ['claude', 'cursor', 'gemini', 'copilot', 'agents'];
+const SKILL_TOPICS = ['generate', 'execute', 'setup'];
+
+describe('skill installation across agents', () => {
+  for (const agent of ALL_AGENTS) {
+    test(`${agent}: writes a SKILL.md per topic in the agent skills dir`, () => {
+      const projectRoot = tmpRoot();
+      const res = require('../../../src/init/adapters').ADAPTERS[agent].apply({ projectRoot });
+      expect(res.agent).toBe(agent);
+      for (const topic of SKILL_TOPICS) {
+        const f = path.join(projectRoot, SKILL_DEST[agent], `mobile-automator-${topic}`, 'SKILL.md');
+        expect(fs.existsSync(f)).toBe(true);
+        const body = fs.readFileSync(f, 'utf8');
+        expect(body).toContain(`name: mobile-automator-${topic}`);
+        expect(body).toContain(`mauto guide ${topic}`);
+        expect(body).not.toContain('{{');
+      }
+    });
+
+    test(`${agent}: re-running is idempotent (byte-identical SKILL.md)`, () => {
+      const projectRoot = tmpRoot();
+      const A = require('../../../src/init/adapters').ADAPTERS[agent];
+      A.apply({ projectRoot });
+      const f = path.join(projectRoot, SKILL_DEST[agent], 'mobile-automator-execute', 'SKILL.md');
+      const first = fs.readFileSync(f, 'utf8');
+      A.apply({ projectRoot });
+      expect(fs.readFileSync(f, 'utf8')).toBe(first);
+    });
+  }
+
+  test('does not touch a foreign skill folder', () => {
+    const projectRoot = tmpRoot();
+    const foreign = path.join(projectRoot, '.claude', 'skills', 'someones-skill', 'SKILL.md');
+    fs.mkdirSync(path.dirname(foreign), { recursive: true });
+    fs.writeFileSync(foreign, 'KEEP ME');
+    require('../../../src/init/adapters').ADAPTERS.claude.apply({ projectRoot });
+    expect(fs.readFileSync(foreign, 'utf8')).toBe('KEEP ME');
+  });
+});
