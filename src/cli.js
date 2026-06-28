@@ -322,7 +322,7 @@ function handleGuide({ projectRoot, emitter = guideEmitter, config = configManag
     raw = emitter.emitGuide(topic, { mode, projectRoot });
   } catch (err) {
     return {
-      envelope: fail('invalid_input', `unknown guide topic "${topic}"`, 'Topics: generate, execute, record, setup.'),
+      envelope: fail('invalid_input', `unknown guide topic "${topic}"`, 'Topics: generate, execute, setup.'),
       exitKind: 'invalid_input',
     };
   }
@@ -722,7 +722,7 @@ function buildProgram(deps = {}) {
 
   program
     .command('guide <topic>')
-    .description('Print the RAW workflow guide for a topic (generate|execute|record|setup)')
+    .description('Print the RAW workflow guide for a topic (generate|execute|setup)')
     .action((topic) => emitMaybeRaw(handleGuide({ projectRoot }, topic)));
 
   program

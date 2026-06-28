@@ -15,12 +15,11 @@
 const guideEmitter = require('../guide/emitter');
 const configManager = require('../config/manager');
 
-const PROMPT_TOPICS = ['generate', 'execute', 'record', 'setup'];
+const PROMPT_TOPICS = ['generate', 'execute', 'setup'];
 
 const DESCRIPTIONS = {
   generate: 'Author a mobile test scenario by exploring the app with mauto verbs.',
   execute: 'Replay a scenario step-by-step and record the run results.',
-  record: 'Capture a scenario from a live interaction session.',
   setup: 'Initialise the mobile-automator workspace and config.',
 };
 

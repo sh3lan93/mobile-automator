@@ -2,7 +2,7 @@
 
 const { emitGuide } = require('../../src/guide/emitter');
 
-const TOPICS = ['generate', 'execute', 'record', 'setup'];
+const TOPICS = ['generate', 'execute', 'setup'];
 
 // Banned-word style mirrors tests/lint/agnostic-no-platform-words.test.js:
 // case-insensitive, word-boundary anchored. In platform-agnostic mode the

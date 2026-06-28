@@ -2,7 +2,7 @@
 
 const { emitGuide } = require('../../src/guide/emitter');
 
-const TOPICS = ['generate', 'execute', 'record', 'setup'];
+const TOPICS = ['generate', 'execute', 'setup'];
 const MODES = ['platform-aware', 'platform-agnostic'];
 
 describe('guide emitter — no placeholder leak', () => {

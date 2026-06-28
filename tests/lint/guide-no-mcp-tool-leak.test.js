@@ -2,7 +2,7 @@
 
 const { emitGuide, emitBootstrap } = require('../../src/guide/emitter');
 
-const TOPICS = ['generate', 'execute', 'record', 'setup'];
+const TOPICS = ['generate', 'execute', 'setup'];
 const MODES = ['platform-aware', 'platform-agnostic'];
 
 // The CLI is the only interface the agent should see. Any leaked raw

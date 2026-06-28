@@ -13,7 +13,7 @@ const path = require('path');
 
 const guideEmitter = require('../guide/emitter');
 
-const TOPICS = ['generate', 'execute', 'record', 'setup'];
+const TOPICS = ['generate', 'execute', 'setup'];
 
 // The single mauto MCP server entry merged into a vendor's mcp config.
 const MAUTO_SERVER = { command: 'mauto', args: ['mcp'] };
@@ -108,7 +108,7 @@ function cursorRuleBody() {
     'alwaysApply: true\n' +
     '---\n\n' +
     guideEmitter.emitBootstrap() +
-    '\nRun `mauto guide <topic>` (generate|execute|record|setup) before a workflow. ' +
+    '\nRun `mauto guide <topic>` (generate|execute|setup) before a workflow. ' +
     'Drive the device only through `mauto` verbs.\n'
   );
 }

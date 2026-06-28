@@ -20,7 +20,7 @@ describe('ADAPTERS.claude.apply', () => {
     const res = ADAPTERS.claude.apply({ projectRoot });
     expect(res.agent).toBe('claude');
 
-    const topics = ['generate', 'execute', 'record', 'setup'];
+    const topics = ['generate', 'execute', 'setup'];
     for (const topic of topics) {
       const f = path.join(projectRoot, '.claude', 'commands', `mobile-automator-${topic}.md`);
       expect(fs.existsSync(f)).toBe(true);
@@ -30,7 +30,7 @@ describe('ADAPTERS.claude.apply', () => {
       expect(body).not.toContain('{{');
       expect(body).not.toMatch(/\bmobile_[a-z_]+/);
     }
-    expect(res.written.length).toBeGreaterThanOrEqual(4);
+    expect(res.written.length).toBeGreaterThanOrEqual(3);
   });
 
   test('creates .mcp.json with the mauto server entry', () => {
