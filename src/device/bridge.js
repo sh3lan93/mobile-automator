@@ -2,15 +2,17 @@
 
 const { normalize, parseElements } = require('./element-model');
 const { normalizeDevices } = require('./device-model');
+const { resolveSingleDevice } = require('./device-resolver');
 
 // Thin wrapper over an injected mobile-mcp `call(toolName, args)` function.
 // Returns the agnostic element model and exposes only the primitives the CLI needs.
 class DeviceBridge {
-  constructor({ call }) {
+  constructor({ call, device = null }) {
     if (typeof call !== 'function') {
       throw new TypeError('DeviceBridge requires a `call` function (toolName, args) => Promise');
     }
     this._call = call;
+    this._device = device;
   }
 
   // Enumerate connected devices/simulators via mobile-mcp and return the
@@ -46,9 +48,35 @@ class DeviceBridge {
     return this._call('mobile_type_keys', { text, submit: false });
   }
 
-  // Swipe in a cardinal direction (up/down/left/right) from screen center.
-  async swipe({ direction } = {}) {
-    return this._call('mobile_swipe_on_screen', { direction });
+  // Swipe in a cardinal direction. Optional x/y set the start point and
+  // distance the travel — used by the iOS edge-swipe back gesture. Absent keys
+  // are not sent so the cardinal-from-center default is preserved.
+  async swipe({ direction, x, y, distance } = {}) {
+    const args = { direction };
+    if (x !== undefined) args.x = x;
+    if (y !== undefined) args.y = y;
+    if (distance !== undefined) args.distance = distance;
+    return this._call('mobile_swipe_on_screen', args);
+  }
+
+  // Platform ('android'/'ios') of the connected device. Uses the pinned id when
+  // one was provided, else the single auto-resolved device.
+  async getPlatform() {
+    const devices = normalizeDevices(await this._call('mobile_list_available_devices', {}));
+    const id = this._device || resolveSingleDevice(devices); // throws DeviceResolutionError on 0/many
+    const match = devices.find((d) => d.id === id);
+    if (!match || !match.platform) {
+      const err = new Error(`Cannot determine the platform of device "${id}".`);
+      err.hint = 'Ensure the device is listed by `mauto devices`.';
+      throw err;
+    }
+    return String(match.platform).toLowerCase();
+  }
+
+  // Physical screen size in pixels, for geometry-based gestures.
+  async getScreenSize() {
+    const r = await this._call('mobile_get_screen_size', {});
+    return { width: Number(r && r.width), height: Number(r && r.height) };
   }
 
   // Press a hardware/system button (BACK, HOME, ENTER, ...).

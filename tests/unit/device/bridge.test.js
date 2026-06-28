@@ -138,3 +138,55 @@ describe('DeviceBridge', () => {
     });
   });
 });
+
+describe('getPlatform', () => {
+  test('returns the lowercased platform of the single connected device', async () => {
+    const call = async (tool) => {
+      if (tool === 'mobile_list_available_devices') {
+        return [{ id: 'emu-5554', name: 'Pixel', os: 'android', state: 'booted' }];
+      }
+      return {};
+    };
+    const bridge = new DeviceBridge({ call });
+    expect(await bridge.getPlatform()).toBe('android');
+  });
+
+  test('matches the pinned device id when several are connected', async () => {
+    const call = async (tool) => {
+      if (tool === 'mobile_list_available_devices') {
+        return [
+          { id: 'emu-5554', os: 'android' },
+          { id: 'sim-iphone', os: 'ios' },
+        ];
+      }
+      return {};
+    };
+    const bridge = new DeviceBridge({ call, device: 'sim-iphone' });
+    expect(await bridge.getPlatform()).toBe('ios');
+  });
+});
+
+describe('getScreenSize', () => {
+  test('returns width/height from mobile_get_screen_size', async () => {
+    const call = async (tool) => {
+      if (tool === 'mobile_get_screen_size') return { width: 1080, height: 1920 };
+      return {};
+    };
+    const bridge = new DeviceBridge({ call });
+    expect(await bridge.getScreenSize()).toEqual({ width: 1080, height: 1920 });
+  });
+});
+
+describe('swipe with coordinates', () => {
+  test('forwards optional x/y/distance and omits absent keys', async () => {
+    const calls = [];
+    const call = async (tool, args) => { calls.push([tool, args]); return {}; };
+    const bridge = new DeviceBridge({ call });
+    await bridge.swipe({ direction: 'right', x: 1, y: 960, distance: 648 });
+    expect(calls).toEqual([['mobile_swipe_on_screen', { direction: 'right', x: 1, y: 960, distance: 648 }]]);
+
+    calls.length = 0;
+    await bridge.swipe({ direction: 'down' });
+    expect(calls).toEqual([['mobile_swipe_on_screen', { direction: 'down' }]]);
+  });
+});
