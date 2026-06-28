@@ -4,7 +4,7 @@
 
 `mauto` is a host-agnostic CLI that lets **any** AI coding agent author and run UI tests on a real device or emulator. The agent decides *what* to do; `mauto` does it — tap, type, swipe, assert — through [mobile-mcp](https://github.com/mobile-next/mobile-mcp). Tests are plain JSON scenarios, **platform-agnostic** by default, so the same scenario runs on Android and iOS.
 
-Claude Code, Cursor, Gemini CLI, GitHub Copilot, and OpenAI Agents all have one-command setup via `mauto init --agent <claude|cursor|gemini|copilot|agents|all>`, which installs native Agent Skills into each host's skills directory; any other MCP-capable agent connects via the `mauto mcp` prompts server. See [Using another agent](#-using-another-agent).
+Claude Code, Cursor, Gemini CLI, GitHub Copilot, and OpenAI Agents all have one-command setup via `mauto init --agent <claude|cursor|gemini|copilot|agents|all>`, which installs native Agent Skills into each host's skills directory (claude and cursor also get slash-commands/rules and the `mauto` MCP entry); any other MCP-capable agent connects via the `mauto mcp` prompts server. See [Using another agent](#-using-another-agent).
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Flutter%20%7C%20RN%20%7C%20KMP%20%7C%20CMP-green.svg)](#)
@@ -80,7 +80,7 @@ Because the contract is just verbs + JSON, **no agent is special** — `mauto in
 
 ## 🤖 Using another agent
 
-`mauto init` ships native Agent Skills for **Claude Code**, **Cursor**, **Gemini CLI**, **GitHub Copilot** (`agents`), and **OpenAI Agents** (`agents`); use `--agent all` to install for all hosts at once. Any other AI agent can drive `mauto` through one of these, no adapter required:
+`mauto init` ships native Agent Skills for **Claude Code**, **Cursor**, **Gemini CLI**, **GitHub Copilot** (`copilot`), and **OpenAI Agents** (`agents`); use `--agent all` to install for all hosts at once. Any other AI agent can drive `mauto` through one of these, no adapter required:
 
 - **MCP (recommended):** point your MCP-capable agent at the prompts server — `mauto mcp` (stdio) — which exposes the `generate` / `execute` / `setup` workflows as prompts. Register it like any MCP server: command `mauto`, args `["mcp"]`.
 - **Plain shell:** have the agent read `mauto bootstrap` once (the verb map + invariants), then read `mauto guide <topic>` for a workflow and call the verbs (`mauto elements`, `tap`, `type`, `assert`, …) directly. Every verb returns the `{ok, data, error, hint}` envelope, so the agent can act on results programmatically.
