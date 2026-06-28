@@ -27,7 +27,10 @@ class DeviceBridge {
   }
 
   async screenshot(destPath) {
-    const result = await this._call('mobile_save_screenshot', { path: destPath });
+    // mobile-mcp's save-screenshot tool names the destination `saveTo` (not
+    // `path`); passing the wrong key makes it a silent no-op that still reports
+    // success. It returns a confirmation string, so we resolve to destPath.
+    const result = await this._call('mobile_save_screenshot', { saveTo: destPath });
     return (result && result.path) || destPath;
   }
 

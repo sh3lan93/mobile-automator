@@ -87,10 +87,33 @@ function makeCall({ rawCall, device = null }) {
   return { call };
 }
 
+// Collect the text content blocks from an MCP tool result into one string.
+function textContent(res) {
+  const content = res && res.content;
+  if (!Array.isArray(content)) return '';
+  return content
+    .filter((c) => c && c.type === 'text' && typeof c.text === 'string')
+    .map((c) => c.text)
+    .join('\n');
+}
+
+// mobile-mcp returns *recoverable* failures (its `ActionableError`) as ordinary
+// text content WITHOUT the `isError` flag, appending this sentinel so an agent
+// reads the hint and retries. We must treat those as failures too, otherwise
+// the error text gets laundered into a successful `{ok:true}` envelope.
+const MOBILE_MCP_ACTIONABLE_SUFFIX = '. Please fix the issue and try again.';
+
 // mobile-mcp returns its payload as text content that is itself JSON.
 // Parse defensively: prefer JSON text content, fall back to raw text/struct.
 function parseToolResult(res) {
   if (!res) return null;
+
+  // `isError` covers "real exceptions"; the sentinel covers ActionableError.
+  // Surface both so device verbs fail honestly instead of reporting ok:true.
+  if (res.isError) {
+    throw new Error(textContent(res) || 'mobile-mcp tool call failed');
+  }
+
   if (res.structuredContent !== undefined) return res.structuredContent;
 
   const content = res.content;
@@ -105,9 +128,15 @@ function parseToolResult(res) {
         // not JSON; keep looking, fall through to raw join
       }
     }
-    if (texts.length) return texts.join('\n');
+    if (texts.length) {
+      const joined = texts.join('\n');
+      if (joined.endsWith(MOBILE_MCP_ACTIONABLE_SUFFIX)) {
+        throw new Error(joined);
+      }
+      return joined;
+    }
   }
   return res;
 }
 
-module.exports = { createCall, makeCall };
+module.exports = { createCall, makeCall, parseToolResult };
