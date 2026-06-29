@@ -46,6 +46,16 @@ Record each observation in the result via `mauto result add-step` so it lands in
 4. **Validate schema version:** read the `$schema_version` field; it must be `"2.1"`. If absent or unrecognized, report an error and halt.
 5. Validate the scenario with `mauto validate <path>` against `mauto schema scenario`.
 
+**Precondition `device_actions`** (from the scenario's `preconditions`, run before step replay):
+
+| Device action | `mauto` verb |
+|---|---|
+| `install_app` | `mauto install <path>` |
+| `uninstall_app` | `mauto uninstall <appId>` |
+| `set_orientation` | `mauto orientation <portrait\|landscape>` |
+
+The remaining precondition actions are not mechanically executable (see step execution): report them honestly or perform them out of band.
+
 ### 2. Semantic Action Resolution
 
 When you encounter a semantic action — `press_back`, `dismiss_keyboard`, `grant_permission`, `deny_permission` — run `mauto press <action>` and let the CLI resolve it for the connected device's `platform`. Never record or hardcode the per-platform mechanics; the scenario stays portable.

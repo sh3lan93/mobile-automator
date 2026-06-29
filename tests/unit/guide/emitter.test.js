@@ -73,7 +73,8 @@ describe('guide/emitter', () => {
     it('contains the verb list', () => {
       const out = emitBootstrap();
       for (const verb of [
-        'elements', 'tap', 'type', 'swipe', 'press', 'screenshot',
+        'elements', 'tap', 'long-press', 'double-tap', 'type', 'swipe', 'press',
+        'launch', 'install', 'uninstall', 'open-url', 'orientation', 'screenshot',
         'assert', 'validate', 'result', 'setup', 'config', 'guide', 'schema',
       ]) {
         expect(out).toContain(verb);

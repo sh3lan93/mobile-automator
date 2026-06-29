@@ -13,6 +13,7 @@ const { ACTION_CATALOG, RESOLUTIONS } = require('../../src/device/action-catalog
 const { DeviceBridge } = require('../../src/device/bridge');
 const { ACTION_METHOD } = require('../../src/device/semantic-press');
 const { buildProgram } = require('../../src/cli');
+const { emitBootstrap } = require('../../src/guide/emitter');
 
 const REPO = path.join(__dirname, '..', '..');
 const schema = require('../../src/schemas/scenario_schema.json');
@@ -82,6 +83,34 @@ describe('action coverage — schema ↔ catalog ↔ verbs ↔ guide', () => {
           .filter((line) => line.includes(action) && /`mauto\s+[a-z-]+/.test(line));
         expect(offending).toEqual([]);
       }
+    });
+  });
+
+  // A new verb that never reaches `mauto bootstrap` is undiscoverable by agents
+  // pulling the verb map. Guard it so the map can't drift behind the catalog.
+  describe('bootstrap verb map lists every verb-backed action', () => {
+    const bootstrap = emitBootstrap();
+    const verbDefs = entries('verb').map((a) => ACTION_CATALOG[a]);
+    // Distinct verbs (press_button shares `press` with the semantic actions).
+    const distinctVerbs = [...new Set(verbDefs.map((d) => d.verb))];
+
+    test.each(distinctVerbs)('`mauto %s` appears in the bootstrap verb map', (verb) => {
+      expect(bootstrap).toContain(`\`mauto ${verb}\``);
+    });
+  });
+
+  // The two guide modes must stay at parity for executable preconditions: a
+  // supported precondition device_action documented in one mode but not the
+  // other leaves agnostic-mode agents (the cross-platform default) blind.
+  describe('precondition device_actions are documented in BOTH guide modes', () => {
+    const supportedPreconditions = deviceActions.filter(
+      (a) => ACTION_CATALOG[a] && ACTION_CATALOG[a].resolution === 'verb'
+    );
+
+    test.each(supportedPreconditions)('%s maps to its verb in aware AND agnostic guides', (action) => {
+      const verb = ACTION_CATALOG[action].verb;
+      expect(guideAware).toContain(`\`mauto ${verb}`);
+      expect(guideAgnostic).toContain(`\`mauto ${verb}`);
     });
   });
 });
