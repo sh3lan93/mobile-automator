@@ -189,6 +189,14 @@ describe('cli handlers', () => {
       expect(envelope.ok).toBe(false);
       expect(envelope.error.kind).toBe('invalid_input');
     });
+
+    test('rejects an empty/whitespace coordinate part (Number("") === 0 trap)', async () => {
+      const bridge = { tap: async () => { throw new Error('should not be called'); } };
+      for (const raw of ['10,', ',20', ' , ', '10, ']) {
+        const { exitKind } = await handleTap({ deviceBridge: bridge }, raw);
+        expect(exitKind).toBe('invalid_input');
+      }
+    });
   });
 
   describe('handleLongPress', () => {

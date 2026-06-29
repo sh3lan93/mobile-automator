@@ -144,8 +144,17 @@ function parseCoordinates(raw) {
       error: fail('invalid_input', `expected coordinates as "x,y", got "${raw}"`, 'Pass --at <x,y>, e.g. --at 100,250.'),
     };
   }
-  const x = Number(parts[0]);
-  const y = Number(parts[1]);
+  // Reject empty/whitespace-only parts BEFORE Number(): Number('') is 0 (a
+  // finite number), so `--at 10,` would otherwise silently resolve to (10, 0).
+  const rawX = parts[0].trim();
+  const rawY = parts[1].trim();
+  if (rawX === '' || rawY === '') {
+    return {
+      error: fail('invalid_input', `expected coordinates as "x,y", got "${raw}"`, 'Pass --at <x,y>, e.g. --at 100,250.'),
+    };
+  }
+  const x = Number(rawX);
+  const y = Number(rawY);
   if (!Number.isFinite(x) || !Number.isFinite(y)) {
     return {
       error: fail('invalid_input', `coordinates must be numbers, got "${raw}"`, 'Pass --at <x,y>, e.g. --at 100,250.'),
