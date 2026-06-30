@@ -14,6 +14,7 @@ const { scaffold } = require('./setup/scaffold');
 const guideEmitter = require('./guide/emitter');
 const { ADAPTERS } = require('./init/adapters');
 const { isSemanticAction, ACTION_METHOD, selectResolver } = require('./device/semantic-press');
+const connection = require('./device/connection');
 
 // Map the user-facing --mode flag onto the stored config mode values.
 const MODE_ALIASES = {
@@ -550,7 +551,10 @@ function handleInit({ projectRoot, adapters = ADAPTERS }, agent) {
 // `mauto session start|status|end` manage the per-workspace daemon that holds
 // ONE mobile-mcp connection and serves every one-shot device verb over a Unix
 // domain socket. Device verbs still autostart a daemon transparently; these
-// verbs give an agent explicit lifecycle control. All session deps are
+// verbs give an agent explicit lifecycle control. The handlers own only the
+// envelope shaping — the "is a daemon alive / spawn one / shut one down"
+// decision lives in device/connection.js, the same owner the verb path uses, so
+// there is no second inline wiring of session-client/session-spawn. Deps stay
 // injectable so the handlers are unit-testable without spawning a real daemon.
 
 async function handleSessionStart(
@@ -569,14 +573,14 @@ async function handleSessionStart(
     }
   }
 
-  if (await client.isAlive(projectRoot)) {
+  if (await connection.isSessionAlive(projectRoot, { client })) {
     return {
       envelope: ok({ started: false, already_running: true, device }),
       exitKind: 'ok',
     };
   }
 
-  const started = await spawn.spawnDaemon({ projectRoot, device, idleMs });
+  const started = await connection.startSession({ projectRoot, device, idleMs, spawn });
   if (!started) {
     return {
       envelope: fail('device', 'failed to start the device session daemon', 'Ensure a device or simulator is connected, or run verbs directly (they fall back to one-shot).'),
@@ -589,14 +593,14 @@ async function handleSessionStart(
 async function handleSessionStatus(
   { projectRoot, client = require('./device/session-client') } = {}
 ) {
-  const running = await client.isAlive(projectRoot);
+  const running = await connection.isSessionAlive(projectRoot, { client });
   return { envelope: ok({ running }), exitKind: 'ok' };
 }
 
 async function handleSessionEnd(
   { projectRoot, client = require('./device/session-client') } = {}
 ) {
-  const stopped = await client.requestShutdown(projectRoot);
+  const stopped = await connection.endSession(projectRoot, { client });
   return {
     envelope: ok({ stopped, already_stopped: !stopped }),
     exitKind: 'ok',
@@ -680,16 +684,15 @@ function handleDevicesClear({ store = selectionStore, projectRoot }) {
 // Program wiring
 // ---------------------------------------------------------------------------
 
-// Build a DeviceBridge, transparently reusing the per-workspace device session
-// daemon when one fits and falling back to a one-shot mobile-mcp spawn
-// otherwise. Returns { bridge, close } — the `deviceBridgeFactory` seam +
-// contract are preserved so existing handler tests stay green. When the bridge
-// is daemon-backed, close() only releases this verb's socket; it never tears
-// the shared daemon down.
-async function realDeviceBridge({ device, projectRoot = process.cwd() } = {}) {
-  const { resolveDeviceConnection } = require('./device/resolve-connection');
-  const { bridge, close } = await resolveDeviceConnection({ device, projectRoot });
-  return { bridge, close };
+// Build a DeviceBridge via the one connection seam, which transparently reuses
+// the per-workspace device session daemon when one fits and falls back to a
+// one-shot mobile-mcp spawn otherwise. Returns { bridge, close } — the
+// `deviceBridgeFactory` seam + contract are preserved so existing handler tests
+// stay green. When the bridge is daemon-backed, close() only releases this
+// verb's socket; it never tears the shared daemon down. This is a thin alias:
+// the daemon-vs-oneshot decision lives entirely in device/connection.js.
+function realDeviceBridge(args) {
+  return require('./device/connection').acquireConnection(args);
 }
 
 function buildProgram(deps = {}) {
@@ -719,46 +722,9 @@ function buildProgram(deps = {}) {
   const resolveVerbDevice = (explicit) =>
     selectionStore.resolveDevice({ explicit, projectRoot, store: selectionStore }).device;
 
-  program
-    .command('elements')
-    .description('List the agnostic UI elements currently on screen')
-    .option('--device <id>', 'target device id')
-    .action(async (opts) => {
-      const device = resolveVerbDevice(opts.device);
-      const { bridge, close } = await deviceBridgeFactory({ device, projectRoot });
-      try {
-        const r = await handleElements({ deviceBridge: bridge });
-        emit(r, humanFlag());
-      } finally {
-        if (typeof close === 'function') await close();
-      }
-    });
-
-  program
-    .command('screenshot <path>')
-    .description('Save a screenshot to the given path')
-    .option('--device <id>', 'target device id')
-    .action(async (destPath, opts) => {
-      const device = resolveVerbDevice(opts.device);
-      const { bridge, close } = await deviceBridgeFactory({ device, projectRoot });
-      try {
-        const r = await handleScreenshot({ deviceBridge: bridge }, destPath);
-        emit(r, humanFlag());
-      } finally {
-        if (typeof close === 'function') await close();
-      }
-    });
-
-  program
-    .command('validate <file>')
-    .description('Validate a scenario JSON file against the scenario schema')
-    .action((file) => {
-      const r = handleValidate({ validator }, file);
-      emit(r, humanFlag());
-    });
-
-  // --- Action verbs (one-shot; CLI owns the mechanical work) ---------------
-
+  // Acquire a bridge, run fn(bridge), emit its result, and always release the
+  // connection. The ONE place verbs touch acquire/close — no verb hand-rolls a
+  // try/finally around deviceBridgeFactory.
   const withBridge = async (explicitDevice, fn) => {
     const device = resolveVerbDevice(explicitDevice);
     const { bridge, close } = await deviceBridgeFactory({ device, projectRoot });
@@ -769,6 +735,29 @@ function buildProgram(deps = {}) {
       if (typeof close === 'function') await close();
     }
   };
+
+  program
+    .command('elements')
+    .description('List the agnostic UI elements currently on screen')
+    .option('--device <id>', 'target device id')
+    .action((opts) => withBridge(opts.device, (bridge) => handleElements({ deviceBridge: bridge })));
+
+  program
+    .command('screenshot <path>')
+    .description('Save a screenshot to the given path')
+    .option('--device <id>', 'target device id')
+    .action((destPath, opts) =>
+      withBridge(opts.device, (bridge) => handleScreenshot({ deviceBridge: bridge }, destPath)));
+
+  program
+    .command('validate <file>')
+    .description('Validate a scenario JSON file against the scenario schema')
+    .action((file) => {
+      const r = handleValidate({ validator }, file);
+      emit(r, humanFlag());
+    });
+
+  // --- Action verbs (one-shot; CLI owns the mechanical work) ---------------
 
   program
     .command('tap')

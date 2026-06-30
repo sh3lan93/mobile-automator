@@ -53,6 +53,22 @@ function deviceMatches(requested, handleDevice) {
   return requested === handleDevice;
 }
 
+// PURE decision: given the observed facts, which strategy should we run?
+//   'daemon'           — a live daemon fits; connect daemon-backed (no-op close)
+//   'oneshot'          — connect once for this call (real close)
+//   'spawn-then-daemon'— no daemon fits but autostart is on; spawn then connect
+//
+// Zero collaborators, no I/O — value-in/value-out so the branching can be tested
+// without faking a client/spawn/createCall or writing a handle to disk. The
+// effectful resolver (below) gathers the facts, calls this, and runs exactly one
+// of the three thin effect paths.
+function chooseConnectionStrategy({ alive, handleDevice, requestedDevice, autostart }) {
+  if (alive && deviceMatches(requestedDevice, handleDevice)) return 'daemon';
+  if (alive) return 'oneshot'; // live daemon, but its device pin mismatches
+  if (autostart) return 'spawn-then-daemon';
+  return 'oneshot';
+}
+
 async function resolveDeviceConnection({
   device = null,
   projectRoot = process.cwd(),
@@ -94,31 +110,47 @@ async function resolveDeviceConnection({
 
   if (alive) {
     const handleDevice = readHandleDevice(projectRoot);
-    if (deviceMatches(device, handleDevice)) {
+    const strategy = chooseConnectionStrategy({
+      alive: true,
+      handleDevice,
+      requestedDevice: device,
+      autostart,
+    });
+    if (strategy === 'daemon') {
       // (a) reuse the live daemon.
       const conn = await daemonBacked();
       if (conn) return conn;
-      // Race: daemon vanished between isAlive and connect — fall through.
+      // Race: daemon vanished between isAlive and connect — fall through and
+      // re-decide as if no daemon were alive.
     } else {
       // (b) device-pin mismatch: never silently reuse the wrong device.
       return oneShot();
     }
   }
 
-  if (!autostart) {
-    // (d) explicit one-shot.
-    return oneShot();
+  // No live daemon (or it vanished mid-flight): spawn-then-daemon vs one-shot.
+  const strategy = chooseConnectionStrategy({
+    alive: false,
+    handleDevice: null,
+    requestedDevice: device,
+    autostart,
+  });
+  if (strategy === 'spawn-then-daemon') {
+    // (c) spawn a daemon, then connect daemon-backed.
+    const started = await spawn.spawnDaemon({ projectRoot, device, idleMs });
+    if (started) {
+      const conn = await daemonBacked();
+      if (conn) return conn;
+    }
   }
 
-  // (c) no daemon: spawn one, then connect.
-  const started = await spawn.spawnDaemon({ projectRoot, device, idleMs });
-  if (started) {
-    const conn = await daemonBacked();
-    if (conn) return conn;
-  }
-
-  // (d) spawn failed / unreachable: one-shot fallback.
+  // (d) explicit one-shot, or spawn failed / unreachable.
   return oneShot();
 }
 
-module.exports = { resolveDeviceConnection, deviceMatches, readHandleDevice };
+module.exports = {
+  resolveDeviceConnection,
+  chooseConnectionStrategy,
+  deviceMatches,
+  readHandleDevice,
+};

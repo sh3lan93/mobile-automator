@@ -4,7 +4,11 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { resolveDeviceConnection, deviceMatches } = require('../../../src/device/resolve-connection');
+const {
+  resolveDeviceConnection,
+  chooseConnectionStrategy,
+  deviceMatches,
+} = require('../../../src/device/resolve-connection');
 const paths = require('../../../src/device/session-paths');
 
 function tmpRoot() {
@@ -56,6 +60,25 @@ describe('resolve-connection', () => {
       expect(deviceMatches('A', 'A')).toBe(true);
       expect(deviceMatches('B', 'A')).toBe(false);
       expect(deviceMatches('A', null)).toBe(false);
+    });
+  });
+
+  // The pure chooser needs NO tmpRoot, NO writeHandle, NO fakes — just values.
+  describe('chooseConnectionStrategy (pure)', () => {
+    test('live daemon + matching pin -> daemon', () => {
+      expect(chooseConnectionStrategy({ alive: true, handleDevice: 'A', requestedDevice: 'A', autostart: true })).toBe('daemon');
+      expect(chooseConnectionStrategy({ alive: true, handleDevice: 'A', requestedDevice: null, autostart: true })).toBe('daemon');
+      expect(chooseConnectionStrategy({ alive: true, handleDevice: null, requestedDevice: null, autostart: false })).toBe('daemon');
+    });
+    test('live daemon + pin mismatch -> oneshot (regardless of autostart)', () => {
+      expect(chooseConnectionStrategy({ alive: true, handleDevice: 'A', requestedDevice: 'B', autostart: true })).toBe('oneshot');
+      expect(chooseConnectionStrategy({ alive: true, handleDevice: null, requestedDevice: 'B', autostart: false })).toBe('oneshot');
+    });
+    test('no daemon + autostart -> spawn-then-daemon', () => {
+      expect(chooseConnectionStrategy({ alive: false, handleDevice: null, requestedDevice: 'A', autostart: true })).toBe('spawn-then-daemon');
+    });
+    test('no daemon + autostart off -> oneshot', () => {
+      expect(chooseConnectionStrategy({ alive: false, handleDevice: null, requestedDevice: null, autostart: false })).toBe('oneshot');
     });
   });
 
