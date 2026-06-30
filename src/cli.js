@@ -514,17 +514,42 @@ function handleBootstrap({ emitter = guideEmitter } = {}) {
 // `mauto init --agent <claude|cursor>` writes per-vendor artifacts in the
 // vendor's own namespace. Adapters are injectable for tests; the device is
 // never exposed as MCP tools — the `mauto mcp` server advertises prompts only.
+// Apply one adapter, converting any throw (perms, corrupt host config, missing
+// asset) into a per-agent record so a mid-batch failure never escapes as a bare
+// stack trace. Writers are idempotent/content-addressed, so a failed agent is
+// re-converged cleanly on the next run without clobbering the succeeded ones.
+function applyOneAdapter(adapter, agent, projectRoot) {
+  try {
+    const r = adapter.apply({ projectRoot });
+    return { agent, ok: true, written: r.written, merged: r.merged };
+  } catch (err) {
+    return {
+      agent,
+      ok: false,
+      error: (err && err.code) || 'io_error',
+      message: (err && err.message) || String(err),
+    };
+  }
+}
+
 function handleInit({ projectRoot, adapters = ADAPTERS }, agent) {
   const known = Object.keys(adapters);
   if (agent === 'all') {
-    const results = known.map((a) => adapters[a].apply({ projectRoot }));
+    // Continue-on-error: every host is attempted; the result is ONE envelope
+    // carrying a per-agent ok/failed map. `ok` only when all succeed.
+    const perAgent = known.map((a) => applyOneAdapter(adapters[a], a, projectRoot));
+    const failed = perAgent.filter((r) => !r.ok);
+    if (failed.length === 0) {
+      return { envelope: ok({ agents: perAgent }), exitKind: 'ok' };
+    }
     return {
-      envelope: ok({
-        agents: results.map((r) => r.agent),
-        written: results.flatMap((r) => r.written),
-        merged: results.flatMap((r) => r.merged),
-      }),
-      exitKind: 'ok',
+      envelope: fail(
+        'partial_failure',
+        `${failed.length}/${known.length} agents failed to initialize`,
+        'See data.agents[].error; re-run to converge the failed agents (writers are idempotent).',
+        { agents: perAgent }
+      ),
+      exitKind: 'partial',
     };
   }
   const adapter = adapters[agent];
@@ -538,7 +563,18 @@ function handleInit({ projectRoot, adapters = ADAPTERS }, agent) {
       exitKind: 'invalid_input',
     };
   }
-  const r = adapter.apply({ projectRoot });
+  const r = applyOneAdapter(adapter, agent, projectRoot);
+  if (!r.ok) {
+    return {
+      envelope: fail(
+        'internal',
+        `init for "${agent}" failed: ${r.message}`,
+        'Fix the underlying filesystem/host-config issue and re-run (writers are idempotent).',
+        { agents: [r] }
+      ),
+      exitKind: 'internal',
+    };
+  }
   return {
     envelope: ok({ agent: r.agent, written: r.written, merged: r.merged }),
     exitKind: 'ok',
