@@ -10,13 +10,18 @@ The **Execute Command** runs your test scenarios on a real device or simulator, 
 
 ## Quick Start
 
-```bash
-# Run the command
-gemini /mobile-automator:execute
+In Claude Code, run the slash-command:
 
-# Select scenario and device
-# Watch test execute step-by-step
-# Review detailed results
+```
+/mobile-automator-execute
+```
+
+With any other agent, have it read the guide and drive the device through `mauto` verbs:
+
+```bash
+mauto guide execute
+# the agent then selects a scenario and device, runs it step-by-step,
+# and writes a detailed result report
 ```
 
 Results are saved to: `mobile-automator/results/run_YYYYMMDD_HHMMSS.json`
@@ -34,24 +39,22 @@ Before running execute, ensure:
    - At least one scenario in `mobile-automator/scenarios/*.json`
 
 3. **Device is connected**
-   - Android: `adb devices` shows your device
-   - iOS: Simulator running or physical device connected
+   - Confirm with `mauto devices` (lists reachable devices)
 
 4. **App is installed**
-   - Executor will build/install if needed
+   - The agent will build/install if needed
 
 ---
 
 ## Pre-Flight Checks
 
-When you run `/mobile-automator:execute`, the wrapper verifies:
+When you start execution, the agent verifies:
 
 ```
 ✓ Checking setup state...
 ✓ Found: mobile-automator/config.json
-✓ Found: .gemini/skills/mobile-automator-executor/SKILL.md
 
-✓ Detecting devices...
+✓ Detecting devices (mauto devices)...
   Available devices:
     1. Pixel 6 (Android 34)
     2. iPhone 14 Pro (iOS 17.2)
@@ -99,9 +102,9 @@ For each step in your scenario:
 
 #### 2a. Get Current Screen State
 ```
-├─ Call mobile_list_elements_on_screen()
-├─ Get current UI element tree
-└─ Record screenshot
+├─ Run mauto elements
+├─ Get current UI element tree (visible text + role + coordinates)
+└─ Record screenshot (mauto screenshot)
 ```
 
 #### 2b. Execute Action
@@ -565,7 +568,7 @@ mobile-automator/results/
 
 **Solutions:**
 1. **Check result file** — `mobile-automator/results/run_*.json` shows which step caused crash
-2. **Review app logs** — `adb logcat` (Android) or Xcode debugger (iOS)
+2. **Review app logs** — use your platform's logging tools (Android logcat, Xcode debugger for iOS)
 3. **Check if known issue** — May be app bug, not test issue
 4. **Add preconditions** — Clear app data before test:
    ```json
