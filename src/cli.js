@@ -680,16 +680,15 @@ function handleDevicesClear({ store = selectionStore, projectRoot }) {
 // Program wiring
 // ---------------------------------------------------------------------------
 
-// Build a DeviceBridge, transparently reusing the per-workspace device session
-// daemon when one fits and falling back to a one-shot mobile-mcp spawn
-// otherwise. Returns { bridge, close } — the `deviceBridgeFactory` seam +
-// contract are preserved so existing handler tests stay green. When the bridge
-// is daemon-backed, close() only releases this verb's socket; it never tears
-// the shared daemon down.
-async function realDeviceBridge({ device, projectRoot = process.cwd() } = {}) {
-  const { resolveDeviceConnection } = require('./device/resolve-connection');
-  const { bridge, close } = await resolveDeviceConnection({ device, projectRoot });
-  return { bridge, close };
+// Build a DeviceBridge via the one connection seam, which transparently reuses
+// the per-workspace device session daemon when one fits and falls back to a
+// one-shot mobile-mcp spawn otherwise. Returns { bridge, close } — the
+// `deviceBridgeFactory` seam + contract are preserved so existing handler tests
+// stay green. When the bridge is daemon-backed, close() only releases this
+// verb's socket; it never tears the shared daemon down. This is a thin alias:
+// the daemon-vs-oneshot decision lives entirely in device/connection.js.
+function realDeviceBridge(args) {
+  return require('./device/connection').acquireConnection(args);
 }
 
 function buildProgram(deps = {}) {
@@ -719,46 +718,9 @@ function buildProgram(deps = {}) {
   const resolveVerbDevice = (explicit) =>
     selectionStore.resolveDevice({ explicit, projectRoot, store: selectionStore }).device;
 
-  program
-    .command('elements')
-    .description('List the agnostic UI elements currently on screen')
-    .option('--device <id>', 'target device id')
-    .action(async (opts) => {
-      const device = resolveVerbDevice(opts.device);
-      const { bridge, close } = await deviceBridgeFactory({ device, projectRoot });
-      try {
-        const r = await handleElements({ deviceBridge: bridge });
-        emit(r, humanFlag());
-      } finally {
-        if (typeof close === 'function') await close();
-      }
-    });
-
-  program
-    .command('screenshot <path>')
-    .description('Save a screenshot to the given path')
-    .option('--device <id>', 'target device id')
-    .action(async (destPath, opts) => {
-      const device = resolveVerbDevice(opts.device);
-      const { bridge, close } = await deviceBridgeFactory({ device, projectRoot });
-      try {
-        const r = await handleScreenshot({ deviceBridge: bridge }, destPath);
-        emit(r, humanFlag());
-      } finally {
-        if (typeof close === 'function') await close();
-      }
-    });
-
-  program
-    .command('validate <file>')
-    .description('Validate a scenario JSON file against the scenario schema')
-    .action((file) => {
-      const r = handleValidate({ validator }, file);
-      emit(r, humanFlag());
-    });
-
-  // --- Action verbs (one-shot; CLI owns the mechanical work) ---------------
-
+  // Acquire a bridge, run fn(bridge), emit its result, and always release the
+  // connection. The ONE place verbs touch acquire/close — no verb hand-rolls a
+  // try/finally around deviceBridgeFactory.
   const withBridge = async (explicitDevice, fn) => {
     const device = resolveVerbDevice(explicitDevice);
     const { bridge, close } = await deviceBridgeFactory({ device, projectRoot });
@@ -769,6 +731,29 @@ function buildProgram(deps = {}) {
       if (typeof close === 'function') await close();
     }
   };
+
+  program
+    .command('elements')
+    .description('List the agnostic UI elements currently on screen')
+    .option('--device <id>', 'target device id')
+    .action((opts) => withBridge(opts.device, (bridge) => handleElements({ deviceBridge: bridge })));
+
+  program
+    .command('screenshot <path>')
+    .description('Save a screenshot to the given path')
+    .option('--device <id>', 'target device id')
+    .action((destPath, opts) =>
+      withBridge(opts.device, (bridge) => handleScreenshot({ deviceBridge: bridge }, destPath)));
+
+  program
+    .command('validate <file>')
+    .description('Validate a scenario JSON file against the scenario schema')
+    .action((file) => {
+      const r = handleValidate({ validator }, file);
+      emit(r, humanFlag());
+    });
+
+  // --- Action verbs (one-shot; CLI owns the mechanical work) ---------------
 
   program
     .command('tap')
