@@ -42,6 +42,19 @@ class DeviceBridge {
     return this._call('mobile_click_on_screen_at_coordinates', { x, y });
   }
 
+  // Long-press at absolute screen coordinates. Optional duration (ms) overrides
+  // mobile-mcp's 500ms default; absent it is not sent so the default applies.
+  async longPress({ x, y, duration } = {}) {
+    const args = { x, y };
+    if (duration !== undefined) args.duration = duration;
+    return this._call('mobile_long_press_on_screen_at_coordinates', args);
+  }
+
+  // Double-tap at absolute screen coordinates.
+  async doubleTap({ x, y } = {}) {
+    return this._call('mobile_double_tap_on_screen', { x, y });
+  }
+
   // Type into the focused element. We never auto-submit; pressing ENTER is a
   // distinct, explicit action via pressButton.
   async type(text) {
@@ -95,6 +108,31 @@ class DeviceBridge {
   // Press a hardware/system button (BACK, HOME, ENTER, ...).
   async pressButton(button) {
     return this._call('mobile_press_button', { button });
+  }
+
+  // Launch an installed app by its package/bundle identifier.
+  async launchApp(packageName) {
+    return this._call('mobile_launch_app', { packageName });
+  }
+
+  // Install an app from a local artifact (apk/ipa) path.
+  async installApp(appPath) {
+    return this._call('mobile_install_app', { path: appPath });
+  }
+
+  // Uninstall an app by its bundle/package identifier.
+  async uninstallApp(appId) {
+    return this._call('mobile_uninstall_app', { bundle_id: appId });
+  }
+
+  // Open a URL (deep link or web) on the device.
+  async openUrl(url) {
+    return this._call('mobile_open_url', { url });
+  }
+
+  // Set the device orientation ('portrait'/'landscape').
+  async setOrientation(orientation) {
+    return this._call('mobile_set_orientation', { orientation });
   }
 }
 

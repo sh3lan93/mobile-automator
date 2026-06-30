@@ -87,20 +87,33 @@ For each step in the scenario:
 
 | Action | `mauto` verb | Notes |
 |---|---|---|
-| `launch_app` | `mauto press` / launch the app under test | |
+| `launch_app` | `mauto launch <appId>` | `appId` from config / scenario metadata |
 | `tap` | `mauto tap --at <x,y>` | Find element first via `mauto elements` |
-| `long_press` | `mauto tap --at <x,y>` (long-press variant) | |
-| `double_tap` | `mauto tap --at <x,y>` (double-tap variant) | |
+| `long_press` | `mauto long-press --at <x,y>` | Optional `--duration <ms>` |
+| `double_tap` | `mauto double-tap --at <x,y>` | |
 | `type` | `mauto type <text>` | |
 | `swipe` | `mauto swipe --direction <dir>` | `value` = direction |
 | `scroll_to_element` | `mauto swipe --direction <dir>` (repeated) | Poll until the target element is visible |
 | `press_button` | `mauto press <button>` | `value` = button name (BACK, HOME, ENTER) |
-| `open_url` | `mauto press` / open the URL | |
+| `open_url` | `mauto open-url <url>` | `value` = the URL to open |
 | `wait_for_element` | Poll `mauto elements` | Repeat until the element appears or timeout |
 | `wait_for_element_gone` | Poll `mauto elements` | Repeat until the element is absent or timeout |
 | `wait_for_loading_complete` | Poll `mauto screenshot <path>` + visual check | Wait for loading indicators ({{loading_indicators}}) to be absent |
 | `capture_value` | `mauto elements` | Extract text from the target element, store in the `capture_to` variable |
-| `clear_app_data` | clear app data before the step | Prefer a precondition `device_action` when possible |
+
+**Precondition `device_actions`** (run before the step replay, from the scenario's `preconditions`):
+
+| Device action | `mauto` verb | Notes |
+|---|---|---|
+| `install_app` | `mauto install <path>` | `path` = the build artifact to install |
+| `uninstall_app` | `mauto uninstall <appId>` | `appId` from config / scenario metadata |
+| `set_orientation` | `mauto orientation <portrait\|landscape>` | `value` = target orientation |
+
+**Not mechanically executable** — these actions have no `mauto` verb and no underlying primitive. Do NOT improvise a gesture for them: report them honestly in the result (as unsupported on this run) and, if the run genuinely depends on them, perform them manually out of band before continuing.
+
+- `clear_app_data` — clear the app's stored data. No verb backs this; do it manually if required, otherwise report it as not executed.
+- `enable_wifi` — not executable through the CLI; handle manually or report.
+- `disable_wifi` — not executable through the CLI; handle manually or report.
 
 **4.2 Handle step outcome**
 

@@ -41,6 +41,7 @@ const KNOWN_ASSERTION_TYPES = new Set([
 ]);
 
 const SWIPE_DIRECTIONS = new Set(['up', 'down', 'left', 'right']);
+const ORIENTATIONS = new Set(['portrait', 'landscape']);
 
 // ---------------------------------------------------------------------------
 // Handlers — pure-ish: accept injected deps, return { envelope, exitKind }.
@@ -133,27 +134,168 @@ function deviceFail(err) {
   };
 }
 
-async function handleTap({ deviceBridge }, raw) {
+// Parse a "x,y" coordinate string shared by tap / long-press / double-tap.
+// Returns { x, y } (rounded ints) on success, or { error } carrying the
+// invalid_input fail envelope so callers can short-circuit uniformly.
+function parseCoordinates(raw) {
   const parts = String(raw == null ? '' : raw).split(',');
   if (parts.length !== 2) {
     return {
-      envelope: fail('invalid_input', `expected coordinates as "x,y", got "${raw}"`, 'Pass --at <x,y>, e.g. --at 100,250.'),
-      exitKind: 'invalid_input',
+      error: fail('invalid_input', `expected coordinates as "x,y", got "${raw}"`, 'Pass --at <x,y>, e.g. --at 100,250.'),
     };
   }
-  const x = Number(parts[0]);
-  const y = Number(parts[1]);
+  // Reject empty/whitespace-only parts BEFORE Number(): Number('') is 0 (a
+  // finite number), so `--at 10,` would otherwise silently resolve to (10, 0).
+  const rawX = parts[0].trim();
+  const rawY = parts[1].trim();
+  if (rawX === '' || rawY === '') {
+    return {
+      error: fail('invalid_input', `expected coordinates as "x,y", got "${raw}"`, 'Pass --at <x,y>, e.g. --at 100,250.'),
+    };
+  }
+  const x = Number(rawX);
+  const y = Number(rawY);
   if (!Number.isFinite(x) || !Number.isFinite(y)) {
     return {
-      envelope: fail('invalid_input', `coordinates must be numbers, got "${raw}"`, 'Pass --at <x,y>, e.g. --at 100,250.'),
+      error: fail('invalid_input', `coordinates must be numbers, got "${raw}"`, 'Pass --at <x,y>, e.g. --at 100,250.'),
+    };
+  }
+  return { x: Math.round(x), y: Math.round(y) };
+}
+
+async function handleTap({ deviceBridge }, raw) {
+  const coords = parseCoordinates(raw);
+  if (coords.error) {
+    return { envelope: coords.error, exitKind: 'invalid_input' };
+  }
+  const { x, y } = coords;
+  try {
+    await deviceBridge.tap({ x, y });
+    return { envelope: ok({ tapped: [x, y] }), exitKind: 'ok' };
+  } catch (err) {
+    return deviceFail(err);
+  }
+}
+
+async function handleLongPress({ deviceBridge }, raw, { duration } = {}) {
+  const coords = parseCoordinates(raw);
+  if (coords.error) {
+    return { envelope: coords.error, exitKind: 'invalid_input' };
+  }
+  const { x, y } = coords;
+  let ms;
+  if (duration !== undefined) {
+    ms = Number(duration);
+    if (!Number.isInteger(ms) || ms <= 0) {
+      return {
+        envelope: fail('invalid_input', `duration must be a positive integer in ms, got "${duration}"`, 'Pass --duration <ms>, e.g. --duration 800.'),
+        exitKind: 'invalid_input',
+      };
+    }
+  }
+  try {
+    if (ms === undefined) {
+      await deviceBridge.longPress({ x, y });
+    } else {
+      await deviceBridge.longPress({ x, y, duration: ms });
+    }
+    const data = { long_pressed: [x, y] };
+    if (ms !== undefined) data.duration = ms;
+    return { envelope: ok(data), exitKind: 'ok' };
+  } catch (err) {
+    return deviceFail(err);
+  }
+}
+
+async function handleDoubleTap({ deviceBridge }, raw) {
+  const coords = parseCoordinates(raw);
+  if (coords.error) {
+    return { envelope: coords.error, exitKind: 'invalid_input' };
+  }
+  const { x, y } = coords;
+  try {
+    await deviceBridge.doubleTap({ x, y });
+    return { envelope: ok({ double_tapped: [x, y] }), exitKind: 'ok' };
+  } catch (err) {
+    return deviceFail(err);
+  }
+}
+
+async function handleLaunch({ deviceBridge }, appId) {
+  const id = String(appId == null ? '' : appId);
+  if (!id) {
+    return {
+      envelope: fail('invalid_input', 'an app id is required', 'e.g. mauto launch com.example.app'),
       exitKind: 'invalid_input',
     };
   }
-  const ix = Math.round(x);
-  const iy = Math.round(y);
   try {
-    await deviceBridge.tap({ x: ix, y: iy });
-    return { envelope: ok({ tapped: [ix, iy] }), exitKind: 'ok' };
+    await deviceBridge.launchApp(id);
+    return { envelope: ok({ launched: id }), exitKind: 'ok' };
+  } catch (err) {
+    return deviceFail(err);
+  }
+}
+
+async function handleInstall({ deviceBridge }, appPath) {
+  const p = String(appPath == null ? '' : appPath);
+  if (!p) {
+    return {
+      envelope: fail('invalid_input', 'an app path is required', 'e.g. mauto install ./app.apk'),
+      exitKind: 'invalid_input',
+    };
+  }
+  try {
+    await deviceBridge.installApp(p);
+    return { envelope: ok({ installed: p }), exitKind: 'ok' };
+  } catch (err) {
+    return deviceFail(err);
+  }
+}
+
+async function handleUninstall({ deviceBridge }, appId) {
+  const id = String(appId == null ? '' : appId);
+  if (!id) {
+    return {
+      envelope: fail('invalid_input', 'an app id is required', 'e.g. mauto uninstall com.example.app'),
+      exitKind: 'invalid_input',
+    };
+  }
+  try {
+    await deviceBridge.uninstallApp(id);
+    return { envelope: ok({ uninstalled: id }), exitKind: 'ok' };
+  } catch (err) {
+    return deviceFail(err);
+  }
+}
+
+async function handleOpenUrl({ deviceBridge }, url) {
+  const u = String(url == null ? '' : url);
+  if (!u) {
+    return {
+      envelope: fail('invalid_input', 'a url is required', 'e.g. mauto open-url https://example.com'),
+      exitKind: 'invalid_input',
+    };
+  }
+  try {
+    await deviceBridge.openUrl(u);
+    return { envelope: ok({ opened: u }), exitKind: 'ok' };
+  } catch (err) {
+    return deviceFail(err);
+  }
+}
+
+async function handleOrientation({ deviceBridge }, orientation) {
+  const o = String(orientation || '').toLowerCase();
+  if (!ORIENTATIONS.has(o)) {
+    return {
+      envelope: fail('invalid_input', `invalid orientation "${orientation}"`, 'Use one of: portrait, landscape.'),
+      exitKind: 'invalid_input',
+    };
+  }
+  try {
+    await deviceBridge.setOrientation(o);
+    return { envelope: ok({ orientation: o }), exitKind: 'ok' };
   } catch (err) {
     return deviceFail(err);
   }
@@ -655,6 +797,51 @@ function buildProgram(deps = {}) {
     .action((button, opts) => withBridge(opts.device, (bridge) => handlePress({ deviceBridge: bridge }, button)));
 
   program
+    .command('long-press')
+    .description('Long-press at absolute screen coordinates')
+    .requiredOption('--at <x,y>', 'coordinates as "x,y"')
+    .option('--duration <ms>', 'press duration in milliseconds')
+    .option('--device <id>', 'target device id')
+    .action((opts) => withBridge(opts.device, (bridge) => handleLongPress({ deviceBridge: bridge }, opts.at, { duration: opts.duration })));
+
+  program
+    .command('double-tap')
+    .description('Double-tap at absolute screen coordinates')
+    .requiredOption('--at <x,y>', 'coordinates as "x,y"')
+    .option('--device <id>', 'target device id')
+    .action((opts) => withBridge(opts.device, (bridge) => handleDoubleTap({ deviceBridge: bridge }, opts.at)));
+
+  program
+    .command('launch <appId>')
+    .description('Launch an installed app by its package/bundle id')
+    .option('--device <id>', 'target device id')
+    .action((appId, opts) => withBridge(opts.device, (bridge) => handleLaunch({ deviceBridge: bridge }, appId)));
+
+  program
+    .command('install <path>')
+    .description('Install an app from a local .apk/.app/.ipa path')
+    .option('--device <id>', 'target device id')
+    .action((path, opts) => withBridge(opts.device, (bridge) => handleInstall({ deviceBridge: bridge }, path)));
+
+  program
+    .command('uninstall <appId>')
+    .description('Uninstall an app by its package/bundle id')
+    .option('--device <id>', 'target device id')
+    .action((appId, opts) => withBridge(opts.device, (bridge) => handleUninstall({ deviceBridge: bridge }, appId)));
+
+  program
+    .command('open-url <url>')
+    .description('Open a URL (deep link or web) on the device')
+    .option('--device <id>', 'target device id')
+    .action((url, opts) => withBridge(opts.device, (bridge) => handleOpenUrl({ deviceBridge: bridge }, url)));
+
+  program
+    .command('orientation <orientation>')
+    .description('Set the device orientation (portrait | landscape)')
+    .option('--device <id>', 'target device id')
+    .action((orientation, opts) => withBridge(opts.device, (bridge) => handleOrientation({ deviceBridge: bridge }, orientation)));
+
+  program
     .command('assert <type>')
     .description('Evaluate an assertion against the current screen (mechanical types decided by the CLI; visual types deferred to the agent)')
     .option('--target <s>', 'element/target description')
@@ -886,9 +1073,16 @@ module.exports = {
   handleScreenshot,
   handleValidate,
   handleTap,
+  handleLongPress,
+  handleDoubleTap,
   handleType,
   handleSwipe,
   handlePress,
+  handleLaunch,
+  handleInstall,
+  handleUninstall,
+  handleOpenUrl,
+  handleOrientation,
   handleAssert,
   handleResultAddStep,
   handleResultFinalize,

@@ -9,9 +9,16 @@ const {
   handleScreenshot,
   handleValidate,
   handleTap,
+  handleLongPress,
+  handleDoubleTap,
   handleType,
   handleSwipe,
   handlePress,
+  handleLaunch,
+  handleInstall,
+  handleUninstall,
+  handleOpenUrl,
+  handleOrientation,
   handleAssert,
   handleResultAddStep,
   handleResultFinalize,
@@ -180,6 +187,159 @@ describe('cli handlers', () => {
       const { envelope, exitKind } = await handleTap({ deviceBridge: bridge }, 'nope');
       expect(exitKind).toBe('invalid_input');
       expect(envelope.ok).toBe(false);
+      expect(envelope.error.kind).toBe('invalid_input');
+    });
+
+    test('rejects an empty/whitespace coordinate part (Number("") === 0 trap)', async () => {
+      const bridge = { tap: async () => { throw new Error('should not be called'); } };
+      for (const raw of ['10,', ',20', ' , ', '10, ']) {
+        const { exitKind } = await handleTap({ deviceBridge: bridge }, raw);
+        expect(exitKind).toBe('invalid_input');
+      }
+    });
+  });
+
+  describe('handleLongPress', () => {
+    test('parses "x,y" and long-presses via the bridge (no duration)', async () => {
+      const calls = [];
+      const bridge = { longPress: async (c) => { calls.push(c); } };
+      const { envelope, exitKind } = await handleLongPress({ deviceBridge: bridge }, '12,34');
+      expect(exitKind).toBe('ok');
+      expect(envelope.data).toEqual({ long_pressed: [12, 34] });
+      expect(calls).toEqual([{ x: 12, y: 34 }]);
+    });
+
+    test('passes a valid duration through to the bridge and reports it', async () => {
+      const calls = [];
+      const bridge = { longPress: async (c) => { calls.push(c); } };
+      const { envelope, exitKind } = await handleLongPress(
+        { deviceBridge: bridge },
+        '5,6',
+        { duration: '800' }
+      );
+      expect(exitKind).toBe('ok');
+      expect(envelope.data).toEqual({ long_pressed: [5, 6], duration: 800 });
+      expect(calls).toEqual([{ x: 5, y: 6, duration: 800 }]);
+    });
+
+    test('rejects bad coordinate format with invalid_input', async () => {
+      const bridge = { longPress: async () => { throw new Error('should not be called'); } };
+      const { envelope, exitKind } = await handleLongPress({ deviceBridge: bridge }, 'nope');
+      expect(exitKind).toBe('invalid_input');
+      expect(envelope.error.kind).toBe('invalid_input');
+    });
+
+    test('rejects a non-positive / non-integer duration with invalid_input', async () => {
+      const bridge = { longPress: async () => { throw new Error('should not be called'); } };
+      const { exitKind } = await handleLongPress({ deviceBridge: bridge }, '1,2', { duration: '-5' });
+      expect(exitKind).toBe('invalid_input');
+      const bad = await handleLongPress({ deviceBridge: bridge }, '1,2', { duration: 'soon' });
+      expect(bad.exitKind).toBe('invalid_input');
+    });
+  });
+
+  describe('handleDoubleTap', () => {
+    test('parses "x,y" and double-taps via the bridge', async () => {
+      const calls = [];
+      const bridge = { doubleTap: async (c) => { calls.push(c); } };
+      const { envelope, exitKind } = await handleDoubleTap({ deviceBridge: bridge }, '12,34');
+      expect(exitKind).toBe('ok');
+      expect(envelope.data).toEqual({ double_tapped: [12, 34] });
+      expect(calls).toEqual([{ x: 12, y: 34 }]);
+    });
+
+    test('rejects bad coordinate format with invalid_input', async () => {
+      const bridge = { doubleTap: async () => { throw new Error('should not be called'); } };
+      const { envelope, exitKind } = await handleDoubleTap({ deviceBridge: bridge }, 'nope');
+      expect(exitKind).toBe('invalid_input');
+      expect(envelope.error.kind).toBe('invalid_input');
+    });
+  });
+
+  describe('handleLaunch', () => {
+    test('launches an app and reports the id', async () => {
+      const calls = [];
+      const bridge = { launchApp: async (a) => { calls.push(a); } };
+      const { envelope, exitKind } = await handleLaunch({ deviceBridge: bridge }, 'com.example.app');
+      expect(exitKind).toBe('ok');
+      expect(envelope.data).toEqual({ launched: 'com.example.app' });
+      expect(calls).toEqual(['com.example.app']);
+    });
+
+    test('rejects a missing appId with invalid_input', async () => {
+      const bridge = { launchApp: async () => { throw new Error('should not be called'); } };
+      const { envelope, exitKind } = await handleLaunch({ deviceBridge: bridge }, '');
+      expect(exitKind).toBe('invalid_input');
+      expect(envelope.error.kind).toBe('invalid_input');
+      expect(envelope.hint).toBeTruthy();
+    });
+  });
+
+  describe('handleInstall', () => {
+    test('installs an app and reports the path', async () => {
+      const calls = [];
+      const bridge = { installApp: async (p) => { calls.push(p); } };
+      const { envelope, exitKind } = await handleInstall({ deviceBridge: bridge }, './app.apk');
+      expect(exitKind).toBe('ok');
+      expect(envelope.data).toEqual({ installed: './app.apk' });
+      expect(calls).toEqual(['./app.apk']);
+    });
+
+    test('rejects a missing path with invalid_input', async () => {
+      const bridge = { installApp: async () => { throw new Error('should not be called'); } };
+      const { exitKind } = await handleInstall({ deviceBridge: bridge }, '');
+      expect(exitKind).toBe('invalid_input');
+    });
+  });
+
+  describe('handleUninstall', () => {
+    test('uninstalls an app and reports the id', async () => {
+      const calls = [];
+      const bridge = { uninstallApp: async (a) => { calls.push(a); } };
+      const { envelope, exitKind } = await handleUninstall({ deviceBridge: bridge }, 'com.example.app');
+      expect(exitKind).toBe('ok');
+      expect(envelope.data).toEqual({ uninstalled: 'com.example.app' });
+      expect(calls).toEqual(['com.example.app']);
+    });
+
+    test('rejects a missing appId with invalid_input', async () => {
+      const bridge = { uninstallApp: async () => { throw new Error('should not be called'); } };
+      const { exitKind } = await handleUninstall({ deviceBridge: bridge }, '');
+      expect(exitKind).toBe('invalid_input');
+    });
+  });
+
+  describe('handleOpenUrl', () => {
+    test('opens a url and reports it', async () => {
+      const calls = [];
+      const bridge = { openUrl: async (u) => { calls.push(u); } };
+      const { envelope, exitKind } = await handleOpenUrl({ deviceBridge: bridge }, 'https://example.com');
+      expect(exitKind).toBe('ok');
+      expect(envelope.data).toEqual({ opened: 'https://example.com' });
+      expect(calls).toEqual(['https://example.com']);
+    });
+
+    test('rejects a missing url with invalid_input', async () => {
+      const bridge = { openUrl: async () => { throw new Error('should not be called'); } };
+      const { exitKind } = await handleOpenUrl({ deviceBridge: bridge }, '');
+      expect(exitKind).toBe('invalid_input');
+    });
+  });
+
+  describe('handleOrientation', () => {
+    test('sets a valid orientation via the bridge', async () => {
+      const calls = [];
+      const bridge = { setOrientation: async (o) => { calls.push(o); } };
+      const { envelope, exitKind } = await handleOrientation({ deviceBridge: bridge }, 'landscape');
+      expect(exitKind).toBe('ok');
+      expect(envelope.data).toEqual({ orientation: 'landscape' });
+      expect(calls).toEqual(['landscape']);
+    });
+
+    test('rejects an invalid orientation with invalid_input', async () => {
+      const bridge = { setOrientation: async () => { throw new Error('should not be called'); } };
+      const { envelope, exitKind } = await handleOrientation({ deviceBridge: bridge }, 'sideways');
+      expect(exitKind).toBe('invalid_input');
       expect(envelope.error.kind).toBe('invalid_input');
     });
   });
