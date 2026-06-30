@@ -14,7 +14,7 @@ Features and improvements currently on the radar for Mobile Automator.
 
 ### Developer Experience
 - [ ] Better error messages
-- [ ] Setup validation and health checks
+- [x] Device-visibility check (`mauto devices`); deeper setup health checks still open
 - [ ] Faster scenario generation
 - [ ] Test scenario templates
 
@@ -22,6 +22,9 @@ Features and improvements currently on the radar for Mobile Automator.
 - [ ] CI/CD examples (GitHub Actions, CircleCI)
 - [ ] JIRA integration for bug reporting
 - [ ] Slack notifications for test results
+
+> Note: a TestRail integration was prototyped and then removed; it is not on the
+> current roadmap.
 
 ---
 
@@ -50,7 +53,7 @@ Features and improvements currently on the radar for Mobile Automator.
 - IDE plugins (VSCode, Android Studio, Xcode)
 - Test scenario marketplace
 - Cloud device integration
-- Plugin system for extensibility
+- Additional agent-host adapters for `mauto init`
 
 ---
 
@@ -62,4 +65,4 @@ Have a feature request? [Open an issue](https://github.com/sh3lan93/mobile-autom
 
 ---
 
-*Last updated: February 2026*
+*Last updated: June 2026*
