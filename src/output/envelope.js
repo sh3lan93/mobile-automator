@@ -23,8 +23,13 @@ const KIND_TO_CODE = {
   internal: 1,
 };
 
-function ok(data) {
-  return { ok: true, data, schema_version: SCHEMA_VERSION };
+function ok(data, hint = null) {
+  const env = { ok: true, data, schema_version: SCHEMA_VERSION };
+  // A success can still carry an advisory hint (e.g. recovered corruption).
+  // The key is only present when there is something to say, so the common
+  // case stays the bare {ok,data,schema_version} envelope.
+  if (hint) env.hint = hint;
+  return env;
 }
 
 function fail(kind, message, hint = null) {
@@ -50,14 +55,19 @@ function render(envelope, { human = false } = {}) {
 
   if (envelope.ok) {
     const data = envelope.data;
+    let line;
     if (Array.isArray(data)) {
-      return `ok: ${data.length} item(s)`;
-    }
-    if (data && typeof data === 'object') {
+      line = `ok: ${data.length} item(s)`;
+    } else if (data && typeof data === 'object') {
       const keys = Object.keys(data);
-      return `ok: ${keys.length ? keys.join(', ') : '(no data)'}`;
+      line = `ok: ${keys.length ? keys.join(', ') : '(no data)'}`;
+    } else {
+      line = `ok: ${String(data)}`;
     }
-    return `ok: ${String(data)}`;
+    if (envelope.hint) {
+      line += `\nhint: ${envelope.hint}`;
+    }
+    return line;
   }
 
   const { kind, message } = envelope.error || {};
