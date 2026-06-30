@@ -14,6 +14,7 @@ const { scaffold } = require('./setup/scaffold');
 const guideEmitter = require('./guide/emitter');
 const { ADAPTERS } = require('./init/adapters');
 const { isSemanticAction, ACTION_METHOD, selectResolver } = require('./device/semantic-press');
+const connection = require('./device/connection');
 
 // Map the user-facing --mode flag onto the stored config mode values.
 const MODE_ALIASES = {
@@ -550,7 +551,10 @@ function handleInit({ projectRoot, adapters = ADAPTERS }, agent) {
 // `mauto session start|status|end` manage the per-workspace daemon that holds
 // ONE mobile-mcp connection and serves every one-shot device verb over a Unix
 // domain socket. Device verbs still autostart a daemon transparently; these
-// verbs give an agent explicit lifecycle control. All session deps are
+// verbs give an agent explicit lifecycle control. The handlers own only the
+// envelope shaping — the "is a daemon alive / spawn one / shut one down"
+// decision lives in device/connection.js, the same owner the verb path uses, so
+// there is no second inline wiring of session-client/session-spawn. Deps stay
 // injectable so the handlers are unit-testable without spawning a real daemon.
 
 async function handleSessionStart(
@@ -569,14 +573,14 @@ async function handleSessionStart(
     }
   }
 
-  if (await client.isAlive(projectRoot)) {
+  if (await connection.isSessionAlive(projectRoot, { client })) {
     return {
       envelope: ok({ started: false, already_running: true, device }),
       exitKind: 'ok',
     };
   }
 
-  const started = await spawn.spawnDaemon({ projectRoot, device, idleMs });
+  const started = await connection.startSession({ projectRoot, device, idleMs, spawn });
   if (!started) {
     return {
       envelope: fail('device', 'failed to start the device session daemon', 'Ensure a device or simulator is connected, or run verbs directly (they fall back to one-shot).'),
@@ -589,14 +593,14 @@ async function handleSessionStart(
 async function handleSessionStatus(
   { projectRoot, client = require('./device/session-client') } = {}
 ) {
-  const running = await client.isAlive(projectRoot);
+  const running = await connection.isSessionAlive(projectRoot, { client });
   return { envelope: ok({ running }), exitKind: 'ok' };
 }
 
 async function handleSessionEnd(
   { projectRoot, client = require('./device/session-client') } = {}
 ) {
-  const stopped = await client.requestShutdown(projectRoot);
+  const stopped = await connection.endSession(projectRoot, { client });
   return {
     envelope: ok({ stopped, already_stopped: !stopped }),
     exitKind: 'ok',
