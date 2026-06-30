@@ -43,6 +43,45 @@ const KNOWN_ASSERTION_TYPES = new Set([
 const SWIPE_DIRECTIONS = new Set(['up', 'down', 'left', 'right']);
 const ORIENTATIONS = new Set(['portrait', 'landscape']);
 
+// fs error codes that signal an environment/filesystem problem (perms, missing
+// path, read-only FS, disk full) rather than a logic bug — surfaced as
+// `internal` with a filesystem-specific hint.
+const FS_ERROR_CODES = new Set(['EACCES', 'ENOENT', 'EROFS', 'ENOSPC', 'EPERM']);
+
+// Classify an UNEXPECTED thrown/rejected error — one a handler did NOT already
+// convert into a `{envelope, exitKind}` — into the uniform fail envelope. This
+// is the single boundary that guarantees a calling agent always receives one
+// JSON line + a meaningful exit code instead of a raw stack trace on stderr.
+//   SyntaxError                  -> invalid_input (a malformed JSON file)
+//   fs EACCES/ENOENT/EROFS/...    -> internal, with a filesystem hint
+//   anything else                -> internal
+function toEnvelope(err) {
+  if (err instanceof SyntaxError) {
+    return {
+      envelope: fail(
+        'invalid_input',
+        err.message || String(err),
+        'A JSON file in the workspace (config.json or a host MCP config) is malformed. Fix its syntax and retry.'
+      ),
+      exitKind: 'invalid_input',
+    };
+  }
+  if (err && FS_ERROR_CODES.has(err.code)) {
+    return {
+      envelope: fail(
+        'internal',
+        err.message || String(err),
+        'A filesystem operation failed (permissions, a missing path, a read-only filesystem, or no disk space). Check the workspace is writable and retry.'
+      ),
+      exitKind: 'internal',
+    };
+  }
+  return {
+    envelope: fail('internal', (err && err.message) || String(err), null),
+    exitKind: 'internal',
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Handlers — pure-ish: accept injected deps, return { envelope, exitKind }.
 // No process.exit / printing here so they are trivially unit-testable.
@@ -713,55 +752,41 @@ function buildProgram(deps = {}) {
 
   const humanFlag = () => Boolean(program.opts().human);
 
+  // The single envelope boundary. Wrap every `.action(...)` callback so any
+  // error that escapes a handler (an unprotected JSON.parse, an fs write, a
+  // bridge-connect rejection, ...) is converted into a fail envelope + the
+  // right exit code instead of a raw stack trace. Handlers that already
+  // self-classify expected errors emit first and never reach this catch; it
+  // only fires on the UNEXPECTED leaks. Belt-and-suspenders for buildProgram's
+  // own throws lives in run() below.
+  const withEnvelope = (action) => async (...args) => {
+    try {
+      await action(...args);
+    } catch (err) {
+      emit(toEnvelope(err), humanFlag());
+    }
+  };
+
   // Resolve which device a verb targets: explicit --device wins, else the
   // persisted selection, else null (mobile-mcp auto-selects a single device).
   // Keeping the no-selection fast path returning null preserves zero-config use.
   const resolveVerbDevice = (explicit) =>
     selectionStore.resolveDevice({ explicit, projectRoot, store: selectionStore }).device;
 
-  program
-    .command('elements')
-    .description('List the agnostic UI elements currently on screen')
-    .option('--device <id>', 'target device id')
-    .action(async (opts) => {
-      const device = resolveVerbDevice(opts.device);
-      const { bridge, close } = await deviceBridgeFactory({ device, projectRoot });
-      try {
-        const r = await handleElements({ deviceBridge: bridge });
-        emit(r, humanFlag());
-      } finally {
-        if (typeof close === 'function') await close();
-      }
-    });
-
-  program
-    .command('screenshot <path>')
-    .description('Save a screenshot to the given path')
-    .option('--device <id>', 'target device id')
-    .action(async (destPath, opts) => {
-      const device = resolveVerbDevice(opts.device);
-      const { bridge, close } = await deviceBridgeFactory({ device, projectRoot });
-      try {
-        const r = await handleScreenshot({ deviceBridge: bridge }, destPath);
-        emit(r, humanFlag());
-      } finally {
-        if (typeof close === 'function') await close();
-      }
-    });
-
-  program
-    .command('validate <file>')
-    .description('Validate a scenario JSON file against the scenario schema')
-    .action((file) => {
-      const r = handleValidate({ validator }, file);
-      emit(r, humanFlag());
-    });
-
-  // --- Action verbs (one-shot; CLI owns the mechanical work) ---------------
-
-  const withBridge = async (explicitDevice, fn) => {
-    const device = resolveVerbDevice(explicitDevice);
-    const { bridge, close } = await deviceBridgeFactory({ device, projectRoot });
+  // Connect a DeviceBridge for an ALREADY-RESOLVED device, run `fn` against it,
+  // emit its result, and always release the connection. The factory call is
+  // INSIDE the try with its own catch so a connect failure (no device, daemon
+  // spawn failure, socket error) lands as a `device` envelope (exit 2) — the
+  // kind an agent expects — rather than escaping as a generic `internal`.
+  const connectBridge = async (device, fn) => {
+    let bridge;
+    let close;
+    try {
+      ({ bridge, close } = await deviceBridgeFactory({ device, projectRoot }));
+    } catch (err) {
+      emit(deviceFail(err), humanFlag());
+      return;
+    }
     try {
       const r = await fn(bridge);
       emit(r, humanFlag());
@@ -771,30 +796,63 @@ function buildProgram(deps = {}) {
   };
 
   program
+    .command('elements')
+    .description('List the agnostic UI elements currently on screen')
+    .option('--device <id>', 'target device id')
+    .action(withEnvelope((opts) =>
+      connectBridge(resolveVerbDevice(opts.device), (bridge) =>
+        handleElements({ deviceBridge: bridge })
+      )
+    ));
+
+  program
+    .command('screenshot <path>')
+    .description('Save a screenshot to the given path')
+    .option('--device <id>', 'target device id')
+    .action(withEnvelope((destPath, opts) =>
+      connectBridge(resolveVerbDevice(opts.device), (bridge) =>
+        handleScreenshot({ deviceBridge: bridge }, destPath)
+      )
+    ));
+
+  program
+    .command('validate <file>')
+    .description('Validate a scenario JSON file against the scenario schema')
+    .action(withEnvelope((file) => {
+      const r = handleValidate({ validator }, file);
+      emit(r, humanFlag());
+    }));
+
+  // --- Action verbs (one-shot; CLI owns the mechanical work) ---------------
+
+  const withBridge = (explicitDevice, fn) =>
+    connectBridge(resolveVerbDevice(explicitDevice), fn);
+
+  program
     .command('tap')
     .description('Tap at absolute screen coordinates')
     .requiredOption('--at <x,y>', 'coordinates as "x,y"')
     .option('--device <id>', 'target device id')
-    .action((opts) => withBridge(opts.device, (bridge) => handleTap({ deviceBridge: bridge }, opts.at)));
+    .action(withEnvelope((opts) => withBridge(opts.device, (bridge) => handleTap({ deviceBridge: bridge }, opts.at))));
 
   program
     .command('type <text>')
     .description('Type text into the focused element')
     .option('--device <id>', 'target device id')
-    .action((text, opts) => withBridge(opts.device, (bridge) => handleType({ deviceBridge: bridge }, text)));
+    .action(withEnvelope((text, opts) => withBridge(opts.device, (bridge) => handleType({ deviceBridge: bridge }, text))));
 
   program
     .command('swipe')
     .description('Swipe in a cardinal direction')
     .requiredOption('--direction <dir>', 'up | down | left | right')
     .option('--device <id>', 'target device id')
-    .action((opts) => withBridge(opts.device, (bridge) => handleSwipe({ deviceBridge: bridge }, opts.direction)));
+    .action(withEnvelope((opts) => withBridge(opts.device, (bridge) => handleSwipe({ deviceBridge: bridge }, opts.direction))));
 
   program
     .command('press <button>')
     .description('Press a system/hardware button (BACK, HOME, ENTER, ...)')
     .option('--device <id>', 'target device id')
-    .action((button, opts) => withBridge(opts.device, (bridge) => handlePress({ deviceBridge: bridge }, button)));
+    .action(withEnvelope((button, opts) => withBridge(opts.device, (bridge) => handlePress({ deviceBridge: bridge }, button))));
 
   program
     .command('long-press')
@@ -802,44 +860,44 @@ function buildProgram(deps = {}) {
     .requiredOption('--at <x,y>', 'coordinates as "x,y"')
     .option('--duration <ms>', 'press duration in milliseconds')
     .option('--device <id>', 'target device id')
-    .action((opts) => withBridge(opts.device, (bridge) => handleLongPress({ deviceBridge: bridge }, opts.at, { duration: opts.duration })));
+    .action(withEnvelope((opts) => withBridge(opts.device, (bridge) => handleLongPress({ deviceBridge: bridge }, opts.at, { duration: opts.duration }))));
 
   program
     .command('double-tap')
     .description('Double-tap at absolute screen coordinates')
     .requiredOption('--at <x,y>', 'coordinates as "x,y"')
     .option('--device <id>', 'target device id')
-    .action((opts) => withBridge(opts.device, (bridge) => handleDoubleTap({ deviceBridge: bridge }, opts.at)));
+    .action(withEnvelope((opts) => withBridge(opts.device, (bridge) => handleDoubleTap({ deviceBridge: bridge }, opts.at))));
 
   program
     .command('launch <appId>')
     .description('Launch an installed app by its package/bundle id')
     .option('--device <id>', 'target device id')
-    .action((appId, opts) => withBridge(opts.device, (bridge) => handleLaunch({ deviceBridge: bridge }, appId)));
+    .action(withEnvelope((appId, opts) => withBridge(opts.device, (bridge) => handleLaunch({ deviceBridge: bridge }, appId))));
 
   program
     .command('install <path>')
     .description('Install an app from a local .apk/.app/.ipa path')
     .option('--device <id>', 'target device id')
-    .action((path, opts) => withBridge(opts.device, (bridge) => handleInstall({ deviceBridge: bridge }, path)));
+    .action(withEnvelope((path, opts) => withBridge(opts.device, (bridge) => handleInstall({ deviceBridge: bridge }, path))));
 
   program
     .command('uninstall <appId>')
     .description('Uninstall an app by its package/bundle id')
     .option('--device <id>', 'target device id')
-    .action((appId, opts) => withBridge(opts.device, (bridge) => handleUninstall({ deviceBridge: bridge }, appId)));
+    .action(withEnvelope((appId, opts) => withBridge(opts.device, (bridge) => handleUninstall({ deviceBridge: bridge }, appId))));
 
   program
     .command('open-url <url>')
     .description('Open a URL (deep link or web) on the device')
     .option('--device <id>', 'target device id')
-    .action((url, opts) => withBridge(opts.device, (bridge) => handleOpenUrl({ deviceBridge: bridge }, url)));
+    .action(withEnvelope((url, opts) => withBridge(opts.device, (bridge) => handleOpenUrl({ deviceBridge: bridge }, url))));
 
   program
     .command('orientation <orientation>')
     .description('Set the device orientation (portrait | landscape)')
     .option('--device <id>', 'target device id')
-    .action((orientation, opts) => withBridge(opts.device, (bridge) => handleOrientation({ deviceBridge: bridge }, orientation)));
+    .action(withEnvelope((orientation, opts) => withBridge(opts.device, (bridge) => handleOrientation({ deviceBridge: bridge }, orientation))));
 
   program
     .command('assert <type>')
@@ -851,7 +909,7 @@ function buildProgram(deps = {}) {
     .option('--pattern <re>', 'regex pattern')
     .option('--variable <name>', 'captured variable name')
     .option('--device <id>', 'target device id')
-    .action((type, opts) =>
+    .action(withEnvelope((type, opts) =>
       withBridge(opts.device, (bridge) =>
         handleAssert({ deviceBridge: bridge }, type, {
           target: opts.target,
@@ -862,7 +920,7 @@ function buildProgram(deps = {}) {
           variable: opts.variable,
         })
       )
-    );
+    ));
 
   // --- Result persistence verbs --------------------------------------------
 
@@ -876,7 +934,7 @@ function buildProgram(deps = {}) {
     .requiredOption('--step-id <id>', 'step identifier')
     .requiredOption('--status <s>', 'pass | fail | skipped | error')
     .option('--attempts <n>', 'number of attempts (>1 records flakiness on pass)')
-    .action((opts) => {
+    .action(withEnvelope((opts) => {
       const r = handleResultAddStep(
         { resultStoreFactory, projectRoot },
         {
@@ -888,7 +946,7 @@ function buildProgram(deps = {}) {
         }
       );
       emit(r, humanFlag());
-    });
+    }));
 
   result
     .command('finalize')
@@ -897,7 +955,7 @@ function buildProgram(deps = {}) {
     .option('--scenario-id <id>', 'scenario identifier')
     .option('--status <s>', 'passed | failed | error')
     .option('--duration <secs>', 'total duration in seconds')
-    .action((opts) => {
+    .action(withEnvelope((opts) => {
       const r = handleResultFinalize(
         { resultStoreFactory, projectRoot },
         {
@@ -908,7 +966,7 @@ function buildProgram(deps = {}) {
         }
       );
       emit(r, humanFlag());
-    });
+    }));
 
   // --- Slice 3 verbs --------------------------------------------------------
 
@@ -927,35 +985,35 @@ function buildProgram(deps = {}) {
     .command('setup')
     .description('Scaffold the workspace (mobile-automator/) and write a config')
     .option('--mode <mode>', 'aware (platform-aware, default) | agnostic (platform-agnostic)')
-    .action((opts) => {
+    .action(withEnvelope((opts) => {
       const r = handleSetup({ projectRoot }, { mode: opts.mode });
       emit(r, humanFlag());
-    });
+    }));
 
   const config = program.command('config').description('Read or update the workspace config');
   config
     .command('get <key>')
     .description('Get a dotted-path config value')
-    .action((key) => emit(handleConfigGet({ projectRoot }, key), humanFlag()));
+    .action(withEnvelope((key) => emit(handleConfigGet({ projectRoot }, key), humanFlag())));
   config
     .command('set <key> <value>')
     .description('Set a dotted-path config value (JSON-parsed when possible)')
-    .action((key, value) => emit(handleConfigSet({ projectRoot }, key, value), humanFlag()));
+    .action(withEnvelope((key, value) => emit(handleConfigSet({ projectRoot }, key, value), humanFlag())));
 
   program
     .command('guide <topic>')
     .description('Print the RAW workflow guide for a topic (generate|execute|setup)')
-    .action((topic) => emitMaybeRaw(handleGuide({ projectRoot }, topic)));
+    .action(withEnvelope((topic) => emitMaybeRaw(handleGuide({ projectRoot }, topic))));
 
   program
     .command('schema <name>')
     .description('Print the RAW JSON schema (scenario|result)')
-    .action((name) => emitMaybeRaw(handleSchema({}, name)));
+    .action(withEnvelope((name) => emitMaybeRaw(handleSchema({}, name))));
 
   program
     .command('bootstrap')
     .description('Print the RAW bootstrap (verb map + invariants)')
-    .action(() => emitMaybeRaw(handleBootstrap({})));
+    .action(withEnvelope(() => emitMaybeRaw(handleBootstrap({}))));
 
   // --- Slice 7: vendor init + MCP prompts server ---------------------------
 
@@ -963,10 +1021,10 @@ function buildProgram(deps = {}) {
     .command('init')
     .description('Install native Agent Skills (+ slash commands/rules + MCP entry) for an agent')
     .requiredOption('--agent <name>', 'claude | cursor | gemini | copilot | agents | all')
-    .action((opts) => {
+    .action(withEnvelope((opts) => {
       const r = handleInit({ projectRoot }, opts.agent);
       emit(r, humanFlag());
-    });
+    }));
 
   // --- Issue #91: device session lifecycle ---------------------------------
 
@@ -979,72 +1037,64 @@ function buildProgram(deps = {}) {
     .description('Start the device session daemon (subsequent verbs reuse its connection)')
     .option('--device <id>', 'pin the daemon to a target device id')
     .option('--idle <ms>', 'idle timeout in milliseconds before the daemon self-reaps')
-    .action(async (opts) => {
+    .action(withEnvelope(async (opts) => {
       const r = await handleSessionStart({ projectRoot }, { device: opts.device, idle: opts.idle });
       emit(r, humanFlag());
-    });
+    }));
 
   session
     .command('status')
     .description('Report whether a device session daemon is running')
-    .action(async () => {
+    .action(withEnvelope(async () => {
       const r = await handleSessionStatus({ projectRoot });
       emit(r, humanFlag());
-    });
+    }));
 
   session
     .command('end')
     .description('Stop the device session daemon and remove its socket/pidfile')
-    .action(async () => {
+    .action(withEnvelope(async () => {
       const r = await handleSessionEnd({ projectRoot });
       emit(r, humanFlag());
-    });
+    }));
 
   // --- Issue #92: device discovery + persisted selection -------------------
 
   const devices = program
     .command('devices')
     .description('List connected devices/simulators (id/name/platform/state)')
-    .action(async () => {
-      const { bridge, close } = await deviceBridgeFactory({ device: null, projectRoot });
-      try {
-        const r = await handleDevices({ deviceBridge: bridge });
-        emit(r, humanFlag());
-      } finally {
-        if (typeof close === 'function') await close();
-      }
-    });
+    .action(withEnvelope(() =>
+      // device:null deliberately bypasses the persisted selection — this verb
+      // lists ALL connected devices, it does not target the pinned one.
+      connectBridge(null, (bridge) => handleDevices({ deviceBridge: bridge }))
+    ));
 
   devices
     .command('use <id>')
     .description('Persist a device selection so subsequent verbs reuse it (--device still overrides per-call)')
-    .action(async (id) => {
-      const { bridge, close } = await deviceBridgeFactory({ device: null, projectRoot });
-      try {
-        const r = await handleDevicesUse({ deviceBridge: bridge, projectRoot }, id);
-        emit(r, humanFlag());
-      } finally {
-        if (typeof close === 'function') await close();
-      }
-    });
+    .action(withEnvelope((id) =>
+      connectBridge(null, (bridge) =>
+        handleDevicesUse({ deviceBridge: bridge, projectRoot }, id)
+      )
+    ));
 
   devices
     .command('clear')
     .description('Remove the persisted device selection')
-    .action(() => {
+    .action(withEnvelope(() => {
       const r = handleDevicesClear({ projectRoot });
       emit(r, humanFlag());
-    });
+    }));
 
   program
     .command('mcp')
     .description('Run the MCP prompts server (stdio) exposing the mauto workflows as prompts')
-    .action(async () => {
+    .action(withEnvelope(async () => {
       // Long-lived: connect the stdio transport and serve until the client
       // closes. Loaded lazily so the MCP SDK is only required for `mauto mcp`.
       const { runServer } = require('./mcp/server');
       await runServer({ projectRoot });
-    });
+    }));
 
   return program;
 }
@@ -1061,14 +1111,38 @@ function emitRaw(content, exitKind) {
   process.exit(exitCodeFor(exitKind));
 }
 
+// Last-resort emit for errors that escape BEFORE any action runs (so the
+// in-program withEnvelope boundary can't see them) — e.g. the ScenarioValidator
+// default-param compiling a corrupt bundled schema inside buildProgram, or a
+// stray unhandled rejection. Always one JSON envelope on stdout + the mapped
+// exit code, never a raw stack trace.
+function emitFatal(err) {
+  const { envelope, exitKind } = toEnvelope(err);
+  process.stdout.write(render(envelope) + '\n');
+  process.exit(exitCodeFor(exitKind));
+}
+
 async function run(argv) {
-  const program = buildProgram();
-  await program.parseAsync(argv);
+  // Belt-and-suspenders around the in-program withEnvelope boundary: a throw in
+  // buildProgram() (e.g. the ScenarioValidator default-param compiling a corrupt
+  // bundled schema) happens before any `.action` callback, so only this outer
+  // try/catch can convert it into the envelope contract. The matching
+  // `unhandledRejection` guard lives in bin/mauto.js (the process entry point),
+  // not here, so calling run() in tests never installs a global exit-on-reject
+  // listener that would leak across the suite.
+  try {
+    const program = buildProgram();
+    await program.parseAsync(argv);
+  } catch (err) {
+    emitFatal(err);
+  }
 }
 
 module.exports = {
   run,
   buildProgram,
+  toEnvelope,
+  emitFatal,
   handleElements,
   handleScreenshot,
   handleValidate,
