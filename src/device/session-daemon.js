@@ -22,7 +22,7 @@ const fs = require('fs');
 const net = require('net');
 
 const paths = require('./session-paths');
-const { encodeResponse, FrameParser } = require('./session-protocol');
+const { FrameParser } = require('./session-protocol');
 
 const DEFAULT_IDLE_MS = 5 * 60 * 1000;
 
@@ -156,7 +156,7 @@ async function startDaemon({
 
     const reply = (obj) => {
       try {
-        socket.write(encodeResponse(obj));
+        socket.write(FrameParser.encode(obj));
       } catch (_) {
         /* peer gone */
       }
