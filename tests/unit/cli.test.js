@@ -993,5 +993,41 @@ describe('cli handlers', () => {
       expect(r.envelope.ok).toBe(false);
       expect(r.exitKind).not.toBe('ok');
     });
+
+    // --- Honest error classification (PR #125 review): a codeless throw (a
+    // real CLI bug) must NOT be disguised as a filesystem fault. ---
+    test('all: a codeless (non-fs) adapter error is classified internal, never io_error', () => {
+      const projectRoot = initTmpRoot();
+      const { ADAPTERS } = require('../../src/init/adapters');
+      const adapters = {
+        ...ADAPTERS,
+        copilot: { apply() { throw new TypeError('cannot read properties of undefined'); } },
+      };
+      const r = handleInit({ projectRoot, adapters }, 'all');
+      const byAgent = Object.fromEntries(r.envelope.data.agents.map((a) => [a.agent, a]));
+      expect(byAgent.copilot.ok).toBe(false);
+      expect(byAgent.copilot.error).toBe('internal');
+      expect(byAgent.copilot.error).not.toBe('io_error');
+    });
+
+    test('single agent: a codeless error does not blame the filesystem in its hint', () => {
+      const projectRoot = initTmpRoot();
+      const boom = new Error('skill generate leaked a placeholder token'); // no .code
+      const adapters = { claude: { apply() { throw boom; } } };
+      const r = handleInit({ projectRoot, adapters }, 'claude');
+      expect(r.envelope.ok).toBe(false);
+      expect(r.envelope.data.agents[0].error).toBe('internal');
+      expect(r.envelope.hint).not.toMatch(/filesystem/i);
+    });
+
+    test('all: a real filesystem errno keeps its E-code class + a filesystem hint', () => {
+      const projectRoot = initTmpRoot();
+      const { ADAPTERS } = require('../../src/init/adapters');
+      const boom = new Error('EACCES: permission denied'); boom.code = 'EACCES';
+      const adapters = { ...ADAPTERS, copilot: { apply() { throw boom; } } };
+      const r = handleInit({ projectRoot, adapters }, 'all');
+      const byAgent = Object.fromEntries(r.envelope.data.agents.map((a) => [a.agent, a]));
+      expect(byAgent.copilot.error).toBe('EACCES');
+    });
   });
 });

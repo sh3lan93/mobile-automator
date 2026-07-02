@@ -518,6 +518,29 @@ function handleBootstrap({ emitter = guideEmitter } = {}) {
 // asset) into a per-agent record so a mid-batch failure never escapes as a bare
 // stack trace. Writers are idempotent/content-addressed, so a failed agent is
 // re-converged cleanly on the next run without clobbering the succeeded ones.
+// Classify an adapter failure HONESTLY rather than blanket-labeling it a
+// filesystem fault. Real OS errors carry an E-prefixed errno (EACCES, ENOSPC,
+// ...); our own malformed-config guard carries 'corrupt_mcp_config'; anything
+// else (a TypeError, the leaked-placeholder guard) is an unexpected internal
+// error and must NOT be disguised as an environment problem — that would send
+// the operator to fix the filesystem for what is actually a code bug.
+function adapterErrorClass(err) {
+  const code = err && err.code;
+  if (typeof code === 'string' && /^E[A-Z]+$/.test(code)) return code;
+  if (code === 'corrupt_mcp_config') return 'corrupt_mcp_config';
+  return 'internal';
+}
+
+function hintForAdapterError(cls) {
+  if (cls === 'corrupt_mcp_config') {
+    return 'An existing host config file is malformed JSON — fix it and re-run (writers are idempotent).';
+  }
+  if (/^E[A-Z]+$/.test(cls)) {
+    return 'A filesystem/permission error blocked init (e.g. an unwritable directory or a full disk) — fix it and re-run (writers are idempotent).';
+  }
+  return 'Unexpected error during init (possibly a bug) — see the message, then re-run after resolving (writers are idempotent).';
+}
+
 function applyOneAdapter(adapter, agent, projectRoot) {
   try {
     const r = adapter.apply({ projectRoot });
@@ -526,7 +549,7 @@ function applyOneAdapter(adapter, agent, projectRoot) {
     return {
       agent,
       ok: false,
-      error: (err && err.code) || 'io_error',
+      error: adapterErrorClass(err),
       message: (err && err.message) || String(err),
     };
   }
@@ -569,7 +592,7 @@ function handleInit({ projectRoot, adapters = ADAPTERS }, agent) {
       envelope: fail(
         'internal',
         `init for "${agent}" failed: ${r.message}`,
-        'Fix the underlying filesystem/host-config issue and re-run (writers are idempotent).',
+        hintForAdapterError(r.error),
         { agents: [r] }
       ),
       exitKind: 'internal',
