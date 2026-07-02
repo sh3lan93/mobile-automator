@@ -21,19 +21,27 @@ const KIND_TO_CODE = {
   target_not_found: EXIT.TARGET_NOT_FOUND,
   cancel: EXIT.CANCEL,
   internal: 1,
+  // `init --agent all` partial failure: some hosts wired, some failed. Non-zero
+  // so callers/CI treat it as a failure; the envelope's data.agents[] is honest.
+  partial: 1,
 };
 
 function ok(data) {
   return { ok: true, data, schema_version: SCHEMA_VERSION };
 }
 
-function fail(kind, message, hint = null) {
-  return {
+function fail(kind, message, hint = null, data = undefined) {
+  const env = {
     ok: false,
     error: { kind, message },
     hint,
     schema_version: SCHEMA_VERSION,
   };
+  // Some failures carry actionable structured detail (e.g. a per-agent
+  // ok/failed map for `init --agent all`); include `data` only when given so
+  // the common fail shape is unchanged.
+  if (data !== undefined) env.data = data;
+  return env;
 }
 
 function exitCodeFor(kind) {
