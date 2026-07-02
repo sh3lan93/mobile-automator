@@ -521,17 +521,65 @@ function handleBootstrap({ emitter = guideEmitter } = {}) {
 // `mauto init --agent <claude|cursor>` writes per-vendor artifacts in the
 // vendor's own namespace. Adapters are injectable for tests; the device is
 // never exposed as MCP tools — the `mauto mcp` server advertises prompts only.
+// Apply one adapter, converting any throw (perms, corrupt host config, missing
+// asset) into a per-agent record so a mid-batch failure never escapes as a bare
+// stack trace. Writers are idempotent/content-addressed, so a failed agent is
+// re-converged cleanly on the next run without clobbering the succeeded ones.
+// Classify an adapter failure HONESTLY rather than blanket-labeling it a
+// filesystem fault. Real OS errors carry an E-prefixed errno (EACCES, ENOSPC,
+// ...); our own malformed-config guard carries 'corrupt_mcp_config'; anything
+// else (a TypeError, the leaked-placeholder guard) is an unexpected internal
+// error and must NOT be disguised as an environment problem — that would send
+// the operator to fix the filesystem for what is actually a code bug.
+function adapterErrorClass(err) {
+  const code = err && err.code;
+  if (typeof code === 'string' && /^E[A-Z]+$/.test(code)) return code;
+  if (code === 'corrupt_mcp_config') return 'corrupt_mcp_config';
+  return 'internal';
+}
+
+function hintForAdapterError(cls) {
+  if (cls === 'corrupt_mcp_config') {
+    return 'An existing host config file is malformed JSON — fix it and re-run (writers are idempotent).';
+  }
+  if (/^E[A-Z]+$/.test(cls)) {
+    return 'A filesystem/permission error blocked init (e.g. an unwritable directory or a full disk) — fix it and re-run (writers are idempotent).';
+  }
+  return 'Unexpected error during init (possibly a bug) — see the message, then re-run after resolving (writers are idempotent).';
+}
+
+function applyOneAdapter(adapter, agent, projectRoot) {
+  try {
+    const r = adapter.apply({ projectRoot });
+    return { agent, ok: true, written: r.written, merged: r.merged };
+  } catch (err) {
+    return {
+      agent,
+      ok: false,
+      error: adapterErrorClass(err),
+      message: (err && err.message) || String(err),
+    };
+  }
+}
+
 function handleInit({ projectRoot, adapters = ADAPTERS }, agent) {
   const known = Object.keys(adapters);
   if (agent === 'all') {
-    const results = known.map((a) => adapters[a].apply({ projectRoot }));
+    // Continue-on-error: every host is attempted; the result is ONE envelope
+    // carrying a per-agent ok/failed map. `ok` only when all succeed.
+    const perAgent = known.map((a) => applyOneAdapter(adapters[a], a, projectRoot));
+    const failed = perAgent.filter((r) => !r.ok);
+    if (failed.length === 0) {
+      return { envelope: ok({ agents: perAgent }), exitKind: 'ok' };
+    }
     return {
-      envelope: ok({
-        agents: results.map((r) => r.agent),
-        written: results.flatMap((r) => r.written),
-        merged: results.flatMap((r) => r.merged),
-      }),
-      exitKind: 'ok',
+      envelope: fail(
+        'partial_failure',
+        `${failed.length}/${known.length} agents failed to initialize`,
+        'See data.agents[].error; re-run to converge the failed agents (writers are idempotent).',
+        { agents: perAgent }
+      ),
+      exitKind: 'partial',
     };
   }
   const adapter = adapters[agent];
@@ -545,7 +593,18 @@ function handleInit({ projectRoot, adapters = ADAPTERS }, agent) {
       exitKind: 'invalid_input',
     };
   }
-  const r = adapter.apply({ projectRoot });
+  const r = applyOneAdapter(adapter, agent, projectRoot);
+  if (!r.ok) {
+    return {
+      envelope: fail(
+        'internal',
+        `init for "${agent}" failed: ${r.message}`,
+        hintForAdapterError(r.error),
+        { agents: [r] }
+      ),
+      exitKind: 'internal',
+    };
+  }
   return {
     envelope: ok({ agent: r.agent, written: r.written, merged: r.merged }),
     exitKind: 'ok',
