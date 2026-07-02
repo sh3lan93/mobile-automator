@@ -492,6 +492,25 @@ describe('cli handlers', () => {
       const validate = new Ajv({ allErrors: true, strict: false }).compile(schema);
       expect(validate(f.envelope.data)).toBe(true);
     });
+
+    test('threads a corruption warning into the success envelope hint', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cli-'));
+      const runId = 'run_20260614_130000';
+      const dir = path.join(projectRoot, 'mobile-automator', 'results');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, `${runId}.json`), '{ truncated <<<');
+
+      const factory = ({ runId: rid, scenarioId, projectRoot: pr }) =>
+        new (require('../../src/result/store').ResultStore)({ runId: rid, scenarioId, projectRoot: pr });
+      const deps = { resultStoreFactory: factory, projectRoot };
+
+      const a = handleResultAddStep(deps, { runId, stepId: 'launch', status: 'pass' });
+      expect(a.exitKind).toBe('ok');
+      expect(a.envelope.ok).toBe(true);
+      // The corruption reaches the caller purely through the envelope hint
+      // (the contract channel) — no stderr side-effect / console spy required.
+      expect(a.envelope.hint).toMatch(/corrupt/i);
+    });
   });
 
   // --- Slice 3: workspace + reasoning-delivery floor ----------------------

@@ -414,7 +414,7 @@ function handleResultAddStep({ resultStoreFactory, projectRoot }, opts) {
     status,
     attempts: attempts === undefined ? 1 : Number(attempts),
   });
-  return { envelope: ok({ run_id: runId, step }), exitKind: 'ok' };
+  return { envelope: ok({ run_id: runId, step }, storeHint(store)), exitKind: 'ok' };
 }
 
 function handleResultFinalize({ resultStoreFactory, projectRoot }, opts) {
@@ -430,7 +430,14 @@ function handleResultFinalize({ resultStoreFactory, projectRoot }, opts) {
     status,
     durationSeconds: duration === undefined ? 0 : Number(duration),
   });
-  return { envelope: ok(result), exitKind: 'ok' };
+  return { envelope: ok(result, storeHint(store)), exitKind: 'ok' };
+}
+
+// Collapse any recovery warnings a ResultStore accumulated (e.g. a corrupt
+// prior file preserved as a sidecar) into a single envelope hint, or null.
+function storeHint(store) {
+  const warnings = (store && store.warnings) || [];
+  return warnings.length ? warnings.join(' ') : null;
 }
 
 // --- Slice 3: workspace + reasoning-delivery floor -----------------------

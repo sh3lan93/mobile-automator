@@ -108,4 +108,65 @@ describe('ResultStore', () => {
     const result = b.finalize({ status: 'passed' });
     expect(result.steps_executed.map((s) => s.step_id)).toEqual(['launch', 'tap']);
   });
+
+  // --- Atomicity & corruption recovery (#119) ----------------------------
+
+  function resultsDir(projectRoot) {
+    return path.join(projectRoot, 'mobile-automator', 'results');
+  }
+
+  test('a corrupt result file is preserved as a .corrupt sidecar and surfaced as a warning, not silently emptied', () => {
+    const projectRoot = tmpRoot();
+    const dir = resultsDir(projectRoot);
+    fs.mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, `${RUN_ID}.json`);
+    const garbage = '{ "steps_executed": [ {"step_id": "launch"  <<< TRUNCATED';
+    fs.writeFileSync(file, garbage);
+
+    const store = new ResultStore({ runId: RUN_ID, scenarioId: 's', projectRoot });
+
+    // The corrupt bytes must survive somewhere — never silently clobbered.
+    const sidecars = fs
+      .readdirSync(dir)
+      .filter((f) => f.startsWith(`${RUN_ID}.json.corrupt.`));
+    expect(sidecars).toHaveLength(1);
+    expect(fs.readFileSync(path.join(dir, sidecars[0]), 'utf8')).toBe(garbage);
+
+    // The store surfaces the corruption via its structured, envelope-threadable
+    // channel (the model stays print-free — no console spy needed).
+    expect(store.warnings.length).toBeGreaterThan(0);
+    expect(store.warnings.join(' ')).toMatch(/corrupt/i);
+
+    // It starts a fresh, valid accumulator rather than carrying garbage forward.
+    store.addStep({ step_id: 'launch', status: 'pass' });
+    const result = store.finalize({ status: 'passed' });
+    const validate = ajvValidator();
+    expect(validate(result)).toBe(true);
+    expect(result.steps_executed.map((s) => s.step_id)).toEqual(['launch']);
+  });
+
+  test('a missing file (ENOENT) is a clean first step — no warning, no sidecar', () => {
+    const projectRoot = tmpRoot();
+    const store = new ResultStore({ runId: RUN_ID, scenarioId: 's', projectRoot });
+    expect(store.warnings).toEqual([]);
+
+    store.addStep({ step_id: 'launch', status: 'pass' });
+    const dir = resultsDir(projectRoot);
+    const sidecars = fs.readdirSync(dir).filter((f) => f.includes('.corrupt.'));
+    expect(sidecars).toHaveLength(0);
+  });
+
+  test('leaves no .tmp residue after a normal write', () => {
+    const projectRoot = tmpRoot();
+    const store = new ResultStore({ runId: RUN_ID, scenarioId: 's', projectRoot });
+    store.addStep({ step_id: 'launch', status: 'pass' });
+    store.addAssertion({ step_id: 'launch', type: 'element_exists', pass: true, message: 'ok' });
+    store.finalize({ status: 'passed' });
+
+    const dir = resultsDir(projectRoot);
+    const entries = fs.readdirSync(dir);
+    expect(entries.filter((f) => f.includes('.tmp'))).toEqual([]);
+    // Only the canonical result file remains.
+    expect(entries).toEqual([`${RUN_ID}.json`]);
+  });
 });
