@@ -9,7 +9,7 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 
-const { buildProgram, toEnvelope } = require('../../src/cli');
+const { buildProgram, toEnvelope, diagnose } = require('../../src/cli');
 
 function tmpRoot(prefix) {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -39,12 +39,12 @@ describe('envelope boundary (#120)', () => {
       expect(r.envelope.hint).toMatch(/malformed/i);
     });
 
-    test('fs EACCES/EROFS/ENOSPC/ENOENT -> internal with a filesystem hint', () => {
+    test('fs EACCES/EROFS/ENOSPC/ENOENT -> environment with a filesystem hint', () => {
       for (const code of ['EACCES', 'EROFS', 'ENOSPC', 'ENOENT']) {
         const err = Object.assign(new Error(`${code}: nope`), { code });
         const r = toEnvelope(err);
-        expect(r.exitKind).toBe('internal');
-        expect(r.envelope.error.kind).toBe('internal');
+        expect(r.exitKind).toBe('environment');
+        expect(r.envelope.error.kind).toBe('environment');
         expect(r.envelope.hint).toMatch(/filesystem/i);
       }
     });
@@ -54,6 +54,25 @@ describe('envelope boundary (#120)', () => {
       expect(r.exitKind).toBe('internal');
       expect(r.envelope.error.kind).toBe('internal');
       expect(r.envelope.error.message).toBe('boom');
+    });
+  });
+
+  describe('diagnose (stderr trace for unexpected internals only)', () => {
+    test('writes a stack to stderr for internal, but stays quiet for environment/invalid_input', () => {
+      const spy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+      let internalCalls;
+      let otherCalls;
+      try {
+        diagnose(new Error('boom'), 'internal');
+        internalCalls = spy.mock.calls.length;
+        diagnose(Object.assign(new Error('EACCES: nope'), { code: 'EACCES' }), 'environment');
+        diagnose(new SyntaxError('bad json'), 'invalid_input');
+        otherCalls = spy.mock.calls.length - internalCalls;
+      } finally {
+        spy.mockRestore();
+      }
+      expect(internalCalls).toBe(1); // the unexpected internal error got its trace
+      expect(otherCalls).toBe(0); // expected/diagnosed classes stayed off stderr
     });
   });
 
@@ -97,16 +116,16 @@ describe('envelope boundary (#120)', () => {
 
   // Read-only FS perms don't constrain root; skip when uid 0 (some CI images).
   const isRoot = typeof process.getuid === 'function' && process.getuid() === 0;
-  (isRoot ? test.skip : test)('(d) setup on a read-only project root -> one internal envelope', async () => {
+  (isRoot ? test.skip : test)('(d) setup on a read-only project root -> one environment envelope', async () => {
     const root = tmpRoot('mauto-b120-ro-');
     fs.chmodSync(root, 0o555);
     try {
       const { program, calls } = captureProgram(root);
       await program.parseAsync(argv('setup'));
       expect(calls).toHaveLength(1);
-      expect(calls[0].exitKind).toBe('internal');
+      expect(calls[0].exitKind).toBe('environment');
       expect(calls[0].envelope.ok).toBe(false);
-      expect(calls[0].envelope.error.kind).toBe('internal');
+      expect(calls[0].envelope.error.kind).toBe('environment');
       expect(calls[0].envelope.hint).toMatch(/filesystem/i);
     } finally {
       fs.chmodSync(root, 0o755);

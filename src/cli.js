@@ -45,7 +45,7 @@ const ORIENTATIONS = new Set(['portrait', 'landscape']);
 
 // fs error codes that signal an environment/filesystem problem (perms, missing
 // path, read-only FS, disk full) rather than a logic bug — surfaced as
-// `internal` with a filesystem-specific hint.
+// `environment` with a filesystem-specific hint.
 const FS_ERROR_CODES = new Set(['EACCES', 'ENOENT', 'EROFS', 'ENOSPC', 'EPERM']);
 
 // Classify an UNEXPECTED thrown/rejected error — one a handler did NOT already
@@ -53,7 +53,7 @@ const FS_ERROR_CODES = new Set(['EACCES', 'ENOENT', 'EROFS', 'ENOSPC', 'EPERM'])
 // is the single boundary that guarantees a calling agent always receives one
 // JSON line + a meaningful exit code instead of a raw stack trace on stderr.
 //   SyntaxError                  -> invalid_input (a malformed JSON file)
-//   fs EACCES/ENOENT/EROFS/...    -> internal, with a filesystem hint
+//   fs EACCES/ENOENT/EROFS/...    -> environment, with a filesystem hint
 //   anything else                -> internal
 function toEnvelope(err) {
   if (err instanceof SyntaxError) {
@@ -69,11 +69,11 @@ function toEnvelope(err) {
   if (err && FS_ERROR_CODES.has(err.code)) {
     return {
       envelope: fail(
-        'internal',
+        'environment',
         err.message || String(err),
         'A filesystem operation failed (permissions, a missing path, a read-only filesystem, or no disk space). Check the workspace is writable and retry.'
       ),
-      exitKind: 'internal',
+      exitKind: 'environment',
     };
   }
   return {
@@ -833,7 +833,9 @@ function buildProgram(deps = {}) {
     try {
       await action(...args);
     } catch (err) {
-      emit(toEnvelope(err), humanFlag());
+      const classified = toEnvelope(err);
+      diagnose(err, classified.exitKind);
+      emit(classified, humanFlag());
     }
   };
 
@@ -1181,6 +1183,16 @@ function emitRaw(content, exitKind) {
   process.exit(exitCodeFor(exitKind));
 }
 
+// Keep the stack of a genuinely-unexpected error on STDERR so a crash stays
+// debuggable. The stdout envelope (the agent's contract) is untouched, and the
+// expected/diagnosed classes (invalid_input, environment) carry an actionable
+// message + hint — so only `internal` warrants a trace.
+function diagnose(err, exitKind) {
+  if (exitKind === 'internal' && err && err.stack) {
+    process.stderr.write(err.stack + '\n');
+  }
+}
+
 // Last-resort emit for errors that escape BEFORE any action runs (so the
 // in-program withEnvelope boundary can't see them) — e.g. the ScenarioValidator
 // default-param compiling a corrupt bundled schema inside buildProgram, or a
@@ -1188,6 +1200,7 @@ function emitRaw(content, exitKind) {
 // exit code, never a raw stack trace.
 function emitFatal(err) {
   const { envelope, exitKind } = toEnvelope(err);
+  diagnose(err, exitKind);
   process.stdout.write(render(envelope) + '\n');
   process.exit(exitCodeFor(exitKind));
 }
@@ -1212,6 +1225,7 @@ module.exports = {
   run,
   buildProgram,
   toEnvelope,
+  diagnose,
   emitFatal,
   handleElements,
   handleScreenshot,
