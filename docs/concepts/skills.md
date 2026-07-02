@@ -1,76 +1,55 @@
 ---
-description: "How mobile-automator workspace skills work - template placeholders, skill installation, customization, and the generator/executor skill lifecycle."
+description: "How mobile-automator skills work - native Agent Skills installed per host by mauto init, guide content in src/guide/content, and placeholders filled at emit time."
 ---
 
 # How Skills Work
 
-Understanding workspace skills: how they're installed, customized, and executed.
+Understanding skills: how they're installed per host, how guide content is customized, and how the agent uses them during generate and execute.
 
 ## What Are Skills?
 
-Skills are prompt templates that contain project-specific testing logic. They're installed into your workspace (`.gemini/skills/`) during the setup process and customized with knowledge about your specific project.
+Skills are **native Agent Skills** that tell an AI host *when* to pull mobile-automator reasoning and how to drive the workflow. They are thin: their job is to invoke `mauto guide <topic>` at the right moment and to drive the device only through `mauto` verbs. The substance — the reasoning prose — lives in the installed package as guide content, not in the skill files.
 
-Two main skills:
-- **Generator Skill** — Converts natural language to test scenarios
-- **Executor Skill** — Executes test scenarios and reports results
+Two main workflows:
+- **Generate** — convert natural language into test scenarios (`mauto guide generate`)
+- **Execute** — replay scenarios and report results (`mauto guide execute`)
 
-## Installation and Customization
+## Installation
 
-### The Setup Process
+### `mauto init` installs per host
 
-During `/mobile-automator:setup`, Section 6:
+Skills are installed by `mauto init --agent <claude|cursor|gemini|copilot|agents|all>`. This writes the native Agent Skill for each host into that host's conventions (for example `.gemini/skills/` for Gemini CLI), plus slash-commands/rules and an MCP entry for hosts that support it.
 
-1. **Gather project knowledge** (sections 1-5)
-   - Detect platform
-   - Discover environments
-   - Infer package ID
-   - Analyze codebase for architecture, domain, patterns
+In **Claude Code**, init installs the hyphen slash-commands `/mobile-automator-generate` and `/mobile-automator-execute`. Each command simply runs the matching `mauto guide <topic>` and follows it, driving the device through `mauto` verbs.
 
-2. **Read skill templates**
-   - Load from `${extensionPath}/templates/mobile-automator-generator/SKILL.md`
-   - Load from `${extensionPath}/templates/mobile-automator-executor/SKILL.md`
+There is **no template-interpolation-at-setup step** that writes skill bodies, and **no resume-state file**. Setup records project knowledge into `mobile-automator/config.json`; skills are installed by `init` independently.
 
-3. **Replace placeholders**
-   - Find all `{{placeholder}}` patterns
-   - Replace with detected/gathered values
-   - 13 placeholders total
+### Guide content lives in the package
 
-4. **Write customized skills**
-   - Save to `.gemini/skills/mobile-automator-generator/SKILL.md`
-   - Save to `.gemini/skills/mobile-automator-executor/SKILL.md`
+The reasoning prose lives in the installed package under `src/guide/content/`:
 
-5. **Verify completion**
-   - Check no `{{` remains in output
-   - Copy schema files to workspace
+```
+src/guide/content/
+├── generate.aware.md      ├── generate.agnostic.md
+├── execute.aware.md       ├── execute.agnostic.md
+└── setup.aware.md         └── setup.agnostic.md
+```
 
-### The 13 Placeholders
+Each topic has an `.aware.md` (platform-aware) and an `.agnostic.md` (platform-agnostic) variant. A topic exposed as a skill also has a placeholder-free, OS-free `<topic>.invariants.md`.
 
-| Placeholder | Example Value | Used By |
-|---|---|---|
-| `{{project_name}}` | "My Shopping App" | Both |
-| `{{platform_details}}` | "Android (minSdk 24, targetSdk 34)" | Generator |
-| `{{build_system}}` | "Gradle" | Executor |
-| `{{build_command}}` | "gradle assembleStaging" | Executor |
-| `{{app_package}}` | "com.example.shopping" | Both |
-| `{{environments}}` | "production, staging, development" | Generator |
-| `{{loading_indicators}}` | "CircularProgressIndicator, Shimmer" | Executor |
-| `{{protected_directories}}` | "src/, lib/" | Both |
-| `{{automation_extras}}` | "Uses Firebase for analytics" | Generator |
-| `{{architecture}}` | "MVVM with Clean Architecture" | Generator |
-| `{{business_domain}}` | "E-commerce platform for fashion retail" | Generator |
-| `{{business_critical_paths}}` | "onboarding, login, checkout, payment" | Generator |
-| `{{additional_resources}}` | "API docs: api.example.com" | Both |
+## Customization via Placeholders
 
-### Example: Generator Skill
+Guide content carries `{{placeholder}}` tokens. These are **filled at emit time** — when the agent runs `mauto guide <topic>`, `src/guide/placeholders.js` interpolates the tokens from `mobile-automator/config.json`. A fallback guarantees no `{{` survives in emitted output, and lint guards enforce that no `mobile_*` tool names leak and that agnostic content names no OS.
 
-Before replacement:
+### Example: Generate guide content
+
+In the source content:
 ```markdown
-# Test Generator for {{project_name}}
+# Generating tests for {{project_name}}
 
 You are testing {{business_domain}}.
 
 Project Architecture: {{architecture}}
-Build System: {{build_system}}
 App Package: {{app_package}}
 
 Protected source directories (never modify):
@@ -78,18 +57,15 @@ Protected source directories (never modify):
 
 Loading indicators in this project:
 {{loading_indicators}}
-
-Generate realistic test scenarios...
 ```
 
-After replacement:
+After emit-time interpolation from `config.json`:
 ```markdown
-# Test Generator for My Shopping App
+# Generating tests for My Shopping App
 
 You are testing E-commerce platform for fashion retail.
 
 Project Architecture: MVVM with Clean Architecture
-Build System: Gradle
 App Package: com.example.shopping
 
 Protected source directories (never modify):
@@ -97,38 +73,41 @@ src/, lib/
 
 Loading indicators in this project:
 CircularProgressIndicator, Shimmer
-
-Generate realistic test scenarios...
 ```
 
-## Generator Skill
+The agent reads this interpolated guidance, then drives `mauto` verbs to do the work.
+
+## Generate Workflow
 
 ### Purpose
 
-Convert natural language descriptions into structured test scenarios (JSON following the test scenario schema).
+Convert natural language descriptions into structured test scenarios (JSON following the scenario schema, v2.1).
 
 ### Inputs
 
 - User description: "Test login flow with email and password"
-- Device context: Connected Android device
-- Project knowledge: Architecture, domain, critical paths
+- Device context: a connected device (via `mauto devices`)
+- Project knowledge: interpolated into the guide from `config.json`
 
 ### Process
 
-1. Parse user intent
-2. Identify test flow (sequence of user actions)
-3. Map to test actions (tap, type, wait, etc.)
-4. Add contextual assertions
-5. Include retry logic for async operations
-6. Capture values for verification
-7. Output JSON scenario
+The agent, following `mauto guide generate`:
+
+1. Parses user intent
+2. Identifies the test flow (sequence of user actions)
+3. Resolves elements with `mauto elements` (which wraps mobile-mcp → device)
+4. Maps to test actions (tap, type, wait, etc.)
+5. Adds contextual assertions
+6. Includes retry logic for async operations
+7. Validates the JSON with `mauto validate <file>` and saves it
 
 ### Output
 
 ```json
 {
   "scenario_id": "login_flow",
-  "schema_version": "2.0",
+  "schema_version": "2.1",
+  "mode": "platform-aware",
   "tags": ["authentication", "critical"],
   "actions": [
     {
@@ -151,7 +130,7 @@ Convert natural language descriptions into structured test scenarios (JSON follo
       "step_id": "type_email",
       "action_type": "type",
       "text": "test@example.com"
-    },
+    }
     // ... more actions
   ],
   "assertions": [
@@ -167,37 +146,37 @@ Convert natural language descriptions into structured test scenarios (JSON follo
 
 ### Where Placeholders Help
 
-- `{{business_domain}}` — Helps generator understand your business logic
-- `{{architecture}}` — Helps generator use the right naming conventions
-- `{{business_critical_paths}}` — Focuses generator on important flows
-- `{{loading_indicators}}` — Helps generator add correct wait steps
-- `{{protected_directories}}` — Reminds generator not to reference source code
+- `{{business_domain}}` — helps the agent understand your business logic
+- `{{architecture}}` — helps the agent use the right naming conventions
+- `{{business_critical_paths}}` — focuses the agent on important flows
+- `{{loading_indicators}}` — helps the agent add correct wait steps
+- `{{protected_directories}}` — reminds the agent not to reference source code
 
-## Executor Skill
+## Execute Workflow
 
 ### Purpose
 
-Execute test scenarios on connected devices and report detailed results with observations.
+Replay test scenarios on a connected device and report detailed results with observations.
 
 ### Inputs
 
 - Scenario JSON file
-- Connected device
-- Project configuration
+- A connected device
+- Project configuration (`mobile-automator/config.json`)
 - Reference screenshots (optional)
 
 ### Process
 
-1. Parse scenario JSON
+The agent, following `mauto guide execute`:
+
+1. Parses the scenario JSON
 2. For each action:
-   - Call mobile-mcp primitive
-   - Execute on device
-   - Capture state
+   - Drives a `mauto` verb (`tap`, `type`, `swipe`, `screenshot`, …) which wraps mobile-mcp → device
+   - Reads the `{ok,data,error,hint,schema_version}` envelope
 3. For each assertion:
-   - Check condition
-   - Record result
-   - Capture observation if relevant
-4. Generate result report
+   - Runs `mauto assert` for mechanical checks, or judges visually for vision assertions
+   - Records the result via `mauto result add-step`
+4. Calls `mauto result finalize` to write the report
 
 ### Output
 
@@ -205,7 +184,7 @@ Execute test scenarios on connected devices and report detailed results with obs
 {
   "run_id": "login_flow_20250227_143022",
   "scenario_id": "login_flow",
-  "schema_version": "2.0",
+  "schema_version": "2.1",
   "status": "passed",
   "duration_seconds": 15.3,
   "steps_executed": [
@@ -248,67 +227,66 @@ Execute test scenarios on connected devices and report detailed results with obs
 
 ### Where Placeholders Help
 
-- `{{app_package}}` — Know which app to launch and verify
-- `{{build_system}}` — Know how to rebuild if needed
-- `{{build_command}}` — Can rebuild with correct command
-- `{{loading_indicators}}` — Know what to wait for
-- `{{environments}}` — Can switch environments between runs
-- `{{business_critical_paths}}` — Prioritizes these paths if tests fail
+- `{{app_package}}` — know which app to launch and verify
+- `{{build_system}}` — know how to rebuild if needed
+- `{{build_command}}` — can rebuild with the correct command
+- `{{loading_indicators}}` — know what to wait for
+- `{{environments}}` — can switch environments between runs
+- `{{business_critical_paths}}` — prioritizes these paths if tests fail
 
 ## Skill Lifecycle
 
-### 1. Installation (During Setup)
+### 1. Installation (`mauto init`)
 
 ```
-User runs /mobile-automator:setup
+User runs mauto init --agent <host>
     ↓
-Setup gathers knowledge (sections 1-5)
+Native Agent Skill written into the host's conventions
     ↓
-Setup reads templates
+(Claude Code: /mobile-automator-generate, /mobile-automator-execute)
     ↓
-Setup replaces placeholders
-    ↓
-Setup writes to .gemini/skills/
-    ↓
-Skills ready for use
+Skill ready: it knows when to pull a guide
 ```
 
-### 2. Usage (During Generate/Execute)
+### 2. Setup (`mauto setup`)
 
 ```
-User runs /mobile-automator:generate or /mobile-automator:execute
+User runs mauto setup [--mode agnostic]
     ↓
-Tier 1 validates pre-flight
+Project knowledge recorded into mobile-automator/config.json
     ↓
-Tier 1 invokes skill
-    ↓
-Skill loads config.json (runtime access to project knowledge)
-    ↓
-Skill executes (generates or runs test)
-    ↓
-Tier 1 saves result
+Mode stored (platform-aware default, or platform-agnostic)
 ```
 
-### 3. Updates
+### 3. Usage (generate / execute)
 
-**Extension Updates**: User updates mobile-automator extension
-- Tier 1 commands update
-- Tier 3 (mobile-mcp) can update
-- Tier 2 skills DO NOT update (they stay in workspace)
+```
+Agent runs mauto guide generate  (or execute)
+    ↓
+Guide content interpolated from config.json at emit time
+    ↓
+Agent reads guidance, drives mauto verbs (→ mobile-mcp → device)
+    ↓
+Scenario validated / result finalized into the workspace
+```
 
-**Skill Updates**: To update skills with new knowledge:
-- Re-run `/mobile-automator:setup`
-- It overwrites the existing skills with latest placeholders
-- Config changes are preserved
+### 4. Updates
 
-## Advanced: Accessing Project Knowledge at Runtime
+**CLI updates**: pull the latest source and re-link. The verbs and bundled guide content update together; mobile-mcp updates with its pin in `package.json`.
 
-Skills can access the full project configuration at runtime via `mobile-automator/config.json`:
+**Re-install skills**: re-run `mauto init --agent <host>` to refresh the host's native Agent Skills.
+
+**Refresh project knowledge**: re-run `mauto setup`, or edit `mobile-automator/config.json` directly — the next `mauto guide` emit picks up the new values.
+
+## Accessing Project Knowledge
+
+The full project configuration lives in `mobile-automator/config.json`:
 
 ```json
 {
   "project_name": "My Shopping App",
   "platform": "android",
+  "mode": "platform-aware",
   "environments": ["production", "staging", "development"],
   "app_package": "com.example.shopping",
   "architecture": "MVVM with Clean Architecture",
@@ -322,59 +300,40 @@ Skills can access the full project configuration at runtime via `mobile-automato
 }
 ```
 
-This allows skills to:
-- Adapt behavior based on platform
-- Use correct environment URLs
-- Understand your architecture patterns
-- Know what to wait for
+These values are interpolated into guide content at emit time, so the agent's reasoning adapts to your platform, environments, and architecture.
 
-## Modifying Skills
+## Modes
 
-### Safe to Edit
+The `mode` field in `config.json` selects how gestures are handled. It is set at `mauto setup`:
 
-Once installed, you can safely modify skills:
+- **platform-aware** (default) — single-OS or OS-specific UI tests
+- **platform-agnostic** (`mauto setup --mode agnostic`) — cross-platform tests (Flutter/RN/KMP/CMP) that map OS gestures to four semantic actions resolved per platform at replay time:
+  - `press_back`
+  - `dismiss_keyboard`
+  - `grant_permission`
+  - `deny_permission`
 
-```bash
-nano .gemini/skills/mobile-automator-generator/SKILL.md
-```
+Each guide topic has both an `.aware.md` and an `.agnostic.md` variant in `src/guide/content/`; the mode decides which one is emitted.
 
-**Good reasons to edit:**
-- Add project-specific assertion logic
-- Customize how observations are captured
-- Integrate with custom CI/CD
-- Add organization-specific patterns
+## Why Pulled Guides Instead of Code?
 
-**Don't edit:**
-- The placeholder values themselves (they're auto-generated)
-- Schema files in `references/`
+Traditional test frameworks require you to write tests in code or DSLs. Pulled-on-demand guidance has significant advantages:
 
-### Preserving Changes
-
-If you modify a skill and then re-run `/mobile-automator:setup`:
-- The skill will be overwritten with fresh content
-- Your modifications will be lost
-- Solution: Keep a backup or commit to git before re-running setup
-
-## Why Skills Instead of Code?
-
-Traditional test frameworks require you to write tests in code or DSLs. Skills have significant advantages:
-
-| Aspect | Skills | Traditional Code |
+| Aspect | mobile-automator | Traditional Code |
 |--------|--------|------------------|
 | **Readability** | Plain markdown, AI-readable | Language syntax, IDE-dependent |
-| **Customization** | Auto-filled with project knowledge | Hardcoded values, must update manually |
+| **Customization** | Interpolated with project knowledge at emit time | Hardcoded values, must update manually |
 | **Auditability** | Plain text, easy git history | Code review + build process |
-| **AI Capability** | Claude understands natural language intent | Must parse code syntax |
-| **Versioning** | Part of project git, tracked | Code repository complexity |
-| **Learning Curve** | Minimal training needed | Language-specific knowledge required |
-| **Maintenance** | Update template once | Update every test file |
-| **Extensibility** | Easy to add project-specific logic | Complex inheritance/polymorphism |
+| **AI Capability** | The agent understands natural-language intent | Must parse code syntax |
+| **Versioning** | Scenarios live in your project git | Code repository complexity |
+| **Context cost** | Reasoning pulled only when needed | Always loaded |
+| **Maintenance** | Update one guide topic | Update every test file |
 
 ## Advanced Features
 
 ### Semantic Visual Testing
 
-The executor doesn't use pixel-by-pixel comparison. Instead, it uses AI vision to answer:
+The agent doesn't use pixel-by-pixel comparison. Instead, it uses AI vision to answer:
 
 > Does this screen fulfill the same purpose as the reference?
 
@@ -393,7 +352,7 @@ This is done by evaluating:
 
 ### Flakiness Detection
 
-The executor detects when tests are flaky:
+The agent detects when tests are flaky:
 
 ```json
 {
@@ -411,7 +370,7 @@ This helps distinguish between:
 
 ### Regression Detection
 
-The executor detects visual changes beyond what assertions check:
+The agent detects visual changes beyond what assertions check:
 
 ```json
 {
@@ -506,56 +465,33 @@ This handles:
 - Slow async operations
 - Race conditions
 
-## Testing Skills Locally
-
-You can test how skills behave without running full tests:
+## Inspecting Skills and Config Locally
 
 ```bash
-# View the generator skill
-cat .gemini/skills/mobile-automator-generator/SKILL.md
+# See the interpolated generate guidance the agent will read
+mauto guide generate
 
-# Check what project knowledge was detected
+# Print the verb map + invariants
+mauto bootstrap
+
+# Check what project knowledge was recorded
 cat mobile-automator/config.json
 
-# Manually invoke the skill with test input
-# (This depends on Gemini CLI capabilities)
+# Print a schema
+mauto schema scenario
 ```
 
-## Debugging Skills
+## Debugging
 
-If a skill isn't behaving as expected:
+If the agent isn't behaving as expected:
 
-1. **Check placeholders were replaced**: Ensure no `{{` in skill file
-2. **Review config.json**: Verify project knowledge was detected correctly
-3. **Check schemas**: Review scenario_schema.json and result_schema.json
-4. **Test manually**: Use Gemini CLI to invoke skill directly
-5. **Edit for debugging**: Add comments in skill file temporarily
-
-## Adding Custom Skills
-
-You can add a third skill to your project:
-
-### Example: mobile-automator-analyzer
-
-Create `.gemini/skills/mobile-automator-analyzer/SKILL.md`:
-
-```markdown
----
-name: mobile-automator-analyzer
-description: Analyze test results and generate reports for {{project_name}}
----
-
-# Test Analyzer
-
-Analyze results from mobile-automator test executions...
-
-[Your custom logic here with {{placeholders}}]
-```
-
-Then create a command wrapper in `commands/mobile-automator/analyze.toml` to invoke it.
+1. **Check the emitted guide**: run `mauto guide <topic>` and confirm no `{{` remains
+2. **Review config.json**: verify project knowledge was recorded correctly
+3. **Check schemas**: review with `mauto schema scenario` / `mauto schema result`
+4. **Re-install skills**: re-run `mauto init --agent <host>` if a host's skill is stale
 
 ## Next Steps
 
-- [Setup Guide](../guides/setup.md) — Deep dive into the 7-section setup
+- [Setup Guide](../guides/setup.md) — Deep dive into the setup workflow
 - [Generator Guide](../guides/generate.md) — How test generation works
 - [Executor Guide](../guides/execute.md) — How test execution works

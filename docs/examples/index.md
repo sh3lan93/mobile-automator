@@ -38,8 +38,8 @@ The most effective way to learn Mobile Automator is by studying and adapting the
 1. **Review the scenario JSON** — Examine the structure of each scenario to understand how steps and assertions are organized
 2. **Understand the test logic** — Study how each test scenario maps to real user interactions in your app
 3. **Adapt for your app** — Modify the examples to match your specific app's screens, workflows, and content
-4. **Generate similar tests** — Use `/mobile-automator:generate` to create new tests based on the patterns you've learned
-5. **Execute and iterate** — Run tests using `/mobile-automator:execute` and review the results to refine your test coverage
+4. **Generate similar tests** — Use `/mobile-automator-generate` (or `mauto guide generate`) to create new tests based on the patterns you've learned
+5. **Execute and iterate** — Run tests using `/mobile-automator-execute` (or `mauto guide execute`) and review the results to refine your test coverage
 
 ## Platform-Specific Considerations
 

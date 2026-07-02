@@ -670,7 +670,7 @@ Add assertions as named steps in your test scenario:
 
 ### In Natural Language to Generator
 
-When using `/mobile-automator:generate`, describe assertions in natural language:
+When using the generate workflow (`/mobile-automator-generate` or `mauto guide generate`), describe assertions in natural language:
 
 ```
 After tapping login:

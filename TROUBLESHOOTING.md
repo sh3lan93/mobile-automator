@@ -4,7 +4,7 @@
 
 ### ❌ "Platform could not be detected"
 - Ensure you're in the root directory of a mobile project
-- The extension supports: Android, iOS, Flutter, React Native, KMP, CMP
+- `mauto` supports: Android, iOS, Flutter, React Native, KMP, CMP
 - If your project structure is non-standard, setup will ask you to specify manually
 
 ### ❌ "Package ID not found"
@@ -13,14 +13,26 @@
 - Setup will prompt you to enter it manually if auto-detection fails
 
 ### ❌ "Skills not installed"
-- Check that `.gemini/skills/mobile-automator-*/SKILL.md` files exist
-- Re-run `/mobile-automator:setup` - it has resume capability and will continue from where it left off
+- Skills are installed per host by `mauto init`. Check that the skill files for your
+  agent exist — e.g. `.claude/skills/mobile-automator-*/SKILL.md` for Claude Code,
+  `.gemini/skills/mobile-automator-*/SKILL.md` for Gemini CLI, and likewise under
+  `.cursor/skills/`, `.github/skills/`, or `.agents/skills/`.
+- Re-run `mauto init --agent <claude|cursor|gemini|copilot|agents|all>` to (re)install them.
 
 ---
 
 ## Device Connection Issues
 
 ### ❌ "No devices found"
+
+First, ask `mauto` what it can see:
+
+```bash
+mauto devices              # lists connected devices/emulators
+mauto devices use <id>     # pin a specific device
+```
+
+If the list is empty, bring a device up:
 
 **Android:**
 ```bash
@@ -40,8 +52,10 @@ xcrun simctl list devices
 xcrun simctl boot "iPhone 15 Pro"
 ```
 
+Then re-run `mauto devices` to confirm it now appears.
+
 ### ❌ "App not installed"
-- The generate/execute commands will offer to build and install
+- The generate/execute workflows will offer to build and install
 - Or install manually before running tests
 
 ---
@@ -60,17 +74,17 @@ xcrun simctl boot "iPhone 15 Pro"
 
 ---
 
-## Template/Schema Issues
+## Scenario / Schema Issues
 
-### ❌ "Template file not found"
-- Ensure the extension is properly installed
-- For local development: `gemini extensions link .` in the extension directory
-- For GitHub: `gemini extensions install https://github.com/sh3lan93/mobile-automator`
+### ❌ "Scenario fails to validate"
+- Run `mauto validate <file>` to check a scenario JSON against the schema; the error
+  envelope's `error`/`hint` fields point at the offending field.
+- Print the current schemas with `mauto schema scenario` / `mauto schema result`.
 
-### ❌ "Placeholder not replaced in skill"
-- This indicates setup didn't complete properly
-- Re-run `/mobile-automator:setup` to regenerate skills with correct values
-- Check `mobile-automator/setup_state.json` for setup status
+### ❌ "Setup didn't complete properly"
+- Re-run `mauto setup` to (re)scaffold the `mobile-automator/` workspace and config.
+- Inspect the workspace config with `mauto config get <key>` (the config lives at
+  `mobile-automator/config.json`).
 
 ---
 
@@ -80,38 +94,9 @@ xcrun simctl boot "iPhone 15 Pro"
 - **Cause:** Tags must contain only lowercase letters, numbers, and hyphens (a-z0-9-), and be under 20 characters. Spaces, underscores, and uppercase letters are not allowed.
 - **Fix:** Update your `scenario.json` file to fix the invalid tag (e.g. change `"Smoke_Test"` to `"smoke-test"`).
 
-### ❌ "No scenarios found with tag expression"
-- **Cause:** No scenarios matched your exact tag filter expression.
-- **Fix:** Run `/mobile-automator:list-tags` to see exactly which tags exist in your workspace. Check your spelling. For AND logic (comma), the scenario must have *all* listed tags. Try an OR filter (`|`) if you want scenarios that have *any* of the tags.
-
 ### ❌ Scenario doesn't show up in tag groups
 - **Cause:** The scenario does not have a `tags` array in its JSON, or the array is empty.
 - **Fix:** Manually add `"tags": ["some-tag"]` to the scenario's JSON file.
-
----
-
-## Manual Restore from Archive
-
-If a migration leaves your project in an unexpected state, you can restore the previous skills and config manually:
-
-```bash
-# 1. Find the archive
-ls .gemini/skills/.archive/
-
-# 2. Restore the skills
-rm -rf .gemini/skills/mobile-automator-generator
-rm -rf .gemini/skills/mobile-automator-executor
-mv .gemini/skills/.archive/generator-<old-mode>-<timestamp> \
-   .gemini/skills/mobile-automator-generator
-mv .gemini/skills/.archive/executor-<old-mode>-<timestamp> \
-   .gemini/skills/mobile-automator-executor
-
-# 3. Restore the config
-mv mobile-automator/config.json.<old-mode>.bak \
-   mobile-automator/config.json
-```
-
-Replace `<old-mode>` with `platform-aware` or `platform-agnostic` and `<timestamp>` with the timestamp shown in the archive directory listing.
 
 ---
 

@@ -10,13 +10,18 @@ The **Generate Command** creates test scenarios using natural language descripti
 
 ## Quick Start
 
-```bash
-# Run the command
-gemini /mobile-automator:generate
+In Claude Code, run the slash-command:
 
-# Select a device and app
-# Describe your test steps
-# Review the generated scenario
+```
+/mobile-automator-generate
+```
+
+With any other agent, have it read the guide and drive the device through `mauto` verbs:
+
+```bash
+mauto guide generate
+# the agent then selects a device, you describe your test steps,
+# and it writes the generated scenario
 ```
 
 Generated scenarios are saved to: `mobile-automator/scenarios/<name>.json`
@@ -25,31 +30,29 @@ Generated scenarios are saved to: `mobile-automator/scenarios/<name>.json`
 
 ## Prerequisites
 
-Before running generate, ensure:
+Before generating, ensure:
 
 1. **Setup is complete**
-   - `mobile-automator/config.json` exists
-   - `.gemini/skills/mobile-automator-generator/SKILL.md` is installed
+   - `mobile-automator/config.json` exists (created by `mauto setup`)
+   - Your agent is wired up via `mauto init --agent <host>` (installs the native Agent Skill / slash-commands for your host)
 
 2. **Device is connected**
-   - Android: `adb devices` shows your device
-   - iOS: `xcrun simctl list` or physical device connected
+   - Confirm with `mauto devices` (lists reachable devices)
 
-3. **App is installed** (or allow generator to build/install)
+3. **App is installed** (or allow the agent to build/install)
    - Required for element resolution and screenshot capture
 
 ---
 
 ## Pre-Flight Checks
 
-When you run `/mobile-automator:generate`, the wrapper performs these checks:
+When you start generation, the agent performs these checks:
 
 ```
 ✓ Checking setup state...
 ✓ Found: mobile-automator/config.json
-✓ Found: .gemini/skills/mobile-automator-generator/SKILL.md
 
-✓ Detecting devices...
+✓ Detecting devices (mauto devices)...
   Available devices:
     1. Pixel 6 (Android 34)
     2. iPhone 14 Pro (iOS 17.2)
@@ -140,9 +143,9 @@ The generator parses your natural language and recognizes actions:
 
 For each action involving an element (tap, type, verify), the generator:
 
-1. **Takes a screenshot** — Captures current app screen
-2. **Lists all elements** — Calls `mobile_list_elements_on_screen()`
-3. **Matches your reference** — Fuzzy-matches your description to actual UI elements
+1. **Takes a screenshot** — Captures current app screen (`mauto screenshot`)
+2. **Lists all elements** — Runs `mauto elements` to read the on-screen UI tree
+3. **Matches your reference** — Fuzzy-matches your description to actual UI elements by visible text, role, and coordinates (never resource-ids)
 4. **Confirms or asks** — "I found a button labeled 'Login' at (200, 400). Use this? (y/n)"
 
 **Element Resolution Examples:**
@@ -479,8 +482,8 @@ See [Assertion Reference](../reference/assertions.md) for full list.
 - Insufficient disk space
 
 **Solution:**
-- Verify device is still connected: `adb devices` or `xcrun simctl list`
-- Restart app: `/mobile-automator:generate` will rebuild/reinstall
+- Verify the device is still connected: `mauto devices`
+- Restart the app: re-run `/mobile-automator-generate` (or `mauto guide generate`) and the agent will rebuild/reinstall
 - Check free disk space
 
 ### "Too Many Steps Generated"
@@ -509,7 +512,7 @@ mobile-automator/
 └── config.json
 ```
 
-**Scenario file:** Ready to execute immediately with `/mobile-automator:execute`
+**Scenario file:** Ready to execute immediately with `/mobile-automator-execute` (or `mauto guide execute`)
 
 **Screenshots:** Reference images for visual verification during execution
 
@@ -518,9 +521,10 @@ mobile-automator/
 ## Next Steps
 
 1. **Review scenario:** Open `mobile-automator/scenarios/<name>.json` in editor
-2. **Refine if needed:** Edit JSON or regenerate with different description
-3. **Execute the test:** `/mobile-automator:execute`
-4. **Review results:** Check `mobile-automator/results/run_*.json`
+2. **Validate it:** Run `mauto validate <file>` to check it against the scenario schema
+3. **Refine if needed:** Edit JSON or regenerate with different description
+4. **Execute the test:** `/mobile-automator-execute` (or `mauto guide execute`)
+5. **Review results:** Check `mobile-automator/results/run_*.json`
 
 See [Execute Command Guide](execute.md) for running tests.
 

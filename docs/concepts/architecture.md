@@ -1,172 +1,135 @@
 ---
-description: "Architecture overview of mobile-automator's 3-tier system - extension commands, workspace skills, and the mobile-mcp automation engine."
+description: "Architecture overview of mobile-automator - the agent (brain), the mauto CLI verbs, and the mobile-mcp automation engine it wraps."
 ---
 
 # Architecture Overview
 
-mobile-automator is designed as a meta-testing extension that analyzes your mobile project, learns its structure and domain, then generates customized testing skills.
+mobile-automator is a **host-agnostic `mauto` CLI** for AI-driven mobile QA automation. Any AI agent drives a real device or emulator through `mauto` verbs; the agent pulls its reasoning on demand via `mauto guide`. The CLI never reasons for the agent and the agent never touches the device directly — each does what it is best at.
+
+## The contract
+
+```
+agent (brain) → mauto verbs → mobile-mcp engine → device
+```
+
+- The **agent** decides *what* to do: it resolves "the Login button" to a concrete element, judges visual assertions, assembles scenarios, and reads guidance via `mauto guide <topic>`.
+- **`mauto`** does the deterministic work: each verb performs one mechanical action or assertion and emits the uniform JSON envelope `{ok,data,error,hint,schema_version}`.
+- **mobile-mcp** is the internal automation engine that `mauto` wraps. The agent never calls `mobile_*` tools directly — `mauto` is the only surface the agent uses, and it translates verbs into mobile-mcp calls behind a single persistent session daemon.
 
 ## System Components
 
-### Tier 1: Extension Commands
+### The agent (brain)
 
-CLI entry points that perform pre-flight checks and validation:
+Any AI agent (Claude Code, Cursor, Gemini CLI, Copilot, and more) drives the workflow. It pulls reasoning on demand rather than carrying an always-loaded skill:
 
-- **`/mobile-automator:setup`** — 7-section interactive workflow
-  - Detects platform
-  - Discovers environments
-  - Infers app package
-  - Analyzes project knowledge
-  - Installs customized skills
-  - Scaffolds directories
-  - Commits to git (optional)
+- `mauto guide <generate|execute|setup>` — task-specific reasoning prose
+- `mauto bootstrap` — verb map + invariants
+- `mauto schema <scenario|result>` — the JSON schemas
 
-- **`/mobile-automator:generate`** — Test generation wrapper
-  - Verifies config exists
-  - Detects connected devices
-  - Confirms app installation
-  - Delegates to generator skill
+`mauto init --agent <host>` installs native Agent Skills per host so the agent knows when to pull each guide.
 
-- **`/mobile-automator:execute`** — Test execution wrapper
-  - Verifies config exists
-  - Lists available devices
-  - Resolves scenarios
-  - Delegates to executor skill
+### The `mauto` verbs
 
-### Tier 2: Workspace Skills
+The deterministic surface the agent drives. Every verb emits `{ok,data,error,hint,schema_version}`; `--human` is an opt-in readable flag.
 
-Project-specific testing logic installed in `.gemini/skills/`:
+- **Device actions:** `elements`, `tap`, `type <text>`, `swipe`, `press <button>`, `screenshot <path>`
+- **Author & verify:** `validate <file>`, `assert <type>`, `result add-step`, `result finalize`
+- **Workspace:** `setup`, `config get <key>`, `config set <key> <value>`
+- **Reasoning:** `guide <topic>`, `bootstrap`, `schema <name>`
+- **Agent integration:** `init --agent <host>`, `mcp` (MCP prompts server)
+- **Device session:** `session start|status|end`; `devices`, `devices use <id>`, `devices clear`
 
-- **`mobile-automator-generator`** — Converts natural language to test scenarios
-  - Takes user description
-  - Generates JSON following the test scenario schema
-  - Creates realistic test flows
-  - Includes assertions and capture values
+### The mobile-mcp engine
 
-- **`mobile-automator-executor`** — Runs tests with AI vision
-  - Parses scenario JSON
-  - Executes actions step by step
-  - Performs AI-powered visual assertions
-  - Captures observations and results
-  - Handles retries and flakiness
+`mobile-mcp` is bundled as a pinned dependency and spawned from `node_modules` — never fetched at runtime. It is the internal engine, not an agent-facing API. It provides the cross-platform device primitives that `mauto` verbs are built on:
 
-### Tier 3: Automation Engine
+- Device enumeration
+- App launch and control
+- Screen interaction (tap, swipe, type, scroll)
+- Screenshot capture
+- Element detection and inspection
+- Button press (back, home, volume)
+- URL opening and orientation control
 
-The MCP server provides device primitives:
-
-- **`mobile-mcp`** — Mobile automation server
-  - Device enumeration
-  - App launch and control
-  - Screen interaction (tap, swipe, type, scroll)
-  - Screenshot capture
-  - Element detection and inspection
-  - Button press (back, home, volume)
-  - URL opening
-  - Orientation control
+`src/device/` wraps this engine via one persistent session daemon so device state survives across verb invocations.
 
 ## Data Flow
 
 ```
 User Input (natural language)
         ↓
-/mobile-automator:generate (Tier 1)
+agent pulls reasoning: mauto guide generate
         ↓
-Pre-flight checks (device, app, config)
-        ↓
-mobile-automator-generator skill (Tier 2)
-        ↓
-AI generates JSON scenario
+agent drives mauto verbs (elements, tap, type, …)
+        ↓   each verb → mobile-mcp engine → device
+agent assembles + validates JSON scenario
         ↓
 Saved to mobile-automator/scenarios/
         ↓
-/mobile-automator:execute (Tier 1)
-        ↓
-Pre-flight checks (scenario selection)
-        ↓
-mobile-automator-executor skill (Tier 2)
+agent pulls reasoning: mauto guide execute
         ↓
 For each step:
-  - Execute action via mobile-mcp (Tier 3)
-  - Perform assertion
-  - Capture observations
+  - agent drives the action via a mauto verb (→ mobile-mcp → device)
+  - agent judges the assertion (mauto assert for mechanical checks)
+  - agent records the step via mauto result add-step
         ↓
-Result report saved to mobile-automator/results/
+mauto result finalize → mobile-automator/results/
 ```
 
 ## File Structure
 
 ```
-mobile-automator/
-├── config.json                          # Collected project knowledge
-├── setup_state.json                     # Resume state
-├── index.md                             # Setup documentation
-├── scenarios/                           # Test scenario JSON files
+mobile-automator/                          # created in the user's project by mauto setup
+├── config.json                            # project knowledge + mode
+├── scenarios/                             # test scenario JSON files
 │   ├── login_flow.json
 │   ├── checkout.json
 │   └── ...
-├── screenshots/                         # Reference screenshots for assertions
+├── screenshots/                           # reference screenshots for assertions
 │   ├── login_screen.png
 │   └── ...
-└── results/                             # Test execution result reports
-    ├── login_flow_20250227_143022.json
-    └── ...
-
-.gemini/
-└── skills/
-    ├── mobile-automator-generator/
-    │   ├── SKILL.md                     # Generator prompt template
-    │   └── references/
-    │       ├── scenario_schema.json     # Test scenario schema
-    │       └── ...
-    └── mobile-automator-executor/
-        ├── SKILL.md                     # Executor prompt template
-        └── references/
-            ├── result_schema.json       # Result schema
-            └── ...
+├── results/                               # test execution result reports
+│   ├── login_flow_20250227_143022.json
+│   └── ...
+└── .session/                              # persistent device-session state
 ```
 
-## MCP Server Integration
+Guide prose and schemas live in the installed package, not the workspace:
 
-The extension bundles `mobile-mcp` as the automation engine:
-
-```json
-{
-  "mcpServers": {
-    "mobileMcpServer": {
-      "command": "npx",
-      "args": ["-y", "@mobilenext/mobile-mcp@latest"]
-    }
-  }
-}
+```
+src/
+├── guide/content/
+│   ├── <topic>.aware.md                   # platform-aware guide prose
+│   └── <topic>.agnostic.md                # platform-agnostic guide prose
+└── schemas/
+    ├── scenario_schema.json               # v2.1
+    └── result_schema.json
 ```
 
-This provides 20+ automation primitives that work across all supported platforms.
+## mobile-mcp Integration
+
+`mobile-mcp` is pinned in `package.json` (`@mobilenext/mobile-mcp`) and resolved from `node_modules` at runtime (see `src/device/mobile-mcp-client.js`). It is spawned as a single persistent session daemon and never fetched ad hoc. This provides 20+ automation primitives that work across all supported platforms — but they are an implementation detail of `mauto`, not something the agent calls.
 
 ## Key Design Decisions
 
-### Why 3 Tiers?
+### Why the brain/hands split?
 
 **Separation of concerns:**
 
-- **Tier 1** handles infrastructure (device detection, configuration validation, pre-flight checks)
-- **Tier 2** contains project-specific logic (test generation, execution, domain knowledge)
-- **Tier 3** provides platform-agnostic primitives (device automation)
+- The **agent (brain)** owns judgment — resolving element references, evaluating visual assertions, and assembling scenarios. This is the part that genuinely needs an LLM.
+- **`mauto`** owns determinism — each verb is a small, testable action that emits a predictable JSON envelope.
+- **mobile-mcp** owns the platform mechanics — translating a tap into the right adb/xcrun call.
 
 **Benefits:**
-- Each tier to evolve independently
-- Easy testing and mocking of individual layers
+- Each layer evolves independently
+- Deterministic verbs are easy to test and mock
 - Clear responsibility boundaries
-- Reusable automation engine across tools
+- One reusable automation engine across hosts
+- The agent stays host-agnostic — only the thin Agent Skill installed by `mauto init` differs per host
 
-### Why Workspace Skills?
+### Why pull reasoning on demand?
 
-Skills are installed into the user's `.gemini/` workspace directory, not the extension directory. This means:
-
-- **Customization**: Each project gets its own tailored version of the skills
-- **Persistence**: Skills don't disappear when extension updates
-- **Control**: Users can inspect and modify skills if needed
-- **Isolation**: Multiple projects can have different skill versions
-- **Version control**: Skills are part of your project's git repository
+Reasoning is delivered via `mauto guide <topic>` at explicit invocation, never as an ambient always-loaded skill. This keeps the agent's context lean and lets each host install only a thin skill that knows *when* to pull the relevant guide.
 
 ### Why This Schema Design?
 
@@ -181,7 +144,7 @@ The test scenario schema provides rich, expressive capabilities:
 
 ### Why Not Modify Your Source Code?
 
-All tests live in `mobile-automator/` directory, completely separate from your source code. This means:
+All tests live in the `mobile-automator/` directory, completely separate from your source code. This means:
 
 - Source code remains untouched and pristine
 - Tests don't interfere with builds or deployments
@@ -200,23 +163,21 @@ Here's exactly what happens when you generate and execute a login test:
    "Tap login button, enter email user@example.com, wait for spinner,
     verify success message"
 
-2. Tier 1 (Extension):
-   - Validates setup complete ✓
-   - Checks app installed ✓
-   - Detects devices ✓
-   - Delegates to generator skill
+2. Agent pulls reasoning:
+   - mauto guide generate
+   - mauto bootstrap (verb map + invariants)
 
-3. Tier 2 (Generator Skill):
+3. Agent generates the scenario (brain):
    - Parses natural language
    - Two-pass semantic model:
-     * Pass 1: Classify as action or assertion
-     * Pass 2: Resolve element references
-   - Calls Tier 3 to get UI elements
-   - Generates JSON scenario
+     * Pass 1: classify each step as action or assertion
+     * Pass 2: resolve element references (mauto elements → mobile-mcp → device)
+   - Assembles JSON, then mauto validate <file>
 
 4. Scenario JSON Created:
    {
-     "schema_version": "2.0",
+     "schema_version": "2.1",
+     "mode": "platform-aware",
      "steps": {
        "tap_login": {
          "type": "tap",
@@ -239,13 +200,13 @@ Here's exactly what happens when you generate and execute a login test:
    }
 
 5. Execution Phase:
-   - Tier 1 (Extension): Pre-flight checks, scenario selection
-   - Tier 2 (Executor Skill): For each step:
-     * Call Tier 3: Get current screen state
-     * Call Tier 3: Execute action (tap, type, etc.)
-     * Call Tier 3: Capture screenshot
-     * Evaluate assertion
-     * Detect patterns (flakiness, regressions)
+   - Agent pulls reasoning: mauto guide execute
+   - For each step (agent drives verbs):
+     * mauto elements / screenshot → mobile-mcp → device (read state)
+     * mauto tap / type / swipe → mobile-mcp → device (act)
+     * mauto assert (mechanical) or agent vision judgment (visual)
+     * mauto result add-step (record)
+   - mauto result finalize
 
 6. Result JSON:
    {
@@ -263,6 +224,6 @@ Here's exactly what happens when you generate and execute a login test:
 
 ## Next Steps
 
-- [3-Tier Design Deep Dive](three-tier-design.md) — Detailed breakdown of each tier
-- [How Skills Work](skills.md) — Understanding skill placeholders and customization
-- [Setup Guide](../guides/setup.md) — Walkthrough of the 7-section setup workflow
+- [Brain/Hands Layering Deep Dive](three-tier-design.md) — Detailed breakdown of each layer
+- [How Skills Work](skills.md) — How native Agent Skills and guide content fit together
+- [Setup Guide](../guides/setup.md) — Walkthrough of the setup workflow
