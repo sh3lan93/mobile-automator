@@ -492,6 +492,25 @@ describe('cli handlers', () => {
       const validate = new Ajv({ allErrors: true, strict: false }).compile(schema);
       expect(validate(f.envelope.data)).toBe(true);
     });
+
+    test('threads a corruption warning into the success envelope hint', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cli-'));
+      const runId = 'run_20260614_130000';
+      const dir = path.join(projectRoot, 'mobile-automator', 'results');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, `${runId}.json`), '{ truncated <<<');
+
+      const factory = ({ runId: rid, scenarioId, projectRoot: pr }) =>
+        new (require('../../src/result/store').ResultStore)({ runId: rid, scenarioId, projectRoot: pr });
+      const deps = { resultStoreFactory: factory, projectRoot };
+
+      const a = handleResultAddStep(deps, { runId, stepId: 'launch', status: 'pass' });
+      expect(a.exitKind).toBe('ok');
+      expect(a.envelope.ok).toBe(true);
+      // The corruption reaches the caller purely through the envelope hint
+      // (the contract channel) — no stderr side-effect / console spy required.
+      expect(a.envelope.hint).toMatch(/corrupt/i);
+    });
   });
 
   // --- Slice 3: workspace + reasoning-delivery floor ----------------------
@@ -902,9 +921,11 @@ describe('cli handlers', () => {
       const projectRoot = initTmpRoot();
       const r = handleInit({ projectRoot }, 'all');
       expect(r.exitKind).toBe('ok');
-      expect(r.envelope.data.agents.sort()).toEqual(
+      // data.agents is now a per-agent ok/failed map.
+      expect(r.envelope.data.agents.map((a) => a.agent).sort()).toEqual(
         ['agents', 'claude', 'copilot', 'cursor', 'gemini']
       );
+      expect(r.envelope.data.agents.every((a) => a.ok === true)).toBe(true);
       for (const [agent, dir] of [
         ['claude', '.claude/skills'],
         ['cursor', '.cursor/skills'],
@@ -915,6 +936,117 @@ describe('cli handlers', () => {
         const f = pathForInit.join(projectRoot, dir, 'mobile-automator-generate', 'SKILL.md');
         expect(fsForInit.existsSync(f)).toBe(true);
       }
+    });
+
+    // --- Issue #121: --agent all is atomic-honest (continue-on-error + map) --
+    test('all: one adapter throwing yields a non-ok partial_failure envelope, NOT a thrown stack trace', () => {
+      const projectRoot = initTmpRoot();
+      const { ADAPTERS } = require('../../src/init/adapters');
+      const boom = new Error('EACCES: permission denied');
+      boom.code = 'EACCES';
+      const adapters = {
+        ...ADAPTERS,
+        copilot: { apply() { throw boom; } },
+      };
+
+      let r;
+      expect(() => {
+        r = handleInit({ projectRoot, adapters }, 'all');
+      }).not.toThrow();
+
+      expect(r.exitKind).not.toBe('ok');
+      expect(r.envelope.ok).toBe(false);
+      expect(r.envelope.error.kind).toBe('partial_failure');
+      // Per-agent map present and honest.
+      const byAgent = Object.fromEntries(r.envelope.data.agents.map((a) => [a.agent, a]));
+      expect(byAgent.copilot.ok).toBe(false);
+      expect(byAgent.copilot.error).toBe('EACCES');
+      expect(byAgent.claude.ok).toBe(true);
+    });
+
+    test('all: the OTHER agents are still written even when one throws (continue-on-error)', () => {
+      const projectRoot = initTmpRoot();
+      const { ADAPTERS } = require('../../src/init/adapters');
+      const adapters = {
+        ...ADAPTERS,
+        copilot: { apply() { throw new Error('nope'); } },
+      };
+      handleInit({ projectRoot, adapters }, 'all');
+      // claude, cursor, gemini, agents all succeeded and left files on disk.
+      for (const dir of ['.claude/skills', '.cursor/skills', '.gemini/skills', '.agents/skills']) {
+        const f = pathForInit.join(projectRoot, dir, 'mobile-automator-generate', 'SKILL.md');
+        expect(fsForInit.existsSync(f)).toBe(true);
+      }
+    });
+
+    test('all: a corrupt pre-existing .mcp.json fails claude honestly without a raw throw, others still written', () => {
+      const projectRoot = initTmpRoot();
+      // claude merges .mcp.json; seed it with invalid JSON.
+      fsForInit.writeFileSync(pathForInit.join(projectRoot, '.mcp.json'), '{ not json');
+
+      let r;
+      expect(() => {
+        r = handleInit({ projectRoot }, 'all');
+      }).not.toThrow();
+
+      expect(r.envelope.ok).toBe(false);
+      expect(r.envelope.error.kind).toBe('partial_failure');
+      const byAgent = Object.fromEntries(r.envelope.data.agents.map((a) => [a.agent, a]));
+      expect(byAgent.claude.ok).toBe(false);
+      expect(byAgent.claude.error).toBe('corrupt_mcp_config');
+      // The corrupt file is left untouched (never clobbered).
+      expect(fsForInit.readFileSync(pathForInit.join(projectRoot, '.mcp.json'), 'utf8')).toBe('{ not json');
+      // gemini/agents have no merge step and still get their skills.
+      expect(
+        fsForInit.existsSync(pathForInit.join(projectRoot, '.gemini/skills', 'mobile-automator-generate', 'SKILL.md'))
+      ).toBe(true);
+    });
+
+    test('single agent: a throwing apply yields a fail envelope, never a raw stack trace', () => {
+      const projectRoot = initTmpRoot();
+      fsForInit.writeFileSync(pathForInit.join(projectRoot, '.mcp.json'), 'totally-not-json');
+      let r;
+      expect(() => {
+        r = handleInit({ projectRoot }, 'claude');
+      }).not.toThrow();
+      expect(r.envelope.ok).toBe(false);
+      expect(r.exitKind).not.toBe('ok');
+    });
+
+    // --- Honest error classification (PR #125 review): a codeless throw (a
+    // real CLI bug) must NOT be disguised as a filesystem fault. ---
+    test('all: a codeless (non-fs) adapter error is classified internal, never io_error', () => {
+      const projectRoot = initTmpRoot();
+      const { ADAPTERS } = require('../../src/init/adapters');
+      const adapters = {
+        ...ADAPTERS,
+        copilot: { apply() { throw new TypeError('cannot read properties of undefined'); } },
+      };
+      const r = handleInit({ projectRoot, adapters }, 'all');
+      const byAgent = Object.fromEntries(r.envelope.data.agents.map((a) => [a.agent, a]));
+      expect(byAgent.copilot.ok).toBe(false);
+      expect(byAgent.copilot.error).toBe('internal');
+      expect(byAgent.copilot.error).not.toBe('io_error');
+    });
+
+    test('single agent: a codeless error does not blame the filesystem in its hint', () => {
+      const projectRoot = initTmpRoot();
+      const boom = new Error('skill generate leaked a placeholder token'); // no .code
+      const adapters = { claude: { apply() { throw boom; } } };
+      const r = handleInit({ projectRoot, adapters }, 'claude');
+      expect(r.envelope.ok).toBe(false);
+      expect(r.envelope.data.agents[0].error).toBe('internal');
+      expect(r.envelope.hint).not.toMatch(/filesystem/i);
+    });
+
+    test('all: a real filesystem errno keeps its E-code class + a filesystem hint', () => {
+      const projectRoot = initTmpRoot();
+      const { ADAPTERS } = require('../../src/init/adapters');
+      const boom = new Error('EACCES: permission denied'); boom.code = 'EACCES';
+      const adapters = { ...ADAPTERS, copilot: { apply() { throw boom; } } };
+      const r = handleInit({ projectRoot, adapters }, 'all');
+      const byAgent = Object.fromEntries(r.envelope.data.agents.map((a) => [a.agent, a]));
+      expect(byAgent.copilot.error).toBe('EACCES');
     });
   });
 });
