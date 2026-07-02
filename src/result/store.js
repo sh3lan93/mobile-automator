@@ -67,8 +67,8 @@ class ResultStore {
   // A file that exists but does not parse is a crash artifact: we MUST NOT
   // silently treat it as empty (that would let the next write O_TRUNC-clobber
   // every previously recorded step). Instead we preserve the bytes as a
-  // `.corrupt.<ts>` sidecar, record a warning (stderr + envelope hint), and
-  // start a fresh accumulator.
+  // `.corrupt.<ts>` sidecar, record a structured warning (surfaced via the
+  // envelope `hint`), and start a fresh accumulator.
   _load() {
     let raw;
     try {
@@ -86,9 +86,12 @@ class ResultStore {
     }
   }
 
-  // Move a corrupt result file aside so its bytes are never lost, warn loudly,
-  // and return an empty accumulator. Failures to write the sidecar are
-  // themselves surfaced as warnings rather than aborting the run.
+  // Move a corrupt result file aside so its bytes are never lost, record a
+  // structured warning, and return an empty accumulator. The warning is the
+  // single source of truth for the recovery — the CLI threads `store.warnings`
+  // into the envelope `hint` (machine) which `render({human:true})` also shows
+  // (human), so the model stays print-free and trivially unit-testable. Sidecar
+  // write failures are themselves surfaced as warnings rather than aborting.
   _preserveCorrupt(raw, err) {
     const ts = new Date().toISOString().replace(/[:.]/g, '-');
     const sidecar = `${this._file}.corrupt.${ts}`;
@@ -110,8 +113,6 @@ class ResultStore {
       `result file ${this._file} was corrupt (${err.message}); ` +
       `${where} and a fresh accumulator was started so prior steps are not silently clobbered`;
     this.warnings.push(message);
-    // eslint-disable-next-line no-console
-    console.warn(`[mauto] ${message}`);
     return {};
   }
 

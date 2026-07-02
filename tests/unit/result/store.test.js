@@ -115,7 +115,7 @@ describe('ResultStore', () => {
     return path.join(projectRoot, 'mobile-automator', 'results');
   }
 
-  test('a corrupt result file is preserved as a .corrupt sidecar and warned, not silently emptied', () => {
+  test('a corrupt result file is preserved as a .corrupt sidecar and surfaced as a warning, not silently emptied', () => {
     const projectRoot = tmpRoot();
     const dir = resultsDir(projectRoot);
     fs.mkdirSync(dir, { recursive: true });
@@ -123,15 +123,7 @@ describe('ResultStore', () => {
     const garbage = '{ "steps_executed": [ {"step_id": "launch"  <<< TRUNCATED';
     fs.writeFileSync(file, garbage);
 
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    let store;
-    let warnCalls;
-    try {
-      store = new ResultStore({ runId: RUN_ID, scenarioId: 's', projectRoot });
-      warnCalls = warnSpy.mock.calls.length;
-    } finally {
-      warnSpy.mockRestore();
-    }
+    const store = new ResultStore({ runId: RUN_ID, scenarioId: 's', projectRoot });
 
     // The corrupt bytes must survive somewhere — never silently clobbered.
     const sidecars = fs
@@ -140,8 +132,8 @@ describe('ResultStore', () => {
     expect(sidecars).toHaveLength(1);
     expect(fs.readFileSync(path.join(dir, sidecars[0]), 'utf8')).toBe(garbage);
 
-    // The store surfaces the corruption (stderr warn + envelope-threadable warning).
-    expect(warnCalls).toBeGreaterThan(0);
+    // The store surfaces the corruption via its structured, envelope-threadable
+    // channel (the model stays print-free — no console spy needed).
     expect(store.warnings.length).toBeGreaterThan(0);
     expect(store.warnings.join(' ')).toMatch(/corrupt/i);
 
@@ -155,15 +147,8 @@ describe('ResultStore', () => {
 
   test('a missing file (ENOENT) is a clean first step — no warning, no sidecar', () => {
     const projectRoot = tmpRoot();
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    let store;
-    try {
-      store = new ResultStore({ runId: RUN_ID, scenarioId: 's', projectRoot });
-    } finally {
-      warnSpy.mockRestore();
-    }
+    const store = new ResultStore({ runId: RUN_ID, scenarioId: 's', projectRoot });
     expect(store.warnings).toEqual([]);
-    expect(warnSpy).not.toHaveBeenCalled();
 
     store.addStep({ step_id: 'launch', status: 'pass' });
     const dir = resultsDir(projectRoot);

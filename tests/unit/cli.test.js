@@ -504,15 +504,11 @@ describe('cli handlers', () => {
         new (require('../../src/result/store').ResultStore)({ runId: rid, scenarioId, projectRoot: pr });
       const deps = { resultStoreFactory: factory, projectRoot };
 
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-      let a;
-      try {
-        a = handleResultAddStep(deps, { runId, stepId: 'launch', status: 'pass' });
-      } finally {
-        warnSpy.mockRestore();
-      }
+      const a = handleResultAddStep(deps, { runId, stepId: 'launch', status: 'pass' });
       expect(a.exitKind).toBe('ok');
       expect(a.envelope.ok).toBe(true);
+      // The corruption reaches the caller purely through the envelope hint
+      // (the contract channel) — no stderr side-effect / console spy required.
       expect(a.envelope.hint).toMatch(/corrupt/i);
     });
   });
