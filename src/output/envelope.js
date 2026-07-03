@@ -10,6 +10,10 @@ const EXIT = {
   DEVICE: 2,
   INVALID_INPUT: 3,
   TARGET_NOT_FOUND: 4,
+  // Filesystem / workspace problem (perms, missing path, read-only FS, no
+  // disk) — an environment fault the caller can fix, distinct from exit 1
+  // ("the CLI itself broke"). Kept separate so agents/CI can branch on it.
+  ENVIRONMENT: 5,
   CANCEL: 130,
 };
 
@@ -19,6 +23,7 @@ const KIND_TO_CODE = {
   device: EXIT.DEVICE,
   invalid_input: EXIT.INVALID_INPUT,
   target_not_found: EXIT.TARGET_NOT_FOUND,
+  environment: EXIT.ENVIRONMENT,
   cancel: EXIT.CANCEL,
   internal: 1,
   // `init --agent all` partial failure: some hosts wired, some failed. Non-zero

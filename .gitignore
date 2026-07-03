@@ -1,5 +1,8 @@
 # Dependencies
-node_modules/
+# No trailing slash so a `node_modules` SYMLINK (used to share deps into
+# nested worktrees) is ignored too — a trailing-slash pattern matches only a
+# directory and let the symlink slip into git once (fixed here).
+node_modules
 
 # Build output
 dist/
