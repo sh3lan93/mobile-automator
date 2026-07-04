@@ -23,6 +23,28 @@ function safeUnlinkSync(p) {
   }
 }
 
+// Tear down this process's workspace files (lock/socket/pid/handle) on exit —
+// but ONLY if we still own the lock (it holds our pid). This is load-bearing
+// for the spawn race: a loser whose startDaemon threw ELOCKED never acquired
+// the lock, so it must NOT delete the winner's files. Deleting them would free
+// the lock and unlink the live socket path, so the next client re-spawns and a
+// second mobile-mcp child starts — the exact C2/B2 orphan the lock prevents.
+// Gating on the lock's pid also stops a departing owner from nuking a successor
+// that has already taken over the workspace.
+function cleanupWorkspaceIfOwned(projectRoot) {
+  let owner;
+  try {
+    owner = fs.readFileSync(paths.lockPath(projectRoot), 'utf8').trim();
+  } catch (_) {
+    return; // no lock present — nothing of ours to clean
+  }
+  if (owner !== String(process.pid)) return; // not our lock — leave the owner's files
+  safeUnlinkSync(paths.lockPath(projectRoot));
+  safeUnlinkSync(paths.socketPath(projectRoot));
+  safeUnlinkSync(paths.pidFilePath(projectRoot));
+  safeUnlinkSync(paths.handlePath(projectRoot));
+}
+
 async function main() {
   const projectRoot = process.env.MAUTO_SESSION_PROJECT_ROOT;
   if (!projectRoot) {
@@ -39,14 +61,9 @@ async function main() {
   // teardown on a crash keeps a leaked mobile-mcp child / stale files from
   // wedging the next spawn. (Kept OUT of startDaemon so in-process tests that
   // start many daemons don't accumulate global listeners.)
-  const onExit = () => {
-    // 'exit' allows only synchronous work — drop the lock + socket + pidfile so
-    // the next spawn isn't wedged by leftovers from this process.
-    safeUnlinkSync(paths.lockPath(projectRoot));
-    safeUnlinkSync(paths.socketPath(projectRoot));
-    safeUnlinkSync(paths.pidFilePath(projectRoot));
-    safeUnlinkSync(paths.handlePath(projectRoot));
-  };
+  // 'exit' allows only synchronous work — drop the lock + socket + pidfile so
+  // the next spawn isn't wedged by leftovers from this process.
+  const onExit = () => cleanupWorkspaceIfOwned(projectRoot);
   process.on('exit', onExit);
   process.on('uncaughtException', (err) => {
     process.stderr.write(`mauto-session-daemon: uncaught ${err && err.stack ? err.stack : err}\n`);
@@ -72,4 +89,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { main };
+module.exports = { main, cleanupWorkspaceIfOwned };
