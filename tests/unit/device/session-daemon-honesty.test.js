@@ -15,7 +15,7 @@ const path = require('path');
 const { startDaemon } = require('../../../src/device/session-daemon');
 const sessionClient = require('../../../src/device/session-client');
 const paths = require('../../../src/device/session-paths');
-const { encodeRequest } = require('../../../src/device/session-protocol');
+const { FrameParser } = require('../../../src/device/session-protocol');
 
 function tmpRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-honesty-'));
@@ -95,7 +95,7 @@ describe('session-daemon honesty + lifecycle (#122)', () => {
       socket.once('connect', resolve);
       socket.once('error', reject);
     });
-    socket.write(encodeRequest({ id: 1, type: 'call', tool: 'mobile_press_button', args: { button: 'BACK' } }));
+    socket.write(FrameParser.encode({ id: 1, type: 'call', tool: 'mobile_press_button', args: { button: 'BACK' } }));
     // Destroy the socket while the (delayed) call is still in flight.
     await new Promise((r) => setTimeout(r, 20));
     socket.destroy();

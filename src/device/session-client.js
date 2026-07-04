@@ -11,7 +11,7 @@
 const net = require('net');
 
 const paths = require('./session-paths');
-const { encodeRequest, FrameParser } = require('./session-protocol');
+const { FrameParser } = require('./session-protocol');
 
 const DEFAULT_TIMEOUT_MS = 30000;
 
@@ -77,7 +77,7 @@ function wrapSocket(socket) {
           reject(err);
         },
       });
-      socket.write(encodeRequest({ id, ...frame }));
+      socket.write(FrameParser.encode({ id, ...frame }));
     });
   }
 

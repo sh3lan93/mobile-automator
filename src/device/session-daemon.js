@@ -22,7 +22,7 @@ const fs = require('fs');
 const net = require('net');
 
 const paths = require('./session-paths');
-const { encodeResponse, FrameParser } = require('./session-protocol');
+const { FrameParser } = require('./session-protocol');
 
 const DEFAULT_IDLE_MS = 5 * 60 * 1000;
 
@@ -252,11 +252,11 @@ async function startDaemon({
       const id = obj && obj.id != null ? obj.id : null;
       let frame;
       try {
-        frame = encodeResponse(obj);
+        frame = FrameParser.encode(obj);
       } catch (encErr) {
         // Result could not be serialized — surface it as an explicit failure
         // frame instead of dropping the reply entirely.
-        frame = encodeResponse({
+        frame = FrameParser.encode({
           id,
           ok: false,
           error: { message: `result not serializable: ${encErr.message || encErr}` },
