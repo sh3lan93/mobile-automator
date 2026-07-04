@@ -17,8 +17,9 @@ Before creating bug reports, please check existing issues to avoid duplicates. W
 - **Expected behavior** - What you expected to happen
 - **Actual behavior** - What actually happened
 - **Environment details**:
-  - Mobile Automator version
-  - Gemini CLI version (`gemini --version`)
+  - Mobile Automator (`mauto`) version
+  - AI agent / host (Claude Code, Cursor, Gemini CLI, etc.)
+  - Node version (`node --version`)
   - Platform (Android/iOS/Flutter/React Native/etc.)
   - OS (macOS/Linux/Windows)
 - **Screenshots/logs** - If applicable
@@ -29,15 +30,16 @@ Before creating bug reports, please check existing issues to avoid duplicates. W
 **Bug:** Setup fails to detect React Native platform
 
 **Steps:**
-1. Run `/mobile-automator:setup` in a React Native project
+1. Run `mauto setup` in a React Native project
 2. Setup claims platform is "unknown"
 
 **Expected:** Should detect React Native from package.json
 **Actual:** Platform detection fails
 
 **Environment:**
-- Mobile Automator: v0.1.0
-- Gemini CLI: v1.0.0
+- mauto: v0.21.0
+- Host: Claude Code
+- Node: v18.19.0
 - Platform: React Native 0.73
 - OS: macOS Sonoma 14.5
 ```
@@ -88,7 +90,8 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 ### Prerequisites
 
 - **Git** - Version control
-- **Gemini CLI** - Install from [geminicli.com](https://geminicli.com) (`npm install -g @anthropic-ai/gemini-cli` or see site for latest instructions)
+- **Node ≥ 18** - `mauto` is a Node CLI
+- **An AI coding agent** - Claude Code, Cursor, Gemini CLI, GitHub Copilot, or any MCP-capable agent
 - **A test mobile project** - Android, iOS, Flutter, or React Native app for testing
 
 ### Local Development
@@ -99,26 +102,29 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
    cd mobile-automator
    ```
 
-2. **Link the extension locally:**
+2. **Install deps and expose `mauto` on your PATH:**
    ```bash
-   gemini extensions link .
+   npm install   # installs the pinned mobile-mcp engine
+   npm link      # exposes `mauto` / `mobile-automator` globally
    ```
 
 3. **Test in a mobile project:**
    ```bash
    cd ~/path/to/test-mobile-app
-   gemini
-   > /mobile-automator:setup
+   mauto init --agent claude   # wire your agent (or: cursor | gemini | copilot | agents | all)
+   mauto setup                 # scaffold the mobile-automator/ workspace
+   mauto devices               # confirm a device/emulator is visible
    ```
 
 4. **Make changes and test:**
-   - Edit files in `commands/mobile-automator/` or `templates/`
-   - Reload skills: `/skills reload`
-   - Test your changes thoroughly
+   - Edit the workflow prose in `src/guide/content/**/*.md`, the verb handlers in
+     `src/`, or the schemas in `src/schemas/`
+   - Exercise the verbs directly (`mauto guide <topic>`, `mauto elements`, `mauto validate <file>`, …)
+   - Run the test suite (`npm test`) and the guide lint guards (`npm run lint:guides`)
 
 5. **Unlink when done:**
    ```bash
-   gemini extensions unlink mobile-automator
+   npm unlink -g mobile-automator
    ```
 
 ### Prompt Linting (Vale + pre-commit)
@@ -160,44 +166,40 @@ If a rule fires, the message tells you what to replace it with. To add a new rul
 ### File Organization
 
 ```
-mobile-automator/
-├── commands/mobile-automator/   # Command definitions
-│   ├── setup.toml              # Setup workflow
-│   ├── generate.toml           # Pre-flight wrapper for generator
-│   └── execute.toml            # Pre-flight wrapper for executor
-├── templates/                   # Skill templates
-│   ├── mobile-automator-generator/
-│   └── mobile-automator-executor/
-├── GEMINI.md                    # AI context (schema, conventions)
-├── CLAUDE.md                    # Developer documentation
-└── README.md                    # User-facing documentation
+src/
+├── cli.js                       # verb registration + handlers
+├── guide/content/               # workflow prose pulled by `mauto guide <topic>`
+│   ├── <topic>.aware.md         #   platform-aware variant
+│   ├── <topic>.agnostic.md      #   platform-agnostic variant
+│   └── <topic>.invariants.md    #   placeholder-free, OS-free skill core
+├── schemas/                     # scenario_schema.json (v2.1), result_schema.json
+├── device/                      # mobile-mcp wrapper (one persistent session daemon)
+└── init/  setup/  config/  …    # host adapters, workspace scaffold, config
+CLAUDE.md                        # developer guide (architecture, workflows)
+README.md                        # user-facing documentation
 ```
 
-### Command File Standards (.toml)
+### Guide Content Standards (`src/guide/content/**/*.md`)
 
-- **Use clear section headers** with numbered protocols
-- **Add CRITICAL warnings** for important constraints
-- **Include explicit WAIT instructions** for user interactions
-- **Add "END YOUR TURN" guards** before user responses
-- **Document all placeholders** in skill templates
-- **Use descriptive variable names** in prompts
+- **Each guide topic has two mode variants** — `<topic>.aware.md` and `<topic>.agnostic.md`
+- **Use `{{placeholder}}` tokens** for config-derived values; they are filled by
+  `src/guide/placeholders.js` at emit time
+- **Never name raw `mobile_*` tools** — the agent drives the device only through `mauto` verbs
+- **Agnostic variants name no OS** — map gestures to the four semantic actions instead
+- Lint guards in `tests/lint/guide-*.test.js` enforce all three rules
 
 **Example:**
-```toml
-## 2.0 PLATFORM DETECTION
+```markdown
+## Resolve the target
 
-1. **Announce Action:** "Detecting mobile platform..."
-
-2. **Scan Project Files:** Look for platform indicators...
-
-3. **ABSOLUTE REQUIREMENT: END YOUR TURN HERE.**
-   - **DO NOT PROCEED until the user responds.**
-   - The user will respond in the next message.
+1. Call `mauto elements` to list on-screen targets.
+2. Pick the element by visible text + role — never a resource-id.
+3. Tap it with `mauto tap --at <x,y>`.
 ```
 
 ### Documentation Standards
 
-- **GEMINI.md** - AI context, schemas, tool mappings
+- **`src/guide/content/**/*.md`** - Agent-facing workflow prose (pulled via `mauto guide`)
 - **CLAUDE.md** - Developer guide, architecture, workflows
 - **README.md** - User guide, quick start, features
 - **CHANGELOG.md** - Keep a Changelog format, semantic versioning
@@ -252,12 +254,12 @@ Test your changes with:
    - [ ] Non-standard project structure
 
 3. **Command flow:**
-   - [ ] `/mobile-automator:setup` completes successfully
-   - [ ] `/skills reload` required after setup
-   - [ ] `/mobile-automator:generate` records scenarios
-   - [ ] `/mobile-automator:execute` replays scenarios
-   - [ ] Interactive menus work correctly
-   - [ ] Sequential questions wait for responses
+   - [ ] `mauto setup` completes successfully
+   - [ ] `mauto devices` lists a connected device
+   - [ ] The generate workflow (`/mobile-automator-generate` or `mauto guide generate`) records scenarios
+   - [ ] The execute workflow (`/mobile-automator-execute` or `mauto guide execute`) replays scenarios
+   - [ ] `mauto validate <file>` accepts the generated scenario
+   - [ ] Verbs emit the `{ok,data,error,hint,schema_version}` envelope
 
 ### Test Project Setup
 

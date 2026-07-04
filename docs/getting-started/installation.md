@@ -1,15 +1,17 @@
 ---
-description: "Install mobile-automator for Gemini CLI with prerequisites, platform-specific requirements for Android and iOS, and troubleshooting tips."
+description: "Install the host-agnostic mauto CLI from source, wire it into your project and agent, and verify your device is visible."
 ---
 
 # Installation
+
+`mauto` is a host-agnostic CLI. You install it once from source, then wire it into each mobile project with `mauto init` and `mauto setup`.
 
 ## Prerequisites
 
 Before installing mobile-automator, ensure you have:
 
-- **Gemini CLI** installed and authenticated ([Get Gemini CLI](https://geminicli.com))
-- **Node.js** v16 or higher (required for mobile-mcp automation engine)
+- **Node.js** v18 or higher (required for mobile-mcp automation engine)
+- **An AI coding agent** — Claude Code, Cursor, Gemini CLI, GitHub Copilot, OpenAI Agents, or any MCP-capable agent
 - A **mobile project** (Android, iOS, Flutter, React Native, KMP, or CMP)
 - A **connected device or simulator** for running tests
 
@@ -29,37 +31,46 @@ Before installing mobile-automator, ensure you have:
 
 ## Installation Steps
 
-### 1. Install the Extension
+### 1. Install `mauto` from Source
 
-The easiest way to install mobile-automator is through the Gemini CLI:
-
-```bash
-gemini extensions install https://github.com/sh3lan93/mobile-automator
-```
-
-This downloads the extension and automatically configures the mobile-mcp server for device automation.
-
-### 2. Verify Installation
-
-Check that the extension commands are available:
-
-```bash
-gemini /mobile-automator:setup --help
-```
-
-You should see help text for the setup command.
-
-### 3. Local Development Setup (Optional)
-
-If you're contributing to mobile-automator or want to test the latest development version:
+`mauto` is not yet published to npm. Install it from source:
 
 ```bash
 git clone https://github.com/sh3lan93/mobile-automator
 cd mobile-automator
-gemini extensions link .
+npm install && npm link        # exposes `mauto` globally
 ```
 
-This links the extension from your local directory instead of installing from GitHub.
+`npm install` pulls in the pinned mobile-mcp automation engine; `npm link` puts the `mauto` (and `mobile-automator`) command on your PATH.
+
+### 2. Verify the CLI Is Available
+
+```bash
+mauto --help
+```
+
+You should see the list of `mauto` verbs.
+
+### 3. Wire It Into Your Project and Agent
+
+From the root of any mobile project:
+
+```bash
+cd /path/to/your/mobile-app
+mauto init --agent claude      # or: cursor | gemini | copilot | agents | all
+mauto setup                    # add --mode agnostic for cross-platform apps
+```
+
+- `init` installs native Agent Skills into the host's skills directory (`.claude/skills/`, `.cursor/skills/`, `.gemini/skills/`, `.github/skills/`, `.agents/skills/`) and, for Claude Code and Cursor, also writes slash-commands/rules and the `mauto` MCP entry (`.mcp.json`).
+- `setup` scaffolds the `mobile-automator/` workspace and writes `mobile-automator/config.json`. Add `--mode agnostic` for cross-platform apps (Flutter/RN/KMP/CMP).
+
+### 4. Verify Your Device Is Visible
+
+```bash
+mauto devices                  # lists devices; mauto devices use <id> to pin one
+```
+
+If a device or running emulator/simulator appears here, `mauto` can drive it. If more than one is listed, pin the one you want with `mauto devices use <id>` (and `mauto devices clear` to unpin).
 
 ## Supported Platforms
 
@@ -72,51 +83,32 @@ This links the extension from your local directory instead of installing from Gi
 | **Kotlin Multiplatform** | ✅ KMP structure | Gradle | ✅ Android + iOS |
 | **Compose Multiplatform** | ✅ CMP structure | Gradle + Xcode | ✅ Android + iOS |
 
-## Verify Your Setup
+## Using Another Agent
 
-To confirm everything is installed correctly, run the setup wizard on any mobile project:
+`mauto init` ships native Agent Skills for Claude Code, Cursor, Gemini CLI, GitHub Copilot (`copilot`), and OpenAI Agents (`agents`). Any other AI agent can drive `mauto` without an adapter:
 
-```bash
-cd /path/to/your/mobile-app
-gemini
-> /mobile-automator:setup
-```
-
-The wizard will validate:
-- ✅ Gemini CLI is functioning
-- ✅ mobile-mcp server is accessible
-- ✅ Platform is detected (Android/iOS/Flutter/etc.)
-- ✅ Build tools are available
-- ✅ Connected devices are detected
+- **MCP (recommended):** point your MCP-capable agent at the prompts server — `mauto mcp` (stdio) — which exposes the `generate` / `execute` / `setup` workflows as prompts. Register it like any MCP server: command `mauto`, args `["mcp"]`.
+- **Plain shell:** have the agent read `mauto bootstrap` once (the verb map + invariants), then read `mauto guide <topic>` for a workflow and call the verbs (`mauto elements`, `tap`, `type`, `assert`, …) directly. Every verb returns the `{ok, data, error, hint, schema_version}` envelope.
 
 ## Troubleshooting Installation
 
-### "gemini: command not found"
+### "mauto: command not found"
 
-The Gemini CLI is not installed or not in your PATH.
+`npm link` didn't expose the command, or your shell hasn't picked up the new PATH entry.
 
 **Solution:**
-1. Install Gemini CLI from [geminicli.com](https://geminicli.com)
-2. Verify installation: `which gemini`
+1. Re-run `npm link` from inside the cloned `mobile-automator` directory
+2. Verify installation: `which mauto`
 3. Restart your terminal and try again
 
-### "Failed to install extension"
+### "npm install" fails
 
-The extension couldn't be downloaded from GitHub.
-
-**Solutions:**
-- Check your internet connection
-- Verify you have access to GitHub
-- Try again with: `gemini extensions install https://github.com/sh3lan93/mobile-automator --force`
-
-### "Setup command not found after installation"
-
-The extension didn't install completely.
+The pinned mobile-mcp dependency couldn't be installed.
 
 **Solutions:**
-1. Restart your terminal
-2. Try installing again: `gemini extensions install https://github.com/sh3lan93/mobile-automator --force`
-3. Check for error messages: `gemini extensions list`
+- Check your internet connection and access to the npm registry
+- Ensure Node.js is v18 or higher: `node --version`
+- Clear the npm cache and retry: `npm cache clean --force && npm install`
 
 ### Platform Detection Fails
 
@@ -142,7 +134,7 @@ Android Debug Bridge (ADB) is not installed.
 
 ### Device Not Detected
 
-Your device isn't showing in the connected devices list.
+`mauto devices` shows nothing.
 
 **Android:**
 1. Check USB cable connection
@@ -161,7 +153,7 @@ Your device isn't showing in the connected devices list.
 Once installation is verified:
 
 1. **[Quick Start](quick-start.md)** — Run your first test in 5 minutes
-2. **[Setup Guide](../guides/setup.md)** — Understand the 7-section setup wizard
+2. **[Setup Guide](../guides/setup.md)** — Understand the setup workflow
 3. **[Architecture](../concepts/architecture.md)** — Learn how mobile-automator works
 
 ---

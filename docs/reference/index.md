@@ -111,9 +111,9 @@ Structure of execution result reports containing test status, step results, obse
 
 ---
 
-### MCP Tool Reference
+### MCP Tool Reference (internal engine)
 
-Low-level device automation primitives for screen interaction, app management, and device control.
+Low-level device automation primitives for screen interaction, app management, and device control. These `mobile_*` tools are the **internal mobile-mcp engine** that `mauto` verbs wrap — agents drive the device through `mauto` verbs, not by calling these directly.
 
 **Tool categories:**
 - **Device Management** — List devices, launch/terminate apps, install/uninstall
@@ -122,15 +122,15 @@ Low-level device automation primitives for screen interaction, app management, a
 - **Navigation** — Open URLs, press back/home
 - **Device Control** — Orientation, screen size
 
-**Common tools:**
-- `mobile_launch_app` — Launch app on device
-- `mobile_click_on_screen_at_coordinates` — Tap at coordinates
-- `mobile_take_screenshot` — Capture screen
-- `mobile_list_elements_on_screen` — Get UI elements and coordinates
-- `mobile_type_keys` — Type text into focused field
-- `mobile_swipe_on_screen` — Scroll or swipe
+**`mauto` verbs and the engine primitives they wrap:**
+- `mauto launch` → `mobile_launch_app` — Launch app on device
+- `mauto tap` → `mobile_click_on_screen_at_coordinates` — Tap at coordinates
+- `mauto screenshot` → `mobile_take_screenshot` — Capture screen
+- `mauto elements` → `mobile_list_elements_on_screen` — Get UI elements and coordinates
+- `mauto type` → `mobile_type_keys` — Type text into focused field
+- `mauto swipe` → `mobile_swipe_on_screen` — Scroll or swipe
 
-**[View all MCP tools →](mcp-tools.md)**
+**[View all engine tools →](mcp-tools.md)**
 
 ---
 

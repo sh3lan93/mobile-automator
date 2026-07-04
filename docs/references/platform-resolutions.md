@@ -1,18 +1,25 @@
 # Platform Resolutions — Semantic Actions
 
-This reference defines how the executor resolves semantic actions to
-per-OS mobile-mcp tool calls. Scenarios in agnostic mode use only the
-semantic action names; the executor consults this table at runtime to
+!!! note "Internal engine — not the agent-facing API"
+    The `mobile_*` calls in the table below are the **internal mobile-mcp
+    engine** that `mauto` verbs wrap. The agent never calls them directly — it
+    emits the semantic action in an agnostic scenario, and `mauto`'s execute
+    workflow resolves it to the per-OS engine calls shown here. This page
+    documents that internal resolution so contributors can extend it.
+
+This reference defines how the execute workflow resolves semantic actions to
+per-OS mobile-mcp engine calls. Scenarios in agnostic mode use only the
+semantic action names; the resolver consults this table at runtime to
 translate them.
 
 ## Resolution rules
 
 - Each row defines ONE semantic action and its resolution per platform.
-- The executor calls `mobile_list_available_devices()` once at startup
-  and reads the device's `platform` field to pick the column.
-- A resolution may be: a single tool call, a sequence, or primary +
+- The resolver reads the connected device's `platform` field once at startup
+  (via `mauto devices`) to pick the column.
+- A resolution may be: a single engine call, a sequence, or primary +
   fallback strategy.
-- If the platform is neither `android` nor `ios`, the executor MUST
+- If the platform is neither `android` nor `ios`, the resolver MUST
   report the action as unsupported on this device and halt the step.
 
 ## Resolution table
@@ -30,8 +37,8 @@ When the agnostic schema gains a new semantic action that differs by OS:
 
 1. Add a row to the table above with both Android and iOS resolutions filled.
 2. Add the action's name to the `action.type` enum in
-   `templates/mobile-automator-generator/references/scenario_schema.json`.
-3. Add a row to the agnostic generator's Step Translation Guide
-   (`templates/mobile-automator-generator/agnostic/SKILL.md`).
+   `src/schemas/scenario_schema.json`.
+3. Add a row to the agnostic generate guide's Step Translation Guide
+   (`src/guide/content/generate.agnostic.md`).
 4. The lint at `tests/lint/platform-resolutions-coverage.test.js` will
    fail until steps 1 and 2 are in sync — that is intentional.

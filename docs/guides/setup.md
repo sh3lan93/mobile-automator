@@ -1,521 +1,285 @@
 ---
-description: "Complete guide to the 7-section setup workflow - platform detection, environment discovery, package inference, and skill installation."
+description: "Set up mobile-automator with the mauto CLI - install, init your agent, scaffold the workspace, choose a mode, and analyze your project into config.json."
 ---
 
-# Setup Command Guide
+# Setup Guide
 
-The **Setup Command** is your entry point to mobile-automator. It analyzes your mobile project, detects its architecture and configuration, then automatically installs customized testing skills tailored specifically to your app.
+Setup is your entry point to mobile-automator. You install the host-agnostic `mauto` CLI, wire it into your AI agent, scaffold the `mobile-automator/` workspace, and let your agent analyze the project into `mobile-automator/config.json` — so later test generation and execution are tailored to your app.
 
-**Key benefit**: You run setup once per project, and it configures everything needed for intelligent test generation and execution.
+**Key benefit**: You set up once per project, and everything needed for intelligent test generation and execution is configured.
 
 ## Quick Start
 
 ```bash
+# 1. Install the CLI from source
+git clone https://github.com/sh3lan93/mobile-automator
+cd mobile-automator
+npm install
+npm link
+
+# 2. Wire mauto into your agent (installs native Agent Skills + slash-commands/rules + .mcp.json)
 cd /path/to/your/mobile-app
-gemini /mobile-automator:setup
+mauto init --agent claude        # or: cursor | gemini | copilot | agents | all
+
+# 3. Scaffold the workspace + config.json
+mauto setup                      # add --mode agnostic for cross-platform apps
+
+# 4. Confirm a device is reachable
+mauto devices
 ```
 
-Setup will guide you through 7 sections of project analysis, typically taking 5-10 minutes depending on project complexity.
-
-## The 7-Section Workflow
-
-### Section 1: Pre-Initialization
-
-**What happens:**
-- Overview of the setup process is presented
-- Checks if you've run setup before (enables resume capability)
-- Verifies the Gemini CLI is properly configured
-
-**User interaction:** You see an overview and confirm to proceed.
-
-**Output:** If this is a resumed setup, loads previous progress from `mobile-automator/setup_state.json`.
+After this, your agent analyzes the project and persists what it learns to `mobile-automator/config.json`.
 
 ---
 
-### Section 2: Platform Detection
+## Step 1: Install `mauto`
 
-**What setup does:**
-- Automatically scans your project structure for mobile platforms
-- Looks for distinctive files and directories:
-  - **Android**: `build.gradle`, `settings.gradle`, `AndroidManifest.xml`
-  - **iOS**: `.xcodeproj`, `.xcworkspace`, `Podfile`
-  - **Flutter**: `pubspec.yaml`, `lib/main.dart`
-  - **React Native**: `package.json`, `index.js`, `react-native.config.js`
-  - **Kotlin Multiplatform (KMP)**: `shared/build.gradle.kts`, `KMM structure`
-  - **Compose Multiplatform (CMP)**: `compose/build.gradle.kts`
+`mauto` is a host-agnostic CLI usable by any AI agent. Install it from source:
 
-**User interaction:**
-- If detection succeeds (most cases), you'll see: "Detected: Android"
-- If detection is unclear, setup will ask you to select from available platforms
-- You can confirm or override the detected platform
-
-**Example:**
-```
-Analyzing project structure...
-✓ Detected: Android (Gradle-based project)
-
-Is this correct? (y/n): y
-```
-
-**Output:** Stored in setup_state.json with confirmed platform.
-
----
-
-### Section 3: Environment Discovery
-
-**What setup does:**
-- Scans for different build environments (production, staging, development, etc.)
-- Uses platform-specific detection:
-
-**Android/KMP/CMP:**
-- Reads `build.gradle` for `productFlavors` (paid, free, beta)
-- Reads `buildTypes` (debug, release, custom)
-- Combined: "debug, release, staging-debug, staging-release, prod-release"
-
-**iOS:**
-- Inspects Xcode project schemes
-- Reads `.xcconfig` files for environment configurations
-- Example: "Debug, Release, Staging, Production"
-
-**Flutter:**
-- Looks for `--dart-define` configurations in build files
-- Scans for flavor-specific `.env` files (`.env.dev`, `.env.staging`, `.env.prod`)
-- Checks for `flutter_flavor` package configurations
-
-**React Native:**
-- Scans `.env.*` files in project root
-- Checks for `react-native-config` package setup
-- Example: ".env.dev, .env.staging, .env.production"
-
-**User interaction:**
-- You'll see the detected environments
-- Can add custom environments if auto-detection missed any
-- Setup asks which environment you primarily test against
-
-**Example:**
-```
-Detected environments:
-  • debug
-  • release
-  • staging
-
-Do you test against any other environments? (y/n): n
-Primary environment for testing: staging
-```
-
-**Output:** Stored list of environments for later use in build commands.
-
----
-
-### Section 4: App Package Inference
-
-**What setup does:**
-- Extracts your app's unique identifier (required for device automation)
-
-**Android:**
-- Reads `build.gradle` for `applicationId`
-- Attempts to parse based on selected environment/flavor
-- Example: `com.example.myapp` or `com.example.myapp.staging`
-
-**iOS:**
-- Reads Xcode project file for `PRODUCT_BUNDLE_IDENTIFIER`
-- Falls back to `Info.plist` if project file parsing fails
-- Example: `com.example.MyApp` or `com.example.MyApp.staging`
-
-**User interaction:**
-- If auto-detection succeeds, shows detected package ID
-- If not found, prompts you to enter it manually
-- You can override if multiple packages exist
-
-**Example:**
-```
-Detected app package:
-  Android: com.example.myapp
-  iOS: com.example.MyApp
-
-Is this correct? (y/n): y
-```
-
-**Output:** Package IDs stored for device automation commands (install, launch, etc.).
-
----
-
-### Section 5: Project Knowledge (⭐ The Magic Happens Here!)
-
-**What setup does:**
-This is where mobile-automator learns the deep details of your project:
-
-#### Auto-Detected Values (No User Input Needed)
-
-**Project Name:**
-- Extracts from `build.gradle`, `package.json`, or `pubspec.yaml`
-- Falls back to directory name
-- Example: "MyShoppingApp"
-
-**Platform Details:**
-- SDK versions, deployment targets
-- Android: "Android (minSdk 24, targetSdk 34)"
-- iOS: "iOS 14.0+" or "iOS 14.0-17.2"
-
-**Build System:**
-- Automatically identified as: Gradle, Xcode, Flutter CLI, Metro, or custom
-- Example: "Gradle with productFlavors"
-
-**Build Command:**
-- Inferred from detected platform and environments
-- Android example: `./gradlew assembleDebug` or `./gradlew assembleStaging`
-- iOS example: `xcodebuild -scheme MyApp -configuration Debug`
-- Flutter example: `flutter build apk --flavor staging`
-
-**Architecture Pattern:**
-- Scans source code for design patterns:
-  - **MVVM**: Looks for `viewmodel/`, `ViewModel` classes, `LiveData`, data binding
-  - **Clean Architecture**: Looks for `repository/`, `usecase/`, `domain/`, `data/`, `presentation/` layers
-  - **BLoC**: Flutter-specific, looks for `bloc/`, `cubit/`, event definitions
-  - **Redux/MVI**: Looks for `reducer/`, `store/`, `action/`, `middleware/`
-  - **MVP/VIPER**: Looks for `presenter/`, `interactor/`, `router/`, `entity/`
-- Intelligently combines patterns: e.g., "MVVM with Clean Architecture" or "BLoC pattern"
-
-**Loading Indicators:**
-- Greps source code for platform-specific loading patterns:
-
-| Platform | Indicators Detected |
-|----------|-------------------|
-| Android | CircularProgressIndicator, LinearProgressIndicator, ProgressBar, ShimmerEffect, ContentLoadingProgressBar |
-| iOS | UIActivityIndicatorView, ProgressView, SkeletonView |
-| Flutter | CircularProgressIndicator, LinearProgressIndicator, Shimmer, LoadingOverlay |
-| React Native | ActivityIndicator, SkeletonPlaceholder, LottieView |
-| Any | Custom patterns matching `*Loading*`, `*Spinner*`, `*Shimmer*`, `*Skeleton*` |
-
-**Protected Directories:**
-- Identifies source code directories to never modify
-- Typically: `src/`, `lib/`, `android/`, `ios/`, `kotlin/`, `swift/`
-- Prevents accidents when generating test support code
-
-#### Values Requiring Your Input
-
-**Corrections to Auto-Detected Values:**
-- Setup shows what it detected
-- You can correct any inaccuracies
-- Example: "Detected architecture: MVVM. Correct? (y/n)"
-
-**Business Domain:**
-- One-sentence description: "E-commerce mobile shopping app with checkout flow"
-- Used to understand context and test priorities
-- Helps skills focus on business-critical flows
-
-**Business-Critical User Paths:**
-- Setup uses the `@codebase_investigator` subagent to automatically analyze your codebase for critical user flows
-- It examines navigation graphs, screen definitions, feature modules, and documentation
-- If paths are detected, you'll see them listed for confirmation (yes/no)
-- If auto-detection fails, you're asked to type them manually (same as before)
-- Examples: "onboarding, login, product search, add-to-cart, checkout, payment"
-- Skills prioritize these paths in test generation
-
-**Example Section 5 Interaction:**
-```
-=== PROJECT KNOWLEDGE ===
-
-Auto-detected:
-  • Project: MyShoppingApp
-  • Platform: Android (minSdk 24, targetSdk 34)
-  • Architecture: MVVM with Clean Architecture
-  • Build system: Gradle
-  • Loading indicators: CircularProgressIndicator, ShimmerEffect (found 2)
-  • Protected dirs: src/main/java, src/main
-
-Corrections needed? (y/n): n
-
-Business domain (one sentence):
-E-commerce mobile shopping app with product catalog and checkout flow
-
-Analyzing your codebase to identify business-critical user paths...
-I analyzed your codebase and identified these business-critical paths:
-  onboarding, login, product-search, add-to-cart, checkout, payment
-Are these correct? (y/n): y
-```
-
-**Output:** All project knowledge stored in `mobile-automator/setup_state.json`.
-
----
-
-### Section 6: Skill Installation (Fully Automated)
-
-**What setup does:**
-- Creates `.gemini/skills/` directory structure
-- Reads skill template files from the extension
-- **Replaces 13 placeholders** with detected/gathered values
-- Copies schema files to workspace
-- Verifies all placeholders were replaced
-
-#### The 13 Placeholders Automatically Populated
-
-| Placeholder | Example Value |
-|-------------|---------------|
-| `{{project_name}}` | MyShoppingApp |
-| `{{platform_details}}` | Android (minSdk 24, targetSdk 34) |
-| `{{architecture}}` | MVVM with Clean Architecture |
-| `{{build_system}}` | Gradle |
-| `{{build_command}}` | ./gradlew assembleDebug |
-| `{{app_package}}` | com.example.myapp |
-| `{{environments}}` | debug, release, staging |
-| `{{loading_indicators}}` | CircularProgressIndicator, ShimmerEffect |
-| `{{business_domain}}` | E-commerce mobile shopping app... |
-| `{{business_critical_paths}}` | onboarding, login, checkout, payment |
-| `{{protected_directories}}` | src/main/java, src/main/kotlin |
-| `{{automation_extras}}` | Android-specific automation notes |
-| `{{additional_resources}}` | Links to documentation |
-
-#### Skills Created
-
-**1. Generator Skill**
-- Location: `.gemini/skills/mobile-automator-generator/SKILL.md`
-- Purpose: Generate test scenarios from natural language
-- Includes: All 13 placeholders populated with your project details
-- Schemas: `references/scenario_schema.json`
-
-**2. Executor Skill**
-- Location: `.gemini/skills/mobile-automator-executor/SKILL.md`
-- Purpose: Execute test scenarios and collect results
-- Includes: All 13 placeholders populated
-- Schemas: `references/result_schema.json`
-
-**Example of Populated Placeholder:**
-
-Before replacement (in template):
-```markdown
-# Mobile Automator — Test Generator for {{project_name}}
-
-This skill generates test scenarios for {{project_name}}, which uses:
-- **Platform**: {{platform_details}}
-- **Architecture**: {{architecture}}
-- **Business Domain**: {{business_domain}}
-
-Critical paths: {{business_critical_paths}}
-```
-
-After replacement (in workspace):
-```markdown
-# Mobile Automator — Test Generator for MyShoppingApp
-
-This skill generates test scenarios for MyShoppingApp, which uses:
-- **Platform**: Android (minSdk 24, targetSdk 34)
-- **Architecture**: MVVM with Clean Architecture
-- **Business Domain**: E-commerce mobile shopping app with product catalog and checkout flow
-
-Critical paths: onboarding, login, checkout, payment
-```
-
-**Verification Step:**
-- Setup scans generated SKILL.md files
-- Confirms no `{{` remains (all placeholders replaced)
-- Reports success or error if placeholders remain
-
-**Example Output:**
-```
-✓ Creating .gemini/skills/mobile-automator-generator/
-✓ Installing generator skill (SKILL.md)
-✓ Replacing 13 placeholders...
-✓ Verifying no placeholders remain: PASSED
-✓ Copying scenario_schema.json
-
-✓ Creating .gemini/skills/mobile-automator-executor/
-✓ Installing executor skill (SKILL.md)
-✓ Replacing 13 placeholders...
-✓ Verifying no placeholders remain: PASSED
-✓ Copying result_schema.json
-```
-
----
-
-### Section 7: Finalization
-
-**What setup does:**
-
-1. **Creates directory structure:**
-   - `mobile-automator/scenarios/` — Store generated test JSON files
-   - `mobile-automator/screenshots/` — Reference and execution screenshots
-   - `mobile-automator/results/` — Execution result reports
-
-2. **Generates configuration files:**
-   - `mobile-automator/config.json` — Complete project configuration (JSON)
-   - `mobile-automator/index.md` — Setup documentation and summary
-   - `mobile-automator/setup_state.json` — Internal state for resume capability
-
-3. **Git integration (optional):**
-   - If your project is a git repository, setup offers to commit
-   - Commit message: "🤖 Mobile Automator Setup: Project Analysis & Skill Installation"
-   - Includes: config.json, .gemini/skills/, directories
-
-4. **Success summary:**
-   - Shows what was created
-   - Lists next steps
-   - Provides command examples
-
-**Example Section 7 Output:**
-```
-=== FINALIZATION ===
-
-Creating directories:
-  ✓ mobile-automator/scenarios/
-  ✓ mobile-automator/screenshots/
-  ✓ mobile-automator/results/
-
-Generating configuration:
-  ✓ mobile-automator/config.json (47 KB)
-  ✓ mobile-automator/index.md
-  ✓ mobile-automator/setup_state.json
-
-Git integration:
-  ? Would you like to commit setup changes? (y/n): y
-  ✓ Committed: "🤖 Mobile Automator Setup: Project Analysis & Skill Installation"
-
-=== SETUP COMPLETE ===
-
-Your project is ready for mobile testing!
-
-Next steps:
-1. Review mobile-automator/config.json for accuracy
-2. Run: gemini /mobile-automator:generate
-3. Create your first test scenario
-
-Learn more: mobile-automator/index.md
-```
-
----
-
-## Resume Capability
-
-If setup is interrupted (network timeout, user cancels, etc.):
-
-1. Setup stores progress in `mobile-automator/setup_state.json`
-2. Run `/mobile-automator:setup` again
-3. Setup detects the partial state
-4. Resumes from the last completed section
-5. No need to re-enter previous answers
-
-**Example:**
 ```bash
-# First run: interrupted at Section 5
-gemini /mobile-automator:setup
-
-# Resume from Section 5
-gemini /mobile-automator:setup
-Resuming setup from Section 5: Project Knowledge...
+git clone https://github.com/sh3lan93/mobile-automator
+cd mobile-automator
+npm install
+npm link
 ```
+
+`npm link` exposes the `mauto` (and `mobile-automator`) commands on your PATH. The mobile-mcp engine that drives the device is pinned as a dependency and resolved from `node_modules` — nothing is fetched at runtime.
+
+---
+
+## Step 2: Wire `mauto` into your agent
+
+Run `mauto init` once per project to install the per-host integration:
+
+```bash
+cd /path/to/your/mobile-app
+mauto init --agent claude
+```
+
+`--agent` accepts `claude`, `cursor`, `gemini`, `copilot`, `agents`, or `all`. Init installs a native Agent Skill for the host plus the right invocation surface:
+
+| Host | What init installs | How you invoke a workflow |
+|---|---|---|
+| Claude Code | Agent Skill + hyphen slash-commands + `.mcp.json` | `/mobile-automator-generate`, `/mobile-automator-execute` |
+| Cursor | Agent Skill + project rule + `.mcp.json` | Ask in plain language (the rule routes it) |
+| Gemini CLI | Agent Skill in `.gemini/skills/` | `mauto guide <topic>` |
+| Any other agent | — | `mauto mcp`, or `mauto bootstrap` + `mauto guide <topic>` |
+
+For any agent, the underlying contract is the same: the agent reads `mauto guide generate` / `mauto guide execute` and drives the device through `mauto` verbs.
+
+---
+
+## Step 3: Scaffold the workspace with `mauto setup`
+
+`mauto setup` is a CLI verb (not an interactive wizard). It is mechanical and idempotent — it creates the workspace tree and a starter config, and re-running never clobbers existing config fields:
+
+```bash
+mauto setup
+```
+
+This creates:
+
+```
+mobile-automator/
+├── scenarios/      # generated test JSON files
+├── screenshots/    # reference + execution screenshots
+├── results/        # execution result reports
+└── config.json     # project configuration (starter skeleton)
+```
+
+The starter `config.json` written on first run:
+
+```json
+{
+  "mode": "platform-aware",
+  "project_name": null,
+  "environments": [],
+  "default_environment": null
+}
+```
+
+### Choosing a mode
+
+The mode is selected with `--mode` and stored in `config.json`. It governs how OS gestures are expressed in scenarios:
+
+```bash
+mauto setup --mode aware       # default — single-OS / OS-specific UI tests
+mauto setup --mode agnostic    # cross-platform (Flutter / RN / KMP / CMP)
+```
+
+| Mode | Use for |
+|---|---|
+| `platform-aware` | Single-OS or OS-specific UI tests |
+| `platform-agnostic` | Cross-platform apps |
+
+Agnostic mode maps OS gestures to four semantic actions — `press_back`, `dismiss_keyboard`, `grant_permission`, `deny_permission` — that resolve to per-platform mechanics at replay time. Re-running `mauto setup --mode <mode>` only updates the stored `mode`, preserving every other field.
+
+---
+
+## Step 4: Confirm a device
+
+```bash
+mauto devices
+```
+
+This lists connected devices/simulators (id, name, platform, state). Optionally pin one so later verbs don't need a `--device` flag:
+
+```bash
+mauto devices use <id>     # persist a selection
+mauto devices clear        # remove the selection
+```
+
+A zero-device result is valid (it exits cleanly with an empty list) — connect a device or start a simulator and re-run.
+
+---
+
+## Step 5: Analyze the project into `config.json`
+
+Scaffolding is the mechanical half. The valuable half is **project analysis**: your agent inspects the codebase, infers each fact, confirms anything uncertain with you, and persists every finding with `mauto config set <key> <value>`. Read a value back with `mauto config get <key>`.
+
+In Claude Code this runs as the setup skill; with any agent you can drive it directly:
+
+```bash
+mauto guide setup
+```
+
+The agent works through the following analysis, persisting each result to `config.json`:
+
+### Platform detection
+
+The agent inspects project files (honoring `.gitignore`) to determine the platform — Flutter, React Native, Kotlin Multiplatform, Compose Multiplatform, Android Native, or iOS Native — and persists it:
+
+```bash
+mauto config set platform <platform>
+```
+
+### Environment discovery
+
+It scans build configuration for named environments (Gradle `productFlavors` × `buildTypes`, Xcode schemes/configs, Flutter flavors / `--dart-define`, React Native `.env*` files), deduplicates, and persists a comma-separated list:
+
+```bash
+mauto config set environments <env1,env2,...>
+```
+
+### App package inference
+
+It reads the application identifier from build files and persists it per platform:
+
+```bash
+mauto config set android_package <id>     # e.g. com.example.myapp
+mauto config set ios_bundle_id <id>       # e.g. com.example.MyApp
+```
+
+### Project knowledge
+
+The agent infers and persists the deeper context that makes generated tests project-aware:
+
+| Key | What it captures |
+|---|---|
+| `project_name` | App / project name |
+| `platform_details` | e.g. `Android (minSdk 24, targetSdk 34)` |
+| `build_system` | e.g. `Gradle (AGP)`, `Xcode`, `Flutter CLI + Gradle + Xcode` |
+| `build_command` | Default debug/dev build command |
+| `architecture` | e.g. `MVVM with Clean Architecture`, `BLoC` |
+| `business_domain` | One-sentence description of what the app does |
+| `business_critical_paths` | Most important user flows (login, checkout, …) |
+| `loading_indicators` | Progress/spinner/shimmer/skeleton patterns to wait on |
+| `protected_directories` | Source dirs the tooling must never modify |
+
+Each is persisted with `mauto config set <key> <value>` (comma-separated values for list keys), confirming uncertain values with you first.
+
+### Confirm the config
+
+When analysis is done, the agent reads each value back with `mauto config get <key>` and presents a summary. The workspace is now configured: `mauto guide generate` and `mauto guide execute` read these values to drive authoring and execution.
 
 ---
 
 ## Configuration File (config.json)
 
-After setup completes, review `mobile-automator/config.json`:
+After analysis, `mobile-automator/config.json` looks something like:
 
 ```json
 {
+  "mode": "platform-aware",
   "project_name": "MyShoppingApp",
   "platform": "android",
-  "app_package": "com.example.myapp",
+  "android_package": "com.example.myapp",
   "environments": ["debug", "release", "staging"],
+  "default_environment": "staging",
   "platform_details": "Android (minSdk 24, targetSdk 34)",
   "architecture": "MVVM with Clean Architecture",
-  "build_system": "Gradle",
+  "build_system": "Gradle (AGP)",
   "build_command": "./gradlew assembleDebug",
-  "business_domain": "E-commerce mobile shopping app...",
+  "business_domain": "E-commerce mobile shopping app with checkout flow",
   "business_critical_paths": ["onboarding", "login", "checkout", "payment"],
   "loading_indicators": ["CircularProgressIndicator", "ShimmerEffect"],
-  "protected_directories": ["src/main/java", "src/main/kotlin"],
-  "automation_extras": "Android automation notes...",
-  "additional_resources": "...",
-  "setup_completed_at": "2026-03-01T10:30:00Z",
-  "setup_completed_by": "user@example.com"
+  "protected_directories": ["app/src/", "lib/"]
 }
 ```
+
+Read or update any field directly:
+
+```bash
+mauto config get platform
+mauto config set default_environment staging
+```
+
+Configs that predate the `mode` field are treated as `platform-aware`.
 
 ---
 
 ## Troubleshooting
 
-### Platform Detection Failed
+### `mauto: command not found`
 
-**Problem:** Setup can't determine your project platform.
+**Problem:** The CLI isn't on your PATH.
 
-**Solution:**
-- Ensure you're in the root directory of a mobile project
-- Setup will prompt you to manually select: Android, iOS, Flutter, React Native, KMP, or CMP
-- Or add files distinctive to your platform (e.g., `pubspec.yaml` for Flutter)
+**Solution:** Re-run `npm install && npm link` inside the cloned `mobile-automator` repo. Confirm with `mauto devices`.
 
-### Package ID Not Found
+### No devices listed
 
-**Problem:** Setup can't extract your app's bundle ID or package name.
+**Problem:** `mauto devices` shows an empty list.
 
-**Solution:**
-- Setup will prompt: "Enter app package name:"
-- Android: Find in `build.gradle` under `applicationId`
-- iOS: Find in Xcode project or `Info.plist` under `CFBundleIdentifier`
+**Solution:** Connect a physical device or start a simulator/emulator, then re-run `mauto devices`. Pin one with `mauto devices use <id>` so later verbs don't need `--device`.
 
-### Skills Not Installed
+### Platform detection inconclusive
 
-**Problem:** After setup, `.gemini/skills/mobile-automator-*/SKILL.md` don't exist.
+**Problem:** The agent can't determine your project's platform.
 
-**Solution:**
-1. Check directory exists: `ls -la .gemini/skills/`
-2. Re-run setup: `gemini /mobile-automator:setup`
-3. Setup will detect partial state and resume from Section 6
-4. If still failing, check extension installation
+**Solution:** Confirm you're in the project root and that platform-distinctive files exist (e.g. `pubspec.yaml` for Flutter, `build.gradle` for Android). Then set it explicitly: `mauto config set platform <platform>`.
 
-### Placeholders Not Replaced
+### Package ID not found
 
-**Problem:** Generated SKILL.md still contains `{{placeholder_name}}`.
+**Problem:** The agent can't extract your app's bundle ID / package name.
 
-**Solution:**
-1. Setup failed to populate a placeholder value
-2. Check `mobile-automator/setup_state.json` for missing keys
-3. Manually edit SKILL.md to replace `{{placeholders}}`
-4. Or re-run setup from Section 5 (Project Knowledge)
+**Solution:** Set it manually — `mauto config set android_package com.example.myapp` (Android, from `applicationId`) or `mauto config set ios_bundle_id com.example.MyApp` (iOS, from `PRODUCT_BUNDLE_IDENTIFIER` / `CFBundleIdentifier`).
 
-### Need to Re-Run Setup
+### Wrong mode
 
-**Problem:** You modified your project (added environments, changed architecture) and want to update config.
+**Problem:** You scaffolded in the wrong mode.
 
-**Solution:**
-```bash
-# Option 1: Resume from specific section
-gemini /mobile-automator:setup
+**Solution:** Re-run `mauto setup --mode aware` or `mauto setup --mode agnostic`. It only updates the stored `mode`, preserving every other field.
 
-# Option 2: Fresh setup (overwrites previous)
-rm mobile-automator/setup_state.json
-gemini /mobile-automator:setup
-```
+### Re-running setup
+
+`mauto setup` is idempotent — re-run it any time. It never clobbers existing config fields; it only ensures the requested mode is set and that the workspace directories exist.
 
 ---
 
 ## After Setup
 
-Once setup completes successfully:
+Once setup and analysis are complete:
 
 1. **Review configuration**: `mobile-automator/config.json`
-2. **Generate your first test**: `/mobile-automator:generate`
-3. **Execute the test**: `/mobile-automator:execute`
+2. **Generate your first test**: `/mobile-automator-generate` (or `mauto guide generate`)
+3. **Execute the test**: `/mobile-automator-execute` (or `mauto guide execute`)
 
-See [Generate Command Guide](generate.md) for next steps.
-
----
-
-## Advanced: Customizing Skill Templates
-
-If you need to modify the generated skills (advanced users only):
-
-1. Edit `.gemini/skills/mobile-automator-generator/SKILL.md`
-2. Or `.gemini/skills/mobile-automator-executor/SKILL.md`
-3. Changes persist until you re-run setup
-4. Re-running setup will regenerate from templates (overwrites your edits)
-
-To permanently modify templates, contribute changes to the extension repository.
+See the [Generate Guide](generate.md) for next steps.
 
 ---
 
 ## See Also
 
-- [Generate Command Guide](generate.md) — Next step after setup
+- [Generate Guide](generate.md) — Next step after setup
 - [Architecture: 3-Tier Design](../concepts/three-tier-design.md) — How setup fits in the overall system
 - [FAQ: Setup Issues](../faq.md#setup-installation)

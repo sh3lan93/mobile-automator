@@ -6,36 +6,31 @@ description: "Run your first mobile test in 5 minutes - from setup to test gener
 
 Get mobile-automator working in 5 minutes with a real test scenario.
 
+This quick start uses **Claude Code** as the example agent. For Cursor, swap `--agent claude` → `--agent cursor`. For any other agent, see [Using another agent](#using-another-agent).
+
 ## Prerequisites
 
+- `mauto` installed and on your PATH ([installation guide](installation.md))
 - Mobile project directory (Android, iOS, Flutter, React Native, KMP, or CMP)
+- An AI coding agent (Claude Code, Cursor, Gemini CLI, GitHub Copilot, OpenAI Agents, or any MCP-capable agent)
 - Connected device or simulator
-- Gemini CLI with mobile-automator extension installed
 
-## Step 1: Navigate to Your Mobile Project
+## Step 1: Wire mobile-automator into Your Project
 
 ```bash
 cd /path/to/your/mobile-app
+mauto init --agent claude      # or: cursor | gemini | copilot | agents | all
 ```
+
+`init` installs native Agent Skills into your host's skills directory and writes the agent command files + MCP server entry (`.claude/commands/` + `.mcp.json` for Claude Code; `.cursor/` for Cursor).
 
 ## Step 2: Run Setup
 
 ```bash
-gemini
-/mobile-automator:setup
+mauto setup                    # add --mode agnostic for cross-platform apps
 ```
 
-The setup wizard will:
-
-1. **Detect your platform** — Identifies Android, iOS, Flutter, React Native, KMP, or CMP
-2. **Discover environments** — Finds production, staging, development, etc.
-3. **Infer app package** — Extracts Android applicationId and iOS Bundle Identifier
-4. **Analyze your project** — Scans codebase for architecture, domain, loading indicators
-5. **Install skills** — Creates customized test generation and execution skills
-6. **Scaffold directories** — Creates `mobile-automator/`, `scenarios/`, `results/`
-7. **Commit to git** — Optionally commits the setup state
-
-**Time**: ~2-3 minutes (mostly for project analysis)
+`setup` scaffolds the `mobile-automator/` workspace and writes its config. Add `--mode agnostic` for cross-platform apps (Flutter/RN/KMP/CMP) so one scenario runs on Android and iOS.
 
 ### What Gets Created
 
@@ -43,32 +38,44 @@ After setup completes:
 
 ```
 mobile-automator/
-├── config.json              # Project configuration
-├── setup_state.json         # Resume state (if setup interrupted)
-├── index.md                 # Setup documentation
-├── scenarios/               # Test scenario files
-├── screenshots/             # Reference screenshots
-└── results/                 # Test execution results
-
-.gemini/
-└── skills/
-    ├── mobile-automator-generator/SKILL.md
-    └── mobile-automator-executor/SKILL.md
+├── config.json              # mode, environments, project config
+├── scenarios/               # test scenario files (JSON, schema 2.1)
+├── screenshots/             # reference screenshots
+└── results/                 # test execution results
 ```
 
-## Step 3: Generate a Test Scenario
+Read any config value with `mauto config get <key>`.
+
+## Step 3: Check Your Device Is Visible
+
+Before generating a test, confirm `mauto` can see a device:
 
 ```bash
-/mobile-automator:generate
+mauto devices                 # lists connected devices and emulators/simulators
 ```
 
-This launches the test generation skill. Describe what you want to test:
+If more than one device is listed, pin the one you want:
+
+```bash
+mauto devices use <id>        # pin a specific device (mauto devices clear to unpin)
+```
+
+## Step 4: Generate a Test Scenario — From Inside Your Agent
+
+Open your agent in the project. In **Claude Code**, `init` installs slash commands:
+
+```
+/mobile-automator-generate
+```
+
+This launches the generate workflow. Describe what you want to test:
 
 Example prompt:
 
 > "Test the login flow: 1) Launch the app, 2) Tap the login button, 3) Enter email 'test@example.com', 4) Enter password 'password123', 5) Tap Sign In, 6) Wait for home screen to load, 7) Verify welcome message appears"
 
-The AI will generate a complete test scenario in JSON format including:
+The agent drives the app through `mauto` verbs and writes a complete test scenario in JSON, including:
+
 - Step definitions (launch, tap, type, wait, etc.)
 - Assertions (element visibility, text content, etc.)
 - Capture values for later verification
@@ -76,24 +83,26 @@ The AI will generate a complete test scenario in JSON format including:
 
 A new scenario file is created in `mobile-automator/scenarios/`.
 
-## Step 4: Execute the Test
+In **Cursor**, `init` installs a project rule instead — just ask the agent in plain language (e.g. *"generate a login test"*). **Any other agent:** run `mauto mcp` (MCP prompts server) or read `mauto bootstrap` + `mauto guide generate`, then call the verbs directly.
 
-```bash
-/mobile-automator:execute
+## Step 5: Execute the Test
+
+```
+/mobile-automator-execute
 ```
 
-The executor will:
+The agent replays the scenario and:
 
-1. List available scenarios
-2. Confirm device connection
-3. Verify app is installed (or offer to build/install)
-4. Execute the scenario step by step
-5. Capture observations (flakiness, regressions, state context)
-6. Generate a detailed result report
+1. Lists available scenarios
+2. Confirms device connection
+3. Verifies the app is installed (or offers to build/install)
+4. Executes the scenario step by step
+5. Captures observations (flakiness, regressions, state context)
+6. Generates a detailed result report
 
 Results are saved to `mobile-automator/results/<run_id>.json`.
 
-## Step 5: Review Results
+## Step 6: Review Results
 
 Open the result file in your editor:
 
@@ -134,7 +143,8 @@ The result includes:
 
 ### Generate More Tests
 
-Repeat Step 3 with different user flows:
+Repeat Step 4 with different user flows:
+
 - Onboarding flow
 - Checkout flow
 - User profile editing
@@ -153,37 +163,27 @@ Add tags to scenarios for easy filtering:
 }
 ```
 
-Then run only critical tests:
-
-```bash
-/mobile-automator:execute --tag critical
-```
-
-### Run Tests in CI/CD
-
-The executor can run without the interactive prompts:
-
-```bash
-/mobile-automator:execute --scenario login_flow --headless
-```
+Then ask your agent to execute only the critical-tagged scenarios.
 
 ## Troubleshooting
 
-### Setup fails to detect platform
+### No device listed by `mauto devices`
 
-Ensure you're in the root of your mobile project. If detection fails, setup will prompt for manual selection.
+Ensure an emulator/simulator is running or a physical device is connected and authorized. See the [installation guide](installation.md) for platform-specific device setup.
 
-### Generate command can't find app package
+### Generate can't find the app package
 
 The app must be:
+
 1. Built successfully in the project
 2. Installed on the connected device/simulator
 
-Setup will automatically prompt to build and install if needed.
+The generate workflow will prompt to build and install if needed.
 
 ### Tests fail with "element not found"
 
 Common causes:
+
 1. App is still loading — Use `wait_for_element` in the scenario
 2. Element is off-screen — Use `scroll_to_element` before tapping
 3. Different environment — Verify you're testing the correct environment (staging vs production)
@@ -192,7 +192,7 @@ Check the result observations for hints about what went wrong.
 
 ## What's Next?
 
-- **[Core Concepts](../concepts/architecture.md)** — Understand the 3-tier architecture
+- **[Core Concepts](../concepts/architecture.md)** — Understand the brain/hands architecture
 - **[Guides](../guides/setup.md)** — Deep dive into each command
 - **[Reference](../reference/assertions.md)** — Complete list of assertion types
 - **[Examples](../examples/android.md)** — Real-world test scenarios

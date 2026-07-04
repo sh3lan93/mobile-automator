@@ -4,7 +4,14 @@ description: "MCP tool reference for mobile-automator - device automation primit
 
 # MCP Tool Reference
 
-The Mobile MCP Server (`mobile-mcp`) provides 20+ device automation primitives for controlling mobile devices and simulators. These tools are used internally by the executor skill but can also be called directly for custom test logic.
+!!! note "Internal engine — not the agent-facing API"
+    The `mobile_*` tools below are the **internal mobile-mcp engine** that `mauto`
+    verbs wrap. They are documented here for reference only. AI agents drive the
+    device **exclusively through `mauto` verbs** (`elements`, `tap`, `type`,
+    `swipe`, `press`, `screenshot`, …) — never by calling `mobile_*` directly.
+    The contract is **agent → `mauto` verbs → mobile-mcp engine → device**.
+
+The Mobile MCP Server (`mobile-mcp`) provides 20+ device automation primitives for controlling mobile devices and simulators. `mauto` verbs wrap these primitives; the reference below documents the engine layer so contributors understand what each verb does under the hood.
 
 ## Overview
 

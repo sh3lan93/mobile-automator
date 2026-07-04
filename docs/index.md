@@ -1,16 +1,16 @@
 ---
-description: "Intelligent mobile QA automation for Gemini CLI. Auto-detect your mobile app architecture, generate test scenarios, and execute them with AI-powered assertions."
+description: "Intelligent mobile QA automation for any AI coding agent. The host-agnostic mauto CLI drives a device to auto-generate test scenarios and execute them with AI-powered assertions."
 ---
 
 # mobile-automator
 
-Intelligent mobile QA automation for Gemini CLI. Analyze your mobile app, auto-generate test scenarios, and execute them with AI-powered assertions.
+Turn **any** AI coding agent into a mobile QA engineer. The host-agnostic `mauto` CLI lets your agent analyze your mobile app, auto-generate test scenarios, and execute them with AI-powered assertions — driving a real device or emulator through [mobile-mcp](https://github.com/mobile-next/mobile-mcp).
 
 ## Why mobile-automator?
 
 Testing mobile apps manually is **tedious and error-prone**. Cross-platform testing doubles the pain: iOS, Android, Flutter, React Native, Kotlin Multiplatform—all with different build systems, package managers, and ecosystem conventions.
 
-**mobile-automator** changes this. It's a Gemini CLI extension that:
+**mobile-automator** changes this. It's a host-agnostic CLI that any AI agent can drive:
 
 - **Learns your app**: Auto-detects platform, architecture, build system, and business domain
 - **Generates tests**: Creates realistic test scenarios from natural language descriptions
@@ -19,60 +19,63 @@ Testing mobile apps manually is **tedious and error-prone**. Cross-platform test
 
 ## Key Features
 
-- **3-Tier Architecture**: Separation of concerns between CLI commands (pre-flight), workspace skills (test logic), and the MCP automation server
+- **Brain / Hands Architecture**: The agent (brain) decides *what* to do; `mauto` (hands) performs deterministic actions via mobile-mcp
+- **Any Agent**: Claude Code, Cursor, Gemini CLI, GitHub Copilot, and OpenAI Agents get one-command setup via `mauto init`; any MCP-capable agent connects via `mauto mcp`
 - **Platform Detection**: Auto-discovers Android, iOS, Flutter, React Native, Kotlin Multiplatform, and Compose Multiplatform projects
-- **Smart Setup**: 7-section interactive workflow that learns your project and installs customized skills
+- **Platform-Agnostic by Default**: One scenario runs on Android and iOS, with OS gestures mapped to semantic actions
 - **Schema**: 14 action types, 27 assertion types, and advanced retry/condition logic
 - **Result Observations**: Captures flakiness, regressions, and state context for smarter debugging
 - **Semantic Vision**: AI-powered visual assertions that tolerate cosmetic changes
-- **Built-in Schemas**: Test scenario and result schemas included in workspace for validation and IDE autocomplete
+- **Portable Targets**: Visible text + role + coordinates, never brittle resource-ids
 
 ## Quick Start
 
-### 1. Install
+### 1. Install `mauto` from source
 
 ```bash
-gemini extensions install https://github.com/sh3lan93/mobile-automator
+git clone https://github.com/sh3lan93/mobile-automator
+cd mobile-automator
+npm install && npm link        # exposes `mauto` globally
 ```
 
-### 2. Setup
+### 2. Wire it into your project
 
 Navigate to your mobile project and run:
 
 ```bash
-/mobile-automator:setup
+mauto init --agent claude      # or: cursor | gemini | copilot | agents | all
+mauto setup                    # add --mode agnostic for cross-platform apps
 ```
 
-This 7-section workflow:
-1. Detects your platform
-2. Discovers environments
-3. Infers app package
-4. Analyzes project knowledge
-5. Installs customized skills
-6. Scaffolds directories
-7. Commits to git (optional)
+`init` installs native Agent Skills (and, for Claude Code/Cursor, slash-commands/rules + the `mauto` MCP entry). `setup` scaffolds the `mobile-automator/` workspace and writes its config.
 
-### 3. Generate Tests
-
-Create test scenarios from natural language:
+### 3. Check your device
 
 ```bash
-/mobile-automator:generate
+mauto devices                  # lists devices; mauto devices use <id> to pin one
 ```
 
-Describe what you want to test. The AI generates structured JSON scenarios.
+### 4. Generate Tests
 
-### 4. Execute Tests
+From inside your agent, create test scenarios from natural language. In **Claude Code**:
 
-Run scenarios on connected devices:
-
-```bash
-/mobile-automator:execute
+```
+/mobile-automator-generate
 ```
 
-Select which scenarios to run. Tests execute with AI vision and capture observations (flakiness, regressions, etc.).
+Describe what you want to test. The agent drives the app through `mauto` verbs and writes structured JSON scenarios. In **Cursor**, just ask in plain language; any other agent uses `mauto mcp` or `mauto guide generate`.
 
-### 5. View Results
+### 5. Execute Tests
+
+Run scenarios on the connected device. In **Claude Code**:
+
+```
+/mobile-automator-execute
+```
+
+Tests execute with AI vision and capture observations (flakiness, regressions, etc.).
+
+### 6. View Results
 
 Check execution results:
 
@@ -86,22 +89,27 @@ Results include step details, assertion outcomes, captured variables, and observ
 
 ```mermaid
 graph TD
-    T1["<b>Tier 1: CLI Commands</b><br/>/mobile-automator:setup<br/>/mobile-automator:generate<br/>/mobile-automator:execute<br/><i>Pre-flight validation</i>"]
-    T2["<b>Tier 2: Workspace Skills</b><br/>.gemini/skills/mobile-automator-*<br/><i>Test generation & execution</i>"]
-    T3["<b>Tier 3: Automation Engine</b><br/>mobile-mcp<br/><i>Device primitives</i>"]
+    A["<b>Your AI Agent</b><br/>(brain)<br/>resolves targets, judges<br/>assertions, assembles scenarios"]
+    B["<b>mauto verbs</b><br/>(hands)<br/>tap · type · swipe · assert<br/><i>uniform JSON envelope</i>"]
+    C["<b>mobile-mcp</b><br/><i>device automation engine</i>"]
+    D["<b>Device / Emulator</b>"]
 
-    T1 -->|delegates to| T2
-    T2 -->|uses| T3
+    A -->|drives| B
+    B -->|wraps| C
+    C -->|controls| D
 
-    style T1 fill:#1a1a2e,stroke:#10B981,color:#fff
-    style T2 fill:#1a1a2e,stroke:#10B981,color:#fff
-    style T3 fill:#1a1a2e,stroke:#10B981,color:#fff
+    style A fill:#1a1a2e,stroke:#10B981,color:#fff
+    style B fill:#1a1a2e,stroke:#10B981,color:#fff
+    style C fill:#1a1a2e,stroke:#10B981,color:#fff
+    style D fill:#1a1a2e,stroke:#10B981,color:#fff
 ```
 
 **Why this design?** Clear separation:
-- **Tier 1** handles infrastructure (device detection, config validation)
-- **Tier 2** contains project-specific test logic
-- **Tier 3** provides platform-agnostic device automation
+- **The agent** makes decisions: which target, whether an assertion passed, how to assemble a scenario
+- **`mauto` verbs** perform deterministic, scriptable actions and emit `{ok, data, error, hint, schema_version}`
+- **mobile-mcp** provides platform-agnostic device automation
+
+Because the contract is just verbs + JSON, **no agent is special** — any agent that can run a shell command or speak MCP can drive the same tool.
 
 ## Supported Platforms
 
@@ -114,11 +122,11 @@ graph TD
 
 ## What's Included
 
-- **7-Section Setup Workflow**: Platform detection, environment discovery, package inference, project analysis
-- **Customized Skills**: Automatically installed and configured for your project
+- **One-Command Setup**: `mauto init` ships native Agent Skills for Claude Code, Cursor, Gemini CLI, GitHub Copilot, and OpenAI Agents
+- **Platform Modes**: platform-aware (default) and platform-agnostic (`--mode agnostic`) with four semantic actions for cross-platform scenarios
 - **Schema**: 14 action types, 27 assertion types, advanced retry/condition logic
 - **Result Observations**: Captures flakiness, regressions, and execution context
-- **Resume Capability**: Setup can resume if interrupted
+- **Built-in Schemas**: Scenario and result schemas available via `mauto schema scenario` / `mauto schema result`
 
 ## Next Steps
 
@@ -135,4 +143,4 @@ graph TD
 
 ---
 
-**Ready to automate?** Start with `/mobile-automator:setup` in your mobile project!
+**Ready to automate?** Install `mauto`, then run `mauto init` in your mobile project!

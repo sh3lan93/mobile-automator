@@ -1,5 +1,5 @@
 ---
-description: "Get started with mobile-automator - install the extension, set up your project, and run your first automated test in minutes."
+description: "Get started with mobile-automator - install the mauto CLI, wire it into your project and agent, and run your first automated test in minutes."
 ---
 
 # Getting Started with mobile-automator
@@ -8,54 +8,61 @@ Welcome! This section will help you get up and running with mobile-automator in 
 
 ## What is mobile-automator?
 
-mobile-automator is a **Gemini CLI extension** that intelligently generates and executes mobile tests for your app. Instead of writing tests manually, it:
+mobile-automator is a **host-agnostic `mauto` CLI** that turns **any** AI coding agent into a mobile QA engineer. The agent decides *what* to test; `mauto` performs the deterministic actions — tap, type, swipe, assert — by driving a real device or emulator through [mobile-mcp](https://github.com/mobile-next/mobile-mcp). Instead of writing tests manually, you:
 
-1. **Analyzes your project** — Understands your app's architecture, platform, and domain
-2. **Generates test skills** — Creates customized testing logic tailored to your project
-3. **Executes tests** — Runs tests with semantic understanding and intelligent retry logic
-4. **Reports results** — Provides detailed execution reports with observations and context
+1. **Wire it into your project** — `mauto init` installs native Agent Skills for your agent; `mauto setup` scaffolds the workspace
+2. **Generate tests** — Describe flows in plain English; the agent drives the app and writes JSON scenarios
+3. **Execute tests** — The agent replays scenarios with semantic understanding and intelligent retry logic
+4. **Review results** — Detailed execution reports with observations and context
 
 ## Why Use mobile-automator?
 
 - **No manual test writing** — Describe flows in plain English, tests are generated automatically
+- **Any agent** — Claude Code, Cursor, Gemini CLI, GitHub Copilot, OpenAI Agents, or any MCP-capable agent
 - **Intelligent retries** — Handles timing issues and loading indicators automatically
-- **Platform-aware** — Works with Android, iOS, Flutter, React Native, KMP, and CMP
-- **Customized for YOUR app** — Learns your architecture patterns and loading indicators
+- **Platform-agnostic by default** — One scenario runs on Android and iOS (Flutter, React Native, KMP, CMP)
 - **Visual regression detection** — Spots UI changes semantically, not pixel-by-pixel
 - **Context-aware debugging** — Includes device state, environment, and network info in failures
+- **Portable targets** — Visible text + role + coordinates, never brittle resource-ids
 
 ## Three Simple Steps to Get Started
 
-### 1. Install the Extension
+### 1. Install `mauto` from Source
 
 ```bash
-gemini extensions install https://github.com/sh3lan93/mobile-automator
+git clone https://github.com/sh3lan93/mobile-automator
+cd mobile-automator
+npm install && npm link        # exposes `mauto` globally
 ```
 
 [Full installation guide →](installation.md)
 
-### 2. Run Setup
+### 2. Wire It Into Your Project
 
 ```bash
 cd /path/to/your/mobile-app
-gemini
-> /mobile-automator:setup
+mauto init --agent claude      # or: cursor | gemini | copilot | agents | all
+mauto setup                    # add --mode agnostic for cross-platform apps
+mauto devices                  # confirm a device is visible
 ```
 
-The interactive wizard analyzes your project and installs customized testing skills.
+`init` installs native Agent Skills and (for Claude Code/Cursor) slash-commands/rules + the `mauto` MCP entry. `setup` scaffolds the `mobile-automator/` workspace.
 
 ### 3. Generate & Execute Tests
 
-```bash
-gemini
-> /mobile-automator:generate
-> /mobile-automator:execute
+Open your agent in the project. In **Claude Code**, `init` installs slash commands:
+
 ```
+/mobile-automator-generate     → describe a flow; the agent drives the app and writes a scenario
+/mobile-automator-execute      → the agent replays the scenario and reports pass/fail
+```
+
+In **Cursor**, ask the agent in plain language. Any other agent: use `mauto mcp` or `mauto bootstrap` + `mauto guide <topic>` and call the verbs directly.
 
 ## The Workflow
 
 ```
-1. Generate (once)     → Describe test in plain English
+1. Generate (once)      → Describe test in plain English
 2. Execute (many times) → Replay automatically across devices and builds
 ```
 
@@ -69,8 +76,8 @@ Get your first test running in **5 minutes**:
 
 Before you begin, ensure you have:
 
-- ✅ **Gemini CLI** installed ([Get Gemini CLI](https://geminicli.com))
-- ✅ **Node.js** v16+ (for mobile-mcp automation engine)
+- ✅ **Node.js** v18+ (for the mobile-mcp automation engine)
+- ✅ **An AI coding agent** (Claude Code, Cursor, Gemini CLI, GitHub Copilot, OpenAI Agents, or any MCP-capable agent)
 - ✅ **Mobile project** (Android, iOS, Flutter, React Native, KMP, or CMP)
 - ✅ **Connected device or simulator** (physical device or emulator)
 
@@ -92,7 +99,7 @@ Before you begin, ensure you have:
 
 In this Getting Started section:
 
-- [**Installation**](installation.md) — How to install and verify the extension
+- [**Installation**](installation.md) — How to install `mauto` and wire it into your project
 - [**Quick Start**](quick-start.md) — Your first test in 5 minutes
 - Overview of the complete workflow
 - Where to go next for deeper learning
@@ -106,14 +113,14 @@ In this Getting Started section:
 
 ## Key Features Preview
 
-### Platform Auto-Detection
-Setup automatically identifies your tech stack: Android, iOS, Flutter, React Native, KMP, or CMP.
+### Brain / Hands Split
+The agent (brain) resolves targets and judges visual assertions; `mauto` (hands) performs deterministic actions via mobile-mcp. Every verb emits `{ok, data, error, hint, schema_version}`; add `--human` for readable output.
 
-### Architecture Pattern Recognition
-Scans your codebase to understand: MVVM, Clean Architecture, BLoC, Redux, MVP, VIPER.
+### Platform Modes
+Choose **platform-aware** (default) for single-OS apps, or **platform-agnostic** (`mauto setup --mode agnostic`) for cross-platform apps. In agnostic mode, OS gestures map to four semantic actions — `press_back`, `dismiss_keyboard`, `grant_permission`, `deny_permission` — resolved to the right native primitive at runtime.
 
-### Loading Indicator Detection
-Finds your app's loading patterns: progress indicators, shimmer effects, spinners, skeleton screens.
+### Loading Indicator Handling
+The generate and execute workflows account for your app's loading patterns: progress indicators, shimmer effects, spinners, skeleton screens.
 
 ### Intelligent Test Execution
 - Automatically retries on timing issues
