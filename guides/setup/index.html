@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Complete guide to the 7-section setup workflow - platform detection, environment discovery, package inference, and skill installation.">
+        <meta name="description" content="Set up mobile-automator with the mauto CLI - install, init your agent, scaffold the workspace, choose a mode, and analyze your project into config.json.">
       
       
       
@@ -65,7 +65,7 @@
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Setup Command - mobile-automator" />
-  <meta property="og:description" content="Complete guide to the 7-section setup workflow - platform detection, environment discovery, package inference, and skill installation." />
+  <meta property="og:description" content="Set up mobile-automator with the mauto CLI - install, init your agent, scaffold the workspace, choose a mode, and analyze your project into config.json." />
   <meta property="og:url" content="https://sh3lan93.github.io/mobile-automator/guides/setup/" />
   <meta property="og:site_name" content="mobile-automator" />
   <meta property="og:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
@@ -73,7 +73,7 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="Setup Command - mobile-automator" />
-  <meta name="twitter:description" content="Complete guide to the 7-section setup workflow - platform detection, environment discovery, package inference, and skill installation." />
+  <meta name="twitter:description" content="Set up mobile-automator with the mauto CLI - install, init your agent, scaffold the workspace, choose a mode, and analyze your project into config.json." />
   <meta name="twitter:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
   
 
@@ -96,7 +96,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#setup-command-guide" class="md-skip">
+        <a href="#setup-guide" class="md-skip">
           Skip to content
         </a>
       
@@ -759,144 +759,44 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-7-section-workflow" class="md-nav__link">
+  <a href="#step-1-install-mauto" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The 7-Section Workflow
+        Step 1: Install mauto
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="The 7-Section Workflow">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-2-wire-mauto-into-your-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Wire mauto into your agent
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-3-scaffold-the-workspace-with-mauto-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Scaffold the workspace with mauto setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 3: Scaffold the workspace with mauto setup">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#section-1-pre-initialization" class="md-nav__link">
+  <a href="#choosing-a-mode" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Section 1: Pre-Initialization
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#section-2-platform-detection" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Section 2: Platform Detection
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#section-3-environment-discovery" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Section 3: Environment Discovery
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#section-4-app-package-inference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Section 4: App Package Inference
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#section-5-project-knowledge-the-magic-happens-here" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Section 5: Project Knowledge (⭐ The Magic Happens Here!)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Section 5: Project Knowledge (⭐ The Magic Happens Here!)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#auto-detected-values-no-user-input-needed" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Auto-Detected Values (No User Input Needed)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#values-requiring-your-input" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Values Requiring Your Input
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#section-6-skill-installation-fully-automated" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Section 6: Skill Installation (Fully Automated)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Section 6: Skill Installation (Fully Automated)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#the-13-placeholders-automatically-populated" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The 13 Placeholders Automatically Populated
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#skills-created" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Skills Created
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#section-7-finalization" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Section 7: Finalization
+        Choosing a mode
       
     </span>
   </a>
@@ -909,13 +809,85 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#resume-capability" class="md-nav__link">
+  <a href="#step-4-confirm-a-device" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Resume Capability
+        Step 4: Confirm a device
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-5-analyze-the-project-into-configjson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5: Analyze the project into config.json
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 5: Analyze the project into config.json">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#platform-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Platform detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#environment-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#app-package-inference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        App package inference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#project-knowledge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Project knowledge
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#confirm-the-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Confirm the config
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -943,10 +915,32 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#platform-detection-failed" class="md-nav__link">
+  <a href="#mauto-command-not-found" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Platform Detection Failed
+        mauto: command not found
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#no-devices-listed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        No devices listed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#platform-detection-inconclusive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Platform detection inconclusive
       
     </span>
   </a>
@@ -957,7 +951,7 @@
   <a href="#package-id-not-found" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Package ID Not Found
+        Package ID not found
       
     </span>
   </a>
@@ -965,10 +959,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#skills-not-installed" class="md-nav__link">
+  <a href="#wrong-mode" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Skills Not Installed
+        Wrong mode
       
     </span>
   </a>
@@ -976,21 +970,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#placeholders-not-replaced" class="md-nav__link">
+  <a href="#re-running-setup" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Placeholders Not Replaced
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#need-to-re-run-setup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Need to Re-Run Setup
+        Re-running setup
       
     </span>
   </a>
@@ -1007,17 +990,6 @@
     <span class="md-ellipsis">
       
         After Setup
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#advanced-customizing-skill-templates" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Advanced: Customizing Skill Templates
       
     </span>
   </a>
@@ -1560,144 +1532,44 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-7-section-workflow" class="md-nav__link">
+  <a href="#step-1-install-mauto" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The 7-Section Workflow
+        Step 1: Install mauto
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="The 7-Section Workflow">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-2-wire-mauto-into-your-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Wire mauto into your agent
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-3-scaffold-the-workspace-with-mauto-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Scaffold the workspace with mauto setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 3: Scaffold the workspace with mauto setup">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#section-1-pre-initialization" class="md-nav__link">
+  <a href="#choosing-a-mode" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Section 1: Pre-Initialization
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#section-2-platform-detection" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Section 2: Platform Detection
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#section-3-environment-discovery" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Section 3: Environment Discovery
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#section-4-app-package-inference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Section 4: App Package Inference
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#section-5-project-knowledge-the-magic-happens-here" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Section 5: Project Knowledge (⭐ The Magic Happens Here!)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Section 5: Project Knowledge (⭐ The Magic Happens Here!)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#auto-detected-values-no-user-input-needed" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Auto-Detected Values (No User Input Needed)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#values-requiring-your-input" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Values Requiring Your Input
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#section-6-skill-installation-fully-automated" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Section 6: Skill Installation (Fully Automated)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Section 6: Skill Installation (Fully Automated)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#the-13-placeholders-automatically-populated" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The 13 Placeholders Automatically Populated
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#skills-created" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Skills Created
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#section-7-finalization" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Section 7: Finalization
+        Choosing a mode
       
     </span>
   </a>
@@ -1710,13 +1582,85 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#resume-capability" class="md-nav__link">
+  <a href="#step-4-confirm-a-device" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Resume Capability
+        Step 4: Confirm a device
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-5-analyze-the-project-into-configjson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5: Analyze the project into config.json
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 5: Analyze the project into config.json">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#platform-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Platform detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#environment-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#app-package-inference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        App package inference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#project-knowledge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Project knowledge
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#confirm-the-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Confirm the config
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1744,10 +1688,32 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#platform-detection-failed" class="md-nav__link">
+  <a href="#mauto-command-not-found" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Platform Detection Failed
+        mauto: command not found
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#no-devices-listed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        No devices listed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#platform-detection-inconclusive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Platform detection inconclusive
       
     </span>
   </a>
@@ -1758,7 +1724,7 @@
   <a href="#package-id-not-found" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Package ID Not Found
+        Package ID not found
       
     </span>
   </a>
@@ -1766,10 +1732,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#skills-not-installed" class="md-nav__link">
+  <a href="#wrong-mode" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Skills Not Installed
+        Wrong mode
       
     </span>
   </a>
@@ -1777,21 +1743,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#placeholders-not-replaced" class="md-nav__link">
+  <a href="#re-running-setup" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Placeholders Not Replaced
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#need-to-re-run-setup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Need to Re-Run Setup
+        Re-running setup
       
     </span>
   </a>
@@ -1808,17 +1763,6 @@
     <span class="md-ellipsis">
       
         After Setup
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#advanced-customizing-skill-templates" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Advanced: Customizing Skill Templates
       
     </span>
   </a>
@@ -1856,488 +1800,256 @@
   
 
 
-<h1 id="setup-command-guide">Setup Command Guide<a class="headerlink" href="#setup-command-guide" title="Permanent link">&para;</a></h1>
-<p>The <strong>Setup Command</strong> is your entry point to mobile-automator. It analyzes your mobile project, detects its architecture and configuration, then automatically installs customized testing skills tailored specifically to your app.</p>
-<p><strong>Key benefit</strong>: You run setup once per project, and it configures everything needed for intelligent test generation and execution.</p>
+<h1 id="setup-guide">Setup Guide<a class="headerlink" href="#setup-guide" title="Permanent link">&para;</a></h1>
+<p>Setup is your entry point to mobile-automator. You install the host-agnostic <code>mauto</code> CLI, wire it into your AI agent, scaffold the <code>mobile-automator/</code> workspace, and let your agent analyze the project into <code>mobile-automator/config.json</code> — so later test generation and execution are tailored to your app.</p>
+<p><strong>Key benefit</strong>: You set up once per project, and everything needed for intelligent test generation and execution is configured.</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/path/to/your/mobile-app
-gemini<span class="w"> </span>/mobile-automator:setup
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. Install the CLI from source</span>
+git<span class="w"> </span>clone<span class="w"> </span>https://github.com/sh3lan93/mobile-automator
+<span class="nb">cd</span><span class="w"> </span>mobile-automator
+npm<span class="w"> </span>install
+npm<span class="w"> </span>link
+
+<span class="c1"># 2. Wire mauto into your agent (installs native Agent Skills + slash-commands/rules + .mcp.json)</span>
+<span class="nb">cd</span><span class="w"> </span>/path/to/your/mobile-app
+mauto<span class="w"> </span>init<span class="w"> </span>--agent<span class="w"> </span>claude<span class="w">        </span><span class="c1"># or: cursor | gemini | copilot | agents | all</span>
+
+<span class="c1"># 3. Scaffold the workspace + config.json</span>
+mauto<span class="w"> </span>setup<span class="w">                      </span><span class="c1"># add --mode agnostic for cross-platform apps</span>
+
+<span class="c1"># 4. Confirm a device is reachable</span>
+mauto<span class="w"> </span>devices
 </code></pre></div>
-<p>Setup will guide you through 7 sections of project analysis, typically taking 5-10 minutes depending on project complexity.</p>
-<h2 id="the-7-section-workflow">The 7-Section Workflow<a class="headerlink" href="#the-7-section-workflow" title="Permanent link">&para;</a></h2>
-<h3 id="section-1-pre-initialization">Section 1: Pre-Initialization<a class="headerlink" href="#section-1-pre-initialization" title="Permanent link">&para;</a></h3>
-<p><strong>What happens:</strong>
-- Overview of the setup process is presented
-- Checks if you've run setup before (enables resume capability)
-- Verifies the Gemini CLI is properly configured</p>
-<p><strong>User interaction:</strong> You see an overview and confirm to proceed.</p>
-<p><strong>Output:</strong> If this is a resumed setup, loads previous progress from <code>mobile-automator/setup_state.json</code>.</p>
+<p>After this, your agent analyzes the project and persists what it learns to <code>mobile-automator/config.json</code>.</p>
 <hr />
-<h3 id="section-2-platform-detection">Section 2: Platform Detection<a class="headerlink" href="#section-2-platform-detection" title="Permanent link">&para;</a></h3>
-<p><strong>What setup does:</strong>
-- Automatically scans your project structure for mobile platforms
-- Looks for distinctive files and directories:
-  - <strong>Android</strong>: <code>build.gradle</code>, <code>settings.gradle</code>, <code>AndroidManifest.xml</code>
-  - <strong>iOS</strong>: <code>.xcodeproj</code>, <code>.xcworkspace</code>, <code>Podfile</code>
-  - <strong>Flutter</strong>: <code>pubspec.yaml</code>, <code>lib/main.dart</code>
-  - <strong>React Native</strong>: <code>package.json</code>, <code>index.js</code>, <code>react-native.config.js</code>
-  - <strong>Kotlin Multiplatform (KMP)</strong>: <code>shared/build.gradle.kts</code>, <code>KMM structure</code>
-  - <strong>Compose Multiplatform (CMP)</strong>: <code>compose/build.gradle.kts</code></p>
-<p><strong>User interaction:</strong>
-- If detection succeeds (most cases), you'll see: "Detected: Android"
-- If detection is unclear, setup will ask you to select from available platforms
-- You can confirm or override the detected platform</p>
-<p><strong>Example:</strong>
-<div class="highlight"><pre><span></span><code>Analyzing project structure...
-✓ Detected: Android (Gradle-based project)
-
-Is this correct? (y/n): y
-</code></pre></div></p>
-<p><strong>Output:</strong> Stored in setup_state.json with confirmed platform.</p>
+<h2 id="step-1-install-mauto">Step 1: Install <code>mauto</code><a class="headerlink" href="#step-1-install-mauto" title="Permanent link">&para;</a></h2>
+<p><code>mauto</code> is a host-agnostic CLI usable by any AI agent. Install it from source:</p>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/sh3lan93/mobile-automator
+<span class="nb">cd</span><span class="w"> </span>mobile-automator
+npm<span class="w"> </span>install
+npm<span class="w"> </span>link
+</code></pre></div>
+<p><code>npm link</code> exposes the <code>mauto</code> (and <code>mobile-automator</code>) commands on your PATH. The mobile-mcp engine that drives the device is pinned as a dependency and resolved from <code>node_modules</code> — nothing is fetched at runtime.</p>
 <hr />
-<h3 id="section-3-environment-discovery">Section 3: Environment Discovery<a class="headerlink" href="#section-3-environment-discovery" title="Permanent link">&para;</a></h3>
-<p><strong>What setup does:</strong>
-- Scans for different build environments (production, staging, development, etc.)
-- Uses platform-specific detection:</p>
-<p><strong>Android/KMP/CMP:</strong>
-- Reads <code>build.gradle</code> for <code>productFlavors</code> (paid, free, beta)
-- Reads <code>buildTypes</code> (debug, release, custom)
-- Combined: "debug, release, staging-debug, staging-release, prod-release"</p>
-<p><strong>iOS:</strong>
-- Inspects Xcode project schemes
-- Reads <code>.xcconfig</code> files for environment configurations
-- Example: "Debug, Release, Staging, Production"</p>
-<p><strong>Flutter:</strong>
-- Looks for <code>--dart-define</code> configurations in build files
-- Scans for flavor-specific <code>.env</code> files (<code>.env.dev</code>, <code>.env.staging</code>, <code>.env.prod</code>)
-- Checks for <code>flutter_flavor</code> package configurations</p>
-<p><strong>React Native:</strong>
-- Scans <code>.env.*</code> files in project root
-- Checks for <code>react-native-config</code> package setup
-- Example: ".env.dev, .env.staging, .env.production"</p>
-<p><strong>User interaction:</strong>
-- You'll see the detected environments
-- Can add custom environments if auto-detection missed any
-- Setup asks which environment you primarily test against</p>
-<p><strong>Example:</strong>
-<div class="highlight"><pre><span></span><code>Detected environments:
-  • debug
-  • release
-  • staging
-
-Do you test against any other environments? (y/n): n
-Primary environment for testing: staging
-</code></pre></div></p>
-<p><strong>Output:</strong> Stored list of environments for later use in build commands.</p>
-<hr />
-<h3 id="section-4-app-package-inference">Section 4: App Package Inference<a class="headerlink" href="#section-4-app-package-inference" title="Permanent link">&para;</a></h3>
-<p><strong>What setup does:</strong>
-- Extracts your app's unique identifier (required for device automation)</p>
-<p><strong>Android:</strong>
-- Reads <code>build.gradle</code> for <code>applicationId</code>
-- Attempts to parse based on selected environment/flavor
-- Example: <code>com.example.myapp</code> or <code>com.example.myapp.staging</code></p>
-<p><strong>iOS:</strong>
-- Reads Xcode project file for <code>PRODUCT_BUNDLE_IDENTIFIER</code>
-- Falls back to <code>Info.plist</code> if project file parsing fails
-- Example: <code>com.example.MyApp</code> or <code>com.example.MyApp.staging</code></p>
-<p><strong>User interaction:</strong>
-- If auto-detection succeeds, shows detected package ID
-- If not found, prompts you to enter it manually
-- You can override if multiple packages exist</p>
-<p><strong>Example:</strong>
-<div class="highlight"><pre><span></span><code>Detected app package:
-  Android: com.example.myapp
-  iOS: com.example.MyApp
-
-Is this correct? (y/n): y
-</code></pre></div></p>
-<p><strong>Output:</strong> Package IDs stored for device automation commands (install, launch, etc.).</p>
-<hr />
-<h3 id="section-5-project-knowledge-the-magic-happens-here">Section 5: Project Knowledge (⭐ The Magic Happens Here!)<a class="headerlink" href="#section-5-project-knowledge-the-magic-happens-here" title="Permanent link">&para;</a></h3>
-<p><strong>What setup does:</strong>
-This is where mobile-automator learns the deep details of your project:</p>
-<h4 id="auto-detected-values-no-user-input-needed">Auto-Detected Values (No User Input Needed)<a class="headerlink" href="#auto-detected-values-no-user-input-needed" title="Permanent link">&para;</a></h4>
-<p><strong>Project Name:</strong>
-- Extracts from <code>build.gradle</code>, <code>package.json</code>, or <code>pubspec.yaml</code>
-- Falls back to directory name
-- Example: "MyShoppingApp"</p>
-<p><strong>Platform Details:</strong>
-- SDK versions, deployment targets
-- Android: "Android (minSdk 24, targetSdk 34)"
-- iOS: "iOS 14.0+" or "iOS 14.0-17.2"</p>
-<p><strong>Build System:</strong>
-- Automatically identified as: Gradle, Xcode, Flutter CLI, Metro, or custom
-- Example: "Gradle with productFlavors"</p>
-<p><strong>Build Command:</strong>
-- Inferred from detected platform and environments
-- Android example: <code>./gradlew assembleDebug</code> or <code>./gradlew assembleStaging</code>
-- iOS example: <code>xcodebuild -scheme MyApp -configuration Debug</code>
-- Flutter example: <code>flutter build apk --flavor staging</code></p>
-<p><strong>Architecture Pattern:</strong>
-- Scans source code for design patterns:
-  - <strong>MVVM</strong>: Looks for <code>viewmodel/</code>, <code>ViewModel</code> classes, <code>LiveData</code>, data binding
-  - <strong>Clean Architecture</strong>: Looks for <code>repository/</code>, <code>usecase/</code>, <code>domain/</code>, <code>data/</code>, <code>presentation/</code> layers
-  - <strong>BLoC</strong>: Flutter-specific, looks for <code>bloc/</code>, <code>cubit/</code>, event definitions
-  - <strong>Redux/MVI</strong>: Looks for <code>reducer/</code>, <code>store/</code>, <code>action/</code>, <code>middleware/</code>
-  - <strong>MVP/VIPER</strong>: Looks for <code>presenter/</code>, <code>interactor/</code>, <code>router/</code>, <code>entity/</code>
-- Intelligently combines patterns: e.g., "MVVM with Clean Architecture" or "BLoC pattern"</p>
-<p><strong>Loading Indicators:</strong>
-- Greps source code for platform-specific loading patterns:</p>
+<h2 id="step-2-wire-mauto-into-your-agent">Step 2: Wire <code>mauto</code> into your agent<a class="headerlink" href="#step-2-wire-mauto-into-your-agent" title="Permanent link">&para;</a></h2>
+<p>Run <code>mauto init</code> once per project to install the per-host integration:</p>
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/path/to/your/mobile-app
+mauto<span class="w"> </span>init<span class="w"> </span>--agent<span class="w"> </span>claude
+</code></pre></div>
+<p><code>--agent</code> accepts <code>claude</code>, <code>cursor</code>, <code>gemini</code>, <code>copilot</code>, <code>agents</code>, or <code>all</code>. Init installs a native Agent Skill for the host plus the right invocation surface:</p>
 <table>
 <thead>
 <tr>
-<th>Platform</th>
-<th>Indicators Detected</th>
+<th>Host</th>
+<th>What init installs</th>
+<th>How you invoke a workflow</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Android</td>
-<td>CircularProgressIndicator, LinearProgressIndicator, ProgressBar, ShimmerEffect, ContentLoadingProgressBar</td>
+<td>Claude Code</td>
+<td>Agent Skill + hyphen slash-commands + <code>.mcp.json</code></td>
+<td><code>/mobile-automator-generate</code>, <code>/mobile-automator-execute</code></td>
 </tr>
 <tr>
-<td>iOS</td>
-<td>UIActivityIndicatorView, ProgressView, SkeletonView</td>
+<td>Cursor</td>
+<td>Agent Skill + project rule + <code>.mcp.json</code></td>
+<td>Ask in plain language (the rule routes it)</td>
 </tr>
 <tr>
-<td>Flutter</td>
-<td>CircularProgressIndicator, LinearProgressIndicator, Shimmer, LoadingOverlay</td>
+<td>Gemini CLI</td>
+<td>Agent Skill in <code>.gemini/skills/</code></td>
+<td><code>mauto guide &lt;topic&gt;</code></td>
 </tr>
 <tr>
-<td>React Native</td>
-<td>ActivityIndicator, SkeletonPlaceholder, LottieView</td>
-</tr>
-<tr>
-<td>Any</td>
-<td>Custom patterns matching <code>*Loading*</code>, <code>*Spinner*</code>, <code>*Shimmer*</code>, <code>*Skeleton*</code></td>
+<td>Any other agent</td>
+<td>—</td>
+<td><code>mauto mcp</code>, or <code>mauto bootstrap</code> + <code>mauto guide &lt;topic&gt;</code></td>
 </tr>
 </tbody>
 </table>
-<p><strong>Protected Directories:</strong>
-- Identifies source code directories to never modify
-- Typically: <code>src/</code>, <code>lib/</code>, <code>android/</code>, <code>ios/</code>, <code>kotlin/</code>, <code>swift/</code>
-- Prevents accidents when generating test support code</p>
-<h4 id="values-requiring-your-input">Values Requiring Your Input<a class="headerlink" href="#values-requiring-your-input" title="Permanent link">&para;</a></h4>
-<p><strong>Corrections to Auto-Detected Values:</strong>
-- Setup shows what it detected
-- You can correct any inaccuracies
-- Example: "Detected architecture: MVVM. Correct? (y/n)"</p>
-<p><strong>Business Domain:</strong>
-- One-sentence description: "E-commerce mobile shopping app with checkout flow"
-- Used to understand context and test priorities
-- Helps skills focus on business-critical flows</p>
-<p><strong>Business-Critical User Paths:</strong>
-- Setup uses the <code>@codebase_investigator</code> subagent to automatically analyze your codebase for critical user flows
-- It examines navigation graphs, screen definitions, feature modules, and documentation
-- If paths are detected, you'll see them listed for confirmation (yes/no)
-- If auto-detection fails, you're asked to type them manually (same as before)
-- Examples: "onboarding, login, product search, add-to-cart, checkout, payment"
-- Skills prioritize these paths in test generation</p>
-<p><strong>Example Section 5 Interaction:</strong>
-<div class="highlight"><pre><span></span><code>=== PROJECT KNOWLEDGE ===
-
-Auto-detected:
-  • Project: MyShoppingApp
-  • Platform: Android (minSdk 24, targetSdk 34)
-  • Architecture: MVVM with Clean Architecture
-  • Build system: Gradle
-  • Loading indicators: CircularProgressIndicator, ShimmerEffect (found 2)
-  • Protected dirs: src/main/java, src/main
-
-Corrections needed? (y/n): n
-
-Business domain (one sentence):
-E-commerce mobile shopping app with product catalog and checkout flow
-
-Analyzing your codebase to identify business-critical user paths...
-I analyzed your codebase and identified these business-critical paths:
-  onboarding, login, product-search, add-to-cart, checkout, payment
-Are these correct? (y/n): y
-</code></pre></div></p>
-<p><strong>Output:</strong> All project knowledge stored in <code>mobile-automator/setup_state.json</code>.</p>
+<p>For any agent, the underlying contract is the same: the agent reads <code>mauto guide generate</code> / <code>mauto guide execute</code> and drives the device through <code>mauto</code> verbs.</p>
 <hr />
-<h3 id="section-6-skill-installation-fully-automated">Section 6: Skill Installation (Fully Automated)<a class="headerlink" href="#section-6-skill-installation-fully-automated" title="Permanent link">&para;</a></h3>
-<p><strong>What setup does:</strong>
-- Creates <code>.gemini/skills/</code> directory structure
-- Reads skill template files from the extension
-- <strong>Replaces 13 placeholders</strong> with detected/gathered values
-- Copies schema files to workspace
-- Verifies all placeholders were replaced</p>
-<h4 id="the-13-placeholders-automatically-populated">The 13 Placeholders Automatically Populated<a class="headerlink" href="#the-13-placeholders-automatically-populated" title="Permanent link">&para;</a></h4>
-<table>
-<thead>
-<tr>
-<th>Placeholder</th>
-<th>Example Value</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>{{project_name}}</code></td>
-<td>MyShoppingApp</td>
-</tr>
-<tr>
-<td><code>{{platform_details}}</code></td>
-<td>Android (minSdk 24, targetSdk 34)</td>
-</tr>
-<tr>
-<td><code>{{architecture}}</code></td>
-<td>MVVM with Clean Architecture</td>
-</tr>
-<tr>
-<td><code>{{build_system}}</code></td>
-<td>Gradle</td>
-</tr>
-<tr>
-<td><code>{{build_command}}</code></td>
-<td>./gradlew assembleDebug</td>
-</tr>
-<tr>
-<td><code>{{app_package}}</code></td>
-<td>com.example.myapp</td>
-</tr>
-<tr>
-<td><code>{{environments}}</code></td>
-<td>debug, release, staging</td>
-</tr>
-<tr>
-<td><code>{{loading_indicators}}</code></td>
-<td>CircularProgressIndicator, ShimmerEffect</td>
-</tr>
-<tr>
-<td><code>{{business_domain}}</code></td>
-<td>E-commerce mobile shopping app...</td>
-</tr>
-<tr>
-<td><code>{{business_critical_paths}}</code></td>
-<td>onboarding, login, checkout, payment</td>
-</tr>
-<tr>
-<td><code>{{protected_directories}}</code></td>
-<td>src/main/java, src/main/kotlin</td>
-</tr>
-<tr>
-<td><code>{{automation_extras}}</code></td>
-<td>Android-specific automation notes</td>
-</tr>
-<tr>
-<td><code>{{additional_resources}}</code></td>
-<td>Links to documentation</td>
-</tr>
-</tbody>
-</table>
-<h4 id="skills-created">Skills Created<a class="headerlink" href="#skills-created" title="Permanent link">&para;</a></h4>
-<p><strong>1. Generator Skill</strong>
-- Location: <code>.gemini/skills/mobile-automator-generator/SKILL.md</code>
-- Purpose: Generate test scenarios from natural language
-- Includes: All 13 placeholders populated with your project details
-- Schemas: <code>references/scenario_schema.json</code></p>
-<p><strong>2. Executor Skill</strong>
-- Location: <code>.gemini/skills/mobile-automator-executor/SKILL.md</code>
-- Purpose: Execute test scenarios and collect results
-- Includes: All 13 placeholders populated
-- Schemas: <code>references/result_schema.json</code></p>
-<p><strong>Example of Populated Placeholder:</strong></p>
-<p>Before replacement (in template):
-<div class="highlight"><pre><span></span><code><span class="gh"># Mobile Automator — Test Generator for {{project_name}}</span>
-
-This skill generates test scenarios for {{project_name}}, which uses:
-<span class="k">-</span><span class="w"> </span><span class="gs">**Platform**</span>: {{platform_details}}
-<span class="k">-</span><span class="w"> </span><span class="gs">**Architecture**</span>: {{architecture}}
-<span class="k">-</span><span class="w"> </span><span class="gs">**Business Domain**</span>: {{business_domain}}
-
-Critical paths: {{business_critical_paths}}
-</code></pre></div></p>
-<p>After replacement (in workspace):
-<div class="highlight"><pre><span></span><code><span class="gh"># Mobile Automator — Test Generator for MyShoppingApp</span>
-
-This skill generates test scenarios for MyShoppingApp, which uses:
-<span class="k">-</span><span class="w"> </span><span class="gs">**Platform**</span>: Android (minSdk 24, targetSdk 34)
-<span class="k">-</span><span class="w"> </span><span class="gs">**Architecture**</span>: MVVM with Clean Architecture
-<span class="k">-</span><span class="w"> </span><span class="gs">**Business Domain**</span>: E-commerce mobile shopping app with product catalog and checkout flow
-
-Critical paths: onboarding, login, checkout, payment
-</code></pre></div></p>
-<p><strong>Verification Step:</strong>
-- Setup scans generated SKILL.md files
-- Confirms no <code>{{</code> remains (all placeholders replaced)
-- Reports success or error if placeholders remain</p>
-<p><strong>Example Output:</strong>
-<div class="highlight"><pre><span></span><code>✓ Creating .gemini/skills/mobile-automator-generator/
-✓ Installing generator skill (SKILL.md)
-✓ Replacing 13 placeholders...
-✓ Verifying no placeholders remain: PASSED
-✓ Copying scenario_schema.json
-
-✓ Creating .gemini/skills/mobile-automator-executor/
-✓ Installing executor skill (SKILL.md)
-✓ Replacing 13 placeholders...
-✓ Verifying no placeholders remain: PASSED
-✓ Copying result_schema.json
-</code></pre></div></p>
-<hr />
-<h3 id="section-7-finalization">Section 7: Finalization<a class="headerlink" href="#section-7-finalization" title="Permanent link">&para;</a></h3>
-<p><strong>What setup does:</strong></p>
-<ol>
-<li><strong>Creates directory structure:</strong></li>
-<li><code>mobile-automator/scenarios/</code> — Store generated test JSON files</li>
-<li><code>mobile-automator/screenshots/</code> — Reference and execution screenshots</li>
-<li>
-<p><code>mobile-automator/results/</code> — Execution result reports</p>
-</li>
-<li>
-<p><strong>Generates configuration files:</strong></p>
-</li>
-<li><code>mobile-automator/config.json</code> — Complete project configuration (JSON)</li>
-<li><code>mobile-automator/index.md</code> — Setup documentation and summary</li>
-<li>
-<p><code>mobile-automator/setup_state.json</code> — Internal state for resume capability</p>
-</li>
-<li>
-<p><strong>Git integration (optional):</strong></p>
-</li>
-<li>If your project is a git repository, setup offers to commit</li>
-<li>Commit message: "🤖 Mobile Automator Setup: Project Analysis &amp; Skill Installation"</li>
-<li>
-<p>Includes: config.json, .gemini/skills/, directories</p>
-</li>
-<li>
-<p><strong>Success summary:</strong></p>
-</li>
-<li>Shows what was created</li>
-<li>Lists next steps</li>
-<li>Provides command examples</li>
-</ol>
-<p><strong>Example Section 7 Output:</strong>
-<div class="highlight"><pre><span></span><code>=== FINALIZATION ===
-
-Creating directories:
-  ✓ mobile-automator/scenarios/
-  ✓ mobile-automator/screenshots/
-  ✓ mobile-automator/results/
-
-Generating configuration:
-  ✓ mobile-automator/config.json (47 KB)
-  ✓ mobile-automator/index.md
-  ✓ mobile-automator/setup_state.json
-
-Git integration:
-  ? Would you like to commit setup changes? (y/n): y
-  ✓ Committed: &quot;🤖 Mobile Automator Setup: Project Analysis &amp; Skill Installation&quot;
-
-=== SETUP COMPLETE ===
-
-Your project is ready for mobile testing!
-
-Next steps:
-1. Review mobile-automator/config.json for accuracy
-2. Run: gemini /mobile-automator:generate
-3. Create your first test scenario
-
-Learn more: mobile-automator/index.md
-</code></pre></div></p>
-<hr />
-<h2 id="resume-capability">Resume Capability<a class="headerlink" href="#resume-capability" title="Permanent link">&para;</a></h2>
-<p>If setup is interrupted (network timeout, user cancels, etc.):</p>
-<ol>
-<li>Setup stores progress in <code>mobile-automator/setup_state.json</code></li>
-<li>Run <code>/mobile-automator:setup</code> again</li>
-<li>Setup detects the partial state</li>
-<li>Resumes from the last completed section</li>
-<li>No need to re-enter previous answers</li>
-</ol>
-<p><strong>Example:</strong>
-<div class="highlight"><pre><span></span><code><span class="c1"># First run: interrupted at Section 5</span>
-gemini<span class="w"> </span>/mobile-automator:setup
-
-<span class="c1"># Resume from Section 5</span>
-gemini<span class="w"> </span>/mobile-automator:setup
-Resuming<span class="w"> </span>setup<span class="w"> </span>from<span class="w"> </span>Section<span class="w"> </span><span class="m">5</span>:<span class="w"> </span>Project<span class="w"> </span>Knowledge...
-</code></pre></div></p>
-<hr />
-<h2 id="configuration-file-configjson">Configuration File (config.json)<a class="headerlink" href="#configuration-file-configjson" title="Permanent link">&para;</a></h2>
-<p>After setup completes, review <code>mobile-automator/config.json</code>:</p>
+<h2 id="step-3-scaffold-the-workspace-with-mauto-setup">Step 3: Scaffold the workspace with <code>mauto setup</code><a class="headerlink" href="#step-3-scaffold-the-workspace-with-mauto-setup" title="Permanent link">&para;</a></h2>
+<p><code>mauto setup</code> is a CLI verb (not an interactive wizard). It is mechanical and idempotent — it creates the workspace tree and a starter config, and re-running never clobbers existing config fields:</p>
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>setup
+</code></pre></div>
+<p>This creates:</p>
+<div class="highlight"><pre><span></span><code>mobile-automator/
+├── scenarios/      # generated test JSON files
+├── screenshots/    # reference + execution screenshots
+├── results/        # execution result reports
+└── config.json     # project configuration (starter skeleton)
+</code></pre></div>
+<p>The starter <code>config.json</code> written on first run:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;project_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;MyShoppingApp&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;platform&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;android&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;app_package&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;com.example.myapp&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;environments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;debug&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;release&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;staging&quot;</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;platform_details&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Android (minSdk 24, targetSdk 34)&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;architecture&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;MVVM with Clean Architecture&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;build_system&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Gradle&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;build_command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./gradlew assembleDebug&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;business_domain&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;E-commerce mobile shopping app...&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;business_critical_paths&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;onboarding&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;login&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;checkout&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;payment&quot;</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;loading_indicators&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;CircularProgressIndicator&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;ShimmerEffect&quot;</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;protected_directories&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;src/main/java&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;src/main/kotlin&quot;</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;automation_extras&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Android automation notes...&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;additional_resources&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;setup_completed_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-03-01T10:30:00Z&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;setup_completed_by&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user@example.com&quot;</span>
+<span class="w">  </span><span class="nt">&quot;mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;platform-aware&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;project_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;environments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<span class="w">  </span><span class="nt">&quot;default_environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
 <span class="p">}</span>
 </code></pre></div>
+<h3 id="choosing-a-mode">Choosing a mode<a class="headerlink" href="#choosing-a-mode" title="Permanent link">&para;</a></h3>
+<p>The mode is selected with <code>--mode</code> and stored in <code>config.json</code>. It governs how OS gestures are expressed in scenarios:</p>
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>setup<span class="w"> </span>--mode<span class="w"> </span>aware<span class="w">       </span><span class="c1"># default — single-OS / OS-specific UI tests</span>
+mauto<span class="w"> </span>setup<span class="w"> </span>--mode<span class="w"> </span>agnostic<span class="w">    </span><span class="c1"># cross-platform (Flutter / RN / KMP / CMP)</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Use for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>platform-aware</code></td>
+<td>Single-OS or OS-specific UI tests</td>
+</tr>
+<tr>
+<td><code>platform-agnostic</code></td>
+<td>Cross-platform apps</td>
+</tr>
+</tbody>
+</table>
+<p>Agnostic mode maps OS gestures to four semantic actions — <code>press_back</code>, <code>dismiss_keyboard</code>, <code>grant_permission</code>, <code>deny_permission</code> — that resolve to per-platform mechanics at replay time. Re-running <code>mauto setup --mode &lt;mode&gt;</code> only updates the stored <code>mode</code>, preserving every other field.</p>
+<hr />
+<h2 id="step-4-confirm-a-device">Step 4: Confirm a device<a class="headerlink" href="#step-4-confirm-a-device" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>devices
+</code></pre></div>
+<p>This lists connected devices/simulators (id, name, platform, state). Optionally pin one so later verbs don't need a <code>--device</code> flag:</p>
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>devices<span class="w"> </span>use<span class="w"> </span>&lt;id&gt;<span class="w">     </span><span class="c1"># persist a selection</span>
+mauto<span class="w"> </span>devices<span class="w"> </span>clear<span class="w">        </span><span class="c1"># remove the selection</span>
+</code></pre></div>
+<p>A zero-device result is valid (it exits cleanly with an empty list) — connect a device or start a simulator and re-run.</p>
+<hr />
+<h2 id="step-5-analyze-the-project-into-configjson">Step 5: Analyze the project into <code>config.json</code><a class="headerlink" href="#step-5-analyze-the-project-into-configjson" title="Permanent link">&para;</a></h2>
+<p>Scaffolding is the mechanical half. The valuable half is <strong>project analysis</strong>: your agent inspects the codebase, infers each fact, confirms anything uncertain with you, and persists every finding with <code>mauto config set &lt;key&gt; &lt;value&gt;</code>. Read a value back with <code>mauto config get &lt;key&gt;</code>.</p>
+<p>In Claude Code this runs as the setup skill; with any agent you can drive it directly:</p>
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>guide<span class="w"> </span>setup
+</code></pre></div>
+<p>The agent works through the following analysis, persisting each result to <code>config.json</code>:</p>
+<h3 id="platform-detection">Platform detection<a class="headerlink" href="#platform-detection" title="Permanent link">&para;</a></h3>
+<p>The agent inspects project files (honoring <code>.gitignore</code>) to determine the platform — Flutter, React Native, Kotlin Multiplatform, Compose Multiplatform, Android Native, or iOS Native — and persists it:</p>
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>platform<span class="w"> </span>&lt;platform&gt;
+</code></pre></div>
+<h3 id="environment-discovery">Environment discovery<a class="headerlink" href="#environment-discovery" title="Permanent link">&para;</a></h3>
+<p>It scans build configuration for named environments (Gradle <code>productFlavors</code> × <code>buildTypes</code>, Xcode schemes/configs, Flutter flavors / <code>--dart-define</code>, React Native <code>.env*</code> files), deduplicates, and persists a comma-separated list:</p>
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>environments<span class="w"> </span>&lt;env1,env2,...&gt;
+</code></pre></div>
+<h3 id="app-package-inference">App package inference<a class="headerlink" href="#app-package-inference" title="Permanent link">&para;</a></h3>
+<p>It reads the application identifier from build files and persists it per platform:</p>
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>android_package<span class="w"> </span>&lt;id&gt;<span class="w">     </span><span class="c1"># e.g. com.example.myapp</span>
+mauto<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>ios_bundle_id<span class="w"> </span>&lt;id&gt;<span class="w">       </span><span class="c1"># e.g. com.example.MyApp</span>
+</code></pre></div>
+<h3 id="project-knowledge">Project knowledge<a class="headerlink" href="#project-knowledge" title="Permanent link">&para;</a></h3>
+<p>The agent infers and persists the deeper context that makes generated tests project-aware:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it captures</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>project_name</code></td>
+<td>App / project name</td>
+</tr>
+<tr>
+<td><code>platform_details</code></td>
+<td>e.g. <code>Android (minSdk 24, targetSdk 34)</code></td>
+</tr>
+<tr>
+<td><code>build_system</code></td>
+<td>e.g. <code>Gradle (AGP)</code>, <code>Xcode</code>, <code>Flutter CLI + Gradle + Xcode</code></td>
+</tr>
+<tr>
+<td><code>build_command</code></td>
+<td>Default debug/dev build command</td>
+</tr>
+<tr>
+<td><code>architecture</code></td>
+<td>e.g. <code>MVVM with Clean Architecture</code>, <code>BLoC</code></td>
+</tr>
+<tr>
+<td><code>business_domain</code></td>
+<td>One-sentence description of what the app does</td>
+</tr>
+<tr>
+<td><code>business_critical_paths</code></td>
+<td>Most important user flows (login, checkout, …)</td>
+</tr>
+<tr>
+<td><code>loading_indicators</code></td>
+<td>Progress/spinner/shimmer/skeleton patterns to wait on</td>
+</tr>
+<tr>
+<td><code>protected_directories</code></td>
+<td>Source dirs the tooling must never modify</td>
+</tr>
+</tbody>
+</table>
+<p>Each is persisted with <code>mauto config set &lt;key&gt; &lt;value&gt;</code> (comma-separated values for list keys), confirming uncertain values with you first.</p>
+<h3 id="confirm-the-config">Confirm the config<a class="headerlink" href="#confirm-the-config" title="Permanent link">&para;</a></h3>
+<p>When analysis is done, the agent reads each value back with <code>mauto config get &lt;key&gt;</code> and presents a summary. The workspace is now configured: <code>mauto guide generate</code> and <code>mauto guide execute</code> read these values to drive authoring and execution.</p>
+<hr />
+<h2 id="configuration-file-configjson">Configuration File (config.json)<a class="headerlink" href="#configuration-file-configjson" title="Permanent link">&para;</a></h2>
+<p>After analysis, <code>mobile-automator/config.json</code> looks something like:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;platform-aware&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;project_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;MyShoppingApp&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;platform&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;android&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;android_package&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;com.example.myapp&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;environments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;debug&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;release&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;staging&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;default_environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;staging&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;platform_details&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Android (minSdk 24, targetSdk 34)&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;architecture&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;MVVM with Clean Architecture&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;build_system&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Gradle (AGP)&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;build_command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./gradlew assembleDebug&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;business_domain&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;E-commerce mobile shopping app with checkout flow&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;business_critical_paths&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;onboarding&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;login&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;checkout&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;payment&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;loading_indicators&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;CircularProgressIndicator&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;ShimmerEffect&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;protected_directories&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;app/src/&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;lib/&quot;</span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Read or update any field directly:</p>
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>config<span class="w"> </span>get<span class="w"> </span>platform
+mauto<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>default_environment<span class="w"> </span>staging
+</code></pre></div>
+<p>Configs that predate the <code>mode</code> field are treated as <code>platform-aware</code>.</p>
 <hr />
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
-<h3 id="platform-detection-failed">Platform Detection Failed<a class="headerlink" href="#platform-detection-failed" title="Permanent link">&para;</a></h3>
-<p><strong>Problem:</strong> Setup can't determine your project platform.</p>
-<p><strong>Solution:</strong>
-- Ensure you're in the root directory of a mobile project
-- Setup will prompt you to manually select: Android, iOS, Flutter, React Native, KMP, or CMP
-- Or add files distinctive to your platform (e.g., <code>pubspec.yaml</code> for Flutter)</p>
-<h3 id="package-id-not-found">Package ID Not Found<a class="headerlink" href="#package-id-not-found" title="Permanent link">&para;</a></h3>
-<p><strong>Problem:</strong> Setup can't extract your app's bundle ID or package name.</p>
-<p><strong>Solution:</strong>
-- Setup will prompt: "Enter app package name:"
-- Android: Find in <code>build.gradle</code> under <code>applicationId</code>
-- iOS: Find in Xcode project or <code>Info.plist</code> under <code>CFBundleIdentifier</code></p>
-<h3 id="skills-not-installed">Skills Not Installed<a class="headerlink" href="#skills-not-installed" title="Permanent link">&para;</a></h3>
-<p><strong>Problem:</strong> After setup, <code>.gemini/skills/mobile-automator-*/SKILL.md</code> don't exist.</p>
-<p><strong>Solution:</strong>
-1. Check directory exists: <code>ls -la .gemini/skills/</code>
-2. Re-run setup: <code>gemini /mobile-automator:setup</code>
-3. Setup will detect partial state and resume from Section 6
-4. If still failing, check extension installation</p>
-<h3 id="placeholders-not-replaced">Placeholders Not Replaced<a class="headerlink" href="#placeholders-not-replaced" title="Permanent link">&para;</a></h3>
-<p><strong>Problem:</strong> Generated SKILL.md still contains <code>{{placeholder_name}}</code>.</p>
-<p><strong>Solution:</strong>
-1. Setup failed to populate a placeholder value
-2. Check <code>mobile-automator/setup_state.json</code> for missing keys
-3. Manually edit SKILL.md to replace <code>{{placeholders}}</code>
-4. Or re-run setup from Section 5 (Project Knowledge)</p>
-<h3 id="need-to-re-run-setup">Need to Re-Run Setup<a class="headerlink" href="#need-to-re-run-setup" title="Permanent link">&para;</a></h3>
-<p><strong>Problem:</strong> You modified your project (added environments, changed architecture) and want to update config.</p>
-<p><strong>Solution:</strong>
-<div class="highlight"><pre><span></span><code><span class="c1"># Option 1: Resume from specific section</span>
-gemini<span class="w"> </span>/mobile-automator:setup
-
-<span class="c1"># Option 2: Fresh setup (overwrites previous)</span>
-rm<span class="w"> </span>mobile-automator/setup_state.json
-gemini<span class="w"> </span>/mobile-automator:setup
-</code></pre></div></p>
+<h3 id="mauto-command-not-found"><code>mauto: command not found</code><a class="headerlink" href="#mauto-command-not-found" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> The CLI isn't on your PATH.</p>
+<p><strong>Solution:</strong> Re-run <code>npm install &amp;&amp; npm link</code> inside the cloned <code>mobile-automator</code> repo. Confirm with <code>mauto devices</code>.</p>
+<h3 id="no-devices-listed">No devices listed<a class="headerlink" href="#no-devices-listed" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> <code>mauto devices</code> shows an empty list.</p>
+<p><strong>Solution:</strong> Connect a physical device or start a simulator/emulator, then re-run <code>mauto devices</code>. Pin one with <code>mauto devices use &lt;id&gt;</code> so later verbs don't need <code>--device</code>.</p>
+<h3 id="platform-detection-inconclusive">Platform detection inconclusive<a class="headerlink" href="#platform-detection-inconclusive" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> The agent can't determine your project's platform.</p>
+<p><strong>Solution:</strong> Confirm you're in the project root and that platform-distinctive files exist (e.g. <code>pubspec.yaml</code> for Flutter, <code>build.gradle</code> for Android). Then set it explicitly: <code>mauto config set platform &lt;platform&gt;</code>.</p>
+<h3 id="package-id-not-found">Package ID not found<a class="headerlink" href="#package-id-not-found" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> The agent can't extract your app's bundle ID / package name.</p>
+<p><strong>Solution:</strong> Set it manually — <code>mauto config set android_package com.example.myapp</code> (Android, from <code>applicationId</code>) or <code>mauto config set ios_bundle_id com.example.MyApp</code> (iOS, from <code>PRODUCT_BUNDLE_IDENTIFIER</code> / <code>CFBundleIdentifier</code>).</p>
+<h3 id="wrong-mode">Wrong mode<a class="headerlink" href="#wrong-mode" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> You scaffolded in the wrong mode.</p>
+<p><strong>Solution:</strong> Re-run <code>mauto setup --mode aware</code> or <code>mauto setup --mode agnostic</code>. It only updates the stored <code>mode</code>, preserving every other field.</p>
+<h3 id="re-running-setup">Re-running setup<a class="headerlink" href="#re-running-setup" title="Permanent link">&para;</a></h3>
+<p><code>mauto setup</code> is idempotent — re-run it any time. It never clobbers existing config fields; it only ensures the requested mode is set and that the workspace directories exist.</p>
 <hr />
 <h2 id="after-setup">After Setup<a class="headerlink" href="#after-setup" title="Permanent link">&para;</a></h2>
-<p>Once setup completes successfully:</p>
+<p>Once setup and analysis are complete:</p>
 <ol>
 <li><strong>Review configuration</strong>: <code>mobile-automator/config.json</code></li>
-<li><strong>Generate your first test</strong>: <code>/mobile-automator:generate</code></li>
-<li><strong>Execute the test</strong>: <code>/mobile-automator:execute</code></li>
+<li><strong>Generate your first test</strong>: <code>/mobile-automator-generate</code> (or <code>mauto guide generate</code>)</li>
+<li><strong>Execute the test</strong>: <code>/mobile-automator-execute</code> (or <code>mauto guide execute</code>)</li>
 </ol>
-<p>See <a href="../generate/">Generate Command Guide</a> for next steps.</p>
-<hr />
-<h2 id="advanced-customizing-skill-templates">Advanced: Customizing Skill Templates<a class="headerlink" href="#advanced-customizing-skill-templates" title="Permanent link">&para;</a></h2>
-<p>If you need to modify the generated skills (advanced users only):</p>
-<ol>
-<li>Edit <code>.gemini/skills/mobile-automator-generator/SKILL.md</code></li>
-<li>Or <code>.gemini/skills/mobile-automator-executor/SKILL.md</code></li>
-<li>Changes persist until you re-run setup</li>
-<li>Re-running setup will regenerate from templates (overwrites your edits)</li>
-</ol>
-<p>To permanently modify templates, contribute changes to the extension repository.</p>
+<p>See the <a href="../generate/">Generate Guide</a> for next steps.</p>
 <hr />
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../generate/">Generate Command Guide</a> — Next step after setup</li>
+<li><a href="../generate/">Generate Guide</a> — Next step after setup</li>
 <li><a href="../../concepts/three-tier-design/">Architecture: 3-Tier Design</a> — How setup fits in the overall system</li>
 <li><a href="../../faq/#setup-installation">FAQ: Setup Issues</a></li>
 </ul>

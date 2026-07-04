@@ -2070,43 +2070,42 @@
 <p>The <strong>Generate Command</strong> creates test scenarios using natural language descriptions. It understands what you want to test, launches your app on a device, resolves UI elements, and generates a JSON scenario file ready for execution.</p>
 <p><strong>Key benefit</strong>: No need to write complex JSON or learn special syntax — just describe your test in plain English.</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><span class="c1"># Run the command</span>
-gemini<span class="w"> </span>/mobile-automator:generate
-
-<span class="c1"># Select a device and app</span>
-<span class="c1"># Describe your test steps</span>
-<span class="c1"># Review the generated scenario</span>
+<p>In Claude Code, run the slash-command:</p>
+<div class="highlight"><pre><span></span><code>/mobile-automator-generate
+</code></pre></div>
+<p>With any other agent, have it read the guide and drive the device through <code>mauto</code> verbs:</p>
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>guide<span class="w"> </span>generate
+<span class="c1"># the agent then selects a device, you describe your test steps,</span>
+<span class="c1"># and it writes the generated scenario</span>
 </code></pre></div>
 <p>Generated scenarios are saved to: <code>mobile-automator/scenarios/&lt;name&gt;.json</code></p>
 <hr />
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
-<p>Before running generate, ensure:</p>
+<p>Before generating, ensure:</p>
 <ol>
 <li><strong>Setup is complete</strong></li>
-<li><code>mobile-automator/config.json</code> exists</li>
+<li><code>mobile-automator/config.json</code> exists (created by <code>mauto setup</code>)</li>
 <li>
-<p><code>.gemini/skills/mobile-automator-generator/SKILL.md</code> is installed</p>
+<p>Your agent is wired up via <code>mauto init --agent &lt;host&gt;</code> (installs the native Agent Skill / slash-commands for your host)</p>
 </li>
 <li>
 <p><strong>Device is connected</strong></p>
 </li>
-<li>Android: <code>adb devices</code> shows your device</li>
 <li>
-<p>iOS: <code>xcrun simctl list</code> or physical device connected</p>
+<p>Confirm with <code>mauto devices</code> (lists reachable devices)</p>
 </li>
 <li>
-<p><strong>App is installed</strong> (or allow generator to build/install)</p>
+<p><strong>App is installed</strong> (or allow the agent to build/install)</p>
 </li>
 <li>Required for element resolution and screenshot capture</li>
 </ol>
 <hr />
 <h2 id="pre-flight-checks">Pre-Flight Checks<a class="headerlink" href="#pre-flight-checks" title="Permanent link">&para;</a></h2>
-<p>When you run <code>/mobile-automator:generate</code>, the wrapper performs these checks:</p>
+<p>When you start generation, the agent performs these checks:</p>
 <div class="highlight"><pre><span></span><code>✓ Checking setup state...
 ✓ Found: mobile-automator/config.json
-✓ Found: .gemini/skills/mobile-automator-generator/SKILL.md
 
-✓ Detecting devices...
+✓ Detecting devices (mauto devices)...
   Available devices:
     1. Pixel 6 (Android 34)
     2. iPhone 14 Pro (iOS 17.2)
@@ -2251,9 +2250,9 @@ Verify dark mode is persisted
 <h3 id="step-3-element-resolution">Step 3: Element Resolution<a class="headerlink" href="#step-3-element-resolution" title="Permanent link">&para;</a></h3>
 <p>For each action involving an element (tap, type, verify), the generator:</p>
 <ol>
-<li><strong>Takes a screenshot</strong> — Captures current app screen</li>
-<li><strong>Lists all elements</strong> — Calls <code>mobile_list_elements_on_screen()</code></li>
-<li><strong>Matches your reference</strong> — Fuzzy-matches your description to actual UI elements</li>
+<li><strong>Takes a screenshot</strong> — Captures current app screen (<code>mauto screenshot</code>)</li>
+<li><strong>Lists all elements</strong> — Runs <code>mauto elements</code> to read the on-screen UI tree</li>
+<li><strong>Matches your reference</strong> — Fuzzy-matches your description to actual UI elements by visible text, role, and coordinates (never resource-ids)</li>
 <li><strong>Confirms or asks</strong> — "I found a button labeled 'Login' at (200, 400). Use this? (y/n)"</li>
 </ol>
 <p><strong>Element Resolution Examples:</strong></p>
@@ -2548,8 +2547,8 @@ Bad:  &quot;Wait 3 seconds&quot;
 - App crashed during test
 - Insufficient disk space</p>
 <p><strong>Solution:</strong>
-- Verify device is still connected: <code>adb devices</code> or <code>xcrun simctl list</code>
-- Restart app: <code>/mobile-automator:generate</code> will rebuild/reinstall
+- Verify the device is still connected: <code>mauto devices</code>
+- Restart the app: re-run <code>/mobile-automator-generate</code> (or <code>mauto guide generate</code>) and the agent will rebuild/reinstall
 - Check free disk space</p>
 <h3 id="too-many-steps-generated">"Too Many Steps Generated"<a class="headerlink" href="#too-many-steps-generated" title="Permanent link">&para;</a></h3>
 <p><strong>Problem:</strong> Generator created more steps than you described.</p>
@@ -2569,14 +2568,15 @@ Bad:  &quot;Wait 3 seconds&quot;
 │   └── ...
 └── config.json
 </code></pre></div>
-<p><strong>Scenario file:</strong> Ready to execute immediately with <code>/mobile-automator:execute</code></p>
+<p><strong>Scenario file:</strong> Ready to execute immediately with <code>/mobile-automator-execute</code> (or <code>mauto guide execute</code>)</p>
 <p><strong>Screenshots:</strong> Reference images for visual verification during execution</p>
 <hr />
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ol>
 <li><strong>Review scenario:</strong> Open <code>mobile-automator/scenarios/&lt;name&gt;.json</code> in editor</li>
+<li><strong>Validate it:</strong> Run <code>mauto validate &lt;file&gt;</code> to check it against the scenario schema</li>
 <li><strong>Refine if needed:</strong> Edit JSON or regenerate with different description</li>
-<li><strong>Execute the test:</strong> <code>/mobile-automator:execute</code></li>
+<li><strong>Execute the test:</strong> <code>/mobile-automator-execute</code> (or <code>mauto guide execute</code>)</li>
 <li><strong>Review results:</strong> Check <code>mobile-automator/results/run_*.json</code></li>
 </ol>
 <p>See <a href="../execute/">Execute Command Guide</a> for running tests.</p>

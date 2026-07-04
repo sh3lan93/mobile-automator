@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Core concepts behind mobile-automator - understand the architecture, 3-tier design, and how workspace skills power intelligent test automation.">
+        <meta name="description" content="Core concepts behind mobile-automator - the agent/mauto/mobile-mcp layering and how pulled-on-demand guides power intelligent test automation.">
       
       
       
@@ -65,7 +65,7 @@
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Core Concepts - mobile-automator" />
-  <meta property="og:description" content="Core concepts behind mobile-automator - understand the architecture, 3-tier design, and how workspace skills power intelligent test automation." />
+  <meta property="og:description" content="Core concepts behind mobile-automator - the agent/mauto/mobile-mcp layering and how pulled-on-demand guides power intelligent test automation." />
   <meta property="og:url" content="https://sh3lan93.github.io/mobile-automator/concepts/" />
   <meta property="og:site_name" content="mobile-automator" />
   <meta property="og:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
@@ -73,7 +73,7 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="Core Concepts - mobile-automator" />
-  <meta name="twitter:description" content="Core concepts behind mobile-automator - understand the architecture, 3-tier design, and how workspace skills power intelligent test automation." />
+  <meta name="twitter:description" content="Core concepts behind mobile-automator - the agent/mauto/mobile-mcp layering and how pulled-on-demand guides power intelligent test automation." />
   <meta name="twitter:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
   
 
@@ -565,22 +565,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-three-tier-architecture" class="md-nav__link">
+  <a href="#the-layered-architecture" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The Three-Tier Architecture
+        The Layered Architecture
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="The Three-Tier Architecture">
+    <nav class="md-nav" aria-label="The Layered Architecture">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#tier-1-extension-commands" class="md-nav__link">
+  <a href="#the-agent-brain" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tier 1: Extension Commands
+        The agent (brain)
       
     </span>
   </a>
@@ -588,10 +588,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#tier-2-workspace-skills" class="md-nav__link">
+  <a href="#the-mauto-verbs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tier 2: Workspace Skills
+        The mauto verbs
       
     </span>
   </a>
@@ -599,10 +599,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#tier-3-automation-engine" class="md-nav__link">
+  <a href="#the-mobile-mcp-engine" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tier 3: Automation Engine
+        The mobile-mcp engine
       
     </span>
   </a>
@@ -642,6 +642,17 @@
     <span class="md-ellipsis">
       
         Project-Specific Customization
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#two-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two Modes
       
     </span>
   </a>
@@ -1438,22 +1449,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-three-tier-architecture" class="md-nav__link">
+  <a href="#the-layered-architecture" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The Three-Tier Architecture
+        The Layered Architecture
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="The Three-Tier Architecture">
+    <nav class="md-nav" aria-label="The Layered Architecture">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#tier-1-extension-commands" class="md-nav__link">
+  <a href="#the-agent-brain" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tier 1: Extension Commands
+        The agent (brain)
       
     </span>
   </a>
@@ -1461,10 +1472,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#tier-2-workspace-skills" class="md-nav__link">
+  <a href="#the-mauto-verbs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tier 2: Workspace Skills
+        The mauto verbs
       
     </span>
   </a>
@@ -1472,10 +1483,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#tier-3-automation-engine" class="md-nav__link">
+  <a href="#the-mobile-mcp-engine" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tier 3: Automation Engine
+        The mobile-mcp engine
       
     </span>
   </a>
@@ -1515,6 +1526,17 @@
     <span class="md-ellipsis">
       
         Project-Specific Customization
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#two-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two Modes
       
     </span>
   </a>
@@ -1615,8 +1637,8 @@
 <h1 id="core-concepts">Core Concepts<a class="headerlink" href="#core-concepts" title="Permanent link">&para;</a></h1>
 <p>Understand the architecture, design patterns, and key concepts behind mobile-automator.</p>
 <h2 id="what-is-mobile-automator">What is mobile-automator?<a class="headerlink" href="#what-is-mobile-automator" title="Permanent link">&para;</a></h2>
-<p>mobile-automator is a <strong>Gemini CLI extension</strong> that provides intelligent mobile QA automation capabilities. But it's not a direct testing tool.</p>
-<p><strong>Key Distinction</strong>: mobile-automator is a <strong>meta-extension</strong> that analyzes your mobile project, learns its architecture and domain, then <strong>generates customized testing skills tailored specifically to your project</strong>.</p>
+<p>mobile-automator is a <strong>host-agnostic <code>mauto</code> CLI</strong> that gives any AI agent intelligent mobile QA automation capabilities. But it's not a direct testing tool.</p>
+<p><strong>Key Distinction</strong>: mobile-automator is a <strong>meta-tool</strong>. The agent analyzes your mobile project, learns its architecture and domain, then generates test scenarios <strong>tailored specifically to your project</strong> — driving the device entirely through <code>mauto</code> verbs.</p>
 <p>This is a fundamentally different approach than traditional test frameworks:</p>
 <table>
 <thead>
@@ -1644,49 +1666,52 @@
 </tr>
 </tbody>
 </table>
-<h2 id="the-three-tier-architecture">The Three-Tier Architecture<a class="headerlink" href="#the-three-tier-architecture" title="Permanent link">&para;</a></h2>
-<p>mobile-automator uses a <strong>3-tier architecture</strong> to separate concerns and enable customization:</p>
-<div class="highlight"><pre><span></span><code>Tier 1: Extension Commands
-  ↓ (pre-flight checks, infrastructure)
-Tier 2: Workspace Skills
-  ↓ (project-specific test generation &amp; execution)
-Tier 3: MCP Server
-  ↓ (device automation primitives)
+<h2 id="the-layered-architecture">The Layered Architecture<a class="headerlink" href="#the-layered-architecture" title="Permanent link">&para;</a></h2>
+<p>mobile-automator separates judgment from mechanics with a clear contract:</p>
+<div class="highlight"><pre><span></span><code>agent (brain)        decides what to do, reads guidance
+  ↓ drives
+mauto verbs          deterministic actions + mechanical assertions
+  ↓ wraps
+mobile-mcp engine    cross-platform device primitives
+  ↓ controls
 Device/App
 </code></pre></div>
-<h3 id="tier-1-extension-commands">Tier 1: Extension Commands<a class="headerlink" href="#tier-1-extension-commands" title="Permanent link">&para;</a></h3>
-<p>CLI entry points that validate setup, detect devices, and delegate to skills.</p>
-<p><strong>Commands:</strong>
-- <code>/mobile-automator:setup</code> — 7-section analysis, skill installation, project learning
-- <code>/mobile-automator:generate</code> — Convert natural language to test scenarios
-- <code>/mobile-automator:execute</code> — Execute scenarios, collect results
-- <code>/mobile-automator:migrate</code> — Migrate legacy scenarios to the current format</p>
-<h3 id="tier-2-workspace-skills">Tier 2: Workspace Skills<a class="headerlink" href="#tier-2-workspace-skills" title="Permanent link">&para;</a></h3>
-<p>AI-powered prompt templates installed in <code>.gemini/skills/</code>, customized with your project knowledge.</p>
-<p><strong>Skills:</strong>
-- <strong>Generator Skill</strong> — Parses user input, generates test scenarios with project awareness
-- <strong>Executor Skill</strong> — Executes tests, detects patterns (flakiness, regressions)</p>
-<h3 id="tier-3-automation-engine">Tier 3: Automation Engine<a class="headerlink" href="#tier-3-automation-engine" title="Permanent link">&para;</a></h3>
-<p>The <code>mobile-mcp</code> server provides 20+ platform-agnostic device automation primitives.</p>
+<h3 id="the-agent-brain">The agent (brain)<a class="headerlink" href="#the-agent-brain" title="Permanent link">&para;</a></h3>
+<p>Any AI host — Claude Code, Cursor, Gemini CLI, Copilot, and more — pulls reasoning on demand and decides <em>what</em> to do: resolving "the Login button," judging visual assertions, and assembling scenarios.</p>
+<p><strong>Reasoning is pulled, not always loaded:</strong>
+- <code>mauto guide generate</code> — convert natural language to test scenarios
+- <code>mauto guide execute</code> — execute scenarios, collect results
+- <code>mauto guide setup</code> — workspace setup reasoning
+- <code>mauto bootstrap</code> — verb map + invariants
+- <code>mauto schema &lt;scenario|result&gt;</code> — the JSON schemas</p>
+<p><code>mauto init --agent &lt;host&gt;</code> installs native Agent Skills per host. In Claude Code these arrive as the hyphen slash-commands <code>/mobile-automator-generate</code> and <code>/mobile-automator-execute</code>.</p>
+<h3 id="the-mauto-verbs">The <code>mauto</code> verbs<a class="headerlink" href="#the-mauto-verbs" title="Permanent link">&para;</a></h3>
+<p>The deterministic surface the agent drives. Every verb emits the uniform JSON envelope <code>{ok,data,error,hint,schema_version}</code> (a <code>--human</code> flag is opt-in). Verbs cover device actions (<code>elements</code>, <code>tap</code>, <code>type</code>, <code>swipe</code>, <code>press</code>, <code>screenshot</code>), authoring/verification (<code>validate</code>, <code>assert</code>, <code>result add-step</code>, <code>result finalize</code>), workspace (<code>setup</code>, <code>config</code>), and device sessions.</p>
+<h3 id="the-mobile-mcp-engine">The mobile-mcp engine<a class="headerlink" href="#the-mobile-mcp-engine" title="Permanent link">&para;</a></h3>
+<p><code>mobile-mcp</code> provides 20+ platform-agnostic device automation primitives. It is the <strong>internal engine that <code>mauto</code> wraps</strong>, not an agent-facing API — the agent never calls <code>mobile_*</code> tools directly.</p>
 <p><strong>Primitives:</strong> device detection, app launch, screen interaction (tap, swipe, type), screenshot capture, element inspection, orientation control, and more.</p>
 <h2 id="key-design-principles">Key Design Principles<a class="headerlink" href="#key-design-principles" title="Permanent link">&para;</a></h2>
 <h3 id="separation-of-concerns">Separation of Concerns<a class="headerlink" href="#separation-of-concerns" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Tier 1</strong> handles infrastructure (device detection, config validation)</li>
-<li><strong>Tier 2</strong> contains domain logic (test generation, execution)</li>
-<li><strong>Tier 3</strong> provides automation primitives (device control)</li>
+<li>The <strong>agent (brain)</strong> owns judgment — element resolution, visual assertions, scenario assembly</li>
+<li><strong><code>mauto</code> verbs</strong> own determinism — one mechanical action per verb, predictable JSON envelope</li>
+<li><strong>mobile-mcp</strong> owns platform mechanics — translating a tap into the right device command</li>
 </ul>
 <h3 id="project-specific-customization">Project-Specific Customization<a class="headerlink" href="#project-specific-customization" title="Permanent link">&para;</a></h3>
-<p>During setup, skills are populated with knowledge about your project:
+<p>During setup, project knowledge is captured into <code>mobile-automator/config.json</code>:
 - Architecture pattern (MVVM, Clean Architecture, BLoC, etc.)
 - Business domain (what your app does)
 - Loading indicators (how to detect async operations)
 - Critical user flows (business-critical paths)</p>
-<p>This allows skills to make intelligent decisions specific to YOUR app.</p>
+<p>Guide content carries <code>{{placeholder}}</code> tokens that are filled from this config when a guide is emitted, so the agent's reasoning is specific to YOUR app.</p>
+<h3 id="two-modes">Two Modes<a class="headerlink" href="#two-modes" title="Permanent link">&para;</a></h3>
+<p>A mode is chosen at <code>mauto setup</code> and stored in <code>config.json</code>:
+- <strong>platform-aware</strong> (default) — single-OS or OS-specific UI tests
+- <strong>platform-agnostic</strong> (<code>--mode agnostic</code>) — cross-platform tests that map OS gestures to four semantic actions (<code>press_back</code>, <code>dismiss_keyboard</code>, <code>grant_permission</code>, <code>deny_permission</code>) resolved per platform at replay time</p>
 <h3 id="no-source-code-modification">No Source Code Modification<a class="headerlink" href="#no-source-code-modification" title="Permanent link">&para;</a></h3>
-<p>Tests live in <code>mobile-automator/</code> directory, never in your source code. Skills are version-controlled separately.</p>
+<p>Tests live in the <code>mobile-automator/</code> directory, never in your source code. Scenarios and results are version-controlled separately.</p>
 <h3 id="semantic-testing">Semantic Testing<a class="headerlink" href="#semantic-testing" title="Permanent link">&para;</a></h3>
-<p>Instead of brittle selectors and pixel-by-pixel comparisons, mobile-automator uses AI vision to understand:
+<p>Instead of brittle selectors and pixel-by-pixel comparisons, the agent uses AI vision to understand:
 - Does this screen fulfill its purpose?
 - Are key elements visible and interactive?
 - Does content match expectations?
@@ -1694,29 +1719,30 @@ Device/App
 <h2 id="key-ideas">Key Ideas<a class="headerlink" href="#key-ideas" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>No source modification</strong> — Tests live in <code>mobile-automator/</code>, never in your source code</li>
-<li><strong>Project learning</strong> — Setup analyzes your codebase to customize skills automatically</li>
+<li><strong>Project learning</strong> — Setup captures your codebase context into <code>config.json</code></li>
+<li><strong>Pull-on-demand reasoning</strong> — The agent reads guidance via <code>mauto guide &lt;topic&gt;</code>, never an ambient always-loaded skill</li>
 <li><strong>Semantic testing</strong> — AI vision understands your app, not just pixel values</li>
 <li><strong>Schema-based</strong> — Test scenarios and results follow JSON schemas for validation and IDE support</li>
 <li><strong>Observational debugging</strong> — Results capture flakiness, regressions, and execution context</li>
-<li><strong>Meta-extension</strong> — Generates testing tools tailored to your specific project</li>
+<li><strong>Device through verbs only</strong> — The agent drives the device exclusively through <code>mauto</code> verbs that wrap mobile-mcp</li>
 </ul>
 <h2 id="main-topics">Main Topics<a class="headerlink" href="#main-topics" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong><a href="architecture/">Architecture Overview</a></strong> — Detailed system design and components</li>
-<li><strong><a href="three-tier-design/">3-Tier Design</a></strong> — In-depth explanation of each tier and rationale</li>
-<li><strong><a href="skills/">How Skills Work</a></strong> — Understanding skill generation, customization, and execution</li>
+<li><strong><a href="three-tier-design/">Brain/Hands Layering</a></strong> — In-depth explanation of each layer and rationale</li>
+<li><strong><a href="skills/">How Skills Work</a></strong> — Native Agent Skills, guide content, and customization</li>
 </ul>
 <h2 id="why-this-design">Why This Design?<a class="headerlink" href="#why-this-design" title="Permanent link">&para;</a></h2>
 <p><strong>Benefits:</strong>
-1. <strong>Separation of Concerns</strong> — Each tier has a single responsibility
-2. <strong>Customization</strong> — Skills are generated specifically for your project
-3. <strong>Maintainability</strong> — Changes to one tier don't affect others
-4. <strong>Reusability</strong> — Tier 3 primitives work with any MCP-compatible tool
-5. <strong>Learning</strong> — Setup analyzes your project to provide context to AI</p>
+1. <strong>Separation of Concerns</strong> — Each layer has a single responsibility
+2. <strong>Customization</strong> — Guidance is interpolated specifically for your project
+3. <strong>Maintainability</strong> — Changes to one layer don't affect others
+4. <strong>Host-agnostic</strong> — Any AI agent drives the same <code>mauto</code> verbs
+5. <strong>Lean context</strong> — Reasoning is pulled only when needed</p>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Start with <a href="architecture/">Architecture Overview</a> for system components</li>
-<li>Then explore <a href="three-tier-design/">3-Tier Design Deep Dive</a> for detailed rationale</li>
+<li>Then explore <a href="three-tier-design/">Brain/Hands Layering</a> for detailed rationale</li>
 <li>Finally, learn about <a href="skills/">How Skills Work</a> for skill mechanics</li>
 </ul>
 

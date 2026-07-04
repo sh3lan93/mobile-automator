@@ -1348,60 +1348,81 @@
 
 
 <h1 id="mobile-mcp-tool-reference">Mobile-MCP Tool Reference<a class="headerlink" href="#mobile-mcp-tool-reference" title="Permanent link">&para;</a></h1>
-<p>This document provides the mapping between test scenario actions and mobile-mcp automation tools.</p>
+<div class="admonition note">
+<p class="admonition-title">Internal engine — not the agent-facing API</p>
+<p>The <code>mobile_*</code> tools below are the <strong>internal mobile-mcp engine</strong> that <code>mauto</code>
+verbs wrap. AI agents never call them directly — they drive the device only
+through <code>mauto</code> verbs (<code>elements</code>, <code>tap</code>, <code>type</code>, <code>swipe</code>, <code>press</code>,
+<code>screenshot</code>, …). The contract is <strong>agent → <code>mauto</code> verbs → mobile-mcp engine
+→ device</strong>. This page documents the engine layer so contributors understand
+what each verb does under the hood.</p>
+</div>
+<p>This document provides the mapping between test scenario actions, the <code>mauto</code>
+verbs that execute them, and the mobile-mcp engine primitives those verbs wrap.</p>
 <h2 id="tool-mapping">Tool Mapping<a class="headerlink" href="#tool-mapping" title="Permanent link">&para;</a></h2>
-<p>When executing test scenario steps, map actions to mobile-mcp tools as follows:</p>
+<p>Each scenario action is executed by a <code>mauto</code> verb, which internally calls the
+mobile-mcp engine primitive shown below:</p>
 <table>
 <thead>
 <tr>
 <th>Scenario Action</th>
-<th>Mobile-MCP Tool</th>
+<th><code>mauto</code> Verb</th>
+<th>Internal mobile-mcp Engine Tool</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>launch_app</code></td>
+<td><code>mauto launch</code></td>
 <td><code>mobile_launch_app</code></td>
 <td>Launch the app on the connected device</td>
 </tr>
 <tr>
 <td><code>tap</code></td>
+<td><code>mauto tap</code></td>
 <td><code>mobile_click_on_screen_at_coordinates</code></td>
 <td>Tap on screen at specific coordinates</td>
 </tr>
 <tr>
 <td><code>type</code></td>
+<td><code>mauto type &lt;text&gt;</code></td>
 <td><code>mobile_type_keys</code></td>
 <td>Type text into focused input field</td>
 </tr>
 <tr>
 <td><code>swipe</code></td>
+<td><code>mauto swipe</code></td>
 <td><code>mobile_swipe_on_screen</code></td>
 <td>Swipe in a direction (up, down, left, right)</td>
 </tr>
 <tr>
 <td><code>press_button</code></td>
+<td><code>mauto press &lt;button&gt;</code></td>
 <td><code>mobile_press_button</code></td>
 <td>Press hardware/system buttons (back, home)</td>
 </tr>
 <tr>
 <td><code>wait</code></td>
 <td>(use delay/polling)</td>
+<td>(use delay/polling)</td>
 <td>Wait for a condition or duration</td>
 </tr>
 <tr>
 <td><code>open_url</code></td>
+<td><code>mauto open-url</code></td>
 <td><code>mobile_open_url</code></td>
 <td>Open a URL in the device browser</td>
 </tr>
 <tr>
 <td>(screenshot)</td>
+<td><code>mauto screenshot</code></td>
 <td><code>mobile_take_screenshot</code> / <code>mobile_save_screenshot</code></td>
 <td>Capture screenshot for verification</td>
 </tr>
 <tr>
 <td>(find element)</td>
+<td><code>mauto elements</code></td>
 <td><code>mobile_list_elements_on_screen</code></td>
 <td>List all interactive elements on screen</td>
 </tr>

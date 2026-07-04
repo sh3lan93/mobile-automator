@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="How mobile-automator workspace skills work - template placeholders, skill installation, customization, and the generator/executor skill lifecycle.">
+        <meta name="description" content="How mobile-automator skills work - native Agent Skills installed per host by mauto init, guide content in src/guide/content, and placeholders filled at emit time.">
       
       
       
@@ -65,7 +65,7 @@
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="How Skills Work - mobile-automator" />
-  <meta property="og:description" content="How mobile-automator workspace skills work - template placeholders, skill installation, customization, and the generator/executor skill lifecycle." />
+  <meta property="og:description" content="How mobile-automator skills work - native Agent Skills installed per host by mauto init, guide content in src/guide/content, and placeholders filled at emit time." />
   <meta property="og:url" content="https://sh3lan93.github.io/mobile-automator/concepts/skills/" />
   <meta property="og:site_name" content="mobile-automator" />
   <meta property="og:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
@@ -73,7 +73,7 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="How Skills Work - mobile-automator" />
-  <meta name="twitter:description" content="How mobile-automator workspace skills work - template placeholders, skill installation, customization, and the generator/executor skill lifecycle." />
+  <meta name="twitter:description" content="How mobile-automator skills work - native Agent Skills installed per host by mauto init, guide content in src/guide/content, and placeholders filled at emit time." />
   <meta name="twitter:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
   
 
@@ -649,22 +649,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#installation-and-customization" class="md-nav__link">
+  <a href="#installation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Installation and Customization
+        Installation
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Installation and Customization">
+    <nav class="md-nav" aria-label="Installation">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#the-setup-process" class="md-nav__link">
+  <a href="#mauto-init-installs-per-host" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The Setup Process
+        mauto init installs per host
       
     </span>
   </a>
@@ -672,21 +672,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#the-13-placeholders" class="md-nav__link">
+  <a href="#guide-content-lives-in-the-package" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The 13 Placeholders
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#example-generator-skill" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example: Generator Skill
+        Guide content lives in the package
       
     </span>
   </a>
@@ -699,15 +688,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#generator-skill" class="md-nav__link">
+  <a href="#customization-via-placeholders" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Generator Skill
+        Customization via Placeholders
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Generator Skill">
+    <nav class="md-nav" aria-label="Customization via Placeholders">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-generate-guide-content" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: Generate guide content
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generate-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generate Workflow
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Generate Workflow">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -771,15 +788,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#executor-skill" class="md-nav__link">
+  <a href="#execute-workflow" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Executor Skill
+        Execute Workflow
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Executor Skill">
+    <nav class="md-nav" aria-label="Execute Workflow">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -855,10 +872,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-installation-during-setup" class="md-nav__link">
+  <a href="#1-installation-mauto-init" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Installation (During Setup)
+        1. Installation (mauto init)
       
     </span>
   </a>
@@ -866,10 +883,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-usage-during-generateexecute" class="md-nav__link">
+  <a href="#2-setup-mauto-setup" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Usage (During Generate/Execute)
+        2. Setup (mauto setup)
       
     </span>
   </a>
@@ -877,10 +894,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-updates" class="md-nav__link">
+  <a href="#3-usage-generate-execute" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Updates
+        3. Usage (generate / execute)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Updates
       
     </span>
   </a>
@@ -893,10 +921,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#advanced-accessing-project-knowledge-at-runtime" class="md-nav__link">
+  <a href="#accessing-project-knowledge" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Advanced: Accessing Project Knowledge at Runtime
+        Accessing Project Knowledge
       
     </span>
   </a>
@@ -904,49 +932,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#modifying-skills" class="md-nav__link">
+  <a href="#modes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Modifying Skills
+        Modes
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Modifying Skills">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#safe-to-edit" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Safe to Edit
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#preserving-changes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Preserving Changes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#why-skills-instead-of-code" class="md-nav__link">
+  <a href="#why-pulled-guides-instead-of-code" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why Skills Instead of Code?
+        Why Pulled Guides Instead of Code?
       
     </span>
   </a>
@@ -1037,10 +1037,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#testing-skills-locally" class="md-nav__link">
+  <a href="#inspecting-skills-and-config-locally" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Testing Skills Locally
+        Inspecting Skills and Config Locally
       
     </span>
   </a>
@@ -1048,41 +1048,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#debugging-skills" class="md-nav__link">
+  <a href="#debugging" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Debugging Skills
+        Debugging
       
     </span>
   </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#adding-custom-skills" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adding Custom Skills
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Adding Custom Skills">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example-mobile-automator-analyzer" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example: mobile-automator-analyzer
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1732,22 +1704,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#installation-and-customization" class="md-nav__link">
+  <a href="#installation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Installation and Customization
+        Installation
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Installation and Customization">
+    <nav class="md-nav" aria-label="Installation">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#the-setup-process" class="md-nav__link">
+  <a href="#mauto-init-installs-per-host" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The Setup Process
+        mauto init installs per host
       
     </span>
   </a>
@@ -1755,21 +1727,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#the-13-placeholders" class="md-nav__link">
+  <a href="#guide-content-lives-in-the-package" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The 13 Placeholders
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#example-generator-skill" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example: Generator Skill
+        Guide content lives in the package
       
     </span>
   </a>
@@ -1782,15 +1743,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#generator-skill" class="md-nav__link">
+  <a href="#customization-via-placeholders" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Generator Skill
+        Customization via Placeholders
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Generator Skill">
+    <nav class="md-nav" aria-label="Customization via Placeholders">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-generate-guide-content" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: Generate guide content
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generate-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generate Workflow
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Generate Workflow">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1854,15 +1843,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#executor-skill" class="md-nav__link">
+  <a href="#execute-workflow" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Executor Skill
+        Execute Workflow
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Executor Skill">
+    <nav class="md-nav" aria-label="Execute Workflow">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1938,10 +1927,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-installation-during-setup" class="md-nav__link">
+  <a href="#1-installation-mauto-init" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Installation (During Setup)
+        1. Installation (mauto init)
       
     </span>
   </a>
@@ -1949,10 +1938,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-usage-during-generateexecute" class="md-nav__link">
+  <a href="#2-setup-mauto-setup" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Usage (During Generate/Execute)
+        2. Setup (mauto setup)
       
     </span>
   </a>
@@ -1960,10 +1949,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-updates" class="md-nav__link">
+  <a href="#3-usage-generate-execute" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Updates
+        3. Usage (generate / execute)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Updates
       
     </span>
   </a>
@@ -1976,10 +1976,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#advanced-accessing-project-knowledge-at-runtime" class="md-nav__link">
+  <a href="#accessing-project-knowledge" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Advanced: Accessing Project Knowledge at Runtime
+        Accessing Project Knowledge
       
     </span>
   </a>
@@ -1987,49 +1987,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#modifying-skills" class="md-nav__link">
+  <a href="#modes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Modifying Skills
+        Modes
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Modifying Skills">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#safe-to-edit" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Safe to Edit
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#preserving-changes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Preserving Changes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#why-skills-instead-of-code" class="md-nav__link">
+  <a href="#why-pulled-guides-instead-of-code" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why Skills Instead of Code?
+        Why Pulled Guides Instead of Code?
       
     </span>
   </a>
@@ -2120,10 +2092,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#testing-skills-locally" class="md-nav__link">
+  <a href="#inspecting-skills-and-config-locally" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Testing Skills Locally
+        Inspecting Skills and Config Locally
       
     </span>
   </a>
@@ -2131,41 +2103,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#debugging-skills" class="md-nav__link">
+  <a href="#debugging" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Debugging Skills
+        Debugging
       
     </span>
   </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#adding-custom-skills" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adding Custom Skills
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Adding Custom Skills">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example-mobile-automator-analyzer" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example: mobile-automator-analyzer
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -2201,136 +2145,34 @@
 
 
 <h1 id="how-skills-work">How Skills Work<a class="headerlink" href="#how-skills-work" title="Permanent link">&para;</a></h1>
-<p>Understanding workspace skills: how they're installed, customized, and executed.</p>
+<p>Understanding skills: how they're installed per host, how guide content is customized, and how the agent uses them during generate and execute.</p>
 <h2 id="what-are-skills">What Are Skills?<a class="headerlink" href="#what-are-skills" title="Permanent link">&para;</a></h2>
-<p>Skills are prompt templates that contain project-specific testing logic. They're installed into your workspace (<code>.gemini/skills/</code>) during the setup process and customized with knowledge about your specific project.</p>
-<p>Two main skills:
-- <strong>Generator Skill</strong> — Converts natural language to test scenarios
-- <strong>Executor Skill</strong> — Executes test scenarios and reports results</p>
-<h2 id="installation-and-customization">Installation and Customization<a class="headerlink" href="#installation-and-customization" title="Permanent link">&para;</a></h2>
-<h3 id="the-setup-process">The Setup Process<a class="headerlink" href="#the-setup-process" title="Permanent link">&para;</a></h3>
-<p>During <code>/mobile-automator:setup</code>, Section 6:</p>
-<ol>
-<li><strong>Gather project knowledge</strong> (sections 1-5)</li>
-<li>Detect platform</li>
-<li>Discover environments</li>
-<li>Infer package ID</li>
-<li>
-<p>Analyze codebase for architecture, domain, patterns</p>
-</li>
-<li>
-<p><strong>Read skill templates</strong></p>
-</li>
-<li>Load from <code>${extensionPath}/templates/mobile-automator-generator/SKILL.md</code></li>
-<li>
-<p>Load from <code>${extensionPath}/templates/mobile-automator-executor/SKILL.md</code></p>
-</li>
-<li>
-<p><strong>Replace placeholders</strong></p>
-</li>
-<li>Find all <code>{{placeholder}}</code> patterns</li>
-<li>Replace with detected/gathered values</li>
-<li>
-<p>13 placeholders total</p>
-</li>
-<li>
-<p><strong>Write customized skills</strong></p>
-</li>
-<li>Save to <code>.gemini/skills/mobile-automator-generator/SKILL.md</code></li>
-<li>
-<p>Save to <code>.gemini/skills/mobile-automator-executor/SKILL.md</code></p>
-</li>
-<li>
-<p><strong>Verify completion</strong></p>
-</li>
-<li>Check no <code>{{</code> remains in output</li>
-<li>Copy schema files to workspace</li>
-</ol>
-<h3 id="the-13-placeholders">The 13 Placeholders<a class="headerlink" href="#the-13-placeholders" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Placeholder</th>
-<th>Example Value</th>
-<th>Used By</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>{{project_name}}</code></td>
-<td>"My Shopping App"</td>
-<td>Both</td>
-</tr>
-<tr>
-<td><code>{{platform_details}}</code></td>
-<td>"Android (minSdk 24, targetSdk 34)"</td>
-<td>Generator</td>
-</tr>
-<tr>
-<td><code>{{build_system}}</code></td>
-<td>"Gradle"</td>
-<td>Executor</td>
-</tr>
-<tr>
-<td><code>{{build_command}}</code></td>
-<td>"gradle assembleStaging"</td>
-<td>Executor</td>
-</tr>
-<tr>
-<td><code>{{app_package}}</code></td>
-<td>"com.example.shopping"</td>
-<td>Both</td>
-</tr>
-<tr>
-<td><code>{{environments}}</code></td>
-<td>"production, staging, development"</td>
-<td>Generator</td>
-</tr>
-<tr>
-<td><code>{{loading_indicators}}</code></td>
-<td>"CircularProgressIndicator, Shimmer"</td>
-<td>Executor</td>
-</tr>
-<tr>
-<td><code>{{protected_directories}}</code></td>
-<td>"src/, lib/"</td>
-<td>Both</td>
-</tr>
-<tr>
-<td><code>{{automation_extras}}</code></td>
-<td>"Uses Firebase for analytics"</td>
-<td>Generator</td>
-</tr>
-<tr>
-<td><code>{{architecture}}</code></td>
-<td>"MVVM with Clean Architecture"</td>
-<td>Generator</td>
-</tr>
-<tr>
-<td><code>{{business_domain}}</code></td>
-<td>"E-commerce platform for fashion retail"</td>
-<td>Generator</td>
-</tr>
-<tr>
-<td><code>{{business_critical_paths}}</code></td>
-<td>"onboarding, login, checkout, payment"</td>
-<td>Generator</td>
-</tr>
-<tr>
-<td><code>{{additional_resources}}</code></td>
-<td>"API docs: api.example.com"</td>
-<td>Both</td>
-</tr>
-</tbody>
-</table>
-<h3 id="example-generator-skill">Example: Generator Skill<a class="headerlink" href="#example-generator-skill" title="Permanent link">&para;</a></h3>
-<p>Before replacement:
-<div class="highlight"><pre><span></span><code><span class="gh"># Test Generator for {{project_name}}</span>
+<p>Skills are <strong>native Agent Skills</strong> that tell an AI host <em>when</em> to pull mobile-automator reasoning and how to drive the workflow. They are thin: their job is to invoke <code>mauto guide &lt;topic&gt;</code> at the right moment and to drive the device only through <code>mauto</code> verbs. The substance — the reasoning prose — lives in the installed package as guide content, not in the skill files.</p>
+<p>Two main workflows:
+- <strong>Generate</strong> — convert natural language into test scenarios (<code>mauto guide generate</code>)
+- <strong>Execute</strong> — replay scenarios and report results (<code>mauto guide execute</code>)</p>
+<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
+<h3 id="mauto-init-installs-per-host"><code>mauto init</code> installs per host<a class="headerlink" href="#mauto-init-installs-per-host" title="Permanent link">&para;</a></h3>
+<p>Skills are installed by <code>mauto init --agent &lt;claude|cursor|gemini|copilot|agents|all&gt;</code>. This writes the native Agent Skill for each host into that host's conventions (for example <code>.gemini/skills/</code> for Gemini CLI), plus slash-commands/rules and an MCP entry for hosts that support it.</p>
+<p>In <strong>Claude Code</strong>, init installs the hyphen slash-commands <code>/mobile-automator-generate</code> and <code>/mobile-automator-execute</code>. Each command simply runs the matching <code>mauto guide &lt;topic&gt;</code> and follows it, driving the device through <code>mauto</code> verbs.</p>
+<p>There is <strong>no template-interpolation-at-setup step</strong> that writes skill bodies, and <strong>no resume-state file</strong>. Setup records project knowledge into <code>mobile-automator/config.json</code>; skills are installed by <code>init</code> independently.</p>
+<h3 id="guide-content-lives-in-the-package">Guide content lives in the package<a class="headerlink" href="#guide-content-lives-in-the-package" title="Permanent link">&para;</a></h3>
+<p>The reasoning prose lives in the installed package under <code>src/guide/content/</code>:</p>
+<div class="highlight"><pre><span></span><code>src/guide/content/
+├── generate.aware.md      ├── generate.agnostic.md
+├── execute.aware.md       ├── execute.agnostic.md
+└── setup.aware.md         └── setup.agnostic.md
+</code></pre></div>
+<p>Each topic has an <code>.aware.md</code> (platform-aware) and an <code>.agnostic.md</code> (platform-agnostic) variant. A topic exposed as a skill also has a placeholder-free, OS-free <code>&lt;topic&gt;.invariants.md</code>.</p>
+<h2 id="customization-via-placeholders">Customization via Placeholders<a class="headerlink" href="#customization-via-placeholders" title="Permanent link">&para;</a></h2>
+<p>Guide content carries <code>{{placeholder}}</code> tokens. These are <strong>filled at emit time</strong> — when the agent runs <code>mauto guide &lt;topic&gt;</code>, <code>src/guide/placeholders.js</code> interpolates the tokens from <code>mobile-automator/config.json</code>. A fallback guarantees no <code>{{</code> survives in emitted output, and lint guards enforce that no <code>mobile_*</code> tool names leak and that agnostic content names no OS.</p>
+<h3 id="example-generate-guide-content">Example: Generate guide content<a class="headerlink" href="#example-generate-guide-content" title="Permanent link">&para;</a></h3>
+<p>In the source content:
+<div class="highlight"><pre><span></span><code><span class="gh"># Generating tests for {{project_name}}</span>
 
 You are testing {{business_domain}}.
 
 Project Architecture: {{architecture}}
-Build System: {{build_system}}
 App Package: {{app_package}}
 
 Protected source directories (never modify):
@@ -2338,16 +2180,13 @@ Protected source directories (never modify):
 
 Loading indicators in this project:
 {{loading_indicators}}
-
-Generate realistic test scenarios...
 </code></pre></div></p>
-<p>After replacement:
-<div class="highlight"><pre><span></span><code><span class="gh"># Test Generator for My Shopping App</span>
+<p>After emit-time interpolation from <code>config.json</code>:
+<div class="highlight"><pre><span></span><code><span class="gh"># Generating tests for My Shopping App</span>
 
 You are testing E-commerce platform for fashion retail.
 
 Project Architecture: MVVM with Clean Architecture
-Build System: Gradle
 App Package: com.example.shopping
 
 Protected source directories (never modify):
@@ -2355,32 +2194,33 @@ src/, lib/
 
 Loading indicators in this project:
 CircularProgressIndicator, Shimmer
-
-Generate realistic test scenarios...
 </code></pre></div></p>
-<h2 id="generator-skill">Generator Skill<a class="headerlink" href="#generator-skill" title="Permanent link">&para;</a></h2>
+<p>The agent reads this interpolated guidance, then drives <code>mauto</code> verbs to do the work.</p>
+<h2 id="generate-workflow">Generate Workflow<a class="headerlink" href="#generate-workflow" title="Permanent link">&para;</a></h2>
 <h3 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">&para;</a></h3>
-<p>Convert natural language descriptions into structured test scenarios (JSON following the test scenario schema).</p>
+<p>Convert natural language descriptions into structured test scenarios (JSON following the scenario schema, v2.1).</p>
 <h3 id="inputs">Inputs<a class="headerlink" href="#inputs" title="Permanent link">&para;</a></h3>
 <ul>
 <li>User description: "Test login flow with email and password"</li>
-<li>Device context: Connected Android device</li>
-<li>Project knowledge: Architecture, domain, critical paths</li>
+<li>Device context: a connected device (via <code>mauto devices</code>)</li>
+<li>Project knowledge: interpolated into the guide from <code>config.json</code></li>
 </ul>
 <h3 id="process">Process<a class="headerlink" href="#process" title="Permanent link">&para;</a></h3>
+<p>The agent, following <code>mauto guide generate</code>:</p>
 <ol>
-<li>Parse user intent</li>
-<li>Identify test flow (sequence of user actions)</li>
-<li>Map to test actions (tap, type, wait, etc.)</li>
-<li>Add contextual assertions</li>
-<li>Include retry logic for async operations</li>
-<li>Capture values for verification</li>
-<li>Output JSON scenario</li>
+<li>Parses user intent</li>
+<li>Identifies the test flow (sequence of user actions)</li>
+<li>Resolves elements with <code>mauto elements</code> (which wraps mobile-mcp → device)</li>
+<li>Maps to test actions (tap, type, wait, etc.)</li>
+<li>Adds contextual assertions</li>
+<li>Includes retry logic for async operations</li>
+<li>Validates the JSON with <code>mauto validate &lt;file&gt;</code> and saves it</li>
 </ol>
 <h3 id="output">Output<a class="headerlink" href="#output" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;scenario_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_flow&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.1&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;platform-aware&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;tags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;authentication&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;critical&quot;</span><span class="p">],</span>
 <span class="w">  </span><span class="nt">&quot;actions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
@@ -2403,7 +2243,7 @@ Generate realistic test scenarios...
 <span class="w">      </span><span class="nt">&quot;step_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;type_email&quot;</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;action_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;test@example.com&quot;</span>
-<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">}</span>
 <span class="w">    </span><span class="c1">// ... more actions</span>
 <span class="w">  </span><span class="p">],</span>
 <span class="w">  </span><span class="nt">&quot;assertions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
@@ -2418,40 +2258,39 @@ Generate realistic test scenarios...
 </code></pre></div>
 <h3 id="where-placeholders-help">Where Placeholders Help<a class="headerlink" href="#where-placeholders-help" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>{{business_domain}}</code> — Helps generator understand your business logic</li>
-<li><code>{{architecture}}</code> — Helps generator use the right naming conventions</li>
-<li><code>{{business_critical_paths}}</code> — Focuses generator on important flows</li>
-<li><code>{{loading_indicators}}</code> — Helps generator add correct wait steps</li>
-<li><code>{{protected_directories}}</code> — Reminds generator not to reference source code</li>
+<li><code>{{business_domain}}</code> — helps the agent understand your business logic</li>
+<li><code>{{architecture}}</code> — helps the agent use the right naming conventions</li>
+<li><code>{{business_critical_paths}}</code> — focuses the agent on important flows</li>
+<li><code>{{loading_indicators}}</code> — helps the agent add correct wait steps</li>
+<li><code>{{protected_directories}}</code> — reminds the agent not to reference source code</li>
 </ul>
-<h2 id="executor-skill">Executor Skill<a class="headerlink" href="#executor-skill" title="Permanent link">&para;</a></h2>
+<h2 id="execute-workflow">Execute Workflow<a class="headerlink" href="#execute-workflow" title="Permanent link">&para;</a></h2>
 <h3 id="purpose_1">Purpose<a class="headerlink" href="#purpose_1" title="Permanent link">&para;</a></h3>
-<p>Execute test scenarios on connected devices and report detailed results with observations.</p>
+<p>Replay test scenarios on a connected device and report detailed results with observations.</p>
 <h3 id="inputs_1">Inputs<a class="headerlink" href="#inputs_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Scenario JSON file</li>
-<li>Connected device</li>
-<li>Project configuration</li>
+<li>A connected device</li>
+<li>Project configuration (<code>mobile-automator/config.json</code>)</li>
 <li>Reference screenshots (optional)</li>
 </ul>
 <h3 id="process_1">Process<a class="headerlink" href="#process_1" title="Permanent link">&para;</a></h3>
+<p>The agent, following <code>mauto guide execute</code>:</p>
 <ol>
-<li>Parse scenario JSON</li>
+<li>Parses the scenario JSON</li>
 <li>For each action:</li>
-<li>Call mobile-mcp primitive</li>
-<li>Execute on device</li>
-<li>Capture state</li>
+<li>Drives a <code>mauto</code> verb (<code>tap</code>, <code>type</code>, <code>swipe</code>, <code>screenshot</code>, …) which wraps mobile-mcp → device</li>
+<li>Reads the <code>{ok,data,error,hint,schema_version}</code> envelope</li>
 <li>For each assertion:</li>
-<li>Check condition</li>
-<li>Record result</li>
-<li>Capture observation if relevant</li>
-<li>Generate result report</li>
+<li>Runs <code>mauto assert</code> for mechanical checks, or judges visually for vision assertions</li>
+<li>Records the result via <code>mauto result add-step</code></li>
+<li>Calls <code>mauto result finalize</code> to write the report</li>
 </ol>
 <h3 id="output_1">Output<a class="headerlink" href="#output_1" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;run_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_flow_20250227_143022&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;scenario_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_flow&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.1&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;passed&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;duration_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">15.3</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;steps_executed&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
@@ -2493,54 +2332,49 @@ Generate realistic test scenarios...
 </code></pre></div>
 <h3 id="where-placeholders-help_1">Where Placeholders Help<a class="headerlink" href="#where-placeholders-help_1" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>{{app_package}}</code> — Know which app to launch and verify</li>
-<li><code>{{build_system}}</code> — Know how to rebuild if needed</li>
-<li><code>{{build_command}}</code> — Can rebuild with correct command</li>
-<li><code>{{loading_indicators}}</code> — Know what to wait for</li>
-<li><code>{{environments}}</code> — Can switch environments between runs</li>
-<li><code>{{business_critical_paths}}</code> — Prioritizes these paths if tests fail</li>
+<li><code>{{app_package}}</code> — know which app to launch and verify</li>
+<li><code>{{build_system}}</code> — know how to rebuild if needed</li>
+<li><code>{{build_command}}</code> — can rebuild with the correct command</li>
+<li><code>{{loading_indicators}}</code> — know what to wait for</li>
+<li><code>{{environments}}</code> — can switch environments between runs</li>
+<li><code>{{business_critical_paths}}</code> — prioritizes these paths if tests fail</li>
 </ul>
 <h2 id="skill-lifecycle">Skill Lifecycle<a class="headerlink" href="#skill-lifecycle" title="Permanent link">&para;</a></h2>
-<h3 id="1-installation-during-setup">1. Installation (During Setup)<a class="headerlink" href="#1-installation-during-setup" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>User runs /mobile-automator:setup
+<h3 id="1-installation-mauto-init">1. Installation (<code>mauto init</code>)<a class="headerlink" href="#1-installation-mauto-init" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>User runs mauto init --agent &lt;host&gt;
     ↓
-Setup gathers knowledge (sections 1-5)
+Native Agent Skill written into the host&#39;s conventions
     ↓
-Setup reads templates
+(Claude Code: /mobile-automator-generate, /mobile-automator-execute)
     ↓
-Setup replaces placeholders
-    ↓
-Setup writes to .gemini/skills/
-    ↓
-Skills ready for use
+Skill ready: it knows when to pull a guide
 </code></pre></div>
-<h3 id="2-usage-during-generateexecute">2. Usage (During Generate/Execute)<a class="headerlink" href="#2-usage-during-generateexecute" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>User runs /mobile-automator:generate or /mobile-automator:execute
+<h3 id="2-setup-mauto-setup">2. Setup (<code>mauto setup</code>)<a class="headerlink" href="#2-setup-mauto-setup" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>User runs mauto setup [--mode agnostic]
     ↓
-Tier 1 validates pre-flight
+Project knowledge recorded into mobile-automator/config.json
     ↓
-Tier 1 invokes skill
-    ↓
-Skill loads config.json (runtime access to project knowledge)
-    ↓
-Skill executes (generates or runs test)
-    ↓
-Tier 1 saves result
+Mode stored (platform-aware default, or platform-agnostic)
 </code></pre></div>
-<h3 id="3-updates">3. Updates<a class="headerlink" href="#3-updates" title="Permanent link">&para;</a></h3>
-<p><strong>Extension Updates</strong>: User updates mobile-automator extension
-- Tier 1 commands update
-- Tier 3 (mobile-mcp) can update
-- Tier 2 skills DO NOT update (they stay in workspace)</p>
-<p><strong>Skill Updates</strong>: To update skills with new knowledge:
-- Re-run <code>/mobile-automator:setup</code>
-- It overwrites the existing skills with latest placeholders
-- Config changes are preserved</p>
-<h2 id="advanced-accessing-project-knowledge-at-runtime">Advanced: Accessing Project Knowledge at Runtime<a class="headerlink" href="#advanced-accessing-project-knowledge-at-runtime" title="Permanent link">&para;</a></h2>
-<p>Skills can access the full project configuration at runtime via <code>mobile-automator/config.json</code>:</p>
+<h3 id="3-usage-generate-execute">3. Usage (generate / execute)<a class="headerlink" href="#3-usage-generate-execute" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Agent runs mauto guide generate  (or execute)
+    ↓
+Guide content interpolated from config.json at emit time
+    ↓
+Agent reads guidance, drives mauto verbs (→ mobile-mcp → device)
+    ↓
+Scenario validated / result finalized into the workspace
+</code></pre></div>
+<h3 id="4-updates">4. Updates<a class="headerlink" href="#4-updates" title="Permanent link">&para;</a></h3>
+<p><strong>CLI updates</strong>: pull the latest source and re-link. The verbs and bundled guide content update together; mobile-mcp updates with its pin in <code>package.json</code>.</p>
+<p><strong>Re-install skills</strong>: re-run <code>mauto init --agent &lt;host&gt;</code> to refresh the host's native Agent Skills.</p>
+<p><strong>Refresh project knowledge</strong>: re-run <code>mauto setup</code>, or edit <code>mobile-automator/config.json</code> directly — the next <code>mauto guide</code> emit picks up the new values.</p>
+<h2 id="accessing-project-knowledge">Accessing Project Knowledge<a class="headerlink" href="#accessing-project-knowledge" title="Permanent link">&para;</a></h2>
+<p>The full project configuration lives in <code>mobile-automator/config.json</code>:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;project_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;My Shopping App&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;platform&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;android&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;platform-aware&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;environments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;production&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;staging&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;development&quot;</span><span class="p">],</span>
 <span class="w">  </span><span class="nt">&quot;app_package&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;com.example.shopping&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;architecture&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;MVVM with Clean Architecture&quot;</span><span class="p">,</span>
@@ -2553,36 +2387,25 @@ Tier 1 saves result
 <span class="w">  </span><span class="nt">&quot;build_system&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Gradle&quot;</span>
 <span class="p">}</span>
 </code></pre></div>
-<p>This allows skills to:
-- Adapt behavior based on platform
-- Use correct environment URLs
-- Understand your architecture patterns
-- Know what to wait for</p>
-<h2 id="modifying-skills">Modifying Skills<a class="headerlink" href="#modifying-skills" title="Permanent link">&para;</a></h2>
-<h3 id="safe-to-edit">Safe to Edit<a class="headerlink" href="#safe-to-edit" title="Permanent link">&para;</a></h3>
-<p>Once installed, you can safely modify skills:</p>
-<div class="highlight"><pre><span></span><code>nano<span class="w"> </span>.gemini/skills/mobile-automator-generator/SKILL.md
-</code></pre></div>
-<p><strong>Good reasons to edit:</strong>
-- Add project-specific assertion logic
-- Customize how observations are captured
-- Integrate with custom CI/CD
-- Add organization-specific patterns</p>
-<p><strong>Don't edit:</strong>
-- The placeholder values themselves (they're auto-generated)
-- Schema files in <code>references/</code></p>
-<h3 id="preserving-changes">Preserving Changes<a class="headerlink" href="#preserving-changes" title="Permanent link">&para;</a></h3>
-<p>If you modify a skill and then re-run <code>/mobile-automator:setup</code>:
-- The skill will be overwritten with fresh content
-- Your modifications will be lost
-- Solution: Keep a backup or commit to git before re-running setup</p>
-<h2 id="why-skills-instead-of-code">Why Skills Instead of Code?<a class="headerlink" href="#why-skills-instead-of-code" title="Permanent link">&para;</a></h2>
-<p>Traditional test frameworks require you to write tests in code or DSLs. Skills have significant advantages:</p>
+<p>These values are interpolated into guide content at emit time, so the agent's reasoning adapts to your platform, environments, and architecture.</p>
+<h2 id="modes">Modes<a class="headerlink" href="#modes" title="Permanent link">&para;</a></h2>
+<p>The <code>mode</code> field in <code>config.json</code> selects how gestures are handled. It is set at <code>mauto setup</code>:</p>
+<ul>
+<li><strong>platform-aware</strong> (default) — single-OS or OS-specific UI tests</li>
+<li><strong>platform-agnostic</strong> (<code>mauto setup --mode agnostic</code>) — cross-platform tests (Flutter/RN/KMP/CMP) that map OS gestures to four semantic actions resolved per platform at replay time:</li>
+<li><code>press_back</code></li>
+<li><code>dismiss_keyboard</code></li>
+<li><code>grant_permission</code></li>
+<li><code>deny_permission</code></li>
+</ul>
+<p>Each guide topic has both an <code>.aware.md</code> and an <code>.agnostic.md</code> variant in <code>src/guide/content/</code>; the mode decides which one is emitted.</p>
+<h2 id="why-pulled-guides-instead-of-code">Why Pulled Guides Instead of Code?<a class="headerlink" href="#why-pulled-guides-instead-of-code" title="Permanent link">&para;</a></h2>
+<p>Traditional test frameworks require you to write tests in code or DSLs. Pulled-on-demand guidance has significant advantages:</p>
 <table>
 <thead>
 <tr>
 <th>Aspect</th>
-<th>Skills</th>
+<th>mobile-automator</th>
 <th>Traditional Code</th>
 </tr>
 </thead>
@@ -2594,7 +2417,7 @@ Tier 1 saves result
 </tr>
 <tr>
 <td><strong>Customization</strong></td>
-<td>Auto-filled with project knowledge</td>
+<td>Interpolated with project knowledge at emit time</td>
 <td>Hardcoded values, must update manually</td>
 </tr>
 <tr>
@@ -2604,34 +2427,29 @@ Tier 1 saves result
 </tr>
 <tr>
 <td><strong>AI Capability</strong></td>
-<td>Claude understands natural language intent</td>
+<td>The agent understands natural-language intent</td>
 <td>Must parse code syntax</td>
 </tr>
 <tr>
 <td><strong>Versioning</strong></td>
-<td>Part of project git, tracked</td>
+<td>Scenarios live in your project git</td>
 <td>Code repository complexity</td>
 </tr>
 <tr>
-<td><strong>Learning Curve</strong></td>
-<td>Minimal training needed</td>
-<td>Language-specific knowledge required</td>
+<td><strong>Context cost</strong></td>
+<td>Reasoning pulled only when needed</td>
+<td>Always loaded</td>
 </tr>
 <tr>
 <td><strong>Maintenance</strong></td>
-<td>Update template once</td>
+<td>Update one guide topic</td>
 <td>Update every test file</td>
-</tr>
-<tr>
-<td><strong>Extensibility</strong></td>
-<td>Easy to add project-specific logic</td>
-<td>Complex inheritance/polymorphism</td>
 </tr>
 </tbody>
 </table>
 <h2 id="advanced-features">Advanced Features<a class="headerlink" href="#advanced-features" title="Permanent link">&para;</a></h2>
 <h3 id="semantic-visual-testing">Semantic Visual Testing<a class="headerlink" href="#semantic-visual-testing" title="Permanent link">&para;</a></h3>
-<p>The executor doesn't use pixel-by-pixel comparison. Instead, it uses AI vision to answer:</p>
+<p>The agent doesn't use pixel-by-pixel comparison. Instead, it uses AI vision to answer:</p>
 <blockquote>
 <p>Does this screen fulfill the same purpose as the reference?</p>
 </blockquote>
@@ -2647,7 +2465,7 @@ Tier 1 saves result
 - More stable than screenshot matching
 - Requires fewer reference images</p>
 <h3 id="flakiness-detection">Flakiness Detection<a class="headerlink" href="#flakiness-detection" title="Permanent link">&para;</a></h3>
-<p>The executor detects when tests are flaky:</p>
+<p>The agent detects when tests are flaky:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;observations&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;flakiness&quot;</span><span class="p">,</span>
@@ -2660,7 +2478,7 @@ Tier 1 saves result
 - <strong>Timing issues</strong> — Test fails then passes on retry (flaky)
 - <strong>Device state</strong> — Test fails due to device memory/performance</p>
 <h3 id="regression-detection">Regression Detection<a class="headerlink" href="#regression-detection" title="Permanent link">&para;</a></h3>
-<p>The executor detects visual changes beyond what assertions check:</p>
+<p>The agent detects visual changes beyond what assertions check:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;observations&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;regression&quot;</span><span class="p">,</span>
@@ -2736,45 +2554,30 @@ Tier 1 saves result
 - Network timeouts
 - Slow async operations
 - Race conditions</p>
-<h2 id="testing-skills-locally">Testing Skills Locally<a class="headerlink" href="#testing-skills-locally" title="Permanent link">&para;</a></h2>
-<p>You can test how skills behave without running full tests:</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># View the generator skill</span>
-cat<span class="w"> </span>.gemini/skills/mobile-automator-generator/SKILL.md
+<h2 id="inspecting-skills-and-config-locally">Inspecting Skills and Config Locally<a class="headerlink" href="#inspecting-skills-and-config-locally" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="c1"># See the interpolated generate guidance the agent will read</span>
+mauto<span class="w"> </span>guide<span class="w"> </span>generate
 
-<span class="c1"># Check what project knowledge was detected</span>
+<span class="c1"># Print the verb map + invariants</span>
+mauto<span class="w"> </span>bootstrap
+
+<span class="c1"># Check what project knowledge was recorded</span>
 cat<span class="w"> </span>mobile-automator/config.json
 
-<span class="c1"># Manually invoke the skill with test input</span>
-<span class="c1"># (This depends on Gemini CLI capabilities)</span>
+<span class="c1"># Print a schema</span>
+mauto<span class="w"> </span>schema<span class="w"> </span>scenario
 </code></pre></div>
-<h2 id="debugging-skills">Debugging Skills<a class="headerlink" href="#debugging-skills" title="Permanent link">&para;</a></h2>
-<p>If a skill isn't behaving as expected:</p>
+<h2 id="debugging">Debugging<a class="headerlink" href="#debugging" title="Permanent link">&para;</a></h2>
+<p>If the agent isn't behaving as expected:</p>
 <ol>
-<li><strong>Check placeholders were replaced</strong>: Ensure no <code>{{</code> in skill file</li>
-<li><strong>Review config.json</strong>: Verify project knowledge was detected correctly</li>
-<li><strong>Check schemas</strong>: Review scenario_schema.json and result_schema.json</li>
-<li><strong>Test manually</strong>: Use Gemini CLI to invoke skill directly</li>
-<li><strong>Edit for debugging</strong>: Add comments in skill file temporarily</li>
+<li><strong>Check the emitted guide</strong>: run <code>mauto guide &lt;topic&gt;</code> and confirm no <code>{{</code> remains</li>
+<li><strong>Review config.json</strong>: verify project knowledge was recorded correctly</li>
+<li><strong>Check schemas</strong>: review with <code>mauto schema scenario</code> / <code>mauto schema result</code></li>
+<li><strong>Re-install skills</strong>: re-run <code>mauto init --agent &lt;host&gt;</code> if a host's skill is stale</li>
 </ol>
-<h2 id="adding-custom-skills">Adding Custom Skills<a class="headerlink" href="#adding-custom-skills" title="Permanent link">&para;</a></h2>
-<p>You can add a third skill to your project:</p>
-<h3 id="example-mobile-automator-analyzer">Example: mobile-automator-analyzer<a class="headerlink" href="#example-mobile-automator-analyzer" title="Permanent link">&para;</a></h3>
-<p>Create <code>.gemini/skills/mobile-automator-analyzer/SKILL.md</code>:</p>
-<div class="highlight"><pre><span></span><code>---
-name: mobile-automator-analyzer
-<span class="gu">description: Analyze test results and generate reports for {{project_name}}</span>
-<span class="gu">---</span>
-
-<span class="gh"># Test Analyzer</span>
-
-Analyze results from mobile-automator test executions...
-
-[Your custom logic here with {{placeholders}}]
-</code></pre></div>
-<p>Then create a command wrapper in <code>commands/mobile-automator/analyze.toml</code> to invoke it.</p>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../../guides/setup/">Setup Guide</a> — Deep dive into the 7-section setup</li>
+<li><a href="../../guides/setup/">Setup Guide</a> — Deep dive into the setup workflow</li>
 <li><a href="../../guides/generate/">Generator Guide</a> — How test generation works</li>
 <li><a href="../../guides/execute/">Executor Guide</a> — How test execution works</li>
 </ul>

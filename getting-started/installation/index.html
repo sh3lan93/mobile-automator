@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Install mobile-automator for Gemini CLI with prerequisites, platform-specific requirements for Android and iOS, and troubleshooting tips.">
+        <meta name="description" content="Install the host-agnostic mauto CLI from source, wire it into your project and agent, and verify your device is visible.">
       
       
       
@@ -65,7 +65,7 @@
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Installation - mobile-automator" />
-  <meta property="og:description" content="Install mobile-automator for Gemini CLI with prerequisites, platform-specific requirements for Android and iOS, and troubleshooting tips." />
+  <meta property="og:description" content="Install the host-agnostic mauto CLI from source, wire it into your project and agent, and verify your device is visible." />
   <meta property="og:url" content="https://sh3lan93.github.io/mobile-automator/getting-started/installation/" />
   <meta property="og:site_name" content="mobile-automator" />
   <meta property="og:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
@@ -73,7 +73,7 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="Installation - mobile-automator" />
-  <meta name="twitter:description" content="Install mobile-automator for Gemini CLI with prerequisites, platform-specific requirements for Android and iOS, and troubleshooting tips." />
+  <meta name="twitter:description" content="Install the host-agnostic mauto CLI from source, wire it into your project and agent, and verify your device is visible." />
   <meta name="twitter:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
   
 
@@ -512,10 +512,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-install-the-extension" class="md-nav__link">
+  <a href="#1-install-mauto-from-source" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Install the Extension
+        1. Install mauto from Source
       
     </span>
   </a>
@@ -523,10 +523,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-verify-installation" class="md-nav__link">
+  <a href="#2-verify-the-cli-is-available" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Verify Installation
+        2. Verify the CLI Is Available
       
     </span>
   </a>
@@ -534,10 +534,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-local-development-setup-optional" class="md-nav__link">
+  <a href="#3-wire-it-into-your-project-and-agent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Local Development Setup (Optional)
+        3. Wire It Into Your Project and Agent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-verify-your-device-is-visible" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Verify Your Device Is Visible
       
     </span>
   </a>
@@ -561,10 +572,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#verify-your-setup" class="md-nav__link">
+  <a href="#using-another-agent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Verify Your Setup
+        Using Another Agent
       
     </span>
   </a>
@@ -584,10 +595,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#gemini-command-not-found" class="md-nav__link">
+  <a href="#mauto-command-not-found" class="md-nav__link">
     <span class="md-ellipsis">
       
-        "gemini: command not found"
+        "mauto: command not found"
       
     </span>
   </a>
@@ -595,21 +606,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#failed-to-install-extension" class="md-nav__link">
+  <a href="#npm-install-fails" class="md-nav__link">
     <span class="md-ellipsis">
       
-        "Failed to install extension"
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#setup-command-not-found-after-installation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        "Setup command not found after installation"
+        "npm install" fails
       
     </span>
   </a>
@@ -1551,10 +1551,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-install-the-extension" class="md-nav__link">
+  <a href="#1-install-mauto-from-source" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Install the Extension
+        1. Install mauto from Source
       
     </span>
   </a>
@@ -1562,10 +1562,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-verify-installation" class="md-nav__link">
+  <a href="#2-verify-the-cli-is-available" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Verify Installation
+        2. Verify the CLI Is Available
       
     </span>
   </a>
@@ -1573,10 +1573,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-local-development-setup-optional" class="md-nav__link">
+  <a href="#3-wire-it-into-your-project-and-agent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Local Development Setup (Optional)
+        3. Wire It Into Your Project and Agent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-verify-your-device-is-visible" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Verify Your Device Is Visible
       
     </span>
   </a>
@@ -1600,10 +1611,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#verify-your-setup" class="md-nav__link">
+  <a href="#using-another-agent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Verify Your Setup
+        Using Another Agent
       
     </span>
   </a>
@@ -1623,10 +1634,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#gemini-command-not-found" class="md-nav__link">
+  <a href="#mauto-command-not-found" class="md-nav__link">
     <span class="md-ellipsis">
       
-        "gemini: command not found"
+        "mauto: command not found"
       
     </span>
   </a>
@@ -1634,21 +1645,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#failed-to-install-extension" class="md-nav__link">
+  <a href="#npm-install-fails" class="md-nav__link">
     <span class="md-ellipsis">
       
-        "Failed to install extension"
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#setup-command-not-found-after-installation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        "Setup command not found after installation"
+        "npm install" fails
       
     </span>
   </a>
@@ -1725,11 +1725,12 @@
 
 
 <h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h1>
+<p><code>mauto</code> is a host-agnostic CLI. You install it once from source, then wire it into each mobile project with <code>mauto init</code> and <code>mauto setup</code>.</p>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <p>Before installing mobile-automator, ensure you have:</p>
 <ul>
-<li><strong>Gemini CLI</strong> installed and authenticated (<a href="https://geminicli.com">Get Gemini CLI</a>)</li>
-<li><strong>Node.js</strong> v16 or higher (required for mobile-mcp automation engine)</li>
+<li><strong>Node.js</strong> v18 or higher (required for mobile-mcp automation engine)</li>
+<li><strong>An AI coding agent</strong> — Claude Code, Cursor, Gemini CLI, GitHub Copilot, OpenAI Agents, or any MCP-capable agent</li>
 <li>A <strong>mobile project</strong> (Android, iOS, Flutter, React Native, KMP, or CMP)</li>
 <li>A <strong>connected device or simulator</strong> for running tests</li>
 </ul>
@@ -1749,23 +1750,31 @@
 <li>Sufficient disk space for simulator images (~10GB)</li>
 </ul>
 <h2 id="installation-steps">Installation Steps<a class="headerlink" href="#installation-steps" title="Permanent link">&para;</a></h2>
-<h3 id="1-install-the-extension">1. Install the Extension<a class="headerlink" href="#1-install-the-extension" title="Permanent link">&para;</a></h3>
-<p>The easiest way to install mobile-automator is through the Gemini CLI:</p>
-<div class="highlight"><pre><span></span><code>gemini<span class="w"> </span>extensions<span class="w"> </span>install<span class="w"> </span>https://github.com/sh3lan93/mobile-automator
-</code></pre></div>
-<p>This downloads the extension and automatically configures the mobile-mcp server for device automation.</p>
-<h3 id="2-verify-installation">2. Verify Installation<a class="headerlink" href="#2-verify-installation" title="Permanent link">&para;</a></h3>
-<p>Check that the extension commands are available:</p>
-<div class="highlight"><pre><span></span><code>gemini<span class="w"> </span>/mobile-automator:setup<span class="w"> </span>--help
-</code></pre></div>
-<p>You should see help text for the setup command.</p>
-<h3 id="3-local-development-setup-optional">3. Local Development Setup (Optional)<a class="headerlink" href="#3-local-development-setup-optional" title="Permanent link">&para;</a></h3>
-<p>If you're contributing to mobile-automator or want to test the latest development version:</p>
+<h3 id="1-install-mauto-from-source">1. Install <code>mauto</code> from Source<a class="headerlink" href="#1-install-mauto-from-source" title="Permanent link">&para;</a></h3>
+<p><code>mauto</code> is not yet published to npm. Install it from source:</p>
 <div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/sh3lan93/mobile-automator
 <span class="nb">cd</span><span class="w"> </span>mobile-automator
-gemini<span class="w"> </span>extensions<span class="w"> </span>link<span class="w"> </span>.
+npm<span class="w"> </span>install<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>npm<span class="w"> </span>link<span class="w">        </span><span class="c1"># exposes `mauto` globally</span>
 </code></pre></div>
-<p>This links the extension from your local directory instead of installing from GitHub.</p>
+<p><code>npm install</code> pulls in the pinned mobile-mcp automation engine; <code>npm link</code> puts the <code>mauto</code> (and <code>mobile-automator</code>) command on your PATH.</p>
+<h3 id="2-verify-the-cli-is-available">2. Verify the CLI Is Available<a class="headerlink" href="#2-verify-the-cli-is-available" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>--help
+</code></pre></div>
+<p>You should see the list of <code>mauto</code> verbs.</p>
+<h3 id="3-wire-it-into-your-project-and-agent">3. Wire It Into Your Project and Agent<a class="headerlink" href="#3-wire-it-into-your-project-and-agent" title="Permanent link">&para;</a></h3>
+<p>From the root of any mobile project:</p>
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/path/to/your/mobile-app
+mauto<span class="w"> </span>init<span class="w"> </span>--agent<span class="w"> </span>claude<span class="w">      </span><span class="c1"># or: cursor | gemini | copilot | agents | all</span>
+mauto<span class="w"> </span>setup<span class="w">                    </span><span class="c1"># add --mode agnostic for cross-platform apps</span>
+</code></pre></div>
+<ul>
+<li><code>init</code> installs native Agent Skills into the host's skills directory (<code>.claude/skills/</code>, <code>.cursor/skills/</code>, <code>.gemini/skills/</code>, <code>.github/skills/</code>, <code>.agents/skills/</code>) and, for Claude Code and Cursor, also writes slash-commands/rules and the <code>mauto</code> MCP entry (<code>.mcp.json</code>).</li>
+<li><code>setup</code> scaffolds the <code>mobile-automator/</code> workspace and writes <code>mobile-automator/config.json</code>. Add <code>--mode agnostic</code> for cross-platform apps (Flutter/RN/KMP/CMP).</li>
+</ul>
+<h3 id="4-verify-your-device-is-visible">4. Verify Your Device Is Visible<a class="headerlink" href="#4-verify-your-device-is-visible" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>devices<span class="w">                  </span><span class="c1"># lists devices; mauto devices use &lt;id&gt; to pin one</span>
+</code></pre></div>
+<p>If a device or running emulator/simulator appears here, <code>mauto</code> can drive it. If more than one is listed, pin the one you want with <code>mauto devices use &lt;id&gt;</code> (and <code>mauto devices clear</code> to unpin).</p>
 <h2 id="supported-platforms">Supported Platforms<a class="headerlink" href="#supported-platforms" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1815,37 +1824,25 @@ gemini<span class="w"> </span>extensions<span class="w"> </span>link<span class=
 </tr>
 </tbody>
 </table>
-<h2 id="verify-your-setup">Verify Your Setup<a class="headerlink" href="#verify-your-setup" title="Permanent link">&para;</a></h2>
-<p>To confirm everything is installed correctly, run the setup wizard on any mobile project:</p>
-<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/path/to/your/mobile-app
-gemini
-&gt;<span class="w"> </span>/mobile-automator:setup
-</code></pre></div>
-<p>The wizard will validate:
-- ✅ Gemini CLI is functioning
-- ✅ mobile-mcp server is accessible
-- ✅ Platform is detected (Android/iOS/Flutter/etc.)
-- ✅ Build tools are available
-- ✅ Connected devices are detected</p>
+<h2 id="using-another-agent">Using Another Agent<a class="headerlink" href="#using-another-agent" title="Permanent link">&para;</a></h2>
+<p><code>mauto init</code> ships native Agent Skills for Claude Code, Cursor, Gemini CLI, GitHub Copilot (<code>copilot</code>), and OpenAI Agents (<code>agents</code>). Any other AI agent can drive <code>mauto</code> without an adapter:</p>
+<ul>
+<li><strong>MCP (recommended):</strong> point your MCP-capable agent at the prompts server — <code>mauto mcp</code> (stdio) — which exposes the <code>generate</code> / <code>execute</code> / <code>setup</code> workflows as prompts. Register it like any MCP server: command <code>mauto</code>, args <code>["mcp"]</code>.</li>
+<li><strong>Plain shell:</strong> have the agent read <code>mauto bootstrap</code> once (the verb map + invariants), then read <code>mauto guide &lt;topic&gt;</code> for a workflow and call the verbs (<code>mauto elements</code>, <code>tap</code>, <code>type</code>, <code>assert</code>, …) directly. Every verb returns the <code>{ok, data, error, hint, schema_version}</code> envelope.</li>
+</ul>
 <h2 id="troubleshooting-installation">Troubleshooting Installation<a class="headerlink" href="#troubleshooting-installation" title="Permanent link">&para;</a></h2>
-<h3 id="gemini-command-not-found">"gemini: command not found"<a class="headerlink" href="#gemini-command-not-found" title="Permanent link">&para;</a></h3>
-<p>The Gemini CLI is not installed or not in your PATH.</p>
+<h3 id="mauto-command-not-found">"mauto: command not found"<a class="headerlink" href="#mauto-command-not-found" title="Permanent link">&para;</a></h3>
+<p><code>npm link</code> didn't expose the command, or your shell hasn't picked up the new PATH entry.</p>
 <p><strong>Solution:</strong>
-1. Install Gemini CLI from <a href="https://geminicli.com">geminicli.com</a>
-2. Verify installation: <code>which gemini</code>
+1. Re-run <code>npm link</code> from inside the cloned <code>mobile-automator</code> directory
+2. Verify installation: <code>which mauto</code>
 3. Restart your terminal and try again</p>
-<h3 id="failed-to-install-extension">"Failed to install extension"<a class="headerlink" href="#failed-to-install-extension" title="Permanent link">&para;</a></h3>
-<p>The extension couldn't be downloaded from GitHub.</p>
+<h3 id="npm-install-fails">"npm install" fails<a class="headerlink" href="#npm-install-fails" title="Permanent link">&para;</a></h3>
+<p>The pinned mobile-mcp dependency couldn't be installed.</p>
 <p><strong>Solutions:</strong>
-- Check your internet connection
-- Verify you have access to GitHub
-- Try again with: <code>gemini extensions install https://github.com/sh3lan93/mobile-automator --force</code></p>
-<h3 id="setup-command-not-found-after-installation">"Setup command not found after installation"<a class="headerlink" href="#setup-command-not-found-after-installation" title="Permanent link">&para;</a></h3>
-<p>The extension didn't install completely.</p>
-<p><strong>Solutions:</strong>
-1. Restart your terminal
-2. Try installing again: <code>gemini extensions install https://github.com/sh3lan93/mobile-automator --force</code>
-3. Check for error messages: <code>gemini extensions list</code></p>
+- Check your internet connection and access to the npm registry
+- Ensure Node.js is v18 or higher: <code>node --version</code>
+- Clear the npm cache and retry: <code>npm cache clean --force &amp;&amp; npm install</code></p>
 <h3 id="platform-detection-fails">Platform Detection Fails<a class="headerlink" href="#platform-detection-fails" title="Permanent link">&para;</a></h3>
 <p>Setup can't detect your mobile project platform.</p>
 <p><strong>Solutions:</strong>
@@ -1863,7 +1860,7 @@ gemini
 - Or manually add ADB: <code>export PATH=$PATH:~/Library/Android/sdk/platform-tools</code>
 - Verify: <code>adb devices</code></p>
 <h3 id="device-not-detected">Device Not Detected<a class="headerlink" href="#device-not-detected" title="Permanent link">&para;</a></h3>
-<p>Your device isn't showing in the connected devices list.</p>
+<p><code>mauto devices</code> shows nothing.</p>
 <p><strong>Android:</strong>
 1. Check USB cable connection
 2. Enable Developer Mode on device
@@ -1878,7 +1875,7 @@ gemini
 <p>Once installation is verified:</p>
 <ol>
 <li><strong><a href="../quick-start/">Quick Start</a></strong> — Run your first test in 5 minutes</li>
-<li><strong><a href="../../guides/setup/">Setup Guide</a></strong> — Understand the 7-section setup wizard</li>
+<li><strong><a href="../../guides/setup/">Setup Guide</a></strong> — Understand the setup workflow</li>
 <li><strong><a href="../../concepts/architecture/">Architecture</a></strong> — Learn how mobile-automator works</li>
 </ol>
 <hr />

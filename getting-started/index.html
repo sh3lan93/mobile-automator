@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Get started with mobile-automator - install the extension, set up your project, and run your first automated test in minutes.">
+        <meta name="description" content="Get started with mobile-automator - install the mauto CLI, wire it into your project and agent, and run your first automated test in minutes.">
       
       
       
@@ -65,7 +65,7 @@
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Getting Started - mobile-automator" />
-  <meta property="og:description" content="Get started with mobile-automator - install the extension, set up your project, and run your first automated test in minutes." />
+  <meta property="og:description" content="Get started with mobile-automator - install the mauto CLI, wire it into your project and agent, and run your first automated test in minutes." />
   <meta property="og:url" content="https://sh3lan93.github.io/mobile-automator/getting-started/" />
   <meta property="og:site_name" content="mobile-automator" />
   <meta property="og:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
@@ -73,7 +73,7 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="Getting Started - mobile-automator" />
-  <meta name="twitter:description" content="Get started with mobile-automator - install the extension, set up your project, and run your first automated test in minutes." />
+  <meta name="twitter:description" content="Get started with mobile-automator - install the mauto CLI, wire it into your project and agent, and run your first automated test in minutes." />
   <meta name="twitter:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
   
 
@@ -450,10 +450,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-install-the-extension" class="md-nav__link">
+  <a href="#1-install-mauto-from-source" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Install the Extension
+        1. Install mauto from Source
       
     </span>
   </a>
@@ -461,10 +461,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-run-setup" class="md-nav__link">
+  <a href="#2-wire-it-into-your-project" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Run Setup
+        2. Wire It Into Your Project
       
     </span>
   </a>
@@ -572,10 +572,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#platform-auto-detection" class="md-nav__link">
+  <a href="#brain-hands-split" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Platform Auto-Detection
+        Brain / Hands Split
       
     </span>
   </a>
@@ -583,10 +583,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#architecture-pattern-recognition" class="md-nav__link">
+  <a href="#platform-modes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Architecture Pattern Recognition
+        Platform Modes
       
     </span>
   </a>
@@ -594,10 +594,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#loading-indicator-detection" class="md-nav__link">
+  <a href="#loading-indicator-handling" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Loading Indicator Detection
+        Loading Indicator Handling
       
     </span>
   </a>
@@ -1533,10 +1533,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-install-the-extension" class="md-nav__link">
+  <a href="#1-install-mauto-from-source" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Install the Extension
+        1. Install mauto from Source
       
     </span>
   </a>
@@ -1544,10 +1544,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-run-setup" class="md-nav__link">
+  <a href="#2-wire-it-into-your-project" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Run Setup
+        2. Wire It Into Your Project
       
     </span>
   </a>
@@ -1655,10 +1655,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#platform-auto-detection" class="md-nav__link">
+  <a href="#brain-hands-split" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Platform Auto-Detection
+        Brain / Hands Split
       
     </span>
   </a>
@@ -1666,10 +1666,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#architecture-pattern-recognition" class="md-nav__link">
+  <a href="#platform-modes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Architecture Pattern Recognition
+        Platform Modes
       
     </span>
   </a>
@@ -1677,10 +1677,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#loading-indicator-detection" class="md-nav__link">
+  <a href="#loading-indicator-handling" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Loading Indicator Detection
+        Loading Indicator Handling
       
     </span>
   </a>
@@ -1759,40 +1759,45 @@
 <h1 id="getting-started-with-mobile-automator">Getting Started with mobile-automator<a class="headerlink" href="#getting-started-with-mobile-automator" title="Permanent link">&para;</a></h1>
 <p>Welcome! This section will help you get up and running with mobile-automator in just a few minutes.</p>
 <h2 id="what-is-mobile-automator">What is mobile-automator?<a class="headerlink" href="#what-is-mobile-automator" title="Permanent link">&para;</a></h2>
-<p>mobile-automator is a <strong>Gemini CLI extension</strong> that intelligently generates and executes mobile tests for your app. Instead of writing tests manually, it:</p>
+<p>mobile-automator is a <strong>host-agnostic <code>mauto</code> CLI</strong> that turns <strong>any</strong> AI coding agent into a mobile QA engineer. The agent decides <em>what</em> to test; <code>mauto</code> performs the deterministic actions — tap, type, swipe, assert — by driving a real device or emulator through <a href="https://github.com/mobile-next/mobile-mcp">mobile-mcp</a>. Instead of writing tests manually, you:</p>
 <ol>
-<li><strong>Analyzes your project</strong> — Understands your app's architecture, platform, and domain</li>
-<li><strong>Generates test skills</strong> — Creates customized testing logic tailored to your project</li>
-<li><strong>Executes tests</strong> — Runs tests with semantic understanding and intelligent retry logic</li>
-<li><strong>Reports results</strong> — Provides detailed execution reports with observations and context</li>
+<li><strong>Wire it into your project</strong> — <code>mauto init</code> installs native Agent Skills for your agent; <code>mauto setup</code> scaffolds the workspace</li>
+<li><strong>Generate tests</strong> — Describe flows in plain English; the agent drives the app and writes JSON scenarios</li>
+<li><strong>Execute tests</strong> — The agent replays scenarios with semantic understanding and intelligent retry logic</li>
+<li><strong>Review results</strong> — Detailed execution reports with observations and context</li>
 </ol>
 <h2 id="why-use-mobile-automator">Why Use mobile-automator?<a class="headerlink" href="#why-use-mobile-automator" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>No manual test writing</strong> — Describe flows in plain English, tests are generated automatically</li>
+<li><strong>Any agent</strong> — Claude Code, Cursor, Gemini CLI, GitHub Copilot, OpenAI Agents, or any MCP-capable agent</li>
 <li><strong>Intelligent retries</strong> — Handles timing issues and loading indicators automatically</li>
-<li><strong>Platform-aware</strong> — Works with Android, iOS, Flutter, React Native, KMP, and CMP</li>
-<li><strong>Customized for YOUR app</strong> — Learns your architecture patterns and loading indicators</li>
+<li><strong>Platform-agnostic by default</strong> — One scenario runs on Android and iOS (Flutter, React Native, KMP, CMP)</li>
 <li><strong>Visual regression detection</strong> — Spots UI changes semantically, not pixel-by-pixel</li>
 <li><strong>Context-aware debugging</strong> — Includes device state, environment, and network info in failures</li>
+<li><strong>Portable targets</strong> — Visible text + role + coordinates, never brittle resource-ids</li>
 </ul>
 <h2 id="three-simple-steps-to-get-started">Three Simple Steps to Get Started<a class="headerlink" href="#three-simple-steps-to-get-started" title="Permanent link">&para;</a></h2>
-<h3 id="1-install-the-extension">1. Install the Extension<a class="headerlink" href="#1-install-the-extension" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>gemini<span class="w"> </span>extensions<span class="w"> </span>install<span class="w"> </span>https://github.com/sh3lan93/mobile-automator
+<h3 id="1-install-mauto-from-source">1. Install <code>mauto</code> from Source<a class="headerlink" href="#1-install-mauto-from-source" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/sh3lan93/mobile-automator
+<span class="nb">cd</span><span class="w"> </span>mobile-automator
+npm<span class="w"> </span>install<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>npm<span class="w"> </span>link<span class="w">        </span><span class="c1"># exposes `mauto` globally</span>
 </code></pre></div>
 <p><a href="installation/">Full installation guide →</a></p>
-<h3 id="2-run-setup">2. Run Setup<a class="headerlink" href="#2-run-setup" title="Permanent link">&para;</a></h3>
+<h3 id="2-wire-it-into-your-project">2. Wire It Into Your Project<a class="headerlink" href="#2-wire-it-into-your-project" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/path/to/your/mobile-app
-gemini
-&gt;<span class="w"> </span>/mobile-automator:setup
+mauto<span class="w"> </span>init<span class="w"> </span>--agent<span class="w"> </span>claude<span class="w">      </span><span class="c1"># or: cursor | gemini | copilot | agents | all</span>
+mauto<span class="w"> </span>setup<span class="w">                    </span><span class="c1"># add --mode agnostic for cross-platform apps</span>
+mauto<span class="w"> </span>devices<span class="w">                  </span><span class="c1"># confirm a device is visible</span>
 </code></pre></div>
-<p>The interactive wizard analyzes your project and installs customized testing skills.</p>
+<p><code>init</code> installs native Agent Skills and (for Claude Code/Cursor) slash-commands/rules + the <code>mauto</code> MCP entry. <code>setup</code> scaffolds the <code>mobile-automator/</code> workspace.</p>
 <h3 id="3-generate-execute-tests">3. Generate &amp; Execute Tests<a class="headerlink" href="#3-generate-execute-tests" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>gemini
-&gt;<span class="w"> </span>/mobile-automator:generate
-&gt;<span class="w"> </span>/mobile-automator:execute
+<p>Open your agent in the project. In <strong>Claude Code</strong>, <code>init</code> installs slash commands:</p>
+<div class="highlight"><pre><span></span><code>/mobile-automator-generate     → describe a flow; the agent drives the app and writes a scenario
+/mobile-automator-execute      → the agent replays the scenario and reports pass/fail
 </code></pre></div>
+<p>In <strong>Cursor</strong>, ask the agent in plain language. Any other agent: use <code>mauto mcp</code> or <code>mauto bootstrap</code> + <code>mauto guide &lt;topic&gt;</code> and call the verbs directly.</p>
 <h2 id="the-workflow">The Workflow<a class="headerlink" href="#the-workflow" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>1. Generate (once)     → Describe test in plain English
+<div class="highlight"><pre><span></span><code>1. Generate (once)      → Describe test in plain English
 2. Execute (many times) → Replay automatically across devices and builds
 </code></pre></div>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
@@ -1801,8 +1806,8 @@ gemini
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
 <p>Before you begin, ensure you have:</p>
 <ul>
-<li>✅ <strong>Gemini CLI</strong> installed (<a href="https://geminicli.com">Get Gemini CLI</a>)</li>
-<li>✅ <strong>Node.js</strong> v16+ (for mobile-mcp automation engine)</li>
+<li>✅ <strong>Node.js</strong> v18+ (for the mobile-mcp automation engine)</li>
+<li>✅ <strong>An AI coding agent</strong> (Claude Code, Cursor, Gemini CLI, GitHub Copilot, OpenAI Agents, or any MCP-capable agent)</li>
 <li>✅ <strong>Mobile project</strong> (Android, iOS, Flutter, React Native, KMP, or CMP)</li>
 <li>✅ <strong>Connected device or simulator</strong> (physical device or emulator)</li>
 </ul>
@@ -1819,7 +1824,7 @@ gemini
 <h2 id="what-youll-learn">What You'll Learn<a class="headerlink" href="#what-youll-learn" title="Permanent link">&para;</a></h2>
 <p>In this Getting Started section:</p>
 <ul>
-<li><a href="installation/"><strong>Installation</strong></a> — How to install and verify the extension</li>
+<li><a href="installation/"><strong>Installation</strong></a> — How to install <code>mauto</code> and wire it into your project</li>
 <li><a href="quick-start/"><strong>Quick Start</strong></a> — Your first test in 5 minutes</li>
 <li>Overview of the complete workflow</li>
 <li>Where to go next for deeper learning</li>
@@ -1832,12 +1837,12 @@ gemini
 <li><strong>Looking for detailed guides?</strong> → Check out <a href="../guides/setup/">Full Guides</a></li>
 </ol>
 <h2 id="key-features-preview">Key Features Preview<a class="headerlink" href="#key-features-preview" title="Permanent link">&para;</a></h2>
-<h3 id="platform-auto-detection">Platform Auto-Detection<a class="headerlink" href="#platform-auto-detection" title="Permanent link">&para;</a></h3>
-<p>Setup automatically identifies your tech stack: Android, iOS, Flutter, React Native, KMP, or CMP.</p>
-<h3 id="architecture-pattern-recognition">Architecture Pattern Recognition<a class="headerlink" href="#architecture-pattern-recognition" title="Permanent link">&para;</a></h3>
-<p>Scans your codebase to understand: MVVM, Clean Architecture, BLoC, Redux, MVP, VIPER.</p>
-<h3 id="loading-indicator-detection">Loading Indicator Detection<a class="headerlink" href="#loading-indicator-detection" title="Permanent link">&para;</a></h3>
-<p>Finds your app's loading patterns: progress indicators, shimmer effects, spinners, skeleton screens.</p>
+<h3 id="brain-hands-split">Brain / Hands Split<a class="headerlink" href="#brain-hands-split" title="Permanent link">&para;</a></h3>
+<p>The agent (brain) resolves targets and judges visual assertions; <code>mauto</code> (hands) performs deterministic actions via mobile-mcp. Every verb emits <code>{ok, data, error, hint, schema_version}</code>; add <code>--human</code> for readable output.</p>
+<h3 id="platform-modes">Platform Modes<a class="headerlink" href="#platform-modes" title="Permanent link">&para;</a></h3>
+<p>Choose <strong>platform-aware</strong> (default) for single-OS apps, or <strong>platform-agnostic</strong> (<code>mauto setup --mode agnostic</code>) for cross-platform apps. In agnostic mode, OS gestures map to four semantic actions — <code>press_back</code>, <code>dismiss_keyboard</code>, <code>grant_permission</code>, <code>deny_permission</code> — resolved to the right native primitive at runtime.</p>
+<h3 id="loading-indicator-handling">Loading Indicator Handling<a class="headerlink" href="#loading-indicator-handling" title="Permanent link">&para;</a></h3>
+<p>The generate and execute workflows account for your app's loading patterns: progress indicators, shimmer effects, spinners, skeleton screens.</p>
 <h3 id="intelligent-test-execution">Intelligent Test Execution<a class="headerlink" href="#intelligent-test-execution" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Automatically retries on timing issues</li>

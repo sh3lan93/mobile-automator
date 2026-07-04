@@ -2258,12 +2258,13 @@
 <p>The <strong>Execute Command</strong> runs your test scenarios on a real device or simulator, evaluates assertions, captures screenshots, and generates detailed result reports with intelligent observations about flakiness, regressions, and device context.</p>
 <p><strong>Key benefit</strong>: You get comprehensive test data — not just pass/fail, but detailed insights about why tests failed and how to fix them.</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><span class="c1"># Run the command</span>
-gemini<span class="w"> </span>/mobile-automator:execute
-
-<span class="c1"># Select scenario and device</span>
-<span class="c1"># Watch test execute step-by-step</span>
-<span class="c1"># Review detailed results</span>
+<p>In Claude Code, run the slash-command:</p>
+<div class="highlight"><pre><span></span><code>/mobile-automator-execute
+</code></pre></div>
+<p>With any other agent, have it read the guide and drive the device through <code>mauto</code> verbs:</p>
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>guide<span class="w"> </span>execute
+<span class="c1"># the agent then selects a scenario and device, runs it step-by-step,</span>
+<span class="c1"># and writes a detailed result report</span>
 </code></pre></div>
 <p>Results are saved to: <code>mobile-automator/results/run_YYYYMMDD_HHMMSS.json</code></p>
 <hr />
@@ -2283,23 +2284,21 @@ gemini<span class="w"> </span>/mobile-automator:execute
 <li>
 <p><strong>Device is connected</strong></p>
 </li>
-<li>Android: <code>adb devices</code> shows your device</li>
 <li>
-<p>iOS: Simulator running or physical device connected</p>
+<p>Confirm with <code>mauto devices</code> (lists reachable devices)</p>
 </li>
 <li>
 <p><strong>App is installed</strong></p>
 </li>
-<li>Executor will build/install if needed</li>
+<li>The agent will build/install if needed</li>
 </ol>
 <hr />
 <h2 id="pre-flight-checks">Pre-Flight Checks<a class="headerlink" href="#pre-flight-checks" title="Permanent link">&para;</a></h2>
-<p>When you run <code>/mobile-automator:execute</code>, the wrapper verifies:</p>
+<p>When you start execution, the agent verifies:</p>
 <div class="highlight"><pre><span></span><code>✓ Checking setup state...
 ✓ Found: mobile-automator/config.json
-✓ Found: .gemini/skills/mobile-automator-executor/SKILL.md
 
-✓ Detecting devices...
+✓ Detecting devices (mauto devices)...
   Available devices:
     1. Pixel 6 (Android 34)
     2. iPhone 14 Pro (iOS 17.2)
@@ -2346,9 +2345,9 @@ gemini<span class="w"> </span>/mobile-automator:execute
 <h3 id="phase-2-step-execution">Phase 2: Step Execution<a class="headerlink" href="#phase-2-step-execution" title="Permanent link">&para;</a></h3>
 <p>For each step in your scenario:</p>
 <h4 id="2a-get-current-screen-state">2a. Get Current Screen State<a class="headerlink" href="#2a-get-current-screen-state" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code>├─ Call mobile_list_elements_on_screen()
-├─ Get current UI element tree
-└─ Record screenshot
+<div class="highlight"><pre><span></span><code>├─ Run mauto elements
+├─ Get current UI element tree (visible text + role + coordinates)
+└─ Record screenshot (mauto screenshot)
 </code></pre></div>
 <h4 id="2b-execute-action">2b. Execute Action<a class="headerlink" href="#2b-execute-action" title="Permanent link">&para;</a></h4>
 <table>
@@ -2819,7 +2818,7 @@ gemini<span class="w"> </span>/mobile-automator:execute
 <p><strong>Problem:</strong> Application crashed mid-execution.</p>
 <p><strong>Solutions:</strong>
 1. <strong>Check result file</strong> — <code>mobile-automator/results/run_*.json</code> shows which step caused crash
-2. <strong>Review app logs</strong> — <code>adb logcat</code> (Android) or Xcode debugger (iOS)
+2. <strong>Review app logs</strong> — use your platform's logging tools (Android logcat, Xcode debugger for iOS)
 3. <strong>Check if known issue</strong> — May be app bug, not test issue
 4. <strong>Add preconditions</strong> — Clear app data before test:
    <div class="highlight"><pre><span></span><code><span class="p">{</span>

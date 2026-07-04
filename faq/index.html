@@ -1247,10 +1247,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#how-do-i-migrate-an-existing-project-to-agnostic-mode" class="md-nav__link">
+  <a href="#how-do-i-choose-a-mode-for-a-new-project" class="md-nav__link">
     <span class="md-ellipsis">
       
-        How do I migrate an existing project to agnostic mode?
+        How do I choose a mode for a new project?
       
     </span>
   </a>
@@ -1308,10 +1308,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#setup-command-failed-what-do-i-do" class="md-nav__link">
+  <a href="#setup-failed-what-do-i-do" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Setup command failed. What do I do?
+        Setup failed. What do I do?
       
     </span>
   </a>
@@ -1341,10 +1341,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#placeholders-not-replaced-in-generated-skills-why" class="md-nav__link">
+  <a href="#agent-skills-werent-installed-why" class="md-nav__link">
     <span class="md-ellipsis">
       
-        "Placeholders not replaced in generated skills" — Why?
+        "Agent skills weren't installed" — Why?
       
     </span>
   </a>
@@ -1613,10 +1613,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#general-extension-not-found-or-command-not-available" class="md-nav__link">
+  <a href="#mauto-command-not-found" class="md-nav__link">
     <span class="md-ellipsis">
       
-        General: "Extension not found" or command not available
+        "mauto: command not found"
       
     </span>
   </a>
@@ -1646,10 +1646,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#mcp-server-issues" class="md-nav__link">
+  <a href="#mcp-automation-engine-issues" class="md-nav__link">
     <span class="md-ellipsis">
       
-        MCP Server Issues
+        MCP / Automation Engine Issues
       
     </span>
   </a>
@@ -1885,10 +1885,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#how-do-i-migrate-an-existing-project-to-agnostic-mode" class="md-nav__link">
+  <a href="#how-do-i-choose-a-mode-for-a-new-project" class="md-nav__link">
     <span class="md-ellipsis">
       
-        How do I migrate an existing project to agnostic mode?
+        How do I choose a mode for a new project?
       
     </span>
   </a>
@@ -1946,10 +1946,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#setup-command-failed-what-do-i-do" class="md-nav__link">
+  <a href="#setup-failed-what-do-i-do" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Setup command failed. What do I do?
+        Setup failed. What do I do?
       
     </span>
   </a>
@@ -1979,10 +1979,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#placeholders-not-replaced-in-generated-skills-why" class="md-nav__link">
+  <a href="#agent-skills-werent-installed-why" class="md-nav__link">
     <span class="md-ellipsis">
       
-        "Placeholders not replaced in generated skills" — Why?
+        "Agent skills weren't installed" — Why?
       
     </span>
   </a>
@@ -2251,10 +2251,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#general-extension-not-found-or-command-not-available" class="md-nav__link">
+  <a href="#mauto-command-not-found" class="md-nav__link">
     <span class="md-ellipsis">
       
-        General: "Extension not found" or command not available
+        "mauto: command not found"
       
     </span>
   </a>
@@ -2284,10 +2284,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#mcp-server-issues" class="md-nav__link">
+  <a href="#mcp-automation-engine-issues" class="md-nav__link">
     <span class="md-ellipsis">
       
-        MCP Server Issues
+        MCP / Automation Engine Issues
       
     </span>
   </a>
@@ -2391,8 +2391,8 @@
 <hr />
 <h2 id="general-questions">General Questions<a class="headerlink" href="#general-questions" title="Permanent link">&para;</a></h2>
 <h3 id="what-is-mobile-automator">What is mobile-automator?<a class="headerlink" href="#what-is-mobile-automator" title="Permanent link">&para;</a></h3>
-<p><strong>Answer:</strong> Mobile Automator is a <strong>Gemini CLI extension</strong> that intelligently generates and executes mobile tests using natural language. Instead of writing tests manually in Appium, XCTest, or Espresso, you describe what you want to test in simple language, and the extension generates JSON test scenarios and executes them automatically.</p>
-<p><strong>Key point:</strong> It's NOT a direct testing tool like Selenium or Appium. It's a <em>meta-extension</em> that analyzes your project architecture and creates customized testing skills tailored to your specific app.</p>
+<p><strong>Answer:</strong> mobile-automator is a host-agnostic <code>mauto</code> CLI that lets <strong>any</strong> AI coding agent generate and execute mobile tests using natural language. Instead of writing tests manually in Appium, XCTest, or Espresso, you describe what you want to test in simple language; your agent drives the device through <code>mauto</code> verbs (which wrap <a href="https://github.com/mobile-next/mobile-mcp">mobile-mcp</a>) to author JSON test scenarios and replay them automatically.</p>
+<p><strong>Key point:</strong> It's NOT a direct testing tool like Selenium or Appium. It splits the work into a <strong>brain</strong> (your AI agent, which decides <em>what</em> to do) and <strong>hands</strong> (<code>mauto</code> verbs, which perform deterministic actions). Any agent — Claude Code, Cursor, Gemini CLI, GitHub Copilot, OpenAI Agents, or any MCP-capable agent — can be the brain.</p>
 <h3 id="how-is-mobile-automator-different-from-appiumxctestespresso">How is mobile-automator different from Appium/XCTest/Espresso?<a class="headerlink" href="#how-is-mobile-automator-different-from-appiumxctestespresso" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -2410,7 +2410,7 @@
 </tr>
 <tr>
 <td><strong>Selector Strategy</strong></td>
-<td>AI-powered fuzzy matching</td>
+<td>Visible text + role + coordinates</td>
 <td>Hard-coded IDs/XPaths</td>
 </tr>
 <tr>
@@ -2424,9 +2424,9 @@
 <td>Embedded in test code</td>
 </tr>
 <tr>
-<td><strong>Customization</strong></td>
-<td>Per-project skills with placeholders</td>
-<td>Shared framework approach</td>
+<td><strong>Portability</strong></td>
+<td>One scenario runs on Android &amp; iOS</td>
+<td>Per-platform test suites</td>
 </tr>
 <tr>
 <td><strong>Learning Curve</strong></td>
@@ -2435,7 +2435,7 @@
 </tr>
 <tr>
 <td><strong>Maintenance</strong></td>
-<td>Skills auto-update with project</td>
+<td>Scenarios are plain JSON</td>
 <td>Manual test updates</td>
 </tr>
 <tr>
@@ -2446,7 +2446,7 @@
 </tbody>
 </table>
 <h3 id="do-i-need-to-write-code">Do I need to write code?<a class="headerlink" href="#do-i-need-to-write-code" title="Permanent link">&para;</a></h3>
-<p><strong>Answer:</strong> No. Tests are described in plain English. The generator converts them to JSON. The executor handles all automation using MCP tools. You never touch code unless you want to customize skills.</p>
+<p><strong>Answer:</strong> No. Tests are described in plain English. Your agent converts them to JSON scenarios and drives the device through <code>mauto</code> verbs. You never touch code unless you want to hand-edit a scenario.</p>
 <p><strong>Example flow:</strong>
 <div class="highlight"><pre><span></span><code>Natural Language: &quot;User logs in with email and password&quot;
 ↓
@@ -2470,18 +2470,14 @@ Executed Automatically: Tap fields, type text, verify dashboard
 - Your tests intentionally exercise OS-specific behaviour or UI patterns
 - You have a legacy project already configured in aware mode and you don't need cross-platform portability</p>
 <p>In practice: if you are using Flutter, React Native, KMP, or CMP, start with agnostic. For native Android-only or iOS-only apps, use aware.</p>
-<h3 id="how-do-i-migrate-an-existing-project-to-agnostic-mode">How do I migrate an existing project to agnostic mode?<a class="headerlink" href="#how-do-i-migrate-an-existing-project-to-agnostic-mode" title="Permanent link">&para;</a></h3>
-<p><strong>Answer:</strong> Re-run <code>/mobile-automator:setup</code> in your project. At setup section § 1.5 (Mode Selection), choose <strong>"Switch to platform-agnostic"</strong>. The migration is handled automatically:</p>
-<ol>
-<li>Values that apply to both modes (project name, business domain, environments, architecture) are carried forward.</li>
-<li>OS-specific values (build command, platform SDK details) are dropped.</li>
-<li>Agnostic-specific fields not present in your old config are prompted interactively.</li>
-<li>Your previous skills are archived to <code>.gemini/skills/.archive/</code> and your previous config is backed up as <code>mobile-automator/config.json.platform-aware.bak</code>.</li>
-</ol>
-<p>The migration is fully reversible — see <a href="../TROUBLESHOOTING.md">TROUBLESHOOTING.md</a> for the manual restore procedure.</p>
+<h3 id="how-do-i-choose-a-mode-for-a-new-project">How do I choose a mode for a new project?<a class="headerlink" href="#how-do-i-choose-a-mode-for-a-new-project" title="Permanent link">&para;</a></h3>
+<p><strong>Answer:</strong> Set the mode when you scaffold the workspace with <code>mauto setup</code>:</p>
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>setup<span class="w">                 </span><span class="c1"># platform-aware (default)</span>
+mauto<span class="w"> </span>setup<span class="w"> </span>--mode<span class="w"> </span>agnostic<span class="w"> </span><span class="c1"># platform-agnostic</span>
+</code></pre></div>
+<p>The chosen mode is stored as <code>mode</code> in <code>mobile-automator/config.json</code> (read it back with <code>mauto config get mode</code>). In agnostic mode, OS-shaped gestures become four semantic actions — <code>press_back</code>, <code>dismiss_keyboard</code>, <code>grant_permission</code>, <code>deny_permission</code> — resolved to the right native primitive at runtime, so one scenario covers both platforms.</p>
 <h3 id="what-is-the-schema_version-field">What is the <code>$schema_version</code> field?<a class="headerlink" href="#what-is-the-schema_version-field" title="Permanent link">&para;</a></h3>
-<p><strong>Answer:</strong> Every test scenario JSON file includes <code>"$schema_version": "2.0"</code> as its first field. This enables version detection for future schema evolution. All scenarios must include this field.
-<strong>Answer:</strong> Every test scenario JSON file includes <code>"$schema_version": "2.0"</code> as its first field. This enables version detection for future schema evolution. All scenarios must include this field.</p>
+<p><strong>Answer:</strong> Every test scenario JSON file includes a <code>$schema_version</code> field (currently <code>"2.1"</code>) as its first field. This enables version detection for schema evolution. All scenarios must include this field.</p>
 <h3 id="can-i-use-mobile-automator-with-my-existing-tests">Can I use mobile-automator with my existing tests?<a class="headerlink" href="#can-i-use-mobile-automator-with-my-existing-tests" title="Permanent link">&para;</a></h3>
 <p><strong>Answer:</strong> Partially. If you have:
 - <strong>Appium/Espresso/XCTest tests</strong> → No direct import, but use mobile-automator for <em>new</em> tests
@@ -2490,23 +2486,27 @@ Executed Automatically: Tap fields, type text, verify dashboard
 <hr />
 <h2 id="setup-installation">Setup &amp; Installation<a class="headerlink" href="#setup-installation" title="Permanent link">&para;</a></h2>
 <h3 id="how-do-i-install-mobile-automator">How do I install mobile-automator?<a class="headerlink" href="#how-do-i-install-mobile-automator" title="Permanent link">&para;</a></h3>
-<p><strong>Answer:</strong>
+<p><strong>Answer:</strong> <code>mauto</code> is installed from source (not yet on npm):</p>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/sh3lan93/mobile-automator
+<span class="nb">cd</span><span class="w"> </span>mobile-automator
+npm<span class="w"> </span>install<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>npm<span class="w"> </span>link<span class="w">        </span><span class="c1"># exposes `mauto` globally</span>
+</code></pre></div>
+<p>Then, from your mobile project, wire it into your agent and scaffold the workspace:</p>
 <div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/path/to/mobile-project
-gemini<span class="w"> </span>extensions<span class="w"> </span>install<span class="w"> </span>https://github.com/sh3lan93/mobile-automator
-</code></pre></div></p>
-<p>Then run:
-<div class="highlight"><pre><span></span><code>gemini<span class="w"> </span>/mobile-automator:setup
-</code></pre></div></p>
-<p>This analyzes your project and creates customized skills.</p>
-<h3 id="setup-command-failed-what-do-i-do">Setup command failed. What do I do?<a class="headerlink" href="#setup-command-failed-what-do-i-do" title="Permanent link">&para;</a></h3>
-<p><strong>Answer:</strong> Setup is resumable. The <code>/mobile-automator:setup</code> command saves progress in <code>mobile-automator/setup_state.json</code>. If it fails:</p>
+mauto<span class="w"> </span>init<span class="w"> </span>--agent<span class="w"> </span>claude<span class="w">      </span><span class="c1"># or: cursor | gemini | copilot | agents | all</span>
+mauto<span class="w"> </span>setup<span class="w">                    </span><span class="c1"># add --mode agnostic for cross-platform apps</span>
+mauto<span class="w"> </span>devices<span class="w">                  </span><span class="c1"># confirm a device is visible</span>
+</code></pre></div>
+<p>See the <a href="../getting-started/installation/">installation guide</a> for full details.</p>
+<h3 id="setup-failed-what-do-i-do">Setup failed. What do I do?<a class="headerlink" href="#setup-failed-what-do-i-do" title="Permanent link">&para;</a></h3>
+<p><strong>Answer:</strong> If <code>mauto setup</code> fails:</p>
 <ol>
-<li><strong>Check the error message</strong> — Note which section failed</li>
-<li><strong>Fix the issue</strong> — If it's a missing package ID, you'll be prompted</li>
-<li><strong>Re-run setup</strong> — It will resume from the last successful section</li>
-<li><strong>Verify completion</strong> — Check that <code>mobile-automator/config.json</code> was created</li>
+<li><strong>Check the error message</strong> — Note what went wrong (e.g., a missing package ID, no detectable platform)</li>
+<li><strong>Fix the issue</strong> — Provide the value when prompted, or pass it explicitly</li>
+<li><strong>Re-run <code>mauto setup</code></strong> — It rescaffolds the workspace</li>
+<li><strong>Verify completion</strong> — Check that <code>mobile-automator/config.json</code> was created (<code>mauto config get mode</code>)</li>
 </ol>
-<p>If stuck, delete <code>setup_state.json</code> and restart fresh.</p>
+<p>The workspace state lives entirely in <code>mobile-automator/config.json</code>; there is no separate resume file to clean up.</p>
 <h3 id="platform-detection-failed-what-should-i-do">"Platform detection failed" — What should I do?<a class="headerlink" href="#platform-detection-failed-what-should-i-do" title="Permanent link">&para;</a></h3>
 <p><strong>Cause:</strong> Your project structure doesn't match recognized patterns.</p>
 <p><strong>Solutions:</strong>
@@ -2536,67 +2536,63 @@ Enter your platform: ios
 - Or check <code>Info.plist</code> for <code>CFBundleIdentifier</code>
 - Or check <code>${PROJECT_DIR}/project.pbxproj</code> for <code>PRODUCT_BUNDLE_IDENTIFIER</code></p>
 <p>When setup prompts, enter the full package ID (e.g., <code>com.example.app</code> for Android, <code>com.example.MyApp</code> for iOS).</p>
-<h3 id="placeholders-not-replaced-in-generated-skills-why">"Placeholders not replaced in generated skills" — Why?<a class="headerlink" href="#placeholders-not-replaced-in-generated-skills-why" title="Permanent link">&para;</a></h3>
-<p><strong>Cause:</strong> The skill templates couldn't be populated with project info.</p>
+<h3 id="agent-skills-werent-installed-why">"Agent skills weren't installed" — Why?<a class="headerlink" href="#agent-skills-werent-installed-why" title="Permanent link">&para;</a></h3>
+<p><strong>Cause:</strong> <code>mauto init</code> didn't write the Agent Skills into your host's skills directory.</p>
 <p><strong>Solutions:</strong>
-1. <strong>Check that setup completed</strong> — Verify <code>mobile-automator/setup_state.json</code> has section 6.0 completed
-2. <strong>Check <code>mobile-automator/config.json</code></strong> — Ensure all fields are populated
-3. <strong>Verify template paths</strong> — Extension should copy from <code>${extensionPath}/templates/</code>
-4. <strong>Re-run setup</strong> — It will retry template replacement in section 6.0</p>
-<p>If still failing:
-<div class="highlight"><pre><span></span><code><span class="c1"># Check if skills were created</span>
-ls<span class="w"> </span>-la<span class="w"> </span>.gemini/skills/mobile-automator-*/SKILL.md
-
-<span class="c1"># Check for remaining placeholders</span>
-grep<span class="w"> </span><span class="s2">&quot;{{&quot;</span><span class="w"> </span>.gemini/skills/mobile-automator-*/SKILL.md
+1. <strong>Re-run init for your agent</strong> — <code>mauto init --agent claude</code> (or <code>cursor | gemini | copilot | agents | all</code>)
+2. <strong>Check the skills directory</strong> — Confirm the files landed in your host's skills dir:
+   <div class="highlight"><pre><span></span><code><span class="c1"># examples per host</span>
+ls<span class="w"> </span>-la<span class="w"> </span>.claude/skills/
+ls<span class="w"> </span>-la<span class="w"> </span>.cursor/skills/
+ls<span class="w"> </span>-la<span class="w"> </span>.gemini/skills/
+</code></pre></div>
+3. <strong>Verify the workspace config</strong> — <code>mauto config get mode</code> should return your mode
+4. <strong>For Claude Code / Cursor</strong>, confirm <code>init</code> also wrote the command files and MCP entry:
+   <div class="highlight"><pre><span></span><code>ls<span class="w"> </span>-la<span class="w"> </span>.claude/commands/<span class="w"> </span>.mcp.json
 </code></pre></div></p>
 <hr />
 <h2 id="test-generation">Test Generation<a class="headerlink" href="#test-generation" title="Permanent link">&para;</a></h2>
 <h3 id="how-do-i-generate-a-test-scenario">How do I generate a test scenario?<a class="headerlink" href="#how-do-i-generate-a-test-scenario" title="Permanent link">&para;</a></h3>
 <p><strong>Answer:</strong>
 1. Ensure setup is complete: <code>mobile-automator/config.json</code> exists
-2. Connect a device via ADB (Android) or Xcode (iOS)
-3. Run the generate command:
-   <div class="highlight"><pre><span></span><code>gemini<span class="w"> </span>/mobile-automator:generate
-</code></pre></div>
+2. Confirm a device is visible: <code>mauto devices</code> (pin one with <code>mauto devices use &lt;id&gt;</code> if needed)
+3. From inside your agent, launch the generate workflow:
+   - <strong>Claude Code:</strong> <code>/mobile-automator-generate</code>
+   - <strong>Cursor:</strong> ask in plain language (e.g. <em>"generate a login test"</em>)
+   - <strong>Any other agent:</strong> <code>mauto mcp</code> (MCP prompts) or <code>mauto guide generate</code> + call verbs directly
 4. Describe your test in natural language when prompted
 5. Review the generated JSON in <code>mobile-automator/scenarios/</code></p>
 <p><strong>Example prompt:</strong>
 <div class="highlight"><pre><span></span><code>Describe the test scenario:
 &gt; User logs in with email and password, verifies dashboard loads
 </code></pre></div></p>
-<p>Generated: <code>mobile-automator/scenarios/android_login_happy_path.json</code></p>
+<p>Generated: <code>mobile-automator/scenarios/login_happy_path.json</code></p>
 <h3 id="element-not-found-when-generating-what-does-this-mean">"Element not found when generating" — What does this mean?<a class="headerlink" href="#element-not-found-when-generating-what-does-this-mean" title="Permanent link">&para;</a></h3>
-<p><strong>Cause:</strong> The generator couldn't find an element you described on the current screen.</p>
+<p><strong>Cause:</strong> The agent couldn't find an element you described on the current screen.</p>
 <p><strong>Solutions:</strong>
 1. <strong>Check app state</strong> — Ensure app is in the right state (logged out for login test)
 2. <strong>Be more specific</strong> — Use visible text or position: "Blue login button in bottom right"
-3. <strong>Use element labels</strong> — Reference element's accessibility label if available
-4. <strong>Check if element exists</strong> — Take a screenshot manually to verify
-5. <strong>Use alternative references</strong> — Instead of internal ID, describe location: "Button below password field"</p>
+3. <strong>Use element labels</strong> — Reference the element's accessibility label if available
+4. <strong>Check if element exists</strong> — Take a screenshot manually (<code>mauto screenshot &lt;path&gt;</code>) to verify
+5. <strong>Use alternative references</strong> — Describe location: "Button below password field"</p>
 <h3 id="generator-misinterpreted-my-intent-how-do-i-fix-it">"Generator misinterpreted my intent" — How do I fix it?<a class="headerlink" href="#generator-misinterpreted-my-intent-how-do-i-fix-it" title="Permanent link">&para;</a></h3>
 <p><strong>Answer:</strong> You can edit the generated JSON directly:</p>
 <ol>
 <li><strong>Review generated scenario</strong> — Check <code>mobile-automator/scenarios/</code></li>
-<li><strong>Edit JSON manually</strong> — Fix element IDs, actions, assertions</li>
-<li><strong>Validate schema</strong> — Ensure it matches <a href="../reference/schema/">schema reference</a></li>
-<li><strong>Validate schema</strong> — Ensure it matches <a href="../reference/schema/">schema reference</a></li>
-<li><strong>Re-execute</strong> — Run <code>/mobile-automator:execute</code> with corrected scenario</li>
+<li><strong>Edit JSON manually</strong> — Fix targets, actions, assertions</li>
+<li><strong>Validate schema</strong> — Run <code>mauto validate &lt;file&gt;</code> (see the <a href="../reference/schema/">schema reference</a>)</li>
+<li><strong>Re-execute</strong> — Run the execute workflow with the corrected scenario</li>
 </ol>
 <p><strong>Common edits:</strong>
-- Change element IDs to correct ones
+- Adjust the target's visible text or role
 - Add/remove assertions
 - Adjust timeout values
 - Add wait steps before actions</p>
 <h3 id="can-i-generate-tests-for-multiple-platforms">Can I generate tests for multiple platforms?<a class="headerlink" href="#can-i-generate-tests-for-multiple-platforms" title="Permanent link">&para;</a></h3>
-<p><strong>Answer:</strong> Yes, but separately:
-1. <strong>Android test</strong> — Generate on Android device
-2. <strong>iOS test</strong> — Generate on iOS device
-3. <strong>Mark platform field</strong> — Set <code>"platform": "android"</code> or <code>"platform": "ios"</code></p>
-<p>For cross-platform apps, generate scenario on each platform to capture platform-specific behaviors.</p>
+<p><strong>Answer:</strong> Yes. If you set up in <strong>platform-agnostic</strong> mode (<code>mauto setup --mode agnostic</code>), a single scenario runs on both Android and iOS — OS gestures resolve to the four semantic actions at replay time.</p>
+<p>In <strong>platform-aware</strong> mode, generate a scenario on each platform separately and mark the <code>platform</code> field (<code>"android"</code> or <code>"ios"</code>) to capture platform-specific behaviors.</p>
 <h3 id="how-do-i-parameterize-tests-different-data">How do I parameterize tests (different data)?<a class="headerlink" href="#how-do-i-parameterize-tests-different-data" title="Permanent link">&para;</a></h3>
-<p><strong>Answer:</strong> Use the <code>variables</code> section in scenarios:
-<strong>Answer:</strong> Use the <code>variables</code> section in scenarios:</p>
+<p><strong>Answer:</strong> Use the <code>variables</code> section in scenarios:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;test_email&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -2617,18 +2613,21 @@ grep<span class="w"> </span><span class="s2">&quot;{{&quot;</span><span class="w
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
-<p>For running with different values, manually edit the JSON or use a test management integration.</p>
+<p>For running with different values, manually edit the JSON or wire the values in from your CI pipeline.</p>
 <hr />
 <h2 id="test-execution">Test Execution<a class="headerlink" href="#test-execution" title="Permanent link">&para;</a></h2>
 <h3 id="how-do-i-execute-a-test-scenario">How do I execute a test scenario?<a class="headerlink" href="#how-do-i-execute-a-test-scenario" title="Permanent link">&para;</a></h3>
-<p><strong>Answer:</strong>
-<div class="highlight"><pre><span></span><code>gemini<span class="w"> </span>/mobile-automator:execute
-</code></pre></div></p>
-<p>This prompts you to:
-1. <strong>Select a scenario</strong> — Choose from <code>mobile-automator/scenarios/</code>
-2. <strong>Select a device</strong> — Pick from connected devices
-3. <strong>Confirm app installation</strong> — Will build/install if needed
-4. <strong>Run the test</strong> — Executes all steps and assertions</p>
+<p><strong>Answer:</strong> From inside your agent, launch the execute workflow:</p>
+<ul>
+<li><strong>Claude Code:</strong> <code>/mobile-automator-execute</code></li>
+<li><strong>Cursor:</strong> ask in plain language (e.g. <em>"execute the login scenario"</em>)</li>
+<li><strong>Any other agent:</strong> <code>mauto mcp</code> (MCP prompts) or <code>mauto guide execute</code> + call verbs directly</li>
+</ul>
+<p>The agent then:
+1. <strong>Selects a scenario</strong> — from <code>mobile-automator/scenarios/</code>
+2. <strong>Confirms the device</strong> — uses the pinned/visible device (<code>mauto devices</code>)
+3. <strong>Confirms app installation</strong> — builds/installs if needed
+4. <strong>Runs the test</strong> — executes all steps and assertions</p>
 <p>Results saved to: <code>mobile-automator/results/&lt;run_id&gt;.json</code></p>
 <h3 id="step-failed-element-not-found-during-execution">"Step failed: Element not found" during execution<a class="headerlink" href="#step-failed-element-not-found-during-execution" title="Permanent link">&para;</a></h3>
 <p><strong>Cause:</strong> Element isn't on screen when the step tries to use it.</p>
@@ -2644,7 +2643,7 @@ grep<span class="w"> </span><span class="s2">&quot;{{&quot;</span><span class="w
 </code></pre></div></p>
 <ol>
 <li><strong>Verify app state</strong> — Ensure app is in expected state before executing</li>
-<li><strong>Check element name</strong> — Verify you're using correct element ID</li>
+<li><strong>Check the target</strong> — Verify you're using the element's visible text/role</li>
 <li><strong>Increase timeout</strong> — Slow devices may need longer waits</li>
 <li><strong>Add screenshot assertion</strong> — Debug what's actually on screen:
    <div class="highlight"><pre><span></span><code><span class="p">{</span>
@@ -2661,7 +2660,7 @@ grep<span class="w"> </span><span class="s2">&quot;{{&quot;</span><span class="w
 1. <strong>Check assertion syntax</strong> — Verify <code>expected_text</code>, <code>expected_exact</code>, <code>expected_substring</code>
 2. <strong>Verify actual app data</strong> — Manually check what value is displayed
 3. <strong>Handle dynamic content</strong> — If value changes, use <code>text_contains</code> instead of <code>text_matches</code>
-4. <strong>Add debug screenshot</strong> — Insert screenshot assertion to see actual state:
+4. <strong>Add debug screenshot</strong> — Insert a capture step to see actual state:
    <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;capture_state&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_value&quot;</span><span class="p">,</span>
@@ -2682,7 +2681,8 @@ grep<span class="w"> </span><span class="s2">&quot;{{&quot;</span><span class="w
 <ol>
 <li>
 <p><strong>Check device state</strong> — Is device frozen or unresponsive?
-   <div class="highlight"><pre><span></span><code>adb<span class="w"> </span>devices<span class="w">  </span><span class="c1"># Android</span>
+   <div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>devices<span class="w">      </span><span class="c1"># confirm the device is still visible</span>
+adb<span class="w"> </span>devices<span class="w">        </span><span class="c1"># Android</span>
 xcrun<span class="w"> </span>simctl<span class="w"> </span>list<span class="w">  </span><span class="c1"># iOS</span>
 </code></pre></div></p>
 </li>
@@ -2745,24 +2745,31 @@ xcrun<span class="w"> </span>simctl<span class="w"> </span>list<span class="w"> 
 <hr />
 <h2 id="integration">Integration<a class="headerlink" href="#integration" title="Permanent link">&para;</a></h2>
 <h3 id="how-do-i-integrate-with-cicd">How do I integrate with CI/CD?<a class="headerlink" href="#how-do-i-integrate-with-cicd" title="Permanent link">&para;</a></h3>
-<p><strong>Answer:</strong> Mobile Automator works in CI/CD pipelines:</p>
+<p><strong>Answer:</strong> mobile-automator works in CI/CD pipelines. The agent drives <code>mauto</code> verbs directly via <code>mauto bootstrap</code> + <code>mauto guide &lt;topic&gt;</code>, or you script the verbs yourself:</p>
 <div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
-<span class="c1"># Setup (first time only)</span>
-gemini<span class="w"> </span>/mobile-automator:setup
+<span class="c1"># Install mauto from source (first time only)</span>
+git<span class="w"> </span>clone<span class="w"> </span>https://github.com/sh3lan93/mobile-automator
+<span class="o">(</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>mobile-automator<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>npm<span class="w"> </span>install<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>npm<span class="w"> </span>link<span class="w"> </span><span class="o">)</span>
 
-<span class="c1"># Generate scenarios (from natural language)</span>
-gemini<span class="w"> </span>/mobile-automator:generate
+<span class="c1"># Wire into the project + scaffold the workspace (first time only)</span>
+mauto<span class="w"> </span>init<span class="w"> </span>--agent<span class="w"> </span>agents
+mauto<span class="w"> </span>setup
 
-<span class="c1"># Execute scenarios</span>
-gemini<span class="w"> </span>/mobile-automator:execute
+<span class="c1"># Confirm a device is visible</span>
+mauto<span class="w"> </span>devices
+
+<span class="c1"># Validate a scenario before running it</span>
+mauto<span class="w"> </span>validate<span class="w"> </span>mobile-automator/scenarios/login_flow.json
+
+<span class="c1"># (Your agent replays the scenario via mauto guide execute + verbs.)</span>
 
 <span class="c1"># Check results</span>
 cat<span class="w"> </span>mobile-automator/results/latest.json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.status&#39;</span>
 </code></pre></div>
-<p><strong>CI/CD Integration:</strong>
-- Install extension: <code>gemini extensions install &lt;url&gt;</code>
-- Connect device in CI environment
-- Run commands with proper error handling
+<p><strong>CI/CD tips:</strong>
+- Cache <code>node_modules</code> so <code>npm install</code> is fast on subsequent runs
+- Connect a device or boot an emulator/simulator in the CI environment
+- Run <code>mauto</code> verbs with <code>--human</code> off (the default JSON envelope is machine-readable)
 - Archive result files as CI artifacts</p>
 <h3 id="can-i-use-mobile-automator-with-github-actions">Can I use mobile-automator with GitHub Actions?<a class="headerlink" href="#can-i-use-mobile-automator-with-github-actions" title="Permanent link">&para;</a></h3>
 <p><strong>Answer:</strong> Yes! Example workflow:</p>
@@ -2778,17 +2785,22 @@ cat<span class="w"> </span>mobile-automator/results/latest.json<span class="w"> 
 <span class="w">        </span><span class="nt">with</span><span class="p">:</span>
 <span class="w">          </span><span class="nt">node-version</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;20&#39;</span>
 
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Install Gemini CLI</span>
-<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">npm install -g @google-cloud/gemini-cli</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Install mauto from source</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">git clone https://github.com/sh3lan93/mobile-automator /tmp/mobile-automator</span>
+<span class="w">          </span><span class="no">cd /tmp/mobile-automator</span>
+<span class="w">          </span><span class="no">npm install &amp;&amp; npm link</span>
 
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Install mobile-automator</span>
-<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gemini extensions install https://github.com/sh3lan93/mobile-automator</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Wire into project &amp; scaffold workspace</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">mauto init --agent agents</span>
+<span class="w">          </span><span class="no">mauto setup</span>
 
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Setup</span>
-<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gemini /mobile-automator:setup</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Check device is visible</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mauto devices</span>
 
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Generate &amp; Execute</span>
-<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gemini /mobile-automator:execute</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Validate scenarios</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mauto validate mobile-automator/scenarios/login_flow.json</span>
 
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Upload Results</span>
 <span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/upload-artifact@v3</span>
@@ -2801,13 +2813,9 @@ cat<span class="w"> </span>mobile-automator/results/latest.json<span class="w"> 
 <h3 id="how-do-i-make-tests-run-faster">How do I make tests run faster?<a class="headerlink" href="#how-do-i-make-tests-run-faster" title="Permanent link">&para;</a></h3>
 <p><strong>Answer:</strong> Test execution speed depends on app, network, and device:</p>
 <ol>
-<li>
-<p><strong>Reduce waits</strong> — Use shorter timeouts for fast-responding apps (e.g., <code>"timeout_seconds": 3</code> instead of 10)</p>
-</li>
-<li>
-<p><strong>Remove unnecessary assertions</strong> — Only assert critical checks</p>
-</li>
-<li><strong>Optimize element selection</strong> — Use unique, visible elements</li>
+<li><strong>Reduce waits</strong> — Use shorter timeouts for fast-responding apps (e.g., <code>"timeout_seconds": 3</code> instead of 10)</li>
+<li><strong>Remove unnecessary assertions</strong> — Only assert critical checks</li>
+<li><strong>Optimize element selection</strong> — Use unique, visible targets</li>
 <li><strong>Test on faster device</strong> — High-end device &gt; low-end device</li>
 <li><strong>Improve network</strong> — Fast connection &gt; slow connection</li>
 <li><strong>Parallelize if possible</strong> — Run multiple tests on different devices</li>
@@ -2837,45 +2845,34 @@ cat<span class="w"> </span>mobile-automator/results/latest.json<span class="w"> 
 <span class="p">}</span>
 </code></pre></div></p>
 <ol>
-<li><strong>Reduce screenshot resolution</strong> — Configure in executor skill</li>
+<li><strong>Reduce screenshot resolution</strong> — Configure in the workspace config</li>
 <li><strong>Use lightweight assertions</strong> — Text checks &gt; visual analysis</li>
 <li><strong>Close background apps</strong> — Limit system load</li>
 </ol>
 <hr />
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
-<h3 id="general-extension-not-found-or-command-not-available">General: "Extension not found" or command not available<a class="headerlink" href="#general-extension-not-found-or-command-not-available" title="Permanent link">&para;</a></h3>
-<p><strong>Cause:</strong> Extension not installed or linked.</p>
+<h3 id="mauto-command-not-found">"mauto: command not found"<a class="headerlink" href="#mauto-command-not-found" title="Permanent link">&para;</a></h3>
+<p><strong>Cause:</strong> <code>mauto</code> isn't on your PATH.</p>
 <p><strong>Solutions:</strong>
-<div class="highlight"><pre><span></span><code><span class="c1"># Install extension</span>
-gemini<span class="w"> </span>extensions<span class="w"> </span>install<span class="w"> </span>https://github.com/sh3lan93/mobile-automator
-
-<span class="c1"># Or link local development version</span>
+<div class="highlight"><pre><span></span><code><span class="c1"># Re-run the link from the cloned repo</span>
 <span class="nb">cd</span><span class="w"> </span>/path/to/mobile-automator
-gemini<span class="w"> </span>extensions<span class="w"> </span>link<span class="w"> </span>.
+npm<span class="w"> </span>install<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>npm<span class="w"> </span>link
 
-<span class="c1"># Verify installation</span>
-gemini<span class="w"> </span>extensions<span class="w"> </span>list
+<span class="c1"># Verify</span>
+which<span class="w"> </span>mauto
+mauto<span class="w"> </span>--help
 </code></pre></div></p>
 <h3 id="device-related-issues">Device-Related Issues<a class="headerlink" href="#device-related-issues" title="Permanent link">&para;</a></h3>
-<p><strong>Android device not detected:</strong>
-<div class="highlight"><pre><span></span><code><span class="c1"># Check ADB connection</span>
+<p><strong>No device shown by <code>mauto devices</code>:</strong>
+<div class="highlight"><pre><span></span><code><span class="c1"># Android: check ADB connection</span>
 adb<span class="w"> </span>devices
-
-<span class="c1"># Authorize device if needed</span>
-adb<span class="w"> </span>devices<span class="w">  </span><span class="c1"># Then tap &quot;Allow&quot; on device</span>
-
-<span class="c1"># Kill and restart ADB</span>
 adb<span class="w"> </span>kill-server<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>adb<span class="w"> </span>start-server
-</code></pre></div></p>
-<p><strong>iOS device not detected:</strong>
-<div class="highlight"><pre><span></span><code><span class="c1"># Check Xcode setup</span>
-xcode-select<span class="w"> </span>--install
 
-<span class="c1"># List iOS devices/simulators</span>
+<span class="c1"># iOS: list simulators/devices</span>
 xcrun<span class="w"> </span>simctl<span class="w"> </span>list<span class="w"> </span>devices
-
-<span class="c1"># Ensure pairing if using real device</span>
-xcode-select<span class="w"> </span>-p
+</code></pre></div></p>
+<p>Pin a specific device once it appears:
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>devices<span class="w"> </span>use<span class="w"> </span>&lt;id&gt;<span class="w">     </span><span class="c1"># mauto devices clear to unpin</span>
 </code></pre></div></p>
 <h3 id="app-installation-failures">App Installation Failures<a class="headerlink" href="#app-installation-failures" title="Permanent link">&para;</a></h3>
 <p><strong>"App not installed" error:</strong>
@@ -2884,17 +2881,20 @@ xcode-select<span class="w"> </span>-p
 3. <strong>Check ADB permissions</strong> — For Android, authorize device
 4. <strong>Check app signing</strong> — For iOS, verify signing certificate
 5. <strong>Clear previous install</strong> — Uninstall old version first</p>
-<h3 id="mcp-server-issues">MCP Server Issues<a class="headerlink" href="#mcp-server-issues" title="Permanent link">&para;</a></h3>
-<p><strong>"mobile-mcp not loading":</strong>
-<div class="highlight"><pre><span></span><code><span class="c1"># Test MCP server directly</span>
-npx<span class="w"> </span>-y<span class="w"> </span>@mobilenext/mobile-mcp@latest<span class="w"> </span>--version
+<h3 id="mcp-automation-engine-issues">MCP / Automation Engine Issues<a class="headerlink" href="#mcp-automation-engine-issues" title="Permanent link">&para;</a></h3>
+<p><strong>"mobile-mcp not loading":</strong></p>
+<p>mobile-mcp is pinned as a dependency of <code>mauto</code> and resolved from <code>node_modules</code> at runtime — it is never fetched on the fly.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Reinstall dependencies from the cloned repo</span>
+<span class="nb">cd</span><span class="w"> </span>/path/to/mobile-automator
+npm<span class="w"> </span>install
 
-<span class="c1"># Check network connectivity</span>
-curl<span class="w"> </span>https://registry.npmjs.org/@mobilenext/mobile-mcp
+<span class="c1"># Confirm the pinned engine is present</span>
+ls<span class="w"> </span>node_modules/@mobilenext/mobile-mcp
 
-<span class="c1"># Update MCP version in gemini-extension.json</span>
-<span class="s2">&quot;args&quot;</span>:<span class="w"> </span><span class="o">[</span><span class="s2">&quot;-y&quot;</span>,<span class="w"> </span><span class="s2">&quot;@mobilenext/mobile-mcp@latest&quot;</span><span class="o">]</span>
-</code></pre></div></p>
+<span class="c1"># Re-verify the device path end-to-end</span>
+mauto<span class="w"> </span>devices
+</code></pre></div>
+<p>If you need a newer engine, bump the <code>@mobilenext/mobile-mcp</code> pin in the repo's <code>package.json</code> and re-run <code>npm install</code>.</p>
 <h3 id="connection-network-issues">Connection &amp; Network Issues<a class="headerlink" href="#connection-network-issues" title="Permanent link">&para;</a></h3>
 <p><strong>"Connection timeout" or "Network error":</strong>
 1. <strong>Check device connectivity</strong> — Enable WiFi/USB debugging
@@ -2911,14 +2911,11 @@ curl<span class="w"> </span>https://registry.npmjs.org/@mobilenext/mobile-mcp
 5. <strong>Use smaller scenarios</strong> — Fewer steps per test</p>
 <h3 id="file-path-issues">File &amp; Path Issues<a class="headerlink" href="#file-path-issues" title="Permanent link">&para;</a></h3>
 <p><strong>"File not found" errors:</strong>
-<div class="highlight"><pre><span></span><code><span class="c1"># Check required directories exist</span>
-mkdir<span class="w"> </span>-p<span class="w"> </span>mobile-automator/<span class="o">{</span>scenarios,results,screenshots<span class="o">}</span>
+<div class="highlight"><pre><span></span><code><span class="c1"># Re-scaffold the workspace if directories are missing</span>
+mauto<span class="w"> </span>setup
 
-<span class="c1"># Check permissions</span>
+<span class="c1"># Check the workspace exists</span>
 ls<span class="w"> </span>-la<span class="w"> </span>mobile-automator/
-
-<span class="c1"># Check git repo initialized (optional)</span>
-git<span class="w"> </span>init
 </code></pre></div></p>
 <p><strong>"Permission denied":</strong>
 <div class="highlight"><pre><span></span><code><span class="c1"># Fix directory permissions</span>
@@ -2960,31 +2957,35 @@ chmod<span class="w"> </span><span class="m">644</span><span class="w"> </span>m
 </tr>
 <tr>
 <td><strong>Element</strong></td>
-<td>A UI component (button, text field, list, etc.)</td>
+<td>A UI component (button, text field, list, etc.) targeted by visible text + role + coordinates</td>
+</tr>
+<tr>
+<td><strong>Verb</strong></td>
+<td>A <code>mauto</code> command (<code>tap</code>, <code>type</code>, <code>swipe</code>, <code>assert</code>, …) that performs a deterministic action and emits the <code>{ok,data,error,hint,schema_version}</code> envelope</td>
 </tr>
 <tr>
 <td><strong>MCP</strong></td>
-<td>Model Context Protocol — standard for tool integration</td>
+<td>Model Context Protocol — standard for tool integration; <code>mauto mcp</code> exposes the workflows as prompts</td>
 </tr>
 <tr>
-<td><strong>Executor</strong></td>
-<td>The skill that runs test scenarios and collects results</td>
+<td><strong>Agent Skill</strong></td>
+<td>A native skill <code>mauto init</code> installs into a host's skills directory so the agent knows the generate/execute/setup workflows</td>
 </tr>
 <tr>
-<td><strong>Generator</strong></td>
-<td>The skill that creates test scenarios from natural language</td>
+<td><strong>Mode</strong></td>
+<td><code>platform-aware</code> (default) or <code>platform-agnostic</code>, chosen at <code>mauto setup</code> and stored in <code>mobile-automator/config.json</code></td>
 </tr>
 <tr>
-<td><strong>Skill</strong></td>
-<td>A Gemini CLI module with domain-specific logic</td>
+<td><strong>Semantic action</strong></td>
+<td>One of <code>press_back</code>, <code>dismiss_keyboard</code>, <code>grant_permission</code>, <code>deny_permission</code> — resolved to a native primitive at replay time (agnostic mode)</td>
 </tr>
 <tr>
 <td><strong>Placeholder</strong></td>
-<td>Template variable replaced during setup (e.g., <code>{{app_package}}</code>)</td>
+<td>Template variable replaced when guide content is emitted (e.g., <code>{{app_package}}</code>)</td>
 </tr>
 <tr>
 <td><strong>Precondition</strong></td>
-<td>Setup actions required before test runs</td>
+<td>Setup actions required before a test runs</td>
 </tr>
 <tr>
 <td><strong>Variable</strong></td>

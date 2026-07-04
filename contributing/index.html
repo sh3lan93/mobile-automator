@@ -1258,10 +1258,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#link-extension-locally" class="md-nav__link">
+  <a href="#install-link-the-cli-locally" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Link Extension Locally
+        Install &amp; Link the CLI Locally
       
     </span>
   </a>
@@ -1320,10 +1320,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-skill-template-changes" class="md-nav__link">
+  <a href="#1-guide-content-changes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Skill Template Changes
+        1. Guide Content Changes
       
     </span>
   </a>
@@ -1342,10 +1342,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-command-workflow-changes" class="md-nav__link">
+  <a href="#3-verb-workflow-changes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Command Workflow Changes
+        3. Verb / Workflow Changes
       
     </span>
   </a>
@@ -1384,6 +1384,17 @@
   
     <nav class="md-nav" aria-label="Testing">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#automated-tests-lint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automated Tests &amp; Lint
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#manual-testing" class="md-nav__link">
@@ -1486,10 +1497,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#skill-templates-markdown" class="md-nav__link">
+  <a href="#guide-content-srcguidecontentmd" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Skill Templates (Markdown)
+        Guide Content (src/guide/content/**/*.md)
       
     </span>
   </a>
@@ -1508,10 +1519,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#commands-toml" class="md-nav__link">
+  <a href="#verb-handlers-src" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Commands (TOML)
+        Verb Handlers (src/)
       
     </span>
   </a>
@@ -1893,10 +1904,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#link-extension-locally" class="md-nav__link">
+  <a href="#install-link-the-cli-locally" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Link Extension Locally
+        Install &amp; Link the CLI Locally
       
     </span>
   </a>
@@ -1955,10 +1966,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-skill-template-changes" class="md-nav__link">
+  <a href="#1-guide-content-changes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Skill Template Changes
+        1. Guide Content Changes
       
     </span>
   </a>
@@ -1977,10 +1988,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-command-workflow-changes" class="md-nav__link">
+  <a href="#3-verb-workflow-changes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Command Workflow Changes
+        3. Verb / Workflow Changes
       
     </span>
   </a>
@@ -2019,6 +2030,17 @@
   
     <nav class="md-nav" aria-label="Testing">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#automated-tests-lint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automated Tests &amp; Lint
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#manual-testing" class="md-nav__link">
@@ -2121,10 +2143,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#skill-templates-markdown" class="md-nav__link">
+  <a href="#guide-content-srcguidecontentmd" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Skill Templates (Markdown)
+        Guide Content (src/guide/content/**/*.md)
       
     </span>
   </a>
@@ -2143,10 +2165,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#commands-toml" class="md-nav__link">
+  <a href="#verb-handlers-src" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Commands (TOML)
+        Verb Handlers (src/)
       
     </span>
   </a>
@@ -2424,6 +2446,7 @@
 
 <h1 id="contributing">Contributing<a class="headerlink" href="#contributing" title="Permanent link">&para;</a></h1>
 <p>We welcome contributions to mobile-automator! This guide explains how to get started developing, submitting changes, and helping improve the project.</p>
+<p>mobile-automator is a host-agnostic <strong><code>mauto</code> CLI</strong>: any AI agent drives a device through <code>mauto</code> verbs (which wrap the mobile-mcp engine), and pulls its reasoning on demand via <code>mauto guide</code>. Contributions touch the verb handlers in <code>src/</code>, the workflow prose in <code>src/guide/content/**/*.md</code>, and the schemas in <code>src/schemas/</code>.</p>
 <h2 id="table-of-contents">Table of Contents<a class="headerlink" href="#table-of-contents" title="Permanent link">&para;</a></h2>
 <ol>
 <li><a href="#getting-started">Getting Started</a></li>
@@ -2440,8 +2463,9 @@
 <h3 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h3>
 <p>Before contributing, ensure you have:</p>
 <ul>
-<li><strong>Node.js 20+</strong> — Required for Gemini CLI and MCP server</li>
+<li><strong>Node.js ≥ 18</strong> — <code>mauto</code> is a Node CLI</li>
 <li><strong>Git</strong> — For version control</li>
+<li><strong>An AI coding agent</strong> — Claude Code, Cursor, Gemini CLI, GitHub Copilot, or any MCP-capable agent</li>
 <li><strong>Mobile tools</strong>:</li>
 <li><strong>Android:</strong> Android SDK, ADB, Android emulator or device</li>
 <li><strong>iOS:</strong> Xcode command-line tools, iOS simulator or device</li>
@@ -2459,112 +2483,114 @@ git<span class="w"> </span>remote<span class="w"> </span>add<span class="w"> </s
 </code></pre></div>
 <hr />
 <h2 id="development-setup">Development Setup<a class="headerlink" href="#development-setup" title="Permanent link">&para;</a></h2>
-<h3 id="link-extension-locally">Link Extension Locally<a class="headerlink" href="#link-extension-locally" title="Permanent link">&para;</a></h3>
-<p>To test changes while developing:</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># From mobile-automator directory</span>
-gemini<span class="w"> </span>extensions<span class="w"> </span>link<span class="w"> </span>.
+<h3 id="install-link-the-cli-locally">Install &amp; Link the CLI Locally<a class="headerlink" href="#install-link-the-cli-locally" title="Permanent link">&para;</a></h3>
+<p>To test changes while developing, install dependencies and expose <code>mauto</code> on your PATH:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># From the mobile-automator repo</span>
+npm<span class="w"> </span>install<span class="w">   </span><span class="c1"># installs the pinned mobile-mcp engine</span>
+npm<span class="w"> </span>link<span class="w">      </span><span class="c1"># exposes `mauto` / `mobile-automator` globally</span>
 
 <span class="c1"># In a test mobile project</span>
 <span class="nb">cd</span><span class="w"> </span>/path/to/test-mobile-app
-gemini<span class="w"> </span>/mobile-automator:setup<span class="w">  </span><span class="c1"># Test the extension</span>
+mauto<span class="w"> </span>init<span class="w"> </span>--agent<span class="w"> </span>claude<span class="w">   </span><span class="c1"># wire your agent (or: cursor | gemini | copilot | agents | all)</span>
+mauto<span class="w"> </span>setup<span class="w">                 </span><span class="c1"># scaffold the mobile-automator/ workspace</span>
+mauto<span class="w"> </span>devices<span class="w">               </span><span class="c1"># confirm a device/emulator is visible</span>
 </code></pre></div>
+<p>When you are done, run <code>npm unlink -g mobile-automator</code> to remove the global link.</p>
 <h3 id="directory-structure">Directory Structure<a class="headerlink" href="#directory-structure" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code>mobile-automator/
-├── commands/                  # Gemini CLI command definitions
-│   └── mobile-automator/
-│       ├── setup.toml        # Setup workflow
-│       ├── generate.toml      # Generate wrapper command
-│       ├── execute.toml       # Execute wrapper command
-│       └── migrate.toml       # Migration tool
-├── templates/                 # Skill templates
-│   ├── mobile-automator-generator/
-│   │   ├── SKILL.md          # Generator skill with {{placeholders}}
-│   │   └── references/        # Schema files
-│   └── mobile-automator-executor/
-│       ├── SKILL.md          # Executor skill with {{placeholders}}
-│       └── references/        # Schema files
-├── gemini-extension.json      # Extension manifest
-├── GEMINI.md                  # AI context for Gemini
-├── CLAUDE.md                  # Developer documentation
-├── README.md                  # User-facing docs
-└── docs/                      # Website content
+├── bin/
+│   ├── mauto.js                 # entry point for `mauto` / `mobile-automator`
+│   └── mauto-session-daemon.js  # entry point for the device session daemon
+├── src/
+│   ├── cli.js                   # verb registration + handlers
+│   ├── guide/content/           # workflow prose pulled by `mauto guide &lt;topic&gt;`
+│   │   ├── &lt;topic&gt;.aware.md      #   platform-aware variant
+│   │   ├── &lt;topic&gt;.agnostic.md   #   platform-agnostic variant
+│   │   └── &lt;topic&gt;.invariants.md #   placeholder-free, OS-free skill core
+│   ├── schemas/                 # scenario_schema.json (v2.1), result_schema.json
+│   ├── device/                  # mobile-mcp wrapper (one persistent session daemon)
+│   └── init/ setup/ config/ …   # host adapters, workspace scaffold, config
+├── CLAUDE.md                    # developer guide (architecture, workflows)
+├── README.md                    # user-facing docs
+└── docs/                        # website content
 </code></pre></div>
 <h3 id="understanding-the-flow">Understanding the Flow<a class="headerlink" href="#understanding-the-flow" title="Permanent link">&para;</a></h3>
+<p>The contract is: <strong>agent (the brain) → <code>mauto</code> verbs → mobile-mcp engine → device</strong>. The agent drives the device <em>only</em> through <code>mauto</code> verbs; mobile-mcp is the internal engine those verbs wrap.</p>
 <ol>
-<li><strong>Extension commands</strong> (<code>commands/mobile-automator/*.toml</code>)</li>
-<li>User-facing commands: <code>/mobile-automator:setup</code>, <code>/mobile-automator:generate</code>, etc.</li>
-<li>Handle pre-flight checks and validation</li>
+<li><strong>Verb handlers</strong> (<code>src/cli.js</code> + <code>src/</code>)</li>
+<li>Every verb (<code>elements</code>, <code>tap</code>, <code>type</code>, <code>swipe</code>, <code>press</code>, <code>screenshot</code>, …) emits the uniform JSON envelope <code>{ok,data,error,hint,schema_version}</code>.</li>
 <li>
-<p>Delegate to skills for actual work</p>
+<p><code>src/device/</code> wraps the mobile-mcp engine via one persistent session daemon.</p>
 </li>
 <li>
-<p><strong>Skill templates</strong> (<code>templates/mobile-automator-*/SKILL.md</code>)</p>
+<p><strong>Guide content</strong> (<code>src/guide/content/&lt;topic&gt;.&lt;aware|agnostic&gt;.md</code>)</p>
 </li>
-<li>Contain test generation/execution logic</li>
-<li>Use <code>{{placeholders}}</code> for project-specific values</li>
+<li>Contains the test generation/execution reasoning, pulled on demand via <code>mauto guide &lt;topic&gt;</code>.</li>
 <li>
-<p>Populated during setup Section 6.0</p>
+<p>Uses <code>{{placeholders}}</code> for project-specific values, filled by <code>src/guide/placeholders.js</code> at emit time.</p>
 </li>
 <li>
-<p><strong>Schemas</strong> (<code>templates/*/references/*.json</code>)</p>
+<p><strong>Schemas</strong> (<code>src/schemas/*.json</code>)</p>
 </li>
-<li>Define test scenario format</li>
-<li>Define test result format</li>
-<li>Referenced by skills for validation</li>
+<li>Define the test scenario format (scenario schema 2.1) and the test result format.</li>
+<li>Enforced by <code>mauto validate &lt;file&gt;</code>.</li>
 </ol>
 <hr />
 <h2 id="making-changes">Making Changes<a class="headerlink" href="#making-changes" title="Permanent link">&para;</a></h2>
 <h3 id="feature-types">Feature Types<a class="headerlink" href="#feature-types" title="Permanent link">&para;</a></h3>
-<h4 id="1-skill-template-changes">1. Skill Template Changes<a class="headerlink" href="#1-skill-template-changes" title="Permanent link">&para;</a></h4>
-<p>Modifying generator or executor skills:</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># Edit template</span>
-vim<span class="w"> </span>templates/mobile-automator-generator/SKILL.md
+<h4 id="1-guide-content-changes">1. Guide Content Changes<a class="headerlink" href="#1-guide-content-changes" title="Permanent link">&para;</a></h4>
+<p>Modifying the generate/execute/setup workflow prose:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Edit the workflow prose (both mode variants)</span>
+vim<span class="w"> </span>src/guide/content/generate.aware.md
+vim<span class="w"> </span>src/guide/content/generate.agnostic.md
+
+<span class="c1"># Inspect the emitted guide</span>
+mauto<span class="w"> </span>guide<span class="w"> </span>generate
 
 <span class="c1"># Test in a mobile project</span>
 <span class="nb">cd</span><span class="w"> </span>/path/to/test-mobile-app
-gemini<span class="w"> </span>/mobile-automator:setup<span class="w">      </span><span class="c1"># Re-populate skill</span>
-gemini<span class="w"> </span>/mobile-automator:generate<span class="w">   </span><span class="c1"># Test generation</span>
-gemini<span class="w"> </span>/mobile-automator:execute<span class="w">    </span><span class="c1"># Test execution</span>
+mauto<span class="w"> </span>guide<span class="w"> </span>generate<span class="w">   </span><span class="c1"># exercise the generate workflow</span>
+mauto<span class="w"> </span>guide<span class="w"> </span>execute<span class="w">    </span><span class="c1"># exercise the execute workflow</span>
 </code></pre></div>
 <p><strong>Guidelines:</strong>
 - Keep prompts clear and concise
-- Use section markers for organization
+- Every guide topic has two mode variants — <code>&lt;topic&gt;.aware.md</code> and <code>&lt;topic&gt;.agnostic.md</code>
 - Reference <code>{{placeholders}}</code> for project context
-- Add comments for complex logic
+- <strong>Never name raw <code>mobile_*</code> tools</strong> — the agent drives the device only through <code>mauto</code> verbs (this is a lint failure)
+- <strong>Agnostic variants name no OS</strong> — map gestures to the four semantic actions instead
 - Test with multiple project types (Android, iOS, Flutter, etc.)</p>
 <h4 id="2-schema-changes">2. Schema Changes<a class="headerlink" href="#2-schema-changes" title="Permanent link">&para;</a></h4>
 <p>Modifying test scenario or result format:</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># Edit schema</span>
-vim<span class="w"> </span>templates/mobile-automator-generator/references/scenario_schema.json
+vim<span class="w"> </span>src/schemas/scenario_schema.json
 
-<span class="c1"># Validate schema syntax</span>
-npm<span class="w"> </span>run<span class="w"> </span>validate-schemas<span class="w">  </span><span class="c1"># If you add this script</span>
+<span class="c1"># Validate a scenario against it</span>
+mauto<span class="w"> </span>validate<span class="w"> </span>path/to/scenario.json
 
-<span class="c1"># Update executor to support new fields</span>
-vim<span class="w"> </span>templates/mobile-automator-executor/SKILL.md
+<span class="c1"># Update the execute guide to support new fields</span>
+vim<span class="w"> </span>src/guide/content/execute.aware.md
 </code></pre></div>
 <p><strong>Guidelines:</strong>
-- Use JSON Schema format (draft-07)
-- Maintain backward compatibility where possible
+- Use JSON Schema format
+- Maintain backward compatibility where possible (schema 2.1 is additive over 2.0)
 - Add <code>description</code> for each new field
-- Provide example in comments
-- Update GEMINI.md schema registry
+- Update <code>mauto schema scenario</code> / <code>mauto schema result</code> output expectations
 - Update reference documentation</p>
-<h4 id="3-command-workflow-changes">3. Command Workflow Changes<a class="headerlink" href="#3-command-workflow-changes" title="Permanent link">&para;</a></h4>
-<p>Modifying setup or command behavior:</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># Edit command</span>
-vim<span class="w"> </span>commands/mobile-automator/setup.toml
+<h4 id="3-verb-workflow-changes">3. Verb / Workflow Changes<a class="headerlink" href="#3-verb-workflow-changes" title="Permanent link">&para;</a></h4>
+<p>Modifying a verb handler or setup behavior:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Edit the verb registration + handlers</span>
+vim<span class="w"> </span>src/cli.js
 
 <span class="c1"># For complex changes, test multiple scenarios</span>
 <span class="c1"># - Different platforms (Android, iOS, Flutter, etc.)</span>
 <span class="c1"># - Different project structures</span>
-<span class="c1"># - Different environments (staging, prod, custom)</span>
+<span class="c1"># - Different modes (platform-aware, platform-agnostic)</span>
 </code></pre></div>
 <p><strong>Guidelines:</strong>
-- Changes must not break existing projects
-- Maintain resume capability (save state between sections)
-- Test resume from each section
-- Add new state to <code>mobile-automator/setup_state.json</code></p>
+- Changes must not break existing projects (preserve the <code>mobile-automator/</code> workspace layout)
+- Every verb must emit the <code>{ok,data,error,hint,schema_version}</code> envelope
+- Workspace state lives in <code>mobile-automator/config.json</code>
+- Never use <code>resource-id</code> / OS-specific element IDs</p>
 <h4 id="4-documentation-changes">4. Documentation Changes<a class="headerlink" href="#4-documentation-changes" title="Permanent link">&para;</a></h4>
 <p>Updating guides, examples, or reference:</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># Edit markdown</span>
@@ -2583,23 +2609,33 @@ mkdocs<span class="w"> </span>serve
 - Add to changelog</p>
 <hr />
 <h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
+<h3 id="automated-tests-lint">Automated Tests &amp; Lint<a class="headerlink" href="#automated-tests-lint" title="Permanent link">&para;</a></h3>
+<p>The fastest signal is the test suite plus the guide lint guards:</p>
+<div class="highlight"><pre><span></span><code>npm<span class="w"> </span><span class="nb">test</span><span class="w">              </span><span class="c1"># run the full test suite</span>
+npm<span class="w"> </span>run<span class="w"> </span>lint:guides<span class="w">   </span><span class="c1"># guide-content lint guards</span>
+</code></pre></div>
+<p>The lint guards enforce that guide content under <code>src/guide/content/**/*.md</code>:</p>
+<ul>
+<li>has no surviving <code>{{placeholders}}</code>,</li>
+<li>leaks no <code>mobile_*</code> engine tool names, and</li>
+<li>(agnostic variants) names no OS.</li>
+</ul>
 <h3 id="manual-testing">Manual Testing<a class="headerlink" href="#manual-testing" title="Permanent link">&para;</a></h3>
-<p><strong>Test a new skill template:</strong></p>
+<p><strong>Test a guide-content change end to end:</strong></p>
 <div class="highlight"><pre><span></span><code><span class="c1"># 1. In test mobile project</span>
 <span class="nb">cd</span><span class="w"> </span>/path/to/test-mobile-app
 
 <span class="c1"># 2. Run setup</span>
-gemini<span class="w"> </span>/mobile-automator:setup
+mauto<span class="w"> </span>setup
 
-<span class="c1"># 3. Verify skill populated correctly</span>
-cat<span class="w"> </span>.gemini/skills/mobile-automator-generator/SKILL.md<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;{{&quot;</span>
-<span class="c1"># ^ Should return nothing (no placeholders remaining)</span>
+<span class="c1"># 3. Confirm a device is visible</span>
+mauto<span class="w"> </span>devices
 
-<span class="c1"># 4. Generate a test</span>
-gemini<span class="w"> </span>/mobile-automator:generate
+<span class="c1"># 4. Exercise the generate workflow</span>
+mauto<span class="w"> </span>guide<span class="w"> </span>generate
 
-<span class="c1"># 5. Execute the test</span>
-gemini<span class="w"> </span>/mobile-automator:execute
+<span class="c1"># 5. Exercise the execute workflow</span>
+mauto<span class="w"> </span>guide<span class="w"> </span>execute
 
 <span class="c1"># 6. Check results</span>
 cat<span class="w"> </span>mobile-automator/results/run_*.json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.&#39;</span>
@@ -2608,28 +2644,28 @@ cat<span class="w"> </span>mobile-automator/results/run_*.json<span class="w"> <
 <div class="highlight"><pre><span></span><code><span class="c1"># Test on Android</span>
 adb<span class="w"> </span>devices
 <span class="nb">cd</span><span class="w"> </span>/path/to/android-app
-gemini<span class="w"> </span>/mobile-automator:setup
-gemini<span class="w"> </span>/mobile-automator:generate
+mauto<span class="w"> </span>setup
+mauto<span class="w"> </span>guide<span class="w"> </span>generate
 
 <span class="c1"># Test on iOS</span>
 xcrun<span class="w"> </span>simctl<span class="w"> </span>list
 <span class="nb">cd</span><span class="w"> </span>/path/to/ios-app
-gemini<span class="w"> </span>/mobile-automator:setup
-gemini<span class="w"> </span>/mobile-automator:generate
+mauto<span class="w"> </span>setup
+mauto<span class="w"> </span>guide<span class="w"> </span>generate
 
 <span class="c1"># Test on Flutter</span>
 <span class="nb">cd</span><span class="w"> </span>/path/to/flutter-app
-gemini<span class="w"> </span>/mobile-automator:setup
-gemini<span class="w"> </span>/mobile-automator:generate
+mauto<span class="w"> </span>setup
+mauto<span class="w"> </span>guide<span class="w"> </span>generate
 </code></pre></div>
 <h3 id="regression-testing">Regression Testing<a class="headerlink" href="#regression-testing" title="Permanent link">&para;</a></h3>
 <p>After making changes:</p>
 <ol>
-<li><strong>Test full setup workflow</strong> — Run setup to completion</li>
+<li><strong>Run the suite</strong> — <code>npm test</code> and <code>npm run lint:guides</code> pass</li>
+<li><strong>Test full setup workflow</strong> — Run <code>mauto setup</code> to completion</li>
 <li><strong>Test scenario generation</strong> — Generate at least 3 scenarios</li>
 <li><strong>Test execution</strong> — Execute generated scenarios</li>
-<li><strong>Test result collection</strong> — Verify results are valid JSON</li>
-<li><strong>Test resume capability</strong> — Stop setup mid-way, resume it</li>
+<li><strong>Test result collection</strong> — Verify results are valid JSON and <code>mauto validate</code> accepts the scenarios</li>
 <li><strong>Test with different projects</strong> — Android, iOS, Flutter, React Native</li>
 </ol>
 <hr />
@@ -2672,7 +2708,7 @@ gh<span class="w"> </span>pr<span class="w"> </span>create<span class="w"> </spa
 <p>Include:
 - <strong>What changes?</strong> — Brief description
 - <strong>Why?</strong> — Problem being solved
-- <strong>How tested?</strong> — Testing performed
+- <strong>How tested?</strong> — Testing performed (<code>npm test</code>, <code>npm run lint:guides</code>, manual runs)
 - <strong>Links</strong> — Related issues or discussions</p>
 <p>Example:
 <div class="highlight"><pre><span></span><code><span class="gu">## Description</span>
@@ -2688,6 +2724,7 @@ verify completion. Tests had to use fixed wait times.
 <span class="k">-</span><span class="w"> </span>Include in precondition evaluation
 
 <span class="gu">## Testing</span>
+<span class="k">-</span><span class="w"> </span><span class="sb">`npm test`</span> and <span class="sb">`npm run lint:guides`</span> pass
 <span class="k">-</span><span class="w"> </span>Tested on Android with custom Shimmer
 <span class="k">-</span><span class="w"> </span>Tested on iOS with custom SkeletonView
 <span class="k">-</span><span class="w"> </span>Tested with project having no custom indicators
@@ -2697,45 +2734,20 @@ Closes <span class="ni">#123</span>
 </code></pre></div></p>
 <hr />
 <h2 id="code-standards">Code Standards<a class="headerlink" href="#code-standards" title="Permanent link">&para;</a></h2>
-<h3 id="skill-templates-markdown">Skill Templates (Markdown)<a class="headerlink" href="#skill-templates-markdown" title="Permanent link">&para;</a></h3>
+<h3 id="guide-content-srcguidecontentmd">Guide Content (<code>src/guide/content/**/*.md</code>)<a class="headerlink" href="#guide-content-srcguidecontentmd" title="Permanent link">&para;</a></h3>
 <p><strong>Structure:</strong>
-<div class="highlight"><pre><span></span><code>---
-name: skill-name
-<span class="gu">description: What this skill does</span>
-<span class="gu">---</span>
+<div class="highlight"><pre><span></span><code><span class="gu">## Resolve the target</span>
 
-<span class="gh"># Skill Title</span>
-
-[Introduction section]
-
-<span class="gu">## Key Responsibilities</span>
-
-<span class="k">-</span><span class="w"> </span>Responsibility 1
-<span class="k">-</span><span class="w"> </span>Responsibility 2
-
-<span class="gu">## Implementation Details</span>
-
-[Detailed explanation with code examples]
-
-<span class="gu">### Using {{Placeholders}}</span>
-
-Explain what each placeholder means:
-<span class="k">-</span><span class="w"> </span><span class="sb">`{{app_package}}`</span> — Android package or iOS bundle ID
-<span class="k">-</span><span class="w"> </span><span class="sb">`{{architecture}}`</span> — Detected architecture pattern
-
-<span class="gu">## Assertions</span>
-
-List supported assertion types with examples
-
-<span class="gu">## Variables</span>
-
-Explain how to use captured variables
+<span class="k">1.</span> Call <span class="sb">`mauto elements`</span> to list on-screen targets.
+<span class="k">2.</span> Pick the element by visible text + role — never a resource-id.
+<span class="k">3.</span> Tap it with <span class="sb">`mauto tap --at &lt;x,y&gt;`</span>.
 </code></pre></div></p>
 <p><strong>Style:</strong>
-- Use clear section headings (## or ###)
+- Use clear section headings (<code>##</code> or <code>###</code>)
 - Include code examples in JSON blocks
-- Reference placeholders in text
-- Comment complex logic
+- Reference <code>{{placeholders}}</code> in text; they are filled at emit time
+- Never name raw <code>mobile_*</code> tools — drive the device through <code>mauto</code> verbs
+- Agnostic variants name no OS — use the four semantic actions
 - Keep lines readable (80-100 chars)</p>
 <h3 id="schemas-json">Schemas (JSON)<a class="headerlink" href="#schemas-json" title="Permanent link">&para;</a></h3>
 <p><strong>Structure:</strong>
@@ -2747,7 +2759,7 @@ Explain how to use captured variables
 <span class="w">  </span><span class="nt">&quot;properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;$schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;enum&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;2.0&quot;</span><span class="p">],</span>
+<span class="w">      </span><span class="nt">&quot;enum&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;2.1&quot;</span><span class="p">],</span>
 <span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Schema version identifier&quot;</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="nt">&quot;new_field&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -2764,37 +2776,19 @@ Explain how to use captured variables
 - Use <code>required</code> array for mandatory fields
 - Reference other schemas with <code>$ref</code>
 - Document version changes</p>
-<h3 id="commands-toml">Commands (TOML)<a class="headerlink" href="#commands-toml" title="Permanent link">&para;</a></h3>
-<p><strong>Structure:</strong>
-<div class="highlight"><pre><span></span><code><span class="c1"># Command description and purpose</span>
-<span class="c1"># Workflow: Step 1 → Step 2 → Step 3</span>
-
-<span class="k">[[steps]]</span>
-<span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;step_1&quot;</span>
-<span class="n">prompt</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;What should we verify?&quot;</span>
-
-<span class="c1"># Explanation of this step</span>
-<span class="c1"># Include context from previous steps</span>
-
-<span class="k">[[steps]]</span>
-<span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;step_2&quot;</span>
-<span class="n">task</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;&quot;&quot;</span>
-<span class="s2">${workspacePath}/path/to/skill</span>
-<span class="s2">...skill configuration...</span>
-<span class="s2">&quot;&quot;&quot;</span>
-</code></pre></div></p>
+<h3 id="verb-handlers-src">Verb Handlers (<code>src/</code>)<a class="headerlink" href="#verb-handlers-src" title="Permanent link">&para;</a></h3>
 <p><strong>Style:</strong>
-- Add comments explaining workflow
-- Use descriptive step IDs
-- Include task descriptions
-- Reference workspace paths correctly
-- Handle state between steps</p>
+- Register every verb in <code>src/cli.js</code>
+- Emit the uniform <code>{ok,data,error,hint,schema_version}</code> envelope (a <code>--human</code> flag is opt-in)
+- One-shot verbs only — no interactive co-routine
+- Drive the device only through the <code>src/device/</code> mobile-mcp wrapper
+- Never use <code>resource-id</code> / OS-specific element IDs</p>
 <hr />
 <h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
 <h3 id="updating-docs">Updating Docs<a class="headerlink" href="#updating-docs" title="Permanent link">&para;</a></h3>
 <p>When making code changes, update corresponding docs:</p>
 <ol>
-<li><strong>Updated skill</strong> → Update <a href="../guides/">Guides</a></li>
+<li><strong>Updated guide content</strong> → Update <a href="../guides/">Guides</a></li>
 <li><strong>New assertion type</strong> → Update <a href="../reference/assertions/">Assertions</a></li>
 <li><strong>Schema changes</strong> → Update <a href="../reference/schema/">Schema Reference</a></li>
 <li><strong>New feature</strong> → Add example to <a href="../examples/">Examples</a></li>
@@ -2810,7 +2804,7 @@ Complete scenario showing authentication:
 
 \`\`\`json
 {
-  &quot;$schema_version&quot;: &quot;2.0&quot;,
+  &quot;$schema_version&quot;: &quot;2.1&quot;,
   &quot;scenario_id&quot;: &quot;login_example&quot;,
   ...
 }
@@ -2851,7 +2845,7 @@ mkdocs<span class="w"> </span>build
 - Reproduction steps
 - Expected vs actual behavior
 - Device/simulator details
-- Test app version</p>
+- <code>mauto</code> version and the contents of <code>mobile-automator/config.json</code> (remove sensitive data)</p>
 <h3 id="feature-requests">Feature Requests<a class="headerlink" href="#feature-requests" title="Permanent link">&para;</a></h3>
 <p>Have an idea? Share it:</p>
 <div class="highlight"><pre><span></span><code>gh<span class="w"> </span>issue<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;Feature: add support for video recording&quot;</span><span class="w"> </span><span class="se">\</span>
@@ -2882,8 +2876,8 @@ gh<span class="w"> </span>pr<span class="w"> </span>review<span class="w"> </spa
 <h3 id="testing-qa">Testing &amp; QA<a class="headerlink" href="#testing-qa" title="Permanent link">&para;</a></h3>
 <p>Help test new features:</p>
 <ol>
-<li>Link the development branch: <code>gemini extensions link .</code></li>
-<li>Test with your mobile project</li>
+<li>Link the development branch: <code>npm install &amp;&amp; npm link</code> from the repo</li>
+<li>Test with your mobile project (<code>mauto setup</code>, <code>mauto guide generate</code>, <code>mauto guide execute</code>)</li>
 <li>Report issues: <code>gh issue create</code></li>
 <li>Verify fixes: <code>gh pr list</code> → comment</li>
 </ol>
@@ -2892,7 +2886,7 @@ gh<span class="w"> </span>pr<span class="w"> </span>review<span class="w"> </spa
 <h3 id="what-we-look-for">What We Look For<a class="headerlink" href="#what-we-look-for" title="Permanent link">&para;</a></h3>
 <p>✅ <strong>Approved when:</strong>
 - Code follows standards
-- Tests pass
+- <code>npm test</code> and <code>npm run lint:guides</code> pass
 - Documentation updated
 - Backwards compatible
 - No breaking changes</p>
@@ -2918,38 +2912,43 @@ gh<span class="w"> </span>pr<span class="w"> </span>review<span class="w"> </spa
 gh<span class="w"> </span>repo<span class="w"> </span>fork<span class="w"> </span>sh3lan93/mobile-automator<span class="w"> </span>--clone
 <span class="nb">cd</span><span class="w"> </span>mobile-automator
 
-<span class="c1"># 2. Create feature branch</span>
+<span class="c1"># 2. Install deps and link the CLI</span>
+npm<span class="w"> </span>install
+npm<span class="w"> </span>link
+
+<span class="c1"># 3. Create feature branch</span>
 git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>feature/custom-assertions
 
-<span class="c1"># 3. Make changes</span>
-<span class="c1"># - Edit templates/mobile-automator-generator/SKILL.md</span>
+<span class="c1"># 4. Make changes</span>
+<span class="c1"># - Edit src/guide/content/generate.aware.md (and .agnostic.md)</span>
 <span class="c1"># - Add assertion example to docs/reference/assertions.md</span>
 <span class="c1"># - Update changelog</span>
 
-<span class="c1"># 4. Test locally</span>
+<span class="c1"># 5. Test locally</span>
+npm<span class="w"> </span><span class="nb">test</span>
+npm<span class="w"> </span>run<span class="w"> </span>lint:guides
 <span class="nb">cd</span><span class="w"> </span>/path/to/test-app
-gemini<span class="w"> </span>extensions<span class="w"> </span>link<span class="w"> </span>/path/to/mobile-automator
-gemini<span class="w"> </span>/mobile-automator:setup
-gemini<span class="w"> </span>/mobile-automator:generate
+mauto<span class="w"> </span>setup
+mauto<span class="w"> </span>guide<span class="w"> </span>generate
 
-<span class="c1"># 5. Commit</span>
+<span class="c1"># 6. Commit</span>
 <span class="nb">cd</span><span class="w"> </span>/path/to/mobile-automator
 git<span class="w"> </span>add<span class="w"> </span>-A
 git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add custom assertion type&quot;</span>
 
-<span class="c1"># 6. Push</span>
+<span class="c1"># 7. Push</span>
 git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>feature/custom-assertions
 
-<span class="c1"># 7. Create PR</span>
+<span class="c1"># 8. Create PR</span>
 gh<span class="w"> </span>pr<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;feat: add custom assertion support&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">             </span>--body<span class="w"> </span><span class="s2">&quot;Enables users to define custom assertions...&quot;</span>
 
-<span class="c1"># 8. Address review feedback</span>
+<span class="c1"># 9. Address review feedback</span>
 git<span class="w"> </span>add<span class="w"> </span>-A
 git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;Address review feedback&quot;</span>
 git<span class="w"> </span>push
 
-<span class="c1"># 9. Merge (after approval)</span>
+<span class="c1"># 10. Merge (after approval)</span>
 gh<span class="w"> </span>pr<span class="w"> </span>merge<span class="w"> </span><span class="m">42</span>
 </code></pre></div>
 <hr />
@@ -2980,8 +2979,8 @@ gh<span class="w"> </span>pr<span class="w"> </span>merge<span class="w"> </span
 <h2 id="resources">Resources<a class="headerlink" href="#resources" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong><a href="https://json-schema.org/">JSON Schema Docs</a></strong> — Schema validation</li>
-<li><strong><a href="../concepts/architecture/">Architecture Documentation</a></strong> — Understand the 3-tier design</li>
-<li><strong><a href="../concepts/">Core Concepts</a></strong> — Foundation for extension development</li>
+<li><strong><a href="../concepts/architecture/">Architecture Documentation</a></strong> — Understand the agent → <code>mauto</code> → mobile-mcp → device design</li>
+<li><strong><a href="../concepts/">Core Concepts</a></strong> — Foundation for CLI development</li>
 <li><strong><a href="../guides/">Full Guides</a></strong> — Detailed command walkthroughs</li>
 </ul>
 <hr />
@@ -2995,7 +2994,9 @@ gh<span class="w"> </span>pr<span class="w"> </span>merge<span class="w"> </span
 <p>We're here to help make contributing as smooth as possible!</p>
 <hr />
 <p>Thank you for contributing to mobile-automator! 🎉</p>
-<p><a href="../">Back to Docs →</a></p>
+<p><a href="../">Back to Docs →</a>
+</content>
+</invoke></p>
 
 
 

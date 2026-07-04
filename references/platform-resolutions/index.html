@@ -1259,18 +1259,26 @@
 
 
 <h1 id="platform-resolutions-semantic-actions">Platform Resolutions — Semantic Actions<a class="headerlink" href="#platform-resolutions-semantic-actions" title="Permanent link">&para;</a></h1>
-<p>This reference defines how the executor resolves semantic actions to
-per-OS mobile-mcp tool calls. Scenarios in agnostic mode use only the
-semantic action names; the executor consults this table at runtime to
+<div class="admonition note">
+<p class="admonition-title">Internal engine — not the agent-facing API</p>
+<p>The <code>mobile_*</code> calls in the table below are the <strong>internal mobile-mcp
+engine</strong> that <code>mauto</code> verbs wrap. The agent never calls them directly — it
+emits the semantic action in an agnostic scenario, and <code>mauto</code>'s execute
+workflow resolves it to the per-OS engine calls shown here. This page
+documents that internal resolution so contributors can extend it.</p>
+</div>
+<p>This reference defines how the execute workflow resolves semantic actions to
+per-OS mobile-mcp engine calls. Scenarios in agnostic mode use only the
+semantic action names; the resolver consults this table at runtime to
 translate them.</p>
 <h2 id="resolution-rules">Resolution rules<a class="headerlink" href="#resolution-rules" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Each row defines ONE semantic action and its resolution per platform.</li>
-<li>The executor calls <code>mobile_list_available_devices()</code> once at startup
-  and reads the device's <code>platform</code> field to pick the column.</li>
-<li>A resolution may be: a single tool call, a sequence, or primary +
+<li>The resolver reads the connected device's <code>platform</code> field once at startup
+  (via <code>mauto devices</code>) to pick the column.</li>
+<li>A resolution may be: a single engine call, a sequence, or primary +
   fallback strategy.</li>
-<li>If the platform is neither <code>android</code> nor <code>ios</code>, the executor MUST
+<li>If the platform is neither <code>android</code> nor <code>ios</code>, the resolver MUST
   report the action as unsupported on this device and halt the step.</li>
 </ul>
 <h2 id="resolution-table">Resolution table<a class="headerlink" href="#resolution-table" title="Permanent link">&para;</a></h2>
@@ -1310,9 +1318,9 @@ translate them.</p>
 <ol>
 <li>Add a row to the table above with both Android and iOS resolutions filled.</li>
 <li>Add the action's name to the <code>action.type</code> enum in
-   <code>templates/mobile-automator-generator/references/scenario_schema.json</code>.</li>
-<li>Add a row to the agnostic generator's Step Translation Guide
-   (<code>templates/mobile-automator-generator/agnostic/SKILL.md</code>).</li>
+   <code>src/schemas/scenario_schema.json</code>.</li>
+<li>Add a row to the agnostic generate guide's Step Translation Guide
+   (<code>src/guide/content/generate.agnostic.md</code>).</li>
 <li>The lint at <code>tests/lint/platform-resolutions-coverage.test.js</code> will
    fail until steps 1 and 2 are in sync — that is intentional.</li>
 </ol>

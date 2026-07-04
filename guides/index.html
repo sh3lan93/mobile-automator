@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Step-by-step command guides for mobile-automator - setup, generate, and execute commands with detailed walkthroughs.">
+        <meta name="description" content="Step-by-step guides for mobile-automator - setup, generate, and execute workflows with detailed walkthroughs.">
       
       
       
@@ -65,7 +65,7 @@
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Command Guides - mobile-automator" />
-  <meta property="og:description" content="Step-by-step command guides for mobile-automator - setup, generate, and execute commands with detailed walkthroughs." />
+  <meta property="og:description" content="Step-by-step guides for mobile-automator - setup, generate, and execute workflows with detailed walkthroughs." />
   <meta property="og:url" content="https://sh3lan93.github.io/mobile-automator/guides/" />
   <meta property="og:site_name" content="mobile-automator" />
   <meta property="og:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
@@ -73,7 +73,7 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="Command Guides - mobile-automator" />
-  <meta name="twitter:description" content="Step-by-step command guides for mobile-automator - setup, generate, and execute commands with detailed walkthroughs." />
+  <meta name="twitter:description" content="Step-by-step guides for mobile-automator - setup, generate, and execute workflows with detailed walkthroughs." />
   <meta name="twitter:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
   
 
@@ -731,10 +731,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#understanding-the-commands" class="md-nav__link">
+  <a href="#understanding-the-workflow" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Understanding the Commands
+        Understanding the Workflow
       
     </span>
   </a>
@@ -753,10 +753,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#when-to-use-each-command" class="md-nav__link">
+  <a href="#when-to-use-each-stage" class="md-nav__link">
     <span class="md-ellipsis">
       
-        When to Use Each Command
+        When to Use Each Stage
       
     </span>
   </a>
@@ -1327,10 +1327,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#understanding-the-commands" class="md-nav__link">
+  <a href="#understanding-the-workflow" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Understanding the Commands
+        Understanding the Workflow
       
     </span>
   </a>
@@ -1349,10 +1349,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#when-to-use-each-command" class="md-nav__link">
+  <a href="#when-to-use-each-stage" class="md-nav__link">
     <span class="md-ellipsis">
       
-        When to Use Each Command
+        When to Use Each Stage
       
     </span>
   </a>
@@ -1391,65 +1391,66 @@
 
 
 <h1 id="guides">Guides<a class="headerlink" href="#guides" title="Permanent link">&para;</a></h1>
-<p>Comprehensive walkthroughs for each Mobile Automator command and workflow. These guides provide step-by-step instructions for analyzing your mobile project, generating test scenarios, and executing tests on real devices.</p>
+<p>Comprehensive walkthroughs for each Mobile Automator workflow. These guides provide step-by-step instructions for scaffolding your workspace, generating test scenarios, and executing tests on real devices.</p>
 <h2 id="available-guides">Available Guides<a class="headerlink" href="#available-guides" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong><a href="setup/">Setup Command</a></strong> — 7-section project analysis and skill installation workflow</li>
-<li><strong><a href="generate/">Generate Command</a></strong> — Creating intelligent test scenarios from natural language descriptions</li>
-<li><strong><a href="execute/">Execute Command</a></strong> — Running tests on connected devices and reviewing results with observations</li>
+<li><strong><a href="setup/">Setup Guide</a></strong> — Scaffolding the <code>mobile-automator/</code> workspace with <code>mauto setup</code></li>
+<li><strong><a href="generate/">Generate Guide</a></strong> — Creating intelligent test scenarios from natural language descriptions</li>
+<li><strong><a href="execute/">Execute Guide</a></strong> — Running tests on connected devices and reviewing results with observations</li>
 </ul>
-<h2 id="understanding-the-commands">Understanding the Commands<a class="headerlink" href="#understanding-the-commands" title="Permanent link">&para;</a></h2>
-<p>Each Mobile Automator command serves a distinct purpose in your testing workflow:</p>
+<h2 id="understanding-the-workflow">Understanding the Workflow<a class="headerlink" href="#understanding-the-workflow" title="Permanent link">&para;</a></h2>
+<p><code>mauto</code> is a host-agnostic CLI. After installing it and running <code>mauto init --agent &lt;host&gt;</code>, your AI agent pulls reasoning on demand via <code>mauto guide &lt;topic&gt;</code> and drives the device through <code>mauto</code> verbs. Each stage serves a distinct purpose:</p>
 <table>
 <thead>
 <tr>
-<th>Command</th>
+<th>Stage</th>
+<th>How you invoke it</th>
 <th>Purpose</th>
-<th>Input</th>
 <th>Output</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>/mobile-automator:setup</code></td>
-<td>Learn your project, install customized skills</td>
-<td>Mobile project directory</td>
-<td>Config file, skills, scaffolding</td>
+<td>Setup</td>
+<td><code>mauto setup</code> (CLI verb)</td>
+<td>Scaffold the <code>mobile-automator/</code> workspace and write <code>config.json</code></td>
+<td>Config file + workspace directories</td>
 </tr>
 <tr>
-<td><code>/mobile-automator:generate</code></td>
-<td>Create test scenarios using AI</td>
-<td>Natural language description</td>
+<td>Generate</td>
+<td><code>/mobile-automator-generate</code> (Claude Code) or <code>mauto guide generate</code></td>
+<td>Create test scenarios from natural language</td>
 <td>JSON scenario file</td>
 </tr>
 <tr>
-<td><code>/mobile-automator:execute</code></td>
-<td>Run tests on connected devices</td>
-<td>Scenario selection and device choice</td>
+<td>Execute</td>
+<td><code>/mobile-automator-execute</code> (Claude Code) or <code>mauto guide execute</code></td>
+<td>Run scenarios on a connected device</td>
 <td>Result report with observations</td>
 </tr>
 </tbody>
 </table>
+<p>In Claude Code, <code>mauto init</code> installs the hyphen slash-commands <code>/mobile-automator-generate</code> and <code>/mobile-automator-execute</code>. In Cursor it installs a project rule (ask in plain language). For any other agent, run <code>mauto mcp</code>, or use <code>mauto bootstrap</code> + <code>mauto guide &lt;topic&gt;</code> and call the verbs directly.</p>
 <h2 id="typical-workflow">Typical Workflow<a class="headerlink" href="#typical-workflow" title="Permanent link">&para;</a></h2>
-<p>The recommended approach to mobile testing with Mobile Automator follows this pattern:</p>
-<div class="highlight"><pre><span></span><code>1. /mobile-automator:setup
+<p>The recommended approach to mobile testing with <code>mauto</code> follows this pattern:</p>
+<div class="highlight"><pre><span></span><code>1. mauto setup
         ↓
-   (Run once per project - analyzes your app)
+   (Run once per project - scaffolds the workspace + config.json)
         ↓
-2. /mobile-automator:generate
+2. /mobile-automator-generate   (or: mauto guide generate)
         ↓
    (Run for each test - describe what to test)
         ↓
-3. /mobile-automator:execute
+3. /mobile-automator-execute    (or: mauto guide execute)
         ↓
    (Run to test - review results and observations)
 </code></pre></div>
-<h2 id="when-to-use-each-command">When to Use Each Command<a class="headerlink" href="#when-to-use-each-command" title="Permanent link">&para;</a></h2>
-<p><strong>Setup</strong> is your starting point. Run it once per mobile project to configure Mobile Automator for your specific app. It auto-detects your platform, discovers build configurations, identifies your app's package ID, and analyzes your project architecture. Setup installs customized skills tailored to your project and scaffolds the directories needed for test scenarios and results.</p>
-<p><strong>Generate</strong> creates test scenarios from natural language. After setup, use this command to describe test cases in plain English. The AI generates structured JSON scenarios, handling all the technical formatting so you can focus on what to test.</p>
-<p><strong>Execute</strong> runs your test scenarios on connected devices. This command performs pre-flight checks to ensure devices are ready, then runs each scenario step-by-step with AI vision-based assertions. Results capture not just pass/fail status, but also observations about flakiness, regressions, and execution context.</p>
+<h2 id="when-to-use-each-stage">When to Use Each Stage<a class="headerlink" href="#when-to-use-each-stage" title="Permanent link">&para;</a></h2>
+<p><strong>Setup</strong> is your starting point. Run <code>mauto setup</code> once per mobile project to scaffold the <code>mobile-automator/</code> workspace (<code>scenarios/</code>, <code>screenshots/</code>, <code>results/</code>) and write <code>config.json</code>. Choose a mode with <code>--mode aware</code> (single-OS) or <code>--mode agnostic</code> (cross-platform). Then run <code>mauto devices</code> to confirm a device is reachable.</p>
+<p><strong>Generate</strong> creates test scenarios from natural language. After setup, the agent reads <code>mauto guide generate</code> and drives the device through <code>mauto</code> verbs to describe test cases in plain English. It generates structured JSON scenarios, handling all the technical formatting so you can focus on what to test.</p>
+<p><strong>Execute</strong> runs your test scenarios on connected devices. The agent reads <code>mauto guide execute</code>, performs pre-flight checks to ensure a device is ready, then runs each scenario step-by-step with AI vision-based assertions. Results capture not just pass/fail status, but also observations about flakiness, regressions, and execution context.</p>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
-<p>Start with <a href="setup/">Setup Command</a> to understand the comprehensive project analysis workflow and get your project configured.</p>
+<p>Start with the <a href="setup/">Setup Guide</a> to scaffold your workspace and get your project configured.</p>
 
 
 

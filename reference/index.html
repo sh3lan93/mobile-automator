@@ -981,10 +981,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#mcp-tool-reference" class="md-nav__link">
+  <a href="#mcp-tool-reference-internal-engine" class="md-nav__link">
     <span class="md-ellipsis">
       
-        MCP Tool Reference
+        MCP Tool Reference (internal engine)
       
     </span>
   </a>
@@ -1628,10 +1628,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#mcp-tool-reference" class="md-nav__link">
+  <a href="#mcp-tool-reference-internal-engine" class="md-nav__link">
     <span class="md-ellipsis">
       
-        MCP Tool Reference
+        MCP Tool Reference (internal engine)
       
     </span>
   </a>
@@ -1944,22 +1944,22 @@
 - Metric tracking (duration, retries, screenshots)</p>
 <p><strong><a href="result-schema/">Result Schema Reference →</a></strong></p>
 <hr />
-<h3 id="mcp-tool-reference">MCP Tool Reference<a class="headerlink" href="#mcp-tool-reference" title="Permanent link">&para;</a></h3>
-<p>Low-level device automation primitives for screen interaction, app management, and device control.</p>
+<h3 id="mcp-tool-reference-internal-engine">MCP Tool Reference (internal engine)<a class="headerlink" href="#mcp-tool-reference-internal-engine" title="Permanent link">&para;</a></h3>
+<p>Low-level device automation primitives for screen interaction, app management, and device control. These <code>mobile_*</code> tools are the <strong>internal mobile-mcp engine</strong> that <code>mauto</code> verbs wrap — agents drive the device through <code>mauto</code> verbs, not by calling these directly.</p>
 <p><strong>Tool categories:</strong>
 - <strong>Device Management</strong> — List devices, launch/terminate apps, install/uninstall
 - <strong>Screen Capture</strong> — Take screenshots, list UI elements
 - <strong>User Interactions</strong> — Tap, swipe, type, press buttons
 - <strong>Navigation</strong> — Open URLs, press back/home
 - <strong>Device Control</strong> — Orientation, screen size</p>
-<p><strong>Common tools:</strong>
-- <code>mobile_launch_app</code> — Launch app on device
-- <code>mobile_click_on_screen_at_coordinates</code> — Tap at coordinates
-- <code>mobile_take_screenshot</code> — Capture screen
-- <code>mobile_list_elements_on_screen</code> — Get UI elements and coordinates
-- <code>mobile_type_keys</code> — Type text into focused field
-- <code>mobile_swipe_on_screen</code> — Scroll or swipe</p>
-<p><strong><a href="mcp-tools/">View all MCP tools →</a></strong></p>
+<p><strong><code>mauto</code> verbs and the engine primitives they wrap:</strong>
+- <code>mauto launch</code> → <code>mobile_launch_app</code> — Launch app on device
+- <code>mauto tap</code> → <code>mobile_click_on_screen_at_coordinates</code> — Tap at coordinates
+- <code>mauto screenshot</code> → <code>mobile_take_screenshot</code> — Capture screen
+- <code>mauto elements</code> → <code>mobile_list_elements_on_screen</code> — Get UI elements and coordinates
+- <code>mauto type</code> → <code>mobile_type_keys</code> — Type text into focused field
+- <code>mauto swipe</code> → <code>mobile_swipe_on_screen</code> — Scroll or swipe</p>
+<p><strong><a href="mcp-tools/">View all engine tools →</a></strong></p>
 <hr />
 <h2 id="learning-path">Learning Path<a class="headerlink" href="#learning-path" title="Permanent link">&para;</a></h2>
 <h3 id="new-to-mobile-automator">New to mobile-automator?<a class="headerlink" href="#new-to-mobile-automator" title="Permanent link">&para;</a></h3>
