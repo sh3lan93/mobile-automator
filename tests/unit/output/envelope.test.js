@@ -20,6 +20,7 @@ describe('envelope', () => {
       DEVICE: 2,
       INVALID_INPUT: 3,
       TARGET_NOT_FOUND: 4,
+      ENVIRONMENT: 5,
       CANCEL: 130,
     });
   });
@@ -65,6 +66,7 @@ describe('envelope', () => {
       ['device', 2],
       ['invalid_input', 3],
       ['target_not_found', 4],
+      ['environment', 5],
       ['cancel', 130],
       ['internal', 1],
     ])('maps %s -> %i', (kind, code) => {

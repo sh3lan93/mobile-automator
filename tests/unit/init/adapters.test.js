@@ -60,6 +60,25 @@ describe('ADAPTERS.claude.apply', () => {
     expect(res.merged).toContain(mcpPath);
   });
 
+  test('a corrupt pre-existing .mcp.json throws a typed corrupt_mcp_config error, not a raw SyntaxError, and is left untouched', () => {
+    const projectRoot = tmpRoot();
+    const mcpPath = path.join(projectRoot, '.mcp.json');
+    const corrupt = '{ "mcpServers": { ';
+    fs.writeFileSync(mcpPath, corrupt);
+    let caught;
+    try {
+      ADAPTERS.claude.apply({ projectRoot });
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeDefined();
+    // Identifiable, actionable error — not a bare SyntaxError the caller can't classify.
+    expect(caught.code).toBe('corrupt_mcp_config');
+    expect(caught).not.toBeInstanceOf(SyntaxError);
+    // The user's file is never clobbered on a parse failure.
+    expect(fs.readFileSync(mcpPath, 'utf8')).toBe(corrupt);
+  });
+
   test('is idempotent — re-running yields the same files with no dupes', () => {
     const projectRoot = tmpRoot();
     ADAPTERS.claude.apply({ projectRoot });
