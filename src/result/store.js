@@ -48,6 +48,11 @@ class ResultStore {
     this._dir = path.join(projectRoot, 'mobile-automator', 'results');
     this._file = path.join(this._dir, `${runId}.json`);
 
+    // Honest-corruption channel: any recovery the load performs is recorded
+    // here so the CLI can thread it into the envelope `hint`. Must exist
+    // before `_load()` runs.
+    this.warnings = [];
+
     const loaded = this._load();
     this._steps = loaded.steps_executed || [];
     this._assertions = loaded.assertion_results || [];
@@ -57,17 +62,96 @@ class ResultStore {
   }
 
   // Load an existing in-progress (or finalized) file if present; else empty.
+  //
+  // A missing file (ENOENT) is the legitimate first step → empty accumulator.
+  // A file that exists but does not parse is a crash artifact: we MUST NOT
+  // silently treat it as empty (that would let the next write O_TRUNC-clobber
+  // every previously recorded step). Instead we preserve the bytes as a
+  // `.corrupt.<ts>` sidecar, record a structured warning (surfaced via the
+  // envelope `hint`), and start a fresh accumulator.
   _load() {
+    let raw;
     try {
-      const raw = fs.readFileSync(this._file, 'utf8');
+      raw = fs.readFileSync(this._file, 'utf8');
+    } catch (e) {
+      if (e && e.code === 'ENOENT') return {};
+      // Unexpected read failure (perms, I/O) — surface it honestly rather
+      // than masquerading as an empty run.
+      throw e;
+    }
+    try {
       return JSON.parse(raw);
-    } catch (_e) {
-      return {};
+    } catch (e) {
+      return this._preserveCorrupt(raw, e);
+    }
+  }
+
+  // Move a corrupt result file aside so its bytes are never lost, record a
+  // structured warning, and return an empty accumulator. The warning is the
+  // single source of truth for the recovery — the CLI threads `store.warnings`
+  // into the envelope `hint` (machine) which `render({human:true})` also shows
+  // (human), so the model stays print-free and trivially unit-testable. Sidecar
+  // write failures are themselves surfaced as warnings rather than aborting.
+  _preserveCorrupt(raw, err) {
+    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    const sidecar = `${this._file}.corrupt.${ts}`;
+    let preserved = false;
+    try {
+      fs.renameSync(this._file, sidecar);
+      preserved = true;
+    } catch (_renameErr) {
+      // Cross-device or other rename failure — fall back to a copy.
+      try {
+        fs.writeFileSync(sidecar, raw);
+        preserved = true;
+      } catch (_writeErr) {
+        // ignore — reported below
+      }
+    }
+    const where = preserved ? `preserved as ${path.basename(sidecar)}` : 'COULD NOT be preserved';
+    const message =
+      `result file ${this._file} was corrupt (${err.message}); ` +
+      `${where} and a fresh accumulator was started so prior steps are not silently clobbered`;
+    this.warnings.push(message);
+    return {};
+  }
+
+  // Atomic write: stream into a hidden temp file in the same directory,
+  // fsync, then rename over the target. rename(2) within one dir is atomic, so
+  // a concurrent reader or a crash sees the old-complete or new-complete file,
+  // never a truncated one. On any failure the temp file is cleaned up.
+  _atomicWrite(contents) {
+    fs.mkdirSync(this._dir, { recursive: true });
+    const tmp = path.join(
+      this._dir,
+      `.${path.basename(this._file)}.tmp.${process.pid}.${Date.now()}`
+    );
+    let fd;
+    try {
+      fd = fs.openSync(tmp, 'w');
+      fs.writeFileSync(fd, contents);
+      fs.fsyncSync(fd);
+      fs.closeSync(fd);
+      fd = undefined;
+      fs.renameSync(tmp, this._file);
+    } catch (e) {
+      if (fd !== undefined) {
+        try {
+          fs.closeSync(fd);
+        } catch (_) {
+          /* ignore */
+        }
+      }
+      try {
+        fs.unlinkSync(tmp);
+      } catch (_) {
+        /* ignore */
+      }
+      throw e;
     }
   }
 
   _persistInProgress() {
-    fs.mkdirSync(this._dir, { recursive: true });
     const snapshot = {
       run_id: this.runId,
       scenario_id: this.scenarioId,
@@ -78,7 +162,7 @@ class ResultStore {
       captured_variables: this._capturedVariables,
       _in_progress: true,
     };
-    fs.writeFileSync(this._file, JSON.stringify(snapshot, null, 2));
+    this._atomicWrite(JSON.stringify(snapshot, null, 2));
   }
 
   addStep({ step_id, status, attempts = 1, screenshot = null, error_message = null, observations = null } = {}) {
@@ -153,8 +237,7 @@ class ResultStore {
         `${resolvedStatus}: ${passed}/${total} assertion(s) passed across ${this._steps.length} step(s).`,
     };
 
-    fs.mkdirSync(this._dir, { recursive: true });
-    fs.writeFileSync(this._file, JSON.stringify(result, null, 2));
+    this._atomicWrite(JSON.stringify(result, null, 2));
     return result;
   }
 }

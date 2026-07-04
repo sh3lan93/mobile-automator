@@ -60,7 +60,17 @@ function writeIfChanged(filePath, content) {
 function mergeMcpConfig(filePath) {
   let doc = {};
   if (fs.existsSync(filePath)) {
-    doc = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const existing = fs.readFileSync(filePath, 'utf8');
+    try {
+      doc = JSON.parse(existing);
+    } catch (err) {
+      // A hand-edited / partially-written host config. Surface a typed,
+      // actionable error instead of a bare SyntaxError, and never clobber the
+      // user's file — re-running converges once they fix it.
+      const e = new Error(`existing MCP config is not valid JSON: ${filePath}`);
+      e.code = 'corrupt_mcp_config';
+      throw e;
+    }
     if (doc == null || typeof doc !== 'object' || Array.isArray(doc)) doc = {};
   }
   if (doc.mcpServers == null || typeof doc.mcpServers !== 'object') {
