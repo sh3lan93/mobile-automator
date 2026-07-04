@@ -18,6 +18,7 @@ const SESSION_DIRNAME = '.session';
 const SOCKET_NAME = 'mauto.sock';
 const PID_NAME = 'daemon.pid';
 const HANDLE_NAME = 'session.json';
+const LOCK_NAME = 'daemon.lock';
 
 // Unix domain socket paths have a hard length limit (~104 bytes on macOS,
 // ~108 on Linux). Deep project roots blow past it, so when the in-workspace
@@ -57,15 +58,23 @@ function handlePath(projectRoot) {
   return path.join(sessionDir(projectRoot), HANDLE_NAME);
 }
 
+// Exclusive workspace lock acquired BEFORE building the mobile-mcp connection so
+// a double-spawn loser fails fast and exits before it ever spawns a child.
+function lockPath(projectRoot) {
+  return path.join(sessionDir(projectRoot), LOCK_NAME);
+}
+
 module.exports = {
   SESSION_DIRNAME,
   SOCKET_NAME,
   PID_NAME,
   HANDLE_NAME,
+  LOCK_NAME,
   SOCKET_PATH_LIMIT,
   sessionDir,
   workspaceSocketPath,
   socketPath,
   pidFilePath,
   handlePath,
+  lockPath,
 };
