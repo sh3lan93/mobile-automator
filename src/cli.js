@@ -14,6 +14,7 @@ const { scaffold } = require('./setup/scaffold');
 const guideEmitter = require('./guide/emitter');
 const { ADAPTERS } = require('./init/adapters');
 const { isSemanticAction, ACTION_METHOD, selectResolver } = require('./device/semantic-press');
+const connection = require('./device/connection');
 
 // Map the user-facing --mode flag onto the stored config mode values.
 const MODE_ALIASES = {
@@ -659,7 +660,10 @@ function handleInit({ projectRoot, adapters = ADAPTERS }, agent) {
 // `mauto session start|status|end` manage the per-workspace daemon that holds
 // ONE mobile-mcp connection and serves every one-shot device verb over a Unix
 // domain socket. Device verbs still autostart a daemon transparently; these
-// verbs give an agent explicit lifecycle control. All session deps are
+// verbs give an agent explicit lifecycle control. The handlers own only the
+// envelope shaping — the "is a daemon alive / spawn one / shut one down"
+// decision lives in device/connection.js, the same owner the verb path uses, so
+// there is no second inline wiring of session-client/session-spawn. Deps stay
 // injectable so the handlers are unit-testable without spawning a real daemon.
 
 async function handleSessionStart(
@@ -678,14 +682,14 @@ async function handleSessionStart(
     }
   }
 
-  if (await client.isAlive(projectRoot)) {
+  if (await connection.isSessionAlive(projectRoot, { client })) {
     return {
       envelope: ok({ started: false, already_running: true, device }),
       exitKind: 'ok',
     };
   }
 
-  const started = await spawn.spawnDaemon({ projectRoot, device, idleMs });
+  const started = await connection.startSession({ projectRoot, device, idleMs, spawn });
   if (!started) {
     return {
       envelope: fail('device', 'failed to start the device session daemon', 'Ensure a device or simulator is connected, or run verbs directly (they fall back to one-shot).'),
@@ -698,14 +702,14 @@ async function handleSessionStart(
 async function handleSessionStatus(
   { projectRoot, client = require('./device/session-client') } = {}
 ) {
-  const running = await client.isAlive(projectRoot);
+  const running = await connection.isSessionAlive(projectRoot, { client });
   return { envelope: ok({ running }), exitKind: 'ok' };
 }
 
 async function handleSessionEnd(
   { projectRoot, client = require('./device/session-client') } = {}
 ) {
-  const stopped = await client.requestShutdown(projectRoot);
+  const stopped = await connection.endSession(projectRoot, { client });
   return {
     envelope: ok({ stopped, already_stopped: !stopped }),
     exitKind: 'ok',
@@ -789,16 +793,15 @@ function handleDevicesClear({ store = selectionStore, projectRoot }) {
 // Program wiring
 // ---------------------------------------------------------------------------
 
-// Build a DeviceBridge, transparently reusing the per-workspace device session
-// daemon when one fits and falling back to a one-shot mobile-mcp spawn
-// otherwise. Returns { bridge, close } — the `deviceBridgeFactory` seam +
-// contract are preserved so existing handler tests stay green. When the bridge
-// is daemon-backed, close() only releases this verb's socket; it never tears
-// the shared daemon down.
-async function realDeviceBridge({ device, projectRoot = process.cwd() } = {}) {
-  const { resolveDeviceConnection } = require('./device/resolve-connection');
-  const { bridge, close } = await resolveDeviceConnection({ device, projectRoot });
-  return { bridge, close };
+// Build a DeviceBridge via the one connection seam, which transparently reuses
+// the per-workspace device session daemon when one fits and falls back to a
+// one-shot mobile-mcp spawn otherwise. Returns { bridge, close } — the
+// `deviceBridgeFactory` seam + contract are preserved so existing handler tests
+// stay green. When the bridge is daemon-backed, close() only releases this
+// verb's socket; it never tears the shared daemon down. This is a thin alias:
+// the daemon-vs-oneshot decision lives entirely in device/connection.js.
+function realDeviceBridge(args) {
+  return require('./device/connection').acquireConnection(args);
 }
 
 function buildProgram(deps = {}) {
@@ -850,6 +853,9 @@ function buildProgram(deps = {}) {
   // INSIDE the try with its own catch so a connect failure (no device, daemon
   // spawn failure, socket error) lands as a `device` envelope (exit 2) — the
   // kind an agent expects — rather than escaping as a generic `internal`.
+  // `deviceBridgeFactory` is realDeviceBridge -> connection.acquireConnection
+  // (the single connection seam), so this keeps both the envelope boundary and
+  // the acquire-seam refactor.
   const connectBridge = async (device, fn) => {
     let bridge;
     let close;

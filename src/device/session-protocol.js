@@ -15,32 +15,24 @@
 //   { id, ok: true, result }
 //   { id, ok: false, error: { message } }
 //
-// All encoders are pure; FrameParser buffers partial chunks and yields whole
-// frames. A malformed line is REPORTED (yielded as an error frame), never
-// thrown — a single bad line must not kill the connection.
+// FrameParser owns the framing on both sides: encode() writes a frame, push()
+// buffers partial chunks and yields whole frames. A malformed line is REPORTED
+// (yielded as an error frame), never thrown — a single bad line must not kill
+// the connection. (The encode/decode of a single frame is a JSON.stringify /
+// JSON.parse one-liner with no independent reason to live as separate exports,
+// so they fold into the one module that earns its keep.)
 
 const NL = '\n';
-
-function encodeRequest(req) {
-  return JSON.stringify(req) + NL;
-}
-
-function decodeRequest(line) {
-  return JSON.parse(line);
-}
-
-function encodeResponse(res) {
-  return JSON.stringify(res) + NL;
-}
-
-function decodeResponse(line) {
-  return JSON.parse(line);
-}
 
 // Buffers byte chunks and yields one parsed object per complete '\n'-terminated
 // line. push() returns an array of results; each result is either
 // { value } for a parsed object or { error, line } for a malformed line.
 class FrameParser {
+  // Serialize a request/response object to one newline-terminated wire frame.
+  static encode(obj) {
+    return JSON.stringify(obj) + NL;
+  }
+
   constructor() {
     this._buf = '';
   }
@@ -64,9 +56,5 @@ class FrameParser {
 }
 
 module.exports = {
-  encodeRequest,
-  decodeRequest,
-  encodeResponse,
-  decodeResponse,
   FrameParser,
 };

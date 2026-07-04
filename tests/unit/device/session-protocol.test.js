@@ -1,26 +1,21 @@
 'use strict';
 
-const {
-  encodeRequest,
-  decodeRequest,
-  encodeResponse,
-  decodeResponse,
-  FrameParser,
-} = require('../../../src/device/session-protocol');
+const { FrameParser } = require('../../../src/device/session-protocol');
 
 describe('session-protocol', () => {
-  test('request round-trips', () => {
+  // encode() writes a frame; push() reads it back — the two are inverses.
+  test('a request frame round-trips through encode + push', () => {
     const req = { id: 7, type: 'call', tool: 'mobile_press_button', args: { button: 'BACK' } };
-    const wire = encodeRequest(req);
+    const wire = FrameParser.encode(req);
     expect(wire.endsWith('\n')).toBe(true);
-    expect(decodeRequest(wire.trim())).toEqual(req);
+    expect(new FrameParser().push(wire).map((r) => r.value)).toEqual([req]);
   });
 
-  test('response round-trips', () => {
+  test('a response frame round-trips through encode + push', () => {
     const res = { id: 7, ok: true, result: { ok: 1 } };
-    const wire = encodeResponse(res);
+    const wire = FrameParser.encode(res);
     expect(wire.endsWith('\n')).toBe(true);
-    expect(decodeResponse(wire.trim())).toEqual(res);
+    expect(new FrameParser().push(wire).map((r) => r.value)).toEqual([res]);
   });
 
   describe('FrameParser', () => {
