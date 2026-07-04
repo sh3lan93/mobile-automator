@@ -6,9 +6,13 @@ const path = require('path');
 // The tool is a host-agnostic `mauto` CLI. The Gemini *extension* it grew out of
 // is gone (colon slash-commands `/mobile-automator:*`, `gemini extensions
 // install/link`, the `setup_state.json` setup-state file, the recorder's
-// `.gemini/skills/.archive` restore dir). Shipping, instructional docs that still
-// teach that removed model send a user down steps that cannot work. This guard
-// fails on those stale tokens so the docs can no longer drift back.
+// `.gemini/skills/.archive` restore dir, the `gemini-extension.json` manifest,
+// the `${extensionPath}` template variable, the `/skills reload` command).
+// Shipping, instructional docs that still teach that removed model send a user
+// down steps that cannot work. This guard fails on those stale tokens so the
+// docs can no longer drift back. The banned set is every removed-artifact token
+// with NO innocent usage in prose; ambiguous tokens (`.toml`, a bare
+// `GEMINI.md`) are deliberately left out to stay false-positive-free.
 //
 // Excluded by design:
 //   - changelog files (a changelog is a historical record)
@@ -35,6 +39,22 @@ const STALE_PATTERNS = [
   {
     name: '`.gemini/skills/.archive` (removed recorder restore dir)',
     regex: /\.gemini\/skills\/\.archive/,
+  },
+  // The following name removed extension-era artifacts with no innocent usage
+  // in prose, so banning them is zero-false-positive. (`.toml` and a bare
+  // `GEMINI.md` are deliberately NOT banned — TOML is a normal file format and
+  // `GEMINI.md` can appear in a sentence like "we removed GEMINI.md".)
+  {
+    name: '`gemini-extension.json` (removed extension manifest)',
+    regex: /gemini-extension\.json/,
+  },
+  {
+    name: '`extensionPath` / `${extensionPath}` (removed extension template variable)',
+    regex: /extensionPath/,
+  },
+  {
+    name: '`/skills reload` (removed Gemini extension command)',
+    regex: /\/skills reload/,
   },
 ];
 
