@@ -459,7 +459,7 @@ function handleResultAddStep({ resultStoreFactory, projectRoot }, opts) {
   return { envelope: ok({ run_id: runId, step }, storeHint(store)), exitKind: 'ok' };
 }
 
-function handleResultFinalize({ resultStoreFactory, projectRoot }, opts) {
+function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectRoot }, opts) {
   const { runId, scenarioId, status, duration } = opts;
   if (!runId) {
     return {
@@ -472,7 +472,22 @@ function handleResultFinalize({ resultStoreFactory, projectRoot }, opts) {
     status,
     durationSeconds: duration === undefined ? 0 : Number(duration),
   });
-  return { envelope: ok(result, storeHint(store)), exitKind: 'ok' };
+
+  // Auto-harvest into cross-session memory. This is best-effort: a memory
+  // failure must never fail an otherwise-successful finalize, so its warnings
+  // fold into the envelope hint instead of throwing.
+  const hints = [storeHint(store)].filter(Boolean);
+  if (memoryStoreFactory) {
+    try {
+      const mem = memoryStoreFactory({ projectRoot });
+      mem.recordRun(result);
+      if (mem.warnings && mem.warnings.length) hints.push(mem.warnings.join(' '));
+    } catch (e) {
+      hints.push(`run-history not updated: ${e.message}`);
+    }
+  }
+
+  return { envelope: ok(result, hints.length ? hints.join(' ') : null), exitKind: 'ok' };
 }
 
 // Collapse any recovery warnings a ResultStore accumulated (e.g. a corrupt
@@ -1057,7 +1072,7 @@ function buildProgram(deps = {}) {
     .option('--duration <secs>', 'total duration in seconds')
     .action(withEnvelope((opts) => {
       const r = handleResultFinalize(
-        { resultStoreFactory, projectRoot },
+        { resultStoreFactory, memoryStoreFactory, projectRoot },
         {
           runId: opts.runId,
           scenarioId: opts.scenarioId,

@@ -3,8 +3,9 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { handleMemoryShow } = require('../../../src/cli');
+const { handleMemoryShow, handleResultFinalize } = require('../../../src/cli');
 const { MemoryStore } = require('../../../src/memory/store');
+const { ResultStore } = require('../../../src/result/store');
 
 function tmpRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-memshow-'));
@@ -37,5 +38,27 @@ describe('handleMemoryShow', () => {
     const r = handleMemoryShow({ memoryStoreFactory: factory, projectRoot: root }, { scenario: 'a(b' });
     expect(r.exitKind).toBe('ok');
     expect(typeof r.raw).toBe('string');
+  });
+});
+
+describe('result finalize auto-harvest', () => {
+  test('result finalize auto-harvests into run-history', () => {
+    const root = tmpRoot();
+    const resultStoreFactory = (a) => new ResultStore(a);
+    const memoryStoreFactory = (a) => new MemoryStore(a);
+
+    // Record a flaky step so finalize carries an observation.
+    const rs = resultStoreFactory({ runId: 'run_20260706_090000', scenarioId: 'login', projectRoot: root });
+    rs.addStep({ step_id: 'tap_login', status: 'pass', attempts: 2 }); // flakiness observation
+
+    const r = handleResultFinalize(
+      { resultStoreFactory, memoryStoreFactory, projectRoot: root },
+      { runId: 'run_20260706_090000', scenarioId: 'login', status: 'passed' }
+    );
+    expect(r.envelope.ok).toBe(true);
+
+    const shown = handleMemoryShow({ memoryStoreFactory, projectRoot: root }, {}).raw;
+    expect(shown).toContain('## login  (last 5 runs: P)');
+    expect(shown).toContain('flakiness (tap_login)');
   });
 });
