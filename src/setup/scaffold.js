@@ -11,7 +11,7 @@ const path = require('path');
 
 const manager = require('../config/manager');
 
-const SUBDIRS = ['scenarios', 'screenshots', 'results'];
+const SUBDIRS = ['scenarios', 'screenshots', 'results', 'memory'];
 
 function scaffold(projectRoot, { mode } = {}) {
   const created = [];
