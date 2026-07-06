@@ -114,6 +114,7 @@ Most low-level verbs are called **by the agent**, not by you. The ones you'll ru
 | `mauto guide <generate\|execute\|setup>` | Print the workflow guidance for a topic |
 | `mauto mcp` | Run the MCP prompts server (for any MCP-capable agent) |
 | `mauto bootstrap` | Print the verb map + invariants (onboarding for any agent) |
+| `mauto memory show [--kind <k>] [--scenario <id>]` | Print cross-session memory (run history auto-harvested from results) as raw markdown for the agent to read at run start |
 | `mauto validate <file>` | Validate a scenario JSON against the schema |
 | `mauto config get\|set <key> [value]` | Read / update workspace config |
 | **Agent-driven verbs** | `elements`, `tap`, `type`, `swipe`, `press`, `screenshot`, `assert`, `result`, `schema` |

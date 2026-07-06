@@ -34,6 +34,7 @@ src/
     result_schema.json
 mobile-automator/             # created in user's project by `mauto setup`
   config.json  scenarios/  screenshots/  results/  .session/
+  memory/                      # cross-session memory (run-history.md)
 ```
 
 ## Modes
@@ -57,6 +58,7 @@ All verbs emit `{ok,data,error,hint,schema_version}`; `--human` is an opt-in rea
 - **Reasoning** (agent pulls on demand): `guide <topic>` (topics: `generate`, `execute`, `setup`); `bootstrap` (verb map + invariants); `schema <name>` (names: `scenario`, `result`)
 - **Agent integration:** `init --agent <claude|cursor|gemini|copilot|agents|all>` (installs native Agent Skills per host + writes slash-commands/rules + MCP entry for claude/cursor); `mcp` (runs an MCP prompts server exposing guide topics)
 - **Device session:** `session start|status|end`; `devices` (list); `devices use <id>`; `devices clear`
+- **Memory:** `memory show` (print cross-session run-history harvested on `result finalize`)
 
 ## Placeholder contract
 
