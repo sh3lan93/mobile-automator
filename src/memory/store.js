@@ -46,7 +46,11 @@ function filterScenario(md, scenario) {
   const kept = [];
   let sawHeading = false;
   let inTarget = false;
-  const headingRe = new RegExp(`^##\\s+${scenario}\\s+\\(last`);
+  // `scenario` is user-supplied (the CLI's --scenario flag); escape regex
+  // metacharacters so a value like "a(b" filters to zero matches instead of
+  // throwing an uncaught SyntaxError out of this read-only render path.
+  const safe = scenario.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const headingRe = new RegExp(`^##\\s+${safe}\\s+\\(last`);
   for (const line of lines) {
     const isHeading = /^##\s+/.test(line);
     if (isHeading) {
