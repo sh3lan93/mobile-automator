@@ -5,7 +5,7 @@ const path = require('path');
 
 const { memoryFile, lockPath } = require('./paths');
 const { withLock } = require('./lock');
-const { parseRunHistory, renderRunHistory, recordInModel } = require('./history');
+const { parseRunHistory, renderRunHistory, recordInModel, countEntries } = require('./history');
 
 // Cross-session memory store. Mirrors ResultStore's one-shot-process,
 // load-mutate-atomic-write shape, but the memory files are SHARED across runs
@@ -27,6 +27,51 @@ function notesFromResult(result) {
     const where = o.step_id ? ` (${o.step_id})` : '';
     return { date, text: `${o.type}${where}: ${o.message}` };
   });
+}
+
+const HEADERS = {
+  'run-history': '# Run History',
+  'app-knowledge': '# App Knowledge',
+  preferences: '# Preferences',
+};
+
+const DEFAULT_CAP = 8000;
+
+// Filter a run-history markdown body down to a single scenario's `##` section.
+// Keeps the top-of-file header lines (everything before the first `##`
+// heading) and, if present, the matching scenario's heading + its note lines;
+// drops every other scenario's section.
+function filterScenario(md, scenario) {
+  const lines = md.split('\n');
+  const kept = [];
+  let sawHeading = false;
+  let inTarget = false;
+  const headingRe = new RegExp(`^##\\s+${scenario}\\s+\\(last`);
+  for (const line of lines) {
+    const isHeading = /^##\s+/.test(line);
+    if (isHeading) {
+      sawHeading = true;
+      inTarget = headingRe.test(line);
+      if (!inTarget) continue;
+      kept.push(line);
+      continue;
+    }
+    if (!sawHeading) {
+      // top-of-file header lines, before any scenario heading
+      kept.push(line);
+      continue;
+    }
+    if (inTarget) kept.push(line);
+  }
+  return kept.join('\n');
+}
+
+// Counts bullets for any file, reusing the history model for run-history.
+function countEntriesFor(name, raw) {
+  if (!raw) return 0;
+  if (name === 'run-history') return countEntries(parseRunHistory(raw));
+  // app-knowledge / preferences: one bullet per entry.
+  return raw.split('\n').filter((l) => /^-\s+\[/.test(l)).length;
 }
 
 class MemoryStore {
@@ -107,6 +152,52 @@ class MemoryStore {
       this._atomicWrite(file, renderRunHistory(model));
       return { scenarioId, runs: model.byScenario[scenarioId].runs.slice() };
     });
+  }
+
+  // Render the raw markdown `mauto memory show` emits: a one-line summary
+  // comment (per-file entry counts + last-updated date) followed by the
+  // requested file bodies. Read-only — no lock needed.
+  render({ kind, scenario, cap = DEFAULT_CAP } = {}) {
+    const names = kind ? [kind] : ['run-history', 'app-knowledge', 'preferences'];
+    const summary = [];
+    const sections = [];
+
+    for (const name of ['run-history', 'app-knowledge', 'preferences']) {
+      const raw = this._safeRead(name);
+      const count = countEntriesFor(name, raw);
+      const updated = this._mtimeDate(name);
+      summary.push(`${name}: ${count} entrie(s)${updated ? `, updated ${updated}` : ''}`);
+    }
+
+    for (const name of names) {
+      let body = this._safeRead(name);
+      if (!body) body = `${HEADERS[name] || `# ${name}`}\n(no entries yet)\n`;
+      if (name === 'run-history' && scenario) body = filterScenario(body, scenario);
+      sections.push(body.trim());
+    }
+
+    let out = `<!-- mauto memory · ${summary.join(' · ')} -->\n\n${sections.join('\n\n')}\n`;
+    if (out.length > cap) {
+      out = `${out.slice(0, cap)}\n… (truncated at ${cap} chars — narrow with --kind/--scenario)\n`;
+    }
+    return out;
+  }
+
+  // Read without the corruption sidecar side effect (render is read-only).
+  _safeRead(name) {
+    try {
+      return fs.readFileSync(this._file(name), 'utf8');
+    } catch (_) {
+      return '';
+    }
+  }
+
+  _mtimeDate(name) {
+    try {
+      return fs.statSync(this._file(name)).mtime.toISOString().slice(0, 10);
+    } catch (_) {
+      return null;
+    }
   }
 }
 

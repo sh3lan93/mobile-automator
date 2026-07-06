@@ -62,3 +62,48 @@ describe('MemoryStore.recordRun', () => {
     expect(md).toContain('## x  (last 5 runs: P)');
   });
 });
+
+describe('MemoryStore.render', () => {
+  test('summarizes counts and includes run-history body', () => {
+    const root = tmpRoot();
+    const store = new MemoryStore({ projectRoot: root });
+    store.recordRun({ scenario_id: 'checkout_flow', status: 'passed', observations: [
+      { type: 'flakiness', step_id: 'tap_pay', message: 'flaky' },
+    ] });
+    const md = store.render();
+    expect(md).toMatch(/mauto memory · run-history: 1 entrie/);
+    expect(md).toContain('## checkout_flow');
+    expect(md).toContain('app-knowledge: 0');
+    expect(md).toContain('preferences: 0');
+  });
+
+  test('kind filter returns only that file', () => {
+    const root = tmpRoot();
+    const store = new MemoryStore({ projectRoot: root });
+    store.recordRun({ scenario_id: 's', status: 'passed', observations: [] });
+    const md = store.render({ kind: 'run-history' });
+    expect(md).toContain('# Run History');
+    expect(md).not.toContain('# App Knowledge');
+  });
+
+  test('scenario filter narrows run-history to one section', () => {
+    const root = tmpRoot();
+    const store = new MemoryStore({ projectRoot: root });
+    store.recordRun({ scenario_id: 'a', status: 'passed', observations: [] });
+    store.recordRun({ scenario_id: 'b', status: 'failed', observations: [] });
+    const md = store.render({ scenario: 'b' });
+    expect(md).toContain('## b');
+    expect(md).not.toContain('## a');
+  });
+
+  test('cap truncates and notes it', () => {
+    const root = tmpRoot();
+    const store = new MemoryStore({ projectRoot: root });
+    store.recordRun({ scenario_id: 's', status: 'passed', observations: [
+      { type: 'state_context', message: 'x'.repeat(500) },
+    ] });
+    const md = store.render({ cap: 120 });
+    expect(md.length).toBeLessThan(400);
+    expect(md).toContain('… (truncated');
+  });
+});
