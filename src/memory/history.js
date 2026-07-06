@@ -41,7 +41,7 @@ function parseRunHistory(md) {
   const model = emptyModel();
   if (!md) return model;
   let current = null;
-  for (const line of md.split('\n')) {
+  for (const line of md.split(/\r?\n/)) {
     const h = line.match(HEADING_RE);
     if (h) {
       const id = h[1].trim();

@@ -61,4 +61,30 @@ describe('result finalize auto-harvest', () => {
     expect(shown).toContain('## login  (last 5 runs: P)');
     expect(shown).toContain('flakiness (tap_login)');
   });
+
+  test('a throwing memoryStoreFactory.recordRun does not fail finalize', () => {
+    const root = tmpRoot();
+    const resultStoreFactory = (a) => new ResultStore(a);
+    const memoryStoreFactory = () => ({
+      recordRun() {
+        throw new Error('boom');
+      },
+      warnings: [],
+    });
+
+    const r = handleResultFinalize(
+      { resultStoreFactory, memoryStoreFactory, projectRoot: root },
+      { runId: 'run_20260706_090001', scenarioId: 'login', status: 'passed' }
+    );
+
+    // (a) finalize still succeeded despite the memory-layer throw.
+    expect(r.envelope.ok).toBe(true);
+
+    // (b) the result file was actually written.
+    const resultFile = path.join(root, 'mobile-automator', 'results', 'run_20260706_090001.json');
+    expect(fs.existsSync(resultFile)).toBe(true);
+
+    // (c) the throw was folded into the envelope hint, not swallowed.
+    expect(r.envelope.hint).toMatch(/run-history not updated|boom/);
+  });
 });

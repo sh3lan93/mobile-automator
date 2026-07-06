@@ -37,8 +37,20 @@ function acquire(lockPath, { now = Date.now, sleep = sleepSync } = {}) {
           fs.unlinkSync(lockPath);
           continue; // retry immediately
         }
-      } catch (_) {
-        continue; // lock vanished between open and stat — retry
+      } catch (statErr) {
+        if (statErr.code !== 'ENOENT') {
+          // Not the benign vanished-lock case — apply the bounded backoff so
+          // a persistent stat/unlink failure (EACCES/EPERM/EBUSY, ...) times
+          // out instead of busy-looping the CPU forever.
+          if (now() >= deadline) {
+            throw new Error(
+              `could not acquire memory lock at ${lockPath} within ${MAX_WAIT_MS}ms`
+            );
+          }
+          sleep(RETRY_MS);
+        }
+        continue; // ENOENT: lock vanished between open and stat — retry now;
+        // any other error already backed off above before retrying.
       }
       if (now() >= deadline) {
         throw new Error(

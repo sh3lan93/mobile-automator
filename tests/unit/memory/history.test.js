@@ -47,4 +47,11 @@ describe('memory/history', () => {
     const reparsed = parseRunHistory(renderRunHistory(m));
     expect(reparsed.order).toEqual(['a', 'b']);
   });
+
+  test('parse tolerates CRLF line endings without dropping notes', () => {
+    const md = '## s  (last 5 runs: P)\r\n- [2026-07-05][observed] hello\r\n';
+    const reparsed = parseRunHistory(md);
+    expect(reparsed.byScenario.s.notes).toHaveLength(1);
+    expect(reparsed.byScenario.s.notes[0].text).toBe('hello');
+  });
 });

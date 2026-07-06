@@ -38,4 +38,26 @@ describe('memory/lock', () => {
     expect(() => acquire(lp)).not.toThrow();
     release(lp);
   });
+
+  test('a persistent non-ENOENT stat error times out instead of hanging', () => {
+    const lp = tmpLock();
+    acquire(lp); // held — a second acquire must go down the EEXIST branch
+
+    let now = 1000;
+    const clock = () => now;
+    const sleep = () => { now += 100; }; // advance virtual time instead of real sleep
+
+    const statSpy = jest.spyOn(fs, 'statSync').mockImplementation(() => {
+      const e = new Error('EACCES: permission denied');
+      e.code = 'EACCES';
+      throw e;
+    });
+
+    try {
+      expect(() => acquire(lp, { now: clock, sleep })).toThrow(/could not acquire/);
+    } finally {
+      statSpy.mockRestore();
+      release(lp);
+    }
+  }, 5000);
 });
