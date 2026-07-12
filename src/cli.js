@@ -9,6 +9,8 @@ const selectionStore = require('./device/selection');
 const { ScenarioValidator } = require('./scenario/validator');
 const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
 const { ResultStore } = require('./result/store');
+const { MemoryStore } = require('./memory/store');
+const { FILES: MEMORY_FILES } = require('./memory/paths');
 const configManager = require('./config/manager');
 const { scaffold } = require('./setup/scaffold');
 const guideEmitter = require('./guide/emitter');
@@ -457,7 +459,7 @@ function handleResultAddStep({ resultStoreFactory, projectRoot }, opts) {
   return { envelope: ok({ run_id: runId, step }, storeHint(store)), exitKind: 'ok' };
 }
 
-function handleResultFinalize({ resultStoreFactory, projectRoot }, opts) {
+function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectRoot }, opts) {
   const { runId, scenarioId, status, duration } = opts;
   if (!runId) {
     return {
@@ -470,7 +472,23 @@ function handleResultFinalize({ resultStoreFactory, projectRoot }, opts) {
     status,
     durationSeconds: duration === undefined ? 0 : Number(duration),
   });
-  return { envelope: ok(result, storeHint(store)), exitKind: 'ok' };
+
+  // Auto-harvest into cross-session memory. This is best-effort: a memory
+  // failure must never fail an otherwise-successful finalize, so its warnings
+  // fold into the envelope hint instead of throwing.
+  const hints = [storeHint(store)].filter(Boolean);
+  if (memoryStoreFactory) {
+    try {
+      const mem = memoryStoreFactory({ projectRoot });
+      mem.recordRun(result);
+      const memHint = storeHint(mem);
+      if (memHint) hints.push(memHint);
+    } catch (e) {
+      hints.push(`run-history not updated: ${e.message}`);
+    }
+  }
+
+  return { envelope: ok(result, hints.length ? hints.join(' ') : null), exitKind: 'ok' };
 }
 
 // Collapse any recovery warnings a ResultStore accumulated (e.g. a corrupt
@@ -554,6 +572,24 @@ function handleSchema({ emitter = guideEmitter } = {}, name) {
 // RAW bootstrap text; no error path.
 function handleBootstrap({ emitter = guideEmitter } = {}) {
   return { raw: emitter.emitBootstrap(), exitKind: 'ok' };
+}
+
+// RAW markdown on success; fail envelope only when --kind is unknown.
+function handleMemoryShow({ memoryStoreFactory, projectRoot }, opts = {}) {
+  const kind = opts.kind;
+  if (kind && !Object.prototype.hasOwnProperty.call(MEMORY_FILES, kind)) {
+    return {
+      envelope: fail(
+        'invalid_input',
+        `unknown memory kind "${kind}"`,
+        'Kinds: run-history, app-knowledge, preferences.'
+      ),
+      exitKind: 'invalid_input',
+    };
+  }
+  const store = memoryStoreFactory({ projectRoot });
+  const raw = store.render({ kind, scenario: opts.scenario });
+  return { raw, exitKind: 'ok' };
 }
 
 // --- Slice 7: vendor init -------------------------------------------------
@@ -811,6 +847,8 @@ function buildProgram(deps = {}) {
     validator = new ScenarioValidator(),
     // Factory for the incremental result store. Overridable in tests.
     resultStoreFactory = (args) => new ResultStore(args),
+    // Factory for the cross-session memory store. Overridable in tests.
+    memoryStoreFactory = (args) => new MemoryStore(args),
     // Project root used to resolve mobile-automator/results/.
     projectRoot = process.cwd(),
     // Sink used to emit the rendered envelope + drive the exit code.
@@ -1035,7 +1073,7 @@ function buildProgram(deps = {}) {
     .option('--duration <secs>', 'total duration in seconds')
     .action(withEnvelope((opts) => {
       const r = handleResultFinalize(
-        { resultStoreFactory, projectRoot },
+        { resultStoreFactory, memoryStoreFactory, projectRoot },
         {
           runId: opts.runId,
           scenarioId: opts.scenarioId,
@@ -1092,6 +1130,21 @@ function buildProgram(deps = {}) {
     .command('bootstrap')
     .description('Print the RAW bootstrap (verb map + invariants)')
     .action(withEnvelope(() => emitMaybeRaw(handleBootstrap({}))));
+
+  // --- Cross-session memory verbs ------------------------------------------
+
+  const memory = program.command('memory').description('Cross-session memory (learning) operations');
+
+  memory
+    .command('show')
+    .description('Print RAW memory markdown (run-history[, app-knowledge, preferences])')
+    .option('--kind <k>', 'run-history | app-knowledge | preferences')
+    .option('--scenario <id>', 'filter run-history to one scenario')
+    .action(withEnvelope((opts) =>
+      emitMaybeRaw(
+        handleMemoryShow({ memoryStoreFactory, projectRoot }, { kind: opts.kind, scenario: opts.scenario })
+      )
+    ));
 
   // --- Slice 7: vendor init + MCP prompts server ---------------------------
 
@@ -1256,6 +1309,7 @@ module.exports = {
   handleGuide,
   handleSchema,
   handleBootstrap,
+  handleMemoryShow,
   handleInit,
   handleSessionStart,
   handleSessionStatus,

@@ -3,6 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 
+const { atomicWrite } = require('../util/atomic');
+
 // Incremental result accumulator that persists to
 //   <projectRoot>/mobile-automator/results/<runId>.json
 //
@@ -116,39 +118,11 @@ class ResultStore {
     return {};
   }
 
-  // Atomic write: stream into a hidden temp file in the same directory,
-  // fsync, then rename over the target. rename(2) within one dir is atomic, so
-  // a concurrent reader or a crash sees the old-complete or new-complete file,
-  // never a truncated one. On any failure the temp file is cleaned up.
+  // Atomic write: delegates to the shared util (see src/util/atomic.js).
+  // `this._dir === path.dirname(this._file)` (results dir), so this is
+  // behavior-identical to the previous inline implementation.
   _atomicWrite(contents) {
-    fs.mkdirSync(this._dir, { recursive: true });
-    const tmp = path.join(
-      this._dir,
-      `.${path.basename(this._file)}.tmp.${process.pid}.${Date.now()}`
-    );
-    let fd;
-    try {
-      fd = fs.openSync(tmp, 'w');
-      fs.writeFileSync(fd, contents);
-      fs.fsyncSync(fd);
-      fs.closeSync(fd);
-      fd = undefined;
-      fs.renameSync(tmp, this._file);
-    } catch (e) {
-      if (fd !== undefined) {
-        try {
-          fs.closeSync(fd);
-        } catch (_) {
-          /* ignore */
-        }
-      }
-      try {
-        fs.unlinkSync(tmp);
-      } catch (_) {
-        /* ignore */
-      }
-      throw e;
-    }
+    atomicWrite(this._file, contents);
   }
 
   _persistInProgress() {

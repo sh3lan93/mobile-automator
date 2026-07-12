@@ -59,10 +59,17 @@ const STALE_PATTERNS = [
 ];
 
 // Files / directories to skip (relative to repo root, posix separators).
+// Point-in-time design docs (brainstorm specs + implementation plans) are a
+// historical record of decisions and legitimately describe the removed
+// extension-era model; they are excluded like changelogs. They live under
+// docs/superpowers/{plans,specs} (the bare docs/plans path is kept for any
+// legacy location).
 const EXCLUDED = [
   'docs/changelog.md',
   'CHANGELOG.md',
   'docs/plans',
+  'docs/superpowers/plans',
+  'docs/superpowers/specs',
 ];
 
 function isExcluded(relPath) {
