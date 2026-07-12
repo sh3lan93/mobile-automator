@@ -12,6 +12,8 @@ const {
 describe('memory/entries', () => {
   test('sanitize collapses control chars/newlines to single spaces and trims', () => {
     expect(sanitizeEntryText('  a\tb\nc  ')).toBe('a b c');
+    // printable punctuation must survive (guards against a space-to-hyphen range)
+    expect(sanitizeEntryText('onboarding top-right ~500ms')).toBe('onboarding top-right ~500ms');
     expect(sanitizeEntryText('x-y')).toBe('x-y'); // preserves hyphens
   });
 
