@@ -479,13 +479,14 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
   // fold into the envelope hint instead of throwing.
   const hints = [storeHint(store)].filter(Boolean);
   if (memoryStoreFactory) {
-    const mem = memoryStoreFactory({ projectRoot });
+    let mem;
     try {
+      mem = memoryStoreFactory({ projectRoot });
       mem.recordRun(result);
     } catch (e) {
       hints.push(`run-history not updated: ${e.message}`);
     }
-    // Fold any warnings recordRun accumulated — even if it later threw.
+    // Fold any warnings the store accumulated (even if recordRun later threw).
     const memHint = storeHint(mem);
     if (memHint) hints.push(memHint);
   }

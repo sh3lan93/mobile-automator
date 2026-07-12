@@ -103,4 +103,27 @@ describe('result finalize auto-harvest', () => {
     expect(r.envelope.hint).toContain('run-history not updated: disk full');
     expect(r.envelope.hint).toContain('preserved as sidecar');
   });
+
+  test('a throwing memoryStoreFactory (construction throw) does not fail finalize', () => {
+    const root = tmpRoot();
+    const resultStoreFactory = (a) => new ResultStore(a);
+    const memoryStoreFactory = () => {
+      throw new Error('factory boom');
+    };
+
+    const r = handleResultFinalize(
+      { resultStoreFactory, memoryStoreFactory, projectRoot: root },
+      { runId: 'run_20260712_101600', scenarioId: 'login', status: 'passed' }
+    );
+
+    // (a) finalize still succeeded despite the memory-store construction throw.
+    expect(r.envelope.ok).toBe(true);
+
+    // (b) the result file was actually written.
+    const resultFile = path.join(root, 'mobile-automator', 'results', 'run_20260712_101600.json');
+    expect(fs.existsSync(resultFile)).toBe(true);
+
+    // (c) the construction throw was folded into the envelope hint, not left uncaught.
+    expect(r.envelope.hint).toContain('run-history not updated: factory boom');
+  });
 });
