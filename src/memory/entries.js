@@ -38,8 +38,8 @@ function parseEntries(md) {
 function renderEntries(kind, entries) {
   const out = [
     HEADERS[kind] || `# ${kind}`,
-    '<!-- Managed by `mauto memory`. Entries are appended; edit or prune freely.',
-    '     [asserted] = agent-claimed; verify before trusting. -->',
+    "<!-- Managed by `mauto memory`. Edit an entry's text or delete whole bullets freely;",
+    '     other lines are not preserved on the next write. [asserted] = agent-claimed; verify. -->',
     '',
   ];
   for (const e of entries) out.push(`- [${e.date}][asserted] ${e.text}`);
