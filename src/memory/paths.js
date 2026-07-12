@@ -10,6 +10,18 @@ const FILES = {
   preferences: 'preferences.md',
 };
 
+// The stable `--kind` identifiers, derived from FILES so there is a single
+// source of truth for "which memory kinds exist".
+const KINDS = Object.keys(FILES);
+
+// Markdown headers per kind, colocated with FILES/KINDS since they're the
+// same per-kind metadata.
+const HEADERS = {
+  'run-history': '# Run History',
+  'app-knowledge': '# App Knowledge',
+  preferences: '# Preferences',
+};
+
 function memoryDir(projectRoot) {
   return path.join(projectRoot, 'mobile-automator', 'memory');
 }
@@ -28,4 +40,4 @@ function lockPath(projectRoot) {
   return path.join(sessionDir(projectRoot), 'memory.lock');
 }
 
-module.exports = { memoryDir, memoryFile, sessionDir, lockPath, FILES };
+module.exports = { memoryDir, memoryFile, sessionDir, lockPath, FILES, KINDS, HEADERS };

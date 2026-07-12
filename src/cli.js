@@ -481,7 +481,8 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
     try {
       const mem = memoryStoreFactory({ projectRoot });
       mem.recordRun(result);
-      if (mem.warnings && mem.warnings.length) hints.push(mem.warnings.join(' '));
+      const memHint = storeHint(mem);
+      if (memHint) hints.push(memHint);
     } catch (e) {
       hints.push(`run-history not updated: ${e.message}`);
     }

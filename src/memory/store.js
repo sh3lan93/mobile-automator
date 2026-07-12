@@ -3,9 +3,10 @@
 const fs = require('fs');
 const path = require('path');
 
-const { memoryFile, lockPath } = require('./paths');
+const { memoryFile, lockPath, KINDS, HEADERS } = require('./paths');
 const { withLock } = require('./lock');
 const { parseRunHistory, renderRunHistory, recordInModel, countEntries } = require('./history');
+const { atomicWrite } = require('../util/atomic');
 
 // Cross-session memory store. Mirrors ResultStore's one-shot-process,
 // load-mutate-atomic-write shape, but the memory files are SHARED across runs
@@ -29,18 +30,20 @@ function notesFromResult(result) {
   });
 }
 
-const HEADERS = {
-  'run-history': '# Run History',
-  'app-knowledge': '# App Knowledge',
-  preferences: '# Preferences',
-};
-
 const DEFAULT_CAP = 8000;
 
 // Filter a run-history markdown body down to a single scenario's `##` section.
 // Keeps the top-of-file header lines (everything before the first `##`
 // heading) and, if present, the matching scenario's heading + its note lines;
 // drops every other scenario's section.
+//
+// This is DELIBERATELY a string-level line filter, not a re-serialization
+// from the parsed history model, mirroring the raw-preserving unfiltered
+// render path above. Re-serializing from the model would silently drop any
+// hand-edited line that doesn't fit the model's note shape — the files are
+// designed to be hand-editable, so that data loss would be a behavior
+// change, not a simplification. Do not "clean this up" into a model-based
+// render without re-checking that invariant.
 function filterScenario(md, scenario) {
   const lines = md.split('\n');
   const kept = [];
@@ -119,27 +122,9 @@ class MemoryStore {
     return '';
   }
 
+  // Delegates to the shared util (see src/util/atomic.js).
   _atomicWrite(file, contents) {
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    const tmp = path.join(
-      path.dirname(file),
-      `.${path.basename(file)}.tmp.${process.pid}.${Date.now()}`
-    );
-    let fd;
-    try {
-      fd = fs.openSync(tmp, 'w');
-      fs.writeFileSync(fd, contents);
-      fs.fsyncSync(fd);
-      fs.closeSync(fd);
-      fd = undefined;
-      fs.renameSync(tmp, file);
-    } catch (e) {
-      if (fd !== undefined) {
-        try { fs.closeSync(fd); } catch (_) { /* ignore */ }
-      }
-      try { fs.unlinkSync(tmp); } catch (_) { /* ignore */ }
-      throw e;
-    }
+    atomicWrite(file, contents);
   }
 
   // Auto-harvest: fold a finalized result into the rolling run-history aggregate.
@@ -162,11 +147,11 @@ class MemoryStore {
   // comment (per-file entry counts + last-updated date) followed by the
   // requested file bodies. Read-only — no lock needed.
   render({ kind, scenario, cap = DEFAULT_CAP } = {}) {
-    const names = kind ? [kind] : ['run-history', 'app-knowledge', 'preferences'];
+    const names = kind ? [kind] : KINDS;
     const summary = [];
     const sections = [];
 
-    for (const name of ['run-history', 'app-knowledge', 'preferences']) {
+    for (const name of KINDS) {
       const raw = this._safeRead(name);
       const count = countEntriesFor(name, raw);
       const updated = this._mtimeDate(name);
