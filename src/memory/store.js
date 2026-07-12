@@ -7,6 +7,7 @@ const { memoryFile, lockPath, KINDS, HEADERS } = require('./paths');
 const { withLock } = require('./lock');
 const { parseRunHistory, renderRunHistory, recordInModel, countEntries } = require('./history');
 const { atomicWrite } = require('../util/atomic');
+const { parseEntries, renderEntries, hasText } = require('./entries');
 
 // Cross-session memory store. Mirrors ResultStore's one-shot-process,
 // load-mutate-atomic-write shape, but the memory files are SHARED across runs
@@ -140,6 +141,34 @@ class MemoryStore {
       });
       this._atomicWrite(file, renderRunHistory(model));
       return { scenarioId, runs: model.byScenario[scenarioId].runs.slice() };
+    });
+  }
+
+  // Agent-authored: append a durable [asserted] fact/preference under the lock.
+  // Exact-match de-dupe (same text already present → skip). Assumes `text` is
+  // already validated/sanitized by the verb handler.
+  add(kind, text) {
+    const file = this._file(kind);
+    return withLock(lockPath(this.projectRoot), () => {
+      const entries = parseEntries(this._readRaw(kind));
+      if (hasText(entries, text)) {
+        return { kind, added: false, deduped: true };
+      }
+      entries.push({ date: todayISO(), text });
+      this._atomicWrite(file, renderEntries(kind, entries));
+      return { kind, added: true, deduped: false };
+    });
+  }
+
+  // The correction path: remove entries whose text contains `match`.
+  forget(kind, match) {
+    const file = this._file(kind);
+    return withLock(lockPath(this.projectRoot), () => {
+      const entries = parseEntries(this._readRaw(kind));
+      const kept = entries.filter((e) => !e.text.includes(match));
+      const removed = entries.length - kept.length;
+      if (removed > 0) this._atomicWrite(file, renderEntries(kind, kept));
+      return { kind, removed };
     });
   }
 

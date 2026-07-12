@@ -14,6 +14,10 @@ const FILES = {
 // source of truth for "which memory kinds exist".
 const KINDS = Object.keys(FILES);
 
+// The two hand-authorable kinds. `run-history` is machine-owned (auto-harvested
+// on `result finalize`) and is NOT a valid `memory add`/`forget` target.
+const AGENT_KINDS = ['app-knowledge', 'preferences'];
+
 // Markdown headers per kind, colocated with FILES/KINDS since they're the
 // same per-kind metadata.
 const HEADERS = {
@@ -40,4 +44,4 @@ function lockPath(projectRoot) {
   return path.join(sessionDir(projectRoot), 'memory.lock');
 }
 
-module.exports = { memoryDir, memoryFile, sessionDir, lockPath, FILES, KINDS, HEADERS };
+module.exports = { memoryDir, memoryFile, sessionDir, lockPath, FILES, KINDS, AGENT_KINDS, HEADERS };
