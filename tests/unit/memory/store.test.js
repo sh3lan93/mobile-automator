@@ -61,6 +61,21 @@ describe('MemoryStore.recordRun', () => {
     const md = readHistory(root);
     expect(md).toContain('## x  (last 5 runs: P)');
   });
+
+  test('a non-ENOENT read failure is tolerated: no throw, a warning is recorded', () => {
+    const root = tmpRoot();
+    const store = new MemoryStore({ projectRoot: root });
+    const spy = jest.spyOn(fs, 'readFileSync').mockImplementation(() => {
+      const e = new Error('EACCES'); e.code = 'EACCES'; throw e;
+    });
+    try {
+      expect(() => store.recordRun({ scenario_id: 'x', status: 'passed', observations: [] })).not.toThrow();
+      expect(store.warnings.length).toBeGreaterThan(0);
+      expect(store.warnings.join(' ')).toMatch(/unreadable/);
+    } finally {
+      spy.mockRestore();
+    }
+  });
 });
 
 describe('MemoryStore.render', () => {

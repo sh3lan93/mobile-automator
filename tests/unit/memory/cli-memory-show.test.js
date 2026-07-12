@@ -87,4 +87,20 @@ describe('result finalize auto-harvest', () => {
     // (c) the throw was folded into the envelope hint, not swallowed.
     expect(r.envelope.hint).toMatch(/run-history not updated|boom/);
   });
+
+  test('finalize folds memory warnings into the hint even when recordRun throws', () => {
+    const root = tmpRoot();
+    const resultStoreFactory = (a) => new (require('../../../src/result/store').ResultStore)(a);
+    const memoryStoreFactory = () => ({
+      warnings: ['run-history file was unreadable; preserved as sidecar'],
+      recordRun() { throw new Error('disk full'); },
+    });
+    const r = handleResultFinalize(
+      { resultStoreFactory, memoryStoreFactory, projectRoot: root },
+      { runId: 'run_20260712_101500', scenarioId: 'x', status: 'passed' }
+    );
+    expect(r.envelope.ok).toBe(true);
+    expect(r.envelope.hint).toContain('run-history not updated: disk full');
+    expect(r.envelope.hint).toContain('preserved as sidecar');
+  });
 });
