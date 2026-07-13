@@ -61,6 +61,21 @@ describe('MemoryStore.recordRun', () => {
     const md = readHistory(root);
     expect(md).toContain('## x  (last 5 runs: P)');
   });
+
+  test('a non-ENOENT read failure is tolerated: no throw, a warning is recorded', () => {
+    const root = tmpRoot();
+    const store = new MemoryStore({ projectRoot: root });
+    const spy = jest.spyOn(fs, 'readFileSync').mockImplementation(() => {
+      const e = new Error('EACCES'); e.code = 'EACCES'; throw e;
+    });
+    try {
+      expect(() => store.recordRun({ scenario_id: 'x', status: 'passed', observations: [] })).not.toThrow();
+      expect(store.warnings.length).toBeGreaterThan(0);
+      expect(store.warnings.join(' ')).toMatch(/unreadable/);
+    } finally {
+      spy.mockRestore();
+    }
+  });
 });
 
 describe('MemoryStore.render', () => {
@@ -105,5 +120,54 @@ describe('MemoryStore.render', () => {
     const md = store.render({ cap: 120 });
     expect(md.length).toBeLessThan(400);
     expect(md).toContain('… (truncated');
+  });
+});
+
+describe('MemoryStore.add / forget', () => {
+  test('add appends an [asserted] entry and creates the file with a header', () => {
+    const root = tmpRoot();
+    const store = new MemoryStore({ projectRoot: root });
+    const r = store.add('app-knowledge', 'search bar needs ~500ms settle');
+    expect(r).toEqual({ kind: 'app-knowledge', added: true, deduped: false });
+    const md = fs.readFileSync(memoryFile(root, 'app-knowledge'), 'utf8');
+    expect(md).toContain('# App Knowledge');
+    expect(md).toMatch(/- \[\d{4}-\d{2}-\d{2}\]\[asserted\] search bar needs ~500ms settle/);
+  });
+
+  test('add de-dupes identical text (skips, reports deduped)', () => {
+    const root = tmpRoot();
+    new MemoryStore({ projectRoot: root }).add('preferences', 'always assert the toast');
+    const r = new MemoryStore({ projectRoot: root }).add('preferences', 'always assert the toast');
+    expect(r).toEqual({ kind: 'preferences', added: false, deduped: true });
+    const md = fs.readFileSync(memoryFile(root, 'preferences'), 'utf8');
+    expect(md.match(/always assert the toast/g)).toHaveLength(1);
+  });
+
+  test('add accumulates across store instances (one-shot process model)', () => {
+    const root = tmpRoot();
+    new MemoryStore({ projectRoot: root }).add('app-knowledge', 'fact one');
+    new MemoryStore({ projectRoot: root }).add('app-knowledge', 'fact two');
+    const md = fs.readFileSync(memoryFile(root, 'app-knowledge'), 'utf8');
+    expect(md).toContain('fact one');
+    expect(md).toContain('fact two');
+  });
+
+  test('forget removes entries whose text contains the substring', () => {
+    const root = tmpRoot();
+    const s = new MemoryStore({ projectRoot: root });
+    s.add('app-knowledge', 'search bar needs a wait');
+    s.add('app-knowledge', 'onboarding Skip is top-right');
+    const r = new MemoryStore({ projectRoot: root }).forget('app-knowledge', 'search bar');
+    expect(r).toEqual({ kind: 'app-knowledge', removed: 1 });
+    const md = fs.readFileSync(memoryFile(root, 'app-knowledge'), 'utf8');
+    expect(md).not.toContain('search bar');
+    expect(md).toContain('onboarding Skip');
+  });
+
+  test('forget with no match removes nothing', () => {
+    const root = tmpRoot();
+    new MemoryStore({ projectRoot: root }).add('preferences', 'assert toast');
+    const r = new MemoryStore({ projectRoot: root }).forget('preferences', 'nonexistent');
+    expect(r).toEqual({ kind: 'preferences', removed: 0 });
   });
 });

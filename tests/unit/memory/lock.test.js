@@ -60,4 +60,15 @@ describe('memory/lock', () => {
       release(lp);
     }
   }, 5000);
+
+  test('withLock releases the lock even when fn throws', () => {
+    const lp = tmpLock();
+    expect(() => withLock(lp, () => { throw new Error('boom'); })).toThrow('boom');
+    expect(fs.existsSync(lp)).toBe(false); // released despite the throw
+  });
+
+  test('release() on an absent lock is a silent no-op', () => {
+    const lp = tmpLock();
+    expect(() => release(lp)).not.toThrow();
+  });
 });

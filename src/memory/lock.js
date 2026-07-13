@@ -10,6 +10,11 @@ const path = require('path');
 // explicit lock. We use O_CREAT|O_EXCL ('wx') as the mutex and break a lock
 // whose holder crashed (mtime older than STALE_MS).
 
+// STALE_MS bounds how long a held lock may sit before another acquirer treats
+// it as abandoned. It is judged from the lockfile's creation mtime and is NOT
+// refreshed while held — safe here because every memory write is a sub-second
+// read-modify-write inside a one-shot verb, far below this window. Revisit if a
+// future caller ever holds the lock across a long-running operation.
 const STALE_MS = 10_000; // a held lock older than this is presumed abandoned
 const RETRY_MS = 50; // wait between acquire attempts
 const MAX_WAIT_MS = 5_000; // give up after this and throw

@@ -7,6 +7,7 @@ const {
   recordInModel,
   countEntries,
   MAX_RUNS,
+  MAX_NOTES,
 } = require('../../../src/memory/history');
 
 describe('memory/history', () => {
@@ -53,5 +54,13 @@ describe('memory/history', () => {
     const reparsed = parseRunHistory(md);
     expect(reparsed.byScenario.s.notes).toHaveLength(1);
     expect(reparsed.byScenario.s.notes[0].text).toBe('hello');
+  });
+
+  test('notes are capped at MAX_NOTES (oldest dropped)', () => {
+    let m = emptyModel();
+    const notes = Array.from({ length: MAX_NOTES + 3 }, (_, i) => ({ date: '2026-07-12', text: `n${i}` }));
+    m = recordInModel(m, { scenarioId: 's', statusLetter: 'P', notes });
+    expect(m.byScenario.s.notes).toHaveLength(MAX_NOTES);
+    expect(m.byScenario.s.notes[m.byScenario.s.notes.length - 1].text).toBe(`n${MAX_NOTES + 2}`); // newest kept
   });
 });

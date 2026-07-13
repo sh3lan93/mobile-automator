@@ -7,6 +7,7 @@ const { memoryFile, lockPath, KINDS, HEADERS } = require('./paths');
 const { withLock } = require('./lock');
 const { parseRunHistory, renderRunHistory, recordInModel, countEntries } = require('./history');
 const { atomicWrite } = require('../util/atomic');
+const { parseEntries, renderEntries, hasText } = require('./entries');
 
 // Cross-session memory store. Mirrors ResultStore's one-shot-process,
 // load-mutate-atomic-write shape, but the memory files are SHARED across runs
@@ -127,19 +128,55 @@ class MemoryStore {
     atomicWrite(file, contents);
   }
 
+  // Acquire the lock, read this kind's raw bytes, run the edit, and write ONLY when
+  // the edit produced new contents. Single owner of the "under lock + write-when-changed"
+  // invariant for every memory mutation.
+  _editUnderLock(kind, edit) {
+    return withLock(lockPath(this.projectRoot), () => {
+      const { contents, result } = edit(this._readRaw(kind));
+      if (contents != null) this._atomicWrite(this._file(kind), contents);
+      return result;
+    });
+  }
+
   // Auto-harvest: fold a finalized result into the rolling run-history aggregate.
   recordRun(result = {}) {
     const scenarioId = result.scenario_id || 'unknown';
-    const file = this._file('run-history');
-    return withLock(lockPath(this.projectRoot), () => {
-      const model = parseRunHistory(this._readRaw('run-history'));
+    return this._editUnderLock('run-history', (raw) => {
+      const model = parseRunHistory(raw);
       recordInModel(model, {
         scenarioId,
         statusLetter: statusLetter(result.status),
         notes: notesFromResult(result),
       });
-      this._atomicWrite(file, renderRunHistory(model));
-      return { scenarioId, runs: model.byScenario[scenarioId].runs.slice() };
+      return {
+        contents: renderRunHistory(model),
+        result: { scenarioId, runs: model.byScenario[scenarioId].runs.slice() },
+      };
+    });
+  }
+
+  // Agent-authored: append a durable [asserted] fact/preference under the lock.
+  // Exact-match de-dupe (same text already present → skip). Assumes `text` is
+  // already validated/sanitized by the verb handler.
+  add(kind, text) {
+    return this._editUnderLock(kind, (raw) => {
+      const entries = parseEntries(raw);
+      if (hasText(entries, text)) {
+        return { contents: undefined, result: { kind, added: false, deduped: true } };
+      }
+      entries.push({ date: todayISO(), text });
+      return { contents: renderEntries(kind, entries), result: { kind, added: true, deduped: false } };
+    });
+  }
+
+  // The correction path: remove entries whose text contains `match`.
+  forget(kind, match) {
+    return this._editUnderLock(kind, (raw) => {
+      const entries = parseEntries(raw);
+      const kept = entries.filter((e) => !e.text.includes(match));
+      const removed = entries.length - kept.length;
+      return { contents: removed > 0 ? renderEntries(kind, kept) : null, result: { kind, removed } };
     });
   }
 

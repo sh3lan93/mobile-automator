@@ -10,7 +10,8 @@ const { ScenarioValidator } = require('./scenario/validator');
 const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
 const { ResultStore } = require('./result/store');
 const { MemoryStore } = require('./memory/store');
-const { FILES: MEMORY_FILES } = require('./memory/paths');
+const { FILES: MEMORY_FILES, AGENT_KINDS } = require('./memory/paths');
+const { validateEntryText, MAX_ENTRY_LEN } = require('./memory/entries');
 const configManager = require('./config/manager');
 const { scaffold } = require('./setup/scaffold');
 const guideEmitter = require('./guide/emitter');
@@ -478,14 +479,16 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
   // fold into the envelope hint instead of throwing.
   const hints = [storeHint(store)].filter(Boolean);
   if (memoryStoreFactory) {
+    let mem;
     try {
-      const mem = memoryStoreFactory({ projectRoot });
+      mem = memoryStoreFactory({ projectRoot });
       mem.recordRun(result);
-      const memHint = storeHint(mem);
-      if (memHint) hints.push(memHint);
     } catch (e) {
       hints.push(`run-history not updated: ${e.message}`);
     }
+    // Fold any warnings the store accumulated (even if recordRun later threw).
+    const memHint = storeHint(mem);
+    if (memHint) hints.push(memHint);
   }
 
   return { envelope: ok(result, hints.length ? hints.join(' ') : null), exitKind: 'ok' };
@@ -590,6 +593,58 @@ function handleMemoryShow({ memoryStoreFactory, projectRoot }, opts = {}) {
   const store = memoryStoreFactory({ projectRoot });
   const raw = store.render({ kind, scenario: opts.scenario });
   return { raw, exitKind: 'ok' };
+}
+
+// Agent-authored memory verbs (`memory add`/`memory forget`) are MUTATIONS —
+// unlike `memory show`, they emit the JSON envelope via `emit(...)`, not raw
+// content. `--kind` is validated against the closed AGENT_KINDS set;
+// run-history is machine-owned (auto-harvested on `result finalize`) and is
+// rejected here.
+// invalid_input fail envelope if kind isn't an agent-authorable kind, else null.
+function validateAgentKind(kind) {
+  if (!AGENT_KINDS.includes(kind)) {
+    return fail(
+      'invalid_input',
+      `--kind must be one of: ${AGENT_KINDS.join(', ')}`,
+      'run-history is auto-harvested and cannot be hand-authored.'
+    );
+  }
+  return null;
+}
+
+function handleMemoryAdd({ memoryStoreFactory, projectRoot }, opts = {}) {
+  const { kind, text } = opts;
+  const kindErr = validateAgentKind(kind);
+  if (kindErr) return { envelope: kindErr, exitKind: 'invalid_input' };
+  const v = validateEntryText(text);
+  if (!v.ok) {
+    const hint = {
+      empty: 'Provide non-empty entry text.',
+      too_long: `Keep entries under ${MAX_ENTRY_LEN} characters.`,
+      placeholder: 'Entry text must not contain "{{".',
+    }[v.reason];
+    return { envelope: fail('invalid_input', `invalid entry text (${v.reason})`, hint), exitKind: 'invalid_input' };
+  }
+  const store = memoryStoreFactory({ projectRoot });
+  const r = store.add(kind, v.value);
+  const hint = r.deduped ? 'identical entry already present; skipped' : storeHint(store);
+  return { envelope: ok(r, hint), exitKind: 'ok' };
+}
+
+function handleMemoryForget({ memoryStoreFactory, projectRoot }, opts = {}) {
+  const { kind, match } = opts;
+  const kindErr = validateAgentKind(kind);
+  if (kindErr) return { envelope: kindErr, exitKind: 'invalid_input' };
+  if (!match || !String(match).trim()) {
+    return {
+      envelope: fail('invalid_input', '--match is required', 'Provide a substring to match entries to remove.'),
+      exitKind: 'invalid_input',
+    };
+  }
+  const store = memoryStoreFactory({ projectRoot });
+  const r = store.forget(kind, match);
+  const hint = r.removed === 0 ? 'no matching entries' : storeHint(store);
+  return { envelope: ok(r, hint), exitKind: 'ok' };
 }
 
 // --- Slice 7: vendor init -------------------------------------------------
@@ -1146,6 +1201,23 @@ function buildProgram(deps = {}) {
       )
     ));
 
+  memory
+    .command('add <text>')
+    .description('Record an agent-authored memory entry (app-knowledge or preferences)')
+    .requiredOption('--kind <k>', 'app-knowledge | preferences')
+    .action(withEnvelope((text, opts) =>
+      emit(handleMemoryAdd({ memoryStoreFactory, projectRoot }, { kind: opts.kind, text }), humanFlag())
+    ));
+
+  memory
+    .command('forget')
+    .description('Remove agent-authored memory entries whose text contains a substring')
+    .requiredOption('--kind <k>', 'app-knowledge | preferences')
+    .requiredOption('--match <substr>', 'remove entries containing this substring')
+    .action(withEnvelope((opts) =>
+      emit(handleMemoryForget({ memoryStoreFactory, projectRoot }, { kind: opts.kind, match: opts.match }), humanFlag())
+    ));
+
   // --- Slice 7: vendor init + MCP prompts server ---------------------------
 
   program
@@ -1310,6 +1382,8 @@ module.exports = {
   handleSchema,
   handleBootstrap,
   handleMemoryShow,
+  handleMemoryAdd,
+  handleMemoryForget,
   handleInit,
   handleSessionStart,
   handleSessionStatus,
