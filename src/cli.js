@@ -600,15 +600,22 @@ function handleMemoryShow({ memoryStoreFactory, projectRoot }, opts = {}) {
 // content. `--kind` is validated against the closed AGENT_KINDS set;
 // run-history is machine-owned (auto-harvested on `result finalize`) and is
 // rejected here.
+// invalid_input fail envelope if kind isn't an agent-authorable kind, else null.
+function validateAgentKind(kind) {
+  if (!AGENT_KINDS.includes(kind)) {
+    return fail(
+      'invalid_input',
+      `--kind must be one of: ${AGENT_KINDS.join(', ')}`,
+      'run-history is auto-harvested and cannot be hand-authored.'
+    );
+  }
+  return null;
+}
+
 function handleMemoryAdd({ memoryStoreFactory, projectRoot }, opts = {}) {
   const { kind, text } = opts;
-  if (!AGENT_KINDS.includes(kind)) {
-    return {
-      envelope: fail('invalid_input', `--kind must be one of: ${AGENT_KINDS.join(', ')}`,
-        'run-history is auto-harvested and cannot be hand-authored.'),
-      exitKind: 'invalid_input',
-    };
-  }
+  const kindErr = validateAgentKind(kind);
+  if (kindErr) return { envelope: kindErr, exitKind: 'invalid_input' };
   const v = validateEntryText(text);
   if (!v.ok) {
     const hint = {
@@ -626,12 +633,8 @@ function handleMemoryAdd({ memoryStoreFactory, projectRoot }, opts = {}) {
 
 function handleMemoryForget({ memoryStoreFactory, projectRoot }, opts = {}) {
   const { kind, match } = opts;
-  if (!AGENT_KINDS.includes(kind)) {
-    return {
-      envelope: fail('invalid_input', `--kind must be one of: ${AGENT_KINDS.join(', ')}`, null),
-      exitKind: 'invalid_input',
-    };
-  }
+  const kindErr = validateAgentKind(kind);
+  if (kindErr) return { envelope: kindErr, exitKind: 'invalid_input' };
   if (!match || !String(match).trim()) {
     return {
       envelope: fail('invalid_input', '--match is required', 'Provide a substring to match entries to remove.'),

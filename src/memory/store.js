@@ -128,19 +128,31 @@ class MemoryStore {
     atomicWrite(file, contents);
   }
 
+  // Acquire the lock, read this kind's raw bytes, run the edit, and write ONLY when
+  // the edit produced new contents. Single owner of the "under lock + write-when-changed"
+  // invariant for every memory mutation.
+  _editUnderLock(kind, edit) {
+    return withLock(lockPath(this.projectRoot), () => {
+      const { contents, result } = edit(this._readRaw(kind));
+      if (contents != null) this._atomicWrite(this._file(kind), contents);
+      return result;
+    });
+  }
+
   // Auto-harvest: fold a finalized result into the rolling run-history aggregate.
   recordRun(result = {}) {
     const scenarioId = result.scenario_id || 'unknown';
-    const file = this._file('run-history');
-    return withLock(lockPath(this.projectRoot), () => {
-      const model = parseRunHistory(this._readRaw('run-history'));
+    return this._editUnderLock('run-history', (raw) => {
+      const model = parseRunHistory(raw);
       recordInModel(model, {
         scenarioId,
         statusLetter: statusLetter(result.status),
         notes: notesFromResult(result),
       });
-      this._atomicWrite(file, renderRunHistory(model));
-      return { scenarioId, runs: model.byScenario[scenarioId].runs.slice() };
+      return {
+        contents: renderRunHistory(model),
+        result: { scenarioId, runs: model.byScenario[scenarioId].runs.slice() },
+      };
     });
   }
 
@@ -148,27 +160,23 @@ class MemoryStore {
   // Exact-match de-dupe (same text already present → skip). Assumes `text` is
   // already validated/sanitized by the verb handler.
   add(kind, text) {
-    const file = this._file(kind);
-    return withLock(lockPath(this.projectRoot), () => {
-      const entries = parseEntries(this._readRaw(kind));
+    return this._editUnderLock(kind, (raw) => {
+      const entries = parseEntries(raw);
       if (hasText(entries, text)) {
-        return { kind, added: false, deduped: true };
+        return { contents: undefined, result: { kind, added: false, deduped: true } };
       }
       entries.push({ date: todayISO(), text });
-      this._atomicWrite(file, renderEntries(kind, entries));
-      return { kind, added: true, deduped: false };
+      return { contents: renderEntries(kind, entries), result: { kind, added: true, deduped: false } };
     });
   }
 
   // The correction path: remove entries whose text contains `match`.
   forget(kind, match) {
-    const file = this._file(kind);
-    return withLock(lockPath(this.projectRoot), () => {
-      const entries = parseEntries(this._readRaw(kind));
+    return this._editUnderLock(kind, (raw) => {
+      const entries = parseEntries(raw);
       const kept = entries.filter((e) => !e.text.includes(match));
       const removed = entries.length - kept.length;
-      if (removed > 0) this._atomicWrite(file, renderEntries(kind, kept));
-      return { kind, removed };
+      return { contents: removed > 0 ? renderEntries(kind, kept) : null, result: { kind, removed } };
     });
   }
 
