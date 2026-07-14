@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.0]
+
 ### ♻️ Changed
 
 - **Device-session connection layer deepened behind one seam (no behavior change).** The daemon-vs-oneshot decision used to be threaded through `resolveDeviceConnection`'s six-concern body (four injected seams + a real handle-file write per test) and re-wired a second time by `cli.js`'s session handlers. It now has one owner: a new `src/device/connection.js` exposes a single verb-facing `acquireConnection({device, projectRoot}) -> {bridge, close}` that hides the decision entirely (the resolver's `source` stays private), plus `isSessionAlive`/`startSession`/`endSession` that `handleSessionStart/Status/End` delegate to. The pure `chooseConnectionStrategy({alive, handleDevice, requestedDevice, autostart}) -> 'daemon'|'oneshot'|'spawn-then-daemon'` is split out of the effectful resolver so the branching is tested value-in/value-out (no `tmpRoot`/`writeHandle`/fakes). `cli.js`'s `realDeviceBridge` is now a thin alias to `acquireConnection`, and the duplicated inline `try/finally` in the `elements`/`screenshot` actions collapses into `withBridge`. `session-protocol.js`'s four pass-through codecs fold into a single `FrameParser.encode()`. End-to-end request reading drops from ~7 session modules to ~3 (cli → connection → bridge). ([#123](https://github.com/sh3lan93/mobile-automator/issues/123), Refs [#116](https://github.com/sh3lan93/mobile-automator/issues/116))
