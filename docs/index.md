@@ -1,5 +1,6 @@
 ---
-description: "Intelligent mobile QA automation for any AI coding agent. The host-agnostic mauto CLI drives a device to auto-generate test scenarios and execute them with AI-powered assertions."
+title: "AI-driven mobile QA automation"
+description: "Intelligent mobile QA automation for any AI coding agent. The host-agnostic mauto CLI auto-generates test scenarios and runs AI-powered assertions on devices."
 ---
 
 # mobile-automator

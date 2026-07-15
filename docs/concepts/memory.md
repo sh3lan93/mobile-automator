@@ -1,5 +1,5 @@
 ---
-description: "How mobile-automator's cross-session memory works - the run-history, app-knowledge, and preferences kinds, the memory verbs, and how the agent gets smarter about your app over time."
+description: "How mobile-automator's cross-session memory works: the run-history, app-knowledge, and preferences kinds, plus the verbs that make the agent smarter over time."
 ---
 
 # Cross-Session Memory

@@ -1,0 +1,12 @@
+{#-
+  Override of Material's partials/logo.html.
+  Fixes two audit findings on the header brand image (present on every page):
+    - a11y/image-redundant-alt: default theme hardcodes alt="logo" (matches filename)
+    - images/dimensions + perf/cls-hints: no width/height -> layout shift
+  Descriptive alt (site name) + explicit 32x32 (Material header logo size) resolve both.
+-#}
+{% if config.theme.logo %}
+  <img src="{{ config.theme.logo | url }}" alt="{{ config.site_name }} logo" width="32" height="32">
+{% elif config.theme.icon.logo %}
+  {% include ".icons/" ~ config.theme.icon.logo ~ ".svg" %}
+{% endif %}

@@ -1,4 +1,5 @@
 ---
+title: "Reference & Schemas"
 description: "Complete reference documentation for mobile-automator schemas, 27 assertion types, 14 action types, and MCP automation tools."
 ---
 
