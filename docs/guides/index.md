@@ -44,11 +44,13 @@ The recommended approach to mobile testing with `mauto` follows this pattern:
 
 ## When to Use Each Stage
 
-**Setup** is your starting point. Run `mauto setup` once per mobile project to scaffold the `mobile-automator/` workspace (`scenarios/`, `screenshots/`, `results/`) and write `config.json`. Choose a mode with `--mode aware` (single-OS) or `--mode agnostic` (cross-platform). Then run `mauto devices` to confirm a device is reachable.
+**Setup** is your starting point. Run `mauto setup` once per mobile project to scaffold the `mobile-automator/` workspace (`scenarios/`, `screenshots/`, `results/`, `memory/`) and write `config.json`. Choose a mode with `--mode aware` (single-OS) or `--mode agnostic` (cross-platform). Then run `mauto devices` to confirm a device is reachable.
 
 **Generate** creates test scenarios from natural language. After setup, the agent reads `mauto guide generate` and drives the device through `mauto` verbs to describe test cases in plain English. It generates structured JSON scenarios, handling all the technical formatting so you can focus on what to test.
 
 **Execute** runs your test scenarios on connected devices. The agent reads `mauto guide execute`, performs pre-flight checks to ensure a device is ready, then runs each scenario step-by-step with AI vision-based assertions. Results capture not just pass/fail status, but also observations about flakiness, regressions, and execution context.
+
+Across all three stages, the agent draws on **cross-session memory** in `mobile-automator/memory/` — run history auto-harvested on `result finalize`, plus agent-authored app-knowledge and preferences (`mauto memory show` / `mauto memory add`) — so it gets smarter about your app over time.
 
 
 ## Next Steps

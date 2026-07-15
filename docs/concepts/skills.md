@@ -93,51 +93,72 @@ Convert natural language descriptions into structured test scenarios (JSON follo
 
 The agent, following `mauto guide generate`:
 
-1. Parses user intent
-2. Identifies the test flow (sequence of user actions)
-3. Resolves elements with `mauto elements` (which wraps mobile-mcp → device)
-4. Maps to test actions (tap, type, wait, etc.)
-5. Adds contextual assertions
-6. Includes retry logic for async operations
-7. Validates the JSON with `mauto validate <file>` and saves it
+1. **Consults memory** with `mauto memory show` for prior app-knowledge and preferences learned in earlier sessions
+2. Parses user intent
+3. Identifies the test flow (sequence of user actions)
+4. Resolves elements with `mauto elements` (which wraps mobile-mcp → device)
+5. Maps to test actions (tap, type, wait, etc.)
+6. Adds contextual assertions
+7. Includes retry logic for async operations
+8. Validates the JSON with `mauto validate <file>` and saves it
+9. **Records durable knowledge** it learned about the app or your conventions with `mauto memory add --kind <app-knowledge|preferences>`
+
+See [Cross-Session Memory](memory.md) for how these reads and writes persist across sessions.
 
 ### Output
 
 ```json
 {
+  "$schema_version": "2.1",
   "scenario_id": "login_flow",
-  "schema_version": "2.1",
+  "name": "Login Flow",
+  "description": "Log in with a valid email and password and land on the home screen",
+  "platform": "android",
+  "app_package": "com.example.app",
   "mode": "platform-aware",
   "tags": ["authentication", "critical"],
-  "actions": [
+  "metadata": {
+    "app_version": "1.0.0",
+    "environment": "staging"
+  },
+  "steps": [
     {
-      "step_id": "launch_app",
-      "action_type": "launch_app",
+      "id": "launch_app",
+      "action": "launch_app",
       "description": "Launch the application"
     },
     {
-      "step_id": "wait_for_login_screen",
-      "action_type": "wait_for_element",
-      "element_description": "Login button",
-      "timeout_seconds": 10
+      "id": "wait_for_login_screen",
+      "action": "wait_for_element",
+      "description": "Wait for the login screen to appear",
+      "target": "Login button"
     },
     {
-      "step_id": "tap_email_field",
-      "action_type": "tap",
-      "element_description": "Email input field"
+      "id": "tap_email_field",
+      "action": "tap",
+      "description": "Focus the email input field",
+      "target": "Email input field"
     },
     {
-      "step_id": "type_email",
-      "action_type": "type",
-      "text": "test@example.com"
+      "id": "type_email",
+      "action": "type",
+      "description": "Enter the email address",
+      "target": "Email input field",
+      "value": "test@example.com"
+    },
+    {
+      "id": "wait_for_home",
+      "action": "wait_for_element",
+      "description": "Wait for the home screen to load",
+      "target": "Home screen content"
     }
-    // ... more actions
   ],
   "assertions": [
     {
-      "assertion_id": "home_screen_visible",
-      "action_step_id": "wait_for_home",
-      "assertion_type": "element_exists",
+      "id": "home_screen_visible",
+      "after_step": "wait_for_home",
+      "type": "element_exists",
+      "description": "The home screen is shown after login",
       "element_description": "Home screen content"
     }
   ]
@@ -169,14 +190,18 @@ Replay test scenarios on a connected device and report detailed results with obs
 
 The agent, following `mauto guide execute`:
 
-1. Parses the scenario JSON
-2. For each action:
+1. **Consults memory** with `mauto memory show --scenario <id>` for prior run-history, app-knowledge, and preferences — for example, known flaky steps to watch
+2. Parses the scenario JSON
+3. For each action:
    - Drives a `mauto` verb (`tap`, `type`, `swipe`, `screenshot`, …) which wraps mobile-mcp → device
    - Reads the `{ok,data,error,hint,schema_version}` envelope
-3. For each assertion:
+4. For each assertion:
    - Runs `mauto assert` for mechanical checks, or judges visually for vision assertions
    - Records the result via `mauto result add-step`
-4. Calls `mauto result finalize` to write the report
+5. Calls `mauto result finalize` to write the report — this **auto-harvests** the run's typed observations (regression / flakiness / state_context) into `run-history` memory
+6. **Records durable knowledge** it learned during the run with `mauto memory add --kind <app-knowledge|preferences>`
+
+See [Cross-Session Memory](memory.md) for how run-history is harvested and how agent-authored entries persist.
 
 ### Output
 
@@ -184,7 +209,7 @@ The agent, following `mauto guide execute`:
 {
   "run_id": "login_flow_20250227_143022",
   "scenario_id": "login_flow",
-  "schema_version": "2.1",
+  "schema_version": "2.0",
   "status": "passed",
   "duration_seconds": 15.3,
   "steps_executed": [
@@ -393,18 +418,28 @@ Capture values during test execution for later verification:
 
 ```json
 {
-  "steps": {
-    "capture_user_id": {
-      "type": "capture_value",
-      "element": "user_id_display",
-      "capture_to": "user_id"
-    },
-    "verify_balance": {
-      "type": "element_text",
-      "element": "balance_display",
-      "condition": "user_id matches variable user_id"
+  "variables": {
+    "user_id": { "type": "string", "description": "The displayed user ID" }
+  },
+  "steps": [
+    {
+      "id": "capture_user_id",
+      "action": "capture_value",
+      "target": "user_id_display",
+      "capture_to": "user_id",
+      "description": "Capture the displayed user ID"
     }
-  }
+  ],
+  "assertions": [
+    {
+      "id": "verify_balance",
+      "after_step": "capture_user_id",
+      "type": "value_matches_variable",
+      "element_description": "balance_display",
+      "variable_name": "user_id",
+      "description": "Balance display matches the captured user ID"
+    }
+  ]
 }
 ```
 
@@ -419,19 +454,24 @@ Execute steps conditionally based on previous results:
 
 ```json
 {
-  "steps": {
-    "attempt_login": { "type": "tap", "element": "login_button" },
-    "check_error": {
-      "type": "element_exists",
-      "element": "error_message",
-      "optional": true
+  "steps": [
+    {
+      "id": "attempt_login",
+      "action": "tap",
+      "target": "login_button",
+      "description": "Tap the login button"
     },
-    "retry_if_error": {
-      "type": "tap",
-      "element": "retry_button",
-      "condition": "error_message is visible"
+    {
+      "id": "retry_if_error",
+      "action": "tap",
+      "target": "retry_button",
+      "description": "Tap retry only if an error is showing",
+      "condition": {
+        "type": "element_visible",
+        "element_description": "error_message"
+      }
     }
-  }
+  ]
 }
 ```
 
@@ -446,17 +486,19 @@ Configure how steps retry on failure:
 
 ```json
 {
-  "steps": {
-    "wait_for_data": {
-      "type": "wait_for_element",
-      "element": "data_list",
+  "steps": [
+    {
+      "id": "wait_for_data",
+      "action": "wait_for_element",
+      "target": "data_list",
+      "description": "Wait for the data list to load",
+      "on_failure": "retry",
       "retry_policy": {
-        "max_retries": 3,
-        "wait_between_retries_ms": 1000,
-        "backoff_factor": 1.5
+        "max_attempts": 3,
+        "backoff_ms": 1000
       }
     }
-  }
+  ]
 }
 ```
 

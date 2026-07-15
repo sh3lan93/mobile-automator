@@ -79,12 +79,13 @@ Provide a deterministic, host-agnostic surface. Each verb performs one mechanica
 
 ### Verb groups
 
-- **Device actions:** `elements`, `tap`, `type <text>`, `swipe`, `press <button>`, `screenshot <path>`
+- **Device actions:** `elements`, `tap`, `type <text>`, `swipe`, `press <button>`, `screenshot <path>`, `long-press`, `double-tap`, `launch <appId>`, `install <path>`, `uninstall <appId>`, `open-url <url>`, `orientation <portrait|landscape>`
 - **Author & verify:** `validate <file>`, `assert <type>`, `result add-step`, `result finalize`
 - **Workspace:** `setup`, `config get <key>`, `config set <key> <value>`
 - **Reasoning:** `guide <topic>`, `bootstrap`, `schema <name>`
 - **Agent integration:** `init --agent <host>`, `mcp`
 - **Device session:** `session start|status|end`; `devices`, `devices use <id>`, `devices clear`
+- **Memory:** `memory show`, `memory add`, `memory forget` — the cross-session learning subsystem (see [Memory](memory.md) and the [CLI Verbs reference](../reference/cli-verbs.md))
 
 ### Why a deterministic CLI?
 
@@ -212,6 +213,10 @@ To extend the CLI:
 ### Adding a New Engine Primitive
 
 mobile-mcp is pinned outside this project. To pick up a newer engine, bump the `@mobilenext/mobile-mcp` pin in `package.json`; `mauto` verbs resolve it from `node_modules` at runtime.
+
+### The Memory Subsystem
+
+Cross-session learning lives in `src/memory/`, backed by the `mobile-automator/memory/` store. It is **auto-harvested on `mauto result finalize`** — typed observations fold into a bounded per-scenario `run-history` — and **agent-authored** via `mauto memory add` / `mauto memory forget` for durable app-knowledge and preferences. This lets the agent get smarter about *this* app over time. See [Memory](memory.md).
 
 ## Next Steps
 

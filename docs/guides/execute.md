@@ -82,7 +82,7 @@ When you start execution, the agent verifies:
 
 ### Phase 1: Setup
 
-Before test execution begins:
+Before test execution begins, the agent reads cross-session memory (`mauto memory show`) to pull in prior run history, app-knowledge, and preferences — known flaky screens, waits, and conventions for this app inform how it runs and interprets the scenario.
 
 1. **Clear previous runs** (optional)
    - Ask: "Clear app data before test? (y/n)"
@@ -184,7 +184,7 @@ For each assertion in your scenario:
 {
   "type": "element_text",
   "element": "welcome_message",
-  "expected_exact": "Welcome back!",
+  "expected_text": "Welcome back!",
   "actual": "Welcome back!",
   "result": "passed"
 }
@@ -194,7 +194,7 @@ For each assertion in your scenario:
 {
   "type": "text_contains",
   "element": "error_message",
-  "expected_contains": "timeout",
+  "expected_substring": "timeout",
   "actual": "Network timeout occurred",
   "result": "passed"
 }
@@ -224,6 +224,10 @@ After all steps execute:
 4. **Create result file**
    - Saved to `mobile-automator/results/run_*.json`
    - Ready for analysis
+
+5. **Harvest memory** (automatic)
+   - On `result finalize`, the typed observations (regression / flakiness / state_context) are folded into a bounded rolling per-scenario aggregate in `mobile-automator/memory/run-history.md`, so future runs carry forward what earlier runs learned.
+   - This is best-effort: a memory-write failure never fails an otherwise-successful finalize — it is reported in the envelope `hint` instead.
 
 ---
 
@@ -323,7 +327,7 @@ After all steps execute:
       "severity": "medium",
       "message": "Step 4 failed initially (timeout), passed on retry after 2s wait",
       "affected_step": "wait_for_product_list",
-      "suggestion": "Add retry_policy or increase timeout_seconds"
+      "suggestion": "Add a retry_policy or increase the wait timeout (wait_config.timeout_ms)"
     },
     {
       "type": "regression",
@@ -387,11 +391,14 @@ If a step has a retry policy configured:
 
 ```json
 {
-  "type": "wait_for_element",
-  "element": "product_list",
+  "id": "wait_for_product_list",
+  "action": "wait_for_element",
+  "target": "product_list",
+  "description": "Wait for the product list to load",
+  "on_failure": "retry",
   "retry_policy": {
-    "max_retries": 3,
-    "wait_between_retries_ms": 2000
+    "max_attempts": 3,
+    "backoff_ms": 2000
   }
 }
 ```
@@ -432,12 +439,17 @@ For steps with timeouts (waits, element verification):
 
 **Customizing timeouts:**
 
-Edit scenario JSON:
+Edit scenario JSON (increase the wait timeout from the default 10s to 30s):
 ```json
 {
-  "type": "wait_for_element",
-  "element": "data_grid",
-  "timeout_seconds": 30  ← Increase from default 10s
+  "id": "wait_for_data_grid",
+  "action": "wait_for_element",
+  "target": "data_grid",
+  "description": "Wait for the data grid to load",
+  "wait_config": {
+    "type": "element_visible",
+    "timeout_ms": 30000
+  }
 }
 ```
 
@@ -482,22 +494,32 @@ mobile-automator/results/
 1. **Add explicit wait before action:**
    ```json
    {
-     "type": "wait_for_element",
-     "element": "target_element",
-     "timeout_seconds": 10
+     "id": "wait_for_target",
+     "action": "wait_for_element",
+     "target": "target_element",
+     "description": "Wait for the target element to appear",
+     "wait_config": {
+       "type": "element_visible",
+       "timeout_ms": 10000
+     }
    },
    {
-     "type": "tap",
-     "element": "target_element"
+     "id": "tap_target",
+     "action": "tap",
+     "target": "target_element",
+     "description": "Tap the target element"
    }
    ```
 
 2. **Add retry policy:**
    ```json
    {
-     "type": "tap",
-     "element": "target_element",
-     "retry_policy": {"max_retries": 3, "wait_between_retries_ms": 2000}
+     "id": "tap_target",
+     "action": "tap",
+     "target": "target_element",
+     "description": "Tap the target element, retrying on failure",
+     "on_failure": "retry",
+     "retry_policy": {"max_attempts": 3, "backoff_ms": 2000}
    }
    ```
 
@@ -515,14 +537,22 @@ mobile-automator/results/
 3. **Use text_contains instead of element_text** — More forgiving
 4. **Capture and compare variables** — For dynamic values:
    ```json
+   // step: capture the dynamic value
    {
-     "type": "capture_value",
-     "element": "dynamic_field",
-     "capture_to": "actual_value"
-   },
+     "id": "capture_dynamic_field",
+     "action": "capture_value",
+     "target": "dynamic_field",
+     "capture_to": "actual_value",
+     "description": "Capture the dynamic field value"
+   }
+   // assertion: compare a later element against the captured value
    {
+     "id": "check_dynamic_field",
+     "after_step": "capture_dynamic_field",
      "type": "value_matches_variable",
-     "variable": "actual_value"
+     "element_description": "dynamic_field",
+     "variable_name": "actual_value",
+     "description": "Field value matches the captured variable"
    }
    ```
 
@@ -534,8 +564,13 @@ mobile-automator/results/
 1. **Increase timeout:**
    ```json
    {
-     "type": "wait_for_loading_complete",
-     "timeout_seconds": 60  ← Increase from default
+     "id": "wait_for_loading",
+     "action": "wait_for_loading_complete",
+     "description": "Wait for loading to complete (increased from the default)",
+     "wait_config": {
+       "type": "loading_complete",
+       "timeout_ms": 60000
+     }
    }
    ```
 
@@ -546,19 +581,31 @@ mobile-automator/results/
 4. **Add intermediate waits** — Break long operations into steps:
    ```json
    {
-     "type": "wait_for_element",
-     "element": "loading_bar",
-     "timeout_seconds": 5
+     "id": "wait_for_loading_bar",
+     "action": "wait_for_element",
+     "target": "loading_bar",
+     "description": "Wait for the loading bar to appear",
+     "wait_config": {
+       "type": "element_visible",
+       "timeout_ms": 5000
+     }
    },
    {
-     "type": "wait_for_element",
-     "element": "loading_bar",
-     "optional": true  ← May disappear
+     "id": "loading_bar_optional",
+     "action": "wait_for_element",
+     "target": "loading_bar",
+     "description": "Loading bar may still be visible",
+     "optional": true
    },
    {
-     "type": "wait_for_element",
-     "element": "content",
-     "timeout_seconds": 10
+     "id": "wait_for_content",
+     "action": "wait_for_element",
+     "target": "content",
+     "description": "Wait for the content to load",
+     "wait_config": {
+       "type": "element_visible",
+       "timeout_ms": 10000
+     }
    }
    ```
 
@@ -570,12 +617,14 @@ mobile-automator/results/
 1. **Check result file** — `mobile-automator/results/run_*.json` shows which step caused crash
 2. **Review app logs** — use your platform's logging tools (Android logcat, Xcode debugger for iOS)
 3. **Check if known issue** — May be app bug, not test issue
-4. **Add preconditions** — Clear app data before test:
+4. **Add preconditions** — Start from a fresh state before the test:
    ```json
    {
      "preconditions": {
-       "clear_app_data": true,
-       "restart_app": true
+       "app_state": "fresh_install",
+       "device_actions": [
+         { "action": "clear_app_data", "target_package": "com.example.myapp" }
+       ]
      }
    }
    ```
@@ -665,9 +714,11 @@ mobile-automator/results/
 
 ```json
 {
+  "id": "assert_welcome",
+  "after_step": "login",
   "type": "element_text",
-  "element": "welcome_message",
-  "expected_exact": "Welcome back, John!",
+  "element_description": "welcome_message",
+  "expected_value": "Welcome back, John!",
   "description": "User is greeted by name after login"
 }
 ```
@@ -676,23 +727,33 @@ mobile-automator/results/
 
 ```json
 {
-  "type": "wait_for_loading_complete",
-  "retry_policy": {"max_retries": 3, "wait_between_retries_ms": 2000}
+  "id": "wait_for_loading",
+  "action": "wait_for_loading_complete",
+  "description": "Wait for loading to complete, retrying on failure",
+  "on_failure": "retry",
+  "retry_policy": {"max_attempts": 3, "backoff_ms": 2000}
 }
 ```
 
 ### ✅ DO: Capture Dynamic Values
 
 ```json
+// step: capture the order ID
 {
-  "type": "capture_value",
-  "element": "order_id",
-  "capture_to": "generated_order_id"
-},
+  "id": "capture_order_id",
+  "action": "capture_value",
+  "target": "order_id",
+  "capture_to": "generated_order_id",
+  "description": "Capture the generated order ID"
+}
+// assertion: confirmation text contains the captured order ID
 {
-  "type": "element_text",
-  "element": "confirmation_text",
-  "expected_contains": "Order captured_to {{generated_order_id}}"
+  "id": "confirm_order_id",
+  "after_step": "capture_order_id",
+  "type": "text_contains",
+  "element_description": "confirmation_text",
+  "expected_substring": "Order {{generated_order_id}}",
+  "description": "Confirmation text includes the captured order ID"
 }
 ```
 
@@ -701,14 +762,18 @@ mobile-automator/results/
 ```json
 // Bad
 {
-  "type": "wait_for_element",  // Uses hardcoded timeout
-  "element": "data",
-  "timeout_seconds": 3
+  "id": "wait_for_data",
+  "action": "wait_for_element",  // Uses a hardcoded timeout
+  "target": "data",
+  "description": "Wait for the data element",
+  "wait_config": { "type": "element_visible", "timeout_ms": 3000 }
 }
 
 // Good
 {
-  "type": "wait_for_loading_complete"  // Waits for actual loading
+  "id": "wait_for_loading",
+  "action": "wait_for_loading_complete",  // Waits for actual loading
+  "description": "Wait for loading to complete"
 }
 ```
 
@@ -717,14 +782,20 @@ mobile-automator/results/
 ```json
 // Bad
 {
+  "id": "assert_pixel_perfect",
+  "after_step": "load_screen",
   "type": "screenshot_match",
-  "reference": "pixel_perfect_baseline.png"  // Too strict
+  "reference_screenshot": "pixel_perfect_baseline.png",  // Too strict
+  "description": "Screen matches a pixel-perfect baseline"
 }
 
 // Good
 {
+  "id": "assert_success",
+  "after_step": "load_screen",
   "type": "element_exists",
-  "element": "success_message"  // Functional assertion
+  "element_description": "success_message",  // Functional assertion
+  "description": "Success message is present"
 }
 ```
 

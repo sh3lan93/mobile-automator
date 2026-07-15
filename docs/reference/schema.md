@@ -17,14 +17,14 @@ The scenario schema defines the format for mobile test scenarios:
 - **Conditional execution** — Optional steps, conditional branching, retry policies
 - **Structured preconditions** — Setup actions and device state requirements
 
-**Schema version identifier:** All scenarios MUST have `"$schema_version": "2.0"` as the first field.
+**Schema version identifier:** Every scenario carries a `$schema_version` field (note the leading `$`). It accepts `"2.0"` or `"2.1"` and defaults to `"2.0"`. **2.1 is the current version** and is purely additive over 2.0 — it adds the `mode` metadata field and four platform-agnostic semantic actions (`press_back`, `dismiss_keyboard`, `grant_permission`, `deny_permission`). Existing `"2.0"` scenarios remain valid; new scenarios should use `"2.1"`.
 
 ## Schema Structure Overview
 
 ```
 Test Scenario
 ├─ Metadata
-│  ├─ $schema_version (required: "2.0")
+│  ├─ $schema_version (required: "2.0" or "2.1")
 │  ├─ scenario_id (required: snake_case)
 │  ├─ name (required: human-readable)
 │  ├─ description (required: what it tests)
@@ -37,7 +37,7 @@ Test Scenario
 │  ├─ variables (optional: variable definitions)
 │  └─ preconditions (optional: setup actions)
 ├─ Execution
-│  ├─ steps (required: test actions)
+│  ├─ steps (required: ordered array of test actions)
 │  └─ assertions (required: verification rules)
 └─ Execution Metadata (runtime-only, in result schema)
 ```
@@ -48,7 +48,7 @@ Test Scenario
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `$schema_version` | string | **YES** | Must be exactly `"2.0"` |
+| `$schema_version` | string | **YES** | Accepts `"2.0"` or `"2.1"` (default `"2.0"`). `"2.1"` is current. |
 | `scenario_id` | string | **YES** | Unique identifier in snake_case (e.g., `login_happy_path`) |
 | `name` | string | **YES** | Human-readable scenario title |
 | `description` | string | **YES** | What this scenario tests and business value |
@@ -56,93 +56,99 @@ Test Scenario
 | `app_package` | string | **YES** | Android package name or iOS bundle identifier |
 | `metadata` | object | **YES** | Design-time metadata with `app_version` and `environment` |
 | `tags` | array | No | Categorization tags for filtering (max 10 tags, max 20 chars each) |
-| `variables` | object | No | Variable declarations for capture_value steps |
+| `variables` | object | No | Variable declarations for `capture_value` steps |
 | `preconditions` | object | No | Setup requirements and device actions before test |
-| `steps` | object | **YES** | Named test steps (key = step_id, value = action definition) |
+| `steps` | array | **YES** | Ordered array of step objects (each with `id`, `action`, `description`) |
 | `assertions` | array | **YES** | Array of assertion checks |
 
 ### Example Minimal Scenario
 
 ```json
 {
-  "$schema_version": "2.0",
+  "$schema_version": "2.1",
   "scenario_id": "login_happy_path",
   "name": "User Login - Happy Path",
-  "description": "Verify user can log in with valid credentials and access dashboard",
+  "description": "Verify user can log in with valid credentials and access the dashboard",
   "platform": "android",
   "app_package": "com.example.app",
   "metadata": {
     "app_version": "1.2.3",
     "environment": "staging"
   },
-  "steps": {
-    "tap_login_button": {
-      "type": "tap",
-      "element": "login_button"
+  "steps": [
+    {
+      "id": "tap_login_button",
+      "action": "tap",
+      "description": "Tap the login button on the welcome screen",
+      "target": "Login button"
     },
-    "wait_for_form": {
-      "type": "wait_for_element",
-      "element": "email_field",
-      "timeout_seconds": 5
+    {
+      "id": "wait_for_form",
+      "action": "wait_for_element",
+      "description": "Wait for the email input field to appear",
+      "target": "Email input field",
+      "wait_config": { "type": "element_visible", "timeout_ms": 5000 }
     }
-  },
+  ],
   "assertions": [
     {
       "id": "login_form_visible",
-      "description": "Login form is displayed",
+      "after_step": "wait_for_form",
       "type": "element_exists",
-      "element": "email_field"
+      "description": "The login form is displayed",
+      "element_description": "Email input field"
     }
   ]
 }
 ```
 
-## Steps Object
+## Steps Array
 
-The `steps` object contains named test actions. Each key is the step ID (snake_case), and the value is an action definition.
+The `steps` field is an **ordered array** of step objects. Each object requires `id`, `action`, and `description`. The `target` field is a *semantic* description of the element (never a `resource-id` or OS-specific locator) — the agent resolves it to a tappable element at replay time.
 
 ### Step ID Format
 
 - Must be lowercase alphanumeric with underscores: `^[a-z][a-z0-9_]*$`
 - Examples: `tap_login`, `wait_for_home`, `type_email_address`
-- Max length: 50 characters
+- Unique within the scenario; used for screenshot naming and `after_step` references
 
 ### Action Types (14 total)
 
+Each step's `action` field is one of these values. In platform-agnostic (`mode: "platform-agnostic"`) scenarios you can additionally use the four semantic actions `press_back`, `dismiss_keyboard`, `grant_permission`, and `deny_permission`, which resolve to the right per-platform mechanics at replay time.
+
 #### 1. launch_app
-Launch the app on the device.
+Launch the app under test on the device.
 
 **Fields:**
-- `type` — `"launch_app"`
-- `app_package` (optional) — Override default package (rarely needed)
+- `action` — `"launch_app"`
 
 **Example:**
 ```json
 {
-  "launch_app_step": {
-    "type": "launch_app"
-  }
+  "id": "launch_app",
+  "action": "launch_app",
+  "description": "Launch the app under test"
 }
 ```
 
 ---
 
 #### 2. tap
-Tap/click on a UI element.
+Tap on a UI element.
 
 **Fields:**
-- `type` — `"tap"`
-- `element` — Element ID/locator to tap
+- `action` — `"tap"`
+- `target` — Semantic description of the element to tap
 - `optional` (optional) — If `true`, step continues even if element not found (default: `false`)
 - `retry_policy` (optional) — Retry configuration
 
 **Example:**
 ```json
 {
-  "tap_login_button": {
-    "type": "tap",
-    "element": "login_button"
-  }
+  "id": "tap_login_button",
+  "action": "tap",
+  "description": "Tap the login button",
+  "target": "Login button"
 }
 ```
 
@@ -152,18 +158,16 @@ Tap/click on a UI element.
 Long-press on a UI element.
 
 **Fields:**
-- `type` — `"long_press"`
-- `element` — Element to long-press
-- `duration_ms` (optional) — Press duration in milliseconds (default: 500)
+- `action` — `"long_press"`
+- `target` — Element to long-press
 
 **Example:**
 ```json
 {
-  "long_press_menu_item": {
-    "type": "long_press",
-    "element": "menu_item",
-    "duration_ms": 1000
-  }
+  "id": "long_press_menu_item",
+  "action": "long_press",
+  "description": "Long-press the list item to open the context menu",
+  "target": "First message in the list"
 }
 ```
 
@@ -173,37 +177,35 @@ Long-press on a UI element.
 Double-tap on a UI element.
 
 **Fields:**
-- `type` — `"double_tap"`
-- `element` — Element to double-tap
+- `action` — `"double_tap"`
+- `target` — Element to double-tap
 
 **Example:**
 ```json
 {
-  "double_tap_zoom": {
-    "type": "double_tap",
-    "element": "image"
-  }
+  "id": "double_tap_zoom",
+  "action": "double_tap",
+  "description": "Double-tap the image to zoom in",
+  "target": "Product image"
 }
 ```
 
 ---
 
 #### 5. type
-Type text into a focused input field.
+Type text into the currently focused input field.
 
 **Fields:**
-- `type` — `"type"`
-- `text` — Text to type
-- `clear_first` (optional) — Clear field before typing (default: `false`)
+- `action` — `"type"`
+- `value` — Text to type
 
 **Example:**
 ```json
 {
-  "enter_email": {
-    "type": "type",
-    "text": "user@example.com",
-    "clear_first": true
-  }
+  "id": "enter_email",
+  "action": "type",
+  "description": "Type the account email into the focused field",
+  "value": "user@example.com"
 }
 ```
 
@@ -213,18 +215,16 @@ Type text into a focused input field.
 Swipe/scroll in a direction.
 
 **Fields:**
-- `type` — `"swipe"`
-- `direction` — `up`, `down`, `left`, or `right`
-- `distance_pixels` (optional) — Distance in pixels (default: 400)
+- `action` — `"swipe"`
+- `value` — `up`, `down`, `left`, or `right`
 
 **Example:**
 ```json
 {
-  "scroll_down_page": {
-    "type": "swipe",
-    "direction": "down",
-    "distance_pixels": 500
-  }
+  "id": "scroll_down_page",
+  "action": "swipe",
+  "description": "Scroll down the page",
+  "value": "down"
 }
 ```
 
@@ -234,57 +234,54 @@ Swipe/scroll in a direction.
 Scroll until a specific element is visible.
 
 **Fields:**
-- `type` — `"scroll_to_element"`
-- `element` — Element to scroll to
-- `max_swipes` (optional) — Maximum scroll attempts (default: 10)
-- `direction` (optional) — `up` or `down` (default: `down`)
+- `action` — `"scroll_to_element"`
+- `target` — Element to scroll to
 
 **Example:**
 ```json
 {
-  "scroll_to_submit": {
-    "type": "scroll_to_element",
-    "element": "submit_button",
-    "direction": "down"
-  }
+  "id": "scroll_to_submit",
+  "action": "scroll_to_element",
+  "description": "Scroll until the submit button is on screen",
+  "target": "Submit button"
 }
 ```
 
 ---
 
 #### 8. press_button
-Press a device button.
+Press a hardware/virtual device button.
 
 **Fields:**
-- `type` — `"press_button"`
-- `button` — `BACK`, `HOME`, `VOLUME_UP`, `VOLUME_DOWN`, `ENTER`
+- `action` — `"press_button"`
+- `value` — `BACK`, `HOME`, or `ENTER`
 
 **Example:**
 ```json
 {
-  "press_back": {
-    "type": "press_button",
-    "button": "BACK"
-  }
+  "id": "press_back",
+  "action": "press_button",
+  "description": "Press the device back button",
+  "value": "BACK"
 }
 ```
 
 ---
 
 #### 9. open_url
-Open a URL in the default browser.
+Open a URL (deep link or web) on the device.
 
 **Fields:**
-- `type` — `"open_url"`
-- `url` — URL to open
+- `action` — `"open_url"`
+- `value` — URL to open
 
 **Example:**
 ```json
 {
-  "open_help_page": {
-    "type": "open_url",
-    "url": "https://help.example.com"
-  }
+  "id": "open_help_page",
+  "action": "open_url",
+  "description": "Open the help page in the browser",
+  "value": "https://help.example.com"
 }
 ```
 
@@ -294,18 +291,18 @@ Open a URL in the default browser.
 Wait until an element appears on screen.
 
 **Fields:**
-- `type` — `"wait_for_element"`
-- `element` — Element to wait for
-- `timeout_seconds` (optional) — Max wait time (default: 10)
+- `action` — `"wait_for_element"`
+- `target` — Element to wait for
+- `wait_config` — `{ "type": "element_visible", "timeout_ms": <1000–60000> }`
 
 **Example:**
 ```json
 {
-  "wait_for_dashboard": {
-    "type": "wait_for_element",
-    "element": "dashboard_content",
-    "timeout_seconds": 15
-  }
+  "id": "wait_for_dashboard",
+  "action": "wait_for_element",
+  "description": "Wait for the dashboard content to appear",
+  "target": "Dashboard content",
+  "wait_config": { "type": "element_visible", "timeout_ms": 15000 }
 }
 ```
 
@@ -315,18 +312,18 @@ Wait until an element appears on screen.
 Wait until an element disappears from screen.
 
 **Fields:**
-- `type` — `"wait_for_element_gone"`
-- `element` — Element to wait for disappearance
-- `timeout_seconds` (optional) — Max wait time (default: 10)
+- `action` — `"wait_for_element_gone"`
+- `target` — Element to wait for disappearance
+- `wait_config` — `{ "type": "element_gone", "timeout_ms": <1000–60000> }`
 
 **Example:**
 ```json
 {
-  "wait_for_loading_done": {
-    "type": "wait_for_element_gone",
-    "element": "loading_spinner",
-    "timeout_seconds": 20
-  }
+  "id": "wait_for_loading_done",
+  "action": "wait_for_element_gone",
+  "description": "Wait for the loading spinner to disappear",
+  "target": "Loading spinner",
+  "wait_config": { "type": "element_gone", "timeout_ms": 20000 }
 }
 ```
 
@@ -336,57 +333,56 @@ Wait until an element disappears from screen.
 Wait until loading indicators disappear.
 
 **Fields:**
-- `type` — `"wait_for_loading_complete"`
-- `timeout_seconds` (optional) — Max wait time (default: 10)
+- `action` — `"wait_for_loading_complete"`
+- `wait_config` — `{ "type": "loading_complete", "indicator": "any", "timeout_ms": <1000–60000> }`
 
-**Note:** Automatically detects project-specific loading indicators from `mobile-automator/config.json`
+**Note:** `indicator` may be `shimmer`, `spinner`, `progress_bar`, `skeleton`, or `any` (default `any`).
 
 **Example:**
 ```json
 {
-  "wait_for_data_load": {
-    "type": "wait_for_loading_complete",
-    "timeout_seconds": 30
-  }
+  "id": "wait_for_data_load",
+  "action": "wait_for_loading_complete",
+  "description": "Wait for the feed to finish loading",
+  "wait_config": { "type": "loading_complete", "indicator": "any", "timeout_ms": 30000 }
 }
 ```
 
 ---
 
 #### 13. capture_value
-Extract text/value from an element and store in a variable.
+Extract text/value from an element and store it in a variable.
 
 **Fields:**
-- `type` — `"capture_value"`
-- `element` — Element to extract from
-- `capture_to` — Variable name to store value (must be declared in `variables` section)
+- `action` — `"capture_value"`
+- `target` — Element to extract from
+- `capture_to` — Variable name to store the value in (must be declared in the `variables` block)
 
 **Example:**
 ```json
 {
-  "capture_order_id": {
-    "type": "capture_value",
-    "element": "order_confirmation_code",
-    "capture_to": "order_id"
-  }
+  "id": "capture_order_id",
+  "action": "capture_value",
+  "description": "Capture the order confirmation code",
+  "target": "Order confirmation code",
+  "capture_to": "order_id"
 }
 ```
 
 ---
 
 #### 14. clear_app_data
-Clear app data and cache (precondition action).
+Clear app data and cache (setup action).
 
 **Fields:**
-- `type` — `"clear_app_data"`
-- `app_package` (optional) — Package to clear (default: primary app)
+- `action` — `"clear_app_data"`
 
 **Example:**
 ```json
 {
-  "reset_app": {
-    "type": "clear_app_data"
-  }
+  "id": "reset_app",
+  "action": "clear_app_data",
+  "description": "Clear app data to start from a clean state"
 }
 ```
 
@@ -394,95 +390,110 @@ Clear app data and cache (precondition action).
 
 ### Step Field Options
 
-Additional fields that can be added to any step:
+Additional optional fields that can be added to any step object:
 
 #### optional
-If `true`, step continues even if it fails. Default: `false`
+If `true`, failure to find or interact with the target is silently ignored and execution continues. Default: `false`
 
 ```json
 {
-  "optional_feature_check": {
-    "type": "tap",
-    "element": "optional_button",
-    "optional": true
-  }
+  "id": "optional_feature_check",
+  "action": "tap",
+  "description": "Dismiss the promo banner if it appears",
+  "target": "Promo banner close button",
+  "optional": true
 }
 ```
 
 #### retry_policy
-Configure automatic retry behavior for flaky steps.
+Configure automatic retry behavior. Only applies when `on_failure` is `"retry"`.
 
 ```json
 {
-  "flaky_element_step": {
-    "type": "wait_for_element",
-    "element": "sometimes_slow_element",
-    "retry_policy": {
-      "max_retries": 3,
-      "backoff_ms": 500,
-      "backoff_multiplier": 1.5
-    }
+  "id": "flaky_element_step",
+  "action": "wait_for_element",
+  "description": "Wait for the sometimes-slow element",
+  "target": "Slow-loading widget",
+  "wait_config": { "type": "element_visible", "timeout_ms": 10000 },
+  "on_failure": "retry",
+  "retry_policy": {
+    "max_attempts": 3,
+    "backoff_ms": 500
   }
 }
 ```
+
+- `max_attempts` — Total attempts including the first (integer, 2–5)
+- `backoff_ms` — Milliseconds to wait between attempts (default `1000`)
 
 #### condition
-Execute step only if condition is true. Reference variables: `"${{variable_name}}"`
+Execute the step only if the condition object evaluates to true; otherwise the step is skipped.
 
 ```json
 {
-  "conditionally_submit": {
-    "type": "tap",
-    "element": "submit_button",
-    "condition": "${{user_role}} == 'admin'"
+  "id": "conditionally_submit",
+  "action": "tap",
+  "description": "Submit only when running on Android",
+  "target": "Submit button",
+  "condition": {
+    "type": "device_property",
+    "property": "platform",
+    "operator": "==",
+    "value": "android"
   }
 }
 ```
 
+Condition `type` is one of `device_property`, `previous_step_skipped`, `variable_value`, or `element_visible`.
+
 #### on_failure
-Action to take if step fails: `"skip_remaining"`, `"retry"`, `"capture_screenshot"`, `"continue"`
+What to do when the step fails: `"fail"` (default), `"skip"`, or `"retry"`.
 
 ```json
 {
-  "critical_step": {
-    "type": "tap",
-    "element": "critical_button",
-    "on_failure": "capture_screenshot"
-  }
+  "id": "critical_step",
+  "action": "tap",
+  "description": "Tap the critical confirm button",
+  "target": "Confirm button",
+  "on_failure": "fail"
 }
 ```
 
 #### sub_steps
-Nested steps within a parent step (useful for complex interactions).
+A nested sub-flow (array of step objects) to execute when this step's `condition` is met. After the sub-steps complete, execution resumes at the next top-level step.
 
 ```json
 {
-  "complex_flow": {
-    "type": "tap",
-    "element": "menu",
-    "sub_steps": [
-      { "tap_submenu": { "type": "tap", "element": "submenu_item" } },
-      { "verify_result": { "type": "wait_for_element", "element": "result" } }
-    ]
-  }
+  "id": "complex_flow",
+  "action": "tap",
+  "description": "Open the menu, then run the nested flow",
+  "target": "Menu button",
+  "sub_steps": [
+    { "id": "tap_submenu", "action": "tap", "description": "Open the submenu", "target": "Settings submenu" },
+    { "id": "verify_result", "action": "wait_for_element", "description": "Wait for the settings panel", "target": "Settings panel", "wait_config": { "type": "element_visible", "timeout_ms": 5000 } }
+  ]
 }
 ```
 
 #### wait_config
-Configure wait behavior within a step.
+Configuration for wait-type actions (`wait_for_element`, `wait_for_element_gone`, `wait_for_loading_complete`).
 
 ```json
 {
-  "step_with_custom_wait": {
-    "type": "tap",
-    "element": "button",
-    "wait_config": {
-      "implicit_wait_ms": 1000,
-      "explicit_timeout_seconds": 5
-    }
+  "id": "wait_step",
+  "action": "wait_for_element",
+  "description": "Wait for the confirmation banner",
+  "target": "Confirmation banner",
+  "wait_config": {
+    "type": "element_visible",
+    "timeout_ms": 5000
   }
 }
 ```
+
+- `type` — `element_visible`, `element_gone`, or `loading_complete`
+- `timeout_ms` — Maximum wait in milliseconds (1000–60000)
+- `indicator` (loading only) — `shimmer`, `spinner`, `progress_bar`, `skeleton`, or `any`
 
 ---
 
@@ -533,8 +544,11 @@ Define setup requirements and device state before test execution.
 | Field | Type | Description |
 |-------|------|-------------|
 | `app_state` | string | Required app state: `fresh_install`, `logged_in`, `logged_out`, `any` |
-| `device_actions` | array | Setup actions to perform (clear data, install app, etc.) |
-| `device_properties` | object | Required device properties (network, location, orientation) |
+| `device_actions` | array | Automated setup actions to perform before the scenario starts |
+| `device_properties` | object | Required device properties (network, location_services, orientation) |
+| `notes` | array | Human-readable notes about preconditions that cannot be automated |
+
+Each `device_actions` item has an `action` (`clear_app_data`, `uninstall_app`, `install_app`, `enable_wifi`, `disable_wifi`, `set_orientation`) plus optional `target_package`, `value`, and `description`.
 
 **Example:**
 ```json
@@ -544,6 +558,7 @@ Define setup requirements and device state before test execution.
     "device_actions": [
       {
         "action": "clear_app_data",
+        "target_package": "com.example.app",
         "description": "Clear any cached login data"
       }
     ],
@@ -551,7 +566,8 @@ Define setup requirements and device state before test execution.
       "network": "wifi",
       "location_services": "enabled",
       "orientation": "portrait"
-    }
+    },
+    "notes": ["A valid test account must exist in the staging environment"]
   }
 }
 ```
@@ -560,17 +576,18 @@ Define setup requirements and device state before test execution.
 
 ## Assertions Array
 
-Define verification rules that must pass for the test to succeed.
+Define verification rules that must pass for the test to succeed. Each assertion requires `id`, `after_step`, `type`, and `description`.
 
 **Fields:**
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `id` | string | **YES** | Unique assertion ID in snake_case |
-| `description` | string | **YES** | Human-readable assertion description |
+| `after_step` | string | **YES** | The `id` of the step after which this assertion runs |
 | `type` | string | **YES** | Assertion type (one of 27 types) |
-| `element` | string | Depends | Element to assert (required for most types) |
-| Additional fields | varies | Depends | Type-specific fields (e.g., `expected_exact`, `expected_contains`) |
+| `description` | string | **YES** | Human-readable assertion description |
+| `element_description` | string | Depends | Semantic description of the element to check (for element-based types) |
+| Type-specific fields | varies | Depends | e.g., `expected_value`, `expected_substring`, `expected_count`, `expected_text`, `pattern` |
 
 **Example:**
 ```json
@@ -578,29 +595,32 @@ Define verification rules that must pass for the test to succeed.
   "assertions": [
     {
       "id": "welcome_message",
-      "description": "Welcome message displays user's name",
+      "after_step": "wait_for_home",
       "type": "element_text",
-      "element": "welcome_label",
-      "expected_exact": "Welcome, John Doe"
+      "description": "Welcome message displays the user's name",
+      "element_description": "Welcome label",
+      "expected_value": "Welcome, John Doe"
     },
     {
       "id": "dashboard_visible",
-      "description": "Dashboard content is fully visible",
+      "after_step": "wait_for_home",
       "type": "element_fully_visible",
-      "element": "dashboard_content"
+      "description": "Dashboard content is fully visible",
+      "element_description": "Dashboard content"
     },
     {
       "id": "verification_code_format",
-      "description": "Verification code has correct format",
+      "after_step": "wait_for_home",
       "type": "pattern_match",
-      "element": "code_display",
-      "expected_pattern": "^[0-9]{6}$"
+      "description": "Verification code has the correct format",
+      "element_description": "Verification code display",
+      "pattern": "^[0-9]{6}$"
     }
   ]
 }
 ```
 
-**See [Assertion Types Reference](assertions.md) for complete documentation on all 27 assertion types.**
+**See [Assertion Types Reference](assertions.md) for complete documentation on all 27 assertion types and their type-specific fields.**
 
 ---
 
@@ -657,7 +677,7 @@ Categorization tags for filtering and organizing scenarios.
 
 ```json
 {
-  "$schema_version": "2.0",
+  "$schema_version": "2.1",
   "scenario_id": "login_with_2fa",
   "name": "Login with 2FA",
   "description": "Verify user can log in with email/password and complete two-factor authentication",
@@ -679,87 +699,119 @@ Categorization tags for filtering and organizing scenarios.
     "device_actions": [
       {
         "action": "clear_app_data",
+        "target_package": "com.example.app",
         "description": "Clear cached login data"
       }
-    ]
+    ],
+    "notes": ["A valid test account must exist in the staging environment"]
   },
-  "steps": {
-    "launch_app": {
-      "type": "launch_app"
+  "steps": [
+    {
+      "id": "launch_app",
+      "action": "launch_app",
+      "description": "Launch the app under test"
     },
-    "wait_for_login_screen": {
-      "type": "wait_for_element",
-      "element": "email_input",
-      "timeout_seconds": 10
+    {
+      "id": "wait_for_login_screen",
+      "action": "wait_for_element",
+      "description": "Wait for the login screen to load",
+      "target": "Email input field",
+      "wait_config": { "type": "element_visible", "timeout_ms": 10000 }
     },
-    "enter_email": {
-      "type": "type",
-      "text": "testuser@example.com"
+    {
+      "id": "tap_email_field",
+      "action": "tap",
+      "description": "Focus the email field",
+      "target": "Email input field"
     },
-    "enter_password": {
-      "type": "tap",
-      "element": "password_input"
+    {
+      "id": "enter_email",
+      "action": "type",
+      "description": "Type the test account email",
+      "value": "testuser@example.com"
     },
-    "type_password": {
-      "type": "type",
-      "text": "SecurePassword123!"
+    {
+      "id": "tap_password_field",
+      "action": "tap",
+      "description": "Focus the password field",
+      "target": "Password input field"
     },
-    "tap_login": {
-      "type": "tap",
-      "element": "login_button"
+    {
+      "id": "type_password",
+      "action": "type",
+      "description": "Type the test account password",
+      "value": "SecurePassword123!"
     },
-    "wait_for_2fa_prompt": {
-      "type": "wait_for_element",
-      "element": "2fa_code_input",
-      "timeout_seconds": 15,
-      "retry_policy": {
-        "max_retries": 2,
-        "backoff_ms": 1000
-      }
+    {
+      "id": "tap_login",
+      "action": "tap",
+      "description": "Submit the login form",
+      "target": "Login button"
     },
-    "enter_2fa_code": {
-      "type": "type",
-      "text": "123456"
+    {
+      "id": "wait_for_2fa_prompt",
+      "action": "wait_for_element",
+      "description": "Wait for the two-factor code prompt",
+      "target": "2FA code input field",
+      "wait_config": { "type": "element_visible", "timeout_ms": 15000 },
+      "on_failure": "retry",
+      "retry_policy": { "max_attempts": 3, "backoff_ms": 1000 }
     },
-    "tap_verify": {
-      "type": "tap",
-      "element": "verify_2fa_button"
+    {
+      "id": "enter_2fa_code",
+      "action": "type",
+      "description": "Type the two-factor authentication code",
+      "value": "123456"
     },
-    "wait_for_dashboard": {
-      "type": "wait_for_loading_complete",
-      "timeout_seconds": 20
+    {
+      "id": "tap_verify",
+      "action": "tap",
+      "description": "Confirm the 2FA code",
+      "target": "Verify button"
     },
-    "capture_auth_token": {
-      "type": "capture_value",
-      "element": "auth_header_token",
+    {
+      "id": "wait_for_dashboard",
+      "action": "wait_for_loading_complete",
+      "description": "Wait for the dashboard to finish loading",
+      "wait_config": { "type": "loading_complete", "timeout_ms": 20000 }
+    },
+    {
+      "id": "capture_auth_token",
+      "action": "capture_value",
+      "description": "Capture the auth token from the session badge",
+      "target": "Auth token badge",
       "capture_to": "auth_token"
     }
-  },
+  ],
   "assertions": [
     {
       "id": "login_success",
-      "description": "User successfully logged in and dashboard is visible",
+      "after_step": "wait_for_dashboard",
       "type": "element_exists",
-      "element": "dashboard_content"
+      "description": "User successfully logged in and the dashboard is visible",
+      "element_description": "Dashboard content"
     },
     {
       "id": "welcome_message",
-      "description": "Welcome message displays correct user",
+      "after_step": "wait_for_dashboard",
       "type": "text_contains",
-      "element": "welcome_label",
-      "expected_contains": "Welcome"
+      "description": "Welcome banner greets the user",
+      "element_description": "Welcome banner",
+      "expected_substring": "Welcome"
     },
     {
       "id": "auth_token_captured",
-      "description": "Authentication token was captured",
+      "after_step": "capture_auth_token",
       "type": "text_not_empty",
-      "element": "auth_header_token"
+      "description": "An auth token was captured",
+      "element_description": "Auth token badge"
     },
     {
       "id": "dashboard_fully_loaded",
-      "description": "Dashboard is fully visible",
+      "after_step": "wait_for_dashboard",
       "type": "element_fully_visible",
-      "element": "dashboard_content"
+      "description": "Dashboard content is fully visible",
+      "element_description": "Dashboard content"
     }
   ]
 }
@@ -770,13 +822,12 @@ Categorization tags for filtering and organizing scenarios.
 
 ## Validation Rules
 
-**schema_version:**
-- Must be exactly `"2.0"`
-- Required, must be first field
+**$schema_version:**
+- Accepts `"2.0"` or `"2.1"` (default `"2.0"`); `"2.1"` is current and additive
+- Required
 
 **scenario_id:**
 - Format: `^[a-z][a-z0-9_]*$`
-- Max 50 characters
 - Unique within project
 
 **platform:**
@@ -788,14 +839,18 @@ Categorization tags for filtering and organizing scenarios.
 - Must be valid for target platform
 
 **Steps:**
+- `steps` is an array; each item requires `id`, `action`, and `description`
 - All step IDs must follow format: `^[a-z][a-z0-9_]*$`
-- Step IDs must be unique within scenario
-- All referenced elements must be valid locators
+- Step IDs must be unique within the scenario
+- `target` values are semantic element descriptions, never `resource-id` / OS locators
 
 **Assertions:**
+- Each assertion requires `id`, `after_step`, `type`, and `description`
+- `after_step` must reference a valid step `id`
 - All assertion IDs must be unique
 - `type` must be one of 27 supported types
-- Type-specific fields must be present
+
+Validate a scenario file at any time with `mauto validate <file>`, which returns the uniform envelope with `data.valid`.
 
 ---
 

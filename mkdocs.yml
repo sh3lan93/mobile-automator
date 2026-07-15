@@ -1,5 +1,5 @@
 site_name: mobile-automator
-site_description: Intelligent mobile QA automation for Gemini CLI - auto-detect mobile app architecture, generate test scenarios, and execute with AI-powered assertions
+site_description: Intelligent mobile QA automation for any AI coding agent via the mauto CLI - auto-generate test scenarios and execute them with AI-powered assertions on real devices and emulators
 site_url: https://sh3lan93.github.io/mobile-automator/
 repo_url: https://github.com/sh3lan93/mobile-automator
 repo_name: sh3lan93/mobile-automator
@@ -75,8 +75,9 @@ nav:
   - Core Concepts:
       - Core Concepts: concepts/index.md
       - Architecture: concepts/architecture.md
-      - 3-Tier Design: concepts/three-tier-design.md
+      - Layered Architecture: concepts/three-tier-design.md
       - How Skills Work: concepts/skills.md
+      - Cross-Session Memory: concepts/memory.md
   - Guides:
       - Command Guides: guides/index.md
       - Setup Command: guides/setup.md
@@ -84,10 +85,11 @@ nav:
       - Execute Command: guides/execute.md
   - Reference:
       - Reference: reference/index.md
+      - CLI Verbs: reference/cli-verbs.md
       - Assertion Types: reference/assertions.md
       - Test Scenario Schema: reference/schema.md
       - Test Result Schema: reference/result-schema.md
-      - MCP Tools: reference/mcp-tools.md
+      - Internal Engine (mobile-mcp): reference/mcp-tools.md
   - Examples:
       - Example Scenarios: examples/index.md
       - Android Examples: examples/android.md

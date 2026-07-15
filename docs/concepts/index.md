@@ -94,6 +94,7 @@ Instead of brittle selectors and pixel-by-pixel comparisons, the agent uses AI v
 - **Semantic testing** — AI vision understands your app, not just pixel values
 - **Schema-based** — Test scenarios and results follow JSON schemas for validation and IDE support
 - **Observational debugging** — Results capture flakiness, regressions, and execution context
+- **Cross-session memory** — The agent [remembers what it learns about your app](memory.md) across sessions, so it gets smarter over time
 - **Device through verbs only** — The agent drives the device exclusively through `mauto` verbs that wrap mobile-mcp
 
 ## Main Topics
@@ -101,6 +102,7 @@ Instead of brittle selectors and pixel-by-pixel comparisons, the agent uses AI v
 - **[Architecture Overview](architecture.md)** — Detailed system design and components
 - **[Brain/Hands Layering](three-tier-design.md)** — In-depth explanation of each layer and rationale
 - **[How Skills Work](skills.md)** — Native Agent Skills, guide content, and customization
+- **[Cross-Session Memory](memory.md)** — How the agent remembers what it learns about your app
 
 ## Why This Design?
 

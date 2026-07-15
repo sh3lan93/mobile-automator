@@ -25,6 +25,7 @@ Testing mobile apps manually is **tedious and error-prone**. Cross-platform test
 - **Platform-Agnostic by Default**: One scenario runs on Android and iOS, with OS gestures mapped to semantic actions
 - **Schema**: 14 action types, 27 assertion types, and advanced retry/condition logic
 - **Result Observations**: Captures flakiness, regressions, and state context for smarter debugging
+- **Cross-Session Memory**: The agent remembers app-knowledge, preferences, and run-history across sessions ([`mauto memory`](concepts/memory.md))
 - **Semantic Vision**: AI-powered visual assertions that tolerate cosmetic changes
 - **Portable Targets**: Visible text + role + coordinates, never brittle resource-ids
 
@@ -54,6 +55,8 @@ mauto setup                    # add --mode agnostic for cross-platform apps
 ```bash
 mauto devices                  # lists devices; mauto devices use <id> to pin one
 ```
+
+Device actions run through one persistent session daemon (`mauto session start|status|end`), so state stays warm across verbs. All device, workspace, memory, and session verbs — including the seven new device verbs in v0.21.0 — are catalogued in the [CLI Verbs reference](reference/cli-verbs.md).
 
 ### 4. Generate Tests
 
@@ -126,6 +129,8 @@ Because the contract is just verbs + JSON, **no agent is special** — any agent
 - **Platform Modes**: platform-aware (default) and platform-agnostic (`--mode agnostic`) with four semantic actions for cross-platform scenarios
 - **Schema**: 14 action types, 27 assertion types, advanced retry/condition logic
 - **Result Observations**: Captures flakiness, regressions, and execution context
+- **Cross-Session Memory**: The agent remembers app-knowledge, preferences, and run-history across sessions via [`mauto memory`](concepts/memory.md) — so it gets smarter about *your* app over time
+- **Persistent Device Session**: One warm mobile-mcp daemon behind `mauto session` and `mauto devices` keeps device state across verbs
 - **Built-in Schemas**: Scenario and result schemas available via `mauto schema scenario` / `mauto schema result`
 
 ## Next Steps

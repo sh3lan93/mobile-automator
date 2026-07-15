@@ -84,8 +84,11 @@ mobile-automator/
 ├── scenarios/      # generated test JSON files
 ├── screenshots/    # reference + execution screenshots
 ├── results/        # execution result reports
+├── memory/         # cross-session memory (run-history, app-knowledge, preferences)
 └── config.json     # project configuration (starter skeleton)
 ```
+
+Alongside `scenarios/`, `screenshots/`, and `results/`, setup also scaffolds a `memory/` subdirectory. This is where `mauto` keeps cross-session memory so your agent gets smarter about *this* app over time — run history auto-harvested on `result finalize`, plus agent-authored app-knowledge and preferences.
 
 The starter `config.json` written on first run:
 
@@ -281,5 +284,5 @@ See the [Generate Guide](generate.md) for next steps.
 ## See Also
 
 - [Generate Guide](generate.md) — Next step after setup
-- [Architecture: 3-Tier Design](../concepts/three-tier-design.md) — How setup fits in the overall system
+- [Architecture: Layered Architecture](../concepts/three-tier-design.md) — How setup fits in the overall system
 - [FAQ: Setup Issues](../faq.md#setup-installation)

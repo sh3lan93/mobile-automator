@@ -6,6 +6,8 @@ description: "All 27 assertion types in mobile-automator - element state, text c
 
 mobile-automator supports 27 assertion types organized in 8 categories for comprehensive test verification.
 
+Every assertion object requires `id`, `after_step` (the step `id` it runs after), `type`, and `description`. Element-based assertions locate their target with `element_description` — a *semantic* description of the element, never a `resource-id` or OS-specific locator. The syntax snippets below show only the type-specific fields for brevity.
+
 ## Quick Reference Table
 
 | Category | Types | Count |
@@ -30,7 +32,7 @@ Verify element is present in UI.
 ```json
 {
   "type": "element_exists",
-  "element": "login_button"
+  "element_description": "Login button"
 }
 ```
 
@@ -51,7 +53,7 @@ Verify element is absent from UI.
 ```json
 {
   "type": "element_not_exists",
-  "element": "loading_spinner"
+  "element_description": "Loading spinner"
 }
 ```
 
@@ -72,9 +74,12 @@ Verify element is visible to user.
 ```json
 {
   "type": "element_visible",
-  "element": "success_message"
+  "element_description": "Success message",
+  "expected_visible": true
 }
 ```
+
+`expected_visible` is a boolean: `true` = must be visible/showing, `false` = must be hidden/dismissed.
 
 **Example scenario usage:**
 ```
@@ -93,17 +98,18 @@ Check element state (enabled, disabled, focused, selected, etc.).
 ```json
 {
   "type": "element_state",
-  "element": "submit_button",
-  "state": "enabled"
+  "element_description": "Submit button",
+  "state_property": "enabled"
 }
 ```
 
-**Supported states:**
+**Supported `state_property` values:**
 - `enabled` — Element is interactive
 - `disabled` — Element is not interactive
-- `focused` — Element has focus (cursor in text field)
 - `selected` — Element is selected (checkbox, radio button)
-- `checked` — Same as selected for checkboxes
+- `not_selected` — Element is not selected
+- `focused` — Element has focus (cursor in text field)
+- `clickable` — Element is clickable
 
 **Example scenario usage:**
 ```
@@ -125,8 +131,8 @@ Verify exact text match.
 ```json
 {
   "type": "element_text",
-  "element": "welcome_label",
-  "expected_exact": "Welcome, John"
+  "element_description": "Welcome label",
+  "expected_value": "Welcome, John"
 }
 ```
 
@@ -147,8 +153,8 @@ Verify substring is present.
 ```json
 {
   "type": "text_contains",
-  "element": "message",
-  "expected_contains": "Success"
+  "element_description": "Status message",
+  "expected_substring": "Success"
 }
 ```
 
@@ -169,7 +175,7 @@ Verify field has any text.
 ```json
 {
   "type": "text_not_empty",
-  "element": "username_field"
+  "element_description": "Username field"
 }
 ```
 
@@ -190,8 +196,8 @@ Check placeholder/hint text.
 ```json
 {
   "type": "element_hint",
-  "element": "email_field",
-  "expected_exact": "Enter email address"
+  "element_description": "Email field",
+  "expected_text": "Enter email address"
 }
 ```
 
@@ -212,8 +218,8 @@ Verify text matches regex pattern.
 ```json
 {
   "type": "pattern_match",
-  "element": "error_code",
-  "expected_pattern": "^ERR_[0-9]{3}$"
+  "element_description": "Error code",
+  "pattern": "^ERR_[0-9]{3}$"
 }
 ```
 
@@ -240,7 +246,7 @@ Verify text changed since last check.
 ```json
 {
   "type": "text_changed",
-  "element": "counter"
+  "element_description": "Counter label"
 }
 ```
 
@@ -261,8 +267,8 @@ Verify accessibility content description.
 ```json
 {
   "type": "content_description",
-  "element": "profile_icon",
-  "expected_exact": "User profile picture"
+  "element_description": "Profile icon",
+  "expected_text": "User profile picture"
 }
 ```
 
@@ -277,7 +283,7 @@ Check the accessibility label of the button
 ## Count & Collections Assertions (3 types)
 
 ### element_count
-Count specific elements matching a selector.
+Count specific elements matching a description.
 
 **When to use:** Verify number of matching elements on screen (buttons, list items, tabs).
 
@@ -285,10 +291,13 @@ Count specific elements matching a selector.
 ```json
 {
   "type": "element_count",
-  "element": "list_item",
-  "expected_exact": 5
+  "element_description": "List item",
+  "operator": "==",
+  "expected_count": 5
 }
 ```
+
+`operator` is one of `==`, `!=`, `>=`, `<=`, `>`, `<` (default `==`).
 
 **Example scenario usage:**
 ```
@@ -307,8 +316,9 @@ Count items in a list view or collection.
 ```json
 {
   "type": "list_item_count",
-  "element": "messages_list",
-  "expected_exact": 3
+  "element_description": "Messages list",
+  "operator": "==",
+  "expected_count": 3
 }
 ```
 
@@ -329,7 +339,7 @@ Verify list has no items.
 ```json
 {
   "type": "list_is_empty",
-  "element": "search_results"
+  "element_description": "Search results list"
 }
 ```
 
@@ -352,9 +362,12 @@ Semantic visual comparison against a reference screenshot.
 ```json
 {
   "type": "screenshot_match",
-  "expected_image": "reference.png"
+  "reference_screenshot": "screenshots/login_flow/reference.png",
+  "tolerance": 0.9
 }
 ```
+
+`tolerance` ranges from `0.0` (any match) to `1.0` (pixel-perfect); default `0.9`.
 
 **Why AI-based comparison:** Tests are resilient to cosmetic changes (fonts, anti-aliasing, small positioning adjustments) while catching functional regressions (colors, layout, missing elements).
 
@@ -367,29 +380,29 @@ Check that the dashboard appears as expected
 ---
 
 ### visual_state
-Check visual appearance of element.
+Check the loading/data state of the screen or element.
 
-**When to use:** Verify element styling without needing a reference screenshot (highlighted, faded, etc.).
+**When to use:** Verify a screen or element is in a specific data state without needing a reference screenshot.
 
 **Syntax:**
 ```json
 {
   "type": "visual_state",
-  "element": "card",
-  "state": "highlighted"
+  "element_description": "Product list",
+  "expected_visual_state": "loaded"
 }
 ```
 
-**Common states:**
-- `highlighted` — Element has emphasis/highlight styling
-- `faded` — Element appears disabled or dimmed
-- `focused` — Element has focus indication
-- `active` — Element is in active state
+**Supported `expected_visual_state` values:**
+- `loaded` — Content finished loading
+- `loading` — Content still loading
+- `empty` — Empty / no-data state
+- `error` — Error state
 
 **Example scenario usage:**
 ```
-Verify the selected tab is highlighted
-Check that the disabled button appears faded
+Verify the product list finished loading
+Check that the feed shows the empty state
 ```
 
 ---
@@ -403,7 +416,7 @@ Verify element is completely visible (not clipped).
 ```json
 {
   "type": "element_fully_visible",
-  "element": "button"
+  "element_description": "Confirmation button"
 }
 ```
 
@@ -424,10 +437,12 @@ Check text or element color.
 ```json
 {
   "type": "color_style",
-  "element": "error_text",
-  "expected_color": "#FF0000"
+  "element_description": "Error text",
+  "color_hex": "#FF0000"
 }
 ```
+
+`color_hex` is a 3- or 6-digit hex value (e.g., `#0057FF`).
 
 **Example scenario usage:**
 ```
@@ -448,7 +463,7 @@ Verify screen/activity name.
 ```json
 {
   "type": "screen_title",
-  "expected_exact": "Login"
+  "expected_text": "Login"
 }
 ```
 
@@ -489,7 +504,7 @@ Verify alert message text.
 ```json
 {
   "type": "alert_text",
-  "expected_exact": "Are you sure?"
+  "expected_text": "Are you sure?"
 }
 ```
 
@@ -510,7 +525,7 @@ Check toast notification is visible.
 ```json
 {
   "type": "toast_visible",
-  "expected_contains": "Saved"
+  "expected_text": "Saved"
 }
 ```
 
@@ -530,9 +545,12 @@ Verify soft keyboard is open.
 **Syntax:**
 ```json
 {
-  "type": "keyboard_visible"
+  "type": "keyboard_visible",
+  "expected_visible": true
 }
 ```
+
+`expected_visible` is a boolean: `true` = keyboard must be showing, `false` = keyboard must be dismissed.
 
 **Example scenario usage:**
 ```
@@ -553,8 +571,8 @@ Check accessibility label on element.
 ```json
 {
   "type": "has_accessibility_label",
-  "element": "close_button",
-  "expected_exact": "Close dialog"
+  "element_description": "Close button",
+  "label_value": "Close dialog"
 }
 ```
 
@@ -577,8 +595,8 @@ Compare captured value to variable.
 ```json
 {
   "type": "value_matches_variable",
-  "expected_variable": "captured_email",
-  "element": "email_field"
+  "element_description": "Email field",
+  "variable_name": "captured_email"
 }
 ```
 
@@ -606,7 +624,7 @@ Check permission prompt (iOS/Android).
 ```json
 {
   "type": "permission_dialog_shown",
-  "expected_permission": "Camera"
+  "permission_name": "camera"
 }
 ```
 
@@ -626,9 +644,12 @@ Check if dark mode is enabled.
 **Syntax:**
 ```json
 {
-  "type": "dark_mode_active"
+  "type": "dark_mode_active",
+  "expected_theme": "dark"
 }
 ```
+
+`expected_theme` is `dark` or `light`.
 
 **Example scenario usage:**
 ```
@@ -642,28 +663,52 @@ Check that the app switched to dark theme
 
 ### In JSON Format
 
-Add assertions as named steps in your test scenario:
+Assertions live in the scenario's top-level `assertions` array. Each one names the step it runs after via `after_step`:
 
 ```json
 {
-  "schema_version": "2.0",
-  "id": "test_001",
-  "steps": {
-    "tap_login": { "type": "tap", "element": "login_button" },
-    "verify_welcome": {
-      "type": "element_text",
-      "element": "welcome_message",
-      "expected_exact": "Welcome, John"
-    },
-    "verify_enabled": {
-      "type": "element_state",
-      "element": "logout_button",
-      "state": "enabled"
-    }
+  "$schema_version": "2.1",
+  "scenario_id": "assertion_examples",
+  "name": "Assertion Examples",
+  "description": "Demonstrates how assertions reference a step and check the resulting UI state",
+  "platform": "android",
+  "app_package": "com.example.app",
+  "metadata": {
+    "app_version": "1.0.0",
+    "environment": "staging"
   },
+  "steps": [
+    {
+      "id": "tap_login",
+      "action": "tap",
+      "description": "Tap the login button",
+      "target": "Login button"
+    },
+    {
+      "id": "wait_for_home",
+      "action": "wait_for_element",
+      "description": "Wait for the home screen to load",
+      "target": "Welcome message",
+      "wait_config": { "type": "element_visible", "timeout_ms": 5000 }
+    }
+  ],
   "assertions": [
-    { "id": "welcome_check", "step": "verify_welcome" },
-    { "id": "button_check", "step": "verify_enabled" }
+    {
+      "id": "welcome_check",
+      "after_step": "wait_for_home",
+      "type": "element_text",
+      "description": "Welcome message greets the user by name",
+      "element_description": "Welcome message",
+      "expected_value": "Welcome, John"
+    },
+    {
+      "id": "logout_enabled_check",
+      "after_step": "wait_for_home",
+      "type": "element_state",
+      "description": "Logout button is enabled",
+      "element_description": "Logout button",
+      "state_property": "enabled"
+    }
   ]
 }
 ```
@@ -697,7 +742,7 @@ The generator automatically converts these to appropriate assertion types.
 ```
 Element 'login_button' not found on screen
 ```
-**Troubleshoot:** Button may be off-screen, hidden, or using different ID
+**Troubleshoot:** Button may be off-screen, hidden, or described differently
 
 ### Failed: element_text
 ```
