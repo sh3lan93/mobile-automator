@@ -553,7 +553,7 @@
   <span class="md-ellipsis">
     
   
-    3-Tier Design
+    Layered Architecture
   
 
     
@@ -582,6 +582,34 @@
     
   
     How Skills Work
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cross-Session Memory
   
 
     
@@ -1388,6 +1416,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../reference/cli-verbs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Verbs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/assertions/" class="md-nav__link">
         
   
@@ -1479,7 +1535,7 @@
   <span class="md-ellipsis">
     
   
-    MCP Tools
+    Internal Engine (mobile-mcp)
   
 
     
@@ -2322,7 +2378,7 @@
 <hr />
 <h2 id="execution-workflow">Execution Workflow<a class="headerlink" href="#execution-workflow" title="Permanent link">&para;</a></h2>
 <h3 id="phase-1-setup">Phase 1: Setup<a class="headerlink" href="#phase-1-setup" title="Permanent link">&para;</a></h3>
-<p>Before test execution begins:</p>
+<p>Before test execution begins, the agent reads cross-session memory (<code>mauto memory show</code>) to pull in prior run history, app-knowledge, and preferences — known flaky screens, waits, and conventions for this app inform how it runs and interprets the scenario.</p>
 <ol>
 <li><strong>Clear previous runs</strong> (optional)</li>
 <li>Ask: "Clear app data before test? (y/n)"</li>
@@ -2457,7 +2513,7 @@
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_text&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;welcome_message&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;expected_exact&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome back!&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;expected_text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome back!&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;actual&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome back!&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;result&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;passed&quot;</span>
 <span class="p">}</span>
@@ -2465,7 +2521,7 @@
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;text_contains&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;error_message&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;expected_contains&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;timeout&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;expected_substring&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;timeout&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;actual&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Network timeout occurred&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;result&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;passed&quot;</span>
 <span class="p">}</span>
@@ -2501,7 +2557,14 @@
 <p><strong>Create result file</strong></p>
 </li>
 <li>Saved to <code>mobile-automator/results/run_*.json</code></li>
-<li>Ready for analysis</li>
+<li>
+<p>Ready for analysis</p>
+</li>
+<li>
+<p><strong>Harvest memory</strong> (automatic)</p>
+</li>
+<li>On <code>result finalize</code>, the typed observations (regression / flakiness / state_context) are folded into a bounded rolling per-scenario aggregate in <code>mobile-automator/memory/run-history.md</code>, so future runs carry forward what earlier runs learned.</li>
+<li>This is best-effort: a memory-write failure never fails an otherwise-successful finalize — it is reported in the envelope <code>hint</code> instead.</li>
 </ol>
 <hr />
 <h2 id="understanding-results">Understanding Results<a class="headerlink" href="#understanding-results" title="Permanent link">&para;</a></h2>
@@ -2605,7 +2668,7 @@
 <span class="w">      </span><span class="nt">&quot;severity&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;medium&quot;</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Step 4 failed initially (timeout), passed on retry after 2s wait&quot;</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;affected_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_product_list&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;suggestion&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Add retry_policy or increase timeout_seconds&quot;</span>
+<span class="w">      </span><span class="nt">&quot;suggestion&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Add a retry_policy or increase the wait timeout (wait_config.timeout_ms)&quot;</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
 <span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;regression&quot;</span><span class="p">,</span>
@@ -2664,11 +2727,14 @@
 <h2 id="retry-behavior">Retry Behavior<a class="headerlink" href="#retry-behavior" title="Permanent link">&para;</a></h2>
 <p>If a step has a retry policy configured:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;product_list&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_product_list&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;product_list&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for the product list to load&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;on_failure&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;retry&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;retry_policy&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;max_retries&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;wait_between_retries_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span>
+<span class="w">    </span><span class="nt">&quot;max_attempts&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;backoff_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -2699,11 +2765,16 @@
 - Error message: "Timeout waiting for element"
 - Observation: "Consider adding retry_policy or increasing timeout"</p>
 <p><strong>Customizing timeouts:</strong></p>
-<p>Edit scenario JSON:
+<p>Edit scenario JSON (increase the wait timeout from the default 10s to 30s):
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;data_grid&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="err">I</span><span class="kc">n</span><span class="err">crease</span><span class="w"> </span><span class="kc">fr</span><span class="err">om</span><span class="w"> </span><span class="err">de</span><span class="kc">fault</span><span class="w"> </span><span class="mi">10</span><span class="err">s</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_data_grid&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;data_grid&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for the data grid to load&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_visible&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30000</span>
+<span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <hr />
@@ -2735,22 +2806,32 @@
 <p><strong>Solutions:</strong>
 1. <strong>Add explicit wait before action:</strong>
    <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;target_element&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_target&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;target_element&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for the target element to appear&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_visible&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10000</span>
+<span class="w">  </span><span class="p">}</span>
 <span class="p">},</span>
 <span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;target_element&quot;</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap_target&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;target_element&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Tap the target element&quot;</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <ol>
 <li>
 <p><strong>Add retry policy:</strong>
    <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;target_element&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;retry_policy&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;max_retries&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;wait_between_retries_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">}</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap_target&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;target_element&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Tap the target element, retrying on failure&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;on_failure&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;retry&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;retry_policy&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;max_attempts&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;backoff_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></p>
 </li>
@@ -2768,14 +2849,22 @@
 2. <strong>Check for whitespace</strong> — "Welcome back!" vs " Welcome back! "
 3. <strong>Use text_contains instead of element_text</strong> — More forgiving
 4. <strong>Capture and compare variables</strong> — For dynamic values:
-   <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_value&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dynamic_field&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;capture_to&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;actual_value&quot;</span>
-<span class="p">},</span>
+   <div class="highlight"><pre><span></span><code><span class="c1">// step: capture the dynamic value</span>
 <span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_dynamic_field&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_value&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dynamic_field&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;capture_to&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;actual_value&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Capture the dynamic field value&quot;</span>
+<span class="p">}</span>
+<span class="c1">// assertion: compare a later element against the captured value</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;check_dynamic_field&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;after_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_dynamic_field&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;value_matches_variable&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;variable&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;actual_value&quot;</span>
+<span class="w">  </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dynamic_field&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;variable_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;actual_value&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Field value matches the captured variable&quot;</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <h3 id="test-timed-out">"Test Timed Out"<a class="headerlink" href="#test-timed-out" title="Permanent link">&para;</a></h3>
@@ -2783,8 +2872,13 @@
 <p><strong>Solutions:</strong>
 1. <strong>Increase timeout:</strong>
    <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading_complete&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">60</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="err">I</span><span class="kc">n</span><span class="err">crease</span><span class="w"> </span><span class="kc">fr</span><span class="err">om</span><span class="w"> </span><span class="err">de</span><span class="kc">fault</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading_complete&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for loading to complete (increased from the default)&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;loading_complete&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">60000</span>
+<span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <ol>
@@ -2797,19 +2891,31 @@
 <li>
 <p><strong>Add intermediate waits</strong> — Break long operations into steps:
    <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;loading_bar&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading_bar&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;loading_bar&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for the loading bar to appear&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_visible&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5000</span>
+<span class="w">  </span><span class="p">}</span>
 <span class="p">},</span>
 <span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;loading_bar&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;optional&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="err">May</span><span class="w"> </span><span class="err">disappear</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;loading_bar_optional&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;loading_bar&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Loading bar may still be visible&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;optional&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
 <span class="p">},</span>
 <span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;content&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_content&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;content&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for the content to load&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_visible&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10000</span>
+<span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></p>
 </li>
@@ -2820,11 +2926,13 @@
 1. <strong>Check result file</strong> — <code>mobile-automator/results/run_*.json</code> shows which step caused crash
 2. <strong>Review app logs</strong> — use your platform's logging tools (Android logcat, Xcode debugger for iOS)
 3. <strong>Check if known issue</strong> — May be app bug, not test issue
-4. <strong>Add preconditions</strong> — Clear app data before test:
+4. <strong>Add preconditions</strong> — Start from a fresh state before the test:
    <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;preconditions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;clear_app_data&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;restart_app&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">    </span><span class="nt">&quot;app_state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fresh_install&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;device_actions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">      </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;clear_app_data&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;target_package&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;com.example.myapp&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></p>
@@ -2888,54 +2996,76 @@
 <h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
 <h3 id="do-use-descriptive-assertions">✅ DO: Use Descriptive Assertions<a class="headerlink" href="#do-use-descriptive-assertions" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;assert_welcome&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;after_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_text&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;welcome_message&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;expected_exact&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome back, John!&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;welcome_message&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;expected_value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome back, John!&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;User is greeted by name after login&quot;</span>
 <span class="p">}</span>
 </code></pre></div>
 <h3 id="do-add-retry-policies-for-flaky-operations">✅ DO: Add Retry Policies for Flaky Operations<a class="headerlink" href="#do-add-retry-policies-for-flaky-operations" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading_complete&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;retry_policy&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;max_retries&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;wait_between_retries_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">}</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading_complete&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for loading to complete, retrying on failure&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;on_failure&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;retry&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;retry_policy&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;max_attempts&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;backoff_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
 <h3 id="do-capture-dynamic-values">✅ DO: Capture Dynamic Values<a class="headerlink" href="#do-capture-dynamic-values" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_value&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;order_id&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;capture_to&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;generated_order_id&quot;</span>
-<span class="p">},</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// step: capture the order ID</span>
 <span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_text&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;confirmation_text&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;expected_contains&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Order captured_to {{generated_order_id}}&quot;</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_order_id&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_value&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;order_id&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;capture_to&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;generated_order_id&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Capture the generated order ID&quot;</span>
+<span class="p">}</span>
+<span class="c1">// assertion: confirmation text contains the captured order ID</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;confirm_order_id&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;after_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_order_id&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;text_contains&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;confirmation_text&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;expected_substring&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Order {{generated_order_id}}&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Confirmation text includes the captured order ID&quot;</span>
 <span class="p">}</span>
 </code></pre></div>
 <h3 id="dont-use-fixed-waits">❌ DON'T: Use Fixed Waits<a class="headerlink" href="#dont-use-fixed-waits" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1">// Bad</span>
 <span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span><span class="w">  </span><span class="c1">// Uses hardcoded timeout</span>
-<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;data&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_data&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span><span class="w">  </span><span class="c1">// Uses a hardcoded timeout</span>
+<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;data&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for the data element&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_visible&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3000</span><span class="w"> </span><span class="p">}</span>
 <span class="p">}</span>
 
 <span class="c1">// Good</span>
 <span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading_complete&quot;</span><span class="w">  </span><span class="c1">// Waits for actual loading</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading_complete&quot;</span><span class="p">,</span><span class="w">  </span><span class="c1">// Waits for actual loading</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for loading to complete&quot;</span>
 <span class="p">}</span>
 </code></pre></div>
 <h3 id="dont-assert-insignificant-details">❌ DON'T: Assert Insignificant Details<a class="headerlink" href="#dont-assert-insignificant-details" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1">// Bad</span>
 <span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;assert_pixel_perfect&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;after_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;load_screen&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;screenshot_match&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;reference&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pixel_perfect_baseline.png&quot;</span><span class="w">  </span><span class="c1">// Too strict</span>
+<span class="w">  </span><span class="nt">&quot;reference_screenshot&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pixel_perfect_baseline.png&quot;</span><span class="p">,</span><span class="w">  </span><span class="c1">// Too strict</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Screen matches a pixel-perfect baseline&quot;</span>
 <span class="p">}</span>
 
 <span class="c1">// Good</span>
 <span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;assert_success&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;after_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;load_screen&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_exists&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;success_message&quot;</span><span class="w">  </span><span class="c1">// Functional assertion</span>
+<span class="w">  </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;success_message&quot;</span><span class="p">,</span><span class="w">  </span><span class="c1">// Functional assertion</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Success message is present&quot;</span>
 <span class="p">}</span>
 </code></pre></div>
 <hr />

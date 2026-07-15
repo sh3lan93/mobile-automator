@@ -27,7 +27,7 @@
     
     
       
-        <title>MCP Tools - mobile-automator</title>
+        <title>Internal Engine (mobile-mcp) - mobile-automator</title>
       
     
     
@@ -64,7 +64,7 @@
   
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="MCP Tools - mobile-automator" />
+  <meta property="og:title" content="Internal Engine (mobile-mcp) - mobile-automator" />
   <meta property="og:description" content="MCP tool reference for mobile-automator - device automation primitives including tap, swipe, type, screenshot, and element inspection." />
   <meta property="og:url" content="https://sh3lan93.github.io/mobile-automator/reference/mcp-tools/" />
   <meta property="og:site_name" content="mobile-automator" />
@@ -72,7 +72,7 @@
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="MCP Tools - mobile-automator" />
+  <meta name="twitter:title" content="Internal Engine (mobile-mcp) - mobile-automator" />
   <meta name="twitter:description" content="MCP tool reference for mobile-automator - device automation primitives including tap, swipe, type, screenshot, and element inspection." />
   <meta name="twitter:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
   
@@ -131,7 +131,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              MCP Tools
+              Internal Engine (mobile-mcp)
             
           </span>
         </div>
@@ -553,7 +553,7 @@
   <span class="md-ellipsis">
     
   
-    3-Tier Design
+    Layered Architecture
   
 
     
@@ -582,6 +582,34 @@
     
   
     How Skills Work
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cross-Session Memory
   
 
     
@@ -852,6 +880,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../cli-verbs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Verbs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../assertions/" class="md-nav__link">
         
   
@@ -952,7 +1008,7 @@
   <span class="md-ellipsis">
     
   
-    MCP Tools
+    Internal Engine (mobile-mcp)
   
 
     
@@ -970,7 +1026,7 @@
   <span class="md-ellipsis">
     
   
-    MCP Tools
+    Internal Engine (mobile-mcp)
   
 
     
@@ -2223,10 +2279,10 @@ The contract is <strong>agent → <code>mauto</code> verbs → mobile-mcp engine
 - Detect available devices before starting tests
 - Choose target device for test execution
 - Verify device connectivity</p>
-<p><strong>Example:</strong>
+<p><strong>Example call:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Get list of connected devices&quot;</span>
+<span class="w">  </span><span class="nt">&quot;tool&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;mobile_list_available_devices&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;parameters&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <hr />
@@ -2249,9 +2305,13 @@ The contract is <strong>agent → <code>mauto</code> verbs → mobile-mcp engine
 - Start app before test execution
 - Relaunch app after crash
 - Test app startup sequence</p>
-<p><strong>Example:</strong>
+<p><strong>Example call:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;launch_app&quot;</span>
+<span class="w">  </span><span class="nt">&quot;tool&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;mobile_launch_app&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;parameters&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;device&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;emulator-5554&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;packageName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;com.example.app&quot;</span>
+<span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <hr />

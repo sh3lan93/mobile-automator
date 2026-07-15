@@ -6,13 +6,17 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Intelligent mobile QA automation for any AI coding agent via the mauto CLI - auto-generate test scenarios and execute them with AI-powered assertions on real devices and emulators">
+        <meta name="description" content="Complete reference for every mauto CLI verb - device actions, authoring, workspace, reasoning, agent integration, device session, and cross-session memory - with the uniform JSON envelope and exit codes.">
       
       
       
-        <link rel="canonical" href="https://sh3lan93.github.io/mobile-automator/plans/2026-06-14-cli-migration-prd/">
+        <link rel="canonical" href="https://sh3lan93.github.io/mobile-automator/reference/cli-verbs/">
       
       
+        <link rel="prev" href="../">
+      
+      
+        <link rel="next" href="../assertions/">
       
       
         
@@ -23,7 +27,7 @@
     
     
       
-        <title>2026 06 14 cli migration prd - mobile-automator</title>
+        <title>CLI Verbs - mobile-automator</title>
       
     
     
@@ -60,16 +64,16 @@
   
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="2026 06 14 cli migration prd - mobile-automator" />
-  <meta property="og:description" content="Intelligent mobile QA automation for any AI coding agent via the mauto CLI - auto-generate test scenarios and execute them with AI-powered assertions on real devices and emulators" />
-  <meta property="og:url" content="https://sh3lan93.github.io/mobile-automator/plans/2026-06-14-cli-migration-prd/" />
+  <meta property="og:title" content="CLI Verbs - mobile-automator" />
+  <meta property="og:description" content="Complete reference for every mauto CLI verb - device actions, authoring, workspace, reasoning, agent integration, device session, and cross-session memory - with the uniform JSON envelope and exit codes." />
+  <meta property="og:url" content="https://sh3lan93.github.io/mobile-automator/reference/cli-verbs/" />
   <meta property="og:site_name" content="mobile-automator" />
   <meta property="og:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="2026 06 14 cli migration prd - mobile-automator" />
-  <meta name="twitter:description" content="Intelligent mobile QA automation for any AI coding agent via the mauto CLI - auto-generate test scenarios and execute them with AI-powered assertions on real devices and emulators" />
+  <meta name="twitter:title" content="CLI Verbs - mobile-automator" />
+  <meta name="twitter:description" content="Complete reference for every mauto CLI verb - device actions, authoring, workspace, reasoning, agent integration, device session, and cross-session memory - with the uniform JSON envelope and exit codes." />
   <meta name="twitter:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
   
 
@@ -92,7 +96,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#problem-statement" class="md-skip">
+        <a href="#cli-verbs-reference" class="md-skip">
           Skip to content
         </a>
       
@@ -127,7 +131,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              2026 06 14 cli migration prd
+              CLI Verbs
             
           </span>
         </div>
@@ -796,18 +800,20 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
@@ -828,7 +834,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -846,7 +852,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -871,10 +877,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../reference/cli-verbs/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Verbs
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -890,6 +923,155 @@
   
 
       </a>
+      
+        
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of Contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of Contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-uniform-json-envelope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The uniform JSON envelope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-kinds-and-exit-codes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error kinds and exit codes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#device-action-verbs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Device action verbs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Device action verbs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#semantic-actions-platform-agnostic-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Semantic actions (platform-agnostic mode)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#author-verify-verbs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Author &amp; verify verbs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workspace-verbs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workspace verbs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reasoning-verbs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reasoning verbs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#agent-integration-verbs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent integration verbs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#device-session-verbs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Device session verbs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#memory-verbs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory verbs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related references
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -902,7 +1084,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/assertions/" class="md-nav__link">
+      <a href="../assertions/" class="md-nav__link">
         
   
   
@@ -930,7 +1112,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/schema/" class="md-nav__link">
+      <a href="../schema/" class="md-nav__link">
         
   
   
@@ -958,7 +1140,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/result-schema/" class="md-nav__link">
+      <a href="../result-schema/" class="md-nav__link">
         
   
   
@@ -986,7 +1168,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/mcp-tools/" class="md-nav__link">
+      <a href="../mcp-tools/" class="md-nav__link">
         
   
   
@@ -1252,6 +1434,8 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -1260,10 +1444,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#problem-statement" class="md-nav__link">
+  <a href="#the-uniform-json-envelope" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Problem Statement
+        The uniform JSON envelope
       
     </span>
   </a>
@@ -1271,10 +1455,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#solution" class="md-nav__link">
+  <a href="#error-kinds-and-exit-codes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Solution
+        Error kinds and exit codes
       
     </span>
   </a>
@@ -1282,10 +1466,38 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#user-stories" class="md-nav__link">
+  <a href="#device-action-verbs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        User Stories
+        Device action verbs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Device action verbs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#semantic-actions-platform-agnostic-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Semantic actions (platform-agnostic mode)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#author-verify-verbs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Author &amp; verify verbs
       
     </span>
   </a>
@@ -1293,10 +1505,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#implementation-decisions" class="md-nav__link">
+  <a href="#workspace-verbs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Implementation Decisions
+        Workspace verbs
       
     </span>
   </a>
@@ -1304,10 +1516,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#testing-decisions" class="md-nav__link">
+  <a href="#reasoning-verbs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Testing Decisions
+        Reasoning verbs
       
     </span>
   </a>
@@ -1315,10 +1527,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#out-of-scope" class="md-nav__link">
+  <a href="#agent-integration-verbs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Out of Scope
+        Agent integration verbs
       
     </span>
   </a>
@@ -1326,10 +1538,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#further-notes" class="md-nav__link">
+  <a href="#device-session-verbs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Further Notes
+        Device session verbs
       
     </span>
   </a>
@@ -1337,10 +1549,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#slices" class="md-nav__link">
+  <a href="#memory-verbs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Slices
+        Memory verbs
       
     </span>
   </a>
@@ -1348,98 +1560,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#70-cli-spine-router-json-envelope-devicebridge-elements-validate" class="md-nav__link">
+  <a href="#related-references" class="md-nav__link">
     <span class="md-ellipsis">
       
-        70 — CLI spine: router + JSON envelope + DeviceBridge + elements + validate
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#71-execute-verbs-assertionevaluator-resultstore" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        71 — execute verbs + AssertionEvaluator + ResultStore
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#72-config-setup-scaffold-guideschemabootstrap-floor-lint-harness" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        72 — config + setup scaffold + guide/schema/bootstrap floor + lint harness
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#73-guide-port-generator-aware-agnostic" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        73 — guide port: generator (aware + agnostic)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#74-guide-port-executor-aware-agnostic" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        74 — guide port: executor (aware + agnostic)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#75-guide-port-recorder-setup-guides" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        75 — guide port: recorder + setup guides
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#76-vendoradapters-init-mcp-prompts-server" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        76 — VendorAdapters (init) + MCP prompts server
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#77-recorder-decoupling-persist-bundle-record-bundle-live-tap-source" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        77 — recorder decoupling: persist bundle + record-bundle + live tap source
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#78-gemini-removal-cirelease-re-point" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        78 — Gemini removal + CI/release re-point
+        Related references
       
     </span>
   </a>
@@ -1466,132 +1590,349 @@
   
 
 
-<blockquote>
-<p><strong>Status:</strong> Draft PRD — locked design from a 2026-06-14 design session. Apply normal triage.</p>
-</blockquote>
-<h2 id="problem-statement">Problem Statement<a class="headerlink" href="#problem-statement" title="Permanent link">&para;</a></h2>
-<p>Mobile Automator today ships as a <strong>Gemini CLI extension</strong>. Its value — the project-aware reasoning that turns natural-language test intent into schema-conformant scenarios, replays them on real devices, and synthesizes recordings — is locked to one host. A developer who uses Claude Code, Cursor, Codex, Cline, Windsurf, or any other AI coding agent cannot use the tool at all. The reasoning lives in Gemini-shaped <code>SKILL.md</code> + <code>.toml</code> command files, the device layer is wired through Gemini's mobile-mcp connection, and the whole surface is namespaced as <code>/mobile-automator:*</code> Gemini commands.</p>
-<p>From the developer's perspective: <em>"I have a mobile app and an AI agent I already use. I want this tool to drive my testing through that agent — whichever vendor it is — and I want it to engage only when I deliberately ask, never to wander into automating my device on its own."</em></p>
-<h2 id="solution">Solution<a class="headerlink" href="#solution" title="Permanent link">&para;</a></h2>
-<p>Replace the Gemini extension with <strong><code>mauto</code>, a standalone Node CLI</strong> that any AI agent or vendor can drive, plus a thin MCP <strong>prompts</strong> server that exposes the workflows as explicit, user-invoked slash commands across MCP-capable hosts.</p>
-<p>The CLI owns the device (wrapping mobile-mcp), exposes every mechanical operation as a one-shot, JSON-emitting verb, and delivers its reasoning as version-matched <strong>guides</strong> the host agent pulls at invocation time. Because the tool is platform-agnostic and never relies on platform-specific element IDs, the irreducible reasoning (resolving a semantic target to a tap, judging a visual assertion) stays in the host agent; the CLI is the deterministic spine and the hands.</p>
-<p>The developer installs <code>mauto</code>, registers the MCP server (or just calls the CLI directly), and invokes a workflow <strong>by intention</strong> — e.g. <code>/mauto:record login_flow</code> or <code>/mauto:generate</code> — which injects the relevant guide and begins the work. Existing <code>mobile-automator/</code> workspaces, scenarios, and schemas keep working unchanged.</p>
-<h2 id="user-stories">User Stories<a class="headerlink" href="#user-stories" title="Permanent link">&para;</a></h2>
-<ol>
-<li>As a mobile QA developer, I want to drive Mobile Automator from my own AI agent (Claude Code, Cursor, Codex, Cline, Windsurf, etc.), so that I am not forced onto Gemini.</li>
-<li>As a developer on an agent with no skill system, I want to run <code>mauto</code> commands directly in my shell, so that I can still use the tool with zero host integration.</li>
-<li>As a developer, I want the tool to engage only when I explicitly invoke a command, so that my agent never starts automating my device because I happened to mention "test".</li>
-<li>As a developer, I want a single <code>mauto bootstrap</code>/<code>mauto guide</code> command that prints how to use the tool, so that any agent can be taught the workflow on demand.</li>
-<li>As an AI agent, I want every <code>mauto</code> command to return a uniform JSON envelope, so that I can parse results reliably regardless of vendor.</li>
-<li>As an AI agent, I want failures to carry a corrective <code>hint</code> and a meaningful exit code, so that I can recover (e.g. re-resolve a target) without extra prompting.</li>
-<li>As an AI agent, I want <code>mauto elements</code> to return on-screen elements with text, accessibility label, bounds, and a precomputed center — and never a platform-specific resource id — so that target resolution stays portable across Android and iOS.</li>
-<li>As an AI agent, I want one-shot device verbs (<code>tap</code>, <code>type</code>, <code>swipe</code>, <code>press</code>, <code>screenshot</code>), so that I can drive the device without an interactive protocol my harness may not support.</li>
-<li>As an AI agent generating a scenario, I want <code>mauto validate</code> to check my JSON against the scenario schema, so that I catch shape errors before saving.</li>
-<li>As an AI agent executing a scenario, I want to own the step loop while calling the CLI for all mechanical work (<code>mauto assert</code>, <code>mauto result</code>), so that results are schema-correct and retry/flake logic is consistent across runs.</li>
-<li>As an AI agent, I want <code>mauto assert &lt;type&gt;</code> to evaluate the mechanical assertion types and return pass/fail, so that I only have to judge the genuinely visual/semantic ones myself.</li>
-<li>As an AI agent, I want <code>mauto result add-step</code> and <code>mauto result finalize</code> to assemble the run report, so that I do not re-derive the result schema in prose each run.</li>
-<li>As a developer, I want a web recorder I can launch with <code>mauto record &lt;name&gt;</code>, so that I can tap through my app and capture a scenario.</li>
-<li>As a developer, I want to add assertions in between steps in the recorder GUI by describing them in natural language, so that I can specify expectations without writing JSON.</li>
-<li>As a developer, I want to record without any AI agent attached, so that capture works as a standalone human tool.</li>
-<li>As a developer, I want my recording persisted as a bundle on Save, so that synthesis into a scenario can happen later, by any agent.</li>
-<li>As an AI agent, I want <code>mauto record-bundle &lt;id&gt;</code> to stream a persisted recording's artifacts, so that I can synthesize a schema-conformant scenario from it following <code>mauto guide record</code>.</li>
-<li>As a developer, I want recorded sensitive inputs masked and flagged, so that captured credentials are not silently written in cleartext.</li>
-<li>As a developer, I want the recorder to detect device disconnects and app crashes, so that a failed session does not corrupt or silently drop my recording.</li>
-<li>As a developer, I want <code>mauto setup</code> to scaffold the <code>mobile-automator/</code> workspace, so that I have the standard directory layout and a config skeleton.</li>
-<li>As an AI agent, I want <code>mauto guide setup</code> to tell me to analyze the codebase and write findings (business domain, critical paths, app package, loading indicators) via <code>mauto config set</code>, so that project knowledge is captured without a monolithic interactive command.</li>
-<li>As a developer, I want <code>mauto init --agent &lt;x&gt;</code> to register the tool for my host (MCP server registration and/or dedicated command files), so that the workflows appear as explicit slash commands.</li>
-<li>As a developer on an MCP-capable host, I want the <code>mauto</code> workflows to appear as user-invoked MCP prompts, so that I get <code>/</code>-commands across the MCP ecosystem from one server without per-vendor files.</li>
-<li>As a developer, I want <code>init</code> to never modify a file I authored (no edits to a shared <code>AGENTS.md</code> or instructions file), so that the tool stays within its own namespace.</li>
-<li>As a developer with an existing <code>mobile-automator/</code> workspace from the Gemini extension, I want my scenarios, screenshots, results, and config to keep working, so that migrating to the CLI loses no data.</li>
-<li>As an AI agent, I want <code>mauto guide &lt;topic&gt;</code> to emit the reasoning for generate/execute/record/setup tuned to my project's mode (platform-aware vs platform-agnostic), so that I get the right instructions for cross-platform vs single-OS projects.</li>
-<li>As an AI agent in an agnostic project, I want the guides and scenarios to use the four semantic actions (<code>press_back</code>, <code>dismiss_keyboard</code>, <code>grant_permission</code>, <code>deny_permission</code>), so that scenarios remain portable across Android and iOS.</li>
-<li>As a developer, I want <code>mauto schema &lt;name&gt;</code> to print the scenario/result JSON schema, so that my agent always references the schema bundled with the installed CLI version.</li>
-<li>As a maintainer, I want the guide content ported from the existing <code>SKILL.md</code> templates rather than rewritten, so that the tool's hard-won testing IP is preserved.</li>
-<li>As a maintainer, I want lint guards on the emitted guides (no leftover <code>{{placeholders}}</code>, no leaked <code>mobile_*</code> tool names, agnostic guides naming no OS), so that the port does not silently regress behavior.</li>
-<li>As a developer running CI, I want <code>mauto</code> to be installable via <code>npx</code>/<code>npm</code>, so that I can use it in pipelines without a Gemini runtime.</li>
-<li>As a human running a <code>mauto</code> command directly, I want an optional <code>--human</code> flag for readable output, so that JSON-by-default does not hurt occasional interactive use.</li>
-<li>As a maintainer, I want the Gemini extension surface (<code>.toml</code> commands, <code>gemini-extension.json</code>, <code>GEMINI.md</code>) removed, so that there is a single source of truth and no dual maintenance.</li>
-</ol>
-<h2 id="implementation-decisions">Implementation Decisions<a class="headerlink" href="#implementation-decisions" title="Permanent link">&para;</a></h2>
-<p><strong>Foundational constraint.</strong> The tool is platform-agnostic and never uses platform-specific element identifiers (<code>resource-id</code> / <code>accessibilityIdentifier</code>). The only portable anchors are visible text and semantic role, and many controls are icon-only — so deterministic selector-based replay is impossible. Tap-target resolution and visual/semantic assertion judgment are therefore irreducibly LLM work performed by the host agent at replay time ("Model A"). The CLI provides the deterministic spine and the device hands; it is not a deterministic test runner.</p>
-<p><strong>Distribution / runtime.</strong> Node, distributed via <code>npx mobile-automator</code> / <code>npm i -g</code>. mobile-mcp is bundled and spawned by the CLI.</p>
-<p><strong>Device ownership (Approach 1).</strong> The CLI spawns and owns a single mobile-mcp instance and exposes device primitives as one-shot, JSON-emitting verbs (<code>elements</code>, <code>tap</code>, <code>type</code>, <code>swipe</code>, <code>press</code>, <code>screenshot</code>, <code>launch</code>). The recorder reuses this same owned connection. Any agent — MCP-capable or not — drives the device through the shell, so MCP support is never required to use the tool.</p>
-<p><strong>Agent↔CLI contract.</strong> Every verb emits a uniform JSON envelope <code>{ ok, data, error, hint, schema_version }</code>. Exit codes are meaningful: <code>0</code> success, <code>2</code> device/environment fault, <code>3</code> invalid input, <code>4</code> target-not-found, <code>130</code> cancel. Errors carry a <code>hint</code> describing the corrective action. <code>mauto elements</code> output carries <code>{ text, accessibility_label, bounds, center, type }</code> and never a resource id. JSON is the default; <code>--human</code> is an opt-in.</p>
-<p><strong>Execute model (agent owns the loop).</strong> There is no interactive <code>mauto run</code> co-routine — one-shot shell is the portable primitive. The agent orchestrates the scenario loop, calling <code>mauto elements</code> and reasoning to resolve targets, then <code>mauto tap</code>/etc.; all mechanical work is discrete verbs: <code>mauto assert &lt;type&gt;</code> evaluates the mechanical assertion subset, and <code>mauto result add-step|finalize</code> owns result-schema assembly plus retry/flake bookkeeping. The agent's only irreducible jobs are target resolution and visual/semantic assertion judgment.</p>
-<p><strong>Reasoning delivery.</strong> Reasoning is injected at explicit invocation via <code>mauto guide &lt;topic&gt;</code> (generate/execute/record/setup), with <code>mauto schema &lt;name&gt;</code> and <code>mauto bootstrap</code> as the runtime floor. Guides read <code>config.json</code> and emit the variant matching <code>config.mode</code> (platform-aware vs platform-agnostic). No always-loaded ambient skill — the tool engages only on deliberate invocation.</p>
-<p><strong>Invocation surface (MCP prompts).</strong> <code>mauto mcp</code> runs a thin MCP server exposing the workflows as <strong>prompts only</strong> (user-controlled by spec), which surface as explicit <code>/</code>-commands across MCP hosts. Device primitives are deliberately not exposed as MCP tools (tools are model-controlled and could fire unintentionally). Non-MCP hosts use the runtime floor.</p>
-<p><strong>Recorder (decoupled).</strong> Capture is LLM-free and remains a standalone service launched by <code>mauto record</code>. On Save the artifact bundle is persisted (not deleted) under the workspace; synthesis becomes a separate, later agent step that reads the bundle via <code>mauto record-bundle &lt;id&gt;</code> and follows <code>mauto guide record</code>; cleanup occurs after successful synthesis. The existing <code>tools/recorder/</code> capture stack is reused; the live tap-source (currently a TODO) is implemented against mobile-mcp frame streaming + the existing video-tap detector.</p>
-<p><strong>Setup.</strong> Split into <code>mauto init --agent &lt;x&gt;</code> (per-vendor registration: MCP server entry and/or dedicated command files; idempotent; never mutates user-owned shared files), <code>mauto setup</code> (mechanical workspace scaffold + config skeleton with mode), <code>mauto guide setup</code> (agent reads the codebase and writes analysis fields), and <code>mauto config get|set</code>.</p>
-<p><strong>Gemini deprecation.</strong> Same repo, evolved in place. Remove <code>commands/mobile-automator/*.toml</code>, <code>gemini-extension.json</code>, <code>GEMINI.md</code>, and the <code>/mobile-automator:*</code> surface. Preserve the <code>mobile-automator/</code> workspace layout, scenario schema 2.1, and result schema so existing data keeps working. Repurpose <code>templates/*/SKILL.md</code> reasoning prose into guide content.</p>
-<p><strong>Modules.</strong> Deep, isolatable modules: DeviceBridge (owns mobile-mcp, injectable call), ElementModel (agnostic element shape + center computation, strips resource id), AssertionEvaluator (mechanical assertion subset), ResultStore (result schema + retry/flake), ScenarioValidator (schema 2.1), GuideEmitter (config-aware, per-mode guide/schema/bootstrap emission), ConfigManager (config read/write + mode resolution), VendorAdapters (per-adapter behind one interface), McpPromptsServer (thin shim over GuideEmitter), OutputEnvelope (envelope + exit-code mapping), RecorderService (decoupled save + bundle reader + tap source). Shallow glue: the CLI router (commander entry, JSON output, <code>--human</code>). DeviceBridge, ElementModel, ConfigManager extend existing recorder modules.</p>
-<h2 id="testing-decisions">Testing Decisions<a class="headerlink" href="#testing-decisions" title="Permanent link">&para;</a></h2>
-<p>Good tests assert <strong>external behavior, not implementation details</strong>: given inputs, the module returns the documented output/JSON shape; refactors that preserve behavior should not break them. The codebase already has prior art for this: the <code>tests/lint/</code> suite asserts properties of generated text (e.g. <code>placeholder-leak</code>, <code>agnostic-no-platform-words</code>, <code>schema-additive</code>), and <code>tests/integration/</code> covers migration paths; the recorder suite injects fakes (<code>deps.mcpCall</code>, <code>deps.tapSource</code>) to exercise pipelines without a device.</p>
-<p>Modules to be tested (correctness-critical and pure/near-pure, plus adapters):</p>
+<h1 id="cli-verbs-reference">CLI Verbs Reference<a class="headerlink" href="#cli-verbs-reference" title="Permanent link">&para;</a></h1>
+<p><code>mauto</code> is a host-agnostic CLI for AI-driven mobile QA automation. Any AI coding agent drives a device through <code>mauto</code> verbs; the verbs wrap the internal <a href="../mcp-tools/">mobile-mcp engine</a>, which talks to the real device or emulator. The agent is the brain (it decides <em>what</em>); the verbs are the hands (they perform deterministic actions).</p>
+<p>This page catalogs every verb, grouped by category.</p>
+<h2 id="the-uniform-json-envelope">The uniform JSON envelope<a class="headerlink" href="#the-uniform-json-envelope" title="Permanent link">&para;</a></h2>
+<p>Every verb emits a single uniform JSON envelope on stdout so any agent can parse the outcome the same way:</p>
 <ul>
-<li><strong>AssertionEvaluator</strong> — fixture-driven: an elements snapshot + assertion spec → expected pass/fail, across the mechanical assertion types.</li>
-<li><strong>ElementModel</strong> — element normalization, center computation, and the invariant that no resource id appears in agnostic output.</li>
-<li><strong>ScenarioValidator</strong> — valid/invalid scenarios against schema 2.1, including the additive 2.0→2.1 cases.</li>
-<li><strong>OutputEnvelope</strong> — envelope shape and exit-code mapping for success and each error class.</li>
-<li><strong>GuideEmitter</strong> — lint guards mirroring the existing suite: no surviving <code>{{placeholders}}</code>, no leaked <code>mobile_*</code> tool names, agnostic guides name no OS, and correct variant selected per <code>config.mode</code>.</li>
-<li><strong>ConfigManager</strong> — read/write round-trips, mode resolution (legacy configs default to platform-aware), schema preservation.</li>
-<li><strong>VendorAdapters</strong> — golden-file output per adapter, idempotency on re-run, and the guarantee that no user-authored shared file is modified.</li>
-<li><strong>ResultStore</strong> — result assembly and retry/flake bookkeeping.</li>
-<li><strong>RecorderService</strong> — extended tests for the decoupled save (bundle persisted on Save, cleanup only after synthesis) and the <code>record-bundle</code> reader.</li>
+<li><strong>Success:</strong> <code>{ "ok": true, "data": …, "schema_version": "2.1" }</code> (plus an optional <code>hint</code>).</li>
+<li><strong>Failure:</strong> <code>{ "ok": false, "error": { "kind": …, "message": … }, "hint": …, "schema_version": "2.1" }</code> (plus an optional <code>data</code>).</li>
 </ul>
-<p>Smoke-tested only (thin I/O glue): <strong>DeviceBridge</strong> (with an injected fake <code>call</code>) and the <strong>CLI router</strong>.</p>
-<h2 id="out-of-scope">Out of Scope<a class="headerlink" href="#out-of-scope" title="Permanent link">&para;</a></h2>
+<p>The canonical shape is <code>{ok, data, error, hint, schema_version}</code>. The envelope <code>schema_version</code> is currently <code>2.1</code>.</p>
+<div class="admonition note">
+<p class="admonition-title">The <code>--human</code> flag</p>
+<p>Every verb accepts a global <code>--human</code> flag (default off). With it, <code>mauto</code> renders a compact human-readable line instead of the JSON envelope. Leave it off when an agent is parsing output; turn it on for interactive terminal use.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">RAW-output exception</p>
+<p>Four verbs do <strong>not</strong> wrap their output in the envelope on success. <code>guide</code>, <code>schema</code>, <code>bootstrap</code>, and <code>memory show</code> print raw markdown/JSON verbatim, because the agent injects that text straight into its own context. (On failure they still emit the normal error envelope.)</p>
+</div>
+<h2 id="error-kinds-and-exit-codes">Error kinds and exit codes<a class="headerlink" href="#error-kinds-and-exit-codes" title="Permanent link">&para;</a></h2>
+<p>The <code>error.kind</code> on a failure envelope maps to a process exit code:</p>
+<table>
+<thead>
+<tr>
+<th>Result</th>
+<th><code>error.kind</code></th>
+<th>Exit code</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Success</td>
+<td>—</td>
+<td><code>0</code></td>
+</tr>
+<tr>
+<td>Internal error</td>
+<td><code>internal</code></td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>Partial success</td>
+<td><code>partial</code></td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>Device / engine failure</td>
+<td><code>device</code></td>
+<td><code>2</code></td>
+</tr>
+<tr>
+<td>Invalid input</td>
+<td><code>invalid_input</code></td>
+<td><code>3</code></td>
+</tr>
+<tr>
+<td>Target not found</td>
+<td><code>target_not_found</code></td>
+<td><code>4</code></td>
+</tr>
+<tr>
+<td>Environment problem</td>
+<td><code>environment</code></td>
+<td><code>5</code></td>
+</tr>
+<tr>
+<td>Cancelled</td>
+<td><code>cancel</code></td>
+<td><code>130</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="device-action-verbs">Device action verbs<a class="headerlink" href="#device-action-verbs" title="Permanent link">&para;</a></h2>
+<p>These verbs drive the screen. Each accepts <code>--device &lt;id&gt;</code> to target a specific device.</p>
+<div class="admonition note">
+<p class="admonition-title"><code>--device</code> precedence</p>
+<p>When resolving which device a verb runs against, the order is: explicit <code>--device &lt;id&gt;</code> <strong>&gt;</strong> the persisted selection (<code>mauto devices use &lt;id&gt;</code>) <strong>&gt;</strong> <code>null</code> (the engine auto-selects when exactly one device is connected).</p>
+</div>
+<table>
+<thead>
+<tr>
+<th>Verb</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mauto elements</code></td>
+<td>List the platform-agnostic UI elements currently on screen</td>
+</tr>
+<tr>
+<td><code>mauto screenshot &lt;path&gt;</code></td>
+<td>Save a screenshot to <code>&lt;path&gt;</code></td>
+</tr>
+<tr>
+<td><code>mauto tap --at &lt;x,y&gt;</code></td>
+<td>Tap at absolute coordinates</td>
+</tr>
+<tr>
+<td><code>mauto type &lt;text&gt;</code></td>
+<td>Type text into the focused element</td>
+</tr>
+<tr>
+<td><code>mauto swipe --direction &lt;up\|down\|left\|right&gt;</code></td>
+<td>Swipe in a cardinal direction</td>
+</tr>
+<tr>
+<td><code>mauto press &lt;button&gt;</code></td>
+<td>Press a hardware button (<code>BACK</code>, <code>HOME</code>, <code>ENTER</code>, …) or a semantic action</td>
+</tr>
+<tr>
+<td><code>mauto long-press --at &lt;x,y&gt; [--duration &lt;ms&gt;]</code></td>
+<td>Long-press at coordinates <strong>(new in 0.21.0)</strong></td>
+</tr>
+<tr>
+<td><code>mauto double-tap --at &lt;x,y&gt;</code></td>
+<td>Double-tap at coordinates <strong>(new in 0.21.0)</strong></td>
+</tr>
+<tr>
+<td><code>mauto launch &lt;appId&gt;</code></td>
+<td>Launch an installed app by package/bundle id <strong>(new in 0.21.0)</strong></td>
+</tr>
+<tr>
+<td><code>mauto install &lt;path&gt;</code></td>
+<td>Install an app from a local <code>.apk</code> / <code>.app</code> / <code>.ipa</code> <strong>(new in 0.21.0)</strong></td>
+</tr>
+<tr>
+<td><code>mauto uninstall &lt;appId&gt;</code></td>
+<td>Uninstall an app by id <strong>(new in 0.21.0)</strong></td>
+</tr>
+<tr>
+<td><code>mauto open-url &lt;url&gt;</code></td>
+<td>Open a URL (deep link or web) on the device <strong>(new in 0.21.0)</strong></td>
+</tr>
+<tr>
+<td><code>mauto orientation &lt;portrait\|landscape&gt;</code></td>
+<td>Set device orientation <strong>(new in 0.21.0)</strong></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition tip">
+<p class="admonition-title">New in v0.21.0</p>
+<p>Seven device verbs were added in <strong>v0.21.0</strong>: <code>long-press</code>, <code>double-tap</code>, <code>launch</code>, <code>install</code>, <code>uninstall</code>, <code>open-url</code>, and <code>orientation</code>.</p>
+</div>
+<h3 id="semantic-actions-platform-agnostic-mode">Semantic actions (platform-agnostic mode)<a class="headerlink" href="#semantic-actions-platform-agnostic-mode" title="Permanent link">&para;</a></h3>
+<p>In platform-agnostic mode, <code>mauto press</code> also resolves four <strong>semantic actions</strong> to per-platform mechanics at replay time:</p>
 <ul>
-<li>Deterministic selector-based replay or any move away from semantic-description targets (ruled out by the agnostic / no-resource-id constraint).</li>
-<li>iOS physical-device recording (Apple exposes no external touch stream; inherited limitation).</li>
-<li>Exposing device primitives as MCP tools (kept as CLI verbs to preserve intentional, shell-portable invocation).</li>
-<li>A self-contained agentic CLI that bundles its own LLM — the tool is driven by the host agent, not its own model.</li>
-<li>C3 instrumentation SDKs (iOS Swift Package, Android AAR) — future work; the C3 protocol contract is unchanged.</li>
-<li>New assertion types or scenario-schema changes beyond what already exists in 2.1.</li>
-<li>A backward-compatibility shim that keeps the <code>/mobile-automator:*</code> Gemini commands alive — Gemini is deprecated outright.</li>
+<li><code>press_back</code></li>
+<li><code>dismiss_keyboard</code></li>
+<li><code>grant_permission</code></li>
+<li><code>deny_permission</code></li>
 </ul>
-<h2 id="further-notes">Further Notes<a class="headerlink" href="#further-notes" title="Permanent link">&para;</a></h2>
+<p>An unresolvable semantic action fails honestly with a <code>device</code> error rather than a silent no-op. Hardware buttons (<code>BACK</code> / <code>HOME</code> / <code>ENTER</code>) keep their passthrough behavior.</p>
+<hr />
+<h2 id="author-verify-verbs">Author &amp; verify verbs<a class="headerlink" href="#author-verify-verbs" title="Permanent link">&para;</a></h2>
+<p>Used to author scenario JSON, evaluate assertions, and assemble result files.</p>
+<table>
+<thead>
+<tr>
+<th>Verb</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mauto validate &lt;file&gt;</code></td>
+<td>Validate a scenario JSON file against the <a href="../schema/">scenario schema</a></td>
+</tr>
+<tr>
+<td><code>mauto assert &lt;type&gt; [--target --expected --operator --count --pattern --variable --device]</code></td>
+<td>Evaluate an assertion; mechanical types are decided by the CLI, visual types are deferred to the agent</td>
+</tr>
+<tr>
+<td><code>mauto result add-step --run-id --step-id --status [--scenario-id --attempts]</code></td>
+<td>Append a step result to a run</td>
+</tr>
+<tr>
+<td><code>mauto result finalize --run-id [--scenario-id --status --duration]</code></td>
+<td>Assemble the final <a href="../result-schema/">result file</a> and auto-harvest memory</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title"><code>result finalize</code> and memory</p>
+<p>On finalize, <code>mauto</code> auto-harvests typed observations into cross-session memory. This is best-effort: a memory failure never fails an otherwise-successful finalize — it folds into the envelope <code>hint</code> instead. See <a href="../../concepts/memory/">Cross-Session Memory</a>.</p>
+</div>
+<hr />
+<h2 id="workspace-verbs">Workspace verbs<a class="headerlink" href="#workspace-verbs" title="Permanent link">&para;</a></h2>
+<p>Scaffold and configure the <code>mobile-automator/</code> workspace.</p>
+<table>
+<thead>
+<tr>
+<th>Verb</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mauto setup [--mode aware\|agnostic]</code></td>
+<td>Scaffold <code>mobile-automator/</code> (subdirs <code>scenarios/</code>, <code>screenshots/</code>, <code>results/</code>, <code>memory/</code>) and write <code>config.json</code></td>
+</tr>
+<tr>
+<td><code>mauto config get &lt;key&gt;</code></td>
+<td>Read a config value by dotted path</td>
+</tr>
+<tr>
+<td><code>mauto config set &lt;key&gt; &lt;value&gt;</code></td>
+<td>Write a config value by dotted path</td>
+</tr>
+</tbody>
+</table>
+<p>The mode is chosen at setup and stored as <code>mode</code> in <code>config.json</code>: <code>--mode aware</code> → <code>platform-aware</code> (single-OS / OS-specific UI tests); <code>--mode agnostic</code> → <code>platform-agnostic</code> (one scenario runs across platforms such as Flutter / RN / KMP / CMP). Configs predating the field are treated as <code>platform-aware</code>.</p>
+<hr />
+<h2 id="reasoning-verbs">Reasoning verbs<a class="headerlink" href="#reasoning-verbs" title="Permanent link">&para;</a></h2>
+<p>The agent pulls reasoning on demand. These verbs <strong>print raw content on success</strong> (see the RAW-output exception above), because the agent injects the text into its context.</p>
+<table>
+<thead>
+<tr>
+<th>Verb</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mauto guide &lt;topic&gt;</code></td>
+<td>Print the workflow guide for a topic: <code>generate</code>, <code>execute</code>, or <code>setup</code></td>
+</tr>
+<tr>
+<td><code>mauto schema &lt;name&gt;</code></td>
+<td>Print a schema: <code>scenario</code> or <code>result</code></td>
+</tr>
+<tr>
+<td><code>mauto bootstrap</code></td>
+<td>Print the verb map and non-negotiable invariants</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="agent-integration-verbs">Agent integration verbs<a class="headerlink" href="#agent-integration-verbs" title="Permanent link">&para;</a></h2>
+<p>Wire <code>mauto</code> into a host AI agent.</p>
+<table>
+<thead>
+<tr>
+<th>Verb</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mauto init --agent &lt;claude\|cursor\|gemini\|copilot\|agents\|all&gt;</code></td>
+<td>Install native Agent Skills (and host-specific slash-commands / rules / MCP entries) for the chosen host</td>
+</tr>
+<tr>
+<td><code>mauto mcp</code></td>
+<td>Run the MCP prompts server (stdio) that exposes the workflows as prompts</td>
+</tr>
+</tbody>
+</table>
+<p>All five hosts get native Agent Skills (one per workflow topic: generate / execute / setup). Claude and Cursor additionally get slash-commands / project rules plus a <code>mauto</code> MCP server entry (<code>{ "command": "mauto", "args": ["mcp"] }</code>). <code>init --agent all</code> continues on error and returns one envelope with a per-agent ok/failed map in <code>data.agents[]</code>.</p>
+<hr />
+<h2 id="device-session-verbs">Device session verbs<a class="headerlink" href="#device-session-verbs" title="Permanent link">&para;</a></h2>
+<p>Device verbs are backed by a single persistent mobile-mcp session daemon. These verbs manage that daemon and the device selection.</p>
+<table>
+<thead>
+<tr>
+<th>Verb</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mauto session start [--device &lt;id&gt;] [--idle &lt;ms&gt;]</code></td>
+<td>Start the persistent session daemon (idempotent; returns <code>already_running: true</code> if alive)</td>
+</tr>
+<tr>
+<td><code>mauto session status</code></td>
+<td>Report <code>{ running: bool }</code></td>
+</tr>
+<tr>
+<td><code>mauto session end</code></td>
+<td>Stop the daemon and remove the socket / pidfile</td>
+</tr>
+<tr>
+<td><code>mauto devices</code></td>
+<td>List connected devices/simulators (id / name / platform / state)</td>
+</tr>
+<tr>
+<td><code>mauto devices use &lt;id&gt;</code></td>
+<td>Validate the id against the live list, then persist the selection</td>
+</tr>
+<tr>
+<td><code>mauto devices clear</code></td>
+<td>Remove the persisted selection</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="memory-verbs">Memory verbs<a class="headerlink" href="#memory-verbs" title="Permanent link">&para;</a></h2>
+<p>Cross-session memory lives in <code>mobile-automator/memory/</code>. There are three kinds across three files; only <code>app-knowledge</code> and <code>preferences</code> are agent-authored. See <a href="../../concepts/memory/">Cross-Session Memory</a> for the full model.</p>
+<table>
+<thead>
+<tr>
+<th>Verb</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mauto memory show [--kind &lt;run-history\|app-knowledge\|preferences&gt;] [--scenario &lt;id&gt;]</code></td>
+<td>Print memory as raw markdown (RAW-output verb)</td>
+</tr>
+<tr>
+<td><code>mauto memory add &lt;text&gt; --kind &lt;app-knowledge\|preferences&gt;</code></td>
+<td>Record an agent-authored entry</td>
+</tr>
+<tr>
+<td><code>mauto memory forget --kind &lt;app-knowledge\|preferences&gt; --match &lt;substr&gt;</code></td>
+<td>Remove agent-authored entries containing <code>&lt;substr&gt;</code></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">run-history is machine-owned</p>
+<p><code>run-history</code> is auto-harvested on <code>result finalize</code> and is <strong>not</strong> a valid target for <code>memory add</code> / <code>memory forget</code>. Only <code>app-knowledge</code> and <code>preferences</code> are agent-authored.</p>
+</div>
+<hr />
+<h2 id="related-references">Related references<a class="headerlink" href="#related-references" title="Permanent link">&para;</a></h2>
 <ul>
-<li>The largest execution risk is <strong>time, not decision</strong>: porting the reasoning prose from the six <code>SKILL.md</code> templates (generator/executor/recorder × aware/agnostic) into guides. Each file is entangled with Gemini on several axes (placeholders → config lookups, mobile-mcp tool names → <code>mauto</code> verbs including the action-mapping table, <code>ask_user</code>/Gemini framing, <code>.gemini/</code> paths + <code>GEMINI.md</code> references → <code>mauto schema</code>/inlined protocol) and additionally needs a brain/hands re-partition (mechanical bits become verbs, reasoning stays in the guide). This is correctness-critical — a botched guide silently yields bad scenarios — and likely warrants 2–3 dedicated slices with the new lint guards.</li>
-<li>The CI version-bump gate and release flow currently key off extension paths and <code>gemini-extension.json</code>; they must be re-pointed at the CLI package.</li>
-<li>Suggested slicing follows the repo's tracer-bullet convention: a thin end-to-end vertical (CLI router + OutputEnvelope + DeviceBridge + one device verb + <code>validate</code>) first, then execute verbs + AssertionEvaluator/ResultStore, the guide port (per skill-pair), VendorAdapters + McpPromptsServer, and finally the recorder decoupling, with the Gemini removal as a clearly-scoped cleanup slice.</li>
+<li><a href="../schema/">Test Scenario Schema</a> — action and assertion structure that <code>validate</code> checks</li>
+<li><a href="../result-schema/">Test Result Schema</a> — the file <code>result finalize</code> assembles</li>
+<li><a href="../../concepts/memory/">Cross-Session Memory</a> — how memory verbs and auto-harvesting work</li>
+<li><a href="../mcp-tools/">Internal Engine (mobile-mcp)</a> — the primitives <code>mauto</code> verbs wrap</li>
 </ul>
-<h2 id="slices">Slices<a class="headerlink" href="#slices" title="Permanent link">&para;</a></h2>
-<p>Tracer-bullet vertical slices (tracked as sub-issues, milestone <code>cli</code>):</p>
-<ol>
-<li>
-<h1 id="70-cli-spine-router-json-envelope-devicebridge-elements-validate">70 — CLI spine: router + JSON envelope + DeviceBridge + <code>elements</code> + <code>validate</code><a class="headerlink" href="#70-cli-spine-router-json-envelope-devicebridge-elements-validate" title="Permanent link">&para;</a></h1>
-</li>
-<li>
-<h1 id="71-execute-verbs-assertionevaluator-resultstore">71 — execute verbs + AssertionEvaluator + ResultStore<a class="headerlink" href="#71-execute-verbs-assertionevaluator-resultstore" title="Permanent link">&para;</a></h1>
-</li>
-<li>
-<h1 id="72-config-setup-scaffold-guideschemabootstrap-floor-lint-harness">72 — config + setup scaffold + guide/schema/bootstrap floor + lint harness<a class="headerlink" href="#72-config-setup-scaffold-guideschemabootstrap-floor-lint-harness" title="Permanent link">&para;</a></h1>
-</li>
-<li>
-<h1 id="73-guide-port-generator-aware-agnostic">73 — guide port: generator (aware + agnostic)<a class="headerlink" href="#73-guide-port-generator-aware-agnostic" title="Permanent link">&para;</a></h1>
-</li>
-<li>
-<h1 id="74-guide-port-executor-aware-agnostic">74 — guide port: executor (aware + agnostic)<a class="headerlink" href="#74-guide-port-executor-aware-agnostic" title="Permanent link">&para;</a></h1>
-</li>
-<li>
-<h1 id="75-guide-port-recorder-setup-guides">75 — guide port: recorder + setup guides<a class="headerlink" href="#75-guide-port-recorder-setup-guides" title="Permanent link">&para;</a></h1>
-</li>
-<li>
-<h1 id="76-vendoradapters-init-mcp-prompts-server">76 — VendorAdapters (<code>init</code>) + MCP prompts server<a class="headerlink" href="#76-vendoradapters-init-mcp-prompts-server" title="Permanent link">&para;</a></h1>
-</li>
-<li>
-<h1 id="77-recorder-decoupling-persist-bundle-record-bundle-live-tap-source">77 — recorder decoupling: persist bundle + <code>record-bundle</code> + live tap source<a class="headerlink" href="#77-recorder-decoupling-persist-bundle-record-bundle-live-tap-source" title="Permanent link">&para;</a></h1>
-</li>
-<li>
-<h1 id="78-gemini-removal-cirelease-re-point">78 — Gemini removal + CI/release re-point<a class="headerlink" href="#78-gemini-removal-cirelease-re-point" title="Permanent link">&para;</a></h1>
-</li>
-</ol>
+<p><a href="../">← Back to Reference Index</a></p>
 
 
 
 
 
 
+
+  
+  
 
 
 
@@ -1616,6 +1957,44 @@
       
         <footer class="md-footer">
   
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../" class="md-footer__link md-footer__link--prev" aria-label="Previous: Reference">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Reference
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../assertions/" class="md-footer__link md-footer__link--next" aria-label="Next: Assertion Types">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Assertion Types
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
     
   
   <div class="md-footer-meta md-typeset">

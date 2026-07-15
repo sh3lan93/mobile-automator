@@ -798,7 +798,7 @@
   <span class="md-ellipsis">
     
   
-    3-Tier Design
+    Layered Architecture
   
 
     
@@ -827,6 +827,34 @@
     
   
     How Skills Work
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cross-Session Memory
   
 
     
@@ -1095,6 +1123,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../reference/cli-verbs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Verbs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/assertions/" class="md-nav__link">
         
   
@@ -1186,7 +1242,7 @@
   <span class="md-ellipsis">
     
   
-    MCP Tools
+    Internal Engine (mobile-mcp)
   
 
     
@@ -1690,12 +1746,13 @@
 <h3 id="the-mauto-verbs">The <code>mauto</code> verbs<a class="headerlink" href="#the-mauto-verbs" title="Permanent link">&para;</a></h3>
 <p>The deterministic surface the agent drives. Every verb emits <code>{ok,data,error,hint,schema_version}</code>; <code>--human</code> is an opt-in readable flag.</p>
 <ul>
-<li><strong>Device actions:</strong> <code>elements</code>, <code>tap</code>, <code>type &lt;text&gt;</code>, <code>swipe</code>, <code>press &lt;button&gt;</code>, <code>screenshot &lt;path&gt;</code></li>
+<li><strong>Device actions:</strong> <code>elements</code>, <code>tap</code>, <code>type &lt;text&gt;</code>, <code>swipe</code>, <code>press &lt;button&gt;</code>, <code>screenshot &lt;path&gt;</code>, <code>long-press</code>, <code>double-tap</code>, <code>launch &lt;appId&gt;</code>, <code>install &lt;path&gt;</code>, <code>uninstall &lt;appId&gt;</code>, <code>open-url &lt;url&gt;</code>, <code>orientation &lt;portrait|landscape&gt;</code></li>
 <li><strong>Author &amp; verify:</strong> <code>validate &lt;file&gt;</code>, <code>assert &lt;type&gt;</code>, <code>result add-step</code>, <code>result finalize</code></li>
 <li><strong>Workspace:</strong> <code>setup</code>, <code>config get &lt;key&gt;</code>, <code>config set &lt;key&gt; &lt;value&gt;</code></li>
 <li><strong>Reasoning:</strong> <code>guide &lt;topic&gt;</code>, <code>bootstrap</code>, <code>schema &lt;name&gt;</code></li>
 <li><strong>Agent integration:</strong> <code>init --agent &lt;host&gt;</code>, <code>mcp</code> (MCP prompts server)</li>
 <li><strong>Device session:</strong> <code>session start|status|end</code>; <code>devices</code>, <code>devices use &lt;id&gt;</code>, <code>devices clear</code></li>
+<li><strong>Memory:</strong> <code>memory show</code>, <code>memory add</code>, <code>memory forget</code> — the cross-session learning subsystem (see <a href="../memory/">Memory</a> and the <a href="../../reference/cli-verbs/">CLI Verbs reference</a>)</li>
 </ul>
 <h3 id="the-mobile-mcp-engine">The mobile-mcp engine<a class="headerlink" href="#the-mobile-mcp-engine" title="Permanent link">&para;</a></h3>
 <p><code>mobile-mcp</code> is bundled as a pinned dependency and spawned from <code>node_modules</code> — never fetched at runtime. It is the internal engine, not an agent-facing API. It provides the cross-platform device primitives that <code>mauto</code> verbs are built on:</p>
@@ -1729,6 +1786,7 @@ For each step:
         ↓
 mauto result finalize → mobile-automator/results/
 </code></pre></div>
+<p>On <code>mauto result finalize</code>, the <strong>memory subsystem</strong> (<code>src/memory/</code>) auto-harvests typed observations into a cross-session <code>mobile-automator/memory/</code> store, so the agent gets smarter about <em>this</em> app over time. The agent can also author durable app-knowledge and preferences directly via <code>mauto memory add</code> / <code>mauto memory forget</code>. See <a href="../memory/">Memory</a>.</p>
 <h2 id="file-structure">File Structure<a class="headerlink" href="#file-structure" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>mobile-automator/                          # created in the user&#39;s project by mauto setup
 ├── config.json                            # project knowledge + mode
@@ -1810,27 +1868,38 @@ mauto result finalize → mobile-automator/results/
 
 4. Scenario JSON Created:
    {
-     &quot;schema_version&quot;: &quot;2.1&quot;,
+     &quot;$schema_version&quot;: &quot;2.1&quot;,
      &quot;mode&quot;: &quot;platform-aware&quot;,
-     &quot;steps&quot;: {
-       &quot;tap_login&quot;: {
-         &quot;type&quot;: &quot;tap&quot;,
-         &quot;element&quot;: &quot;login_button&quot;
+     &quot;steps&quot;: [
+       {
+         &quot;id&quot;: &quot;tap_login&quot;,
+         &quot;action&quot;: &quot;tap&quot;,
+         &quot;target&quot;: &quot;login_button&quot;,
+         &quot;description&quot;: &quot;Tap the login button&quot;
        },
-       &quot;enter_email&quot;: {
-         &quot;type&quot;: &quot;type&quot;,
-         &quot;element&quot;: &quot;email_field&quot;,
-         &quot;text&quot;: &quot;user@example.com&quot;
+       {
+         &quot;id&quot;: &quot;enter_email&quot;,
+         &quot;action&quot;: &quot;type&quot;,
+         &quot;target&quot;: &quot;email_field&quot;,
+         &quot;value&quot;: &quot;user@example.com&quot;,
+         &quot;description&quot;: &quot;Enter the email address&quot;
        },
-       &quot;wait_spinner&quot;: {
-         &quot;type&quot;: &quot;wait_for_loading_complete&quot;
-       },
-       &quot;verify_success&quot;: {
-         &quot;type&quot;: &quot;element_text&quot;,
-         &quot;element&quot;: &quot;success_message&quot;,
-         &quot;expected_exact&quot;: &quot;Success&quot;
+       {
+         &quot;id&quot;: &quot;wait_spinner&quot;,
+         &quot;action&quot;: &quot;wait_for_loading_complete&quot;,
+         &quot;description&quot;: &quot;Wait for the loading spinner to disappear&quot;
        }
-     }
+     ],
+     &quot;assertions&quot;: [
+       {
+         &quot;id&quot;: &quot;verify_success&quot;,
+         &quot;after_step&quot;: &quot;wait_spinner&quot;,
+         &quot;type&quot;: &quot;element_text&quot;,
+         &quot;element_description&quot;: &quot;success_message&quot;,
+         &quot;expected_value&quot;: &quot;Success&quot;,
+         &quot;description&quot;: &quot;Success message is shown after login&quot;
+       }
+     ]
    }
 
 5. Execution Phase:
@@ -1916,13 +1985,13 @@ mauto result finalize → mobile-automator/results/
         
         
           
-          <a href="../three-tier-design/" class="md-footer__link md-footer__link--next" aria-label="Next: 3-Tier Design">
+          <a href="../three-tier-design/" class="md-footer__link md-footer__link--next" aria-label="Next: Layered Architecture">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                3-Tier Design
+                Layered Architecture
               </div>
             </div>
             <div class="md-footer__button md-icon">

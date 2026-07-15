@@ -553,7 +553,7 @@
   <span class="md-ellipsis">
     
   
-    3-Tier Design
+    Layered Architecture
   
 
     
@@ -582,6 +582,34 @@
     
   
     How Skills Work
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cross-Session Memory
   
 
     
@@ -850,6 +878,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../reference/cli-verbs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Verbs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../reference/assertions/" class="md-nav__link">
         
   
@@ -941,7 +997,7 @@
   <span class="md-ellipsis">
     
   
-    MCP Tools
+    Internal Engine (mobile-mcp)
   
 
     
@@ -1269,6 +1325,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#does-the-agent-remember-anything-between-sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Does the agent remember anything between sessions?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#can-i-use-mobile-automator-with-my-existing-tests" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1628,6 +1695,17 @@
     <span class="md-ellipsis">
       
         Device-Related Issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#device-state-seems-stuck-or-stale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Device state seems stuck or stale
       
     </span>
   </a>
@@ -1907,6 +1985,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#does-the-agent-remember-anything-between-sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Does the agent remember anything between sessions?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#can-i-use-mobile-automator-with-my-existing-tests" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2273,6 +2362,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#device-state-seems-stuck-or-stale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Device state seems stuck or stale
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#app-installation-failures" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2478,6 +2578,23 @@ mauto<span class="w"> </span>setup<span class="w"> </span>--mode<span class="w">
 <p>The chosen mode is stored as <code>mode</code> in <code>mobile-automator/config.json</code> (read it back with <code>mauto config get mode</code>). In agnostic mode, OS-shaped gestures become four semantic actions — <code>press_back</code>, <code>dismiss_keyboard</code>, <code>grant_permission</code>, <code>deny_permission</code> — resolved to the right native primitive at runtime, so one scenario covers both platforms.</p>
 <h3 id="what-is-the-schema_version-field">What is the <code>$schema_version</code> field?<a class="headerlink" href="#what-is-the-schema_version-field" title="Permanent link">&para;</a></h3>
 <p><strong>Answer:</strong> Every test scenario JSON file includes a <code>$schema_version</code> field (currently <code>"2.1"</code>) as its first field. This enables version detection for schema evolution. All scenarios must include this field.</p>
+<h3 id="does-the-agent-remember-anything-between-sessions">Does the agent remember anything between sessions?<a class="headerlink" href="#does-the-agent-remember-anything-between-sessions" title="Permanent link">&para;</a></h3>
+<p><strong>Answer:</strong> Yes. mobile-automator keeps a small <strong>cross-session memory</strong> under <code>mobile-automator/memory/</code>, so the agent gets smarter about <em>your</em> app over time instead of re-discovering the same quirks on every run. There are three kinds:</p>
+<ul>
+<li><strong><code>run-history</code></strong> (<code>run-history.md</code>) — <strong>machine-owned</strong>. Auto-harvested on <code>mauto result finalize</code>: typed observations (regression / flakiness / state context) are folded into a bounded rolling per-scenario summary. You don't edit this by hand.</li>
+<li><strong><code>app-knowledge</code></strong> (<code>app-knowledge.md</code>) — <strong>agent-authored</strong> durable facts about the app (selectors, conventions, gotchas).</li>
+<li><strong><code>preferences</code></strong> (<code>preferences.md</code>) — <strong>agent-authored</strong> testing preferences.</li>
+</ul>
+<p>Inspect memory (prints raw markdown, not the JSON envelope):</p>
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>memory<span class="w"> </span>show<span class="w">                              </span><span class="c1"># everything</span>
+mauto<span class="w"> </span>memory<span class="w"> </span>show<span class="w"> </span>--kind<span class="w"> </span>app-knowledge<span class="w">         </span><span class="c1"># one kind</span>
+mauto<span class="w"> </span>memory<span class="w"> </span>show<span class="w"> </span>--kind<span class="w"> </span>run-history<span class="w"> </span>--scenario<span class="w"> </span>login_happy_path
+</code></pre></div>
+<p>Add or remove agent-authored entries (only <code>app-knowledge</code> and <code>preferences</code> are writable — <code>run-history</code> is not):</p>
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>memory<span class="w"> </span>add<span class="w"> </span><span class="s2">&quot;Login button is labeled &#39;Sign in&#39;, not &#39;Log in&#39;&quot;</span><span class="w"> </span>--kind<span class="w"> </span>app-knowledge
+mauto<span class="w"> </span>memory<span class="w"> </span>forget<span class="w"> </span>--kind<span class="w"> </span>app-knowledge<span class="w"> </span>--match<span class="w"> </span><span class="s2">&quot;Sign in&quot;</span>
+</code></pre></div>
+<p>Entries are exact-match de-duped and written under an advisory lock with atomic writes, so concurrent runs won't corrupt the files. The generate and execute workflows consult memory before work and save durable knowledge they learn.</p>
 <h3 id="can-i-use-mobile-automator-with-my-existing-tests">Can I use mobile-automator with my existing tests?<a class="headerlink" href="#can-i-use-mobile-automator-with-my-existing-tests" title="Permanent link">&para;</a></h3>
 <p><strong>Answer:</strong> Partially. If you have:
 - <strong>Appium/Espresso/XCTest tests</strong> → No direct import, but use mobile-automator for <em>new</em> tests
@@ -2597,20 +2714,24 @@ ls<span class="w"> </span>-la<span class="w"> </span>.gemini/skills/
 <span class="w">  </span><span class="nt">&quot;variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;test_email&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Email used to log in&quot;</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user@example.com&quot;</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="nt">&quot;test_password&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Password used to log in&quot;</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;SecurePassword123&quot;</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;enter_email&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;email_input&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;{{test_email}}&quot;</span>
+<span class="w">  </span><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;enter_email&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;email_input&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;{{test_email}}&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Type the test email into the email field&quot;</span>
 <span class="w">    </span><span class="p">}</span>
-<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
 </code></pre></div>
 <p>For running with different values, manually edit the JSON or wire the values in from your CI pipeline.</p>
@@ -2634,11 +2755,15 @@ ls<span class="w"> </span>-la<span class="w"> </span>.gemini/skills/
 <p><strong>Solutions:</strong>
 1. <strong>Add explicit wait</strong> — Insert a wait step before the action:
    <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;wait_for_element&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;button_id&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span>
-<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_button&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;button_id&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for the button to appear&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_visible&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5000</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <ol>
@@ -2647,26 +2772,35 @@ ls<span class="w"> </span>-la<span class="w"> </span>.gemini/skills/
 <li><strong>Increase timeout</strong> — Slow devices may need longer waits</li>
 <li><strong>Add screenshot assertion</strong> — Debug what's actually on screen:
    <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;verify_screen&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;screenshot_match&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;reference_file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;expected_screen.png&quot;</span>
-<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="nt">&quot;assertions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;verify_screen&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;after_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_button&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;screenshot_match&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;reference_screenshot&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;expected_screen.png&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Screen matches the expected baseline&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
 </code></pre></div></li>
 </ol>
 <h3 id="assertion-failed-expected-x-got-y">"Assertion failed: Expected X, got Y"<a class="headerlink" href="#assertion-failed-expected-x-got-y" title="Permanent link">&para;</a></h3>
 <p><strong>Cause:</strong> Assertion condition wasn't met during test.</p>
 <p><strong>Solutions:</strong>
-1. <strong>Check assertion syntax</strong> — Verify <code>expected_text</code>, <code>expected_exact</code>, <code>expected_substring</code>
+1. <strong>Check assertion syntax</strong> — Verify <code>expected_text</code>, <code>expected_value</code>, <code>expected_substring</code>
 2. <strong>Verify actual app data</strong> — Manually check what value is displayed
 3. <strong>Handle dynamic content</strong> — If value changes, use <code>text_contains</code> instead of <code>text_matches</code>
 4. <strong>Add debug screenshot</strong> — Insert a capture step to see actual state:
    <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;capture_state&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_value&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;title&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;capture_to&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;actual_title&quot;</span>
-<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_state&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_value&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;title&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;capture_to&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;actual_title&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Capture the current title&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <h3 id="test-timed-out-error">"Test timed out" error<a class="headerlink" href="#test-timed-out-error" title="Permanent link">&para;</a></h3>
@@ -2674,8 +2808,10 @@ ls<span class="w"> </span>-la<span class="w"> </span>.gemini/skills/
 <p><strong>Solutions:</strong>
 1. <strong>Increase timeout</strong> — Default is 10s, try 15-30s:
    <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading_complete&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading_complete&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for loading to complete&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;loading_complete&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30000</span><span class="w"> </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <ol>
@@ -2692,10 +2828,14 @@ xcrun<span class="w"> </span>simctl<span class="w"> </span>list<span class="w"> 
 <li>
 <p><strong>Add intermediate waits</strong> — Between rapid actions:
    <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;wait_before_next&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading_complete&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;timeout_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span>
-<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_before_next&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading_complete&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Brief wait before the next action&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;loading_complete&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
 </code></pre></div></p>
 </li>
@@ -2813,7 +2953,7 @@ cat<span class="w"> </span>mobile-automator/results/latest.json<span class="w"> 
 <h3 id="how-do-i-make-tests-run-faster">How do I make tests run faster?<a class="headerlink" href="#how-do-i-make-tests-run-faster" title="Permanent link">&para;</a></h3>
 <p><strong>Answer:</strong> Test execution speed depends on app, network, and device:</p>
 <ol>
-<li><strong>Reduce waits</strong> — Use shorter timeouts for fast-responding apps (e.g., <code>"timeout_seconds": 3</code> instead of 10)</li>
+<li><strong>Reduce waits</strong> — Use shorter wait timeouts for fast-responding apps (e.g., <code>wait_config.timeout_ms</code> of <code>3000</code> instead of <code>10000</code>)</li>
 <li><strong>Remove unnecessary assertions</strong> — Only assert critical checks</li>
 <li><strong>Optimize element selection</strong> — Use unique, visible targets</li>
 <li><strong>Test on faster device</strong> — High-end device &gt; low-end device</li>
@@ -2838,8 +2978,8 @@ cat<span class="w"> </span>mobile-automator/results/latest.json<span class="w"> 
 2. <strong>Clear app cache</strong> between tests:
    <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;preconditions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;setup_actions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">      </span><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;clear_app_data&quot;</span><span class="p">}</span>
+<span class="w">    </span><span class="nt">&quot;device_actions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">      </span><span class="p">{</span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;clear_app_data&quot;</span><span class="p">}</span>
 <span class="w">    </span><span class="p">]</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
@@ -2874,6 +3014,23 @@ xcrun<span class="w"> </span>simctl<span class="w"> </span>list<span class="w"> 
 <p>Pin a specific device once it appears:
 <div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>devices<span class="w"> </span>use<span class="w"> </span>&lt;id&gt;<span class="w">     </span><span class="c1"># mauto devices clear to unpin</span>
 </code></pre></div></p>
+<h3 id="device-state-seems-stuck-or-stale">Device state seems stuck or stale<a class="headerlink" href="#device-state-seems-stuck-or-stale" title="Permanent link">&para;</a></h3>
+<p><strong>Cause:</strong> Device actions run through one long-lived session daemon (a persistent mobile-mcp process). If it wedged — verbs hang, target the wrong device, or return stale screen state — reset it.</p>
+<p><strong>Solutions:</strong>
+<div class="highlight"><pre><span></span><code><span class="c1"># Check whether the daemon is alive</span>
+mauto<span class="w"> </span>session<span class="w"> </span>status<span class="w">        </span><span class="c1"># -&gt; { running: true|false }</span>
+
+<span class="c1"># Stop it (removes the socket/pidfile); it auto-restarts on the next device verb</span>
+mauto<span class="w"> </span>session<span class="w"> </span>end
+
+<span class="c1"># Optionally start a fresh one explicitly</span>
+mauto<span class="w"> </span>session<span class="w"> </span>start
+
+<span class="c1"># Re-confirm and re-pin the device</span>
+mauto<span class="w"> </span>devices<span class="w">               </span><span class="c1"># list connected devices/simulators</span>
+mauto<span class="w"> </span>devices<span class="w"> </span>use<span class="w"> </span>&lt;id&gt;<span class="w">      </span><span class="c1"># pin the intended one (mauto devices clear to unpin)</span>
+</code></pre></div></p>
+<p>Device precedence is: explicit <code>--device &lt;id&gt;</code> &gt; persisted selection (<code>mauto devices use</code>) &gt; auto-selected lone device. If you have several devices attached and haven't pinned one, pin it to avoid the daemon acting on the wrong target.</p>
 <h3 id="app-installation-failures">App Installation Failures<a class="headerlink" href="#app-installation-failures" title="Permanent link">&para;</a></h3>
 <p><strong>"App not installed" error:</strong>
 1. <strong>Check build succeeded</strong> — Try building manually first

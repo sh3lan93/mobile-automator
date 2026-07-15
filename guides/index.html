@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://sh3lan93.github.io/mobile-automator/guides/">
       
       
-        <link rel="prev" href="../concepts/skills/">
+        <link rel="prev" href="../concepts/memory/">
       
       
         <link rel="next" href="setup/">
@@ -553,7 +553,7 @@
   <span class="md-ellipsis">
     
   
-    3-Tier Design
+    Layered Architecture
   
 
     
@@ -582,6 +582,34 @@
     
   
     How Skills Work
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cross-Session Memory
   
 
     
@@ -956,6 +984,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../reference/cli-verbs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Verbs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../reference/assertions/" class="md-nav__link">
         
   
@@ -1047,7 +1103,7 @@
   <span class="md-ellipsis">
     
   
-    MCP Tools
+    Internal Engine (mobile-mcp)
   
 
     
@@ -1446,9 +1502,10 @@
    (Run to test - review results and observations)
 </code></pre></div>
 <h2 id="when-to-use-each-stage">When to Use Each Stage<a class="headerlink" href="#when-to-use-each-stage" title="Permanent link">&para;</a></h2>
-<p><strong>Setup</strong> is your starting point. Run <code>mauto setup</code> once per mobile project to scaffold the <code>mobile-automator/</code> workspace (<code>scenarios/</code>, <code>screenshots/</code>, <code>results/</code>) and write <code>config.json</code>. Choose a mode with <code>--mode aware</code> (single-OS) or <code>--mode agnostic</code> (cross-platform). Then run <code>mauto devices</code> to confirm a device is reachable.</p>
+<p><strong>Setup</strong> is your starting point. Run <code>mauto setup</code> once per mobile project to scaffold the <code>mobile-automator/</code> workspace (<code>scenarios/</code>, <code>screenshots/</code>, <code>results/</code>, <code>memory/</code>) and write <code>config.json</code>. Choose a mode with <code>--mode aware</code> (single-OS) or <code>--mode agnostic</code> (cross-platform). Then run <code>mauto devices</code> to confirm a device is reachable.</p>
 <p><strong>Generate</strong> creates test scenarios from natural language. After setup, the agent reads <code>mauto guide generate</code> and drives the device through <code>mauto</code> verbs to describe test cases in plain English. It generates structured JSON scenarios, handling all the technical formatting so you can focus on what to test.</p>
 <p><strong>Execute</strong> runs your test scenarios on connected devices. The agent reads <code>mauto guide execute</code>, performs pre-flight checks to ensure a device is ready, then runs each scenario step-by-step with AI vision-based assertions. Results capture not just pass/fail status, but also observations about flakiness, regressions, and execution context.</p>
+<p>Across all three stages, the agent draws on <strong>cross-session memory</strong> in <code>mobile-automator/memory/</code> — run history auto-harvested on <code>result finalize</code>, plus agent-authored app-knowledge and preferences (<code>mauto memory show</code> / <code>mauto memory add</code>) — so it gets smarter about your app over time.</p>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <p>Start with the <a href="setup/">Setup Guide</a> to scaffold your workspace and get your project configured.</p>
 
@@ -1489,7 +1546,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../concepts/skills/" class="md-footer__link md-footer__link--prev" aria-label="Previous: How Skills Work">
+          <a href="../concepts/memory/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Cross-Session Memory">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -1499,7 +1556,7 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                How Skills Work
+                Cross-Session Memory
               </div>
             </div>
           </a>

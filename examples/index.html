@@ -553,7 +553,7 @@
   <span class="md-ellipsis">
     
   
-    3-Tier Design
+    Layered Architecture
   
 
     
@@ -582,6 +582,34 @@
     
   
     How Skills Work
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cross-Session Memory
   
 
     
@@ -850,6 +878,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../reference/cli-verbs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Verbs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../reference/assertions/" class="md-nav__link">
         
   
@@ -941,7 +997,7 @@
   <span class="md-ellipsis">
     
   
-    MCP Tools
+    Internal Engine (mobile-mcp)
   
 
     
@@ -1493,6 +1549,7 @@
 </ul>
 <h2 id="why-these-examples-matter">Why These Examples Matter<a class="headerlink" href="#why-these-examples-matter" title="Permanent link">&para;</a></h2>
 <p>Mobile testing involves unique challenges compared to web testing. Mobile apps must handle diverse device sizes, orientations, network conditions, and user interactions. Our examples show you how to write tests that account for these variables. By studying these scenarios, you'll learn how to write clear, maintainable test scenarios using the JSON schema, structure steps logically to match actual user behavior patterns, create assertions that verify functionality without being brittle, handle asynchronous operations like network requests and animations, and account for platform-specific behavior differences.</p>
+<p>All examples on this site use scenario schema <strong>2.1</strong> — the current version, additive over 2.0 (it adds the <code>mode</code> metadata field and the four platform-agnostic semantic actions <code>press_back</code>, <code>dismiss_keyboard</code>, <code>grant_permission</code>, and <code>deny_permission</code>). Existing 2.0 scenarios remain valid. The examples below are organized by platform, but if you author in <code>platform-agnostic</code> mode a single scenario can run on both Android and iOS by using those semantic actions in place of OS-specific gestures.</p>
 <h2 id="how-to-use-these-examples">How to Use These Examples<a class="headerlink" href="#how-to-use-these-examples" title="Permanent link">&para;</a></h2>
 <p>The most effective way to learn Mobile Automator is by studying and adapting these examples:</p>
 <ol>
@@ -1547,7 +1604,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../reference/mcp-tools/" class="md-footer__link md-footer__link--prev" aria-label="Previous: MCP Tools">
+          <a href="../reference/mcp-tools/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Internal Engine (mobile-mcp)">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -1557,7 +1614,7 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                MCP Tools
+                Internal Engine (mobile-mcp)
               </div>
             </div>
           </a>

@@ -760,7 +760,7 @@
   <span class="md-ellipsis">
     
   
-    3-Tier Design
+    Layered Architecture
   
 
     
@@ -789,6 +789,34 @@
     
   
     How Skills Work
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="concepts/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cross-Session Memory
   
 
     
@@ -1057,6 +1085,34 @@
   
   
     <li class="md-nav__item">
+      <a href="reference/cli-verbs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Verbs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="reference/assertions/" class="md-nav__link">
         
   
@@ -1148,7 +1204,7 @@
   <span class="md-ellipsis">
     
   
-    MCP Tools
+    Internal Engine (mobile-mcp)
   
 
     
@@ -1615,6 +1671,7 @@
 <li><strong>Platform-Agnostic by Default</strong>: One scenario runs on Android and iOS, with OS gestures mapped to semantic actions</li>
 <li><strong>Schema</strong>: 14 action types, 27 assertion types, and advanced retry/condition logic</li>
 <li><strong>Result Observations</strong>: Captures flakiness, regressions, and state context for smarter debugging</li>
+<li><strong>Cross-Session Memory</strong>: The agent remembers app-knowledge, preferences, and run-history across sessions (<a href="concepts/memory/"><code>mauto memory</code></a>)</li>
 <li><strong>Semantic Vision</strong>: AI-powered visual assertions that tolerate cosmetic changes</li>
 <li><strong>Portable Targets</strong>: Visible text + role + coordinates, never brittle resource-ids</li>
 </ul>
@@ -1633,6 +1690,7 @@ mauto<span class="w"> </span>setup<span class="w">                    </span><sp
 <h3 id="3-check-your-device">3. Check your device<a class="headerlink" href="#3-check-your-device" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>devices<span class="w">                  </span><span class="c1"># lists devices; mauto devices use &lt;id&gt; to pin one</span>
 </code></pre></div>
+<p>Device actions run through one persistent session daemon (<code>mauto session start|status|end</code>), so state stays warm across verbs. All device, workspace, memory, and session verbs — including the seven new device verbs in v0.21.0 — are catalogued in the <a href="reference/cli-verbs/">CLI Verbs reference</a>.</p>
 <h3 id="4-generate-tests">4. Generate Tests<a class="headerlink" href="#4-generate-tests" title="Permanent link">&para;</a></h3>
 <p>From inside your agent, create test scenarios from natural language. In <strong>Claude Code</strong>:</p>
 <div class="highlight"><pre><span></span><code>/mobile-automator-generate
@@ -1683,6 +1741,8 @@ mauto<span class="w"> </span>setup<span class="w">                    </span><sp
 <li><strong>Platform Modes</strong>: platform-aware (default) and platform-agnostic (<code>--mode agnostic</code>) with four semantic actions for cross-platform scenarios</li>
 <li><strong>Schema</strong>: 14 action types, 27 assertion types, advanced retry/condition logic</li>
 <li><strong>Result Observations</strong>: Captures flakiness, regressions, and execution context</li>
+<li><strong>Cross-Session Memory</strong>: The agent remembers app-knowledge, preferences, and run-history across sessions via <a href="concepts/memory/"><code>mauto memory</code></a> — so it gets smarter about <em>your</em> app over time</li>
+<li><strong>Persistent Device Session</strong>: One warm mobile-mcp daemon behind <code>mauto session</code> and <code>mauto devices</code> keeps device state across verbs</li>
 <li><strong>Built-in Schemas</strong>: Scenario and result schemas available via <code>mauto schema scenario</code> / <code>mauto schema result</code></li>
 </ul>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>

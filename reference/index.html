@@ -16,7 +16,7 @@
         <link rel="prev" href="../guides/execute/">
       
       
-        <link rel="next" href="assertions/">
+        <link rel="next" href="cli-verbs/">
       
       
         
@@ -553,7 +553,7 @@
   <span class="md-ellipsis">
     
   
-    3-Tier Design
+    Layered Architecture
   
 
     
@@ -582,6 +582,34 @@
     
   
     How Skills Work
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cross-Session Memory
   
 
     
@@ -920,6 +948,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#for-agent-operators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        For Agent Operators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#for-schema-developers" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -985,6 +1024,28 @@
     <span class="md-ellipsis">
       
         MCP Tool Reference (internal engine)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cli-verbs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI Verbs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory
       
     </span>
   </a>
@@ -1109,10 +1170,21 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#current-20" class="md-nav__link">
+  <a href="#scenario-schema-schema_version-note-the" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Current (2.0)
+        Scenario schema — $schema_version (note the $)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#result-schema-schema_version-no" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Result schema — schema_version (no $)
       
     </span>
   </a>
@@ -1161,6 +1233,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="cli-verbs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Verbs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1264,7 +1364,7 @@
   <span class="md-ellipsis">
     
   
-    MCP Tools
+    Internal Engine (mobile-mcp)
   
 
     
@@ -1567,6 +1667,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#for-agent-operators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        For Agent Operators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#for-schema-developers" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1632,6 +1743,28 @@
     <span class="md-ellipsis">
       
         MCP Tool Reference (internal engine)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cli-verbs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI Verbs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory
       
     </span>
   </a>
@@ -1756,10 +1889,21 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#current-20" class="md-nav__link">
+  <a href="#scenario-schema-schema_version-note-the" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Current (2.0)
+        Scenario schema — $schema_version (note the $)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#result-schema-schema_version-no" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Result schema — schema_version (no $)
       
     </span>
   </a>
@@ -1836,6 +1980,10 @@
 <p><strong>Run tests with:</strong>
 - <a href="mcp-tools/">20+ MCP Tools</a> — Device control, screenshots, element inspection
 - <a href="result-schema/">Result Schema</a> — Understanding test execution results</p>
+<h3 id="for-agent-operators">For Agent Operators<a class="headerlink" href="#for-agent-operators" title="Permanent link">&para;</a></h3>
+<p><strong>Drive and extend mobile-automator:</strong>
+- <a href="cli-verbs/">CLI Verbs</a> — Every <code>mauto</code> verb and its JSON envelope
+- <a href="../concepts/memory/">Memory</a> — Cross-session learning (run-history, app-knowledge, preferences)</p>
 <h3 id="for-schema-developers">For Schema Developers<a class="headerlink" href="#for-schema-developers" title="Permanent link">&para;</a></h3>
 <p><strong>Extend mobile-automator:</strong>
 - <a href="schema/">Full Schema</a> — Complete JSON schema definition
@@ -1902,14 +2050,18 @@
 <p>The default schema for test scenarios. Defines structure for steps, assertions, variables, and execution metadata.</p>
 <p><strong>Schema structure:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;$schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;$schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.1&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;scenario_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_flow&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;tap_login&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;button&quot;</span><span class="w"> </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;verify_success&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_exists&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;element&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;welcome&quot;</span><span class="w"> </span><span class="p">}</span>
-<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Login Flow&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Verify the user can log in and reach the dashboard&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;platform&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;android&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;app_package&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;com.example.app&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;metadata&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;app_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.0.0&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;staging&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap_login&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Tap the login button&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Login button&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">],</span>
 <span class="w">  </span><span class="nt">&quot;assertions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;logged_in&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;screen_title&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;expected_exact&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Dashboard&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;logged_in&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;after_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap_login&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;screen_title&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;The dashboard screen is shown&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;expected_text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Dashboard&quot;</span><span class="w"> </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
 </code></pre></div></p>
@@ -1960,6 +2112,14 @@
 - <code>mauto type</code> → <code>mobile_type_keys</code> — Type text into focused field
 - <code>mauto swipe</code> → <code>mobile_swipe_on_screen</code> — Scroll or swipe</p>
 <p><strong><a href="mcp-tools/">View all engine tools →</a></strong></p>
+<hr />
+<h3 id="cli-verbs">CLI Verbs<a class="headerlink" href="#cli-verbs" title="Permanent link">&para;</a></h3>
+<p>The full <code>mauto</code> verb surface — device actions, authoring, workspace, reasoning, agent integration, device session, and memory — each emitting the uniform <code>{ok, data, error, hint, schema_version}</code> envelope.</p>
+<p><strong><a href="cli-verbs/">CLI Verbs Reference →</a></strong></p>
+<hr />
+<h3 id="memory">Memory<a class="headerlink" href="#memory" title="Permanent link">&para;</a></h3>
+<p>How mobile-automator learns across sessions: the auto-harvested <code>run-history</code> plus agent-authored <code>app-knowledge</code> and <code>preferences</code>, stored under <code>mobile-automator/memory/</code>.</p>
+<p><strong><a href="../concepts/memory/">Memory Concept →</a></strong></p>
 <hr />
 <h2 id="learning-path">Learning Path<a class="headerlink" href="#learning-path" title="Permanent link">&para;</a></h2>
 <h3 id="new-to-mobile-automator">New to mobile-automator?<a class="headerlink" href="#new-to-mobile-automator" title="Permanent link">&para;</a></h3>
@@ -2044,12 +2204,18 @@
 - <code>dark_mode_active</code> — Dark mode enabled</p>
 <hr />
 <h2 id="schema-versioning">Schema Versioning<a class="headerlink" href="#schema-versioning" title="Permanent link">&para;</a></h2>
-<h3 id="current-20">Current (2.0)<a class="headerlink" href="#current-20" title="Permanent link">&para;</a></h3>
+<p>Scenario files and result files version themselves independently, with <strong>different field names</strong>:</p>
+<h3 id="scenario-schema-schema_version-note-the">Scenario schema — <code>$schema_version</code> (note the <code>$</code>)<a class="headerlink" href="#scenario-schema-schema_version-note-the" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Identifier:</strong> <code>"$schema_version": "2.0"</code></li>
+<li><strong>Identifier:</strong> <code>"$schema_version"</code>, which accepts <code>"2.0"</code> or <code>"2.1"</code> (default <code>"2.0"</code>)</li>
+<li><strong>2.1 is current</strong> and additive over 2.0 — it adds the <code>mode</code> metadata field and four platform-agnostic semantic actions (<code>press_back</code>, <code>dismiss_keyboard</code>, <code>grant_permission</code>, <code>deny_permission</code>). Existing <code>"2.0"</code> scenarios remain valid; new scenarios should use <code>"2.1"</code>.</li>
 <li><strong>Step IDs:</strong> String snake_case (<code>tap_login</code>, <code>verify_message</code>)</li>
-<li><strong>Features:</strong> Variables, retry policies, conditions, sub-steps, observations</li>
-<li><strong>Status:</strong> Fully supported and recommended for new scenarios</li>
+<li><strong>Features:</strong> Variables, retry policies, conditions, sub-steps</li>
+</ul>
+<h3 id="result-schema-schema_version-no">Result schema — <code>schema_version</code> (no <code>$</code>)<a class="headerlink" href="#result-schema-schema_version-no" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Identifier:</strong> <code>"schema_version"</code>, which is always <code>"2.0"</code> (the only valid value for result files)</li>
+<li>This is intentional — result files stay at <code>2.0</code> even when the scenario that produced them uses <code>$schema_version</code> <code>2.1</code>.</li>
 </ul>
 <hr />
 <h2 id="file-locations">File Locations<a class="headerlink" href="#file-locations" title="Permanent link">&para;</a></h2>
@@ -2142,13 +2308,13 @@
         
         
           
-          <a href="assertions/" class="md-footer__link md-footer__link--next" aria-label="Next: Assertion Types">
+          <a href="cli-verbs/" class="md-footer__link md-footer__link--next" aria-label="Next: CLI Verbs">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Assertion Types
+                CLI Verbs
               </div>
             </div>
             <div class="md-footer__button md-icon">

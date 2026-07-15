@@ -553,7 +553,7 @@
   <span class="md-ellipsis">
     
   
-    3-Tier Design
+    Layered Architecture
   
 
     
@@ -582,6 +582,34 @@
     
   
     How Skills Work
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cross-Session Memory
   
 
     
@@ -1161,6 +1189,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../reference/cli-verbs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Verbs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/assertions/" class="md-nav__link">
         
   
@@ -1252,7 +1308,7 @@
   <span class="md-ellipsis">
     
   
-    MCP Tools
+    Internal Engine (mobile-mcp)
   
 
     
@@ -1879,8 +1935,10 @@ mauto<span class="w"> </span>init<span class="w"> </span>--agent<span class="w">
 ├── scenarios/      # generated test JSON files
 ├── screenshots/    # reference + execution screenshots
 ├── results/        # execution result reports
+├── memory/         # cross-session memory (run-history, app-knowledge, preferences)
 └── config.json     # project configuration (starter skeleton)
 </code></pre></div>
+<p>Alongside <code>scenarios/</code>, <code>screenshots/</code>, and <code>results/</code>, setup also scaffolds a <code>memory/</code> subdirectory. This is where <code>mauto</code> keeps cross-session memory so your agent gets smarter about <em>this</em> app over time — run history auto-harvested on <code>result finalize</code>, plus agent-authored app-knowledge and preferences.</p>
 <p>The starter <code>config.json</code> written on first run:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;platform-aware&quot;</span><span class="p">,</span>
@@ -2050,7 +2108,7 @@ mauto<span class="w"> </span>config<span class="w"> </span><span class="nb">set<
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../generate/">Generate Guide</a> — Next step after setup</li>
-<li><a href="../../concepts/three-tier-design/">Architecture: 3-Tier Design</a> — How setup fits in the overall system</li>
+<li><a href="../../concepts/three-tier-design/">Architecture: Layered Architecture</a> — How setup fits in the overall system</li>
 <li><a href="../../faq/#setup-installation">FAQ: Setup Issues</a></li>
 </ul>
 

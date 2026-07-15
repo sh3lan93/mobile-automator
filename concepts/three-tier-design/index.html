@@ -27,7 +27,7 @@
     
     
       
-        <title>3-Tier Design - mobile-automator</title>
+        <title>Layered Architecture - mobile-automator</title>
       
     
     
@@ -64,7 +64,7 @@
   
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="3-Tier Design - mobile-automator" />
+  <meta property="og:title" content="Layered Architecture - mobile-automator" />
   <meta property="og:description" content="Deep dive into mobile-automator's layering - the agent (brain), mauto CLI verbs for deterministic actions, and the mobile-mcp engine for device control." />
   <meta property="og:url" content="https://sh3lan93.github.io/mobile-automator/concepts/three-tier-design/" />
   <meta property="og:site_name" content="mobile-automator" />
@@ -72,7 +72,7 @@
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="3-Tier Design - mobile-automator" />
+  <meta name="twitter:title" content="Layered Architecture - mobile-automator" />
   <meta name="twitter:description" content="Deep dive into mobile-automator's layering - the agent (brain), mauto CLI verbs for deterministic actions, and the mobile-mcp engine for device control." />
   <meta name="twitter:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
   
@@ -131,7 +131,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              3-Tier Design
+              Layered Architecture
             
           </span>
         </div>
@@ -564,7 +564,7 @@
   <span class="md-ellipsis">
     
   
-    3-Tier Design
+    Layered Architecture
   
 
     
@@ -582,7 +582,7 @@
   <span class="md-ellipsis">
     
   
-    3-Tier Design
+    Layered Architecture
   
 
     
@@ -876,6 +876,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#the-memory-subsystem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Memory Subsystem
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -916,6 +927,34 @@
     
   
     How Skills Work
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cross-Session Memory
   
 
     
@@ -1184,6 +1223,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../reference/cli-verbs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Verbs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/assertions/" class="md-nav__link">
         
   
@@ -1275,7 +1342,7 @@
   <span class="md-ellipsis">
     
   
-    MCP Tools
+    Internal Engine (mobile-mcp)
   
 
     
@@ -1810,6 +1877,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#the-memory-subsystem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Memory Subsystem
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1907,12 +1985,13 @@
 <p>Provide a deterministic, host-agnostic surface. Each verb performs one mechanical action or assertion and emits the uniform JSON envelope <code>{ok,data,error,hint,schema_version}</code> (a <code>--human</code> flag is opt-in).</p>
 <h3 id="verb-groups">Verb groups<a class="headerlink" href="#verb-groups" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Device actions:</strong> <code>elements</code>, <code>tap</code>, <code>type &lt;text&gt;</code>, <code>swipe</code>, <code>press &lt;button&gt;</code>, <code>screenshot &lt;path&gt;</code></li>
+<li><strong>Device actions:</strong> <code>elements</code>, <code>tap</code>, <code>type &lt;text&gt;</code>, <code>swipe</code>, <code>press &lt;button&gt;</code>, <code>screenshot &lt;path&gt;</code>, <code>long-press</code>, <code>double-tap</code>, <code>launch &lt;appId&gt;</code>, <code>install &lt;path&gt;</code>, <code>uninstall &lt;appId&gt;</code>, <code>open-url &lt;url&gt;</code>, <code>orientation &lt;portrait|landscape&gt;</code></li>
 <li><strong>Author &amp; verify:</strong> <code>validate &lt;file&gt;</code>, <code>assert &lt;type&gt;</code>, <code>result add-step</code>, <code>result finalize</code></li>
 <li><strong>Workspace:</strong> <code>setup</code>, <code>config get &lt;key&gt;</code>, <code>config set &lt;key&gt; &lt;value&gt;</code></li>
 <li><strong>Reasoning:</strong> <code>guide &lt;topic&gt;</code>, <code>bootstrap</code>, <code>schema &lt;name&gt;</code></li>
 <li><strong>Agent integration:</strong> <code>init --agent &lt;host&gt;</code>, <code>mcp</code></li>
 <li><strong>Device session:</strong> <code>session start|status|end</code>; <code>devices</code>, <code>devices use &lt;id&gt;</code>, <code>devices clear</code></li>
+<li><strong>Memory:</strong> <code>memory show</code>, <code>memory add</code>, <code>memory forget</code> — the cross-session learning subsystem (see <a href="../memory/">Memory</a> and the <a href="../../reference/cli-verbs/">CLI Verbs reference</a>)</li>
 </ul>
 <h3 id="why-a-deterministic-cli">Why a deterministic CLI?<a class="headerlink" href="#why-a-deterministic-cli" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2018,6 +2097,8 @@ mauto result finalize → mobile-automator/results/&lt;run_id&gt;.json
 </ol>
 <h3 id="adding-a-new-engine-primitive">Adding a New Engine Primitive<a class="headerlink" href="#adding-a-new-engine-primitive" title="Permanent link">&para;</a></h3>
 <p>mobile-mcp is pinned outside this project. To pick up a newer engine, bump the <code>@mobilenext/mobile-mcp</code> pin in <code>package.json</code>; <code>mauto</code> verbs resolve it from <code>node_modules</code> at runtime.</p>
+<h3 id="the-memory-subsystem">The Memory Subsystem<a class="headerlink" href="#the-memory-subsystem" title="Permanent link">&para;</a></h3>
+<p>Cross-session learning lives in <code>src/memory/</code>, backed by the <code>mobile-automator/memory/</code> store. It is <strong>auto-harvested on <code>mauto result finalize</code></strong> — typed observations fold into a bounded per-scenario <code>run-history</code> — and <strong>agent-authored</strong> via <code>mauto memory add</code> / <code>mauto memory forget</code> for durable app-knowledge and preferences. This lets the agent get smarter about <em>this</em> app over time. See <a href="../memory/">Memory</a>.</p>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../skills/">How Skills Work</a> — Native Agent Skills and guide content</li>
