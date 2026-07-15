@@ -85,6 +85,7 @@ mobile-automator/
 │   │   └── <topic>.invariants.md #   placeholder-free, OS-free skill core
 │   ├── schemas/                 # scenario_schema.json (v2.1), result_schema.json
 │   ├── device/                  # mobile-mcp wrapper (one persistent session daemon)
+│   ├── memory/                  # cross-session memory (run-history, app-knowledge, preferences)
 │   └── init/ setup/ config/ …   # host adapters, workspace scaffold, config
 ├── CLAUDE.md                    # developer guide (architecture, workflows)
 ├── README.md                    # user-facing docs
@@ -106,6 +107,13 @@ The contract is: **agent (the brain) → `mauto` verbs → mobile-mcp engine →
 3. **Schemas** (`src/schemas/*.json`)
    - Define the test scenario format (scenario schema 2.1) and the test result format.
    - Enforced by `mauto validate <file>`.
+
+4. **Cross-session memory** (`src/memory/`)
+   - Persists what the agent learns about an app across runs in `mobile-automator/memory/`.
+   - `run-history.md` is machine-owned (auto-harvested on `result finalize`); `app-knowledge.md`
+     and `preferences.md` are agent-authored via `mauto memory add`/`memory forget`.
+   - Read-modify-writes go through an advisory lock plus atomic writes. See the
+     [memory concept doc](concepts/memory.md) for the full model.
 
 ---
 
@@ -393,7 +401,7 @@ Closes #123
   "properties": {
     "$schema_version": {
       "type": "string",
-      "enum": ["2.1"],
+      "enum": ["2.0", "2.1"],
       "description": "Schema version identifier"
     },
     "new_field": {
@@ -683,5 +691,4 @@ We're here to help make contributing as smooth as possible!
 Thank you for contributing to mobile-automator! 🎉
 
 [Back to Docs →](index.md)
-</content>
-</invoke>
+

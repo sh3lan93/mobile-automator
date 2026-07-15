@@ -32,12 +32,13 @@ Any AI agent (Claude Code, Cursor, Gemini CLI, Copilot, and more) drives the wor
 
 The deterministic surface the agent drives. Every verb emits `{ok,data,error,hint,schema_version}`; `--human` is an opt-in readable flag.
 
-- **Device actions:** `elements`, `tap`, `type <text>`, `swipe`, `press <button>`, `screenshot <path>`
+- **Device actions:** `elements`, `tap`, `type <text>`, `swipe`, `press <button>`, `screenshot <path>`, `long-press`, `double-tap`, `launch <appId>`, `install <path>`, `uninstall <appId>`, `open-url <url>`, `orientation <portrait|landscape>`
 - **Author & verify:** `validate <file>`, `assert <type>`, `result add-step`, `result finalize`
 - **Workspace:** `setup`, `config get <key>`, `config set <key> <value>`
 - **Reasoning:** `guide <topic>`, `bootstrap`, `schema <name>`
 - **Agent integration:** `init --agent <host>`, `mcp` (MCP prompts server)
 - **Device session:** `session start|status|end`; `devices`, `devices use <id>`, `devices clear`
+- **Memory:** `memory show`, `memory add`, `memory forget` — the cross-session learning subsystem (see [Memory](memory.md) and the [CLI Verbs reference](../reference/cli-verbs.md))
 
 ### The mobile-mcp engine
 
@@ -75,6 +76,8 @@ For each step:
         ↓
 mauto result finalize → mobile-automator/results/
 ```
+
+On `mauto result finalize`, the **memory subsystem** (`src/memory/`) auto-harvests typed observations into a cross-session `mobile-automator/memory/` store, so the agent gets smarter about *this* app over time. The agent can also author durable app-knowledge and preferences directly via `mauto memory add` / `mauto memory forget`. See [Memory](memory.md).
 
 ## File Structure
 
@@ -176,27 +179,38 @@ Here's exactly what happens when you generate and execute a login test:
 
 4. Scenario JSON Created:
    {
-     "schema_version": "2.1",
+     "$schema_version": "2.1",
      "mode": "platform-aware",
-     "steps": {
-       "tap_login": {
-         "type": "tap",
-         "element": "login_button"
+     "steps": [
+       {
+         "id": "tap_login",
+         "action": "tap",
+         "target": "login_button",
+         "description": "Tap the login button"
        },
-       "enter_email": {
-         "type": "type",
-         "element": "email_field",
-         "text": "user@example.com"
+       {
+         "id": "enter_email",
+         "action": "type",
+         "target": "email_field",
+         "value": "user@example.com",
+         "description": "Enter the email address"
        },
-       "wait_spinner": {
-         "type": "wait_for_loading_complete"
-       },
-       "verify_success": {
-         "type": "element_text",
-         "element": "success_message",
-         "expected_exact": "Success"
+       {
+         "id": "wait_spinner",
+         "action": "wait_for_loading_complete",
+         "description": "Wait for the loading spinner to disappear"
        }
-     }
+     ],
+     "assertions": [
+       {
+         "id": "verify_success",
+         "after_step": "wait_spinner",
+         "type": "element_text",
+         "element_description": "success_message",
+         "expected_value": "Success",
+         "description": "Success message is shown after login"
+       }
+     ]
    }
 
 5. Execution Phase:

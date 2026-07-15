@@ -92,6 +92,31 @@ The chosen mode is stored as `mode` in `mobile-automator/config.json` (read it b
 
 **Answer:** Every test scenario JSON file includes a `$schema_version` field (currently `"2.1"`) as its first field. This enables version detection for schema evolution. All scenarios must include this field.
 
+### Does the agent remember anything between sessions?
+
+**Answer:** Yes. mobile-automator keeps a small **cross-session memory** under `mobile-automator/memory/`, so the agent gets smarter about *your* app over time instead of re-discovering the same quirks on every run. There are three kinds:
+
+- **`run-history`** (`run-history.md`) — **machine-owned**. Auto-harvested on `mauto result finalize`: typed observations (regression / flakiness / state context) are folded into a bounded rolling per-scenario summary. You don't edit this by hand.
+- **`app-knowledge`** (`app-knowledge.md`) — **agent-authored** durable facts about the app (selectors, conventions, gotchas).
+- **`preferences`** (`preferences.md`) — **agent-authored** testing preferences.
+
+Inspect memory (prints raw markdown, not the JSON envelope):
+
+```bash
+mauto memory show                              # everything
+mauto memory show --kind app-knowledge         # one kind
+mauto memory show --kind run-history --scenario login_happy_path
+```
+
+Add or remove agent-authored entries (only `app-knowledge` and `preferences` are writable — `run-history` is not):
+
+```bash
+mauto memory add "Login button is labeled 'Sign in', not 'Log in'" --kind app-knowledge
+mauto memory forget --kind app-knowledge --match "Sign in"
+```
+
+Entries are exact-match de-duped and written under an advisory lock with atomic writes, so concurrent runs won't corrupt the files. The generate and execute workflows consult memory before work and save durable knowledge they learn.
+
 ### Can I use mobile-automator with my existing tests?
 
 **Answer:** Partially. If you have:
@@ -261,20 +286,24 @@ In **platform-aware** mode, generate a scenario on each platform separately and 
   "variables": {
     "test_email": {
       "type": "string",
+      "description": "Email used to log in",
       "value": "user@example.com"
     },
     "test_password": {
       "type": "string",
+      "description": "Password used to log in",
       "value": "SecurePassword123"
     }
   },
-  "steps": {
-    "enter_email": {
-      "type": "type",
-      "element": "email_input",
-      "text": "{{test_email}}"
+  "steps": [
+    {
+      "id": "enter_email",
+      "action": "type",
+      "target": "email_input",
+      "value": "{{test_email}}",
+      "description": "Type the test email into the email field"
     }
-  }
+  ]
 }
 ```
 
@@ -308,11 +337,15 @@ Results saved to: `mobile-automator/results/<run_id>.json`
 1. **Add explicit wait** — Insert a wait step before the action:
    ```json
    {
-     "wait_for_element": {
-       "type": "wait_for_element",
-       "element": "button_id",
-       "timeout_seconds": 5
-     }
+     "steps": [
+       {
+         "id": "wait_for_button",
+         "action": "wait_for_element",
+         "target": "button_id",
+         "description": "Wait for the button to appear",
+         "wait_config": { "type": "element_visible", "timeout_ms": 5000 }
+       }
+     ]
    }
    ```
 
@@ -322,10 +355,15 @@ Results saved to: `mobile-automator/results/<run_id>.json`
 5. **Add screenshot assertion** — Debug what's actually on screen:
    ```json
    {
-     "verify_screen": {
-       "type": "screenshot_match",
-       "reference_file": "expected_screen.png"
-     }
+     "assertions": [
+       {
+         "id": "verify_screen",
+         "after_step": "wait_for_button",
+         "type": "screenshot_match",
+         "reference_screenshot": "expected_screen.png",
+         "description": "Screen matches the expected baseline"
+       }
+     ]
    }
    ```
 
@@ -334,17 +372,21 @@ Results saved to: `mobile-automator/results/<run_id>.json`
 **Cause:** Assertion condition wasn't met during test.
 
 **Solutions:**
-1. **Check assertion syntax** — Verify `expected_text`, `expected_exact`, `expected_substring`
+1. **Check assertion syntax** — Verify `expected_text`, `expected_value`, `expected_substring`
 2. **Verify actual app data** — Manually check what value is displayed
 3. **Handle dynamic content** — If value changes, use `text_contains` instead of `text_matches`
 4. **Add debug screenshot** — Insert a capture step to see actual state:
    ```json
    {
-     "capture_state": {
-       "type": "capture_value",
-       "element": "title",
-       "capture_to": "actual_title"
-     }
+     "steps": [
+       {
+         "id": "capture_state",
+         "action": "capture_value",
+         "target": "title",
+         "capture_to": "actual_title",
+         "description": "Capture the current title"
+       }
+     ]
    }
    ```
 
@@ -356,8 +398,10 @@ Results saved to: `mobile-automator/results/<run_id>.json`
 1. **Increase timeout** — Default is 10s, try 15-30s:
    ```json
    {
-     "type": "wait_for_loading_complete",
-     "timeout_seconds": 30
+     "id": "wait_for_loading",
+     "action": "wait_for_loading_complete",
+     "description": "Wait for loading to complete",
+     "wait_config": { "type": "loading_complete", "timeout_ms": 30000 }
    }
    ```
 
@@ -372,10 +416,14 @@ Results saved to: `mobile-automator/results/<run_id>.json`
 4. **Add intermediate waits** — Between rapid actions:
    ```json
    {
-     "wait_before_next": {
-       "type": "wait_for_loading_complete",
-       "timeout_seconds": 2
-     }
+     "steps": [
+       {
+         "id": "wait_before_next",
+         "action": "wait_for_loading_complete",
+         "description": "Brief wait before the next action",
+         "wait_config": { "type": "loading_complete", "timeout_ms": 2000 }
+       }
+     ]
    }
    ```
 
@@ -515,7 +563,7 @@ jobs:
 
 **Answer:** Test execution speed depends on app, network, and device:
 
-1. **Reduce waits** — Use shorter timeouts for fast-responding apps (e.g., `"timeout_seconds": 3` instead of 10)
+1. **Reduce waits** — Use shorter wait timeouts for fast-responding apps (e.g., `wait_config.timeout_ms` of `3000` instead of `10000`)
 2. **Remove unnecessary assertions** — Only assert critical checks
 3. **Optimize element selection** — Use unique, visible targets
 4. **Test on faster device** — High-end device > low-end device
@@ -546,8 +594,8 @@ jobs:
    ```json
    {
      "preconditions": {
-       "setup_actions": [
-         {"type": "clear_app_data"}
+       "device_actions": [
+         {"action": "clear_app_data"}
        ]
      }
    }
@@ -592,6 +640,28 @@ Pin a specific device once it appears:
 ```bash
 mauto devices use <id>     # mauto devices clear to unpin
 ```
+
+### Device state seems stuck or stale
+
+**Cause:** Device actions run through one long-lived session daemon (a persistent mobile-mcp process). If it wedged — verbs hang, target the wrong device, or return stale screen state — reset it.
+
+**Solutions:**
+```bash
+# Check whether the daemon is alive
+mauto session status        # -> { running: true|false }
+
+# Stop it (removes the socket/pidfile); it auto-restarts on the next device verb
+mauto session end
+
+# Optionally start a fresh one explicitly
+mauto session start
+
+# Re-confirm and re-pin the device
+mauto devices               # list connected devices/simulators
+mauto devices use <id>      # pin the intended one (mauto devices clear to unpin)
+```
+
+Device precedence is: explicit `--device <id>` > persisted selection (`mauto devices use`) > auto-selected lone device. If you have several devices attached and haven't pinned one, pin it to avoid the daemon acting on the wrong target.
 
 ### App Installation Failures
 

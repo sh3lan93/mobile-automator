@@ -6,7 +6,7 @@ description: "Run your first mobile test in 5 minutes - from setup to test gener
 
 Get mobile-automator working in 5 minutes with a real test scenario.
 
-This quick start uses **Claude Code** as the example agent. For Cursor, swap `--agent claude` → `--agent cursor`. For any other agent, see [Using another agent](#using-another-agent).
+This quick start uses **Claude Code** as the example agent. For Cursor, swap `--agent claude` → `--agent cursor`. For any other agent, see [Using another agent](installation.md#using-another-agent).
 
 ## Prerequisites
 

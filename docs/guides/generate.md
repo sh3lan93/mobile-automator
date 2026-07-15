@@ -72,6 +72,21 @@ If app isn't installed, generator offers to build and install it.
 
 ## The Generation Workflow
 
+### Step 0: Consult cross-session memory
+
+Before authoring, the agent reads what it already knows about this app:
+
+```bash
+mauto memory show
+```
+
+This surfaces prior run history, app-knowledge, and preferences — so it can reuse known selectors, waits, and conventions instead of re-discovering them. As it learns durable facts during generation (a reliable element reference, a project convention, a flaky screen to guard), it records them for next time:
+
+```bash
+mauto memory add "Login screen shows a shimmer loader; wait for it to clear" --kind app-knowledge
+mauto memory add "Prefer semantic waits over fixed delays" --kind preferences
+```
+
 ### Step 1: Natural Language Input
 
 The generator prompts you to describe your test in plain English:
@@ -182,7 +197,7 @@ The generator creates a scenario JSON file with all information:
 
 ```json
 {
-  "$schema_version": "2.0",
+  "$schema_version": "2.1",
   "scenario_id": "login_happy_path",
   "name": "User Login - Happy Path",
   "description": "User can log in with valid credentials and see home screen",
@@ -192,49 +207,59 @@ The generator creates a scenario JSON file with all information:
     "app_version": "1.2.3",
     "environment": "staging"
   },
-  "steps": {
-    "tap_login_button": {
-      "type": "tap",
-      "element": "login_button",
-      "coordinates": [200, 400]
+  "steps": [
+    {
+      "id": "tap_login_button",
+      "action": "tap",
+      "description": "Open the login form",
+      "target": "Login button"
     },
-    "enter_email": {
-      "type": "type",
-      "element": "email_field",
-      "text": "user@example.com"
+    {
+      "id": "enter_email",
+      "action": "type",
+      "description": "Enter the account email",
+      "target": "Email field",
+      "value": "user@example.com"
     },
-    "enter_password": {
-      "type": "type",
-      "element": "password_field",
-      "text": "password123"
+    {
+      "id": "enter_password",
+      "action": "type",
+      "description": "Enter the account password",
+      "target": "Password field",
+      "value": "password123"
     },
-    "tap_signin": {
-      "type": "tap",
-      "element": "signin_button"
+    {
+      "id": "tap_signin",
+      "action": "tap",
+      "description": "Submit the login form",
+      "target": "Sign in button"
     },
-    "wait_loading": {
-      "type": "wait_for_loading_complete",
-      "timeout_seconds": 10
-    },
-    "verify_welcome": {
-      "type": "element_text",
-      "element": "home_title",
-      "expected_exact": "Welcome back!"
+    {
+      "id": "wait_loading",
+      "action": "wait_for_loading_complete",
+      "description": "Wait for the login spinner to clear",
+      "wait_config": {
+        "type": "loading_complete",
+        "indicator": "spinner",
+        "timeout_ms": 10000
+      }
     }
-  },
+  ],
   "assertions": [
     {
       "id": "login_button_exists",
-      "description": "Login button is visible on startup",
+      "after_step": "tap_login_button",
       "type": "element_exists",
-      "element": "login_button"
+      "description": "Login button is visible on startup",
+      "element_description": "Login button"
     },
     {
       "id": "home_screen_title",
-      "description": "Home screen shows correct greeting",
+      "after_step": "wait_loading",
       "type": "element_text",
-      "element": "home_title",
-      "expected_exact": "Welcome back!"
+      "description": "Home screen shows correct greeting",
+      "element_description": "Home screen title",
+      "expected_text": "Welcome back!"
     }
   ]
 }
@@ -282,20 +307,29 @@ Generator creates:
       "description": "User ID from welcome message"
     }
   },
-  "steps": {
-    "capture_user_id": {
-      "type": "capture_value",
-      "element": "welcome_message",
+  "steps": [
+    {
+      "id": "capture_user_id",
+      "action": "capture_value",
+      "description": "Capture the user ID shown in the welcome message",
+      "target": "welcome_message",
       "capture_to": "user_id"
-    },
-    "verify_id_matches": {
-      "type": "value_matches_variable",
-      "element": "profile_id",
-      "variable": "user_id"
     }
-  }
+  ],
+  "assertions": [
+    {
+      "id": "id_matches",
+      "after_step": "capture_user_id",
+      "type": "value_matches_variable",
+      "description": "Verify the profile ID matches the captured user_id",
+      "element_description": "profile_id",
+      "variable_name": "user_id"
+    }
+  ]
 }
 ```
+
+Variables are captured by a `capture_value` **step** (via `capture_to`) and checked by a `value_matches_variable` **assertion** (via `variable_name`).
 
 ### Conditional Steps
 
@@ -311,20 +345,24 @@ For conditional branching (skip steps if condition not met):
 Generator creates:
 ```json
 {
-  "steps": {
-    "enter_email": {
-      "type": "type",
-      "element": "email_field",
-      "text": "user@example.com",
+  "steps": [
+    {
+      "id": "enter_email",
+      "action": "type",
+      "description": "Enter the email address when the field is present",
+      "target": "email_field",
+      "value": "user@example.com",
       "optional": true,
       "condition": {
-        "type": "element_exists",
-        "element": "email_field"
+        "type": "element_visible",
+        "element_description": "email_field"
       }
     }
-  }
+  ]
 }
 ```
+
+Condition `type` is one of `element_visible`, `variable_value`, `device_property`, or `previous_step_skipped` — pair it with `optional: true` so an unmet condition skips the step instead of failing it.
 
 ### Retry Policies
 
@@ -337,15 +375,23 @@ Wait for product list to load (retry up to 3 times if timeout)
 Generator creates:
 ```json
 {
-  "type": "wait_for_element",
-  "element": "product_list",
-  "timeout_seconds": 10,
+  "id": "wait_for_products",
+  "action": "wait_for_element",
+  "description": "Wait for the product list to load",
+  "target": "product_list",
+  "wait_config": {
+    "type": "element_visible",
+    "timeout_ms": 10000
+  },
+  "on_failure": "retry",
   "retry_policy": {
-    "max_retries": 3,
-    "wait_between_retries_ms": 2000
+    "max_attempts": 3,
+    "backoff_ms": 2000
   }
 }
 ```
+
+`retry_policy` applies only when `on_failure` is `"retry"`. `max_attempts` (2–5) counts the initial try plus retries; `backoff_ms` is the pause between attempts.
 
 ---
 
@@ -407,22 +453,25 @@ Bad:  "Wait 3 seconds"
 
 ### Schema Version
 
-All generated scenarios use the current schema:
+Scenarios carry a `$schema_version` field (note the leading `$`). Two values are valid:
+
 ```json
-{ "$schema_version": "2.0" }
+{ "$schema_version": "2.1" }
 ```
 
-The schema provides features like variables, retry policies, and comprehensive assertions.
+`2.0` is the baseline. **`2.1` is current and additive** — it adds the `mode` metadata field and the four platform-agnostic semantic actions (`press_back`, `dismiss_keyboard`, `grant_permission`, `deny_permission`) without removing anything. Existing `2.0` scenarios remain valid, so there is no forced migration; new scenarios should use `2.1`.
+
+Either version provides features like variables, retry policies, and comprehensive assertions.
 
 ### Step IDs (Named Strings)
 
-The schema uses descriptive step IDs:
+`steps` is an ordered array; each step carries a descriptive `id` (plus `action` and `description`):
 ```json
-"steps": {
-  "tap_login": {...},
-  "enter_email": {...},
-  "wait_loading": {...}
-}
+"steps": [
+  { "id": "tap_login", "action": "tap", "description": "..." },
+  { "id": "enter_email", "action": "type", "description": "..." },
+  { "id": "wait_loading", "action": "wait_for_element", "description": "..." }
+]
 ```
 
 Benefits:
@@ -537,11 +586,14 @@ Generated JSON is fully editable. Common modifications:
 **Add retry policy:**
 ```json
 {
-  "type": "wait_for_element",
-  "element": "product_list",
+  "id": "wait_for_product_list",
+  "action": "wait_for_element",
+  "target": "product_list",
+  "description": "Wait for the product list to load",
+  "on_failure": "retry",
   "retry_policy": {
-    "max_retries": 3,
-    "wait_between_retries_ms": 2000
+    "max_attempts": 3,
+    "backoff_ms": 2000
   }
 }
 ```
@@ -549,8 +601,10 @@ Generated JSON is fully editable. Common modifications:
 **Make step optional:**
 ```json
 {
-  "type": "element_text",
-  "element": "newsletter_prompt",
+  "id": "dismiss_newsletter_prompt",
+  "action": "tap",
+  "target": "newsletter_prompt",
+  "description": "Dismiss the newsletter prompt if it appears",
   "optional": true
 }
 ```
@@ -558,11 +612,13 @@ Generated JSON is fully editable. Common modifications:
 **Add condition:**
 ```json
 {
-  "type": "tap",
-  "element": "premium_feature",
+  "id": "tap_premium_feature",
+  "action": "tap",
+  "target": "premium_feature",
+  "description": "Tap the premium feature when the premium badge is present",
   "condition": {
-    "type": "element_exists",
-    "element": "premium_badge"
+    "type": "element_visible",
+    "element_description": "premium_badge"
   }
 }
 ```
