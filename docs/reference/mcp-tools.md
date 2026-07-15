@@ -68,11 +68,11 @@ Returns all connected devices and simulators (iOS and Android).
 - Choose target device for test execution
 - Verify device connectivity
 
-**Example:**
+**Example call:**
 ```json
 {
-  "type": "wait_for_element",
-  "description": "Get list of connected devices"
+  "tool": "mobile_list_available_devices",
+  "parameters": {}
 }
 ```
 
@@ -104,10 +104,14 @@ Launch an app on the specified device.
 - Relaunch app after crash
 - Test app startup sequence
 
-**Example:**
+**Example call:**
 ```json
 {
-  "type": "launch_app"
+  "tool": "mobile_launch_app",
+  "parameters": {
+    "device": "emulator-5554",
+    "packageName": "com.example.app"
+  }
 }
 ```
 

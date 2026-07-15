@@ -31,6 +31,8 @@ Our examples cover a wide range of mobile testing scenarios that you'll encounte
 
 Mobile testing involves unique challenges compared to web testing. Mobile apps must handle diverse device sizes, orientations, network conditions, and user interactions. Our examples show you how to write tests that account for these variables. By studying these scenarios, you'll learn how to write clear, maintainable test scenarios using the JSON schema, structure steps logically to match actual user behavior patterns, create assertions that verify functionality without being brittle, handle asynchronous operations like network requests and animations, and account for platform-specific behavior differences.
 
+All examples on this site use scenario schema **2.1** — the current version, additive over 2.0 (it adds the `mode` metadata field and the four platform-agnostic semantic actions `press_back`, `dismiss_keyboard`, `grant_permission`, and `deny_permission`). Existing 2.0 scenarios remain valid. The examples below are organized by platform, but if you author in `platform-agnostic` mode a single scenario can run on both Android and iOS by using those semantic actions in place of OS-specific gestures.
+
 ## How to Use These Examples
 
 The most effective way to learn Mobile Automator is by studying and adapting these examples:

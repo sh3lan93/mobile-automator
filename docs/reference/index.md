@@ -21,6 +21,12 @@ Complete reference for all schemas, assertion types, and automation tools used b
 - [20+ MCP Tools](mcp-tools.md) — Device control, screenshots, element inspection
 - [Result Schema](result-schema.md) — Understanding test execution results
 
+### For Agent Operators
+
+**Drive and extend mobile-automator:**
+- [CLI Verbs](cli-verbs.md) — Every `mauto` verb and its JSON envelope
+- [Memory](../concepts/memory.md) — Cross-session learning (run-history, app-knowledge, preferences)
+
 ### For Schema Developers
 
 **Extend mobile-automator:**
@@ -58,14 +64,18 @@ The default schema for test scenarios. Defines structure for steps, assertions, 
 **Schema structure:**
 ```json
 {
-  "$schema_version": "2.0",
+  "$schema_version": "2.1",
   "scenario_id": "login_flow",
-  "steps": {
-    "tap_login": { "type": "tap", "element": "button" },
-    "verify_success": { "type": "element_exists", "element": "welcome" }
-  },
+  "name": "Login Flow",
+  "description": "Verify the user can log in and reach the dashboard",
+  "platform": "android",
+  "app_package": "com.example.app",
+  "metadata": { "app_version": "1.0.0", "environment": "staging" },
+  "steps": [
+    { "id": "tap_login", "action": "tap", "description": "Tap the login button", "target": "Login button" }
+  ],
   "assertions": [
-    { "id": "logged_in", "type": "screen_title", "expected_exact": "Dashboard" }
+    { "id": "logged_in", "after_step": "tap_login", "type": "screen_title", "description": "The dashboard screen is shown", "expected_text": "Dashboard" }
   ]
 }
 ```
@@ -131,6 +141,22 @@ Low-level device automation primitives for screen interaction, app management, a
 - `mauto swipe` → `mobile_swipe_on_screen` — Scroll or swipe
 
 **[View all engine tools →](mcp-tools.md)**
+
+---
+
+### CLI Verbs
+
+The full `mauto` verb surface — device actions, authoring, workspace, reasoning, agent integration, device session, and memory — each emitting the uniform `{ok, data, error, hint, schema_version}` envelope.
+
+**[CLI Verbs Reference →](cli-verbs.md)**
+
+---
+
+### Memory
+
+How mobile-automator learns across sessions: the auto-harvested `run-history` plus agent-authored `app-knowledge` and `preferences`, stored under `mobile-automator/memory/`.
+
+**[Memory Concept →](../concepts/memory.md)**
 
 ---
 
@@ -234,12 +260,19 @@ Low-level device automation primitives for screen interaction, app management, a
 
 ## Schema Versioning
 
-### Current (2.0)
+Scenario files and result files version themselves independently, with **different field names**:
 
-- **Identifier:** `"$schema_version": "2.0"`
+### Scenario schema — `$schema_version` (note the `$`)
+
+- **Identifier:** `"$schema_version"`, which accepts `"2.0"` or `"2.1"` (default `"2.0"`)
+- **2.1 is current** and additive over 2.0 — it adds the `mode` metadata field and four platform-agnostic semantic actions (`press_back`, `dismiss_keyboard`, `grant_permission`, `deny_permission`). Existing `"2.0"` scenarios remain valid; new scenarios should use `"2.1"`.
 - **Step IDs:** String snake_case (`tap_login`, `verify_message`)
-- **Features:** Variables, retry policies, conditions, sub-steps, observations
-- **Status:** Fully supported and recommended for new scenarios
+- **Features:** Variables, retry policies, conditions, sub-steps
+
+### Result schema — `schema_version` (no `$`)
+
+- **Identifier:** `"schema_version"`, which is always `"2.0"` (the only valid value for result files)
+- This is intentional — result files stay at `2.0` even when the scenario that produced them uses `$schema_version` `2.1`.
 
 ---
 

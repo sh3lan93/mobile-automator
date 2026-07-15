@@ -17,6 +17,11 @@ A test result is a comprehensive record of a single scenario execution, capturin
 
 Results are stored as JSON files in `mobile-automator/results/` with the naming pattern `run_YYYYMMDD_HHMMSS.json`.
 
+!!! note "Result files version differently from scenario files"
+    Result files carry `schema_version` (no leading `$`), and its only valid value is `"2.0"`. This is deliberate and **not** a mistake: *scenario* files use `$schema_version` (with the `$`), which accepts `"2.0"` **or** `"2.1"`, while *result* files stay at `schema_version: "2.0"`. A result produced from a `$schema_version: "2.1"` scenario still reports `schema_version: "2.0"`.
+
+When you run `mauto result finalize`, the result file is assembled and its typed `observations` (regression, flakiness, state context) are auto-harvested into cross-session [memory](../concepts/memory.md) — a best-effort step that never fails an otherwise-successful finalize.
+
 ## Schema Structure
 
 The result schema defines a single JSON object at the root level with required and optional fields:
@@ -42,7 +47,7 @@ Run Result
 |-------|------|----------|-------------|
 | `run_id` | string | Yes | Unique run identifier in format `run_YYYYMMDD_HHMMSS`. Example: `run_20260227_145230` |
 | `scenario_id` | string | Yes | ID of the scenario that was executed |
-| `schema_version` | string | No | Version of the scenario schema: "2.0". |
+| `schema_version` | string | No | Result-file schema version. Always `"2.0"` (the only valid value). Distinct from a scenario's `$schema_version`, which may be `"2.0"` or `"2.1"`. |
 | `status` | string | Yes | Overall result status: `"passed"`, `"failed"`, or `"error"` |
 | `metadata` | object | Yes | Execution context including device, app version, environment, timestamp |
 | `total_assertions` | integer | Yes | Total count of assertions in the execution |

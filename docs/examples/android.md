@@ -6,6 +6,8 @@ description: "Android test scenario examples - login flow, RecyclerView scrollin
 
 Complete test scenario examples for Android applications. Each example demonstrates key patterns and best practices.
 
+All scenarios below use scenario schema **2.1** (the current version — additive over 2.0, adding the `mode` metadata field and the four platform-agnostic semantic actions). Existing 2.0 scenarios remain valid. Every example on this page validates with `mauto validate <file>`.
+
 ## Table of Contents
 
 1. [Login Flow](#login-flow) — Email validation, loading states, error handling
@@ -32,7 +34,7 @@ A realistic login scenario demonstrating email validation, password entry, loadi
 
 ```json
 {
-  "$schema_version": "2.0",
+  "$schema_version": "2.1",
   "scenario_id": "android_login_happy_path",
   "name": "Login with Valid Credentials",
   "description": "User successfully logs in with valid email and password, completes loading, and accesses dashboard",
@@ -44,110 +46,39 @@ A realistic login scenario demonstrating email validation, password entry, loadi
   },
   "tags": ["authentication", "login", "happy-path"],
   "variables": {
-    "user_email": {
-      "type": "string",
-      "value": "testuser@example.com"
-    },
-    "user_password": {
-      "type": "string",
-      "value": "SecurePassword123!"
-    },
     "dashboard_title": {
-      "type": "string"
+      "type": "string",
+      "description": "Title text captured from the dashboard screen after login"
     }
   },
   "preconditions": {
-    "setup_actions": [
+    "app_state": "logged_out",
+    "device_actions": [
       {
-        "type": "clear_app_data",
-        "description": "Clear app cache to ensure fresh login state"
+        "action": "clear_app_data",
+        "target_package": "com.example.app",
+        "description": "Clear app cache to ensure a fresh login state"
       }
     ],
-    "device_state": "Clean login screen required"
+    "notes": ["A clean login screen is required before the scenario starts"]
   },
-  "steps": {
-    "launch_app": {
-      "type": "launch_app",
-      "description": "Launch the app to login screen"
-    },
-    "verify_login_screen": {
-      "type": "wait_for_element",
-      "element": "email_input",
-      "timeout_seconds": 5,
-      "description": "Wait for login screen to appear"
-    },
-    "tap_email_field": {
-      "type": "tap",
-      "element": "email_input",
-      "description": "Tap on email input field"
-    },
-    "enter_email": {
-      "type": "type",
-      "element": "email_input",
-      "text": "testuser@example.com",
-      "clear_before": true,
-      "description": "Enter test user email address"
-    },
-    "tap_password_field": {
-      "type": "tap",
-      "element": "password_input",
-      "description": "Tap on password input field"
-    },
-    "enter_password": {
-      "type": "type",
-      "element": "password_input",
-      "text": "SecurePassword123!",
-      "clear_before": true,
-      "description": "Enter user password"
-    },
-    "tap_login_button": {
-      "type": "tap",
-      "element": "login_button",
-      "description": "Tap login button to submit form"
-    },
-    "wait_for_loading": {
-      "type": "wait_for_loading_complete",
-      "timeout_seconds": 10,
-      "description": "Wait for loading animation to complete"
-    },
-    "verify_dashboard_reached": {
-      "type": "wait_for_element",
-      "element": "dashboard_title",
-      "timeout_seconds": 5,
-      "description": "Verify dashboard screen is displayed"
-    }
-  },
+  "steps": [
+    { "id": "launch_app", "action": "launch_app", "description": "Launch the app to the login screen", "target": "com.example.app" },
+    { "id": "verify_login_screen", "action": "wait_for_element", "description": "Wait for the login screen to appear", "target": "email input field", "wait_config": { "type": "element_visible", "timeout_ms": 5000 } },
+    { "id": "tap_email_field", "action": "tap", "description": "Tap on the email input field", "target": "email input field" },
+    { "id": "enter_email", "action": "type", "description": "Enter the test user email address", "target": "email input field", "value": "testuser@example.com" },
+    { "id": "tap_password_field", "action": "tap", "description": "Tap on the password input field", "target": "password input field" },
+    { "id": "enter_password", "action": "type", "description": "Enter the user password", "target": "password input field", "value": "SecurePassword123!" },
+    { "id": "tap_login_button", "action": "tap", "description": "Tap the login button to submit the form", "target": "login button" },
+    { "id": "wait_for_loading", "action": "wait_for_loading_complete", "description": "Wait for the loading animation to complete", "wait_config": { "type": "loading_complete", "indicator": "spinner", "timeout_ms": 10000 } },
+    { "id": "verify_dashboard_reached", "action": "wait_for_element", "description": "Verify the dashboard screen is displayed", "target": "dashboard screen title", "wait_config": { "type": "element_visible", "timeout_ms": 5000 } }
+  ],
   "assertions": [
-    {
-      "id": "email_field_visible",
-      "description": "Email input field is visible on login screen",
-      "type": "element_exists",
-      "element": "email_input"
-    },
-    {
-      "id": "password_field_visible",
-      "description": "Password input field is visible on login screen",
-      "type": "element_exists",
-      "element": "password_input"
-    },
-    {
-      "id": "login_button_clickable",
-      "description": "Login button is visible and accessible",
-      "type": "element_visible",
-      "element": "login_button"
-    },
-    {
-      "id": "dashboard_screen_reached",
-      "description": "Dashboard screen is displayed after login",
-      "type": "screen_title",
-      "expected_text": "Dashboard"
-    },
-    {
-      "id": "no_error_message",
-      "description": "No error message displayed during login",
-      "type": "element_not_exists",
-      "element": "error_message_view"
-    }
+    { "id": "email_field_visible", "after_step": "verify_login_screen", "type": "element_exists", "description": "Email input field is visible on the login screen", "element_description": "email input field" },
+    { "id": "password_field_visible", "after_step": "verify_login_screen", "type": "element_exists", "description": "Password input field is visible on the login screen", "element_description": "password input field" },
+    { "id": "login_button_clickable", "after_step": "verify_login_screen", "type": "element_visible", "description": "Login button is visible and accessible", "element_description": "login button", "expected_visible": true },
+    { "id": "dashboard_screen_reached", "after_step": "verify_dashboard_reached", "type": "screen_title", "description": "Dashboard screen is displayed after login", "expected_text": "Dashboard" },
+    { "id": "no_error_message", "after_step": "verify_dashboard_reached", "type": "element_not_exists", "description": "No error message displayed during login", "element_description": "error message banner" }
   ]
 }
 ```
@@ -166,7 +97,7 @@ A realistic login scenario demonstrating email validation, password entry, loadi
 - Change email/password credentials for different test accounts
 - Modify timeout values based on network speed
 - Add additional assertions for custom dashboard elements
-- Use variables to parameterize credentials
+- Capture dynamic values (like the dashboard title) into declared `variables`
 
 ---
 
@@ -186,108 +117,35 @@ Demonstrates handling of RecyclerView/ListViews, scrolling to elements, and sele
 
 ```json
 {
-  "$schema_version": "2.0",
+  "$schema_version": "2.1",
   "scenario_id": "android_list_scrolling",
   "name": "Navigate List and Select Item",
   "description": "User scrolls through a product list and selects an item to view details",
   "platform": "android",
   "app_package": "com.example.shop",
-  "metadata": {
-    "app_version": "2.1.0",
-    "environment": "staging"
-  },
+  "metadata": { "app_version": "2.1.0", "environment": "staging" },
   "tags": ["navigation", "list", "scrolling"],
   "variables": {
-    "selected_product": {
-      "type": "string",
-      "value": "Premium Widget"
-    },
-    "product_price": {
-      "type": "string"
-    }
+    "product_price": { "type": "string", "description": "Price text captured from the product detail screen" }
   },
   "preconditions": {
-    "setup_actions": [
-      {
-        "type": "launch_app"
-      }
-    ],
-    "device_state": "Logged in and on products list screen"
+    "app_state": "logged_in",
+    "notes": ["User is logged in and on the products list screen"]
   },
-  "steps": {
-    "launch_app": {
-      "type": "launch_app",
-      "description": "Launch shopping app"
-    },
-    "wait_for_product_list": {
-      "type": "wait_for_element",
-      "element": "products_recycler_view",
-      "timeout_seconds": 5,
-      "description": "Wait for products list to load"
-    },
-    "verify_list_not_empty": {
-      "type": "list_is_empty",
-      "element": "products_recycler_view",
-      "expected": false,
-      "description": "Verify list contains items"
-    },
-    "scroll_to_premium_widget": {
-      "type": "scroll_to_element",
-      "element": "products_recycler_view",
-      "target_element": "product_item_premium_widget",
-      "timeout_seconds": 10,
-      "description": "Scroll down to find Premium Widget product"
-    },
-    "verify_item_visible": {
-      "type": "element_visible",
-      "element": "product_item_premium_widget",
-      "description": "Verify Premium Widget is visible on screen"
-    },
-    "tap_product_item": {
-      "type": "tap",
-      "element": "product_item_premium_widget",
-      "description": "Tap on Premium Widget item"
-    },
-    "wait_for_detail_screen": {
-      "type": "wait_for_element",
-      "element": "product_detail_title",
-      "timeout_seconds": 5,
-      "description": "Wait for product detail screen to load"
-    }
-  },
+  "steps": [
+    { "id": "launch_app", "action": "launch_app", "description": "Launch the shopping app", "target": "com.example.shop" },
+    { "id": "wait_for_product_list", "action": "wait_for_element", "description": "Wait for the products list to load", "target": "products list", "wait_config": { "type": "element_visible", "timeout_ms": 5000 } },
+    { "id": "scroll_to_premium_widget", "action": "scroll_to_element", "description": "Scroll down to find the Premium Widget product", "target": "Premium Widget product row", "value": "down" },
+    { "id": "tap_product_item", "action": "tap", "description": "Tap on the Premium Widget item", "target": "Premium Widget product row" },
+    { "id": "wait_for_detail_screen", "action": "wait_for_element", "description": "Wait for the product detail screen to load", "target": "product detail title", "wait_config": { "type": "element_visible", "timeout_ms": 5000 } },
+    { "id": "capture_price", "action": "capture_value", "description": "Capture the product price from the detail screen", "target": "product detail price", "capture_to": "product_price" }
+  ],
   "assertions": [
-    {
-      "id": "list_displayed",
-      "description": "Products list is displayed",
-      "type": "element_exists",
-      "element": "products_recycler_view"
-    },
-    {
-      "id": "list_has_items",
-      "description": "Products list contains items",
-      "type": "list_is_empty",
-      "element": "products_recycler_view",
-      "expected": false
-    },
-    {
-      "id": "product_item_found",
-      "description": "Premium Widget product item is found",
-      "type": "element_exists",
-      "element": "product_item_premium_widget"
-    },
-    {
-      "id": "detail_screen_loaded",
-      "description": "Product detail screen displays correct product",
-      "type": "element_text",
-      "element": "product_detail_title",
-      "expected_text": "Premium Widget"
-    },
-    {
-      "id": "price_displayed",
-      "description": "Product price is displayed on detail screen",
-      "type": "element_exists",
-      "element": "product_detail_price"
-    }
+    { "id": "list_displayed", "after_step": "wait_for_product_list", "type": "element_exists", "description": "Products list is displayed", "element_description": "products list" },
+    { "id": "list_has_items", "after_step": "wait_for_product_list", "type": "list_item_count", "description": "Products list contains at least one item", "element_description": "products list", "operator": ">", "expected_count": 0 },
+    { "id": "product_item_found", "after_step": "scroll_to_premium_widget", "type": "element_exists", "description": "Premium Widget product item is found", "element_description": "Premium Widget product row" },
+    { "id": "detail_screen_loaded", "after_step": "wait_for_detail_screen", "type": "element_text", "description": "Product detail screen displays the correct product", "element_description": "product detail title", "expected_value": "Premium Widget" },
+    { "id": "price_displayed", "after_step": "capture_price", "type": "element_exists", "description": "Product price is displayed on the detail screen", "element_description": "product detail price" }
   ]
 }
 ```
@@ -325,101 +183,39 @@ Demonstrates handling Android runtime permission dialogs and permission-dependen
 
 ```json
 {
-  "$schema_version": "2.0",
+  "$schema_version": "2.1",
   "scenario_id": "android_camera_permission_request",
   "name": "Request Camera Permission",
-  "description": "User grants camera permission to enable photo capture feature",
+  "description": "User grants camera permission to enable the photo capture feature",
   "platform": "android",
   "app_package": "com.example.photoapp",
-  "metadata": {
-    "app_version": "3.0.0",
-    "environment": "staging"
-  },
+  "metadata": { "app_version": "3.0.0", "environment": "staging" },
   "tags": ["permissions", "camera", "system-dialog"],
   "preconditions": {
-    "setup_actions": [
-      {
-        "type": "clear_app_data",
-        "description": "Clear app to reset permission state"
-      }
+    "app_state": "fresh_install",
+    "device_actions": [
+      { "action": "clear_app_data", "target_package": "com.example.photoapp", "description": "Clear app data to reset the permission state" }
     ],
-    "device_state": "Camera permission not yet granted"
+    "notes": ["Camera permission has not yet been granted"]
   },
-  "steps": {
-    "launch_app": {
-      "type": "launch_app",
-      "description": "Launch photo app"
-    },
-    "wait_for_home_screen": {
-      "type": "wait_for_element",
-      "element": "home_screen_title",
-      "timeout_seconds": 5,
-      "description": "Wait for home screen to load"
-    },
-    "tap_camera_button": {
-      "type": "tap",
-      "element": "camera_button",
-      "description": "Tap camera button to trigger permission request"
-    },
-    "wait_for_permission_dialog": {
-      "type": "wait_for_element",
-      "element": "permission_dialog_title",
-      "timeout_seconds": 3,
-      "description": "Wait for Android permission dialog to appear"
-    },
-    "verify_dialog_message": {
-      "type": "wait_for_element",
-      "element": "permission_message_text",
-      "timeout_seconds": 2,
-      "description": "Verify permission request message is displayed"
-    },
-    "tap_allow_button": {
-      "type": "tap",
-      "element": "permission_allow_button",
-      "description": "Tap Allow button in permission dialog"
-    },
-    "wait_for_camera_feature": {
-      "type": "wait_for_element",
-      "element": "camera_preview",
-      "timeout_seconds": 5,
-      "description": "Wait for camera preview to load after permission granted"
-    }
-  },
+  "steps": [
+    { "id": "launch_app", "action": "launch_app", "description": "Launch the photo app", "target": "com.example.photoapp" },
+    { "id": "wait_for_home_screen", "action": "wait_for_element", "description": "Wait for the home screen to load", "target": "home screen title", "wait_config": { "type": "element_visible", "timeout_ms": 5000 } },
+    { "id": "tap_camera_button", "action": "tap", "description": "Tap the camera button to trigger the permission request", "target": "camera button" },
+    { "id": "wait_for_permission_dialog", "action": "wait_for_element", "description": "Wait for the system permission dialog to appear", "target": "camera permission dialog", "wait_config": { "type": "element_visible", "timeout_ms": 3000 } },
+    { "id": "grant_camera_permission", "action": "grant_permission", "description": "Grant the camera permission on the system dialog", "permission_name": "camera" },
+    { "id": "wait_for_camera_feature", "action": "wait_for_element", "description": "Wait for the camera preview to load after the permission is granted", "target": "camera preview", "wait_config": { "type": "element_visible", "timeout_ms": 5000 } }
+  ],
   "assertions": [
-    {
-      "id": "permission_dialog_shown",
-      "description": "Android camera permission dialog is displayed",
-      "type": "permission_dialog_shown",
-      "permission_type": "android.permission.CAMERA"
-    },
-    {
-      "id": "dialog_title_correct",
-      "description": "Permission dialog shows correct title",
-      "type": "element_text",
-      "element": "permission_dialog_title",
-      "expected_text": "Allow photo app to access your camera?"
-    },
-    {
-      "id": "allow_button_visible",
-      "description": "Allow button is visible in permission dialog",
-      "type": "element_visible",
-      "element": "permission_allow_button"
-    },
-    {
-      "id": "camera_available_after_grant",
-      "description": "Camera preview is available after permission granted",
-      "type": "element_exists",
-      "element": "camera_preview"
-    },
-    {
-      "id": "no_error_shown",
-      "description": "No error message displayed after granting permission",
-      "type": "element_not_exists",
-      "element": "error_toast"
-    }
+    { "id": "permission_dialog_shown", "after_step": "wait_for_permission_dialog", "type": "permission_dialog_shown", "description": "System camera permission dialog is displayed", "permission_name": "camera" },
+    { "id": "allow_button_visible", "after_step": "wait_for_permission_dialog", "type": "element_visible", "description": "Allow button is visible in the permission dialog", "element_description": "Allow button", "expected_visible": true },
+    { "id": "camera_available_after_grant", "after_step": "wait_for_camera_feature", "type": "element_exists", "description": "Camera preview is available after the permission is granted", "element_description": "camera preview" },
+    { "id": "no_error_shown", "after_step": "wait_for_camera_feature", "type": "element_not_exists", "description": "No error toast displayed after granting permission", "element_description": "error toast" }
   ]
 }
 ```
+
+> **Semantic action:** This scenario uses the `grant_permission` action, one of the four platform-agnostic semantic actions (`press_back`, `dismiss_keyboard`, `grant_permission`, `deny_permission`). In a `platform-agnostic` scenario these resolve to the correct per-platform mechanics at replay time — the same step works on Android and iOS. Swap it for `deny_permission` to exercise the rejection flow.
 
 ### What This Tests
 
@@ -431,9 +227,9 @@ Demonstrates handling Android runtime permission dialogs and permission-dependen
 
 ### Adaptation Tips
 
-- Change permission type (CAMERA, LOCATION, CONTACTS, etc.)
+- Change the permission name (`camera`, `location`, `contacts`, etc.)
 - Adjust timeout based on device and network
-- Add deny button testing for rejection flow
+- Swap `grant_permission` for `deny_permission` to test the rejection flow
 - Include feature-specific assertions
 
 ---
@@ -454,123 +250,39 @@ Demonstrates verification of toast messages during user interactions.
 
 ```json
 {
-  "$schema_version": "2.0",
+  "$schema_version": "2.1",
   "scenario_id": "android_toast_verification",
   "name": "Verify Toast Notifications",
-  "description": "User performs action that triggers success toast message",
+  "description": "User performs an action that triggers a success toast message",
   "platform": "android",
   "app_package": "com.example.notes",
-  "metadata": {
-    "app_version": "1.5.0",
-    "environment": "staging"
-  },
+  "metadata": { "app_version": "1.5.0", "environment": "staging" },
   "tags": ["notifications", "toast", "feedback"],
   "variables": {
-    "note_title": {
-      "type": "string",
-      "value": "Test Note"
-    }
+    "note_title": { "type": "string", "description": "Title used for the note created during the test", "value": "Test Note" }
   },
   "preconditions": {
-    "setup_actions": [
-      {
-        "type": "launch_app"
-      }
-    ],
-    "device_state": "Logged in on notes list screen"
+    "app_state": "logged_in",
+    "notes": ["User is logged in on the notes list screen"]
   },
-  "steps": {
-    "launch_app": {
-      "type": "launch_app",
-      "description": "Launch notes application"
-    },
-    "wait_for_notes_list": {
-      "type": "wait_for_element",
-      "element": "notes_list",
-      "timeout_seconds": 5,
-      "description": "Wait for notes list to display"
-    },
-    "tap_create_note_button": {
-      "type": "tap",
-      "element": "create_note_button",
-      "description": "Tap create new note button"
-    },
-    "wait_for_note_form": {
-      "type": "wait_for_element",
-      "element": "note_title_input",
-      "timeout_seconds": 3,
-      "description": "Wait for note creation form"
-    },
-    "enter_note_title": {
-      "type": "type",
-      "element": "note_title_input",
-      "text": "Test Note",
-      "clear_before": true,
-      "description": "Enter note title"
-    },
-    "tap_note_content": {
-      "type": "tap",
-      "element": "note_content_input",
-      "description": "Tap on note content field"
-    },
-    "enter_note_content": {
-      "type": "type",
-      "element": "note_content_input",
-      "text": "This is a test note created during automated testing.",
-      "clear_before": true,
-      "description": "Enter note content"
-    },
-    "tap_save_button": {
-      "type": "tap",
-      "element": "save_note_button",
-      "description": "Tap save button"
-    },
-    "wait_for_toast": {
-      "type": "toast_visible",
-      "message": "Note saved successfully",
-      "timeout_seconds": 3,
-      "description": "Wait for success toast to appear"
-    }
-  },
+  "steps": [
+    { "id": "launch_app", "action": "launch_app", "description": "Launch the notes application", "target": "com.example.notes" },
+    { "id": "wait_for_notes_list", "action": "wait_for_element", "description": "Wait for the notes list to display", "target": "notes list", "wait_config": { "type": "element_visible", "timeout_ms": 5000 } },
+    { "id": "tap_create_note_button", "action": "tap", "description": "Tap the create new note button", "target": "create note button" },
+    { "id": "wait_for_note_form", "action": "wait_for_element", "description": "Wait for the note creation form", "target": "note title input", "wait_config": { "type": "element_visible", "timeout_ms": 3000 } },
+    { "id": "enter_note_title", "action": "type", "description": "Enter the note title", "target": "note title input", "value": "Test Note" },
+    { "id": "tap_note_content", "action": "tap", "description": "Tap on the note content field", "target": "note content input" },
+    { "id": "enter_note_content", "action": "type", "description": "Enter the note content", "target": "note content input", "value": "This is a test note created during automated testing." },
+    { "id": "tap_save_button", "action": "tap", "description": "Tap the save button", "target": "save note button" },
+    { "id": "wait_for_toast", "action": "wait_for_element", "description": "Wait for the success toast to appear", "target": "success toast", "wait_config": { "type": "element_visible", "timeout_ms": 3000 } }
+  ],
   "assertions": [
-    {
-      "id": "create_button_visible",
-      "description": "Create note button is visible",
-      "type": "element_visible",
-      "element": "create_note_button"
-    },
-    {
-      "id": "form_displayed",
-      "description": "Note creation form is displayed",
-      "type": "element_exists",
-      "element": "note_title_input"
-    },
-    {
-      "id": "title_entered",
-      "description": "Note title is entered correctly",
-      "type": "element_text",
-      "element": "note_title_input",
-      "expected_text": "Test Note"
-    },
-    {
-      "id": "content_entered",
-      "description": "Note content is entered correctly",
-      "type": "text_contains",
-      "element": "note_content_input",
-      "expected_substring": "test note created"
-    },
-    {
-      "id": "success_toast_shown",
-      "description": "Success toast message is displayed",
-      "type": "toast_visible",
-      "message": "Note saved successfully"
-    },
-    {
-      "id": "back_to_list",
-      "description": "User returns to notes list after save",
-      "type": "element_exists",
-      "element": "notes_list"
-    }
+    { "id": "create_button_visible", "after_step": "wait_for_notes_list", "type": "element_visible", "description": "Create note button is visible", "element_description": "create note button", "expected_visible": true },
+    { "id": "form_displayed", "after_step": "wait_for_note_form", "type": "element_exists", "description": "Note creation form is displayed", "element_description": "note title input" },
+    { "id": "title_entered", "after_step": "enter_note_title", "type": "element_text", "description": "Note title is entered correctly", "element_description": "note title input", "expected_value": "Test Note" },
+    { "id": "content_entered", "after_step": "enter_note_content", "type": "text_contains", "description": "Note content includes the expected text", "element_description": "note content input", "expected_substring": "test note created" },
+    { "id": "success_toast_shown", "after_step": "wait_for_toast", "type": "toast_visible", "description": "Success toast message is displayed", "expected_text": "Note saved successfully" },
+    { "id": "back_to_list", "after_step": "wait_for_toast", "type": "element_exists", "description": "User returns to the notes list after save", "element_description": "notes list" }
   ]
 }
 ```
@@ -609,112 +321,36 @@ Demonstrates verification of error states, network errors, and validation error 
 
 ```json
 {
-  "$schema_version": "2.0",
+  "$schema_version": "2.1",
   "scenario_id": "android_error_handling",
   "name": "Handle Login Validation Error",
-  "description": "User enters invalid email and sees validation error message",
+  "description": "User enters an invalid email and sees a validation error message",
   "platform": "android",
   "app_package": "com.example.app",
-  "metadata": {
-    "app_version": "1.2.3",
-    "environment": "staging"
-  },
+  "metadata": { "app_version": "1.2.3", "environment": "staging" },
   "tags": ["validation", "error-handling", "forms"],
   "preconditions": {
-    "setup_actions": [
-      {
-        "type": "clear_app_data",
-        "description": "Clear app data for clean state"
-      }
+    "app_state": "logged_out",
+    "device_actions": [
+      { "action": "clear_app_data", "target_package": "com.example.app", "description": "Clear app data for a clean state" }
     ],
-    "device_state": "On login screen"
+    "notes": ["Start on the login screen"]
   },
-  "steps": {
-    "launch_app": {
-      "type": "launch_app",
-      "description": "Launch application"
-    },
-    "wait_for_login_screen": {
-      "type": "wait_for_element",
-      "element": "email_input",
-      "timeout_seconds": 5,
-      "description": "Wait for login screen to load"
-    },
-    "tap_email_field": {
-      "type": "tap",
-      "element": "email_input",
-      "description": "Tap email input field"
-    },
-    "enter_invalid_email": {
-      "type": "type",
-      "element": "email_input",
-      "text": "invalid.email",
-      "clear_before": true,
-      "description": "Enter invalid email format"
-    },
-    "tap_password_field": {
-      "type": "tap",
-      "element": "password_input",
-      "description": "Tap password field to trigger validation"
-    },
-    "wait_for_error_message": {
-      "type": "wait_for_element",
-      "element": "email_error_message",
-      "timeout_seconds": 2,
-      "description": "Wait for email validation error to appear"
-    },
-    "verify_error_displayed": {
-      "type": "element_visible",
-      "element": "email_error_message",
-      "description": "Verify error message is visible"
-    },
-    "verify_login_button_disabled": {
-      "type": "element_state",
-      "element": "login_button",
-      "expected_state": "disabled",
-      "description": "Verify login button is disabled due to validation error"
-    }
-  },
+  "steps": [
+    { "id": "launch_app", "action": "launch_app", "description": "Launch the application", "target": "com.example.app" },
+    { "id": "wait_for_login_screen", "action": "wait_for_element", "description": "Wait for the login screen to load", "target": "email input field", "wait_config": { "type": "element_visible", "timeout_ms": 5000 } },
+    { "id": "tap_email_field", "action": "tap", "description": "Tap the email input field", "target": "email input field" },
+    { "id": "enter_invalid_email", "action": "type", "description": "Enter an invalid email format", "target": "email input field", "value": "invalid.email" },
+    { "id": "tap_password_field", "action": "tap", "description": "Tap the password field to trigger validation", "target": "password input field" },
+    { "id": "wait_for_error_message", "action": "wait_for_element", "description": "Wait for the email validation error to appear", "target": "email error message", "wait_config": { "type": "element_visible", "timeout_ms": 2000 } }
+  ],
   "assertions": [
-    {
-      "id": "login_screen_ready",
-      "description": "Login screen is displayed",
-      "type": "element_exists",
-      "element": "email_input"
-    },
-    {
-      "id": "invalid_email_entered",
-      "description": "Invalid email is entered in field",
-      "type": "element_text",
-      "element": "email_input",
-      "expected_text": "invalid.email"
-    },
-    {
-      "id": "error_message_displayed",
-      "description": "Email validation error message is shown",
-      "type": "element_exists",
-      "element": "email_error_message"
-    },
-    {
-      "id": "error_text_correct",
-      "description": "Error message contains correct validation text",
-      "type": "element_text",
-      "element": "email_error_message",
-      "expected_text": "Please enter a valid email address"
-    },
-    {
-      "id": "login_button_disabled",
-      "description": "Login button is disabled when validation fails",
-      "type": "element_state",
-      "element": "login_button",
-      "expected_state": "disabled"
-    },
-    {
-      "id": "error_icon_visible",
-      "description": "Error icon is shown next to email field",
-      "type": "element_exists",
-      "element": "email_error_icon"
-    }
+    { "id": "login_screen_ready", "after_step": "wait_for_login_screen", "type": "element_exists", "description": "Login screen is displayed", "element_description": "email input field" },
+    { "id": "invalid_email_entered", "after_step": "enter_invalid_email", "type": "element_text", "description": "Invalid email is entered in the field", "element_description": "email input field", "expected_value": "invalid.email" },
+    { "id": "error_message_displayed", "after_step": "wait_for_error_message", "type": "element_exists", "description": "Email validation error message is shown", "element_description": "email error message" },
+    { "id": "error_text_correct", "after_step": "wait_for_error_message", "type": "element_text", "description": "Error message contains the correct validation text", "element_description": "email error message", "expected_value": "Please enter a valid email address" },
+    { "id": "login_button_disabled", "after_step": "wait_for_error_message", "type": "element_state", "description": "Login button is disabled when validation fails", "element_description": "login button", "state_property": "disabled" },
+    { "id": "error_icon_visible", "after_step": "wait_for_error_message", "type": "element_exists", "description": "Error icon is shown next to the email field", "element_description": "email error icon" }
   ]
 }
 ```
