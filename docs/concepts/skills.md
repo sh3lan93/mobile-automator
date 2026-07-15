@@ -1,5 +1,5 @@
 ---
-description: "How mobile-automator skills work - native Agent Skills installed per host by mauto init, guide content in src/guide/content, and placeholders filled at emit time."
+description: "How mobile-automator skills work: native Agent Skills installed per host by mauto init, with guide content and placeholders resolved at emit time."
 ---
 
 # How Skills Work

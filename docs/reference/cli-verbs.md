@@ -1,5 +1,6 @@
 ---
-description: "Complete reference for every mauto CLI verb - device actions, authoring, workspace, reasoning, agent integration, device session, and cross-session memory - with the uniform JSON envelope and exit codes."
+title: "CLI Verbs Reference"
+description: "Complete reference for every mauto CLI verb - device actions, authoring, workspace, reasoning, sessions, and memory - with the uniform JSON envelope."
 ---
 
 # CLI Verbs Reference

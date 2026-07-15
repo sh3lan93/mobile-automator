@@ -1,5 +1,5 @@
 ---
-description: "Step-by-step guides for mobile-automator - setup, generate, and execute workflows with detailed walkthroughs."
+description: "Step-by-step guides for mobile-automator covering the setup, generate, and execute workflows, each with detailed walkthroughs and command examples."
 ---
 
 # Guides

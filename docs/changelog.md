@@ -1,4 +1,5 @@
 ---
+title: "Changelog & Release Notes"
 description: "Changelog for mobile-automator - version history, new features, breaking changes, and migration notes from v0.1.0 to latest."
 ---
 
@@ -224,7 +225,7 @@ Schema v1 is deprecated as of **2026-02-17**. The 12-month deprecation timeline:
 | Phase 2 | 2026-08-17 → 2027-01-17 | New v1 generation blocked; execution requires acknowledgment |
 | Phase 3 | 2027-01-17+ | Hard fail — v1 scenarios will not execute |
 
-Migrate existing scenarios with `/mobile-automator:migrate <scenario_id>`. See [MIGRATION.md](https://github.com/sh3lan93/mobile-automator/blob/main/MIGRATION.md) for the full guide.
+Migrate existing scenarios with `/mobile-automator:migrate <scenario_id>`. See [MIGRATION.md](https://github.com/sh3lan93/mobile-automator/blob/v0.1.1/MIGRATION.md) for the full guide.
 
 ---
 
