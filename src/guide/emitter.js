@@ -114,7 +114,7 @@ function emitBootstrap() {
     ['setup', 'scaffold the workspace and write a config'],
     ['config', 'get/set values in the workspace config'],
     ['guide', 'print the guide for a workflow topic'],
-    ['schema', 'print the scenario or result JSON schema'],
+    ['schema', 'print the scenario, result, or config JSON schema'],
   ];
 
   const lines = [];

@@ -12,7 +12,7 @@ Every analysis result is stored in the workspace config:
 mauto config set <key> <value>
 ```
 
-For list-valued keys (e.g. `protected_directories`), pass a comma-separated value. When a value is uncertain, confirm it with the user before persisting. When you truly cannot infer a value, ask the user directly and persist their answer.
+For list-valued keys (e.g. `protected_directories`), pass a comma-separated value. Run `mauto schema config` to see the declared type of any key. When a value is uncertain, confirm it with the user before persisting. When you truly cannot infer a value, ask the user directly and persist their answer.
 
 ## 1. Detect the platform
 

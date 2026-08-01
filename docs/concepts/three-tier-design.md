@@ -56,7 +56,7 @@ The agent is not pre-loaded with an always-on skill. It pulls task-specific reas
 - `mauto guide execute` — reasoning for running scenarios and collecting results
 - `mauto guide setup` — reasoning for workspace setup
 - `mauto bootstrap` — the verb map + invariants the agent must honor
-- `mauto schema <scenario|result>` — the JSON schemas
+- `mauto schema <scenario|result|config>` — the JSON schemas
 
 `mauto init --agent <host>` installs a thin native Agent Skill per host that knows *when* to pull each guide. In Claude Code these are the hyphen slash-commands `/mobile-automator-generate` and `/mobile-automator-execute`.
 
