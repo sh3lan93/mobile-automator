@@ -72,6 +72,18 @@ describe('config/coerce', () => {
     });
   });
 
+  describe('coerceValue — object-typed keys (the catch-all fallback IS reachable)', () => {
+    // declaredTypesAt('app') / declaredTypesAt('knowledge') return ['object'],
+    // not 'array' or 'string' — this is the branch that makes
+    // `mauto config set app '{"android_package":"com.x"}'` work. A prior
+    // progress-ledger entry claimed this branch was unreachable; it is live.
+    it('JSON-parses an object-typed key round-trip', () => {
+      expect(coerceValue('app', '{"android_package":"com.x"}')).toEqual({
+        android_package: 'com.x',
+      });
+    });
+  });
+
   describe('coerceValue — undeclared keys stay lenient', () => {
     it('JSON-parses when possible', () => {
       expect(coerceValue('made_up_key', '{"a":1}')).toEqual({ a: 1 });

@@ -100,6 +100,11 @@ describe('config/schema', () => {
       expect(r.errors.join(' ')).toMatch(/platform-aware/);
     });
 
+    it('does not prefix a root-level error with the redundant "(root)" — the CLI message already names the key', () => {
+      const r = validateAt('mode', 'windows');
+      expect(r.errors.join(' ')).not.toMatch(/\(root\)/);
+    });
+
     it('always passes an undeclared path', () => {
       expect(validateAt('anything_at_all', { deeply: ['nested'] })).toEqual({ valid: true, errors: [] });
     });

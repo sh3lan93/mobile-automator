@@ -645,6 +645,20 @@ describe('cli handlers', () => {
       );
     });
 
+    test('a rejected set against an EXISTING config leaves the file byte-identical (Minor 7)', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-'));
+      fs.mkdirSync(path.join(projectRoot, 'mobile-automator'), { recursive: true });
+      const configPath = path.join(projectRoot, 'mobile-automator', 'config.json');
+      const before = JSON.stringify({ project_name: 'Demo', mode: 'platform-aware' });
+      fs.writeFileSync(configPath, before);
+      const r = handleConfigSet({ projectRoot }, 'mode', 'windows');
+      expect(r.exitKind).toBe('invalid_input');
+      // coerce -> validate -> early return; configManager.set is the only
+      // writer, so the file on disk must not have moved at all — not even a
+      // healing rewrite (load() heals on every read, this call never reads).
+      expect(fs.readFileSync(configPath, 'utf8')).toBe(before);
+    });
+
     test('an unrelated pre-existing bad value does not block a valid write', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-'));
       fs.mkdirSync(path.join(projectRoot, 'mobile-automator'), { recursive: true });

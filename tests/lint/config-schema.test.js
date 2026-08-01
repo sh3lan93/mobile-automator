@@ -118,16 +118,18 @@ describe('config schema — structural agreement', () => {
     }
   });
 
-  test('the fresh scaffold skeleton conforms to the schema', () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-lint-'));
-    scaffold(root, { mode: 'platform-aware' });
-    const cfg = JSON.parse(
-      fs.readFileSync(path.join(root, 'mobile-automator', 'config.json'), 'utf8')
-    );
-    for (const key of Object.keys(cfg)) {
-      const { valid, errors } = validateAt(key, cfg[key]);
-      expect({ key, valid, errors }).toEqual({ key, valid: true, errors: [] });
-    }
+  describe.each(['platform-aware', 'platform-agnostic'])('mode: %s', (mode) => {
+    test('the fresh scaffold skeleton conforms to the schema', () => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-lint-'));
+      scaffold(root, { mode });
+      const cfg = JSON.parse(
+        fs.readFileSync(path.join(root, 'mobile-automator', 'config.json'), 'utf8')
+      );
+      for (const key of Object.keys(cfg)) {
+        const { valid, errors } = validateAt(key, cfg[key]);
+        expect({ key, valid, errors }).toEqual({ key, valid: true, errors: [] });
+      }
+    });
   });
 
   test('the shipped config fixtures conform once healed', () => {

@@ -100,7 +100,19 @@ function validateAt(dottedKey, value) {
   const fn = compiled.get(dottedKey);
   const valid = fn(value);
   if (valid) return { valid: true, errors: [] };
-  return { valid: false, errors: (fn.errors || []).map(formatError) };
+  // formatError prefixes a root-level error with "(root)" — meaningful for
+  // the scenario validator, whose messages otherwise carry no subject. Here
+  // the CLI message already names the key ("invalid value for config key
+  // ..."), so a bare "(root)" only duplicates it; strip that one case. A
+  // non-root instancePath (e.g. "/android_package" on an object-typed key
+  // like "app") still adds information the key name alone doesn't, so it is
+  // left as formatError produced it. Fixed here, not in format-error.js,
+  // because the scenario validator's messages depend on that prefix.
+  const errors = (fn.errors || []).map((err) => {
+    const msg = formatError(err);
+    return err.instancePath ? msg : msg.replace(/^\(root\)\s*/, '');
+  });
+  return { valid: false, errors };
 }
 
 module.exports = {
