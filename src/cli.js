@@ -13,6 +13,8 @@ const { MemoryStore } = require('./memory/store');
 const { FILES: MEMORY_FILES, AGENT_KINDS } = require('./memory/paths');
 const { validateEntryText, MAX_ENTRY_LEN } = require('./memory/entries');
 const configManager = require('./config/manager');
+const { coerceValue } = require('./config/coerce');
+const { validateAt } = require('./config/schema');
 const { scaffold } = require('./setup/scaffold');
 const guideEmitter = require('./guide/emitter');
 const { ADAPTERS } = require('./init/adapters');
@@ -531,12 +533,21 @@ function handleConfigGet({ projectRoot }, key) {
   return { envelope: ok({ key, value }), exitKind: 'ok' };
 }
 
+// Coerce the raw CLI string into the type config_schema.json declares for this
+// key, then validate that one key before writing. Per-key (not whole-document)
+// so unrelated pre-existing drift never blocks an otherwise-valid write.
 function handleConfigSet({ projectRoot }, key, rawValue) {
-  let value = rawValue;
-  try {
-    value = JSON.parse(rawValue);
-  } catch (_) {
-    // Not JSON — keep the literal string.
+  const value = coerceValue(key, rawValue);
+  const { valid, errors } = validateAt(key, value);
+  if (!valid) {
+    return {
+      envelope: fail(
+        'invalid_input',
+        `invalid value for config key "${key}": ${errors.join('; ')}`,
+        'Run `mauto schema config` to see the declared type for this key. List keys accept a comma-separated value or a JSON array.'
+      ),
+      exitKind: 'invalid_input',
+    };
   }
   configManager.set(projectRoot, key, value);
   return { envelope: ok({ key, value }), exitKind: 'ok' };
