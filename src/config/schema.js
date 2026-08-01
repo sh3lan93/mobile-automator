@@ -21,18 +21,27 @@ const CONFIG_SCHEMA_PATH = path.resolve(__dirname, '../schemas/config_schema.jso
 const schema = JSON.parse(fs.readFileSync(CONFIG_SCHEMA_PATH, 'utf8'));
 const ajv = new Ajv({ allErrors: true, strict: false });
 
-// Resolve a local `$ref` ("#/definitions/stringList") one hop. The config
-// schema only ever uses single-hop local refs; anything else is left as-is and
-// Ajv resolves it at validation time.
+// Resolve a local `$ref` ("#/definitions/stringList") to a fixpoint: a
+// resolved node may itself be another `$ref` (e.g. a `$ref` to a `$ref`), so
+// one hop is not enough to agree with Ajv, which resolves refs fully. A
+// visited-set cycle guard makes a self-referential or circular `$ref` a no-op
+// (return the last-seen node) instead of an infinite loop.
 function deref(node) {
-  if (!node || typeof node !== 'object' || typeof node.$ref !== 'string') return node;
-  const parts = node.$ref.replace(/^#\//, '').split('/');
-  let cur = schema;
-  for (const part of parts) {
-    if (cur == null) return node;
-    cur = cur[part];
+  const seen = new Set();
+  let cur = node;
+  while (cur && typeof cur === 'object' && typeof cur.$ref === 'string') {
+    if (seen.has(cur.$ref)) return cur; // circular $ref — bail with what we have
+    seen.add(cur.$ref);
+    const parts = cur.$ref.replace(/^#\//, '').split('/');
+    let target = schema;
+    for (const part of parts) {
+      if (target == null) return cur; // unresolvable pointer — leave as-is
+      target = target[part];
+    }
+    if (!target) return cur;
+    cur = target;
   }
-  return cur || node;
+  return cur;
 }
 
 // Walk `properties` down a dotted path. Undeclared path -> null.

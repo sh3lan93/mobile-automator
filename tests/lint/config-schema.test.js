@@ -88,6 +88,36 @@ describe('config schema — structural agreement', () => {
     expect(LIST_KEY_PATHS).toEqual(expect.arrayContaining(['environments']));
   });
 
+  test('every declared leaf under `properties` (walking nested objects) has a non-empty declaredTypesAt', () => {
+    // Deliberately does NOT resolve `$ref` at all — it only recurses into a
+    // child that carries an INLINE `properties` (the "app"/"knowledge"
+    // nested-object shape). Every other property (however many `$ref` hops
+    // away its real type sits) is asserted purely through the production
+    // `declaredTypesAt`. This is what makes the guard independent of
+    // `deref`'s own walk: a multi-hop `$ref`, a `patternProperties`, or an
+    // `allOf`/`anyOf` combinator all land here as "a declared key whose
+    // type must still resolve to something" rather than being silently
+    // skipped because some walker doesn't model that construct.
+    function collectDeclaredPaths(node, prefix, out) {
+      if (!node || !node.properties) return out;
+      for (const [name, child] of Object.entries(node.properties)) {
+        const childPath = prefix ? `${prefix}.${name}` : name;
+        out.push(childPath);
+        if (child && child.properties) collectDeclaredPaths(child, childPath, out);
+      }
+      return out;
+    }
+
+    const declaredPaths = collectDeclaredPaths(schema, '', []);
+    expect(declaredPaths.length).toBeGreaterThan(0);
+    for (const key of declaredPaths) {
+      expect({ key, types: declaredTypesAt(key) }).toEqual({
+        key,
+        types: expect.arrayContaining([expect.any(String)]),
+      });
+    }
+  });
+
   test('the fresh scaffold skeleton conforms to the schema', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-lint-'));
     scaffold(root, { mode: 'platform-aware' });
