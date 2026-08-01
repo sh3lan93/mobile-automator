@@ -103,5 +103,22 @@ describe('config/schema', () => {
     it('always passes an undeclared path', () => {
       expect(validateAt('anything_at_all', { deeply: ['nested'] })).toEqual({ valid: true, errors: [] });
     });
+
+    // "app" and "knowledge" are object-typed keys whose OWN top-level $ref (if
+    // any) subschemaAt resolves, but whose nested properties (app.ios_bundle_id,
+    // knowledge.business_critical_paths, ...) still carry an unresolved local
+    // `#/definitions/...` $ref. Compiling that fragment on its own, without the
+    // root schema's `definitions`, previously threw "can't resolve reference"
+    // instead of returning a validation result.
+    it('validates an object-typed key whose nested properties still hold local $refs', () => {
+      expect(validateAt('app', { android_package: 'com.example.app', ios_bundle_id: null })).toEqual({
+        valid: true,
+        errors: [],
+      });
+      expect(validateAt('knowledge', { business_critical_paths: ['login', 'checkout'] })).toEqual({
+        valid: true,
+        errors: [],
+      });
+    });
   });
 });

@@ -46,6 +46,8 @@ Deduplicate the result. If none are found, default to `production, staging, deve
 mauto config set environments <env1,env2,...>
 ```
 
+The comma-separated value is stored as a JSON list.
+
 ## 3. Infer the app package
 
 Read the application identifier from the build files, scoped to the platform:
@@ -66,9 +68,9 @@ Infer each of the following from the codebase, confirm uncertain values with the
 - **Build command** — the default debug/development build command (e.g. `./gradlew assembleDemoDebug`, `flutter build apk --flavor demo`, `npx react-native run-android`, or `xcodebuild -scheme <scheme>`). Persist: `mauto config set build_command "<command>"`.
 - **Architecture** — infer from directory and class naming (`viewmodel/` → MVVM; `repository/`+`usecase/`+`domain/`+`data/` → Clean Architecture; `bloc/`/`cubit/` → BLoC; `reducer/`/`store/` → Redux/MVI; `presenter/`/`interactor/` → MVP/VIPER). Combine findings (e.g. `"MVVM with Clean Architecture"`). If unclear, ask the user. Persist: `mauto config set architecture "<pattern>"`.
 - **Business domain** — read `README.md`, app-store metadata, `pubspec.yaml`/`package.json` description, or the app display name to infer a one-sentence domain description. If you cannot tell, ask the user. Persist: `mauto config set business_domain "<one sentence>"`.
-- **Business-critical paths** — analyze navigation graphs, route/deep-link definitions, screen/Activity/Fragment/ViewController/page definitions, and feature modules to find the most important user flows (login, signup, onboarding, checkout, payment, search, profile, …). Confirm the list with the user. Persist a comma-separated value: `mauto config set business_critical_paths "<onboarding, login, checkout>"`.
+- **Business-critical paths** — analyze navigation graphs, route/deep-link definitions, screen/Activity/Fragment/ViewController/page definitions, and feature modules to find the most important user flows (login, signup, onboarding, checkout, payment, search, profile, …). Confirm the list with the user. Persist a comma-separated value (stored as a list): `mauto config set business_critical_paths "<onboarding, login, checkout>"`.
 - **Loading indicators** — grep for loading widgets/components (progress indicators, spinners, shimmer/skeleton placeholders) and any `*Loading*`/`*Spinner*`/`*Shimmer*`/`*Skeleton*` classes. Persist the found names, or a description like `"progress bars, spinners, shimmer effects"` if none found. Persist: `mauto config set loading_indicators "<list>"`.
-- **Protected directories** — list the source directories the QA tooling must NEVER modify (e.g. `app/src/`, `lib/`, `src/`, `shared/`, `composeApp/`, `iosApp/`). Confirm with the user. Persist a comma-separated value: `mauto config set protected_directories "<app/src/, lib/, core/>"`.
+- **Protected directories** — list the source directories the QA tooling must NEVER modify (e.g. `app/src/`, `lib/`, `src/`, `shared/`, `composeApp/`, `iosApp/`). Confirm with the user. Persist a comma-separated value (stored as a list): `mauto config set protected_directories "<app/src/, lib/, core/>"`.
 
 ## 5. Confirm the config
 

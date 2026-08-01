@@ -78,7 +78,15 @@ function validateAt(dottedKey, value) {
   const sub = subschemaAt(dottedKey);
   if (!sub) return { valid: true, errors: [] }; // undeclared key -> always allowed
   if (!compiled.has(dottedKey)) {
-    compiled.set(dottedKey, ajv.compile(sub));
+    // `sub` may be an object-typed node (e.g. "app", "knowledge") whose OWN
+    // top-level $ref was resolved by subschemaAt's final deref, but whose
+    // nested properties (e.g. app.ios_bundle_id) still carry an unresolved
+    // local `#/definitions/...` $ref. Compiling `sub` standalone would make
+    // that pointer resolve against `sub`'s own (definitions-less) root and
+    // throw "can't resolve reference". Carrying the root `definitions`
+    // alongside makes every local ref in this schema resolve correctly no
+    // matter how deep the compiled subschema sits.
+    compiled.set(dottedKey, ajv.compile({ ...sub, definitions: schema.definitions }));
   }
   const fn = compiled.get(dottedKey);
   const valid = fn(value);
