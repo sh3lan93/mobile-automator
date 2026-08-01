@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Mobile Automator Workspace Config",
+  "description": "Schema for mobile-automator/config.json. Declares the type of every key `mauto config set` knows about. Unknown keys are permitted (additionalProperties: true) so agents can persist project knowledge this schema does not anticipate — the schema types keys, it does not gate them.",
+  "type": "object",
+  "additionalProperties": true,
+  "definitions": {
+    "stringList": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "A list of strings. `mauto config set` accepts either a JSON array or a comma-separated value and stores a list either way."
+    },
+    "nullableString": {
+      "type": ["string", "null"],
+      "description": "A string, or null when the value is not yet configured."
+    }
+  },
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": ["platform-aware", "platform-agnostic"],
+      "description": "Selected at setup. Configs predating this field are treated as platform-aware."
+    },
+    "project_name": { "$ref": "#/definitions/nullableString" },
+    "platform": { "type": "string", "description": "Detected platform (platform-aware mode)." },
+    "platform_details": { "type": "string" },
+    "build_system": { "type": "string" },
+    "build_command": { "type": "string" },
+    "architecture": { "type": "string" },
+    "business_domain": { "type": "string" },
+    "loading_indicators": { "type": "string" },
+    "automation_extras": { "type": "string" },
+    "additional_resources": { "type": "string" },
+    "android_package": { "type": "string" },
+    "ios_bundle_id": { "type": "string" },
+    "default_environment": { "$ref": "#/definitions/nullableString" },
+    "environments": { "$ref": "#/definitions/stringList" },
+    "protected_directories": { "$ref": "#/definitions/stringList" },
+    "business_critical_paths": { "$ref": "#/definitions/stringList" },
+    "app": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Legacy nested shape written by pre-CLI setup. Read by the placeholder resolver.",
+      "properties": {
+        "android_package": { "type": "string" },
+        "ios_bundle_id": { "$ref": "#/definitions/nullableString" }
+      }
+    },
+    "knowledge": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Legacy nested shape written by pre-CLI setup. Read by the placeholder resolver.",
+      "properties": {
+        "project_name": { "$ref": "#/definitions/nullableString" },
+        "architecture": { "type": "string" },
+        "platform_details": { "type": "string" },
+        "build_system": { "type": "string" },
+        "build_command": { "type": "string" },
+        "business_domain": { "type": "string" },
+        "loading_indicators": { "type": "string" },
+        "automation_extras": { "type": "string" },
+        "additional_resources": { "type": "string" },
+        "protected_directories": { "$ref": "#/definitions/stringList" },
+        "business_critical_paths": { "$ref": "#/definitions/stringList" }
+      }
+    }
+  }
+}
