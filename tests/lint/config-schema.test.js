@@ -42,10 +42,49 @@ describe('config schema — structural agreement', () => {
     }
   });
 
-  test('no array-typed schema path is missing from LIST_KEY_PATHS', () => {
-    for (const listPath of LIST_KEY_PATHS) {
+  test('LIST_KEY_PATHS matches every array-typed path in the raw schema, independently derived', () => {
+    // Deliberately re-walks the raw config_schema.json here instead of
+    // importing collectListPaths/LIST_KEY_PATHS to build the expected set —
+    // asserting LIST_KEY_PATHS against a set built BY collectListPaths itself
+    // can never fail from a recursion bug or a dropped nesting level in that
+    // function, which is exactly the drift this guard exists to catch.
+
+    function resolveRefIndependently(node) {
+      if (!node || typeof node !== 'object' || typeof node.$ref !== 'string') return node;
+      const parts = node.$ref.replace(/^#\//, '').split('/');
+      let cur = schema;
+      for (const part of parts) {
+        if (cur == null) return node;
+        cur = cur[part];
+      }
+      return cur || node;
+    }
+
+    function collectArrayPathsIndependently(node, prefix, out) {
+      const resolved = resolveRefIndependently(node);
+      if (!resolved || !resolved.properties) return out;
+      for (const [name, child] of Object.entries(resolved.properties)) {
+        const childPath = prefix ? `${prefix}.${name}` : name;
+        const resolvedChild = resolveRefIndependently(child);
+        if (!resolvedChild) continue;
+        if (resolvedChild.type === 'array') out.push(childPath);
+        else if (resolvedChild.type === 'object' || resolvedChild.properties) {
+          collectArrayPathsIndependently(resolvedChild, childPath, out);
+        }
+      }
+      return out;
+    }
+
+    const expected = collectArrayPathsIndependently(schema, '', []).sort();
+    expect([...LIST_KEY_PATHS].sort()).toEqual(expected);
+
+    // Every path this test derives must actually be array-typed per
+    // subschemaAt too, so a false-positive in the independent walk itself
+    // (e.g. matching a property named "array") can't slip through unnoticed.
+    for (const listPath of expected) {
       expect(subschemaAt(listPath).type).toBe('array');
     }
+
     expect(LIST_KEY_PATHS).toEqual(expect.arrayContaining(['environments']));
   });
 
