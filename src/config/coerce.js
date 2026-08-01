@@ -29,6 +29,13 @@ function tryJson(raw) {
 }
 
 function coerceValue(dottedKey, rawValue) {
+  // A bare `null` argument always means JSON null, regardless of the key's
+  // declared type. It is `validateAt` — not this function — that decides
+  // whether the key is allowed to hold it: keys declared nullable accept it,
+  // everything else gets a loud invalid_input instead of silently storing the
+  // string "null" (see #136 fix-wave, Important 2).
+  if (String(rawValue).trim() === 'null') return null;
+
   const types = declaredTypesAt(dottedKey);
 
   // Undeclared key: preserve the historical lenient behavior exactly.
@@ -45,9 +52,7 @@ function coerceValue(dottedKey, rawValue) {
 
   if (types.includes('string')) {
     // Never let JSON.parse retype a string key (a project literally named
-    // "12345" stays a string). `null` is honored only where the schema
-    // declares the key nullable — that is how the scaffold seeds "unset".
-    if (types.includes('null') && String(rawValue).trim() === 'null') return null;
+    // "12345" stays a string).
     return String(rawValue);
   }
 

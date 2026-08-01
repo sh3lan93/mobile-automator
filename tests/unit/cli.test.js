@@ -617,6 +617,25 @@ describe('cli handlers', () => {
       ).toBe(false);
     });
 
+    test('rejects a bare "null" on a non-nullable key instead of storing the string "null" (#136 fix-wave)', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-'));
+      const r = handleConfigSet({ projectRoot }, 'build_command', 'null');
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.ok).toBe(false);
+      expect(r.envelope.error.kind).toBe('invalid_input');
+      // Nothing was written.
+      expect(
+        fs.existsSync(path.join(projectRoot, 'mobile-automator', 'config.json'))
+      ).toBe(false);
+    });
+
+    test('a bare "null" on a nullable key stores JSON null', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-'));
+      const r = handleConfigSet({ projectRoot }, 'project_name', 'null');
+      expect(r.exitKind).toBe('ok');
+      expect(handleConfigGet({ projectRoot }, 'project_name').envelope.data.value).toBeNull();
+    });
+
     test('still accepts unknown keys leniently', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-'));
       const r = handleConfigSet({ projectRoot }, 'team_convention', 'we test on Pixel 7');

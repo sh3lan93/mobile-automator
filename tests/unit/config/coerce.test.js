@@ -64,10 +64,11 @@ describe('config/coerce', () => {
       expect(coerceValue('business_domain', 'true')).toBe('true');
     });
 
-    it('maps the literal "null" to null only where null is allowed', () => {
+    it('maps the literal "null" to JSON null unconditionally — validateAt gates which keys may hold it', () => {
       expect(coerceValue('project_name', 'null')).toBeNull();
       expect(coerceValue('default_environment', 'null')).toBeNull();
-      expect(coerceValue('build_command', 'null')).toBe('null');
+      expect(coerceValue('build_command', 'null')).toBeNull();
+      expect(coerceValue('android_package', 'null')).toBeNull();
     });
   });
 
