@@ -29,6 +29,7 @@ const PORTED_TOPICS = new Set(['generate', 'execute', 'setup']);
 
 const SCENARIO_SCHEMA = path.resolve(__dirname, '../schemas/scenario_schema.json');
 const RESULT_SCHEMA = path.resolve(__dirname, '../schemas/result_schema.json');
+const CONFIG_SCHEMA = path.resolve(__dirname, '../schemas/config_schema.json');
 
 const TOPICS = {
   generate:
@@ -78,8 +79,14 @@ function emitGuide(topic, { mode = 'platform-aware', projectRoot } = {}) {
   return lines.join('\n');
 }
 
+const SCHEMA_FILES = {
+  scenario: SCENARIO_SCHEMA,
+  result: RESULT_SCHEMA,
+  config: CONFIG_SCHEMA,
+};
+
 function emitSchema(name) {
-  const file = name === 'scenario' ? SCENARIO_SCHEMA : name === 'result' ? RESULT_SCHEMA : null;
+  const file = SCHEMA_FILES[name];
   if (!file) {
     throw new Error(`unknown schema name: ${name}`);
   }

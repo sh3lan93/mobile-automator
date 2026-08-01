@@ -117,7 +117,7 @@ The agent pulls reasoning on demand. These verbs **print raw content on success*
 | Verb | Description |
 |------|-------------|
 | `mauto guide <topic>` | Print the workflow guide for a topic: `generate`, `execute`, or `setup` |
-| `mauto schema <name>` | Print a schema: `scenario` or `result` |
+| `mauto schema <name>` | Print a schema: `scenario`, `result`, or `config` |
 | `mauto bootstrap` | Print the verb map and non-negotiable invariants |
 
 ---

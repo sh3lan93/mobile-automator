@@ -576,7 +576,7 @@ function handleSchema({ emitter = guideEmitter } = {}, name) {
     raw = emitter.emitSchema(name);
   } catch (err) {
     return {
-      envelope: fail('invalid_input', `unknown schema "${name}"`, 'Names: scenario, result.'),
+      envelope: fail('invalid_input', `unknown schema "${name}"`, 'Names: scenario, result, config.'),
       exitKind: 'invalid_input',
     };
   }
@@ -1179,7 +1179,7 @@ function buildProgram(deps = {}) {
     .action(withEnvelope((key) => emit(handleConfigGet({ projectRoot }, key), humanFlag())));
   config
     .command('set <key> <value>')
-    .description('Set a dotted-path config value (JSON-parsed when possible)')
+    .description('Set a dotted-path config value (coerced to its declared type per `mauto schema config`)')
     .action(withEnvelope((key, value) => emit(handleConfigSet({ projectRoot }, key, value), humanFlag())));
 
   program
@@ -1189,7 +1189,7 @@ function buildProgram(deps = {}) {
 
   program
     .command('schema <name>')
-    .description('Print the RAW JSON schema (scenario|result)')
+    .description('Print the RAW JSON schema (scenario|result|config)')
     .action(withEnvelope((name) => emitMaybeRaw(handleSchema({}, name))));
 
   program

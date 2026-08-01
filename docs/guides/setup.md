@@ -164,6 +164,8 @@ It scans build configuration for named environments (Gradle `productFlavors` × 
 mauto config set environments <env1,env2,...>
 ```
 
+> List keys (`environments`, `protected_directories`, `business_critical_paths`) accept either a comma-separated value or a JSON array; both are stored as a JSON list. Run `mauto schema config` to see the declared type of every key.
+
 ### App package inference
 
 It reads the application identifier from build files and persists it per platform:
@@ -189,7 +191,7 @@ The agent infers and persists the deeper context that makes generated tests proj
 | `loading_indicators` | Progress/spinner/shimmer/skeleton patterns to wait on |
 | `protected_directories` | Source dirs the tooling must never modify |
 
-Each is persisted with `mauto config set <key> <value>` (comma-separated values for list keys), confirming uncertain values with you first.
+Each is persisted with `mauto config set <key> <value>` (comma-separated values for list keys), which are stored as JSON lists, confirming uncertain values with you first.
 
 ### Confirm the config
 

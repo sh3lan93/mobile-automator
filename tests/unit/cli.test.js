@@ -677,6 +677,29 @@ describe('cli handlers', () => {
       expect(r.exitKind).toBe('invalid_input');
       expect(r.envelope.error.kind).toBe('invalid_input');
     });
+
+    test('returns raw JSON for config', () => {
+      const r = handleSchema({}, 'config');
+      expect(r.exitKind).toBe('ok');
+      expect(r.envelope).toBeUndefined();
+      const parsed = JSON.parse(r.raw);
+      expect(parsed.title).toMatch(/Config/i);
+      expect(parsed.properties.environments).toBeDefined();
+    });
+
+    test('unknown schema name lists config among the valid names', () => {
+      const r = handleSchema({}, 'bogus');
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.hint).toMatch(/config/);
+    });
+
+    test('the config set rejection hint points at a command that works', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-'));
+      const rejected = handleConfigSet({ projectRoot }, 'mode', 'windows');
+      expect(rejected.envelope.hint).toMatch(/mauto schema config/);
+      // The command that hint names must actually succeed.
+      expect(handleSchema({}, 'config').exitKind).toBe('ok');
+    });
   });
 
   describe('handleBootstrap (raw text)', () => {
