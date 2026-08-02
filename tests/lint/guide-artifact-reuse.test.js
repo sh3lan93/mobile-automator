@@ -17,7 +17,17 @@ function preflightSection(out) {
   if (start === -1) throw new Error('guide has no "### 1. Pre-flight" section');
   const rest = out.slice(start);
   const end = rest.indexOf('\n### ', 1);
-  return end === -1 ? rest : rest.slice(0, end);
+  const section = end === -1 ? rest : rest.slice(0, end);
+  // execute.agnostic.md additionally sandwiches a **Precondition
+  // `device_actions`** markdown table between the pre-flight numbered list
+  // and the next `### ` heading. That table's rows already contain
+  // `mauto install` / `mauto uninstall`, so without truncating before it, an
+  // unfixed pre-flight in that one file would pass this guard by accident —
+  // the table, not the fix, would supply the signal. Cut at the first
+  // markdown table row (a line starting with `|`); none of the pre-flight
+  // steps themselves start a line with `|` in any of the four files.
+  const tableStart = section.search(/\n\|/);
+  return tableStart === -1 ? section : section.slice(0, tableStart);
 }
 
 describe('guide emitter — pre-flight reuses a prebuilt artifact', () => {
