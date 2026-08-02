@@ -39,7 +39,7 @@ Before generating, ensure:
 2. **Device is connected**
    - Confirm with `mauto devices` (lists reachable devices)
 
-3. **App is installed** (or allow the agent to build/install)
+3. **App is installed** (or name a prebuilt artifact, or allow the agent to build)
    - Required for element resolution and screenshot capture
 
 ---
@@ -66,7 +66,9 @@ When you start generation, the agent performs these checks:
   Ready to generate!
 ```
 
-If app isn't installed, generator offers to build and install it.
+If the app isn't installed, name a prebuilt artifact path when you start and the
+agent installs it with `mauto install`; otherwise it builds using the
+`build_command` from your config.
 
 ---
 
