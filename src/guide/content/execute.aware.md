@@ -52,7 +52,9 @@ Record each observation in the result via `mauto result add-step` so it lands in
 ### 1. Pre-flight
 
 - Verify a device is available with `mauto devices`.
-- Build and install the app using `{{build_command}}`.
+- **App under test.** If the user pointed you at a prebuilt artifact, install it with `mauto install <path>` and do NOT build — reusing a ready artifact is the point. Otherwise build and install with `{{build_command}}`.
+- If that install fails because a different build of {{app_package}} is already on the device, run `mauto uninstall {{app_package}}`, install again, and report that app data was wiped — a scenario whose preconditions assume existing app state may now fail for that reason.
+- State which path you took — installed a supplied artifact, or built — before continuing.
 
 ### 2. Load Scenario
 
