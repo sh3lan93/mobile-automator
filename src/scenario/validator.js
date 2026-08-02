@@ -4,22 +4,11 @@ const fs = require('fs');
 const path = require('path');
 const Ajv = require('ajv');
 
+const { formatError } = require('../schemas/format-error');
+
 // Path to the canonical scenario schema, bundled inside the package.
 // src/scenario/validator.js -> ../schemas/scenario_schema.json
 const DEFAULT_SCHEMA_PATH = path.resolve(__dirname, '../schemas/scenario_schema.json');
-
-function formatError(err) {
-  const where = err.instancePath || '(root)';
-  let msg = `${where} ${err.message}`;
-  if (err.keyword === 'required' && err.params && err.params.missingProperty) {
-    msg = `${where} is missing required property '${err.params.missingProperty}'`;
-  } else if (err.keyword === 'enum' && err.params && Array.isArray(err.params.allowedValues)) {
-    msg = `${where} ${err.message}: ${err.params.allowedValues.join(', ')}`;
-  } else if (err.keyword === 'additionalProperties' && err.params) {
-    msg = `${where} has unexpected property '${err.params.additionalProperty}'`;
-  }
-  return msg;
-}
 
 class ScenarioValidator {
   constructor({ schemaPath = DEFAULT_SCHEMA_PATH } = {}) {

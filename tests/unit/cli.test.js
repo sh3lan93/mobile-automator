@@ -569,6 +569,106 @@ describe('cli handlers', () => {
       expect(getR.exitKind).toBe('ok');
       expect(getR.envelope.data.value).toBeUndefined();
     });
+
+    test('coerces a comma-separated list key into an array (#136)', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-'));
+      const setR = handleConfigSet({ projectRoot }, 'environments', 'stagingDebug,productionRelease');
+      expect(setR.exitKind).toBe('ok');
+      // The envelope echoes the coerced value, not the raw argument.
+      expect(setR.envelope.data.value).toEqual(['stagingDebug', 'productionRelease']);
+      // And it is a real JSON array on disk.
+      const onDisk = JSON.parse(
+        fs.readFileSync(path.join(projectRoot, 'mobile-automator', 'config.json'), 'utf8')
+      );
+      expect(onDisk.environments).toEqual(['stagingDebug', 'productionRelease']);
+    });
+
+    test('coerces the other two list keys the setup guide writes', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-'));
+      handleConfigSet({ projectRoot }, 'protected_directories', 'src/, lib/');
+      handleConfigSet({ projectRoot }, 'business_critical_paths', 'onboarding, login, checkout');
+      expect(handleConfigGet({ projectRoot }, 'protected_directories').envelope.data.value).toEqual([
+        'src/',
+        'lib/',
+      ]);
+      expect(handleConfigGet({ projectRoot }, 'business_critical_paths').envelope.data.value).toEqual([
+        'onboarding',
+        'login',
+        'checkout',
+      ]);
+    });
+
+    test('keeps a numeric-looking string key a string', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-'));
+      handleConfigSet({ projectRoot }, 'project_name', '12345');
+      expect(handleConfigGet({ projectRoot }, 'project_name').envelope.data.value).toBe('12345');
+    });
+
+    test('rejects a value that violates its declared type, with a hint', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-'));
+      const r = handleConfigSet({ projectRoot }, 'mode', 'windows');
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.ok).toBe(false);
+      expect(r.envelope.error.kind).toBe('invalid_input');
+      expect(r.envelope.hint).toMatch(/mauto schema config/);
+      // Nothing was written.
+      expect(
+        fs.existsSync(path.join(projectRoot, 'mobile-automator', 'config.json'))
+      ).toBe(false);
+    });
+
+    test('rejects a bare "null" on a non-nullable key instead of storing the string "null" (#136 fix-wave)', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-'));
+      const r = handleConfigSet({ projectRoot }, 'build_command', 'null');
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.ok).toBe(false);
+      expect(r.envelope.error.kind).toBe('invalid_input');
+      // Nothing was written.
+      expect(
+        fs.existsSync(path.join(projectRoot, 'mobile-automator', 'config.json'))
+      ).toBe(false);
+    });
+
+    test('a bare "null" on a nullable key stores JSON null', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-'));
+      const r = handleConfigSet({ projectRoot }, 'project_name', 'null');
+      expect(r.exitKind).toBe('ok');
+      expect(handleConfigGet({ projectRoot }, 'project_name').envelope.data.value).toBeNull();
+    });
+
+    test('still accepts unknown keys leniently', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-'));
+      const r = handleConfigSet({ projectRoot }, 'team_convention', 'we test on Pixel 7');
+      expect(r.exitKind).toBe('ok');
+      expect(handleConfigGet({ projectRoot }, 'team_convention').envelope.data.value).toBe(
+        'we test on Pixel 7'
+      );
+    });
+
+    test('a rejected set against an EXISTING config leaves the file byte-identical (Minor 7)', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-'));
+      fs.mkdirSync(path.join(projectRoot, 'mobile-automator'), { recursive: true });
+      const configPath = path.join(projectRoot, 'mobile-automator', 'config.json');
+      const before = JSON.stringify({ project_name: 'Demo', mode: 'platform-aware' });
+      fs.writeFileSync(configPath, before);
+      const r = handleConfigSet({ projectRoot }, 'mode', 'windows');
+      expect(r.exitKind).toBe('invalid_input');
+      // coerce -> validate -> early return; configManager.set is the only
+      // writer, so the file on disk must not have moved at all — not even a
+      // healing rewrite (load() heals on every read, this call never reads).
+      expect(fs.readFileSync(configPath, 'utf8')).toBe(before);
+    });
+
+    test('an unrelated pre-existing bad value does not block a valid write', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-'));
+      fs.mkdirSync(path.join(projectRoot, 'mobile-automator'), { recursive: true });
+      fs.writeFileSync(
+        path.join(projectRoot, 'mobile-automator', 'config.json'),
+        JSON.stringify({ platform_details: 42 })
+      );
+      const r = handleConfigSet({ projectRoot }, 'project_name', 'Demo');
+      expect(r.exitKind).toBe('ok');
+    });
   });
 
   describe('handleGuide (raw content / fail on unknown)', () => {
@@ -609,6 +709,29 @@ describe('cli handlers', () => {
       const r = handleSchema({}, 'bogus');
       expect(r.exitKind).toBe('invalid_input');
       expect(r.envelope.error.kind).toBe('invalid_input');
+    });
+
+    test('returns raw JSON for config', () => {
+      const r = handleSchema({}, 'config');
+      expect(r.exitKind).toBe('ok');
+      expect(r.envelope).toBeUndefined();
+      const parsed = JSON.parse(r.raw);
+      expect(parsed.title).toMatch(/Config/i);
+      expect(parsed.properties.environments).toBeDefined();
+    });
+
+    test('unknown schema name lists config among the valid names', () => {
+      const r = handleSchema({}, 'bogus');
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.hint).toMatch(/config/);
+    });
+
+    test('the config set rejection hint points at a command that works', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-'));
+      const rejected = handleConfigSet({ projectRoot }, 'mode', 'windows');
+      expect(rejected.envelope.hint).toMatch(/mauto schema config/);
+      // The command that hint names must actually succeed.
+      expect(handleSchema({}, 'config').exitKind).toBe('ok');
     });
   });
 

@@ -24,7 +24,7 @@ Any AI agent (Claude Code, Cursor, Gemini CLI, Copilot, and more) drives the wor
 
 - `mauto guide <generate|execute|setup>` — task-specific reasoning prose
 - `mauto bootstrap` — verb map + invariants
-- `mauto schema <scenario|result>` — the JSON schemas
+- `mauto schema <scenario|result|config>` — the JSON schemas
 
 `mauto init --agent <host>` installs native Agent Skills per host so the agent knows when to pull each guide.
 

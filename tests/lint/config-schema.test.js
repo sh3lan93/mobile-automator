@@ -1,0 +1,119 @@
+'use strict';
+
+// Structural guard: the config schema, the guide placeholder table, the
+// scaffold skeleton, the shipped fixtures, and the setup guide prose must
+// agree on what type each config key holds. #136 happened because that
+// knowledge was duplicated across modules and drifted. It fails HERE now.
+
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
+const { LIST_KEY_PATHS, subschemaAt, declaredTypesAt, validateAt } = require('../../src/config/schema');
+const { normalizeConfig } = require('../../src/config/coerce');
+const { PLACEHOLDER_KEYS } = require('../../src/guide/placeholders');
+const { scaffold } = require('../../src/setup/scaffold');
+
+const REPO = path.join(__dirname, '..', '..');
+const schema = require('../../src/schemas/config_schema.json');
+
+const guideFiles = ['setup.aware.md', 'setup.agnostic.md'].map((f) => ({
+  name: f,
+  text: fs.readFileSync(path.join(REPO, 'src', 'guide', 'content', f), 'utf8'),
+}));
+
+describe('config schema — structural agreement', () => {
+  test('every join:true placeholder key resolves to an array-typed schema path', () => {
+    for (const [name, spec] of Object.entries(PLACEHOLDER_KEYS)) {
+      if (!spec.join) continue;
+      // At least one of the candidate config paths must be declared as a list;
+      // otherwise the placeholder joins something the schema says is a scalar.
+      const arrayPaths = spec.keys.filter((k) => declaredTypesAt(k).includes('array'));
+      expect({ placeholder: name, arrayPaths }).toEqual({
+        placeholder: name,
+        arrayPaths: expect.arrayContaining([expect.any(String)]),
+      });
+      // And no candidate path may be declared as a non-array scalar.
+      for (const k of spec.keys) {
+        const types = declaredTypesAt(k);
+        if (types.length === 0) continue; // undeclared candidate paths are fine
+        expect(types).toContain('array');
+      }
+    }
+  });
+
+  test('every declared leaf under `properties` (walking nested objects) has a non-empty declaredTypesAt', () => {
+    // Deliberately does NOT resolve `$ref` at all — it only recurses into a
+    // child that carries an INLINE `properties` (the "app"/"knowledge"
+    // nested-object shape). Every other property (however many `$ref` hops
+    // away its real type sits) is asserted purely through the production
+    // `declaredTypesAt`. This is what makes the guard independent of
+    // `deref`'s own walk: a multi-hop `$ref`, a `patternProperties`, or an
+    // `allOf`/`anyOf` combinator all land here as "a declared key whose
+    // type must still resolve to something" rather than being silently
+    // skipped because some walker doesn't model that construct.
+    function collectDeclaredPaths(node, prefix, out) {
+      if (!node || !node.properties) return out;
+      for (const [name, child] of Object.entries(node.properties)) {
+        const childPath = prefix ? `${prefix}.${name}` : name;
+        out.push(childPath);
+        if (child && child.properties) collectDeclaredPaths(child, childPath, out);
+      }
+      return out;
+    }
+
+    const declaredPaths = collectDeclaredPaths(schema, '', []);
+    expect(declaredPaths.length).toBeGreaterThan(0);
+    for (const key of declaredPaths) {
+      expect({ key, types: declaredTypesAt(key) }).toEqual({
+        key,
+        types: expect.arrayContaining([expect.any(String)]),
+      });
+    }
+
+    // Sanity check: LIST_KEY_PATHS must actually contain a known array-typed
+    // key, not just be non-empty by accident.
+    expect(LIST_KEY_PATHS).toEqual(expect.arrayContaining(['environments']));
+  });
+
+  describe.each(['platform-aware', 'platform-agnostic'])('mode: %s', (mode) => {
+    test('the fresh scaffold skeleton conforms to the schema', () => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-lint-'));
+      scaffold(root, { mode });
+      const cfg = JSON.parse(
+        fs.readFileSync(path.join(root, 'mobile-automator', 'config.json'), 'utf8')
+      );
+      for (const key of Object.keys(cfg)) {
+        const { valid, errors } = validateAt(key, cfg[key]);
+        expect({ key, valid, errors }).toEqual({ key, valid: true, errors: [] });
+      }
+    });
+  });
+
+  test('the shipped config fixtures conform once healed', () => {
+    for (const name of ['config.platform-aware.json', 'config.platform-agnostic.json']) {
+      const raw = JSON.parse(fs.readFileSync(path.join(REPO, 'tests', 'fixtures', name), 'utf8'));
+      const healed = normalizeConfig(raw);
+      for (const key of Object.keys(healed)) {
+        const { valid, errors } = validateAt(key, healed[key]);
+        expect({ name, key, valid, errors }).toEqual({ name, key, valid: true, errors: [] });
+      }
+    }
+  });
+
+  describe.each(guideFiles)('$name', ({ text }) => {
+    test('every literal `mauto config set <key>` names a schema-declared key', () => {
+      // Matches `mauto config set some_key` but skips the generic
+      // `mauto config set <key> <value>` template form.
+      const found = [...text.matchAll(/mauto config set ([a-z_][a-z0-9_.]*)/g)].map((m) => m[1]);
+      expect(found.length).toBeGreaterThan(0);
+      const undeclared = [...new Set(found)].filter((k) => subschemaAt(k) === null);
+      expect(undeclared).toEqual([]);
+    });
+
+    test('the guide never tells the agent a list key holds a string', () => {
+      // Guard against prose regressing to "persist a comma-separated string".
+      expect(text).not.toMatch(/comma-separated string/i);
+    });
+  });
+});

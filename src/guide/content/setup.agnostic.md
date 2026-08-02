@@ -12,7 +12,7 @@ Every analysis result is stored in the workspace config:
 mauto config set <key> <value>
 ```
 
-For list-valued keys, pass a comma-separated value. Confirm uncertain values with the user before persisting; when a value truly cannot be inferred, ask the user directly and persist their answer.
+For list-valued keys (`environments`, `protected_directories`, `business_critical_paths`), pass a comma-separated value — it is stored as a JSON list. A JSON array is accepted too. Run `mauto schema config` to see the declared type of any key. Confirm uncertain values with the user before persisting; when a value truly cannot be inferred, ask the user directly and persist their answer.
 
 ## 1. Project basics
 
@@ -22,7 +22,7 @@ For list-valued keys, pass a comma-separated value. Confirm uncertain values wit
 ## 2. Business knowledge
 
 - **Business domain** — read `README.md`, app-store description, or the app display name to infer a one-sentence domain description. If you cannot tell, ask the user. Persist: `mauto config set business_domain "<one sentence>"`.
-- **Business-critical paths** — identify the most important user flows (onboarding, login, checkout, payment, search, profile, …) from navigation/route definitions, screen/page definitions, and feature structure. Confirm the list with the user. Persist a comma-separated value: `mauto config set business_critical_paths "<onboarding, login, checkout>"`.
+- **Business-critical paths** — identify the most important user flows (onboarding, login, checkout, payment, search, profile, …) from navigation/route definitions, screen/page definitions, and feature structure. Confirm the list with the user. Persist a comma-separated value (stored as a list): `mauto config set business_critical_paths "<onboarding, login, checkout>"`.
 
 ## 3. Loading indicators (semantic descriptions)
 
@@ -36,7 +36,7 @@ Ask the user to describe it if you cannot infer it from the UI. Persist the desc
 
 ## 4. Protected directories
 
-List the source directories the QA tooling must NEVER modify (it operates on test artifacts, not source code). Auto-detect common source roots that exist in the project (e.g. `src/`, `lib/`, app/module source trees), confirm with the user, then persist a comma-separated value: `mauto config set protected_directories "<src/, lib/>"`.
+List the source directories the QA tooling must NEVER modify (it operates on test artifacts, not source code). Auto-detect common source roots that exist in the project (e.g. `src/`, `lib/`, app/module source trees), confirm with the user, then persist a comma-separated value (stored as a list): `mauto config set protected_directories "<src/, lib/>"`.
 
 ## 5. Environments (optional)
 

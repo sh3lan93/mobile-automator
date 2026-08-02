@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [0.21.1]
+
+### 🐛 Fixed
+
+- **Workspace config values are now typed.** `mauto config set environments "a,b"` stored the literal string `"a,b"` instead of a list, because `config set` had no idea what shape any key held — it opportunistically `JSON.parse`d and fell back to the raw string, while the setup guide told the agent to pass a comma-separated value. The same defect hit `protected_directories` and `business_critical_paths`, and the same untyped handler retyped scalars (`config set project_name 12345` stored a number). A new `src/schemas/config_schema.json` declares the type of every known key; `config set` now coerces the raw argument to the declared type (comma-separated *or* JSON array → list; string keys stay strings) and validates it per-key before writing, returning a `hint` pointing at the new `mauto schema config` verb on a violation. Configs written by earlier versions are healed on read and rewritten in healed form by the next write. Unknown keys stay writable — the schema types keys, it does not gate them. A structural guard (`tests/lint/config-schema.test.js`) holds the schema, the placeholder table, the scaffold skeleton, the shipped fixtures, and the setup guide prose in agreement. ([#136](https://github.com/sh3lan93/mobile-automator/issues/136))
+
+### ✨ Added
+
+- `mauto schema config` prints the workspace config schema, so an agent can pull the config contract the same way it pulls `mauto schema scenario`. ([#136](https://github.com/sh3lan93/mobile-automator/issues/136))
 
 ## [0.21.0]
 

@@ -137,7 +137,7 @@ mobile-automator/
 └── results/           # execution results
 ```
 
-Scenario and result schemas: `mauto schema scenario` / `mauto schema result`.
+Scenario, result, and config schemas: `mauto schema scenario` / `mauto schema result` / `mauto schema config`.
 
 ---
 

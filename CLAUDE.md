@@ -32,6 +32,7 @@ src/
   schemas/
     scenario_schema.json      # v2.1
     result_schema.json
+    config_schema.json
 mobile-automator/             # created in user's project by `mauto setup`
   config.json  scenarios/  screenshots/  results/  .session/
   memory/                      # cross-session memory (run-history.md)
@@ -55,7 +56,7 @@ All verbs emit `{ok,data,error,hint,schema_version}`; `--human` is an opt-in rea
 - **Device actions:** `elements`, `tap`, `type <text>`, `swipe`, `press <button>`, `screenshot <path>`
 - **Author & verify:** `validate <file>`, `assert <type>`, `result add-step`, `result finalize`
 - **Workspace:** `setup`, `config get <key>`, `config set <key> <value>`
-- **Reasoning** (agent pulls on demand): `guide <topic>` (topics: `generate`, `execute`, `setup`); `bootstrap` (verb map + invariants); `schema <name>` (names: `scenario`, `result`)
+- **Reasoning** (agent pulls on demand): `guide <topic>` (topics: `generate`, `execute`, `setup`); `bootstrap` (verb map + invariants); `schema <name>` (names: `scenario`, `result`, `config`)
 - **Agent integration:** `init --agent <claude|cursor|gemini|copilot|agents|all>` (installs native Agent Skills per host + writes slash-commands/rules + MCP entry for claude/cursor); `mcp` (runs an MCP prompts server exposing guide topics)
 - **Device session:** `session start|status|end`; `devices` (list); `devices use <id>`; `devices clear`
 - **Memory:** `memory show` (read), `memory add <text> --kind <app-knowledge|preferences>` / `memory forget --kind <k> --match <substr>` (agent-authored); run-history is auto-harvested on `result finalize`

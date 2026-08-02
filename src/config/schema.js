@@ -1,0 +1,124 @@
+'use strict';
+
+// Type lookup + per-key validation for the workspace config.
+//
+// config_schema.json is the single source of truth for what shape each config
+// key holds. This module is the only reader of that fact: the coercion layer
+// asks it "what type is this key?" and the CLI asks it "is this value valid?".
+// Nothing else hard-codes a config key's type.
+//
+// Validation is deliberately PER-KEY, not whole-document: a config carrying
+// unrelated pre-existing drift must not block an unrelated `config set`.
+
+const fs = require('fs');
+const path = require('path');
+const Ajv = require('ajv');
+
+const { formatError } = require('../schemas/format-error');
+
+const CONFIG_SCHEMA_PATH = path.resolve(__dirname, '../schemas/config_schema.json');
+
+const schema = JSON.parse(fs.readFileSync(CONFIG_SCHEMA_PATH, 'utf8'));
+const ajv = new Ajv({ allErrors: true, strict: false });
+
+// Resolve a local `$ref` ("#/definitions/stringList") to a fixpoint: a
+// resolved node may itself be another `$ref` (e.g. a `$ref` to a `$ref`), so
+// one hop is not enough to agree with Ajv, which resolves refs fully. A
+// visited-set cycle guard makes a self-referential or circular `$ref` a no-op
+// (return the last-seen node) instead of an infinite loop.
+function deref(node) {
+  const seen = new Set();
+  let cur = node;
+  while (cur && typeof cur === 'object' && typeof cur.$ref === 'string') {
+    if (seen.has(cur.$ref)) return cur; // circular $ref — bail with what we have
+    seen.add(cur.$ref);
+    const parts = cur.$ref.replace(/^#\//, '').split('/');
+    let target = schema;
+    for (const part of parts) {
+      if (target == null) return cur; // unresolvable pointer — leave as-is
+      target = target[part];
+    }
+    if (!target) return cur;
+    cur = target;
+  }
+  return cur;
+}
+
+// Walk `properties` down a dotted path. Undeclared path -> null.
+function subschemaAt(dottedKey) {
+  const parts = String(dottedKey).split('.');
+  let node = schema;
+  for (const part of parts) {
+    node = deref(node);
+    if (!node || !node.properties || !node.properties[part]) return null;
+    node = node.properties[part];
+  }
+  const resolved = deref(node);
+  return resolved || null;
+}
+
+function declaredTypesAt(dottedKey) {
+  const sub = subschemaAt(dottedKey);
+  if (!sub || sub.type === undefined) return [];
+  return Array.isArray(sub.type) ? [...sub.type] : [sub.type];
+}
+
+// Every array-typed dotted path in the schema, flat and nested. Drives both
+// read-side healing and the structural lint guard.
+function collectListPaths(node, prefix, out) {
+  const resolved = deref(node);
+  if (!resolved || !resolved.properties) return out;
+  for (const [name, child] of Object.entries(resolved.properties)) {
+    const childPath = prefix ? `${prefix}.${name}` : name;
+    const rc = deref(child);
+    if (!rc) continue;
+    if (rc.type === 'array') out.push(childPath);
+    else if (rc.type === 'object' || rc.properties) collectListPaths(rc, childPath, out);
+  }
+  return out;
+}
+
+const LIST_KEY_PATHS = collectListPaths(schema, '', []);
+
+// Compiled per-path validators, built lazily and cached.
+const compiled = new Map();
+
+function validateAt(dottedKey, value) {
+  const sub = subschemaAt(dottedKey);
+  if (!sub) return { valid: true, errors: [] }; // undeclared key -> always allowed
+  if (!compiled.has(dottedKey)) {
+    // `sub` may be an object-typed node (e.g. "app", "knowledge") whose OWN
+    // top-level $ref was resolved by subschemaAt's final deref, but whose
+    // nested properties (e.g. app.ios_bundle_id) still carry an unresolved
+    // local `#/definitions/...` $ref. Compiling `sub` standalone would make
+    // that pointer resolve against `sub`'s own (definitions-less) root and
+    // throw "can't resolve reference". Carrying the root `definitions`
+    // alongside makes every local ref in this schema resolve correctly no
+    // matter how deep the compiled subschema sits.
+    compiled.set(dottedKey, ajv.compile({ ...sub, definitions: schema.definitions }));
+  }
+  const fn = compiled.get(dottedKey);
+  const valid = fn(value);
+  if (valid) return { valid: true, errors: [] };
+  // formatError prefixes a root-level error with "(root)" — meaningful for
+  // the scenario validator, whose messages otherwise carry no subject. Here
+  // the CLI message already names the key ("invalid value for config key
+  // ..."), so a bare "(root)" only duplicates it; strip that one case. A
+  // non-root instancePath (e.g. "/android_package" on an object-typed key
+  // like "app") still adds information the key name alone doesn't, so it is
+  // left as formatError produced it. Fixed here, not in format-error.js,
+  // because the scenario validator's messages depend on that prefix.
+  const errors = (fn.errors || []).map((err) => {
+    const msg = formatError(err);
+    return err.instancePath ? msg : msg.replace(/^\(root\)\s*/, '');
+  });
+  return { valid: false, errors };
+}
+
+module.exports = {
+  CONFIG_SCHEMA_PATH,
+  subschemaAt,
+  declaredTypesAt,
+  LIST_KEY_PATHS,
+  validateAt,
+};
