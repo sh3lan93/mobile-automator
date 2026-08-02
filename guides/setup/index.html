@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1995,6 +1995,9 @@ mauto<span class="w"> </span>devices<span class="w"> </span>clear<span class="w"
 <p>It scans build configuration for named environments (Gradle <code>productFlavors</code> × <code>buildTypes</code>, Xcode schemes/configs, Flutter flavors / <code>--dart-define</code>, React Native <code>.env*</code> files), deduplicates, and persists a comma-separated list:</p>
 <div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>environments<span class="w"> </span>&lt;env1,env2,...&gt;
 </code></pre></div>
+<blockquote>
+<p>List keys (<code>environments</code>, <code>protected_directories</code>, <code>business_critical_paths</code>) accept either a comma-separated value or a JSON array; both are stored as a JSON list. Run <code>mauto schema config</code> to see the declared type of every key.</p>
+</blockquote>
 <h3 id="app-package-inference">App package inference<a class="headerlink" href="#app-package-inference" title="Permanent link">&para;</a></h3>
 <p>It reads the application identifier from build files and persists it per platform:</p>
 <div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>android_package<span class="w"> </span>&lt;id&gt;<span class="w">     </span><span class="c1"># e.g. com.example.myapp</span>
@@ -2048,7 +2051,7 @@ mauto<span class="w"> </span>config<span class="w"> </span><span class="nb">set<
 </tr>
 </tbody>
 </table>
-<p>Each is persisted with <code>mauto config set &lt;key&gt; &lt;value&gt;</code> (comma-separated values for list keys), confirming uncertain values with you first.</p>
+<p>Each is persisted with <code>mauto config set &lt;key&gt; &lt;value&gt;</code> (comma-separated values for list keys), which are stored as JSON lists, confirming uncertain values with you first.</p>
 <h3 id="confirm-the-config">Confirm the config<a class="headerlink" href="#confirm-the-config" title="Permanent link">&para;</a></h3>
 <p>When analysis is done, the agent reads each value back with <code>mauto config get &lt;key&gt;</code> and presents a summary. The workspace is now configured: <code>mauto guide generate</code> and <code>mauto guide execute</code> read these values to drive authoring and execution.</p>
 <hr />
@@ -2228,7 +2231,7 @@ mauto<span class="w"> </span>config<span class="w"> </span><span class="nb">set<
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
