@@ -43,7 +43,7 @@ Any AI host — Claude Code, Cursor, Gemini CLI, Copilot, and more — pulls rea
 - `mauto guide execute` — execute scenarios, collect results
 - `mauto guide setup` — workspace setup reasoning
 - `mauto bootstrap` — verb map + invariants
-- `mauto schema <scenario|result>` — the JSON schemas
+- `mauto schema <scenario|result|config>` — the JSON schemas
 
 `mauto init --agent <host>` installs native Agent Skills per host. In Claude Code these arrive as the hyphen slash-commands `/mobile-automator-generate` and `/mobile-automator-execute`.
 

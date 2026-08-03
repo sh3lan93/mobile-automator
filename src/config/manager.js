@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { normalizeConfig } = require('./coerce');
 
 function configDir(projectRoot) {
   return path.join(projectRoot, 'mobile-automator');
@@ -16,11 +17,14 @@ function configPath(projectRoot) {
   return path.join(configDir(projectRoot), 'config.json');
 }
 
-// Parsed config object, or null when the file is absent.
+// Parsed config object, or null when the file is absent. Values written before
+// the config schema existed are healed on the way out (a comma-joined list key
+// becomes a real array) — see #136. Since set() is load-mutate-write, the next
+// write persists the healed shape.
 function load(projectRoot) {
   const p = configPath(projectRoot);
   if (!fs.existsSync(p)) return null;
-  return JSON.parse(fs.readFileSync(p, 'utf8'));
+  return normalizeConfig(JSON.parse(fs.readFileSync(p, 'utf8')));
 }
 
 // Default to platform-aware for null/empty/legacy configs.

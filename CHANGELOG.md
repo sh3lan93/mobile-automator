@@ -7,13 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
-
 ## [0.22.0]
 
 ### ✨ Added
 
 - **Reuse a prebuilt app artifact instead of rebuilding.** The `generate` and `execute` pre-flight told the agent to "Build and install the app using `{{build_command}}`" with no alternative, so a scenario run rebuilt the app even when a usable artifact already existed — typically one a previous run had just produced. The pre-flight in all four guide bodies (`generate`/`execute` × aware/agnostic) now prefers an artifact the user names, installing it with `mauto install <path>` and skipping the build. Building remains the fallback in platform-aware mode — and when no artifact is named there, the agent now checks whether the app is already installed and, if so, says so and asks whether to rebuild before proceeding, instead of rebuilding silently on the chance a previous run just built it; platform-agnostic mode (which never builds) now installs a supplied artifact instead of halting to ask the user to do it by hand. When the install fails because a different build is already on the device, the agent uninstalls, retries, and reports that app data was wiped. A new lint guard (`tests/lint/guide-artifact-reuse.test.js`, registered in `lint:guides`) asserts every emitted pre-flight offers the install branch and that the old unconditional phrasing cannot return. No new verb and no config key — `mauto install` and its `mauto bootstrap` entry already shipped in 0.21.0. ([#137](https://github.com/sh3lan93/mobile-automator/issues/137))
+
+## [0.21.1]
+
+### 🐛 Fixed
+
+- **Workspace config values are now typed.** `mauto config set environments "a,b"` stored the literal string `"a,b"` instead of a list, because `config set` had no idea what shape any key held — it opportunistically `JSON.parse`d and fell back to the raw string, while the setup guide told the agent to pass a comma-separated value. The same defect hit `protected_directories` and `business_critical_paths`, and the same untyped handler retyped scalars (`config set project_name 12345` stored a number). A new `src/schemas/config_schema.json` declares the type of every known key; `config set` now coerces the raw argument to the declared type (comma-separated *or* JSON array → list; string keys stay strings) and validates it per-key before writing, returning a `hint` pointing at the new `mauto schema config` verb on a violation. Configs written by earlier versions are healed on read and rewritten in healed form by the next write. Unknown keys stay writable — the schema types keys, it does not gate them. A structural guard (`tests/lint/config-schema.test.js`) holds the schema, the placeholder table, the scaffold skeleton, the shipped fixtures, and the setup guide prose in agreement. ([#136](https://github.com/sh3lan93/mobile-automator/issues/136))
+
+### ✨ Added
+
+- `mauto schema config` prints the workspace config schema, so an agent can pull the config contract the same way it pulls `mauto schema scenario`. ([#136](https://github.com/sh3lan93/mobile-automator/issues/136))
 
 ## [0.21.0]
 
