@@ -2747,7 +2747,7 @@ ls<span class="w"> </span>-la<span class="w"> </span>.gemini/skills/
 <p>The agent then:
 1. <strong>Selects a scenario</strong> — from <code>mobile-automator/scenarios/</code>
 2. <strong>Confirms the device</strong> — uses the pinned/visible device (<code>mauto devices</code>)
-3. <strong>Confirms app installation</strong> — builds/installs if needed
+3. <strong>Confirms app installation</strong> — installs a named artifact if you gave one; otherwise builds it in platform-aware projects, or asks you to install it yourself in platform-agnostic projects
 4. <strong>Runs the test</strong> — executes all steps and assertions</p>
 <p>Results saved to: <code>mobile-automator/results/&lt;run_id&gt;.json</code></p>
 <h3 id="step-failed-element-not-found-during-execution">"Step failed: Element not found" during execution<a class="headerlink" href="#step-failed-element-not-found-during-execution" title="Permanent link">&para;</a></h3>

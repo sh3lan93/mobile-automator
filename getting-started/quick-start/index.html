@@ -1784,7 +1784,7 @@ mauto<span class="w"> </span>init<span class="w"> </span>--agent<span class="w">
 <ol>
 <li>Lists available scenarios</li>
 <li>Confirms device connection</li>
-<li>Verifies the app is installed (or offers to build/install)</li>
+<li>Installs a named artifact if you gave one; otherwise builds and installs (platform-aware) or asks you to install the app yourself (platform-agnostic)</li>
 <li>Executes the scenario step by step</li>
 <li>Captures observations (flakiness, regressions, state context)</li>
 <li>Generates a detailed result report</li>
@@ -1848,7 +1848,10 @@ mauto<span class="w"> </span>init<span class="w"> </span>--agent<span class="w">
 <li>Built successfully in the project</li>
 <li>Installed on the connected device/simulator</li>
 </ol>
-<p>The generate workflow will prompt to build and install if needed.</p>
+<p>To reuse a build you already have, name the artifact path when you start the run
+and the agent installs it instead of rebuilding. Without an artifact, a
+platform-aware project builds and installs as needed; a platform-agnostic
+project asks you to install the app yourself.</p>
 <h3 id="tests-fail-with-element-not-found">Tests fail with "element not found"<a class="headerlink" href="#tests-fail-with-element-not-found" title="Permanent link">&para;</a></h3>
 <p>Common causes:</p>
 <ol>

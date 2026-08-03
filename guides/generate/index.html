@@ -2173,7 +2173,7 @@
 <p>Confirm with <code>mauto devices</code> (lists reachable devices)</p>
 </li>
 <li>
-<p><strong>App is installed</strong> (or allow the agent to build/install)</p>
+<p><strong>App is installed</strong> (or name a prebuilt artifact, or — in platform-aware projects — allow the agent to build)</p>
 </li>
 <li>Required for element resolution and screenshot capture</li>
 </ol>
@@ -2196,7 +2196,10 @@
 
   Ready to generate!
 </code></pre></div>
-<p>If app isn't installed, generator offers to build and install it.</p>
+<p>If the app isn't installed, name a prebuilt artifact path when you start and the
+agent installs it with <code>mauto install</code>. Without an artifact, a <strong>platform-aware</strong>
+project builds using the <code>build_command</code> from your config; a <strong>platform-agnostic</strong>
+project never builds and asks you to install the app yourself.</p>
 <hr />
 <h2 id="the-generation-workflow">The Generation Workflow<a class="headerlink" href="#the-generation-workflow" title="Permanent link">&para;</a></h2>
 <h3 id="step-0-consult-cross-session-memory">Step 0: Consult cross-session memory<a class="headerlink" href="#step-0-consult-cross-session-memory" title="Permanent link">&para;</a></h3>
