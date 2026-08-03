@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.0]
+
+### ✨ Added
+
+- **Reuse a prebuilt app artifact instead of rebuilding.** The `generate` and `execute` pre-flight told the agent to "Build and install the app using `{{build_command}}`" with no alternative, so a scenario run rebuilt the app even when a usable artifact already existed — typically one a previous run had just produced. The pre-flight in all four guide bodies (`generate`/`execute` × aware/agnostic) now prefers an artifact the user names, installing it with `mauto install <path>` and skipping the build. Building remains the fallback in platform-aware mode; platform-agnostic mode (which never builds) now installs a supplied artifact instead of halting to ask the user to do it by hand. When the install fails because a different build is already on the device, the agent uninstalls, retries, and reports that app data was wiped. A new lint guard (`tests/lint/guide-artifact-reuse.test.js`, registered in `lint:guides`) asserts every emitted pre-flight offers the install branch and that the old unconditional phrasing cannot return. No new verb and no config key — `mauto install` and its `mauto bootstrap` entry already shipped in 0.21.0. ([#137](https://github.com/sh3lan93/mobile-automator/issues/137))
+
 ## [0.21.0]
 
 ### ♻️ Changed
