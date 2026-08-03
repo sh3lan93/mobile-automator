@@ -53,7 +53,9 @@ While recording, you also **passively observe and report** (but never add extra 
 ### 1. Pre-flight
 
 - Verify a device is available with `mauto devices`.
-- Verify the app is installed on the device. If not, ask the user to install it manually before continuing. (This guide does not auto-build or auto-install.)
+- **App under test.** If the user pointed you at a prebuilt app artifact, install it with `mauto install <path>`. Otherwise verify the app is installed on the device; if it is not, ask the user to install it manually before continuing. This guide never builds.
+- If that install fails because a different build is already on the device, uninstall it with `mauto uninstall <appId>` (the app identifier from `mobile-automator/config.json` — `android_package` / `ios_bundle_id`), install again, and report that app data was wiped.
+- State which path you took before continuing.
 
 ### 2. Receive Steps from User
 

@@ -324,7 +324,7 @@ For running with different values, manually edit the JSON or wire the values in 
 The agent then:
 1. **Selects a scenario** — from `mobile-automator/scenarios/`
 2. **Confirms the device** — uses the pinned/visible device (`mauto devices`)
-3. **Confirms app installation** — builds/installs if needed
+3. **Confirms app installation** — installs a named artifact if you gave one; otherwise builds it in platform-aware projects, or asks you to install it yourself in platform-agnostic projects
 4. **Runs the test** — executes all steps and assertions
 
 Results saved to: `mobile-automator/results/<run_id>.json`
