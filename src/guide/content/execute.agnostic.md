@@ -57,7 +57,7 @@ Record each observation in the result via `mauto result add-step` so it lands in
 3. **App under test.**
    - If the user pointed you at a prebuilt app artifact, install it with `mauto install <path>`.
    - Otherwise verify the app is already installed; if it is not, halt and ask the user to install it. This guide never builds.
-   - If the install fails because a different build is already on the device, uninstall it with `mauto uninstall <appId>` (the app identifier from the scenario `metadata` or config), install again, and report that app data was wiped — a scenario whose preconditions assume existing app state may now fail for that reason.
+   - If the install fails because a different build is already on the device, uninstall it with `mauto uninstall <appId>` (the app identifier from `mobile-automator/config.json` — `android_package` / `ios_bundle_id`), install again, and report that app data was wiped — a scenario whose preconditions assume existing app state may now fail for that reason.
    - State which path you took before continuing.
 4. **Validate schema version:** read the `$schema_version` field; it must be `"2.1"`. If absent or unrecognized, report an error and halt.
 5. Validate the scenario with `mauto validate <path>` against `mauto schema scenario`.

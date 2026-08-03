@@ -95,7 +95,7 @@ The agent replays the scenario and:
 
 1. Lists available scenarios
 2. Confirms device connection
-3. Verifies the app is installed (or offers to build/install)
+3. Installs a named artifact if you gave one; otherwise builds and installs (platform-aware) or asks you to install the app yourself (platform-agnostic)
 4. Executes the scenario step by step
 5. Captures observations (flakiness, regressions, state context)
 6. Generates a detailed result report

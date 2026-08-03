@@ -21,9 +21,10 @@ function preflightSection(out) {
   // execute.agnostic.md additionally sandwiches a **Precondition
   // `device_actions`** markdown table between the pre-flight numbered list
   // and the next `### ` heading. That table's rows already contain
-  // `mauto install` / `mauto uninstall`, so without truncating before it, an
-  // unfixed pre-flight in that one file would pass this guard by accident —
-  // the table, not the fix, would supply the signal. Cut at the first
+  // `mauto install` / `mauto uninstall`. Every assertion below is `toContain`,
+  // so this truncation is fail-safe: cutting before the table can only remove
+  // signal (making the test fail on an unfixed pre-flight), never manufacture
+  // a pass — a table match could not stand in for the fix. Cut at the first
   // markdown table row (a line starting with `|`); none of the pre-flight
   // steps themselves start a line with `|` in any of the four files.
   const tableStart = section.search(/\n\|/);
@@ -39,6 +40,21 @@ describe('guide emitter — pre-flight reuses a prebuilt artifact', () => {
         expect(preflight).toContain('mauto install');
         expect(preflight).toContain('mauto uninstall');
       });
+
+      if (mode === 'platform-aware') {
+        it(`${topic} (${mode}) keeps the build fallback when no artifact is named`, () => {
+          const preflight = preflightSection(emitGuide(topic, { mode }));
+          expect(preflight).toContain('build and install with');
+          expect(preflight).toContain('ask whether to rebuild');
+        });
+      }
+
+      if (mode === 'platform-agnostic') {
+        it(`${topic} (${mode}) never builds`, () => {
+          const preflight = preflightSection(emitGuide(topic, { mode }));
+          expect(preflight).toContain('never builds');
+        });
+      }
 
       it(`${topic} (${mode}) does not instruct an unconditional build`, () => {
         const out = emitGuide(topic, { mode });
