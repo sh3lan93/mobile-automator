@@ -178,9 +178,10 @@ The app must be:
 1. Built successfully in the project
 2. Installed on the connected device/simulator
 
-The generate workflow builds and installs if needed. To reuse a build you
-already have, name the artifact path when you start the run and the agent
-installs it instead of rebuilding.
+To reuse a build you already have, name the artifact path when you start the run
+and the agent installs it instead of rebuilding. Without an artifact, a
+platform-aware project builds and installs as needed; a platform-agnostic
+project asks you to install the app yourself.
 
 ### Tests fail with "element not found"
 

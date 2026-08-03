@@ -42,7 +42,7 @@ Before running execute, ensure:
    - Confirm with `mauto devices` (lists reachable devices)
 
 4. **App is installed**
-   - Point the agent at a prebuilt artifact to install it directly, or let the agent build
+   - Point the agent at a prebuilt artifact to install it directly, or — in platform-aware projects — let the agent build
 
 ---
 
@@ -76,12 +76,15 @@ When you start execution, the agent verifies:
   Select scenario (1-3): 1
 ```
 
-If you don't name an artifact, the agent builds and installs using the
-`build_command` from `mobile-automator/config.json`. To reuse a build you
-already have, name its path when you start the run — for example, "run
-checkout_flow using build/app/outputs/flutter-apk/app-debug.apk". If a
-different build of the app is already on the device, the agent uninstalls it
-first and tells you that app data was wiped.
+If you don't name an artifact, what happens depends on your project's `mode`:
+a **platform-aware** project builds and installs using the `build_command`
+from `mobile-automator/config.json`, while a **platform-agnostic** project
+never builds — it checks whether the app is already installed and asks you to
+install it if it isn't. To reuse a build you already have, name its path when
+you start the run — for example, "run checkout_flow using
+build/app/outputs/flutter-apk/app-debug.apk". If a different build of the app
+is already on the device, the agent uninstalls it first and tells you that app
+data was wiped.
 
 ---
 
