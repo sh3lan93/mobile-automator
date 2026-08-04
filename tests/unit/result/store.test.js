@@ -228,5 +228,25 @@ describe('ResultStore', () => {
 
       expect(second.finalize({ status: 'passed' }).observations).toHaveLength(2);
     });
+
+    test('throws when message is missing rather than persisting it', () => {
+      const store = freshStore();
+      expect(() => store.addObservation({ type: 'regression', step_id: 'a' })).toThrow(/message/i);
+      expect(store.finalize({ status: 'passed' }).observations).toEqual([]);
+    });
+
+    test('throws when message is whitespace-only rather than persisting it', () => {
+      const store = freshStore();
+      expect(() => store.addObservation({ type: 'regression', step_id: 'a', message: '   ' })).toThrow(/message/i);
+      expect(store.finalize({ status: 'passed' }).observations).toEqual([]);
+    });
+
+    test('coerces a numeric message to a string', () => {
+      const store = freshStore();
+      store.addObservation({ type: 'regression', step_id: 'a', message: 42 });
+      const result = store.finalize({ status: 'passed' });
+      expect(result.observations[0].message).toBe('42');
+      expect(typeof result.observations[0].message).toBe('string');
+    });
   });
 });
