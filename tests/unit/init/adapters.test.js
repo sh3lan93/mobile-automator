@@ -5,6 +5,17 @@ const fs = require('fs');
 const path = require('path');
 
 const { ADAPTERS } = require('../../../src/init/adapters');
+const { SKILL_META } = require('../../../src/init/skill-meta');
+
+const CONTENT_DIR = path.resolve(__dirname, '../../../src/guide/content');
+
+function invariantLines(topic) {
+  return fs
+    .readFileSync(path.join(CONTENT_DIR, `${topic}.invariants.md`), 'utf8')
+    .trim()
+    .split('\n')
+    .filter((line) => line.trim() !== '');
+}
 
 function tmpRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-init-'));
@@ -31,6 +42,40 @@ describe('ADAPTERS.claude.apply', () => {
       expect(body).not.toMatch(/\bmobile_[a-z_]+/);
     }
     expect(res.written.length).toBeGreaterThanOrEqual(3);
+  });
+
+  // Drift guard for #139. A same-named skill takes precedence over a command,
+  // so `.claude/commands/*.md` only ever wins where no skill is installed —
+  // pre-skills Claude Code, or a workspace whose last `mauto init` predates the
+  // release that started writing skills. Those users must not be handed a
+  // weaker surface than the skill they are standing in for, so the command body
+  // is DERIVED from the same two sources the skill renders from. Asserting the
+  // derivation (not a substring) is what makes this a real guard: a "command is
+  // a substring of the skill" check would keep passing while the skill grew any
+  // number of new directives the command never gained.
+  test('command body is derived from the skill sources — same discovery description, same invariants', () => {
+    const projectRoot = tmpRoot();
+    ADAPTERS.claude.apply({ projectRoot });
+
+    for (const topic of ['generate', 'execute', 'setup']) {
+      const body = fs.readFileSync(
+        path.join(projectRoot, '.claude', 'commands', `mobile-automator-${topic}.md`),
+        'utf8'
+      );
+
+      // The authored "use when…" description — the only thing a host has to
+      // decide whether to surface this — must reach this path too, instead of
+      // the body's first line being truncated into a description.
+      expect(body).toContain(`description: ${SKILL_META[topic].description}`);
+
+      // Every non-negotiable directive the skill inlines is present verbatim.
+      for (const line of invariantLines(topic)) {
+        expect(body).toContain(line);
+      }
+
+      // Still points at the live, mode-aware instruction surface.
+      expect(body).toContain(`mauto guide ${topic}`);
+    }
   });
 
   test('creates .mcp.json with the mauto server entry', () => {

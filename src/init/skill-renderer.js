@@ -19,6 +19,13 @@ const TITLES = {
   setup: 'Setup',
 };
 
+// The non-negotiable directives for a topic, verbatim from disk. Exported so
+// every surface that has to carry these directives renders them from this one
+// source rather than restating them — see `claudeCommandBody` in adapters.js.
+function readInvariants(topic) {
+  return fs.readFileSync(path.join(CONTENT_DIR, `${topic}.invariants.md`), 'utf8').trim();
+}
+
 function renderSkill(topic) {
   const meta = SKILL_META[topic];
   if (!meta) {
@@ -27,9 +34,7 @@ function renderSkill(topic) {
   if (!TITLES[topic]) {
     throw new Error(`unknown skill topic title: ${topic}`);
   }
-  const invariants = fs
-    .readFileSync(path.join(CONTENT_DIR, `${topic}.invariants.md`), 'utf8')
-    .trim();
+  const invariants = readInvariants(topic);
 
   const content =
     '---\n' +
@@ -52,4 +57,4 @@ function renderSkill(topic) {
   return { dirName: meta.name, content };
 }
 
-module.exports = { renderSkill, SKILL_TOPICS };
+module.exports = { renderSkill, readInvariants, SKILL_TOPICS };

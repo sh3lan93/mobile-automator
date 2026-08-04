@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.22.1]
+
+### 🐛 Fixed
+
+- **The `.claude/commands/` fallback is no longer weaker than the skill it stands in for.** Claude Code merged custom commands into skills and gives a same-named skill precedence, so the three `mobile-automator-<topic>.md` files `mauto init --agent claude` writes are never read on a host with skills support — while `claudeCommandBody()` looked like the live instruction surface and invited edits that would silently do nothing (an early `argument-hint` proposal during [#137](https://github.com/sh3lan93/mobile-automator/issues/137) would have been exactly that no-op). The files are still written, because they *do* win in two cases — a Claude Code predating skills, and any workspace whose last `mauto init` predates 0.21.0, when skill installation was added — but on those paths they were carrying a single directive against the skill's four (no `mauto memory show`, no screenshot-backed assertions, no exact-scenario adherence) and no `description` frontmatter, so a host derived a description by truncating the body and got the mechanism ("Run `mauto guide execute` and follow it…") instead of the authored "use when…" trigger. The body is now *derived* from the same two sources the skill renders from — `SKILL_META` for the description and `<topic>.invariants.md` for the directives, via a new exported `readInvariants()` seam — so the two surfaces cannot drift and the fallback always carries the full directive set. A drift guard in `tests/unit/init/adapters.test.js` asserts the derivation rather than a substring, which is what makes it hold as the skill grows. Same seven files are written; no change to `mauto guide`. ([#139](https://github.com/sh3lan93/mobile-automator/issues/139))
+
 ## [0.22.0]
 
 ### ✨ Added

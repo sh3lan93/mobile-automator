@@ -12,7 +12,8 @@ const fs = require('fs');
 const path = require('path');
 
 const guideEmitter = require('../guide/emitter');
-const { renderSkill, SKILL_TOPICS } = require('./skill-renderer');
+const { renderSkill, readInvariants, SKILL_TOPICS } = require('./skill-renderer');
+const { SKILL_META } = require('./skill-meta');
 
 const TOPICS = ['generate', 'execute', 'setup'];
 
@@ -30,10 +31,32 @@ const SKILL_DEST = {
   agents: path.join('.agents', 'skills'),
 };
 
+// BACK-COMPAT FALLBACK — NOT the live instruction surface for a current host.
+//
+// Claude Code merged custom commands into skills, and a same-named skill wins:
+//   "if a skill and a command share the same name, the skill takes precedence"
+//   https://code.claude.com/docs/en/skills
+// We write both `mobile-automator-<topic>.md` here and a skill folder of the
+// same name, so on any host with skills support THIS FILE IS NEVER READ.
+// Editing it to change agent behavior on a current host does nothing — change
+// `<topic>.invariants.md` (directives) or the guide content (workflow) instead.
+//
+// It still wins in two places, which is why it is kept and why it must not be
+// thin: a Claude Code old enough to predate skills, and a workspace whose last
+// `mauto init` predates the release that started writing skills. On both, this
+// file IS the registered surface — so it renders from the same two sources the
+// skill does (`SKILL_META` + `<topic>.invariants.md`) and can never drift into
+// being the weaker of the two. The `description` frontmatter matters for the
+// same reason: without it a host derives one by truncating the body, which
+// yields a description of the mechanism rather than of when to use this.
 function claudeCommandBody(topic) {
   return (
-    `Run \`mauto guide ${topic}\` and follow it. ` +
-    'Drive the device only through `mauto` verbs (never assume resource-ids).\n'
+    '---\n' +
+    `description: ${SKILL_META[topic].description}\n` +
+    '---\n\n' +
+    `Run \`mauto guide ${topic}\` and follow it.\n\n` +
+    '## Non-negotiable directives (always apply)\n' +
+    `${readInvariants(topic)}\n`
   );
 }
 
