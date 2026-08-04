@@ -511,6 +511,75 @@ describe('cli handlers', () => {
       // (the contract channel) — no stderr side-effect / console spy required.
       expect(a.envelope.hint).toMatch(/corrupt/i);
     });
+
+    function tmpDeps() {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cli-'));
+      const factory = ({ runId: rid, scenarioId, projectRoot: pr }) =>
+        new (require('../../src/result/store').ResultStore)({ runId: rid, scenarioId, projectRoot: pr });
+      return { resultStoreFactory: factory, projectRoot };
+    }
+
+    test('records screenshot, error_message, typed observations and captured variables', () => {
+      const deps = tmpDeps();
+      const runId = 'run_20260804_140000';
+
+      const a = handleResultAddStep(deps, {
+        runId,
+        scenarioId: 'login_smoke',
+        stepId: 'verify_home',
+        status: 'fail',
+        screenshot: 'mobile-automator/screenshots/verify_home.png',
+        errorMessage: 'Login button not found',
+        observation: ['regression:logo is gone', 'state_context:dark mode was active'],
+        capture: ['order_id=A-1729'],
+      });
+      expect(a.exitKind).toBe('ok');
+      expect(a.envelope.data.step.screenshot).toBe('mobile-automator/screenshots/verify_home.png');
+      expect(a.envelope.data.step.error_message).toBe('Login button not found');
+
+      const f = handleResultFinalize(deps, { runId, status: 'failed', duration: 3 });
+      const types = f.envelope.data.observations.map((o) => o.type);
+      expect(types).toEqual(['regression', 'state_context']);
+      expect(f.envelope.data.observations[0].step_id).toBe('verify_home');
+      expect(f.envelope.data.captured_variables).toEqual({ order_id: 'A-1729' });
+
+      const schema = JSON.parse(fs.readFileSync(RESULT_SCHEMA_PATH, 'utf8'));
+      expect(new Ajv({ allErrors: true, strict: false }).compile(schema)(f.envelope.data)).toBe(true);
+    });
+
+    test('rejects an unknown observation type with invalid_input', () => {
+      const deps = tmpDeps();
+      const r = handleResultAddStep(deps, {
+        runId: 'run_20260804_141000', stepId: 'verify', status: 'fail',
+        observation: ['typo:something'],
+      });
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.error.kind).toBe('invalid_input');
+      expect(r.envelope.error.message).toMatch(/unknown observation type "typo"/);
+    });
+
+    test('writes NOTHING when a composite flag is invalid', () => {
+      const deps = tmpDeps();
+      const runId = 'run_20260804_142000';
+      handleResultAddStep(deps, {
+        runId, stepId: 'verify', status: 'fail',
+        screenshot: 'shot.png',
+        observation: ['typo:something'],
+      });
+      // The rejected invocation must not have half-recorded the step.
+      const file = path.join(deps.projectRoot, 'mobile-automator', 'results', `${runId}.json`);
+      expect(fs.existsSync(file)).toBe(false);
+    });
+
+    test('rejects a malformed capture spec with invalid_input', () => {
+      const deps = tmpDeps();
+      const r = handleResultAddStep(deps, {
+        runId: 'run_20260804_143000', stepId: 'verify', status: 'pass',
+        capture: ['order_id'],
+      });
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.error.message).toMatch(/<name>=<value>/);
+    });
   });
 
   // --- Slice 3: workspace + reasoning-delivery floor ----------------------

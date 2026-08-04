@@ -9,6 +9,7 @@ const selectionStore = require('./device/selection');
 const { ScenarioValidator } = require('./scenario/validator');
 const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
 const { ResultStore } = require('./result/store');
+const { OBSERVATION_TYPES, parseObservation, parseCapture, parseBool } = require('./result/flags');
 const { MemoryStore } = require('./memory/store');
 const { FILES: MEMORY_FILES, AGENT_KINDS } = require('./memory/paths');
 const { validateEntryText, MAX_ENTRY_LEN } = require('./memory/entries');
@@ -445,21 +446,68 @@ async function handleAssert({ deviceBridge }, type, flags = {}) {
   };
 }
 
+// Collect a repeatable flag's values into an array (commander's collector).
+const collect = (value, previous) => previous.concat([value]);
+
 function handleResultAddStep({ resultStoreFactory, projectRoot }, opts) {
-  const { runId, scenarioId, stepId, status, attempts } = opts;
+  const { runId, scenarioId, stepId, status, attempts, screenshot, errorMessage } = opts;
   if (!runId || !stepId || !status) {
     return {
       envelope: fail('invalid_input', '--run-id, --step-id and --status are required', null),
       exitKind: 'invalid_input',
     };
   }
+
+  // Parse every composite flag BEFORE touching the store: a half-recorded step
+  // (screenshot persisted, observation rejected) leaves the agent unable to
+  // tell which half landed, so validation is all-or-nothing.
+  const observations = [];
+  for (const spec of opts.observation || []) {
+    const parsed = parseObservation(spec);
+    if (parsed.error) {
+      return {
+        envelope: fail('invalid_input', parsed.error, `Valid types: ${OBSERVATION_TYPES.join(' | ')}.`),
+        exitKind: 'invalid_input',
+      };
+    }
+    observations.push({ ...parsed.value, step_id: stepId });
+  }
+
+  const captures = [];
+  for (const spec of opts.capture || []) {
+    const parsed = parseCapture(spec);
+    if (parsed.error) {
+      return {
+        envelope: fail('invalid_input', parsed.error, 'Use --capture <name>=<value>.'),
+        exitKind: 'invalid_input',
+      };
+    }
+    captures.push(parsed.value);
+  }
+
   const store = resultStoreFactory({ runId, scenarioId, projectRoot });
   const step = store.addStep({
     step_id: stepId,
     status,
     attempts: attempts === undefined ? 1 : Number(attempts),
+    screenshot: screenshot === undefined ? null : screenshot,
+    error_message: errorMessage === undefined ? null : errorMessage,
   });
-  return { envelope: ok({ run_id: runId, step }, storeHint(store)), exitKind: 'ok' };
+  for (const obs of observations) store.addObservation(obs);
+  for (const cap of captures) store.captureVariable(cap.name, cap.value);
+
+  return {
+    envelope: ok(
+      {
+        run_id: runId,
+        step,
+        observations,
+        captured_variables: Object.fromEntries(captures.map((c) => [c.name, c.value])),
+      },
+      storeHint(store)
+    ),
+    exitKind: 'ok',
+  };
 }
 
 function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectRoot }, opts) {
@@ -1116,6 +1164,15 @@ function buildProgram(deps = {}) {
     .requiredOption('--step-id <id>', 'step identifier')
     .requiredOption('--status <s>', 'pass | fail | skipped | error')
     .option('--attempts <n>', 'number of attempts (>1 records flakiness on pass)')
+    .option('--screenshot <path>', 'path to the screenshot backing this step')
+    .option('--error-message <text>', 'diagnostic detail for a failed step')
+    .option(
+      '--observation <type:message>',
+      `typed observation (${OBSERVATION_TYPES.join(' | ')}); repeatable`,
+      collect,
+      []
+    )
+    .option('--capture <name=value>', 'captured variable; repeatable', collect, [])
     .action(withEnvelope((opts) => {
       const r = handleResultAddStep(
         { resultStoreFactory, projectRoot },
@@ -1125,6 +1182,10 @@ function buildProgram(deps = {}) {
           stepId: opts.stepId,
           status: opts.status,
           attempts: opts.attempts,
+          screenshot: opts.screenshot,
+          errorMessage: opts.errorMessage,
+          observation: opts.observation,
+          capture: opts.capture,
         }
       );
       emit(r, humanFlag());
