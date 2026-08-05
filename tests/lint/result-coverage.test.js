@@ -118,6 +118,15 @@ describe('result coverage — schema ↔ store ↔ verbs', () => {
     }
   });
 
+  test('the legacy step-level observations string is marked deprecated', () => {
+    const legacy = resolvePointer('/properties/steps_executed/items/properties/observations');
+    // Kept for backward compatibility with result files written before #140,
+    // but the typed root array is the single source of truth — no new writer.
+    expect(legacy.type).toEqual(['string', 'null']);
+    expect(legacy.description).toMatch(/deprecated/i);
+    expect(legacy.description).toMatch(/observations/);
+  });
+
   // Fields whose store-level write cannot be proven by a source substring
   // (writeCheck: 'behavioral' — see capability-catalog.js) are instead proven
   // here by actually running a ResultStore against a throwaway project root

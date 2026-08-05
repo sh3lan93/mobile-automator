@@ -132,7 +132,7 @@
           },
           "observations": {
             "type": ["string", "null"],
-            "description": "Observer trait notes (regression, flakiness, state context)"
+            "description": "DEPRECATED — use the run-level `observations` array, which is typed. Retained for result files written before typed observations; no writer populates it."
           }
         }
       }
