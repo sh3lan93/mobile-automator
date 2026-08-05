@@ -585,6 +585,11 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
     status,
     durationSeconds: duration === undefined ? 0 : Number(duration),
     metadata,
+    // Undefined when --summary is omitted; ResultStore.finalize's own
+    // `summary || <generated default>` already treats that as "no override",
+    // so no provided-keys-only guard is needed here (unlike metadata, whose
+    // sub-fields default independently to 'unknown').
+    summary: opts.summary,
   });
 
   // Auto-harvest into cross-session memory. This is best-effort: a memory
@@ -1295,6 +1300,7 @@ function buildProgram(deps = {}) {
     .option('--device-model <v>', 'device the run executed on')
     .option('--api-level <v>', 'OS API level / version')
     .option('--environment <v>', "target environment (e.g. 'staging')")
+    .option('--summary <text>', 'override the generated one-line result summary')
     .action(withEnvelope((opts) => {
       const r = handleResultFinalize(
         { resultStoreFactory, memoryStoreFactory, projectRoot },
@@ -1307,6 +1313,7 @@ function buildProgram(deps = {}) {
           deviceModel: opts.deviceModel,
           apiLevel: opts.apiLevel,
           environment: opts.environment,
+          summary: opts.summary,
         }
       );
       emit(r, humanFlag());

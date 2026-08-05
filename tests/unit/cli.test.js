@@ -627,6 +627,24 @@ describe('cli handlers', () => {
       const f = handleResultFinalize(deps, { runId, status: 'passed', duration: 1 });
       expect(f.envelope.data.metadata.device_model).toBe('unknown');
     });
+
+    test('a supplied --summary overrides the generated summary line', () => {
+      const deps = tmpDeps();
+      const runId = 'run_20260805_180000';
+      handleResultAddStep(deps, { runId, scenarioId: 's', stepId: 'launch', status: 'pass' });
+      const f = handleResultFinalize(deps, {
+        runId, status: 'passed', duration: 2, summary: 'Login flow verified end to end.',
+      });
+      expect(f.envelope.data.summary).toBe('Login flow verified end to end.');
+    });
+
+    test('omitting --summary keeps the generated default summary', () => {
+      const deps = tmpDeps();
+      const runId = 'run_20260805_181000';
+      handleResultAddStep(deps, { runId, scenarioId: 's', stepId: 'launch', status: 'pass' });
+      const f = handleResultFinalize(deps, { runId, status: 'passed', duration: 2 });
+      expect(f.envelope.data.summary).toBe('passed: 0/0 assertion(s) passed across 1 step(s).');
+    });
   });
 
   describe('handleResultAddAssertion', () => {
