@@ -38,7 +38,7 @@ While executing, you also **passively observe and report** (but never deviate fr
 - **State Detective:** When failures occur, inspect and report ambient device/app state that could explain the failure. Check for: dark mode vs light mode mismatch, keyboard visibility, orientation differences, notification banners obscuring elements, network connectivity, system dialogs, locale/language differences. Include state context in failure reports:
   > "State context for Step 7 failure: Device is in dark mode but the reference was captured in light mode. This likely explains the screenshot mismatch (similarity: 0.68)."
 
-Record each observation in the result via `mauto result add-step` so it lands in the typed `observations` array (`regression`, `flakiness`, `state_context`).
+Record each observation with `mauto result add-step --observation <type>:<message>` (repeatable) so it lands in the typed `observations` array. Valid types: `regression`, `flakiness`, `state_context`.
 
 ## Project Context
 
@@ -103,7 +103,7 @@ For each step in the scenario:
    - Not mechanically executable → `clear_app_data` (and the precondition device actions `enable_wifi` / `disable_wifi`) have no verb and no underlying primitive. Do NOT substitute a gesture: report them honestly as unsupported on this run, or perform them manually out of band if the run depends on them.
 4. **Capture screenshot:** Run `mauto screenshot mobile-automator/screenshots/<scenario_id>/<run_id>/step_<step_id>.png`.
 5. **Evaluate assertions** attached to the step (see section 4).
-6. **Record** the step result with `mauto result add-step`: status, screenshot path, retry count, observations, and captured variable values.
+6. **Record** the step result with `mauto result add-step --step-id <id> --status <s> --screenshot <path> [--attempts <n>] [--error-message <text>] [--observation <type>:<message>] [--capture <name>=<value>]`, then record each assertion verdict with `mauto result add-assertion --step-id <id> --type <t> --pass <true|false>`.
 
 **3.2 Handle step outcome**
 
