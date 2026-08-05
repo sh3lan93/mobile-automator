@@ -38,7 +38,7 @@ While executing, you also **passively observe and report** (but never deviate fr
 - **State Detective:** When failures occur, inspect and report ambient device/app state that could explain the failure. Check for: dark mode vs light mode mismatch, keyboard visibility, orientation differences, notification banners obscuring elements, network connectivity, system dialogs, locale/language differences. Include state context in failure reports:
   > "State context for Step 7 failure: Device is in dark mode but the reference was captured in light mode. This likely explains the screenshot mismatch (similarity: 0.68)."
 
-Record each observation in the result via `mauto result add-step` so it lands in the typed `observations` array (`regression`, `flakiness`, `state_context`).
+Record each observation with `mauto result add-step --observation <type>:<message>` (repeatable) so it lands in the typed `observations` array. Valid types: `regression`, `flakiness`, `state_context`.
 
 ## Project Context
 
@@ -103,11 +103,11 @@ For each step in the scenario:
    - Not mechanically executable → `clear_app_data` (and the precondition device actions `enable_wifi` / `disable_wifi`) have no verb and no underlying primitive. Do NOT substitute a gesture: report them honestly as unsupported on this run, or perform them manually out of band if the run depends on them.
 4. **Capture screenshot:** Run `mauto screenshot mobile-automator/screenshots/<scenario_id>/<run_id>/step_<step_id>.png`.
 5. **Evaluate assertions** attached to the step (see section 4).
-6. **Record** the step result with `mauto result add-step`: status, screenshot path, retry count, observations, and captured variable values.
+6. **Record** the step result with `mauto result add-step --step-id <id> --status <s> --screenshot <path> [--attempts <n>] [--error-message <text>] [--observation <type>:<message>] [--capture <name>=<value>]`, then record each assertion verdict with `mauto result add-assertion --step-id <id> --type <t> --pass <true|false> --message <text> [--expected <v> --actual <v>]`. `--message` carries the justification you already formed — for Tier-2 verdicts it IS the evidence, so never omit it; add `--expected`/`--actual` whenever the assertion compares a specific value.
 
 **3.2 Handle step outcome**
 
-- `"fail"` (default): capture a failure screenshot, apply the Flakiness Detector logic, record as failed.
+- `"fail"` (default): capture a failure screenshot, apply the Flakiness Detector logic, record as failed via `mauto result add-step --status fail --error-message <text> --screenshot <path>`.
 - `"skip"`: mark `skipped`, continue silently, do NOT fail the scenario.
 - `"retry"`: apply `retry_policy` (up to `max_attempts`, waiting `backoff_ms` between attempts). If all retries fail → treat as `"fail"`.
 - `optional: true` overrides a failure to `"skip"`.
@@ -155,14 +155,13 @@ For each: take a screenshot, visually analyze it, and report pass/fail with a cl
 
 ### 5. Generate the Result Report
 
-Obtain the result schema by running `mauto schema result`, then finalize the run with `mauto result finalize` (writing to `mobile-automator/results/<run_id>.json`). Populate:
+Obtain the result schema by running `mauto schema result`, then finalize the run with `mauto result finalize` (writing to `mobile-automator/results/<run_id>.json`), passing the run metadata you already know (`--device-model`, `--api-level`, `--app-version`, `--environment`) — the timestamp is filled in for you, and omitted fields are recorded as `unknown`. You may supply your own narrative with `--summary <text>`; omitting it keeps the generated default summary line. The finalized result assembles what the earlier `add-step`/`add-assertion` calls already recorded:
 
-- `run_id`, `scenario_id`, `started_at`, `ended_at`, `status`.
-- `device`: model, OS version, platform.
-- `steps_executed[]`: per-step status, retry_count, step_duration_ms, observations, captured variable values, sub-steps.
-- `assertion_results[]`: per-assertion result with evidence pointers.
-- `observations[]`: typed observations (`regression`, `flakiness`, `state_context`).
-- `captured_variables`: final values of any session variables.
+- `run_id`, `scenario_id`, `status`, `duration_seconds`.
+- `steps_executed[]`: per-step status, retry_count, screenshot, error_message.
+- `assertion_results[]`: per-assertion verdict, message, expected/actual.
+- `observations[]`: typed observations (`regression`, `flakiness`, `state_context`) recorded via `--observation` on `add-step`.
+- `captured_variables`: values recorded via `--capture` on `add-step`.
 
 ### 6. Flakiness & Resolution Reporting
 

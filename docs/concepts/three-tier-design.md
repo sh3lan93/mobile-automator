@@ -80,7 +80,7 @@ Provide a deterministic, host-agnostic surface. Each verb performs one mechanica
 ### Verb groups
 
 - **Device actions:** `elements`, `tap`, `type <text>`, `swipe`, `press <button>`, `screenshot <path>`, `long-press`, `double-tap`, `launch <appId>`, `install <path>`, `uninstall <appId>`, `open-url <url>`, `orientation <portrait|landscape>`
-- **Author & verify:** `validate <file>`, `assert <type>`, `result add-step`, `result finalize`
+- **Author & verify:** `validate <file>`, `assert <type>`, `result add-step`, `result add-assertion`, `result finalize`
 - **Workspace:** `setup`, `config get <key>`, `config set <key> <value>`
 - **Reasoning:** `guide <topic>`, `bootstrap`, `schema <name>`
 - **Agent integration:** `init --agent <host>`, `mcp`

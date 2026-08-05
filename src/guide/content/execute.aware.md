@@ -36,7 +36,7 @@ While executing, you also **passively observe and report** (but never deviate fr
 - **State Detective:** When failures occur, inspect and report ambient device/app state that could explain the failure. Check for: dark mode vs light mode mismatch, keyboard visibility, orientation differences, notification banners obscuring elements, network connectivity, system dialogs (low battery, update prompts), locale/language differences. Include state context in failure reports:
   > "State context for Step 7 failure: Device is in dark mode but the reference was captured in light mode. This likely explains the screenshot mismatch (similarity: 0.68)."
 
-Record each observation in the result via `mauto result add-step` so it lands in the typed `observations` array (`regression`, `flakiness`, `state_context`).
+Record each observation with `mauto result add-step --observation <type>:<message>` (repeatable) so it lands in the typed `observations` array. Valid types: `regression`, `flakiness`, `state_context`.
 
 ## Tech Stack & Environment
 
@@ -95,7 +95,7 @@ For each step in the scenario:
 2. **Execute the action** using the appropriate `mauto` verb (see the action mapping table below). Resolve coordinates for taps from the `mauto elements` output and pass them with `mauto tap --at <x,y>`.
 3. **Capture screenshot:** Run `mauto screenshot mobile-automator/results/<run_id>/screenshots/step_<step_id>.png` (where `step_id` is the step's named string ID, e.g., `step_tap_login.png`).
 4. **Verify state:** Compare what you see against the step's `expected_state` description.
-5. **Record progress:** Append the step result with `mauto result add-step` (status, screenshot path, retry count, observations) and report:
+5. **Record progress:** Append the step result with `mauto result add-step --step-id <id> --status <s> --screenshot <path> [--attempts <n>] [--error-message <text>] [--observation <type>:<message>] [--capture <name>=<value>]`, then record each assertion verdict with `mauto result add-assertion --step-id <id> --type <t> --pass <true|false> --message <text> [--expected <v> --actual <v>]`. `--message` carries the justification you already formed comparing `expected_state` against what you observed — for Tier-2 verdicts it IS the evidence, so never omit it; add `--expected`/`--actual` whenever the assertion compares a specific value. Report:
    > "Step tap_login (4/12): Tapped 'Login' — login form displayed (passed)"
 
 **Action-to-verb mapping:**
@@ -140,7 +140,7 @@ For each step in the scenario:
 **If the step fails:**
 
 - Check the `on_failure` field:
-  - `"fail"` (default): capture a failure screenshot with `mauto screenshot <path>`. Check for flakiness indicators (loading not complete, animation in progress) and apply the Flakiness Detector logic. Record as failed via `mauto result add-step`. Continue to the next step.
+  - `"fail"` (default): capture a failure screenshot with `mauto screenshot <path>`. Check for flakiness indicators (loading not complete, animation in progress) and apply the Flakiness Detector logic. Record as failed via `mauto result add-step --status fail --error-message <text> --screenshot <path>`. Continue to the next step.
   - `"skip"`: mark the step as `skipped`. Continue silently. Do NOT mark the scenario as failed.
   - `"retry"`: apply `retry_policy` (attempt up to `max_attempts` total, waiting `backoff_ms` between each). If all retries fail → treat as `"fail"`.
 
@@ -162,7 +162,8 @@ When executing a `capture_value` action:
 1. Locate the element described in `target` with `mauto elements`.
 2. Extract its text content.
 3. Store it in the session variable map under the step's `capture_to` name: `variables[<capture_to>] = <extracted_text>`.
-4. Report: "Captured `capture_to` = '<value>'".
+4. Also record it in the result file with `--capture <capture_to>=<extracted_text>` on that step's `mauto result add-step` call — the in-memory session variable map alone never reaches the result file; only the flag does.
+5. Report: "Captured `capture_to` = '<value>'".
 
 ### 5. Validate Assertions (27 types)
 
@@ -218,7 +219,7 @@ For all Tier 2 assertions: take a screenshot, visually analyze it, and report pa
 
 ### 6. Generate the Result Report
 
-Obtain the result schema by running `mauto schema result`, then finalize the run with `mauto result finalize` (writing to `mobile-automator/results/<run_id>.json`). Auto-populate metadata (device model, API level, timestamps) from the current session. The result carries typed `observations` (`regression`, `flakiness`, `state_context`) gathered by the Observer traits above.
+Obtain the result schema by running `mauto schema result`, then finalize the run with `mauto result finalize` (writing to `mobile-automator/results/<run_id>.json`), passing the run metadata you already know (`--device-model`, `--api-level`, `--app-version`, `--environment`) — the timestamp is filled in for you, and omitted fields are recorded as `unknown`. You may supply your own narrative with `--summary <text>`; omitting it keeps the generated default summary line. The result carries typed `observations` (`regression`, `flakiness`, `state_context`) gathered by the Observer traits above.
 
 ### 7. Present the Summary
 

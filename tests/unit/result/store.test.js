@@ -169,4 +169,84 @@ describe('ResultStore', () => {
     // Only the canonical result file remains.
     expect(entries).toEqual([`${RUN_ID}.json`]);
   });
+
+  describe('addObservation', () => {
+    function freshStore() {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-obs-'));
+      return new ResultStore({ runId: 'run_20260804_090000', scenarioId: 'obs', projectRoot });
+    }
+
+    test('appends a typed entry to the ROOT observations array', () => {
+      const store = freshStore();
+      store.addStep({ step_id: 'verify', status: 'fail' });
+      store.addObservation({ type: 'regression', step_id: 'verify', message: 'logo is gone' });
+
+      const result = store.finalize({ status: 'failed' });
+      expect(result.observations).toContainEqual({
+        type: 'regression', step_id: 'verify', message: 'logo is gone',
+      });
+    });
+
+    test('does not touch the deprecated step-level observations string', () => {
+      const store = freshStore();
+      store.addStep({ step_id: 'verify', status: 'fail' });
+      store.addObservation({ type: 'state_context', step_id: 'verify', message: 'dark mode' });
+
+      const result = store.finalize({ status: 'failed' });
+      expect(result.steps_executed[0].observations).toBeNull();
+    });
+
+    test('defaults step_id to null when the observation is run-wide', () => {
+      const store = freshStore();
+      store.addObservation({ type: 'flakiness', message: 'network was slow throughout' });
+      expect(store.finalize({ status: 'passed' }).observations[0].step_id).toBeNull();
+    });
+
+    test('coexists with the auto-derived flakiness observation', () => {
+      const store = freshStore();
+      store.addStep({ step_id: 'tap_login', status: 'pass', attempts: 2 });
+      store.addObservation({ type: 'regression', step_id: 'tap_login', message: 'banner missing' });
+
+      const types = store.finalize({ status: 'passed' }).observations.map((o) => o.type);
+      expect(types).toEqual(['flakiness', 'regression']);
+    });
+
+    test('throws on an unknown type rather than persisting it', () => {
+      const store = freshStore();
+      expect(() => store.addObservation({ type: 'typo', message: 'x' })).toThrow(/unknown observation type/);
+      expect(store.finalize({ status: 'passed' }).observations).toEqual([]);
+    });
+
+    test('survives across store instances (one-shot CLI invocations)', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-obs-'));
+      const runId = 'run_20260804_091500';
+      new ResultStore({ runId, scenarioId: 'obs', projectRoot })
+        .addObservation({ type: 'regression', step_id: 'a', message: 'first process' });
+
+      const second = new ResultStore({ runId, scenarioId: 'obs', projectRoot });
+      second.addObservation({ type: 'state_context', step_id: 'b', message: 'second process' });
+
+      expect(second.finalize({ status: 'passed' }).observations).toHaveLength(2);
+    });
+
+    test('throws when message is missing rather than persisting it', () => {
+      const store = freshStore();
+      expect(() => store.addObservation({ type: 'regression', step_id: 'a' })).toThrow(/message/i);
+      expect(store.finalize({ status: 'passed' }).observations).toEqual([]);
+    });
+
+    test('throws when message is whitespace-only rather than persisting it', () => {
+      const store = freshStore();
+      expect(() => store.addObservation({ type: 'regression', step_id: 'a', message: '   ' })).toThrow(/message/i);
+      expect(store.finalize({ status: 'passed' }).observations).toEqual([]);
+    });
+
+    test('coerces a numeric message to a string', () => {
+      const store = freshStore();
+      store.addObservation({ type: 'regression', step_id: 'a', message: 42 });
+      const result = store.finalize({ status: 'passed' });
+      expect(result.observations[0].message).toBe('42');
+      expect(typeof result.observations[0].message).toBe('string');
+    });
+  });
 });

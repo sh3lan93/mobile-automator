@@ -88,8 +88,9 @@ Used to author scenario JSON, evaluate assertions, and assemble result files.
 |------|-------------|
 | `mauto validate <file>` | Validate a scenario JSON file against the [scenario schema](schema.md) |
 | `mauto assert <type> [--target --expected --operator --count --pattern --variable --device]` | Evaluate an assertion; mechanical types are decided by the CLI, visual types are deferred to the agent |
-| `mauto result add-step --run-id --step-id --status [--scenario-id --attempts]` | Append a step result to a run |
-| `mauto result finalize --run-id [--scenario-id --status --duration]` | Assemble the final [result file](result-schema.md) and auto-harvest memory |
+| `mauto result add-step --run-id --step-id --status [--scenario-id --attempts --screenshot --error-message --observation <type>:<message> --capture <name>=<value>]` | Append a step result to a run; `--observation` and `--capture` are repeatable |
+| `mauto result add-assertion --run-id --step-id --type --pass [--scenario-id --assertion-id --message --expected --actual]` | Record an assertion verdict against a step |
+| `mauto result finalize --run-id [--scenario-id --status --duration --app-version --device-model --api-level --environment --summary]` | Assemble the final [result file](result-schema.md) and auto-harvest memory |
 
 !!! note "`result finalize` and memory"
     On finalize, `mauto` auto-harvests typed observations into cross-session memory. This is best-effort: a memory failure never fails an otherwise-successful finalize — it folds into the envelope `hint` instead. See [Cross-Session Memory](../concepts/memory.md).

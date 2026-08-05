@@ -9,6 +9,7 @@ const selectionStore = require('./device/selection');
 const { ScenarioValidator } = require('./scenario/validator');
 const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
 const { ResultStore } = require('./result/store');
+const { OBSERVATION_TYPES, parseObservation, parseCapture, parseBool } = require('./result/flags');
 const { MemoryStore } = require('./memory/store');
 const { FILES: MEMORY_FILES, AGENT_KINDS } = require('./memory/paths');
 const { validateEntryText, MAX_ENTRY_LEN } = require('./memory/entries');
@@ -412,7 +413,7 @@ async function handlePress({ deviceBridge }, button) {
 async function handleAssert({ deviceBridge }, type, flags = {}) {
   if (!KNOWN_ASSERTION_TYPES.has(type)) {
     return {
-      envelope: fail('invalid_input', `unknown assertion type "${type}"`, 'See the executor SKILL for the supported assertion types.'),
+      envelope: fail('invalid_input', `unknown assertion type "${type}"`, 'Run `mauto schema scenario` for the supported assertion types.'),
       exitKind: 'invalid_input',
     };
   }
@@ -433,33 +434,135 @@ async function handleAssert({ deviceBridge }, type, flags = {}) {
   if (flags.variable !== undefined) assertion.variable_name = flags.variable;
 
   const r = evaluate(assertion, { elements });
+  // The verdict has to be transcribed into `result add-assertion` by the agent
+  // (assert has no run context, and Tier-2 types are not decided here at all).
+  // Emitting the exact command turns transcription into copying (#140 D1).
+  const verdict = r.needs_agent ? '<your verdict>' : String(r.pass);
+  const hint =
+    `Record it: mauto result add-assertion --run-id <run_id> --step-id <step_id> ` +
+    `--type ${r.type} --pass ${verdict} --message "<why>"`;
+
   return {
-    envelope: ok({
-      type: r.type,
-      mechanical: r.mechanical,
-      pass: r.pass,
-      needs_agent: r.needs_agent,
-      message: r.message,
-    }),
+    envelope: ok(
+      {
+        type: r.type,
+        mechanical: r.mechanical,
+        pass: r.pass,
+        needs_agent: r.needs_agent,
+        message: r.message,
+      },
+      hint
+    ),
     exitKind: 'ok',
   };
 }
 
+// Collect a repeatable flag's values into an array (commander's collector).
+const collect = (value, previous) => previous.concat([value]);
+
 function handleResultAddStep({ resultStoreFactory, projectRoot }, opts) {
-  const { runId, scenarioId, stepId, status, attempts } = opts;
+  const { runId, scenarioId, stepId, status, attempts, screenshot, errorMessage } = opts;
   if (!runId || !stepId || !status) {
     return {
       envelope: fail('invalid_input', '--run-id, --step-id and --status are required', null),
       exitKind: 'invalid_input',
     };
   }
+
+  // Parse every composite flag BEFORE touching the store: a half-recorded step
+  // (screenshot persisted, observation rejected) leaves the agent unable to
+  // tell which half landed, so validation is all-or-nothing.
+  const observations = [];
+  for (const spec of opts.observation || []) {
+    const parsed = parseObservation(spec);
+    if (parsed.error) {
+      return {
+        envelope: fail('invalid_input', parsed.error, `Valid types: ${OBSERVATION_TYPES.join(' | ')}.`),
+        exitKind: 'invalid_input',
+      };
+    }
+    observations.push({ ...parsed.value, step_id: stepId });
+  }
+
+  const captures = [];
+  for (const spec of opts.capture || []) {
+    const parsed = parseCapture(spec);
+    if (parsed.error) {
+      return {
+        envelope: fail('invalid_input', parsed.error, 'Use --capture <name>=<value>.'),
+        exitKind: 'invalid_input',
+      };
+    }
+    captures.push(parsed.value);
+  }
+
   const store = resultStoreFactory({ runId, scenarioId, projectRoot });
   const step = store.addStep({
     step_id: stepId,
     status,
     attempts: attempts === undefined ? 1 : Number(attempts),
+    screenshot: screenshot === undefined ? null : screenshot,
+    error_message: errorMessage === undefined ? null : errorMessage,
   });
-  return { envelope: ok({ run_id: runId, step }, storeHint(store)), exitKind: 'ok' };
+  // Echo what the STORE recorded, not the parsed request: if the store ever
+  // normalizes an observation (e.g. trims/derives a field), the envelope must
+  // reflect that rather than silently lying about what actually landed.
+  const recordedObservations = observations.map((obs) => store.addObservation(obs));
+  for (const cap of captures) store.captureVariable(cap.name, cap.value);
+
+  return {
+    envelope: ok(
+      {
+        run_id: runId,
+        step,
+        observations: recordedObservations,
+        captured_variables: Object.fromEntries(captures.map((c) => [c.name, c.value])),
+      },
+      storeHint(store)
+    ),
+    exitKind: 'ok',
+  };
+}
+
+// Persist an assertion verdict. Deliberately a separate verb rather than a
+// side effect of `mauto assert`: 12 of the 27 assertion types are Tier 2
+// (`needs_agent`, `pass: null`), so `assert` has no verdict to record at
+// return time, and a side effect would re-record on every retry — inflating
+// total_assertions past the scenario's actual assertion count (#140 D1).
+function handleResultAddAssertion({ resultStoreFactory, projectRoot }, opts) {
+  const { runId, scenarioId, stepId, type, pass, assertionId, message, expected, actual } = opts;
+  if (!runId || !stepId || !type || pass === undefined) {
+    return {
+      envelope: fail('invalid_input', '--run-id, --step-id, --type and --pass are required', null),
+      exitKind: 'invalid_input',
+    };
+  }
+  if (!KNOWN_ASSERTION_TYPES.has(type)) {
+    return {
+      envelope: fail(
+        'invalid_input',
+        `unknown assertion type "${type}"`,
+        'Run `mauto schema scenario` for the supported assertion types.'
+      ),
+      exitKind: 'invalid_input',
+    };
+  }
+  const verdict = parseBool(pass, '--pass');
+  if (verdict.error) {
+    return { envelope: fail('invalid_input', verdict.error, null), exitKind: 'invalid_input' };
+  }
+
+  const store = resultStoreFactory({ runId, scenarioId, projectRoot });
+  const entry = store.addAssertion({
+    step_id: stepId,
+    assertion_id: assertionId,
+    type,
+    pass: verdict.value,
+    message,
+    expected: expected === undefined ? null : expected,
+    actual: actual === undefined ? null : actual,
+  });
+  return { envelope: ok({ run_id: runId, assertion: entry }, storeHint(store)), exitKind: 'ok' };
 }
 
 function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectRoot }, opts) {
@@ -470,10 +573,26 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
       exitKind: 'invalid_input',
     };
   }
+
+  // Only provided keys: `defaultMetadata` fills the rest with 'unknown', and
+  // the result schema requires all five fields to be strings, so threading
+  // `undefined` through would break conformance.
+  const metadata = {};
+  if (opts.appVersion !== undefined) metadata.app_version = opts.appVersion;
+  if (opts.deviceModel !== undefined) metadata.device_model = opts.deviceModel;
+  if (opts.apiLevel !== undefined) metadata.api_level = opts.apiLevel;
+  if (opts.environment !== undefined) metadata.environment = opts.environment;
+
   const store = resultStoreFactory({ runId, scenarioId, projectRoot });
   const result = store.finalize({
     status,
     durationSeconds: duration === undefined ? 0 : Number(duration),
+    metadata,
+    // Undefined when --summary is omitted; ResultStore.finalize's own
+    // `summary || <generated default>` already treats that as "no override",
+    // so no provided-keys-only guard is needed here (unlike metadata, whose
+    // sub-fields default independently to 'unknown').
+    summary: opts.summary,
   });
 
   // Auto-harvest into cross-session memory. This is best-effort: a memory
@@ -1116,6 +1235,15 @@ function buildProgram(deps = {}) {
     .requiredOption('--step-id <id>', 'step identifier')
     .requiredOption('--status <s>', 'pass | fail | skipped | error')
     .option('--attempts <n>', 'number of attempts (>1 records flakiness on pass)')
+    .option('--screenshot <path>', 'path to the screenshot backing this step')
+    .option('--error-message <text>', 'diagnostic detail for a failed step')
+    .option(
+      '--observation <type:message>',
+      `typed observation (${OBSERVATION_TYPES.join(' | ')}); repeatable`,
+      collect,
+      []
+    )
+    .option('--capture <name=value>', 'captured variable; repeatable', collect, [])
     .action(withEnvelope((opts) => {
       const r = handleResultAddStep(
         { resultStoreFactory, projectRoot },
@@ -1125,6 +1253,40 @@ function buildProgram(deps = {}) {
           stepId: opts.stepId,
           status: opts.status,
           attempts: opts.attempts,
+          screenshot: opts.screenshot,
+          errorMessage: opts.errorMessage,
+          observation: opts.observation,
+          capture: opts.capture,
+        }
+      );
+      emit(r, humanFlag());
+    }));
+
+  result
+    .command('add-assertion')
+    .description('Record an assertion verdict against a step')
+    .requiredOption('--run-id <id>', 'run identifier (run_YYYYMMDD_HHMMSS)')
+    .option('--scenario-id <id>', 'scenario identifier')
+    .requiredOption('--step-id <id>', 'step this assertion belongs to')
+    .requiredOption('--type <t>', 'assertion type (see `mauto schema scenario`)')
+    .requiredOption('--pass <bool>', 'true | false — the verdict being recorded')
+    .option('--assertion-id <id>', 'stable assertion identifier (derived when omitted)')
+    .option('--message <text>', 'human-readable justification for the verdict')
+    .option('--expected <v>', 'expected value')
+    .option('--actual <v>', 'observed value')
+    .action(withEnvelope((opts) => {
+      const r = handleResultAddAssertion(
+        { resultStoreFactory, projectRoot },
+        {
+          runId: opts.runId,
+          scenarioId: opts.scenarioId,
+          stepId: opts.stepId,
+          type: opts.type,
+          pass: opts.pass,
+          assertionId: opts.assertionId,
+          message: opts.message,
+          expected: opts.expected,
+          actual: opts.actual,
         }
       );
       emit(r, humanFlag());
@@ -1137,6 +1299,11 @@ function buildProgram(deps = {}) {
     .option('--scenario-id <id>', 'scenario identifier')
     .option('--status <s>', 'passed | failed | error')
     .option('--duration <secs>', 'total duration in seconds')
+    .option('--app-version <v>', 'app version under test')
+    .option('--device-model <v>', 'device the run executed on')
+    .option('--api-level <v>', 'OS API level / version')
+    .option('--environment <v>', "target environment (e.g. 'staging')")
+    .option('--summary <text>', 'override the generated one-line result summary')
     .action(withEnvelope((opts) => {
       const r = handleResultFinalize(
         { resultStoreFactory, memoryStoreFactory, projectRoot },
@@ -1145,6 +1312,11 @@ function buildProgram(deps = {}) {
           scenarioId: opts.scenarioId,
           status: opts.status,
           duration: opts.duration,
+          appVersion: opts.appVersion,
+          deviceModel: opts.deviceModel,
+          apiLevel: opts.apiLevel,
+          environment: opts.environment,
+          summary: opts.summary,
         }
       );
       emit(r, humanFlag());
@@ -1385,6 +1557,7 @@ module.exports = {
   handleOrientation,
   handleAssert,
   handleResultAddStep,
+  handleResultAddAssertion,
   handleResultFinalize,
   handleSetup,
   handleConfigGet,

@@ -54,7 +54,7 @@ Agnostic mode maps OS gestures to four semantic actions resolved to per-platform
 All verbs emit `{ok,data,error,hint,schema_version}`; `--human` is an opt-in readable flag.
 
 - **Device actions:** `elements`, `tap`, `type <text>`, `swipe`, `press <button>`, `screenshot <path>`
-- **Author & verify:** `validate <file>`, `assert <type>`, `result add-step`, `result finalize`
+- **Author & verify:** `validate <file>`, `assert <type>`, `result add-step`, `result add-assertion`, `result finalize`
 - **Workspace:** `setup`, `config get <key>`, `config set <key> <value>`
 - **Reasoning** (agent pulls on demand): `guide <topic>` (topics: `generate`, `execute`, `setup`); `bootstrap` (verb map + invariants); `schema <name>` (names: `scenario`, `result`, `config`)
 - **Agent integration:** `init --agent <claude|cursor|gemini|copilot|agents|all>` (installs native Agent Skills per host + writes slash-commands/rules + MCP entry for claude/cursor); `mcp` (runs an MCP prompts server exposing guide topics)

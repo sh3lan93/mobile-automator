@@ -87,7 +87,7 @@ Each step execution object captures what happened during that test step:
 | `step_duration_ms` | integer | No | Actual time taken to execute this step in milliseconds |
 | `condition_evaluated` | boolean \| null | No | Result of the step's condition evaluation. Null if no condition was set. |
 | `sub_steps_executed` | array | No | Execution results for nested sub-steps if this step had `sub_steps` |
-| `observations` | string \| null | No | Observer trait notes (regression, flakiness, state context) |
+| `observations` | string \| null | No | DEPRECATED — use the run-level `observations` array, which is typed. Retained for result files written before typed observations; no writer populates it. |
 
 ### assertion_results[] Array Items
 

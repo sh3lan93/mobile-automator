@@ -21,6 +21,7 @@ const {
   handleOrientation,
   handleAssert,
   handleResultAddStep,
+  handleResultAddAssertion,
   handleResultFinalize,
   handleSetup,
   handleConfigGet,
@@ -79,6 +80,13 @@ function writeTmp(name, contents) {
 }
 
 describe('cli handlers', () => {
+  function tmpDeps() {
+    const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cli-'));
+    const factory = ({ runId: rid, scenarioId, projectRoot: pr }) =>
+      new (require('../../src/result/store').ResultStore)({ runId: rid, scenarioId, projectRoot: pr });
+    return { resultStoreFactory: factory, projectRoot };
+  }
+
   describe('handleElements', () => {
     test('returns ok envelope with the agnostic elements from the bridge', async () => {
       const fakeBridge = {
@@ -467,6 +475,29 @@ describe('cli handlers', () => {
     });
   });
 
+  describe('handleAssert recording hint', () => {
+    const bridge = { listElements: async () => [{ accessibility_label: 'Login', text: 'Login' }] };
+
+    test('a mechanical verdict hints the exact recording command with the decided value', async () => {
+      const r = await handleAssert({ deviceBridge: bridge }, 'element_exists', { target: 'Login' });
+      expect(r.exitKind).toBe('ok');
+      expect(r.envelope.data.mechanical).toBe(true);
+      expect(r.envelope.hint).toContain('mauto result add-assertion');
+      expect(r.envelope.hint).toContain('--type element_exists');
+      expect(r.envelope.hint).toContain(`--pass ${r.envelope.data.pass}`);
+      // The hint is copied verbatim, so it must never omit --message: for
+      // Tier-2 verdicts the message IS the evidence (#140 fix-wave FIX 3).
+      expect(r.envelope.hint).toContain('--message');
+    });
+
+    test('an agent-judged verdict hints a placeholder instead of a decided value, and still includes --message', async () => {
+      const r = await handleAssert({ deviceBridge: bridge }, 'screenshot_match', { target: 'ref.png' });
+      expect(r.envelope.data.needs_agent).toBe(true);
+      expect(r.envelope.hint).toContain('--pass <your verdict>');
+      expect(r.envelope.hint).toContain('--message');
+    });
+  });
+
   describe('handleResultAddStep -> handleResultFinalize round-trip', () => {
     test('writes a schema-conformant result to a tmp projectRoot', async () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cli-'));
@@ -510,6 +541,166 @@ describe('cli handlers', () => {
       // The corruption reaches the caller purely through the envelope hint
       // (the contract channel) — no stderr side-effect / console spy required.
       expect(a.envelope.hint).toMatch(/corrupt/i);
+    });
+
+    test('records screenshot, error_message, typed observations and captured variables', () => {
+      const deps = tmpDeps();
+      const runId = 'run_20260804_140000';
+
+      const a = handleResultAddStep(deps, {
+        runId,
+        scenarioId: 'login_smoke',
+        stepId: 'verify_home',
+        status: 'fail',
+        screenshot: 'mobile-automator/screenshots/verify_home.png',
+        errorMessage: 'Login button not found',
+        observation: ['regression:logo is gone', 'state_context:dark mode was active'],
+        capture: ['order_id=A-1729'],
+      });
+      expect(a.exitKind).toBe('ok');
+      expect(a.envelope.data.step.screenshot).toBe('mobile-automator/screenshots/verify_home.png');
+      expect(a.envelope.data.step.error_message).toBe('Login button not found');
+
+      const f = handleResultFinalize(deps, { runId, status: 'failed', duration: 3 });
+      const types = f.envelope.data.observations.map((o) => o.type);
+      expect(types).toEqual(['regression', 'state_context']);
+      expect(f.envelope.data.observations[0].step_id).toBe('verify_home');
+      expect(f.envelope.data.captured_variables).toEqual({ order_id: 'A-1729' });
+
+      const schema = JSON.parse(fs.readFileSync(RESULT_SCHEMA_PATH, 'utf8'));
+      expect(new Ajv({ allErrors: true, strict: false }).compile(schema)(f.envelope.data)).toBe(true);
+    });
+
+    test('rejects an unknown observation type with invalid_input', () => {
+      const deps = tmpDeps();
+      const r = handleResultAddStep(deps, {
+        runId: 'run_20260804_141000', stepId: 'verify', status: 'fail',
+        observation: ['typo:something'],
+      });
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.error.kind).toBe('invalid_input');
+      expect(r.envelope.error.message).toMatch(/unknown observation type "typo"/);
+    });
+
+    test('writes NOTHING when a composite flag is invalid', () => {
+      const deps = tmpDeps();
+      const runId = 'run_20260804_142000';
+      handleResultAddStep(deps, {
+        runId, stepId: 'verify', status: 'fail',
+        screenshot: 'shot.png',
+        observation: ['typo:something'],
+      });
+      // The rejected invocation must not have half-recorded the step.
+      const file = path.join(deps.projectRoot, 'mobile-automator', 'results', `${runId}.json`);
+      expect(fs.existsSync(file)).toBe(false);
+    });
+
+    test('rejects a malformed capture spec with invalid_input', () => {
+      const deps = tmpDeps();
+      const r = handleResultAddStep(deps, {
+        runId: 'run_20260804_143000', stepId: 'verify', status: 'pass',
+        capture: ['order_id'],
+      });
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.error.message).toMatch(/<name>=<value>/);
+    });
+
+    test('populates run metadata from flags and leaves the rest as unknown', () => {
+      const deps = tmpDeps();
+      const runId = 'run_20260804_170000';
+      handleResultAddStep(deps, { runId, scenarioId: 's', stepId: 'launch', status: 'pass' });
+
+      const f = handleResultFinalize(deps, {
+        runId, status: 'passed', duration: 9,
+        deviceModel: 'Pixel 7', apiLevel: '34',
+      });
+      expect(f.envelope.data.metadata.device_model).toBe('Pixel 7');
+      expect(f.envelope.data.metadata.api_level).toBe('34');
+      expect(f.envelope.data.metadata.app_version).toBe('unknown');
+      expect(f.envelope.data.metadata.environment).toBe('unknown');
+      expect(typeof f.envelope.data.metadata.timestamp).toBe('string');
+
+      const schema = JSON.parse(fs.readFileSync(RESULT_SCHEMA_PATH, 'utf8'));
+      expect(new Ajv({ allErrors: true, strict: false }).compile(schema)(f.envelope.data)).toBe(true);
+    });
+
+    test('omitting every metadata flag keeps the previous all-unknown behaviour', () => {
+      const deps = tmpDeps();
+      const runId = 'run_20260804_171000';
+      handleResultAddStep(deps, { runId, scenarioId: 's', stepId: 'launch', status: 'pass' });
+      const f = handleResultFinalize(deps, { runId, status: 'passed', duration: 1 });
+      expect(f.envelope.data.metadata.device_model).toBe('unknown');
+    });
+
+    test('a supplied --summary overrides the generated summary line', () => {
+      const deps = tmpDeps();
+      const runId = 'run_20260805_180000';
+      handleResultAddStep(deps, { runId, scenarioId: 's', stepId: 'launch', status: 'pass' });
+      const f = handleResultFinalize(deps, {
+        runId, status: 'passed', duration: 2, summary: 'Login flow verified end to end.',
+      });
+      expect(f.envelope.data.summary).toBe('Login flow verified end to end.');
+    });
+
+    test('omitting --summary keeps the generated default summary', () => {
+      const deps = tmpDeps();
+      const runId = 'run_20260805_181000';
+      handleResultAddStep(deps, { runId, scenarioId: 's', stepId: 'launch', status: 'pass' });
+      const f = handleResultFinalize(deps, { runId, status: 'passed', duration: 2 });
+      expect(f.envelope.data.summary).toBe('passed: 0/0 assertion(s) passed across 1 step(s).');
+    });
+  });
+
+  describe('handleResultAddAssertion', () => {
+    test('persists a verdict so the finalized counts are non-zero', () => {
+      const deps = tmpDeps();
+      const runId = 'run_20260804_160000';
+
+      handleResultAddStep(deps, { runId, scenarioId: 's', stepId: 'verify', status: 'pass' });
+      const a = handleResultAddAssertion(deps, {
+        runId, stepId: 'verify', type: 'element_exists', pass: 'true', message: 'Login present',
+      });
+      expect(a.exitKind).toBe('ok');
+
+      const b = handleResultAddAssertion(deps, {
+        runId, stepId: 'verify', type: 'element_text', pass: 'false',
+        message: 'wrong text', expected: 'Sign in', actual: 'Log in',
+      });
+      expect(b.exitKind).toBe('ok');
+
+      const f = handleResultFinalize(deps, { runId, duration: 4 });
+      expect(f.envelope.data.total_assertions).toBe(2);
+      expect(f.envelope.data.passed_assertions).toBe(1);
+      expect(f.envelope.data.failed_assertions).toBe(1);
+      expect(f.envelope.data.status).toBe('failed'); // derived from the failed assertion
+      expect(f.envelope.data.assertion_results[1]).toMatchObject({
+        status: 'failed', expected: 'Sign in', actual: 'Log in',
+      });
+
+      const schema = JSON.parse(fs.readFileSync(RESULT_SCHEMA_PATH, 'utf8'));
+      expect(new Ajv({ allErrors: true, strict: false }).compile(schema)(f.envelope.data)).toBe(true);
+    });
+
+    test('rejects a non-boolean --pass with invalid_input', () => {
+      const r = handleResultAddAssertion(tmpDeps(), {
+        runId: 'run_20260804_161000', stepId: 'verify', type: 'element_exists', pass: 'yes',
+      });
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.error.message).toMatch(/--pass must be "true" or "false"/);
+    });
+
+    test('rejects an unknown assertion type with invalid_input', () => {
+      const r = handleResultAddAssertion(tmpDeps(), {
+        runId: 'run_20260804_162000', stepId: 'verify', type: 'element_glows', pass: 'true',
+      });
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.error.message).toMatch(/unknown assertion type "element_glows"/);
+    });
+
+    test('requires run-id, step-id, type and pass', () => {
+      const r = handleResultAddAssertion(tmpDeps(), { runId: 'run_20260804_163000' });
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.error.message).toMatch(/--run-id, --step-id, --type and --pass are required/);
     });
   });
 
@@ -1170,6 +1361,189 @@ describe('cli handlers', () => {
       const r = handleInit({ projectRoot, adapters }, 'all');
       const byAgent = Object.fromEntries(r.envelope.data.agents.map((a) => [a.agent, a]));
       expect(byAgent.copilot.error).toBe('EACCES');
+    });
+  });
+
+  // --- Fix-wave FIX 1: argv -> action body -> handler -> store wiring ------
+  //
+  // The unit tests above call the HANDLERS directly, which proves the handler
+  // passes its argument to the store — but proves nothing about whether
+  // commander's parsed `opts.*` actually reaches the handler at all. A deleted
+  // `deviceModel: opts.deviceModel,` line in the finalize action body left the
+  // rest of the suite green. These tests close that gap by building a REAL
+  // program (`buildProgram`) and parsing REAL argv (`program.parseAsync`),
+  // then asserting the values the injected store received — one test per
+  // `result` verb, covering every flag it accepts (including a REPEATED
+  // --observation and --capture, which also exercises commander's `collect`
+  // reducer with an actual repetition for the first time).
+  describe('result verb argv wiring (buildProgram parses real argv)', () => {
+    function tmpRoot() {
+      return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-resultargv-'));
+    }
+
+    // A store double that records every call it receives, standing in for
+    // ResultStore so these tests assert on what reached the STORE layer, not
+    // the filesystem.
+    function fakeStore() {
+      const calls = { addStep: [], addObservation: [], captureVariable: [], addAssertion: [], finalize: [] };
+      const store = {
+        warnings: [],
+        addStep(arg) {
+          calls.addStep.push(arg);
+          return { step_id: arg.step_id, status: arg.status };
+        },
+        addObservation(arg) {
+          calls.addObservation.push(arg);
+          return { ...arg };
+        },
+        captureVariable(name, value) {
+          calls.captureVariable.push({ name, value });
+        },
+        addAssertion(arg) {
+          calls.addAssertion.push(arg);
+          return { ...arg };
+        },
+        finalize(arg) {
+          calls.finalize.push(arg);
+          return { run_id: 'stub', ...arg };
+        },
+      };
+      return { store, calls };
+    }
+
+    // A memory store double so `result finalize`'s best-effort auto-harvest
+    // never touches the real MemoryStore/filesystem in these argv tests.
+    function fakeMemoryStore() {
+      return { warnings: [], recordRun() {} };
+    }
+
+    async function runVerb(argv, deps) {
+      const program = buildProgram({ projectRoot: tmpRoot(), emit: () => {}, ...deps });
+      await program.parseAsync(['node', 'mauto', ...argv]);
+    }
+
+    test('add-step: every flag reaches the store, including a REPEATED --observation and --capture', async () => {
+      const { store, calls } = fakeStore();
+      const factoryArgs = [];
+      const resultStoreFactory = (args) => { factoryArgs.push(args); return store; };
+
+      await runVerb(
+        [
+          'result', 'add-step',
+          '--run-id', 'run_argv_1',
+          '--scenario-id', 'scn_argv',
+          '--step-id', 'step_1',
+          '--status', 'fail',
+          '--attempts', '3',
+          '--screenshot', 'mobile-automator/screenshots/step_1.png',
+          '--error-message', 'button not found',
+          '--observation', 'regression:logo is gone',
+          '--observation', 'state_context:dark mode was active',
+          '--capture', 'order_id=A-1729',
+          '--capture', 'user_name=jane',
+        ],
+        { resultStoreFactory }
+      );
+
+      // The store factory itself received run-id/scenario-id.
+      expect(factoryArgs[0]).toMatchObject({ runId: 'run_argv_1', scenarioId: 'scn_argv' });
+
+      // Every scalar add-step flag landed on the store.addStep call.
+      expect(calls.addStep).toEqual([
+        {
+          step_id: 'step_1',
+          status: 'fail',
+          attempts: 3,
+          screenshot: 'mobile-automator/screenshots/step_1.png',
+          error_message: 'button not found',
+        },
+      ]);
+
+      // BOTH repeated --observation values reached the store, in order —
+      // proving commander's `collect` reducer actually accumulated them.
+      expect(calls.addObservation).toEqual([
+        { type: 'regression', message: 'logo is gone', step_id: 'step_1' },
+        { type: 'state_context', message: 'dark mode was active', step_id: 'step_1' },
+      ]);
+
+      // BOTH repeated --capture values reached the store, in order.
+      expect(calls.captureVariable).toEqual([
+        { name: 'order_id', value: 'A-1729' },
+        { name: 'user_name', value: 'jane' },
+      ]);
+    });
+
+    test('add-assertion: every flag reaches the store', async () => {
+      const { store, calls } = fakeStore();
+      const factoryArgs = [];
+      const resultStoreFactory = (args) => { factoryArgs.push(args); return store; };
+
+      await runVerb(
+        [
+          'result', 'add-assertion',
+          '--run-id', 'run_argv_2',
+          '--scenario-id', 'scn_argv_2',
+          '--step-id', 'step_verify',
+          '--type', 'element_exists',
+          '--pass', 'false',
+          '--assertion-id', 'assert_custom_id',
+          '--message', 'Login button missing',
+          '--expected', 'visible',
+          '--actual', 'absent',
+        ],
+        { resultStoreFactory }
+      );
+
+      expect(factoryArgs[0]).toMatchObject({ runId: 'run_argv_2', scenarioId: 'scn_argv_2' });
+      expect(calls.addAssertion).toEqual([
+        {
+          step_id: 'step_verify',
+          assertion_id: 'assert_custom_id',
+          type: 'element_exists',
+          pass: false,
+          message: 'Login button missing',
+          expected: 'visible',
+          actual: 'absent',
+        },
+      ]);
+    });
+
+    test('finalize: every flag reaches the store', async () => {
+      const { store, calls } = fakeStore();
+      const factoryArgs = [];
+      const resultStoreFactory = (args) => { factoryArgs.push(args); return store; };
+      const memoryStoreFactory = () => fakeMemoryStore();
+
+      await runVerb(
+        [
+          'result', 'finalize',
+          '--run-id', 'run_argv_3',
+          '--scenario-id', 'scn_argv_3',
+          '--status', 'passed',
+          '--duration', '12',
+          '--app-version', '2.3.4',
+          '--device-model', 'Pixel 7',
+          '--api-level', '34',
+          '--environment', 'staging',
+          '--summary', 'Custom narrative summary.',
+        ],
+        { resultStoreFactory, memoryStoreFactory }
+      );
+
+      expect(factoryArgs[0]).toMatchObject({ runId: 'run_argv_3', scenarioId: 'scn_argv_3' });
+      expect(calls.finalize).toEqual([
+        {
+          status: 'passed',
+          durationSeconds: 12,
+          metadata: {
+            app_version: '2.3.4',
+            device_model: 'Pixel 7',
+            api_level: '34',
+            environment: 'staging',
+          },
+          summary: 'Custom narrative summary.',
+        },
+      ]);
     });
   });
 });

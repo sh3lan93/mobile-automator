@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { atomicWrite } = require('../util/atomic');
+const { OBSERVATION_TYPES } = require('./flags');
 
 // Incremental result accumulator that persists to
 //   <projectRoot>/mobile-automator/results/<runId>.json
@@ -165,6 +166,28 @@ class ResultStore {
 
     this._persistInProgress();
     return step;
+  }
+
+  // Append a TYPED observation to the run-level `observations` array — the one
+  // `finalize()` emits and `src/memory/store.js` harvests. Deliberately NOT
+  // routed through `addStep`: the step-level `observations` field is a legacy
+  // freeform string, so writing there would produce untyped text in the wrong
+  // shape (see #140 D2).
+  addObservation({ type, step_id = null, message } = {}) {
+    if (!OBSERVATION_TYPES.includes(type)) {
+      throw new Error(
+        `unknown observation type "${type}" (expected ${OBSERVATION_TYPES.join(' | ')})`
+      );
+    }
+    if (message == null || String(message).trim() === '') {
+      throw new Error(
+        'observation message is required and cannot be empty or whitespace-only'
+      );
+    }
+    const entry = { type, step_id: step_id == null ? null : String(step_id), message: String(message) };
+    this._observations.push(entry);
+    this._persistInProgress();
+    return entry;
   }
 
   addAssertion({ step_id, assertion_id, type, pass, message, expected = null, actual = null } = {}) {
