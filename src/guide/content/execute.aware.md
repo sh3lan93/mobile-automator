@@ -95,7 +95,7 @@ For each step in the scenario:
 2. **Execute the action** using the appropriate `mauto` verb (see the action mapping table below). Resolve coordinates for taps from the `mauto elements` output and pass them with `mauto tap --at <x,y>`.
 3. **Capture screenshot:** Run `mauto screenshot mobile-automator/results/<run_id>/screenshots/step_<step_id>.png` (where `step_id` is the step's named string ID, e.g., `step_tap_login.png`).
 4. **Verify state:** Compare what you see against the step's `expected_state` description.
-5. **Record progress:** Append the step result with `mauto result add-step --step-id <id> --status <s> --screenshot <path> [--attempts <n>] [--error-message <text>] [--observation <type>:<message>]`, then record each assertion verdict with `mauto result add-assertion --step-id <id> --type <t> --pass <true|false>`. Report:
+5. **Record progress:** Append the step result with `mauto result add-step --step-id <id> --status <s> --screenshot <path> [--attempts <n>] [--error-message <text>] [--observation <type>:<message>]`, then record each assertion verdict with `mauto result add-assertion --step-id <id> --type <t> --pass <true|false> --message <text> [--expected <v> --actual <v>]`. `--message` carries the justification you already formed comparing `expected_state` against what you observed — for Tier-2 verdicts it IS the evidence, so never omit it; add `--expected`/`--actual` whenever the assertion compares a specific value. Report:
    > "Step tap_login (4/12): Tapped 'Login' — login form displayed (passed)"
 
 **Action-to-verb mapping:**
@@ -140,7 +140,7 @@ For each step in the scenario:
 **If the step fails:**
 
 - Check the `on_failure` field:
-  - `"fail"` (default): capture a failure screenshot with `mauto screenshot <path>`. Check for flakiness indicators (loading not complete, animation in progress) and apply the Flakiness Detector logic. Record as failed via `mauto result add-step`. Continue to the next step.
+  - `"fail"` (default): capture a failure screenshot with `mauto screenshot <path>`. Check for flakiness indicators (loading not complete, animation in progress) and apply the Flakiness Detector logic. Record as failed via `mauto result add-step --status fail --error-message <text> --screenshot <path>`. Continue to the next step.
   - `"skip"`: mark the step as `skipped`. Continue silently. Do NOT mark the scenario as failed.
   - `"retry"`: apply `retry_policy` (attempt up to `max_attempts` total, waiting `backoff_ms` between each). If all retries fail → treat as `"fail"`.
 

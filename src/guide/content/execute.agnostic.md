@@ -103,7 +103,7 @@ For each step in the scenario:
    - Not mechanically executable → `clear_app_data` (and the precondition device actions `enable_wifi` / `disable_wifi`) have no verb and no underlying primitive. Do NOT substitute a gesture: report them honestly as unsupported on this run, or perform them manually out of band if the run depends on them.
 4. **Capture screenshot:** Run `mauto screenshot mobile-automator/screenshots/<scenario_id>/<run_id>/step_<step_id>.png`.
 5. **Evaluate assertions** attached to the step (see section 4).
-6. **Record** the step result with `mauto result add-step --step-id <id> --status <s> --screenshot <path> [--attempts <n>] [--error-message <text>] [--observation <type>:<message>] [--capture <name>=<value>]`, then record each assertion verdict with `mauto result add-assertion --step-id <id> --type <t> --pass <true|false>`.
+6. **Record** the step result with `mauto result add-step --step-id <id> --status <s> --screenshot <path> [--attempts <n>] [--error-message <text>] [--observation <type>:<message>] [--capture <name>=<value>]`, then record each assertion verdict with `mauto result add-assertion --step-id <id> --type <t> --pass <true|false> --message <text> [--expected <v> --actual <v>]`. `--message` carries the justification you already formed — for Tier-2 verdicts it IS the evidence, so never omit it; add `--expected`/`--actual` whenever the assertion compares a specific value.
 
 **3.2 Handle step outcome**
 
