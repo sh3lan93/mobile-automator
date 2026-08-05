@@ -600,6 +600,33 @@ describe('cli handlers', () => {
       expect(r.exitKind).toBe('invalid_input');
       expect(r.envelope.error.message).toMatch(/<name>=<value>/);
     });
+
+    test('populates run metadata from flags and leaves the rest as unknown', () => {
+      const deps = tmpDeps();
+      const runId = 'run_20260804_170000';
+      handleResultAddStep(deps, { runId, scenarioId: 's', stepId: 'launch', status: 'pass' });
+
+      const f = handleResultFinalize(deps, {
+        runId, status: 'passed', duration: 9,
+        deviceModel: 'Pixel 7', apiLevel: '34',
+      });
+      expect(f.envelope.data.metadata.device_model).toBe('Pixel 7');
+      expect(f.envelope.data.metadata.api_level).toBe('34');
+      expect(f.envelope.data.metadata.app_version).toBe('unknown');
+      expect(f.envelope.data.metadata.environment).toBe('unknown');
+      expect(typeof f.envelope.data.metadata.timestamp).toBe('string');
+
+      const schema = JSON.parse(fs.readFileSync(RESULT_SCHEMA_PATH, 'utf8'));
+      expect(new Ajv({ allErrors: true, strict: false }).compile(schema)(f.envelope.data)).toBe(true);
+    });
+
+    test('omitting every metadata flag keeps the previous all-unknown behaviour', () => {
+      const deps = tmpDeps();
+      const runId = 'run_20260804_171000';
+      handleResultAddStep(deps, { runId, scenarioId: 's', stepId: 'launch', status: 'pass' });
+      const f = handleResultFinalize(deps, { runId, status: 'passed', duration: 1 });
+      expect(f.envelope.data.metadata.device_model).toBe('unknown');
+    });
   });
 
   describe('handleResultAddAssertion', () => {

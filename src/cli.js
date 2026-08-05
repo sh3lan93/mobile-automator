@@ -570,10 +570,21 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
       exitKind: 'invalid_input',
     };
   }
+
+  // Only provided keys: `defaultMetadata` fills the rest with 'unknown', and
+  // the result schema requires all five fields to be strings, so threading
+  // `undefined` through would break conformance.
+  const metadata = {};
+  if (opts.appVersion !== undefined) metadata.app_version = opts.appVersion;
+  if (opts.deviceModel !== undefined) metadata.device_model = opts.deviceModel;
+  if (opts.apiLevel !== undefined) metadata.api_level = opts.apiLevel;
+  if (opts.environment !== undefined) metadata.environment = opts.environment;
+
   const store = resultStoreFactory({ runId, scenarioId, projectRoot });
   const result = store.finalize({
     status,
     durationSeconds: duration === undefined ? 0 : Number(duration),
+    metadata,
   });
 
   // Auto-harvest into cross-session memory. This is best-effort: a memory
@@ -1280,6 +1291,10 @@ function buildProgram(deps = {}) {
     .option('--scenario-id <id>', 'scenario identifier')
     .option('--status <s>', 'passed | failed | error')
     .option('--duration <secs>', 'total duration in seconds')
+    .option('--app-version <v>', 'app version under test')
+    .option('--device-model <v>', 'device the run executed on')
+    .option('--api-level <v>', 'OS API level / version')
+    .option('--environment <v>', "target environment (e.g. 'staging')")
     .action(withEnvelope((opts) => {
       const r = handleResultFinalize(
         { resultStoreFactory, memoryStoreFactory, projectRoot },
@@ -1288,6 +1303,10 @@ function buildProgram(deps = {}) {
           scenarioId: opts.scenarioId,
           status: opts.status,
           duration: opts.duration,
+          appVersion: opts.appVersion,
+          deviceModel: opts.deviceModel,
+          apiLevel: opts.apiLevel,
+          environment: opts.environment,
         }
       );
       emit(r, humanFlag());
