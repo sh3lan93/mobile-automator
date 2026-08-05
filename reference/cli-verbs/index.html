@@ -1763,11 +1763,15 @@
 <td>Evaluate an assertion; mechanical types are decided by the CLI, visual types are deferred to the agent</td>
 </tr>
 <tr>
-<td><code>mauto result add-step --run-id --step-id --status [--scenario-id --attempts]</code></td>
-<td>Append a step result to a run</td>
+<td><code>mauto result add-step --run-id --step-id --status [--scenario-id --attempts --screenshot --error-message --observation &lt;type&gt;:&lt;message&gt; --capture &lt;name&gt;=&lt;value&gt;]</code></td>
+<td>Append a step result to a run; <code>--observation</code> and <code>--capture</code> are repeatable</td>
 </tr>
 <tr>
-<td><code>mauto result finalize --run-id [--scenario-id --status --duration]</code></td>
+<td><code>mauto result add-assertion --run-id --step-id --type --pass [--scenario-id --assertion-id --message --expected --actual]</code></td>
+<td>Record an assertion verdict against a step</td>
+</tr>
+<tr>
+<td><code>mauto result finalize --run-id [--scenario-id --status --duration --app-version --device-model --api-level --environment --summary]</code></td>
 <td>Assemble the final <a href="../result-schema/">result file</a> and auto-harvest memory</td>
 </tr>
 </tbody>
