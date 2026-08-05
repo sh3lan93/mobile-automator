@@ -475,6 +475,25 @@ describe('cli handlers', () => {
     });
   });
 
+  describe('handleAssert recording hint', () => {
+    const bridge = { listElements: async () => [{ accessibility_label: 'Login', text: 'Login' }] };
+
+    test('a mechanical verdict hints the exact recording command with the decided value', async () => {
+      const r = await handleAssert({ deviceBridge: bridge }, 'element_exists', { target: 'Login' });
+      expect(r.exitKind).toBe('ok');
+      expect(r.envelope.data.mechanical).toBe(true);
+      expect(r.envelope.hint).toContain('mauto result add-assertion');
+      expect(r.envelope.hint).toContain('--type element_exists');
+      expect(r.envelope.hint).toContain(`--pass ${r.envelope.data.pass}`);
+    });
+
+    test('an agent-judged verdict hints a placeholder instead of a decided value', async () => {
+      const r = await handleAssert({ deviceBridge: bridge }, 'screenshot_match', { target: 'ref.png' });
+      expect(r.envelope.data.needs_agent).toBe(true);
+      expect(r.envelope.hint).toContain('--pass <your verdict>');
+    });
+  });
+
   describe('handleResultAddStep -> handleResultFinalize round-trip', () => {
     test('writes a schema-conformant result to a tmp projectRoot', async () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cli-'));

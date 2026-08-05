@@ -434,14 +434,25 @@ async function handleAssert({ deviceBridge }, type, flags = {}) {
   if (flags.variable !== undefined) assertion.variable_name = flags.variable;
 
   const r = evaluate(assertion, { elements });
+  // The verdict has to be transcribed into `result add-assertion` by the agent
+  // (assert has no run context, and Tier-2 types are not decided here at all).
+  // Emitting the exact command turns transcription into copying (#140 D1).
+  const verdict = r.needs_agent ? '<your verdict>' : String(r.pass);
+  const hint =
+    `Record it: mauto result add-assertion --run-id <run_id> --step-id <step_id> ` +
+    `--type ${r.type} --pass ${verdict}`;
+
   return {
-    envelope: ok({
-      type: r.type,
-      mechanical: r.mechanical,
-      pass: r.pass,
-      needs_agent: r.needs_agent,
-      message: r.message,
-    }),
+    envelope: ok(
+      {
+        type: r.type,
+        mechanical: r.mechanical,
+        pass: r.pass,
+        needs_agent: r.needs_agent,
+        message: r.message,
+      },
+      hint
+    ),
     exitKind: 'ok',
   };
 }
