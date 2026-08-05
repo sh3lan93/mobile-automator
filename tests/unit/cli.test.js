@@ -21,6 +21,7 @@ const {
   handleOrientation,
   handleAssert,
   handleResultAddStep,
+  handleResultAddAssertion,
   handleResultFinalize,
   handleSetup,
   handleConfigGet,
@@ -79,6 +80,13 @@ function writeTmp(name, contents) {
 }
 
 describe('cli handlers', () => {
+  function tmpDeps() {
+    const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cli-'));
+    const factory = ({ runId: rid, scenarioId, projectRoot: pr }) =>
+      new (require('../../src/result/store').ResultStore)({ runId: rid, scenarioId, projectRoot: pr });
+    return { resultStoreFactory: factory, projectRoot };
+  }
+
   describe('handleElements', () => {
     test('returns ok envelope with the agnostic elements from the bridge', async () => {
       const fakeBridge = {
@@ -512,13 +520,6 @@ describe('cli handlers', () => {
       expect(a.envelope.hint).toMatch(/corrupt/i);
     });
 
-    function tmpDeps() {
-      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cli-'));
-      const factory = ({ runId: rid, scenarioId, projectRoot: pr }) =>
-        new (require('../../src/result/store').ResultStore)({ runId: rid, scenarioId, projectRoot: pr });
-      return { resultStoreFactory: factory, projectRoot };
-    }
-
     test('records screenshot, error_message, typed observations and captured variables', () => {
       const deps = tmpDeps();
       const runId = 'run_20260804_140000';
@@ -579,6 +580,59 @@ describe('cli handlers', () => {
       });
       expect(r.exitKind).toBe('invalid_input');
       expect(r.envelope.error.message).toMatch(/<name>=<value>/);
+    });
+  });
+
+  describe('handleResultAddAssertion', () => {
+    test('persists a verdict so the finalized counts are non-zero', () => {
+      const deps = tmpDeps();
+      const runId = 'run_20260804_160000';
+
+      handleResultAddStep(deps, { runId, scenarioId: 's', stepId: 'verify', status: 'pass' });
+      const a = handleResultAddAssertion(deps, {
+        runId, stepId: 'verify', type: 'element_exists', pass: 'true', message: 'Login present',
+      });
+      expect(a.exitKind).toBe('ok');
+
+      const b = handleResultAddAssertion(deps, {
+        runId, stepId: 'verify', type: 'element_text', pass: 'false',
+        message: 'wrong text', expected: 'Sign in', actual: 'Log in',
+      });
+      expect(b.exitKind).toBe('ok');
+
+      const f = handleResultFinalize(deps, { runId, duration: 4 });
+      expect(f.envelope.data.total_assertions).toBe(2);
+      expect(f.envelope.data.passed_assertions).toBe(1);
+      expect(f.envelope.data.failed_assertions).toBe(1);
+      expect(f.envelope.data.status).toBe('failed'); // derived from the failed assertion
+      expect(f.envelope.data.assertion_results[1]).toMatchObject({
+        status: 'failed', expected: 'Sign in', actual: 'Log in',
+      });
+
+      const schema = JSON.parse(fs.readFileSync(RESULT_SCHEMA_PATH, 'utf8'));
+      expect(new Ajv({ allErrors: true, strict: false }).compile(schema)(f.envelope.data)).toBe(true);
+    });
+
+    test('rejects a non-boolean --pass with invalid_input', () => {
+      const r = handleResultAddAssertion(tmpDeps(), {
+        runId: 'run_20260804_161000', stepId: 'verify', type: 'element_exists', pass: 'yes',
+      });
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.error.message).toMatch(/--pass must be "true" or "false"/);
+    });
+
+    test('rejects an unknown assertion type with invalid_input', () => {
+      const r = handleResultAddAssertion(tmpDeps(), {
+        runId: 'run_20260804_162000', stepId: 'verify', type: 'element_glows', pass: 'true',
+      });
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.error.message).toMatch(/unknown assertion type "element_glows"/);
+    });
+
+    test('requires run-id, step-id, type and pass', () => {
+      const r = handleResultAddAssertion(tmpDeps(), { runId: 'run_20260804_163000' });
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.error.message).toMatch(/--run-id, --step-id, --type and --pass are required/);
     });
   });
 

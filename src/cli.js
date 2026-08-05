@@ -510,6 +510,47 @@ function handleResultAddStep({ resultStoreFactory, projectRoot }, opts) {
   };
 }
 
+// Persist an assertion verdict. Deliberately a separate verb rather than a
+// side effect of `mauto assert`: 12 of the 27 assertion types are Tier 2
+// (`needs_agent`, `pass: null`), so `assert` has no verdict to record at
+// return time, and a side effect would re-record on every retry — inflating
+// total_assertions past the scenario's actual assertion count (#140 D1).
+function handleResultAddAssertion({ resultStoreFactory, projectRoot }, opts) {
+  const { runId, scenarioId, stepId, type, pass, assertionId, message, expected, actual } = opts;
+  if (!runId || !stepId || !type || pass === undefined) {
+    return {
+      envelope: fail('invalid_input', '--run-id, --step-id, --type and --pass are required', null),
+      exitKind: 'invalid_input',
+    };
+  }
+  if (!KNOWN_ASSERTION_TYPES.has(type)) {
+    return {
+      envelope: fail(
+        'invalid_input',
+        `unknown assertion type "${type}"`,
+        'Run `mauto schema scenario` for the supported assertion types.'
+      ),
+      exitKind: 'invalid_input',
+    };
+  }
+  const verdict = parseBool(pass, '--pass');
+  if (verdict.error) {
+    return { envelope: fail('invalid_input', verdict.error, null), exitKind: 'invalid_input' };
+  }
+
+  const store = resultStoreFactory({ runId, scenarioId, projectRoot });
+  const entry = store.addAssertion({
+    step_id: stepId,
+    assertion_id: assertionId,
+    type,
+    pass: verdict.value,
+    message,
+    expected: expected === undefined ? null : expected,
+    actual: actual === undefined ? null : actual,
+  });
+  return { envelope: ok({ run_id: runId, assertion: entry }, storeHint(store)), exitKind: 'ok' };
+}
+
 function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectRoot }, opts) {
   const { runId, scenarioId, status, duration } = opts;
   if (!runId) {
@@ -1192,6 +1233,36 @@ function buildProgram(deps = {}) {
     }));
 
   result
+    .command('add-assertion')
+    .description('Record an assertion verdict against a step')
+    .requiredOption('--run-id <id>', 'run identifier (run_YYYYMMDD_HHMMSS)')
+    .option('--scenario-id <id>', 'scenario identifier')
+    .requiredOption('--step-id <id>', 'step this assertion belongs to')
+    .requiredOption('--type <t>', 'assertion type (see `mauto schema scenario`)')
+    .requiredOption('--pass <bool>', 'true | false — the verdict being recorded')
+    .option('--assertion-id <id>', 'stable assertion identifier (derived when omitted)')
+    .option('--message <text>', 'human-readable justification for the verdict')
+    .option('--expected <v>', 'expected value')
+    .option('--actual <v>', 'observed value')
+    .action(withEnvelope((opts) => {
+      const r = handleResultAddAssertion(
+        { resultStoreFactory, projectRoot },
+        {
+          runId: opts.runId,
+          scenarioId: opts.scenarioId,
+          stepId: opts.stepId,
+          type: opts.type,
+          pass: opts.pass,
+          assertionId: opts.assertionId,
+          message: opts.message,
+          expected: opts.expected,
+          actual: opts.actual,
+        }
+      );
+      emit(r, humanFlag());
+    }));
+
+  result
     .command('finalize')
     .description('Assemble and write the final result file')
     .requiredOption('--run-id <id>', 'run identifier')
@@ -1446,6 +1517,7 @@ module.exports = {
   handleOrientation,
   handleAssert,
   handleResultAddStep,
+  handleResultAddAssertion,
   handleResultFinalize,
   handleSetup,
   handleConfigGet,
