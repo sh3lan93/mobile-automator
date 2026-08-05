@@ -155,14 +155,13 @@ For each: take a screenshot, visually analyze it, and report pass/fail with a cl
 
 ### 5. Generate the Result Report
 
-Obtain the result schema by running `mauto schema result`, then finalize the run with `mauto result finalize` (writing to `mobile-automator/results/<run_id>.json`). Populate:
+Obtain the result schema by running `mauto schema result`, then finalize the run with `mauto result finalize` (writing to `mobile-automator/results/<run_id>.json`), passing the run metadata you already know (`--device-model`, `--api-level`, `--app-version`, `--environment`) — the timestamp is filled in for you, and omitted fields are recorded as `unknown`. You may supply your own narrative with `--summary <text>`; omitting it keeps the generated default summary line. The finalized result assembles what the earlier `add-step`/`add-assertion` calls already recorded:
 
-- `run_id`, `scenario_id`, `started_at`, `ended_at`, `status`.
-- `device`: model, OS version, platform.
-- `steps_executed[]`: per-step status, retry_count, step_duration_ms, observations, captured variable values, sub-steps.
-- `assertion_results[]`: per-assertion result with evidence pointers.
-- `observations[]`: typed observations (`regression`, `flakiness`, `state_context`).
-- `captured_variables`: final values of any session variables.
+- `run_id`, `scenario_id`, `status`, `duration_seconds`.
+- `steps_executed[]`: per-step status, retry_count, screenshot, error_message.
+- `assertion_results[]`: per-assertion verdict, message, expected/actual.
+- `observations[]`: typed observations (`regression`, `flakiness`, `state_context`) recorded via `--observation` on `add-step`.
+- `captured_variables`: values recorded via `--capture` on `add-step`.
 
 ### 6. Flakiness & Resolution Reporting
 

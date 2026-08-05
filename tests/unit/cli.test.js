@@ -485,12 +485,16 @@ describe('cli handlers', () => {
       expect(r.envelope.hint).toContain('mauto result add-assertion');
       expect(r.envelope.hint).toContain('--type element_exists');
       expect(r.envelope.hint).toContain(`--pass ${r.envelope.data.pass}`);
+      // The hint is copied verbatim, so it must never omit --message: for
+      // Tier-2 verdicts the message IS the evidence (#140 fix-wave FIX 3).
+      expect(r.envelope.hint).toContain('--message');
     });
 
-    test('an agent-judged verdict hints a placeholder instead of a decided value', async () => {
+    test('an agent-judged verdict hints a placeholder instead of a decided value, and still includes --message', async () => {
       const r = await handleAssert({ deviceBridge: bridge }, 'screenshot_match', { target: 'ref.png' });
       expect(r.envelope.data.needs_agent).toBe(true);
       expect(r.envelope.hint).toContain('--pass <your verdict>');
+      expect(r.envelope.hint).toContain('--message');
     });
   });
 
@@ -1357,6 +1361,189 @@ describe('cli handlers', () => {
       const r = handleInit({ projectRoot, adapters }, 'all');
       const byAgent = Object.fromEntries(r.envelope.data.agents.map((a) => [a.agent, a]));
       expect(byAgent.copilot.error).toBe('EACCES');
+    });
+  });
+
+  // --- Fix-wave FIX 1: argv -> action body -> handler -> store wiring ------
+  //
+  // The unit tests above call the HANDLERS directly, which proves the handler
+  // passes its argument to the store — but proves nothing about whether
+  // commander's parsed `opts.*` actually reaches the handler at all. A deleted
+  // `deviceModel: opts.deviceModel,` line in the finalize action body left the
+  // rest of the suite green. These tests close that gap by building a REAL
+  // program (`buildProgram`) and parsing REAL argv (`program.parseAsync`),
+  // then asserting the values the injected store received — one test per
+  // `result` verb, covering every flag it accepts (including a REPEATED
+  // --observation and --capture, which also exercises commander's `collect`
+  // reducer with an actual repetition for the first time).
+  describe('result verb argv wiring (buildProgram parses real argv)', () => {
+    function tmpRoot() {
+      return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-resultargv-'));
+    }
+
+    // A store double that records every call it receives, standing in for
+    // ResultStore so these tests assert on what reached the STORE layer, not
+    // the filesystem.
+    function fakeStore() {
+      const calls = { addStep: [], addObservation: [], captureVariable: [], addAssertion: [], finalize: [] };
+      const store = {
+        warnings: [],
+        addStep(arg) {
+          calls.addStep.push(arg);
+          return { step_id: arg.step_id, status: arg.status };
+        },
+        addObservation(arg) {
+          calls.addObservation.push(arg);
+          return { ...arg };
+        },
+        captureVariable(name, value) {
+          calls.captureVariable.push({ name, value });
+        },
+        addAssertion(arg) {
+          calls.addAssertion.push(arg);
+          return { ...arg };
+        },
+        finalize(arg) {
+          calls.finalize.push(arg);
+          return { run_id: 'stub', ...arg };
+        },
+      };
+      return { store, calls };
+    }
+
+    // A memory store double so `result finalize`'s best-effort auto-harvest
+    // never touches the real MemoryStore/filesystem in these argv tests.
+    function fakeMemoryStore() {
+      return { warnings: [], recordRun() {} };
+    }
+
+    async function runVerb(argv, deps) {
+      const program = buildProgram({ projectRoot: tmpRoot(), emit: () => {}, ...deps });
+      await program.parseAsync(['node', 'mauto', ...argv]);
+    }
+
+    test('add-step: every flag reaches the store, including a REPEATED --observation and --capture', async () => {
+      const { store, calls } = fakeStore();
+      const factoryArgs = [];
+      const resultStoreFactory = (args) => { factoryArgs.push(args); return store; };
+
+      await runVerb(
+        [
+          'result', 'add-step',
+          '--run-id', 'run_argv_1',
+          '--scenario-id', 'scn_argv',
+          '--step-id', 'step_1',
+          '--status', 'fail',
+          '--attempts', '3',
+          '--screenshot', 'mobile-automator/screenshots/step_1.png',
+          '--error-message', 'button not found',
+          '--observation', 'regression:logo is gone',
+          '--observation', 'state_context:dark mode was active',
+          '--capture', 'order_id=A-1729',
+          '--capture', 'user_name=jane',
+        ],
+        { resultStoreFactory }
+      );
+
+      // The store factory itself received run-id/scenario-id.
+      expect(factoryArgs[0]).toMatchObject({ runId: 'run_argv_1', scenarioId: 'scn_argv' });
+
+      // Every scalar add-step flag landed on the store.addStep call.
+      expect(calls.addStep).toEqual([
+        {
+          step_id: 'step_1',
+          status: 'fail',
+          attempts: 3,
+          screenshot: 'mobile-automator/screenshots/step_1.png',
+          error_message: 'button not found',
+        },
+      ]);
+
+      // BOTH repeated --observation values reached the store, in order —
+      // proving commander's `collect` reducer actually accumulated them.
+      expect(calls.addObservation).toEqual([
+        { type: 'regression', message: 'logo is gone', step_id: 'step_1' },
+        { type: 'state_context', message: 'dark mode was active', step_id: 'step_1' },
+      ]);
+
+      // BOTH repeated --capture values reached the store, in order.
+      expect(calls.captureVariable).toEqual([
+        { name: 'order_id', value: 'A-1729' },
+        { name: 'user_name', value: 'jane' },
+      ]);
+    });
+
+    test('add-assertion: every flag reaches the store', async () => {
+      const { store, calls } = fakeStore();
+      const factoryArgs = [];
+      const resultStoreFactory = (args) => { factoryArgs.push(args); return store; };
+
+      await runVerb(
+        [
+          'result', 'add-assertion',
+          '--run-id', 'run_argv_2',
+          '--scenario-id', 'scn_argv_2',
+          '--step-id', 'step_verify',
+          '--type', 'element_exists',
+          '--pass', 'false',
+          '--assertion-id', 'assert_custom_id',
+          '--message', 'Login button missing',
+          '--expected', 'visible',
+          '--actual', 'absent',
+        ],
+        { resultStoreFactory }
+      );
+
+      expect(factoryArgs[0]).toMatchObject({ runId: 'run_argv_2', scenarioId: 'scn_argv_2' });
+      expect(calls.addAssertion).toEqual([
+        {
+          step_id: 'step_verify',
+          assertion_id: 'assert_custom_id',
+          type: 'element_exists',
+          pass: false,
+          message: 'Login button missing',
+          expected: 'visible',
+          actual: 'absent',
+        },
+      ]);
+    });
+
+    test('finalize: every flag reaches the store', async () => {
+      const { store, calls } = fakeStore();
+      const factoryArgs = [];
+      const resultStoreFactory = (args) => { factoryArgs.push(args); return store; };
+      const memoryStoreFactory = () => fakeMemoryStore();
+
+      await runVerb(
+        [
+          'result', 'finalize',
+          '--run-id', 'run_argv_3',
+          '--scenario-id', 'scn_argv_3',
+          '--status', 'passed',
+          '--duration', '12',
+          '--app-version', '2.3.4',
+          '--device-model', 'Pixel 7',
+          '--api-level', '34',
+          '--environment', 'staging',
+          '--summary', 'Custom narrative summary.',
+        ],
+        { resultStoreFactory, memoryStoreFactory }
+      );
+
+      expect(factoryArgs[0]).toMatchObject({ runId: 'run_argv_3', scenarioId: 'scn_argv_3' });
+      expect(calls.finalize).toEqual([
+        {
+          status: 'passed',
+          durationSeconds: 12,
+          metadata: {
+            app_version: '2.3.4',
+            device_model: 'Pixel 7',
+            api_level: '34',
+            environment: 'staging',
+          },
+          summary: 'Custom narrative summary.',
+        },
+      ]);
     });
   });
 });

@@ -413,7 +413,7 @@ async function handlePress({ deviceBridge }, button) {
 async function handleAssert({ deviceBridge }, type, flags = {}) {
   if (!KNOWN_ASSERTION_TYPES.has(type)) {
     return {
-      envelope: fail('invalid_input', `unknown assertion type "${type}"`, 'See the executor SKILL for the supported assertion types.'),
+      envelope: fail('invalid_input', `unknown assertion type "${type}"`, 'Run `mauto schema scenario` for the supported assertion types.'),
       exitKind: 'invalid_input',
     };
   }
@@ -440,7 +440,7 @@ async function handleAssert({ deviceBridge }, type, flags = {}) {
   const verdict = r.needs_agent ? '<your verdict>' : String(r.pass);
   const hint =
     `Record it: mauto result add-assertion --run-id <run_id> --step-id <step_id> ` +
-    `--type ${r.type} --pass ${verdict}`;
+    `--type ${r.type} --pass ${verdict} --message "<why>"`;
 
   return {
     envelope: ok(
@@ -504,7 +504,10 @@ function handleResultAddStep({ resultStoreFactory, projectRoot }, opts) {
     screenshot: screenshot === undefined ? null : screenshot,
     error_message: errorMessage === undefined ? null : errorMessage,
   });
-  for (const obs of observations) store.addObservation(obs);
+  // Echo what the STORE recorded, not the parsed request: if the store ever
+  // normalizes an observation (e.g. trims/derives a field), the envelope must
+  // reflect that rather than silently lying about what actually landed.
+  const recordedObservations = observations.map((obs) => store.addObservation(obs));
   for (const cap of captures) store.captureVariable(cap.name, cap.value);
 
   return {
@@ -512,7 +515,7 @@ function handleResultAddStep({ resultStoreFactory, projectRoot }, opts) {
       {
         run_id: runId,
         step,
-        observations,
+        observations: recordedObservations,
         captured_variables: Object.fromEntries(captures.map((c) => [c.name, c.value])),
       },
       storeHint(store)
