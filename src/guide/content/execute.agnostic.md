@@ -107,7 +107,7 @@ For each step in the scenario:
 
 **3.2 Handle step outcome**
 
-- `"fail"` (default): capture a failure screenshot, apply the Flakiness Detector logic, record as failed.
+- `"fail"` (default): capture a failure screenshot, apply the Flakiness Detector logic, record as failed via `mauto result add-step --status fail --error-message <text> --screenshot <path>`.
 - `"skip"`: mark `skipped`, continue silently, do NOT fail the scenario.
 - `"retry"`: apply `retry_policy` (up to `max_attempts`, waiting `backoff_ms` between attempts). If all retries fail → treat as `"fail"`.
 - `optional: true` overrides a failure to `"skip"`.
