@@ -56,6 +56,84 @@ describe('makeCall device threading', () => {
   });
 });
 
+describe('makeCall stale auto-resolved device re-resolution', () => {
+  test('re-resolves and retries once when the auto-resolved device goes stale', async () => {
+    const calls = [];
+    const rawCall = jest.fn(async (tool, args) => {
+      calls.push({ tool, args });
+      if (tool === 'mobile_list_available_devices') {
+        const n = calls.filter((c) => c.tool === 'mobile_list_available_devices').length;
+        return n === 1 ? [{ id: 'A' }] : [{ id: 'B' }];
+      }
+      if (tool === 'tap') {
+        const n = calls.filter((c) => c.tool === 'tap').length;
+        if (n === 1) throw new Error('Device "A" not found');
+        return { ok: true };
+      }
+      return `ok:${tool}`;
+    });
+    const { call } = makeCall({ rawCall, device: null });
+    await expect(call('tap', {})).resolves.toEqual({ ok: true });
+    const taps = calls.filter((c) => c.tool === 'tap');
+    expect(taps).toHaveLength(2);
+    expect(taps[0].args.device).toBe('A');
+    expect(taps[1].args.device).toBe('B');
+    expect(calls.filter((c) => c.tool === 'mobile_list_available_devices')).toHaveLength(2);
+  });
+
+  test('never re-resolves when the device was pinned', async () => {
+    const calls = [];
+    const rawCall = jest.fn(async (tool, args) => {
+      calls.push({ tool, args });
+      if (tool === 'mobile_list_available_devices') return [{ id: 'B' }];
+      throw new Error('Device "A" not found');
+    });
+    const { call } = makeCall({ rawCall, device: 'A' });
+    await expect(call('tap', {})).rejects.toThrow(/Device "A" not found/);
+    expect(calls.filter((c) => c.tool === 'tap')).toHaveLength(1);
+    expect(calls.filter((c) => c.tool === 'mobile_list_available_devices')).toHaveLength(0);
+  });
+
+  test('retries at most once even when re-resolution returns the same stale device', async () => {
+    const calls = [];
+    const rawCall = jest.fn(async (tool, args) => {
+      calls.push({ tool, args });
+      if (tool === 'mobile_list_available_devices') return [{ id: 'A' }];
+      throw new Error('Device "A" not found');
+    });
+    const { call } = makeCall({ rawCall, device: null });
+    await expect(call('tap', {})).rejects.toThrow(/Device "A" not found/);
+    expect(calls.filter((c) => c.tool === 'tap')).toHaveLength(2);
+    expect(calls.filter((c) => c.tool === 'mobile_list_available_devices')).toHaveLength(2);
+  });
+
+  test('does not bust the cache for a non-device error', async () => {
+    const calls = [];
+    const rawCall = jest.fn(async (tool, args) => {
+      calls.push({ tool, args });
+      if (tool === 'mobile_list_available_devices') return [{ id: 'A' }];
+      throw new Error('element not found');
+    });
+    const { call } = makeCall({ rawCall, device: null });
+    await expect(call('tap', {})).rejects.toThrow('element not found');
+    expect(calls.filter((c) => c.tool === 'tap')).toHaveLength(1);
+    expect(calls.filter((c) => c.tool === 'mobile_list_available_devices')).toHaveLength(1);
+  });
+
+  test('does not cache a failed discovery', async () => {
+    const calls = [];
+    const rawCall = jest.fn(async (tool, args) => {
+      calls.push({ tool, args });
+      if (tool === 'mobile_list_available_devices') throw new Error('bridge down');
+      return `ok:${tool}`;
+    });
+    const { call } = makeCall({ rawCall, device: null });
+    await expect(call('tap', {})).rejects.toThrow('bridge down');
+    await expect(call('tap', {})).rejects.toThrow('bridge down');
+    expect(calls.filter((c) => c.tool === 'mobile_list_available_devices')).toHaveLength(2);
+  });
+});
+
 describe('parseToolResult error surfacing', () => {
   test('throws with the mobile-mcp message when isError is set', () => {
     const res = { isError: true, content: [{ type: 'text', text: 'Error: boom' }] };
