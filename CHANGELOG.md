@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### 🐛 Fixed
+
+- **The result store no longer loses steps when two `result` invocations race on the same run.** `src/result/store.js`'s mutators (`addStep`, `addObservation`, `addAssertion`, `captureVariable`, `finalize`) each did load → mutate → `atomicWrite`, and `atomicWrite` is atomic-rename — it protects readers from torn reads but is NOT a mutex, so two concurrent `result add-step` calls for one runId both loaded snapshot N, appended their own step, and the last rename won, silently dropping the other's step. The memory store next to it (`src/memory/store.js`) already solved this with an advisory lock (`src/memory/lock.js`, used via `_editUnderLock`); the result store never got the same treatment. The lock is now a shared util (`src/util/lock.js`, with `src/memory/lock.js` kept as a re-export shim so existing importers keep working), and every result mutator runs as a full read-modify-write under a **per-runId** advisory lock (`<runId>.lock` beside the result file). The load itself moved INSIDE the lock: the constructor still eager-loads for read-only paths and back-compat, but a mutator that trusted that snapshot would still clobber — two processes would cache the same stale state and serialize only their writes — so each mutator re-loads fresh-from-disk state under the lock before mutating and persisting. `selection.json` writes are atomic too (tmp + fsync + rename) instead of a bare `writeFileSync`. Corrupt-file detection still surfaces through the existing `warnings` channel whether it fires in the constructor or during an in-lock re-load.
+  Closes #151
+
 ## [0.23.0]
 
 ### ✨ Added
