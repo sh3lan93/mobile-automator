@@ -1071,12 +1071,22 @@ describe('cli handlers', () => {
   });
 
   describe('handleSessionStatus', () => {
-    test('reports running:true/false from the client', async () => {
-      const up = await handleSessionStatus({ projectRoot: '/x', client: { isAlive: async () => true } });
+    test('reports running:true with in_flight and device from the client', async () => {
+      const up = await handleSessionStatus({
+        projectRoot: '/x',
+        client: { getSessionStatus: async () => ({ running: true, in_flight: 2, device: 'A' }) },
+      });
       expect(up.exitKind).toBe('ok');
-      expect(up.envelope.data.running).toBe(true);
-      const down = await handleSessionStatus({ projectRoot: '/x', client: { isAlive: async () => false } });
-      expect(down.envelope.data.running).toBe(false);
+      expect(up.envelope.data).toEqual({ running: true, in_flight: 2, device: 'A' });
+    });
+
+    test('reports running:false with null in_flight/device when no daemon is up', async () => {
+      const down = await handleSessionStatus({
+        projectRoot: '/x',
+        client: { getSessionStatus: async () => ({ running: false, in_flight: null, device: null }) },
+      });
+      expect(down.exitKind).toBe('ok');
+      expect(down.envelope.data).toEqual({ running: false, in_flight: null, device: null });
     });
   });
 

@@ -39,11 +39,25 @@ async function spawnDaemon({
     env,
   });
 
+  // A spawn that fails synchronously (EMFILE, EACCES, ENOENT on the bin) emits
+  // an 'error' event instead of throwing. Without a listener that error would
+  // crash the one-shot verb process; with it we bail out of the readiness poll
+  // immediately instead of waiting out the full 15s window for a child that can
+  // never come up. No 'exit' short-circuit here: a loser exiting ELOCKED is
+  // expected, and the winner may still come up within the poll window.
+  let spawnError = null;
+  if (child && typeof child.on === 'function') {
+    child.on('error', (err) => {
+      spawnError = err;
+    });
+  }
+
   // Let the daemon outlive this one-shot verb process.
   if (child && typeof child.unref === 'function') child.unref();
 
   const deadline = Date.now() + readyTimeoutMs;
   while (Date.now() < deadline) {
+    if (spawnError) return false;
     if (await isAlive(projectRoot)) return true;
     await sleep(pollMs);
   }

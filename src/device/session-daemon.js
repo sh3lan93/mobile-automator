@@ -18,6 +18,7 @@
 // Everything that touches a real device is injected, so the full lifecycle is
 // unit-testable with a fake createCall and a mkdtemp project root.
 
+const childProcess = require('child_process');
 const fs = require('fs');
 const net = require('net');
 
@@ -25,6 +26,24 @@ const paths = require('./session-paths');
 const { FrameParser } = require('./session-protocol');
 
 const DEFAULT_IDLE_MS = 5 * 60 * 1000;
+
+// Per-call timeout for the shared mobile-mcp connection. Deliberately BELOW the
+// client's DEFAULT_TIMEOUT_MS (30000) so the daemon's timeout error always wins
+// the race and reaches the client as an honest {kind:'timeout'} reply instead of
+// being dropped by the client's own 30s timeout (which would look like a
+// false-failure and prompt a retry → double-execution on the device). The
+// structural invariant CLIENT_TIMEOUT > DAEMON_CALL_TIMEOUT is pinned by
+// tests/unit/device/timeout-invariant.test.js.
+const DAEMON_CALL_TIMEOUT_MS = 25000;
+
+// Resolves after `ms` without keeping the process alive. Injectable so tests
+// can drive the timeout path without waiting 25s.
+function defaultScheduleTimeout(ms) {
+  return new Promise((resolve) => {
+    const t = setTimeout(resolve, ms);
+    if (typeof t.unref === 'function') t.unref();
+  });
+}
 
 function defaultCreateCall(opts) {
   return require('./mobile-mcp-client').createCall(opts);
@@ -40,6 +59,8 @@ function safeUnlink(p) {
 }
 
 // True when a pid is a live process we own. ESRCH => dead; EPERM => alive.
+// Kept exported for back-compat; cleanStale routes through pidIdentity, which
+// also checks the process's identity (not just liveness).
 function pidAlive(pid) {
   if (!pid || !Number.isInteger(pid)) return false;
   try {
@@ -47,6 +68,41 @@ function pidAlive(pid) {
     return true;
   } catch (err) {
     return err.code === 'EPERM';
+  }
+}
+
+// Classify a pid by liveness AND identity. Liveness alone is not enough: a
+// recycled pid (an unrelated process that inherited the dead daemon's pid) is
+// "alive" but is NOT our daemon, so a stale lock/pidfile pointing at it must be
+// cleaned rather than respected. Returns one of:
+//   'dead'    - no such process (ESRCH or any non-EPERM kill error)
+//   'ours'    - alive AND its command line contains `mauto-session-daemon`
+//   'other'   - alive AND its command line does NOT (recycled pid)
+//   'unknown' - alive but `ps` itself failed (e.g. no `ps` on the host) —
+//               treated as 'ours' by cleanStale: never clean when unsure.
+// `execFile` is injectable for tests; a failure there must never crash the
+// daemon, hence the 'unknown' fallback.
+function pidIdentity(pid, { execFile = childProcess.execFileSync } = {}) {
+  if (!pid || !Number.isInteger(pid)) return 'dead';
+  // Our own pid is the in-process daemon (unit tests run startDaemon in the
+  // test process, so the lock/pidfile carry the test runner's pid). Never clean
+  // files that point at ourselves. In production cleanStale runs before the
+  // daemon writes its own pid/lock, so this branch only fires in-process.
+  if (pid === process.pid) return 'ours';
+  let alive;
+  try {
+    process.kill(pid, 0);
+    alive = true;
+  } catch (err) {
+    if (err.code === 'EPERM') alive = true;
+    else return 'dead';
+  }
+  if (!alive) return 'dead';
+  try {
+    const out = execFile('ps', ['-p', String(pid), '-o', 'command='], { encoding: 'utf8' });
+    return /mauto-session-daemon/.test(String(out || '')) ? 'ours' : 'other';
+  } catch (_) {
+    return 'unknown';
   }
 }
 
@@ -61,21 +117,29 @@ function readPidFile(file) {
 }
 
 // Remove stale socket/pidfile/handle/lock left by a crashed daemon so a fresh
-// daemon can bind. Liveness is decided from the LOCK file first (acquired before
+// daemon can bind. Identity is decided from the LOCK file first (acquired before
 // the connection is built, so it covers a daemon still mid-startup) then the
-// pidfile (written once listening). If either points at a LIVE process we leave
-// everything alone and signal the caller — the lock's O_EXCL or the listen()
-// EADDRINUSE then surfaces the conflict rather than hijacking a healthy daemon.
-function cleanStale(projectRoot) {
+// pidfile (written once listening). If either points at a LIVE process that is
+// OURS (or unclassifiable — 'unknown') we leave everything alone and signal the
+// caller — the lock's O_EXCL or the listen() EADDRINUSE then surfaces the
+// conflict rather than hijacking a healthy daemon. A pid that is alive but NOT
+// ours ('other') is a RECYCLED pid: the daemon that wrote it is long dead and an
+// unrelated process inherited the number, so the stale files are cleaned instead
+// of wedging every spawn for the lifetime of that unrelated process.
+function cleanStale(projectRoot, { execFile } = {}) {
   const pidFile = paths.pidFilePath(projectRoot);
   const lockFile = paths.lockPath(projectRoot);
   let livePid = null;
   for (const f of [lockFile, pidFile]) {
     const pid = readPidFile(f);
-    if (pid && pidAlive(pid)) {
+    if (!pid) continue;
+    const id = pidIdentity(pid, { execFile });
+    if (id === 'dead') continue; // keep scanning; ultimately clean
+    if (id === 'ours' || id === 'unknown') {
       livePid = pid;
       break;
     }
+    // id === 'other' → recycled pid → fall through to the safeUnlinks.
   }
   if (livePid) return { cleaned: false, livePid };
 
@@ -92,6 +156,8 @@ async function startDaemon({
   idleMs = DEFAULT_IDLE_MS,
   createCall = defaultCreateCall,
   onUndeliverable = null,
+  scheduleTimeout = defaultScheduleTimeout,
+  execFile = childProcess.execFileSync,
 } = {}) {
   if (!projectRoot) throw new TypeError('startDaemon requires projectRoot');
 
@@ -99,7 +165,7 @@ async function startDaemon({
   fs.mkdirSync(dir, { recursive: true });
 
   // Reap a crashed daemon's leftovers before we bind.
-  cleanStale(projectRoot);
+  cleanStale(projectRoot, { execFile });
 
   // Acquire an EXCLUSIVE per-workspace lock BEFORE building the connection. Two
   // `mauto` invocations that both saw isAlive=false would otherwise both spawn a
@@ -331,17 +397,60 @@ async function startDaemon({
           continue;
         }
         if (req.type === 'ping') {
-          await reply({ id: req.id, ok: true, result: { pong: true, device } });
+          await reply({ id: req.id, ok: true, result: { pong: true, device, in_flight: inFlight } });
           armIdle();
           continue;
         }
         if (req.type === 'call') {
+          // A call that arrives after stop() began must be rejected up front:
+          // it never started, so it must not block stop()'s drain (inFlight is
+          // only decremented for calls that actually incremented it).
+          if (stopping) {
+            await reply({
+              id: req.id,
+              ok: false,
+              error: { message: 'session daemon is shutting down', kind: 'device' },
+            });
+            armIdle();
+            continue;
+          }
           inFlight += 1;
           try {
-            const result = await call(req.tool, req.args || {});
+            // Bound the shared mobile-mcp call. The daemon's timeout (25s) is
+            // BELOW the client's (30s) so this error always reaches the client
+            // as an honest {kind:'timeout'} reply instead of being dropped by
+            // the client's own timeout — a dropped reply reads as a
+            // false-failure and prompts a retry → double-execution. The
+            // underlying call is NOT cancellable; it keeps running in the
+            // background, which is fine — the point is the agent gets a bounded,
+            // honest error. Swallow the loser's eventual settlement so it can't
+            // surface as an unhandled rejection after the race already settled.
+            const callPromise = call(req.tool, req.args || {});
+            callPromise.catch(() => {});
+            const result = await Promise.race([
+              callPromise,
+              scheduleTimeout(DAEMON_CALL_TIMEOUT_MS).then(() => {
+                const e = new Error(
+                  `${req.tool}: the mobile-mcp call did not respond within ${DAEMON_CALL_TIMEOUT_MS}ms`
+                );
+                e.kind = 'timeout';
+                e.hint = 'the action may have partially executed on the device — verify state before retrying';
+                throw e;
+              }),
+            ]);
             await reply({ id: req.id, ok: true, result });
           } catch (err) {
-            await reply({ id: req.id, ok: false, error: { message: err.message || String(err) } });
+            if (err && err.kind === 'timeout') {
+              await reply({
+                id: req.id,
+                ok: false,
+                error: { message: err.message, kind: 'timeout', hint: err.hint },
+              });
+            } else {
+              // Non-timeout failure: no kind → client/deviceFail default to
+              // 'device'. Only the timeout path sets kind:'timeout'.
+              await reply({ id: req.id, ok: false, error: { message: err.message || String(err) } });
+            }
           } finally {
             inFlight -= 1;
             armIdle(); // arm idle only after the reply has completed
@@ -414,4 +523,4 @@ async function startDaemon({
   };
 }
 
-module.exports = { startDaemon, cleanStale, pidAlive, DEFAULT_IDLE_MS };
+module.exports = { startDaemon, cleanStale, pidAlive, pidIdentity, DAEMON_CALL_TIMEOUT_MS, DEFAULT_IDLE_MS };

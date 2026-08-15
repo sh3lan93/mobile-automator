@@ -74,6 +74,15 @@ async function main() {
     }
     process.exit(1);
   });
+  process.on('unhandledRejection', (err) => {
+    process.stderr.write(`mauto-session-daemon: unhandled rejection ${err && err.stack ? err.stack : err}\n`);
+    // Same teardown as uncaughtException: a rejected promise must not leave a
+    // leaked mobile-mcp child / stale files wedging the next spawn.
+    if (daemon && typeof daemon.stop === 'function') {
+      daemon.stop().catch(() => {});
+    }
+    process.exit(1);
+  });
 
   daemon = await startDaemon({ projectRoot, device, idleMs });
   // Keep the event loop alive until the daemon stops (idle reap / signal /
