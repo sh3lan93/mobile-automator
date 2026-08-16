@@ -888,7 +888,12 @@ function handleInit({ projectRoot, adapters = ADAPTERS }, agent) {
 // injectable so the handlers are unit-testable without spawning a real daemon.
 
 async function handleSessionStart(
-  { projectRoot, spawn = require('./device/session-spawn'), client = require('./device/session-client') },
+  {
+    projectRoot,
+    spawn = require('./device/session-spawn'),
+    client = require('./device/session-client'),
+    readHandle = require('./device/resolve-connection').readHandleDevice,
+  },
   opts = {}
 ) {
   const device = opts.device || null;
@@ -904,6 +909,24 @@ async function handleSessionStart(
   }
 
   if (await connection.isSessionAlive(projectRoot, { client })) {
+    // A live daemon is already pinned to whatever device it was started with.
+    // Echoing back the *requested* device without comparing the handle pin is
+    // how #148 lied to the agent: `session start --device B` against a daemon
+    // pinned to A reported already_running:true, device:B while every verb
+    // kept driving A. Fail with a hint instead — the agent stays in control
+    // and decides whether to `session end` and repin.
+    const pinned = readHandle(projectRoot);
+    if (device !== null && device !== pinned) {
+      return {
+        envelope: fail(
+          'device',
+          `a device session is already running, pinned to ${pinned || 'auto'} — not ${device}`,
+          `Run \`mauto session end\` first, then \`mauto session start --device ${device}\` to repin. Omit --device to reuse the running session.`,
+          { started: false, already_running: true, pinned, requested: device }
+        ),
+        exitKind: 'device',
+      };
+    }
     return {
       envelope: ok({ started: false, already_running: true, device }),
       exitKind: 'ok',
@@ -1004,10 +1027,30 @@ async function handleDevicesUse({ deviceBridge, store = selectionStore, projectR
   return { envelope: ok({ selected: match.id, device: match }), exitKind: 'ok' };
 }
 
-function handleDevicesClear({ store = selectionStore, projectRoot }) {
+async function handleDevicesClear({
+  store = selectionStore,
+  projectRoot,
+  isAlive = require('./device/connection').isSessionAlive,
+  readHandle = require('./device/resolve-connection').readHandleDevice,
+} = {}) {
   const previous = store.read(projectRoot);
   store.clear(projectRoot);
-  return { envelope: ok({ cleared: previous || null }), exitKind: 'ok' };
+  // Clearing selection.json only forgets the *persisted* choice; a running
+  // daemon keeps serving the device it was started with (its handle pin is
+  // the truth, and rewriting the handle would lie between file and reality).
+  // Surface that so the agent knows `mauto session end` is required to switch.
+  const alive = await isAlive(projectRoot);
+  if (!alive) {
+    return { envelope: ok({ cleared: previous || null }), exitKind: 'ok' };
+  }
+  const pinned = readHandle(projectRoot);
+  return {
+    envelope: ok(
+      { cleared: previous || null, daemon_still_pinned: pinned },
+      `a running device session is still pinned to ${pinned || 'auto'} — run \`mauto session end\` to switch devices`
+    ),
+    exitKind: 'ok',
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -1467,8 +1510,8 @@ function buildProgram(deps = {}) {
   devices
     .command('clear')
     .description('Remove the persisted device selection')
-    .action(withEnvelope(() => {
-      const r = handleDevicesClear({ projectRoot });
+    .action(withEnvelope(async () => {
+      const r = await handleDevicesClear({ projectRoot });
       emit(r, humanFlag());
     }));
 
