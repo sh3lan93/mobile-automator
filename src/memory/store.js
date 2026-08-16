@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { memoryFile, lockPath, KINDS, HEADERS } = require('./paths');
-const { withLock } = require('./lock');
+const { withLock } = require('../util/lock');
 const { parseRunHistory, renderRunHistory, recordInModel, countEntries } = require('./history');
 const { atomicWrite } = require('../util/atomic');
 const { parseEntries, renderEntries, hasText } = require('./entries');

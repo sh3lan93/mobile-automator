@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { atomicWrite } = require('../util/atomic');
+const { withLock } = require('../util/lock');
 const { OBSERVATION_TYPES } = require('./flags');
 
 // Incremental result accumulator that persists to
@@ -50,12 +51,27 @@ class ResultStore {
 
     this._dir = path.join(projectRoot, 'mobile-automator', 'results');
     this._file = path.join(this._dir, `${runId}.json`);
+    // Per-runId advisory lock guarding every read-modify-write mutator. Lives
+    // in the same directory as the result file, so the lock is scoped to this
+    // run only — different runs never contend on it.
+    this._lock = path.join(this._dir, `${runId}.lock`);
 
     // Honest-corruption channel: any recovery the load performs is recorded
     // here so the CLI can thread it into the envelope `hint`. Must exist
     // before `_load()` runs.
     this.warnings = [];
 
+    this._refreshFromDisk();
+  }
+
+  // Re-load the on-disk accumulator and refresh the in-memory fields. The
+  // constructor eager-loads once (read-only paths and back-compat), but every
+  // persisting mutator re-runs this UNDER the per-runId lock so it operates on
+  // fresh-from-disk state — never the possibly-stale constructor snapshot.
+  // Without this, two concurrent processes would both cache the same stale
+  // snapshot and serialize only their writes, so the last rename would win and
+  // the other's mutation would be silently lost.
+  _refreshFromDisk() {
     const loaded = this._load();
     this._steps = loaded.steps_executed || [];
     this._assertions = loaded.assertion_results || [];
@@ -141,31 +157,34 @@ class ResultStore {
   }
 
   addStep({ step_id, status, attempts = 1, screenshot = null, error_message = null, observations = null } = {}) {
-    const normalized = stepStatus(status);
-    const retryCount = Math.max(0, Number(attempts) - 1);
-    const step = {
-      step_id,
-      status: normalized,
-      screenshot,
-      error_message,
-      retried: retryCount > 0,
-      retry_count: retryCount,
-      observations,
-    };
-    this._steps.push(step);
-
-    // Flakiness bookkeeping: a step that ultimately PASSED but needed more than
-    // one attempt is flaky.
-    if (retryCount > 0 && normalized === 'passed') {
-      this._observations.push({
-        type: 'flakiness',
+    return withLock(this._lock, () => {
+      this._refreshFromDisk();
+      const normalized = stepStatus(status);
+      const retryCount = Math.max(0, Number(attempts) - 1);
+      const step = {
         step_id,
-        message: `Step '${step_id}' passed only after ${attempts} attempts; possible flakiness.`,
-      });
-    }
+        status: normalized,
+        screenshot,
+        error_message,
+        retried: retryCount > 0,
+        retry_count: retryCount,
+        observations,
+      };
+      this._steps.push(step);
 
-    this._persistInProgress();
-    return step;
+      // Flakiness bookkeeping: a step that ultimately PASSED but needed more than
+      // one attempt is flaky.
+      if (retryCount > 0 && normalized === 'passed') {
+        this._observations.push({
+          type: 'flakiness',
+          step_id,
+          message: `Step '${step_id}' passed only after ${attempts} attempts; possible flakiness.`,
+        });
+      }
+
+      this._persistInProgress();
+      return step;
+    });
   }
 
   // Append a TYPED observation to the run-level `observations` array — the one
@@ -174,68 +193,80 @@ class ResultStore {
   // freeform string, so writing there would produce untyped text in the wrong
   // shape (see #140 D2).
   addObservation({ type, step_id = null, message } = {}) {
-    if (!OBSERVATION_TYPES.includes(type)) {
-      throw new Error(
-        `unknown observation type "${type}" (expected ${OBSERVATION_TYPES.join(' | ')})`
-      );
-    }
-    if (message == null || String(message).trim() === '') {
-      throw new Error(
-        'observation message is required and cannot be empty or whitespace-only'
-      );
-    }
-    const entry = { type, step_id: step_id == null ? null : String(step_id), message: String(message) };
-    this._observations.push(entry);
-    this._persistInProgress();
-    return entry;
+    return withLock(this._lock, () => {
+      this._refreshFromDisk();
+      if (!OBSERVATION_TYPES.includes(type)) {
+        throw new Error(
+          `unknown observation type "${type}" (expected ${OBSERVATION_TYPES.join(' | ')})`
+        );
+      }
+      if (message == null || String(message).trim() === '') {
+        throw new Error(
+          'observation message is required and cannot be empty or whitespace-only'
+        );
+      }
+      const entry = { type, step_id: step_id == null ? null : String(step_id), message: String(message) };
+      this._observations.push(entry);
+      this._persistInProgress();
+      return entry;
+    });
   }
 
   addAssertion({ step_id, assertion_id, type, pass, message, expected = null, actual = null } = {}) {
-    const entry = {
-      assertion_id: assertion_id || `${step_id || 'assert'}_${type || 'unknown'}_${this._assertions.length + 1}`,
-      status: assertionStatus(pass),
-      expected: expected == null ? null : String(expected),
-      actual: actual == null ? null : String(actual),
-      message: message || '',
-    };
-    this._assertions.push(entry);
-    this._persistInProgress();
-    return entry;
+    return withLock(this._lock, () => {
+      this._refreshFromDisk();
+      const entry = {
+        assertion_id: assertion_id || `${step_id || 'assert'}_${type || 'unknown'}_${this._assertions.length + 1}`,
+        status: assertionStatus(pass),
+        expected: expected == null ? null : String(expected),
+        actual: actual == null ? null : String(actual),
+        message: message || '',
+      };
+      this._assertions.push(entry);
+      this._persistInProgress();
+      return entry;
+    });
   }
 
   captureVariable(name, value) {
-    this._capturedVariables[name] = value;
-    this._persistInProgress();
+    return withLock(this._lock, () => {
+      this._refreshFromDisk();
+      this._capturedVariables[name] = value;
+      this._persistInProgress();
+    });
   }
 
   finalize({ status, durationSeconds = 0, summary, metadata } = {}) {
-    const passed = this._assertions.filter((a) => a.status === 'passed').length;
-    const failed = this._assertions.filter((a) => a.status === 'failed').length;
-    const total = this._assertions.length;
+    return withLock(this._lock, () => {
+      this._refreshFromDisk();
+      const passed = this._assertions.filter((a) => a.status === 'passed').length;
+      const failed = this._assertions.filter((a) => a.status === 'failed').length;
+      const total = this._assertions.length;
 
-    const resolvedStatus = status || (failed > 0 ? 'failed' : 'passed');
+      const resolvedStatus = status || (failed > 0 ? 'failed' : 'passed');
 
-    const result = {
-      run_id: this.runId,
-      scenario_id: this.scenarioId,
-      schema_version: SCHEMA_VERSION,
-      status: resolvedStatus,
-      metadata: defaultMetadata({ ...this._metadataOverrides, ...(metadata || {}) }),
-      total_assertions: total,
-      passed_assertions: passed,
-      failed_assertions: failed,
-      duration_seconds: Number(durationSeconds) || 0,
-      steps_executed: this._steps,
-      assertion_results: this._assertions,
-      observations: this._observations,
-      captured_variables: this._capturedVariables,
-      summary:
-        summary ||
-        `${resolvedStatus}: ${passed}/${total} assertion(s) passed across ${this._steps.length} step(s).`,
-    };
+      const result = {
+        run_id: this.runId,
+        scenario_id: this.scenarioId,
+        schema_version: SCHEMA_VERSION,
+        status: resolvedStatus,
+        metadata: defaultMetadata({ ...this._metadataOverrides, ...(metadata || {}) }),
+        total_assertions: total,
+        passed_assertions: passed,
+        failed_assertions: failed,
+        duration_seconds: Number(durationSeconds) || 0,
+        steps_executed: this._steps,
+        assertion_results: this._assertions,
+        observations: this._observations,
+        captured_variables: this._capturedVariables,
+        summary:
+          summary ||
+          `${resolvedStatus}: ${passed}/${total} assertion(s) passed across ${this._steps.length} step(s).`,
+      };
 
-    this._atomicWrite(JSON.stringify(result, null, 2));
-    return result;
+      this._atomicWrite(JSON.stringify(result, null, 2));
+      return result;
+    });
   }
 }
 
