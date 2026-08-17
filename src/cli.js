@@ -22,6 +22,24 @@ const { ADAPTERS } = require('./init/adapters');
 const { isSemanticAction, ACTION_METHOD, selectResolver } = require('./device/semantic-press');
 const connection = require('./device/connection');
 
+// `--version` / `-V` keep their human-readable output + exit 0. bin/mauto.js
+// intercepts them before commander in the real CLI; run() mirrors that so a
+// direct run() call (including tests) never routes them into commander, which
+// has no version flag by design.
+const VERSION_FLAGS = new Set(['--version', '-V']);
+
+// commander codes that represent a PARSE failure (bad flag, missing required
+// option/argument, unknown subcommand) — the classes #146 must convert into the
+// envelope instead of letting commander print bare text to stderr + exit(1)
+// itself. Other commander codes (helpDisplayed, version, help) are NOT errors
+// and are handled separately in run().
+const COMMANDER_PARSE_CODES = new Set([
+  'commander.unknownOption',
+  'commander.missingArgument',
+  'commander.missingMandatoryOptionValue',
+  'commander.unknownCommand',
+]);
+
 // Map the user-facing --mode flag onto the stored config mode values.
 const MODE_ALIASES = {
   aware: 'platform-aware',
@@ -55,14 +73,35 @@ const ORIENTATIONS = new Set(['portrait', 'landscape']);
 // `environment` with a filesystem-specific hint.
 const FS_ERROR_CODES = new Set(['EACCES', 'ENOENT', 'EROFS', 'ENOSPC', 'EPERM']);
 
+// Build a human-readable usage line for a commander command, e.g.
+// "Usage: mauto result add-step [options]". Walks the parent chain so a
+// subcommand's hint names the full invocation path.
+function usageLine(cmd) {
+  const names = [];
+  for (let c = cmd; c; c = c.parent) names.unshift(c.name());
+  const usage = (cmd.usage && cmd.usage()) || '';
+  return `Usage: ${names.join(' ')} ${usage}`.trim();
+}
+
 // Classify an UNEXPECTED thrown/rejected error — one a handler did NOT already
 // convert into a `{envelope, exitKind}` — into the uniform fail envelope. This
 // is the single boundary that guarantees a calling agent always receives one
 // JSON line + a meaningful exit code instead of a raw stack trace on stderr.
+//   CommanderError (parse failure) -> invalid_input, with the usage line as hint
 //   SyntaxError                  -> invalid_input (a malformed JSON file)
 //   fs EACCES/ENOENT/EROFS/...    -> environment, with a filesystem hint
 //   anything else                -> internal
 function toEnvelope(err) {
+  if (err && typeof err.code === 'string' && COMMANDER_PARSE_CODES.has(err.code)) {
+    return {
+      envelope: fail(
+        'invalid_input',
+        err.message || String(err),
+        err.usage || null
+      ),
+      exitKind: 'invalid_input',
+    };
+  }
   if (err instanceof SyntaxError) {
     return {
       envelope: fail(
@@ -1046,6 +1085,26 @@ function buildProgram(deps = {}) {
     .description('Platform-agnostic mobile automation CLI')
     .option('--human', 'render human-readable output instead of JSON', false);
 
+  // Parse-level failures (unknown option, missing required option/argument,
+  // unknown subcommand) must NOT bypass the envelope contract (#146). Without
+  // exitOverride, commander prints bare text to stderr and calls process.exit
+  // itself. exitOverride makes it throw a CommanderError instead; configureOutput
+  // swallows commander's own stderr text so it never reaches the agent raw (the
+  // message is carried in the envelope instead). Both are set on the ROOT before
+  // any subcommand is created so every subcommand inherits them (commander copies
+  // _exitCallback + _outputConfiguration to children via copyInheritedSettings).
+  program.exitOverride(function (err) {
+    // Attach the throwing command's usage line so the envelope hint can carry it.
+    // `this` is the command that threw: commander invokes the callback as a
+    // method of the throwing command even when the callback is inherited from
+    // the root, so this.usage() names the exact subcommand that failed.
+    if (this && typeof this.usage === 'function') {
+      err.usage = usageLine(this);
+    }
+    throw err;
+  });
+  program.configureOutput({ writeErr: () => {} });
+
   const humanFlag = () => Boolean(program.opts().human);
 
   // The single envelope boundary. Wrap every `.action(...)` callback so any
@@ -1511,15 +1570,27 @@ function diagnose(err, exitKind) {
 // in-program withEnvelope boundary can't see them) — e.g. the ScenarioValidator
 // default-param compiling a corrupt bundled schema inside buildProgram, or a
 // stray unhandled rejection. Always one JSON envelope on stdout + the mapped
-// exit code, never a raw stack trace.
-function emitFatal(err) {
+// exit code, never a raw stack trace. `human` (opt-in --human) renders the fail
+// envelope readably instead of as JSON.
+function emitFatal(err, human = false) {
   const { envelope, exitKind } = toEnvelope(err);
   diagnose(err, exitKind);
-  process.stdout.write(render(envelope) + '\n');
+  process.stdout.write(render(envelope, { human }) + '\n');
   process.exit(exitCodeFor(exitKind));
 }
 
 async function run(argv) {
+  // `--version` / `-V` keep their human-readable output + exit 0 (mirrors
+  // bin/mauto.js, which intercepts them before commander in the real CLI).
+  // Handled here too so a direct run() call — including tests — never routes
+  // them into commander (which has no version flag by design).
+  if (argv.slice(2).some((arg) => VERSION_FLAGS.has(arg))) {
+    // eslint-disable-next-line global-require
+    process.stdout.write(require('../package.json').version + '\n');
+    process.exit(0);
+    return;
+  }
+
   // Belt-and-suspenders around the in-program withEnvelope boundary: a throw in
   // buildProgram() (e.g. the ScenarioValidator default-param compiling a corrupt
   // bundled schema) happens before any `.action` callback, so only this outer
@@ -1531,7 +1602,14 @@ async function run(argv) {
     const program = buildProgram();
     await program.parseAsync(argv);
   } catch (err) {
-    emitFatal(err);
+    // commander.helpDisplayed / commander.version are NOT errors: commander
+    // already wrote the human-readable help/version to stdout and exited 0.
+    // Leave them alone (exit 0, no envelope) rather than wrapping them (#146).
+    if (err && (err.code === 'commander.helpDisplayed' || err.code === 'commander.version')) {
+      process.exit(0);
+      return;
+    }
+    emitFatal(err, argv.slice(2).includes('--human'));
   }
 }
 
