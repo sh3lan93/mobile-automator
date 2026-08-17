@@ -15,7 +15,7 @@
 
 const configManager = require('../config/manager');
 
-const FALLBACK = '(not configured — run `mauto config set <key> …`)';
+const FALLBACK = '(not configured — set it via mauto config set <key>)';
 
 // Each entry lists candidate config keys, tried in order. The config may be in
 // the flat agnostic shape (top-level keys) or the nested aware shape written by
