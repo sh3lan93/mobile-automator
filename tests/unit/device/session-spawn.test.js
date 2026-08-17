@@ -1,5 +1,7 @@
 'use strict';
 
+const { EventEmitter } = require('events');
+
 const { spawnDaemon, DAEMON_BIN } = require('../../../src/device/session-spawn');
 
 function fakeChild() {
@@ -67,5 +69,28 @@ describe('session-spawn', () => {
       pollMs: 1,
     });
     expect(captured.env.MAUTO_SESSION_DEVICE).toBeUndefined();
+  });
+
+  test('a spawn error (EMFILE/EACCES) bails the readiness poll immediately', async () => {
+    const child = new EventEmitter();
+    child.unref = () => {};
+    let polls = 0;
+    const p = spawnDaemon({
+      projectRoot: '/proj',
+      spawn: () => child,
+      isAlive: async () => {
+        polls += 1;
+        return false;
+      },
+      pollMs: 5,
+      readyTimeoutMs: 10000,
+    });
+    // The 'error' listener is attached synchronously inside spawnDaemon, so an
+    // error emitted right after the call is captured before the first poll
+    // completes — no 10s wait for a child that can never come up.
+    child.emit('error', new Error('spawn EMFILE'));
+    const ok = await p;
+    expect(ok).toBe(false);
+    expect(polls).toBe(1); // bailed after the first poll, not ~2000
   });
 });

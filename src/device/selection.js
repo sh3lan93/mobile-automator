@@ -16,6 +16,7 @@ const fs = require('fs');
 const path = require('path');
 
 const paths = require('./session-paths');
+const { atomicWrite } = require('../util/atomic');
 
 const SELECTION_NAME = 'selection.json';
 
@@ -35,10 +36,11 @@ function read(projectRoot) {
   }
 }
 
-// Persist a device id. Creates mobile-automator/.session/ if needed.
+// Persist a device id. Creates mobile-automator/.session/ if needed. Written
+// via atomicWrite (tmp + fsync + rename) so a concurrent reader or a crash
+// sees the old-complete or new-complete selection, never a torn one.
 function write(projectRoot, id) {
-  fs.mkdirSync(paths.sessionDir(projectRoot), { recursive: true });
-  fs.writeFileSync(
+  atomicWrite(
     selectionPath(projectRoot),
     JSON.stringify({ device: String(id) }, null, 2) + '\n'
   );

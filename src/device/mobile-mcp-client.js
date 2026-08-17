@@ -73,7 +73,12 @@ function makeCall({ rawCall, device = null }) {
   function ensureDevice() {
     if (!resolvedPromise) {
       resolvedPromise = rawCall('mobile_list_available_devices', {})
-        .then((listed) => resolveSingleDevice(normalizeDevices(listed))); // throws DeviceResolutionError on 0/many
+        .then((listed) => resolveSingleDevice(normalizeDevices(listed))) // throws DeviceResolutionError on 0/many
+        .catch((err) => {
+          // A failed discovery must not wedge the cache: the next call re-lists.
+          resolvedPromise = null;
+          throw err;
+        });
     }
     return resolvedPromise;
   }
@@ -81,8 +86,24 @@ function makeCall({ rawCall, device = null }) {
     if (toolName === 'mobile_list_available_devices') {
       return rawCall(toolName, args);
     }
-    const deviceId = await ensureDevice();
-    return rawCall(toolName, injectDeviceArg(toolName, args, deviceId));
+    // The auto-resolved device can go stale (disconnected, a new one appears);
+    // the cached id then fails every call with `Device "X" not found` until the
+    // daemon restarts. Retry ONCE by busting the cache and re-resolving — but
+    // only for an auto-resolved device (device === null): a user-pinned daemon
+    // must never silently switch devices.
+    let retried = false;
+    for (;;) {
+      const deviceId = await ensureDevice();
+      try {
+        return await rawCall(toolName, injectDeviceArg(toolName, args, deviceId));
+      } catch (err) {
+        const staleAutoResolved =
+          device == null && !retried && /Device .+ not found/i.test(err && err.message);
+        if (!staleAutoResolved) throw err;
+        retried = true;
+        resolvedPromise = null;
+      }
+    }
   }
   return { call };
 }

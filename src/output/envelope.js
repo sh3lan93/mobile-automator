@@ -21,6 +21,11 @@ const EXIT = {
 const KIND_TO_CODE = {
   ok: EXIT.OK,
   device: EXIT.DEVICE,
+  // A daemon per-call timeout is a device-class failure (the action may have
+  // partially executed on the device) — exit 2 keeps the contract unchanged for
+  // callers branching on 2, while the envelope's error.kind stays 'timeout' so
+  // agents can distinguish "no response" from a hard device error.
+  timeout: EXIT.DEVICE,
   invalid_input: EXIT.INVALID_INPUT,
   target_not_found: EXIT.TARGET_NOT_FOUND,
   environment: EXIT.ENVIRONMENT,

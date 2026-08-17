@@ -1011,15 +1011,82 @@ describe('cli handlers', () => {
       expect(exitKind).toBe('invalid_input');
       expect(envelope.error.kind).toBe('invalid_input');
     });
+
+    test('fails with a device error when a live daemon is pinned to a different device', async () => {
+      const spawn = { spawnDaemon: async () => { throw new Error('should not spawn'); } };
+      const client = { isAlive: async () => true };
+      const readHandle = () => 'A';
+      const { envelope, exitKind } = await handleSessionStart(
+        { projectRoot, spawn, client, readHandle },
+        { device: 'B' }
+      );
+      expect(exitKind).toBe('device');
+      expect(envelope.ok).toBe(false);
+      expect(envelope.error.kind).toBe('device');
+      expect(envelope.error.message).toContain('pinned to A');
+      expect(envelope.error.message).toContain('not B');
+      expect(envelope.hint).toContain('session end');
+      expect(envelope.data).toEqual({ started: false, already_running: true, pinned: 'A', requested: 'B' });
+    });
+
+    test('reuses a live daemon when the requested device matches the handle pin', async () => {
+      const spawn = { spawnDaemon: async () => { throw new Error('should not spawn'); } };
+      const client = { isAlive: async () => true };
+      const readHandle = () => 'A';
+      const { envelope, exitKind } = await handleSessionStart(
+        { projectRoot, spawn, client, readHandle },
+        { device: 'A' }
+      );
+      expect(exitKind).toBe('ok');
+      expect(envelope.data.already_running).toBe(true);
+      expect(envelope.data.device).toBe('A');
+    });
+
+    test('fails when a live daemon is unpinned and a specific device is requested', async () => {
+      const spawn = { spawnDaemon: async () => { throw new Error('should not spawn'); } };
+      const client = { isAlive: async () => true };
+      const readHandle = () => null;
+      const { envelope, exitKind } = await handleSessionStart(
+        { projectRoot, spawn, client, readHandle },
+        { device: 'B' }
+      );
+      expect(exitKind).toBe('device');
+      expect(envelope.ok).toBe(false);
+      expect(envelope.error.message).toContain('auto');
+      expect(envelope.hint).toContain('session end');
+    });
+
+    test('reuses a live daemon when no device is requested, whatever its pin', async () => {
+      const spawn = { spawnDaemon: async () => { throw new Error('should not spawn'); } };
+      const client = { isAlive: async () => true };
+      const readHandle = () => 'A';
+      const { envelope, exitKind } = await handleSessionStart(
+        { projectRoot, spawn, client, readHandle },
+        {}
+      );
+      expect(exitKind).toBe('ok');
+      expect(envelope.data.already_running).toBe(true);
+      expect(envelope.data.device).toBeNull();
+    });
   });
 
   describe('handleSessionStatus', () => {
-    test('reports running:true/false from the client', async () => {
-      const up = await handleSessionStatus({ projectRoot: '/x', client: { isAlive: async () => true } });
+    test('reports running:true with in_flight and device from the client', async () => {
+      const up = await handleSessionStatus({
+        projectRoot: '/x',
+        client: { getSessionStatus: async () => ({ running: true, in_flight: 2, device: 'A' }) },
+      });
       expect(up.exitKind).toBe('ok');
-      expect(up.envelope.data.running).toBe(true);
-      const down = await handleSessionStatus({ projectRoot: '/x', client: { isAlive: async () => false } });
-      expect(down.envelope.data.running).toBe(false);
+      expect(up.envelope.data).toEqual({ running: true, in_flight: 2, device: 'A' });
+    });
+
+    test('reports running:false with null in_flight/device when no daemon is up', async () => {
+      const down = await handleSessionStatus({
+        projectRoot: '/x',
+        client: { getSessionStatus: async () => ({ running: false, in_flight: null, device: null }) },
+      });
+      expect(down.exitKind).toBe('ok');
+      expect(down.envelope.data).toEqual({ running: false, in_flight: null, device: null });
     });
   });
 
@@ -1137,19 +1204,65 @@ describe('cli handlers', () => {
   });
 
   describe('handleDevicesClear', () => {
-    test('clears via the injected store and reports the previous selection', () => {
+    test('clears via the injected store and reports the previous selection', async () => {
       const cleared = [];
       const store = { read: () => 'A', clear: (root) => cleared.push(root) };
-      const { envelope, exitKind } = handleDevicesClear({ store, projectRoot: '/x' });
+      const { envelope, exitKind } = await handleDevicesClear({
+        store,
+        projectRoot: '/x',
+        isAlive: async () => false,
+      });
       expect(exitKind).toBe('ok');
       expect(envelope.data.cleared).toBe('A');
       expect(cleared).toEqual(['/x']);
     });
 
-    test('reports cleared:null when nothing was selected', () => {
+    test('reports cleared:null when nothing was selected', async () => {
       const store = { read: () => null, clear: () => {} };
-      const { envelope } = handleDevicesClear({ store, projectRoot: '/x' });
+      const { envelope } = await handleDevicesClear({
+        store,
+        projectRoot: '/x',
+        isAlive: async () => false,
+      });
       expect(envelope.data.cleared).toBeNull();
+    });
+
+    test('surfaces daemon_still_pinned when a live daemon stays pinned after the clear', async () => {
+      const store = { read: () => 'B', clear: () => {} };
+      const { envelope, exitKind } = await handleDevicesClear({
+        store,
+        projectRoot: '/x',
+        isAlive: async () => true,
+        readHandle: () => 'A',
+      });
+      expect(exitKind).toBe('ok');
+      expect(envelope.ok).toBe(true);
+      expect(envelope.data.cleared).toBe('B');
+      expect(envelope.data.daemon_still_pinned).toBe('A');
+      expect(envelope.hint).toContain('session end');
+    });
+
+    test('reports daemon_still_pinned:null for a live unpinned daemon', async () => {
+      const store = { read: () => null, clear: () => {} };
+      const { envelope } = await handleDevicesClear({
+        store,
+        projectRoot: '/x',
+        isAlive: async () => true,
+        readHandle: () => null,
+      });
+      expect(envelope.data.cleared).toBeNull();
+      expect(envelope.data.daemon_still_pinned).toBeNull();
+    });
+
+    test('omits daemon_still_pinned when no daemon is running', async () => {
+      const store = { read: () => 'A', clear: () => {} };
+      const { envelope } = await handleDevicesClear({
+        store,
+        projectRoot: '/x',
+        isAlive: async () => false,
+      });
+      expect(envelope.data.cleared).toBe('A');
+      expect('daemon_still_pinned' in envelope.data).toBe(false);
     });
   });
 
