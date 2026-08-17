@@ -83,7 +83,14 @@ function wrapSocket(socket) {
 
   async function call(tool, args = {}) {
     const res = await request({ type: 'call', tool, args });
-    if (!res.ok) throw new Error((res.error && res.error.message) || 'session call failed');
+    if (!res.ok) {
+      // Carry the daemon's kind/hint (e.g. kind:'timeout' + partial-execution
+      // hint) so the CLI can surface them instead of defaulting to 'device'.
+      const e = new Error((res.error && res.error.message) || 'session call failed');
+      if (res.error && res.error.kind) e.kind = res.error.kind;
+      if (res.error && res.error.hint) e.hint = res.error.hint;
+      throw e;
+    }
     return res.result;
   }
 
@@ -140,4 +147,27 @@ async function requestShutdown(projectRoot) {
   }
 }
 
-module.exports = { tryConnect, isAlive, requestShutdown };
+// Rich status probe: connect + ping and report whether a daemon is running,
+// how many device calls are currently in flight (the double-execution window
+// is visible here), and which device it is pinned to. `null`s when not running.
+async function getSessionStatus(projectRoot) {
+  const socket = await connectSocket(paths.socketPath(projectRoot));
+  if (!socket) return { running: false, in_flight: null, device: null };
+  const client = wrapSocket(socket);
+  try {
+    const res = await client.request({ type: 'ping' }, { timeoutMs: 2000 });
+    if (!(res && res.ok)) return { running: false, in_flight: null, device: null };
+    const result = res.result || {};
+    return {
+      running: true,
+      in_flight: typeof result.in_flight === 'number' ? result.in_flight : null,
+      device: result.device != null ? result.device : null,
+    };
+  } catch (_) {
+    return { running: false, in_flight: null, device: null };
+  } finally {
+    await client.close();
+  }
+}
+
+module.exports = { tryConnect, isAlive, requestShutdown, getSessionStatus, DEFAULT_TIMEOUT_MS };

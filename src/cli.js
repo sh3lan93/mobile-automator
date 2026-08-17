@@ -170,13 +170,17 @@ function handleValidate({ validator }, file) {
 }
 
 function deviceFail(err) {
+  // Respect a typed error's kind (e.g. the daemon's 'timeout') so the envelope
+  // and exit code reflect the real failure class; anything else defaults to
+  // 'device' (exit 2) as before.
+  const kind = err.kind || 'device';
   return {
     envelope: fail(
-      'device',
+      kind,
       err.message || String(err),
       err.hint || 'Ensure a device or simulator is connected and the app is running.'
     ),
-    exitKind: 'device',
+    exitKind: kind,
   };
 }
 
@@ -946,8 +950,8 @@ async function handleSessionStart(
 async function handleSessionStatus(
   { projectRoot, client = require('./device/session-client') } = {}
 ) {
-  const running = await connection.isSessionAlive(projectRoot, { client });
-  return { envelope: ok({ running }), exitKind: 'ok' };
+  const status = await connection.sessionStatus(projectRoot, { client });
+  return { envelope: ok(status), exitKind: 'ok' };
 }
 
 async function handleSessionEnd(

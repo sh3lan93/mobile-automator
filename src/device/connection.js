@@ -40,6 +40,12 @@ function isSessionAlive(projectRoot, { client = sessionClient } = {}) {
   return client.isAlive(projectRoot);
 }
 
+// Rich status: running + in-flight call count + pinned device. `null`s when not
+// running. The in-flight count exposes the double-execution window.
+function sessionStatus(projectRoot, { client = sessionClient } = {}) {
+  return client.getSessionStatus(projectRoot);
+}
+
 // Spawn a daemon and wait until it answers. Resolves true on success.
 function startSession({ projectRoot, device = null, idleMs, spawn = sessionSpawn } = {}) {
   return spawn.spawnDaemon({ projectRoot, device, idleMs });
@@ -53,6 +59,7 @@ function endSession(projectRoot, { client = sessionClient } = {}) {
 module.exports = {
   acquireConnection,
   isSessionAlive,
+  sessionStatus,
   startSession,
   endSession,
 };
