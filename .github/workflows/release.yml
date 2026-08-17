@@ -78,3 +78,29 @@ jobs:
             - [Troubleshooting Guide](https://github.com/${{ github.repository }}/blob/${{ steps.get_version.outputs.tag }}/TROUBLESHOOTING.md)
           draft: false
           prerelease: ${{ contains(steps.get_version.outputs.version, 'beta') || contains(steps.get_version.outputs.version, 'alpha') || startsWith(steps.get_version.outputs.version, '0.') }}
+
+  publish-npm:
+    name: Publish to npm
+    # Only publish graduated (non-prerelease) tags. The workflow triggers on
+    # v*.*.* which also matches rc tags like v0.21.0-rc.13; this guard skips
+    # those so release candidates are never published to the registry.
+    if: ${{ !contains(github.ref, '-') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # Required for npm publish --provenance
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm ci
+      - run: npm test
+      - run: ./scripts/pack-smoke.sh
+      # NPM_TOKEN must be configured in the repo's secrets (Settings > Secrets
+      # and variables > Actions) with an npm automation token that has publish
+      # rights for the mobile-automator package.
+      - run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
