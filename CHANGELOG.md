@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.23.9]
+
+### 🔒 Changed
+
+- **npm publishing moved to trusted publishing (OIDC); the `NPM_TOKEN` secret is gone.** 0.23.8 published with a granular access token that had to be scoped to **All Packages**, because npm cannot scope a token to a package that does not exist yet — a broad, long-lived credential sitting in repository secrets purely to bootstrap the first release. That constraint is gone now that the package exists, so `publish-npm` authenticates with the workflow's own OIDC identity instead: npm exchanges the `id-token` for a short-lived publish grant via a trusted publisher configured on the package, naming this repository and this workflow file. Nothing long-lived remains, and there is nothing to rotate. The job moves from Node 18 to **Node 22**, and — because Node 22 LTS bundles npm 10.x while trusted publishing requires **npm >= 11.5.1** — npm is upgraded explicitly and the floor is asserted, so a future runner image change fails loudly at a named step rather than surfacing as an opaque authentication error at publish time. `--provenance` is kept deliberately: OIDC generates provenance regardless, but the explicit flag makes a failure to attest fail the publish rather than silently shipping an unattested tarball. Note the trust relationship names `release.yml` specifically — renaming that file, or moving the publish step into another workflow, breaks publishing until the trusted publisher is updated (`npm trust list mobile-automator`). ([#170](https://github.com/sh3lan93/mobile-automator/issues/170))
+
+---
+
 ## [0.23.8]
 
 ### 🐛 Fixed
