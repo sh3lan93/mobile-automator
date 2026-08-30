@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Test Scenario Schema reference - named step IDs, 14 action types, 27 assertion types, variables, retry policies, and conditional logic.">
+        <meta name="description" content="Test Scenario Schema reference - named step IDs, 18 action types, 27 assertion types, variables, retry policies, and conditional logic.">
       
       
       
@@ -65,7 +65,7 @@
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Test Scenario Schema - mobile-automator" />
-  <meta property="og:description" content="Test Scenario Schema reference - named step IDs, 14 action types, 27 assertion types, variables, retry policies, and conditional logic." />
+  <meta property="og:description" content="Test Scenario Schema reference - named step IDs, 18 action types, 27 assertion types, variables, retry policies, and conditional logic." />
   <meta property="og:url" content="https://sh3lan93.github.io/mobile-automator/reference/schema/" />
   <meta property="og:site_name" content="mobile-automator" />
   <meta property="og:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
@@ -73,7 +73,7 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="Test Scenario Schema - mobile-automator" />
-  <meta name="twitter:description" content="Test Scenario Schema reference - named step IDs, 14 action types, 27 assertion types, variables, retry policies, and conditional logic." />
+  <meta name="twitter:description" content="Test Scenario Schema reference - named step IDs, 18 action types, 27 assertion types, variables, retry policies, and conditional logic." />
   <meta name="twitter:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
   
 
@@ -1082,15 +1082,15 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#action-types-14-total" class="md-nav__link">
+  <a href="#action-types-18-total" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Action Types (14 total)
+        Action Types (18 total)
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Action Types (14 total)">
+    <nav class="md-nav" aria-label="Action Types (18 total)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1832,15 +1832,15 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#action-types-14-total" class="md-nav__link">
+  <a href="#action-types-18-total" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Action Types (14 total)
+        Action Types (18 total)
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Action Types (14 total)">
+    <nav class="md-nav" aria-label="Action Types (18 total)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2204,7 +2204,7 @@
 <p>The scenario schema defines the format for mobile test scenarios:</p>
 <ul>
 <li><strong>Named string step IDs</strong> — <code>tap_login</code>, <code>wait_for_home</code> (not integer indices)</li>
-<li><strong>14 action types</strong> — From simple tap/type to advanced waits and variable capture</li>
+<li><strong>18 action types</strong> — From simple tap/type to advanced waits and variable capture</li>
 <li><strong>27 assertion types</strong> — Comprehensive UI, content, visual, and accessibility checks</li>
 <li><strong>Variables &amp; capture</strong> — Extract dynamic values during execution for later assertions</li>
 <li><strong>Conditional execution</strong> — Optional steps, conditional branching, retry policies</li>
@@ -2214,7 +2214,7 @@
 <h2 id="schema-structure-overview">Schema Structure Overview<a class="headerlink" href="#schema-structure-overview" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>Test Scenario
 ├─ Metadata
-│  ├─ $schema_version (required: &quot;2.0&quot; or &quot;2.1&quot;)
+│  ├─ $schema_version (required: "2.0" or "2.1")
 │  ├─ scenario_id (required: snake_case)
 │  ├─ name (required: human-readable)
 │  ├─ description (required: what it tests)
@@ -2319,38 +2319,38 @@
 </table>
 <h3 id="example-minimal-scenario">Example Minimal Scenario<a class="headerlink" href="#example-minimal-scenario" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;$schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.1&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;scenario_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_happy_path&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;User Login - Happy Path&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Verify user can log in with valid credentials and access the dashboard&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;platform&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;android&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;app_package&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;com.example.app&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;metadata&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;app_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.2.3&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;staging&quot;</span>
+<span class="w">  </span><span class="nt">"$schema_version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2.1"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"scenario_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"login_happy_path"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"User Login - Happy Path"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Verify user can log in with valid credentials and access the dashboard"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"platform"</span><span class="p">:</span><span class="w"> </span><span class="s2">"android"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"app_package"</span><span class="p">:</span><span class="w"> </span><span class="s2">"com.example.app"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"metadata"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"app_version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.2.3"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"environment"</span><span class="p">:</span><span class="w"> </span><span class="s2">"staging"</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"steps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap_login_button&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Tap the login button on the welcome screen&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Login button&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap_login_button"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Tap the login button on the welcome screen"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Login button"</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_form&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for the email input field to appear&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Email input field&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_visible&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5000</span><span class="w"> </span><span class="p">}</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_form"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_element"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Wait for the email input field to appear"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Email input field"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"wait_config"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_visible"</span><span class="p">,</span><span class="w"> </span><span class="nt">"timeout_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">5000</span><span class="w"> </span><span class="p">}</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;assertions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"assertions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_form_visible&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;after_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_form&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_exists&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;The login form is displayed&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Email input field&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"login_form_visible"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"after_step"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_form"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_exists"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"The login form is displayed"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Email input field"</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
@@ -2363,17 +2363,18 @@
 <li>Examples: <code>tap_login</code>, <code>wait_for_home</code>, <code>type_email_address</code></li>
 <li>Unique within the scenario; used for screenshot naming and <code>after_step</code> references</li>
 </ul>
-<h3 id="action-types-14-total">Action Types (14 total)<a class="headerlink" href="#action-types-14-total" title="Permanent link">&para;</a></h3>
-<p>Each step's <code>action</code> field is one of these values. In platform-agnostic (<code>mode: "platform-agnostic"</code>) scenarios you can additionally use the four semantic actions <code>press_back</code>, <code>dismiss_keyboard</code>, <code>grant_permission</code>, and <code>deny_permission</code>, which resolve to the right per-platform mechanics at replay time.</p>
+<h3 id="action-types-18-total">Action Types (18 total)<a class="headerlink" href="#action-types-18-total" title="Permanent link">&para;</a></h3>
+<p>Each step's <code>action</code> field is one of these values: the <strong>14 core actions</strong> documented below, plus <strong>4 semantic actions</strong> available in platform-agnostic (<code>mode: "platform-agnostic"</code>) scenarios — <code>press_back</code>, <code>dismiss_keyboard</code>, <code>grant_permission</code>, and <code>deny_permission</code> — which resolve to the right per-platform mechanics at replay time.</p>
+<p>Note that <code>clear_app_data</code> is accepted by the schema but is <strong>not mechanically executable</strong> — the underlying automation engine exposes no primitive for it, so a scenario using it cannot replay unattended. The same applies to the <code>enable_wifi</code> and <code>disable_wifi</code> precondition device actions.</p>
 <h4 id="1-launch_app">1. launch_app<a class="headerlink" href="#1-launch_app" title="Permanent link">&para;</a></h4>
 <p>Launch the app under test on the device.</p>
 <p><strong>Fields:</strong>
 - <code>action</code> — <code>"launch_app"</code></p>
 <p><strong>Example:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;launch_app&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;launch_app&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Launch the app under test&quot;</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"launch_app"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"launch_app"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Launch the app under test"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <hr />
@@ -2386,10 +2387,10 @@
 - <code>retry_policy</code> (optional) — Retry configuration</p>
 <p><strong>Example:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap_login_button&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Tap the login button&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Login button&quot;</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap_login_button"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Tap the login button"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Login button"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <hr />
@@ -2400,10 +2401,10 @@
 - <code>target</code> — Element to long-press</p>
 <p><strong>Example:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;long_press_menu_item&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;long_press&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Long-press the list item to open the context menu&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;First message in the list&quot;</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"long_press_menu_item"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"long_press"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Long-press the list item to open the context menu"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"First message in the list"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <hr />
@@ -2414,10 +2415,10 @@
 - <code>target</code> — Element to double-tap</p>
 <p><strong>Example:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;double_tap_zoom&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;double_tap&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Double-tap the image to zoom in&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Product image&quot;</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"double_tap_zoom"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"double_tap"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Double-tap the image to zoom in"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Product image"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <hr />
@@ -2428,10 +2429,10 @@
 - <code>value</code> — Text to type</p>
 <p><strong>Example:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;enter_email&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Type the account email into the focused field&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user@example.com&quot;</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"enter_email"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"type"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Type the account email into the focused field"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"user@example.com"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <hr />
@@ -2442,10 +2443,10 @@
 - <code>value</code> — <code>up</code>, <code>down</code>, <code>left</code>, or <code>right</code></p>
 <p><strong>Example:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;scroll_down_page&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;swipe&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Scroll down the page&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;down&quot;</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"scroll_down_page"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"swipe"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Scroll down the page"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"down"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <hr />
@@ -2456,10 +2457,10 @@
 - <code>target</code> — Element to scroll to</p>
 <p><strong>Example:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;scroll_to_submit&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;scroll_to_element&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Scroll until the submit button is on screen&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Submit button&quot;</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"scroll_to_submit"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"scroll_to_element"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Scroll until the submit button is on screen"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Submit button"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <hr />
@@ -2470,10 +2471,10 @@
 - <code>value</code> — <code>BACK</code>, <code>HOME</code>, or <code>ENTER</code></p>
 <p><strong>Example:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;press_back&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;press_button&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Press the device back button&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;BACK&quot;</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"press_back"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"press_button"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Press the device back button"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"BACK"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <hr />
@@ -2484,10 +2485,10 @@
 - <code>value</code> — URL to open</p>
 <p><strong>Example:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;open_help_page&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;open_url&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Open the help page in the browser&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://help.example.com&quot;</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"open_help_page"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"open_url"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Open the help page in the browser"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://help.example.com"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <hr />
@@ -2499,11 +2500,11 @@
 - <code>wait_config</code> — <code>{ "type": "element_visible", "timeout_ms": &lt;1000–60000&gt; }</code></p>
 <p><strong>Example:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_dashboard&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for the dashboard content to appear&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Dashboard content&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_visible&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">15000</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_dashboard"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_element"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Wait for the dashboard content to appear"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Dashboard content"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"wait_config"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_visible"</span><span class="p">,</span><span class="w"> </span><span class="nt">"timeout_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">15000</span><span class="w"> </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <hr />
@@ -2515,11 +2516,11 @@
 - <code>wait_config</code> — <code>{ "type": "element_gone", "timeout_ms": &lt;1000–60000&gt; }</code></p>
 <p><strong>Example:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading_done&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element_gone&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for the loading spinner to disappear&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Loading spinner&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_gone&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20000</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_loading_done"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_element_gone"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Wait for the loading spinner to disappear"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Loading spinner"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"wait_config"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_gone"</span><span class="p">,</span><span class="w"> </span><span class="nt">"timeout_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">20000</span><span class="w"> </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <hr />
@@ -2531,10 +2532,10 @@
 <p><strong>Note:</strong> <code>indicator</code> may be <code>shimmer</code>, <code>spinner</code>, <code>progress_bar</code>, <code>skeleton</code>, or <code>any</code> (default <code>any</code>).</p>
 <p><strong>Example:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_data_load&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading_complete&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for the feed to finish loading&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;loading_complete&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;indicator&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;any&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30000</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_data_load"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_loading_complete"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Wait for the feed to finish loading"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"wait_config"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"loading_complete"</span><span class="p">,</span><span class="w"> </span><span class="nt">"indicator"</span><span class="p">:</span><span class="w"> </span><span class="s2">"any"</span><span class="p">,</span><span class="w"> </span><span class="nt">"timeout_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">30000</span><span class="w"> </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <hr />
@@ -2546,11 +2547,11 @@
 - <code>capture_to</code> — Variable name to store the value in (must be declared in the <code>variables</code> block)</p>
 <p><strong>Example:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_order_id&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_value&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Capture the order confirmation code&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Order confirmation code&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;capture_to&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;order_id&quot;</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"capture_order_id"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"capture_value"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Capture the order confirmation code"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Order confirmation code"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"capture_to"</span><span class="p">:</span><span class="w"> </span><span class="s2">"order_id"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <hr />
@@ -2560,9 +2561,9 @@
 - <code>action</code> — <code>"clear_app_data"</code></p>
 <p><strong>Example:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;reset_app&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;clear_app_data&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Clear app data to start from a clean state&quot;</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"reset_app"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"clear_app_data"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Clear app data to start from a clean state"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <hr />
@@ -2571,25 +2572,25 @@
 <h4 id="optional">optional<a class="headerlink" href="#optional" title="Permanent link">&para;</a></h4>
 <p>If <code>true</code>, failure to find or interact with the target is silently ignored and execution continues. Default: <code>false</code></p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;optional_feature_check&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Dismiss the promo banner if it appears&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Promo banner close button&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;optional&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"optional_feature_check"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Dismiss the promo banner if it appears"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Promo banner close button"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"optional"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
 <span class="p">}</span>
 </code></pre></div>
 <h4 id="retry_policy">retry_policy<a class="headerlink" href="#retry_policy" title="Permanent link">&para;</a></h4>
 <p>Configure automatic retry behavior. Only applies when <code>on_failure</code> is <code>"retry"</code>.</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;flaky_element_step&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for the sometimes-slow element&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Slow-loading widget&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_visible&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10000</span><span class="w"> </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;on_failure&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;retry&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;retry_policy&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;max_attempts&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;backoff_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"flaky_element_step"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_element"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Wait for the sometimes-slow element"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Slow-loading widget"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"wait_config"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_visible"</span><span class="p">,</span><span class="w"> </span><span class="nt">"timeout_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">10000</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"on_failure"</span><span class="p">:</span><span class="w"> </span><span class="s2">"retry"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"retry_policy"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"max_attempts"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"backoff_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -2600,15 +2601,15 @@
 <h4 id="condition">condition<a class="headerlink" href="#condition" title="Permanent link">&para;</a></h4>
 <p>Execute the step only if the condition object evaluates to true; otherwise the step is skipped.</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;conditionally_submit&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Submit only when running on Android&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Submit button&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;condition&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;device_property&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;property&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;platform&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;operator&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;==&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;android&quot;</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"conditionally_submit"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Submit only when running on Android"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Submit button"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"condition"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"device_property"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"property"</span><span class="p">:</span><span class="w"> </span><span class="s2">"platform"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"operator"</span><span class="p">:</span><span class="w"> </span><span class="s2">"=="</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"android"</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -2616,36 +2617,36 @@
 <h4 id="on_failure">on_failure<a class="headerlink" href="#on_failure" title="Permanent link">&para;</a></h4>
 <p>What to do when the step fails: <code>"fail"</code> (default), <code>"skip"</code>, or <code>"retry"</code>.</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;critical_step&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Tap the critical confirm button&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Confirm button&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;on_failure&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fail&quot;</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"critical_step"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Tap the critical confirm button"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Confirm button"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"on_failure"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fail"</span>
 <span class="p">}</span>
 </code></pre></div>
 <h4 id="sub_steps">sub_steps<a class="headerlink" href="#sub_steps" title="Permanent link">&para;</a></h4>
 <p>A nested sub-flow (array of step objects) to execute when this step's <code>condition</code> is met. After the sub-steps complete, execution resumes at the next top-level step.</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;complex_flow&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Open the menu, then run the nested flow&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Menu button&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;sub_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap_submenu&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Open the submenu&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Settings submenu&quot;</span><span class="w"> </span><span class="p">},</span>
-<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;verify_result&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for the settings panel&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Settings panel&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_visible&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5000</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"complex_flow"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Open the menu, then run the nested flow"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Menu button"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"sub_steps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap_submenu"</span><span class="p">,</span><span class="w"> </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap"</span><span class="p">,</span><span class="w"> </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Open the submenu"</span><span class="p">,</span><span class="w"> </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Settings submenu"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"verify_result"</span><span class="p">,</span><span class="w"> </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_element"</span><span class="p">,</span><span class="w"> </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Wait for the settings panel"</span><span class="p">,</span><span class="w"> </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Settings panel"</span><span class="p">,</span><span class="w"> </span><span class="nt">"wait_config"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_visible"</span><span class="p">,</span><span class="w"> </span><span class="nt">"timeout_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">5000</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
 </code></pre></div>
 <h4 id="wait_config">wait_config<a class="headerlink" href="#wait_config" title="Permanent link">&para;</a></h4>
 <p>Configuration for wait-type actions (<code>wait_for_element</code>, <code>wait_for_element_gone</code>, <code>wait_for_loading_complete</code>).</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_step&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for the confirmation banner&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Confirmation banner&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_visible&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5000</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_step"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_element"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Wait for the confirmation banner"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Confirmation banner"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"wait_config"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_visible"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"timeout_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">5000</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -2659,28 +2660,28 @@
 <p>Declare variables that will be captured during test execution and used in assertions or conditions.</p>
 <p><strong>Format:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;variable_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string|integer|number|boolean&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Human-readable description&quot;</span>
+<span class="w">  </span><span class="nt">"variables"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"variable_name"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"string|integer|number|boolean"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Human-readable description"</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Example:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;auth_token&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Authentication token captured after login&quot;</span>
+<span class="w">  </span><span class="nt">"variables"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"auth_token"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"string"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Authentication token captured after login"</span>
 <span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;user_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;integer&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;User ID extracted from profile&quot;</span>
+<span class="w">    </span><span class="nt">"user_id"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"integer"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"User ID extracted from profile"</span>
 <span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;is_premium&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;boolean&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Whether user has premium subscription&quot;</span>
+<span class="w">    </span><span class="nt">"is_premium"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"boolean"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Whether user has premium subscription"</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
@@ -2723,21 +2724,21 @@
 <p>Each <code>device_actions</code> item has an <code>action</code> (<code>clear_app_data</code>, <code>uninstall_app</code>, <code>install_app</code>, <code>enable_wifi</code>, <code>disable_wifi</code>, <code>set_orientation</code>) plus optional <code>target_package</code>, <code>value</code>, and <code>description</code>.</p>
 <p><strong>Example:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;preconditions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;app_state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;logged_out&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;device_actions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"preconditions"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"app_state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"logged_out"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"device_actions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">      </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;clear_app_data&quot;</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;target_package&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;com.example.app&quot;</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Clear any cached login data&quot;</span>
+<span class="w">        </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"clear_app_data"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"target_package"</span><span class="p">:</span><span class="w"> </span><span class="s2">"com.example.app"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Clear any cached login data"</span>
 <span class="w">      </span><span class="p">}</span>
 <span class="w">    </span><span class="p">],</span>
-<span class="w">    </span><span class="nt">&quot;device_properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wifi&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;location_services&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;enabled&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;orientation&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;portrait&quot;</span>
+<span class="w">    </span><span class="nt">"device_properties"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wifi"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"location_services"</span><span class="p">:</span><span class="w"> </span><span class="s2">"enabled"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"orientation"</span><span class="p">:</span><span class="w"> </span><span class="s2">"portrait"</span>
 <span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;notes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;A valid test account must exist in the staging environment&quot;</span><span class="p">]</span>
+<span class="w">    </span><span class="nt">"notes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"A valid test account must exist in the staging environment"</span><span class="p">]</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></p>
@@ -2795,29 +2796,29 @@
 </table>
 <p><strong>Example:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;assertions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"assertions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;welcome_message&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;after_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_home&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_text&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome message displays the user&#39;s name&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome label&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;expected_value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome, John Doe&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"welcome_message"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"after_step"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_home"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_text"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Welcome message displays the user's name"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Welcome label"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"expected_value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Welcome, John Doe"</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dashboard_visible&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;after_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_home&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_fully_visible&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Dashboard content is fully visible&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Dashboard content&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dashboard_visible"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"after_step"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_home"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_fully_visible"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Dashboard content is fully visible"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Dashboard content"</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;verification_code_format&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;after_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_home&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pattern_match&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Verification code has the correct format&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Verification code display&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;pattern&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;^[0-9]{6}$&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"verification_code_format"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"after_step"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_home"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pattern_match"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Verification code has the correct format"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Verification code display"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"pattern"</span><span class="p">:</span><span class="w"> </span><span class="s2">"^[0-9]{6}$"</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
@@ -2859,10 +2860,10 @@
 </table>
 <p><strong>Example:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;metadata&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;app_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.1.0&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;staging&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;target_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.x&quot;</span>
+<span class="w">  </span><span class="nt">"metadata"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"app_version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2.1.0"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"environment"</span><span class="p">:</span><span class="w"> </span><span class="s2">"staging"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"target_version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2.x"</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></p>
@@ -2875,7 +2876,7 @@
 - Max 20 characters per tag</p>
 <p><strong>Example:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;tags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;smoke&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;regression&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;p0&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;auth&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;critical-flow&quot;</span><span class="p">]</span>
+<span class="w">  </span><span class="nt">"tags"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"smoke"</span><span class="p">,</span><span class="w"> </span><span class="s2">"regression"</span><span class="p">,</span><span class="w"> </span><span class="s2">"p0"</span><span class="p">,</span><span class="w"> </span><span class="s2">"auth"</span><span class="p">,</span><span class="w"> </span><span class="s2">"critical-flow"</span><span class="p">]</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Common tag categories:</strong>
@@ -2886,141 +2887,141 @@
 <hr />
 <h2 id="complete-example-login-scenario-with-variables">Complete Example: Login Scenario with Variables<a class="headerlink" href="#complete-example-login-scenario-with-variables" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;$schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.1&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;scenario_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_with_2fa&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Login with 2FA&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Verify user can log in with email/password and complete two-factor authentication&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;platform&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;android&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;app_package&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;com.example.app&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;metadata&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;app_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.1.0&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;staging&quot;</span>
+<span class="w">  </span><span class="nt">"$schema_version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2.1"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"scenario_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"login_with_2fa"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Login with 2FA"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Verify user can log in with email/password and complete two-factor authentication"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"platform"</span><span class="p">:</span><span class="w"> </span><span class="s2">"android"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"app_package"</span><span class="p">:</span><span class="w"> </span><span class="s2">"com.example.app"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"metadata"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"app_version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2.1.0"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"environment"</span><span class="p">:</span><span class="w"> </span><span class="s2">"staging"</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;tags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;auth&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;p0&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;smoke&quot;</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;auth_token&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;JWT token received after successful login&quot;</span>
+<span class="w">  </span><span class="nt">"tags"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"auth"</span><span class="p">,</span><span class="w"> </span><span class="s2">"p0"</span><span class="p">,</span><span class="w"> </span><span class="s2">"smoke"</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"variables"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"auth_token"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"string"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"JWT token received after successful login"</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;preconditions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;app_state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;logged_out&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;device_actions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"preconditions"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"app_state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"logged_out"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"device_actions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">      </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;clear_app_data&quot;</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;target_package&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;com.example.app&quot;</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Clear cached login data&quot;</span>
+<span class="w">        </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"clear_app_data"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"target_package"</span><span class="p">:</span><span class="w"> </span><span class="s2">"com.example.app"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Clear cached login data"</span>
 <span class="w">      </span><span class="p">}</span>
 <span class="w">    </span><span class="p">],</span>
-<span class="w">    </span><span class="nt">&quot;notes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;A valid test account must exist in the staging environment&quot;</span><span class="p">]</span>
+<span class="w">    </span><span class="nt">"notes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"A valid test account must exist in the staging environment"</span><span class="p">]</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"steps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;launch_app&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;launch_app&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Launch the app under test&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"launch_app"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"launch_app"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Launch the app under test"</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_login_screen&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for the login screen to load&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Email input field&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_visible&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10000</span><span class="w"> </span><span class="p">}</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_login_screen"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_element"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Wait for the login screen to load"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Email input field"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"wait_config"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_visible"</span><span class="p">,</span><span class="w"> </span><span class="nt">"timeout_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">10000</span><span class="w"> </span><span class="p">}</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap_email_field&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Focus the email field&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Email input field&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap_email_field"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Focus the email field"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Email input field"</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;enter_email&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Type the test account email&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;testuser@example.com&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"enter_email"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"type"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Type the test account email"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"testuser@example.com"</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap_password_field&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Focus the password field&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Password input field&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap_password_field"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Focus the password field"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Password input field"</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;type_password&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Type the test account password&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;SecurePassword123!&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"type_password"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"type"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Type the test account password"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"SecurePassword123!"</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap_login&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Submit the login form&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Login button&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap_login"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Submit the login form"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Login button"</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_2fa_prompt&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for the two-factor code prompt&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2FA code input field&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_visible&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">15000</span><span class="w"> </span><span class="p">},</span>
-<span class="w">      </span><span class="nt">&quot;on_failure&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;retry&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;retry_policy&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;max_attempts&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;backoff_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="w"> </span><span class="p">}</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_2fa_prompt"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_element"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Wait for the two-factor code prompt"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2FA code input field"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"wait_config"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_visible"</span><span class="p">,</span><span class="w"> </span><span class="nt">"timeout_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">15000</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">"on_failure"</span><span class="p">:</span><span class="w"> </span><span class="s2">"retry"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"retry_policy"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"max_attempts"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="nt">"backoff_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="w"> </span><span class="p">}</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;enter_2fa_code&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Type the two-factor authentication code&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;123456&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"enter_2fa_code"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"type"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Type the two-factor authentication code"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"123456"</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap_verify&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Confirm the 2FA code&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Verify button&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap_verify"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Confirm the 2FA code"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Verify button"</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_dashboard&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading_complete&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for the dashboard to finish loading&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;loading_complete&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20000</span><span class="w"> </span><span class="p">}</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_dashboard"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_loading_complete"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Wait for the dashboard to finish loading"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"wait_config"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"loading_complete"</span><span class="p">,</span><span class="w"> </span><span class="nt">"timeout_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">20000</span><span class="w"> </span><span class="p">}</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_auth_token&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_value&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Capture the auth token from the session badge&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Auth token badge&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;capture_to&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;auth_token&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"capture_auth_token"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"capture_value"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Capture the auth token from the session badge"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Auth token badge"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"capture_to"</span><span class="p">:</span><span class="w"> </span><span class="s2">"auth_token"</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;assertions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"assertions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_success&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;after_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_dashboard&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_exists&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;User successfully logged in and the dashboard is visible&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Dashboard content&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"login_success"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"after_step"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_dashboard"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_exists"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"User successfully logged in and the dashboard is visible"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Dashboard content"</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;welcome_message&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;after_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_dashboard&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;text_contains&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome banner greets the user&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome banner&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;expected_substring&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"welcome_message"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"after_step"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_dashboard"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"text_contains"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Welcome banner greets the user"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Welcome banner"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"expected_substring"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Welcome"</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;auth_token_captured&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;after_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_auth_token&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;text_not_empty&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;An auth token was captured&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Auth token badge&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"auth_token_captured"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"after_step"</span><span class="p">:</span><span class="w"> </span><span class="s2">"capture_auth_token"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"text_not_empty"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"An auth token was captured"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Auth token badge"</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dashboard_fully_loaded&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;after_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_dashboard&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_fully_visible&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Dashboard content is fully visible&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Dashboard content&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dashboard_fully_loaded"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"after_step"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_dashboard"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_fully_visible"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Dashboard content is fully visible"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Dashboard content"</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>

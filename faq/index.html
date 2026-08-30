@@ -2548,7 +2548,7 @@
 <h3 id="do-i-need-to-write-code">Do I need to write code?<a class="headerlink" href="#do-i-need-to-write-code" title="Permanent link">&para;</a></h3>
 <p><strong>Answer:</strong> No. Tests are described in plain English. Your agent converts them to JSON scenarios and drives the device through <code>mauto</code> verbs. You never touch code unless you want to hand-edit a scenario.</p>
 <p><strong>Example flow:</strong>
-<div class="highlight"><pre><span></span><code>Natural Language: &quot;User logs in with email and password&quot;
+<div class="highlight"><pre><span></span><code>Natural Language: "User logs in with email and password"
 ↓
 Generated JSON: scenario_login_happy_path.json
 ↓
@@ -2591,8 +2591,8 @@ mauto<span class="w"> </span>memory<span class="w"> </span>show<span class="w"> 
 mauto<span class="w"> </span>memory<span class="w"> </span>show<span class="w"> </span>--kind<span class="w"> </span>run-history<span class="w"> </span>--scenario<span class="w"> </span>login_happy_path
 </code></pre></div>
 <p>Add or remove agent-authored entries (only <code>app-knowledge</code> and <code>preferences</code> are writable — <code>run-history</code> is not):</p>
-<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>memory<span class="w"> </span>add<span class="w"> </span><span class="s2">&quot;Login button is labeled &#39;Sign in&#39;, not &#39;Log in&#39;&quot;</span><span class="w"> </span>--kind<span class="w"> </span>app-knowledge
-mauto<span class="w"> </span>memory<span class="w"> </span>forget<span class="w"> </span>--kind<span class="w"> </span>app-knowledge<span class="w"> </span>--match<span class="w"> </span><span class="s2">&quot;Sign in&quot;</span>
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>memory<span class="w"> </span>add<span class="w"> </span><span class="s2">"Login button is labeled 'Sign in', not 'Log in'"</span><span class="w"> </span>--kind<span class="w"> </span>app-knowledge
+mauto<span class="w"> </span>memory<span class="w"> </span>forget<span class="w"> </span>--kind<span class="w"> </span>app-knowledge<span class="w"> </span>--match<span class="w"> </span><span class="s2">"Sign in"</span>
 </code></pre></div>
 <p>Entries are exact-match de-duped and written under an advisory lock with atomic writes, so concurrent runs won't corrupt the files. The generate and execute workflows consult memory before work and save durable knowledge they learn.</p>
 <h3 id="can-i-use-mobile-automator-with-my-existing-tests">Can I use mobile-automator with my existing tests?<a class="headerlink" href="#can-i-use-mobile-automator-with-my-existing-tests" title="Permanent link">&para;</a></h3>
@@ -2644,7 +2644,7 @@ Enter your platform: ios
 <p><strong>For Android:</strong>
 - Check <code>app/build.gradle</code> for <code>applicationId</code>:
   <div class="highlight"><pre><span></span><code>defaultConfig {
-  applicationId &quot;com.example.myapp&quot;  // ← This one
+  applicationId "com.example.myapp"  // ← This one
 }
 </code></pre></div>
 - Or check <code>AndroidManifest.xml</code> for <code>package</code> attribute</p>
@@ -2711,25 +2711,25 @@ ls<span class="w"> </span>-la<span class="w"> </span>.gemini/skills/
 <h3 id="how-do-i-parameterize-tests-different-data">How do I parameterize tests (different data)?<a class="headerlink" href="#how-do-i-parameterize-tests-different-data" title="Permanent link">&para;</a></h3>
 <p><strong>Answer:</strong> Use the <code>variables</code> section in scenarios:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;test_email&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Email used to log in&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user@example.com&quot;</span>
+<span class="w">  </span><span class="nt">"variables"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"test_email"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"string"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Email used to log in"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"user@example.com"</span>
 <span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;test_password&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Password used to log in&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;SecurePassword123&quot;</span>
+<span class="w">    </span><span class="nt">"test_password"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"string"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Password used to log in"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"SecurePassword123"</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"steps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;enter_email&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;email_input&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;{{test_email}}&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Type the test email into the email field&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"enter_email"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"type"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"email_input"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"{{test_email}}"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Type the test email into the email field"</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
@@ -2755,13 +2755,13 @@ ls<span class="w"> </span>-la<span class="w"> </span>.gemini/skills/
 <p><strong>Solutions:</strong>
 1. <strong>Add explicit wait</strong> — Insert a wait step before the action:
    <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"steps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_button&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;button_id&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for the button to appear&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_visible&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5000</span><span class="w"> </span><span class="p">}</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_button"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_element"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"button_id"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Wait for the button to appear"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"wait_config"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_visible"</span><span class="p">,</span><span class="w"> </span><span class="nt">"timeout_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">5000</span><span class="w"> </span><span class="p">}</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
@@ -2772,13 +2772,13 @@ ls<span class="w"> </span>-la<span class="w"> </span>.gemini/skills/
 <li><strong>Increase timeout</strong> — Slow devices may need longer waits</li>
 <li><strong>Add screenshot assertion</strong> — Debug what's actually on screen:
    <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;assertions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"assertions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;verify_screen&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;after_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_button&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;screenshot_match&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;reference_screenshot&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;expected_screen.png&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Screen matches the expected baseline&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"verify_screen"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"after_step"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_button"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"screenshot_match"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"reference_screenshot"</span><span class="p">:</span><span class="w"> </span><span class="s2">"expected_screen.png"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Screen matches the expected baseline"</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
@@ -2792,13 +2792,13 @@ ls<span class="w"> </span>-la<span class="w"> </span>.gemini/skills/
 3. <strong>Handle dynamic content</strong> — If value changes, use <code>text_contains</code> instead of <code>text_matches</code>
 4. <strong>Add debug screenshot</strong> — Insert a capture step to see actual state:
    <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"steps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_state&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_value&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;title&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;capture_to&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;actual_title&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Capture the current title&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"capture_state"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"capture_value"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"title"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"capture_to"</span><span class="p">:</span><span class="w"> </span><span class="s2">"actual_title"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Capture the current title"</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
@@ -2808,10 +2808,10 @@ ls<span class="w"> </span>-la<span class="w"> </span>.gemini/skills/
 <p><strong>Solutions:</strong>
 1. <strong>Increase timeout</strong> — Default is 10s, try 15-30s:
    <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading_complete&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for loading to complete&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;loading_complete&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30000</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_loading"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_loading_complete"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Wait for loading to complete"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"wait_config"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"loading_complete"</span><span class="p">,</span><span class="w"> </span><span class="nt">"timeout_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">30000</span><span class="w"> </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <ol>
@@ -2828,12 +2828,12 @@ xcrun<span class="w"> </span>simctl<span class="w"> </span>list<span class="w"> 
 <li>
 <p><strong>Add intermediate waits</strong> — Between rapid actions:
    <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"steps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_before_next&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading_complete&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Brief wait before the next action&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;loading_complete&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="w"> </span><span class="p">}</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_before_next"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_loading_complete"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Brief wait before the next action"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"wait_config"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"loading_complete"</span><span class="p">,</span><span class="w"> </span><span class="nt">"timeout_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="w"> </span><span class="p">}</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
@@ -2855,22 +2855,22 @@ xcrun<span class="w"> </span>simctl<span class="w"> </span>list<span class="w"> 
 - <strong><code>screenshots</code></strong> — Screenshots of failure state</p>
 <p>Example output:
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;observations&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"observations"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;flakiness&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Step 4 failed due to loading indicator still visible&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;suggestion&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Increase wait timeout or add explicit wait_for_loading_complete&quot;</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"flakiness"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"message"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Step 4 failed due to loading indicator still visible"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"suggestion"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Increase wait timeout or add explicit wait_for_loading_complete"</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;steps_executed&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"steps_executed"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;step_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap_login&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;passed&quot;</span>
+<span class="w">      </span><span class="nt">"step_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap_login"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"passed"</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;step_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_dashboard&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;failed&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;error&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Element not found after 5 seconds&quot;</span>
+<span class="w">      </span><span class="nt">"step_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_dashboard"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"failed"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"error"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Element not found after 5 seconds"</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
@@ -2904,7 +2904,7 @@ mauto<span class="w"> </span>validate<span class="w"> </span>mobile-automator/sc
 <span class="c1"># (Your agent replays the scenario via mauto guide execute + verbs.)</span>
 
 <span class="c1"># Check results</span>
-cat<span class="w"> </span>mobile-automator/results/latest.json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.status&#39;</span>
+cat<span class="w"> </span>mobile-automator/results/latest.json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">'.status'</span>
 </code></pre></div>
 <p><strong>CI/CD tips:</strong>
 - Cache <code>node_modules</code> so <code>npm install</code> is fast on subsequent runs
@@ -2923,7 +2923,7 @@ cat<span class="w"> </span>mobile-automator/results/latest.json<span class="w"> 
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/checkout@v3</span>
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/setup-node@v3</span>
 <span class="w">        </span><span class="nt">with</span><span class="p">:</span>
-<span class="w">          </span><span class="nt">node-version</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;20&#39;</span>
+<span class="w">          </span><span class="nt">node-version</span><span class="p">:</span><span class="w"> </span><span class="s">'20'</span>
 
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Install mauto from source</span>
 <span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
@@ -2977,9 +2977,9 @@ cat<span class="w"> </span>mobile-automator/results/latest.json<span class="w"> 
 1. <strong>Run tests individually</strong> — Not in parallel
 2. <strong>Clear app cache</strong> between tests:
    <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;preconditions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;device_actions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">      </span><span class="p">{</span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;clear_app_data&quot;</span><span class="p">}</span>
+<span class="w">  </span><span class="nt">"preconditions"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"device_actions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">      </span><span class="p">{</span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"clear_app_data"</span><span class="p">}</span>
 <span class="w">    </span><span class="p">]</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>

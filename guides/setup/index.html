@@ -1941,10 +1941,10 @@ mauto<span class="w"> </span>init<span class="w"> </span>--agent<span class="w">
 <p>Alongside <code>scenarios/</code>, <code>screenshots/</code>, and <code>results/</code>, setup also scaffolds a <code>memory/</code> subdirectory. This is where <code>mauto</code> keeps cross-session memory so your agent gets smarter about <em>this</em> app over time — run history auto-harvested on <code>result finalize</code>, plus agent-authored app-knowledge and preferences.</p>
 <p>The starter <code>config.json</code> written on first run:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;platform-aware&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;project_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;environments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
-<span class="w">  </span><span class="nt">&quot;default_environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+<span class="w">  </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"platform-aware"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"project_name"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"environments"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<span class="w">  </span><span class="nt">"default_environment"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
 <span class="p">}</span>
 </code></pre></div>
 <h3 id="choosing-a-mode">Choosing a mode<a class="headerlink" href="#choosing-a-mode" title="Permanent link">&para;</a></h3>
@@ -2058,20 +2058,20 @@ mauto<span class="w"> </span>config<span class="w"> </span><span class="nb">set<
 <h2 id="configuration-file-configjson">Configuration File (config.json)<a class="headerlink" href="#configuration-file-configjson" title="Permanent link">&para;</a></h2>
 <p>After analysis, <code>mobile-automator/config.json</code> looks something like:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;platform-aware&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;project_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;MyShoppingApp&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;platform&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;android&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;android_package&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;com.example.myapp&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;environments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;debug&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;release&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;staging&quot;</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;default_environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;staging&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;platform_details&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Android (minSdk 24, targetSdk 34)&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;architecture&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;MVVM with Clean Architecture&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;build_system&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Gradle (AGP)&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;build_command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./gradlew assembleDebug&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;business_domain&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;E-commerce mobile shopping app with checkout flow&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;business_critical_paths&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;onboarding&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;login&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;checkout&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;payment&quot;</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;loading_indicators&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;CircularProgressIndicator&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;ShimmerEffect&quot;</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;protected_directories&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;app/src/&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;lib/&quot;</span><span class="p">]</span>
+<span class="w">  </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"platform-aware"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"project_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"MyShoppingApp"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"platform"</span><span class="p">:</span><span class="w"> </span><span class="s2">"android"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"android_package"</span><span class="p">:</span><span class="w"> </span><span class="s2">"com.example.myapp"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"environments"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"debug"</span><span class="p">,</span><span class="w"> </span><span class="s2">"release"</span><span class="p">,</span><span class="w"> </span><span class="s2">"staging"</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"default_environment"</span><span class="p">:</span><span class="w"> </span><span class="s2">"staging"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"platform_details"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Android (minSdk 24, targetSdk 34)"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"architecture"</span><span class="p">:</span><span class="w"> </span><span class="s2">"MVVM with Clean Architecture"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"build_system"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Gradle (AGP)"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"build_command"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./gradlew assembleDebug"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"business_domain"</span><span class="p">:</span><span class="w"> </span><span class="s2">"E-commerce mobile shopping app with checkout flow"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"business_critical_paths"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"onboarding"</span><span class="p">,</span><span class="w"> </span><span class="s2">"login"</span><span class="p">,</span><span class="w"> </span><span class="s2">"checkout"</span><span class="p">,</span><span class="w"> </span><span class="s2">"payment"</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"loading_indicators"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"CircularProgressIndicator"</span><span class="p">,</span><span class="w"> </span><span class="s2">"ShimmerEffect"</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"protected_directories"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"app/src/"</span><span class="p">,</span><span class="w"> </span><span class="s2">"lib/"</span><span class="p">]</span>
 <span class="p">}</span>
 </code></pre></div>
 <p>Read or update any field directly:</p>

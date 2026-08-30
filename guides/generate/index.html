@@ -2207,8 +2207,8 @@ project never builds and asks you to install the app yourself.</p>
 <div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>memory<span class="w"> </span>show
 </code></pre></div>
 <p>This surfaces prior run history, app-knowledge, and preferences — so it can reuse known selectors, waits, and conventions instead of re-discovering them. As it learns durable facts during generation (a reliable element reference, a project convention, a flaky screen to guard), it records them for next time:</p>
-<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>memory<span class="w"> </span>add<span class="w"> </span><span class="s2">&quot;Login screen shows a shimmer loader; wait for it to clear&quot;</span><span class="w"> </span>--kind<span class="w"> </span>app-knowledge
-mauto<span class="w"> </span>memory<span class="w"> </span>add<span class="w"> </span><span class="s2">&quot;Prefer semantic waits over fixed delays&quot;</span><span class="w"> </span>--kind<span class="w"> </span>preferences
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>memory<span class="w"> </span>add<span class="w"> </span><span class="s2">"Login screen shows a shimmer loader; wait for it to clear"</span><span class="w"> </span>--kind<span class="w"> </span>app-knowledge
+mauto<span class="w"> </span>memory<span class="w"> </span>add<span class="w"> </span><span class="s2">"Prefer semantic waits over fixed delays"</span><span class="w"> </span>--kind<span class="w"> </span>preferences
 </code></pre></div>
 <h3 id="step-1-natural-language-input">Step 1: Natural Language Input<a class="headerlink" href="#step-1-natural-language-input" title="Permanent link">&para;</a></h3>
 <p>The generator prompts you to describe your test in plain English:</p>
@@ -2217,16 +2217,16 @@ mauto<span class="w"> </span>memory<span class="w"> </span>add<span class="w"> <
 <p>You can provide test steps in natural language:</p>
 <p><strong>Example 1: Simple Login Flow</strong>
 <div class="highlight"><pre><span></span><code>1. Tap the login button
-2. Enter &quot;user@example.com&quot; in the email field
-3. Enter &quot;password123&quot; in the password field
+2. Enter "user@example.com" in the email field
+3. Enter "password123" in the password field
 4. Tap the sign in button
 5. Wait for the loading spinner to disappear
-6. Verify the home screen title says &quot;Welcome back!&quot;
+6. Verify the home screen title says "Welcome back!"
 </code></pre></div></p>
 <p><strong>Example 2: Product Search Flow</strong>
 <div class="highlight"><pre><span></span><code>Launch the app
 Navigate to search
-Enter &quot;blue shoes&quot; in search field
+Enter "blue shoes" in search field
 Wait for results to load
 Verify at least 5 products displayed
 Tap the first product
@@ -2370,69 +2370,69 @@ Verify dark mode is persisted
 <h3 id="step-5-json-generation">Step 5: JSON Generation<a class="headerlink" href="#step-5-json-generation" title="Permanent link">&para;</a></h3>
 <p>The generator creates a scenario JSON file with all information:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;$schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.1&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;scenario_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_happy_path&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;User Login - Happy Path&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;User can log in with valid credentials and see home screen&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;platform&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;android&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;app_package&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;com.example.myapp&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;metadata&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;app_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.2.3&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;staging&quot;</span>
+<span class="w">  </span><span class="nt">"$schema_version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2.1"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"scenario_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"login_happy_path"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"User Login - Happy Path"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"User can log in with valid credentials and see home screen"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"platform"</span><span class="p">:</span><span class="w"> </span><span class="s2">"android"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"app_package"</span><span class="p">:</span><span class="w"> </span><span class="s2">"com.example.myapp"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"metadata"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"app_version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.2.3"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"environment"</span><span class="p">:</span><span class="w"> </span><span class="s2">"staging"</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"steps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap_login_button&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Open the login form&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Login button&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap_login_button"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Open the login form"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Login button"</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;enter_email&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Enter the account email&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Email field&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user@example.com&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"enter_email"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"type"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Enter the account email"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Email field"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"user@example.com"</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;enter_password&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Enter the account password&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Password field&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;password123&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"enter_password"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"type"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Enter the account password"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Password field"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"password123"</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap_signin&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Submit the login form&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Sign in button&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap_signin"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Submit the login form"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Sign in button"</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_loading&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_loading_complete&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for the login spinner to clear&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;loading_complete&quot;</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;indicator&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;spinner&quot;</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10000</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_loading"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_loading_complete"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Wait for the login spinner to clear"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"wait_config"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"loading_complete"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"indicator"</span><span class="p">:</span><span class="w"> </span><span class="s2">"spinner"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"timeout_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">10000</span>
 <span class="w">      </span><span class="p">}</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;assertions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"assertions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_button_exists&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;after_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap_login_button&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_exists&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Login button is visible on startup&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Login button&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"login_button_exists"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"after_step"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap_login_button"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_exists"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Login button is visible on startup"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Login button"</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;home_screen_title&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;after_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_loading&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_text&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Home screen shows correct greeting&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Home screen title&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;expected_text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome back!&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"home_screen_title"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"after_step"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_loading"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_text"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Home screen shows correct greeting"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Home screen title"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"expected_text"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Welcome back!"</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
@@ -2455,35 +2455,35 @@ Verify dark mode is persisted
 <h2 id="advanced-features">Advanced Features<a class="headerlink" href="#advanced-features" title="Permanent link">&para;</a></h2>
 <h3 id="variables-dynamic-values">Variables &amp; Dynamic Values<a class="headerlink" href="#variables-dynamic-values" title="Permanent link">&para;</a></h3>
 <p>For tests with dynamic data (usernames, IDs, etc.), use variable capture:</p>
-<div class="highlight"><pre><span></span><code>1. Capture the user ID from the welcome message to variable &quot;user_id&quot;
+<div class="highlight"><pre><span></span><code>1. Capture the user ID from the welcome message to variable "user_id"
 2. Tap profile menu
-3. Verify the ID displayed matches variable &quot;user_id&quot;
+3. Verify the ID displayed matches variable "user_id"
 </code></pre></div>
 <p>Generator creates:
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;variables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;user_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;User ID from welcome message&quot;</span>
+<span class="w">  </span><span class="nt">"variables"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"user_id"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"string"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"User ID from welcome message"</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"steps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_user_id&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_value&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Capture the user ID shown in the welcome message&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;welcome_message&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;capture_to&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user_id&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"capture_user_id"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"capture_value"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Capture the user ID shown in the welcome message"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"welcome_message"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"capture_to"</span><span class="p">:</span><span class="w"> </span><span class="s2">"user_id"</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;assertions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"assertions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;id_matches&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;after_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;capture_user_id&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;value_matches_variable&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Verify the profile ID matches the captured user_id&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;profile_id&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;variable_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user_id&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"id_matches"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"after_step"</span><span class="p">:</span><span class="w"> </span><span class="s2">"capture_user_id"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"value_matches_variable"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Verify the profile ID matches the captured user_id"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"profile_id"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"variable_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"user_id"</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
@@ -2492,23 +2492,23 @@ Verify dark mode is persisted
 <h3 id="conditional-steps">Conditional Steps<a class="headerlink" href="#conditional-steps" title="Permanent link">&para;</a></h3>
 <p>For conditional branching (skip steps if condition not met):</p>
 <div class="highlight"><pre><span></span><code>1. Tap login button
-2. If email field exists, enter &quot;user@example.com&quot;
+2. If email field exists, enter "user@example.com"
 3. Otherwise, skip to biometric login
 4. Complete login flow
 </code></pre></div>
 <p>Generator creates:
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"steps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;enter_email&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Enter the email address when the field is present&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;email_field&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user@example.com&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;optional&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;condition&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_visible&quot;</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;email_field&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"enter_email"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"type"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Enter the email address when the field is present"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"email_field"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"user@example.com"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"optional"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"condition"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_visible"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"email_field"</span>
 <span class="w">      </span><span class="p">}</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
@@ -2521,18 +2521,18 @@ Verify dark mode is persisted
 </code></pre></div>
 <p>Generator creates:
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_products&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for the product list to load&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;product_list&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_visible&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10000</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_products"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_element"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Wait for the product list to load"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"product_list"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"wait_config"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_visible"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"timeout_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">10000</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;on_failure&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;retry&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;retry_policy&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;max_attempts&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;backoff_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span>
+<span class="w">  </span><span class="nt">"on_failure"</span><span class="p">:</span><span class="w"> </span><span class="s2">"retry"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"retry_policy"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"max_attempts"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"backoff_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></p>
@@ -2540,53 +2540,53 @@ Verify dark mode is persisted
 <hr />
 <h2 id="best-practices-for-descriptions">Best Practices for Descriptions<a class="headerlink" href="#best-practices-for-descriptions" title="Permanent link">&para;</a></h2>
 <h3 id="do-be-specific">✅ DO: Be Specific<a class="headerlink" href="#do-be-specific" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>Good:  &quot;Tap the &#39;Sign Up&#39; button in the top-right corner of the login screen&quot;
-Bad:   &quot;Tap the button&quot;
+<div class="highlight"><pre><span></span><code>Good:  "Tap the 'Sign Up' button in the top-right corner of the login screen"
+Bad:   "Tap the button"
 
-Good:  &quot;Enter &#39;test@example.com&#39; in the email field and verify it appears&quot;
-Bad:   &quot;Type in a field&quot;
+Good:  "Enter 'test@example.com' in the email field and verify it appears"
+Bad:   "Type in a field"
 </code></pre></div>
 <h3 id="do-describe-intent-outcome">✅ DO: Describe Intent &amp; Outcome<a class="headerlink" href="#do-describe-intent-outcome" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>Good:  &quot;Wait for loading spinner to disappear, then verify the product list is visible&quot;
-Bad:   &quot;Wait 5 seconds&quot;
+<div class="highlight"><pre><span></span><code>Good:  "Wait for loading spinner to disappear, then verify the product list is visible"
+Bad:   "Wait 5 seconds"
 
-Good:  &quot;Tap the menu icon and verify all menu options are displayed&quot;
-Bad:   &quot;Tap menu&quot;
+Good:  "Tap the menu icon and verify all menu options are displayed"
+Bad:   "Tap menu"
 </code></pre></div>
 <h3 id="do-use-natural-language">✅ DO: Use Natural Language<a class="headerlink" href="#do-use-natural-language" title="Permanent link">&para;</a></h3>
 <p>The generator understands human language better than special syntax:</p>
-<div class="highlight"><pre><span></span><code>Good:  &quot;Verify the price is not empty&quot;
-Bad:   &quot;assert(price != &#39;&#39;)&quot;
+<div class="highlight"><pre><span></span><code>Good:  "Verify the price is not empty"
+Bad:   "assert(price != '')"
 
-Good:  &quot;Scroll down until the checkout button is visible&quot;
-Bad:   &quot;scroll(0, 500)&quot;
+Good:  "Scroll down until the checkout button is visible"
+Bad:   "scroll(0, 500)"
 </code></pre></div>
 <h3 id="dont-be-too-vague">❌ DON'T: Be Too Vague<a class="headerlink" href="#dont-be-too-vague" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>Bad:  &quot;Do something with login&quot;
-Bad:  &quot;Test the app&quot;
-Bad:  &quot;Verify stuff works&quot;
+<div class="highlight"><pre><span></span><code>Bad:  "Do something with login"
+Bad:  "Test the app"
+Bad:  "Verify stuff works"
 </code></pre></div>
 <h3 id="dont-include-implementation-details">❌ DON'T: Include Implementation Details<a class="headerlink" href="#dont-include-implementation-details" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>Bad:  &quot;Tap at coordinates (200, 400)&quot;
-      (Use: &quot;Tap the login button&quot; instead)
+<div class="highlight"><pre><span></span><code>Bad:  "Tap at coordinates (200, 400)"
+      (Use: "Tap the login button" instead)
 
-Bad:  &quot;Wait 3 seconds&quot;
-      (Use: &quot;Wait for loading spinner to disappear&quot; instead)
+Bad:  "Wait 3 seconds"
+      (Use: "Wait for loading spinner to disappear" instead)
 </code></pre></div>
 <hr />
 <h2 id="understanding-generated-scenarios">Understanding Generated Scenarios<a class="headerlink" href="#understanding-generated-scenarios" title="Permanent link">&para;</a></h2>
 <h3 id="schema-version">Schema Version<a class="headerlink" href="#schema-version" title="Permanent link">&para;</a></h3>
 <p>Scenarios carry a <code>$schema_version</code> field (note the leading <code>$</code>). Two values are valid:</p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">&quot;$schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.1&quot;</span><span class="w"> </span><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">"$schema_version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2.1"</span><span class="w"> </span><span class="p">}</span>
 </code></pre></div>
 <p><code>2.0</code> is the baseline. <strong><code>2.1</code> is current and additive</strong> — it adds the <code>mode</code> metadata field and the four platform-agnostic semantic actions (<code>press_back</code>, <code>dismiss_keyboard</code>, <code>grant_permission</code>, <code>deny_permission</code>) without removing anything. Existing <code>2.0</code> scenarios remain valid, so there is no forced migration; new scenarios should use <code>2.1</code>.</p>
 <p>Either version provides features like variables, retry policies, and comprehensive assertions.</p>
 <h3 id="step-ids-named-strings">Step IDs (Named Strings)<a class="headerlink" href="#step-ids-named-strings" title="Permanent link">&para;</a></h3>
 <p><code>steps</code> is an ordered array; each step carries a descriptive <code>id</code> (plus <code>action</code> and <code>description</code>):
-<div class="highlight"><pre><span></span><code><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap_login&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"> </span><span class="p">},</span>
-<span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;enter_email&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;type&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"> </span><span class="p">},</span>
-<span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_loading&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"> </span><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><span class="nt">"steps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap_login"</span><span class="p">,</span><span class="w"> </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap"</span><span class="p">,</span><span class="w"> </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"enter_email"</span><span class="p">,</span><span class="w"> </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"type"</span><span class="p">,</span><span class="w"> </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_loading"</span><span class="p">,</span><span class="w"> </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_element"</span><span class="p">,</span><span class="w"> </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="w"> </span><span class="p">}</span>
 <span class="p">]</span>
 </code></pre></div></p>
 <p>Benefits:
@@ -2703,35 +2703,35 @@ Bad:  &quot;Wait 3 seconds&quot;
 <p>Generated JSON is fully editable. Common modifications:</p>
 <p><strong>Add retry policy:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_product_list&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;product_list&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for the product list to load&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;on_failure&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;retry&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;retry_policy&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;max_attempts&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;backoff_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_product_list"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_element"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"product_list"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Wait for the product list to load"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"on_failure"</span><span class="p">:</span><span class="w"> </span><span class="s2">"retry"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"retry_policy"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"max_attempts"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"backoff_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Make step optional:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dismiss_newsletter_prompt&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;newsletter_prompt&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Dismiss the newsletter prompt if it appears&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;optional&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dismiss_newsletter_prompt"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"newsletter_prompt"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Dismiss the newsletter prompt if it appears"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"optional"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Add condition:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap_premium_feature&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;premium_feature&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Tap the premium feature when the premium badge is present&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;condition&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_visible&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;premium_badge&quot;</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap_premium_feature"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"premium_feature"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Tap the premium feature when the premium badge is present"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"condition"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_visible"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"premium_badge"</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></p>

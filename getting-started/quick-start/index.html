@@ -1796,26 +1796,26 @@ mauto<span class="w"> </span>init<span class="w"> </span>--agent<span class="w">
 </code></pre></div>
 <p>The result includes:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;run_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_flow_20250227_143022&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;scenario_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_flow&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;passed&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;steps_executed&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"run_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"login_flow_20250227_143022"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"scenario_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"login_flow"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"passed"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"steps_executed"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;step_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;launch_app&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;passed&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;duration_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2300</span>
+<span class="w">      </span><span class="nt">"step_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"launch_app"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"passed"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"duration_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">2300</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;step_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap_login_button&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;passed&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;duration_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">450</span>
+<span class="w">      </span><span class="nt">"step_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap_login_button"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"passed"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"duration_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">450</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">    </span><span class="c1">// ... more steps</span>
 <span class="w">  </span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;observations&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"observations"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;regression&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Login button styling differs from reference screenshot&quot;</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"regression"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"message"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Login button styling differs from reference screenshot"</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
@@ -1833,9 +1833,9 @@ mauto<span class="w"> </span>init<span class="w"> </span>--agent<span class="w">
 <h3 id="organize-tests-with-tags">Organize Tests with Tags<a class="headerlink" href="#organize-tests-with-tags" title="Permanent link">&para;</a></h3>
 <p>Add tags to scenarios for easy filtering:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;scenario_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_flow&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;tags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;critical&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;authentication&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;smoke-test&quot;</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;actions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="p">]</span>
+<span class="w">  </span><span class="nt">"scenario_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"login_flow"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"tags"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"critical"</span><span class="p">,</span><span class="w"> </span><span class="s2">"authentication"</span><span class="p">,</span><span class="w"> </span><span class="s2">"smoke-test"</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"actions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="p">]</span>
 <span class="p">}</span>
 </code></pre></div>
 <p>Then ask your agent to execute only the critical-tagged scenarios.</p>

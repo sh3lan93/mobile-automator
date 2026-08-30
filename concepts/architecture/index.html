@@ -1788,7 +1788,7 @@ mauto result finalize → mobile-automator/results/
 </code></pre></div>
 <p>On <code>mauto result finalize</code>, the <strong>memory subsystem</strong> (<code>src/memory/</code>) auto-harvests typed observations into a cross-session <code>mobile-automator/memory/</code> store, so the agent gets smarter about <em>this</em> app over time. The agent can also author durable app-knowledge and preferences directly via <code>mauto memory add</code> / <code>mauto memory forget</code>. See <a href="../memory/">Memory</a>.</p>
 <h2 id="file-structure">File Structure<a class="headerlink" href="#file-structure" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>mobile-automator/                          # created in the user&#39;s project by mauto setup
+<div class="highlight"><pre><span></span><code>mobile-automator/                          # created in the user's project by mauto setup
 ├── config.json                            # project knowledge + mode
 ├── scenarios/                             # test scenario JSON files
 │   ├── login_flow.json
@@ -1832,7 +1832,7 @@ mauto result finalize → mobile-automator/results/
 <h3 id="why-this-schema-design">Why This Schema Design?<a class="headerlink" href="#why-this-schema-design" title="Permanent link">&para;</a></h3>
 <p>The test scenario schema provides rich, expressive capabilities:</p>
 <ul>
-<li><strong>14 action types</strong> — scroll, scroll_to_element, wait_for_loading_complete, capture_value, clear_app_data, and more</li>
+<li><strong>18 action types</strong> — tap, swipe, scroll_to_element, wait_for_loading_complete, capture_value, and the four semantic actions used by platform-agnostic mode</li>
 <li><strong>27 assertion types</strong> — comprehensive coverage across text, visibility, collections, visual, navigation</li>
 <li><strong>Advanced control</strong> — retry policies, conditions, sub-steps</li>
 <li><strong>Better debugging</strong> — capture values for later assertion, detailed step context</li>
@@ -1852,8 +1852,8 @@ mauto result finalize → mobile-automator/results/
 <h3 id="example-complete-login-flow">Example: Complete Login Flow<a class="headerlink" href="#example-complete-login-flow" title="Permanent link">&para;</a></h3>
 <p>Here's exactly what happens when you generate and execute a login test:</p>
 <div class="highlight"><pre><span></span><code>1. User Input
-   &quot;Tap login button, enter email user@example.com, wait for spinner,
-    verify success message&quot;
+   "Tap login button, enter email user@example.com, wait for spinner,
+    verify success message"
 
 2. Agent pulls reasoning:
    - mauto guide generate
@@ -1868,36 +1868,36 @@ mauto result finalize → mobile-automator/results/
 
 4. Scenario JSON Created:
    {
-     &quot;$schema_version&quot;: &quot;2.1&quot;,
-     &quot;mode&quot;: &quot;platform-aware&quot;,
-     &quot;steps&quot;: [
+     "$schema_version": "2.1",
+     "mode": "platform-aware",
+     "steps": [
        {
-         &quot;id&quot;: &quot;tap_login&quot;,
-         &quot;action&quot;: &quot;tap&quot;,
-         &quot;target&quot;: &quot;login_button&quot;,
-         &quot;description&quot;: &quot;Tap the login button&quot;
+         "id": "tap_login",
+         "action": "tap",
+         "target": "login_button",
+         "description": "Tap the login button"
        },
        {
-         &quot;id&quot;: &quot;enter_email&quot;,
-         &quot;action&quot;: &quot;type&quot;,
-         &quot;target&quot;: &quot;email_field&quot;,
-         &quot;value&quot;: &quot;user@example.com&quot;,
-         &quot;description&quot;: &quot;Enter the email address&quot;
+         "id": "enter_email",
+         "action": "type",
+         "target": "email_field",
+         "value": "user@example.com",
+         "description": "Enter the email address"
        },
        {
-         &quot;id&quot;: &quot;wait_spinner&quot;,
-         &quot;action&quot;: &quot;wait_for_loading_complete&quot;,
-         &quot;description&quot;: &quot;Wait for the loading spinner to disappear&quot;
+         "id": "wait_spinner",
+         "action": "wait_for_loading_complete",
+         "description": "Wait for the loading spinner to disappear"
        }
      ],
-     &quot;assertions&quot;: [
+     "assertions": [
        {
-         &quot;id&quot;: &quot;verify_success&quot;,
-         &quot;after_step&quot;: &quot;wait_spinner&quot;,
-         &quot;type&quot;: &quot;element_text&quot;,
-         &quot;element_description&quot;: &quot;success_message&quot;,
-         &quot;expected_value&quot;: &quot;Success&quot;,
-         &quot;description&quot;: &quot;Success message is shown after login&quot;
+         "id": "verify_success",
+         "after_step": "wait_spinner",
+         "type": "element_text",
+         "element_description": "success_message",
+         "expected_value": "Success",
+         "description": "Success message is shown after login"
        }
      ]
    }
@@ -1913,15 +1913,15 @@ mauto result finalize → mobile-automator/results/
 
 6. Result JSON:
    {
-     &quot;run_id&quot;: &quot;run_2026-02-27_145230&quot;,
-     &quot;status&quot;: &quot;passed&quot;,
-     &quot;steps_executed&quot;: [
-       {&quot;step_id&quot;: &quot;tap_login&quot;, &quot;status&quot;: &quot;passed&quot;, &quot;duration_ms&quot;: 245},
-       {&quot;step_id&quot;: &quot;enter_email&quot;, &quot;status&quot;: &quot;passed&quot;, &quot;duration_ms&quot;: 320},
-       {&quot;step_id&quot;: &quot;wait_spinner&quot;, &quot;status&quot;: &quot;passed&quot;, &quot;duration_ms&quot;: 1200},
-       {&quot;step_id&quot;: &quot;verify_success&quot;, &quot;status&quot;: &quot;passed&quot;, &quot;duration_ms&quot;: 150}
+     "run_id": "run_2026-02-27_145230",
+     "status": "passed",
+     "steps_executed": [
+       {"step_id": "tap_login", "status": "passed", "duration_ms": 245},
+       {"step_id": "enter_email", "status": "passed", "duration_ms": 320},
+       {"step_id": "wait_spinner", "status": "passed", "duration_ms": 1200},
+       {"step_id": "verify_success", "status": "passed", "duration_ms": 150}
      ],
-     &quot;observations&quot;: []
+     "observations": []
    }
 </code></pre></div>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>

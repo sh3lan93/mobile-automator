@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Complete reference documentation for mobile-automator schemas, 27 assertion types, 14 action types, and MCP automation tools.">
+        <meta name="description" content="Complete reference documentation for mobile-automator schemas, 27 assertion types, 18 action types, and MCP automation tools.">
       
       
       
@@ -65,7 +65,7 @@
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Reference & Schemas - mobile-automator" />
-  <meta property="og:description" content="Complete reference documentation for mobile-automator schemas, 27 assertion types, 14 action types, and MCP automation tools." />
+  <meta property="og:description" content="Complete reference documentation for mobile-automator schemas, 27 assertion types, 18 action types, and MCP automation tools." />
   <meta property="og:url" content="https://sh3lan93.github.io/mobile-automator/reference/" />
   <meta property="og:site_name" content="mobile-automator" />
   <meta property="og:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
@@ -73,7 +73,7 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="Reference & Schemas - mobile-automator" />
-  <meta name="twitter:description" content="Complete reference documentation for mobile-automator schemas, 27 assertion types, 14 action types, and MCP automation tools." />
+  <meta name="twitter:description" content="Complete reference documentation for mobile-automator schemas, 27 assertion types, 18 action types, and MCP automation tools." />
   <meta name="twitter:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
   
 
@@ -1974,7 +1974,7 @@
 <h3 id="for-test-creators">For Test Creators<a class="headerlink" href="#for-test-creators" title="Permanent link">&para;</a></h3>
 <p><strong>Create test scenarios with:</strong>
 - <a href="assertions/">27 Assertion Types</a> — Element visibility, text content, visual state, and more
-- <a href="schema/#action-types-14-total">14 Action Types</a> — Launch app, tap, type, wait, capture values, etc.
+- <a href="schema/#action-types-18-total">18 Action Types</a> — Launch app, tap, type, wait, capture values, etc.
 - <a href="schema/">Schema Documentation</a> — Complete scenario structure and all fields</p>
 <h3 id="for-test-executors">For Test Executors<a class="headerlink" href="#for-test-executors" title="Permanent link">&para;</a></h3>
 <p><strong>Run tests with:</strong>
@@ -2050,24 +2050,24 @@
 <p>The default schema for test scenarios. Defines structure for steps, assertions, variables, and execution metadata.</p>
 <p><strong>Schema structure:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;$schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.1&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;scenario_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_flow&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Login Flow&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Verify the user can log in and reach the dashboard&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;platform&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;android&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;app_package&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;com.example.app&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;metadata&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;app_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.0.0&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;staging&quot;</span><span class="w"> </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap_login&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Tap the login button&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Login button&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="nt">"$schema_version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2.1"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"scenario_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"login_flow"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Login Flow"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Verify the user can log in and reach the dashboard"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"platform"</span><span class="p">:</span><span class="w"> </span><span class="s2">"android"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"app_package"</span><span class="p">:</span><span class="w"> </span><span class="s2">"com.example.app"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"metadata"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"app_version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.0.0"</span><span class="p">,</span><span class="w"> </span><span class="nt">"environment"</span><span class="p">:</span><span class="w"> </span><span class="s2">"staging"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"steps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap_login"</span><span class="p">,</span><span class="w"> </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap"</span><span class="p">,</span><span class="w"> </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Tap the login button"</span><span class="p">,</span><span class="w"> </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Login button"</span><span class="w"> </span><span class="p">}</span>
 <span class="w">  </span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;assertions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;logged_in&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;after_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap_login&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;screen_title&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;The dashboard screen is shown&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;expected_text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Dashboard&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="nt">"assertions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"logged_in"</span><span class="p">,</span><span class="w"> </span><span class="nt">"after_step"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap_login"</span><span class="p">,</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"screen_title"</span><span class="p">,</span><span class="w"> </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"The dashboard screen is shown"</span><span class="p">,</span><span class="w"> </span><span class="nt">"expected_text"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Dashboard"</span><span class="w"> </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Key features:</strong>
 - Named string step IDs (not integer indices)
-- 14 action types and 27 assertion types
+- 18 action types and 27 assertion types
 - Variables and value capture
 - Conditional execution and retry policies
 - Structured preconditions</p>
@@ -2077,14 +2077,14 @@
 <p>Structure of execution result reports containing test status, step results, observations, and metrics.</p>
 <p><strong>Result structure:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;run_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;run_20260227_145230&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;scenario_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;login_flow&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;passed&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;passed_assertions&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;failed_assertions&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;duration_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">12.45</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;observations&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;flakiness&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Step took longer than expected&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="nt">"run_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"run_20260227_145230"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"scenario_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"login_flow"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"passed"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"passed_assertions"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"failed_assertions"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"duration_seconds"</span><span class="p">:</span><span class="w"> </span><span class="mf">12.45</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"observations"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"flakiness"</span><span class="p">,</span><span class="w"> </span><span class="nt">"message"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Step took longer than expected"</span><span class="w"> </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
 </code></pre></div></p>
@@ -2131,7 +2131,7 @@
 </ol>
 <h3 id="creating-test-scenarios">Creating test scenarios?<a class="headerlink" href="#creating-test-scenarios" title="Permanent link">&para;</a></h3>
 <ol>
-<li><a href="schema/#action-types-14-total">Schema — Step Reference</a> — All 14 action types</li>
+<li><a href="schema/#action-types-18-total">Schema — Step Reference</a> — All 18 action types</li>
 <li><a href="assertions/">Assertion Types</a> — All 27 assertion types with examples</li>
 <li><a href="schema/#complete-example-login-scenario-with-variables">Schema — Complete Example</a> — Full working scenario</li>
 </ol>

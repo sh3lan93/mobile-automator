@@ -2705,7 +2705,7 @@ mauto<span class="w"> </span>guide<span class="w"> </span>generate
 mauto<span class="w"> </span>guide<span class="w"> </span>execute
 
 <span class="c1"># 6. Check results</span>
-cat<span class="w"> </span>mobile-automator/results/run_*.json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.&#39;</span>
+cat<span class="w"> </span>mobile-automator/results/run_*.json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">'.'</span>
 </code></pre></div>
 <p><strong>Test different platforms:</strong></p>
 <div class="highlight"><pre><span></span><code><span class="c1"># Test on Android</span>
@@ -2766,8 +2766,8 @@ refactor: simplify placeholder replacement logic
 git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>feature/my-feature
 
 <span class="c1"># Create pull request</span>
-gh<span class="w"> </span>pr<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;feat: add custom assertions&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">             </span>--body<span class="w"> </span><span class="s2">&quot;This PR adds support for...&quot;</span>
+gh<span class="w"> </span>pr<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">"feat: add custom assertions"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">             </span>--body<span class="w"> </span><span class="s2">"This PR adds support for..."</span>
 
 <span class="c1"># Or use GitHub web interface</span>
 </code></pre></div>
@@ -2782,7 +2782,7 @@ gh<span class="w"> </span>pr<span class="w"> </span>create<span class="w"> </spa
 Add support for custom loading indicators beyond built-in patterns.
 
 <span class="gu">## Problem</span>
-Users with custom loading indicators (spinners, animations) couldn&#39;t
+Users with custom loading indicators (spinners, animations) couldn't
 verify completion. Tests had to use fixed wait times.
 
 <span class="gu">## Solution</span>
@@ -2819,20 +2819,20 @@ Closes <span class="ni">#123</span>
 <h3 id="schemas-json">Schemas (JSON)<a class="headerlink" href="#schemas-json" title="Permanent link">&para;</a></h3>
 <p><strong>Structure:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;$schema&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;http://json-schema.org/draft-07/schema#&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Test Scenario Schema&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;object&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;required&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;$schema_version&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;scenario_id&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;name&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;steps&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;assertions&quot;</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;$schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;enum&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;2.0&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;2.1&quot;</span><span class="p">],</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Schema version identifier&quot;</span>
+<span class="w">  </span><span class="nt">"$schema"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://json-schema.org/draft-07/schema#"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Test Scenario Schema"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"object"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"$schema_version"</span><span class="p">,</span><span class="w"> </span><span class="s2">"scenario_id"</span><span class="p">,</span><span class="w"> </span><span class="s2">"name"</span><span class="p">,</span><span class="w"> </span><span class="s2">"steps"</span><span class="p">,</span><span class="w"> </span><span class="s2">"assertions"</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"properties"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"$schema_version"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"string"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"enum"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"2.0"</span><span class="p">,</span><span class="w"> </span><span class="s2">"2.1"</span><span class="p">],</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Schema version identifier"</span>
 <span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;new_field&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;What this field does&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;examples&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;example1&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;example2&quot;</span><span class="p">]</span>
+<span class="w">    </span><span class="nt">"new_field"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"string"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"What this field does"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"examples"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"example1"</span><span class="p">,</span><span class="w"> </span><span class="s2">"example2"</span><span class="p">]</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
@@ -2871,8 +2871,8 @@ Complete scenario showing authentication:
 
 \`\`\`json
 {
-  &quot;$schema_version&quot;: &quot;2.1&quot;,
-  &quot;scenario_id&quot;: &quot;login_example&quot;,
+  "$schema_version": "2.1",
+  "scenario_id": "login_example",
   ...
 }
 \`\`\`
@@ -2904,8 +2904,8 @@ mkdocs<span class="w"> </span>build
 <h2 id="types-of-contributions">Types of Contributions<a class="headerlink" href="#types-of-contributions" title="Permanent link">&para;</a></h2>
 <h3 id="bug-reports">Bug Reports<a class="headerlink" href="#bug-reports" title="Permanent link">&para;</a></h3>
 <p>Found an issue? Please report it:</p>
-<div class="highlight"><pre><span></span><code>gh<span class="w"> </span>issue<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;Bug: tests fail on Android 14&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">                 </span>--body<span class="w"> </span><span class="s2">&quot;Description of the issue...&quot;</span>
+<div class="highlight"><pre><span></span><code>gh<span class="w"> </span>issue<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">"Bug: tests fail on Android 14"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">                 </span>--body<span class="w"> </span><span class="s2">"Description of the issue..."</span>
 </code></pre></div>
 <p><strong>Include:</strong>
 - Platform (Android, iOS, Flutter, etc.)
@@ -2915,8 +2915,8 @@ mkdocs<span class="w"> </span>build
 - <code>mauto</code> version and the contents of <code>mobile-automator/config.json</code> (remove sensitive data)</p>
 <h3 id="feature-requests">Feature Requests<a class="headerlink" href="#feature-requests" title="Permanent link">&para;</a></h3>
 <p>Have an idea? Share it:</p>
-<div class="highlight"><pre><span></span><code>gh<span class="w"> </span>issue<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;Feature: add support for video recording&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">                 </span>--body<span class="w"> </span><span class="s2">&quot;Use case and desired behavior...&quot;</span>
+<div class="highlight"><pre><span></span><code>gh<span class="w"> </span>issue<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">"Feature: add support for video recording"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">                 </span>--body<span class="w"> </span><span class="s2">"Use case and desired behavior..."</span>
 </code></pre></div>
 <p><strong>Include:</strong>
 - Problem you're solving
@@ -2938,7 +2938,7 @@ mkdocs<span class="w"> </span>build
 gh<span class="w"> </span>pr<span class="w"> </span>list
 
 <span class="c1"># Review a PR</span>
-gh<span class="w"> </span>pr<span class="w"> </span>review<span class="w"> </span><span class="m">42</span><span class="w"> </span>--comment<span class="w"> </span><span class="s2">&quot;Consider adding test case for...&quot;</span>
+gh<span class="w"> </span>pr<span class="w"> </span>review<span class="w"> </span><span class="m">42</span><span class="w"> </span>--comment<span class="w"> </span><span class="s2">"Consider adding test case for..."</span>
 </code></pre></div>
 <h3 id="testing-qa">Testing &amp; QA<a class="headerlink" href="#testing-qa" title="Permanent link">&para;</a></h3>
 <p>Help test new features:</p>
@@ -3001,18 +3001,18 @@ mauto<span class="w"> </span>guide<span class="w"> </span>generate
 <span class="c1"># 6. Commit</span>
 <span class="nb">cd</span><span class="w"> </span>/path/to/mobile-automator
 git<span class="w"> </span>add<span class="w"> </span>-A
-git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add custom assertion type&quot;</span>
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"feat: add custom assertion type"</span>
 
 <span class="c1"># 7. Push</span>
 git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>feature/custom-assertions
 
 <span class="c1"># 8. Create PR</span>
-gh<span class="w"> </span>pr<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;feat: add custom assertion support&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">             </span>--body<span class="w"> </span><span class="s2">&quot;Enables users to define custom assertions...&quot;</span>
+gh<span class="w"> </span>pr<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">"feat: add custom assertion support"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">             </span>--body<span class="w"> </span><span class="s2">"Enables users to define custom assertions..."</span>
 
 <span class="c1"># 9. Address review feedback</span>
 git<span class="w"> </span>add<span class="w"> </span>-A
-git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;Address review feedback&quot;</span>
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"Address review feedback"</span>
 git<span class="w"> </span>push
 
 <span class="c1"># 10. Merge (after approval)</span>

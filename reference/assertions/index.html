@@ -2529,8 +2529,8 @@
 <p><strong>When to use:</strong> Check that expected UI element is on screen.</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_exists&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Login button&quot;</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_exists"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Login button"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Example scenario usage:</strong>
@@ -2543,8 +2543,8 @@ Check that the welcome message exists
 <p><strong>When to use:</strong> Verify something that shouldn't be there is gone (e.g., loading indicator disappeared, error message cleared).</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_not_exists&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Loading spinner&quot;</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_not_exists"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Loading spinner"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Example scenario usage:</strong>
@@ -2557,9 +2557,9 @@ Check that the error message is no longer visible
 <p><strong>When to use:</strong> Element exists but might be hidden or clipped. This is stricter than <code>element_exists</code>.</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_visible&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Success message&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;expected_visible&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_visible"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Success message"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"expected_visible"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><code>expected_visible</code> is a boolean: <code>true</code> = must be visible/showing, <code>false</code> = must be hidden/dismissed.</p>
@@ -2573,9 +2573,9 @@ Check that the button is not hidden by other content
 <p><strong>When to use:</strong> Verify an element's interactive state or selection status.</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_state&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Submit button&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;state_property&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;enabled&quot;</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_state"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Submit button"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"state_property"</span><span class="p">:</span><span class="w"> </span><span class="s2">"enabled"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Supported <code>state_property</code> values:</strong>
@@ -2597,14 +2597,14 @@ Check that the input field is focused
 <p><strong>When to use:</strong> Check exact content of a label, button, or message. Whitespace must match exactly.</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_text&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome label&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;expected_value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome, John&quot;</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_text"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Welcome label"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"expected_value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Welcome, John"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Example scenario usage:</strong>
-<div class="highlight"><pre><span></span><code>Verify the welcome message says &quot;Welcome, John&quot;
-Check the button text is exactly &quot;Sign In&quot;
+<div class="highlight"><pre><span></span><code>Verify the welcome message says "Welcome, John"
+Check the button text is exactly "Sign In"
 </code></pre></div></p>
 <hr />
 <h3 id="text_contains">text_contains<a class="headerlink" href="#text_contains" title="Permanent link">&para;</a></h3>
@@ -2612,14 +2612,14 @@ Check the button text is exactly &quot;Sign In&quot;
 <p><strong>When to use:</strong> Check that text contains a substring (useful when exact text varies or contains dynamic content).</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;text_contains&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Status message&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;expected_substring&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Success&quot;</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"text_contains"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Status message"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"expected_substring"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Success"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Example scenario usage:</strong>
-<div class="highlight"><pre><span></span><code>Verify the message contains &quot;Success&quot;
-Check that the error text includes &quot;Invalid email&quot;
+<div class="highlight"><pre><span></span><code>Verify the message contains "Success"
+Check that the error text includes "Invalid email"
 </code></pre></div></p>
 <hr />
 <h3 id="text_not_empty">text_not_empty<a class="headerlink" href="#text_not_empty" title="Permanent link">&para;</a></h3>
@@ -2627,8 +2627,8 @@ Check that the error text includes &quot;Invalid email&quot;
 <p><strong>When to use:</strong> Check that a field is populated with something (exact content doesn't matter).</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;text_not_empty&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Username field&quot;</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"text_not_empty"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Username field"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Example scenario usage:</strong>
@@ -2641,13 +2641,13 @@ Check that the response contains some text
 <p><strong>When to use:</strong> Verify placeholder text in input fields.</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_hint&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Email field&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;expected_text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Enter email address&quot;</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_hint"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Email field"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"expected_text"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Enter email address"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Example scenario usage:</strong>
-<div class="highlight"><pre><span></span><code>Verify the email field placeholder says &quot;Enter email address&quot;
+<div class="highlight"><pre><span></span><code>Verify the email field placeholder says "Enter email address"
 Check that the input hint text is correct
 </code></pre></div></p>
 <hr />
@@ -2656,9 +2656,9 @@ Check that the input hint text is correct
 <p><strong>When to use:</strong> Check format of dynamic text (phone numbers, email, dates, codes).</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pattern_match&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Error code&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;pattern&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;^ERR_[0-9]{3}$&quot;</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pattern_match"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Error code"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"pattern"</span><span class="p">:</span><span class="w"> </span><span class="s2">"^ERR_[0-9]{3}$"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Common patterns:</strong>
@@ -2676,8 +2676,8 @@ Check that the phone number follows the format XXX-XXX-XXXX
 <p><strong>When to use:</strong> Confirm that a dynamic value updated (counter incremented, status changed, etc.).</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;text_changed&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Counter label&quot;</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"text_changed"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Counter label"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Example scenario usage:</strong>
@@ -2690,13 +2690,13 @@ Check that the status text was updated
 <p><strong>When to use:</strong> Check alt text or accessibility description on images, icons, or custom views.</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;content_description&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Profile icon&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;expected_text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;User profile picture&quot;</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"content_description"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Profile icon"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"expected_text"</span><span class="p">:</span><span class="w"> </span><span class="s2">"User profile picture"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Example scenario usage:</strong>
-<div class="highlight"><pre><span></span><code>Verify the profile icon has content description &quot;User profile picture&quot;
+<div class="highlight"><pre><span></span><code>Verify the profile icon has content description "User profile picture"
 Check the accessibility label of the button
 </code></pre></div></p>
 <hr />
@@ -2706,10 +2706,10 @@ Check the accessibility label of the button
 <p><strong>When to use:</strong> Verify number of matching elements on screen (buttons, list items, tabs).</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_count&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;List item&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;operator&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;==&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;expected_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_count"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"List item"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"operator"</span><span class="p">:</span><span class="w"> </span><span class="s2">"=="</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"expected_count"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><code>operator</code> is one of <code>==</code>, <code>!=</code>, <code>&gt;=</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&lt;</code> (default <code>==</code>).</p>
@@ -2723,10 +2723,10 @@ Check that the search results show 10 products
 <p><strong>When to use:</strong> Verify number of items in a ListView, RecyclerView, or collection view.</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;list_item_count&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Messages list&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;operator&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;==&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;expected_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"list_item_count"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Messages list"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"operator"</span><span class="p">:</span><span class="w"> </span><span class="s2">"=="</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"expected_count"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Example scenario usage:</strong>
@@ -2739,8 +2739,8 @@ Check that the cart contains 5 items
 <p><strong>When to use:</strong> Check that a list view or search results are empty (no data state).</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;list_is_empty&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Search results list&quot;</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"list_is_empty"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Search results list"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Example scenario usage:</strong>
@@ -2754,9 +2754,9 @@ Check that the cart is empty when no items added
 <p><strong>When to use:</strong> Verify that the overall screen appearance matches expectations. Uses AI vision for semantic comparison, not pixel-perfect matching.</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;screenshot_match&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;reference_screenshot&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;screenshots/login_flow/reference.png&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;tolerance&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.9</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"screenshot_match"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"reference_screenshot"</span><span class="p">:</span><span class="w"> </span><span class="s2">"screenshots/login_flow/reference.png"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"tolerance"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.9</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><code>tolerance</code> ranges from <code>0.0</code> (any match) to <code>1.0</code> (pixel-perfect); default <code>0.9</code>.</p>
@@ -2771,9 +2771,9 @@ Check that the dashboard appears as expected
 <p><strong>When to use:</strong> Verify a screen or element is in a specific data state without needing a reference screenshot.</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;visual_state&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Product list&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;expected_visual_state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;loaded&quot;</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"visual_state"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Product list"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"expected_visual_state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"loaded"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Supported <code>expected_visual_state</code> values:</strong>
@@ -2791,8 +2791,8 @@ Check that the feed shows the empty state
 <p><strong>When to use:</strong> Ensure element is not cut off by parent container or screen bounds.</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_fully_visible&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Confirmation button&quot;</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_fully_visible"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Confirmation button"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Example scenario usage:</strong>
@@ -2805,9 +2805,9 @@ Check that the footer is not clipped off screen
 <p><strong>When to use:</strong> Verify element color (text color, background color, border color).</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;color_style&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Error text&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;color_hex&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#FF0000&quot;</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"color_style"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Error text"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"color_hex"</span><span class="p">:</span><span class="w"> </span><span class="s2">"#FF0000"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><code>color_hex</code> is a 3- or 6-digit hex value (e.g., <code>#0057FF</code>).</p>
@@ -2822,12 +2822,12 @@ Check that the success message is green
 <p><strong>When to use:</strong> Confirm navigation to the correct screen.</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;screen_title&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;expected_text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Login&quot;</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"screen_title"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"expected_text"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Login"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Example scenario usage:</strong>
-<div class="highlight"><pre><span></span><code>Verify we&#39;re on the Login screen
+<div class="highlight"><pre><span></span><code>Verify we're on the Login screen
 Check that the checkout screen is displayed
 </code></pre></div></p>
 <hr />
@@ -2836,7 +2836,7 @@ Check that the checkout screen is displayed
 <p><strong>When to use:</strong> Verify an alert, dialog, or modal appeared.</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;alert_present&quot;</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"alert_present"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Example scenario usage:</strong>
@@ -2849,12 +2849,12 @@ Check that the confirmation dialog is shown
 <p><strong>When to use:</strong> Check the content of an alert, dialog, or confirmation message.</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;alert_text&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;expected_text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Are you sure?&quot;</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"alert_text"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"expected_text"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Are you sure?"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Example scenario usage:</strong>
-<div class="highlight"><pre><span></span><code>Verify the alert says &quot;Are you sure you want to delete?&quot;
+<div class="highlight"><pre><span></span><code>Verify the alert says "Are you sure you want to delete?"
 Check that the confirmation message is correct
 </code></pre></div></p>
 <hr />
@@ -2863,13 +2863,13 @@ Check that the confirmation message is correct
 <p><strong>When to use:</strong> Verify short-lived notification messages (Android toast, iOS notification).</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;toast_visible&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;expected_text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Saved&quot;</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"toast_visible"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"expected_text"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Saved"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Example scenario usage:</strong>
-<div class="highlight"><pre><span></span><code>Verify the &quot;Saved successfully&quot; toast appeared
-Check that the notification shows &quot;Loading complete&quot;
+<div class="highlight"><pre><span></span><code>Verify the "Saved successfully" toast appeared
+Check that the notification shows "Loading complete"
 </code></pre></div></p>
 <hr />
 <h3 id="keyboard_visible">keyboard_visible<a class="headerlink" href="#keyboard_visible" title="Permanent link">&para;</a></h3>
@@ -2877,8 +2877,8 @@ Check that the notification shows &quot;Loading complete&quot;
 <p><strong>When to use:</strong> Check that the on-screen keyboard appeared (usually after tapping input field).</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;keyboard_visible&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;expected_visible&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"keyboard_visible"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"expected_visible"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><code>expected_visible</code> is a boolean: <code>true</code> = keyboard must be showing, <code>false</code> = keyboard must be dismissed.</p>
@@ -2893,13 +2893,13 @@ Check that the input keyboard is visible
 <p><strong>When to use:</strong> Verify that interactive elements have proper accessibility labels for screen readers.</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;has_accessibility_label&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Close button&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;label_value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Close dialog&quot;</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"has_accessibility_label"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Close button"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"label_value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Close dialog"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Example scenario usage:</strong>
-<div class="highlight"><pre><span></span><code>Verify the close button has accessibility label &quot;Close dialog&quot;
+<div class="highlight"><pre><span></span><code>Verify the close button has accessibility label "Close dialog"
 Check that the icon has proper accessibility description
 </code></pre></div></p>
 <hr />
@@ -2909,9 +2909,9 @@ Check that the icon has proper accessibility description
 <p><strong>When to use:</strong> Verify that a dynamic value matches a previously captured variable.</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;value_matches_variable&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Email field&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;variable_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;captured_email&quot;</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"value_matches_variable"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Email field"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"variable_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"captured_email"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>How it works:</strong>
@@ -2929,8 +2929,8 @@ Check that the order ID is the same as when we created it
 <p><strong>When to use:</strong> Verify system permission dialog appeared (camera, location, contacts, etc.).</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;permission_dialog_shown&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;permission_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;camera&quot;</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"permission_dialog_shown"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"permission_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"camera"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><strong>Example scenario usage:</strong>
@@ -2943,8 +2943,8 @@ Check that the location services prompt is shown
 <p><strong>When to use:</strong> Verify device or app dark mode is active.</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dark_mode_active&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;expected_theme&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dark&quot;</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dark_mode_active"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"expected_theme"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dark"</span>
 <span class="p">}</span>
 </code></pre></div></p>
 <p><code>expected_theme</code> is <code>dark</code> or <code>light</code>.</p>
@@ -2957,47 +2957,47 @@ Check that the app switched to dark theme
 <h3 id="in-json-format">In JSON Format<a class="headerlink" href="#in-json-format" title="Permanent link">&para;</a></h3>
 <p>Assertions live in the scenario's top-level <code>assertions</code> array. Each one names the step it runs after via <code>after_step</code>:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;$schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.1&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;scenario_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;assertion_examples&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Assertion Examples&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Demonstrates how assertions reference a step and check the resulting UI state&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;platform&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;android&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;app_package&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;com.example.app&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;metadata&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;app_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.0.0&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;environment&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;staging&quot;</span>
+<span class="w">  </span><span class="nt">"$schema_version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2.1"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"scenario_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"assertion_examples"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Assertion Examples"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Demonstrates how assertions reference a step and check the resulting UI state"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"platform"</span><span class="p">:</span><span class="w"> </span><span class="s2">"android"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"app_package"</span><span class="p">:</span><span class="w"> </span><span class="s2">"com.example.app"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"metadata"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"app_version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.0.0"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"environment"</span><span class="p">:</span><span class="w"> </span><span class="s2">"staging"</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"steps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap_login&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tap&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Tap the login button&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Login button&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap_login"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Tap the login button"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Login button"</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_home&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_element&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Wait for the home screen to load&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome message&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;wait_config&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_visible&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;timeout_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5000</span><span class="w"> </span><span class="p">}</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_home"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_element"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Wait for the home screen to load"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Welcome message"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"wait_config"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_visible"</span><span class="p">,</span><span class="w"> </span><span class="nt">"timeout_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">5000</span><span class="w"> </span><span class="p">}</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;assertions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"assertions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;welcome_check&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;after_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_home&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_text&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome message greets the user by name&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome message&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;expected_value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome, John&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"welcome_check"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"after_step"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_home"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_text"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Welcome message greets the user by name"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Welcome message"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"expected_value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Welcome, John"</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;logout_enabled_check&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;after_step&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait_for_home&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;element_state&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Logout button is enabled&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;element_description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Logout button&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;state_property&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;enabled&quot;</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"logout_enabled_check"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"after_step"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_home"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_state"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Logout button is enabled"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Logout button"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"state_property"</span><span class="p">:</span><span class="w"> </span><span class="s2">"enabled"</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
@@ -3005,7 +3005,7 @@ Check that the app switched to dark theme
 <h3 id="in-natural-language-to-generator">In Natural Language to Generator<a class="headerlink" href="#in-natural-language-to-generator" title="Permanent link">&para;</a></h3>
 <p>When using the generate workflow (<code>/mobile-automator-generate</code> or <code>mauto guide generate</code>), describe assertions in natural language:</p>
 <div class="highlight"><pre><span></span><code>After tapping login:
-  - Verify the welcome message says &quot;Welcome, John&quot;
+  - Verify the welcome message says "Welcome, John"
   - Check that the logout button is enabled
   - Verify the success screen is fully visible
 </code></pre></div>
@@ -3021,18 +3021,18 @@ Check that the app switched to dark theme
 <hr />
 <h2 id="assertion-failure-examples">Assertion Failure Examples<a class="headerlink" href="#assertion-failure-examples" title="Permanent link">&para;</a></h2>
 <h3 id="failed-element_exists">Failed: element_exists<a class="headerlink" href="#failed-element_exists" title="Permanent link">&para;</a></h3>
-<p><div class="highlight"><pre><span></span><code>Element &#39;login_button&#39; not found on screen
+<p><div class="highlight"><pre><span></span><code>Element 'login_button' not found on screen
 </code></pre></div>
 <strong>Troubleshoot:</strong> Button may be off-screen, hidden, or described differently</p>
 <h3 id="failed-element_text">Failed: element_text<a class="headerlink" href="#failed-element_text" title="Permanent link">&para;</a></h3>
-<p><div class="highlight"><pre><span></span><code>Expected: &quot;Welcome, John Doe&quot;
-Actual: &quot;Welcome, John D.&quot;
+<p><div class="highlight"><pre><span></span><code>Expected: "Welcome, John Doe"
+Actual: "Welcome, John D."
 Text does not match exactly
 </code></pre></div>
 <strong>Troubleshoot:</strong> Use <code>text_contains</code> if full text varies, or check for truncation</p>
 <h3 id="failed-text_contains">Failed: text_contains<a class="headerlink" href="#failed-text_contains" title="Permanent link">&para;</a></h3>
-<p><div class="highlight"><pre><span></span><code>Expected substring &#39;Success&#39; not found in element
-Text was: &quot;Operation failed: Connection timeout&quot;
+<p><div class="highlight"><pre><span></span><code>Expected substring 'Success' not found in element
+Text was: "Operation failed: Connection timeout"
 </code></pre></div>
 <strong>Troubleshoot:</strong> Operation may have failed, check previous steps</p>
 <h3 id="failed-screenshot_match">Failed: screenshot_match<a class="headerlink" href="#failed-screenshot_match" title="Permanent link">&para;</a></h3>

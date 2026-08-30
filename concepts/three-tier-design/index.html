@@ -2015,10 +2015,10 @@
 <li><strong>Isolates the engine</strong> — mobile-mcp is pinned in <code>package.json</code> and spawned from <code>node_modules</code>, never fetched at runtime</li>
 </ul>
 <h2 id="data-flow-example-login-test">Data Flow Example: Login Test<a class="headerlink" href="#data-flow-example-login-test" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>User: &quot;Test the login flow&quot;
+<div class="highlight"><pre><span></span><code>User: "Test the login flow"
         ↓
 Layer 1: Agent pulls `mauto guide generate`, `mauto bootstrap`
-  - Parse: &quot;login flow&quot;
+  - Parse: "login flow"
   - Resolve elements via `mauto elements` (→ mobile-mcp → device)
   - Assemble action sequence:
     * launch_app
@@ -2031,12 +2031,12 @@ Layer 1: Agent pulls `mauto guide generate`, `mauto bootstrap`
     * wait_for_element (home screen)
   - Add assertions:
     * home_screen element exists
-    * welcome_text matches &quot;Welcome, {username}&quot;
+    * welcome_text matches "Welcome, {username}"
   - `mauto validate` the scenario, then save it
         ↓
 Saved to mobile-automator/scenarios/login_flow.json
         ↓
-User: &quot;Execute login test&quot;
+User: "Execute login test"
         ↓
 Layer 1: Agent pulls `mauto guide execute`
   - For each action, drive a mauto verb ↓
