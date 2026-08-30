@@ -138,7 +138,7 @@ Reasoning is delivered via `mauto guide <topic>` at explicit invocation, never a
 
 The test scenario schema provides rich, expressive capabilities:
 
-- **14 action types** — scroll, scroll_to_element, wait_for_loading_complete, capture_value, clear_app_data, and more
+- **18 action types** — tap, swipe, scroll_to_element, wait_for_loading_complete, capture_value, and the four semantic actions used by platform-agnostic mode
 - **27 assertion types** — comprehensive coverage across text, visibility, collections, visual, navigation
 - **Advanced control** — retry policies, conditions, sub-steps
 - **Better debugging** — capture values for later assertion, detailed step context

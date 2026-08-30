@@ -24,7 +24,7 @@ Testing mobile apps manually is **tedious and error-prone**. Cross-platform test
 - **Any Agent**: Claude Code, Cursor, Gemini CLI, GitHub Copilot, and OpenAI Agents get one-command setup via `mauto init`; any MCP-capable agent connects via `mauto mcp`
 - **Platform Detection**: Auto-discovers Android, iOS, Flutter, React Native, Kotlin Multiplatform, and Compose Multiplatform projects
 - **Platform-Agnostic by Default**: One scenario runs on Android and iOS, with OS gestures mapped to semantic actions
-- **Schema**: 14 action types, 27 assertion types, and advanced retry/condition logic
+- **Schema**: 18 action types, 27 assertion types, and advanced retry/condition logic
 - **Result Observations**: Captures flakiness, regressions, and state context for smarter debugging
 - **Cross-Session Memory**: The agent remembers app-knowledge, preferences, and run-history across sessions ([`mauto memory`](concepts/memory.md))
 - **Semantic Vision**: AI-powered visual assertions that tolerate cosmetic changes
@@ -128,7 +128,7 @@ Because the contract is just verbs + JSON, **no agent is special** — any agent
 
 - **One-Command Setup**: `mauto init` ships native Agent Skills for Claude Code, Cursor, Gemini CLI, GitHub Copilot, and OpenAI Agents
 - **Platform Modes**: platform-aware (default) and platform-agnostic (`--mode agnostic`) with four semantic actions for cross-platform scenarios
-- **Schema**: 14 action types, 27 assertion types, advanced retry/condition logic
+- **Schema**: 18 action types, 27 assertion types, advanced retry/condition logic
 - **Result Observations**: Captures flakiness, regressions, and execution context
 - **Cross-Session Memory**: The agent remembers app-knowledge, preferences, and run-history across sessions via [`mauto memory`](concepts/memory.md) — so it gets smarter about *your* app over time
 - **Persistent Device Session**: One warm mobile-mcp daemon behind `mauto session` and `mauto devices` keeps device state across verbs
