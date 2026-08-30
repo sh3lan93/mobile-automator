@@ -1,5 +1,5 @@
 ---
-description: "Test Scenario Schema reference - named step IDs, 14 action types, 27 assertion types, variables, retry policies, and conditional logic."
+description: "Test Scenario Schema reference - named step IDs, 18 action types, 27 assertion types, variables, retry policies, and conditional logic."
 ---
 
 # Test Scenario Schema Reference
@@ -11,7 +11,7 @@ The schema for test scenarios. Defines the complete structure for test steps, as
 The scenario schema defines the format for mobile test scenarios:
 
 - **Named string step IDs** — `tap_login`, `wait_for_home` (not integer indices)
-- **14 action types** — From simple tap/type to advanced waits and variable capture
+- **18 action types** — From simple tap/type to advanced waits and variable capture
 - **27 assertion types** — Comprehensive UI, content, visual, and accessibility checks
 - **Variables & capture** — Extract dynamic values during execution for later assertions
 - **Conditional execution** — Optional steps, conditional branching, retry policies
@@ -112,9 +112,11 @@ The `steps` field is an **ordered array** of step objects. Each object requires 
 - Examples: `tap_login`, `wait_for_home`, `type_email_address`
 - Unique within the scenario; used for screenshot naming and `after_step` references
 
-### Action Types (14 total)
+### Action Types (18 total)
 
-Each step's `action` field is one of these values. In platform-agnostic (`mode: "platform-agnostic"`) scenarios you can additionally use the four semantic actions `press_back`, `dismiss_keyboard`, `grant_permission`, and `deny_permission`, which resolve to the right per-platform mechanics at replay time.
+Each step's `action` field is one of these values: the **14 core actions** documented below, plus **4 semantic actions** available in platform-agnostic (`mode: "platform-agnostic"`) scenarios — `press_back`, `dismiss_keyboard`, `grant_permission`, and `deny_permission` — which resolve to the right per-platform mechanics at replay time.
+
+Note that `clear_app_data` is accepted by the schema but is **not mechanically executable** — the underlying automation engine exposes no primitive for it, so a scenario using it cannot replay unattended. The same applies to the `enable_wifi` and `disable_wifi` precondition device actions.
 
 #### 1. launch_app
 Launch the app under test on the device.

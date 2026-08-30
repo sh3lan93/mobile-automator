@@ -4,22 +4,25 @@ Features and improvements currently on the radar for Mobile Automator.
 
 ---
 
-## 🎯 Near Term
+> **Current focus:** the [`production-ready`](https://github.com/sh3lan93/mobile-automator/milestone/4)
+> milestone — the work between today's source-only install and a first published
+> npm release. Gate issue:
+> [#168](https://github.com/sh3lan93/mobile-automator/issues/168).
 
 ### Testing Features
 - [x] Tag-based test filtering and execution
+- [x] Retry logic for flaky tests — per-step `retry_policy` in the schema; `mauto result add-step --attempts` records a `flakiness` observation
 - [ ] Test suite organization (folders, groups)
-- [ ] Retry logic for flaky tests
 - [ ] Screenshot comparison improvements
 
 ### Developer Experience
-- [ ] Better error messages
+- [x] Better error messages — every verb emits the uniform `{ok,data,error,hint,schema_version}` envelope with an actionable `hint`, and commander parse failures are routed through it too
 - [x] Device-visibility check (`mauto devices`); deeper setup health checks still open
 - [ ] Faster scenario generation
 - [ ] Test scenario templates
 
 ### Integrations
-- [ ] CI/CD examples (GitHub Actions, CircleCI)
+- [x] CI/CD example for GitHub Actions — see the [FAQ](docs/faq.md); a CircleCI example is still open
 - [ ] JIRA integration for bug reporting
 - [ ] Slack notifications for test results
 
@@ -65,4 +68,4 @@ Have a feature request? [Open an issue](https://github.com/sh3lan93/mobile-autom
 
 ---
 
-*Last updated: June 2026*
+*Last updated: August 2026 (v0.23.7)*

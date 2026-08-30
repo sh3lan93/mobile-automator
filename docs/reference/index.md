@@ -1,6 +1,6 @@
 ---
 title: "Reference & Schemas"
-description: "Complete reference documentation for mobile-automator schemas, 27 assertion types, 14 action types, and MCP automation tools."
+description: "Complete reference documentation for mobile-automator schemas, 27 assertion types, 18 action types, and MCP automation tools."
 ---
 
 # Reference Documentation
@@ -13,7 +13,7 @@ Complete reference for all schemas, assertion types, and automation tools used b
 
 **Create test scenarios with:**
 - [27 Assertion Types](assertions.md) — Element visibility, text content, visual state, and more
-- [14 Action Types](schema.md#action-types-14-total) — Launch app, tap, type, wait, capture values, etc.
+- [18 Action Types](schema.md#action-types-18-total) — Launch app, tap, type, wait, capture values, etc.
 - [Schema Documentation](schema.md) — Complete scenario structure and all fields
 
 ### For Test Executors
@@ -83,7 +83,7 @@ The default schema for test scenarios. Defines structure for steps, assertions, 
 
 **Key features:**
 - Named string step IDs (not integer indices)
-- 14 action types and 27 assertion types
+- 18 action types and 27 assertion types
 - Variables and value capture
 - Conditional execution and retry policies
 - Structured preconditions
@@ -172,7 +172,7 @@ How mobile-automator learns across sessions: the auto-harvested `run-history` pl
 
 ### Creating test scenarios?
 
-1. [Schema — Step Reference](schema.md#action-types-14-total) — All 14 action types
+1. [Schema — Step Reference](schema.md#action-types-18-total) — All 18 action types
 2. [Assertion Types](assertions.md) — All 27 assertion types with examples
 3. [Schema — Complete Example](schema.md#complete-example-login-scenario-with-variables) — Full working scenario
 
