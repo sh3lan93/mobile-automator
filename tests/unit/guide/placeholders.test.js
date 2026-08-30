@@ -79,6 +79,45 @@ describe('guide/placeholders', () => {
     expect(out).toContain(FALLBACK);
   });
 
+  // The unset rendering must carry no parentheses of its own — the prose
+  // supplies them where they belong. A self-parenthesizing fallback rendered
+  // `the app package ((not configured …))` at every appositive slot.
+  it('renders an unset value slot without parentheses of its own', () => {
+    const root = tmpProject({});
+    const out = interpolate('the app package ({{app_package}})', {
+      projectRoot: root,
+      mode: 'platform-aware',
+    });
+    expect(out).not.toContain('((');
+    expect(out).toBe('the app package (not configured — mauto config set android_package)');
+  });
+
+  // The old fallback said `mauto config set <key>` with `<key>` left literal,
+  // so it never named the key that was actually missing.
+  it('names the config key to set rather than a literal <key>', () => {
+    const root = tmpProject({});
+    const out = interpolate('{{build_command}}', { projectRoot: root, mode: 'platform-aware' });
+    expect(out).toBe('not configured — mauto config set build_command');
+    expect(out).not.toContain('<key>');
+  });
+
+  // Optional slots are additive prose: with nothing to add, the correct
+  // rendering is nothing. Previously the note was jammed onto the prior word
+  // (`the \`mauto\` CLI(not configured …).`).
+  it('renders optional tails and sections as empty when unset', () => {
+    const root = tmpProject({});
+    const opts = { projectRoot: root, mode: 'platform-aware' };
+    expect(interpolate('the `mauto` CLI{{automation_extras}}.', opts)).toBe('the `mauto` CLI.');
+    expect(interpolate('{{additional_resources}}', opts)).toBe('');
+  });
+
+  it('still applies an optional value (with its prefix) when one IS configured', () => {
+    const root = tmpProject({ automation_extras: ', plus adb', additional_resources: '- extra doc' });
+    const opts = { projectRoot: root, mode: 'platform-aware' };
+    expect(interpolate('the `mauto` CLI{{automation_extras}}.', opts)).toBe('the `mauto` CLI, plus adb.');
+    expect(interpolate('{{additional_resources}}', opts)).toBe('\n- extra doc');
+  });
+
   it('never leaves a {{ token for any known placeholder, even with empty config', () => {
     const root = tmpProject({});
     const tpl = Object.keys(PLACEHOLDER_KEYS).map((k) => `{{${k}}}`).join(' ');

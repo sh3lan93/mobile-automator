@@ -42,7 +42,7 @@ Record each observation with `mauto result add-step --observation <type>:<messag
 
 - **Platform:** {{platform_details}}
 - **Build System:** {{build_system}}
-- **Build Command:** run the build command ({{build_command}})
+- **Build Command:** {{build_command}}
 - **App Package:** {{app_package}}
 - **Environments:** {{environments}}
 - **Automation:** the `mauto` CLI{{automation_extras}}.
