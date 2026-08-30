@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.23.5]
+
+### 🐛 Fixed
+
+- **Commander failures are now classified by denylist, not allowlist — a truncated flag no longer fakes a crash.** 0.23.4 routed four commander error codes (`unknownOption`, `missingArgument`, `missingMandatoryOptionValue`, `unknownCommand`) to `invalid_input`. Commander v12 defines **13**, and the nine unlisted codes fell through to `internal` — which is not a neutral bucket: it maps to exit 1 and makes `diagnose()` dump a raw stack trace, the exact failure mode [#146](https://github.com/sh3lan93/mobile-automator/issues/146) exists to remove. One gap was live: `mauto result add-step --run-id` (flag supplied, value omitted — `optionMissingArgument`, a near-synonym of the handled `missingMandatoryOptionValue`) emitted `kind:"internal"`, exit 1, and a 10-frame stack trace, across all 60 value-taking options in the CLI. Three more were latent, reachable the moment the CLI adopts `.choices()`, `.conflicts()`, or `.error()`. `toEnvelope()` now classifies **any** `CommanderError` as `invalid_input` (exit 3) except the closed set of display outcomes (`help`, `helpDisplayed`, `version`), which `run()` short-circuits to commander's own exit code — the set of non-failures is closed and tiny, while the set of ways an invocation can be malformed grows with each commander release. A drift guard scans commander's own source for its error-code surface and fails the build if any code reaches `internal`, so a future commander upgrade cannot silently reopen the gap. ([#146](https://github.com/sh3lan93/mobile-automator/issues/146))
+
+---
+
 ## [0.23.4]
 
 ### 🐛 Fixed
