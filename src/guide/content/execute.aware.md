@@ -42,7 +42,7 @@ Record each observation with `mauto result add-step --observation <type>:<messag
 
 - **Platform:** {{platform_details}}
 - **Build System:** {{build_system}}
-- **Build Command:** `{{build_command}}`
+- **Build Command:** run the build command ({{build_command}})
 - **App Package:** {{app_package}}
 - **Environments:** {{environments}}
 - **Automation:** the `mauto` CLI{{automation_extras}}.
@@ -53,14 +53,14 @@ Record each observation with `mauto result add-step --observation <type>:<messag
 
 - Verify a device is available with `mauto devices`.
 - **App under test.** If the user pointed you at a prebuilt artifact, install it with `mauto install <path>` and do NOT build — reusing a ready artifact is the point.
-- If no artifact was named: check whether the app is already installed. If it is, say so and ask whether to rebuild before running `{{build_command}}` — a previous run may have just built it. If it is not installed, build and install with `{{build_command}}`.
+- If no artifact was named: check whether the app is already installed. If it is, say so and ask whether to rebuild before running the build command ({{build_command}}) — a previous run may have just built it. If it is not installed, build and install with the build command ({{build_command}}).
 - If that install fails because a different build of the app is already on the device, uninstall it — run `mauto uninstall` with the app package ({{app_package}}) — then install again, and report that app data was wiped — a scenario whose preconditions assume existing app state may now fail for that reason.
 - State which path you took — installed a supplied artifact, or built — before continuing.
 
 ### 2. Load Scenario
 
 - Read the JSON scenario file from `mobile-automator/scenarios/`.
-- **Validate schema version:** Read the `$schema_version` field. It must be `"2.0"`. If absent or unrecognized, report an error and halt.
+- **Validate schema version:** Read the `$schema_version` field. It must be `"2.1"`. If absent or unrecognized, report an error and halt.
 - Validate the scenario with `mauto validate <path>` against `mauto schema scenario`.
 - Read the `metadata` to compare the recording environment against the current execution environment. Note any differences (different device, API level, environment).
 

@@ -1,0 +1,18 @@
+{
+  "$schema_version": "2.1",
+  "scenario_id": "valid_smoke",
+  "name": "Valid smoke scenario",
+  "description": "A minimal schema-2.1-valid scenario used by the integration smoke suite.",
+  "platform": "android",
+  "app_package": "com.example.app",
+  "metadata": {
+    "app_version": "1.0.0",
+    "environment": "staging"
+  },
+  "steps": [
+    { "id": "launch", "action": "launch_app", "description": "Launch the app" },
+    { "id": "tap", "action": "tap", "description": "Tap the login button", "target": "Login button" }
+  ],
+  "assertions": [],
+  "tags": []
+}

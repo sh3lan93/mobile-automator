@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.23.4]
+
+### 🐛 Fixed
+
+- **Commander parse errors now flow through the JSON envelope instead of bypassing it.** `mauto result add-step --run-id X --screenshot shot.png` used to print `error: unknown option '--screenshot'` as bare stderr text and exit 1 — commander detected the bad flag before any action callback ran, so the `{ok,data,error,hint,schema_version}` contract every host agent parses simply never emitted, and a malformed invocation was indistinguishable from a crashed device. `buildProgram()` now sets `exitOverride()` + `configureOutput({writeErr})` on the root program (inherited by every subcommand), and `toEnvelope()` classifies the four parse-failure codes (`unknownOption`, `missingArgument`, `missingMandatoryOptionValue`, `unknownCommand`) as `invalid_input` (exit 3) with commander's message preserved in `error` and the failing command's usage line in `hint`. `mauto --help` / `mauto --version` keep their human-readable output and exit 0, and `--human` renders parse failures readably. A guard suite asserts every parse-failure class produces JSON-parseable stdout. ([#146](https://github.com/sh3lan93/mobile-automator/issues/146))
+- **Unset placeholders no longer interpolate inside code spans.** The not-configured fallback for `{{build_command}}` contained backticks of its own, and four guide lines placed the token inside a markdown code span — so on an unconfigured workspace (exactly a new user's first contact) the emitted guide rendered nested-backtick soup at the spot meant to show a command, and on two lines presented the fallback string itself as the command to run. Every `{{build_command}}` occurrence now sits outside the code span (the literal verb stays inside, the value outside, matching the `{{app_package}}` remedy), the fallback is backtick-free, and a new lint guard (`tests/lint/guide-no-placeholder-in-code-span.test.js`) fails if a placeholder is reintroduced inside a code span in any ported guide. ([#143](https://github.com/sh3lan93/mobile-automator/issues/143))
+- **The platform-aware guides no longer pin `$schema_version` to `"2.0"`.** The aware `execute`/`generate` guides instructed agents to author scenarios at 2.0 while the shipped schema is 2.1 and the agnostic guides already said so — an agent following the aware guide produced files a strict 2.1 consumer rejects. Both pins now read `"2.1"`. ([#142](https://github.com/sh3lan93/mobile-automator/issues/142))
+
+### ✨ Added
+
+- **A real npm distribution pipeline.** The package has never been published (`npm view mobile-automator` → 404) even though the release workflow told users to `npm i -g mobile-automator`. `release.yml` gains a `publish-npm` job — guarded to graduated tags only (`vX.Y.Z`, never `-rc.N`) — that runs the full suite plus a packed-tarball smoke check before `npm publish --provenance --access public` (requires an `NPM_TOKEN` repo secret). A `prepublishOnly` script runs the test suite so a local publish can't skip it, and `scripts/pack-smoke.sh` (also a `test.yml` CI job) packs the tarball, installs it into a clean prefix, and verifies the installed `mauto` answers `--version`, emits parseable `schema scenario` JSON, and leaks no `{{placeholders}}` in `guide generate`.
+- `mauto --version` / `-V` prints the installed package version and exits 0 (intercepted in `bin/mauto.js` so the commander program stays version-flag-free).
+- **`tests/integration/` now exists** — `npm run test:integration` previously pointed at a missing directory and exited 1. The new `cli-smoke` suite spawns the real CLI in a temp workspace and covers `--version`, `validate` (ok envelope on a valid 2.1 scenario), `schema scenario`, `guide generate` (no surviving placeholders), and `config get` against a hand-written workspace config. Plain `npm test` picks it up, so the full suite stays one command.
+
+---
+
 ## [Unreleased]
 
 ### 🐛 Fixed
