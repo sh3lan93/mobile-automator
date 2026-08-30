@@ -28,17 +28,38 @@ const connection = require('./device/connection');
 // has no version flag by design.
 const VERSION_FLAGS = new Set(['--version', '-V']);
 
-// commander codes that represent a PARSE failure (bad flag, missing required
-// option/argument, unknown subcommand) — the classes #146 must convert into the
-// envelope instead of letting commander print bare text to stderr + exit(1)
-// itself. Other commander codes (helpDisplayed, version, help) are NOT errors
-// and are handled separately in run().
-const COMMANDER_PARSE_CODES = new Set([
-  'commander.unknownOption',
-  'commander.missingArgument',
-  'commander.missingMandatoryOptionValue',
-  'commander.unknownCommand',
+// Commander throws (via exitOverride) for two very different reasons, and the
+// split below is the ONLY thing that tells them apart.
+//
+// The set of commander outcomes that are NOT failures is closed and tiny: help
+// and version already wrote their human-readable text and computed an exit
+// code. The set of ways an invocation can be malformed is open — it grows with
+// every commander release. So enumerate the closed set and let everything else
+// default to a parse failure (#146).
+//
+// An allowlist of failure codes inverts that, and anything it forgets falls
+// through to `internal` — which is the panic bucket, not a neutral default:
+// `diagnose()` dumps a stack trace for `internal` and it maps to exit 1, so a
+// missed code turns a user typo into a fake crash. That is exactly what
+// happened with `commander.optionMissingArgument` (`--run-id` with no value).
+//
+// `commander.executeSubCommandAsync` is unreachable here by construction: it
+// fires only for standalone executable subcommands (`.command('x', 'desc')`),
+// and every command in this CLI is declared with an inline `.action()`.
+const COMMANDER_NON_FAILURES = new Set([
+  'commander.helpDisplayed', // the --help flag
+  'commander.help', // an explicit .help() call
+  'commander.version', // the --version flag
 ]);
+
+// True for ANY commander parse failure: bad flag, missing option value, missing
+// argument, unknown subcommand, invalid choice, conflicting options, excess
+// arguments — and whatever commander adds in a future release.
+function isCommanderParseFailure(err) {
+  return Boolean(
+    err && err.name === 'CommanderError' && !COMMANDER_NON_FAILURES.has(err.code)
+  );
+}
 
 // Map the user-facing --mode flag onto the stored config mode values.
 const MODE_ALIASES = {
@@ -92,7 +113,7 @@ function usageLine(cmd) {
 //   fs EACCES/ENOENT/EROFS/...    -> environment, with a filesystem hint
 //   anything else                -> internal
 function toEnvelope(err) {
-  if (err && typeof err.code === 'string' && COMMANDER_PARSE_CODES.has(err.code)) {
+  if (isCommanderParseFailure(err)) {
     return {
       envelope: fail(
         'invalid_input',
@@ -1649,11 +1670,14 @@ async function run(argv) {
     const program = buildProgram();
     await program.parseAsync(argv);
   } catch (err) {
-    // commander.helpDisplayed / commander.version are NOT errors: commander
-    // already wrote the human-readable help/version to stdout and exited 0.
-    // Leave them alone (exit 0, no envelope) rather than wrapping them (#146).
-    if (err && (err.code === 'commander.helpDisplayed' || err.code === 'commander.version')) {
-      process.exit(0);
+    // Help/version are NOT errors: commander already wrote the human-readable
+    // text to stdout. Leave them alone (no envelope) rather than wrapping them
+    // (#146). Same COMMANDER_NON_FAILURES set toEnvelope classifies against, so
+    // "which commander outcomes aren't failures" has exactly one answer.
+    if (err && err.name === 'CommanderError' && COMMANDER_NON_FAILURES.has(err.code)) {
+      // Honor commander's own exit code rather than assuming 0 — `.help()`
+      // invoked with `{error:true}` computes 1.
+      process.exit(err.exitCode || 0);
       return;
     }
     emitFatal(err, argv.slice(2).includes('--human'));
