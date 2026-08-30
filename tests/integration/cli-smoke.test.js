@@ -52,6 +52,39 @@ describe('cli smoke (integration)', () => {
     expect(r.stdout.trim()).toMatch(/^\d+\.\d+\.\d+/);
   });
 
+  test('-V exits 0 and prints a semver', () => {
+    const r = runCli(['-V']);
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim()).toMatch(/^\d+\.\d+\.\d+/);
+  });
+
+  // Regression: version handling used to be a hand-rolled argv pre-scan
+  // (`argv.some((a) => a === '--version')`) running ahead of commander. That
+  // scan is positionally blind — it cannot honor the POSIX `--` separator,
+  // which is a parser state transition rather than a matchable token — so it
+  // hijacked `--version` even when supplied as an operand. `mauto type --
+  // --version` printed the version and exited 0 instead of typing the text,
+  // and NO invocation could pass the literal value. Commander's own
+  // `.version()` tracks that state, so the escape works again.
+  //
+  // Asserted via `config set` rather than `type` so the test needs no device.
+  test('the POSIX `--` separator protects a leading-dash value from the version flag', () => {
+    const configDir = path.join(workspace, 'mobile-automator');
+    fs.mkdirSync(configDir, { recursive: true });
+    fs.copyFileSync(CONFIG_FIXTURE, path.join(configDir, 'config.json'));
+
+    const set = runCli(['config', 'set', 'build_command', '--', '--version'], { cwd: workspace });
+    expect(set.status).toBe(0);
+    // The giveaway for the old behavior: bare semver on stdout, exit 0.
+    expect(set.stdout.trim()).not.toMatch(/^\d+\.\d+\.\d+$/);
+
+    const get = runCli(['config', 'get', 'build_command'], { cwd: workspace });
+    expect(get.status).toBe(0);
+    const parsed = JSON.parse(get.stdout);
+    expect(parsed.ok).toBe(true);
+    expect(parsed.data.value).toBe('--version');
+  });
+
   test('validate on a valid scenario returns an ok:true envelope', () => {
     const r = runCli(['validate', VALID_SCENARIO]);
     expect(r.status).toBe(0);

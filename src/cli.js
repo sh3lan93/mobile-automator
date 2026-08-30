@@ -3,6 +3,8 @@
 const fs = require('fs');
 const { Command } = require('commander');
 
+const { version: PKG_VERSION } = require('../package.json');
+
 const { ok, fail, render, exitCodeFor } = require('./output/envelope');
 const { DeviceBridge } = require('./device/bridge');
 const selectionStore = require('./device/selection');
@@ -21,12 +23,6 @@ const guideEmitter = require('./guide/emitter');
 const { ADAPTERS } = require('./init/adapters');
 const { isSemanticAction, ACTION_METHOD, selectResolver } = require('./device/semantic-press');
 const connection = require('./device/connection');
-
-// `--version` / `-V` keep their human-readable output + exit 0. bin/mauto.js
-// intercepts them before commander in the real CLI; run() mirrors that so a
-// direct run() call (including tests) never routes them into commander, which
-// has no version flag by design.
-const VERSION_FLAGS = new Set(['--version', '-V']);
 
 // Commander throws (via exitOverride) for two very different reasons, and the
 // split below is the ONLY thing that tells them apart.
@@ -1151,6 +1147,16 @@ function buildProgram(deps = {}) {
   program
     .name('mauto')
     .description('Platform-agnostic mobile automation CLI')
+    // Commander owns `-V, --version` rather than a hand-rolled argv pre-scan.
+    // A scan like `argv.some((a) => a === '--version')` is positionally blind:
+    // it cannot honor the POSIX `--` separator, which is a state transition in
+    // the parser (everything after it is an operand), not a token to match. It
+    // therefore hijacked the value in `mauto type -- --version`, making a
+    // literal "--version" impossible to type into a device by ANY invocation.
+    // Commander tracks that state, so `--` works and the version flag still
+    // resolves anywhere else. Emits `commander.version` via exitOverride, which
+    // run() treats as a display outcome and exits 0.
+    .version(PKG_VERSION)
     .option('--human', 'render human-readable output instead of JSON', false);
 
   // Parse-level failures (unknown option, missing required option/argument,
@@ -1648,17 +1654,6 @@ function emitFatal(err, human = false) {
 }
 
 async function run(argv) {
-  // `--version` / `-V` keep their human-readable output + exit 0 (mirrors
-  // bin/mauto.js, which intercepts them before commander in the real CLI).
-  // Handled here too so a direct run() call — including tests — never routes
-  // them into commander (which has no version flag by design).
-  if (argv.slice(2).some((arg) => VERSION_FLAGS.has(arg))) {
-    // eslint-disable-next-line global-require
-    process.stdout.write(require('../package.json').version + '\n');
-    process.exit(0);
-    return;
-  }
-
   // Belt-and-suspenders around the in-program withEnvelope boundary: a throw in
   // buildProgram() (e.g. the ScenarioValidator default-param compiling a corrupt
   // bundled schema) happens before any `.action` callback, so only this outer

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.23.6]
+
+### 🐛 Fixed
+
+- **`mauto --version` is now owned by commander, so the POSIX `--` escape works again.** 0.23.4 introduced `--version` / `-V` as a hand-rolled `argv` pre-scan, duplicated in `bin/mauto.js` and `src/cli.js`. A scan such as `argv.some((a) => a === '--version')` is positionally blind, and in particular cannot honor `--`: that separator is a *state transition* in the parser — everything after it is an operand — not a token that can be matched. So the flag was hijacked even when supplied as a value: `mauto type -- --version` printed the version and exited 0 instead of typing the text, and **no** invocation could pass a literal `--version` / `-V` to `type`, `memory add`, `config set`, or `screenshot` — the value was unreachable through the CLI. It is now a single `.version(PKG_VERSION)` on the root program; `exitOverride` turns it into a `CommanderError` with code `commander.version`, which the denylist classification in 0.23.5 already treats as a display outcome. Commander tracks parser state, so `--` works again, and the flag now appears in `mauto --help`, where the hand-rolled version was invisible. ([#146](https://github.com/sh3lan93/mobile-automator/issues/146))
+
+---
+
 ## [0.23.5]
 
 ### 🐛 Fixed
