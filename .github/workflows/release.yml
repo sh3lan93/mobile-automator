@@ -1,13 +1,66 @@
 name: Release
 
+# Three ways in, deliberately:
+#   push.tags       — the normal path: auto-tag.yml pushes vX.Y.Z (as the
+#                     release App, so the event is not suppressed — see #170).
+#   release         — a Release created by hand in the UI. Before #170 this
+#                     reached nobody: attaching a Release to an existing tag
+#                     pushes nothing, so no tag-push event was ever emitted.
+#   workflow_dispatch — a manual escape hatch. Pick the *tag* in the ref
+#                     dropdown; the resolve job rejects branch refs.
+#
+# NOTE: the release job below must keep using GITHUB_TOKEN. Actions suppresses
+# events raised by GITHUB_TOKEN, which is exactly what stops the Release it
+# creates from re-triggering this workflow on `release: published`. Handing it
+# the App token would turn that suppression off and create an infinite loop.
 on:
   push:
     tags:
       - 'v*.*.*'  # Triggers on version tags like v0.1.0, v1.0.0, etc.
+  release:
+    types: [published]
+  workflow_dispatch:
 
 jobs:
+  resolve:
+    name: Resolve release ref
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      tag: ${{ steps.get_version.outputs.tag }}
+    steps:
+      # Every entry point must land on a tag ref. push.tags and release always
+      # do; workflow_dispatch does not have to, so a branch ref is rejected
+      # here rather than silently producing a garbage version like
+      # "refs/heads/main" and publishing it.
+      - name: Validate the ref is a version tag
+        run: |
+          if [[ "$GITHUB_REF" != refs/tags/v*.*.* ]]; then
+            echo "❌ Expected a version tag ref, got: $GITHUB_REF"
+            echo ""
+            echo "  This workflow publishes whatever the ref points at, so it"
+            echo "  only runs on a vX.Y.Z tag. If you triggered it manually,"
+            echo "  re-run it and pick the tag (not a branch) in the"
+            echo "  'Use workflow from' dropdown."
+            exit 1
+          fi
+          echo "✅ Ref is a version tag: $GITHUB_REF"
+
+      - name: Extract version from tag
+        id: get_version
+        run: |
+          # Remove 'v' prefix from tag (v0.1.0 -> 0.1.0)
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          echo "Resolved version $VERSION from ${GITHUB_REF#refs/tags/}"
+
   release:
     name: Create Release
+    needs: resolve
+    # On the `release` entry point the Release already exists — that event is
+    # what triggered us. Re-creating it is a no-op at best.
+    if: github.event_name != 'release'
     runs-on: ubuntu-latest
     permissions:
       contents: write  # Required to create releases
@@ -18,19 +71,11 @@ jobs:
         with:
           fetch-depth: 0  # Fetch all history for changelog extraction
 
-      - name: Extract version from tag
-        id: get_version
-        run: |
-          # Remove 'v' prefix from tag (v0.1.0 -> 0.1.0)
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-
       - name: Extract changelog for this version
         id: changelog
         run: |
           # Extract the changelog section for this specific version
-          VERSION="${{ steps.get_version.outputs.version }}"
+          VERSION="${{ needs.resolve.outputs.version }}"
 
           # Find the section between ## [$VERSION] and the next ## [
           CHANGELOG=$(sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | sed '$d' | tail -n +2)
@@ -45,15 +90,19 @@ jobs:
           echo "$CHANGELOG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
+      # Replaces actions/create-release@v1, which was archived in 2021 and
+      # declares runs.using: node12 — a runtime current runners no longer
+      # provide. It also failed outright when the release already existed;
+      # this one updates in place, so re-runs are safe.
       - name: Create GitHub Release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.get_version.outputs.tag }}
-          release_name: Release ${{ steps.get_version.outputs.tag }}
+          tag_name: ${{ needs.resolve.outputs.tag }}
+          name: Release ${{ needs.resolve.outputs.tag }}
           body: |
-            ## Mobile Automator ${{ steps.get_version.outputs.tag }}
+            ## Mobile Automator ${{ needs.resolve.outputs.tag }}
 
             ${{ steps.changelog.outputs.content }}
 
@@ -73,18 +122,21 @@ jobs:
 
             ### 📚 Documentation
 
-            - [README](https://github.com/${{ github.repository }}/blob/${{ steps.get_version.outputs.tag }}/README.md)
-            - [CHANGELOG](https://github.com/${{ github.repository }}/blob/${{ steps.get_version.outputs.tag }}/CHANGELOG.md)
-            - [Troubleshooting Guide](https://github.com/${{ github.repository }}/blob/${{ steps.get_version.outputs.tag }}/TROUBLESHOOTING.md)
+            - [README](https://github.com/${{ github.repository }}/blob/${{ needs.resolve.outputs.tag }}/README.md)
+            - [CHANGELOG](https://github.com/${{ github.repository }}/blob/${{ needs.resolve.outputs.tag }}/CHANGELOG.md)
+            - [Troubleshooting Guide](https://github.com/${{ github.repository }}/blob/${{ needs.resolve.outputs.tag }}/TROUBLESHOOTING.md)
           draft: false
-          prerelease: ${{ contains(steps.get_version.outputs.version, 'beta') || contains(steps.get_version.outputs.version, 'alpha') || startsWith(steps.get_version.outputs.version, '0.') }}
+          prerelease: ${{ contains(needs.resolve.outputs.version, 'beta') || contains(needs.resolve.outputs.version, 'alpha') || startsWith(needs.resolve.outputs.version, '0.') }}
 
   publish-npm:
     name: Publish to npm
-    # Only publish graduated (non-prerelease) tags. The workflow triggers on
+    needs: resolve
+    # Only publish graduated (non-prerelease) versions. The workflow triggers on
     # v*.*.* which also matches rc tags like v0.21.0-rc.13; this guard skips
-    # those so release candidates are never published to the registry.
-    if: ${{ !contains(github.ref, '-') }}
+    # those so release candidates are never published to the registry. It reads
+    # the resolved version rather than github.ref so it cannot be fooled by a
+    # hyphen elsewhere in the ref.
+    if: ${{ !contains(needs.resolve.outputs.version, '-') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -99,8 +151,12 @@ jobs:
       - run: npm test
       - run: ./scripts/pack-smoke.sh
       # NPM_TOKEN must be configured in the repo's secrets (Settings > Secrets
-      # and variables > Actions) with an npm automation token that has publish
-      # rights for the mobile-automator package.
+      # and variables > Actions) with an npm *granular* access token that has
+      # publish rights. npm removed classic/automation tokens in November 2025.
+      # For a package that does not exist yet the token must be scoped to
+      # "All Packages" — a not-yet-published name cannot be selected
+      # individually. Once published, migrate to trusted publishing (OIDC) and
+      # delete this secret.
       - run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

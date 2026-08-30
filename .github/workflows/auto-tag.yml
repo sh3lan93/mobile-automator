@@ -10,13 +10,57 @@ jobs:
     name: Create version tag
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # Required to push tags
+      contents: read  # the App token below performs the write, not GITHUB_TOKEN
 
     steps:
+      # The tag this job pushes must be able to trigger `release.yml`, which
+      # listens for a tag push. Actions deliberately suppresses that event when
+      # the push is made with the built-in GITHUB_TOKEN (loop prevention), so a
+      # GITHUB_TOKEN-pushed tag silently reaches nobody — the tag lands, this
+      # job reports success, and the release never happens. See #170.
+      #
+      # A GitHub App installation token is a distinct identity, so its pushes
+      # are not suppressed. It is preferred over a PAT: short-lived (~1h),
+      # scoped to this repo, and nothing to rotate.
+      # Secrets go through env, never string interpolation: the private key is a
+      # multiline PEM and would break the shell if pasted into the script body.
+      - name: Fail early if the release App is not configured
+        env:
+          APP_ID: ${{ secrets.RELEASE_APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+        run: |
+          MISSING=""
+          if [ -z "$APP_ID" ]; then MISSING="$MISSING RELEASE_APP_ID"; fi
+          if [ -z "$APP_PRIVATE_KEY" ]; then MISSING="$MISSING RELEASE_APP_PRIVATE_KEY"; fi
+
+          if [ -n "$MISSING" ]; then
+            echo "❌ Missing repository secret(s):$MISSING"
+            echo ""
+            echo "  Tagging is intentionally hard-failed rather than falling back to"
+            echo "  GITHUB_TOKEN. A fallback would push the tag and silently fail to"
+            echo "  trigger release.yml — the exact invisible breakage of #170."
+            echo ""
+            echo "  Create a GitHub App with Repository permissions > Contents: Read"
+            echo "  and write, install it on this repo, then add its App ID and"
+            echo "  private key as the secrets above."
+            exit 1
+          fi
+          echo "✅ Release App secrets present."
+
+      - name: Mint a GitHub App installation token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Required to fetch all existing tags
+          # Persisted so the tag push below uses the App identity, not
+          # GITHUB_TOKEN. This is the whole point of the job.
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Read version from package.json
         id: get_version
@@ -53,7 +97,7 @@ jobs:
           git push origin "$TAG"
 
           echo ""
-          echo "🏷️ Tag created and pushed"
+          echo "🏷️ Tag created and pushed (as the release App, so release.yml will fire)"
           echo "────────────────────────────────────────"
           echo "  Tag:     $TAG"
           echo "  Version: $VERSION"
