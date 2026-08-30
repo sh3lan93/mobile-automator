@@ -38,7 +38,7 @@ While recording, you also **passively observe and report** (but never add extra 
 
 - **Platform:** {{platform_details}}
 - **Build System:** {{build_system}}
-- **Build Command:** run the build command ({{build_command}})
+- **Build Command:** {{build_command}}
 - **App Package:** {{app_package}}
 - **Environments:** {{environments}}
 - **Automation:** the `mauto` CLI{{automation_extras}}.

@@ -15,7 +15,35 @@
 
 const configManager = require('../config/manager');
 
-const FALLBACK = '(not configured — set it via mauto config set <key>)';
+// How an UNSET placeholder renders has to fit the sentence it lands in. A
+// single context-blind string cannot: the 13 placeholder sites in the aware
+// guides occupy at least five grammatical roles (label value, inline noun,
+// parenthetical appositive, inline tail, whole section body). There are two
+// kinds of slot, and they want opposite things.
+//
+//   VALUE slots — `**Platform:** {{platform_details}}`, `the app package
+//   ({{app_package}})`. These want a short noun phrase naming the key to set.
+//   Critically it must carry NO parentheses of its own: the prose already
+//   supplies them where they belong, so a self-parenthesizing fallback rendered
+//   `the app package ((not configured …))` — the same class of malformation
+//   #143 set out to remove, in a different shape.
+//
+//   OPTIONAL slots — `the `mauto` CLI{{automation_extras}}.` and the trailing
+//   `{{additional_resources}}` bullet. These are additive prose; when there is
+//   nothing to add, the correct rendering is NOTHING. A diagnostic jammed onto
+//   the preceding word (`the `mauto` CLI(not configured …).`) is strictly worse
+//   than silence.
+const FALLBACK = 'not configured';
+
+// The fallback also used to read `set it via mauto config set <key>` with
+// `<key>` left LITERAL — so the guide told the agent to run a command with a
+// placeholder still in it, 13 times, and never named the missing key. The
+// candidate list knows the key, so name it.
+function fallbackFor(spec) {
+  if (!spec) return FALLBACK; // unknown token — nothing to name
+  if (spec.optional) return '';
+  return `${FALLBACK} — mauto config set ${spec.keys[0]}`;
+}
 
 // Each entry lists candidate config keys, tried in order. The config may be in
 // the flat agnostic shape (top-level keys) or the nested aware shape written by
@@ -33,9 +61,11 @@ const PLACEHOLDER_KEYS = {
     keys: ['protected_directories', 'knowledge.protected_directories'],
     join: true,
   },
+  // `optional: true` -> renders as nothing when unset (see FALLBACK above).
   additional_resources: {
     keys: ['additional_resources', 'knowledge.additional_resources'],
     prefix: '\n',
+    optional: true,
   },
 
   // ---- aware only ----
@@ -44,7 +74,12 @@ const PLACEHOLDER_KEYS = {
   platform_details: { keys: ['platform_details', 'knowledge.platform_details', 'platform'] },
   build_system: { keys: ['build_system', 'knowledge.build_system'] },
   build_command: { keys: ['build_command', 'knowledge.build_command'] },
-  automation_extras: { keys: ['automation_extras', 'knowledge.automation_extras'] },
+  // An inline tail (", plus adb") appended to "the `mauto` CLI" — optional, so
+  // an unset value ends the sentence cleanly instead of jamming a note onto it.
+  automation_extras: {
+    keys: ['automation_extras', 'knowledge.automation_extras'],
+    optional: true,
+  },
   environments: { keys: ['environments'], join: true },
 
   // ---- agnostic only ----
@@ -89,11 +124,9 @@ function interpolate(template, { projectRoot, mode } = {}) {
   void mode;
   return String(template).replace(/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g, (_, name) => {
     const spec = PLACEHOLDER_KEYS[name];
-    if (!spec) return FALLBACK;
-    const raw = firstDefined(projectRoot, spec.keys);
-    const rendered = renderValue(raw, spec);
-    return rendered === undefined ? FALLBACK : rendered;
+    const rendered = spec ? renderValue(firstDefined(projectRoot, spec.keys), spec) : undefined;
+    return rendered === undefined ? fallbackFor(spec) : rendered;
   });
 }
 
-module.exports = { interpolate, PLACEHOLDER_KEYS, FALLBACK };
+module.exports = { interpolate, PLACEHOLDER_KEYS, FALLBACK, fallbackFor };

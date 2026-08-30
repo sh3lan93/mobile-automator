@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.23.7]
+
+### 🐛 Fixed
+
+- **Unset placeholders now render per slot kind, fixing doubled parens across the guides.** 0.23.4 addressed `{{build_command}}` by moving it out of its code span and making the fallback backtick-free, but the root cause was the fallback itself, not the code span: one context-blind string was substituted into 13 placeholder sites spanning five grammatical roles (label value, inline noun, parenthetical appositive, inline tail, whole section body), and no single string fits all of them. Because the fallback parenthesized itself while the surrounding prose also supplied parentheses, every appositive slot rendered doubled parens — `the app package ((not configured …))` — which affected the `{{app_package}}` and `{{loading_indicators}}` lines that 0.23.4 never touched, not just `{{build_command}}`. Unset placeholders now render per slot kind: **value** slots get a bare, unparenthesized note naming the key to set (`not configured — mauto config set build_command`, where the old text left `<key>` literal and never said which key was missing), and **optional** slots (`{{automation_extras}}`, `{{additional_resources}}`) render as nothing, so the automation line ends cleanly instead of having a note jammed onto the preceding word. The guard moved to the layer that owns the invariant: `tests/lint/guide-no-placeholder-leak.test.js` already emits every topic × mode with no config — precisely the unconfigured first-contact state — so it now also asserts no doubled parens, no fallback inside a code span, and no fallback jammed against the preceding word. The 0.23.4 guard that scanned raw content files could not see any of this, since every malformation exists only after interpolation; it is superseded and removed. ([#143](https://github.com/sh3lan93/mobile-automator/issues/143))
+
+---
+
 ## [0.23.6]
 
 ### 🐛 Fixed
