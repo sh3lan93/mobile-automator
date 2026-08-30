@@ -140,23 +140,46 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write  # Required for npm publish --provenance
+      # The OIDC identity IS the credential now: npm exchanges this token for a
+      # short-lived publish grant via the trusted publisher configured on the
+      # package. No NPM_TOKEN is involved.
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
+
+      # Trusted publishing needs npm >= 11.5.1, and Node 22 LTS bundles npm
+      # 10.x — the Node version alone does NOT satisfy the floor. Upgrade
+      # explicitly and assert it, so a future runner image change surfaces as a
+      # clear failure here rather than as an authentication error at publish
+      # time.
+      - name: Install an npm that supports trusted publishing
+        run: |
+          npm install -g npm@latest
+          NPM_VERSION="$(npm --version)"
+          echo "npm $NPM_VERSION"
+          MIN=11.5.1
+          if [ "$(printf '%s\n%s\n' "$MIN" "$NPM_VERSION" | sort -V | head -n1)" != "$MIN" ]; then
+            echo "npm $NPM_VERSION is below the $MIN required for trusted publishing"
+            exit 1
+          fi
+          echo "npm $NPM_VERSION satisfies the >= $MIN floor"
+
       - run: npm ci
       - run: npm test
       - run: ./scripts/pack-smoke.sh
-      # NPM_TOKEN must be configured in the repo's secrets (Settings > Secrets
-      # and variables > Actions) with an npm *granular* access token that has
-      # publish rights. npm removed classic/automation tokens in November 2025.
-      # For a package that does not exist yet the token must be scoped to
-      # "All Packages" — a not-yet-published name cannot be selected
-      # individually. Once published, migrate to trusted publishing (OIDC) and
-      # delete this secret.
+
+      # Published via trusted publishing (OIDC) — no NPM_TOKEN, nothing to
+      # rotate, and no long-lived credential in repository secrets. The trust
+      # relationship is configured on the package itself and names this
+      # repository and this workflow file, so renaming release.yml or moving
+      # the publish to another workflow will break it until the trusted
+      # publisher is updated (`npm trust list mobile-automator`).
+      #
+      # --provenance is kept deliberately. OIDC generates provenance anyway,
+      # but the explicit flag makes a failure to attest fail the publish rather
+      # than silently shipping an unattested tarball.
       - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
