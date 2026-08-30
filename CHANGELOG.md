@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.23.8]
+
+### 🐛 Fixed
+
+- **The release pipeline is reachable for the first time since v0.1.0.** `release.yml` had produced exactly one run in the repository's history — `v0.1.0` in February 2026, from a hand-pushed tag — so no tag from `v0.22.0` onward ever produced a GitHub Release or an npm publish, and nothing ever reported an error, because a workflow that is never triggered emits no failure. Two independent walls caused it. **(1)** `auto-tag.yml` pushed tags using the built-in `GITHUB_TOKEN`, and Actions deliberately does not start workflow runs from events raised with `GITHUB_TOKEN` (loop prevention) — the tag landed, the job printed `🏷️ Tag created and pushed`, and the push event reached nobody. Tags are now pushed with a **GitHub App installation token** (`actions/create-github-app-token`), a distinct identity whose pushes are not suppressed; it is preferred over a PAT because it is repo-scoped, lives about an hour, and needs no rotation. Missing App secrets hard-fail with an actionable message rather than falling back to `GITHUB_TOKEN`, since a fallback would recreate exactly the invisible breakage being fixed. **(2)** `release.yml` listened only for `push.tags`, so a Release created by hand from an existing tag — which pushes nothing, and therefore emits no tag-push event — could not trigger it either; `release: [published]` and `workflow_dispatch` are now accepted as entry points. The release job deliberately keeps `GITHUB_TOKEN`: that same suppression is what stops the Release it creates from re-triggering the workflow on `release: published`. A new `resolve` job validates that the ref is a `vX.Y.Z` tag and exports the version once for both jobs — `workflow_dispatch` can target a branch, which would otherwise resolve a version of `refs/heads/main` and publish it — and the release-candidate guard now reads that resolved version instead of `github.ref`, so a hyphen elsewhere in the ref cannot let an rc reach the registry. `actions/create-release@v1` (archived in 2021, `runs.using: node12`, a runtime current runners no longer provide, and hard-fails when the release already exists) is replaced by `softprops/action-gh-release@v2`, which updates in place so re-runs are safe. ([#170](https://github.com/sh3lan93/mobile-automator/issues/170))
+
+---
+
 ## [0.23.7]
 
 ### 🐛 Fixed
