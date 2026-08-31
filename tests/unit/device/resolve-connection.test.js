@@ -146,6 +146,60 @@ describe('resolve-connection', () => {
     expect(state.closed).toBe(1); // one-shot close tears the transport down
   });
 
+  // --- #163: a failed spawn must point the user at the daemon log ---------
+  //
+  // Transparent autostart is the COMMON path (most users never type
+  // `mauto session start`), and until now a dead daemon fell through to the
+  // one-shot silently. The signal rides err.hint because that is the channel
+  // deviceFail() in cli.js already surfaces on every device verb.
+  test('(d) spawn failed + one-shot throws -> the error carries a hint naming the daemon log', async () => {
+    const root = tmpRoot();
+    const client = fakeClient({ alive: false, conn: null });
+    const spawn = { spawnDaemon: async () => false };
+    const createCall = async () => { throw new Error('no device'); };
+
+    await expect(
+      resolveDeviceConnection({ device: null, projectRoot: root, client, spawn, createCall })
+    ).rejects.toMatchObject({
+      message: 'no device',
+      hint: expect.stringContaining(paths.logFilePath(root)),
+    });
+  });
+
+  test('(d) spawn failed -> an error that already carries its own hint keeps it', async () => {
+    const root = tmpRoot();
+    const client = fakeClient({ alive: false, conn: null });
+    const spawn = { spawnDaemon: async () => false };
+    const createCall = async () => {
+      const err = new Error('no device');
+      err.hint = 'Plug in a phone.';
+      throw err;
+    };
+
+    await expect(
+      resolveDeviceConnection({ device: null, projectRoot: root, client, spawn, createCall })
+    ).rejects.toMatchObject({ hint: 'Plug in a phone.' });
+  });
+
+  // The daemon started fine here — it just wasn't reachable in time. Its log
+  // has nothing to say about the one-shot's failure, so pointing at it would
+  // be a false lead.
+  test('spawn succeeded but the daemon connect yielded null -> no daemon-log hint on a one-shot failure', async () => {
+    const root = tmpRoot();
+    const client = fakeClient({ alive: false, conn: null }); // tryConnect -> null
+    const spawn = { spawnDaemon: async () => true };
+    const createCall = async () => { throw new Error('no device'); };
+
+    let thrown = null;
+    try {
+      await resolveDeviceConnection({ device: null, projectRoot: root, client, spawn, createCall });
+    } catch (err) {
+      thrown = err;
+    }
+    expect(thrown).not.toBeNull();
+    expect(thrown.hint).toBeUndefined();
+  });
+
   test('autostart:false -> straight one-shot, never spawns', async () => {
     const root = tmpRoot();
     const client = fakeClient({ alive: false, conn: null });

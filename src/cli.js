@@ -995,8 +995,13 @@ async function handleSessionStart(
 
   const started = await connection.startSession({ projectRoot, device, idleMs, spawn });
   if (!started) {
+    // The daemon's stdout/stderr are captured to the workspace log, so the
+    // "why" of a startup crash exists on disk — but only this hint tells the
+    // user (or agent) that it does. Same sentence the transparent-autostart
+    // fallback uses, so the log is named identically wherever it surfaces.
+    const logHint = require('./device/resolve-connection').daemonLogHint(projectRoot);
     return {
-      envelope: fail('device', 'failed to start the device session daemon', 'Ensure a device or simulator is connected, or run verbs directly (they fall back to one-shot).'),
+      envelope: fail('device', 'failed to start the device session daemon', `Ensure a device or simulator is connected, or run verbs directly (they fall back to one-shot). ${logHint}`),
       exitKind: 'device',
     };
   }

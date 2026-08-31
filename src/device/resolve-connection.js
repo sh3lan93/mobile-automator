@@ -14,7 +14,9 @@
 //   (c) autostart && no reachable daemon
 //         -> spawn a daemon, then connect daemon-backed (no-op close).
 //   (d) spawn failed, or autostart:false
-//         -> one-shot fallback via the real createCall (real close).
+//         -> one-shot fallback via the real createCall (real close). When the
+//            spawn is what failed, a thrown one-shot error is decorated with a
+//            hint naming the daemon log so the crash stays findable (#163).
 //
 // Everything device-touching is injected so the whole matrix is unit-testable
 // with a fake daemon + fake createCall + fake spawn.
@@ -31,6 +33,13 @@ function defaultCreateCall(opts) {
 }
 
 const NOOP_CLOSE = () => Promise.resolve();
+
+// The one sentence that points a user at the daemon's captured output (#163).
+// Shared with cli.js's `session start` failure envelope so the two moments a
+// user can learn the log exists word it identically.
+function daemonLogHint(projectRoot) {
+  return `The daemon's output (including stack traces) was captured to ${paths.logFilePath(projectRoot)}.`;
+}
 
 // Read the live daemon's pinned device from its handle, or null. A null pin
 // means the daemon serves whatever device mobile-mcp selected (matches any
@@ -141,6 +150,28 @@ async function resolveDeviceConnection({
     if (started) {
       const conn = await daemonBacked();
       if (conn) return conn;
+      // Spawn worked; the daemon just wasn't reachable. Its log has nothing to
+      // say about a subsequent one-shot failure, so no hint — fall through.
+    } else {
+      // The daemon died on startup and its log is the only record of why.
+      // Transparent autostart is the common path (most users never type
+      // `mauto session start`), so without this the log stays invisible to
+      // almost everyone.
+      //
+      // The signal rides the existing err.hint channel on purpose. deviceFail()
+      // in cli.js already surfaces err.hint and all nine device verb paths route
+      // through it, so this reaches every verb with no change to the
+      // acquireConnection contract — which connection.js deliberately keeps
+      // narrow ("callers never learn (or care)" which path served them).
+      // Widening the return type with a source/spawnFailed flag would fight
+      // that design and force every caller to care.
+      try {
+        return await oneShot();
+      } catch (err) {
+        // Never clobber a more specific hint the transport already attached.
+        if (!err.hint) err.hint = daemonLogHint(projectRoot);
+        throw err;
+      }
     }
   }
 
@@ -151,6 +182,7 @@ async function resolveDeviceConnection({
 module.exports = {
   resolveDeviceConnection,
   chooseConnectionStrategy,
+  daemonLogHint,
   deviceMatches,
   readHandleDevice,
 };
