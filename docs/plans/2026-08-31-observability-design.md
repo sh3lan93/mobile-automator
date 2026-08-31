@@ -9,9 +9,11 @@
 
 `mauto` has no observability of any kind. Concretely, in 6,254 lines of `src/` + `bin/`:
 
-1. **No logging.** Zero `console.*` calls. The only diagnostic channel is three
-   `process.stderr.write` sites: `diagnose()` (`src/cli.js:1637`), which prints a stack
-   only for `internal`-kind errors, and the daemon's crash guards.
+1. **No logging.** Zero `console.*` calls. The only diagnostic channel is six
+   `process.stderr.write` sites across three files: `diagnose()` (`src/cli.js:1639`), which
+   prints a stack only for `internal`-kind errors; one undeliverable-reply notice
+   (`src/device/session-daemon.js:224`); and four crash guards in
+   `bin/mauto-session-daemon.js` — the four that `stdio: 'ignore'` discards.
 2. **The daemon's diagnostics are discarded by construction.** `src/device/session-spawn.js:38`
    spawns with `stdio: 'ignore'`, so every `process.stderr.write` in
    `bin/mauto-session-daemon.js` — including the `uncaughtException` stack — goes to
@@ -104,6 +106,12 @@ One canonical record, NDJSON on disk, one JSON object per line:
 }
 ```
 
+`session_id` does not exist in the codebase today (`session status` reports pid and idle_ms,
+no id). Slice 2 introduces it: the daemon generates a random id at start and records it in
+the existing `session.json` handle (`src/device/session-paths.js`), so verbs read it from a
+file that is already there. It correlates device work to one *daemon lifetime*, which
+`run_id` cannot — a daemon that dies and respawns mid-run is exactly the event worth seeing.
+
 `error_kind` is reused verbatim from the envelope's existing taxonomy — the classification
 work is already done and already tested.
 
@@ -152,8 +160,12 @@ behavioural fix plus fd lifecycle management, and it makes the daemon's four exi
 
 ### Making B honest
 
-Rather than a second mechanism, B falls out of A's file sink. When `MAUTO_RUN_ID` is set (or
-`--run-id` passed), verb events are appended to
+Rather than a second mechanism, B falls out of A's file sink. Correlation for **device
+verbs is by the `MAUTO_RUN_ID` environment variable only** — the agent exports it once per
+run. No device verb gains a `--run-id` flag; that option exists today solely as a
+`requiredOption` on `result add-step` / `add-assertion` / `finalize` (`src/cli.js:1366`,
+`:1401`, `:1431`), and adding it to twelve device verbs would be churn for no gain. When
+`MAUTO_RUN_ID` is set, verb events are appended to
 `mobile-automator/.logs/run-<runId>.ndjson`. `result finalize` then **derives** measured
 values from that trace instead of trusting flags:
 
@@ -167,6 +179,15 @@ Screenshot-on-failure: on a `device`-kind failure the CLI captures a screenshot 
 `mobile-automator/screenshots/` and records its path in the trace, so a failed run carries
 evidence rather than a narrative.
 
+The seam needs care. `connectBridge` (`src/cli.js:1215`) has two failure paths and only one
+is usable: its first `catch` handles a *connect* failure, where no bridge exists to
+screenshot from. The capture therefore hooks the second `try` — after `const r = await
+fn(bridge)` returns a `device`-kind fail envelope and **before** the `finally` calls
+`close()`, which is the only window where the bridge is still live. The capture is itself a
+daemon round-trip that can fail, so it must be wrapped such that a screenshot failure is
+recorded and discarded: **it must never mask or replace the original error**, which is the
+thing the caller actually needs.
+
 ### Crash / ANR detection
 
 A new `mauto crash` verb (`list` / `get`), reaching the device through a new
@@ -177,8 +198,20 @@ action would add a device round-trip to `mauto tap`, which is on the hot path; c
 a failure costs nothing in the common case and answers the exact question that is currently
 unanswerable.
 
-Obligations: an entry in `src/device/action-catalog.js` (resolution `verb`) and an entry in
-`src/result/capability-catalog.js` for the crash record's home in the result schema.
+**`crash` must NOT get an `action-catalog.js` entry.** That catalog holds exactly the 23
+*scenario-schema actions*, and `tests/lint/action-coverage.test.js:49` asserts bidirectional
+parity — `expect(missingFromSchema).toEqual([])`, "catalog entry the schema never declares".
+Adding `crash` to the catalog without also adding it to `scenario_schema.json`'s
+`step.action` and `preconditions.device_actions` enums **fails the build**, and adding it to
+those enums would be an unplanned schema bump.
+
+`crash` is a *diagnostic* verb, not something a scenario does — it belongs with `devices`,
+`session`, and `memory`, none of which appear in the catalog. Its only catalog obligation is
+an entry in `src/result/capability-catalog.js` for the crash record's home in the result
+schema.
+
+Deliberate non-goal: no `no_crash` assertion type. That would be a scenario-schema change
+with its own additivity implications, and it is not required to answer "did the app die?".
 
 ### Telemetry transport (C)
 
@@ -233,19 +266,26 @@ currently committable by accident; `.logs/` would compound that.
 
 Every invariant from PRD #69 is preserved, and one needs an explicit guard:
 
-- **Uniform envelope — the critical one.** stdout is owned exclusively by the envelope. No
-  sink may ever write to stdout; diagnostics go to stderr and files only. Guarded by an
-  integration test asserting that stdout contains exactly one JSON object for every verb at
-  every log level, including `debug`.
+- **Uniform envelope — the critical one.** **No sink may ever write to stdout**; stdout
+  carries exactly the verb's own output and nothing else. Diagnostics go to stderr and files
+  only. Note the guard cannot be stated as "stdout is always one JSON object": `guide`,
+  `schema`, and `bootstrap` route through `emitMaybeRaw` → `emitRaw` (`src/cli.js:1463`,
+  `:1628`) and print raw markdown with no envelope at all. The guard is therefore
+  byte-equality against an uninstrumented baseline, per verb class (see Testing).
 - **Device driven only through `mauto` verbs.** Crash detection goes through a `DeviceBridge`
   method behind a verb.
 - **One-shot verbs only.** No verb becomes long-lived; the spool exists precisely so none has
   to.
 - **Reasoning is pulled, never ambient.** Unaffected; the execute guide gains crash-verb
   documentation.
-- **Backwards compatibility.** `.logs/` is an additive directory; result-schema additions are
-  additive and guarded by `tests/lint/schema-additive.test.js`; `config_schema.json` already
-  sets `additionalProperties: true`.
+- **Backwards compatibility.** `.logs/` is an additive directory and `config_schema.json`
+  already sets `additionalProperties: true`. **The result schema has no additivity guard
+  today** — `tests/lint/schema-additive.test.js` reads only `scenario_schema.json` against
+  the `scenario_schema_v2.0.json` fixture, and `result-coverage.test.js` guards field→verb
+  reachability, not additivity. Slices 3 and 4 both add result-schema fields, so slice 3 must
+  *create* `tests/lint/result-schema-additive.test.js` plus a
+  `tests/fixtures/result_schema_v2.0.json` baseline, mirroring the scenario one. This is new
+  work, not an existing guarantee to lean on.
 - **Platform-agnostic selectors.** Unaffected.
 
 Windows (#165) is not made worse: no new socket or platform-specific primitive is introduced.
@@ -261,9 +301,13 @@ filtering; spool batching and idempotent flush; duration derivation from a trace
 `result-coverage.test.js` for the crash record and measured-duration fields; extend
 `config-schema.test.js` for the telemetry keys.
 
-**Integration** — the envelope-purity test above; `MAUTO_LOG_LEVEL=debug` writes to stderr
-only; telemetry stays unreachable while disabled (asserted by injecting a transport that
-fails the test if called).
+**Integration** — *stdout purity*, the guard that matters most, split by verb class: for
+envelope verbs stdout parses as exactly one JSON object; for the raw verbs (`guide`,
+`schema`, `bootstrap`) stdout is byte-identical to the uninstrumented baseline. Both must
+hold at **every** log level including `debug`, which is what catches the first careless sink
+write. Plus: `MAUTO_LOG_LEVEL=debug` output appears on stderr only; telemetry stays
+unreachable while disabled (asserted by injecting a transport that fails the test if
+called).
 
 ## Slice ladder
 
@@ -275,7 +319,7 @@ since it is a straight bug fix for #163 that users hit today.
 |---|---|---|---|
 | 1 | Recorder core, event model, field catalog + redaction lint, stderr/file sinks, daemon stdio fix, workspace `.gitignore` | `0.24.0-rc.0` | #163 |
 | 2 | Daemon instrumentation: call latency, timeouts, lifecycle, connect failures, undeliverable replies | `0.24.0-rc.1` | part of #156 |
-| 3 | Run traces, measured `duration_seconds` and retry counts in `finalize`, screenshot-on-failure | `0.24.0-rc.2` | — |
+| 3 | Run traces, measured `duration_seconds` and retry counts in `finalize`, screenshot-on-failure, **new result-schema additivity guard + fixture** | `0.24.0-rc.2` | — |
 | 4 | `mauto crash` verb, failure-path auto-check, result-schema record, both catalog entries | `0.24.0-rc.3` | — |
 | 5 | Opt-in PostHog spool + daemon flush, consent UX, privacy documentation | `0.24.0` | — |
 
