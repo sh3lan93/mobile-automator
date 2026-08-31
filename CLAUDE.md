@@ -6,7 +6,7 @@ Developer guide for maintaining the `mauto` CLI. User-facing docs live in `READM
 
 mobile-automator is a **host-agnostic `mauto` CLI** for AI-driven mobile QA automation. Any AI agent drives a device through `mauto` verbs (which wrap mobile-mcp); reasoning is pulled on demand via `mauto guide`.
 
-**Status (v0.23.7): feature-complete, not yet released.** The package is **not on npm** — `npm view mobile-automator` returns 404, so every install path is from source (`git clone` + `npm link`). Milestone `production-ready` (gate issue [#168](https://github.com/sh3lan93/mobile-automator/issues/168)) tracks what stands between here and a first published release. Do not describe the tool as installable from the registry until the publish actually lands.
+**Status (v0.23.9): published.** The package is on npm as `mobile-automator` — first published release **v0.23.8** (2026-08-30), `latest` is **v0.23.9**. `npm i -g mobile-automator` and `npx mobile-automator <verb>` both work. Publishing is automatic: merge a version bump to `main` and the pipeline tags, releases, and publishes (see [Releasing & version handling](#releasing--version-handling)). Milestone `production-ready` (gate issue [#168](https://github.com/sh3lan93/mobile-automator/issues/168)) tracks the remaining work; its Tier 0 ("not distributable") is now clear. Note that `README.md` and `docs/getting-started/installation.md` still describe source install only — stale as of the publish, not yet corrected.
 
 ## Architecture
 
@@ -151,18 +151,20 @@ This workflow lives here (not in per-issue bodies) so it applies uniformly and s
 
 ## Releasing & version handling
 
-The package is **not yet published**; users install from source. mobile-mcp is pinned as a dependency (`@mobilenext/mobile-mcp@0.0.55`) and spawned from `node_modules` — never fetched at runtime. `package.json` `files` ships only `bin/` and `src/`.
+The package is **published on npm**; installs come from the registry. mobile-mcp is pinned as a dependency (`@mobilenext/mobile-mcp@0.0.55`) and spawned from `node_modules` — never fetched at runtime. `package.json` `files` ships only `bin/` and `src/`.
 
 **The pipeline, as it actually behaves:**
 
-1. Merge to `main` → `auto-tag.yml` reads `package.json` `version` and pushes tag `v<version>` if it does not already exist.
-2. Tag push → `release.yml` cuts a GitHub Release with the matching `CHANGELOG.md` section.
-3. `release.yml`'s `publish-npm` job runs `npm ci` → `npm test` → `scripts/pack-smoke.sh` → `npm publish --provenance`, but only for graduated tags (`if: !contains(github.ref, '-')`), so `-rc.N` tags are never published.
+1. Merge to `main` → `auto-tag.yml` mints a **GitHub App installation token** (repo secrets `RELEASE_APP_ID` / `RELEASE_APP_PRIVATE_KEY`), reads `package.json` `version`, and pushes tag `v<version>` if it does not already exist. The App identity is load-bearing, not incidental: Actions does not start workflow runs from events raised with the default `GITHUB_TOKEN`, so a `GITHUB_TOKEN`-pushed tag lands and reaches nobody — that was [#170](https://github.com/sh3lan93/mobile-automator/issues/170), which silently killed every release between v0.22.0 and v0.23.7. Missing App secrets **hard-fail** the job rather than falling back.
+2. Tag push → `release.yml` cuts a GitHub Release with the matching `CHANGELOG.md` section. It has two other entry points: `release: [published]` (a Release created by hand in the UI, which pushes no tag and so emits no tag-push event) and `workflow_dispatch` (pick the **tag**, not a branch, in the ref dropdown). A `resolve` job rejects any ref that is not `refs/tags/vX.Y.Z`, so a manual run on a branch cannot publish `refs/heads/main` as a version.
+3. `release.yml`'s `publish-npm` job runs `npm ci` → `npm test` → `scripts/pack-smoke.sh` → `npm publish --provenance --access public` via **trusted publishing (OIDC)** — there is no `NPM_TOKEN` anywhere, the workflow's `id-token` is the credential. It upgrades npm in-job because trusted publishing needs `npm >= 11.5.1` and Node 22 ships 10.x. Only graduated tags publish (`if: !contains(needs.resolve.outputs.version, '-')` — the *resolved version*, not `github.ref`, so a hyphen elsewhere in the ref cannot fool it), so `-rc.N` tags are never published.
 
-**Two caveats, both real:**
+**Four things worth knowing:**
 
 - **rc versions *are* tagged.** `auto-tag.yml` has no prerelease guard, so `v0.21.0-rc.13` and 20 other rc tags exist in the repo. Only *npm publishing* is gated on graduation, not tagging.
-- **`release.yml` currently can never fire** — `auto-tag.yml` pushes the tag with the default `GITHUB_TOKEN`, which does not re-trigger workflows, so `publish-npm` is unreachable. Tracked as issue [#170](https://github.com/sh3lan93/mobile-automator/issues/170); releases have been cut by hand.
+- **`release.yml`'s `release` job must keep `GITHUB_TOKEN`.** The same suppression rule that caused #170 is what stops the Release it creates from re-triggering the workflow through its own `release: [published]` trigger. Handing that step the App token would loop forever.
+- **Trusted publishing names this workflow file.** The trust relationship lives on the npm package and names both this repo and `release.yml`. Renaming that file, or moving the publish step into another workflow, breaks publishing until the trusted publisher is updated — check with `npm trust list mobile-automator`.
+- **The GitHub Releases list looks patchy on purpose.** Tags `v0.23.1`–`v0.23.6` have no Release: they predate the #170 fix and were deliberately not backfilled (never published, their content is in `CHANGELOG.md`). Also, `release.yml` marks every `0.x` version `prerelease: true`, so nothing is flagged "Latest" until 1.0.
 
 **CI version-bump gate.** The `Verify version is bumped` workflow fails any PR touching `src/`, `bin/`, or `package.json` without bumping `package.json`'s `version` to a value not yet in `git tag`.
 
@@ -208,4 +210,4 @@ Tracked under the `production-ready` milestone; worth knowing before you debug s
 
 ## Metadata
 
-Repo: https://github.com/sh3lan93/mobile-automator · Version: see `package.json` (0.23.7 at last edit) · License: Apache 2.0 (note: `LICENSE` currently ships a stub, not the full text — #160) · Status: feature-complete, unreleased.
+Repo: https://github.com/sh3lan93/mobile-automator · Version: see `package.json` (0.23.9 at last edit) · License: Apache 2.0 (note: `LICENSE` currently ships a stub, not the full text — #160) · Status: published on npm since v0.23.8 (2026-08-30).
