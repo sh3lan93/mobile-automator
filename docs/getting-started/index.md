@@ -27,12 +27,10 @@ mobile-automator is a **host-agnostic `mauto` CLI** that turns **any** AI coding
 
 ## Three Simple Steps to Get Started
 
-### 1. Install `mauto` from Source
+### 1. Install `mauto`
 
 ```bash
-git clone https://github.com/sh3lan93/mobile-automator
-cd mobile-automator
-npm install && npm link        # exposes `mauto` globally
+npm i -g mobile-automator      # exposes `mauto` globally
 ```
 
 [Full installation guide →](installation.md)

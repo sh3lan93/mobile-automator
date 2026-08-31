@@ -32,13 +32,13 @@ Testing mobile apps manually is **tedious and error-prone**. Cross-platform test
 
 ## Quick Start
 
-### 1. Install `mauto` from source
+### 1. Install `mauto`
 
 ```bash
-git clone https://github.com/sh3lan93/mobile-automator
-cd mobile-automator
-npm install && npm link        # exposes `mauto` globally
+npm i -g mobile-automator      # exposes `mauto` globally
 ```
+
+Or run it ad hoc with `npx mobile-automator <verb>`.
 
 ### 2. Wire it into your project
 

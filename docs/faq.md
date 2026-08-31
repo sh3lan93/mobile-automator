@@ -131,13 +131,13 @@ Best approach: Run mobile-automator alongside existing tests for new features.
 
 ### How do I install mobile-automator?
 
-**Answer:** `mauto` is installed from source (not yet on npm):
+**Answer:** `mauto` is published on npm:
 
 ```bash
-git clone https://github.com/sh3lan93/mobile-automator
-cd mobile-automator
-npm install && npm link        # exposes `mauto` globally
+npm i -g mobile-automator      # exposes `mauto` globally
 ```
+
+Or run it ad hoc with `npx mobile-automator <verb>`. To run unreleased changes, clone the repo and `npm install && npm link` instead.
 
 Then, from your mobile project, wire it into your agent and scaffold the workspace:
 
@@ -488,9 +488,8 @@ Parallel execution is on the roadmap.
 
 ```bash
 #!/bin/bash
-# Install mauto from source (first time only)
-git clone https://github.com/sh3lan93/mobile-automator
-( cd mobile-automator && npm install && npm link )
+# Install mauto (first time only)
+npm i -g mobile-automator
 
 # Wire into the project + scaffold the workspace (first time only)
 mauto init --agent agents
@@ -531,11 +530,8 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install mauto from source
-        run: |
-          git clone https://github.com/sh3lan93/mobile-automator /tmp/mobile-automator
-          cd /tmp/mobile-automator
-          npm install && npm link
+      - name: Install mauto
+        run: npm i -g mobile-automator
 
       - name: Wire into project & scaffold workspace
         run: |
@@ -615,9 +611,11 @@ jobs:
 
 **Solutions:**
 ```bash
-# Re-run the link from the cloned repo
-cd /path/to/mobile-automator
-npm install && npm link
+# Re-install globally
+npm i -g mobile-automator
+
+# Check npm's global bin directory is on your PATH
+echo "$(npm prefix -g)/bin"
 
 # Verify
 which mauto
