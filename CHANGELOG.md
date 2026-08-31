@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.24.0]
+
+### 🐛 Fixed
+
+- **Daemon crash diagnostics are captured instead of destroyed.** The session daemon was spawned with `stdio: 'ignore'`, so every diagnostic it wrote went to `/dev/null` as it was written — including uncaught exceptions and unhandled rejections **with stack traces** (`bin/mauto-session-daemon.js:69,78`), the missing-project-root and init-failure messages, and the undeliverable-reply warning whose `catch (_) { /* stderr gone */ }` had anticipated exactly this case without it ever being the only case. The loss ran a level deeper than the daemon's own writes: `createCall` builds the mobile-mcp transport without a `stderr` option, and the MCP SDK defaults that to `'inherit'`, so the engine's stderr inherited the daemon's fd 2 and was discarded too — meaning the adb/simctl output that explains most field failures was equally unreachable. A user whose daemon died during startup got a 15s readiness timeout, a generic failure, and nothing else; there was no log, no `MAUTO_DEBUG` escape hatch, and no documented way to reproduce in the foreground. `spawnDaemon` now opens `mobile-automator/.session/daemon.log` and passes that descriptor as the child's stdout and stderr, which captures both layers at once — one fd at the spawn site, no change to `mobile-mcp-client.js`. The file is opened **append**, never truncated: lock-race losers exit `ELOCKED` through the same stderr path and share the file, so truncating on spawn would let a loser erase the winner's just-written trace; growth is bounded by rotating to `daemon.log.1` at 1 MiB, checked per spawn, which covers the crash-loop case that can actually fill a disk. Opening the log is strictly best-effort — a read-only or full workspace falls back to the previous `'ignore'` behavior rather than making the CLI unusable. `mauto session status` now reports `log_path`, computed locally from the workspace rather than from the daemon's `ping` reply, because `getSessionStatus` returns its not-running shape whenever it cannot connect — precisely when the path is needed; both `mauto session start` and the transparent-autostart path (which otherwise falls back to one-shot silently) name the log in their failure hints, the latter through the existing `err.hint` channel so no verb-facing contract widened. Unlike the socket, the log has no `os.tmpdir()` fallback: that exists only for the ~104-byte sockaddr limit, which does not apply to a regular file. ([#163](https://github.com/sh3lan93/mobile-automator/issues/163))
+
+---
+
 ## [0.23.9]
 
 ### 🔒 Changed
