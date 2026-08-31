@@ -3,7 +3,8 @@
 **Date:** 2026-08-31
 **Status:** Design — approved approach, not yet sliced
 **Version at design time:** 0.23.9 (first npm-published release, 2026-08-30)
-**Related:** #163 (daemon stderr discarded), #156 (daemon lifecycle / invisible engine death), #161 (no audit gate), gate #168
+**Related:** #163 (daemon stderr discarded — **in flight as draft PR #176**), #156 (daemon
+lifecycle / invisible engine death), #161 (no audit gate), gate #168
 
 ## Problem
 
@@ -19,6 +20,10 @@
    `bin/mauto-session-daemon.js` — including the `uncaughtException` stack — goes to
    `/dev/null`. The one long-lived component, wrapping a child process that drives physical
    hardware, is completely opaque. (#163, and the readable half of #156.)
+   **Being fixed independently by draft PR #176** — see "Relationship to PR #176" below. That
+   work also found the loss ran a level deeper than #163 described: the MCP SDK defaults its
+   transport to `stderr: 'inherit'`, so *mobile-mcp's own* stderr — the adb/simctl output
+   that explains most field failures — inherited the discarded fd too.
 3. **Nothing measures time.** There is no `hrtime` and no `Date.now()` delta outside the
    daemon readiness poll and lock staleness. `duration_seconds` in every result file is
    whatever number the calling agent passed to `--duration` (`src/cli.js:649`); `--attempts`
@@ -151,12 +156,42 @@ Two seams cover everything:
    events (start, connect failure, idle reap, `ELOCKED` loss, `uncaughtException`) and the
    existing `recordUndeliverable` seam (`session-daemon.js:232`) feed the same recorder.
 
-### Fix for #163
+### Relationship to PR #176 (do not re-implement)
 
-`src/device/session-spawn.js:38` changes from `stdio: 'ignore'` to `['ignore', fd, fd]` where
-`fd` is an appended-opened handle on `mobile-automator/.logs/daemon.log`. This is a one-line
-behavioural fix plus fd lifecycle management, and it makes the daemon's four existing
-`stderr.write` calls readable for the first time.
+Draft PR #176 (`fix/163-daemon-log-capture`) already closes #163. This design **builds on it
+and must not redo it.** What it lands:
+
+- `src/device/session-log.js` — owns the log file lifecycle, keeping `session-spawn.js` free
+  of `fs` and unit-testable behind an injected handle.
+- The daemon's stdout/stderr wired to **`mobile-automator/.session/daemon.log`**, capturing
+  both the daemon's own writes *and* the mobile-mcp engine's.
+- Append-never-truncate (lock-race losers share the file), bounded at **1 MiB with a single
+  rotation generation** (`daemon.log.1`), checked per spawn.
+- Best-effort: a failure to open the log returns `null` and degrades to the old `'ignore'`
+  behaviour, so a read-only workspace never breaks the CLI.
+- `log_path` surfaced in `session status` and on the failed-spawn hint.
+
+**Two log artifacts, two homes — a deliberate split, not an accident.** `.session/daemon.log`
+is *raw process stdio* (unstructured, includes engine output, useful for a human reading a
+crash). `.logs/*.ndjson` is the *structured event stream* this design adds (parseable,
+redactable, aggregatable). They are different artifacts with different consumers, so they
+keep different homes; `.session/` already holds daemon runtime state, which is what raw stdio
+is. The recorder's file sink reuses `session-log.js`'s rotation approach rather than
+inventing a second one.
+
+Consequences for this design:
+
+- **Slice 1 no longer contains the stdio fix.** It is done.
+- **Slice 2's daemon instrumentation depends on #176 landing first** — #176 is what makes
+  daemon death observable at all, and it explicitly unblocks #156.
+- **The version ladder shifts.** #176 already bumps `package.json` to `0.24.0`, so this work
+  starts at `0.25.0-rc.0`.
+- **The `.gitignore` gap is inherited, and the stakes went up.** #176 explicitly scoped it
+  out. This repo's own `.gitignore:42` covers `mobile-automator/.session/`, but a *user's*
+  project has no such entry — so `daemon.log`, which now contains device serials, adb output
+  and stack traces, sits untracked-but-unignored in their repo where a `git add -A` sweeps it
+  up. That was a tolerable wart for a socket and a pidfile; it is not for a log file. Slice 1
+  carries it.
 
 ### Making B honest
 
@@ -253,7 +288,10 @@ on, and no upload path is reachable while `telemetry.enabled` is false.
 
 ### Storage hygiene
 
-Logs live in `mobile-automator/.logs/`, NDJSON, size-capped rotation (5MB × 2). `mauto setup`
+Structured event logs live in `mobile-automator/.logs/`, NDJSON, bounded by the same
+1 MiB / single-generation rotation `session-log.js` establishes, so there is one rotation
+policy in the codebase rather than two. (Raw daemon stdio stays at `.session/daemon.log` per
+#176.) `mauto setup`
 gains a generated `mobile-automator/.gitignore` covering `.logs/`, `.session/`, and
 `screenshots/`.
 
@@ -317,14 +355,15 @@ since it is a straight bug fix for #163 that users hit today.
 
 | Slice | Content | Version | Closes |
 |---|---|---|---|
-| 1 | Recorder core, event model, field catalog + redaction lint, stderr/file sinks, daemon stdio fix, workspace `.gitignore` | `0.24.0-rc.0` | #163 |
-| 2 | Daemon instrumentation: call latency, timeouts, lifecycle, connect failures, undeliverable replies | `0.24.0-rc.1` | part of #156 |
-| 3 | Run traces, measured `duration_seconds` and retry counts in `finalize`, screenshot-on-failure, **new result-schema additivity guard + fixture** | `0.24.0-rc.2` | — |
-| 4 | `mauto crash` verb, failure-path auto-check, result-schema record, both catalog entries | `0.24.0-rc.3` | — |
-| 5 | Opt-in PostHog spool + daemon flush, consent UX, privacy documentation | `0.24.0` | — |
+| 1 | Recorder core, event model, field catalog + redaction lint, stderr/file sinks, workspace `.gitignore` | `0.25.0-rc.0` | — |
+| 2 | Daemon instrumentation: call latency, timeouts, lifecycle, connect failures, undeliverable replies (**after #176**) | `0.25.0-rc.1` | part of #156 |
+| 3 | Run traces, measured `duration_seconds` and retry counts in `finalize`, screenshot-on-failure, **new result-schema additivity guard + fixture** | `0.25.0-rc.2` | — |
+| 4 | `mauto crash` verb, failure-path auto-check, result-schema record, capability-catalog entry | `0.25.0-rc.3` | — |
+| 5 | Opt-in PostHog spool + daemon flush, consent UX, privacy documentation | `0.25.0` | — |
 
-Slice 1 stands alone and is independently valuable: it closes an open `production-ready`
-issue and gives every later slice its seam.
+Slice 1 stands alone and is independently valuable: it lands the seam every later slice
+needs, and closes the `.gitignore` gap #176 deferred. It no longer closes #163 — PR #176
+does.
 
 ## Open questions
 
