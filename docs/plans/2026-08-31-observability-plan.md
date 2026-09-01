@@ -278,7 +278,7 @@ module.exports = { EVENT_VERSION, LEVELS, EVENT_FIELDS, NEVER_SENDS, makeEvent, 
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `npx jest tests/unit/observe/event.test.js tests/lint/telemetry-redaction.test.js`
-Expected: PASS, 9 tests
+Expected: PASS, 11 tests (7 unit + 4 lint)
 
 - [ ] **Step 5: Commit**
 
@@ -666,7 +666,7 @@ module.exports = { format, write };
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `npx jest tests/unit/observe/sinks.test.js`
-Expected: PASS, 8 tests
+Expected: PASS, 7 tests (2 stderr + 5 file)
 
 - [ ] **Step 5: Commit**
 
@@ -1036,7 +1036,7 @@ function emitRaw(content, exitKind) {
 - [ ] **Step 4: Run the guards to verify they pass**
 
 Run: `npx jest tests/integration/stdout-purity.test.js tests/unit/observe/cli-wiring.test.js`
-Expected: PASS, 17 tests
+Expected: PASS, 21 tests (16 integration = 5 levels x 3, plus 1; 5 wiring)
 
 - [ ] **Step 5: Run the FULL suite — this task modifies a hot file**
 
