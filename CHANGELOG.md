@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.25.0]
+
+### 🔧 Changed
+
+- **CI verifies the supported Node range instead of asserting it.** `test.yml` pinned Node 18 in both jobs — the suite and the packed-tarball smoke check — while `engines` promised `>=18` and the README badge repeated it. Node 18 reached EOL in April 2025 and Node 20 in April 2026, so the one runtime under test was the one no user should still be running. The verification was not quite absent: `release.yml`'s `publish-npm` job runs `npm ci → npm test → pack-smoke.sh` on Node 22, so every published release did clear 22 — but only at publish time, which catches a regression after it has already landed on `main` rather than in review. Both `test.yml` jobs now run under a `fail-fast: false` matrix so a failure on one version cannot mask the others, and the daemon tests this matters most for are not mocked: they call the real `startDaemon()`, which binds an actual Unix domain socket and, in one case, forces a real `EADDRINUSE`. ([#162](https://github.com/sh3lan93/mobile-automator/issues/162))
+
+---
+
 ## [0.24.0]
 
 ### 🐛 Fixed

@@ -7,22 +7,31 @@ on:
 
 jobs:
   test:
+    name: Test (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['18', '20', '22', '24']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: ${{ matrix.node-version }}
       - run: npm ci
       - run: npm run test:all
 
   pack-smoke:
-    name: Packed-tarball smoke check
+    name: Packed-tarball smoke check (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['18', '20', '22', '24']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: ${{ matrix.node-version }}
       - run: npm ci
       - run: ./scripts/pack-smoke.sh
