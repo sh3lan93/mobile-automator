@@ -138,6 +138,7 @@ async function resolveDeviceConnection({
     requestedDevice: device,
     autostart,
   });
+  let spawnFailed = false;
   if (strategy === 'spawn-then-daemon') {
     // (c) spawn a daemon, then connect daemon-backed.
     const started = await spawn.spawnDaemon({ projectRoot, device, idleMs });
@@ -147,30 +148,24 @@ async function resolveDeviceConnection({
       // Spawn worked; the daemon just wasn't reachable. Its log has nothing to
       // say about a subsequent one-shot failure, so no hint — fall through.
     } else {
-      // The daemon died on startup and its log is the only record of why.
-      // Transparent autostart is the common path (most users never type
-      // `mauto session start`), so without this the log stays invisible to
-      // almost everyone.
-      //
-      // The signal rides the existing err.hint channel on purpose. deviceFail()
-      // in cli.js already surfaces err.hint and all nine device verb paths route
-      // through it, so this reaches every verb with no change to the
-      // acquireConnection contract — which connection.js deliberately keeps
-      // narrow ("callers never learn (or care)" which path served them).
-      // Widening the return type with a source/spawnFailed flag would fight
-      // that design and force every caller to care.
-      try {
-        return await oneShot();
-      } catch (err) {
-        // Never clobber a more specific hint the transport already attached.
-        if (!err.hint) err.hint = daemonLogHint(projectRoot);
-        throw err;
-      }
+      spawnFailed = true;
     }
   }
 
-  // (d) explicit one-shot, or spawn failed / unreachable.
-  return oneShot();
+  // (d) explicit one-shot, or spawn failed / unreachable. When the SPAWN is
+  // what failed, the daemon's log is the only record of why, and transparent
+  // autostart is the common path — most users never type `mauto session start`,
+  // so without this the log stays invisible to almost everyone. The signal
+  // rides err.hint because deviceFail() in cli.js already surfaces it on every
+  // device verb, so acquireConnection's deliberately narrow contract is
+  // untouched (#163).
+  try {
+    return await oneShot();
+  } catch (err) {
+    // Never clobber a more specific hint the transport already attached.
+    if (spawnFailed && !err.hint) err.hint = daemonLogHint(projectRoot);
+    throw err;
+  }
 }
 
 module.exports = {
