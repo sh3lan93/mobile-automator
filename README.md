@@ -18,13 +18,25 @@ Claude Code, Cursor, Gemini CLI, GitHub Copilot, and OpenAI Agents all have one-
 
 > This quick start uses **Claude Code** as the example agent. For Cursor, swap `--agent claude` → `--agent cursor`. For any other agent, see [Using another agent](#-using-another-agent).
 
-**1. Install `mauto`** (from source — not yet on npm):
+**1. Install `mauto`:**
 
 ```bash
+npm i -g mobile-automator      # exposes `mauto` globally
+```
+
+<details>
+<summary>Or run it without installing / build from source</summary>
+
+```bash
+npx mobile-automator <verb>    # no global install
+
+# from source, to run unreleased changes:
 git clone https://github.com/sh3lan93/mobile-automator
 cd mobile-automator
-npm install && npm link        # exposes `mauto` globally
+npm install && npm link
 ```
+
+</details>
 
 **2. Wire it into your project and agent:**
 

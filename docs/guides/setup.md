@@ -11,11 +11,8 @@ Setup is your entry point to mobile-automator. You install the host-agnostic `ma
 ## Quick Start
 
 ```bash
-# 1. Install the CLI from source
-git clone https://github.com/sh3lan93/mobile-automator
-cd mobile-automator
-npm install
-npm link
+# 1. Install the CLI
+npm i -g mobile-automator
 
 # 2. Wire mauto into your agent (installs native Agent Skills + slash-commands/rules + .mcp.json)
 cd /path/to/your/mobile-app
@@ -34,16 +31,15 @@ After this, your agent analyzes the project and persists what it learns to `mobi
 
 ## Step 1: Install `mauto`
 
-`mauto` is a host-agnostic CLI usable by any AI agent. Install it from source:
+`mauto` is a host-agnostic CLI usable by any AI agent. Install it from npm:
 
 ```bash
-git clone https://github.com/sh3lan93/mobile-automator
-cd mobile-automator
-npm install
-npm link
+npm i -g mobile-automator
 ```
 
-`npm link` exposes the `mauto` (and `mobile-automator`) commands on your PATH. The mobile-mcp engine that drives the device is pinned as a dependency and resolved from `node_modules` — nothing is fetched at runtime.
+This exposes the `mauto` (and `mobile-automator`) commands on your PATH. The mobile-mcp engine that drives the device is pinned as a dependency and resolved from `node_modules` — nothing is fetched at runtime.
+
+To run a one-off verb without a global install, use `npx mobile-automator <verb>`. To run unreleased changes, clone the repo and `npm install && npm link` instead.
 
 ---
 
@@ -239,7 +235,7 @@ Configs that predate the `mode` field are treated as `platform-aware`.
 
 **Problem:** The CLI isn't on your PATH.
 
-**Solution:** Re-run `npm install && npm link` inside the cloned `mobile-automator` repo. Confirm with `mauto devices`.
+**Solution:** Re-run `npm i -g mobile-automator` (or `npm install && npm link` inside a source checkout), and check that npm's global bin directory — `$(npm prefix -g)/bin` — is on your PATH. Confirm with `mauto devices`.
 
 ### No devices listed
 
