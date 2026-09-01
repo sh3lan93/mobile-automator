@@ -25,10 +25,21 @@ const { isSemanticAction, ACTION_METHOD, selectResolver } = require('./device/se
 const connection = require('./device/connection');
 const { record } = require('./observe/recorder');
 
-// Stamped at require time, which for a one-shot verb is process start. There
-// is no in-memory span tree to hang a timer on — each verb is a fresh process
-// that exits — so the module load itself is the clock's zero point.
-const PROCESS_START_MS = Date.now();
+// The top-level command commander actually RESOLVED, or null when parsing never
+// got that far. Set by the preAction hook in buildProgram(); read by finish().
+//
+// It is deliberately not `process.argv[2]`. The event catalog marks `verb` as
+// `sends: true` on the stated grounds that it is "a fixed vocabulary we ship",
+// and slice 5 will ship it to a third party on that justification — so the
+// field has to actually be that. argv[2] is an arbitrary user-supplied token:
+// `mauto --human config get mode` recorded `--human`, and nothing stops the
+// next token from being a device serial or a file path.
+//
+// Module-level because finish() is module-level and the three exit paths reach
+// it from inside commander's own call stack. It is reset per buildProgram()
+// rather than only at load, so a test that builds two programs in one process
+// cannot inherit the previous run's verb.
+let resolvedVerb = null;
 
 // Commander throws (via exitOverride) for two very different reasons, and the
 // split below is the ONLY thing that tells them apart.
@@ -1190,6 +1201,23 @@ function buildProgram(deps = {}) {
   });
   program.configureOutput({ writeErr: () => {} });
 
+  // Name the verb for the observability record, from commander's own resolution
+  // rather than from argv. preAction fires only after a SUCCESSFUL parse and
+  // only for a command that exists, which is what makes `verb` provably a name
+  // out of the vocabulary this CLI ships — the property event.js's `sends: true`
+  // classification asserts. Hooks registered on the root are inherited by every
+  // subcommand, so one registration covers all of them.
+  //
+  // `actionCommand` is the innermost command (`get` in `config get mode`), so
+  // walk up to the child of the root: the record names the verb, not its
+  // subcommand, keeping the vocabulary the size of the verb list.
+  resolvedVerb = null;
+  program.hook('preAction', (_thisCommand, actionCommand) => {
+    let command = actionCommand;
+    while (command.parent && command.parent.parent) command = command.parent;
+    resolvedVerb = command.name();
+  });
+
   const humanFlag = () => Boolean(program.opts().human);
 
   // The single envelope boundary. Wrap every `.action(...)` callback so any
@@ -1629,40 +1657,60 @@ function buildProgram(deps = {}) {
   return program;
 }
 
-function defaultEmit({ envelope, exitKind }, human) {
+// THE process-ending path. Every way this CLI terminates a verb goes through
+// here, so "is this invocation observable" has exactly one answer.
+//
+// It is one function because the alternative was three: an envelope path, a
+// raw path, and a fatal path, each with its own copy of a ten-line record()
+// literal. Two of the three copies got written, the third never did, and the
+// class of failure that went unrecorded was parse failures (#146) — the
+// crashes this instrumentation exists to see. Duplication did not just risk
+// drift here; it produced a hole shaped exactly like the bug.
+//
+// dur_ms uses process.uptime(), which is seconds since THIS process started
+// and needs no module state. A `Date.now()` stamped at require time measured
+// from whenever cli.js happened to be loaded, which is not process start for
+// anything that requires it first (a test harness, bin/mauto.js's own guards).
+function finish({ text, exitKind, ok, errorKind }) {
   // Record BEFORE the write: process.exit() below is immediate and would cut
   // off any work queued after it.
   record({
     event: 'verb.end',
-    level: envelope && envelope.ok ? 'info' : 'warn',
+    // `info`, not `warn`-on-failure. The failure is carried by `ok` and
+    // `error_kind`; the LEVEL only decides routing. Recording a failure at
+    // `warn` would clear the default stderr threshold and print a line on
+    // every failed verb — restating, in a worse format, the envelope the CLI
+    // has just written. stderr is deliberately quiet at `warn` so it stays a
+    // human's channel; the file sink (threshold `info`) keeps the forensic
+    // record either way, which is what the crash blind spot actually needed.
+    level: 'info',
     src: 'cli',
-    verb: process.argv[2],
-    ok: Boolean(envelope && envelope.ok),
-    error_kind: envelope && envelope.error ? envelope.error.kind : undefined,
+    // Absent, not guessed, when parsing never resolved a command. A parse
+    // failure genuinely has no verb; makeEvent drops undefined fields, so the
+    // line simply carries no `verb` rather than a plausible-looking lie.
+    verb: resolvedVerb || undefined,
+    ok,
+    error_kind: errorKind,
     exit_code: exitCodeFor(exitKind),
-    dur_ms: Date.now() - PROCESS_START_MS,
+    dur_ms: Math.round(process.uptime() * 1000),
   });
-  process.stdout.write(render(envelope, { human }) + '\n');
+  process.stdout.write(text.endsWith('\n') ? text : text + '\n');
   process.exit(exitCodeFor(exitKind));
+}
+
+function defaultEmit({ envelope, exitKind }, human) {
+  finish({
+    text: render(envelope, { human }),
+    exitKind,
+    ok: Boolean(envelope && envelope.ok),
+    errorKind: envelope && envelope.error ? envelope.error.kind : undefined,
+  });
 }
 
 // Print raw content (markdown / JSON schema / text) verbatim — no envelope
 // wrapping — then exit. Used by guide/schema/bootstrap success paths.
 function emitRaw(content, exitKind) {
-  // Instrumented separately from defaultEmit: this path never builds an
-  // envelope, so an emit-only hook would leave every guide/schema/bootstrap
-  // invocation unrecorded.
-  record({
-    event: 'verb.end',
-    level: 'info',
-    src: 'cli',
-    verb: process.argv[2],
-    ok: true,
-    exit_code: exitCodeFor(exitKind),
-    dur_ms: Date.now() - PROCESS_START_MS,
-  });
-  process.stdout.write(content.endsWith('\n') ? content : content + '\n');
-  process.exit(exitCodeFor(exitKind));
+  finish({ text: content, exitKind, ok: true });
 }
 
 // Keep the stack of a genuinely-unexpected error on STDERR so a crash stays
@@ -1684,8 +1732,12 @@ function diagnose(err, exitKind) {
 function emitFatal(err, human = false) {
   const { envelope, exitKind } = toEnvelope(err);
   diagnose(err, exitKind);
-  process.stdout.write(render(envelope, { human }) + '\n');
-  process.exit(exitCodeFor(exitKind));
+  finish({
+    text: render(envelope, { human }),
+    exitKind,
+    ok: false,
+    errorKind: envelope && envelope.error ? envelope.error.kind : undefined,
+  });
 }
 
 async function run(argv) {

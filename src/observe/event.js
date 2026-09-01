@@ -36,6 +36,9 @@ const EVENT_FIELDS = {
   event: { sends: true, why: 'enumerated event name' },
 
   // --- outcome -----------------------------------------------------------
+  // The justification is only true if the value is enforced to be one: cli.js
+  // takes it from commander's resolved command, never from argv, so an
+  // unparseable invocation records no verb rather than a user-supplied token.
   verb: { sends: true, why: 'the mauto verb name; a fixed vocabulary we ship' },
   ok: { sends: true, why: 'boolean outcome' },
   error_kind: { sends: true, why: 'enumerated envelope taxonomy (device|timeout|...)' },
