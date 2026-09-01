@@ -30,7 +30,7 @@ async function spawnDaemon({
   readyTimeoutMs = DEFAULT_READY_TIMEOUT_MS,
   pollMs = DEFAULT_POLL_MS,
   isAlive = sessionClient.isAlive,
-  openLog = sessionLog.openLogFd,
+  openLog = sessionLog.openDaemonLog,
 } = {}) {
   if (!projectRoot) throw new TypeError('spawnDaemon requires projectRoot');
 
@@ -39,55 +39,54 @@ async function spawnDaemon({
   if (idleMs !== undefined && idleMs !== null) env.MAUTO_SESSION_IDLE_MS = String(idleMs);
 
   // Must precede the spawn: the fd has to exist before the child can inherit it.
-  // A null handle (read-only or full workspace) degrades to the old behaviour.
+  // Never null — a workspace we cannot write to yields the `stdio: 'ignore'`
+  // handle, so there is nothing to branch on here. The daemon writes its own
+  // spawn banner (bin/mauto-session-daemon.js), which is why this file no
+  // longer needs the child's pid.
   const log = openLog(projectRoot);
 
-  const child = spawn(process.execPath, [DAEMON_BIN], {
-    detached: true,
-    // stdin stays ignored; stdout and stderr both land in the log. Passing the
-    // same fd twice is deliberate — the child gets dups sharing one O_APPEND
-    // file description, so the two streams interleave without clobbering.
-    // This one descriptor also captures mobile-mcp: the MCP SDK's stdio
-    // transport defaults its stderr to 'inherit', so the engine writes to
-    // whatever fd 2 the daemon has. Point fd 2 at /dev/null and its crashes
-    // vanish with it.
-    stdio: log ? ['ignore', log.fd, log.fd] : 'ignore',
-    env,
-  });
+  try {
+    const child = spawn(process.execPath, [DAEMON_BIN], {
+      detached: true,
+      stdio: log.stdio,
+      env,
+    });
 
-  if (log) {
-    // One banner per spawn, so concurrent writers to this append-only file stay
-    // separable when reading it back. A fake/failed child may have no pid yet.
-    const pid = child && child.pid ? child.pid : '?';
-    log.write(`\n=== mauto daemon spawn ${new Date().toISOString()} child_pid=${pid} ===\n`);
-    // The child holds its own dup, so the parent releases its descriptor here
-    // rather than leaking one per verb invocation.
+    // A spawn that fails to exec (EMFILE, EACCES, ENOENT on the bin) emits an
+    // 'error' event instead of throwing. Without a listener that error would
+    // crash the one-shot verb process; with it we bail out of the readiness
+    // poll immediately instead of waiting out the full 15s window for a child
+    // that can never come up. No 'exit' short-circuit here: a loser exiting
+    // ELOCKED is expected, and the winner may still come up within the window.
+    //
+    // The error is also WRITTEN to the log, not just used as a flag: a child
+    // that never execs has no stdout/stderr of its own, so the parent is the
+    // only witness. Dropping it here would rebuild the exact hole #163 fixes,
+    // one layer up.
+    let spawnError = null;
+    if (child && typeof child.on === 'function') {
+      child.on('error', (err) => {
+        spawnError = err;
+        log.write(`mauto: daemon spawn failed: ${err && err.stack ? err.stack : err}\n`);
+      });
+    }
+
+    // Let the daemon outlive this one-shot verb process.
+    if (child && typeof child.unref === 'function') child.unref();
+
+    const deadline = Date.now() + readyTimeoutMs;
+    while (Date.now() < deadline) {
+      if (spawnError) return false;
+      if (await isAlive(projectRoot)) return true;
+      await sleep(pollMs);
+    }
+    return false;
+  } finally {
+    // The child holds its own dup, so the parent releases its descriptor rather
+    // than leaking one per verb invocation. In `finally` because the 'error'
+    // listener above fires asynchronously — the handle has to outlive the poll.
     log.close();
   }
-
-  // A spawn that fails synchronously (EMFILE, EACCES, ENOENT on the bin) emits
-  // an 'error' event instead of throwing. Without a listener that error would
-  // crash the one-shot verb process; with it we bail out of the readiness poll
-  // immediately instead of waiting out the full 15s window for a child that can
-  // never come up. No 'exit' short-circuit here: a loser exiting ELOCKED is
-  // expected, and the winner may still come up within the poll window.
-  let spawnError = null;
-  if (child && typeof child.on === 'function') {
-    child.on('error', (err) => {
-      spawnError = err;
-    });
-  }
-
-  // Let the daemon outlive this one-shot verb process.
-  if (child && typeof child.unref === 'function') child.unref();
-
-  const deadline = Date.now() + readyTimeoutMs;
-  while (Date.now() < deadline) {
-    if (spawnError) return false;
-    if (await isAlive(projectRoot)) return true;
-    await sleep(pollMs);
-  }
-  return false;
 }
 
 module.exports = { spawnDaemon, DAEMON_BIN };
