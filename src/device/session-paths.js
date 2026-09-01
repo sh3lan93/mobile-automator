@@ -6,6 +6,7 @@
 //   mauto.sock    — Unix domain socket the daemon listens on
 //   daemon.pid    — pidfile written once the daemon is listening
 //   session.json  — handle describing the live session (device pin, socket, pid)
+//   daemon.log    — bounded stdout/stderr capture from the detached daemon
 //
 // These are intentionally side-effect-free so they can be unit-tested without
 // touching the filesystem.
@@ -19,6 +20,7 @@ const SOCKET_NAME = 'mauto.sock';
 const PID_NAME = 'daemon.pid';
 const HANDLE_NAME = 'session.json';
 const LOCK_NAME = 'daemon.lock';
+const LOG_NAME = 'daemon.log';
 
 // Unix domain socket paths have a hard length limit (~104 bytes on macOS,
 // ~108 on Linux). Deep project roots blow past it, so when the in-workspace
@@ -50,6 +52,14 @@ function socketPath(projectRoot) {
   return path.join(os.tmpdir(), `mauto-${hash}.sock`);
 }
 
+// Deliberately has no os.tmpdir() fallback, unlike socketPath(). That fallback
+// exists solely because Unix domain socket paths hit a ~104-byte sockaddr
+// limit; a regular file has no such limit, so the log stays in the workspace
+// unconditionally and is always findable next to the session it describes.
+function logFilePath(projectRoot) {
+  return path.join(sessionDir(projectRoot), LOG_NAME);
+}
+
 function pidFilePath(projectRoot) {
   return path.join(sessionDir(projectRoot), PID_NAME);
 }
@@ -70,10 +80,12 @@ module.exports = {
   PID_NAME,
   HANDLE_NAME,
   LOCK_NAME,
+  LOG_NAME,
   SOCKET_PATH_LIMIT,
   sessionDir,
   workspaceSocketPath,
   socketPath,
+  logFilePath,
   pidFilePath,
   handlePath,
   lockPath,

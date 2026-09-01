@@ -58,6 +58,29 @@ Then re-run `mauto devices` to confirm it now appears.
 - The generate/execute workflows will offer to build and install
 - Or install manually before running tests
 
+### ❌ "failed to start the device session daemon"
+
+Device verbs share one background daemon per workspace. When it cannot start,
+the verb waits out a 15s readiness window and then falls back to a one-shot
+connection — so the failure is often silent. The daemon writes everything it
+knows, including uncaught exceptions with stack traces and mobile-mcp's own
+output, to a log inside the workspace:
+
+```bash
+mauto session status                          # reports log_path, running or not
+tail -50 mobile-automator/.session/daemon.log
+```
+
+The log is appended across spawns and rotates to `daemon.log.1` once it passes
+1 MiB, so a crash loop cannot fill the disk. To start clean, remove the session
+directory and re-run any device verb:
+
+```bash
+mauto session end                    # ask a live daemon to stop
+rm -rf mobile-automator/.session     # clear a wedged socket/pidfile/lock
+mauto devices                        # respawns the daemon
+```
+
 ---
 
 ## Test Execution Issues
@@ -109,3 +132,5 @@ If you encounter an issue not listed here:
    - Error message
    - Setup configuration (`mobile-automator/config.json`)
    - Steps to reproduce
+   - For anything device-related, the daemon log
+     (`mobile-automator/.session/daemon.log`) — it carries the stack traces

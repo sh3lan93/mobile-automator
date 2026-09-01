@@ -39,6 +39,7 @@ const {
   buildProgram,
 } = require('../../src/cli');
 const selectionStore = require('../../src/device/selection');
+const sessionPaths = require('../../src/device/session-paths');
 const Ajv = require('ajv');
 
 const RESULT_SCHEMA_PATH = path.resolve(
@@ -1001,6 +1002,16 @@ describe('cli handlers', () => {
       expect(envelope.error.kind).toBe('device');
     });
 
+    // #163: the daemon's crash is now on disk; the failure envelope has to say
+    // where, or the capture is unreachable for anyone who didn't read the code.
+    test('the spawn-failure hint names the daemon log path and keeps the one-shot advice', async () => {
+      const spawn = { spawnDaemon: async () => false };
+      const client = { isAlive: async () => false };
+      const { envelope } = await handleSessionStart({ projectRoot, spawn, client }, {});
+      expect(envelope.hint).toContain(sessionPaths.logFilePath(projectRoot));
+      expect(envelope.hint).toContain('fall back to one-shot');
+    });
+
     test('rejects an invalid --idle value', async () => {
       const spawn = { spawnDaemon: async () => true };
       const client = { isAlive: async () => false };
@@ -1077,7 +1088,9 @@ describe('cli handlers', () => {
         client: { getSessionStatus: async () => ({ running: true, in_flight: 2, device: 'A' }) },
       });
       expect(up.exitKind).toBe('ok');
-      expect(up.envelope.data).toEqual({ running: true, in_flight: 2, device: 'A' });
+      expect(up.envelope.data).toEqual({
+        running: true, in_flight: 2, device: 'A', log_path: sessionPaths.logFilePath('/x'),
+      });
     });
 
     test('reports running:false with null in_flight/device when no daemon is up', async () => {
@@ -1086,7 +1099,10 @@ describe('cli handlers', () => {
         client: { getSessionStatus: async () => ({ running: false, in_flight: null, device: null }) },
       });
       expect(down.exitKind).toBe('ok');
-      expect(down.envelope.data).toEqual({ running: false, in_flight: null, device: null });
+      // log_path survives the not-running shape: that is when it is needed.
+      expect(down.envelope.data).toEqual({
+        running: false, in_flight: null, device: null, log_path: sessionPaths.logFilePath('/x'),
+      });
     });
   });
 

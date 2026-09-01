@@ -2,10 +2,14 @@
 
 const {
   acquireConnection,
+  daemonLogHint,
   isSessionAlive,
+  sessionStatus,
   startSession,
   endSession,
 } = require('../../../src/device/connection');
+const paths = require('../../../src/device/session-paths');
+const sessionLog = require('../../../src/device/session-log');
 
 describe('connection', () => {
   describe('acquireConnection', () => {
@@ -28,6 +32,42 @@ describe('connection', () => {
       const client = { isAlive: async (root) => root === '/x' };
       expect(await isSessionAlive('/x', { client })).toBe(true);
       expect(await isSessionAlive('/y', { client })).toBe(false);
+    });
+  });
+
+  describe('sessionStatus', () => {
+    test('merges the daemon-reported status with the workspace log path', async () => {
+      const client = { getSessionStatus: async () => ({ running: true, in_flight: 2, device: 'A' }) };
+      expect(await sessionStatus('/x', { client })).toEqual({
+        running: true,
+        in_flight: 2,
+        device: 'A',
+        log_path: paths.logFilePath('/x'),
+      });
+    });
+
+    // The load-bearing case. getSessionStatus() collapses EVERY failure branch
+    // (no socket, non-ok ping, throw) to the same not-running shape, so a
+    // daemon-supplied log path would be absent in precisely the situation that
+    // makes the log worth reading. Computing it locally keeps it available.
+    test('reports log_path even when no daemon is running (a dead daemon cannot tell us where its log is)', async () => {
+      const client = { getSessionStatus: async () => ({ running: false, in_flight: null, device: null }) };
+      expect(await sessionStatus('/x', { client })).toEqual({
+        running: false,
+        in_flight: null,
+        device: null,
+        log_path: paths.logFilePath('/x'),
+      });
+    });
+  });
+
+  // cli.js already imports this module as its one device facade, so naming the
+  // daemon log costs it no new dependency — and in particular no reach into
+  // resolve-connection, which owns connection strategy and not log paths.
+  describe('daemonLogHint', () => {
+    test('is the same function session-log defines, not a second copy of the sentence', () => {
+      expect(daemonLogHint).toBe(sessionLog.daemonLogHint);
+      expect(daemonLogHint('/x')).toContain(paths.logFilePath('/x'));
     });
   });
 

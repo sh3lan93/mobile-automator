@@ -14,7 +14,9 @@
 //   (c) autostart && no reachable daemon
 //         -> spawn a daemon, then connect daemon-backed (no-op close).
 //   (d) spawn failed, or autostart:false
-//         -> one-shot fallback via the real createCall (real close).
+//         -> one-shot fallback via the real createCall (real close). When the
+//            spawn is what failed, a thrown one-shot error is decorated with a
+//            hint naming the daemon log so the crash stays findable (#163).
 //
 // Everything device-touching is injected so the whole matrix is unit-testable
 // with a fake daemon + fake createCall + fake spawn.
@@ -24,6 +26,7 @@ const fs = require('fs');
 const { DeviceBridge } = require('./bridge');
 const paths = require('./session-paths');
 const sessionClient = require('./session-client');
+const { daemonLogHint } = require('./session-log');
 const sessionSpawn = require('./session-spawn');
 
 function defaultCreateCall(opts) {
@@ -135,17 +138,34 @@ async function resolveDeviceConnection({
     requestedDevice: device,
     autostart,
   });
+  let spawnFailed = false;
   if (strategy === 'spawn-then-daemon') {
     // (c) spawn a daemon, then connect daemon-backed.
     const started = await spawn.spawnDaemon({ projectRoot, device, idleMs });
     if (started) {
       const conn = await daemonBacked();
       if (conn) return conn;
+      // Spawn worked; the daemon just wasn't reachable. Its log has nothing to
+      // say about a subsequent one-shot failure, so no hint — fall through.
+    } else {
+      spawnFailed = true;
     }
   }
 
-  // (d) explicit one-shot, or spawn failed / unreachable.
-  return oneShot();
+  // (d) explicit one-shot, or spawn failed / unreachable. When the SPAWN is
+  // what failed, the daemon's log is the only record of why, and transparent
+  // autostart is the common path — most users never type `mauto session start`,
+  // so without this the log stays invisible to almost everyone. The signal
+  // rides err.hint because deviceFail() in cli.js already surfaces it on every
+  // device verb, so acquireConnection's deliberately narrow contract is
+  // untouched (#163).
+  try {
+    return await oneShot();
+  } catch (err) {
+    // Never clobber a more specific hint the transport already attached.
+    if (spawnFailed && !err.hint) err.hint = daemonLogHint(projectRoot);
+    throw err;
+  }
 }
 
 module.exports = {
