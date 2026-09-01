@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.24.0]
+
+### 🐛 Fixed
+
+- **Daemon crash diagnostics are captured instead of destroyed.** The session daemon was spawned with `stdio: 'ignore'`, so every diagnostic it wrote went to `/dev/null` as it was written — the missing-project-root and init-failure messages, the undeliverable-reply warning, and uncaught exceptions and unhandled rejections **with stack traces**. The loss ran a level deeper: `createCall` builds the mobile-mcp transport with no `stderr` option and the MCP SDK defaults that to `'inherit'`, so the *engine's* stderr inherited the daemon's fd 2 and was discarded too — taking the adb/simctl output that explains most field failures with it. A user whose daemon died got a 15s readiness timeout, a generic failure, and nothing else. `spawnDaemon` now opens `mobile-automator/.session/daemon.log` and hands that descriptor to the child as both stdout and stderr, which captures both layers at one spawn site. A spawn that fails to *exec* (EMFILE, EACCES, ENOENT on the bin) leaves the child with nothing to say, so the parent writes that error to the log itself rather than using it only to bail out of the readiness poll. The file is opened **append**, never truncated — lock-race losers exit `ELOCKED` through the same path and share it — and growth is bounded by rotating to `daemon.log.1` at 1 MiB, checked per spawn. Both the log open and the rotation are best-effort and degrade independently: a read-only workspace falls back to the previous `'ignore'` behavior, and a rotation that loses a race still yields a usable log, because an oversized log beats no log. `mauto session status` now reports `log_path`, computed locally from the workspace rather than from the daemon's `ping` reply, which returns its not-running shape precisely when the path is needed; `mauto session start` and the transparent-autostart path both name the log in their failure hints. ([#163](https://github.com/sh3lan93/mobile-automator/issues/163))
+
+---
+
 ## [0.23.9]
 
 ### 🔒 Changed

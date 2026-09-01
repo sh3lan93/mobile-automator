@@ -46,6 +46,15 @@ function cleanupWorkspaceIfOwned(projectRoot) {
 }
 
 async function main() {
+  // First write of the process, so every later line in the shared append-only
+  // log is attributable to a spawn. Written HERE rather than by the spawning
+  // parent because only this process knows its own pid, and because a parent
+  // banner races the child's own first output (#163). Under the degraded
+  // `stdio: 'ignore'` handle this lands in /dev/null, which is correct.
+  process.stderr.write(
+    `\n=== mauto daemon ${new Date().toISOString()} pid=${process.pid} ===\n`
+  );
+
   const projectRoot = process.env.MAUTO_SESSION_PROJECT_ROOT;
   if (!projectRoot) {
     process.stderr.write('mauto-session-daemon: MAUTO_SESSION_PROJECT_ROOT is required\n');

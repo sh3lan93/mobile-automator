@@ -225,7 +225,11 @@ async function startDaemon({
               `mauto-session-daemon: undeliverable reply id=${info.id}: ${info.reason}\n`
             );
           } catch (_) {
-            /* stderr gone */
+            // fd 2 is unwritable (full disk, or the workspace log could not be
+            // opened and this is /dev/null's successor). Since #163 it normally
+            // reaches mobile-automator/.session/daemon.log; either way an
+            // undeliverable reply is already recorded in `undeliverable`, so
+            // losing the warning must not take the daemon down.
           }
         };
 
