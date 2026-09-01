@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Install the host-agnostic mauto CLI from source, wire it into your project and agent, and verify your device is visible.">
+        <meta name="description" content="Install the host-agnostic mauto CLI from npm, wire it into your project and agent, and verify your device is visible.">
       
       
       
@@ -65,7 +65,7 @@
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Installation - mobile-automator" />
-  <meta property="og:description" content="Install the host-agnostic mauto CLI from source, wire it into your project and agent, and verify your device is visible." />
+  <meta property="og:description" content="Install the host-agnostic mauto CLI from npm, wire it into your project and agent, and verify your device is visible." />
   <meta property="og:url" content="https://sh3lan93.github.io/mobile-automator/getting-started/installation/" />
   <meta property="og:site_name" content="mobile-automator" />
   <meta property="og:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
@@ -73,7 +73,7 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="Installation - mobile-automator" />
-  <meta name="twitter:description" content="Install the host-agnostic mauto CLI from source, wire it into your project and agent, and verify your device is visible." />
+  <meta name="twitter:description" content="Install the host-agnostic mauto CLI from npm, wire it into your project and agent, and verify your device is visible." />
   <meta name="twitter:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
   
 
@@ -512,13 +512,30 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-install-mauto-from-source" class="md-nav__link">
+  <a href="#1-install-mauto" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Install mauto from Source
+        1. Install mauto
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="1. Install mauto">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#from-source-instead" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From source instead
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -1607,13 +1624,30 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-install-mauto-from-source" class="md-nav__link">
+  <a href="#1-install-mauto" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Install mauto from Source
+        1. Install mauto
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="1. Install mauto">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#from-source-instead" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From source instead
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -1781,7 +1815,7 @@
 
 
 <h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h1>
-<p><code>mauto</code> is a host-agnostic CLI. You install it once from source, then wire it into each mobile project with <code>mauto init</code> and <code>mauto setup</code>.</p>
+<p><code>mauto</code> is a host-agnostic CLI. You install it once from npm, then wire it into each mobile project with <code>mauto init</code> and <code>mauto setup</code>.</p>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <p>Before installing mobile-automator, ensure you have:</p>
 <ul>
@@ -1806,13 +1840,17 @@
 <li>Sufficient disk space for simulator images (~10GB)</li>
 </ul>
 <h2 id="installation-steps">Installation Steps<a class="headerlink" href="#installation-steps" title="Permanent link">&para;</a></h2>
-<h3 id="1-install-mauto-from-source">1. Install <code>mauto</code> from Source<a class="headerlink" href="#1-install-mauto-from-source" title="Permanent link">&para;</a></h3>
-<p><code>mauto</code> is not yet published to npm. Install it from source:</p>
+<h3 id="1-install-mauto">1. Install <code>mauto</code><a class="headerlink" href="#1-install-mauto" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>npm<span class="w"> </span>i<span class="w"> </span>-g<span class="w"> </span>mobile-automator<span class="w">      </span><span class="c1"># exposes `mauto` globally</span>
+</code></pre></div>
+<p>This puts the <code>mauto</code> (and <code>mobile-automator</code>) command on your PATH and pulls in the pinned mobile-mcp automation engine, which is resolved from <code>node_modules</code> — nothing is fetched at runtime.</p>
+<p>To run a verb without installing anything globally, use <code>npx mobile-automator &lt;verb&gt;</code>.</p>
+<h4 id="from-source-instead">From source instead<a class="headerlink" href="#from-source-instead" title="Permanent link">&para;</a></h4>
+<p>Only needed if you want unreleased changes or intend to contribute:</p>
 <div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/sh3lan93/mobile-automator
 <span class="nb">cd</span><span class="w"> </span>mobile-automator
 npm<span class="w"> </span>install<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>npm<span class="w"> </span>link<span class="w">        </span><span class="c1"># exposes `mauto` globally</span>
 </code></pre></div>
-<p><code>npm install</code> pulls in the pinned mobile-mcp automation engine; <code>npm link</code> puts the <code>mauto</code> (and <code>mobile-automator</code>) command on your PATH.</p>
 <h3 id="2-verify-the-cli-is-available">2. Verify the CLI Is Available<a class="headerlink" href="#2-verify-the-cli-is-available" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>--help
 </code></pre></div>
@@ -1888,11 +1926,12 @@ mauto<span class="w"> </span>setup<span class="w">                    </span><sp
 </ul>
 <h2 id="troubleshooting-installation">Troubleshooting Installation<a class="headerlink" href="#troubleshooting-installation" title="Permanent link">&para;</a></h2>
 <h3 id="mauto-command-not-found">"mauto: command not found"<a class="headerlink" href="#mauto-command-not-found" title="Permanent link">&para;</a></h3>
-<p><code>npm link</code> didn't expose the command, or your shell hasn't picked up the new PATH entry.</p>
+<p>The install didn't expose the command, or your shell hasn't picked up the new PATH entry.</p>
 <p><strong>Solution:</strong>
-1. Re-run <code>npm link</code> from inside the cloned <code>mobile-automator</code> directory
-2. Verify installation: <code>which mauto</code>
-3. Restart your terminal and try again</p>
+1. Re-run <code>npm i -g mobile-automator</code> (or, for a source checkout, <code>npm link</code> from inside the cloned <code>mobile-automator</code> directory)
+2. Check that npm's global bin directory — <code>$(npm prefix -g)/bin</code> — is on your PATH
+3. Verify installation: <code>which mauto</code>
+4. Restart your terminal and try again</p>
 <h3 id="npm-install-fails">"npm install" fails<a class="headerlink" href="#npm-install-fails" title="Permanent link">&para;</a></h3>
 <p>The pinned mobile-mcp dependency couldn't be installed.</p>
 <p><strong>Solutions:</strong>

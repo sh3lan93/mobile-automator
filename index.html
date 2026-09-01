@@ -372,10 +372,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-install-mauto-from-source" class="md-nav__link">
+  <a href="#1-install-mauto" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Install mauto from source
+        1. Install mauto
       
     </span>
   </a>
@@ -1507,10 +1507,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-install-mauto-from-source" class="md-nav__link">
+  <a href="#1-install-mauto" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Install mauto from source
+        1. Install mauto
       
     </span>
   </a>
@@ -1676,11 +1676,10 @@
 <li><strong>Portable Targets</strong>: Visible text + role + coordinates, never brittle resource-ids</li>
 </ul>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<h3 id="1-install-mauto-from-source">1. Install <code>mauto</code> from source<a class="headerlink" href="#1-install-mauto-from-source" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/sh3lan93/mobile-automator
-<span class="nb">cd</span><span class="w"> </span>mobile-automator
-npm<span class="w"> </span>install<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>npm<span class="w"> </span>link<span class="w">        </span><span class="c1"># exposes `mauto` globally</span>
+<h3 id="1-install-mauto">1. Install <code>mauto</code><a class="headerlink" href="#1-install-mauto" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>npm<span class="w"> </span>i<span class="w"> </span>-g<span class="w"> </span>mobile-automator<span class="w">      </span><span class="c1"># exposes `mauto` globally</span>
 </code></pre></div>
+<p>Or run it ad hoc with <code>npx mobile-automator &lt;verb&gt;</code>.</p>
 <h3 id="2-wire-it-into-your-project">2. Wire it into your project<a class="headerlink" href="#2-wire-it-into-your-project" title="Permanent link">&para;</a></h3>
 <p>Navigate to your mobile project and run:</p>
 <div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>init<span class="w"> </span>--agent<span class="w"> </span>claude<span class="w">      </span><span class="c1"># or: cursor | gemini | copilot | agents | all</span>

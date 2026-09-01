@@ -2603,11 +2603,10 @@ mauto<span class="w"> </span>memory<span class="w"> </span>forget<span class="w"
 <hr />
 <h2 id="setup-installation">Setup &amp; Installation<a class="headerlink" href="#setup-installation" title="Permanent link">&para;</a></h2>
 <h3 id="how-do-i-install-mobile-automator">How do I install mobile-automator?<a class="headerlink" href="#how-do-i-install-mobile-automator" title="Permanent link">&para;</a></h3>
-<p><strong>Answer:</strong> <code>mauto</code> is installed from source (not yet on npm):</p>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/sh3lan93/mobile-automator
-<span class="nb">cd</span><span class="w"> </span>mobile-automator
-npm<span class="w"> </span>install<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>npm<span class="w"> </span>link<span class="w">        </span><span class="c1"># exposes `mauto` globally</span>
+<p><strong>Answer:</strong> <code>mauto</code> is published on npm:</p>
+<div class="highlight"><pre><span></span><code>npm<span class="w"> </span>i<span class="w"> </span>-g<span class="w"> </span>mobile-automator<span class="w">      </span><span class="c1"># exposes `mauto` globally</span>
 </code></pre></div>
+<p>Or run it ad hoc with <code>npx mobile-automator &lt;verb&gt;</code>. To run unreleased changes, clone the repo and <code>npm install &amp;&amp; npm link</code> instead.</p>
 <p>Then, from your mobile project, wire it into your agent and scaffold the workspace:</p>
 <div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/path/to/mobile-project
 mauto<span class="w"> </span>init<span class="w"> </span>--agent<span class="w"> </span>claude<span class="w">      </span><span class="c1"># or: cursor | gemini | copilot | agents | all</span>
@@ -2887,9 +2886,8 @@ xcrun<span class="w"> </span>simctl<span class="w"> </span>list<span class="w"> 
 <h3 id="how-do-i-integrate-with-cicd">How do I integrate with CI/CD?<a class="headerlink" href="#how-do-i-integrate-with-cicd" title="Permanent link">&para;</a></h3>
 <p><strong>Answer:</strong> mobile-automator works in CI/CD pipelines. The agent drives <code>mauto</code> verbs directly via <code>mauto bootstrap</code> + <code>mauto guide &lt;topic&gt;</code>, or you script the verbs yourself:</p>
 <div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
-<span class="c1"># Install mauto from source (first time only)</span>
-git<span class="w"> </span>clone<span class="w"> </span>https://github.com/sh3lan93/mobile-automator
-<span class="o">(</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>mobile-automator<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>npm<span class="w"> </span>install<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>npm<span class="w"> </span>link<span class="w"> </span><span class="o">)</span>
+<span class="c1"># Install mauto (first time only)</span>
+npm<span class="w"> </span>i<span class="w"> </span>-g<span class="w"> </span>mobile-automator
 
 <span class="c1"># Wire into the project + scaffold the workspace (first time only)</span>
 mauto<span class="w"> </span>init<span class="w"> </span>--agent<span class="w"> </span>agents
@@ -2925,11 +2923,8 @@ cat<span class="w"> </span>mobile-automator/results/latest.json<span class="w"> 
 <span class="w">        </span><span class="nt">with</span><span class="p">:</span>
 <span class="w">          </span><span class="nt">node-version</span><span class="p">:</span><span class="w"> </span><span class="s">'20'</span>
 
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Install mauto from source</span>
-<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-<span class="w">          </span><span class="no">git clone https://github.com/sh3lan93/mobile-automator /tmp/mobile-automator</span>
-<span class="w">          </span><span class="no">cd /tmp/mobile-automator</span>
-<span class="w">          </span><span class="no">npm install &amp;&amp; npm link</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Install mauto</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">npm i -g mobile-automator</span>
 
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Wire into project &amp; scaffold workspace</span>
 <span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
@@ -2994,9 +2989,11 @@ cat<span class="w"> </span>mobile-automator/results/latest.json<span class="w"> 
 <h3 id="mauto-command-not-found">"mauto: command not found"<a class="headerlink" href="#mauto-command-not-found" title="Permanent link">&para;</a></h3>
 <p><strong>Cause:</strong> <code>mauto</code> isn't on your PATH.</p>
 <p><strong>Solutions:</strong>
-<div class="highlight"><pre><span></span><code><span class="c1"># Re-run the link from the cloned repo</span>
-<span class="nb">cd</span><span class="w"> </span>/path/to/mobile-automator
-npm<span class="w"> </span>install<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>npm<span class="w"> </span>link
+<div class="highlight"><pre><span></span><code><span class="c1"># Re-install globally</span>
+npm<span class="w"> </span>i<span class="w"> </span>-g<span class="w"> </span>mobile-automator
+
+<span class="c1"># Check npm's global bin directory is on your PATH</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">"</span><span class="k">$(</span>npm<span class="w"> </span>prefix<span class="w"> </span>-g<span class="k">)</span><span class="s2">/bin"</span>
 
 <span class="c1"># Verify</span>
 which<span class="w"> </span>mauto

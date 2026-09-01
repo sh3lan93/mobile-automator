@@ -1860,11 +1860,8 @@
 <p>Setup is your entry point to mobile-automator. You install the host-agnostic <code>mauto</code> CLI, wire it into your AI agent, scaffold the <code>mobile-automator/</code> workspace, and let your agent analyze the project into <code>mobile-automator/config.json</code> — so later test generation and execution are tailored to your app.</p>
 <p><strong>Key benefit</strong>: You set up once per project, and everything needed for intelligent test generation and execution is configured.</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><span class="c1"># 1. Install the CLI from source</span>
-git<span class="w"> </span>clone<span class="w"> </span>https://github.com/sh3lan93/mobile-automator
-<span class="nb">cd</span><span class="w"> </span>mobile-automator
-npm<span class="w"> </span>install
-npm<span class="w"> </span>link
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. Install the CLI</span>
+npm<span class="w"> </span>i<span class="w"> </span>-g<span class="w"> </span>mobile-automator
 
 <span class="c1"># 2. Wire mauto into your agent (installs native Agent Skills + slash-commands/rules + .mcp.json)</span>
 <span class="nb">cd</span><span class="w"> </span>/path/to/your/mobile-app
@@ -1879,13 +1876,11 @@ mauto<span class="w"> </span>devices
 <p>After this, your agent analyzes the project and persists what it learns to <code>mobile-automator/config.json</code>.</p>
 <hr />
 <h2 id="step-1-install-mauto">Step 1: Install <code>mauto</code><a class="headerlink" href="#step-1-install-mauto" title="Permanent link">&para;</a></h2>
-<p><code>mauto</code> is a host-agnostic CLI usable by any AI agent. Install it from source:</p>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/sh3lan93/mobile-automator
-<span class="nb">cd</span><span class="w"> </span>mobile-automator
-npm<span class="w"> </span>install
-npm<span class="w"> </span>link
+<p><code>mauto</code> is a host-agnostic CLI usable by any AI agent. Install it from npm:</p>
+<div class="highlight"><pre><span></span><code>npm<span class="w"> </span>i<span class="w"> </span>-g<span class="w"> </span>mobile-automator
 </code></pre></div>
-<p><code>npm link</code> exposes the <code>mauto</code> (and <code>mobile-automator</code>) commands on your PATH. The mobile-mcp engine that drives the device is pinned as a dependency and resolved from <code>node_modules</code> — nothing is fetched at runtime.</p>
+<p>This exposes the <code>mauto</code> (and <code>mobile-automator</code>) commands on your PATH. The mobile-mcp engine that drives the device is pinned as a dependency and resolved from <code>node_modules</code> — nothing is fetched at runtime.</p>
+<p>To run a one-off verb without a global install, use <code>npx mobile-automator &lt;verb&gt;</code>. To run unreleased changes, clone the repo and <code>npm install &amp;&amp; npm link</code> instead.</p>
 <hr />
 <h2 id="step-2-wire-mauto-into-your-agent">Step 2: Wire <code>mauto</code> into your agent<a class="headerlink" href="#step-2-wire-mauto-into-your-agent" title="Permanent link">&para;</a></h2>
 <p>Run <code>mauto init</code> once per project to install the per-host integration:</p>
@@ -2083,7 +2078,7 @@ mauto<span class="w"> </span>config<span class="w"> </span><span class="nb">set<
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="mauto-command-not-found"><code>mauto: command not found</code><a class="headerlink" href="#mauto-command-not-found" title="Permanent link">&para;</a></h3>
 <p><strong>Problem:</strong> The CLI isn't on your PATH.</p>
-<p><strong>Solution:</strong> Re-run <code>npm install &amp;&amp; npm link</code> inside the cloned <code>mobile-automator</code> repo. Confirm with <code>mauto devices</code>.</p>
+<p><strong>Solution:</strong> Re-run <code>npm i -g mobile-automator</code> (or <code>npm install &amp;&amp; npm link</code> inside a source checkout), and check that npm's global bin directory — <code>$(npm prefix -g)/bin</code> — is on your PATH. Confirm with <code>mauto devices</code>.</p>
 <h3 id="no-devices-listed">No devices listed<a class="headerlink" href="#no-devices-listed" title="Permanent link">&para;</a></h3>
 <p><strong>Problem:</strong> <code>mauto devices</code> shows an empty list.</p>
 <p><strong>Solution:</strong> Connect a physical device or start a simulator/emulator, then re-run <code>mauto devices</code>. Pin one with <code>mauto devices use &lt;id&gt;</code> so later verbs don't need <code>--device</code>.</p>
