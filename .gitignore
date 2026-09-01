@@ -38,8 +38,13 @@ site/
 .worktrees/
 docs/superpowers/
 
-# Mobile Automator device session daemon (socket / pidfile / handle)
+# Mobile Automator runtime artifacts this repo's own test suite creates in the
+# checkout. `.session/` is the device session daemon (socket / pidfile / handle
+# / daemon.log); `.logs/` is the structured event stream, written since the CLI
+# was instrumented because tests/integration/cli-smoke.test.js spawns the CLI
+# with cwd=REPO_ROOT.
 mobile-automator/.session/
+mobile-automator/.logs/
 
 # sample-app (Flutter) build artifacts
 sample-app/build/
