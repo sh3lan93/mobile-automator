@@ -5,8 +5,8 @@
 // #162 happened because they were free to drift: CI verified only Node 18
 // (EOL April 2025) while `engines` promised `>=18` to users running 22 and 24,
 // and nothing failed. This guard derives the floor from package.json — the one
-// declaration npm actually enforces — and fails any doc or workflow that
-// disagrees.
+// declaration npm actually enforces — and fails any doc, workflow, or lockfile
+// that disagrees.
 //
 // Excluded by design: CHANGELOG.md, docs/changelog.md and docs/plans/** are
 // historical records. "Node 18" was TRUE when those were written.
@@ -17,10 +17,11 @@ const yaml = require('js-yaml');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const pkg = require('../../package.json');
+const lock = require('../../package-lock.json');
 
 // --- Derived truth (never hardcode this) ----------------------------------
 
-const ENGINES_RANGE = pkg.engines.node;
+const ENGINES_RANGE = (pkg.engines || {}).node;
 const FLOOR = (() => {
   const m = /^>=\s*(\d+)\.\d+\.\d+$/.exec(ENGINES_RANGE);
   if (!m) {
@@ -36,11 +37,46 @@ const FLOOR = (() => {
 
 // Anything shaped like a statement about the Node version a user needs.
 // Each pattern captures the major version being claimed.
+//
+// `active: true` means this pattern is expected to match something in the
+// current corpus — a real phrasing in use today — and the anti-vacuity test
+// below fails if it ever stops matching (see #162 review finding "Minor 6").
+// `active: false` marks a pattern kept purely defensively, for a realistic
+// phrasing this repo does not currently use anywhere (e.g. an alternate
+// shields.io badge encoding); it is still checked for floor violations, it
+// just isn't required to have a live hit.
+//
+// Deliberately NOT matched: lowercase `node >= 18`. Matching it would also
+// catch `"node": ">=20.0.0"` inside JSON snippets quoted in docs (e.g. a
+// package.json excerpt), which is not a claim about what the *reader* needs —
+// it would false-positive every time an example config is pasted in prose.
 const CLAIM_PATTERNS = [
-  /Node-%E2%89%A5(\d+)-/g, // shields.io badge: "Node-≥18-brightgreen"
-  /Node(?:\.js)?\s*(?:\*\*)?\s*[≥>]=?\s*(\d+)/g, // "Node ≥ 18", "Node.js ≥ 18"
-  /Node(?:\.js)?\*{0,2}\s+v?(\d+)\+/g, // "Node.js v18+"
-  /v(\d+) or higher/g, // "v18 or higher"
+  {
+    regex: /Node-%E2%89%A5(\d+)-/g,
+    active: true,
+    label: 'shields.io badge "Node-≥N-brightgreen"',
+  },
+  {
+    regex: /Node-%3E%3D(\d+)-/g,
+    active: false,
+    label: 'shields.io badge using %3E%3D ("Node->=N") instead of %E2%89%A5 ("Node-≥N")',
+  },
+  {
+    regex: /Node(?:\.js)?\s*(?:\*\*)?\s*[≥>]=?\s*(\d+)/g,
+    active: true,
+    label: '"Node ≥ N" / "Node.js ≥ N"',
+  },
+  {
+    regex: /Node(?:\.js)?\*{0,2}\s+v?(\d+)\+/g,
+    active: true,
+    label: '"Node.js vN+"',
+  },
+  {
+    regex: /Node(?:\.js)?\*{0,2}(?:\s+\S+){0,2}?\s+v?(\d+) or (?:higher|newer|later)/g,
+    active: true,
+    label: '"Node(.js) [is] vN or higher/newer/later" — anchored to Node so a claim like ' +
+      '"scenario schema v2 or higher" cannot misfire',
+  },
 ];
 
 const EXCLUDED_FILES = new Set(['CHANGELOG.md', 'docs/changelog.md', 'CLAUDE.md']);
@@ -93,10 +129,10 @@ describe('Node support range — structural agreement', () => {
     const violations = [];
     for (const rel of shippingMarkdown(REPO_ROOT)) {
       const text = fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
-      for (const pattern of CLAIM_PATTERNS) {
-        pattern.lastIndex = 0;
+      for (const { regex } of CLAIM_PATTERNS) {
+        regex.lastIndex = 0;
         let m;
-        while ((m = pattern.exec(text)) !== null) {
+        while ((m = regex.exec(text)) !== null) {
           const claimed = Number(m[1]);
           if (claimed !== FLOOR) {
             violations.push({ file: rel, claimed, expected: FLOOR, text: m[0] });
@@ -107,15 +143,20 @@ describe('Node support range — structural agreement', () => {
     expect(violations).toEqual([]);
   });
 
-  test('at least one prose claim exists, so the scan can never pass vacuously', () => {
-    const hits = shippingMarkdown(REPO_ROOT).filter((rel) => {
-      const text = fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
-      return CLAIM_PATTERNS.some((p) => {
-        p.lastIndex = 0;
-        return p.test(text);
+  test('every active claim pattern matches at least once, so the scan can never pass vacuously', () => {
+    const corpus = shippingMarkdown(REPO_ROOT).map((rel) =>
+      fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8')
+    );
+    const deadPatterns = [];
+    for (const { regex, active, label } of CLAIM_PATTERNS) {
+      if (!active) continue; // defensive-only pattern — see comment above CLAIM_PATTERNS
+      const matched = corpus.some((text) => {
+        regex.lastIndex = 0;
+        return regex.test(text);
       });
-    });
-    expect(hits).toEqual(expect.arrayContaining(['README.md', 'CONTRIBUTING.md']));
+      if (!matched) deadPatterns.push(label);
+    }
+    expect(deadPatterns).toEqual([]);
   });
 
   test('test.yml runs every job under a node-version matrix whose minimum is the floor', () => {
@@ -136,8 +177,16 @@ describe('Node support range — structural agreement', () => {
       });
       const majors = matrix.map((v) => Number(String(v).split('.')[0]));
       expect({ job: jobName, min: Math.min(...majors) }).toEqual({ job: jobName, min: FLOOR });
-      // Every setup-node in test.yml must read the matrix, not a literal.
-      for (const { job, version } of setupNodeVersions({ jobs: { [jobName]: jobDef } })) {
+      // A matrix with no setup-node step at all verifies nothing — the job
+      // would run every leg on the runner's default Node while the check
+      // name still claims to cover the matrix.
+      const nodeSteps = setupNodeVersions({ jobs: { [jobName]: jobDef } });
+      expect({ job: jobName, hasSetupNodeStep: nodeSteps.length > 0 }).toEqual({
+        job: jobName,
+        hasSetupNodeStep: true,
+      });
+      // Every setup-node step present must read the matrix, not a literal.
+      for (const { job, version } of nodeSteps) {
         expect({ job, version }).toEqual({ job, version: '${{ matrix.node-version }}' });
       }
     }
@@ -157,5 +206,22 @@ describe('Node support range — structural agreement', () => {
       }
     }
     expect(violations).toEqual([]);
+  });
+
+  test('package-lock.json root entry agrees with package.json on version and engines.node', () => {
+    const rootEntry = (lock.packages || {})[''];
+    if (!rootEntry) {
+      throw new Error(
+        'package-lock.json has no packages[""] root entry to compare against package.json — ' +
+          'was the lockfile regenerated with a pre-v7 npm, or hand-edited?'
+      );
+    }
+    expect({
+      version: rootEntry.version,
+      enginesNode: (rootEntry.engines || {}).node,
+    }).toEqual({
+      version: pkg.version,
+      enginesNode: ENGINES_RANGE,
+    });
   });
 });

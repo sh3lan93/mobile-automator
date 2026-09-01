@@ -93,6 +93,8 @@ Two catalogs are the single source of truth for "does this capability actually r
 
 **`src/result/capability-catalog.js`** (#140) binds every fact a result file can carry to the result schema, the `ResultStore` method that writes it, and the `mauto result` flag that supplies it. Guard: `tests/lint/result-coverage.test.js`. This exists because `assertion_results` silently stayed empty for months — the schema had a home for it and no verb could fill it.
 
+**`package.json` `engines.node`** (#162) is the single source of truth for the supported Node range. Guard: `tests/lint/node-version-agreement.test.js` — derives the floor from `engines.node` and fails when the README badge, any prose prerequisite, `package-lock.json`'s root entry, `test.yml`'s matrix, or any workflow's literal `node-version` disagrees with it.
+
 When you add an action or a result field, add its catalog entry in the same change. Do not hand-restate these counts in prose; derive them.
 
 ## Placeholder contract
