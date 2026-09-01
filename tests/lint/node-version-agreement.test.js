@@ -44,10 +44,14 @@ const CLAIM_PATTERNS = [
 ];
 
 const EXCLUDED_FILES = new Set(['CHANGELOG.md', 'docs/changelog.md', 'CLAUDE.md']);
-// .superpowers/sdd is gitignored task-planning scratch space (see
-// .superpowers/sdd/.gitignore) — it never reaches a real checkout, so a doc
-// under it is neither shipped nor historical; it just doesn't exist in CI.
-const EXCLUDED_DIRS = ['node_modules', '.git', 'docs/plans', 'sample-app', '.superpowers'];
+// .superpowers/sdd is gitignored task-planning scratch space — see
+// .superpowers/sdd/.gitignore, which ignores everything under that exact
+// path (`*`). It never reaches a real checkout, so a doc under it is
+// neither shipped nor historical; it just doesn't exist in CI. Scoped to
+// `sdd` specifically, not all of `.superpowers`, because that's the actual
+// gitignore boundary — a tracked file added elsewhere under `.superpowers/`
+// must still be scanned.
+const EXCLUDED_DIRS = ['node_modules', '.git', 'docs/plans', 'sample-app', '.superpowers/sdd'];
 
 function shippingMarkdown(dir, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
