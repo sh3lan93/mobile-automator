@@ -23,6 +23,12 @@ const guideEmitter = require('./guide/emitter');
 const { ADAPTERS } = require('./init/adapters');
 const { isSemanticAction, ACTION_METHOD, selectResolver } = require('./device/semantic-press');
 const connection = require('./device/connection');
+const { record } = require('./observe/recorder');
+
+// Stamped at require time, which for a one-shot verb is process start. There
+// is no in-memory span tree to hang a timer on — each verb is a fresh process
+// that exits — so the module load itself is the clock's zero point.
+const PROCESS_START_MS = Date.now();
 
 // Commander throws (via exitOverride) for two very different reasons, and the
 // split below is the ONLY thing that tells them apart.
@@ -1624,6 +1630,18 @@ function buildProgram(deps = {}) {
 }
 
 function defaultEmit({ envelope, exitKind }, human) {
+  // Record BEFORE the write: process.exit() below is immediate and would cut
+  // off any work queued after it.
+  record({
+    event: 'verb.end',
+    level: envelope && envelope.ok ? 'info' : 'warn',
+    src: 'cli',
+    verb: process.argv[2],
+    ok: Boolean(envelope && envelope.ok),
+    error_kind: envelope && envelope.error ? envelope.error.kind : undefined,
+    exit_code: exitCodeFor(exitKind),
+    dur_ms: Date.now() - PROCESS_START_MS,
+  });
   process.stdout.write(render(envelope, { human }) + '\n');
   process.exit(exitCodeFor(exitKind));
 }
@@ -1631,6 +1649,18 @@ function defaultEmit({ envelope, exitKind }, human) {
 // Print raw content (markdown / JSON schema / text) verbatim — no envelope
 // wrapping — then exit. Used by guide/schema/bootstrap success paths.
 function emitRaw(content, exitKind) {
+  // Instrumented separately from defaultEmit: this path never builds an
+  // envelope, so an emit-only hook would leave every guide/schema/bootstrap
+  // invocation unrecorded.
+  record({
+    event: 'verb.end',
+    level: 'info',
+    src: 'cli',
+    verb: process.argv[2],
+    ok: true,
+    exit_code: exitCodeFor(exitKind),
+    dur_ms: Date.now() - PROCESS_START_MS,
+  });
   process.stdout.write(content.endsWith('\n') ? content : content + '\n');
   process.exit(exitCodeFor(exitKind));
 }
