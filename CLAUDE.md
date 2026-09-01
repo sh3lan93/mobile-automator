@@ -6,7 +6,7 @@ Developer guide for maintaining the `mauto` CLI. User-facing docs live in `READM
 
 mobile-automator is a **host-agnostic `mauto` CLI** for AI-driven mobile QA automation. Any AI agent drives a device through `mauto` verbs (which wrap mobile-mcp); reasoning is pulled on demand via `mauto guide`.
 
-**Status (v0.23.9): published.** The package is on npm as `mobile-automator` — first published release **v0.23.8** (2026-08-30), `latest` is **v0.23.9**. `npm i -g mobile-automator` and `npx mobile-automator <verb>` both work. Publishing is automatic: merge a version bump to `main` and the pipeline tags, releases, and publishes (see [Releasing & version handling](#releasing--version-handling)). Milestone `production-ready` (gate issue [#168](https://github.com/sh3lan93/mobile-automator/issues/168)) tracks the remaining work; its Tier 0 ("not distributable") is now clear. User-facing docs (`README.md`, `docs/`) teach `npm i -g mobile-automator`; source install (`git clone` + `npm link`) is kept only as the path for unreleased changes and contributors.
+**Status (v0.24.0): published.** The package is on npm as `mobile-automator` — first published release **v0.23.8** (2026-08-30), `latest` is **v0.24.0**. `npm i -g mobile-automator` and `npx mobile-automator <verb>` both work. Publishing is automatic: merge a version bump to `main` and the pipeline tags, releases, and publishes (see [Releasing & version handling](#releasing--version-handling)). Milestone `production-ready` (gate issue [#168](https://github.com/sh3lan93/mobile-automator/issues/168)) tracks the remaining work; its Tier 0 ("not distributable") is now clear. User-facing docs (`README.md`, `docs/`) teach `npm i -g mobile-automator`; source install (`git clone` + `npm link`) is kept only as the path for unreleased changes and contributors.
 
 ## Architecture
 
@@ -31,7 +31,7 @@ src/
   device/
     action-catalog.js         # schema action → execution contract (drift guard, see below)
     session-daemon.js         # persistent mobile-mcp session behind a Unix socket
-    session-client.js  session-spawn.js  session-paths.js  session-protocol.js
+    session-client.js  session-spawn.js  session-paths.js  session-protocol.js  session-log.js
     bridge.js  mobile-mcp-client.js  semantic-press/  device-resolver.js  selection.js
   result/
     capability-catalog.js     # result field → verb → store method → schema pointer (drift guard)
@@ -196,7 +196,6 @@ Note: `jest.config` `testPathIgnorePatterns` must stay `<rootDir>`-anchored — 
 
 Tracked under the `production-ready` milestone; worth knowing before you debug something.
 
-- Daemon stderr is discarded (`stdio: 'ignore'`), so engine crash diagnostics are unreadable — #163.
 - Windows is silently unsupported: the session daemon binds a Unix domain socket — #165.
 - No JavaScript linter is configured (no ESLint config, dep, or script) — #164.
 - CI tests Node 18 only while `engines` declares `>=18` — #162.
@@ -210,4 +209,4 @@ Tracked under the `production-ready` milestone; worth knowing before you debug s
 
 ## Metadata
 
-Repo: https://github.com/sh3lan93/mobile-automator · Version: see `package.json` (0.23.9 at last edit) · License: Apache 2.0 (note: `LICENSE` currently ships a stub, not the full text — #160) · Status: published on npm since v0.23.8 (2026-08-30).
+Repo: https://github.com/sh3lan93/mobile-automator · Version: see `package.json` (0.24.0 at last edit) · License: Apache 2.0 (note: `LICENSE` currently ships a stub, not the full text — #160) · Status: published on npm since v0.23.8 (2026-08-30).
