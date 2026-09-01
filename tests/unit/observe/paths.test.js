@@ -13,6 +13,10 @@ describe('observe paths', () => {
     expect(got).toBe(path.resolve('/tmp/elsewhere'));
   });
 
+  it('names the workspace base dir, which gates whether file logging happens at all', () => {
+    expect(paths.workspaceDir('/proj')).toBe(path.join('/proj', 'mobile-automator'));
+  });
+
   it('names the main log mauto.ndjson', () => {
     expect(paths.mainLogPath('/proj', {})).toBe(
       path.join('/proj', 'mobile-automator', '.logs', 'mauto.ndjson')
