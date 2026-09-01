@@ -1,29 +1,34 @@
 # Observability & Monitoring for `mauto`
 
-**Date:** 2026-08-31
+**Date:** 2026-08-31 (updated 2026-09-01 for the #176 merge)
 **Status:** Design — approved approach, not yet sliced
-**Version at design time:** 0.23.9 (first npm-published release, 2026-08-30)
-**Related:** #163 (daemon stderr discarded — **in flight as draft PR #176**), #156 (daemon
+**Version:** `main` at 0.24.0. 858 tests / 71 suites green at time of writing.
+**Related:** #163 (daemon stderr discarded — **CLOSED 2026-09-01 by PR #176**), #156 (daemon
 lifecycle / invisible engine death), #161 (no audit gate), gate #168
 
 ## Problem
 
 `mauto` has no observability of any kind. Concretely, in 6,254 lines of `src/` + `bin/`:
 
-1. **No logging.** Zero `console.*` calls. The only diagnostic channel is six
-   `process.stderr.write` sites across three files: `diagnose()` (`src/cli.js:1639`), which
-   prints a stack only for `internal`-kind errors; one undeliverable-reply notice
-   (`src/device/session-daemon.js:224`); and four crash guards in
-   `bin/mauto-session-daemon.js` — the four that `stdio: 'ignore'` discards.
-2. **The daemon's diagnostics are discarded by construction.** `src/device/session-spawn.js:38`
-   spawns with `stdio: 'ignore'`, so every `process.stderr.write` in
-   `bin/mauto-session-daemon.js` — including the `uncaughtException` stack — goes to
-   `/dev/null`. The one long-lived component, wrapping a child process that drives physical
-   hardware, is completely opaque. (#163, and the readable half of #156.)
-   **Being fixed independently by draft PR #176** — see "Relationship to PR #176" below. That
-   work also found the loss ran a level deeper than #163 described: the MCP SDK defaults its
-   transport to `stderr: 'inherit'`, so *mobile-mcp's own* stderr — the adb/simctl output
-   that explains most field failures — inherited the discarded fd too.
+1. **No logging.** Zero `console.*` calls. The only diagnostic channel is seven ad-hoc
+   `process.stderr.write` sites across three files — no levels, no structure, no correlation
+   between them: `diagnose()` (`src/cli.js:1644`), which prints a stack only for
+   `internal`-kind errors; one undeliverable-reply notice
+   (`src/device/session-daemon.js:224`); and five in `bin/mauto-session-daemon.js` (the spawn
+   banner plus four crash guards).
+2. **The daemon's diagnostics were discarded by construction — now fixed.** `session-spawn.js`
+   spawned with `stdio: 'ignore'`, so every daemon `process.stderr.write`, including the
+   `uncaughtException` stack, went to `/dev/null`. **PR #176 closed this on 2026-09-01**
+   (see "Relationship to PR #176"). That work also found the loss ran a level deeper than
+   #163 described: the MCP SDK defaults its transport to `stderr: 'inherit'`, so
+   *mobile-mcp's own* stderr — the adb/simctl output explaining most field failures —
+   inherited the discarded fd too.
+
+   **What remains after #176, and why this design still stands.** The captured output is raw
+   unstructured text: greppable by a human, but not queryable, not aggregatable, and carrying
+   no timings or outcomes. And it covers the *daemon only* — a `mauto tap` that fails, a
+   `setup` that breaks, an `init` that half-succeeds still leave no trace anywhere. #176 made
+   one component legible; it did not give the tool observability.
 3. **Nothing measures time.** There is no `hrtime` and no `Date.now()` delta outside the
    daemon readiness poll and lock staleness. `duration_seconds` in every result file is
    whatever number the calling agent passed to `--duration` (`src/cli.js:649`); `--attempts`
@@ -146,29 +151,39 @@ best-effort by review.
 
 Two seams cover everything:
 
-1. **`withEnvelope` (`src/cli.js:1191`) + `emit`/`emitRaw`.** A module-level `t0` at process
+1. **`withEnvelope` (`src/cli.js:1196`) + `emit`/`emitRaw`.** A module-level `t0` at process
    start plus the envelope at exit gives verb name, duration, outcome, and error kind for
    every invocation. `emitRaw` (the `guide`/`schema`/`bootstrap` path) must be instrumented
    too — it bypasses `emit` today.
-2. **The daemon's call dispatch (`src/device/session-daemon.js:428`).** Wrapping the
+2. **The daemon's call dispatch (`src/device/session-daemon.js:432`).** Wrapping the
    `Promise.race` around `call(req.tool, req.args)` yields per-primitive latency, timeout
    counts, and mobile-mcp error rates for *every* verb through one edit. Daemon lifecycle
    events (start, connect failure, idle reap, `ELOCKED` loss, `uncaughtException`) and the
-   existing `recordUndeliverable` seam (`session-daemon.js:232`) feed the same recorder.
+   existing `recordUndeliverable` seam (`session-daemon.js:236`) feed the same recorder.
 
-### Relationship to PR #176 (do not re-implement)
+### Relationship to PR #176 (merged — do not re-implement)
 
-Draft PR #176 (`fix/163-daemon-log-capture`) already closes #163. This design **builds on it
-and must not redo it.** What it lands:
+PR #176 (`fix/163-daemon-log-capture`) merged to `main` on 2026-09-01 as commit `65067b0`,
+closing #163 and taking `package.json` to 0.24.0. This design **builds on it and must not redo
+it.** What is now on `main`, verified against the merged code:
 
-- `src/device/session-log.js` — owns the log file lifecycle, keeping `session-spawn.js` free
-  of `fs` and unit-testable behind an injected handle.
-- The daemon's stdout/stderr wired to **`mobile-automator/.session/daemon.log`**, capturing
-  both the daemon's own writes *and* the mobile-mcp engine's.
-- Append-never-truncate (lock-race losers share the file), bounded at **1 MiB with a single
+- **`src/device/session-log.js`** exporting `openDaemonLog(projectRoot, {maxBytes, fs})`,
+  `daemonLogHint()`, `MAX_LOG_BYTES` and `IGNORED`. It keeps `session-spawn.js` free of `fs`
+  and is injectable via `spawnDaemon`'s `openLog` parameter — a fourth seam alongside
+  `spawn` / `isAlive` / `pollMs`.
+- It returns `{ stdio, write, close }` and — note, this differs from the PR description —
+  **never `null`**. An unopenable workspace degrades to a frozen `IGNORED` handle carrying
+  `stdio: 'ignore'` and no-op `write`/`close`, so callers have nothing to branch on and a
+  read-only workspace cannot break the CLI.
+- `stdio` is `['ignore', fd, fd]`: stdout *and* stderr share one descriptor, which is what
+  captures the mobile-mcp engine as well as the daemon.
+- Log at **`mobile-automator/.session/daemon.log`** via `session-paths.logFilePath()` /
+  `LOG_NAME`, deliberately with no `os.tmpdir()` fallback (that exists only for the socket's
+  ~104-byte sockaddr limit; a regular file has no such limit).
+- Append-never-truncate — lock-race losers share the file — bounded at **1 MiB with a single
   rotation generation** (`daemon.log.1`), checked per spawn.
-- Best-effort: a failure to open the log returns `null` and degrades to the old `'ignore'`
-  behaviour, so a read-only workspace never breaks the CLI.
+- The daemon writes its **own** spawn banner (`bin/mauto-session-daemon.js`), because only it
+  knows its pid and a parent-written banner races the child's first output.
 - `log_path` surfaced in `session status` and on the failed-spawn hint.
 
 **Two log artifacts, two homes — a deliberate split, not an accident.** `.session/daemon.log`
@@ -181,11 +196,12 @@ inventing a second one.
 
 Consequences for this design:
 
-- **Slice 1 no longer contains the stdio fix.** It is done.
-- **Slice 2's daemon instrumentation depends on #176 landing first** — #176 is what makes
-  daemon death observable at all, and it explicitly unblocks #156.
-- **The version ladder shifts.** #176 already bumps `package.json` to `0.24.0`, so this work
-  starts at `0.25.0-rc.0`.
+- **Slice 1 no longer contains the stdio fix.** It is merged.
+- **Slice 2's dependency is satisfied** — #176 has landed, and it is what makes daemon death
+  observable at all. It explicitly unblocks #156.
+- **The version ladder starts at `0.25.0-rc.0`**, since `main` is now 0.24.0.
+- **`openLog` is the injection point to reuse.** Slice 2 does not re-plumb the daemon's
+  stdio; it records structured events alongside the raw capture #176 established.
 - **The `.gitignore` gap is inherited, and the stakes went up.** #176 explicitly scoped it
   out. This repo's own `.gitignore:42` covers `mobile-automator/.session/`, but a *user's*
   project has no such entry — so `daemon.log`, which now contains device serials, adb output
@@ -198,8 +214,8 @@ Consequences for this design:
 Rather than a second mechanism, B falls out of A's file sink. Correlation for **device
 verbs is by the `MAUTO_RUN_ID` environment variable only** — the agent exports it once per
 run. No device verb gains a `--run-id` flag; that option exists today solely as a
-`requiredOption` on `result add-step` / `add-assertion` / `finalize` (`src/cli.js:1366`,
-`:1401`, `:1431`), and adding it to twelve device verbs would be churn for no gain. When
+`requiredOption` on `result add-step` / `add-assertion` / `finalize` (`src/cli.js:1371`,
+`:1406`, `:1436`), and adding it to twelve device verbs would be churn for no gain. When
 `MAUTO_RUN_ID` is set, verb events are appended to
 `mobile-automator/.logs/run-<runId>.ndjson`. `result finalize` then **derives** measured
 values from that trace instead of trusting flags:
@@ -214,7 +230,7 @@ Screenshot-on-failure: on a `device`-kind failure the CLI captures a screenshot 
 `mobile-automator/screenshots/` and records its path in the trace, so a failed run carries
 evidence rather than a narrative.
 
-The seam needs care. `connectBridge` (`src/cli.js:1215`) has two failure paths and only one
+The seam needs care. `connectBridge` (`src/cli.js:1220`) has two failure paths and only one
 is usable: its first `catch` handles a *connect* failure, where no bridge exists to
 screenshot from. The capture therefore hooks the second `try` — after `const r = await
 fn(bridge)` returns a `device`-kind fail envelope and **before** the `finally` calls
@@ -265,7 +281,7 @@ built-in `fetch`:
 - switching to self-hosted PostHog later is a URL change, not a migration.
 
 **A one-shot process cannot reliably do network I/O.** Every verb ends in `process.exit()`
-(`src/cli.js:1623`), which tears down pending sockets — a fire-and-forget POST would be
+(`src/cli.js:1628`), which tears down pending sockets — a fire-and-forget POST would be
 dropped a large fraction of the time, and awaiting it would add network latency to every tap.
 So verbs never talk to the network. They append to a local spool file (synchronous, cheap,
 always succeeds), and the **daemon** flushes the spool during its idle window, with
@@ -307,8 +323,8 @@ Every invariant from PRD #69 is preserved, and one needs an explicit guard:
 - **Uniform envelope — the critical one.** **No sink may ever write to stdout**; stdout
   carries exactly the verb's own output and nothing else. Diagnostics go to stderr and files
   only. Note the guard cannot be stated as "stdout is always one JSON object": `guide`,
-  `schema`, and `bootstrap` route through `emitMaybeRaw` → `emitRaw` (`src/cli.js:1463`,
-  `:1628`) and print raw markdown with no envelope at all. The guard is therefore
+  `schema`, and `bootstrap` route through `emitMaybeRaw` → `emitRaw` (`src/cli.js:1468`,
+  `:1633`) and print raw markdown with no envelope at all. The guard is therefore
   byte-equality against an uninstrumented baseline, per verb class (see Testing).
 - **Device driven only through `mauto` verbs.** Crash detection goes through a `DeviceBridge`
   method behind a verb.
@@ -356,7 +372,7 @@ since it is a straight bug fix for #163 that users hit today.
 | Slice | Content | Version | Closes |
 |---|---|---|---|
 | 1 | Recorder core, event model, field catalog + redaction lint, stderr/file sinks, workspace `.gitignore` | `0.25.0-rc.0` | — |
-| 2 | Daemon instrumentation: call latency, timeouts, lifecycle, connect failures, undeliverable replies (**after #176**) | `0.25.0-rc.1` | part of #156 |
+| 2 | Daemon instrumentation: call latency, timeouts, lifecycle, connect failures, undeliverable replies (builds on merged #176) | `0.25.0-rc.1` | part of #156 |
 | 3 | Run traces, measured `duration_seconds` and retry counts in `finalize`, screenshot-on-failure, **new result-schema additivity guard + fixture** | `0.25.0-rc.2` | — |
 | 4 | `mauto crash` verb, failure-path auto-check, result-schema record, capability-catalog entry | `0.25.0-rc.3` | — |
 | 5 | Opt-in PostHog spool + daemon flush, consent UX, privacy documentation | `0.25.0` | — |
