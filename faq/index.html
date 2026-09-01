@@ -3017,8 +3017,9 @@ xcrun<span class="w"> </span>simctl<span class="w"> </span>list<span class="w"> 
 <h3 id="device-state-seems-stuck-or-stale">Device state seems stuck or stale<a class="headerlink" href="#device-state-seems-stuck-or-stale" title="Permanent link">&para;</a></h3>
 <p><strong>Cause:</strong> Device actions run through one long-lived session daemon (a persistent mobile-mcp process). If it wedged — verbs hang, target the wrong device, or return stale screen state — reset it.</p>
 <p><strong>Solutions:</strong>
-<div class="highlight"><pre><span></span><code><span class="c1"># Check whether the daemon is alive</span>
-mauto<span class="w"> </span>session<span class="w"> </span>status<span class="w">        </span><span class="c1"># -&gt; { running: true|false }</span>
+<div class="highlight"><pre><span></span><code><span class="c1"># Check whether the daemon is alive, and where its output was captured</span>
+mauto<span class="w"> </span>session<span class="w"> </span>status<span class="w">        </span><span class="c1"># -&gt; { running, in_flight, device, log_path }</span>
+tail<span class="w"> </span>-50<span class="w"> </span>mobile-automator/.session/daemon.log<span class="w">   </span><span class="c1"># stack traces live here</span>
 
 <span class="c1"># Stop it (removes the socket/pidfile); it auto-restarts on the next device verb</span>
 mauto<span class="w"> </span>session<span class="w"> </span>end
