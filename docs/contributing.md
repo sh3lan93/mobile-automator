@@ -27,7 +27,7 @@ mobile-automator is a host-agnostic **`mauto` CLI**: any AI agent drives a devic
 
 Before contributing, ensure you have:
 
-- **Node.js ≥ 18** — `mauto` is a Node CLI
+- **Node.js ≥ 20** — `mauto` is a Node CLI
 - **Git** — For version control
 - **An AI coding agent** — Claude Code, Cursor, Gemini CLI, GitHub Copilot, or any MCP-capable agent
 - **Mobile tools**:

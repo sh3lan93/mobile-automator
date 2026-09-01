@@ -198,7 +198,6 @@ Tracked under the `production-ready` milestone; worth knowing before you debug s
 
 - Windows is silently unsupported: the session daemon binds a Unix domain socket — #165.
 - No JavaScript linter is configured (no ESLint config, dep, or script) — #164.
-- CI tests Node 18 only while `engines` declares `>=18` — #162.
 - Production dependencies carry high-severity advisories; no audit gate, no Dependabot — #161.
 
 ## Conventions

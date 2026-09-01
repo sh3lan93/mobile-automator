@@ -74,7 +74,7 @@ Get your first test running in **5 minutes**:
 
 Before you begin, ensure you have:
 
-- ✅ **Node.js** v18+ (for the mobile-mcp automation engine)
+- ✅ **Node.js** v20+ (for the mobile-mcp automation engine)
 - ✅ **An AI coding agent** (Claude Code, Cursor, Gemini CLI, GitHub Copilot, OpenAI Agents, or any MCP-capable agent)
 - ✅ **Mobile project** (Android, iOS, Flutter, React Native, KMP, or CMP)
 - ✅ **Connected device or simulator** (physical device or emulator)
