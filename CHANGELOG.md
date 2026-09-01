@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### ✨ Added
+
+- Observability recorder seam (`src/observe/`): a single `record(event)` with a
+  redaction-guarded event catalog, a stderr sink and an NDJSON file sink at
+  `mobile-automator/.logs/mauto.ndjson`. Verb outcomes and measured durations
+  are recorded at both CLI exit paths.
+- `MAUTO_LOG_LEVEL` (`silent|error|warn|info|debug`; default `warn` on stderr,
+  `info` in the file) and `MAUTO_LOG_DIR`.
+- `mauto setup` now writes `mobile-automator/.gitignore`, keeping `.session/`
+  (which since 0.24.0 holds `daemon.log` with device serials and stack traces),
+  `.logs/` and `screenshots/` out of users' repositories.
+
+---
+
 ## [0.24.0]
 
 ### 🐛 Fixed
