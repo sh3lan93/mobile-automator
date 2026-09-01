@@ -26,6 +26,7 @@ const fs = require('fs');
 const { DeviceBridge } = require('./bridge');
 const paths = require('./session-paths');
 const sessionClient = require('./session-client');
+const { daemonLogHint } = require('./session-log');
 const sessionSpawn = require('./session-spawn');
 
 function defaultCreateCall(opts) {
@@ -33,13 +34,6 @@ function defaultCreateCall(opts) {
 }
 
 const NOOP_CLOSE = () => Promise.resolve();
-
-// The one sentence that points a user at the daemon's captured output (#163).
-// Shared with cli.js's `session start` failure envelope so the two moments a
-// user can learn the log exists word it identically.
-function daemonLogHint(projectRoot) {
-  return `The daemon's output (including stack traces) was captured to ${paths.logFilePath(projectRoot)}.`;
-}
 
 // Read the live daemon's pinned device from its handle, or null. A null pin
 // means the daemon serves whatever device mobile-mcp selected (matches any
@@ -182,7 +176,6 @@ async function resolveDeviceConnection({
 module.exports = {
   resolveDeviceConnection,
   chooseConnectionStrategy,
-  daemonLogHint,
   deviceMatches,
   readHandleDevice,
 };

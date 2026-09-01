@@ -2,12 +2,14 @@
 
 const {
   acquireConnection,
+  daemonLogHint,
   isSessionAlive,
   sessionStatus,
   startSession,
   endSession,
 } = require('../../../src/device/connection');
 const paths = require('../../../src/device/session-paths');
+const sessionLog = require('../../../src/device/session-log');
 
 describe('connection', () => {
   describe('acquireConnection', () => {
@@ -56,6 +58,16 @@ describe('connection', () => {
         device: null,
         log_path: paths.logFilePath('/x'),
       });
+    });
+  });
+
+  // cli.js already imports this module as its one device facade, so naming the
+  // daemon log costs it no new dependency — and in particular no reach into
+  // resolve-connection, which owns connection strategy and not log paths.
+  describe('daemonLogHint', () => {
+    test('is the same function session-log defines, not a second copy of the sentence', () => {
+      expect(daemonLogHint).toBe(sessionLog.daemonLogHint);
+      expect(daemonLogHint('/x')).toContain(paths.logFilePath('/x'));
     });
   });
 

@@ -14,6 +14,7 @@
 // handlers.
 
 const { resolveDeviceConnection } = require('./resolve-connection');
+const { daemonLogHint } = require('./session-log');
 const paths = require('./session-paths');
 const sessionClient = require('./session-client');
 const sessionSpawn = require('./session-spawn');
@@ -69,6 +70,10 @@ function endSession(projectRoot, { client = sessionClient } = {}) {
 
 module.exports = {
   acquireConnection,
+  // Re-exported from session-log so cli.js can name the daemon log through the
+  // one device facade it already imports, instead of reaching into a
+  // connection-strategy module for a string.
+  daemonLogHint,
   isSessionAlive,
   sessionStatus,
   startSession,

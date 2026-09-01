@@ -19,6 +19,14 @@ const MAX_LOG_BYTES = 1024 * 1024;
 // `stdio: 'ignore'` is the behaviour that predates #163.
 const IGNORED = Object.freeze({ stdio: 'ignore', write() {}, close() {} });
 
+// The one sentence pointing a user at the daemon's captured output (#163).
+// It lives here because it is a fact about the log, and it is re-exported
+// through connection.js so cli.js reaches it via the device facade it already
+// imports rather than reaching into a connection-strategy module.
+function daemonLogHint(projectRoot) {
+  return `The daemon's output (including stack traces) was captured to ${logFilePath(projectRoot)}.`;
+}
+
 // Best-effort rotation to a single previous generation; clobbering an existing
 // .1 is the intended bound. Every failure here is survivable — no log yet
 // (ENOENT on stat), a concurrent spawn that already rotated (ENOENT on rename),
@@ -84,4 +92,4 @@ function openDaemonLog(projectRoot, { maxBytes = MAX_LOG_BYTES, fs = realFs } = 
   return { stdio: ['ignore', fd, fd], write, close };
 }
 
-module.exports = { MAX_LOG_BYTES, IGNORED, openDaemonLog };
+module.exports = { MAX_LOG_BYTES, IGNORED, daemonLogHint, openDaemonLog };

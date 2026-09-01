@@ -999,7 +999,7 @@ async function handleSessionStart(
     // "why" of a startup crash exists on disk — but only this hint tells the
     // user (or agent) that it does. Same sentence the transparent-autostart
     // fallback uses, so the log is named identically wherever it surfaces.
-    const logHint = require('./device/resolve-connection').daemonLogHint(projectRoot);
+    const logHint = connection.daemonLogHint(projectRoot);
     return {
       envelope: fail('device', 'failed to start the device session daemon', `Ensure a device or simulator is connected, or run verbs directly (they fall back to one-shot). ${logHint}`),
       exitKind: 'device',
