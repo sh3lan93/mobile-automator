@@ -14,6 +14,8 @@
 // handlers.
 
 const { resolveDeviceConnection } = require('./resolve-connection');
+const { daemonLogHint } = require('./session-log');
+const paths = require('./session-paths');
 const sessionClient = require('./session-client');
 const sessionSpawn = require('./session-spawn');
 
@@ -40,10 +42,20 @@ function isSessionAlive(projectRoot, { client = sessionClient } = {}) {
   return client.isAlive(projectRoot);
 }
 
-// Rich status: running + in-flight call count + pinned device. `null`s when not
-// running. The in-flight count exposes the double-execution window.
-function sessionStatus(projectRoot, { client = sessionClient } = {}) {
-  return client.getSessionStatus(projectRoot);
+// Rich status: running + in-flight call count + pinned device (`null`s when not
+// running), plus log_path, which is reported unconditionally. The in-flight
+// count exposes the double-execution window.
+//
+// log_path is computed HERE from the project root rather than read out of the
+// daemon's ping reply, and that is deliberate: getSessionStatus() collapses
+// every failure branch — no socket, non-ok ping, or a throw — into the same
+// not-running shape, so a daemon-supplied path would go missing in exactly the
+// case where a user is reaching for `session status` to find out why the daemon
+// is dead. The path is a pure function of the workspace, so we can always
+// answer it. Do not "simplify" this into the ping payload.
+async function sessionStatus(projectRoot, { client = sessionClient } = {}) {
+  const status = await client.getSessionStatus(projectRoot);
+  return { ...status, log_path: paths.logFilePath(projectRoot) };
 }
 
 // Spawn a daemon and wait until it answers. Resolves true on success.
@@ -58,6 +70,10 @@ function endSession(projectRoot, { client = sessionClient } = {}) {
 
 module.exports = {
   acquireConnection,
+  // Re-exported from session-log so cli.js can name the daemon log through the
+  // one device facade it already imports, instead of reaching into a
+  // connection-strategy module for a string.
+  daemonLogHint,
   isSessionAlive,
   sessionStatus,
   startSession,

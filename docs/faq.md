@@ -645,8 +645,9 @@ mauto devices use <id>     # mauto devices clear to unpin
 
 **Solutions:**
 ```bash
-# Check whether the daemon is alive
-mauto session status        # -> { running: true|false }
+# Check whether the daemon is alive, and where its output was captured
+mauto session status        # -> { running, in_flight, device, log_path }
+tail -50 mobile-automator/.session/daemon.log   # stack traces live here
 
 # Stop it (removes the socket/pidfile); it auto-restarts on the next device verb
 mauto session end
