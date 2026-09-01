@@ -15,6 +15,12 @@
 // Level filtering happens here rather than in the sinks because the two sinks
 // have DIFFERENT thresholds (stderr warn, file info) and only the recorder
 // knows which sink it is currently feeding.
+//
+// A sink is a { threshold, write } pair and ALWAYS states its own threshold —
+// there is no default filled in on its behalf. A test that wants the real
+// thresholds wraps defaultSinks(root, env) and swaps only `write`, so it
+// exercises the levels production resolves instead of a branch that exists
+// only for tests.
 
 const { makeEvent } = require('./event');
 const { resolveLevels, atLeast } = require('./settings');
@@ -33,15 +39,10 @@ function record(fields = {}, { projectRoot = process.cwd(), env = process.env, s
   try {
     const level = fields.level || 'info';
     const list = sinks || defaultSinks(projectRoot, env);
-    // An injected sink with no threshold of its own is filtered against the
-    // resolved stderr threshold, so tests exercise the real gate rather than
-    // an unfiltered bypass.
-    const fallback = resolveLevels(env).stderr;
     const event = makeEvent({ ...fields, level });
 
     for (const sink of list) {
-      const threshold = sink.threshold === undefined ? fallback : sink.threshold;
-      if (!atLeast(level, threshold)) continue;
+      if (!atLeast(level, sink.threshold)) continue;
       try {
         sink.write(event);
       } catch (_) {
