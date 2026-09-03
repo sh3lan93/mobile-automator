@@ -367,7 +367,7 @@ Append to `tests/unit/observe/sinks.test.js`, inside the existing `describe('fil
   });
 
   it('still refuses to log into a directory that has no workspace, logPath or not', () => {
-    const root = workspace(); // mkdtemp'd, so no mobile-automator/ inside it
+    const root = bareDir(); // mkdtemp'd, so no mobile-automator/ inside it
     const target = path.join(root, 'mobile-automator', '.logs', 'daemon.ndjson');
 
     fileSink.write({ level: 'info', event: 'e' }, { projectRoot: root, env: {}, logPath: target });
