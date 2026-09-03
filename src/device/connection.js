@@ -14,6 +14,7 @@
 // handlers.
 
 const { resolveDeviceConnection } = require('./resolve-connection');
+const { readSessionId } = require('./session-handle');
 const { daemonLogHint } = require('./session-log');
 const paths = require('./session-paths');
 const sessionClient = require('./session-client');
@@ -55,7 +56,20 @@ function isSessionAlive(projectRoot, { client = sessionClient } = {}) {
 // answer it. Do not "simplify" this into the ping payload.
 async function sessionStatus(projectRoot, { client = sessionClient } = {}) {
   const status = await client.getSessionStatus(projectRoot);
-  return { ...status, log_path: paths.logFilePath(projectRoot) };
+  return {
+    ...status,
+    log_path: paths.logFilePath(projectRoot),
+    // Read from the handle, not from the ping reply. The handle is written once
+    // the daemon is listening and removed by stop(), so it is the same fact
+    // without a second protocol field that could disagree with it — and a verb
+    // that wants the id does not have to pay a socket round trip.
+    //
+    // Deliberately NOT symmetric with log_path, which survives running:false on
+    // purpose (a dead daemon's log is exactly what you want then). A SIGKILLed
+    // daemon leaves its handle behind, so reporting that id alongside
+    // running:false would name a session that no longer exists.
+    session_id: status && status.running ? readSessionId(projectRoot) : null,
+  };
 }
 
 // Spawn a daemon and wait until it answers. Resolves true on success.
