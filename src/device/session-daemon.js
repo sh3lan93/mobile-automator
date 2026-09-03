@@ -170,6 +170,27 @@ async function startDaemon({
 } = {}) {
   if (!projectRoot) throw new TypeError('startDaemon requires projectRoot');
 
+  // Observability must never be load-bearing. `observe` is injected, so a
+  // caller-supplied sink that throws must not take the daemon — and the device
+  // session — down with it. The production recorder is already total; this
+  // makes that a property of the DAEMON rather than of its current caller,
+  // which matters because the seam exists precisely so that something other
+  // than the default gets passed. Wrapped once, here, rather than at each call
+  // site: a guarantee you have to remember to re-apply is not a guarantee.
+  //
+  // Two failure modes this closes, both proved by
+  // tests/unit/device/daemon-observability.test.js: the daemon dying at startup
+  // killed by the code whose only job is to explain why daemons die, and — on
+  // the failure paths, which observe BEFORE releaseLock() — a telemetry fault
+  // masking the real error and leaking the lock, wedging every later spawn.
+  const safeObserve = (fields) => {
+    try {
+      observe(fields);
+    } catch (_) {
+      /* an observability fault is never worth a device session */
+    }
+  };
+
   // Zero point for every dur_ms this daemon reports: startup duration on
   // daemon.start, total session lifetime on daemon.stop.
   const startedAtMs = Date.now();
@@ -195,14 +216,14 @@ async function startDaemon({
       // warn, not error: a spawn-race loser failing here is the lock DOING ITS
       // JOB. It is worth seeing (a workspace where it repeats means two agents
       // are fighting over one device) but it is not a malfunction.
-      observe({ level: 'warn', event: 'daemon.lock_conflict', error_code: 'ELOCKED', pid: process.pid });
+      safeObserve({ level: 'warn', event: 'daemon.lock_conflict', error_code: 'ELOCKED', pid: process.pid });
       const e = new Error('device session daemon already starting for this workspace (lock held)');
       e.code = 'ELOCKED';
       throw e;
     }
     // Not a race — EACCES, EROFS, ENOSPC on .session/. An invisible death that
     // nothing else in the system reports.
-    observe({
+    safeObserve({
       level: 'error',
       event: 'daemon.start_failure',
       error_code: err && err.code,
@@ -233,7 +254,7 @@ async function startDaemon({
   } catch (err) {
     // #156's core symptom: mobile-mcp never came up, and until now the only
     // trace was a 15s readiness timeout in the spawning verb.
-    observe({
+    safeObserve({
       level: 'error',
       event: 'daemon.connect_failure',
       error_code: err && err.code,
@@ -304,7 +325,7 @@ async function startDaemon({
     // not die — the two hangs most worth seeing — and an event written after
     // them would never be written at all. The `if (stopping) return` above is
     // what keeps this to one event per daemon.
-    observe({
+    safeObserve({
       level: 'info',
       event: 'daemon.stop',
       stop_reason: reason,
@@ -537,7 +558,7 @@ async function startDaemon({
     // listen failed (e.g. EADDRINUSE from a double-spawn that beat us to the
     // bind, or a recycled-pid wedge). The connection was already built — close
     // it so we never leak the mobile-mcp child, and release the lock.
-    observe({
+    safeObserve({
       level: 'error',
       event: 'daemon.listen_failure',
       error_code: err && err.code,
@@ -577,7 +598,7 @@ async function startDaemon({
   // Recorded after the handle exists, so anything reading the log can also read
   // the handle it names. device_id is sends:false — a device serial never
   // leaves the machine.
-  observe({
+  safeObserve({
     level: 'info',
     event: 'daemon.start',
     pid: process.pid,

@@ -201,3 +201,57 @@ describe('daemon failure events', () => {
     expect(typeof fail.error_code).toBe('string');
   });
 });
+
+describe('observability is never load-bearing', () => {
+  // `observe` is an INJECTED seam, and the whole point of injecting one is that
+  // something other than the default gets passed. The production recorder being
+  // total makes the daemon safe TODAY; it does not make the DAEMON safe. These
+  // tests hold the guarantee where it belongs — in startDaemon — so that no
+  // future caller (Task 7's real recorder included) can turn a telemetry fault
+  // into a dead device session. The failure mode being prevented is the daemon
+  // dying at startup, killed by the code whose only job is to explain why
+  // daemons die.
+  const explode = () => {
+    throw new Error('observe exploded');
+  };
+
+  test('a throwing observe does not stop the daemon from starting or stopping', async () => {
+    const root = tmpRoot();
+
+    const daemon = await startDaemon({
+      projectRoot: root,
+      idleMs: 0,
+      createCall: makeFakeCreateCall(),
+      observe: explode,
+    });
+
+    // The daemon is genuinely up, not merely un-thrown: the handle it writes
+    // just before daemon.start is on disk.
+    expect(JSON.parse(fs.readFileSync(paths.handlePath(root), 'utf8')).pid).toBe(process.pid);
+
+    await expect(daemon.stop()).resolves.toBeUndefined();
+    expect(fs.existsSync(paths.handlePath(root))).toBe(false);
+  });
+
+  test('a throwing observe on a failure path preserves the real error and releases the lock', async () => {
+    const root = tmpRoot();
+    const boom = async () => {
+      const err = new Error('no devices found');
+      err.code = 'ENODEV';
+      throw err;
+    };
+
+    // The connect catch observes BEFORE releaseLock(). An observe that throws
+    // there would both mask the real cause and leak the lock, wedging every
+    // later spawn in this workspace.
+    await expect(
+      startDaemon({ projectRoot: root, idleMs: 0, createCall: boom, observe: explode })
+    ).rejects.toMatchObject({ code: 'ENODEV' });
+
+    expect(fs.existsSync(paths.lockPath(root))).toBe(false);
+
+    // Proof the workspace is not wedged: a fresh daemon still takes the lock.
+    const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall() });
+    await daemon.stop();
+  });
+});
