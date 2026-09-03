@@ -28,6 +28,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `mauto setup` now writes `mobile-automator/.gitignore`, keeping `.session/`
   (which since 0.24.0 holds `daemon.log` with device serials and stack traces),
   `.logs/` and `screenshots/` out of users' repositories.
+- Daemon observability. The session daemon now records structured events to
+  `mobile-automator/.logs/daemon.ndjson`: per-primitive call latency, timeout
+  counts and mobile-mcp error rates from the one call seam every device verb
+  passes through, plus its lifecycle — start, spawn-race lock conflict, connect
+  failure, listen failure, stop (with the reason: `idle`, `signal`, `shutdown`,
+  `crash` or `explicit`), and `uncaughtException`/`unhandledRejection`. The
+  undeliverable-reply notice, previously a bespoke `process.stderr.write`, is
+  now one of those events. Lifecycle failures record at `warn`/`error`, unlike
+  the CLI's `verb.end`: the daemon's stderr *is*
+  `mobile-automator/.session/daemon.log` since 0.24.0, so a warn line there
+  costs no terminal noise and lands next to the adb/simctl output that explains
+  it.
+- `session_id`: a random id generated per daemon lifetime, written into the
+  `mobile-automator/.session/session.json` handle and reported by
+  `mauto session status` (`null` when no daemon is running). It correlates
+  device work to one *daemon lifetime*, which a run id cannot — a daemon that
+  dies and respawns mid-run is exactly the event worth seeing.
+- Daemon events live in their own NDJSON file rather than the CLI's
+  `mauto.ndjson`. The daemon is the only long-lived writer in the system, and
+  a shared file would make log rotation a `stat`-then-`rename` race between it
+  and every one-shot verb, which loses a whole generation when it goes wrong.
+  Both files share the same 1 MiB single-generation policy, so
+  `cat mobile-automator/.logs/*.ndjson` is still one timeline.
 
 ---
 
