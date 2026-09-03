@@ -12,6 +12,8 @@ const fs = require('fs');
 
 const { startDaemon } = require('../src/device/session-daemon');
 const paths = require('../src/device/session-paths');
+const { newSessionId } = require('../src/device/session-handle');
+const { makeDaemonRecorder } = require('../src/observe/daemon-recorder');
 
 // Best-effort synchronous unlink — never throws. Used by the crash guards so a
 // hard failure can't leave a stale lock/socket/pidfile wedging the next spawn.
@@ -45,6 +47,20 @@ function cleanupWorkspaceIfOwned(projectRoot) {
   safeUnlinkSync(paths.handlePath(projectRoot));
 }
 
+// Observability must never be the reason a daemon fails to start. The observe()
+// makeDaemonRecorder returns already swallows everything, but CONSTRUCTION sits
+// outside that guarantee: it resolves levels and computes a log path before any
+// event exists. So a throw here degrades to an inert observe, the same shape
+// session-log.js uses when it can't open the raw log — a frozen IGNORED handle
+// rather than a null every caller has to branch on.
+function buildRecorder(projectRoot, sessionId) {
+  try {
+    return makeDaemonRecorder({ projectRoot, sessionId });
+  } catch (_) {
+    return () => {};
+  }
+}
+
 async function main() {
   // First write of the process, so every later line in the shared append-only
   // log is attributable to a spawn. Written HERE rather than by the spawning
@@ -64,6 +80,18 @@ async function main() {
   const idleRaw = process.env.MAUTO_SESSION_IDLE_MS;
   const idleMs = idleRaw ? Number(idleRaw) : undefined;
 
+  // The recorder is built ONCE, here, and bound for this process's lifetime.
+  // record()'s own defaults are wrong for a detached daemon: projectRoot would
+  // fall back to a cwd inherited from whichever verb spawned us and which we
+  // outlive, and the sink levels would be re-resolved per device call from an
+  // environment that cannot change after spawn.
+  //
+  // The id is generated HERE rather than inside startDaemon so that the crash
+  // guards below — which can fire before startDaemon has resolved — already
+  // have an identity to stamp their events with.
+  const sessionId = newSessionId();
+  const observe = buildRecorder(projectRoot, sessionId);
+
   let daemon = null;
 
   // Crash guards: this is the real, single-daemon process, so a best-effort
@@ -75,25 +103,48 @@ async function main() {
   const onExit = () => cleanupWorkspaceIfOwned(projectRoot);
   process.on('exit', onExit);
   process.on('uncaughtException', (err) => {
+    // Recorded FIRST, before the stderr write and before teardown: these are the
+    // invisible deaths #156 is about, and process.exit(1) below is immediate.
+    // The file sink appends synchronously, so this line is on disk by the time
+    // the process is gone — a buffered sink would lose exactly this event.
+    //
+    // Two writes on purpose, to two different readers. The structured event
+    // carries the classification (and stays one line); the raw stderr write is
+    // #176's contract — the full stack, unchanged, in .session/daemon.log.
+    observe({
+      level: 'error',
+      event: 'daemon.crash',
+      error_code: err && err.code,
+      message: `uncaughtException: ${err && err.message ? err.message : err}`,
+      pid: process.pid,
+    });
     process.stderr.write(`mauto-session-daemon: uncaught ${err && err.stack ? err.stack : err}\n`);
     // Tear the daemon down (closes the mobile-mcp child) then let 'exit' clean
-    // the files.
+    // the files. Unchanged except for the reason — recording must not delay or
+    // displace the teardown that frees the lock/socket/pidfile.
     if (daemon && typeof daemon.stop === 'function') {
-      daemon.stop().catch(() => {});
+      daemon.stop('crash').catch(() => {});
     }
     process.exit(1);
   });
   process.on('unhandledRejection', (err) => {
+    observe({
+      level: 'error',
+      event: 'daemon.crash',
+      error_code: err && err.code,
+      message: `unhandledRejection: ${err && err.message ? err.message : err}`,
+      pid: process.pid,
+    });
     process.stderr.write(`mauto-session-daemon: unhandled rejection ${err && err.stack ? err.stack : err}\n`);
     // Same teardown as uncaughtException: a rejected promise must not leave a
     // leaked mobile-mcp child / stale files wedging the next spawn.
     if (daemon && typeof daemon.stop === 'function') {
-      daemon.stop().catch(() => {});
+      daemon.stop('crash').catch(() => {});
     }
     process.exit(1);
   });
 
-  daemon = await startDaemon({ projectRoot, device, idleMs });
+  daemon = await startDaemon({ projectRoot, device, idleMs, sessionId, observe });
   // Keep the event loop alive until the daemon stops (idle reap / signal /
   // shutdown frame), then exit cleanly.
   await daemon.whenStopped;
