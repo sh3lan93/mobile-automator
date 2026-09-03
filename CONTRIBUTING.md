@@ -39,7 +39,7 @@ Before creating bug reports, please check existing issues to avoid duplicates. W
 **Environment:**
 - mauto: v0.21.0
 - Host: Claude Code
-- Node: v18.19.0
+- Node: v20.11.0
 - Platform: React Native 0.73
 - OS: macOS Sonoma 14.5
 ```

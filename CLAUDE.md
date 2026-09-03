@@ -93,7 +93,11 @@ Two catalogs are the single source of truth for "does this capability actually r
 
 **`src/result/capability-catalog.js`** (#140) binds every fact a result file can carry to the result schema, the `ResultStore` method that writes it, and the `mauto result` flag that supplies it. Guard: `tests/lint/result-coverage.test.js`. This exists because `assertion_results` silently stayed empty for months — the schema had a home for it and no verb could fill it.
 
-**`package.json` `engines.node`** (#162) is the single source of truth for the supported Node range. Guard: `tests/lint/node-version-agreement.test.js` — derives the floor from `engines.node` and fails when the README badge, any prose prerequisite, `package-lock.json`'s root entry, `test.yml`'s matrix, or any workflow's literal `node-version` disagrees with it.
+**`package.json` `engines.node`** (#162) is the single source of truth for the supported Node range, and must stay a bare `>=X.Y.Z` floor — the guard rejects a compound range like `^20 || ^22` outright, because there is no single floor to check prose against. Guard: `tests/lint/node-version-agreement.test.js` — derives the floor and fails when the README badge, any prose claim in a shipping doc, `test.yml`'s matrix, or any workflow's literal `node-version` disagrees. It matches *any* Node-adjacent major rather than an enumerated list of phrasings, so a newly-written claim is caught by default; the rare sentence that names a Node version without claiming support goes in `NOT_A_CLAIM`.
+
+**`package-lock.json`** must mirror `package.json`'s `name`, `version` and `engines.node`. Guard: `tests/lint/lockfile-in-sync.test.js`. CI installs with `npm ci`, which installs *from the lockfile*, so a stale root entry is invisible until something downstream reads the wrong value — it has drifted twice.
+
+**The shipping-doc corpus** is `tests/lint/docs-corpus.js`: every tracked `.md` minus historical records (`CHANGELOG.md`, `docs/changelog.md`, `docs/plans/**`), enumerated with `git ls-files` so `.gitignore` never has to be restated. Three guards scan it — `docs-counts.test.js` (capability counts vs the schema), `docs-no-stale-extension.test.js` (the removed Gemini-extension model), and the Node guard above. A new doc-scanning guard consumes `shippingDocs()`; do not hand-maintain a second file list, which is how `sample-app/README.md` kept teaching removed slash-command syntax for months.
 
 When you add an action or a result field, add its catalog entry in the same change. Do not hand-restate these counts in prose; derive them.
 
@@ -185,7 +189,7 @@ cd /path/to/test-mobile-app && mauto <verb>           # drive a device, e.g. mau
 npm test                  # full jest suite (also runs on prepublishOnly)
 npm run test:unit         # tests/unit
 npm run test:integration  # tests/integration (CLI smoke over the real binary)
-npm run lint:guides       # guide + skill + coverage lint guards
+npm run lint:guides       # every lint guard in tests/lint (guide, skill, coverage, drift)
 npm run lint:schema-additive
 ./scripts/pack-smoke.sh   # install the packed tarball and exercise the bin — CI gates on this
 ```
