@@ -255,3 +255,183 @@ describe('observability is never load-bearing', () => {
     await daemon.stop();
   });
 });
+
+describe('device call events', () => {
+  test('records call.end at info with the primitive and a measured duration', async () => {
+    const root = tmpRoot();
+    const observe = collector();
+    const daemon = await startDaemon({
+      projectRoot: root,
+      idleMs: 0,
+      createCall: makeFakeCreateCall(),
+      observe,
+    });
+
+    const conn = await sessionClient.tryConnect(root);
+    await conn.call('mobile_press_button', { button: 'BACK' });
+    await conn.close();
+
+    const [end] = observe.named('call.end');
+    expect(end.level).toBe('info');
+    expect(end.ok).toBe(true);
+    expect(end.tool).toBe('mobile_press_button');
+    expect(typeof end.dur_ms).toBe('number');
+
+    await daemon.stop();
+  });
+
+  test('brackets a call with a debug call.start, so a call that never returns still leaves a trace', async () => {
+    const root = tmpRoot();
+    const observe = collector();
+    const daemon = await startDaemon({
+      projectRoot: root,
+      idleMs: 0,
+      createCall: makeFakeCreateCall(),
+      observe,
+    });
+
+    const conn = await sessionClient.tryConnect(root);
+    await conn.call('mobile_list_elements_on_screen', {});
+    await conn.close();
+
+    const [start] = observe.named('call.start');
+    expect(start.level).toBe('debug');
+    expect(start.tool).toBe('mobile_list_elements_on_screen');
+
+    await daemon.stop();
+  });
+
+  test('records a mobile-mcp failure at warn with the device error kind', async () => {
+    const root = tmpRoot();
+    const observe = collector();
+    const daemon = await startDaemon({
+      projectRoot: root,
+      idleMs: 0,
+      createCall: makeFakeCreateCall(async () => {
+        throw new Error('adb: device offline');
+      }),
+      observe,
+    });
+
+    const conn = await sessionClient.tryConnect(root);
+    await expect(conn.call('mobile_press_button', { button: 'BACK' })).rejects.toThrow();
+    await conn.close();
+
+    const [end] = observe.named('call.end');
+    expect(end.level).toBe('warn');
+    expect(end.ok).toBe(false);
+    expect(end.error_kind).toBe('device');
+    expect(end.message).toContain('adb: device offline');
+
+    await daemon.stop();
+  });
+
+  test('records a timeout with error_kind timeout, reusing the envelope taxonomy', async () => {
+    const root = tmpRoot();
+    const observe = collector();
+    const daemon = await startDaemon({
+      projectRoot: root,
+      idleMs: 0,
+      // Never settles, so the timeout branch always wins the race.
+      createCall: makeFakeCreateCall(() => new Promise(() => {})),
+      scheduleTimeout: () => Promise.resolve(),
+      observe,
+    });
+
+    const conn = await sessionClient.tryConnect(root);
+    await expect(conn.call('mobile_swipe_on_screen', {})).rejects.toThrow();
+    await conn.close();
+
+    const [end] = observe.named('call.end');
+    expect(end.error_kind).toBe('timeout');
+    expect(end.ok).toBe(false);
+
+    await daemon.stop();
+  });
+
+  test('omits the tool name when the frame did not name a known primitive', async () => {
+    const root = tmpRoot();
+    const observe = collector();
+    const daemon = await startDaemon({
+      projectRoot: root,
+      idleMs: 0,
+      createCall: makeFakeCreateCall(),
+      observe,
+    });
+
+    // The socket is reachable by anything on the machine, so `tool` must never
+    // be trusted as the enumerated value the catalog says it is.
+    const conn = await sessionClient.tryConnect(root);
+    await conn.call('/Users/someone/unreleased-thing.apk', {});
+    await conn.close();
+
+    const [end] = observe.named('call.end');
+    expect(end.ok).toBe(true);
+    expect(end.tool).toBeUndefined();
+
+    await daemon.stop();
+  });
+
+  test('records the undeliverable-reply seam as a warn event', async () => {
+    const root = tmpRoot();
+    const observe = collector();
+    const daemon = await startDaemon({
+      projectRoot: root,
+      idleMs: 0,
+      createCall: makeFakeCreateCall(async () => {
+        // Long enough for the client to vanish before the reply goes out.
+        await new Promise((r) => setTimeout(r, 40));
+        return { done: true };
+      }),
+      observe,
+    });
+
+    const raw = net.connect(paths.socketPath(root));
+    await new Promise((r) => raw.once('connect', r));
+    raw.write(JSON.stringify({ id: 1, type: 'call', tool: 'mobile_press_button', args: {} }) + '\n');
+    await new Promise((r) => setTimeout(r, 10));
+    raw.destroy();
+    await new Promise((r) => setTimeout(r, 120));
+
+    expect(daemon.undeliverable.length).toBeGreaterThanOrEqual(1);
+    const [warned] = observe.named('daemon.undeliverable');
+    expect(warned.level).toBe('warn');
+    expect(warned.message).toContain('id=1');
+
+    await daemon.stop();
+  });
+
+  test('costs exactly one file append per device call at the default level', async () => {
+    // The cost argument for keeping appendFileSync per event, pinned as a test:
+    // call.start is debug and therefore off by default, so a scenario pays one
+    // append per device call and nothing more.
+    const { makeDaemonRecorder } = require('../../../src/observe/daemon-recorder');
+
+    const root = tmpRoot();
+    const logDir = path.join(root, 'logs');
+    const env = { MAUTO_LOG_DIR: logDir };
+    const daemon = await startDaemon({
+      projectRoot: root,
+      idleMs: 0,
+      createCall: makeFakeCreateCall(),
+      observe: makeDaemonRecorder({ projectRoot: root, sessionId: 'abcdef0123456789', env }),
+    });
+
+    const conn = await sessionClient.tryConnect(root);
+    await conn.call('mobile_press_button', { button: 'BACK' });
+    await conn.call('mobile_press_button', { button: 'HOME' });
+    await conn.close();
+
+    const lines = fs
+      .readFileSync(path.join(logDir, 'daemon.ndjson'), 'utf8')
+      .trim()
+      .split('\n')
+      .map((l) => JSON.parse(l));
+    const callLines = lines.filter((e) => String(e.event).startsWith('call.'));
+    expect(callLines).toHaveLength(2);
+    expect(callLines.every((e) => e.event === 'call.end')).toBe(true);
+    expect(callLines.every((e) => e.session_id === 'abcdef0123456789')).toBe(true);
+
+    await daemon.stop();
+  });
+});

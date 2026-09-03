@@ -25,6 +25,7 @@ const net = require('net');
 const paths = require('./session-paths');
 const { FrameParser } = require('./session-protocol');
 const { newSessionId } = require('./session-handle');
+const { isKnownTool } = require('./mobile-mcp-tools');
 
 const DEFAULT_IDLE_MS = 5 * 60 * 1000;
 
@@ -276,19 +277,21 @@ async function startDaemon({
   const notifyUndeliverable =
     typeof onUndeliverable === 'function'
       ? onUndeliverable
-      : (info) => {
-          try {
-            process.stderr.write(
-              `mauto-session-daemon: undeliverable reply id=${info.id}: ${info.reason}\n`
-            );
-          } catch (_) {
-            // fd 2 is unwritable (full disk, or the workspace log could not be
-            // opened and this is /dev/null's successor). Since #163 it normally
-            // reaches mobile-automator/.session/daemon.log; either way an
-            // undeliverable reply is already recorded in `undeliverable`, so
-            // losing the warning must not take the daemon down.
-          }
-        };
+      : (info) =>
+          // Was a bespoke process.stderr.write with its own try/catch. It is
+          // the same destination — the stderr sink writes to fd 2, which since
+          // #176 IS mobile-automator/.session/daemon.log — but now structured,
+          // and safeObserve (plus record()'s own never-throw guarantee)
+          // subsumes the hand-rolled guard. That guard mattered: this runs
+          // inside reply(), on the socket's async data handler, so a throw here
+          // would surface as an unhandled rejection. The frame id and the
+          // transport reason go in `message`, which is sends:false: a socket
+          // errno is free text and free text never reaches the telemetry path.
+          safeObserve({
+            level: 'warn',
+            event: 'daemon.undeliverable',
+            message: `id=${info.id}: ${info.reason}`,
+          });
 
   function recordUndeliverable(info) {
     undeliverable.push(info);
@@ -489,6 +492,18 @@ async function startDaemon({
             continue;
           }
           inFlight += 1;
+          // NEVER `req.tool` unchecked. The frame arrives over a Unix socket
+          // any process on the machine can connect to, and `tool` is sends:true
+          // in the event catalog on the grounds that it is an enumerated
+          // primitive name. Unknown values are simply omitted (makeEvent drops
+          // undefined), so the latency is still recorded — just anonymously.
+          const toolName = isKnownTool(req.tool) ? req.tool : undefined;
+          const callStartedMs = Date.now();
+          // debug: off at the default level, so a scenario pays ONE append per
+          // device call. Its value is bracketing — a daemon SIGKILLed mid-call
+          // leaves a call.start with no call.end, which is the only trace a
+          // call that never returned can possibly leave.
+          safeObserve({ level: 'debug', event: 'call.start', tool: toolName });
           try {
             // Bound the shared mobile-mcp call. The daemon's timeout (25s) is
             // BELOW the client's (30s) so this error always reaches the client
@@ -512,9 +527,38 @@ async function startDaemon({
                 throw e;
               }),
             ]);
+            // Recorded BEFORE the reply: reply() can await socket drain for as
+            // long as the peer takes, and the number we want is DEVICE latency,
+            // not delivery latency. It also means a reply that never flushes
+            // still leaves the measurement behind.
+            safeObserve({
+              level: 'info',
+              event: 'call.end',
+              tool: toolName,
+              ok: true,
+              dur_ms: Date.now() - callStartedMs,
+            });
             await reply({ id: req.id, ok: true, result });
           } catch (err) {
-            if (err && err.kind === 'timeout') {
+            const timedOut = Boolean(err && err.kind === 'timeout');
+            safeObserve({
+              // warn, not info. The daemon's stderr is a log file, not a
+              // terminal, so this costs a human no noise and lands next to the
+              // adb/simctl output that explains it.
+              level: 'warn',
+              event: 'call.end',
+              tool: toolName,
+              ok: false,
+              // The envelope's own taxonomy, reused verbatim: a non-timeout
+              // daemon failure is exactly what client/deviceFail turns into
+              // kind 'device'.
+              error_kind: timedOut ? 'timeout' : 'device',
+              dur_ms: Date.now() - callStartedMs,
+              // sends:false — an engine message can embed element labels,
+              // typed text and filesystem paths.
+              message: err && (err.message || String(err)),
+            });
+            if (timedOut) {
               await reply({
                 id: req.id,
                 ok: false,
