@@ -6,14 +6,14 @@
 // It is behavioural rather than a grep over the source, but it cannot be a
 // full end-to-end spawn: running the real bin means running the real
 // createCall, which spawns mobile-mcp and talks to whatever devices happen to
-// be attached to the machine. So session-daemon and daemon-recorder are mocked
-// and main() is driven directly.
+// be attached to the machine. So session-daemon and the recorder seam are
+// mocked and main() is driven directly.
 
 jest.mock('../../../src/device/session-daemon');
-jest.mock('../../../src/observe/daemon-recorder');
+jest.mock('../../../src/observe/recorder');
 
 const { startDaemon } = require('../../../src/device/session-daemon');
-const { makeDaemonRecorder } = require('../../../src/observe/daemon-recorder');
+const { boundRecorder } = require('../../../src/observe/recorder');
 const { main } = require('../../../bin/mauto-session-daemon');
 
 const GUARDS = ['uncaughtException', 'unhandledRejection', 'exit'];
@@ -35,7 +35,7 @@ describe('bin/mauto-session-daemon observability wiring', () => {
     stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
     exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {});
 
-    makeDaemonRecorder.mockImplementation(() => (fields) => observed.push(fields));
+    boundRecorder.mockImplementation(() => (fields) => observed.push(fields));
     startDaemon.mockImplementation(async (opts) => {
       started = opts;
       return {
@@ -81,10 +81,10 @@ describe('bin/mauto-session-daemon observability wiring', () => {
     start();
     await settle();
 
-    expect(makeDaemonRecorder).toHaveBeenCalledTimes(1);
-    const args = makeDaemonRecorder.mock.calls[0][0];
+    expect(boundRecorder).toHaveBeenCalledTimes(1);
+    const args = boundRecorder.mock.calls[0][0];
     expect(args.projectRoot).toBe('/tmp/some-project');
-    expect(args.sessionId).toMatch(/^[0-9a-f]{16}$/);
+    expect(args.fields.session_id).toMatch(/^[0-9a-f]{16}$/);
   });
 
   it('injects that recorder and the same session id into startDaemon', async () => {
@@ -92,7 +92,7 @@ describe('bin/mauto-session-daemon observability wiring', () => {
     await settle();
 
     expect(typeof started.observe).toBe('function');
-    expect(started.sessionId).toBe(makeDaemonRecorder.mock.calls[0][0].sessionId);
+    expect(started.sessionId).toBe(boundRecorder.mock.calls[0][0].fields.session_id);
     expect(started.projectRoot).toBe('/tmp/some-project');
   });
 
@@ -130,13 +130,13 @@ describe('bin/mauto-session-daemon observability wiring', () => {
   });
 
   // The recorder must never be the reason the daemon fails to start. The
-  // returned observe() already swallows everything (daemon-recorder.test.js
-  // pins that); CONSTRUCTION is the one moment that is still outside its
-  // guarantee — daemonSinks() resolves levels and computes a log path before
-  // any event exists. So it degrades the same way session-log.js degrades to
-  // its frozen IGNORED handle: no observability, but a live daemon.
+  // returned observe() already swallows everything (recorder.test.js pins
+  // that); CONSTRUCTION is the one moment that is still outside its guarantee —
+  // boundRecorder() resolves levels and computes a log path before any event
+  // exists. So it degrades the same way session-log.js degrades to its frozen
+  // IGNORED handle: no observability, but a live daemon.
   it('still starts the daemon when building the recorder throws', async () => {
-    makeDaemonRecorder.mockImplementation(() => {
+    boundRecorder.mockImplementation(() => {
       throw new Error('sink construction exploded');
     });
 

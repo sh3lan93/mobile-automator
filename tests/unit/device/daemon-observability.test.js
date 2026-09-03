@@ -405,7 +405,8 @@ describe('device call events', () => {
     // The cost argument for keeping appendFileSync per event, pinned as a test:
     // call.start is debug and therefore off by default, so a scenario pays one
     // append per device call and nothing more.
-    const { makeDaemonRecorder } = require('../../../src/observe/daemon-recorder');
+    const { boundRecorder } = require('../../../src/observe/recorder');
+    const { daemonEventLogPath } = require('../../../src/observe/paths');
 
     const root = tmpRoot();
     const logDir = path.join(root, 'logs');
@@ -414,7 +415,12 @@ describe('device call events', () => {
       projectRoot: root,
       idleMs: 0,
       createCall: makeFakeCreateCall(),
-      observe: makeDaemonRecorder({ projectRoot: root, sessionId: 'abcdef0123456789', env }),
+      observe: boundRecorder({
+        projectRoot: root,
+        env,
+        logPath: daemonEventLogPath(root, env),
+        fields: { src: 'daemon', session_id: 'abcdef0123456789' },
+      }),
     });
 
     const conn = await sessionClient.tryConnect(root);

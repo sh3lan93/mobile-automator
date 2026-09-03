@@ -1,6 +1,23 @@
 'use strict';
 
-const { record, defaultSinks } = require('../../../src/observe/recorder');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
+const { record, defaultSinks, boundRecorder } = require('../../../src/observe/recorder');
+
+// A project that HAS run `mauto setup` — the file sink refuses to log into a
+// directory with no mobile-automator/ in it, so a real-fs test needs one.
+function workspace() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-bound-rec-'));
+  fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+  return root;
+}
+
+function readLines(file) {
+  if (!fs.existsSync(file)) return [];
+  return fs.readFileSync(file, 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l));
+}
 
 // A sink is a { threshold, write } pair — production builds them in
 // defaultSinks() and they always carry a threshold, so tests state one too.
@@ -115,5 +132,79 @@ describe('defaultSinks', () => {
     for (const sink of defaultSinks('/unused', { MAUTO_LOG_LEVEL: 'silent' })) {
       expect(sink.threshold).toBeNull();
     }
+  });
+});
+
+// The binding the daemon uses, and the one a run-scoped CLI recorder will use.
+// These are real-fs rather than sink-injection tests on purpose: what is being
+// pinned is that the binding reaches the RIGHT FILE with the RIGHT identity,
+// which an injected sink would stub out.
+describe('boundRecorder', () => {
+  it('stamps its bound fields on every event', () => {
+    const root = workspace();
+    const observe = boundRecorder({
+      projectRoot: root,
+      env: {},
+      fields: { src: 'daemon', session_id: '8f2c1a3b4d5e6f70' },
+    });
+
+    observe({ level: 'info', event: 'daemon.start' });
+
+    const events = readLines(path.join(root, 'mobile-automator', '.logs', 'mauto.ndjson'));
+    expect(events).toHaveLength(1);
+    expect(events[0].src).toBe('daemon');
+    expect(events[0].session_id).toBe('8f2c1a3b4d5e6f70');
+  });
+
+  it('does not let a caller overwrite the identity fields', () => {
+    // Bound fields are applied AFTER the caller's, so no call site can forge
+    // `src` or claim another session's id.
+    const root = workspace();
+    const observe = boundRecorder({
+      projectRoot: root,
+      env: {},
+      fields: { src: 'daemon', session_id: 'real' },
+    });
+
+    observe({ level: 'info', event: 'daemon.start', src: 'cli', session_id: 'forged' });
+
+    const [event] = readLines(path.join(root, 'mobile-automator', '.logs', 'mauto.ndjson'));
+    expect(event.src).toBe('daemon');
+    expect(event.session_id).toBe('real');
+  });
+
+  it('honours an explicit logPath, writing there and never to the CLI log', () => {
+    const root = workspace();
+    const daemonLog = path.join(root, 'mobile-automator', '.logs', 'daemon.ndjson');
+    const observe = boundRecorder({
+      projectRoot: root,
+      env: {},
+      logPath: daemonLog,
+      fields: { src: 'daemon', session_id: 'abc' },
+    });
+
+    observe({ level: 'info', event: 'call.end', tool: 'mobile_press_button', dur_ms: 41 });
+
+    const events = readLines(daemonLog);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ src: 'daemon', event: 'call.end', tool: 'mobile_press_button' });
+    expect(fs.existsSync(path.join(root, 'mobile-automator', '.logs', 'mauto.ndjson'))).toBe(false);
+  });
+
+  it('resolves levels ONCE, at construction, not per event', () => {
+    // A long-lived detached process cannot have its environment changed from
+    // outside, so re-reading it per event is pure waste. Mutating the env object
+    // after construction must therefore have no effect: the debug event below
+    // still lands even though the env now says silent.
+    const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const root = workspace();
+    const env = { MAUTO_LOG_LEVEL: 'debug' };
+    const observe = boundRecorder({ projectRoot: root, env });
+
+    env.MAUTO_LOG_LEVEL = 'silent';
+    observe({ level: 'debug', event: 'call.start' });
+
+    expect(readLines(path.join(root, 'mobile-automator', '.logs', 'mauto.ndjson'))).toHaveLength(1);
+    stderrSpy.mockRestore();
   });
 });

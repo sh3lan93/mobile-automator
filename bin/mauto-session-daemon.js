@@ -13,7 +13,8 @@ const fs = require('fs');
 const { startDaemon } = require('../src/device/session-daemon');
 const paths = require('../src/device/session-paths');
 const { newSessionId } = require('../src/device/session-handle');
-const { makeDaemonRecorder } = require('../src/observe/daemon-recorder');
+const { boundRecorder } = require('../src/observe/recorder');
+const { daemonEventLogPath } = require('../src/observe/paths');
 
 // Best-effort synchronous unlink — never throws. Used by the crash guards so a
 // hard failure can't leave a stale lock/socket/pidfile wedging the next spawn.
@@ -47,15 +48,34 @@ function cleanupWorkspaceIfOwned(projectRoot) {
   safeUnlinkSync(paths.handlePath(projectRoot));
 }
 
+// The daemon's binding of the recorder seam: its own log file (daemon.ndjson,
+// not the CLI's mauto.ndjson — see observe/paths.js for why they are separate)
+// and its own identity fields on every event. `env` is read once and the log
+// path derived from that same object, so the sinks and the path can never
+// disagree about MAUTO_LOG_DIR.
+//
+// The stderr sink is deliberately left in place. The daemon's stderr IS
+// mobile-automator/.session/daemon.log (PR #176), not a terminal, which inverts
+// cli.js finish()'s calculus: a warn line here costs a human no terminal noise
+// and lands next to the adb/simctl output that explains it. That is why daemon
+// lifecycle failures are the first events in this codebase to record above
+// `info`.
+//
 // Observability must never be the reason a daemon fails to start. The observe()
-// makeDaemonRecorder returns already swallows everything, but CONSTRUCTION sits
+// boundRecorder returns already swallows everything, but CONSTRUCTION sits
 // outside that guarantee: it resolves levels and computes a log path before any
 // event exists. So a throw here degrades to an inert observe, the same shape
 // session-log.js uses when it can't open the raw log — a frozen IGNORED handle
 // rather than a null every caller has to branch on.
 function buildRecorder(projectRoot, sessionId) {
   try {
-    return makeDaemonRecorder({ projectRoot, sessionId });
+    const env = process.env;
+    return boundRecorder({
+      projectRoot,
+      env,
+      logPath: daemonEventLogPath(projectRoot, env),
+      fields: { src: 'daemon', session_id: sessionId },
+    });
   } catch (_) {
     return () => {};
   }
@@ -80,11 +100,10 @@ async function main() {
   const idleRaw = process.env.MAUTO_SESSION_IDLE_MS;
   const idleMs = idleRaw ? Number(idleRaw) : undefined;
 
-  // The recorder is built ONCE, here, and bound for this process's lifetime.
-  // record()'s own defaults are wrong for a detached daemon: projectRoot would
-  // fall back to a cwd inherited from whichever verb spawned us and which we
-  // outlive, and the sink levels would be re-resolved per device call from an
-  // environment that cannot change after spawn.
+  // The recorder is built ONCE, here, and bound for this process's lifetime —
+  // see boundRecorder in src/observe/recorder.js for why record()'s own defaults
+  // (cwd-derived projectRoot, per-call level resolution) are wrong for a
+  // detached process that outlives the verb that spawned it.
   //
   // The id is generated HERE rather than inside startDaemon so that the crash
   // guards below — which can fire before startDaemon has resolved — already
