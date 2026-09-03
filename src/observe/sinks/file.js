@@ -38,13 +38,16 @@ function allowed(projectRoot, env, fs) {
   return fs.existsSync(workspaceDir(projectRoot));
 }
 
-function write(event, { projectRoot, env = process.env, fs = realFs } = {}) {
+// `logPath` lets a caller name the target file explicitly; without it the CLI's
+// mauto.ndjson is used. It does NOT bypass allowed(): which file to write is a
+// different question from whether this directory has opted into logging at all.
+function write(event, { projectRoot, env = process.env, fs = realFs, logPath } = {}) {
   try {
     if (!allowed(projectRoot, env, fs)) return;
-    const logPath = mainLogPath(projectRoot, env);
-    fs.mkdirSync(path.dirname(logPath), { recursive: true });
-    rotateIfLarge(logPath, { fs });
-    fs.appendFileSync(logPath, format(event));
+    const target = logPath || mainLogPath(projectRoot, env);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    rotateIfLarge(target, { fs });
+    fs.appendFileSync(target, format(event));
   } catch (_) {
     // Observability must never be load-bearing. Losing a log line is always
     // preferable to failing the verb the user actually asked for.

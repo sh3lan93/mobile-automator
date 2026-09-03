@@ -128,4 +128,27 @@ describe('file sink', () => {
     expect(line.trim().split('\n')).toHaveLength(1);
     expect(JSON.parse(line).message).toBe('said "hi"\nnewline');
   });
+
+  it('writes to an explicit logPath when one is given', () => {
+    const root = workspace();
+    fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+    const target = path.join(root, 'mobile-automator', '.logs', 'daemon.ndjson');
+
+    fileSink.write(
+      { level: 'info', event: 'call.end', tool: 'mobile_press_button' },
+      { projectRoot: root, env: {}, logPath: target }
+    );
+
+    expect(JSON.parse(fs.readFileSync(target, 'utf8').trim()).tool).toBe('mobile_press_button');
+    expect(fs.existsSync(path.join(root, 'mobile-automator', '.logs', 'mauto.ndjson'))).toBe(false);
+  });
+
+  it('still refuses to log into a directory that has no workspace, logPath or not', () => {
+    const root = bareDir(); // mkdtemp'd, so no mobile-automator/ inside it
+    const target = path.join(root, 'mobile-automator', '.logs', 'daemon.ndjson');
+
+    fileSink.write({ level: 'info', event: 'e' }, { projectRoot: root, env: {}, logPath: target });
+
+    expect(fs.existsSync(target)).toBe(false);
+  });
 });

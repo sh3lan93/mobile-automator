@@ -12,6 +12,7 @@ const path = require('path');
 
 const LOGS_DIRNAME = '.logs';
 const MAIN_LOG_NAME = 'mauto.ndjson';
+const DAEMON_LOG_NAME = 'daemon.ndjson';
 
 // The workspace root `mauto setup` creates. The file sink treats its existence
 // as permission to log: mauto runs from whatever directory a user is standing
@@ -30,4 +31,28 @@ function mainLogPath(projectRoot, env = process.env) {
   return path.join(logsDir(projectRoot, env), MAIN_LOG_NAME);
 }
 
-module.exports = { LOGS_DIRNAME, MAIN_LOG_NAME, workspaceDir, logsDir, mainLogPath };
+// The DAEMON's structured event stream — deliberately a different file from
+// mauto.ndjson.
+//
+// The daemon is the only long-lived writer in the system. Sharing one file
+// would make rotation multi-writer: rotateIfLarge is statSync-then-renameSync,
+// so two concurrent rotations mean the second rename clobbers the .1 the first
+// just created, destroying a whole generation of a single-generation log. Its
+// own file makes its rotation single-writer and removes the interaction.
+//
+// It is also not .session/daemon.log, which is the same process's RAW stdio
+// (PR #176). Same writer, two artifacts: unstructured text a human reads there,
+// parseable events here.
+function daemonEventLogPath(projectRoot, env = process.env) {
+  return path.join(logsDir(projectRoot, env), DAEMON_LOG_NAME);
+}
+
+module.exports = {
+  LOGS_DIRNAME,
+  MAIN_LOG_NAME,
+  DAEMON_LOG_NAME,
+  workspaceDir,
+  logsDir,
+  mainLogPath,
+  daemonEventLogPath,
+};
