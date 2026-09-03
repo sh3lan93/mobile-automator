@@ -25,7 +25,7 @@ const net = require('net');
 const paths = require('./session-paths');
 const { FrameParser } = require('./session-protocol');
 const { newSessionId } = require('./session-handle');
-const { isKnownTool } = require('./mobile-mcp-tools');
+const { makeDeviceCall } = require('./device-call');
 
 const DEFAULT_IDLE_MS = 5 * 60 * 1000;
 
@@ -267,6 +267,23 @@ async function startDaemon({
     throw err;
   }
 
+  // One bounded, measured call, built ONCE and shared by every connection: the
+  // timeout, the sink and the connection are all per-daemon, so nothing about
+  // it is per-socket. Built HERE, before server.listen() below, or the first
+  // frame to arrive would hit a temporal dead zone.
+  //
+  // safeObserve, never the raw `observe`. call.start now fires BEFORE call(),
+  // so a sink that throws would mean the device action never happens at all —
+  // observability deciding whether a tap occurs. The wrapper at :178-193 is the
+  // one place that guarantee lives; device-call.js is deliberately unguarded
+  // and lets a throwing observe propagate, so passing the raw seam here would
+  // quietly undo it.
+  const invoke = makeDeviceCall(call, {
+    scheduleTimeout,
+    observe: safeObserve,
+    timeoutMs: DAEMON_CALL_TIMEOUT_MS,
+  });
+
   let idleTimer = null;
   let stopping = false;
   let inFlight = 0; // device calls whose reply has not yet been sent
@@ -491,84 +508,30 @@ async function startDaemon({
             armIdle();
             continue;
           }
+          // inFlight/armIdle stay HERE, not in the decorator: they gate stop()'s
+          // drain and are reported by ping/getSessionStatus, which are facts
+          // about the daemon's sockets rather than about one device call.
           inFlight += 1;
-          // NEVER `req.tool` unchecked. The frame arrives over a Unix socket
-          // any process on the machine can connect to, and `tool` is sends:true
-          // in the event catalog on the grounds that it is an enumerated
-          // primitive name. Unknown values are simply omitted (makeEvent drops
-          // undefined), so the latency is still recorded — just anonymously.
-          const toolName = isKnownTool(req.tool) ? req.tool : undefined;
-          const callStartedMs = Date.now();
-          // debug: off at the default level, so a scenario pays ONE append per
-          // device call. Its value is bracketing — a daemon SIGKILLed mid-call
-          // leaves a call.start with no call.end, which is the only trace a
-          // call that never returned can possibly leave.
-          safeObserve({ level: 'debug', event: 'call.start', tool: toolName });
           try {
-            // Bound the shared mobile-mcp call. The daemon's timeout (25s) is
-            // BELOW the client's (30s) so this error always reaches the client
-            // as an honest {kind:'timeout'} reply instead of being dropped by
-            // the client's own timeout — a dropped reply reads as a
-            // false-failure and prompts a retry → double-execution. The
-            // underlying call is NOT cancellable; it keeps running in the
-            // background, which is fine — the point is the agent gets a bounded,
-            // honest error. Swallow the loser's eventual settlement so it can't
-            // surface as an unhandled rejection after the race already settled.
-            const callPromise = call(req.tool, req.args || {});
-            callPromise.catch(() => {});
-            const result = await Promise.race([
-              callPromise,
-              scheduleTimeout(DAEMON_CALL_TIMEOUT_MS).then(() => {
-                const e = new Error(
-                  `${req.tool}: the mobile-mcp call did not respond within ${DAEMON_CALL_TIMEOUT_MS}ms`
-                );
-                e.kind = 'timeout';
-                e.hint = 'the action may have partially executed on the device — verify state before retrying';
-                throw e;
-              }),
-            ]);
-            // Recorded BEFORE the reply: reply() can await socket drain for as
-            // long as the peer takes, and the number we want is DEVICE latency,
-            // not delivery latency. It also means a reply that never flushes
-            // still leaves the measurement behind.
-            safeObserve({
-              level: 'info',
-              event: 'call.end',
-              tool: toolName,
-              ok: true,
-              dur_ms: Date.now() - callStartedMs,
-            });
+            const result = await invoke(req.tool, req.args || {});
             await reply({ id: req.id, ok: true, result });
           } catch (err) {
+            // Only a timeout carries kind/hint outward; a non-timeout failure
+            // drops both so client/deviceFail defaults to 'device'. Do NOT
+            // "simplify" this to `kind: err && err.kind`: that would forward an
+            // engine-invented kind that exitCodeFor does not enumerate (turning
+            // a device failure's exit 2 into exit 1) and would emit "kind":null
+            // for a falsy rejection. daemon-timeout.test.js pins both.
             const timedOut = Boolean(err && err.kind === 'timeout');
-            safeObserve({
-              // warn, not info. The daemon's stderr is a log file, not a
-              // terminal, so this costs a human no noise and lands next to the
-              // adb/simctl output that explains it.
-              level: 'warn',
-              event: 'call.end',
-              tool: toolName,
+            await reply({
+              id: req.id,
               ok: false,
-              // The envelope's own taxonomy, reused verbatim: a non-timeout
-              // daemon failure is exactly what client/deviceFail turns into
-              // kind 'device'.
-              error_kind: timedOut ? 'timeout' : 'device',
-              dur_ms: Date.now() - callStartedMs,
-              // sends:false — an engine message can embed element labels,
-              // typed text and filesystem paths.
-              message: err && (err.message || String(err)),
+              error: {
+                message: err && (err.message || String(err)),
+                kind: timedOut ? 'timeout' : undefined,
+                hint: timedOut ? err.hint : undefined,
+              },
             });
-            if (timedOut) {
-              await reply({
-                id: req.id,
-                ok: false,
-                error: { message: err.message, kind: 'timeout', hint: err.hint },
-              });
-            } else {
-              // Non-timeout failure: no kind → client/deviceFail default to
-              // 'device'. Only the timeout path sets kind:'timeout'.
-              await reply({ id: req.id, ok: false, error: { message: err.message || String(err) } });
-            }
           } finally {
             inFlight -= 1;
             armIdle(); // arm idle only after the reply has completed

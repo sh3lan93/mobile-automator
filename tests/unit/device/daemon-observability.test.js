@@ -254,9 +254,78 @@ describe('observability is never load-bearing', () => {
     const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall() });
     await daemon.stop();
   });
+
+  // The two below are about the DEVICE-CALL path specifically, and they can
+  // only be written at this level: makeDeviceCall lets a throwing observe
+  // propagate on purpose (pinned in tests/unit/device/device-call.test.js), so
+  // what is under test here is startDaemon's choice to hand it safeObserve.
+  // That choice is invisible from inside device-call.js.
+  test('a throwing observe does not swallow the device action it brackets', async () => {
+    const root = tmpRoot();
+    // call.start fires BEFORE call(), so an unguarded sink would mean the tap
+    // never reaches the device — observability deciding whether an action runs.
+    let calls = 0;
+    const daemon = await startDaemon({
+      projectRoot: root,
+      idleMs: 0,
+      createCall: makeFakeCreateCall(async (tool) => {
+        calls += 1;
+        return { echoed: tool };
+      }),
+      observe: explode,
+    });
+
+    const conn = await sessionClient.tryConnect(root);
+    await expect(conn.call('mobile_press_button', { button: 'BACK' })).resolves.toEqual({
+      echoed: 'mobile_press_button',
+    });
+    expect(calls).toBe(1);
+
+    // Still usable afterwards, and the frame accounting is intact.
+    await expect(conn.call('mobile_press_button', { button: 'HOME' })).resolves.toBeDefined();
+    expect(calls).toBe(2);
+    expect(await sessionClient.getSessionStatus(root)).toEqual({ running: true, in_flight: 0, device: null });
+
+    await conn.close();
+    await expect(daemon.stop()).resolves.toBeUndefined();
+  });
+
+  test('a throwing observe never masks the device error it was recording', async () => {
+    const root = tmpRoot();
+    const daemon = await startDaemon({
+      projectRoot: root,
+      idleMs: 0,
+      createCall: makeFakeCreateCall(async () => {
+        throw new Error('adb: device offline');
+      }),
+      observe: explode,
+    });
+
+    const conn = await sessionClient.tryConnect(root);
+    let err = null;
+    try {
+      await conn.call('mobile_press_button', { button: 'BACK' });
+    } catch (e) {
+      err = e;
+    }
+    // The agent must be told what the DEVICE did, not what the log did.
+    expect(err).not.toBeNull();
+    expect(err.message).toBe('adb: device offline');
+    expect(err.message).not.toMatch(/observe exploded/);
+
+    expect(await sessionClient.getSessionStatus(root)).toEqual({ running: true, in_flight: 0, device: null });
+
+    await conn.close();
+    await daemon.stop();
+  });
 });
 
 describe('device call events', () => {
+  // The per-call event SHAPES are unit-tested against the decorator itself
+  // (tests/unit/device/device-call.test.js), with no socket and no temp dir.
+  // What survives here is what only the daemon can prove: that startDaemon
+  // actually builds the decorator, hands it safeObserve and the daemon's
+  // timeout, and routes call frames through it — the wiring, not the shape.
   test('records call.end at info with the primitive and a measured duration', async () => {
     const root = tmpRoot();
     const observe = collector();
@@ -280,97 +349,9 @@ describe('device call events', () => {
     await daemon.stop();
   });
 
-  test('brackets a call with a debug call.start, so a call that never returns still leaves a trace', async () => {
-    const root = tmpRoot();
-    const observe = collector();
-    const daemon = await startDaemon({
-      projectRoot: root,
-      idleMs: 0,
-      createCall: makeFakeCreateCall(),
-      observe,
-    });
 
-    const conn = await sessionClient.tryConnect(root);
-    await conn.call('mobile_list_elements_on_screen', {});
-    await conn.close();
 
-    const [start] = observe.named('call.start');
-    expect(start.level).toBe('debug');
-    expect(start.tool).toBe('mobile_list_elements_on_screen');
 
-    await daemon.stop();
-  });
-
-  test('records a mobile-mcp failure at warn with the device error kind', async () => {
-    const root = tmpRoot();
-    const observe = collector();
-    const daemon = await startDaemon({
-      projectRoot: root,
-      idleMs: 0,
-      createCall: makeFakeCreateCall(async () => {
-        throw new Error('adb: device offline');
-      }),
-      observe,
-    });
-
-    const conn = await sessionClient.tryConnect(root);
-    await expect(conn.call('mobile_press_button', { button: 'BACK' })).rejects.toThrow();
-    await conn.close();
-
-    const [end] = observe.named('call.end');
-    expect(end.level).toBe('warn');
-    expect(end.ok).toBe(false);
-    expect(end.error_kind).toBe('device');
-    expect(end.message).toContain('adb: device offline');
-
-    await daemon.stop();
-  });
-
-  test('records a timeout with error_kind timeout, reusing the envelope taxonomy', async () => {
-    const root = tmpRoot();
-    const observe = collector();
-    const daemon = await startDaemon({
-      projectRoot: root,
-      idleMs: 0,
-      // Never settles, so the timeout branch always wins the race.
-      createCall: makeFakeCreateCall(() => new Promise(() => {})),
-      scheduleTimeout: () => Promise.resolve(),
-      observe,
-    });
-
-    const conn = await sessionClient.tryConnect(root);
-    await expect(conn.call('mobile_swipe_on_screen', {})).rejects.toThrow();
-    await conn.close();
-
-    const [end] = observe.named('call.end');
-    expect(end.error_kind).toBe('timeout');
-    expect(end.ok).toBe(false);
-
-    await daemon.stop();
-  });
-
-  test('omits the tool name when the frame did not name a known primitive', async () => {
-    const root = tmpRoot();
-    const observe = collector();
-    const daemon = await startDaemon({
-      projectRoot: root,
-      idleMs: 0,
-      createCall: makeFakeCreateCall(),
-      observe,
-    });
-
-    // The socket is reachable by anything on the machine, so `tool` must never
-    // be trusted as the enumerated value the catalog says it is.
-    const conn = await sessionClient.tryConnect(root);
-    await conn.call('/Users/someone/unreleased-thing.apk', {});
-    await conn.close();
-
-    const [end] = observe.named('call.end');
-    expect(end.ok).toBe(true);
-    expect(end.tool).toBeUndefined();
-
-    await daemon.stop();
-  });
 
   test('records the undeliverable-reply seam as a warn event', async () => {
     const root = tmpRoot();
@@ -397,6 +378,16 @@ describe('device call events', () => {
     const [warned] = observe.named('daemon.undeliverable');
     expect(warned.level).toBe('warn');
     expect(warned.message).toContain('id=1');
+
+    // Ordering, asserted nowhere else: the measurement is recorded BEFORE the
+    // reply is attempted, so a call whose reply can never be delivered still
+    // leaves its latency behind. reply() can await socket drain for as long as
+    // the peer takes, and the number we want is DEVICE latency, not delivery
+    // latency — recording after the write would conflate them and, on this
+    // path, would record nothing at all.
+    const [end] = observe.named('call.end');
+    expect(end.ok).toBe(true);
+    expect(typeof end.dur_ms).toBe('number');
 
     await daemon.stop();
   });

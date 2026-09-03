@@ -54,9 +54,12 @@ const EVENT_FIELDS = {
   // tests/unit/device/session-handle.test.js.
   session_id: { sends: true, why: 'random id scoped to one daemon lifetime; no user-derived content' },
   // As with `verb`, the justification holds only because the value is enforced
-  // to be one: the daemon records this field ONLY when isKnownTool() accepts it
-  // (src/device/mobile-mcp-tools.js), because it arrives inside a socket frame
-  // and the socket is reachable by anything on the machine.
+  // to be one: src/device/device-call.js records this field ONLY when
+  // isKnownTool() accepts it (src/device/mobile-mcp-tools.js), because it
+  // arrives inside a socket frame and the socket is reachable by anything on
+  // the machine. It is checked there — in the one wrapper every daemon call
+  // goes through — rather than at the daemon's frame router, so a second call
+  // site cannot appear that forgets to check.
   tool: { sends: true, why: 'mobile-mcp primitive name, checked against the pinned tool set' },
   stop_reason: { sends: true, why: 'enumerated: idle|signal|shutdown|crash|explicit' },
   error_code: { sends: true, why: "Node/libuv errno string (EADDRINUSE|EACCES|…) plus our own ELOCKED" },
