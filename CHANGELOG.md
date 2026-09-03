@@ -46,11 +46,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   device work to one *daemon lifetime*, which a run id cannot — a daemon that
   dies and respawns mid-run is exactly the event worth seeing.
 - Daemon events live in their own NDJSON file rather than the CLI's
-  `mauto.ndjson`. The daemon is the only long-lived writer in the system, and
-  a shared file would make log rotation a `stat`-then-`rename` race between it
-  and every one-shot verb, which loses a whole generation when it goes wrong.
-  Both files share the same 1 MiB single-generation policy, so
-  `cat mobile-automator/.logs/*.ndjson` is still one timeline.
+  `mauto.ndjson`, for two reasons: volume (a scenario writes roughly as many
+  daemon events as CLI events, so a shared 1 MiB budget would rotate the CLI's
+  history out about twice as fast) and precedent (`.session/daemon.log` is
+  already a daemon-owned file distinct from the CLI's diagnostics). Both files
+  share the same 1 MiB single-generation policy, and both carry an ISO `ts` and
+  a `src`, so `jq -s 'sort_by(.ts) | .[]' mobile-automator/.logs/*.ndjson`
+  merges them into one timeline.
 
 ---
 

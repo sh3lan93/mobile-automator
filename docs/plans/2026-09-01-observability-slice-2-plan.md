@@ -2219,3 +2219,49 @@ Not planned here, for the same reason slice 1 gave: detail written now goes stal
 | 3 | Run traces, measured `duration_seconds`/retries in `finalize`, screenshot-on-failure, result-schema additivity guard + fixture. `session_id` on device-verb events via `readSessionId` | `0.25.0-rc.2` |
 | 4 | `mauto crash` verb, failure-path auto-check, result-schema record, capability-catalog entry. Adds `mobile_get_crash`/`mobile_list_crashes` to `mobile-mcp-tools.js` in the same change as the bridge methods | `0.25.0-rc.3` |
 | 5 | Opt-in PostHog spool + daemon flush, consent UX, privacy docs; removes the gate | `0.25.0` |
+
+---
+
+## Correction note — 2026-09-03, post-review
+
+This plan was executed as written. A thermo-nuclear code-quality review of the
+resulting PR (#180) then found three structural problems and one overstated
+justification. The fixes landed on the same branch. **The plan body above is
+left unedited as a historical record — where it disagrees with the code, the
+code is right.** Specifically:
+
+1. **`src/observe/daemon-recorder.js` no longer exists.** `daemonSinks()` was
+   `defaultSinks()` copy-pasted with one extra key, which violated this plan's
+   own rule ("everything that changes is *binding*, not *mechanism*") in the one
+   place it mattered. `defaultSinks` now takes the optional `{ logPath }` the
+   file sink already accepted, and `boundRecorder()` in `src/observe/recorder.js`
+   generalises the partial application. The verbatim copies of that module and
+   its tests embedded in Task 3 below are therefore stale.
+
+2. **Per-call instrumentation is no longer inline in the socket data handler.**
+   It lives in `src/device/device-call.js` as a decorator over the single
+   injected `call`. The `if (req.type === 'call')` branch went 97 → 42 lines and
+   nesting depth 6 → 4. Task 6's code excerpts are stale.
+
+3. **`session.json` has one reader.** `resolve-connection.readHandleDevice()`
+   delegates to `session-handle.readHandle()` instead of parsing the file itself.
+
+4. **The rotation argument in Task 2 overreaches, and the code comment has been
+   corrected.** Giving the daemon its own file does *not* make rotation
+   single-writer: `mauto.ndjson` is already multi-writer (any two concurrent
+   `mauto` verbs race `rotateIfLarge`), and `daemon.ndjson` is not strictly
+   single-writer either — as this plan itself concedes, a spawn-race lock loser
+   writes `daemon.lock_conflict` to it. The split removes the daemon from one
+   instance of the race, not the race. The reasons that do hold are volume and
+   precedent, which Task 2 filed as merely "supporting"; they are now the stated
+   rationale in `src/observe/paths.js`.
+
+   Relatedly, `cat …/*.ndjson | sort` worked only because `ts` happens to be the
+   first key `makeEvent` inserts and ISO-8601 sorts lexically — nothing pinned
+   that. The documented recipe is now `jq -s 'sort_by(.ts) | .[]'`.
+
+One behaviour change rode along with (2), in the right direction: a `call` that
+rejected with a falsy value used to throw a `TypeError` inside the daemon's catch
+block, escape the async data handler as an unhandled rejection, and take the
+whole device session down via the crash guard. It is now an ordinary `ok:false`
+reply.

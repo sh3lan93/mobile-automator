@@ -93,7 +93,7 @@ cat mobile-automator/.logs/daemon.ndjson
 grep -E '"level":"(warn|error)"' mobile-automator/.logs/daemon.ndjson
 
 # CLI and daemon on one timeline — both files carry an ISO `ts` and a `src`
-cat mobile-automator/.logs/*.ndjson | sort
+jq -s 'sort_by(.ts) | .[]' mobile-automator/.logs/*.ndjson
 ```
 
 Every event from one daemon lifetime shares a `session_id`, so when a daemon
