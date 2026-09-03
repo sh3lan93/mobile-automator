@@ -1,7 +1,9 @@
 'use strict';
 
-// Read side of mobile-automator/.session/session.json, plus the generator for
-// the session id it carries.
+// Read side of mobile-automator/.session/session.json — the ONLY one — plus the
+// generator for the session id it carries. resolve-connection.js's
+// readHandleDevice() is a projection onto the `device` field and delegates here;
+// it used to parse the file itself, which meant two readers of one artifact.
 //
 // The handle is where session_id lives because it is a file that is ALREADY
 // there, already written at exactly the right moment (once the daemon is
