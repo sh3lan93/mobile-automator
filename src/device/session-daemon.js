@@ -196,8 +196,25 @@ async function startDaemon({
   // daemon.start, total session lifetime on daemon.stop.
   const startedAtMs = Date.now();
 
+  // Guarded like the lock failure below, and for the same reason: this is the
+  // FIRST filesystem operation the daemon performs, and it fails on exactly the
+  // conditions daemon.start_failure exists to report (EACCES, EROFS, ENOSPC on
+  // the workspace). An unguarded throw here is the earliest invisible death
+  // there is — nothing else in the system records it, and the spawning verb
+  // sees only a readiness timeout.
   const dir = paths.sessionDir(projectRoot);
-  fs.mkdirSync(dir, { recursive: true });
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch (err) {
+    safeObserve({
+      level: 'error',
+      event: 'daemon.start_failure',
+      error_code: err && err.code,
+      message: err && (err.message || String(err)),
+      pid: process.pid,
+    });
+    throw err;
+  }
 
   // Reap a crashed daemon's leftovers before we bind.
   cleanStale(projectRoot, { execFile });

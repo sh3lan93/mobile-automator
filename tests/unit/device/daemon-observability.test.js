@@ -200,6 +200,26 @@ describe('daemon failure events', () => {
     expect(fail.level).toBe('error');
     expect(typeof fail.error_code).toBe('string');
   });
+
+  test('records daemon.start_failure at error when the session directory cannot be created', async () => {
+    const root = tmpRoot();
+    const observe = collector();
+    // mkdirSync of .session/ is the FIRST filesystem operation startDaemon
+    // performs, and it fails on the same EACCES/EROFS/ENOSPC class as the lock.
+    // A regular FILE where the directory belongs reproduces that deterministically
+    // — the same trick the listen_failure test above uses, and unlike a chmod it
+    // still fails when the suite runs as root in CI.
+    fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+    fs.writeFileSync(paths.sessionDir(root), 'not a directory\n');
+
+    await expect(
+      startDaemon({ projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall(), observe })
+    ).rejects.toThrow();
+
+    const [fail] = observe.named('daemon.start_failure');
+    expect(fail.level).toBe('error');
+    expect(typeof fail.error_code).toBe('string');
+  });
 });
 
 describe('observability is never load-bearing', () => {
