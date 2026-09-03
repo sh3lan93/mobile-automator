@@ -24,6 +24,7 @@ const net = require('net');
 
 const paths = require('./session-paths');
 const { FrameParser } = require('./session-protocol');
+const { newSessionId } = require('./session-handle');
 
 const DEFAULT_IDLE_MS = 5 * 60 * 1000;
 
@@ -158,8 +159,20 @@ async function startDaemon({
   onUndeliverable = null,
   scheduleTimeout = defaultScheduleTimeout,
   execFile = childProcess.execFileSync,
+  sessionId = newSessionId(),
+  // Structured observability, injected rather than defaulted to the real
+  // recorder for one reason: startDaemon also runs IN-PROCESS across ~40 unit
+  // tests, where a live stderr sink would write into jest's reporter output.
+  // The only process that is actually a daemon — bin/mauto-session-daemon.js —
+  // injects the real recorder, and tests/unit/bin/mauto-session-daemon-observe
+  // .test.js proves it does.
+  observe = () => {},
 } = {}) {
   if (!projectRoot) throw new TypeError('startDaemon requires projectRoot');
+
+  // Zero point for every dur_ms this daemon reports: startup duration on
+  // daemon.start, total session lifetime on daemon.stop.
+  const startedAtMs = Date.now();
 
   const dir = paths.sessionDir(projectRoot);
   fs.mkdirSync(dir, { recursive: true });
@@ -179,10 +192,23 @@ async function startDaemon({
     fs.writeSync(lockFd, String(process.pid) + '\n');
   } catch (err) {
     if (err && err.code === 'EEXIST') {
+      // warn, not error: a spawn-race loser failing here is the lock DOING ITS
+      // JOB. It is worth seeing (a workspace where it repeats means two agents
+      // are fighting over one device) but it is not a malfunction.
+      observe({ level: 'warn', event: 'daemon.lock_conflict', error_code: 'ELOCKED', pid: process.pid });
       const e = new Error('device session daemon already starting for this workspace (lock held)');
       e.code = 'ELOCKED';
       throw e;
     }
+    // Not a race — EACCES, EROFS, ENOSPC on .session/. An invisible death that
+    // nothing else in the system reports.
+    observe({
+      level: 'error',
+      event: 'daemon.start_failure',
+      error_code: err && err.code,
+      message: err && (err.message || String(err)),
+      pid: process.pid,
+    });
     throw err;
   }
 
@@ -205,6 +231,16 @@ async function startDaemon({
   try {
     ({ call, close } = await createCall({ device }));
   } catch (err) {
+    // #156's core symptom: mobile-mcp never came up, and until now the only
+    // trace was a 15s readiness timeout in the spawning verb.
+    observe({
+      level: 'error',
+      event: 'daemon.connect_failure',
+      error_code: err && err.code,
+      message: err && (err.message || String(err)),
+      dur_ms: Date.now() - startedAtMs,
+      pid: process.pid,
+    });
     releaseLock();
     throw err;
   }
@@ -252,16 +288,29 @@ async function startDaemon({
     if (stopping) return; // never re-arm once we have begun tearing down
     if (idleMs > 0 && Number.isFinite(idleMs)) {
       idleTimer = setTimeout(() => {
-        stop().catch(() => {});
+        stop('idle').catch(() => {});
       }, idleMs);
       if (typeof idleTimer.unref === 'function') idleTimer.unref();
     }
   }
 
-  async function stop() {
+  async function stop(reason = 'explicit') {
     if (stopping) return;
     stopping = true;
     clearIdle();
+
+    // Recorded HERE, before the drain, not after teardown. stop() can block on
+    // an in-flight device call and on close()ing a mobile-mcp child that will
+    // not die — the two hangs most worth seeing — and an event written after
+    // them would never be written at all. The `if (stopping) return` above is
+    // what keeps this to one event per daemon.
+    observe({
+      level: 'info',
+      event: 'daemon.stop',
+      stop_reason: reason,
+      pid: process.pid,
+      dur_ms: Date.now() - startedAtMs,
+    });
 
     // Drain-before-teardown: never destroy a socket or tear down the shared
     // connection while a device call is still in flight. The action already hit
@@ -299,7 +348,7 @@ async function startDaemon({
   }
 
   function onSignal() {
-    stop().catch(() => {});
+    stop('signal').catch(() => {});
   }
 
   server.on('connection', (socket) => {
@@ -397,7 +446,7 @@ async function startDaemon({
         if (req.type === 'shutdown') {
           await reply({ id: req.id, ok: true, result: { stopping: true } });
           // Reply already flushed (awaited) — now tear down.
-          setImmediate(() => stop().catch(() => {}));
+          setImmediate(() => stop('shutdown').catch(() => {}));
           continue;
         }
         if (req.type === 'ping') {
@@ -488,6 +537,14 @@ async function startDaemon({
     // listen failed (e.g. EADDRINUSE from a double-spawn that beat us to the
     // bind, or a recycled-pid wedge). The connection was already built — close
     // it so we never leak the mobile-mcp child, and release the lock.
+    observe({
+      level: 'error',
+      event: 'daemon.listen_failure',
+      error_code: err && err.code,
+      message: err && (err.message || String(err)),
+      dur_ms: Date.now() - startedAtMs,
+      pid: process.pid,
+    });
     try {
       await close();
     } catch (_) {
@@ -500,6 +557,10 @@ async function startDaemon({
   // Persist handle + pidfile now that we are actually listening.
   const handle = {
     pid: process.pid,
+    // Correlates every event from this daemon lifetime, which run_id cannot:
+    // it lives in the handle so a verb reads it from a file that is already
+    // there instead of paying a socket round trip (src/device/session-handle.js).
+    session_id: sessionId,
     device: device || null,
     socket: socketPath,
     started_at: new Date().toISOString(),
@@ -513,9 +574,21 @@ async function startDaemon({
 
   armIdle();
 
+  // Recorded after the handle exists, so anything reading the log can also read
+  // the handle it names. device_id is sends:false — a device serial never
+  // leaves the machine.
+  observe({
+    level: 'info',
+    event: 'daemon.start',
+    pid: process.pid,
+    device_id: device || undefined,
+    dur_ms: Date.now() - startedAtMs,
+  });
+
   return {
     socketPath,
     device: device || null,
+    sessionId,
     stop,
     // Replies that could not be delivered (peer gone / unflushable). Surfaced so
     // callers/tests can observe transport failures instead of them being eaten.
