@@ -63,3 +63,40 @@ describe('catalog integrity', () => {
     expect(LEVELS).toEqual(['debug', 'info', 'warn', 'error']);
   });
 });
+
+describe('daemon field classifications', () => {
+  const { EVENT_FIELDS, NEVER_SENDS, makeEvent, telemetryPayload } = require('../../../src/observe/event');
+
+  it('lets the daemon carry a session id, a primitive name, a stop reason and an errno', () => {
+    for (const f of ['session_id', 'tool', 'stop_reason', 'error_code']) {
+      expect(EVENT_FIELDS[f]).toBeDefined();
+      expect(EVENT_FIELDS[f].sends).toBe(true);
+    }
+  });
+
+  it('keeps pid local — a pid plus a timestamp is a host correlator with no aggregate value', () => {
+    expect(EVENT_FIELDS.pid.sends).toBe(false);
+    expect(NEVER_SENDS).toContain('pid');
+  });
+
+  it('round-trips a daemon call event through makeEvent without dropping a field', () => {
+    const e = makeEvent({
+      src: 'daemon',
+      event: 'call.end',
+      session_id: '8f2c1a3b4d5e6f70',
+      tool: 'mobile_press_button',
+      ok: false,
+      error_kind: 'timeout',
+      dur_ms: 25000,
+      pid: 4242,
+    });
+    expect(e.tool).toBe('mobile_press_button');
+    expect(e.session_id).toBe('8f2c1a3b4d5e6f70');
+    expect(e.pid).toBe(4242);
+
+    const p = telemetryPayload(e);
+    expect(p.tool).toBe('mobile_press_button');
+    expect(p.session_id).toBe('8f2c1a3b4d5e6f70');
+    expect(p).not.toHaveProperty('pid');
+  });
+});
