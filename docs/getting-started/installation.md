@@ -1,10 +1,10 @@
 ---
-description: "Install the host-agnostic mauto CLI from source, wire it into your project and agent, and verify your device is visible."
+description: "Install the host-agnostic mauto CLI from npm, wire it into your project and agent, and verify your device is visible."
 ---
 
 # Installation
 
-`mauto` is a host-agnostic CLI. You install it once from source, then wire it into each mobile project with `mauto init` and `mauto setup`.
+`mauto` is a host-agnostic CLI. You install it once from npm, then wire it into each mobile project with `mauto init` and `mauto setup`.
 
 ## Prerequisites
 
@@ -31,17 +31,25 @@ Before installing mobile-automator, ensure you have:
 
 ## Installation Steps
 
-### 1. Install `mauto` from Source
+### 1. Install `mauto`
 
-`mauto` is not yet published to npm. Install it from source:
+```bash
+npm i -g mobile-automator      # exposes `mauto` globally
+```
+
+This puts the `mauto` (and `mobile-automator`) command on your PATH and pulls in the pinned mobile-mcp automation engine, which is resolved from `node_modules` — nothing is fetched at runtime.
+
+To run a verb without installing anything globally, use `npx mobile-automator <verb>`.
+
+#### From source instead
+
+Only needed if you want unreleased changes or intend to contribute:
 
 ```bash
 git clone https://github.com/sh3lan93/mobile-automator
 cd mobile-automator
 npm install && npm link        # exposes `mauto` globally
 ```
-
-`npm install` pulls in the pinned mobile-mcp automation engine; `npm link` puts the `mauto` (and `mobile-automator`) command on your PATH.
 
 ### 2. Verify the CLI Is Available
 
@@ -94,12 +102,13 @@ If a device or running emulator/simulator appears here, `mauto` can drive it. If
 
 ### "mauto: command not found"
 
-`npm link` didn't expose the command, or your shell hasn't picked up the new PATH entry.
+The install didn't expose the command, or your shell hasn't picked up the new PATH entry.
 
 **Solution:**
-1. Re-run `npm link` from inside the cloned `mobile-automator` directory
-2. Verify installation: `which mauto`
-3. Restart your terminal and try again
+1. Re-run `npm i -g mobile-automator` (or, for a source checkout, `npm link` from inside the cloned `mobile-automator` directory)
+2. Check that npm's global bin directory — `$(npm prefix -g)/bin` — is on your PATH
+3. Verify installation: `which mauto`
+4. Restart your terminal and try again
 
 ### "npm install" fails
 
