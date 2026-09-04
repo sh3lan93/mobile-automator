@@ -1765,13 +1765,17 @@ async function run(argv) {
     await program.parseAsync(argv);
   } catch (err) {
     // Help/version are NOT errors: commander already wrote the human-readable
-    // text to stdout. Leave them alone (no envelope) rather than wrapping them
-    // (#146). Same COMMANDER_NON_FAILURES set toEnvelope classifies against, so
-    // "which commander outcomes aren't failures" has exactly one answer.
+    // text to stdout, so they get no envelope wrapped around them (#146). Same
+    // COMMANDER_NON_FAILURES set toEnvelope classifies against, so "which
+    // commander outcomes aren't failures" has exactly one answer.
+    //
+    // They still exit through finish(), with no text of their own to print.
+    // They are real invocations, and slice 5 computes rates off this stream —
+    // omitting a whole invocation class skews every one of those denominators.
+    // `exitCode` comes from commander rather than a kind because commander
+    // already computed one: `.help({error:true})` yields 1, not 0.
     if (err && err.name === 'CommanderError' && COMMANDER_NON_FAILURES.has(err.code)) {
-      // Honor commander's own exit code rather than assuming 0 — `.help()`
-      // invoked with `{error:true}` computes 1.
-      process.exit(err.exitCode || 0);
+      emitters.finish({ exitCode: err.exitCode || 0, ok: true });
       return;
     }
     emitters.emitFatal(err, argv.slice(2).includes('--human'));

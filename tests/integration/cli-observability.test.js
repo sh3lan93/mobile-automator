@@ -85,6 +85,48 @@ describe('cli observability (integration)', () => {
     expect(verbEnds(run)[0]).not.toHaveProperty('verb');
   });
 
+  // Commander writes help/version text and terminates DURING the parse, before
+  // any action exists to wrap. That is a fourth exit path, and it stayed
+  // uninstrumented through a full review-and-fix round. Slice 5 ships aggregate
+  // counts off this stream, so an invocation class that emits nothing skews the
+  // denominator of every rate computed from it.
+  describe('help and version terminate during the parse, and are still recorded', () => {
+    it('records a verb.end for --help', () => {
+      const run = runCli(['--help']);
+      expect(run.status).toBe(0);
+      const [event, ...rest] = verbEnds(run);
+      expect(rest).toEqual([]);
+      expect(event).toMatchObject({ src: 'cli', ok: true, exit_code: 0 });
+    });
+
+    it('omits verb on --help rather than inventing one', () => {
+      // preAction fires only after a successful parse resolves a command;
+      // commander displays help INSIDE the parse, so no command was resolved.
+      // Absent is the honest record, exactly as for a parse failure.
+      expect(verbEnds(runCli(['--help']))[0]).not.toHaveProperty('verb');
+    });
+
+    it('records a verb.end for --version', () => {
+      const run = runCli(['--version']);
+      expect(run.status).toBe(0);
+      expect(verbEnds(run)[0]).toMatchObject({ src: 'cli', ok: true, exit_code: 0 });
+    });
+
+    it('records a verb.end for a subcommand help', () => {
+      const run = runCli(['tap', '--help']);
+      expect(run.status).toBe(0);
+      expect(verbEnds(run)).toHaveLength(1);
+    });
+
+    it('leaves the help text on stdout untouched, adding no blank line', () => {
+      // Commander already wrote the text. Recording the invocation must not
+      // also make finish() write an empty line after it.
+      const run = runCli(['--help']);
+      expect(run.stdout).toContain('Usage: mauto');
+      expect(run.stdout.endsWith('\n\n')).toBe(false);
+    });
+  });
+
   it('records the error kind when an envelope verb fails', () => {
     const run = runCli(['validate', 'no-such-file.json']);
     const event = verbEnds(run)[0];
