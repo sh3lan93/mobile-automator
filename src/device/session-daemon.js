@@ -200,7 +200,6 @@ async function startDaemon({
       event: 'daemon.start_failure',
       error_code: err && err.code,
       message: err && (err.message || String(err)),
-      pid: process.pid,
     });
     throw err;
   }
@@ -223,7 +222,7 @@ async function startDaemon({
       // warn, not error: a spawn-race loser failing here is the lock DOING ITS
       // JOB. It is worth seeing (a workspace where it repeats means two agents
       // are fighting over one device) but it is not a malfunction.
-      safeObserve({ level: 'warn', event: 'daemon.lock_conflict', error_code: 'ELOCKED', pid: process.pid });
+      safeObserve({ level: 'warn', event: 'daemon.lock_conflict', error_code: 'ELOCKED' });
       const e = new Error('device session daemon already starting for this workspace (lock held)');
       e.code = 'ELOCKED';
       throw e;
@@ -235,7 +234,6 @@ async function startDaemon({
       event: 'daemon.start_failure',
       error_code: err && err.code,
       message: err && (err.message || String(err)),
-      pid: process.pid,
     });
     throw err;
   }
@@ -267,7 +265,6 @@ async function startDaemon({
       error_code: err && err.code,
       message: err && (err.message || String(err)),
       dur_ms: Date.now() - startedAtMs,
-      pid: process.pid,
     });
     releaseLock();
     throw err;
@@ -351,7 +348,6 @@ async function startDaemon({
       level: 'info',
       event: 'daemon.stop',
       stop_reason: reason,
-      pid: process.pid,
       dur_ms: Date.now() - startedAtMs,
     });
 
@@ -573,7 +569,6 @@ async function startDaemon({
       error_code: err && err.code,
       message: err && (err.message || String(err)),
       dur_ms: Date.now() - startedAtMs,
-      pid: process.pid,
     });
     try {
       await close();
@@ -610,7 +605,6 @@ async function startDaemon({
   safeObserve({
     level: 'info',
     event: 'daemon.start',
-    pid: process.pid,
     device_id: device || undefined,
     dur_ms: Date.now() - startedAtMs,
   });

@@ -85,6 +85,11 @@ describe('bin/mauto-session-daemon observability wiring', () => {
     const args = boundRecorder.mock.calls[0][0];
     expect(args.projectRoot).toBe('/tmp/some-project');
     expect(args.fields.session_id).toMatch(/^[0-9a-f]{16}$/);
+    // pid is per-process identity, exactly like src and session_id, so it is
+    // BOUND rather than hand-stamped at each event. Bound fields are applied
+    // after the caller's, so no daemon call site can misreport it.
+    expect(args.fields.pid).toBe(process.pid);
+    expect(args.fields.src).toBe('daemon');
   });
 
   it('injects that recorder and the same session id into startDaemon', async () => {

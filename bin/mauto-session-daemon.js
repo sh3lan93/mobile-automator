@@ -88,7 +88,11 @@ async function main() {
     projectRoot,
     env,
     logPath: daemonEventLogPath(projectRoot, env),
-    fields: { src: 'daemon', session_id: sessionId },
+    // Constant per-process identity, stamped once here instead of at every
+    // daemon.* call site. pid is the most per-process fact there is; binding it
+    // is the same reason src and session_id are bound, and bound fields are
+    // applied last so no call site can misreport it.
+    fields: { src: 'daemon', session_id: sessionId, pid: process.pid },
   });
 
   let daemon = null;
@@ -115,7 +119,6 @@ async function main() {
       event: 'daemon.crash',
       error_code: err && err.code,
       message: `uncaughtException: ${err && err.message ? err.message : err}`,
-      pid: process.pid,
     });
     process.stderr.write(`mauto-session-daemon: uncaught ${err && err.stack ? err.stack : err}\n`);
     // Tear the daemon down (closes the mobile-mcp child) then let 'exit' clean
@@ -132,7 +135,6 @@ async function main() {
       event: 'daemon.crash',
       error_code: err && err.code,
       message: `unhandledRejection: ${err && err.message ? err.message : err}`,
-      pid: process.pid,
     });
     process.stderr.write(`mauto-session-daemon: unhandled rejection ${err && err.stack ? err.stack : err}\n`);
     // Same teardown as uncaughtException: a rejected promise must not leave a

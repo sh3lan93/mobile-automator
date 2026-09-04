@@ -37,7 +37,13 @@ function makeFakeCreateCall(impl) {
 }
 
 describe('daemon lifecycle events', () => {
-  test('records daemon.start with the pid, the pinned device and a startup duration', async () => {
+  // No pid assertion here on purpose: pid is per-process identity, bound once
+  // by the recorder (bin/mauto-session-daemon.js) rather than stamped by the
+  // daemon, so a bare collector correctly never sees one. The wiring is pinned
+  // in tests/unit/bin/mauto-session-daemon-observe.test.js and the stamping in
+  // tests/unit/observe/recorder.test.js; the last test in this file proves the
+  // two meet on disk.
+  test('records daemon.start with the pinned device and a startup duration', async () => {
     const root = tmpRoot();
     const observe = collector();
     const daemon = await startDaemon({
@@ -51,7 +57,7 @@ describe('daemon lifecycle events', () => {
     const [start, ...rest] = observe.named('daemon.start');
     expect(rest).toEqual([]);
     expect(start.level).toBe('info');
-    expect(start.pid).toBe(process.pid);
+    expect(start.pid).toBeUndefined();
     expect(start.device_id).toBe('emulator-5554');
     expect(typeof start.dur_ms).toBe('number');
 
@@ -430,7 +436,7 @@ describe('device call events', () => {
         projectRoot: root,
         env,
         logPath: daemonEventLogPath(root, env),
-        fields: { src: 'daemon', session_id: 'abcdef0123456789' },
+        fields: { src: 'daemon', session_id: 'abcdef0123456789', pid: process.pid },
       }),
     });
 
@@ -448,6 +454,9 @@ describe('device call events', () => {
     expect(callLines).toHaveLength(2);
     expect(callLines.every((e) => e.event === 'call.end')).toBe(true);
     expect(callLines.every((e) => e.session_id === 'abcdef0123456789')).toBe(true);
+    // Where the two halves meet: the daemon stamps no pid anywhere, and every
+    // line it wrote still carries one, because the recorder is bound with it.
+    expect(lines.every((e) => e.pid === process.pid)).toBe(true);
 
     await daemon.stop();
   });

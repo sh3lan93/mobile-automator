@@ -183,14 +183,15 @@ describe('boundRecorder', () => {
     const observe = boundRecorder({
       projectRoot: root,
       env: {},
-      fields: { src: 'daemon', session_id: 'real' },
+      fields: { src: 'daemon', session_id: 'real', pid: 4242 },
     });
 
-    observe({ level: 'info', event: 'daemon.start', src: 'cli', session_id: 'forged' });
+    observe({ level: 'info', event: 'daemon.start', src: 'cli', session_id: 'forged', pid: 1 });
 
     const [event] = readLines(path.join(root, 'mobile-automator', '.logs', 'mauto.ndjson'));
     expect(event.src).toBe('daemon');
     expect(event.session_id).toBe('real');
+    expect(event.pid).toBe(4242);
   });
 
   it('honours an explicit logPath, writing there and never to the CLI log', () => {
