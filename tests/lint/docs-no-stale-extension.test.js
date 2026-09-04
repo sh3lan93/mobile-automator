@@ -14,14 +14,17 @@ const path = require('path');
 // with NO innocent usage in prose; ambiguous tokens (`.toml`, a bare
 // `GEMINI.md`) are deliberately left out to stay false-positive-free.
 //
-// Excluded by design:
-//   - changelog files (a changelog is a historical record)
-//   - docs/plans/** (point-in-time design docs)
+// The doc corpus, and which docs are historical records exempt from this scan,
+// come from ./docs-corpus, shared with every other prose-scanning guard. When
+// that corpus replaced this file's hand-picked file list it immediately found a
+// stale `/mobile-automator:*` in sample-app/README.md that had been sitting
+// outside the old list's reach since the extension was removed.
+//
 // Note: `.gemini/skills` (without `.archive`) is NOT banned — it is the valid
 // skills dir for the Gemini host (`mauto init --agent gemini`). Only the
 // recorder's `.archive` variant is stale.
 
-const REPO_ROOT = path.resolve(__dirname, '..', '..');
+const { REPO_ROOT, shippingDocs } = require('./docs-corpus');
 
 const STALE_PATTERNS = [
   {
@@ -58,67 +61,20 @@ const STALE_PATTERNS = [
   },
 ];
 
-// Files / directories to skip (relative to repo root, posix separators).
-// Point-in-time design docs (brainstorm specs + implementation plans) are a
-// historical record of decisions and legitimately describe the removed
-// extension-era model; they are excluded like changelogs. They live under
-// docs/superpowers/{plans,specs} (the bare docs/plans path is kept for any
-// legacy location).
-const EXCLUDED = [
-  'docs/changelog.md',
-  'CHANGELOG.md',
-  'docs/plans',
-  'docs/superpowers/plans',
-  'docs/superpowers/specs',
-];
-
-function isExcluded(relPath) {
-  const posix = relPath.split(path.sep).join('/');
-  return EXCLUDED.some(
-    (ex) => posix === ex || posix.startsWith(ex + '/')
-  );
-}
-
-function collectDocs() {
-  const files = [];
-
-  // Top-level shipping docs.
-  for (const top of ['TROUBLESHOOTING.md', 'README.md', 'ROADMAP.md', 'CONTRIBUTING.md']) {
-    const abs = path.join(REPO_ROOT, top);
-    if (fs.existsSync(abs)) files.push(abs);
-  }
-
-  // Every markdown file under docs/, minus the exclusions.
-  const docsRoot = path.join(REPO_ROOT, 'docs');
-  const walk = (dir) => {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const abs = path.join(dir, entry.name);
-      const rel = path.relative(REPO_ROOT, abs);
-      if (isExcluded(rel)) continue;
-      if (entry.isDirectory()) {
-        walk(abs);
-      } else if (entry.isFile() && entry.name.endsWith('.md')) {
-        files.push(abs);
-      }
-    }
-  };
-  if (fs.existsSync(docsRoot)) walk(docsRoot);
-
-  return files;
-}
-
 describe('shipping docs name no removed Gemini-extension model', () => {
-  const files = collectDocs();
+  const files = shippingDocs();
+
+  it('finds docs to scan', () => {
+    expect(files.length).toBeGreaterThan(0);
+  });
 
   for (const { name, regex } of STALE_PATTERNS) {
     it(`no doc contains ${name}`, () => {
       const offenders = [];
-      for (const abs of files) {
-        const lines = fs.readFileSync(abs, 'utf8').split('\n');
+      for (const rel of files) {
+        const lines = fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8').split('\n');
         lines.forEach((line, i) => {
-          if (regex.test(line)) {
-            offenders.push(`${path.relative(REPO_ROOT, abs)}:${i + 1}: ${line.trim()}`);
-          }
+          if (regex.test(line)) offenders.push(`${rel}:${i + 1}: ${line.trim()}`);
         });
       }
       expect(offenders).toEqual([]);
