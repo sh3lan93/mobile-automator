@@ -25,22 +25,6 @@ const { isSemanticAction, ACTION_METHOD, selectResolver } = require('./device/se
 const connection = require('./device/connection');
 const { record } = require('./observe/recorder');
 
-// The top-level command commander actually RESOLVED, or null when parsing never
-// got that far. Set by the preAction hook in buildProgram(); read by finish().
-//
-// It is deliberately not `process.argv[2]`. The event catalog marks `verb` as
-// `sends: true` on the stated grounds that it is "a fixed vocabulary we ship",
-// and slice 5 will ship it to a third party on that justification — so the
-// field has to actually be that. argv[2] is an arbitrary user-supplied token:
-// `mauto --human config get mode` recorded `--human`, and nothing stops the
-// next token from being a device serial or a file path.
-//
-// Module-level because finish() is module-level and the three exit paths reach
-// it from inside commander's own call stack. It is reset per buildProgram()
-// rather than only at load, so a test that builds two programs in one process
-// cannot inherit the previous run's verb.
-let resolvedVerb = null;
-
 // Commander throws (via exitOverride) for two very different reasons, and the
 // split below is the ONLY thing that tells them apart.
 //
@@ -1159,10 +1143,14 @@ function buildProgram(deps = {}) {
     resultStoreFactory = (args) => new ResultStore(args),
     // Factory for the cross-session memory store. Overridable in tests.
     memoryStoreFactory = (args) => new MemoryStore(args),
-    // Project root used to resolve mobile-automator/results/.
+    // Project root used to resolve mobile-automator/results/ — and, through the
+    // emitters below, mobile-automator/.logs/. One root, one tree.
     projectRoot = process.cwd(),
+    // The exit paths. run() passes its own instance so the help/version and
+    // fatal paths it owns share this program's resolved verb.
+    emitters = makeEmitters({ projectRoot }),
     // Sink used to emit the rendered envelope + drive the exit code.
-    emit = defaultEmit,
+    emit = emitters.emit,
   } = deps;
 
   const program = new Command();
@@ -1211,11 +1199,10 @@ function buildProgram(deps = {}) {
   // `actionCommand` is the innermost command (`get` in `config get mode`), so
   // walk up to the child of the root: the record names the verb, not its
   // subcommand, keeping the vocabulary the size of the verb list.
-  resolvedVerb = null;
   program.hook('preAction', (_thisCommand, actionCommand) => {
     let command = actionCommand;
     while (command.parent && command.parent.parent) command = command.parent;
-    resolvedVerb = command.name();
+    emitters.setVerb(command.name());
   });
 
   const humanFlag = () => Boolean(program.opts().human);
@@ -1501,7 +1488,7 @@ function buildProgram(deps = {}) {
   // anything else is an envelope error and goes through the normal emit path.
   const emitMaybeRaw = (r) => {
     if (r.raw !== undefined && r.exitKind === 'ok') {
-      emitRaw(r.raw, r.exitKind);
+      emitters.emitRaw(r.raw, r.exitKind);
     } else {
       emit(r, humanFlag());
     }
@@ -1657,62 +1644,6 @@ function buildProgram(deps = {}) {
   return program;
 }
 
-// THE process-ending path. Every way this CLI terminates a verb goes through
-// here, so "is this invocation observable" has exactly one answer.
-//
-// It is one function because the alternative was three: an envelope path, a
-// raw path, and a fatal path, each with its own copy of a ten-line record()
-// literal. Two of the three copies got written, the third never did, and the
-// class of failure that went unrecorded was parse failures (#146) — the
-// crashes this instrumentation exists to see. Duplication did not just risk
-// drift here; it produced a hole shaped exactly like the bug.
-//
-// dur_ms uses process.uptime(), which is seconds since THIS process started
-// and needs no module state. A `Date.now()` stamped at require time measured
-// from whenever cli.js happened to be loaded, which is not process start for
-// anything that requires it first (a test harness, bin/mauto.js's own guards).
-function finish({ text, exitKind, ok, errorKind }) {
-  // Record BEFORE the write: process.exit() below is immediate and would cut
-  // off any work queued after it.
-  record({
-    event: 'verb.end',
-    // `info`, not `warn`-on-failure. The failure is carried by `ok` and
-    // `error_kind`; the LEVEL only decides routing. Recording a failure at
-    // `warn` would clear the default stderr threshold and print a line on
-    // every failed verb — restating, in a worse format, the envelope the CLI
-    // has just written. stderr is deliberately quiet at `warn` so it stays a
-    // human's channel; the file sink (threshold `info`) keeps the forensic
-    // record either way, which is what the crash blind spot actually needed.
-    level: 'info',
-    src: 'cli',
-    // Absent, not guessed, when parsing never resolved a command. A parse
-    // failure genuinely has no verb; makeEvent drops undefined fields, so the
-    // line simply carries no `verb` rather than a plausible-looking lie.
-    verb: resolvedVerb || undefined,
-    ok,
-    error_kind: errorKind,
-    exit_code: exitCodeFor(exitKind),
-    dur_ms: Math.round(process.uptime() * 1000),
-  });
-  process.stdout.write(text.endsWith('\n') ? text : text + '\n');
-  process.exit(exitCodeFor(exitKind));
-}
-
-function defaultEmit({ envelope, exitKind }, human) {
-  finish({
-    text: render(envelope, { human }),
-    exitKind,
-    ok: Boolean(envelope && envelope.ok),
-    errorKind: envelope && envelope.error ? envelope.error.kind : undefined,
-  });
-}
-
-// Print raw content (markdown / JSON schema / text) verbatim — no envelope
-// wrapping — then exit. Used by guide/schema/bootstrap success paths.
-function emitRaw(content, exitKind) {
-  finish({ text: content, exitKind, ok: true });
-}
-
 // Keep the stack of a genuinely-unexpected error on STDERR so a crash stays
 // debuggable. The stdout envelope (the agent's contract) is untouched, and the
 // expected/diagnosed classes (invalid_input, environment) carry an actionable
@@ -1723,22 +1654,101 @@ function diagnose(err, exitKind) {
   }
 }
 
-// Last-resort emit for errors that escape BEFORE any action runs (so the
-// in-program withEnvelope boundary can't see them) — e.g. the ScenarioValidator
-// default-param compiling a corrupt bundled schema inside buildProgram, or a
-// stray unhandled rejection. Always one JSON envelope on stdout + the mapped
-// exit code, never a raw stack trace. `human` (opt-in --human) renders the fail
-// envelope readably instead of as JSON.
-function emitFatal(err, human = false) {
-  const { envelope, exitKind } = toEnvelope(err);
-  diagnose(err, exitKind);
-  finish({
+// The exit paths, bound to ONE invocation's resolved dependencies. Per
+// invocation rather than module-scope because every input they need is: as
+// module-level functions, finish() could not see the projectRoot buildProgram()
+// was handed, so it reached around the program's own DI to process.cwd() and
+// wrote the record of a verb into a different tree than the verb ran against.
+function makeEmitters({ projectRoot = process.cwd() } = {}) {
+  // The top-level command commander actually RESOLVED, or null when parsing
+  // never got that far (a parse failure, or help/version). Set via setVerb()
+  // from buildProgram()'s preAction hook.
+  //
+  // Deliberately not `process.argv[2]`: event.js marks `verb` as `sends: true`
+  // on the grounds that it is "a fixed vocabulary we ship", and slice 5 ships
+  // it to a third party on that justification. argv[2] is arbitrary user text —
+  // `mauto --human config get mode` recorded `--human`.
+  let resolvedVerb = null;
+
+  // THE process-ending path: every way this CLI terminates goes through here,
+  // so "is this invocation observable" has exactly one answer. Only `mauto mcp`
+  // is outside it — it serves until its client disconnects and then returns,
+  // with no termination to record.
+  //
+  // One function rather than four copies of a ten-line record() literal. Two of
+  // the four got written, and the classes left unrecorded were parse failures
+  // (#146) — the crashes this instrumentation exists to see — and help/version.
+  //
+  // `text` is optional: commander writes help/version itself, so that path has
+  // an invocation to record but nothing left to print.
+  //
+  // dur_ms uses process.uptime() (seconds since THIS process started, no state
+  // needed). A Date.now() stamped at require time would measure from whenever
+  // cli.js was loaded, which is not process start for anything that requires it
+  // first (a test harness, bin/mauto.js's own guards).
+  function finish({ text = '', exitKind, ok, errorKind, exitCode = exitCodeFor(exitKind) }) {
+    // Record BEFORE the write: process.exit() below is immediate.
+    const fields = {
+      event: 'verb.end',
+      // `info`, not `warn`-on-failure: the failure is carried by `ok` and
+      // `error_kind`, and the LEVEL only decides routing. At `warn` every
+      // failed verb would clear the stderr threshold and echo the envelope the
+      // CLI just wrote. stderr stays a human's channel; the file sink
+      // (threshold `info`) keeps the forensic record either way.
+      level: 'info',
+      src: 'cli',
+      // Absent, not guessed, when no command resolved. makeEvent drops
+      // undefined fields, so the line carries no `verb` rather than a lie.
+      verb: resolvedVerb || undefined,
+      ok,
+      error_kind: errorKind,
+      exit_code: exitCode,
+      dur_ms: Math.round(process.uptime() * 1000),
+    };
+    record(fields, { projectRoot });
+    if (text) process.stdout.write(text.endsWith('\n') ? text : text + '\n');
+    process.exit(exitCode);
+  }
+
+  const fromEnvelope = (envelope, exitKind, human) => ({
     text: render(envelope, { human }),
     exitKind,
-    ok: false,
+    ok: Boolean(envelope && envelope.ok),
     errorKind: envelope && envelope.error ? envelope.error.kind : undefined,
   });
+
+  return {
+    finish,
+    setVerb: (verb) => {
+      resolvedVerb = verb;
+    },
+
+    emit: ({ envelope, exitKind }, human) => finish(fromEnvelope(envelope, exitKind, human)),
+
+    // Raw content (markdown / JSON schema / text) verbatim, no envelope
+    // wrapping. Used by the guide/schema/bootstrap success paths.
+    emitRaw: (content, exitKind) => finish({ text: content, exitKind, ok: true }),
+
+    // Last-resort emit for errors that escape BEFORE any action runs, so the
+    // in-program withEnvelope boundary can't see them — a throw inside
+    // buildProgram, or a stray unhandled rejection. One JSON envelope on stdout
+    // + the mapped exit code, never a raw stack trace.
+    emitFatal: (err, human = false) => {
+      const { envelope, exitKind } = toEnvelope(err);
+      diagnose(err, exitKind);
+      finish(fromEnvelope(envelope, exitKind, human));
+    },
+  };
 }
+
+// bin/mauto.js registers the exported emitFatal as a PROCESS-wide
+// unhandledRejection handler, which can fire before run() has built anything —
+// so it needs a module-level way to reach the invocation in flight. A pointer to
+// the per-invocation instance, not a second copy of its state: an unhandled
+// rejection is exactly the crash class this instrumentation exists to see, and
+// it should carry the verb and projectRoot the invocation actually resolved.
+let activeEmitters = null;
+const emitFatal = (err, human = false) => (activeEmitters || makeEmitters()).emitFatal(err, human);
 
 async function run(argv) {
   // Belt-and-suspenders around the in-program withEnvelope boundary: a throw in
@@ -1748,21 +1758,27 @@ async function run(argv) {
   // `unhandledRejection` guard lives in bin/mauto.js (the process entry point),
   // not here, so calling run() in tests never installs a global exit-on-reject
   // listener that would leak across the suite.
+  const emitters = makeEmitters();
+  activeEmitters = emitters;
   try {
-    const program = buildProgram();
+    const program = buildProgram({ emitters });
     await program.parseAsync(argv);
   } catch (err) {
     // Help/version are NOT errors: commander already wrote the human-readable
-    // text to stdout. Leave them alone (no envelope) rather than wrapping them
-    // (#146). Same COMMANDER_NON_FAILURES set toEnvelope classifies against, so
-    // "which commander outcomes aren't failures" has exactly one answer.
+    // text to stdout, so they get no envelope wrapped around them (#146). Same
+    // COMMANDER_NON_FAILURES set toEnvelope classifies against, so "which
+    // commander outcomes aren't failures" has exactly one answer.
+    //
+    // They still exit through finish(), with no text of their own to print.
+    // They are real invocations, and slice 5 computes rates off this stream —
+    // omitting a whole invocation class skews every one of those denominators.
+    // `exitCode` comes from commander rather than a kind because commander
+    // already computed one: `.help({error:true})` yields 1, not 0.
     if (err && err.name === 'CommanderError' && COMMANDER_NON_FAILURES.has(err.code)) {
-      // Honor commander's own exit code rather than assuming 0 — `.help()`
-      // invoked with `{error:true}` computes 1.
-      process.exit(err.exitCode || 0);
+      emitters.finish({ exitCode: err.exitCode || 0, ok: true });
       return;
     }
-    emitFatal(err, argv.slice(2).includes('--human'));
+    emitters.emitFatal(err, argv.slice(2).includes('--human'));
   }
 }
 
