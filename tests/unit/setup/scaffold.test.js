@@ -72,3 +72,33 @@ function set_app_package(root) {
   const { set } = require('../../../src/config/manager');
   set(root, 'app_package', 'com.example');
 }
+
+describe('workspace .gitignore', () => {
+  it('writes mobile-automator/.gitignore covering the runtime dirs', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scaffold-'));
+    scaffold(root, { mode: 'platform-aware' });
+
+    const gi = path.join(root, 'mobile-automator', '.gitignore');
+    const body = fs.readFileSync(gi, 'utf8');
+    expect(body).toContain('.session/');
+    expect(body).toContain('.logs/');
+    expect(body).toContain('screenshots/');
+  });
+
+  it('reports the .gitignore in created[] on first write', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scaffold-'));
+    const { created } = scaffold(root, { mode: 'platform-aware' });
+    expect(created.some((p) => p.endsWith(path.join('mobile-automator', '.gitignore')))).toBe(true);
+  });
+
+  it('never clobbers a .gitignore the user has edited', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scaffold-'));
+    fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+    const gi = path.join(root, 'mobile-automator', '.gitignore');
+    fs.writeFileSync(gi, '# mine\n');
+
+    scaffold(root, { mode: 'platform-aware' });
+
+    expect(fs.readFileSync(gi, 'utf8')).toBe('# mine\n');
+  });
+});
