@@ -4,7 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { record, defaultSinks, boundRecorder } = require('../../../src/observe/recorder');
+const { record, defaultSinks, boundRecorder, safeObserve } = require('../../../src/observe/recorder');
 
 // A project that HAS run `mauto setup` — the file sink refuses to log into a
 // directory with no mobile-automator/ in it, so a real-fs test needs one.
@@ -135,6 +135,26 @@ describe('defaultSinks', () => {
   });
 });
 
+// The ONE never-load-bearing mechanism, exported so every boundary that injects
+// a sink shares it instead of hand-rolling a try/catch of its own. It lives with
+// the seam it guards: a guarantee you have to remember to re-apply at each call
+// site is not a guarantee.
+describe('safeObserve', () => {
+  it('swallows a throwing observe instead of propagating into the caller', () => {
+    const guarded = safeObserve(() => {
+      throw new Error('observe exploded');
+    });
+    expect(() => guarded({ level: 'error', event: 'daemon.crash' })).not.toThrow();
+  });
+
+  it('passes fields straight through when the observe does not throw', () => {
+    const seen = [];
+    const guarded = safeObserve((fields) => seen.push(fields));
+    guarded({ level: 'info', event: 'daemon.start', pid: 7 });
+    expect(seen).toEqual([{ level: 'info', event: 'daemon.start', pid: 7 }]);
+  });
+});
+
 // The binding the daemon uses, and the one a run-scoped CLI recorder will use.
 // These are real-fs rather than sink-injection tests on purpose: what is being
 // pinned is that the binding reaches the RIGHT FILE with the RIGHT identity,
@@ -189,6 +209,26 @@ describe('boundRecorder', () => {
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({ src: 'daemon', event: 'call.end', tool: 'mobile_press_button' });
     expect(fs.existsSync(path.join(root, 'mobile-automator', '.logs', 'mauto.ndjson'))).toBe(false);
+  });
+
+  it('degrades to an inert observe when construction itself throws', () => {
+    // Construction is the one moment outside the returned observe's own
+    // never-throw guarantee: it resolves levels and builds sinks before any
+    // event exists. So the totality belongs HERE, in the thing that constructs,
+    // rather than in a try/catch every process that binds a recorder has to
+    // remember to write. A throwing env getter makes defaultSinks fail for real
+    // instead of the test asserting against an injected stub.
+    const env = {
+      get MAUTO_LOG_LEVEL() {
+        throw new Error('sink construction exploded');
+      },
+    };
+
+    const observe = boundRecorder({ projectRoot: workspace(), env, fields: { src: 'daemon' } });
+
+    // Inert, not absent — the daemon must not have to branch on a null seam.
+    expect(typeof observe).toBe('function');
+    expect(() => observe({ level: 'error', event: 'daemon.crash' })).not.toThrow();
   });
 
   it('resolves levels ONCE, at construction, not per event', () => {

@@ -60,6 +60,23 @@ function record(fields = {}, { projectRoot = process.cwd(), env = process.env, s
   }
 }
 
+// The never-load-bearing guarantee, as a function instead of as a warning.
+//
+// record() is already total; this is for the INJECTED seams, which exist so
+// that something OTHER than record() gets passed. In the daemon `call.start`
+// fires before the device call, so an unguarded sink there decides whether a
+// tap happens at all. Exported from here, with the seam it guards, so every
+// boundary shares one implementation.
+function safeObserve(observe) {
+  return (fields) => {
+    try {
+      observe(fields);
+    } catch (_) {
+      /* an observability fault is never worth the work it was describing */
+    }
+  };
+}
+
 // record() bound to one writer, for a process that records many times.
 //
 // record()'s own defaults are written for a one-shot verb that records once and
@@ -78,13 +95,25 @@ function record(fields = {}, { projectRoot = process.cwd(), env = process.env, s
 //                daemon, `mauto session end` is how you change them.
 //
 // `fields` are stamped on every event and applied AFTER the caller's, so no call
-// site can forge `src` or claim another session's id. That identity is the whole
-// point of binding: it is what makes one process's events a queryable group.
+// site can forge `src`, claim another session's id or misreport its pid. That
+// identity is the whole point of binding: it is what makes one process's events
+// a queryable group.
+//
+// CONSTRUCTION is total too, and the try/catch is here rather than around each
+// caller's boundRecorder() call because building sinks happens before any event
+// exists, outside the returned observe's own guarantee. A failure degrades to an
+// inert observe — session-log.js's frozen IGNORED handle, not a null every call
+// site has to branch on.
 function boundRecorder({ projectRoot, env = process.env, logPath, fields = {} } = {}) {
-  const sinks = defaultSinks(projectRoot, env, { logPath });
+  let sinks;
+  try {
+    sinks = defaultSinks(projectRoot, env, { logPath });
+  } catch (_) {
+    return () => {};
+  }
   return function observe(extra = {}) {
     record({ ...extra, ...fields }, { projectRoot, env, sinks });
   };
 }
 
-module.exports = { record, defaultSinks, boundRecorder };
+module.exports = { record, defaultSinks, boundRecorder, safeObserve };

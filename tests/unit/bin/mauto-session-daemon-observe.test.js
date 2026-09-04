@@ -129,27 +129,11 @@ describe('bin/mauto-session-daemon observability wiring', () => {
     expect(stoppedWith).toBe('crash');
   });
 
-  // The recorder must never be the reason the daemon fails to start. The
-  // returned observe() already swallows everything (recorder.test.js pins
-  // that); CONSTRUCTION is the one moment that is still outside its guarantee —
-  // boundRecorder() resolves levels and computes a log path before any event
-  // exists. So it degrades the same way session-log.js degrades to its frozen
-  // IGNORED handle: no observability, but a live daemon.
-  it('still starts the daemon when building the recorder throws', async () => {
-    boundRecorder.mockImplementation(() => {
-      throw new Error('sink construction exploded');
-    });
-
-    start();
-    await settle();
-
-    expect(startDaemon).toHaveBeenCalledTimes(1);
-    expect(typeof started.observe).toBe('function');
-    expect(started.sessionId).toMatch(/^[0-9a-f]{16}$/);
-    // The degraded observe is inert, not absent — no call site has to branch.
-    expect(() => started.observe({ level: 'error', event: 'daemon.crash' })).not.toThrow();
-    expect(exitSpy).not.toHaveBeenCalled();
-  });
+  // NOTE: "the recorder must never be the reason the daemon fails to start" is
+  // pinned in tests/unit/observe/recorder.test.js, against the REAL
+  // boundRecorder, because that is where construction totality now lives. It
+  // cannot be asserted here: boundRecorder is mocked in this file, so a version
+  // of this test would only be checking the mock.
 
   // A crash before startDaemon resolved must still record and still tear down
   // the workspace files — `daemon` is null, so the guard must not assume it.

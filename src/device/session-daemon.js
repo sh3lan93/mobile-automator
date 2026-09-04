@@ -26,6 +26,7 @@ const paths = require('./session-paths');
 const { FrameParser } = require('./session-protocol');
 const { newSessionId } = require('./session-handle');
 const { makeDeviceCall } = require('./device-call');
+const { safeObserve: guardObserve } = require('../observe/recorder');
 
 const DEFAULT_IDLE_MS = 5 * 60 * 1000;
 
@@ -171,26 +172,14 @@ async function startDaemon({
 } = {}) {
   if (!projectRoot) throw new TypeError('startDaemon requires projectRoot');
 
-  // Observability must never be load-bearing. `observe` is injected, so a
-  // caller-supplied sink that throws must not take the daemon — and the device
-  // session — down with it. The production recorder is already total; this
-  // makes that a property of the DAEMON rather than of its current caller,
-  // which matters because the seam exists precisely so that something other
-  // than the default gets passed. Wrapped once, here, rather than at each call
-  // site: a guarantee you have to remember to re-apply is not a guarantee.
-  //
-  // Two failure modes this closes, both proved by
+  // The injected seam, guarded once at the boundary with the canonical wrapper
+  // (src/observe/recorder.js) rather than a fourth hand-rolled try/catch. Two
+  // failure modes this closes, both proved by
   // tests/unit/device/daemon-observability.test.js: the daemon dying at startup
   // killed by the code whose only job is to explain why daemons die, and — on
   // the failure paths, which observe BEFORE releaseLock() — a telemetry fault
   // masking the real error and leaking the lock, wedging every later spawn.
-  const safeObserve = (fields) => {
-    try {
-      observe(fields);
-    } catch (_) {
-      /* an observability fault is never worth a device session */
-    }
-  };
+  const safeObserve = guardObserve(observe);
 
   // Zero point for every dur_ms this daemon reports: startup duration on
   // daemon.start, total session lifetime on daemon.stop.
@@ -289,12 +278,8 @@ async function startDaemon({
   // it is per-socket. Built HERE, before server.listen() below, or the first
   // frame to arrive would hit a temporal dead zone.
   //
-  // safeObserve, never the raw `observe`. call.start now fires BEFORE call(),
-  // so a sink that throws would mean the device action never happens at all —
-  // observability deciding whether a tap occurs. The wrapper at :178-193 is the
-  // one place that guarantee lives; device-call.js is deliberately unguarded
-  // and lets a throwing observe propagate, so passing the raw seam here would
-  // quietly undo it.
+  // safeObserve, never the raw `observe` — device-call.js is deliberately not
+  // guarded a second time (pinned in tests/unit/device/device-call.test.js).
   const invoke = makeDeviceCall(call, {
     scheduleTimeout,
     observe: safeObserve,
