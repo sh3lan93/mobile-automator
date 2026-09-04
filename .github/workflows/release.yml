@@ -150,6 +150,7 @@ jobs:
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
 
       # Trusted publishing needs npm >= 11.5.1, and Node 22 LTS bundles npm
       # 10.x — the Node version alone does NOT satisfy the floor. Upgrade
