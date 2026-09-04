@@ -105,45 +105,38 @@ async function main() {
   // the next spawn isn't wedged by leftovers from this process.
   const onExit = () => cleanupWorkspaceIfOwned(projectRoot);
   process.on('exit', onExit);
-  process.on('uncaughtException', (err) => {
-    // Recorded FIRST, before the stderr write and before teardown: these are the
-    // invisible deaths #156 is about, and process.exit(1) below is immediate.
-    // The file sink appends synchronously, so this line is on disk by the time
-    // the process is gone — a buffered sink would lose exactly this event.
-    //
-    // Two writes on purpose, to two different readers. The structured event
-    // carries the classification (and stays one line); the raw stderr write is
-    // #176's contract — the full stack, unchanged, in .session/daemon.log.
+  // One fatal handler, two registrations. The two crashes differ by exactly two
+  // strings; everything else about them is load-bearing and identical, so they
+  // are built from one function rather than kept in sync by hand.
+  //
+  // Recorded FIRST, before the stderr write and before teardown: these are the
+  // invisible deaths #156 is about, and process.exit(1) below is immediate. The
+  // file sink appends synchronously, so the line is on disk by the time the
+  // process is gone — a buffered sink would lose exactly this event.
+  //
+  // Two writes on purpose, to two different readers. The structured event
+  // carries the classification (and stays one line); the raw stderr write is
+  // #176's contract — the full stack, unchanged, in .session/daemon.log.
+  //
+  // Then tear the daemon down (closing the mobile-mcp child) and let 'exit'
+  // clean the files. Recording must not delay or displace the teardown that
+  // frees the lock/socket/pidfile, and `daemon` may still be null — a crash can
+  // beat startDaemon to it.
+  const onFatal = (kind, label) => (err) => {
     observe({
       level: 'error',
       event: 'daemon.crash',
       error_code: err && err.code,
-      message: `uncaughtException: ${err && err.message ? err.message : err}`,
+      message: `${kind}: ${err && err.message ? err.message : err}`,
     });
-    process.stderr.write(`mauto-session-daemon: uncaught ${err && err.stack ? err.stack : err}\n`);
-    // Tear the daemon down (closes the mobile-mcp child) then let 'exit' clean
-    // the files. Unchanged except for the reason — recording must not delay or
-    // displace the teardown that frees the lock/socket/pidfile.
+    process.stderr.write(`mauto-session-daemon: ${label} ${err && err.stack ? err.stack : err}\n`);
     if (daemon && typeof daemon.stop === 'function') {
       daemon.stop('crash').catch(() => {});
     }
     process.exit(1);
-  });
-  process.on('unhandledRejection', (err) => {
-    observe({
-      level: 'error',
-      event: 'daemon.crash',
-      error_code: err && err.code,
-      message: `unhandledRejection: ${err && err.message ? err.message : err}`,
-    });
-    process.stderr.write(`mauto-session-daemon: unhandled rejection ${err && err.stack ? err.stack : err}\n`);
-    // Same teardown as uncaughtException: a rejected promise must not leave a
-    // leaked mobile-mcp child / stale files wedging the next spawn.
-    if (daemon && typeof daemon.stop === 'function') {
-      daemon.stop('crash').catch(() => {});
-    }
-    process.exit(1);
-  });
+  };
+  process.on('uncaughtException', onFatal('uncaughtException', 'uncaught'));
+  process.on('unhandledRejection', onFatal('unhandledRejection', 'unhandled rejection'));
 
   daemon = await startDaemon({ projectRoot, device, idleMs, sessionId, observe });
   // Keep the event loop alive until the daemon stops (idle reap / signal /

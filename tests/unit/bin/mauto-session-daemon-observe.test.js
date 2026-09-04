@@ -25,22 +25,33 @@ describe('bin/mauto-session-daemon observability wiring', () => {
   let before;
   let stderrSpy;
   let exitSpy;
+  let order;
 
   beforeEach(() => {
     observed = [];
     started = null;
     stoppedWith = null;
+    order = [];
     before = Object.fromEntries(GUARDS.map((g) => [g, process.listeners(g)]));
 
-    stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
-    exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {});
+    stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => {
+      order.push('stderr');
+      return true;
+    });
+    exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {
+      order.push('exit');
+    });
 
-    boundRecorder.mockImplementation(() => (fields) => observed.push(fields));
+    boundRecorder.mockImplementation(() => (fields) => {
+      order.push('observe');
+      observed.push(fields);
+    });
     startDaemon.mockImplementation(async (opts) => {
       started = opts;
       return {
         sessionId: opts.sessionId,
         stop: async (reason) => {
+          order.push('stop');
           stoppedWith = reason;
         },
         // Never resolves: main() awaits this, which is what keeps a real
@@ -101,37 +112,63 @@ describe('bin/mauto-session-daemon observability wiring', () => {
     expect(started.projectRoot).toBe('/tmp/some-project');
   });
 
-  it('records daemon.crash and stops with reason "crash" on an uncaught exception', async () => {
-    start();
-    await settle();
+  // The two crash guards do the same four things, in an order that is itself
+  // load-bearing, and differ by exactly two strings. Driven from a table so the
+  // pair cannot drift and so every property is asserted for BOTH rather than
+  // for whichever one someone remembered to cover.
+  describe.each([
+    ['uncaughtException', 'uncaughtException', 'uncaught'],
+    ['unhandledRejection', 'unhandledRejection', 'unhandled rejection'],
+  ])('the %s crash guard', (guard, messagePrefix, stderrLabel) => {
+    const fire = async (err) => {
+      start();
+      await settle();
+      order.length = 0; // drop main()'s own startup banner write
+      process.listeners(guard).slice(-1)[0](err);
+      await settle();
+    };
 
-    const handler = process.listeners('uncaughtException').slice(-1)[0];
-    const err = new Error('engine exploded');
-    err.code = 'EPIPE';
-    handler(err);
-    await settle();
+    it('records daemon.crash at error, classified and with the engine message', async () => {
+      const err = new Error('engine exploded');
+      err.code = 'EPIPE';
+      await fire(err);
 
-    const [crash] = observed.filter((e) => e.event === 'daemon.crash');
-    expect(crash.level).toBe('error');
-    expect(crash.error_code).toBe('EPIPE');
-    expect(crash.message).toContain('engine exploded');
-    expect(stoppedWith).toBe('crash');
-    // The full stack still goes to the raw log unchanged (PR #176).
-    expect(stderrSpy.mock.calls.some(([s]) => String(s).includes('uncaught'))).toBe(true);
-  });
+      const [crash, ...rest] = observed.filter((e) => e.event === 'daemon.crash');
+      expect(rest).toEqual([]);
+      expect(crash.level).toBe('error');
+      expect(crash.error_code).toBe('EPIPE');
+      expect(crash.message).toBe(`${messagePrefix}: engine exploded`);
+    });
 
-  it('records daemon.crash on an unhandled rejection too', async () => {
-    start();
-    await settle();
+    it('records BEFORE the stderr write and before the teardown', async () => {
+      // These are the invisible deaths #156 is about and process.exit(1) is
+      // immediate, so the event has to be written first; and the teardown that
+      // frees the lock/socket/pidfile must never be delayed by the recording.
+      await fire(new Error('engine exploded'));
+      expect(order).toEqual(['observe', 'stderr', 'stop', 'exit']);
+    });
 
-    const handler = process.listeners('unhandledRejection').slice(-1)[0];
-    handler(new Error('promise exploded'));
-    await settle();
+    it('still writes the full stack to the raw log, and exits 1', async () => {
+      // Two writes on purpose, to two different readers: the structured event
+      // carries the classification, the raw write is #176's contract.
+      const err = new Error('engine exploded');
+      await fire(err);
 
-    const [crash] = observed.filter((e) => e.event === 'daemon.crash');
-    expect(crash.level).toBe('error');
-    expect(crash.message).toContain('promise exploded');
-    expect(stoppedWith).toBe('crash');
+      const [line] = stderrSpy.mock.calls.slice(-1)[0];
+      expect(String(line)).toContain(stderrLabel);
+      expect(String(line)).toContain(err.stack);
+      expect(stoppedWith).toBe('crash');
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('survives a falsy crash value rather than replacing it with a TypeError', async () => {
+      await fire(null);
+
+      const [crash] = observed.filter((e) => e.event === 'daemon.crash');
+      expect(crash.error_code).toBeNull(); // `err && err.code` on a falsy err
+      expect(crash.message).toBe(`${messagePrefix}: null`);
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
   });
 
   // NOTE: "the recorder must never be the reason the daemon fails to start" is
