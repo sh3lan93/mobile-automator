@@ -8,13 +8,13 @@ Claude Code, Cursor, Gemini CLI, GitHub Copilot, and OpenAI Agents all have one-
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Flutter%20%7C%20RN%20%7C%20KMP%20%7C%20CMP-green.svg)](#)
-[![Node](https://img.shields.io/badge/Node-%E2%89%A518-brightgreen.svg)](#)
+[![Node](https://img.shields.io/badge/Node-%E2%89%A520-brightgreen.svg)](#)
 
 ---
 
 ## ⏱️ Quick start (5 minutes)
 
-**You need:** Node ≥ 18 · an AI coding agent · a running emulator/simulator or a connected device.
+**You need:** Node ≥ 20 · an AI coding agent · a running emulator/simulator or a connected device.
 
 > This quick start uses **Claude Code** as the example agent. For Cursor, swap `--agent claude` → `--agent cursor`. For any other agent, see [Using another agent](#-using-another-agent).
 

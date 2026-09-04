@@ -10,7 +10,7 @@ description: "Install the host-agnostic mauto CLI from npm, wire it into your pr
 
 Before installing mobile-automator, ensure you have:
 
-- **Node.js** v18 or higher (required for mobile-mcp automation engine)
+- **Node.js** v20 or higher (required for mobile-mcp automation engine)
 - **An AI coding agent** — Claude Code, Cursor, Gemini CLI, GitHub Copilot, OpenAI Agents, or any MCP-capable agent
 - A **mobile project** (Android, iOS, Flutter, React Native, KMP, or CMP)
 - A **connected device or simulator** for running tests
@@ -116,7 +116,7 @@ The pinned mobile-mcp dependency couldn't be installed.
 
 **Solutions:**
 - Check your internet connection and access to the npm registry
-- Ensure Node.js is v18 or higher: `node --version`
+- Ensure Node.js is v20 or higher: `node --version`
 - Clear the npm cache and retry: `npm cache clean --force && npm install`
 
 ### Platform Detection Fails
