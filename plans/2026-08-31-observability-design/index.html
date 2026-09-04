@@ -1,0 +1,1961 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Intelligent mobile QA automation for any AI coding agent via the mauto CLI - auto-generate test scenarios and execute them with AI-powered assertions on real devices and emulators">
+      
+      
+      
+        <link rel="canonical" href="https://sh3lan93.github.io/mobile-automator/plans/2026-08-31-observability-design/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Observability & Monitoring for mauto - mobile-automator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Observability &amp; Monitoring for mauto - mobile-automator" />
+  <meta property="og:description" content="Intelligent mobile QA automation for any AI coding agent via the mauto CLI - auto-generate test scenarios and execute them with AI-powered assertions on real devices and emulators" />
+  <meta property="og:url" content="https://sh3lan93.github.io/mobile-automator/plans/2026-08-31-observability-design/" />
+  <meta property="og:site_name" content="mobile-automator" />
+  <meta property="og:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Observability &amp; Monitoring for mauto - mobile-automator" />
+  <meta name="twitter:description" content="Intelligent mobile QA automation for any AI coding agent via the mauto CLI - auto-generate test scenarios and execute them with AI-powered assertions on real devices and emulators" />
+  <meta name="twitter:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
+  
+
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#observability-monitoring-for-mauto" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="mobile-automator" class="md-header__button md-logo" aria-label="mobile-automator" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="mobile-automator logo" width="32" height="32">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            mobile-automator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Observability &amp; Monitoring for mauto
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/sh3lan93/mobile-automator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sh3lan93/mobile-automator
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="mobile-automator" class="md-nav__button md-logo" aria-label="mobile-automator" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="mobile-automator logo" width="32" height="32">
+
+    </a>
+    mobile-automator
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/sh3lan93/mobile-automator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sh3lan93/mobile-automator
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Core Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/three-tier-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Layered Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How Skills Work
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cross-Session Memory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command Guides
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup Command
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/generate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Generate Command
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/execute/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execute Command
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli-verbs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Verbs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/assertions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Assertion Types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test Scenario Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/result-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test Result Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/mcp-tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internal Engine (mobile-mcp)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Example Scenarios
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/android/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Android Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/ios/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    iOS Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ & Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of Contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of Contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Problem
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#approach-one-recorder-seam-three-sinks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Approach: one recorder seam, three sinks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Approach: one recorder seam, three sinks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#event-shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Event shape
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-redaction-contract-load-bearing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The redaction contract (load-bearing)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#instrumentation-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Instrumentation points
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#relationship-to-pr-176-merged-do-not-re-implement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Relationship to PR #176 (merged — do not re-implement)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#making-b-honest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Making B honest
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#crash-anr-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Crash / ANR detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#telemetry-transport-c" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Telemetry transport (C)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#control-surface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Control surface
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#storage-hygiene" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage hygiene
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="observability-monitoring-for-mauto">Observability &amp; Monitoring for <code>mauto</code><a class="headerlink" href="#observability-monitoring-for-mauto" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-08-31 (updated 2026-09-01 for the #176 merge)
+<strong>Status:</strong> Design — approved approach, not yet sliced
+<strong>Version:</strong> <code>main</code> at 0.24.0. 858 tests / 71 suites green at time of writing.
+<strong>Related:</strong> #163 (daemon stderr discarded — <strong>CLOSED 2026-09-01 by PR #176</strong>), #156 (daemon
+lifecycle / invisible engine death), #161 (no audit gate), gate #168</p>
+<h2 id="problem">Problem<a class="headerlink" href="#problem" title="Permanent link">&para;</a></h2>
+<p><code>mauto</code> has no observability of any kind. Concretely, in 6,254 lines of <code>src/</code> + <code>bin/</code>:</p>
+<ol>
+<li><strong>No logging.</strong> Zero <code>console.*</code> calls. The only diagnostic channel is seven ad-hoc
+   <code>process.stderr.write</code> sites across three files — no levels, no structure, no correlation
+   between them: <code>diagnose()</code> (<code>src/cli.js:1644</code>), which prints a stack only for
+   <code>internal</code>-kind errors; one undeliverable-reply notice
+   (<code>src/device/session-daemon.js:224</code>); and five in <code>bin/mauto-session-daemon.js</code> (the spawn
+   banner plus four crash guards).</li>
+<li><strong>The daemon's diagnostics were discarded by construction — now fixed.</strong> <code>session-spawn.js</code>
+   spawned with <code>stdio: 'ignore'</code>, so every daemon <code>process.stderr.write</code>, including the
+   <code>uncaughtException</code> stack, went to <code>/dev/null</code>. <strong>PR #176 closed this on 2026-09-01</strong>
+   (see "Relationship to PR #176"). That work also found the loss ran a level deeper than
+   #163 described: the MCP SDK defaults its transport to <code>stderr: 'inherit'</code>, so
+   <em>mobile-mcp's own</em> stderr — the adb/simctl output explaining most field failures —
+   inherited the discarded fd too.</li>
+</ol>
+<p><strong>What remains after #176, and why this design still stands.</strong> The captured output is raw
+   unstructured text: greppable by a human, but not queryable, not aggregatable, and carrying
+   no timings or outcomes. And it covers the <em>daemon only</em> — a <code>mauto tap</code> that fails, a
+   <code>setup</code> that breaks, an <code>init</code> that half-succeeds still leave no trace anywhere. #176 made
+   one component legible; it did not give the tool observability.
+3. <strong>Nothing measures time.</strong> There is no <code>hrtime</code> and no <code>Date.now()</code> delta outside the
+   daemon readiness poll and lock staleness. <code>duration_seconds</code> in every result file is
+   whatever number the calling agent passed to <code>--duration</code> (<code>src/cli.js:649</code>); <code>--attempts</code>
+   likewise. The two metrics that would reveal a degrading scenario or a slow device are
+   self-reported by a language model with no clock.
+4. <strong>App crashes are invisible.</strong> mobile-mcp 0.0.55 exposes <code>mobile_get_crash</code> and
+   <code>mobile_list_crashes</code>; <code>mauto</code> calls neither. When the app under test dies mid-scenario
+   the agent observes "element not found" and reasons about a UI change. A QA tool that
+   cannot distinguish "the app crashed" from "the button moved" produces confidently wrong
+   test results.</p>
+<p>The asset already in place: <strong>the envelope is a structured event.</strong>
+<code>{ok, data, error:{kind,message}, hint, schema_version}</code> plus <code>KIND_TO_CODE</code>
+(<code>src/output/envelope.js</code>) is a typed record with a classified failure taxonomy. Every verb
+already produces one. Nothing persists or aggregates it.</p>
+<h2 id="scope">Scope<a class="headerlink" href="#scope" title="Permanent link">&para;</a></h2>
+<p>Three domains, all in scope:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Question answered</th>
+<th>Consumer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A. Tool self-diagnostics</strong></td>
+<td>Why did <code>mauto</code> break on a user's machine?</td>
+<td>Maintainers, from a bug report</td>
+</tr>
+<tr>
+<td><strong>B. Run/device telemetry</strong></td>
+<td>How long did that tap take? Did the app crash? Is this scenario flaking?</td>
+<td>The AI agent mid-run; QA reading results</td>
+</tr>
+<tr>
+<td><strong>C. Usage telemetry</strong></td>
+<td>Which verbs do users run? What is the field error rate?</td>
+<td>Maintainers, post-launch</td>
+</tr>
+</tbody>
+</table>
+<p>Explicitly <strong>out of scope:</strong> CI/pipeline monitoring (domain D). Tracked separately.</p>
+<h2 id="approach-one-recorder-seam-three-sinks">Approach: one recorder seam, three sinks<a class="headerlink" href="#approach-one-recorder-seam-three-sinks" title="Permanent link">&para;</a></h2>
+<p>A single <code>record(event)</code> function, three independently switchable sinks, two instrumentation
+points. Chosen over (a) extending the result schema only, and (b) two independent tracks,
+because both alternatives assume the interesting failures happen inside a scenario. This
+project's own bug history says otherwise: #156 and #163 are both "the daemon died and nobody
+could see why" — cases with no <code>runId</code> and no result file.</p>
+<div class="highlight"><pre><span></span><code>                                       ┌──────────────┐
+  cli.js  withEnvelope ───┐            │ stderr sink  │  level-gated   → A
+  cli.js  emit / emitRaw ─┤            ├──────────────┤
+                          ├→ record() →│  file sink   │  NDJSON        → A + B
+  daemon  call dispatch ──┤            ├──────────────┤
+  daemon  lifecycle ──────┘            │  spool sink  │  opt-in        → C
+                                       └──────┬───────┘
+                                              │ flushed by the daemon
+                                              ▼
+                                     PostHog /batch (EU)
+</code></pre></div>
+<h3 id="modules">Modules<a class="headerlink" href="#modules" title="Permanent link">&para;</a></h3>
+<p>New <code>src/observe/</code>, matching the existing module scale (~140 lines average):</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>event.js</code></td>
+<td>Event shape, <code>makeEvent()</code>, and the <strong>field catalog</strong> (below). Pure.</td>
+</tr>
+<tr>
+<td><code>recorder.js</code></td>
+<td><code>record(event)</code>; level filtering, sink fan-out, failure transparency.</td>
+</tr>
+<tr>
+<td><code>paths.js</code></td>
+<td>Log/spool paths under the workspace. Pure, side-effect-free.</td>
+</tr>
+<tr>
+<td><code>settings.js</code></td>
+<td>Resolves level, log dir, and telemetry opt-in from env + <code>config.json</code>.</td>
+</tr>
+<tr>
+<td><code>sinks/stderr.js</code></td>
+<td>Human-ish line output for interactive debugging.</td>
+</tr>
+<tr>
+<td><code>sinks/file.js</code></td>
+<td>NDJSON append + size-capped rotation.</td>
+</tr>
+<tr>
+<td><code>sinks/spool.js</code></td>
+<td>Append-only telemetry spool + batch upload (used by the daemon).</td>
+</tr>
+</tbody>
+</table>
+<h3 id="event-shape">Event shape<a class="headerlink" href="#event-shape" title="Permanent link">&para;</a></h3>
+<p>One canonical record, NDJSON on disk, one JSON object per line:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">"ts"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-08-31T20:45:00.123Z"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"v"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"level"</span><span class="p">:</span><span class="w"> </span><span class="s2">"info"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"src"</span><span class="p">:</span><span class="w"> </span><span class="s2">"cli"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"event"</span><span class="p">:</span><span class="w"> </span><span class="s2">"verb.end"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"verb"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tap"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"run_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"login-smoke-0031"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"dur_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">41</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"ok"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"error_kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"device"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"exit_code"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"mauto_version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0.23.9"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"node"</span><span class="p">:</span><span class="w"> </span><span class="s2">"v22.14.0"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"os"</span><span class="p">:</span><span class="w"> </span><span class="s2">"darwin"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"session_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"8f2c1a…"</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><code>session_id</code> does not exist in the codebase today (<code>session status</code> reports pid and idle_ms,
+no id). Slice 2 introduces it: the daemon generates a random id at start and records it in
+the existing <code>session.json</code> handle (<code>src/device/session-paths.js</code>), so verbs read it from a
+file that is already there. It correlates device work to one <em>daemon lifetime</em>, which
+<code>run_id</code> cannot — a daemon that dies and respawns mid-run is exactly the event worth seeing.</p>
+<p><code>error_kind</code> is reused verbatim from the envelope's existing taxonomy — the classification
+work is already done and already tested.</p>
+<h3 id="the-redaction-contract-load-bearing">The redaction contract (load-bearing)<a class="headerlink" href="#the-redaction-contract-load-bearing" title="Permanent link">&para;</a></h3>
+<p>The telemetry payload is built from an <strong>allowlist, never a denylist</strong>. The HTTP sink
+serializes only fields the catalog marks <code>sends: true</code>; anything else — present in the local
+log or not — cannot leave the machine.</p>
+<p>This is the <code>action-catalog</code> / <code>capability-catalog</code> idiom applied to privacy: one catalog
+entry per field, each carrying <code>sends</code> and a stated reason, guarded by a lint test. It exists
+because the sensitive values here are not incidental. Scenario IDs and app package names are
+users' <strong>unreleased product names</strong>; device IDs are hardware identifiers. A naive
+"log the verb and its args" event would ship <code>mauto launch com.acme.unreleased-thing</code> to a
+third party.</p>
+<p>Fields permanently marked <code>sends: false</code>, enforced by
+<code>tests/lint/telemetry-redaction.test.js</code>:
+<code>error.message</code>, <code>hint</code>, <code>scenario_id</code>, <code>run_id</code>, <code>app_id</code>, <code>device_id</code>, <code>device_model</code>,
+<code>project_name</code>, any filesystem path, any element label, any typed text.</p>
+<p>Consequence: <strong>the telemetry path carries no free text at all</strong> — only enumerated values,
+counts, and durations. That makes redaction provable by a structural test rather than
+best-effort by review.</p>
+<h3 id="instrumentation-points">Instrumentation points<a class="headerlink" href="#instrumentation-points" title="Permanent link">&para;</a></h3>
+<p>Two seams cover everything:</p>
+<ol>
+<li><strong><code>withEnvelope</code> (<code>src/cli.js:1196</code>) + <code>emit</code>/<code>emitRaw</code>.</strong> A module-level <code>t0</code> at process
+   start plus the envelope at exit gives verb name, duration, outcome, and error kind for
+   every invocation. <code>emitRaw</code> (the <code>guide</code>/<code>schema</code>/<code>bootstrap</code> path) must be instrumented
+   too — it bypasses <code>emit</code> today.</li>
+<li><strong>The daemon's call dispatch (<code>src/device/session-daemon.js:432</code>).</strong> Wrapping the
+   <code>Promise.race</code> around <code>call(req.tool, req.args)</code> yields per-primitive latency, timeout
+   counts, and mobile-mcp error rates for <em>every</em> verb through one edit. Daemon lifecycle
+   events (start, connect failure, idle reap, <code>ELOCKED</code> loss, <code>uncaughtException</code>) and the
+   existing <code>recordUndeliverable</code> seam (<code>session-daemon.js:236</code>) feed the same recorder.</li>
+</ol>
+<h3 id="relationship-to-pr-176-merged-do-not-re-implement">Relationship to PR #176 (merged — do not re-implement)<a class="headerlink" href="#relationship-to-pr-176-merged-do-not-re-implement" title="Permanent link">&para;</a></h3>
+<p>PR #176 (<code>fix/163-daemon-log-capture</code>) merged to <code>main</code> on 2026-09-01 as commit <code>65067b0</code>,
+closing #163 and taking <code>package.json</code> to 0.24.0. This design <strong>builds on it and must not redo
+it.</strong> What is now on <code>main</code>, verified against the merged code:</p>
+<ul>
+<li><strong><code>src/device/session-log.js</code></strong> exporting <code>openDaemonLog(projectRoot, {maxBytes, fs})</code>,
+  <code>daemonLogHint()</code>, <code>MAX_LOG_BYTES</code> and <code>IGNORED</code>. It keeps <code>session-spawn.js</code> free of <code>fs</code>
+  and is injectable via <code>spawnDaemon</code>'s <code>openLog</code> parameter — a fourth seam alongside
+  <code>spawn</code> / <code>isAlive</code> / <code>pollMs</code>.</li>
+<li>It returns <code>{ stdio, write, close }</code> and — note, this differs from the PR description —
+  <strong>never <code>null</code></strong>. An unopenable workspace degrades to a frozen <code>IGNORED</code> handle carrying
+  <code>stdio: 'ignore'</code> and no-op <code>write</code>/<code>close</code>, so callers have nothing to branch on and a
+  read-only workspace cannot break the CLI.</li>
+<li><code>stdio</code> is <code>['ignore', fd, fd]</code>: stdout <em>and</em> stderr share one descriptor, which is what
+  captures the mobile-mcp engine as well as the daemon.</li>
+<li>Log at <strong><code>mobile-automator/.session/daemon.log</code></strong> via <code>session-paths.logFilePath()</code> /
+  <code>LOG_NAME</code>, deliberately with no <code>os.tmpdir()</code> fallback (that exists only for the socket's
+  ~104-byte sockaddr limit; a regular file has no such limit).</li>
+<li>Append-never-truncate — lock-race losers share the file — bounded at <strong>1 MiB with a single
+  rotation generation</strong> (<code>daemon.log.1</code>), checked per spawn.</li>
+<li>The daemon writes its <strong>own</strong> spawn banner (<code>bin/mauto-session-daemon.js</code>), because only it
+  knows its pid and a parent-written banner races the child's first output.</li>
+<li><code>log_path</code> surfaced in <code>session status</code> and on the failed-spawn hint.</li>
+</ul>
+<p><strong>Two log artifacts, two homes — a deliberate split, not an accident.</strong> <code>.session/daemon.log</code>
+is <em>raw process stdio</em> (unstructured, includes engine output, useful for a human reading a
+crash). <code>.logs/*.ndjson</code> is the <em>structured event stream</em> this design adds (parseable,
+redactable, aggregatable). They are different artifacts with different consumers, so they
+keep different homes; <code>.session/</code> already holds daemon runtime state, which is what raw stdio
+is. The recorder's file sink reuses <code>session-log.js</code>'s rotation approach rather than
+inventing a second one.</p>
+<p>Consequences for this design:</p>
+<ul>
+<li><strong>Slice 1 no longer contains the stdio fix.</strong> It is merged.</li>
+<li><strong>Slice 2's dependency is satisfied</strong> — #176 has landed, and it is what makes daemon death
+  observable at all. It explicitly unblocks #156.</li>
+<li><strong>The version ladder starts at <code>0.25.0-rc.0</code></strong>, since <code>main</code> is now 0.24.0.</li>
+<li><strong><code>openLog</code> is the injection point to reuse.</strong> Slice 2 does not re-plumb the daemon's
+  stdio; it records structured events alongside the raw capture #176 established.</li>
+<li><strong>The <code>.gitignore</code> gap is inherited, and the stakes went up.</strong> #176 explicitly scoped it
+  out. This repo's own <code>.gitignore:42</code> covers <code>mobile-automator/.session/</code>, but a <em>user's</em>
+  project has no such entry — so <code>daemon.log</code>, which now contains device serials, adb output
+  and stack traces, sits untracked-but-unignored in their repo where a <code>git add -A</code> sweeps it
+  up. That was a tolerable wart for a socket and a pidfile; it is not for a log file. Slice 1
+  carries it.</li>
+</ul>
+<h3 id="making-b-honest">Making B honest<a class="headerlink" href="#making-b-honest" title="Permanent link">&para;</a></h3>
+<p>Rather than a second mechanism, B falls out of A's file sink. Correlation for <strong>device
+verbs is by the <code>MAUTO_RUN_ID</code> environment variable only</strong> — the agent exports it once per
+run. No device verb gains a <code>--run-id</code> flag; that option exists today solely as a
+<code>requiredOption</code> on <code>result add-step</code> / <code>add-assertion</code> / <code>finalize</code> (<code>src/cli.js:1371</code>,
+<code>:1406</code>, <code>:1436</code>), and adding it to twelve device verbs would be churn for no gain. When
+<code>MAUTO_RUN_ID</code> is set, verb events are appended to
+<code>mobile-automator/.logs/run-&lt;runId&gt;.ndjson</code>. <code>result finalize</code> then <strong>derives</strong> measured
+values from that trace instead of trusting flags:</p>
+<ul>
+<li><code>duration_seconds</code> — computed from the trace when <code>--duration</code> is absent; a supplied
+  <code>--duration</code> that disagrees with the measured value is recorded and flagged rather than
+  silently trusted.</li>
+<li>retry/attempt counts — counted from repeated verb events against the same target.</li>
+<li>step outcomes — taken from real exit kinds.</li>
+</ul>
+<p>Screenshot-on-failure: on a <code>device</code>-kind failure the CLI captures a screenshot into
+<code>mobile-automator/screenshots/</code> and records its path in the trace, so a failed run carries
+evidence rather than a narrative.</p>
+<p>The seam needs care. <code>connectBridge</code> (<code>src/cli.js:1220</code>) has two failure paths and only one
+is usable: its first <code>catch</code> handles a <em>connect</em> failure, where no bridge exists to
+screenshot from. The capture therefore hooks the second <code>try</code> — after <code>const r = await
+fn(bridge)</code> returns a <code>device</code>-kind fail envelope and <strong>before</strong> the <code>finally</code> calls
+<code>close()</code>, which is the only window where the bridge is still live. The capture is itself a
+daemon round-trip that can fail, so it must be wrapped such that a screenshot failure is
+recorded and discarded: <strong>it must never mask or replace the original error</strong>, which is the
+thing the caller actually needs.</p>
+<h3 id="crash-anr-detection">Crash / ANR detection<a class="headerlink" href="#crash-anr-detection" title="Permanent link">&para;</a></h3>
+<p>A new <code>mauto crash</code> verb (<code>list</code> / <code>get</code>), reaching the device through a new
+<code>DeviceBridge.listCrashes()</code> / <code>getCrash()</code> pair — never a direct mobile-mcp call, per the
+locked invariant. Additionally, the failure path performs an automatic crash check: <strong>only</strong>
+when an action has already failed or an element lookup returned empty. Checking after every
+action would add a device round-trip to <code>mauto tap</code>, which is on the hot path; checking after
+a failure costs nothing in the common case and answers the exact question that is currently
+unanswerable.</p>
+<p><strong><code>crash</code> must NOT get an <code>action-catalog.js</code> entry.</strong> That catalog holds exactly the 23
+<em>scenario-schema actions</em>, and <code>tests/lint/action-coverage.test.js:49</code> asserts bidirectional
+parity — <code>expect(missingFromSchema).toEqual([])</code>, "catalog entry the schema never declares".
+Adding <code>crash</code> to the catalog without also adding it to <code>scenario_schema.json</code>'s
+<code>step.action</code> and <code>preconditions.device_actions</code> enums <strong>fails the build</strong>, and adding it to
+those enums would be an unplanned schema bump.</p>
+<p><code>crash</code> is a <em>diagnostic</em> verb, not something a scenario does — it belongs with <code>devices</code>,
+<code>session</code>, and <code>memory</code>, none of which appear in the catalog. Its only catalog obligation is
+an entry in <code>src/result/capability-catalog.js</code> for the crash record's home in the result
+schema.</p>
+<p>Deliberate non-goal: no <code>no_crash</code> assertion type. That would be a scenario-schema change
+with its own additivity implications, and it is not required to answer "did the app die?".</p>
+<h3 id="telemetry-transport-c">Telemetry transport (C)<a class="headerlink" href="#telemetry-transport-c" title="Permanent link">&para;</a></h3>
+<p><strong>PostHog free tier, used without its SDK.</strong> The free plan is $0 with no credit card and
+covers all three domains in one account: 1M analytics events, 100K error-tracking exceptions,
+and 50GB logs per month. PostHog exposes documented plain-HTTP capture endpoints
+(<code>POST /i/v0/e</code> and <code>/batch</code>) authenticated by a project token, so events go out via Node's
+built-in <code>fetch</code>:</p>
+<ul>
+<li><strong>zero new dependencies</strong> — cold start stays at its current 112ms, which matters because
+  one scenario is dozens of <code>mauto</code> process spawns;</li>
+<li><strong>no new supply-chain surface</strong>, on a project that already carries 7 high-severity
+  advisories (#161);</li>
+<li><strong>full payload control</strong>, which the redaction contract requires;</li>
+<li><strong>EU cloud</strong> (<code>eu.i.posthog.com</code>) as the default host, given app package names are in play;</li>
+<li>switching to self-hosted PostHog later is a URL change, not a migration.</li>
+</ul>
+<p><strong>A one-shot process cannot reliably do network I/O.</strong> Every verb ends in <code>process.exit()</code>
+(<code>src/cli.js:1628</code>), which tears down pending sockets — a fire-and-forget POST would be
+dropped a large fraction of the time, and awaiting it would add network latency to every tap.
+So verbs never talk to the network. They append to a local spool file (synchronous, cheap,
+always succeeds), and the <strong>daemon</strong> flushes the spool during its idle window, with
+<code>mauto telemetry flush</code> as an explicit escape hatch. An undelivered spool is just a file that
+gets picked up on the next run.</p>
+<h3 id="control-surface">Control surface<a class="headerlink" href="#control-surface" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Default</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MAUTO_LOG_LEVEL</code></td>
+<td><code>warn</code> (stderr), <code>info</code> (file)</td>
+<td><code>silent</code>/<code>error</code>/<code>warn</code>/<code>info</code>/<code>debug</code></td>
+</tr>
+<tr>
+<td><code>MAUTO_LOG_DIR</code></td>
+<td><code>mobile-automator/.logs</code></td>
+<td>Relocate logs</td>
+</tr>
+<tr>
+<td><code>MAUTO_RUN_ID</code></td>
+<td>unset</td>
+<td>Correlates verbs into one run trace</td>
+</tr>
+<tr>
+<td><code>telemetry.enabled</code> in <code>config.json</code></td>
+<td><code>false</code></td>
+<td>Opt-in; set via <code>mauto config set</code></td>
+</tr>
+<tr>
+<td><code>MAUTO_TELEMETRY=0</code></td>
+<td>—</td>
+<td>Kill switch; always wins over config</td>
+</tr>
+<tr>
+<td><code>DO_NOT_TRACK=1</code></td>
+<td>—</td>
+<td>Honoured; disables C</td>
+</tr>
+</tbody>
+</table>
+<p>Telemetry is <strong>off until explicitly enabled</strong>. There is no first-run prompt that defaults to
+on, and no upload path is reachable while <code>telemetry.enabled</code> is false.</p>
+<h3 id="storage-hygiene">Storage hygiene<a class="headerlink" href="#storage-hygiene" title="Permanent link">&para;</a></h3>
+<p>Structured event logs live in <code>mobile-automator/.logs/</code>, NDJSON, bounded by the same
+1 MiB / single-generation rotation <code>session-log.js</code> establishes, so there is one rotation
+policy in the codebase rather than two. (Raw daemon stdio stays at <code>.session/daemon.log</code> per</p>
+<h1 id="176-mauto-setup">176.) <code>mauto setup</code><a class="headerlink" href="#176-mauto-setup" title="Permanent link">&para;</a></h1>
+<p>gains a generated <code>mobile-automator/.gitignore</code> covering <code>.logs/</code>, <code>.session/</code>, and
+<code>screenshots/</code>.</p>
+<p>This closes a latent gap: <code>tests/unit/memory/paths.test.js:24</code> describes <code>.session/</code> as "the
+gitignored <code>.session</code> dir", but nothing actually ignores it inside a <em>user's</em> repository —
+this repo's own <code>.gitignore</code> has no bearing there. Device serials and session handles are
+currently committable by accident; <code>.logs/</code> would compound that.</p>
+<h2 id="locked-invariants">Locked invariants<a class="headerlink" href="#locked-invariants" title="Permanent link">&para;</a></h2>
+<p>Every invariant from PRD #69 is preserved, and one needs an explicit guard:</p>
+<ul>
+<li><strong>Uniform envelope — the critical one.</strong> <strong>No sink may ever write to stdout</strong>; stdout
+  carries exactly the verb's own output and nothing else. Diagnostics go to stderr and files
+  only. Note the guard cannot be stated as "stdout is always one JSON object": <code>guide</code>,
+  <code>schema</code>, and <code>bootstrap</code> route through <code>emitMaybeRaw</code> → <code>emitRaw</code> (<code>src/cli.js:1468</code>,
+  <code>:1633</code>) and print raw markdown with no envelope at all. The guard is therefore
+  byte-equality against an uninstrumented baseline, per verb class (see Testing).</li>
+<li><strong>Device driven only through <code>mauto</code> verbs.</strong> Crash detection goes through a <code>DeviceBridge</code>
+  method behind a verb.</li>
+<li><strong>One-shot verbs only.</strong> No verb becomes long-lived; the spool exists precisely so none has
+  to.</li>
+<li><strong>Reasoning is pulled, never ambient.</strong> Unaffected; the execute guide gains crash-verb
+  documentation.</li>
+<li><strong>Backwards compatibility.</strong> <code>.logs/</code> is an additive directory and <code>config_schema.json</code>
+  already sets <code>additionalProperties: true</code>. <strong>The result schema has no additivity guard
+  today</strong> — <code>tests/lint/schema-additive.test.js</code> reads only <code>scenario_schema.json</code> against
+  the <code>scenario_schema_v2.0.json</code> fixture, and <code>result-coverage.test.js</code> guards field→verb
+  reachability, not additivity. Slices 3 and 4 both add result-schema fields, so slice 3 must
+  <em>create</em> <code>tests/lint/result-schema-additive.test.js</code> plus a
+  <code>tests/fixtures/result_schema_v2.0.json</code> baseline, mirroring the scenario one. This is new
+  work, not an existing guarantee to lean on.</li>
+<li><strong>Platform-agnostic selectors.</strong> Unaffected.</li>
+</ul>
+<p>Windows (#165) is not made worse: no new socket or platform-specific primitive is introduced.</p>
+<h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
+<p><strong>Unit</strong> — redaction allowlist rejects every <code>sends: false</code> field; the recorder never throws
+and never propagates (a full disk must not fail <code>mauto tap</code>); file-sink rotation; level
+filtering; spool batching and idempotent flush; duration derivation from a trace.</p>
+<p><strong>Lint guards</strong> — new <code>tests/lint/telemetry-redaction.test.js</code> (no free-text field is ever
+<code>sends: true</code>); extend <code>action-coverage.test.js</code> for the crash action; extend
+<code>result-coverage.test.js</code> for the crash record and measured-duration fields; extend
+<code>config-schema.test.js</code> for the telemetry keys.</p>
+<p><strong>Integration</strong> — <em>stdout purity</em>, the guard that matters most, split by verb class: for
+envelope verbs stdout parses as exactly one JSON object; for the raw verbs (<code>guide</code>,
+<code>schema</code>, <code>bootstrap</code>) stdout is byte-identical to the uninstrumented baseline. Both must
+hold at <strong>every</strong> log level including <code>debug</code>, which is what catches the first careless sink
+write. Plus: <code>MAUTO_LOG_LEVEL=debug</code> output appears on stderr only; telemetry stays
+unreachable while disabled (asserted by injecting a transport that fails the test if
+called).</p>
+<h2 id="slice-ladder">Slice ladder<a class="headerlink" href="#slice-ladder" title="Permanent link">&para;</a></h2>
+<p>Tracer-bullet slices, gate-then-graduate per the release convention. Slices 2–5 gate their
+user-visible verbs behind <code>MAUTO_OBSERVE=1</code>; the slice-1 daemon stdio fix ships <strong>ungated</strong>,
+since it is a straight bug fix for #163 that users hit today.</p>
+<table>
+<thead>
+<tr>
+<th>Slice</th>
+<th>Content</th>
+<th>Version</th>
+<th>Closes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Recorder core, event model, field catalog + redaction lint, stderr/file sinks, workspace <code>.gitignore</code></td>
+<td><code>0.25.0-rc.0</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Daemon instrumentation: call latency, timeouts, lifecycle, connect failures, undeliverable replies (builds on merged #176)</td>
+<td><code>0.25.0-rc.1</code></td>
+<td>part of #156</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Run traces, measured <code>duration_seconds</code> and retry counts in <code>finalize</code>, screenshot-on-failure, <strong>new result-schema additivity guard + fixture</strong></td>
+<td><code>0.25.0-rc.2</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>mauto crash</code> verb, failure-path auto-check, result-schema record, capability-catalog entry</td>
+<td><code>0.25.0-rc.3</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Opt-in PostHog spool + daemon flush, consent UX, privacy documentation</td>
+<td><code>0.25.0</code></td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>Slice 1 stands alone and is independently valuable: it lands the seam every later slice
+needs, and closes the <code>.gitignore</code> gap #176 deferred. It no longer closes #163 — PR #176
+does.</p>
+<h2 id="open-questions">Open questions<a class="headerlink" href="#open-questions" title="Permanent link">&para;</a></h2>
+<p>None blocking. Two to settle during slice 5: whether the PostHog project token ships in the
+package or is fetched at flush time, and the exact wording of the opt-in consent notice.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/sh3lan93/mobile-automator" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
