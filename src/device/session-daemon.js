@@ -24,6 +24,9 @@ const net = require('net');
 
 const paths = require('./session-paths');
 const { FrameParser } = require('./session-protocol');
+const { newSessionId } = require('./session-handle');
+const { makeDeviceCall } = require('./device-call');
+const { safeObserve: guardObserve } = require('../observe/recorder');
 
 const DEFAULT_IDLE_MS = 5 * 60 * 1000;
 
@@ -158,11 +161,48 @@ async function startDaemon({
   onUndeliverable = null,
   scheduleTimeout = defaultScheduleTimeout,
   execFile = childProcess.execFileSync,
+  sessionId = newSessionId(),
+  // Structured observability, injected rather than defaulted to the real
+  // recorder for one reason: startDaemon also runs IN-PROCESS across ~40 unit
+  // tests, where a live stderr sink would write into jest's reporter output.
+  // The only process that is actually a daemon — bin/mauto-session-daemon.js —
+  // injects the real recorder, and tests/unit/bin/mauto-session-daemon-observe
+  // .test.js proves it does.
+  observe = () => {},
 } = {}) {
   if (!projectRoot) throw new TypeError('startDaemon requires projectRoot');
 
+  // The injected seam, guarded once at the boundary with the canonical wrapper
+  // (src/observe/recorder.js) rather than a fourth hand-rolled try/catch. Two
+  // failure modes this closes, both proved by
+  // tests/unit/device/daemon-observability.test.js: the daemon dying at startup
+  // killed by the code whose only job is to explain why daemons die, and — on
+  // the failure paths, which observe BEFORE releaseLock() — a telemetry fault
+  // masking the real error and leaking the lock, wedging every later spawn.
+  const safeObserve = guardObserve(observe);
+
+  // Zero point for every dur_ms this daemon reports: startup duration on
+  // daemon.start, total session lifetime on daemon.stop.
+  const startedAtMs = Date.now();
+
+  // Guarded like the lock failure below, and for the same reason: this is the
+  // FIRST filesystem operation the daemon performs, and it fails on exactly the
+  // conditions daemon.start_failure exists to report (EACCES, EROFS, ENOSPC on
+  // the workspace). An unguarded throw here is the earliest invisible death
+  // there is — nothing else in the system records it, and the spawning verb
+  // sees only a readiness timeout.
   const dir = paths.sessionDir(projectRoot);
-  fs.mkdirSync(dir, { recursive: true });
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch (err) {
+    safeObserve({
+      level: 'error',
+      event: 'daemon.start_failure',
+      error_code: err && err.code,
+      message: err && (err.message || String(err)),
+    });
+    throw err;
+  }
 
   // Reap a crashed daemon's leftovers before we bind.
   cleanStale(projectRoot, { execFile });
@@ -179,10 +219,22 @@ async function startDaemon({
     fs.writeSync(lockFd, String(process.pid) + '\n');
   } catch (err) {
     if (err && err.code === 'EEXIST') {
+      // warn, not error: a spawn-race loser failing here is the lock DOING ITS
+      // JOB. It is worth seeing (a workspace where it repeats means two agents
+      // are fighting over one device) but it is not a malfunction.
+      safeObserve({ level: 'warn', event: 'daemon.lock_conflict', error_code: 'ELOCKED' });
       const e = new Error('device session daemon already starting for this workspace (lock held)');
       e.code = 'ELOCKED';
       throw e;
     }
+    // Not a race — EACCES, EROFS, ENOSPC on .session/. An invisible death that
+    // nothing else in the system reports.
+    safeObserve({
+      level: 'error',
+      event: 'daemon.start_failure',
+      error_code: err && err.code,
+      message: err && (err.message || String(err)),
+    });
     throw err;
   }
 
@@ -205,9 +257,31 @@ async function startDaemon({
   try {
     ({ call, close } = await createCall({ device }));
   } catch (err) {
+    // #156's core symptom: mobile-mcp never came up, and until now the only
+    // trace was a 15s readiness timeout in the spawning verb.
+    safeObserve({
+      level: 'error',
+      event: 'daemon.connect_failure',
+      error_code: err && err.code,
+      message: err && (err.message || String(err)),
+      dur_ms: Date.now() - startedAtMs,
+    });
     releaseLock();
     throw err;
   }
+
+  // One bounded, measured call, built ONCE and shared by every connection: the
+  // timeout, the sink and the connection are all per-daemon, so nothing about
+  // it is per-socket. Built HERE, before server.listen() below, or the first
+  // frame to arrive would hit a temporal dead zone.
+  //
+  // safeObserve, never the raw `observe` — device-call.js is deliberately not
+  // guarded a second time (pinned in tests/unit/device/device-call.test.js).
+  const invoke = makeDeviceCall(call, {
+    scheduleTimeout,
+    observe: safeObserve,
+    timeoutMs: DAEMON_CALL_TIMEOUT_MS,
+  });
 
   let idleTimer = null;
   let stopping = false;
@@ -219,19 +293,21 @@ async function startDaemon({
   const notifyUndeliverable =
     typeof onUndeliverable === 'function'
       ? onUndeliverable
-      : (info) => {
-          try {
-            process.stderr.write(
-              `mauto-session-daemon: undeliverable reply id=${info.id}: ${info.reason}\n`
-            );
-          } catch (_) {
-            // fd 2 is unwritable (full disk, or the workspace log could not be
-            // opened and this is /dev/null's successor). Since #163 it normally
-            // reaches mobile-automator/.session/daemon.log; either way an
-            // undeliverable reply is already recorded in `undeliverable`, so
-            // losing the warning must not take the daemon down.
-          }
-        };
+      : (info) =>
+          // Was a bespoke process.stderr.write with its own try/catch. It is
+          // the same destination — the stderr sink writes to fd 2, which since
+          // #176 IS mobile-automator/.session/daemon.log — but now structured,
+          // and safeObserve (plus record()'s own never-throw guarantee)
+          // subsumes the hand-rolled guard. That guard mattered: this runs
+          // inside reply(), on the socket's async data handler, so a throw here
+          // would surface as an unhandled rejection. The frame id and the
+          // transport reason go in `message`, which is sends:false: a socket
+          // errno is free text and free text never reaches the telemetry path.
+          safeObserve({
+            level: 'warn',
+            event: 'daemon.undeliverable',
+            message: `id=${info.id}: ${info.reason}`,
+          });
 
   function recordUndeliverable(info) {
     undeliverable.push(info);
@@ -252,16 +328,28 @@ async function startDaemon({
     if (stopping) return; // never re-arm once we have begun tearing down
     if (idleMs > 0 && Number.isFinite(idleMs)) {
       idleTimer = setTimeout(() => {
-        stop().catch(() => {});
+        stop('idle').catch(() => {});
       }, idleMs);
       if (typeof idleTimer.unref === 'function') idleTimer.unref();
     }
   }
 
-  async function stop() {
+  async function stop(reason = 'explicit') {
     if (stopping) return;
     stopping = true;
     clearIdle();
+
+    // Recorded HERE, before the drain, not after teardown. stop() can block on
+    // an in-flight device call and on close()ing a mobile-mcp child that will
+    // not die — the two hangs most worth seeing — and an event written after
+    // them would never be written at all. The `if (stopping) return` above is
+    // what keeps this to one event per daemon.
+    safeObserve({
+      level: 'info',
+      event: 'daemon.stop',
+      stop_reason: reason,
+      dur_ms: Date.now() - startedAtMs,
+    });
 
     // Drain-before-teardown: never destroy a socket or tear down the shared
     // connection while a device call is still in flight. The action already hit
@@ -299,7 +387,7 @@ async function startDaemon({
   }
 
   function onSignal() {
-    stop().catch(() => {});
+    stop('signal').catch(() => {});
   }
 
   server.on('connection', (socket) => {
@@ -397,7 +485,7 @@ async function startDaemon({
         if (req.type === 'shutdown') {
           await reply({ id: req.id, ok: true, result: { stopping: true } });
           // Reply already flushed (awaited) — now tear down.
-          setImmediate(() => stop().catch(() => {}));
+          setImmediate(() => stop('shutdown').catch(() => {}));
           continue;
         }
         if (req.type === 'ping') {
@@ -418,43 +506,30 @@ async function startDaemon({
             armIdle();
             continue;
           }
+          // inFlight/armIdle stay HERE, not in the decorator: they gate stop()'s
+          // drain and are reported by ping/getSessionStatus, which are facts
+          // about the daemon's sockets rather than about one device call.
           inFlight += 1;
           try {
-            // Bound the shared mobile-mcp call. The daemon's timeout (25s) is
-            // BELOW the client's (30s) so this error always reaches the client
-            // as an honest {kind:'timeout'} reply instead of being dropped by
-            // the client's own timeout — a dropped reply reads as a
-            // false-failure and prompts a retry → double-execution. The
-            // underlying call is NOT cancellable; it keeps running in the
-            // background, which is fine — the point is the agent gets a bounded,
-            // honest error. Swallow the loser's eventual settlement so it can't
-            // surface as an unhandled rejection after the race already settled.
-            const callPromise = call(req.tool, req.args || {});
-            callPromise.catch(() => {});
-            const result = await Promise.race([
-              callPromise,
-              scheduleTimeout(DAEMON_CALL_TIMEOUT_MS).then(() => {
-                const e = new Error(
-                  `${req.tool}: the mobile-mcp call did not respond within ${DAEMON_CALL_TIMEOUT_MS}ms`
-                );
-                e.kind = 'timeout';
-                e.hint = 'the action may have partially executed on the device — verify state before retrying';
-                throw e;
-              }),
-            ]);
+            const result = await invoke(req.tool, req.args || {});
             await reply({ id: req.id, ok: true, result });
           } catch (err) {
-            if (err && err.kind === 'timeout') {
-              await reply({
-                id: req.id,
-                ok: false,
-                error: { message: err.message, kind: 'timeout', hint: err.hint },
-              });
-            } else {
-              // Non-timeout failure: no kind → client/deviceFail default to
-              // 'device'. Only the timeout path sets kind:'timeout'.
-              await reply({ id: req.id, ok: false, error: { message: err.message || String(err) } });
-            }
+            // Only a timeout carries kind/hint outward; a non-timeout failure
+            // drops both so client/deviceFail defaults to 'device'. Do NOT
+            // "simplify" this to `kind: err && err.kind`: that would forward an
+            // engine-invented kind that exitCodeFor does not enumerate (turning
+            // a device failure's exit 2 into exit 1) and would emit "kind":null
+            // for a falsy rejection. daemon-timeout.test.js pins both.
+            const timedOut = Boolean(err && err.kind === 'timeout');
+            await reply({
+              id: req.id,
+              ok: false,
+              error: {
+                message: err && (err.message || String(err)),
+                kind: timedOut ? 'timeout' : undefined,
+                hint: timedOut ? err.hint : undefined,
+              },
+            });
           } finally {
             inFlight -= 1;
             armIdle(); // arm idle only after the reply has completed
@@ -488,6 +563,13 @@ async function startDaemon({
     // listen failed (e.g. EADDRINUSE from a double-spawn that beat us to the
     // bind, or a recycled-pid wedge). The connection was already built — close
     // it so we never leak the mobile-mcp child, and release the lock.
+    safeObserve({
+      level: 'error',
+      event: 'daemon.listen_failure',
+      error_code: err && err.code,
+      message: err && (err.message || String(err)),
+      dur_ms: Date.now() - startedAtMs,
+    });
     try {
       await close();
     } catch (_) {
@@ -500,6 +582,10 @@ async function startDaemon({
   // Persist handle + pidfile now that we are actually listening.
   const handle = {
     pid: process.pid,
+    // Correlates every event from this daemon lifetime, which run_id cannot:
+    // it lives in the handle so a verb reads it from a file that is already
+    // there instead of paying a socket round trip (src/device/session-handle.js).
+    session_id: sessionId,
     device: device || null,
     socket: socketPath,
     started_at: new Date().toISOString(),
@@ -513,9 +599,20 @@ async function startDaemon({
 
   armIdle();
 
+  // Recorded after the handle exists, so anything reading the log can also read
+  // the handle it names. device_id is sends:false — a device serial never
+  // leaves the machine.
+  safeObserve({
+    level: 'info',
+    event: 'daemon.start',
+    device_id: device || undefined,
+    dur_ms: Date.now() - startedAtMs,
+  });
+
   return {
     socketPath,
     device: device || null,
+    sessionId,
     stop,
     // Replies that could not be delivered (peer gone / unflushable). Surfaced so
     // callers/tests can observe transport failures instead of them being eaten.

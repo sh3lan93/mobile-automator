@@ -1,5 +1,7 @@
 'use strict';
 
+const path = require('path');
+
 const {
   acquireConnection,
   daemonLogHint,
@@ -36,6 +38,9 @@ describe('connection', () => {
   });
 
   describe('sessionStatus', () => {
+    const fs = require('fs');
+    const os = require('os');
+
     test('merges the daemon-reported status with the workspace log path', async () => {
       const client = { getSessionStatus: async () => ({ running: true, in_flight: 2, device: 'A' }) };
       expect(await sessionStatus('/x', { client })).toEqual({
@@ -43,6 +48,7 @@ describe('connection', () => {
         in_flight: 2,
         device: 'A',
         log_path: paths.logFilePath('/x'),
+        session_id: null,
       });
     });
 
@@ -57,7 +63,35 @@ describe('connection', () => {
         in_flight: null,
         device: null,
         log_path: paths.logFilePath('/x'),
+        session_id: null,
       });
+    });
+
+    test('reports session_id from the handle of a running daemon', async () => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-conn-status-'));
+      fs.mkdirSync(paths.sessionDir(root), { recursive: true });
+      fs.writeFileSync(
+        paths.handlePath(root),
+        JSON.stringify({ pid: 1, session_id: 'abcdef0123456789' }) + '\n'
+      );
+
+      const client = { getSessionStatus: async () => ({ running: true, in_flight: 0, device: null }) };
+      expect((await sessionStatus(root, { client })).session_id).toBe('abcdef0123456789');
+    });
+
+    // Deliberately NOT symmetric with log_path. A SIGKILLed daemon leaves its
+    // handle behind, so reporting that id next to running:false would name a
+    // session that does not exist.
+    test('reports session_id null when not running, even if a stale handle survives', async () => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-conn-status-'));
+      fs.mkdirSync(paths.sessionDir(root), { recursive: true });
+      fs.writeFileSync(
+        paths.handlePath(root),
+        JSON.stringify({ pid: 1, session_id: 'deadbeefdeadbeef' }) + '\n'
+      );
+
+      const client = { getSessionStatus: async () => ({ running: false, in_flight: null, device: null }) };
+      expect((await sessionStatus(root, { client })).session_id).toBeNull();
     });
   });
 

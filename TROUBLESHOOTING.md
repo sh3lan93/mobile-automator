@@ -67,13 +67,53 @@ knows, including uncaught exceptions with stack traces and mobile-mcp's own
 output, to a log inside the workspace:
 
 ```bash
-mauto session status                          # reports log_path, running or not
-tail -50 mobile-automator/.session/daemon.log
+mauto session status                          # reports log_path and session_id
+tail -50 mobile-automator/.session/daemon.log # raw daemon + mobile-mcp output
 ```
 
 The log is appended across spawns and rotates to `daemon.log.1` once it passes
-1 MiB, so a crash loop cannot fill the disk. To start clean, remove the session
-directory and re-run any device verb:
+1 MiB, so a crash loop cannot fill the disk.
+
+**There are two log artifacts, and they answer different questions.**
+`.session/daemon.log` is raw process output — the daemon's own stderr plus the
+mobile-mcp engine's adb/simctl chatter — meant for a human to read top to
+bottom. `.logs/daemon.ndjson` is one JSON object per line, carrying per-call
+latencies, timeout counts, mobile-mcp error kinds, and the daemon's lifecycle
+events (`daemon.start`, `daemon.lock_conflict`, `daemon.connect_failure`,
+`daemon.listen_failure`, `daemon.stop`, `daemon.crash`). It answers "how long
+do taps take on this device", "how often does mobile-mcp time out" and "did the
+daemon die and respawn mid-run" — none of which the raw log can. Both are
+bounded at 1 MiB with a single `.1` generation.
+
+```bash
+# What did the daemon do, most recent last?
+cat mobile-automator/.logs/daemon.ndjson
+
+# Only the failures
+grep -E '"level":"(warn|error)"' mobile-automator/.logs/daemon.ndjson
+
+# CLI and daemon on one timeline — both files carry an ISO `ts` and a `src`
+jq -s 'sort_by(.ts) | .[]' mobile-automator/.logs/*.ndjson
+```
+
+Every event from one daemon lifetime shares a `session_id`, so when a daemon
+died and respawned mid-run the two lifetimes stay separable — and
+`mauto session status` tells you which one is live. A `call.start` with no
+matching `call.end` for the same `session_id` is a call that never returned;
+correlate its `ts` against `daemon.log` to see what the engine was doing.
+
+`MAUTO_LOG_LEVEL` (`silent|error|warn|info|debug`) raises the detail in both
+logs; `call.start` is recorded at `debug`, so hung-call diagnosis needs it. One
+catch: **the daemon captures its log level at spawn time.** Nothing can export
+a variable into an already-running detached process, so setting the variable on
+a later verb changes only that verb's own events. End the session first:
+
+```bash
+mauto session end
+MAUTO_LOG_LEVEL=debug mauto devices   # respawns the daemon at debug
+```
+
+To start clean, remove the session directory and re-run any device verb:
 
 ```bash
 mauto session end                    # ask a live daemon to stop

@@ -21,10 +21,8 @@
 // Everything device-touching is injected so the whole matrix is unit-testable
 // with a fake daemon + fake createCall + fake spawn.
 
-const fs = require('fs');
-
 const { DeviceBridge } = require('./bridge');
-const paths = require('./session-paths');
+const { readHandle } = require('./session-handle');
 const sessionClient = require('./session-client');
 const { daemonLogHint } = require('./session-log');
 const sessionSpawn = require('./session-spawn');
@@ -38,14 +36,14 @@ const NOOP_CLOSE = () => Promise.resolve();
 // Read the live daemon's pinned device from its handle, or null. A null pin
 // means the daemon serves whatever device mobile-mcp selected (matches any
 // request that doesn't pin a specific device).
+//
+// Reading and parsing the handle belongs to session-handle.js, which owns that
+// file and is already total (absent/unreadable/malformed all mean "no
+// session"). This is the projection onto the one field this module cares about,
+// not a second reader of the same JSON.
 function readHandleDevice(projectRoot) {
-  try {
-    const raw = fs.readFileSync(paths.handlePath(projectRoot), 'utf8');
-    const handle = JSON.parse(raw);
-    return handle && handle.device ? handle.device : null;
-  } catch (_) {
-    return null;
-  }
+  const handle = readHandle(projectRoot);
+  return (handle && handle.device) || null;
 }
 
 // Does a daemon pinned to `handleDevice` satisfy a request for `requested`?
