@@ -1,7 +1,7 @@
 {
   "name": "mobile-automator",
-  "version": "0.25.0-rc.0",
-  "description": "Host-agnostic mauto CLI for AI-driven mobile QA automation — analyzes a mobile project and drives devices through mobile-mcp.",
+  "version": "0.26.0-rc.0",
+  "description": "Host-agnostic mauto CLI for AI-driven mobile QA automation \u2014 analyzes a mobile project and drives devices through mobile-mcp.",
   "homepage": "https://github.com/sh3lan93/mobile-automator#readme",
   "repository": {
     "type": "git",
@@ -26,7 +26,7 @@
     "prepublishOnly": "npm test",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "lint:guides": "jest tests/lint/guide-no-mcp-tool-leak.test.js tests/lint/guide-no-placeholder-leak.test.js tests/lint/guide-agnostic-no-os.test.js tests/lint/guide-artifact-reuse.test.js tests/lint/skill-invariants.test.js tests/lint/skill-no-placeholder-leak.test.js tests/lint/skill-frontmatter-valid.test.js tests/lint/config-schema.test.js tests/lint/result-coverage.test.js",
+    "lint:guides": "jest tests/lint",
     "lint:schema-additive": "jest tests/lint/schema-additive.test.js",
     "test:unit": "jest tests/unit",
     "test:integration": "jest tests/integration",
@@ -41,9 +41,10 @@
   "devDependencies": {
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
+    "js-yaml": "^4.3.2",
     "toml": "^3.0.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   }
 }

@@ -13,11 +13,11 @@ const { ACTION_CATALOG } = require('../../src/device/action-catalog');
 // the true counts from the schema + action catalog and fails any shipping doc
 // that states a different number, so a count can never silently rot again.
 //
-// Excluded by design: changelog files and docs/plans/** are historical records
-// — "14 actions" was TRUE when those entries were written and must not be
-// rewritten.
+// The doc corpus — and which docs count as historical, since "14 actions" was
+// TRUE when those changelog entries were written — comes from ./docs-corpus,
+// shared with every other prose-scanning guard.
 
-const REPO_ROOT = path.resolve(__dirname, '..', '..');
+const { REPO_ROOT, shippingDocs } = require('./docs-corpus');
 
 // --- Derived truth (never hardcode these) ---------------------------------
 
@@ -67,43 +67,8 @@ const CLAIM_PATTERNS = [
   },
 ];
 
-const EXCLUDED = [
-  'docs/changelog.md',
-  'CHANGELOG.md',
-  'docs/plans',
-  'docs/superpowers/plans',
-  'docs/superpowers/specs',
-];
-
-function isExcluded(relPath) {
-  const posix = relPath.split(path.sep).join('/');
-  return EXCLUDED.some((ex) => posix === ex || posix.startsWith(ex + '/'));
-}
-
-function collectDocs() {
-  const files = [];
-
-  for (const top of ['README.md', 'CLAUDE.md', 'ROADMAP.md', 'TROUBLESHOOTING.md', 'CONTRIBUTING.md']) {
-    const abs = path.join(REPO_ROOT, top);
-    if (fs.existsSync(abs)) files.push(abs);
-  }
-
-  const docsRoot = path.join(REPO_ROOT, 'docs');
-  const walk = (dir) => {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const abs = path.join(dir, entry.name);
-      if (isExcluded(path.relative(REPO_ROOT, abs))) continue;
-      if (entry.isDirectory()) walk(abs);
-      else if (entry.isFile() && entry.name.endsWith('.md')) files.push(abs);
-    }
-  };
-  if (fs.existsSync(docsRoot)) walk(docsRoot);
-
-  return files;
-}
-
 describe('shipping docs state capability counts that match the schema', () => {
-  const files = collectDocs();
+  const files = shippingDocs();
 
   it('finds docs to scan', () => {
     expect(files.length).toBeGreaterThan(0);
@@ -114,13 +79,13 @@ describe('shipping docs state capability counts that match the schema', () => {
       const want = expected();
       const offenders = [];
 
-      for (const abs of files) {
-        const lines = fs.readFileSync(abs, 'utf8').split('\n');
+      for (const rel of files) {
+        const lines = fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8').split('\n');
         lines.forEach((line, i) => {
           for (const m of line.matchAll(regex)) {
             if (Number(m[1]) !== want) {
               offenders.push(
-                `${path.relative(REPO_ROOT, abs)}:${i + 1}: says ${m[1]}, schema says ${want} — ${line.trim()}`
+                `${rel}:${i + 1}: says ${m[1]}, schema says ${want} — ${line.trim()}`
               );
             }
           }
