@@ -24,6 +24,9 @@ const { ADAPTERS } = require('./init/adapters');
 const { isSemanticAction, ACTION_METHOD, selectResolver } = require('./device/semantic-press');
 const connection = require('./device/connection');
 const { record } = require('./observe/recorder');
+const { resolveRunId } = require('./observe/settings');
+const { runTracePath } = require('./observe/paths');
+const { readSessionId } = require('./device/session-handle');
 
 // Commander throws (via exitOverride) for two very different reasons, and the
 // split below is the ONLY thing that tells them apart.
@@ -1200,6 +1203,15 @@ function buildProgram(deps = {}) {
   // walk up to the child of the root: the record names the verb, not its
   // subcommand, keeping the vocabulary the size of the verb list.
   program.hook('preAction', (_thisCommand, actionCommand) => {
+    // Read --run-id off the INNERMOST command (e.g. `add-step`) before walking
+    // up to name the verb (`result`). The three result verbs already require
+    // it, so they correlate with no new flag and no environment variable; an
+    // explicit flag beats the ambient MAUTO_RUN_ID because it is scoped to this
+    // invocation and the environment is not.
+    const opts = actionCommand.opts();
+    emitters.setRunId(
+      (typeof opts.runId === 'string' && opts.runId ? opts.runId : null) || resolveRunId(process.env)
+    );
     let command = actionCommand;
     while (command.parent && command.parent.parent) command = command.parent;
     emitters.setVerb(command.name());
@@ -1243,6 +1255,12 @@ function buildProgram(deps = {}) {
     let close;
     try {
       ({ bridge, close } = await deviceBridgeFactory({ device, projectRoot }));
+      // AFTER the connect, deliberately: the handle is written when the daemon
+      // starts listening, so before this point it may legitimately not exist
+      // yet. Best-effort — readSessionId never throws and returns null for an
+      // absent or malformed handle, which is a normal state (a one-shot
+      // fallback connection has no daemon at all).
+      emitters.setSessionId(readSessionId(projectRoot));
     } catch (err) {
       emit(deviceFail(err), humanFlag());
       return;
@@ -1670,6 +1688,21 @@ function makeEmitters({ projectRoot = process.cwd() } = {}) {
   // `mauto --human config get mode` recorded `--human`.
   let resolvedVerb = null;
 
+  // The run this invocation belongs to, and the daemon lifetime it used.
+  //
+  // Both follow resolvedVerb's pattern for resolvedVerb's reason: finish() is
+  // closed over this invocation's state, and every exit path reaches it
+  // through commander's own call stack, so there is nowhere else to put them.
+  //
+  // resolvedRunId is NOT validated here. It becomes a filename in exactly one
+  // place — runTracePath — which refuses anything unsafe and returns null, so
+  // a second predicate here could only disagree with that one.
+  let resolvedRunId = null;
+  // Set ONLY by connectBridge, and only after a successful connect. That is
+  // what makes `session_id` on a CLI event mean "this verb reached the device
+  // through that daemon".
+  let resolvedSessionId = null;
+
   // THE process-ending path: every way this CLI terminates goes through here,
   // so "is this invocation observable" has exactly one answer. Only `mauto mcp`
   // is outside it — it serves until its client disconnects and then returns,
@@ -1687,6 +1720,17 @@ function makeEmitters({ projectRoot = process.cwd() } = {}) {
   // cli.js was loaded, which is not process start for anything that requires it
   // first (a test harness, bin/mauto.js's own guards).
   function finish({ text = '', exitKind, ok, errorKind, exitCode = exitCodeFor(exitKind) }) {
+    // The flag-resolved id when a command parsed, the environment otherwise: a
+    // parse failure reaches no preAction hook and so has no flag, but it is
+    // still part of the run and is exactly the class of failure (#146) this
+    // instrumentation exists to see.
+    const runId = resolvedRunId || resolveRunId(process.env);
+    // null for an id that cannot safely name a file. Every hostile
+    // MAUTO_RUN_ID lands here as "no trace" — but NOT as "no run_id below":
+    // the raw id is still recorded on the mauto.ndjson line, so a refused id
+    // is provably distinguishable from one never exported at all (no field).
+    const tracePath = runTracePath(projectRoot, runId);
+
     // Record BEFORE the write: process.exit() below is immediate.
     const fields = {
       event: 'verb.end',
@@ -1700,12 +1744,17 @@ function makeEmitters({ projectRoot = process.cwd() } = {}) {
       // Absent, not guessed, when no command resolved. makeEvent drops
       // undefined fields, so the line carries no `verb` rather than a lie.
       verb: resolvedVerb || undefined,
+      // Recorded even when the id could not name a trace file: the
+      // correlation still belongs in mauto.ndjson, where it is the only thing
+      // tying this line to a run. sends:false in the event catalog.
+      run_id: runId || undefined,
+      session_id: resolvedSessionId || undefined,
       ok,
       error_kind: errorKind,
       exit_code: exitCode,
       dur_ms: Math.round(process.uptime() * 1000),
     };
-    record(fields, { projectRoot });
+    record(fields, { projectRoot, tracePath: tracePath || undefined });
     if (text) process.stdout.write(text.endsWith('\n') ? text : text + '\n');
     process.exit(exitCode);
   }
@@ -1721,6 +1770,12 @@ function makeEmitters({ projectRoot = process.cwd() } = {}) {
     finish,
     setVerb: (verb) => {
       resolvedVerb = verb;
+    },
+    setRunId: (runId) => {
+      resolvedRunId = runId;
+    },
+    setSessionId: (sessionId) => {
+      resolvedSessionId = sessionId;
     },
 
     emit: ({ envelope, exitKind }, human) => finish(fromEnvelope(envelope, exitKind, human)),

@@ -85,4 +85,23 @@ describe('the observability seam honours the injected projectRoot', () => {
 
     expect(fs.existsSync(path.join(sub, 'mobile-automator'))).toBe(false);
   });
+
+  // The trace path is built from the SAME injected projectRoot finish() already
+  // uses for mauto.ndjson — a second process.cwd() default on this new path
+  // would reintroduce exactly the bug this file exists to guard against.
+  it('writes the run trace into the injected workspace, not into cwd', async () => {
+    const { root, sub } = makeWorkspace();
+    const originalRunId = process.env.MAUTO_RUN_ID;
+    process.env.MAUTO_RUN_ID = 'run_20260905_141500';
+    try {
+      await runProgram(['config', 'get', 'mode'], { projectRoot: root, cwd: sub });
+    } finally {
+      if (originalRunId === undefined) delete process.env.MAUTO_RUN_ID;
+      else process.env.MAUTO_RUN_ID = originalRunId;
+    }
+
+    const tracePath = path.join(root, 'mobile-automator', '.logs', 'run-run_20260905_141500.ndjson');
+    expect(fs.existsSync(tracePath)).toBe(true);
+    expect(fs.existsSync(path.join(sub, 'mobile-automator'))).toBe(false);
+  });
 });
