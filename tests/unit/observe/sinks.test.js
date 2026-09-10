@@ -128,4 +128,48 @@ describe('file sink', () => {
     expect(line.trim().split('\n')).toHaveLength(1);
     expect(JSON.parse(line).message).toBe('said "hi"\nnewline');
   });
+
+  it('writes to an explicit logPath when one is given', () => {
+    const root = workspace();
+    fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+    const target = path.join(root, 'mobile-automator', '.logs', 'daemon.ndjson');
+
+    fileSink.write(
+      { level: 'info', event: 'call.end', tool: 'mobile_press_button' },
+      { projectRoot: root, env: {}, logPath: target }
+    );
+
+    expect(JSON.parse(fs.readFileSync(target, 'utf8').trim()).tool).toBe('mobile_press_button');
+    expect(fs.existsSync(path.join(root, 'mobile-automator', '.logs', 'mauto.ndjson'))).toBe(false);
+  });
+
+  it('holds no file descriptor between events', () => {
+    // Rotation renames the file; a held fd would keep writing into the rotated
+    // inode. That matters most for the daemon, the one long-lived writer in the
+    // system, but it is a property of the sink: it opens, appends and closes per
+    // event. Proven by rotating BETWEEN two writes and checking the second
+    // landed in the fresh file.
+    const root = workspace();
+    const logPath = path.join(root, 'mobile-automator', '.logs', 'daemon.ndjson');
+
+    fileSink.write({ level: 'info', event: 'daemon.start' }, { projectRoot: root, env: {}, logPath });
+    fs.renameSync(logPath, `${logPath}.1`);
+    fileSink.write(
+      { level: 'info', event: 'daemon.stop', stop_reason: 'idle' },
+      { projectRoot: root, env: {}, logPath }
+    );
+
+    const lines = fs.readFileSync(logPath, 'utf8').trim().split('\n').filter(Boolean);
+    expect(lines).toHaveLength(1);
+    expect(JSON.parse(lines[0]).event).toBe('daemon.stop');
+  });
+
+  it('still refuses to log into a directory that has no workspace, logPath or not', () => {
+    const root = bareDir(); // mkdtemp'd, so no mobile-automator/ inside it
+    const target = path.join(root, 'mobile-automator', '.logs', 'daemon.ndjson');
+
+    fileSink.write({ level: 'info', event: 'e' }, { projectRoot: root, env: {}, logPath: target });
+
+    expect(fs.existsSync(target)).toBe(false);
+  });
 });

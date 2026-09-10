@@ -29,3 +29,26 @@ describe('observe paths', () => {
     expect(fs.existsSync(target)).toBe(false);
   });
 });
+
+describe('daemon event log', () => {
+  const path = require('path');
+  const paths = require('../../../src/observe/paths');
+
+  it('is a separate file from the CLI log, in the same .logs dir', () => {
+    expect(paths.daemonEventLogPath('/proj', {})).toBe(
+      path.join('/proj', 'mobile-automator', '.logs', 'daemon.ndjson')
+    );
+    expect(paths.daemonEventLogPath('/proj', {})).not.toBe(paths.mainLogPath('/proj', {}));
+  });
+
+  it('honours MAUTO_LOG_DIR like every other log path', () => {
+    expect(paths.daemonEventLogPath('/proj', { MAUTO_LOG_DIR: '/tmp/elsewhere' })).toBe(
+      path.join(path.resolve('/tmp/elsewhere'), 'daemon.ndjson')
+    );
+  });
+
+  it('is not the raw stdio log, which stays in .session (PR #176)', () => {
+    const sessionPaths = require('../../../src/device/session-paths');
+    expect(paths.daemonEventLogPath('/proj', {})).not.toBe(sessionPaths.logFilePath('/proj'));
+  });
+});

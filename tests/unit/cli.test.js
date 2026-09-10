@@ -1089,7 +1089,8 @@ describe('cli handlers', () => {
       });
       expect(up.exitKind).toBe('ok');
       expect(up.envelope.data).toEqual({
-        running: true, in_flight: 2, device: 'A', log_path: sessionPaths.logFilePath('/x'),
+        running: true, in_flight: 2, device: 'A',
+        log_path: sessionPaths.logFilePath('/x'), session_id: null,
       });
     });
 
@@ -1101,7 +1102,8 @@ describe('cli handlers', () => {
       expect(down.exitKind).toBe('ok');
       // log_path survives the not-running shape: that is when it is needed.
       expect(down.envelope.data).toEqual({
-        running: false, in_flight: null, device: null, log_path: sessionPaths.logFilePath('/x'),
+        running: false, in_flight: null, device: null,
+        log_path: sessionPaths.logFilePath('/x'), session_id: null,
       });
     });
   });

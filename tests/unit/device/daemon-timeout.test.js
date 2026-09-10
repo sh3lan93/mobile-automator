@@ -165,4 +165,79 @@ describe('session-daemon per-call timeout (#149)', () => {
     await connB.close();
     await daemon.stop();
   });
+
+  // --- characterization: behaviours the rest of the suite is blind to -------
+  // Both pin properties of the daemon's error-reply path that survive the
+  // extraction of the per-call instrumentation into src/device/device-call.js.
+
+  test('narrows a non-timeout error reply: kind and hint from the engine never reach the client', async () => {
+    // The daemon's non-timeout reply branch drops `kind`/`hint` on purpose and
+    // nothing else pins that. It matters because the client copies any kind it
+    // is given straight onto the thrown error, and `exitCodeFor`
+    // (src/output/envelope.js) only maps the ENUMERATED kinds — an unenumerated
+    // one ('device_busy' here) falls through to exit 1, where a device failure
+    // exits 2 today. Forwarding whatever the engine invented would therefore
+    // silently reclassify device failures as internal errors.
+    const root = tmpRoot();
+    const createCall = async () => ({
+      call: async () => {
+        throw Object.assign(new Error('busy'), { kind: 'device_busy', hint: 'plug it in' });
+      },
+      close: async () => {},
+    });
+    const daemon = await startDaemon({
+      projectRoot: root,
+      idleMs: 0,
+      createCall,
+      // Never resolves → the rejection wins the race, not the timeout.
+      scheduleTimeout: () => new Promise(() => {}),
+    });
+
+    const conn = await sessionClient.tryConnect(root);
+    let err = null;
+    try {
+      await conn.call('mobile_press_button', {});
+    } catch (e) {
+      err = e;
+    }
+    expect(err).not.toBeNull();
+    expect(err.message).toBe('busy');
+    expect(err.kind).toBeUndefined();
+    expect(err.hint).toBeUndefined();
+
+    await conn.close();
+    await daemon.stop();
+  });
+
+  test('the timeout message names the RAW tool from the frame, even one the tool set does not know', async () => {
+    // The first test in this file cannot catch a `${name}`-for-`${tool}` slip:
+    // it drives a KNOWN primitive, where the checked name and the raw frame
+    // value are the same string. With an unknown tool they diverge — the
+    // checked name is undefined — and interpolating it would render
+    // "undefined: the mobile-mcp call did not respond ..." , hiding which call
+    // hung at exactly the moment a human needs to know.
+    const root = tmpRoot();
+    const { createCall } = hangingCreateCall();
+    const daemon = await startDaemon({
+      projectRoot: root,
+      idleMs: 0,
+      createCall,
+      // Resolves immediately → the timeout always wins the race.
+      scheduleTimeout: async () => {},
+    });
+
+    const conn = await sessionClient.tryConnect(root);
+    let err = null;
+    try {
+      await conn.call('/Users/someone/unreleased-thing.apk', {});
+    } catch (e) {
+      err = e;
+    }
+    expect(err).not.toBeNull();
+    expect(err.kind).toBe('timeout');
+    expect(err.message.startsWith('/Users/someone/unreleased-thing.apk')).toBe(true);
+
+    await conn.close();
+    await daemon.stop();
+  });
 });
