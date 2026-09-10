@@ -27,6 +27,7 @@ const { record } = require('./observe/recorder');
 const { resolveRunId } = require('./observe/settings');
 const { runTracePath } = require('./observe/paths');
 const { readSessionId } = require('./device/session-handle');
+const { captureOnFailure } = require('./observe/failure-capture');
 
 // Commander throws (via exitOverride) for two very different reasons, and the
 // split below is the ONLY thing that tells them apart.
@@ -1267,6 +1268,22 @@ function buildProgram(deps = {}) {
     }
     try {
       const r = await fn(bridge);
+      // The ONE window where a device failure can still be photographed: after
+      // fn(bridge) has produced its verdict and before `finally` closes the
+      // connection. The connect-failure catch above cannot do this — there is
+      // no bridge there — which is why this is here and not wrapped around the
+      // whole function.
+      //
+      // The return value is deliberately unused. `r` reaches emit() untouched
+      // whether the capture succeeded, failed, or never ran; a screenshot must
+      // never mask or replace the error the caller actually asked about.
+      await captureOnFailure({
+        bridge,
+        result: r,
+        projectRoot,
+        runId: emitters.getRunId(),
+        verb: emitters.getVerb(),
+      });
       emit(r, humanFlag());
     } finally {
       if (typeof close === 'function') await close();
@@ -1777,6 +1794,13 @@ function makeEmitters({ projectRoot = process.cwd() } = {}) {
     setSessionId: (sessionId) => {
       resolvedSessionId = sessionId;
     },
+    // Read-only counterparts to the setters above, for the one other call site
+    // that needs this invocation's resolved run id / verb: connectBridge's
+    // screenshot-on-failure hook. Both values are already committed by the
+    // preAction hook by the time any verb's fn(bridge) can have returned, so
+    // there is nothing to resolve here — only to expose.
+    getRunId: () => resolvedRunId,
+    getVerb: () => resolvedVerb,
 
     emit: ({ envelope, exitKind }, human) => finish(fromEnvelope(envelope, exitKind, human)),
 

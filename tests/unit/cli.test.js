@@ -1341,6 +1341,131 @@ describe('cli handlers', () => {
     });
   });
 
+  // Screenshot-on-failure hooks connectBridge's SECOND try — after fn(bridge)
+  // has produced its verdict, before finally closes the connection — because
+  // that is the only window where the bridge is still live. The connect
+  // FAILURE catch has no bridge to photograph with; wiring the capture there
+  // by mistake would silently do nothing forever, since captureOnFailure
+  // gracefully no-ops on a missing bridge. The proof that matters is therefore
+  // the positive case below: a bridge that connects successfully and CAN take
+  // a screenshot must actually have it called after a device-kind failure.
+  describe('screenshot-on-failure wiring (buildProgram)', () => {
+    function tmpRoot() {
+      return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-failcap-cli-'));
+    }
+
+    async function withRunId(runId, fn) {
+      const original = process.env.MAUTO_RUN_ID;
+      process.env.MAUTO_RUN_ID = runId;
+      try {
+        return await fn();
+      } finally {
+        if (original === undefined) delete process.env.MAUTO_RUN_ID;
+        else process.env.MAUTO_RUN_ID = original;
+      }
+    }
+
+    function traceEvents(root, runId) {
+      const file = path.join(root, 'mobile-automator', '.logs', `run-${runId}.ndjson`);
+      return fs.existsSync(file)
+        ? fs.readFileSync(file, 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l))
+        : [];
+    }
+
+    test('captures a screenshot after fn(bridge) returns a device failure, in the live-bridge window', async () => {
+      const root = tmpRoot();
+      const shots = [];
+      const deviceBridgeFactory = async () => ({
+        bridge: {
+          listElements: async () => {
+            throw new Error('element not found');
+          },
+          async screenshot(dest) {
+            shots.push(dest);
+            fs.mkdirSync(path.dirname(dest), { recursive: true });
+            fs.writeFileSync(dest, 'PNG');
+            return dest;
+          },
+        },
+        close: async () => {},
+      });
+      const emitted = [];
+
+      await withRunId('wiring-smoke', () =>
+        buildProgram({
+          projectRoot: root,
+          deviceBridgeFactory,
+          emit: (r) => emitted.push(r),
+        }).parseAsync(['node', 'mauto', 'elements'])
+      );
+
+      expect(shots).toHaveLength(1);
+      expect(emitted).toHaveLength(1);
+      expect(emitted[0].exitKind).toBe('device');
+      expect(emitted[0].envelope.ok).toBe(false);
+
+      const events = traceEvents(root, 'wiring-smoke');
+      expect(events).toContainEqual(expect.objectContaining({ event: 'screenshot.on_failure', verb: 'elements' }));
+    });
+
+    test('never attempts a capture when the CONNECT itself fails — there is no bridge there', async () => {
+      const root = tmpRoot();
+      const deviceBridgeFactory = async () => {
+        throw new Error('no device found');
+      };
+      const emitted = [];
+
+      await withRunId('wiring-connect-fail', () =>
+        buildProgram({
+          projectRoot: root,
+          deviceBridgeFactory,
+          emit: (r) => emitted.push(r),
+        }).parseAsync(['node', 'mauto', 'elements'])
+      );
+
+      expect(emitted).toHaveLength(1);
+      expect(emitted[0].exitKind).toBe('device');
+      const events = traceEvents(root, 'wiring-connect-fail');
+      expect(events.some((e) => typeof e.event === 'string' && e.event.startsWith('screenshot.'))).toBe(false);
+    });
+
+    // THE property this task exists to prove: a screenshot capture that itself
+    // fails must never mask, replace, or delay the original device envelope
+    // that reaches the caller.
+    test('a screenshot capture failure never masks the original device envelope', async () => {
+      const root = tmpRoot();
+      const deviceBridgeFactory = async () => ({
+        bridge: {
+          listElements: async () => {
+            throw new Error('element not found');
+          },
+          async screenshot() {
+            throw new Error('daemon socket closed');
+          },
+        },
+        close: async () => {},
+      });
+      const emitted = [];
+
+      await withRunId('wiring-shot-fail', () =>
+        buildProgram({
+          projectRoot: root,
+          deviceBridgeFactory,
+          emit: (r) => emitted.push(r),
+        }).parseAsync(['node', 'mauto', 'elements'])
+      );
+
+      expect(emitted).toHaveLength(1);
+      const { envelope, exitKind } = emitted[0];
+      expect(exitKind).toBe('device');
+      expect(envelope.ok).toBe(false);
+      expect(envelope.error.message).toBe('element not found');
+
+      const events = traceEvents(root, 'wiring-shot-fail');
+      expect(events).toContainEqual(expect.objectContaining({ event: 'screenshot.capture_failed', verb: 'elements' }));
+    });
+  });
+
   describe('handleInit — five agents + all', () => {
     const fsForInit = fs;
     const pathForInit = path;
