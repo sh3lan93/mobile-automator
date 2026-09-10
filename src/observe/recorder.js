@@ -32,18 +32,51 @@ const fileSink = require('./sinks/file');
 // omitting it — as record() does — is exactly today's CLI behaviour, and naming
 // it is how a writer with its own log file (the daemon's daemon.ndjson) gets one
 // without a second copy of this list.
-function defaultSinks(projectRoot, env, { logPath } = {}) {
+//
+// `tracePath` adds a THIRD sink — the per-run trace — and two things about it
+// are deliberate:
+//
+//   ADDITIONAL, not a redirect. Sending a run's events to the trace instead of
+//   mauto.ndjson would punch a hole in the maintainer log across exactly the
+//   invocations a bug report is about, and would let the trace's cap silently
+//   drop CLI history. The cost of writing both is one extra ~300-byte
+//   open/write/close per verb against a 112ms process start.
+//
+//   INJECTED, never resolved from `env` here. A daemon reads MAUTO_RUN_ID from
+//   whichever verb spawned it and then outlives that run — its environment is
+//   pinned at spawn and cannot change. Resolving the trace from `env` would
+//   make boundRecorder pick it up, and the daemon would file every later run's
+//   device calls under the first run's id. Only cli.js's finish() passes this.
+//
+// The trace's threshold is levels.file (info), the same as the main log, not
+// levels.stderr (warn): a trace exists to reconstruct one run, and a threshold
+// that filtered out most of a passing run's own verb.end events would defeat
+// that purpose. It is deliberately not wider than `info` either — nothing in
+// this slice records below `info`, so there is no debug firehose to admit by
+// pinning the trace looser than the log it is bound to the same constant as.
+function defaultSinks(projectRoot, env, { logPath, tracePath } = {}) {
   const levels = resolveLevels(env);
-  return [
+  const sinks = [
     { threshold: levels.stderr, write: (e) => stderrSink.write(e) },
     { threshold: levels.file, write: (e) => fileSink.write(e, { projectRoot, env, logPath }) },
   ];
+  if (tracePath) {
+    sinks.push({
+      threshold: levels.file,
+      // bound:'cap' — a trace must not rotate; see sinks/file.js.
+      write: (e) => fileSink.write(e, { projectRoot, env, logPath: tracePath, bound: 'cap' }),
+    });
+  }
+  return sinks;
 }
 
-function record(fields = {}, { projectRoot = process.cwd(), env = process.env, sinks } = {}) {
+function record(
+  fields = {},
+  { projectRoot = process.cwd(), env = process.env, sinks, tracePath } = {}
+) {
   try {
     const level = fields.level || 'info';
-    const list = sinks || defaultSinks(projectRoot, env);
+    const list = sinks || defaultSinks(projectRoot, env, { tracePath });
     const event = makeEvent({ ...fields, level });
 
     for (const sink of list) {

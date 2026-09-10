@@ -249,3 +249,92 @@ describe('boundRecorder', () => {
     stderrSpy.mockRestore();
   });
 });
+
+describe('run trace sink', () => {
+  it('adds a third sink only when a trace path is given', () => {
+    expect(defaultSinks('/proj', {}, {})).toHaveLength(2);
+    expect(defaultSinks('/proj', {}, { tracePath: '/proj/x/run-a.ndjson' })).toHaveLength(3);
+  });
+
+  // The trace is an ADDITIONAL file, not a redirect. Sending run events to the
+  // trace instead would punch a hole in mauto.ndjson across exactly the
+  // invocations a maintainer reading a bug report cares about.
+  it('writes the event to BOTH the main log and the trace', () => {
+    const root = workspace();
+    const main = path.join(root, 'mobile-automator', '.logs', 'mauto.ndjson');
+    const trace = path.join(root, 'mobile-automator', '.logs', 'run-smoke.ndjson');
+
+    record(
+      { level: 'info', src: 'cli', event: 'verb.end', verb: 'tap', ok: true, run_id: 'smoke' },
+      { projectRoot: root, env: { MAUTO_LOG_LEVEL: 'info' }, tracePath: trace }
+    );
+
+    expect(readLines(main)).toHaveLength(1);
+    expect(readLines(trace)).toHaveLength(1);
+    expect(readLines(trace)[0]).toMatchObject({ verb: 'tap', run_id: 'smoke' });
+  });
+
+  it('silences the trace along with everything else at MAUTO_LOG_LEVEL=silent', () => {
+    const root = workspace();
+    const trace = path.join(root, 'mobile-automator', '.logs', 'run-smoke.ndjson');
+
+    record(
+      { level: 'info', src: 'cli', event: 'verb.end' },
+      { projectRoot: root, env: { MAUTO_LOG_LEVEL: 'silent' }, tracePath: trace }
+    );
+
+    expect(readLines(trace)).toHaveLength(0);
+  });
+
+  // Total means total: a throwing trace sink must cost NEITHER of its
+  // neighbours the event, not just the one this test happens to check. Built
+  // from the REAL defaultSinks(..., { tracePath }) — same order, same
+  // asymmetric thresholds the CLI actually uses — with only each sink's
+  // `write` swapped for a collector (the spyDefaults pattern above), so the
+  // proof is about record()'s per-sink isolation under production wiring,
+  // not about a hand-rolled sink shape. The event is 'warn' so it clears
+  // every threshold; an 'info' event would never reach stderr regardless of
+  // the trace sink, proving nothing about stderr's independence from it.
+  it('never lets a failing trace sink cost stderr or the main log their event', () => {
+    const root = workspace();
+    const seen = { stderr: [], file: [] };
+    const tracePath = path.join(root, 'mobile-automator', '.logs', 'run-smoke.ndjson');
+    const sinks = defaultSinks(root, { MAUTO_LOG_LEVEL: 'info' }, { tracePath }).map((sink, i) => ({
+      ...sink,
+      write:
+        i === 0
+          ? (e) => seen.stderr.push(e)
+          : i === 1
+            ? (e) => seen.file.push(e)
+            : () => {
+                throw new Error('trace sink exploded');
+              },
+    }));
+
+    expect(() =>
+      record({ level: 'warn', src: 'cli', event: 'verb.end' }, { sinks, env: {} })
+    ).not.toThrow();
+
+    expect(seen.stderr).toHaveLength(1);
+    expect(seen.file).toHaveLength(1);
+  });
+
+  // Load-bearing, not stylistic. A daemon inherits MAUTO_RUN_ID from whichever
+  // verb spawned it and then OUTLIVES that run (slice 2: its environment is
+  // pinned at spawn). If defaultSinks resolved the trace from env, every later
+  // run's device calls would be filed under the first run's id.
+  it('cannot be reached by boundRecorder — the daemon can never write a trace', () => {
+    const root = workspace();
+    const observe = boundRecorder({
+      projectRoot: root,
+      env: { MAUTO_LOG_LEVEL: 'info', MAUTO_RUN_ID: 'smoke' },
+      logPath: path.join(root, 'mobile-automator', '.logs', 'daemon.ndjson'),
+      fields: { src: 'daemon' },
+    });
+
+    observe({ level: 'info', event: 'call.end', ok: true });
+
+    expect(readLines(path.join(root, 'mobile-automator', '.logs', 'run-smoke.ndjson'))).toHaveLength(0);
+    expect(readLines(path.join(root, 'mobile-automator', '.logs', 'daemon.ndjson'))).toHaveLength(1);
+  });
+});
