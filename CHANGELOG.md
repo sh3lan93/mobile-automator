@@ -61,6 +61,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   share the same 1 MiB single-generation policy, and both carry an ISO `ts` and
   a `src`, so `jq -s 'sort_by(.ts) | .[]' mobile-automator/.logs/*.ndjson`
   merges them into one timeline.
+- Run traces and **measured** run durations. Export `MAUTO_RUN_ID` before a run
+  and every `mauto` invocation records into
+  `mobile-automator/.logs/run-<run_id>.ndjson`; the three `mauto result` verbs
+  join the same trace through the `--run-id` they already require, so no verb
+  gained a flag. `mauto result finalize` then derives `duration_seconds` from
+  the trace instead of taking `--duration` at face value. Previously that field
+  — and `--attempts` — were whatever number the executing agent supplied,
+  which is to say the tool asked a language model with no clock how long a run
+  took and wrote the answer down as a fact.
+- A supplied `--duration` is no longer silently trusted **or** silently
+  discarded. It is kept as `measurements.reported_duration_seconds` and, when
+  it differs from the measured value by more than the tolerance, flagged as
+  `measurements.duration_disagreement` and recorded as a typed `state_context`
+  observation. The disagreement is a signal about the run, not noise to
+  resolve.
+- New additive `measurements` object on the result schema, carrying where the
+  duration came from (`trace` / `reported` / `none`), the reported figure, the
+  trace event count, the run's device and timeout failures, whether the trace
+  hit its size cap, and any screenshots captured at failures. A run with no
+  trace omits the key entirely, so result files written without `MAUTO_RUN_ID`
+  are shaped exactly as 0.24.0 wrote them.
+- Screenshot-on-failure. When a device verb fails with a `device` or `timeout`
+  error and a run id is set, `mauto` captures the screen into
+  `mobile-automator/screenshots/<run_id>/` — the directory `mauto setup`'s
+  `.gitignore` already covers — and records the path in the trace, so
+  `finalize` can list it. The capture is itself a device round-trip and can
+  fail; when it does, the failure is recorded and discarded. It never masks or
+  replaces the original error.
+- Run traces are bounded differently from the other logs, deliberately. They do
+  not rotate: rotation renames the run's beginning out of the live file, and
+  the beginning is where the measured duration starts — a rotated trace would
+  report a three-minute run as forty seconds, which is measured-looking fiction
+  and worse than the self-report it replaces. Instead a trace stops growing at
+  the same 1 MiB cap, `finalize` records `trace_truncated` so the duration is
+  read as the lower bound it is, and `finalize` prunes all but the 20 most
+  recent traces — never the one it just measured, which is the evidence behind
+  every number it wrote.
+- A run id that cannot safely name a file (`../../etc/x`, `a/b`, a leading dot)
+  is refused rather than sanitized, and the run simply gets no trace.
+  Sanitizing would collapse two distinct runs onto one file and produce a
+  duration spanning both.
+- New `tests/lint/result-schema-additive.test.js` plus a
+  `tests/fixtures/result_schema_v2.0.json` baseline. The result schema — the
+  tool's durable output, which `mauto`'s cross-session memory reads back — had
+  no additivity guard; the scenario schema has had one since 2.1. It fails the
+  build on a dropped node, a removed enum value, a narrowed type or a changed
+  `required` list, and validates a v2.0-era result document against the current
+  schema.
 
 ---
 
