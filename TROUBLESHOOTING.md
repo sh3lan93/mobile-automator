@@ -98,9 +98,22 @@ jq -s 'sort_by(.ts) | .[]' mobile-automator/.logs/*.ndjson
 
 Every event from one daemon lifetime shares a `session_id`, so when a daemon
 died and respawned mid-run the two lifetimes stay separable — and
-`mauto session status` tells you which one is live. A `call.start` with no
-matching `call.end` for the same `session_id` is a call that never returned;
-correlate its `ts` against `daemon.log` to see what the engine was doing.
+`mauto session status` tells you which one is live.
+
+Within a lifetime, each device call carries its own `call_id`, and that is what
+pairs a `call.start` to its `call.end`. Pair on `call_id`, never on
+`session_id`: the daemon serves several sockets at once, so calls overlap and
+finish out of order, and every call in the lifetime shares the one `session_id`.
+A `call.start` whose `call_id` never appears in a `call.end` is a call that
+never returned — correlate its `ts` against `daemon.log` to see what the engine
+was doing.
+
+```bash
+# Calls that started and never returned (needs MAUTO_LOG_LEVEL=debug — see below)
+jq -s '(map(select(.event == "call.end") | .call_id)) as $returned
+       | map(select(.event == "call.start" and (.call_id as $id | $returned | index($id) | not)))' \
+  mobile-automator/.logs/daemon.ndjson
+```
 
 `MAUTO_LOG_LEVEL` (`silent|error|warn|info|debug`) raises the detail in both
 logs; `call.start` is recorded at `debug`, so hung-call diagnosis needs it. One

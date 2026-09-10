@@ -31,7 +31,7 @@
 
 const { isKnownTool } = require('./mobile-mcp-tools');
 
-function makeDeviceCall(call, { scheduleTimeout, observe, timeoutMs } = {}) {
+function makeDeviceCall(call, { scheduleTimeout, observe, timeoutMs, nextCallId } = {}) {
   // Validate at CONSTRUCTION, loudly, rather than defaulting. A default here
   // would be worse than a crash: with `timeoutMs` undefined,
   // scheduleTimeout(undefined) is setTimeout(fn, undefined) is setTimeout(fn, 0),
@@ -47,6 +47,16 @@ function makeDeviceCall(call, { scheduleTimeout, observe, timeoutMs } = {}) {
   if (typeof timeoutMs !== 'number' || !Number.isFinite(timeoutMs) || timeoutMs <= 0) {
     throw new TypeError('makeDeviceCall requires a finite positive timeoutMs');
   }
+  // Injected rather than defaulted for the reason in the WARNING above: a
+  // counter kept at factory scope here would be cross-connection shared state
+  // living in the wrong module. The sequence belongs to the DAEMON LIFETIME,
+  // which is what the id is scoped to, so startDaemon owns it — and a default
+  // built here would silently work (the decorator is built once per daemon)
+  // right up until something builds two, at which point two live calls could
+  // share an id and the pairing would be wrong rather than merely absent.
+  if (typeof nextCallId !== 'function') {
+    throw new TypeError('makeDeviceCall requires a nextCallId function');
+  }
 
   return async function invoke(tool, args) {
     // NEVER record `tool` unchecked. The value arrives inside a socket frame
@@ -55,6 +65,10 @@ function makeDeviceCall(call, { scheduleTimeout, observe, timeoutMs } = {}) {
     // enumerated primitive name. Unknown values are omitted (makeEvent drops
     // undefined), so the latency is still recorded — just anonymously.
     const name = isKnownTool(tool) ? tool : undefined;
+    // Drawn ONCE, here, and stamped on both events. Drawing it twice would look
+    // like a start and an end belonging to two different calls, which is worse
+    // than carrying no id: the pairing would be wrong rather than absent.
+    const callId = nextCallId();
     // Started BEFORE the call.start observe, so the sink's own cost (an
     // appendFileSync) is inside the measurement rather than excluded from it.
     // The number is meant to bound what the device took, from the daemon's
@@ -63,8 +77,10 @@ function makeDeviceCall(call, { scheduleTimeout, observe, timeoutMs } = {}) {
     // debug: off at the default level, so a scenario pays ONE append per device
     // call. Its value is bracketing — a daemon SIGKILLed mid-call leaves a
     // call.start with no call.end, which is the only trace a call that never
-    // returned can possibly leave.
-    observe({ level: 'debug', event: 'call.start', tool: name });
+    // returned can possibly leave. That reading needs call_id: the daemon
+    // multiplexes and every call in a lifetime shares session_id, so without a
+    // per-call id "no matching call.end" is not a decidable question.
+    observe({ level: 'debug', event: 'call.start', tool: name, call_id: callId });
     try {
       // `call(...)` stays INSIDE the try. A `call` that throws synchronously —
       // or returns a non-thenable, which makes `p.catch` a TypeError — would
@@ -92,7 +108,14 @@ function makeDeviceCall(call, { scheduleTimeout, observe, timeoutMs } = {}) {
           throw e;
         }),
       ]);
-      observe({ level: 'info', event: 'call.end', tool: name, ok: true, dur_ms: Date.now() - started });
+      observe({
+        level: 'info',
+        event: 'call.end',
+        tool: name,
+        call_id: callId,
+        ok: true,
+        dur_ms: Date.now() - started,
+      });
       return result;
     } catch (err) {
       observe({
@@ -102,6 +125,7 @@ function makeDeviceCall(call, { scheduleTimeout, observe, timeoutMs } = {}) {
         level: 'warn',
         event: 'call.end',
         tool: name,
+        call_id: callId,
         ok: false,
         // The envelope's own taxonomy, reused verbatim: a non-timeout failure
         // is exactly what client/deviceFail turns into kind 'device'.

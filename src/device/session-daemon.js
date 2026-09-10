@@ -307,10 +307,27 @@ async function startDaemon({
   //
   // safeObserve, never the raw `observe` — device-call.js is deliberately not
   // guarded a second time (pinned in tests/unit/device/device-call.test.js).
+  //
+  // The per-call correlation id is minted HERE, from a counter scoped to this
+  // daemon lifetime — the same scope as session_id, one level down. It is what
+  // makes call.start and call.end pairable: session_id cannot do it (every call
+  // in a lifetime shares one) and neither can position or timestamp, because
+  // the daemon multiplexes and two sockets' calls interleave and finish out of
+  // order. The counter lives at THIS scope rather than inside makeDeviceCall
+  // because that module's factory scope must stay free of mutable state (see
+  // its WARNING), and because "per daemon lifetime" is a fact this function
+  // owns.
+  //
+  // Deliberately NOT the frame's `req.id`, which the router discards: that
+  // value is client-chosen and the socket is reachable by any process on the
+  // machine, so it could not be sends:true in the event catalog. A
+  // daemon-minted integer can, on the same grounds as dur_ms.
+  let callSeq = 0;
   const invoke = makeDeviceCall(call, {
     scheduleTimeout,
     observe: safeObserve,
     timeoutMs: DAEMON_CALL_TIMEOUT_MS,
+    nextCallId: () => (callSeq += 1),
   });
 
   let idleTimer = null;

@@ -67,8 +67,10 @@ describe('catalog integrity', () => {
 describe('daemon field classifications', () => {
   const { EVENT_FIELDS, NEVER_SENDS, makeEvent, telemetryPayload } = require('../../../src/observe/event');
 
-  it('lets the daemon carry a session id, a primitive name, a stop reason and an errno', () => {
-    for (const f of ['session_id', 'tool', 'stop_reason', 'error_code']) {
+  it('lets the daemon carry a session id, a call id, a primitive name, a stop reason and an errno', () => {
+    // call_id is sends:true on the same grounds as dur_ms: a daemon-minted
+    // monotonic integer, never the client-chosen id from the socket frame.
+    for (const f of ['session_id', 'call_id', 'tool', 'stop_reason', 'error_code']) {
       expect(EVENT_FIELDS[f]).toBeDefined();
       expect(EVENT_FIELDS[f].sends).toBe(true);
     }

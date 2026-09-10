@@ -40,6 +40,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `mobile-automator/.session/daemon.log` since 0.24.0, so a warn line there
   costs no terminal noise and lands next to the adb/simctl output that explains
   it.
+- `call_id`: a per-call id on `call.start` / `call.end`, minted by the daemon
+  and scoped to one daemon lifetime. It is what makes the pair matchable — the
+  daemon serves several sockets at once, so calls overlap and finish out of
+  order, and `session_id` is shared by every call in the lifetime. A
+  `call.start` whose `call_id` never appears in a `call.end` is a call that
+  never returned, which is the diagnosis the pair exists for. Deliberately not
+  the request id from the socket frame: that is client-chosen, and only a
+  daemon-minted value can be cleared for telemetry.
 - `session_id`: a random id generated per daemon lifetime, written into the
   `mobile-automator/.session/session.json` handle and reported by
   `mauto session status` (`null` when no daemon is running). It correlates

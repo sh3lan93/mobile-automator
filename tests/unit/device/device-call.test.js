@@ -19,13 +19,16 @@ function collector() {
   return observe;
 }
 
-// Default injections: a timeout that never fires, so `call` always wins.
+// Default injections: a timeout that never fires, so `call` always wins, and a
+// counter standing in for the daemon's per-lifetime one.
 function build(call, overrides = {}) {
   const observe = overrides.observe || collector();
+  let seq = 0;
   const invoke = makeDeviceCall(call, {
     observe,
     scheduleTimeout: overrides.scheduleTimeout || (() => new Promise(() => {})),
     timeoutMs: overrides.timeoutMs === undefined ? 25000 : overrides.timeoutMs,
+    nextCallId: overrides.nextCallId || (() => (seq += 1)),
   });
   return { invoke, observe };
 }
@@ -68,12 +71,32 @@ describe('makeDeviceCall: happy-path events', () => {
 
     expect(observe.events).toHaveLength(2);
     const [start, end] = observe.events;
-    expect(start).toEqual({ level: 'debug', event: 'call.start', tool: KNOWN });
+    expect(start).toEqual({ level: 'debug', event: 'call.start', tool: KNOWN, call_id: 1 });
     expect(end.level).toBe('info');
     expect(end.event).toBe('call.end');
     expect(end.ok).toBe(true);
     expect(end.tool).toBe(KNOWN);
+    expect(end.call_id).toBe(1);
     expect(typeof end.dur_ms).toBe('number');
+  });
+
+  test('takes ONE id per call and stamps the same one on both ends of the bracket', async () => {
+    // An id drawn twice would look like a start and an end for two different
+    // calls, which is worse than no id: the pairing would be wrong rather than
+    // merely absent.
+    const drawn = [];
+    const { invoke, observe } = build(async () => ({}), {
+      nextCallId: () => {
+        drawn.push(drawn.length + 1);
+        return drawn.length;
+      },
+    });
+
+    await invoke(KNOWN, {});
+
+    expect(drawn).toEqual([1]);
+    expect(observe.named('call.start')[0].call_id).toBe(1);
+    expect(observe.named('call.end')[0].call_id).toBe(1);
   });
 
   test('omits the tool from BOTH events when the frame did not name a known primitive', async () => {
@@ -110,6 +133,13 @@ describe('makeDeviceCall: happy-path events', () => {
     expect(observe.named('call.start').map((e) => e.tool)).toEqual([KNOWN, 'mobile_swipe_on_screen']);
     expect(observe.named('call.end').map((e) => e.tool)).toEqual(['mobile_swipe_on_screen', KNOWN]);
     expect(observe.named('call.end').every((e) => e.ok === true)).toBe(true);
+
+    // And the whole reason call_id exists: the ends arrive in the OPPOSITE
+    // order to the starts, so nothing about position, timestamp or tool name
+    // pairs them. The daemon multiplexes and every call in one lifetime shares
+    // a session_id, so this is the ordinary case, not a contrived one.
+    expect(observe.named('call.start').map((e) => e.call_id)).toEqual([1, 2]);
+    expect(observe.named('call.end').map((e) => e.call_id)).toEqual([2, 1]);
   });
 });
 
@@ -213,6 +243,10 @@ describe('makeDeviceCall: failures', () => {
     expect(ends[0].error_kind).toBe('device');
     expect(ends[0].message).toBe('adb: device offline');
     expect(typeof ends[0].dur_ms).toBe('number');
+    // The failing end is pairable too. A call that failed and a call that never
+    // returned look identical without it — which is the diagnosis call.start
+    // exists to support.
+    expect(ends[0].call_id).toBe(observe.named('call.start')[0].call_id);
   });
 
   test('a synchronously throwing call still records call.end and rejects', async () => {
@@ -266,10 +300,21 @@ describe('makeDeviceCall: construction', () => {
     observe: () => {},
     scheduleTimeout: () => new Promise(() => {}),
     timeoutMs: 25000,
+    nextCallId: () => 1,
   };
 
   test('rejects a non-function call', () => {
     expect(() => makeDeviceCall(undefined, ok)).toThrow(TypeError);
+  });
+
+  test('rejects a non-function nextCallId rather than defaulting', () => {
+    // Same policy as the other four, for the same reason: a default counter
+    // built here would be per-DECORATOR, and the decorator is built once per
+    // daemon, so it would silently work — right up until something builds two.
+    // The id has to come from whoever owns the daemon lifetime.
+    for (const bad of [undefined, null, 0, 'seq']) {
+      expect(() => makeDeviceCall(async () => {}, { ...ok, nextCallId: bad })).toThrow(TypeError);
+    }
   });
 
   test('rejects a non-function observe', () => {

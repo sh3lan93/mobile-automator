@@ -61,6 +61,19 @@ const EVENT_FIELDS = {
   // goes through — rather than at the daemon's frame router, so a second call
   // site cannot appear that forgets to check.
   tool: { sends: true, why: 'mobile-mcp primitive name, checked against the pinned tool set' },
+  // Monotonic integer minted by startDaemon, one per device call, scoped to one
+  // daemon lifetime. It is what makes call.start and call.end PAIRABLE: every
+  // call in a lifetime shares session_id and the daemon multiplexes, so a
+  // start-without-end — the only trace a call that never returned can leave —
+  // is undecidable without a per-call identity.
+  //
+  // The daemon already has a correlation id in the socket frame's `req.id`, and
+  // deliberately does not use it: that value is client-chosen and the socket is
+  // reachable by any process on the machine, so recording it would put caller
+  // text on a sends:true field — the same concern that produced
+  // src/device/mobile-mcp-tools.js. A daemon-minted counter needs no redaction
+  // argument at all, on exactly the grounds dur_ms is cleared.
+  call_id: { sends: true, why: 'daemon-minted counter scoped to one session; never the client-supplied frame id' },
   stop_reason: { sends: true, why: 'enumerated: idle|signal|shutdown|crash|explicit' },
   error_code: { sends: true, why: "Node/libuv errno string (EADDRINUSE|EACCES|…) plus our own ELOCKED" },
 

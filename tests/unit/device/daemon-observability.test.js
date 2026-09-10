@@ -415,6 +415,81 @@ describe('device call events', () => {
 
 
 
+  test('gives each call an id that pairs its start to its end across sockets', async () => {
+    // TROUBLESHOOTING.md tells a reader to find a call.start with no matching
+    // call.end. session_id cannot do that matching: every call in one daemon
+    // lifetime shares one, and the daemon multiplexes — two sockets' frames
+    // interleave freely. This is that shape, with the second call finishing
+    // first, so only call_id can pair the four events.
+    const root = tmpRoot();
+    const observe = collector();
+    const resolvers = [];
+    const daemon = await startDaemon({
+      projectRoot: root,
+      idleMs: 0,
+      createCall: makeFakeCreateCall(
+        (tool) => new Promise((resolve) => resolvers.push(() => resolve({ echoed: tool })))
+      ),
+      recorderFor: always(observe),
+    });
+
+    const a = await sessionClient.tryConnect(root);
+    const b = await sessionClient.tryConnect(root);
+    const callA = a.call('mobile_press_button', { button: 'BACK' });
+    const callB = b.call('mobile_swipe_on_screen', {});
+    while (resolvers.length < 2) await new Promise((r) => setTimeout(r, 5));
+
+    resolvers[1]();
+    resolvers[0]();
+    await callA;
+    await callB;
+
+    // Minted by the daemon, monotonically, one per call over the lifetime.
+    expect(observe.named('call.start').map((e) => e.call_id)).toEqual([1, 2]);
+    // Ends in the opposite order — the pairing is by id, never by position.
+    expect(observe.named('call.end').map((e) => e.call_id)).toEqual([2, 1]);
+
+    await a.close();
+    await b.close();
+    await daemon.stop();
+  });
+
+  test('mints the call id itself rather than trusting the id in the frame', async () => {
+    // The daemon already has a correlation id in `req.id` — and deliberately
+    // does not record it. That value is client-chosen and the socket is
+    // reachable by any process on the machine, the same untrusted-input concern
+    // that motivated mobile-mcp-tools.js. call_id is sends:true in the event
+    // catalog ONLY because the daemon mints it; a frame-supplied one would put
+    // caller text on a field cleared for the network.
+    const root = tmpRoot();
+    const observe = collector();
+    const daemon = await startDaemon({
+      projectRoot: root,
+      idleMs: 0,
+      createCall: makeFakeCreateCall(),
+      recorderFor: always(observe),
+    });
+
+    const raw = net.connect(paths.socketPath(root));
+    await new Promise((r) => raw.once('connect', r));
+    raw.write(
+      JSON.stringify({
+        id: '/Users/someone/unreleased-thing.apk',
+        type: 'call',
+        tool: 'mobile_press_button',
+        args: {},
+      }) + '\n'
+    );
+    await new Promise((r) => setTimeout(r, 60));
+
+    const [start] = observe.named('call.start');
+    expect(start.call_id).toBe(1);
+    expect(observe.named('call.end')[0].call_id).toBe(1);
+
+    raw.destroy();
+    await daemon.stop();
+  });
+
   test('records the undeliverable-reply seam as a warn event', async () => {
     const root = tmpRoot();
     const observe = collector();
