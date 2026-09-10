@@ -161,16 +161,46 @@ async function startDaemon({
   onUndeliverable = null,
   scheduleTimeout = defaultScheduleTimeout,
   execFile = childProcess.execFileSync,
-  sessionId = newSessionId(),
-  // Structured observability, injected rather than defaulted to the real
-  // recorder for one reason: startDaemon also runs IN-PROCESS across ~40 unit
-  // tests, where a live stderr sink would write into jest's reporter output.
-  // The only process that is actually a daemon — bin/mauto-session-daemon.js —
-  // injects the real recorder, and tests/unit/bin/mauto-session-daemon-observe
-  // .test.js proves it does.
-  observe = () => {},
+  // Structured observability, injected as a FACTORY rather than as a ready-made
+  // recorder. See the binding below for why it has to be a factory.
+  //
+  // Defaulted to an inert one for the same reason the old `observe` parameter
+  // was: startDaemon also runs IN-PROCESS across ~40 unit tests, where a live
+  // stderr sink would write into jest's reporter output. The only process that
+  // is actually a daemon — bin/mauto-session-daemon.js — injects boundRecorder,
+  // and tests/unit/bin/mauto-session-daemon-observe.test.js proves it does. The
+  // factory must be construction-total (boundRecorder is: recorder.js degrades
+  // to an inert observe rather than throwing), because a recorder that cannot
+  // be built must not be the reason a device session fails to start.
+  recorderFor = () => () => {},
 } = {}) {
   if (!projectRoot) throw new TypeError('startDaemon requires projectRoot');
+
+  // This daemon's identity, minted HERE and nowhere else.
+  //
+  // startDaemon is the SOLE owner of session_id: it mints it, binds it onto
+  // every event it records, and writes it into the handle below — so the handle
+  // and the event stream cannot name different sessions, because there is no
+  // second parameter for them to disagree through. Callers read it back off the
+  // return value.
+  //
+  // It used to arrive as `sessionId = newSessionId()`, an optional parameter
+  // sitting alongside an already-bound `observe`, with nothing forcing the two
+  // to agree: a caller that wired observability but not an id got a handle
+  // advertising one session and a stream stamped with none, silently. That is
+  // exactly the class of failure device-call.js refuses to allow for its own
+  // four inputs ("every one of these has a failure mode that is silent if it is
+  // wrong"), and it is why the id cannot be a parameter at all — requiring one
+  // would still leave two ways in. Pinned by the last test in
+  // tests/unit/device/daemon-observability.test.js, which reads the handle and
+  // the log file and demands one value.
+  const sessionId = newSessionId();
+
+  // Which is why the seam is a factory: the identity a recorder must be bound
+  // to does not exist until the line above. The caller owns WHERE events go;
+  // the daemon owns WHOSE they are. `pid` is bound here too, being the same
+  // kind of fact, so no daemon call site can hand-stamp either one.
+  const observe = recorderFor({ src: 'daemon', session_id: sessionId, pid: process.pid });
 
   // The injected seam, guarded once at the boundary with the canonical wrapper
   // (src/observe/recorder.js) rather than a fourth hand-rolled try/catch. Two
@@ -613,6 +643,12 @@ async function startDaemon({
     socketPath,
     device: device || null,
     sessionId,
+    // This daemon's recorder, already bound to the identity above and already
+    // guarded. Handed back so a caller whose own instrumentation outlives
+    // startDaemon — the bin's crash guards — can adopt it instead of building a
+    // second one and binding the id by hand, which is how the two owners this
+    // replaced came about.
+    observe: safeObserve,
     stop,
     // Replies that could not be delivered (peer gone / unflushable). Surfaced so
     // callers/tests can observe transport failures instead of them being eaten.

@@ -5,8 +5,10 @@
 // that an invocation actually leaves a trace, never that a particular line of
 // source text exists.
 //
-// `observe` is injected as a collector, which is the same idiom the daemon
-// already uses for createCall / scheduleTimeout / execFile.
+// The recorder factory is injected and hands back a collector, which is the
+// same idiom the daemon already uses for createCall / scheduleTimeout /
+// execFile. It is a factory rather than a recorder because startDaemon mints
+// session_id and so is the only thing that can bind a recorder to it.
 
 const fs = require('fs');
 const os = require('os');
@@ -29,6 +31,31 @@ function collector() {
   return observe;
 }
 
+// startDaemon takes a recorder FACTORY, not a recorder: it mints session_id and
+// is therefore the only thing that can bind it. A test that only wants to
+// collect events hands back the same collector whatever identity it is asked to
+// stamp — the identity is what the last test in this file is about.
+const always = (observe) => () => observe;
+
+// The real recorder, writing into a temp log dir — the factory the daemon
+// process itself injects, differing only in where MAUTO_LOG_DIR points. Used by
+// the two tests below that assert on what reached DISK rather than on what the
+// daemon passed to a collector.
+function recorderInto(root, logDir) {
+  const { boundRecorder } = require('../../../src/observe/recorder');
+  const { daemonEventLogPath } = require('../../../src/observe/paths');
+  const env = { MAUTO_LOG_DIR: logDir };
+  return (fields) => boundRecorder({ projectRoot: root, env, logPath: daemonEventLogPath(root, env), fields });
+}
+
+function readLog(logDir) {
+  return fs
+    .readFileSync(path.join(logDir, 'daemon.ndjson'), 'utf8')
+    .trim()
+    .split('\n')
+    .map((l) => JSON.parse(l));
+}
+
 function makeFakeCreateCall(impl) {
   return async () => ({
     call: impl || (async (tool, args) => ({ echoed: tool, args })),
@@ -37,12 +64,11 @@ function makeFakeCreateCall(impl) {
 }
 
 describe('daemon lifecycle events', () => {
-  // No pid assertion here on purpose: pid is per-process identity, bound once
-  // by the recorder (bin/mauto-session-daemon.js) rather than stamped by the
-  // daemon, so a bare collector correctly never sees one. The wiring is pinned
-  // in tests/unit/bin/mauto-session-daemon-observe.test.js and the stamping in
-  // tests/unit/observe/recorder.test.js; the last test in this file proves the
-  // two meet on disk.
+  // No pid assertion here on purpose: pid is per-process identity, BOUND into
+  // the recorder rather than stamped at each call site, so a collector standing
+  // in for the recorder correctly never sees one. The binding is pinned in
+  // tests/unit/observe/recorder.test.js; the last test in this file proves it
+  // and session_id both reach disk.
   test('records daemon.start with the pinned device and a startup duration', async () => {
     const root = tmpRoot();
     const observe = collector();
@@ -51,7 +77,7 @@ describe('daemon lifecycle events', () => {
       device: 'emulator-5554',
       idleMs: 0,
       createCall: makeFakeCreateCall(),
-      observe,
+      recorderFor: always(observe),
     });
 
     const [start, ...rest] = observe.named('daemon.start');
@@ -64,26 +90,36 @@ describe('daemon lifecycle events', () => {
     await daemon.stop();
   });
 
-  test('writes session_id into the handle and exposes it on the daemon', async () => {
+  test('writes its session id into the handle and exposes it on the daemon', async () => {
+    const root = tmpRoot();
+    const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall() });
+
+    const handle = JSON.parse(fs.readFileSync(paths.handlePath(root), 'utf8'));
+    expect(handle.session_id).toMatch(/^[0-9a-f]{16}$/);
+    expect(daemon.sessionId).toBe(handle.session_id);
+
+    await daemon.stop();
+  });
+
+  test('mints its own session id, which no caller can supply or override', async () => {
+    // startDaemon is the SOLE owner of session_id. It used to accept one as an
+    // optional parameter defaulted to newSessionId(), alongside an already-bound
+    // `observe` — so a caller that passed observability but not an id got a
+    // handle advertising one session and an event stream stamped with another,
+    // silently. Nothing can hand it an id any more, and this is the tripwire for
+    // reintroducing the parameter.
     const root = tmpRoot();
     const daemon = await startDaemon({
       projectRoot: root,
       idleMs: 0,
       createCall: makeFakeCreateCall(),
-      sessionId: 'abcdef0123456789',
+      sessionId: 'deadbeefdeadbeef',
     });
 
-    const handle = JSON.parse(fs.readFileSync(paths.handlePath(root), 'utf8'));
-    expect(handle.session_id).toBe('abcdef0123456789');
-    expect(daemon.sessionId).toBe('abcdef0123456789');
-
-    await daemon.stop();
-  });
-
-  test('generates its own session id when none is supplied', async () => {
-    const root = tmpRoot();
-    const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall() });
     expect(daemon.sessionId).toMatch(/^[0-9a-f]{16}$/);
+    expect(daemon.sessionId).not.toBe('deadbeefdeadbeef');
+    expect(JSON.parse(fs.readFileSync(paths.handlePath(root), 'utf8')).session_id).toBe(daemon.sessionId);
+
     await daemon.stop();
   });
 
@@ -94,7 +130,7 @@ describe('daemon lifecycle events', () => {
       projectRoot: root,
       idleMs: 0,
       createCall: makeFakeCreateCall(),
-      observe,
+      recorderFor: always(observe),
     });
 
     await daemon.stop();
@@ -112,7 +148,7 @@ describe('daemon lifecycle events', () => {
       projectRoot: root,
       idleMs: 50,
       createCall: makeFakeCreateCall(),
-      observe,
+      recorderFor: always(observe),
     });
 
     await daemon.whenStopped;
@@ -127,7 +163,7 @@ describe('daemon lifecycle events', () => {
       projectRoot: root,
       idleMs: 0,
       createCall: makeFakeCreateCall(),
-      observe,
+      recorderFor: always(observe),
     });
 
     expect(await sessionClient.requestShutdown(root)).toBe(true);
@@ -143,7 +179,7 @@ describe('daemon lifecycle events', () => {
       projectRoot: root,
       idleMs: 0,
       createCall: makeFakeCreateCall(),
-      observe,
+      recorderFor: always(observe),
     });
 
     await daemon.stop();
@@ -160,7 +196,7 @@ describe('daemon failure events', () => {
 
     const observe = collector();
     await expect(
-      startDaemon({ projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall(), observe })
+      startDaemon({ projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall(), recorderFor: always(observe) })
     ).rejects.toMatchObject({ code: 'ELOCKED' });
 
     const [conflict] = observe.named('daemon.lock_conflict');
@@ -180,7 +216,7 @@ describe('daemon failure events', () => {
     };
 
     await expect(
-      startDaemon({ projectRoot: root, idleMs: 0, createCall: boom, observe })
+      startDaemon({ projectRoot: root, idleMs: 0, createCall: boom, recorderFor: always(observe) })
     ).rejects.toThrow('no devices found');
 
     const [fail] = observe.named('daemon.connect_failure');
@@ -199,7 +235,7 @@ describe('daemon failure events', () => {
     fs.mkdirSync(paths.socketPath(root), { recursive: true });
 
     await expect(
-      startDaemon({ projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall(), observe })
+      startDaemon({ projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall(), recorderFor: always(observe) })
     ).rejects.toThrow();
 
     const [fail] = observe.named('daemon.listen_failure');
@@ -219,7 +255,7 @@ describe('daemon failure events', () => {
     fs.writeFileSync(paths.sessionDir(root), 'not a directory\n');
 
     await expect(
-      startDaemon({ projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall(), observe })
+      startDaemon({ projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall(), recorderFor: always(observe) })
     ).rejects.toThrow();
 
     const [fail] = observe.named('daemon.start_failure');
@@ -248,7 +284,7 @@ describe('observability is never load-bearing', () => {
       projectRoot: root,
       idleMs: 0,
       createCall: makeFakeCreateCall(),
-      observe: explode,
+      recorderFor: always(explode),
     });
 
     // The daemon is genuinely up, not merely un-thrown: the handle it writes
@@ -271,7 +307,7 @@ describe('observability is never load-bearing', () => {
     // there would both mask the real cause and leak the lock, wedging every
     // later spawn in this workspace.
     await expect(
-      startDaemon({ projectRoot: root, idleMs: 0, createCall: boom, observe: explode })
+      startDaemon({ projectRoot: root, idleMs: 0, createCall: boom, recorderFor: always(explode) })
     ).rejects.toMatchObject({ code: 'ENODEV' });
 
     expect(fs.existsSync(paths.lockPath(root))).toBe(false);
@@ -298,7 +334,7 @@ describe('observability is never load-bearing', () => {
         calls += 1;
         return { echoed: tool };
       }),
-      observe: explode,
+      recorderFor: always(explode),
     });
 
     const conn = await sessionClient.tryConnect(root);
@@ -324,7 +360,7 @@ describe('observability is never load-bearing', () => {
       createCall: makeFakeCreateCall(async () => {
         throw new Error('adb: device offline');
       }),
-      observe: explode,
+      recorderFor: always(explode),
     });
 
     const conn = await sessionClient.tryConnect(root);
@@ -359,7 +395,7 @@ describe('device call events', () => {
       projectRoot: root,
       idleMs: 0,
       createCall: makeFakeCreateCall(),
-      observe,
+      recorderFor: always(observe),
     });
 
     const conn = await sessionClient.tryConnect(root);
@@ -390,7 +426,7 @@ describe('device call events', () => {
         await new Promise((r) => setTimeout(r, 40));
         return { done: true };
       }),
-      observe,
+      recorderFor: always(observe),
     });
 
     const raw = net.connect(paths.socketPath(root));
@@ -422,22 +458,13 @@ describe('device call events', () => {
     // The cost argument for keeping appendFileSync per event, pinned as a test:
     // call.start is debug and therefore off by default, so a scenario pays one
     // append per device call and nothing more.
-    const { boundRecorder } = require('../../../src/observe/recorder');
-    const { daemonEventLogPath } = require('../../../src/observe/paths');
-
     const root = tmpRoot();
     const logDir = path.join(root, 'logs');
-    const env = { MAUTO_LOG_DIR: logDir };
     const daemon = await startDaemon({
       projectRoot: root,
       idleMs: 0,
       createCall: makeFakeCreateCall(),
-      observe: boundRecorder({
-        projectRoot: root,
-        env,
-        logPath: daemonEventLogPath(root, env),
-        fields: { src: 'daemon', session_id: 'abcdef0123456789', pid: process.pid },
-      }),
+      recorderFor: recorderInto(root, logDir),
     });
 
     const conn = await sessionClient.tryConnect(root);
@@ -445,17 +472,46 @@ describe('device call events', () => {
     await conn.call('mobile_press_button', { button: 'HOME' });
     await conn.close();
 
-    const lines = fs
-      .readFileSync(path.join(logDir, 'daemon.ndjson'), 'utf8')
-      .trim()
-      .split('\n')
-      .map((l) => JSON.parse(l));
-    const callLines = lines.filter((e) => String(e.event).startsWith('call.'));
+    const callLines = readLog(logDir).filter((e) => String(e.event).startsWith('call.'));
     expect(callLines).toHaveLength(2);
     expect(callLines.every((e) => e.event === 'call.end')).toBe(true);
-    expect(callLines.every((e) => e.session_id === 'abcdef0123456789')).toBe(true);
-    // Where the two halves meet: the daemon stamps no pid anywhere, and every
-    // line it wrote still carries one, because the recorder is bound with it.
+
+    await daemon.stop();
+  });
+
+  test('stamps the session id the handle names onto every event it records', async () => {
+    // The two halves meeting on disk, and the F1 guard: the handle and the event
+    // stream have ONE owner, so they cannot name different sessions.
+    //
+    // They used to arrive through two independent parameters — a `sessionId`
+    // defaulted to newSessionId() and a separately-bound `observe` — with
+    // nothing forcing them to agree. Against that code this reads:
+    //     handle.session_id       = "0bb9a25e035e0fa5"
+    //     event session_id values = [undefined]
+    // because a caller that wired observability without also passing an id got
+    // a handle advertising one session and a stream stamped with none. That is
+    // the exact join a reader of daemon.ndjson has to make.
+    const root = tmpRoot();
+    const logDir = path.join(root, 'logs');
+    const daemon = await startDaemon({
+      projectRoot: root,
+      idleMs: 0,
+      createCall: makeFakeCreateCall(),
+      recorderFor: recorderInto(root, logDir),
+    });
+
+    const conn = await sessionClient.tryConnect(root);
+    await conn.call('mobile_press_button', { button: 'BACK' });
+    await conn.close();
+
+    const handle = JSON.parse(fs.readFileSync(paths.handlePath(root), 'utf8'));
+    const lines = readLog(logDir);
+
+    expect(lines.length).toBeGreaterThan(0);
+    expect(handle.session_id).toBe(daemon.sessionId);
+    expect([...new Set(lines.map((e) => e.session_id))]).toEqual([handle.session_id]);
+    // Where the two halves meet on the other bound field: the daemon stamps no
+    // pid anywhere, and every line it wrote still carries one.
     expect(lines.every((e) => e.pid === process.pid)).toBe(true);
 
     await daemon.stop();

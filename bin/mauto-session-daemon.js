@@ -12,7 +12,6 @@ const fs = require('fs');
 
 const { startDaemon } = require('../src/device/session-daemon');
 const paths = require('../src/device/session-paths');
-const { newSessionId } = require('../src/device/session-handle');
 const { boundRecorder } = require('../src/observe/recorder');
 const { daemonEventLogPath } = require('../src/observe/paths');
 
@@ -67,33 +66,38 @@ async function main() {
   const idleRaw = process.env.MAUTO_SESSION_IDLE_MS;
   const idleMs = idleRaw ? Number(idleRaw) : undefined;
 
-  // The daemon's binding of the recorder seam: its own log file (daemon.ndjson,
-  // not the CLI's mauto.ndjson — see observe/paths.js) and its own identity on
-  // every event. `env` is read once and the log path derived from that same
-  // object, so the sinks and the path can never disagree about MAUTO_LOG_DIR.
-  // See boundRecorder for why record()'s defaults are wrong for a detached
-  // process, and for why a construction failure degrades rather than throwing.
+  // Where this process's events go: its own log file (daemon.ndjson, not the
+  // CLI's mauto.ndjson — see observe/paths.js). `env` is read once and the log
+  // path derived from that same object, so the sinks and the path can never
+  // disagree about MAUTO_LOG_DIR. See boundRecorder for why record()'s defaults
+  // are wrong for a detached process, and for why a construction failure
+  // degrades rather than throwing.
   //
   // The stderr sink is deliberately left in place: the daemon's stderr IS
   // mobile-automator/.session/daemon.log (PR #176), not a terminal, which
   // inverts cli.js finish()'s calculus — a warn line here costs a human no
   // terminal noise and lands next to the adb/simctl output that explains it.
   //
-  // The id is generated HERE rather than inside startDaemon so that the crash
-  // guards below — which can fire before startDaemon has resolved — already
-  // have an identity to stamp their events with.
-  const sessionId = newSessionId();
+  // A FACTORY, not a recorder. session_id belongs to startDaemon — it mints the
+  // id, writes it to the handle and binds it — so this file cannot build a
+  // session-bound recorder, and must not try: an id minted here and one written
+  // there are two owners that nothing forces to agree. This file owns WHERE the
+  // events go; startDaemon owns WHOSE they are.
   const env = process.env;
-  const observe = boundRecorder({
-    projectRoot,
-    env,
-    logPath: daemonEventLogPath(projectRoot, env),
-    // Constant per-process identity, stamped once here instead of at every
-    // daemon.* call site. pid is the most per-process fact there is; binding it
-    // is the same reason src and session_id are bound, and bound fields are
-    // applied last so no call site can misreport it.
-    fields: { src: 'daemon', session_id: sessionId, pid: process.pid },
-  });
+  const logPath = daemonEventLogPath(projectRoot, env);
+  const recorderFor = (fields) => boundRecorder({ projectRoot, env, logPath, fields });
+
+  // Two bindings of that one factory, because the crash guards outlive the
+  // question "is there a session yet?".
+  //
+  // Until startDaemon resolves there is no session to name, so this one carries
+  // the process identity alone. Nothing is lost by that: a crash before
+  // startDaemon resolves is by definition a daemon that never wrote a handle,
+  // so a session id would name nothing a reader could join against, and `pid`
+  // already groups those events. The moment the daemon exists we adopt ITS
+  // recorder (below), so every later crash — the common case — is stamped with
+  // the session whose handle is on disk.
+  let observe = recorderFor({ src: 'daemon', pid: process.pid });
 
   let daemon = null;
 
@@ -138,7 +142,12 @@ async function main() {
   process.on('uncaughtException', onFatal('uncaughtException', 'uncaught'));
   process.on('unhandledRejection', onFatal('unhandledRejection', 'unhandled rejection'));
 
-  daemon = await startDaemon({ projectRoot, device, idleMs, sessionId, observe });
+  daemon = await startDaemon({ projectRoot, device, idleMs, recorderFor });
+  // Adopt the daemon's own recorder: same log file, now bound to the session id
+  // it minted and wrote into the handle. onFatal reads `observe` when it fires,
+  // not when it was built, so every crash from here on is joinable to that
+  // handle. This is a READ of startDaemon's id, never a second mint of one.
+  observe = daemon.observe;
   // Keep the event loop alive until the daemon stops (idle reap / signal /
   // shutdown frame), then exit cleanly.
   await daemon.whenStopped;

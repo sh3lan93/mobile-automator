@@ -18,6 +18,10 @@ const { main } = require('../../../bin/mauto-session-daemon');
 
 const GUARDS = ['uncaughtException', 'unhandledRejection', 'exit'];
 
+// The id startDaemon mints. It is the DAEMON's to mint, not this file's, so the
+// mock below produces one exactly the way the real startDaemon does.
+const DAEMON_SESSION = 'abcdef0123456789';
+
 describe('bin/mauto-session-daemon observability wiring', () => {
   let observed;
   let started;
@@ -42,14 +46,22 @@ describe('bin/mauto-session-daemon observability wiring', () => {
       order.push('exit');
     });
 
-    boundRecorder.mockImplementation(() => (fields) => {
+    // Faithful to the real boundRecorder in the one respect these tests turn
+    // on: the BOUND fields are applied last, so a collected event carries the
+    // identity its recorder was built with. Without that, a mock could not tell
+    // the boot recorder apart from the daemon's.
+    boundRecorder.mockImplementation((args) => (fields) => {
       order.push('observe');
-      observed.push(fields);
+      observed.push({ ...fields, ...(args && args.fields) });
     });
     startDaemon.mockImplementation(async (opts) => {
       started = opts;
       return {
-        sessionId: opts.sessionId,
+        sessionId: DAEMON_SESSION,
+        // What the real startDaemon does with the injected factory: mint an id,
+        // bind it, and hand the bound recorder back so the caller's crash guards
+        // can adopt it.
+        observe: opts.recorderFor({ src: 'daemon', session_id: DAEMON_SESSION, pid: process.pid }),
         stop: async (reason) => {
           order.push('stop');
           stoppedWith = reason;
@@ -88,28 +100,55 @@ describe('bin/mauto-session-daemon observability wiring', () => {
   // absorbed here rather than escaping as an unhandled rejection into jest.
   const start = () => main().catch(() => {});
 
-  it('builds the recorder bound to the project root and a fresh session id', async () => {
+  it('builds a boot recorder bound to the project root and this process', async () => {
     start();
     await settle();
 
-    expect(boundRecorder).toHaveBeenCalledTimes(1);
     const args = boundRecorder.mock.calls[0][0];
     expect(args.projectRoot).toBe('/tmp/some-project');
-    expect(args.fields.session_id).toMatch(/^[0-9a-f]{16}$/);
-    // pid is per-process identity, exactly like src and session_id, so it is
-    // BOUND rather than hand-stamped at each event. Bound fields are applied
-    // after the caller's, so no daemon call site can misreport it.
-    expect(args.fields.pid).toBe(process.pid);
-    expect(args.fields.src).toBe('daemon');
+    // pid is per-process identity, so it is BOUND rather than hand-stamped at
+    // each event. Bound fields are applied after the caller's, so no call site
+    // can misreport it.
+    expect(args.fields).toEqual({ src: 'daemon', pid: process.pid });
+    // No session_id, deliberately: before startDaemon resolves there is no
+    // session to name. An id minted here would name a daemon that never wrote a
+    // handle, so nothing could be joined against it — and `pid` already groups
+    // those events.
+    expect(args.fields.session_id).toBeUndefined();
   });
 
-  it('injects that recorder and the same session id into startDaemon', async () => {
+  it('injects a recorder FACTORY, never a session id, into startDaemon', async () => {
     start();
     await settle();
 
-    expect(typeof started.observe).toBe('function');
-    expect(started.sessionId).toBe(boundRecorder.mock.calls[0][0].fields.session_id);
+    // startDaemon is the sole owner of session_id: it mints the id and is
+    // therefore the only thing that can bind a recorder to it. This file owns
+    // WHERE the events go; startDaemon owns WHOSE they are. A `sessionId`
+    // travelling the other way is the divergence this replaced.
+    expect(typeof started.recorderFor).toBe('function');
+    expect(started.sessionId).toBeUndefined();
+    expect(started.observe).toBeUndefined();
     expect(started.projectRoot).toBe('/tmp/some-project');
+
+    // The factory builds the daemon's own recorder against the same log file —
+    // the mock startDaemon above already called it once with the id it minted.
+    const forDaemon = boundRecorder.mock.calls[1][0];
+    expect(forDaemon.projectRoot).toBe('/tmp/some-project');
+    expect(forDaemon.logPath).toBe(boundRecorder.mock.calls[0][0].logPath);
+    expect(forDaemon.fields.session_id).toBe(DAEMON_SESSION);
+  });
+
+  it('adopts the daemon\'s session-bound recorder once the daemon exists', async () => {
+    // The common case, and the one worth the swap: a crash long after startup
+    // must be joinable to the handle sitting on disk.
+    start();
+    await settle();
+
+    process.listeners('uncaughtException').slice(-1)[0](new Error('late death'));
+    await settle();
+
+    const [crash] = observed.filter((e) => e.event === 'daemon.crash');
+    expect(crash.session_id).toBe(DAEMON_SESSION);
   });
 
   // The two crash guards do the same four things, in an order that is itself
@@ -196,6 +235,11 @@ describe('bin/mauto-session-daemon observability wiring', () => {
 
     const [crash] = observed.filter((e) => e.event === 'daemon.crash');
     expect(crash.message).toContain('early death');
+    // Recorded under the boot recorder, so it carries the process identity and
+    // no session. That is honest rather than lossy: a crash before startDaemon
+    // resolved never wrote a handle, so an id here would name nothing.
+    expect(crash.pid).toBe(process.pid);
+    expect(crash.session_id).toBeUndefined();
     expect(exitSpy).toHaveBeenCalledWith(1);
     if (release) release({ stop: async () => {}, whenStopped: new Promise(() => {}) });
   });
