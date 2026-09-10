@@ -1537,7 +1537,7 @@
 <li><strong>One rotation policy.</strong> <code>src/util/log-rotate.js</code> (<code>MAX_LOG_BYTES</code>, <code>rotateIfLarge</code>) stays the only one. The run trace uses the same <em>constant</em> under a different <em>action</em>; it does not get a second constant, a second generation, or a forked rotation function.</li>
 <li><strong>Bind, do not copy.</strong> The file sink already accepts <code>logPath</code>; it gains one <code>bound</code> argument, not a sibling module. <code>defaultSinks</code> already accepts an options bag; it gains one key, not a <code>traceSinks()</code> twin. Two prior reviews on this branch flagged near-copies (see the slice-2 correction note); do not add a third.</li>
 <li><strong>Backwards compatibility is now enforced, not asserted.</strong> Task 1 creates <code>tests/lint/result-schema-additive.test.js</code> and its <code>tests/fixtures/result_schema_v2.0.json</code> baseline <em>before</em> anything touches the schema. A result file written by 0.24.0 must still validate after this slice.</li>
-<li><strong>CI version gate:</strong> this touches <code>src/</code>, so <code>package.json</code> <code>version</code> must be bumped to a value not yet in <code>git tag</code>. <code>main</code> is 0.24.0, slice 1 took the branch to <code>0.25.0-rc.0</code>, slice 2 to <code>0.25.0-rc.1</code>; neither rc is tagged. Slice 3's target is <strong><code>0.25.0-rc.2</code></strong>.</li>
+<li><strong>CI version gate:</strong> this touches <code>src/</code>, so <code>package.json</code> <code>version</code> must be bumped to a value not yet in <code>git tag</code>. <code>main</code> is 0.26.0-rc.1, slice 1 took the branch to <code>0.26.0-rc.0</code>, slice 2 to <code>0.26.0-rc.1</code>; neither rc is tagged. Slice 3's target is <strong><code>0.26.0-rc.2</code></strong>.</li>
 <li><strong>No <code>MAUTO_OBSERVE</code> gate, and the switch that replaces it is <code>MAUTO_RUN_ID</code>.</strong> The design gates slices 2–5's <em>user-visible verbs</em> behind <code>MAUTO_OBSERVE=1</code>. Slice 3 adds no verb and no flag. Its three behaviour changes — a trace file, a derived <code>duration_seconds</code>, a screenshot on failure — are all downstream of a run id being present, and a run id is only present because an agent exported one. That is already an opt-in, and it is a <em>better</em> one than a second env var: one switch turns the whole slice on, and with it unset the tool behaves exactly as 0.24.0 did. A second gate would mean a user could export <code>MAUTO_RUN_ID</code>, see a trace file appear, and still get a self-reported duration — the half-built state the gate exists to prevent.</li>
 <li><strong>Platform-agnostic:</strong> never emit <code>resource-id</code> or OS-specific element IDs in any artifact, and name no OS in <code>*.agnostic.md</code>.</li>
 </ul>
@@ -3940,12 +3940,12 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 <ul>
 <li>[ ] <strong>Step 1: Bump the version</strong></li>
 </ul>
-<p>The CI gate <code>Verify version is bumped</code> fails any PR touching <code>src/</code>, <code>bin/</code> or <code>package.json</code> without a version not already in <code>git tag</code>. <code>main</code> is 0.24.0, slice 1 took this branch to <code>0.25.0-rc.0</code> and slice 2 to <code>0.25.0-rc.1</code>; neither rc is tagged. Slice 3 increments the rc counter.</p>
+<p>The CI gate <code>Verify version is bumped</code> fails any PR touching <code>src/</code>, <code>bin/</code> or <code>package.json</code> without a version not already in <code>git tag</code>. <code>main</code> is 0.26.0-rc.1, slice 1 took this branch to <code>0.26.0-rc.0</code> and slice 2 to <code>0.26.0-rc.1</code>; neither rc is tagged. Slice 3 increments the rc counter.</p>
 <p>Confirm first, do not assume:</p>
-<div class="highlight"><pre><span></span><code>node<span class="w"> </span>-e<span class="w"> </span><span class="s2">"console.log(require('./package.json').version)"</span><span class="w">   </span><span class="c1"># expect 0.25.0-rc.1</span>
-git<span class="w"> </span>tag<span class="w"> </span>--list<span class="w"> </span><span class="s1">'v0.25.0*'</span><span class="w">                                   </span><span class="c1"># expect empty</span>
+<div class="highlight"><pre><span></span><code>node<span class="w"> </span>-e<span class="w"> </span><span class="s2">"console.log(require('./package.json').version)"</span><span class="w">   </span><span class="c1"># expect 0.26.0-rc.1</span>
+git<span class="w"> </span>tag<span class="w"> </span>--list<span class="w"> </span><span class="s1">'v0.26.0*'</span><span class="w">                                   </span><span class="c1"># expect empty</span>
 </code></pre></div>
-<p>Set <code>"version": "0.25.0-rc.2"</code> in <code>package.json</code>, then:</p>
+<p>Set <code>"version": "0.26.0-rc.2"</code> in <code>package.json</code>, then:</p>
 <div class="highlight"><pre><span></span><code>npm<span class="w"> </span>install<span class="w"> </span>--package-lock-only
 </code></pre></div>
 <ul>
@@ -4007,7 +4007,7 @@ git<span class="w"> </span>tag<span class="w"> </span>--list<span class="w"> </s
 <p>Add a new subsection under <code>## Test Execution Issues</code>, after <code>### ❌ "Test is flaky"</code>:</p>
 <div class="highlight"><pre><span></span><code><span class="gu">### ❌ "duration_seconds looks wrong"</span>
 
-Since 0.25.0 that field is measured from the run trace rather than taken from
+Since 0.26.0 that field is measured from the run trace rather than taken from
 <span class="sb">`--duration`</span>, but only when the run had a trace. Check which:
 
 <span class="sb">```bash</span>
@@ -4050,7 +4050,7 @@ npm<span class="w"> </span>run<span class="w"> </span>lint:schema-additive
 <li>[ ] <strong>Step 5: Commit and push</strong></li>
 </ul>
 <div class="highlight"><pre><span></span><code>git<span class="w"> </span>add<span class="w"> </span>package.json<span class="w"> </span>package-lock.json<span class="w"> </span>CHANGELOG.md<span class="w"> </span>TROUBLESHOOTING.md
-git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"chore(release): bump to 0.25.0-rc.2 for run traces and measured durations"</span>
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"chore(release): bump to 0.26.0-rc.2 for run traces and measured durations"</span>
 git<span class="w"> </span>push<span class="w"> </span>-u<span class="w"> </span>origin<span class="w"> </span>sh3lan93/observability-slice-2
 </code></pre></div>
 <ul>
@@ -4178,12 +4178,12 @@ git<span class="w"> </span>push<span class="w"> </span>-u<span class="w"> </span
 <tr>
 <td>4</td>
 <td><code>mauto crash</code> verb, failure-path auto-check, result-schema crash record, capability-catalog entry. Adds <code>mobile_get_crash</code>/<code>mobile_list_crashes</code> to <code>mobile-mcp-tools.js</code> in the same change as the bridge methods, and <strong>uses the additivity guard this slice created</strong>.</td>
-<td><code>0.25.0-rc.3</code></td>
+<td><code>0.26.0-rc.3</code></td>
 </tr>
 <tr>
 <td>5</td>
 <td>Opt-in PostHog spool + daemon flush, consent UX, privacy docs; removes the gate</td>
-<td><code>0.25.0</code></td>
+<td><code>0.26.0</code></td>
 </tr>
 </tbody>
 </table>

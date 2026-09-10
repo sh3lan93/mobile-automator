@@ -1469,7 +1469,7 @@
 <li><strong>No new dependencies.</strong> Cold start is ~112ms and one scenario is dozens of process spawns.</li>
 <li><strong>Bind, do not copy.</strong> Three places in this slice reuse an existing binding instead of minting a new one, and each is called out where it happens: the crash watermark reuses <code>session.json</code>'s existing <code>started_at</code>; the crashed process name reuses the <code>app_id</code> event field; the crash excerpt reuses the <code>message</code> event field.</li>
 <li><strong>Slice 3 is assumed, not built.</strong> <code>tests/lint/result-schema-additive.test.js</code> and <code>tests/fixtures/result_schema_v2.0.json</code> are slice 3's deliverable. Do <strong>not</strong> create them here, do not duplicate them. Task 5 depends only on the <em>guarantee</em> they encode (the result schema is additive over v2.0), never on their internals. Slice 3 also edits <code>connectBridge</code> for screenshot-on-failure; Task 4's change to that function is deliberately <strong>one inserted line</strong> so the two compose without a merge argument.</li>
-<li><strong>CI version gate:</strong> this touches <code>src/</code>, so <code>package.json</code> <code>version</code> must be bumped to a value not yet in <code>git tag</code>. <code>main</code> is at 0.24.0; slice 1 took the branch to <code>0.25.0-rc.0</code>, slice 2 to <code>0.25.0-rc.1</code>, slice 3 to <code>0.25.0-rc.2</code>. Slice 4's target is <strong><code>0.25.0-rc.3</code></strong>.</li>
+<li><strong>CI version gate:</strong> this touches <code>src/</code>, so <code>package.json</code> <code>version</code> must be bumped to a value not yet in <code>git tag</code>. <code>main</code> is 0.26.0-rc.1; slice 1 took the branch to <code>0.26.0-rc.0</code>, slice 2 to <code>0.26.0-rc.1</code>, slice 3 to <code>0.26.0-rc.2</code>. Slice 4's target is <strong><code>0.26.0-rc.3</code></strong>.</li>
 <li><strong>Platform-agnostic:</strong> never emit <code>resource-id</code> or OS-specific element IDs in any artifact.</li>
 </ul>
 <hr />
@@ -3275,7 +3275,7 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 <ul>
 <li>[ ] <strong>Step 1: Bump the version</strong></li>
 </ul>
-<p>The CI gate <code>Verify version is bumped</code> fails any PR touching <code>src/</code>, <code>bin/</code> or <code>package.json</code> without a version not already in <code>git tag</code>. Slice 3 took this branch to <code>0.25.0-rc.2</code>, so slice 4 increments the rc counter. In <code>package.json</code>, set <code>"version": "0.25.0-rc.3"</code>, then:</p>
+<p>The CI gate <code>Verify version is bumped</code> fails any PR touching <code>src/</code>, <code>bin/</code> or <code>package.json</code> without a version not already in <code>git tag</code>. Slice 3 took this branch to <code>0.26.0-rc.2</code>, so slice 4 increments the rc counter. In <code>package.json</code>, set <code>"version": "0.26.0-rc.3"</code>, then:</p>
 <div class="highlight"><pre><span></span><code>npm<span class="w"> </span>install<span class="w"> </span>--package-lock-only
 </code></pre></div>
 <ul>
@@ -3337,7 +3337,7 @@ npm<span class="w"> </span>run<span class="w"> </span>lint:schema-additive
 </li>
 </ul>
 <div class="highlight"><pre><span></span><code>git<span class="w"> </span>add<span class="w"> </span>package.json<span class="w"> </span>package-lock.json<span class="w"> </span>CHANGELOG.md
-git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"chore(release): bump to 0.25.0-rc.3 for crash visibility</span>
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"chore(release): bump to 0.26.0-rc.3 for crash visibility</span>
 
 <span class="s2">Co-Authored-By: Claude Opus 5 (1M context) &lt;noreply@anthropic.com&gt;</span>
 <span class="s2">Claude-Session: https://claude.ai/code/session_01KmSR7wKHGdpze7SVzuqg26"</span>

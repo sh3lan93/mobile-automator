@@ -1544,7 +1544,7 @@
 <blockquote>
 <p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (<code>- [ ]</code>) syntax for tracking.</p>
 </blockquote>
-<p><strong>Goal:</strong> Give <code>mauto</code> domain C — usage telemetry — without letting a single verb touch the network, without a stable machine identifier, and without any upload path being reachable until a human has explicitly opted in. Then graduate the whole <code>0.25.0</code> feature: remove the <code>MAUTO_OBSERVE</code> gate (whatever slices 3–4 left of it), collapse <code>[Unreleased]</code>, and bump <code>0.25.0-rc.3</code> → <code>0.25.0</code>.</p>
+<p><strong>Goal:</strong> Give <code>mauto</code> domain C — usage telemetry — without letting a single verb touch the network, without a stable machine identifier, and without any upload path being reachable until a human has explicitly opted in. Then graduate the whole <code>0.26.0</code> feature: remove the <code>MAUTO_OBSERVE</code> gate (whatever slices 3–4 left of it), collapse <code>[Unreleased]</code>, and bump <code>0.26.0-rc.3</code> → <code>0.26.0</code>.</p>
 <p><strong>Architecture:</strong> <code>telemetryPayload()</code> (<code>src/observe/event.js</code>) already exists, is allowlist-by-construction, and is lint-guarded. It has no transport. This slice supplies exactly one, in exactly one place, reached by exactly one path:</p>
 <div class="highlight"><pre><span></span><code>  verb / daemon
       │
@@ -1579,7 +1579,7 @@
 <li><strong>The envelope is locked:</strong> <code>{ok,data,error,hint,schema_version}</code> on stdout, nothing else on stdout ever. The new <code>telemetry</code> verb emits the envelope like every other verb. Node 18's <code>fetch</code> emits an <code>ExperimentalWarning</code> on first use — that lands on <strong>stderr</strong>, which is permitted, and in the daemon's case stderr <em>is</em> <code>mobile-automator/.session/daemon.log</code>.</li>
 <li><strong>One rotation policy, and the spool is deliberately not covered by it.</strong> <code>src/util/log-rotate.js</code> is the policy for <em>logs</em>. The spool is a <em>queue</em>: renaming it to <code>.1</code> would silently discard records that were pending delivery, and a second rotation would clobber the first generation. The spool gets a hard byte cap and drops at the cap instead. This divergence is stated here once so it is not re-argued in review.</li>
 <li><strong>Bind, do not copy.</strong> The spool becomes a third entry in the existing <code>defaultSinks</code> list — not a second sink-list, not a parallel <code>record()</code>. That one edit covers the CLI and the daemon at once, because <code>bin/mauto-session-daemon.js</code> already builds its recorder through <code>boundRecorder</code> → <code>defaultSinks</code>.</li>
-<li><strong>CI version gate:</strong> this touches <code>src/</code>, <code>bin/</code> and <code>package.json</code>, so <code>version</code> must move to a value not yet in <code>git tag</code>. This is the graduation slice: <strong><code>0.25.0-rc.3</code> → <code>0.25.0</code></strong>. Task 12 asserts the starting version rather than assuming it.</li>
+<li><strong>CI version gate:</strong> this touches <code>src/</code>, <code>bin/</code> and <code>package.json</code>, so <code>version</code> must move to a value not yet in <code>git tag</code>. This is the graduation slice: <strong><code>0.26.0-rc.3</code> → <code>0.26.0</code></strong>. Task 12 asserts the starting version rather than assuming it.</li>
 <li><strong>Platform-agnostic:</strong> never emit <code>resource-id</code> or OS-specific element IDs in any artifact.</li>
 </ul>
 <hr />
@@ -4314,7 +4314,7 @@ docs/plans/2026-09-01-observability-slice-2-plan.md
 <p>Create <code>tests/lint/no-observe-gate.test.js</code>:</p>
 <div class="highlight"><pre><span></span><code><span class="s1">'use strict'</span><span class="p">;</span>
 
-<span class="c1">// The observability feature graduated in 0.25.0. MAUTO_OBSERVE was the</span>
+<span class="c1">// The observability feature graduated in 0.26.0. MAUTO_OBSERVE was the</span>
 <span class="c1">// gate-then-graduate env var that kept slices 2-4's partial states invisible on</span>
 <span class="c1">// main; a graduated feature that still reads it has a hidden second behaviour</span>
 <span class="c1">// nobody tests, which is the exact failure the gate existed to prevent — just</span>
@@ -4396,8 +4396,8 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 </ul>
 <div class="highlight"><pre><span></span><code>node<span class="w"> </span>-p<span class="w"> </span><span class="s2">"require('./package.json').version"</span>
 </code></pre></div>
-<p>Expected: <code>0.25.0-rc.3</code> — slice 1 took the branch to <code>-rc.0</code>, slice 2 to <code>-rc.1</code>, slices 3 and 4 to <code>-rc.2</code> and <code>-rc.3</code>. If it is a <em>different</em> rc of <code>0.25.0</code>, that is fine; graduate from whatever it actually is. If it does <strong>not</strong> match <code>0.25.0-rc.*</code>, stop: either a slice did not bump, or this is not the branch you think it is.</p>
-<div class="highlight"><pre><span></span><code>node<span class="w"> </span>-e<span class="w"> </span><span class="s2">"const v=require('./package.json').version; if(!/^0\.25\.0-rc\.\d+</span>$<span class="s2">/.test(v)){console.error('STOP: expected 0.25.0-rc.N, found '+v);process.exit(1)}"</span>
+<p>Expected: <code>0.26.0-rc.3</code> — slice 1 took the branch to <code>-rc.0</code>, slice 2 to <code>-rc.1</code>, slices 3 and 4 to <code>-rc.2</code> and <code>-rc.3</code>. If it is a <em>different</em> rc of <code>0.26.0</code>, that is fine; graduate from whatever it actually is. If it does <strong>not</strong> match <code>0.26.0-rc.*</code>, stop: either a slice did not bump, or this is not the branch you think it is.</p>
+<div class="highlight"><pre><span></span><code>node<span class="w"> </span>-e<span class="w"> </span><span class="s2">"const v=require('./package.json').version; if(!/^0\.26\.0-rc\.\d+</span>$<span class="s2">/.test(v)){console.error('STOP: expected 0.26.0-rc.N, found '+v);process.exit(1)}"</span>
 </code></pre></div>
 <ul>
 <li>[ ] <strong>Step 2: Paste the real PostHog project token</strong></li>
@@ -4415,10 +4415,10 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 <ul>
 <li>[ ] <strong>Step 3: Bump the version</strong></li>
 </ul>
-<p>In <code>package.json</code>, set <code>"version": "0.25.0"</code>, then:</p>
+<p>In <code>package.json</code>, set <code>"version": "0.26.0"</code>, then:</p>
 <div class="highlight"><pre><span></span><code>npm<span class="w"> </span>install<span class="w"> </span>--package-lock-only
 </code></pre></div>
-<p>The CI gate <code>Verify version is bumped</code> fails any PR touching <code>src/</code>, <code>bin/</code> or <code>package.json</code> without a version not already in <code>git tag</code>; <code>0.25.0</code> has not been tagged (only the <code>-rc.N</code> prereleases have — <code>auto-tag.yml</code> has no prerelease guard, so those tags exist).</p>
+<p>The CI gate <code>Verify version is bumped</code> fails any PR touching <code>src/</code>, <code>bin/</code> or <code>package.json</code> without a version not already in <code>git tag</code>; <code>0.26.0</code> has not been tagged (only the <code>-rc.N</code> prereleases have — <code>auto-tag.yml</code> has no prerelease guard, so those tags exist).</p>
 <ul>
 <li>[ ] <strong>Step 4: Resolve the changelog ambiguity BEFORE editing — this is a hard stop</strong></li>
 </ul>
@@ -4443,7 +4443,7 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 <li>[ ] <strong>Step 5: Collapse <code>[Unreleased]</code> into the release section</strong></li>
 </ul>
 <p>With exactly one heading present, rename it and add the slice-5 entries. The result is:</p>
-<div class="highlight"><pre><span></span><code><span class="gu">## [0.25.0]</span>
+<div class="highlight"><pre><span></span><code><span class="gu">## [0.26.0]</span>
 
 <span class="gu">### ✨ Added</span>
 
@@ -4538,15 +4538,15 @@ npm<span class="w"> </span>run<span class="w"> </span>lint:schema-additive
 <li>[ ] <strong>Step 8: Commit and open the PR</strong></li>
 </ul>
 <div class="highlight"><pre><span></span><code>git<span class="w"> </span>add<span class="w"> </span>src/observe/transport.js<span class="w"> </span>package.json<span class="w"> </span>package-lock.json<span class="w"> </span>CHANGELOG.md<span class="w"> </span>TROUBLESHOOTING.md
-git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"chore(release): graduate observability to 0.25.0"</span>
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"chore(release): graduate observability to 0.26.0"</span>
 git<span class="w"> </span>push<span class="w"> </span>-u<span class="w"> </span>origin<span class="w"> </span>sh3lan93/observability-slice-2
 </code></pre></div>
 <div class="highlight"><pre><span></span><code>gh<span class="w"> </span>pr<span class="w"> </span>create<span class="w"> </span>--draft<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--title<span class="w"> </span><span class="s2">"feat(observe): opt-in telemetry, consent surface, and 0.25.0 graduation"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--title<span class="w"> </span><span class="s2">"feat(observe): opt-in telemetry, consent surface, and 0.26.0 graduation"</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--body<span class="w"> </span><span class="s2">"</span><span class="k">$(</span>cat<span class="w"> </span><span class="s">&lt;&lt;'BODY'</span>
 <span class="s">## What</span>
 
-<span class="s">Slice 5 of the observability design, and the graduation of the whole 0.25.0</span>
+<span class="s">Slice 5 of the observability design, and the graduation of the whole 0.26.0</span>
 <span class="s">feature.</span>
 
 <span class="s">- Opt-in anonymous usage telemetry, off by default, with `mauto telemetry</span>
@@ -4556,7 +4556,7 @@ git<span class="w"> </span>push<span class="w"> </span>-u<span class="w"> </span
 <span class="s">  its idle window on a self-rescheduling unref'd timer.</span>
 <span class="s">- PostHog plain HTTP capture API, EU cloud, write-only public project token, no</span>
 <span class="s">  SDK, no new dependency.</span>
-<span class="s">- `MAUTO_OBSERVE` gate removed / guarded shut, `0.25.0-rc.N` → `0.25.0`,</span>
+<span class="s">- `MAUTO_OBSERVE` gate removed / guarded shut, `0.26.0-rc.N` → `0.26.0`,</span>
 <span class="s">  `[Unreleased]` collapsed.</span>
 
 <span class="s">## Why</span>
@@ -4622,7 +4622,7 @@ git<span class="w"> </span>push<span class="w"> </span>-u<span class="w"> </span
 <p><strong>Placeholder scan.</strong> No "add appropriate error handling", no "similar to Task N", no "TODO", no elided function bodies. Two intentional fill-ins are both flagged as such with a named verification step: the PostHog project token (Task 12 Step 2) and the <code>$process_person_profile</code> flag name (Task 2 Step 3 note + Task 12 Step 2).</p>
 <p><strong>Type consistency.</strong> <code>postBatch</code> returns <code>{ok, retry, status}</code> everywhere it is produced and consumed. <code>flush()</code> returns <code>{skipped?, sent, dropped, kept, ok, nextDelayMs}</code>; the daemon reads only <code>nextDelayMs</code>, the CLI reads only the counts, and both tolerate a missing field. <code>decideForProject</code> and <code>resolveTelemetry</code> return the same <code>{enabled, reason}</code> shape. <code>spool.stats()</code> returns the same four keys in <code>stats</code>, <code>handleTelemetryStatus</code> and its test.</p>
 <p><strong>Interface consistency against the real tree.</strong> Verified against this worktree at <code>HEAD</code>: <code>defaultSinks(projectRoot, env, {logPath})</code> and <code>boundRecorder</code> in <code>src/observe/recorder.js</code>; <code>logsDir</code>/<code>MAIN_LOG_NAME</code>/<code>DAEMON_LOG_NAME</code> in <code>src/observe/paths.js</code>; <code>EVENT_FIELDS</code>/<code>NEVER_SENDS</code>/<code>telemetryPayload</code> in <code>src/observe/event.js</code>; <code>configManager.load/set/configPath</code> in <code>src/config/manager.js</code>; <code>startDaemon</code>'s <code>observe</code>/<code>safeObserve</code>/<code>armIdle</code>/<code>stop</code>/<code>inFlight</code> in <code>src/device/session-daemon.js</code>; <code>buildRecorder</code>/<code>main</code> in <code>bin/mauto-session-daemon.js</code>; the scaffold skeleton in <code>src/setup/scaffold.js</code> and the guard that validates it in <code>tests/lint/config-schema.test.js</code>; <code>coerceValue</code>'s fall-through to <code>tryJson</code>, which is why a boolean-declared <code>telemetry.enabled</code> accepts <code>mauto config set telemetry.enabled true</code> with no coercion change.</p>
-<p><strong>Two facts that were assumed by the task brief and are not true of the tree, corrected inline:</strong> <code>MAUTO_OBSERVE</code> exists nowhere outside the two planning documents (Task 11 handles both branches), and <code>package.json</code> is at <code>0.25.0-rc.1</code> at the time of writing, not <code>-rc.3</code> (Task 12 Step 1 checks rather than assumes, and accepts any <code>0.25.0-rc.N</code>).</p>
+<p><strong>Two facts that were assumed by the task brief and are not true of the tree, corrected inline:</strong> <code>MAUTO_OBSERVE</code> exists nowhere outside the two planning documents (Task 11 handles both branches), and <code>package.json</code> is at <code>0.26.0-rc.1</code> at the time of writing, not <code>-rc.3</code> (Task 12 Step 1 checks rather than assumes, and accepts any <code>0.26.0-rc.N</code>).</p>
 
 
 
