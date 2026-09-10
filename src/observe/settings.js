@@ -32,4 +32,20 @@ function atLeast(level, threshold) {
   return a >= b;
 }
 
-module.exports = { DEFAULT_STDERR_LEVEL, DEFAULT_FILE_LEVEL, resolveLevels, atLeast };
+// MAUTO_RUN_ID is the ONLY correlation input for device verbs — deliberately no
+// --run-id flag on the twelve of them. The agent exports it once per run; a
+// value that cannot change inside a run does not want twelve flags, each of
+// which is another place to forget it. The three `result` verbs correlate
+// through the --run-id they already require, which cli.js prefers over this.
+//
+// This answers "is there a run id", not "is it usable as a filename" — that is
+// runTracePath's job, and keeping it there means one gate rather than two that
+// can drift apart.
+function resolveRunId(env = process.env) {
+  const raw = env && env.MAUTO_RUN_ID;
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  return trimmed === '' ? null : trimmed;
+}
+
+module.exports = { DEFAULT_STDERR_LEVEL, DEFAULT_FILE_LEVEL, resolveLevels, atLeast, resolveRunId };
