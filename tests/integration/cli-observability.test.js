@@ -239,4 +239,24 @@ describe('run traces (integration)', () => {
     });
     expect(() => JSON.parse(run.stdout)).not.toThrow();
   });
+
+  it('measures a real run end to end', () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-e2e-measure-'));
+    fs.mkdirSync(path.join(cwd, 'mobile-automator', 'results'), { recursive: true });
+    const runId = 'run_20260905_141500';
+    const env = { ...process.env, MAUTO_LOG_LEVEL: 'info', MAUTO_RUN_ID: runId };
+    const call = (args) => spawnSync(process.execPath, [CLI, ...args], { cwd, encoding: 'utf8', env });
+
+    call(['result', 'add-step', '--run-id', runId, '--step-id', 'a', '--status', 'pass']);
+    call(['result', 'add-step', '--run-id', runId, '--step-id', 'b', '--status', 'pass']);
+    // --duration 999 is a self-report no trace could support.
+    const out = call(['result', 'finalize', '--run-id', runId, '--duration', '999']);
+
+    const data = JSON.parse(out.stdout).data;
+    expect(data.measurements.source).toBe('trace');
+    expect(data.measurements.reported_duration_seconds).toBe(999);
+    expect(data.measurements.duration_disagreement).toBe(true);
+    // Two add-step invocations milliseconds apart: measured, small, and real.
+    expect(data.duration_seconds).toBeLessThan(60);
+  });
 });

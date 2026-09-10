@@ -26,6 +26,7 @@ const connection = require('./device/connection');
 const { record } = require('./observe/recorder');
 const { resolveRunId } = require('./observe/settings');
 const { runTracePath } = require('./observe/paths');
+const { readTrace, deriveRun, pruneRunTraces } = require('./observe/trace');
 const { readSessionId } = require('./device/session-handle');
 const { captureOnFailure } = require('./observe/failure-capture');
 
@@ -630,6 +631,57 @@ function handleResultAddAssertion({ resultStoreFactory, projectRoot }, opts) {
   return { envelope: ok({ run_id: runId, assertion: entry }, storeHint(store)), exitKind: 'ok' };
 }
 
+// Tolerance for calling a reported duration wrong.
+//
+// The measured value is a wall-clock span between two recorded events, so
+// sub-second differences are rounding rather than disagreement, and 10% absorbs
+// the honest gap between "the run" and "the part of the run mauto saw" —
+// setup before the first verb, and finalize's own execution after the last.
+//
+// Symmetric on purpose. An UNDER-claim means the agent lost track of its own
+// retries; an OVER-claim means it counted its planning as run time. Both are
+// worth a human seeing, and one rule is two tests instead of four.
+const DURATION_TOLERANCE_SECONDS = 1;
+const DURATION_TOLERANCE_RATIO = 0.1;
+
+// Turn the run's trace into the duration to record and the measurement block to
+// record beside it. Total: an unreadable, absent or unmeasurable trace yields
+// the reported value and a `measurements` block that says so, never an error.
+function measureRun({ projectRoot, runId, reported }) {
+  const derived = deriveRun(readTrace(runTracePath(projectRoot, runId)));
+  const reportedSeconds = reported === undefined ? null : Number(reported);
+  const hasReported = reportedSeconds !== null && Number.isFinite(reportedSeconds);
+
+  const base = {
+    reported_duration_seconds: hasReported ? reportedSeconds : null,
+    trace_events: derived ? derived.trace_events : 0,
+    device_failures: derived ? derived.device_failures : 0,
+    trace_truncated: derived ? derived.trace_truncated : false,
+    failure_screenshots: derived ? derived.failure_screenshots : [],
+  };
+
+  // No trace, or a trace too short to span any time. Falling back to the flag
+  // is 0.24.0's behaviour, and `source` records that it IS a fallback rather
+  // than dressing a self-report as a measurement.
+  if (!derived || derived.duration_seconds === null) {
+    return {
+      durationSeconds: hasReported ? reportedSeconds : 0,
+      measurements: { source: hasReported ? 'reported' : 'none', duration_disagreement: false, ...base },
+    };
+  }
+
+  const measured = derived.duration_seconds;
+  const tolerance = Math.max(DURATION_TOLERANCE_SECONDS, measured * DURATION_TOLERANCE_RATIO);
+  return {
+    durationSeconds: measured,
+    measurements: {
+      source: 'trace',
+      duration_disagreement: hasReported && Math.abs(reportedSeconds - measured) > tolerance,
+      ...base,
+    },
+  };
+}
+
 function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectRoot }, opts) {
   const { runId, scenarioId, status, duration } = opts;
   if (!runId) {
@@ -648,17 +700,32 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
   if (opts.apiLevel !== undefined) metadata.api_level = opts.apiLevel;
   if (opts.environment !== undefined) metadata.environment = opts.environment;
 
+  // Measure BEFORE constructing the store: the trace is read-only here, and
+  // deriving first keeps the store's lock window as small as it already is.
+  const measured = measureRun({ projectRoot, runId, reported: duration });
+
   const store = resultStoreFactory({ runId, scenarioId, projectRoot });
   const result = store.finalize({
     status,
-    durationSeconds: duration === undefined ? 0 : Number(duration),
+    // Derived, not trusted. `--duration` survives in
+    // measurements.reported_duration_seconds and, when it disagrees with the
+    // clock, in a typed state_context observation — the disagreement is a
+    // signal about the agent, so it is recorded rather than resolved.
+    durationSeconds: measured.durationSeconds,
     metadata,
+    measurements: measured.measurements,
     // Undefined when --summary is omitted; ResultStore.finalize's own
     // `summary || <generated default>` already treats that as "no override",
     // so no provided-keys-only guard is needed here (unlike metadata, whose
     // sub-fields default independently to 'unknown').
     summary: opts.summary,
   });
+
+  // Retention, at the only moment a run is known to be over and the only place
+  // off the hot path. Never this run's own trace — it is the evidence behind
+  // every number just written. Best-effort by construction; pruneRunTraces
+  // swallows everything and returns a count.
+  pruneRunTraces(projectRoot, { except: runId });
 
   // Auto-harvest into cross-session memory. This is best-effort: a memory
   // failure must never fail an otherwise-successful finalize, so its warnings
