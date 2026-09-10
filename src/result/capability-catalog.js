@@ -92,6 +92,11 @@ const RESULT_CAPABILITIES = {
   },
   duration: {
     verb: 'finalize',
+    // --duration is now the REPORTED value, not the recorded one. When a run
+    // trace exists, finalize writes the measured duration to duration_seconds
+    // and keeps this flag's value in measurements.reported_duration_seconds,
+    // flagging a disagreement rather than silently discarding either number.
+    // The store's write site is unchanged — the caller derives the value.
     flags: ['--duration'],
     store: 'finalize',
     writes: 'duration_seconds: Number(durationSeconds) || 0',
@@ -139,6 +144,7 @@ const NO_FLAG_ALLOWLIST = {
   total_assertions: 'derived by ResultStore.finalize by counting assertion_results; no independent flag by design',
   passed_assertions: 'derived by ResultStore.finalize by counting assertion_results; no independent flag by design',
   failed_assertions: 'derived by ResultStore.finalize by counting assertion_results; no independent flag by design',
+  measurements: 'derived by ResultStore.finalize from the run trace (src/observe/trace.js); deliberately has NO flag — an agent-supplied measurement is precisely the self-report this field exists to replace',
 };
 
 module.exports = { RESULT_CAPABILITIES, IDENTITY_FLAGS, NO_FLAG_ALLOWLIST };

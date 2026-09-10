@@ -173,5 +173,27 @@ describe('result coverage — schema ↔ store ↔ verbs', () => {
       const result = store.finalize({});
       expect(result.summary).toBe('passed: 0/0 assertion(s) passed across 1 step(s).');
     });
+
+    // `measurements` has no flag by design (see NO_FLAG_ALLOWLIST), so the
+    // catalog cannot bind it to one. This is the #140 check in its place:
+    // a home the store can actually fill.
+    test('a supplied measurement reaches the finalized result', () => {
+      const store = new ResultStore({ runId: 'run_20260101_000006', scenarioId: 's', projectRoot: tmpProjectRoot() });
+      store.addStep({ step_id: 'step_1', status: 'pass' });
+      const result = store.finalize({
+        durationSeconds: 12.5,
+        measurements: {
+          source: 'trace',
+          reported_duration_seconds: null,
+          duration_disagreement: false,
+          trace_events: 4,
+          device_failures: 0,
+          trace_truncated: false,
+          failure_screenshots: [],
+        },
+      });
+      expect(result.measurements.source).toBe('trace');
+      expect(result.duration_seconds).toBe(12.5);
+    });
   });
 });

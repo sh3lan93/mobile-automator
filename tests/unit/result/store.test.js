@@ -249,4 +249,79 @@ describe('ResultStore', () => {
       expect(typeof result.observations[0].message).toBe('string');
     });
   });
+
+  describe('measurements', () => {
+    const root = () => fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-measure-'));
+
+    const measured = (over = {}) => ({
+      source: 'trace',
+      reported_duration_seconds: 30,
+      duration_disagreement: false,
+      trace_events: 12,
+      device_failures: 0,
+      trace_truncated: false,
+      failure_screenshots: [],
+      ...over,
+    });
+
+    it('writes the measurement block when one is supplied', () => {
+      const store = new ResultStore({ runId: 'run_20260905_000001', scenarioId: 's', projectRoot: root() });
+      store.addStep({ step_id: 'a', status: 'pass' });
+      const result = store.finalize({ durationSeconds: 140.25, measurements: measured() });
+      expect(result.duration_seconds).toBe(140.25);
+      expect(result.measurements).toMatchObject({ source: 'trace', trace_events: 12 });
+    });
+
+    // A run with no trace must produce a file shaped exactly as 0.24.0 wrote it,
+    // so an absent measurement is OMITTED rather than emitted as an empty
+    // placeholder object.
+    it('omits the key entirely when there is nothing measured', () => {
+      const store = new ResultStore({ runId: 'run_20260905_000002', scenarioId: 's', projectRoot: root() });
+      store.addStep({ step_id: 'a', status: 'pass' });
+      const result = store.finalize({ durationSeconds: 30 });
+      expect(result).not.toHaveProperty('measurements');
+    });
+
+    // Disagreements land in the TYPED observation array as well as in
+    // `measurements`, because src/memory/store.js harvests observations into
+    // run-history — so a scenario whose reported durations are chronically wrong
+    // becomes a cross-session fact rather than a per-file one.
+    it('notes a duration disagreement as a typed observation', () => {
+      const store = new ResultStore({ runId: 'run_20260905_000003', scenarioId: 's', projectRoot: root() });
+      store.addStep({ step_id: 'a', status: 'pass' });
+      const result = store.finalize({
+        durationSeconds: 140.25,
+        measurements: measured({ duration_disagreement: true, reported_duration_seconds: 30 }),
+      });
+      const note = result.observations.find((o) => o.type === 'state_context');
+      expect(note.message).toContain('30');
+      expect(note.message).toContain('140.25');
+    });
+
+    it('notes under-reported retries when the device failed and no step admits it', () => {
+      const store = new ResultStore({ runId: 'run_20260905_000004', scenarioId: 's', projectRoot: root() });
+      store.addStep({ step_id: 'a', status: 'pass', attempts: 1 });
+      const result = store.finalize({ durationSeconds: 10, measurements: measured({ device_failures: 3 }) });
+      const note = result.observations.find((o) => o.type === 'flakiness');
+      expect(note.message).toContain('3 device call');
+    });
+
+    it('stays quiet when the reported attempts already account for the failures', () => {
+      const store = new ResultStore({ runId: 'run_20260905_000005', scenarioId: 's', projectRoot: root() });
+      store.addStep({ step_id: 'a', status: 'pass', attempts: 3 });
+      const result = store.finalize({ durationSeconds: 10, measurements: measured({ device_failures: 2 }) });
+      expect(result.observations.filter((o) => o.message.includes('device call'))).toEqual([]);
+    });
+
+    // finalize is re-runnable — the guide tells an agent to retry a failed one.
+    it('does not stack duplicate notes when finalize runs twice', () => {
+      const projectRoot = root();
+      const args = { runId: 'run_20260905_000006', scenarioId: 's', projectRoot };
+      new ResultStore(args).addStep({ step_id: 'a', status: 'pass' });
+      const m = measured({ duration_disagreement: true });
+      new ResultStore(args).finalize({ durationSeconds: 140.25, measurements: m });
+      const second = new ResultStore(args).finalize({ durationSeconds: 140.25, measurements: m });
+      expect(second.observations.filter((o) => o.type === 'state_context')).toHaveLength(1);
+    });
+  });
 });
