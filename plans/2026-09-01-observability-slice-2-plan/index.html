@@ -1421,6 +1421,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#correction-note-2026-09-03-post-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Correction note — 2026-09-03, post-review
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1807,7 +1818,7 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 <span class="w">  </span><span class="p">});</span>
 
 <span class="w">  </span><span class="nx">it</span><span class="p">(</span><span class="s1">'still refuses to log into a directory that has no workspace, logPath or not'</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">root</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">workspace</span><span class="p">();</span><span class="w"> </span><span class="c1">// mkdtemp'd, so no mobile-automator/ inside it</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">root</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">bareDir</span><span class="p">();</span><span class="w"> </span><span class="c1">// mkdtemp'd, so no mobile-automator/ inside it</span>
 <span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">target</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">path</span><span class="p">.</span><span class="nx">join</span><span class="p">(</span><span class="nx">root</span><span class="p">,</span><span class="w"> </span><span class="s1">'mobile-automator'</span><span class="p">,</span><span class="w"> </span><span class="s1">'.logs'</span><span class="p">,</span><span class="w"> </span><span class="s1">'daemon.ndjson'</span><span class="p">);</span>
 
 <span class="w">    </span><span class="nx">fileSink</span><span class="p">.</span><span class="nx">write</span><span class="p">({</span><span class="w"> </span><span class="nx">level</span><span class="o">:</span><span class="w"> </span><span class="s1">'info'</span><span class="p">,</span><span class="w"> </span><span class="nx">event</span><span class="o">:</span><span class="w"> </span><span class="s1">'e'</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">projectRoot</span><span class="o">:</span><span class="w"> </span><span class="nx">root</span><span class="p">,</span><span class="w"> </span><span class="nx">env</span><span class="o">:</span><span class="w"> </span><span class="p">{},</span><span class="w"> </span><span class="nx">logPath</span><span class="o">:</span><span class="w"> </span><span class="nx">target</span><span class="w"> </span><span class="p">});</span>
@@ -3530,6 +3541,53 @@ git<span class="w"> </span>push<span class="w"> </span>-u<span class="w"> </span
 </tr>
 </tbody>
 </table>
+<hr />
+<h2 id="correction-note-2026-09-03-post-review">Correction note — 2026-09-03, post-review<a class="headerlink" href="#correction-note-2026-09-03-post-review" title="Permanent link">&para;</a></h2>
+<p>This plan was executed as written. A thermo-nuclear code-quality review of the
+resulting PR (#180) then found three structural problems and one overstated
+justification. The fixes landed on the same branch. <strong>The plan body above is
+left unedited as a historical record — where it disagrees with the code, the
+code is right.</strong> Specifically:</p>
+<ol>
+<li>
+<p><strong><code>src/observe/daemon-recorder.js</code> no longer exists.</strong> <code>daemonSinks()</code> was
+   <code>defaultSinks()</code> copy-pasted with one extra key, which violated this plan's
+   own rule ("everything that changes is <em>binding</em>, not <em>mechanism</em>") in the one
+   place it mattered. <code>defaultSinks</code> now takes the optional <code>{ logPath }</code> the
+   file sink already accepted, and <code>boundRecorder()</code> in <code>src/observe/recorder.js</code>
+   generalises the partial application. The verbatim copies of that module and
+   its tests embedded in Task 3 below are therefore stale.</p>
+</li>
+<li>
+<p><strong>Per-call instrumentation is no longer inline in the socket data handler.</strong>
+   It lives in <code>src/device/device-call.js</code> as a decorator over the single
+   injected <code>call</code>. The <code>if (req.type === 'call')</code> branch went 97 → 42 lines and
+   nesting depth 6 → 4. Task 6's code excerpts are stale.</p>
+</li>
+<li>
+<p><strong><code>session.json</code> has one reader.</strong> <code>resolve-connection.readHandleDevice()</code>
+   delegates to <code>session-handle.readHandle()</code> instead of parsing the file itself.</p>
+</li>
+<li>
+<p><strong>The rotation argument in Task 2 overreaches, and the code comment has been
+   corrected.</strong> Giving the daemon its own file does <em>not</em> make rotation
+   single-writer: <code>mauto.ndjson</code> is already multi-writer (any two concurrent
+   <code>mauto</code> verbs race <code>rotateIfLarge</code>), and <code>daemon.ndjson</code> is not strictly
+   single-writer either — as this plan itself concedes, a spawn-race lock loser
+   writes <code>daemon.lock_conflict</code> to it. The split removes the daemon from one
+   instance of the race, not the race. The reasons that do hold are volume and
+   precedent, which Task 2 filed as merely "supporting"; they are now the stated
+   rationale in <code>src/observe/paths.js</code>.</p>
+</li>
+</ol>
+<p>Relatedly, <code>cat …/*.ndjson | sort</code> worked only because <code>ts</code> happens to be the
+   first key <code>makeEvent</code> inserts and ISO-8601 sorts lexically — nothing pinned
+   that. The documented recipe is now <code>jq -s 'sort_by(.ts) | .[]'</code>.</p>
+<p>One behaviour change rode along with (2), in the right direction: a <code>call</code> that
+rejected with a falsy value used to throw a <code>TypeError</code> inside the daemon's catch
+block, escape the async data handler as an unhandled rejection, and take the
+whole device session down via the crash guard. It is now an ordinary <code>ok:false</code>
+reply.</p>
 
 
 
