@@ -25,7 +25,7 @@
 - **No new dependencies.** Cold start is ~112ms and one scenario is dozens of process spawns.
 - **Bind, do not copy.** Three places in this slice reuse an existing binding instead of minting a new one, and each is called out where it happens: the crash watermark reuses `session.json`'s existing `started_at`; the crashed process name reuses the `app_id` event field; the crash excerpt reuses the `message` event field.
 - **Slice 3 is assumed, not built.** `tests/lint/result-schema-additive.test.js` and `tests/fixtures/result_schema_v2.0.json` are slice 3's deliverable. Do **not** create them here, do not duplicate them. Task 5 depends only on the *guarantee* they encode (the result schema is additive over v2.0), never on their internals. Slice 3 also edits `connectBridge` for screenshot-on-failure; Task 4's change to that function is deliberately **one inserted line** so the two compose without a merge argument.
-- **CI version gate:** this touches `src/`, so `package.json` `version` must be bumped to a value not yet in `git tag`. `main` is at 0.24.0; slice 1 took the branch to `0.25.0-rc.0`, slice 2 to `0.25.0-rc.1`, slice 3 to `0.25.0-rc.2`. Slice 4's target is **`0.25.0-rc.3`**.
+- **CI version gate:** this touches `src/`, so `package.json` `version` must be bumped to a value not yet in `git tag`. `main` is 0.26.0-rc.1; slice 1 took the branch to `0.26.0-rc.0`, slice 2 to `0.26.0-rc.1`, slice 3 to `0.26.0-rc.2`. Slice 4's target is **`0.26.0-rc.3`**.
 - **Platform-agnostic:** never emit `resource-id` or OS-specific element IDs in any artifact.
 
 ---
@@ -1960,7 +1960,7 @@ Claude-Session: https://claude.ai/code/session_01KmSR7wKHGdpze7SVzuqg26"
 
 - [ ] **Step 1: Bump the version**
 
-The CI gate `Verify version is bumped` fails any PR touching `src/`, `bin/` or `package.json` without a version not already in `git tag`. Slice 3 took this branch to `0.25.0-rc.2`, so slice 4 increments the rc counter. In `package.json`, set `"version": "0.25.0-rc.3"`, then:
+The CI gate `Verify version is bumped` fails any PR touching `src/`, `bin/` or `package.json` without a version not already in `git tag`. Slice 3 took this branch to `0.26.0-rc.2`, so slice 4 increments the rc counter. In `package.json`, set `"version": "0.26.0-rc.3"`, then:
 
 ```bash
 npm install --package-lock-only
@@ -2026,7 +2026,7 @@ Expected: all green. Do not claim completion without pasting this output — the
 
 ```bash
 git add package.json package-lock.json CHANGELOG.md
-git commit -m "chore(release): bump to 0.25.0-rc.3 for crash visibility
+git commit -m "chore(release): bump to 0.26.0-rc.3 for crash visibility
 
 Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01KmSR7wKHGdpze7SVzuqg26"

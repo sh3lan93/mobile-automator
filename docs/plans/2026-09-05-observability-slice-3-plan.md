@@ -21,7 +21,7 @@
 - **One rotation policy.** `src/util/log-rotate.js` (`MAX_LOG_BYTES`, `rotateIfLarge`) stays the only one. The run trace uses the same *constant* under a different *action*; it does not get a second constant, a second generation, or a forked rotation function.
 - **Bind, do not copy.** The file sink already accepts `logPath`; it gains one `bound` argument, not a sibling module. `defaultSinks` already accepts an options bag; it gains one key, not a `traceSinks()` twin. Two prior reviews on this branch flagged near-copies (see the slice-2 correction note); do not add a third.
 - **Backwards compatibility is now enforced, not asserted.** Task 1 creates `tests/lint/result-schema-additive.test.js` and its `tests/fixtures/result_schema_v2.0.json` baseline *before* anything touches the schema. A result file written by 0.24.0 must still validate after this slice.
-- **CI version gate:** this touches `src/`, so `package.json` `version` must be bumped to a value not yet in `git tag`. `main` is 0.24.0, slice 1 took the branch to `0.25.0-rc.0`, slice 2 to `0.25.0-rc.1`; neither rc is tagged. Slice 3's target is **`0.25.0-rc.2`**.
+- **CI version gate:** this touches `src/`, so `package.json` `version` must be bumped to a value not yet in `git tag`. `main` is 0.26.0-rc.1, slice 1 took the branch to `0.26.0-rc.0`, slice 2 to `0.26.0-rc.1`; neither rc is tagged. Slice 3's target is **`0.26.0-rc.2`**.
 - **No `MAUTO_OBSERVE` gate, and the switch that replaces it is `MAUTO_RUN_ID`.** The design gates slices 2–5's *user-visible verbs* behind `MAUTO_OBSERVE=1`. Slice 3 adds no verb and no flag. Its three behaviour changes — a trace file, a derived `duration_seconds`, a screenshot on failure — are all downstream of a run id being present, and a run id is only present because an agent exported one. That is already an opt-in, and it is a *better* one than a second env var: one switch turns the whole slice on, and with it unset the tool behaves exactly as 0.24.0 did. A second gate would mean a user could export `MAUTO_RUN_ID`, see a trace file appear, and still get a self-reported duration — the half-built state the gate exists to prevent.
 - **Platform-agnostic:** never emit `resource-id` or OS-specific element IDs in any artifact, and name no OS in `*.agnostic.md`.
 
@@ -2630,16 +2630,16 @@ lint guard asserts on the EMITTED guide so interpolation cannot swallow it."
 
 - [ ] **Step 1: Bump the version**
 
-The CI gate `Verify version is bumped` fails any PR touching `src/`, `bin/` or `package.json` without a version not already in `git tag`. `main` is 0.24.0, slice 1 took this branch to `0.25.0-rc.0` and slice 2 to `0.25.0-rc.1`; neither rc is tagged. Slice 3 increments the rc counter.
+The CI gate `Verify version is bumped` fails any PR touching `src/`, `bin/` or `package.json` without a version not already in `git tag`. `main` is 0.26.0-rc.1, slice 1 took this branch to `0.26.0-rc.0` and slice 2 to `0.26.0-rc.1`; neither rc is tagged. Slice 3 increments the rc counter.
 
 Confirm first, do not assume:
 
 ```bash
-node -e "console.log(require('./package.json').version)"   # expect 0.25.0-rc.1
-git tag --list 'v0.25.0*'                                   # expect empty
+node -e "console.log(require('./package.json').version)"   # expect 0.26.0-rc.1
+git tag --list 'v0.26.0*'                                   # expect empty
 ```
 
-Set `"version": "0.25.0-rc.2"` in `package.json`, then:
+Set `"version": "0.26.0-rc.2"` in `package.json`, then:
 
 ```bash
 npm install --package-lock-only
@@ -2707,7 +2707,7 @@ Add a new subsection under `## Test Execution Issues`, after `### ❌ "Test is f
 ````markdown
 ### ❌ "duration_seconds looks wrong"
 
-Since 0.25.0 that field is measured from the run trace rather than taken from
+Since 0.26.0 that field is measured from the run trace rather than taken from
 `--duration`, but only when the run had a trace. Check which:
 
 ```bash
@@ -2753,7 +2753,7 @@ Expected: all green. Do not claim completion without pasting this output — the
 
 ```bash
 git add package.json package-lock.json CHANGELOG.md TROUBLESHOOTING.md
-git commit -m "chore(release): bump to 0.25.0-rc.2 for run traces and measured durations"
+git commit -m "chore(release): bump to 0.26.0-rc.2 for run traces and measured durations"
 git push -u origin sh3lan93/observability-slice-2
 ```
 
@@ -2878,8 +2878,8 @@ Not planned here, for the reason slices 1 and 2 both gave: detail written now go
 
 | Slice | Content | Version |
 |---|---|---|
-| 4 | `mauto crash` verb, failure-path auto-check, result-schema crash record, capability-catalog entry. Adds `mobile_get_crash`/`mobile_list_crashes` to `mobile-mcp-tools.js` in the same change as the bridge methods, and **uses the additivity guard this slice created**. | `0.25.0-rc.3` |
-| 5 | Opt-in PostHog spool + daemon flush, consent UX, privacy docs; removes the gate | `0.25.0` |
+| 4 | `mauto crash` verb, failure-path auto-check, result-schema crash record, capability-catalog entry. Adds `mobile_get_crash`/`mobile_list_crashes` to `mobile-mcp-tools.js` in the same change as the bridge methods, and **uses the additivity guard this slice created**. | `0.26.0-rc.3` |
+| 5 | Opt-in PostHog spool + daemon flush, consent UX, privacy docs; removes the gate | `0.26.0` |
 
 Two hooks slice 4 should know about:
 

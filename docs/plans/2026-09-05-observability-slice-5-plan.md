@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Give `mauto` domain C — usage telemetry — without letting a single verb touch the network, without a stable machine identifier, and without any upload path being reachable until a human has explicitly opted in. Then graduate the whole `0.25.0` feature: remove the `MAUTO_OBSERVE` gate (whatever slices 3–4 left of it), collapse `[Unreleased]`, and bump `0.25.0-rc.3` → `0.25.0`.
+**Goal:** Give `mauto` domain C — usage telemetry — without letting a single verb touch the network, without a stable machine identifier, and without any upload path being reachable until a human has explicitly opted in. Then graduate the whole `0.26.0` feature: remove the `MAUTO_OBSERVE` gate (whatever slices 3–4 left of it), collapse `[Unreleased]`, and bump `0.26.0-rc.3` → `0.26.0`.
 
 **Architecture:** `telemetryPayload()` (`src/observe/event.js`) already exists, is allowlist-by-construction, and is lint-guarded. It has no transport. This slice supplies exactly one, in exactly one place, reached by exactly one path:
 
@@ -45,7 +45,7 @@ The spool sink is synchronous, unconditional-success, and never blocks. The daem
 - **The envelope is locked:** `{ok,data,error,hint,schema_version}` on stdout, nothing else on stdout ever. The new `telemetry` verb emits the envelope like every other verb. Node 18's `fetch` emits an `ExperimentalWarning` on first use — that lands on **stderr**, which is permitted, and in the daemon's case stderr *is* `mobile-automator/.session/daemon.log`.
 - **One rotation policy, and the spool is deliberately not covered by it.** `src/util/log-rotate.js` is the policy for *logs*. The spool is a *queue*: renaming it to `.1` would silently discard records that were pending delivery, and a second rotation would clobber the first generation. The spool gets a hard byte cap and drops at the cap instead. This divergence is stated here once so it is not re-argued in review.
 - **Bind, do not copy.** The spool becomes a third entry in the existing `defaultSinks` list — not a second sink-list, not a parallel `record()`. That one edit covers the CLI and the daemon at once, because `bin/mauto-session-daemon.js` already builds its recorder through `boundRecorder` → `defaultSinks`.
-- **CI version gate:** this touches `src/`, `bin/` and `package.json`, so `version` must move to a value not yet in `git tag`. This is the graduation slice: **`0.25.0-rc.3` → `0.25.0`**. Task 12 asserts the starting version rather than assuming it.
+- **CI version gate:** this touches `src/`, `bin/` and `package.json`, so `version` must move to a value not yet in `git tag`. This is the graduation slice: **`0.26.0-rc.3` → `0.26.0`**. Task 12 asserts the starting version rather than assuming it.
 - **Platform-agnostic:** never emit `resource-id` or OS-specific element IDs in any artifact.
 
 ---
@@ -2993,7 +2993,7 @@ Create `tests/lint/no-observe-gate.test.js`:
 ```js
 'use strict';
 
-// The observability feature graduated in 0.25.0. MAUTO_OBSERVE was the
+// The observability feature graduated in 0.26.0. MAUTO_OBSERVE was the
 // gate-then-graduate env var that kept slices 2-4's partial states invisible on
 // main; a graduated feature that still reads it has a hidden second behaviour
 // nobody tests, which is the exact failure the gate existed to prevent — just
@@ -3088,10 +3088,10 @@ Release mechanics. Every step here has a precondition that fails loudly rather t
 node -p "require('./package.json').version"
 ```
 
-Expected: `0.25.0-rc.3` — slice 1 took the branch to `-rc.0`, slice 2 to `-rc.1`, slices 3 and 4 to `-rc.2` and `-rc.3`. If it is a *different* rc of `0.25.0`, that is fine; graduate from whatever it actually is. If it does **not** match `0.25.0-rc.*`, stop: either a slice did not bump, or this is not the branch you think it is.
+Expected: `0.26.0-rc.3` — slice 1 took the branch to `-rc.0`, slice 2 to `-rc.1`, slices 3 and 4 to `-rc.2` and `-rc.3`. If it is a *different* rc of `0.26.0`, that is fine; graduate from whatever it actually is. If it does **not** match `0.26.0-rc.*`, stop: either a slice did not bump, or this is not the branch you think it is.
 
 ```bash
-node -e "const v=require('./package.json').version; if(!/^0\.25\.0-rc\.\d+$/.test(v)){console.error('STOP: expected 0.25.0-rc.N, found '+v);process.exit(1)}"
+node -e "const v=require('./package.json').version; if(!/^0\.26\.0-rc\.\d+$/.test(v)){console.error('STOP: expected 0.26.0-rc.N, found '+v);process.exit(1)}"
 ```
 
 - [ ] **Step 2: Paste the real PostHog project token**
@@ -3118,13 +3118,13 @@ npx jest tests/unit/observe/transport.test.js
 
 - [ ] **Step 3: Bump the version**
 
-In `package.json`, set `"version": "0.25.0"`, then:
+In `package.json`, set `"version": "0.26.0"`, then:
 
 ```bash
 npm install --package-lock-only
 ```
 
-The CI gate `Verify version is bumped` fails any PR touching `src/`, `bin/` or `package.json` without a version not already in `git tag`; `0.25.0` has not been tagged (only the `-rc.N` prereleases have — `auto-tag.yml` has no prerelease guard, so those tags exist).
+The CI gate `Verify version is bumped` fails any PR touching `src/`, `bin/` or `package.json` without a version not already in `git tag`; `0.26.0` has not been tagged (only the `-rc.N` prereleases have — `auto-tag.yml` has no prerelease guard, so those tags exist).
 
 - [ ] **Step 4: Resolve the changelog ambiguity BEFORE editing — this is a hard stop**
 
@@ -3155,7 +3155,7 @@ fi
 With exactly one heading present, rename it and add the slice-5 entries. The result is:
 
 ```markdown
-## [0.25.0]
+## [0.26.0]
 
 ### ✨ Added
 
@@ -3260,17 +3260,17 @@ Expected: `mauto.ndjson` and nothing named `telemetry.spool`.
 
 ```bash
 git add src/observe/transport.js package.json package-lock.json CHANGELOG.md TROUBLESHOOTING.md
-git commit -m "chore(release): graduate observability to 0.25.0"
+git commit -m "chore(release): graduate observability to 0.26.0"
 git push -u origin sh3lan93/observability-slice-2
 ```
 
 ```bash
 gh pr create --draft \
-  --title "feat(observe): opt-in telemetry, consent surface, and 0.25.0 graduation" \
+  --title "feat(observe): opt-in telemetry, consent surface, and 0.26.0 graduation" \
   --body "$(cat <<'BODY'
 ## What
 
-Slice 5 of the observability design, and the graduation of the whole 0.25.0
+Slice 5 of the observability design, and the graduation of the whole 0.26.0
 feature.
 
 - Opt-in anonymous usage telemetry, off by default, with `mauto telemetry
@@ -3280,7 +3280,7 @@ feature.
   its idle window on a self-rescheduling unref'd timer.
 - PostHog plain HTTP capture API, EU cloud, write-only public project token, no
   SDK, no new dependency.
-- `MAUTO_OBSERVE` gate removed / guarded shut, `0.25.0-rc.N` → `0.25.0`,
+- `MAUTO_OBSERVE` gate removed / guarded shut, `0.26.0-rc.N` → `0.26.0`,
   `[Unreleased]` collapsed.
 
 ## Why
@@ -3355,4 +3355,4 @@ Run before handing this plan to an implementer; findings are fixed inline above 
 
 **Interface consistency against the real tree.** Verified against this worktree at `HEAD`: `defaultSinks(projectRoot, env, {logPath})` and `boundRecorder` in `src/observe/recorder.js`; `logsDir`/`MAIN_LOG_NAME`/`DAEMON_LOG_NAME` in `src/observe/paths.js`; `EVENT_FIELDS`/`NEVER_SENDS`/`telemetryPayload` in `src/observe/event.js`; `configManager.load/set/configPath` in `src/config/manager.js`; `startDaemon`'s `observe`/`safeObserve`/`armIdle`/`stop`/`inFlight` in `src/device/session-daemon.js`; `buildRecorder`/`main` in `bin/mauto-session-daemon.js`; the scaffold skeleton in `src/setup/scaffold.js` and the guard that validates it in `tests/lint/config-schema.test.js`; `coerceValue`'s fall-through to `tryJson`, which is why a boolean-declared `telemetry.enabled` accepts `mauto config set telemetry.enabled true` with no coercion change.
 
-**Two facts that were assumed by the task brief and are not true of the tree, corrected inline:** `MAUTO_OBSERVE` exists nowhere outside the two planning documents (Task 11 handles both branches), and `package.json` is at `0.25.0-rc.1` at the time of writing, not `-rc.3` (Task 12 Step 1 checks rather than assumes, and accepts any `0.25.0-rc.N`).
+**Two facts that were assumed by the task brief and are not true of the tree, corrected inline:** `MAUTO_OBSERVE` exists nowhere outside the two planning documents (Task 11 handles both branches), and `package.json` is at `0.26.0-rc.1` at the time of writing, not `-rc.3` (Task 12 Step 1 checks rather than assumes, and accepts any `0.26.0-rc.N`).
