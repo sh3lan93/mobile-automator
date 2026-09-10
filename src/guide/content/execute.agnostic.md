@@ -52,15 +52,16 @@ Record each observation with `mauto result add-step --observation <type>:<messag
 
 ### 1. Pre-flight
 
-1. Read the scenario JSON.
-2. Verify a device is available with `mauto devices`. Read the device's `platform` field — store it for the duration of execution.
-3. **App under test.**
+1. **Name the run first.** Choose the run identifier for this execution (format `run_YYYYMMDD_HHMMSS`) and export it as `MAUTO_RUN_ID` before running any other verb — `export MAUTO_RUN_ID=run_20260905_141500`. Every verb then records into a trace for that run, and `mauto result finalize --run-id <the same id>` measures the run's duration from it instead of taking your word for it. Use the *same* id in both places; a different one means no trace to measure.
+2. Read the scenario JSON.
+3. Verify a device is available with `mauto devices`. Read the device's `platform` field — store it for the duration of execution.
+4. **App under test.**
    - If the user pointed you at a prebuilt app artifact, install it with `mauto install <path>`.
    - Otherwise verify the app is already installed; if it is not, halt and ask the user to install it. This guide never builds.
    - If the install fails because a different build is already on the device, uninstall it with `mauto uninstall <appId>` (the app identifier from `mobile-automator/config.json` — `android_package` / `ios_bundle_id`), install again, and report that app data was wiped — a scenario whose preconditions assume existing app state may now fail for that reason.
    - State which path you took before continuing.
-4. **Validate schema version:** read the `$schema_version` field; it must be `"2.1"`. If absent or unrecognized, report an error and halt.
-5. Validate the scenario with `mauto validate <path>` against `mauto schema scenario`.
+5. **Validate schema version:** read the `$schema_version` field; it must be `"2.1"`. If absent or unrecognized, report an error and halt.
+6. Validate the scenario with `mauto validate <path>` against `mauto schema scenario`.
 
 **Precondition `device_actions`** (from the scenario's `preconditions`, run before step replay):
 
@@ -162,6 +163,8 @@ Obtain the result schema by running `mauto schema result`, then finalize the run
 - `assertion_results[]`: per-assertion verdict, message, expected/actual.
 - `observations[]`: typed observations (`regression`, `flakiness`, `state_context`) recorded via `--observation` on `add-step`.
 - `captured_variables`: values recorded via `--capture` on `add-step`.
+
+`--duration` is now a cross-check rather than the recorded value: when a run trace exists the duration is measured from it, your figure is kept as `measurements.reported_duration_seconds`, and a disagreement beyond the tolerance is recorded as a `state_context` observation. Report the duration you believe is right and let the two be compared; do not reverse-engineer a number to match.
 
 ### 6. Flakiness & Resolution Reporting
 

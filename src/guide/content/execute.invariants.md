@@ -2,3 +2,4 @@
 - Drive the device **only** through `mauto` verbs; never assume resource-ids or OS-specific element IDs (use the semantic actions in platform-agnostic projects).
 - Every assertion is backed by a screenshot recorded with `mauto result add-step --screenshot`; record its verdict with `mauto result add-assertion` and any observations with `--observation <type>:<message>`.
 - If this workspace has memory, read it first with `mauto memory show`; save durable app facts and user corrections with `mauto memory add`.
+- Export `MAUTO_RUN_ID` before the first verb of a run, and pass the same identifier to every `mauto result` verb. Verb events are correlated by that value; without it the run has no trace and its recorded duration is your own estimate rather than a measurement.
