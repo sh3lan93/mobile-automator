@@ -173,3 +173,77 @@ describe('file sink', () => {
     expect(fs.existsSync(target)).toBe(false);
   });
 });
+
+describe('file sink bounding modes', () => {
+  const { MAX_LOG_BYTES: MAX_LOG_BYTES_CANONICAL } = require('../../../src/util/log-rotate');
+
+  function workspace() {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-sink-bound-'));
+    fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+    return root;
+  }
+
+  const event = { ts: '2026-09-05T10:00:00.000Z', v: 1, level: 'info', event: 'verb.end' };
+
+  it("defaults to 'rotate' — unchanged behaviour for mauto.ndjson", () => {
+    const root = workspace();
+    const target = path.join(root, 'mobile-automator', '.logs', 'mauto.ndjson');
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, 'x'.repeat(MAX_LOG_BYTES_CANONICAL));
+
+    fileSink.write(event, { projectRoot: root, env: {}, logPath: target });
+
+    expect(fs.existsSync(`${target}.1`)).toBe(true);
+    expect(fs.readFileSync(target, 'utf8').trim().split('\n')).toHaveLength(1);
+  });
+
+  // The one place the shared rotation policy is wrong. A trace's CONTENT is the
+  // measurement: rotating renames the run's beginning away, so the next
+  // finalize would compute the span of an arbitrary suffix and report a
+  // three-minute run as forty seconds — measured-looking fiction.
+  it("'cap' stops appending instead of rotating the run's beginning away", () => {
+    const root = workspace();
+    const target = path.join(root, 'mobile-automator', '.logs', 'run-smoke.ndjson');
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    const original = 'x'.repeat(MAX_LOG_BYTES_CANONICAL);
+    fs.writeFileSync(target, original);
+
+    fileSink.write(event, { projectRoot: root, env: {}, logPath: target, bound: 'cap' });
+
+    expect(fs.existsSync(`${target}.1`)).toBe(false);
+    expect(fs.readFileSync(target, 'utf8')).toBe(original);
+  });
+
+  it("'cap' appends normally below the cap", () => {
+    const root = workspace();
+    const target = path.join(root, 'mobile-automator', '.logs', 'run-smoke.ndjson');
+
+    fileSink.write(event, { projectRoot: root, env: {}, logPath: target, bound: 'cap' });
+    fileSink.write(event, { projectRoot: root, env: {}, logPath: target, bound: 'cap' });
+
+    const lines = fs.readFileSync(target, 'utf8').trim().split('\n');
+    expect(lines).toHaveLength(2);
+    expect(JSON.parse(lines[0]).event).toBe('verb.end');
+  });
+
+  it('atCap answers the same question finalize needs to ask', () => {
+    const root = workspace();
+    const target = path.join(root, 'mobile-automator', '.logs', 'run-smoke.ndjson');
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+
+    expect(fileSink.atCap(target)).toBe(false); // no file yet
+    fs.writeFileSync(target, 'small');
+    expect(fileSink.atCap(target)).toBe(false);
+    fs.writeFileSync(target, 'x'.repeat(MAX_LOG_BYTES_CANONICAL));
+    expect(fileSink.atCap(target)).toBe(true);
+  });
+
+  it("'cap' still respects the no-workspace rule", () => {
+    const bare = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-sink-bare-'));
+    const target = path.join(bare, 'mobile-automator', '.logs', 'run-smoke.ndjson');
+
+    fileSink.write(event, { projectRoot: bare, env: {}, logPath: target, bound: 'cap' });
+
+    expect(fs.existsSync(target)).toBe(false);
+  });
+});
