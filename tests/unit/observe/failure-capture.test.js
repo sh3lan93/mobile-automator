@@ -133,6 +133,21 @@ describe('screenshot on device failure', () => {
     expect(events[0].message).toContain('daemon socket closed');
   });
 
+  // The module's own docstring claims "It never throws." runTracePath
+  // short-circuits an INVALID run id before ever touching projectRoot, which
+  // is why that path alone would not catch a regression here — it has to be a
+  // VALID run id so the call reaches logsDir's path.join(projectRoot, ...) and
+  // a non-string projectRoot throws a TypeError there instead of at a caller
+  // this module does not control.
+  it('never throws when projectRoot is not a string, even with a valid run id', async () => {
+    const bridge = fakeBridge();
+    await expect(
+      captureOnFailure({
+        bridge, result: failing('device'), projectRoot: undefined, runId: 'run_20260101_000001', verb: 'tap', env: ENV,
+      })
+    ).resolves.toBeNull();
+  });
+
   it('survives a bridge with no screenshot method and an unwritable workspace', async () => {
     const root = workspace();
     await expect(

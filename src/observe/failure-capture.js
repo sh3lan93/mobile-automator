@@ -78,8 +78,12 @@ async function captureOnFailure({
 } = {}) {
   // Resolved once and reused as BOTH the trace target and the is-this-id-safe
   // predicate — one gate rather than a second check that can disagree with it.
-  const tracePath = runTracePath(projectRoot, runId, env);
+  // Declared here and assigned inside the try so a non-string projectRoot
+  // (path.join throws via logsDir for a VALID run id) is caught by this
+  // function's own catch instead of escaping to a caller that has none.
+  let tracePath = null;
   try {
+    tracePath = runTracePath(projectRoot, runId, env);
     if (!isCapturable(result)) return null;
     if (!tracePath) return null;
     if (!bridge || typeof bridge.screenshot !== 'function') return null;
