@@ -157,4 +157,42 @@ describe('screenshot on device failure', () => {
       captureOnFailure({ bridge: null, result: failing('device'), projectRoot: root, runId: 'smoke', env: ENV })
     ).resolves.toBeNull();
   });
+
+  // verb is NOT gated the way runId is: captureOnFailure trusts runTracePath to
+  // reject a hostile run id, but nothing upstream constrains verb before it
+  // reaches failureShotPath. It happens to be safe today only because verb is
+  // always command.name() from a successfully-parsed commander command — a
+  // guarantee this module does not control and should not depend on.
+  describe('sanitizes verb before it becomes a path segment', () => {
+    const screenshotsDir = (root) => path.join(root, 'mobile-automator', 'screenshots', 'smoke');
+
+    it.each([
+      ['../../../../tmp/evil', 'a traversal that escapes screenshots/<runId>/'],
+      ['..', 'a bare parent-directory token'],
+      ['a/b/c', 'a multi-segment verb that would silently mkdir -p nested dirs'],
+    ])('keeps a hostile verb %s (%s) inside screenshots/<runId>/ with no nested dirs', async (verb) => {
+      const root = workspace();
+      const bridge = fakeBridge();
+
+      const shot = await captureOnFailure({
+        bridge, result: failing('device'), projectRoot: root, runId: 'smoke', verb, env: ENV,
+      });
+
+      expect(shot).toBeTruthy();
+      // Exact-equality on the containing directory is the strong form of "stays
+      // inside": a traversal would move dirname OUTSIDE screenshots/smoke, and a
+      // multi-segment verb would move it to a NESTED child of screenshots/smoke.
+      // Either failure mode shows up as this not holding.
+      expect(path.dirname(shot)).toBe(screenshotsDir(root));
+    });
+
+    it('leaves the ordinary verb="tap" case byte-identical to today', async () => {
+      const root = workspace();
+      const shot = await captureOnFailure({
+        bridge: fakeBridge(), result: failing('device'), projectRoot: root, runId: 'smoke', verb: 'tap', env: ENV,
+      });
+      expect(path.basename(shot)).toMatch(/^tap-.*\.png$/);
+      expect(path.dirname(shot)).toBe(screenshotsDir(root));
+    });
+  });
 });

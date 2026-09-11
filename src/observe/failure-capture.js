@@ -49,6 +49,24 @@ function isCapturable(result) {
   );
 }
 
+// verb becomes a filename, not a correlation key the way runId does (see
+// runTracePath's comment in ./paths.js) — the event this module records
+// carries the raw verb in its own field regardless of what the filename
+// says, so nothing downstream reads the filename to learn which verb failed.
+// That means a REJECT-and-fall-back is enough here; there is no
+// isValidRunId-style argument that sanitizing would corrupt a measurement.
+//
+// It is safe today only because verb is always command.name() from a
+// commander command that already parsed successfully — a guarantee this
+// module does not control and must not depend on. Anything that is not a
+// plain token falls back to the same 'device' literal the module already
+// used for a missing verb, so the ordinary case is unaffected.
+const SAFE_VERB_TOKEN = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
+
+function safeVerbToken(verb) {
+  return typeof verb === 'string' && SAFE_VERB_TOKEN.test(verb) ? verb : 'device';
+}
+
 // mobile-automator/screenshots/<runId>/<verb>-<ts>.png.
 //
 // Under screenshots/, NOT results/<run_id>/screenshots/ which the execute guide
@@ -63,7 +81,7 @@ function failureShotPath(projectRoot, runId, verb) {
     'mobile-automator',
     'screenshots',
     runId,
-    `${verb || 'device'}-${stamp}.png`
+    `${safeVerbToken(verb)}-${stamp}.png`
   );
 }
 
