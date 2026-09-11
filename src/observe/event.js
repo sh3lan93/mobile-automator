@@ -77,6 +77,19 @@ const EVENT_FIELDS = {
   stop_reason: { sends: true, why: 'enumerated: idle|signal|shutdown|crash|explicit' },
   error_code: { sends: true, why: "Node/libuv errno string (EADDRINUSE|EACCES|…) plus our own ELOCKED" },
 
+  // --- crash (slice 4) ---------------------------------------------------
+  // The ONLY new field slice 4 mints. As with `verb`, `tool` and `session_id`,
+  // the sends:true justification is only true if the value is enforced to be
+  // one: every record site coerces with Number.isFinite before recording, so a
+  // malformed engine payload records no field rather than an arbitrary value.
+  //
+  // Deliberately no crash_process / crash_excerpt / crash_path fields: a
+  // crashed process name IS an app id, a stack excerpt IS free text and a
+  // report location IS a filesystem path. Those three entries already carry the
+  // right classification, and a near-copy would be a second decision to keep in
+  // sync with the first.
+  crash_count: { sends: true, why: 'integer count of crash reports observed; carries no user content' },
+
   // --- local only: every one of these can carry user content -------------
   run_id: { sends: false, why: 'agent-chosen; routinely names an unreleased feature' },
   scenario_id: { sends: false, why: "names the user's feature under test" },

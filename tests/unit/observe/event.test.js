@@ -114,3 +114,47 @@ describe('daemon field classifications', () => {
     expect(p).not.toHaveProperty('pid');
   });
 });
+
+describe('crash field classifications', () => {
+  const { EVENT_FIELDS, NEVER_SENDS, makeEvent, telemetryPayload } = require('../../../src/observe/event');
+
+  it('lets a crash event carry a count', () => {
+    expect(EVENT_FIELDS.crash_count).toBeDefined();
+    expect(EVENT_FIELDS.crash_count.sends).toBe(true);
+    expect(typeof EVENT_FIELDS.crash_count.why).toBe('string');
+    expect(EVENT_FIELDS.crash_count.why.trim().length).toBeGreaterThan(0);
+  });
+
+  it('mints NO new field for the crashed process or the stack — those reuse app_id and message', () => {
+    // Slice 4 deliberately adds one field, not four. A crashed process name IS
+    // an app id and a stack excerpt IS free text; both already have a correct
+    // sends:false classification, and a near-copy would be a second decision to
+    // keep in sync with the first.
+    expect(EVENT_FIELDS.crash_process).toBeUndefined();
+    expect(EVENT_FIELDS.crash_excerpt).toBeUndefined();
+    expect(EVENT_FIELDS.app_id.sends).toBe(false);
+    expect(EVENT_FIELDS.message.sends).toBe(false);
+    expect(NEVER_SENDS).toContain('app_id');
+    expect(NEVER_SENDS).toContain('message');
+  });
+
+  it('round-trips a crash event, sending the count and nothing else about it', () => {
+    const e = makeEvent({
+      src: 'cli',
+      event: 'crash.detected',
+      verb: 'tap',
+      crash_count: 2,
+      app_id: 'com.acme.unreleased-thing',
+      message: 'FATAL EXCEPTION: main\n\tat com.acme.Login.onClick(Login.java:42)',
+      path: '/Users/someone/proj/mobile-automator/results/crash-1.txt',
+    });
+    expect(e.crash_count).toBe(2);
+    expect(e.app_id).toBe('com.acme.unreleased-thing');
+
+    const p = telemetryPayload(e);
+    expect(p.crash_count).toBe(2);
+    expect(p).not.toHaveProperty('app_id');
+    expect(p).not.toHaveProperty('message');
+    expect(p).not.toHaveProperty('path');
+  });
+});
