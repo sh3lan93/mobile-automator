@@ -68,4 +68,20 @@ describe('crashTimestampMs', () => {
     expect(crashTimestampMs({})).toBeNull();
     expect(crashTimestampMs(null)).toBeNull();
   });
+
+  it('returns null for an at-or-before-epoch instant, however it is spelled', () => {
+    // No device capable of running mauto reports a crash at or before the Unix
+    // epoch, so every spelling of "the engine could not determine a time" that
+    // decodes to <= 0 is a sentinel, not a real instant — a wire-format detail,
+    // not a fact about the crash. Concretely: a zero-value int64 epoch field
+    // (`0`, `'0'`) and Go's zero-value time.Time (`'0001-01-01T00:00:00Z'`,
+    // which json.Marshal emits for an unset time.Time) both decode to instants
+    // at or before 1970-01-01T00:00:00Z. All three must read as unreadable —
+    // never as a real, ancient instant — or Task 5 sorts them before every
+    // watermark and silently drops the report instead of counting it in
+    // `unattributed`.
+    expect(crashTimestampMs({ timestamp: 0 })).toBeNull();
+    expect(crashTimestampMs({ timestamp: '0' })).toBeNull();
+    expect(crashTimestampMs({ timestamp: '0001-01-01T00:00:00Z' })).toBeNull();
+  });
 });
