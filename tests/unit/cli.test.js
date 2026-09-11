@@ -652,6 +652,128 @@ describe('cli handlers', () => {
     });
   });
 
+  describe('measured duration', () => {
+    function project() {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-finalize-'));
+      fs.mkdirSync(path.join(root, 'mobile-automator', '.logs'), { recursive: true });
+      return root;
+    }
+
+    function trace(root, runId, stamps) {
+      fs.writeFileSync(
+        path.join(root, 'mobile-automator', '.logs', `run-${runId}.ndjson`),
+        stamps
+          .map((s) => JSON.stringify({ ts: s.ts, v: 1, src: 'cli', event: s.event || 'verb.end', ...s }))
+          .join('\n') + '\n'
+      );
+    }
+
+    const deps = (projectRoot) => ({
+      resultStoreFactory: (a) => new (require('../../src/result/store').ResultStore)(a),
+      memoryStoreFactory: null,
+      projectRoot,
+    });
+
+    test('measures the duration from the trace when one exists', () => {
+      const root = project();
+      trace(root, 'run_20260905_141500', [
+        { ts: '2026-09-05T14:15:00.000Z', ok: true },
+        { ts: '2026-09-05T14:17:20.250Z', ok: true },
+      ]);
+      const r = handleResultFinalize(deps(root), { runId: 'run_20260905_141500' });
+      expect(r.envelope.data.duration_seconds).toBe(140.25);
+      expect(r.envelope.data.measurements.source).toBe('trace');
+    });
+
+    // The point of the slice: a supplied --duration that DISAGREES is recorded
+    // and flagged, not silently believed and not silently discarded.
+    test('flags a reported duration that disagrees with the measured one', () => {
+      const root = project();
+      trace(root, 'run_20260905_141501', [
+        { ts: '2026-09-05T14:15:00.000Z', ok: true },
+        { ts: '2026-09-05T14:17:20.250Z', ok: true },
+      ]);
+      const r = handleResultFinalize(deps(root), { runId: 'run_20260905_141501', duration: '30' });
+      const m = r.envelope.data.measurements;
+      expect(r.envelope.data.duration_seconds).toBe(140.25);
+      expect(m.reported_duration_seconds).toBe(30);
+      expect(m.duration_disagreement).toBe(true);
+      expect(r.envelope.data.observations.some((o) => o.type === 'state_context')).toBe(true);
+    });
+
+    test('does not flag a reported duration inside the tolerance', () => {
+      const root = project();
+      trace(root, 'run_20260905_141502', [
+        { ts: '2026-09-05T14:15:00.000Z', ok: true },
+        { ts: '2026-09-05T14:15:10.000Z', ok: true },
+      ]);
+      const r = handleResultFinalize(deps(root), { runId: 'run_20260905_141502', duration: '10.5' });
+      expect(r.envelope.data.measurements.duration_disagreement).toBe(false);
+    });
+
+    // MAUTO_RUN_ID unset, logging silenced, or no workspace: 0.24.0's behaviour,
+    // reached deliberately rather than by omission.
+    test('falls back to the reported duration with no trace', () => {
+      const root = project();
+      const r = handleResultFinalize(deps(root), { runId: 'run_20260905_141503', duration: '42' });
+      expect(r.envelope.data.duration_seconds).toBe(42);
+      expect(r.envelope.data.measurements).toMatchObject({
+        source: 'reported',
+        reported_duration_seconds: 42,
+        duration_disagreement: false,
+        trace_events: 0,
+      });
+    });
+
+    test('records source "none" with neither a trace nor a --duration', () => {
+      const root = project();
+      const r = handleResultFinalize(deps(root), { runId: 'run_20260905_141504' });
+      expect(r.envelope.data.duration_seconds).toBe(0);
+      expect(r.envelope.data.measurements.source).toBe('none');
+    });
+
+    test('carries the failure screenshots and the device failure count through', () => {
+      const root = project();
+      trace(root, 'run_20260905_141505', [
+        { ts: '2026-09-05T14:15:00.000Z', ok: false, error_kind: 'device' },
+        { ts: '2026-09-05T14:15:01.000Z', event: 'screenshot.on_failure', path: '/p/tap.png' },
+        { ts: '2026-09-05T14:15:09.000Z', ok: true },
+      ]);
+      const r = handleResultFinalize(deps(root), { runId: 'run_20260905_141505' });
+      expect(r.envelope.data.measurements.device_failures).toBe(1);
+      expect(r.envelope.data.measurements.failure_screenshots).toEqual(['/p/tap.png']);
+    });
+
+    test('never lets an unreadable trace fail the finalize', () => {
+      const root = project();
+      // A directory where the trace file should be: readFileSync throws EISDIR.
+      fs.mkdirSync(path.join(root, 'mobile-automator', '.logs', 'run-run_20260905_141506.ndjson'));
+      const r = handleResultFinalize(deps(root), { runId: 'run_20260905_141506', duration: '9' });
+      expect(r.exitKind).toBe('ok');
+      expect(r.envelope.data.duration_seconds).toBe(9);
+    });
+
+    test('prunes stale traces but never the one it just measured', () => {
+      const root = project();
+      const dir = path.join(root, 'mobile-automator', '.logs');
+      for (let i = 0; i < 25; i += 1) {
+        const f = path.join(dir, `run-old${i}.ndjson`);
+        fs.writeFileSync(f, '{}\n');
+        fs.utimesSync(f, new Date(1e9 + i * 1000), new Date(1e9 + i * 1000));
+      }
+      trace(root, 'run_20260905_141507', [
+        { ts: '2026-09-05T14:15:00.000Z', ok: true },
+        { ts: '2026-09-05T14:15:05.000Z', ok: true },
+      ]);
+
+      handleResultFinalize(deps(root), { runId: 'run_20260905_141507' });
+
+      const left = fs.readdirSync(dir).filter((n) => n.startsWith('run-'));
+      expect(left).toHaveLength(20);
+      expect(left).toContain('run-run_20260905_141507.ndjson');
+    });
+  });
+
   describe('handleResultAddAssertion', () => {
     test('persists a verdict so the finalized counts are non-zero', () => {
       const deps = tmpDeps();
@@ -1341,6 +1463,131 @@ describe('cli handlers', () => {
     });
   });
 
+  // Screenshot-on-failure hooks connectBridge's SECOND try — after fn(bridge)
+  // has produced its verdict, before finally closes the connection — because
+  // that is the only window where the bridge is still live. The connect
+  // FAILURE catch has no bridge to photograph with; wiring the capture there
+  // by mistake would silently do nothing forever, since captureOnFailure
+  // gracefully no-ops on a missing bridge. The proof that matters is therefore
+  // the positive case below: a bridge that connects successfully and CAN take
+  // a screenshot must actually have it called after a device-kind failure.
+  describe('screenshot-on-failure wiring (buildProgram)', () => {
+    function tmpRoot() {
+      return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-failcap-cli-'));
+    }
+
+    async function withRunId(runId, fn) {
+      const original = process.env.MAUTO_RUN_ID;
+      process.env.MAUTO_RUN_ID = runId;
+      try {
+        return await fn();
+      } finally {
+        if (original === undefined) delete process.env.MAUTO_RUN_ID;
+        else process.env.MAUTO_RUN_ID = original;
+      }
+    }
+
+    function traceEvents(root, runId) {
+      const file = path.join(root, 'mobile-automator', '.logs', `run-${runId}.ndjson`);
+      return fs.existsSync(file)
+        ? fs.readFileSync(file, 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l))
+        : [];
+    }
+
+    test('captures a screenshot after fn(bridge) returns a device failure, in the live-bridge window', async () => {
+      const root = tmpRoot();
+      const shots = [];
+      const deviceBridgeFactory = async () => ({
+        bridge: {
+          listElements: async () => {
+            throw new Error('element not found');
+          },
+          async screenshot(dest) {
+            shots.push(dest);
+            fs.mkdirSync(path.dirname(dest), { recursive: true });
+            fs.writeFileSync(dest, 'PNG');
+            return dest;
+          },
+        },
+        close: async () => {},
+      });
+      const emitted = [];
+
+      await withRunId('wiring-smoke', () =>
+        buildProgram({
+          projectRoot: root,
+          deviceBridgeFactory,
+          emit: (r) => emitted.push(r),
+        }).parseAsync(['node', 'mauto', 'elements'])
+      );
+
+      expect(shots).toHaveLength(1);
+      expect(emitted).toHaveLength(1);
+      expect(emitted[0].exitKind).toBe('device');
+      expect(emitted[0].envelope.ok).toBe(false);
+
+      const events = traceEvents(root, 'wiring-smoke');
+      expect(events).toContainEqual(expect.objectContaining({ event: 'screenshot.on_failure', verb: 'elements' }));
+    });
+
+    test('never attempts a capture when the CONNECT itself fails — there is no bridge there', async () => {
+      const root = tmpRoot();
+      const deviceBridgeFactory = async () => {
+        throw new Error('no device found');
+      };
+      const emitted = [];
+
+      await withRunId('wiring-connect-fail', () =>
+        buildProgram({
+          projectRoot: root,
+          deviceBridgeFactory,
+          emit: (r) => emitted.push(r),
+        }).parseAsync(['node', 'mauto', 'elements'])
+      );
+
+      expect(emitted).toHaveLength(1);
+      expect(emitted[0].exitKind).toBe('device');
+      const events = traceEvents(root, 'wiring-connect-fail');
+      expect(events.some((e) => typeof e.event === 'string' && e.event.startsWith('screenshot.'))).toBe(false);
+    });
+
+    // THE property this task exists to prove: a screenshot capture that itself
+    // fails must never mask, replace, or delay the original device envelope
+    // that reaches the caller.
+    test('a screenshot capture failure never masks the original device envelope', async () => {
+      const root = tmpRoot();
+      const deviceBridgeFactory = async () => ({
+        bridge: {
+          listElements: async () => {
+            throw new Error('element not found');
+          },
+          async screenshot() {
+            throw new Error('daemon socket closed');
+          },
+        },
+        close: async () => {},
+      });
+      const emitted = [];
+
+      await withRunId('wiring-shot-fail', () =>
+        buildProgram({
+          projectRoot: root,
+          deviceBridgeFactory,
+          emit: (r) => emitted.push(r),
+        }).parseAsync(['node', 'mauto', 'elements'])
+      );
+
+      expect(emitted).toHaveLength(1);
+      const { envelope, exitKind } = emitted[0];
+      expect(exitKind).toBe('device');
+      expect(envelope.ok).toBe(false);
+      expect(envelope.error.message).toBe('element not found');
+
+      const events = traceEvents(root, 'wiring-shot-fail');
+      expect(events).toContainEqual(expect.objectContaining({ event: 'screenshot.capture_failed', verb: 'elements' }));
+    });
+  });
+
   describe('handleInit — five agents + all', () => {
     const fsForInit = fs;
     const pathForInit = path;
@@ -1671,6 +1918,18 @@ describe('cli handlers', () => {
             device_model: 'Pixel 7',
             api_level: '34',
             environment: 'staging',
+          },
+          // No trace exists for this run id, so measureRun falls back to the
+          // reported value — the same fallback the 'measured duration' suite
+          // covers directly.
+          measurements: {
+            source: 'reported',
+            duration_disagreement: false,
+            reported_duration_seconds: 12,
+            trace_events: 0,
+            device_failures: 0,
+            trace_truncated: false,
+            failure_screenshots: [],
           },
           summary: 'Custom narrative summary.',
         },

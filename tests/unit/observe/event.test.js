@@ -62,6 +62,18 @@ describe('catalog integrity', () => {
   it('exposes the four levels in ascending severity', () => {
     expect(LEVELS).toEqual(['debug', 'info', 'warn', 'error']);
   });
+
+  it('already classifies every field slice 3 records', () => {
+    // Slice 3 adds NO new catalog field, and this is what keeps that true: a
+    // later change that starts recording something unclassified fails here
+    // rather than having makeEvent drop it silently.
+    for (const f of ['run_id', 'session_id', 'path', 'verb', 'ok', 'error_kind', 'dur_ms', 'message']) {
+      expect(EVENT_FIELDS[f]).toBeDefined();
+      expect(typeof EVENT_FIELDS[f].why).toBe('string');
+    }
+    expect(EVENT_FIELDS.run_id.sends).toBe(false);
+    expect(EVENT_FIELDS.path.sends).toBe(false);
+  });
 });
 
 describe('daemon field classifications', () => {

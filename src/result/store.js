@@ -236,9 +236,66 @@ class ResultStore {
     });
   }
 
-  finalize({ status, durationSeconds = 0, summary, metadata } = {}) {
+  // Typed observations derived from the measurement.
+  //
+  // They go in the observations array as well as in `measurements` because
+  // src/memory/store.js harvests observations into run-history: a scenario
+  // whose reported durations are chronically wrong, or whose steps claim no
+  // retries while the device kept failing, is a CROSS-RUN fact, and
+  // `measurements` is only ever read one file at a time.
+  //
+  // `state_context` for the duration case rather than a new observation type:
+  // extending the enum would mean changing OBSERVATION_TYPES and the schema
+  // together for a fact the existing vocabulary already describes — the agent's
+  // model of the run disagreed with the machine's.
+  _measurementObservations(measurements, measuredSeconds) {
+    const notes = [];
+    if (!measurements) return notes;
+
+    if (measurements.duration_disagreement) {
+      notes.push({
+        type: 'state_context',
+        step_id: null,
+        message:
+          `Reported duration ${measurements.reported_duration_seconds}s disagrees with ` +
+          `${measuredSeconds}s measured from the run trace; the measured value was recorded.`,
+      });
+    }
+
+    // Provable under-report: the device failed, and not one step admits to a
+    // retry. `_steps.length > 0` because `every` on an empty array is true, and
+    // a run with no steps has nothing to under-report.
+    if (
+      measurements.device_failures > 0 &&
+      this._steps.length > 0 &&
+      this._steps.every((s) => (s.retry_count || 0) === 0)
+    ) {
+      notes.push({
+        type: 'flakiness',
+        step_id: null,
+        message:
+          `${measurements.device_failures} device call(s) failed during this run, but no step ` +
+          `reported a retry; the recorded attempt counts under-report what the device saw.`,
+      });
+    }
+
+    return notes;
+  }
+
+  finalize({ status, durationSeconds = 0, summary, metadata, measurements } = {}) {
     return withLock(this._lock, () => {
       this._refreshFromDisk();
+
+      // Appended INSIDE the lock and deduped by (type, message), so re-running
+      // finalize — which the execute guide tells an agent to do after a failed
+      // one — cannot stack duplicates.
+      for (const note of this._measurementObservations(measurements, Number(durationSeconds) || 0)) {
+        const already = this._observations.some(
+          (o) => o.type === note.type && o.message === note.message
+        );
+        if (!already) this._observations.push(note);
+      }
+
       const passed = this._assertions.filter((a) => a.status === 'passed').length;
       const failed = this._assertions.filter((a) => a.status === 'failed').length;
       const total = this._assertions.length;
@@ -263,6 +320,11 @@ class ResultStore {
           summary ||
           `${resolvedStatus}: ${passed}/${total} assertion(s) passed across ${this._steps.length} step(s).`,
       };
+
+      // Additive and OMITTED when absent: a result file from a run with no
+      // trace must stay shaped exactly as 0.24.0 wrote it, so finalize never
+      // emits an empty measurements object as a placeholder.
+      if (measurements) result.measurements = measurements;
 
       this._atomicWrite(JSON.stringify(result, null, 2));
       return result;

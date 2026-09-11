@@ -143,6 +143,64 @@ mauto devices                        # respawns the daemon
 - Check the observations in the result report for root cause
 - **Common causes:** loading delays, animations, network dependencies
 
+### ❌ "duration_seconds looks wrong"
+
+Since 0.26.0 that field is measured from the run trace rather than taken from
+`--duration`, but only when the run had a trace. Check which:
+
+```bash
+jq '.measurements' mobile-automator/results/<run_id>.json
+```
+
+- `"source": "trace"` — measured. If `duration_disagreement` is `true`, the
+  agent's `--duration` and the clock disagreed; both numbers are in the file.
+  That is a finding about the agent's estimate, not a bug in `mauto` — the
+  clock is authoritative and the disagreement is exactly the signal this
+  feature exists to surface.
+- `"source": "reported"` — no trace, so `--duration` was used verbatim. Almost
+  always because `MAUTO_RUN_ID` was not exported before the run, or was
+  exported with a different value than the one passed to
+  `mauto result finalize --run-id`. This is 0.24.0's behaviour, unchanged.
+- `"source": "none"` — no trace and no `--duration` either.
+- `"trace_truncated": true` — the trace hit its 1 MiB cap, so the duration is a
+  lower bound, not the run's full span.
+
+`MAUTO_RUN_ID` is what creates the trace in the first place — export it once,
+before the first verb of the run, and every subsequent `mauto` invocation
+(device verbs via the daemon, `mauto result` verbs via the `--run-id` they
+already require) appends to the same file:
+
+```bash
+export MAUTO_RUN_ID=run_20260911_120000
+mauto tap 100,250
+mauto result add-step --run-id "$MAUTO_RUN_ID" ...
+mauto result finalize --run-id "$MAUTO_RUN_ID" --duration 999
+```
+
+The trace itself is one JSON object per line, next to the other logs:
+
+```bash
+# Everything mauto did during that run, in order
+cat mobile-automator/.logs/run-<run_id>.ndjson
+
+# Just the failures, and any screenshots taken at them
+jq 'select(.ok == false or .event == "screenshot.on_failure")' \
+  mobile-automator/.logs/run-<run_id>.ndjson
+```
+
+Run traces are **capped, not rotated**, and that is deliberate. Rotation
+renames the file's beginning away once it grows past the cap — but the
+beginning is where the measured duration starts, so a rotated trace would
+report a three-minute run as forty seconds: a number that *looks* measured and
+is simply wrong, which is worse than the self-reported figure it replaced. A
+capped trace instead stops accepting new events at the 1 MiB mark and keeps
+the true beginning, so `finalize` can still report an honest duration — it
+just flags it as a lower bound via `trace_truncated`.
+
+`mauto result finalize` keeps the 20 most recent traces and deletes older ones
+— pruning runs at finalize and nowhere else, and never deletes the trace it
+just measured. A trace from a run several sessions ago may therefore be gone.
+
 ### ❌ "Screenshot mismatch"
 - Check device differences (was reference captured on different device?)
 - Check display settings (dark mode, font size)

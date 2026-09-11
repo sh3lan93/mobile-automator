@@ -203,44 +203,6 @@
       },
       "description": "Observations from observer traits (regression spotter, flakiness detector, state detective)"
     },
-    "measurements": {
-      "type": "object",
-      "description": "Facts MEASURED from the run's event trace (mobile-automator/.logs/run-<run_id>.ndjson) rather than self-reported by the executing agent. Absent when no trace was available — MAUTO_RUN_ID unset, logging silenced, no workspace, or a run id that could not name a file.",
-      "properties": {
-        "source": {
-          "type": "string",
-          "enum": ["trace", "reported", "none"],
-          "description": "Where duration_seconds came from: measured from the trace, taken from --duration, or neither."
-        },
-        "reported_duration_seconds": {
-          "type": ["number", "null"],
-          "description": "What --duration claimed, retained even when the measured value was written to duration_seconds instead."
-        },
-        "duration_disagreement": {
-          "type": "boolean",
-          "description": "True when the reported and measured durations differ by more than the tolerance. The disagreement is itself a signal and is recorded rather than silently resolved."
-        },
-        "trace_events": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Number of events in the run trace."
-        },
-        "device_failures": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Device-kind and timeout-kind verb failures recorded during the run. Every one is an attempt that did not take."
-        },
-        "trace_truncated": {
-          "type": "boolean",
-          "description": "True when the trace reached its size cap, so the measured duration is a lower bound rather than the run's full span."
-        },
-        "failure_screenshots": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Screenshots captured automatically at device failures during this run."
-        }
-      }
-    },
     "summary": {
       "type": "string",
       "description": "Human-readable overall summary"
