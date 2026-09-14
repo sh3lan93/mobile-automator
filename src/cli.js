@@ -634,6 +634,27 @@ function handleResultAddAssertion({ resultStoreFactory, projectRoot }, opts) {
   return { envelope: ok({ run_id: runId, assertion: entry }, storeHint(store)), exitKind: 'ok' };
 }
 
+// Record an observed app crash. Deliberately NOT gated behind MAUTO_OBSERVE:
+// this is a complete, device-free result writer with no partial state to
+// hide, and tests/lint/result-coverage.test.js builds the program in a plain
+// environment — gating this verb would red-tree that guard in CI.
+function handleResultAddCrash({ resultStoreFactory, projectRoot }, opts = {}) {
+  const store = resultStoreFactory({
+    runId: opts.runId,
+    scenarioId: opts.scenarioId,
+    projectRoot,
+  });
+  const entry = store.addCrash({
+    crash_id: opts.crashId,
+    process: opts.process,
+    timestamp: opts.crashTimestamp,
+    step_id: opts.stepId,
+    excerpt: opts.excerpt,
+    report_path: opts.reportPath,
+  });
+  return { envelope: ok({ crash: entry }, storeHint(store)), exitKind: 'ok' };
+}
+
 // Tolerance for calling a reported duration wrong.
 //
 // The measured value is a wall-clock span between two recorded events, so
@@ -1699,6 +1720,35 @@ function buildProgram(deps = {}) {
       emit(r, humanFlag());
     }));
 
+  // Not gated behind MAUTO_OBSERVE — see handleResultAddCrash's comment.
+  result
+    .command('add-crash')
+    .description('Record an app crash observed during the run')
+    .requiredOption('--run-id <id>', 'run identifier (run_YYYYMMDD_HHMMSS)')
+    .option('--scenario-id <id>', 'scenario identifier')
+    .requiredOption('--crash-id <id>', 'device-local report id (from `mauto crash list`)')
+    .option('--step-id <id>', 'step in flight when the crash was observed')
+    .option('--process <name>', 'package/bundle identifier of the process that died')
+    .option('--crash-timestamp <iso>', "the device's own time for the report")
+    .option('--excerpt <text>', 'head of the crash report (stored capped at 2000 chars)')
+    .option('--report-path <path>', 'path to the full report written by `mauto crash get --out`')
+    .action(withEnvelope((opts) => {
+      const r = handleResultAddCrash(
+        { resultStoreFactory, projectRoot },
+        {
+          runId: opts.runId,
+          scenarioId: opts.scenarioId,
+          crashId: opts.crashId,
+          stepId: opts.stepId,
+          process: opts.process,
+          crashTimestamp: opts.crashTimestamp,
+          excerpt: opts.excerpt,
+          reportPath: opts.reportPath,
+        }
+      );
+      emit(r, humanFlag());
+    }));
+
   result
     .command('finalize')
     .description('Assemble and write the final result file')
@@ -2134,6 +2184,7 @@ module.exports = {
   handleAssert,
   handleResultAddStep,
   handleResultAddAssertion,
+  handleResultAddCrash,
   handleResultFinalize,
   handleSetup,
   handleConfigGet,
