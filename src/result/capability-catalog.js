@@ -119,6 +119,14 @@ const RESULT_CAPABILITIES = {
     writeCheck: 'behavioral',
     schemaPointer: '/properties/summary',
   },
+  crash_record: {
+    verb: 'add-crash',
+    flags: ['--crash-id', '--process', '--crash-timestamp', '--excerpt', '--report-path'],
+    store: 'addCrash',
+    writes: 'this._crashes.push(entry)',
+    writeCheck: 'substring',
+    schemaPointer: '/properties/crashes',
+  },
 };
 
 // Flags that identify WHICH run/step is being recorded, rather than carrying
