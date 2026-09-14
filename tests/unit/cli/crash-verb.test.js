@@ -5,6 +5,7 @@ const os = require('os');
 const path = require('path');
 
 const { handleCrashList, handleCrashGet, buildProgram } = require('../../../src/cli');
+const sessionPaths = require('../../../src/device/session-paths');
 
 const CRASHES = [
   { id: 'r-old', process: 'com.acme.app', timestamp: '2026-09-01T09:00:00.000Z' },
@@ -173,4 +174,64 @@ describe('gating', () => {
       });
     expect(resultSubcommands('1')).toEqual(resultSubcommands(undefined));
   });
+});
+
+// `crash list`/`crash get` are registered under one commander subcommand, so
+// they collapse to the single verb name `crash` — the same mechanism that
+// collapses `config get/set` to `config`. That means a failing `crash get`
+// goes through connectBridge's post-fn probeCrashes() hook exactly like any
+// other device verb, unless `crash` is in PROBE_EXEMPT_VERBS. This exercises
+// that through the real program, not just handleCrashGet in isolation —
+// handleCrashGet alone can't see connectBridge's probe wiring.
+describe('interaction with the failure-path crash probe', () => {
+  const withEnv = (value, fn) => {
+    const prev = process.env.MAUTO_OBSERVE;
+    if (value === undefined) delete process.env.MAUTO_OBSERVE;
+    else process.env.MAUTO_OBSERVE = value;
+    return Promise.resolve()
+      .then(fn)
+      .finally(() => {
+        if (prev === undefined) delete process.env.MAUTO_OBSERVE;
+        else process.env.MAUTO_OBSERVE = prev;
+      });
+  };
+
+  function writeHandle(root, handle) {
+    fs.mkdirSync(sessionPaths.sessionDir(root), { recursive: true });
+    fs.writeFileSync(sessionPaths.handlePath(root), JSON.stringify(handle));
+  }
+
+  it('does not re-probe crashes on its own failure — no double listCrashes call, no stapled hint', () =>
+    withEnv('1', async () => {
+      const root = tmpRoot();
+      writeHandle(root, { started_at: '2026-09-05T10:00:00.000Z' });
+      const listCrashesCalls = [];
+      const RECENT_CRASH = { id: 'c1', process: 'com.acme.app', timestamp: '2026-09-05T10:30:00.000Z' };
+
+      const deviceBridgeFactory = async () => ({
+        bridge: {
+          getCrash: async () => {
+            throw new Error('crash report c-bad-id not found');
+          },
+          listCrashes: async () => {
+            listCrashesCalls.push(true);
+            return [RECENT_CRASH];
+          },
+        },
+        close: async () => {},
+      });
+      const emitted = [];
+
+      await buildProgram({
+        projectRoot: root,
+        deviceBridgeFactory,
+        emit: (r) => emitted.push(r),
+      }).parseAsync(['node', 'mauto', 'crash', 'get', 'c-bad-id']);
+
+      expect(listCrashesCalls).toHaveLength(0);
+      expect(emitted).toHaveLength(1);
+      expect(emitted[0].envelope.error.message).toBe('crash report c-bad-id not found');
+      expect(emitted[0].envelope.data).toBeUndefined();
+      expect(emitted[0].envelope.hint).not.toMatch(/crashed during this session/);
+    }));
 });

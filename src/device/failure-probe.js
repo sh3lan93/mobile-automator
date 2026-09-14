@@ -72,7 +72,17 @@ const CRASH_PROBE_TIMEOUT_MS = 3000;
 // `mauto devices` returns a bare array through the same connectBridge seam, so
 // the empty-list trigger would fire on "nothing connected" and then try to
 // probe a device that does not exist.
-const PROBE_EXEMPT_VERBS = new Set(['devices']);
+//
+// `crash` is exempt for the same reason, sharper: it is ITSELF the
+// crash-diagnostic tool. A failing `crash get <id>` (bad id, unreadable
+// report — kind `device` either way) would otherwise re-run `listCrashes()`
+// behind its back and staple a second, unrelated crash-probe hint onto the
+// error, e.g. "The app under test crashed... run `mauto crash get c1`"
+// alongside "the device engine could not read crash reports" for the SAME
+// envelope — self-contradictory, and pointing at a different id than the one
+// the caller asked about. The probe exists to answer a question other verbs
+// can't; `crash` can already answer it directly.
+const PROBE_EXEMPT_VERBS = new Set(['devices', 'crash']);
 
 // Failure kinds that can plausibly mean "the app died". invalid_input is a bad
 // flag, target_not_found/environment/internal never reached (or never

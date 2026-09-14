@@ -47,6 +47,15 @@ describe('shouldProbe', () => {
     expect(shouldProbe({ envelope: failEnv('device'), verb: 'devices' })).toBe(false);
   });
 
+  it('never fires for `crash`, which is itself the crash-diagnostic tool', () => {
+    // A failing `crash get <bad-id>` (kind `device`) must not re-run
+    // listCrashes() behind its back and staple an unrelated "the app
+    // crashed, run `mauto crash get <other-id>`" hint onto the error it is
+    // already reporting — that produced a self-contradictory envelope.
+    expect(shouldProbe({ envelope: failEnv('device'), verb: 'crash' })).toBe(false);
+    expect(shouldProbe({ envelope: failEnv('timeout'), verb: 'crash' })).toBe(false);
+  });
+
   it('is total against a missing or malformed envelope', () => {
     expect(shouldProbe({ envelope: null, verb: 'tap' })).toBe(false);
     expect(shouldProbe({ envelope: undefined, verb: undefined })).toBe(false);
