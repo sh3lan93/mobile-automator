@@ -12,8 +12,10 @@
 const realFs = require('fs');
 
 const { sessionDir, logFilePath } = require('./session-paths');
-
-const MAX_LOG_BYTES = 1024 * 1024;
+// Rotation lives in src/util/log-rotate.js because the structured event log
+// wants the identical policy. Re-exported below so this module's public surface
+// is unchanged for its existing callers.
+const { MAX_LOG_BYTES, rotateIfLarge } = require('../util/log-rotate');
 
 // The degraded handle, expressed as a VALUE so callers never branch on null.
 // `stdio: 'ignore'` is the behaviour that predates #163.
@@ -25,19 +27,6 @@ const IGNORED = Object.freeze({ stdio: 'ignore', write() {}, close() {} });
 // imports rather than reaching into a connection-strategy module.
 function daemonLogHint(projectRoot) {
   return `The daemon's output (including stack traces) was captured to ${logFilePath(projectRoot)}.`;
-}
-
-// Best-effort rotation to a single previous generation; clobbering an existing
-// .1 is the intended bound. Every failure here is survivable — no log yet
-// (ENOENT on stat), a concurrent spawn that already rotated (ENOENT on rename),
-// an unreadable directory (EACCES) — so we swallow and carry on to the open.
-// An oversized log beats no log.
-function rotateIfLarge(logPath, maxBytes, fs) {
-  try {
-    if (fs.statSync(logPath).size >= maxBytes) fs.renameSync(logPath, `${logPath}.1`);
-  } catch (_) {
-    /* nothing to rotate, or someone beat us to it */
-  }
 }
 
 // Returns { stdio, write, close } — NEVER null.
@@ -60,7 +49,7 @@ function openDaemonLog(projectRoot, { maxBytes = MAX_LOG_BYTES, fs = realFs } = 
     fs.mkdirSync(sessionDir(projectRoot), { recursive: true });
 
     const logPath = logFilePath(projectRoot);
-    rotateIfLarge(logPath, maxBytes, fs);
+    rotateIfLarge(logPath, { maxBytes, fs });
 
     // Append, never 'w'. Lock-race losers exit ELOCKED through
     // bin/mauto-session-daemon.js and write to this same file; truncating on

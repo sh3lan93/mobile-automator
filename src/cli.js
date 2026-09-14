@@ -23,6 +23,12 @@ const guideEmitter = require('./guide/emitter');
 const { ADAPTERS } = require('./init/adapters');
 const { isSemanticAction, ACTION_METHOD, selectResolver } = require('./device/semantic-press');
 const connection = require('./device/connection');
+const { record } = require('./observe/recorder');
+const { resolveRunId } = require('./observe/settings');
+const { runTracePath } = require('./observe/paths');
+const { readTrace, deriveRun, pruneRunTraces } = require('./observe/trace');
+const { readSessionId } = require('./device/session-handle');
+const { captureOnFailure } = require('./observe/failure-capture');
 
 // Commander throws (via exitOverride) for two very different reasons, and the
 // split below is the ONLY thing that tells them apart.
@@ -625,6 +631,57 @@ function handleResultAddAssertion({ resultStoreFactory, projectRoot }, opts) {
   return { envelope: ok({ run_id: runId, assertion: entry }, storeHint(store)), exitKind: 'ok' };
 }
 
+// Tolerance for calling a reported duration wrong.
+//
+// The measured value is a wall-clock span between two recorded events, so
+// sub-second differences are rounding rather than disagreement, and 10% absorbs
+// the honest gap between "the run" and "the part of the run mauto saw" —
+// setup before the first verb, and finalize's own execution after the last.
+//
+// Symmetric on purpose. An UNDER-claim means the agent lost track of its own
+// retries; an OVER-claim means it counted its planning as run time. Both are
+// worth a human seeing, and one rule is two tests instead of four.
+const DURATION_TOLERANCE_SECONDS = 1;
+const DURATION_TOLERANCE_RATIO = 0.1;
+
+// Turn the run's trace into the duration to record and the measurement block to
+// record beside it. Total: an unreadable, absent or unmeasurable trace yields
+// the reported value and a `measurements` block that says so, never an error.
+function measureRun({ projectRoot, runId, reported }) {
+  const derived = deriveRun(readTrace(runTracePath(projectRoot, runId)));
+  const reportedSeconds = reported === undefined ? null : Number(reported);
+  const hasReported = reportedSeconds !== null && Number.isFinite(reportedSeconds);
+
+  const base = {
+    reported_duration_seconds: hasReported ? reportedSeconds : null,
+    trace_events: derived ? derived.trace_events : 0,
+    device_failures: derived ? derived.device_failures : 0,
+    trace_truncated: derived ? derived.trace_truncated : false,
+    failure_screenshots: derived ? derived.failure_screenshots : [],
+  };
+
+  // No trace, or a trace too short to span any time. Falling back to the flag
+  // is 0.24.0's behaviour, and `source` records that it IS a fallback rather
+  // than dressing a self-report as a measurement.
+  if (!derived || derived.duration_seconds === null) {
+    return {
+      durationSeconds: hasReported ? reportedSeconds : 0,
+      measurements: { source: hasReported ? 'reported' : 'none', duration_disagreement: false, ...base },
+    };
+  }
+
+  const measured = derived.duration_seconds;
+  const tolerance = Math.max(DURATION_TOLERANCE_SECONDS, measured * DURATION_TOLERANCE_RATIO);
+  return {
+    durationSeconds: measured,
+    measurements: {
+      source: 'trace',
+      duration_disagreement: hasReported && Math.abs(reportedSeconds - measured) > tolerance,
+      ...base,
+    },
+  };
+}
+
 function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectRoot }, opts) {
   const { runId, scenarioId, status, duration } = opts;
   if (!runId) {
@@ -643,17 +700,32 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
   if (opts.apiLevel !== undefined) metadata.api_level = opts.apiLevel;
   if (opts.environment !== undefined) metadata.environment = opts.environment;
 
+  // Measure BEFORE constructing the store: the trace is read-only here, and
+  // deriving first keeps the store's lock window as small as it already is.
+  const measured = measureRun({ projectRoot, runId, reported: duration });
+
   const store = resultStoreFactory({ runId, scenarioId, projectRoot });
   const result = store.finalize({
     status,
-    durationSeconds: duration === undefined ? 0 : Number(duration),
+    // Derived, not trusted. `--duration` survives in
+    // measurements.reported_duration_seconds and, when it disagrees with the
+    // clock, in a typed state_context observation — the disagreement is a
+    // signal about the agent, so it is recorded rather than resolved.
+    durationSeconds: measured.durationSeconds,
     metadata,
+    measurements: measured.measurements,
     // Undefined when --summary is omitted; ResultStore.finalize's own
     // `summary || <generated default>` already treats that as "no override",
     // so no provided-keys-only guard is needed here (unlike metadata, whose
     // sub-fields default independently to 'unknown').
     summary: opts.summary,
   });
+
+  // Retention, at the only moment a run is known to be over and the only place
+  // off the hot path. Never this run's own trace — it is the evidence behind
+  // every number just written. Best-effort by construction; pruneRunTraces
+  // swallows everything and returns a count.
+  pruneRunTraces(projectRoot, { except: runId });
 
   // Auto-harvest into cross-session memory. This is best-effort: a memory
   // failure must never fail an otherwise-successful finalize, so its warnings
@@ -1142,10 +1214,14 @@ function buildProgram(deps = {}) {
     resultStoreFactory = (args) => new ResultStore(args),
     // Factory for the cross-session memory store. Overridable in tests.
     memoryStoreFactory = (args) => new MemoryStore(args),
-    // Project root used to resolve mobile-automator/results/.
+    // Project root used to resolve mobile-automator/results/ — and, through the
+    // emitters below, mobile-automator/.logs/. One root, one tree.
     projectRoot = process.cwd(),
+    // The exit paths. run() passes its own instance so the help/version and
+    // fatal paths it owns share this program's resolved verb.
+    emitters = makeEmitters({ projectRoot }),
     // Sink used to emit the rendered envelope + drive the exit code.
-    emit = defaultEmit,
+    emit = emitters.emit,
   } = deps;
 
   const program = new Command();
@@ -1183,6 +1259,31 @@ function buildProgram(deps = {}) {
     throw err;
   });
   program.configureOutput({ writeErr: () => {} });
+
+  // Name the verb for the observability record, from commander's own resolution
+  // rather than from argv. preAction fires only after a SUCCESSFUL parse and
+  // only for a command that exists, which is what makes `verb` provably a name
+  // out of the vocabulary this CLI ships — the property event.js's `sends: true`
+  // classification asserts. Hooks registered on the root are inherited by every
+  // subcommand, so one registration covers all of them.
+  //
+  // `actionCommand` is the innermost command (`get` in `config get mode`), so
+  // walk up to the child of the root: the record names the verb, not its
+  // subcommand, keeping the vocabulary the size of the verb list.
+  program.hook('preAction', (_thisCommand, actionCommand) => {
+    // Read --run-id off the INNERMOST command (e.g. `add-step`) before walking
+    // up to name the verb (`result`). The three result verbs already require
+    // it, so they correlate with no new flag and no environment variable; an
+    // explicit flag beats the ambient MAUTO_RUN_ID because it is scoped to this
+    // invocation and the environment is not.
+    const opts = actionCommand.opts();
+    emitters.setRunId(
+      (typeof opts.runId === 'string' && opts.runId ? opts.runId : null) || resolveRunId(process.env)
+    );
+    let command = actionCommand;
+    while (command.parent && command.parent.parent) command = command.parent;
+    emitters.setVerb(command.name());
+  });
 
   const humanFlag = () => Boolean(program.opts().human);
 
@@ -1222,12 +1323,34 @@ function buildProgram(deps = {}) {
     let close;
     try {
       ({ bridge, close } = await deviceBridgeFactory({ device, projectRoot }));
+      // AFTER the connect, deliberately: the handle is written when the daemon
+      // starts listening, so before this point it may legitimately not exist
+      // yet. Best-effort — readSessionId never throws and returns null for an
+      // absent or malformed handle, which is a normal state (a one-shot
+      // fallback connection has no daemon at all).
+      emitters.setSessionId(readSessionId(projectRoot));
     } catch (err) {
       emit(deviceFail(err), humanFlag());
       return;
     }
     try {
       const r = await fn(bridge);
+      // The ONE window where a device failure can still be photographed: after
+      // fn(bridge) has produced its verdict and before `finally` closes the
+      // connection. The connect-failure catch above cannot do this — there is
+      // no bridge there — which is why this is here and not wrapped around the
+      // whole function.
+      //
+      // The return value is deliberately unused. `r` reaches emit() untouched
+      // whether the capture succeeded, failed, or never ran; a screenshot must
+      // never mask or replace the error the caller actually asked about.
+      await captureOnFailure({
+        bridge,
+        result: r,
+        projectRoot,
+        runId: emitters.getRunId(),
+        verb: emitters.getVerb(),
+      });
       emit(r, humanFlag());
     } finally {
       if (typeof close === 'function') await close();
@@ -1467,7 +1590,7 @@ function buildProgram(deps = {}) {
   // anything else is an envelope error and goes through the normal emit path.
   const emitMaybeRaw = (r) => {
     if (r.raw !== undefined && r.exitKind === 'ok') {
-      emitRaw(r.raw, r.exitKind);
+      emitters.emitRaw(r.raw, r.exitKind);
     } else {
       emit(r, humanFlag());
     }
@@ -1623,18 +1746,6 @@ function buildProgram(deps = {}) {
   return program;
 }
 
-function defaultEmit({ envelope, exitKind }, human) {
-  process.stdout.write(render(envelope, { human }) + '\n');
-  process.exit(exitCodeFor(exitKind));
-}
-
-// Print raw content (markdown / JSON schema / text) verbatim — no envelope
-// wrapping — then exit. Used by guide/schema/bootstrap success paths.
-function emitRaw(content, exitKind) {
-  process.stdout.write(content.endsWith('\n') ? content : content + '\n');
-  process.exit(exitCodeFor(exitKind));
-}
-
 // Keep the stack of a genuinely-unexpected error on STDERR so a crash stays
 // debuggable. The stdout envelope (the agent's contract) is untouched, and the
 // expected/diagnosed classes (invalid_input, environment) carry an actionable
@@ -1645,18 +1756,145 @@ function diagnose(err, exitKind) {
   }
 }
 
-// Last-resort emit for errors that escape BEFORE any action runs (so the
-// in-program withEnvelope boundary can't see them) — e.g. the ScenarioValidator
-// default-param compiling a corrupt bundled schema inside buildProgram, or a
-// stray unhandled rejection. Always one JSON envelope on stdout + the mapped
-// exit code, never a raw stack trace. `human` (opt-in --human) renders the fail
-// envelope readably instead of as JSON.
-function emitFatal(err, human = false) {
-  const { envelope, exitKind } = toEnvelope(err);
-  diagnose(err, exitKind);
-  process.stdout.write(render(envelope, { human }) + '\n');
-  process.exit(exitCodeFor(exitKind));
+// The exit paths, bound to ONE invocation's resolved dependencies. Per
+// invocation rather than module-scope because every input they need is: as
+// module-level functions, finish() could not see the projectRoot buildProgram()
+// was handed, so it reached around the program's own DI to process.cwd() and
+// wrote the record of a verb into a different tree than the verb ran against.
+function makeEmitters({ projectRoot = process.cwd() } = {}) {
+  // The top-level command commander actually RESOLVED, or null when parsing
+  // never got that far (a parse failure, or help/version). Set via setVerb()
+  // from buildProgram()'s preAction hook.
+  //
+  // Deliberately not `process.argv[2]`: event.js marks `verb` as `sends: true`
+  // on the grounds that it is "a fixed vocabulary we ship", and slice 5 ships
+  // it to a third party on that justification. argv[2] is arbitrary user text —
+  // `mauto --human config get mode` recorded `--human`.
+  let resolvedVerb = null;
+
+  // The run this invocation belongs to, and the daemon lifetime it used.
+  //
+  // Both follow resolvedVerb's pattern for resolvedVerb's reason: finish() is
+  // closed over this invocation's state, and every exit path reaches it
+  // through commander's own call stack, so there is nowhere else to put them.
+  //
+  // resolvedRunId is NOT validated here. It becomes a filename in exactly one
+  // place — runTracePath — which refuses anything unsafe and returns null, so
+  // a second predicate here could only disagree with that one.
+  let resolvedRunId = null;
+  // Set ONLY by connectBridge, and only after a successful connect. That is
+  // what makes `session_id` on a CLI event mean "this verb reached the device
+  // through that daemon".
+  let resolvedSessionId = null;
+
+  // THE process-ending path: every way this CLI terminates goes through here,
+  // so "is this invocation observable" has exactly one answer. Only `mauto mcp`
+  // is outside it — it serves until its client disconnects and then returns,
+  // with no termination to record.
+  //
+  // One function rather than four copies of a ten-line record() literal. Two of
+  // the four got written, and the classes left unrecorded were parse failures
+  // (#146) — the crashes this instrumentation exists to see — and help/version.
+  //
+  // `text` is optional: commander writes help/version itself, so that path has
+  // an invocation to record but nothing left to print.
+  //
+  // dur_ms uses process.uptime() (seconds since THIS process started, no state
+  // needed). A Date.now() stamped at require time would measure from whenever
+  // cli.js was loaded, which is not process start for anything that requires it
+  // first (a test harness, bin/mauto.js's own guards).
+  function finish({ text = '', exitKind, ok, errorKind, exitCode = exitCodeFor(exitKind) }) {
+    // The flag-resolved id when a command parsed, the environment otherwise: a
+    // parse failure reaches no preAction hook and so has no flag, but it is
+    // still part of the run and is exactly the class of failure (#146) this
+    // instrumentation exists to see.
+    const runId = resolvedRunId || resolveRunId(process.env);
+    // null for an id that cannot safely name a file. Every hostile
+    // MAUTO_RUN_ID lands here as "no trace" — but NOT as "no run_id below":
+    // the raw id is still recorded on the mauto.ndjson line, so a refused id
+    // is provably distinguishable from one never exported at all (no field).
+    const tracePath = runTracePath(projectRoot, runId);
+
+    // Record BEFORE the write: process.exit() below is immediate.
+    const fields = {
+      event: 'verb.end',
+      // `info`, not `warn`-on-failure: the failure is carried by `ok` and
+      // `error_kind`, and the LEVEL only decides routing. At `warn` every
+      // failed verb would clear the stderr threshold and echo the envelope the
+      // CLI just wrote. stderr stays a human's channel; the file sink
+      // (threshold `info`) keeps the forensic record either way.
+      level: 'info',
+      src: 'cli',
+      // Absent, not guessed, when no command resolved. makeEvent drops
+      // undefined fields, so the line carries no `verb` rather than a lie.
+      verb: resolvedVerb || undefined,
+      // Recorded even when the id could not name a trace file: the
+      // correlation still belongs in mauto.ndjson, where it is the only thing
+      // tying this line to a run. sends:false in the event catalog.
+      run_id: runId || undefined,
+      session_id: resolvedSessionId || undefined,
+      ok,
+      error_kind: errorKind,
+      exit_code: exitCode,
+      dur_ms: Math.round(process.uptime() * 1000),
+    };
+    record(fields, { projectRoot, tracePath: tracePath || undefined });
+    if (text) process.stdout.write(text.endsWith('\n') ? text : text + '\n');
+    process.exit(exitCode);
+  }
+
+  const fromEnvelope = (envelope, exitKind, human) => ({
+    text: render(envelope, { human }),
+    exitKind,
+    ok: Boolean(envelope && envelope.ok),
+    errorKind: envelope && envelope.error ? envelope.error.kind : undefined,
+  });
+
+  return {
+    finish,
+    setVerb: (verb) => {
+      resolvedVerb = verb;
+    },
+    setRunId: (runId) => {
+      resolvedRunId = runId;
+    },
+    setSessionId: (sessionId) => {
+      resolvedSessionId = sessionId;
+    },
+    // Read-only counterparts to the setters above, for the one other call site
+    // that needs this invocation's resolved run id / verb: connectBridge's
+    // screenshot-on-failure hook. Both values are already committed by the
+    // preAction hook by the time any verb's fn(bridge) can have returned, so
+    // there is nothing to resolve here — only to expose.
+    getRunId: () => resolvedRunId,
+    getVerb: () => resolvedVerb,
+
+    emit: ({ envelope, exitKind }, human) => finish(fromEnvelope(envelope, exitKind, human)),
+
+    // Raw content (markdown / JSON schema / text) verbatim, no envelope
+    // wrapping. Used by the guide/schema/bootstrap success paths.
+    emitRaw: (content, exitKind) => finish({ text: content, exitKind, ok: true }),
+
+    // Last-resort emit for errors that escape BEFORE any action runs, so the
+    // in-program withEnvelope boundary can't see them — a throw inside
+    // buildProgram, or a stray unhandled rejection. One JSON envelope on stdout
+    // + the mapped exit code, never a raw stack trace.
+    emitFatal: (err, human = false) => {
+      const { envelope, exitKind } = toEnvelope(err);
+      diagnose(err, exitKind);
+      finish(fromEnvelope(envelope, exitKind, human));
+    },
+  };
 }
+
+// bin/mauto.js registers the exported emitFatal as a PROCESS-wide
+// unhandledRejection handler, which can fire before run() has built anything —
+// so it needs a module-level way to reach the invocation in flight. A pointer to
+// the per-invocation instance, not a second copy of its state: an unhandled
+// rejection is exactly the crash class this instrumentation exists to see, and
+// it should carry the verb and projectRoot the invocation actually resolved.
+let activeEmitters = null;
+const emitFatal = (err, human = false) => (activeEmitters || makeEmitters()).emitFatal(err, human);
 
 async function run(argv) {
   // Belt-and-suspenders around the in-program withEnvelope boundary: a throw in
@@ -1666,21 +1904,27 @@ async function run(argv) {
   // `unhandledRejection` guard lives in bin/mauto.js (the process entry point),
   // not here, so calling run() in tests never installs a global exit-on-reject
   // listener that would leak across the suite.
+  const emitters = makeEmitters();
+  activeEmitters = emitters;
   try {
-    const program = buildProgram();
+    const program = buildProgram({ emitters });
     await program.parseAsync(argv);
   } catch (err) {
     // Help/version are NOT errors: commander already wrote the human-readable
-    // text to stdout. Leave them alone (no envelope) rather than wrapping them
-    // (#146). Same COMMANDER_NON_FAILURES set toEnvelope classifies against, so
-    // "which commander outcomes aren't failures" has exactly one answer.
+    // text to stdout, so they get no envelope wrapped around them (#146). Same
+    // COMMANDER_NON_FAILURES set toEnvelope classifies against, so "which
+    // commander outcomes aren't failures" has exactly one answer.
+    //
+    // They still exit through finish(), with no text of their own to print.
+    // They are real invocations, and slice 5 computes rates off this stream —
+    // omitting a whole invocation class skews every one of those denominators.
+    // `exitCode` comes from commander rather than a kind because commander
+    // already computed one: `.help({error:true})` yields 1, not 0.
     if (err && err.name === 'CommanderError' && COMMANDER_NON_FAILURES.has(err.code)) {
-      // Honor commander's own exit code rather than assuming 0 — `.help()`
-      // invoked with `{error:true}` computes 1.
-      process.exit(err.exitCode || 0);
+      emitters.finish({ exitCode: err.exitCode || 0, ok: true });
       return;
     }
-    emitFatal(err, argv.slice(2).includes('--human'));
+    emitters.emitFatal(err, argv.slice(2).includes('--human'));
   }
 }
 

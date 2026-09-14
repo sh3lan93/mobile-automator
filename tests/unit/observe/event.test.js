@@ -1,0 +1,116 @@
+'use strict';
+
+const { makeEvent, telemetryPayload, EVENT_FIELDS, LEVELS } = require('../../../src/observe/event');
+
+describe('makeEvent', () => {
+  it('stamps the ambient fields', () => {
+    const e = makeEvent({ event: 'verb.end', verb: 'tap', ok: true });
+    expect(e.event).toBe('verb.end');
+    expect(e.verb).toBe('tap');
+    expect(typeof e.ts).toBe('string');
+    expect(e.v).toBe(1);
+    expect(e.mauto_version).toBe(require('../../../package.json').version);
+    expect(e.node).toBe(process.version);
+    expect(e.os).toBe(process.platform);
+  });
+
+  it('drops keys the catalog does not declare', () => {
+    const e = makeEvent({ event: 'verb.end', smuggled: 'com.acme.secret' });
+    expect(e).not.toHaveProperty('smuggled');
+  });
+
+  it('omits keys whose value is undefined rather than emitting null', () => {
+    const e = makeEvent({ event: 'verb.end', dur_ms: undefined });
+    expect(e).not.toHaveProperty('dur_ms');
+  });
+});
+
+describe('telemetryPayload', () => {
+  it('strips every sends:false field', () => {
+    const e = makeEvent({
+      event: 'verb.end',
+      verb: 'launch',
+      ok: false,
+      error_kind: 'device',
+      app_id: 'com.acme.unreleased',
+      run_id: 'checkout-redesign-smoke',
+      message: 'element "Buy now" not found',
+    });
+    const p = telemetryPayload(e);
+    expect(p.verb).toBe('launch');
+    expect(p.error_kind).toBe('device');
+    expect(p).not.toHaveProperty('app_id');
+    expect(p).not.toHaveProperty('run_id');
+    expect(p).not.toHaveProperty('message');
+  });
+
+  it('never emits a key absent from the catalog even if present on the event', () => {
+    const p = telemetryPayload({ event: 'verb.end', rogue: 'x' });
+    expect(p).not.toHaveProperty('rogue');
+  });
+});
+
+describe('catalog integrity', () => {
+  it('declares sends and a reason for every field', () => {
+    for (const [name, def] of Object.entries(EVENT_FIELDS)) {
+      expect(typeof def.sends).toBe('boolean');
+      expect(typeof def.why).toBe('string');
+      expect(def.why.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('exposes the four levels in ascending severity', () => {
+    expect(LEVELS).toEqual(['debug', 'info', 'warn', 'error']);
+  });
+
+  it('already classifies every field slice 3 records', () => {
+    // Slice 3 adds NO new catalog field, and this is what keeps that true: a
+    // later change that starts recording something unclassified fails here
+    // rather than having makeEvent drop it silently.
+    for (const f of ['run_id', 'session_id', 'path', 'verb', 'ok', 'error_kind', 'dur_ms', 'message']) {
+      expect(EVENT_FIELDS[f]).toBeDefined();
+      expect(typeof EVENT_FIELDS[f].why).toBe('string');
+    }
+    expect(EVENT_FIELDS.run_id.sends).toBe(false);
+    expect(EVENT_FIELDS.path.sends).toBe(false);
+  });
+});
+
+describe('daemon field classifications', () => {
+  const { EVENT_FIELDS, NEVER_SENDS, makeEvent, telemetryPayload } = require('../../../src/observe/event');
+
+  it('lets the daemon carry a session id, a call id, a primitive name, a stop reason and an errno', () => {
+    // call_id is sends:true on the same grounds as dur_ms: a daemon-minted
+    // monotonic integer, never the client-chosen id from the socket frame.
+    for (const f of ['session_id', 'call_id', 'tool', 'stop_reason', 'error_code']) {
+      expect(EVENT_FIELDS[f]).toBeDefined();
+      expect(EVENT_FIELDS[f].sends).toBe(true);
+    }
+  });
+
+  it('keeps pid local — a pid plus a timestamp is a host correlator with no aggregate value', () => {
+    expect(EVENT_FIELDS.pid.sends).toBe(false);
+    expect(NEVER_SENDS).toContain('pid');
+  });
+
+  it('round-trips a daemon call event through makeEvent without dropping a field', () => {
+    const e = makeEvent({
+      src: 'daemon',
+      event: 'call.end',
+      session_id: '8f2c1a3b4d5e6f70',
+      tool: 'mobile_press_button',
+      ok: false,
+      error_kind: 'timeout',
+      dur_ms: 25000,
+      pid: 4242,
+    });
+    expect(e.tool).toBe('mobile_press_button');
+    expect(e.session_id).toBe('8f2c1a3b4d5e6f70');
+    expect(e.pid).toBe(4242);
+
+    const p = telemetryPayload(e);
+    expect(p.tool).toBe('mobile_press_button');
+    expect(p.session_id).toBe('8f2c1a3b4d5e6f70');
+    expect(p).not.toHaveProperty('pid');
+  });
+});

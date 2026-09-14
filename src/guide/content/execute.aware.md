@@ -51,6 +51,7 @@ Record each observation with `mauto result add-step --observation <type>:<messag
 
 ### 1. Pre-flight
 
+- **Name the run first.** Choose the run identifier for this execution (format `run_YYYYMMDD_HHMMSS`) and export it as `MAUTO_RUN_ID` before running any other verb — `export MAUTO_RUN_ID=run_20260905_141500`. Every verb then records into a trace for that run, and `mauto result finalize --run-id <the same id>` measures the run's duration from it instead of taking your word for it. Use the *same* id in both places; a different one means no trace to measure.
 - Verify a device is available with `mauto devices`.
 - **App under test.** If the user pointed you at a prebuilt artifact, install it with `mauto install <path>` and do NOT build — reusing a ready artifact is the point.
 - If no artifact was named: check whether the app is already installed. If it is, say so and ask whether to rebuild before running the build command ({{build_command}}) — a previous run may have just built it. If it is not installed, build and install with the build command ({{build_command}}).
@@ -219,7 +220,7 @@ For all Tier 2 assertions: take a screenshot, visually analyze it, and report pa
 
 ### 6. Generate the Result Report
 
-Obtain the result schema by running `mauto schema result`, then finalize the run with `mauto result finalize` (writing to `mobile-automator/results/<run_id>.json`), passing the run metadata you already know (`--device-model`, `--api-level`, `--app-version`, `--environment`) — the timestamp is filled in for you, and omitted fields are recorded as `unknown`. You may supply your own narrative with `--summary <text>`; omitting it keeps the generated default summary line. The result carries typed `observations` (`regression`, `flakiness`, `state_context`) gathered by the Observer traits above.
+Obtain the result schema by running `mauto schema result`, then finalize the run with `mauto result finalize` (writing to `mobile-automator/results/<run_id>.json`), passing the run metadata you already know (`--device-model`, `--api-level`, `--app-version`, `--environment`) — the timestamp is filled in for you, and omitted fields are recorded as `unknown`. You may supply your own narrative with `--summary <text>`; omitting it keeps the generated default summary line. The result carries typed `observations` (`regression`, `flakiness`, `state_context`) gathered by the Observer traits above. `--duration` is now a cross-check rather than the recorded value: when a run trace exists the duration is measured from it, your figure is kept as `measurements.reported_duration_seconds`, and a disagreement beyond the tolerance is recorded as a `state_context` observation. Report the duration you believe is right and let the two be compared; do not reverse-engineer a number to match.
 
 ### 7. Present the Summary
 
