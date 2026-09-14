@@ -158,3 +158,30 @@ describe('crash field classifications', () => {
     expect(p).not.toHaveProperty('path');
   });
 });
+
+describe('telemetry transport field classifications', () => {
+  const { EVENT_FIELDS, makeEvent, telemetryPayload } = require('../../../src/observe/event');
+
+  it('lets a spooled line carry a delivery id, a batch size and an HTTP status', () => {
+    for (const f of ['msg_id', 'count', 'http_status']) {
+      expect(EVENT_FIELDS[f]).toBeDefined();
+      expect(EVENT_FIELDS[f].sends).toBe(true);
+    }
+  });
+
+  it('round-trips a flush event through makeEvent without dropping a field', () => {
+    const e = makeEvent({
+      src: 'daemon',
+      event: 'telemetry.flush',
+      msg_id: 'b3a1c0de4f5a6b7c8d9e0f1a2b3c4d5e',
+      count: 42,
+      http_status: 200,
+      ok: true,
+      dur_ms: 137,
+    });
+    const p = telemetryPayload(e);
+    expect(p.msg_id).toBe('b3a1c0de4f5a6b7c8d9e0f1a2b3c4d5e');
+    expect(p.count).toBe(42);
+    expect(p.http_status).toBe(200);
+  });
+});
