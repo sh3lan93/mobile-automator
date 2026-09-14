@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
 
 jobs:
   test:
@@ -18,6 +19,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+          # One key for all six legs: it hashes the lockfile, not the Node
+          # version, because ~/.npm holds version-independent tarballs. On a
+          # cold key five legs log "Failed to save: Unable to reserve cache"
+          # while one saves it — expected and harmless; keying on the Node
+          # version would store the same bytes three times to silence it.
+          cache: 'npm'
       - run: npm ci
       - run: npm run test:all
 
@@ -33,5 +40,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+          cache: 'npm'
       - run: npm ci
       - run: ./scripts/pack-smoke.sh
