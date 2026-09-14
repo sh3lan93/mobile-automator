@@ -166,6 +166,46 @@ When executing a `capture_value` action:
 4. Also record it in the result file with `--capture <capture_to>=<extracted_text>` on that step's `mauto result add-step` call — the in-memory session variable map alone never reaches the result file; only the flag does.
 5. Report: "Captured `capture_to` = '<value>'".
 
+### When a step fails, find out whether the app is still alive
+
+An action that fails, or an `elements` call that comes back empty, has two very
+different explanations: the UI changed, or the app died. They lead to opposite
+conclusions, and only one of them is worth reporting as a test failure.
+
+When `MAUTO_OBSERVE=1` is set, `mauto` checks for you. A failed device action
+comes back with a `crashes` array in `data`, and the `hint` names the process
+that died. Three states, and they are not the same:
+
+- `crashes` present and non-empty — the app crashed. Stop reasoning about the
+  UI. Record it and stop the run.
+- `crashes` present and empty — the app is alive. This is a real UI failure;
+  carry on diagnosing it.
+- `crashes` absent — `mauto` could not check. Nothing has been claimed either
+  way; reason as you would have without it.
+
+To ask directly, at any time:
+
+```bash
+mauto crash list                     # reports since this device session began
+mauto crash list --since <iso>       # a window you choose
+mauto crash get <id>                 # the head of one report
+mauto crash get <id> --out <path>    # the whole report to a file
+```
+
+Record what you found so the result file carries it:
+
+```bash
+mauto result add-crash --run-id <run> --crash-id <id> --step-id <step> \
+  --process <package> --excerpt "<first lines of the report>"
+```
+
+Two cautions. Crash-report retention differs between platforms: on some the
+reports age out of a device log within minutes, on others they are files that
+persist for weeks. That is why `crash list` scopes to the current session by
+default — a report from last week is not evidence about this step. And a report
+whose own timestamp is unreadable is counted in `unattributed` rather than
+included; if that count is non-zero, widen `--since` and look yourself.
+
 ### 5. Validate Assertions (27 types)
 
 For each assertion in the scenario (evaluated after the referenced step), pick the type recorded in the scenario and evaluate it. The 27 types split into two tiers by **who decides pass/fail**:
