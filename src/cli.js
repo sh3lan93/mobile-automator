@@ -31,6 +31,7 @@ const { readHandle, readSessionId } = require('./device/session-handle');
 const { captureOnFailure } = require('./observe/failure-capture');
 const { crashTimestampMs } = require('./device/crash-model');
 const { observeEnabled } = require('./observe/gate');
+const { probeCrashes } = require('./device/failure-probe');
 
 // Commander throws (via exitOverride) for two very different reasons, and the
 // split below is the ONLY thing that tells them apart.
@@ -1465,15 +1466,30 @@ function buildProgram(deps = {}) {
     }
     try {
       const r = await fn(bridge);
-      // The ONE window where a device failure can still be photographed: after
+      // The ONE window where a device failure can still be investigated: after
       // fn(bridge) has produced its verdict and before `finally` closes the
       // connection. The connect-failure catch above cannot do this — there is
       // no bridge there — which is why this is here and not wrapped around the
       // whole function.
       //
-      // The return value is deliberately unused. `r` reaches emit() untouched
-      // whether the capture succeeded, failed, or never ran; a screenshot must
-      // never mask or replace the error the caller actually asked about.
+      // The return value of BOTH calls is deliberately unused. `r` reaches
+      // emit() untouched (aside from probeCrashes's own in-place, additive
+      // mutation of r.envelope) whether either helper succeeded, failed, or
+      // never ran; neither may mask or replace the error the caller actually
+      // asked about. Probe before screenshot: the probe has its own short,
+      // gated deadline and must not sit behind the screenshot's device round
+      // trip.
+      await probeCrashes({
+        bridge,
+        envelope: r.envelope,
+        verb: emitters.getVerb(),
+        projectRoot,
+        // Gated here too, not only inside probeCrashes: with the gate unset
+        // this must do ZERO extra work, not merely "produce no visible
+        // change" — sessionWatermark() is a filesystem read that an ungated
+        // user has never paid for on this path before.
+        watermark: observeEnabled(process.env) ? sessionWatermark(projectRoot) : null,
+      });
       await captureOnFailure({
         bridge,
         result: r,
