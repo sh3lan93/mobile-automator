@@ -27,8 +27,10 @@ const { record } = require('./observe/recorder');
 const { resolveRunId } = require('./observe/settings');
 const { runTracePath } = require('./observe/paths');
 const { readTrace, deriveRun, pruneRunTraces } = require('./observe/trace');
-const { readSessionId } = require('./device/session-handle');
+const { readHandle, readSessionId } = require('./device/session-handle');
 const { captureOnFailure } = require('./observe/failure-capture');
+const { crashTimestampMs } = require('./device/crash-model');
+const { observeEnabled } = require('./observe/gate');
 
 // Commander throws (via exitOverride) for two very different reasons, and the
 // split below is the ONLY thing that tells them apart.
@@ -1190,6 +1192,134 @@ async function handleDevicesClear({
   };
 }
 
+// --- Crash diagnostics (slice 4) -----------------------------------------
+//
+// A DIAGNOSTIC verb, like `devices` / `session` / `memory` — deliberately NOT
+// in src/device/action-catalog.js, which holds exactly the scenario-schema
+// actions and whose lint guard asserts parity in both directions.
+
+const CRASH_REPORT_HEAD_LINES = 200;
+const CRASH_LIST_HINT =
+  'The device engine could not read crash reports. Run `mauto devices` to confirm the device is reachable; crash reporting needs the helper binary that ships with the device engine.';
+
+// Default watermark: when a device session is live, its handle already records
+// started_at (src/device/session-daemon.js). Bind, do not copy — there is no new
+// timestamp artifact and no second source of truth for "when did this session
+// begin". No handle means no watermark, which means UNSCOPED, which the envelope
+// reports as `since: null` rather than pretending the list is recent.
+function sessionWatermark(projectRoot) {
+  const handle = readHandle(projectRoot);
+  const t = handle && handle.started_at;
+  return typeof t === 'string' && Number.isFinite(Date.parse(t)) ? t : null;
+}
+
+// Split a crash list around a watermark. Reports whose own time is unreadable
+// are neither included nor discarded — they are counted, so the caller can see
+// that the device returned something the tool could not place in time.
+function scopeCrashes(crashes, sinceMs) {
+  if (sinceMs == null) return { crashes, unattributed: 0 };
+  const inWindow = [];
+  let unattributed = 0;
+  for (const c of crashes) {
+    const ms = crashTimestampMs(c);
+    if (ms == null) unattributed += 1;
+    else if (ms >= sinceMs) inWindow.push(c);
+  }
+  return { crashes: inWindow, unattributed };
+}
+
+async function handleCrashList({ deviceBridge, projectRoot }, opts = {}) {
+  const sinceRaw = opts.since !== undefined ? opts.since : sessionWatermark(projectRoot);
+  let sinceMs = null;
+  if (sinceRaw != null) {
+    sinceMs = Date.parse(sinceRaw);
+    if (!Number.isFinite(sinceMs)) {
+      return {
+        envelope: fail(
+          'invalid_input',
+          `could not parse --since "${sinceRaw}" as a date`,
+          'Pass an ISO 8601 timestamp, e.g. --since 2026-09-05T10:00:00Z.'
+        ),
+        exitKind: 'invalid_input',
+      };
+    }
+  }
+
+  let all;
+  try {
+    all = await deviceBridge.listCrashes();
+  } catch (err) {
+    // "Could not look" is NOT "found none". Reporting ok:true with an empty
+    // list here would be this slice's own bug with the sign flipped.
+    return {
+      envelope: fail(err.kind || 'device', err.message || String(err), err.hint || CRASH_LIST_HINT),
+      exitKind: err.kind || 'device',
+    };
+  }
+
+  const { crashes, unattributed } = scopeCrashes(all, sinceMs);
+  record(
+    {
+      level: 'info',
+      src: 'cli',
+      event: 'crash.list',
+      crash_count: Number.isFinite(crashes.length) ? crashes.length : undefined,
+    },
+    { projectRoot }
+  );
+  return {
+    envelope: ok({
+      crashes,
+      count: crashes.length,
+      since: sinceMs == null ? null : sinceRaw,
+      unattributed,
+    }),
+    exitKind: 'ok',
+  };
+}
+
+async function handleCrashGet({ deviceBridge, fs: fsDep = fs }, id, opts = {}) {
+  let report;
+  try {
+    report = await deviceBridge.getCrash(id);
+  } catch (err) {
+    return {
+      envelope: fail(err.kind || 'device', err.message || String(err), err.hint || CRASH_LIST_HINT),
+      exitKind: err.kind || 'device',
+    };
+  }
+
+  // --out writes the FULL report and returns only its path. This is how a
+  // tens-of-kilobytes native tombstone reaches a result file without passing
+  // through the agent's context window.
+  if (opts.out) {
+    try {
+      fsDep.writeFileSync(opts.out, report);
+    } catch (err) {
+      return {
+        envelope: fail(
+          'environment',
+          `could not write the crash report to ${opts.out}: ${err.message}`,
+          'Check the directory exists and is writable.'
+        ),
+        exitKind: 'environment',
+      };
+    }
+    return { envelope: ok({ crash_id: id, path: opts.out, truncated: false }), exitKind: 'ok' };
+  }
+
+  const lines = String(report).split('\n');
+  const truncated = !opts.full && lines.length > CRASH_REPORT_HEAD_LINES;
+  return {
+    envelope: ok({
+      crash_id: id,
+      report: truncated ? lines.slice(0, CRASH_REPORT_HEAD_LINES).join('\n') : String(report),
+      truncated,
+    }),
+    exitKind: 'ok',
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Program wiring
 // ---------------------------------------------------------------------------
@@ -1733,6 +1863,43 @@ function buildProgram(deps = {}) {
       emit(r, humanFlag());
     }));
 
+  // Gated behind MAUTO_OBSERVE=1 per the observability design's slice ladder.
+  // Registration, not a stub: with the gate unset `mauto crash list` is an
+  // unknown command and lands as the usual invalid_input envelope, so a partly
+  // built capability is ABSENT rather than present-and-broken. The graduation
+  // PR deletes this branch and the one in connectBridge (Task 5) together.
+  if (observeEnabled(process.env)) {
+    const crash = program
+      .command('crash')
+      .description('Diagnostics: crash reports currently readable on the device');
+
+    crash
+      .command('list')
+      .description('List crash reports, scoped to the current device session by default')
+      .option('--device <id>', 'target device id')
+      .option('--since <iso>', 'only reports at or after this ISO timestamp (default: session start)')
+      .action(withEnvelope((opts) =>
+        connectBridge(resolveVerbDevice(opts.device), (bridge) =>
+          handleCrashList(
+            { deviceBridge: bridge, projectRoot },
+            opts.since === undefined ? {} : { since: opts.since }
+          )
+        )
+      ));
+
+    crash
+      .command('get <id>')
+      .description('Fetch one crash report (head by default)')
+      .option('--device <id>', 'target device id')
+      .option('--full', 'return the whole report instead of its head')
+      .option('--out <path>', 'write the full report to a file and return its path')
+      .action(withEnvelope((id, opts) =>
+        connectBridge(resolveVerbDevice(opts.device), (bridge) =>
+          handleCrashGet({ deviceBridge: bridge }, id, { full: opts.full, out: opts.out })
+        )
+      ));
+  }
+
   program
     .command('mcp')
     .description('Run the MCP prompts server (stdio) exposing the mauto workflows as prompts')
@@ -1968,4 +2135,6 @@ module.exports = {
   handleDevices,
   handleDevicesUse,
   handleDevicesClear,
+  handleCrashList,
+  handleCrashGet,
 };

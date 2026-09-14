@@ -26,6 +26,7 @@ function runCli(args, opts = {}) {
   const res = spawnSync(process.execPath, [CLI, ...args], {
     cwd: opts.cwd || REPO_ROOT,
     encoding: 'utf8',
+    env: opts.env || process.env,
   });
   return { status: res.status, stdout: res.stdout || '', stderr: res.stderr || '' };
 }
@@ -118,5 +119,15 @@ describe('cli smoke (integration)', () => {
     expect(parsed.ok).toBe(true);
     expect(parsed.data.key).toBe('mode');
     expect(parsed.data.value).toBe('platform-aware');
+  });
+
+  test('`mauto crash list` is absent, and envelope-shaped, when the gate is unset', () => {
+    const out = runCli(['crash', 'list'], { env: { ...process.env, MAUTO_OBSERVE: '' } });
+    // The point is not the exit code but that an ungated user gets ONE JSON
+    // envelope on stdout and never a bare commander error (#146).
+    const parsed = JSON.parse(out.stdout);
+    expect(parsed.ok).toBe(false);
+    expect(parsed.error.kind).toBe('invalid_input');
+    expect(out.status).toBe(3);
   });
 });
