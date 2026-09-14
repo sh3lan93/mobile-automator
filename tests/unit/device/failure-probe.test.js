@@ -1,6 +1,10 @@
 'use strict';
 
+const path = require('path');
+const { execFileSync } = require('child_process');
 const { probeCrashes, shouldProbe, CRASH_PROBE_TIMEOUT_MS } = require('../../../src/device/failure-probe');
+
+const FAILURE_PROBE_PATH = path.join(__dirname, '..', '..', '..', 'src', 'device', 'failure-probe');
 
 const ON = { MAUTO_OBSERVE: '1' };
 const failEnv = (kind = 'device') => ({
@@ -162,5 +166,41 @@ describe('probeCrashes', () => {
     expect(envelope.data).toEqual([]);
     expect(envelope.hint).toMatch(/crash/i);
     expect(envelope.hint).not.toMatch(/mauto crash get/);
+  });
+
+});
+
+describe('probeCrashes deadline vs. an empty event loop', () => {
+  // jest itself always holds handles open (its own timers/workers), so a unit
+  // test inside jest cannot distinguish a ref'd timer from an unref'd one: the
+  // race would resolve either way. The bug only manifests when NOTHING else is
+  // keeping the process alive — which is exactly the shape of a one-shot `mauto`
+  // verb once connectBridge's own socket handling has already torn down. Proving
+  // it requires a real, separate process with a genuinely empty event loop
+  // apart from the probe's own timer.
+  it('resolves the deadline instead of hanging forever when the bridge call never settles', () => {
+    const script = `
+      const { probeCrashes } = require(${JSON.stringify(FAILURE_PROBE_PATH)});
+      const envelope = {
+        ok: false,
+        error: { kind: 'device', message: 'element not found' },
+        hint: 'Check the element is on screen.',
+        schema_version: '2.1',
+      };
+      probeCrashes({
+        bridge: { listCrashes: () => new Promise(() => {}) },
+        envelope,
+        verb: 'tap',
+        projectRoot: '/nope',
+        env: { MAUTO_OBSERVE: '1' },
+        watermark: '2026-09-05T10:00:00.000Z',
+        sinks: [],
+        timeoutMs: 50,
+      }).then(() => {
+        process.stdout.write('PROBE_RESOLVED');
+      });
+    `;
+    const out = execFileSync(process.execPath, ['-e', script], { encoding: 'utf8', timeout: 5000 });
+    expect(out).toBe('PROBE_RESOLVED');
   });
 });

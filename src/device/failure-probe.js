@@ -114,15 +114,25 @@ function amendHint(envelope, note) {
 // actually matches.
 const TIMED_OUT = Symbol('mauto.probe.timeout');
 
-// Race a promise against a deadline WITHOUT leaving a live timer behind: a
-// pending timer would keep a one-shot verb's event loop alive past its own
-// exit. unref() so even an unexpectedly-long-lived process doesn't wait on it,
-// and clearTimeout once the race settles either way.
+// Race a promise against a deadline. The timer is deliberately left REF'D
+// (not unref()'d): the promise on the other side of this race is, by
+// definition, a HUNG bridge call that will never settle on its own — that is
+// the exact case this deadline exists to catch. If the timer were unref'd and
+// nothing else happened to be keeping the event loop alive (a one-shot verb
+// whose connectBridge socket handling has already torn down, say), Node would
+// consider the loop empty and exit *before the timer ever fires*: the race
+// never settles, probeCrashes never resolves, connectBridge's `await
+// probeCrashes(...)` never returns, and the CLI exits 0 with no output —
+// silently swallowing the very device failure this module exists to surface.
+// That is strictly worse than never having built this deadline. Keeping the
+// timer ref'd costs nothing it was trying to save: the `.finally(() =>
+// clearTimeout(timer))` below already guarantees the timer cannot outlive the
+// race on either branch, which is the actual guarantee "don't leave a live
+// timer behind" was after.
 function withDeadline(promise, ms) {
   let timer;
   const deadline = new Promise((resolve) => {
     timer = setTimeout(() => resolve(TIMED_OUT), ms);
-    if (timer && typeof timer.unref === 'function') timer.unref();
   });
   return Promise.race([promise, deadline]).finally(() => clearTimeout(timer));
 }
