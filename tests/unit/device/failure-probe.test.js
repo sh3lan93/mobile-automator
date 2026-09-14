@@ -168,6 +168,46 @@ describe('probeCrashes', () => {
     expect(envelope.hint).not.toMatch(/mauto crash get/);
   });
 
+  it('counts a report with an unreadable timestamp as unattributed instead of dropping it (ok:false path)', async () => {
+    const envelope = failEnv();
+    const gozero = { id: 'gozero', process: 'p', timestamp: '0001-01-01T00:00:00Z' };
+    await probeCrashes(opts({ listCrashes: async () => [gozero] }, { envelope }));
+    // An earned-empty `crashes: []` here would be indistinguishable from "the
+    // device genuinely reported none" — exactly the confident wrong answer the
+    // Task-2 fix (crashTimestampMs's epoch floor) was written to prevent.
+    expect(envelope.data.crashes).toEqual([]);
+    expect(envelope.data.unattributed).toBe(1);
+    expect(envelope.hint).toMatch(/unattributed|unreadable|could not/i);
+    expect(envelope.hint).not.toMatch(/none found/i);
+  });
+
+  it('counts a report with an unreadable timestamp as unattributed instead of dropping it (ok:true elements path)', async () => {
+    const envelope = okElements([]);
+    const gozero = { id: 'gozero', process: 'p', timestamp: '0001-01-01T00:00:00Z' };
+    await probeCrashes(opts({ listCrashes: async () => [gozero] }, { envelope, verb: 'elements' }));
+    expect(envelope.data).toEqual([]); // still unpolluted — no data slot on this path
+    expect(envelope.hint).toMatch(/unattributed|unreadable|could not/i);
+    // Must not read like the earned-clear "none found" hint, and must not
+    // claim a crash was actually found either.
+    expect(envelope.hint).not.toMatch(/none found/i);
+    expect(envelope.hint).not.toMatch(/mauto crash get/);
+  });
+
+  it('keeps a real in-window crash and an unattributed report distinguishable at once', async () => {
+    const envelope = failEnv();
+    const gozero = { id: 'gozero', process: 'p', timestamp: '0001-01-01T00:00:00Z' };
+    await probeCrashes(opts({ listCrashes: async () => [recent, gozero] }, { envelope }));
+    expect(envelope.data.crashes).toEqual([recent]);
+    expect(envelope.data.unattributed).toBe(1);
+  });
+
+  it('keeps an EARNED-clear result truly zero-attributed, not just zero-crashes', async () => {
+    // The default for a genuinely clean answer must be unattributed: 0, not
+    // undefined — matching handleCrashList's contract in src/cli.js.
+    const envelope = failEnv();
+    await probeCrashes(opts({ listCrashes: async () => [] }, { envelope }));
+    expect(envelope.data).toEqual({ crashes: [], unattributed: 0 });
+  });
 });
 
 describe('probeCrashes deadline vs. an empty event loop', () => {

@@ -104,6 +104,17 @@ function crashHint(crashes) {
 const NO_CRASH_HINT =
   'Checked for an app crash since the session started: none found — the empty result looks genuine.';
 
+// A report whose own timestamp is missing or unparseable (crashTimestampMs
+// returns null — see crash-model.js's epoch floor for why a zero-value
+// sentinel counts as unreadable too) is neither included nor silently
+// dropped: it is `unattributed`, matching handleCrashList's vocabulary in
+// src/cli.js. Attaching an earned-empty `crashes: []` here instead would be
+// this slice's own confident-wrong-answer bug, just moved from "found none"
+// to "found something I couldn't place in time".
+function unattributedHint(count) {
+  return `Checked for an app crash since the session started: the device returned ${count} report(s) with an unreadable timestamp — not counted as clear. Run \`mauto crash list\` to inspect them.`;
+}
+
 function amendHint(envelope, note) {
   envelope.hint = envelope.hint ? `${note} ${envelope.hint}` : note;
 }
@@ -187,10 +198,13 @@ async function probeCrashes({
       return;
     }
 
-    const crashes = (Array.isArray(raw) ? raw : []).filter((c) => {
+    const crashes = [];
+    let unattributed = 0;
+    for (const c of Array.isArray(raw) ? raw : []) {
       const ms = crashTimestampMs(c);
-      return ms != null && Number.isFinite(sinceMs) && ms >= sinceMs;
-    });
+      if (ms == null) unattributed += 1;
+      else if (Number.isFinite(sinceMs) && ms >= sinceMs) crashes.push(c);
+    }
 
     record(
       {
@@ -209,13 +223,20 @@ async function probeCrashes({
     if (envelope.ok === false) {
       // EARNED result: we asked, the device answered, we attribute the answer.
       // See the module comment above for why this key is safe to add.
-      envelope.data = { ...(envelope.data || {}), crashes };
+      // `unattributed` rides alongside `crashes` unconditionally (0 included)
+      // so "genuinely clean" and "device returned something unplaceable in
+      // time" are always distinguishable, never just when the count is > 0.
+      envelope.data = { ...(envelope.data || {}), crashes, unattributed };
       if (crashes.length > 0) amendHint(envelope, crashHint(crashes));
+      else if (unattributed > 0) amendHint(envelope, unattributedHint(unattributed));
     } else {
       // ok:true only happens for the empty-`elements` trigger. `data` stays the
-      // elements array untouched; the result is prose-only, on BOTH determined
-      // outcomes. See the module comment above.
-      amendHint(envelope, crashes.length > 0 ? crashHint(crashes) : NO_CRASH_HINT);
+      // elements array untouched; the result is prose-only, on ALL THREE
+      // determined outcomes (crash found, unattributed report found, confirmed
+      // clear). See the module comment above.
+      if (crashes.length > 0) amendHint(envelope, crashHint(crashes));
+      else if (unattributed > 0) amendHint(envelope, unattributedHint(unattributed));
+      else amendHint(envelope, NO_CRASH_HINT);
     }
   } catch (err) {
     // Total by construction. A broken probe must never turn "tap failed:
