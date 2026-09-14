@@ -109,6 +109,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   build on a dropped node, a removed enum value, a narrowed type or a changed
   `required` list, and validates a v2.0-era result document against the current
   schema.
+- `mauto crash list` / `mauto crash get <id>`, gated behind `MAUTO_OBSERVE=1`:
+  diagnostic verbs that ask the device whether the app under test crashed,
+  instead of leaving an agent to infer it from a UI that stopped responding.
+  `list` scopes to the current session by default (the existing
+  `.session/session.json` handle's `started_at`) and reports `unattributed`
+  separately from `crashes` — a report whose own timestamp cannot be read is
+  never silently claimed in-window or dropped. `get` returns a bounded head
+  (200 lines) by default; `--full` returns the whole report, and `--out <path>`
+  writes it to disk and returns only the path, so a tens-of-kilobytes native
+  tombstone never has to pass through an agent's context window.
+- A failure-path crash check. After a device verb fails with a `device` or
+  `timeout` error, or `mauto elements` returns an empty list — never after a
+  successful action — `mauto` asks the device whether the app died and
+  attaches the answer to the envelope: `crashes: [...]` when it found
+  something, `crashes: []` when it asked and the device said none, or nothing
+  at all when it could not ask. The three states are load-bearing: emitting an
+  earned-looking empty list when the probe failed, timed out, or had nothing to
+  scope against would be a confident wrong answer. Bounded by its own
+  3-second deadline, independent of the daemon's 25s call timeout, and total —
+  it never rewrites the caller's original error. Exempted from probing itself:
+  `mauto devices` (would probe a device that doesn't exist) and `mauto crash`
+  (would staple an unrelated crash hint onto its own crash-diagnostic
+  failure).
+- Agnostic crash-report model (`src/device/crash-model.js`), normalizing
+  mobile-mcp's crash payload the same way `element-model.js`/`device-model.js`
+  normalize elements and devices — the underlying `mobilecli` binary is
+  separately versioned and reaches `mauto` transitively, so its field
+  spellings are not this repo's contract to hold still. An unreadable or
+  at-or-before-epoch timestamp is treated as unreadable rather than as a real,
+  ancient instant — Go's zero-value spellings for "no time" would otherwise
+  decode to a finite timestamp that sorts before every watermark and silently
+  drops the report instead of counting it as `unattributed`.
+- One new telemetry field, `crash_count` (`sends: true`, an integer carrying no
+  user content). The crashed process name reuses the existing `app_id` field
+  and the stack excerpt reuses `message`, both already `sends: false` — a
+  package name is an unreleased product's roadmap.
 
 ---
 

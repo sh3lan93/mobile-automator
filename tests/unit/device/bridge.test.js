@@ -284,3 +284,49 @@ describe('swipe with coordinates', () => {
     expect(calls).toEqual([['mobile_swipe_on_screen', { direction: 'down' }]]);
   });
 });
+
+describe('crash primitives', () => {
+  it('lists crashes through mobile_list_crashes and returns the normalized model', async () => {
+    const calls = [];
+    const bridge = new DeviceBridge({
+      call: async (tool, args) => {
+        calls.push([tool, args]);
+        return [{ id: 'r1', processName: 'com.acme.app', timestamp: '2026-09-05T10:00:00Z' }];
+      },
+    });
+    await expect(bridge.listCrashes()).resolves.toEqual([
+      { id: 'r1', process: 'com.acme.app', timestamp: '2026-09-05T10:00:00Z' },
+    ]);
+    // No `device` argument: src/device/tool-args.js injects the resolved id into
+    // every call except discovery, exactly as it does for tap/listElements.
+    expect(calls).toEqual([['mobile_list_crashes', {}]]);
+  });
+
+  it('fetches one report through mobile_get_crash and returns it as text', async () => {
+    const calls = [];
+    const bridge = new DeviceBridge({
+      call: async (tool, args) => {
+        calls.push([tool, args]);
+        return 'FATAL EXCEPTION: main\n\tat com.acme.Login.onClick(Login.java:42)';
+      },
+    });
+    await expect(bridge.getCrash('r1')).resolves.toContain('FATAL EXCEPTION');
+    expect(calls).toEqual([['mobile_get_crash', { id: 'r1' }]]);
+  });
+
+  it('stringifies a non-string report body rather than returning an object', async () => {
+    const bridge = new DeviceBridge({ call: async () => ({ content: 'boom' }) });
+    await expect(bridge.getCrash('r1')).resolves.toBe('boom');
+  });
+
+  it('propagates an engine failure rather than reporting an empty list', async () => {
+    // "mobilecli is not available" must NOT launder into `ok: true, []`. See
+    // "The absent-versus-empty problem".
+    const bridge = new DeviceBridge({
+      call: async () => {
+        throw new Error('mobilecli is not available or not working properly');
+      },
+    });
+    await expect(bridge.listCrashes()).rejects.toThrow(/mobilecli is not available/);
+  });
+});

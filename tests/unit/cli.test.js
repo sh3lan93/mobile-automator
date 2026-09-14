@@ -1588,6 +1588,236 @@ describe('cli handlers', () => {
     });
   });
 
+  // Crash-probe wiring: connectBridge's SECOND try, same window as
+  // screenshot-on-failure, called first (see the comment at the call site).
+  describe('crash-probe wiring (buildProgram)', () => {
+    function tmpRoot() {
+      return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-crashprobe-cli-'));
+    }
+
+    function withObserveEnv(value, fn) {
+      const prev = process.env.MAUTO_OBSERVE;
+      if (value === undefined) delete process.env.MAUTO_OBSERVE;
+      else process.env.MAUTO_OBSERVE = value;
+      return Promise.resolve()
+        .then(fn)
+        .finally(() => {
+          if (prev === undefined) delete process.env.MAUTO_OBSERVE;
+          else process.env.MAUTO_OBSERVE = prev;
+        });
+    }
+
+    function writeHandle(root, handle) {
+      fs.mkdirSync(sessionPaths.sessionDir(root), { recursive: true });
+      fs.writeFileSync(sessionPaths.handlePath(root), JSON.stringify(handle));
+    }
+
+    // probeCrashes records through the plain recorder (mauto.ndjson), not the
+    // per-run trace — unlike captureOnFailure it carries no run_id and needs no
+    // run correlation, matching the plan's own probeCrashes signature/tests,
+    // neither of which take a runId.
+    function mainLogEvents(root) {
+      const file = path.join(root, 'mobile-automator', '.logs', 'mauto.ndjson');
+      return fs.existsSync(file)
+        ? fs.readFileSync(file, 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l))
+        : [];
+    }
+
+    const RECENT_CRASH = { id: 'c1', process: 'com.acme.app', timestamp: '2026-09-05T10:30:00.000Z' };
+    const STARTED_AT = '2026-09-05T10:00:00.000Z';
+
+    test('attaches crashes to a device-failure envelope when gated and a watermark exists', () =>
+      withObserveEnv('1', async () => {
+        const root = tmpRoot();
+        writeHandle(root, { started_at: STARTED_AT });
+        const listCrashesCalls = [];
+        const deviceBridgeFactory = async () => ({
+          bridge: {
+            listElements: async () => {
+              throw new Error('element not found');
+            },
+            listCrashes: async () => {
+              listCrashesCalls.push(true);
+              return [RECENT_CRASH];
+            },
+          },
+          close: async () => {},
+        });
+        const emitted = [];
+
+        await buildProgram({
+          projectRoot: root,
+          deviceBridgeFactory,
+          emit: (r) => emitted.push(r),
+        }).parseAsync(['node', 'mauto', 'elements']);
+
+        expect(listCrashesCalls).toHaveLength(1);
+        expect(emitted).toHaveLength(1);
+        expect(emitted[0].exitKind).toBe('device');
+        expect(emitted[0].envelope.ok).toBe(false);
+        expect(emitted[0].envelope.error.message).toBe('element not found');
+        expect(emitted[0].envelope.data.crashes).toEqual([RECENT_CRASH]);
+        expect(emitted[0].envelope.hint).toMatch(/crash/i);
+
+        const events = mainLogEvents(root);
+        expect(events).toContainEqual(expect.objectContaining({ event: 'crash.detected', verb: 'elements' }));
+      }));
+
+    test('amends only the hint, never `data`, on an ok:true empty-elements envelope', () =>
+      withObserveEnv('1', async () => {
+        const root = tmpRoot();
+        writeHandle(root, { started_at: STARTED_AT });
+        const deviceBridgeFactory = async () => ({
+          bridge: {
+            listElements: async () => [],
+            listCrashes: async () => [RECENT_CRASH],
+          },
+          close: async () => {},
+        });
+        const emitted = [];
+
+        await buildProgram({
+          projectRoot: root,
+          deviceBridgeFactory,
+          emit: (r) => emitted.push(r),
+        }).parseAsync(['node', 'mauto', 'elements']);
+
+        expect(emitted).toHaveLength(1);
+        expect(emitted[0].envelope.ok).toBe(true);
+        expect(emitted[0].envelope.data).toEqual([]);
+        expect(emitted[0].envelope.hint).toMatch(/crash/i);
+      }));
+
+    test('`devices` is exempt from the empty-array trigger even when gated', () =>
+      withObserveEnv('1', async () => {
+        const root = tmpRoot();
+        writeHandle(root, { started_at: STARTED_AT });
+        const listCrashesCalls = [];
+        const deviceBridgeFactory = async () => ({
+          bridge: {
+            listDevices: async () => [],
+            listCrashes: async () => {
+              listCrashesCalls.push(true);
+              return [RECENT_CRASH];
+            },
+          },
+          close: async () => {},
+        });
+        const emitted = [];
+
+        await buildProgram({
+          projectRoot: root,
+          deviceBridgeFactory,
+          emit: (r) => emitted.push(r),
+        }).parseAsync(['node', 'mauto', 'devices']);
+
+        expect(listCrashesCalls).toHaveLength(0);
+        expect(emitted[0].envelope.data).toEqual([]);
+        expect('hint' in emitted[0].envelope).toBe(false);
+      }));
+
+    test('a non-device failure kind (invalid_input) never triggers the probe', () =>
+      withObserveEnv('1', async () => {
+        const root = tmpRoot();
+        writeHandle(root, { started_at: STARTED_AT });
+        const listCrashesCalls = [];
+        const deviceBridgeFactory = async () => ({
+          bridge: {
+            tap: async () => {
+              throw new Error('unreachable');
+            },
+            listCrashes: async () => {
+              listCrashesCalls.push(true);
+              return [RECENT_CRASH];
+            },
+          },
+          close: async () => {},
+        });
+        const emitted = [];
+
+        // An unparseable --at never reaches the device: handleTap returns
+        // invalid_input before calling deviceBridge.tap at all.
+        await buildProgram({
+          projectRoot: root,
+          deviceBridgeFactory,
+          emit: (r) => emitted.push(r),
+        }).parseAsync(['node', 'mauto', 'tap', '--at', 'not-coords']);
+
+        expect(listCrashesCalls).toHaveLength(0);
+        expect(emitted[0].exitKind).toBe('invalid_input');
+        expect('data' in emitted[0].envelope).toBe(false);
+      }));
+
+    test('with no session handle, the probe attaches nothing — unscoped, not earned-empty', () =>
+      withObserveEnv('1', async () => {
+        const root = tmpRoot(); // no writeHandle(): no session.json
+        const listCrashesCalls = [];
+        const deviceBridgeFactory = async () => ({
+          bridge: {
+            listElements: async () => {
+              throw new Error('element not found');
+            },
+            listCrashes: async () => {
+              listCrashesCalls.push(true);
+              return [RECENT_CRASH];
+            },
+          },
+          close: async () => {},
+        });
+        const emitted = [];
+
+        await buildProgram({
+          projectRoot: root,
+          deviceBridgeFactory,
+          emit: (r) => emitted.push(r),
+        }).parseAsync(['node', 'mauto', 'elements']);
+
+        expect(listCrashesCalls).toHaveLength(0);
+        expect('data' in emitted[0].envelope).toBe(false);
+      }));
+
+    // PROPERTY C: with the gate unset, connectBridge must behave byte-identically
+    // to slice 3 — no new device round trip, no new envelope key, no new event.
+    test('is byte-identical to the ungated baseline when MAUTO_OBSERVE is unset', () =>
+      withObserveEnv(undefined, async () => {
+        const root = tmpRoot();
+        writeHandle(root, { started_at: STARTED_AT });
+        const listCrashesCalls = [];
+        const deviceBridgeFactory = async () => ({
+          bridge: {
+            listElements: async () => {
+              throw new Error('element not found');
+            },
+            listCrashes: async () => {
+              listCrashesCalls.push(true);
+              return [RECENT_CRASH];
+            },
+          },
+          close: async () => {},
+        });
+        const emitted = [];
+
+        await buildProgram({
+          projectRoot: root,
+          deviceBridgeFactory,
+          emit: (r) => emitted.push(r),
+        }).parseAsync(['node', 'mauto', 'elements']);
+
+        expect(listCrashesCalls).toHaveLength(0);
+        expect(emitted).toHaveLength(1);
+        expect(emitted[0].exitKind).toBe('device');
+        expect(emitted[0].envelope).toEqual({
+          ok: false,
+          error: { kind: 'device', message: 'element not found' },
+          hint: 'Ensure a device or simulator is connected and the app is running.',
+          schema_version: '2.1',
+        });
+
+        const events = mainLogEvents(root);
+        expect(events.some((e) => typeof e.event === 'string' && e.event.startsWith('crash.'))).toBe(false);
+      }));
+  });
+
   describe('handleInit — five agents + all', () => {
     const fsForInit = fs;
     const pathForInit = path;

@@ -12,8 +12,9 @@
 //
 // tests/lint/mobile-mcp-tool-coverage.test.js pins this set to the primitives
 // src/device/bridge.js calls, in BOTH directions, so neither a new bridge call
-// nor a stale entry can drift. Slice 4's crash verb adds mobile_get_crash /
-// mobile_list_crashes here in the same change that adds them to the bridge.
+// nor a stale entry can drift. The guard being bidirectional is why the crash
+// primitives and DeviceBridge#listCrashes/#getCrash landed in one commit: either
+// half alone fails one of its two assertions.
 
 // The vocabulary, as a frozen ARRAY, exported only so the lint guard can
 // enumerate it in both directions.
@@ -43,6 +44,9 @@ const MOBILE_MCP_TOOL_NAMES = Object.freeze([
   'mobile_uninstall_app',
   'mobile_open_url',
   'mobile_set_orientation',
+  // Diagnostic, not a scenario action — see DeviceBridge#listCrashes.
+  'mobile_list_crashes',
+  'mobile_get_crash',
 ]);
 
 // The structure isKnownTool actually queries is module-PRIVATE, and that — not

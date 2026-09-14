@@ -2,6 +2,7 @@
 
 const { normalize, parseElements } = require('./element-model');
 const { normalizeDevices } = require('./device-model');
+const { normalizeCrashes } = require('./crash-model');
 const { resolveSingleDevice } = require('./device-resolver');
 
 // Thin wrapper over an injected mobile-mcp `call(toolName, args)` function.
@@ -133,6 +134,35 @@ class DeviceBridge {
   // Set the device orientation ('portrait'/'landscape').
   async setOrientation(orientation) {
     return this._call('mobile_set_orientation', { orientation });
+  }
+
+  // Crash reports currently readable on the device, as the agnostic crash
+  // model. DIAGNOSTIC only — never invoked by a scenario action, which is why
+  // `crash` has no src/device/action-catalog.js entry (that catalog holds
+  // exactly the scenario-schema actions and its lint guard asserts parity).
+  //
+  // No `device` argument: src/device/tool-args.js injects the resolved id into
+  // every tool except discovery.
+  //
+  // Retention differs by platform and the caller must know it: Android reports
+  // come from the device log and AGE OUT; iOS device/simulator reports are files
+  // that PERSIST and accumulate across runs. Same call, under-inclusive on one
+  // platform and over-inclusive on the other — hence the `since` scoping in
+  // src/device/failure-probe.js. There is deliberately no platform branch here.
+  async listCrashes() {
+    return normalizeCrashes(await this._call('mobile_list_crashes', {}));
+  }
+
+  // The full text of one crash report. The engine returns a bare string (its
+  // `response.data.content`), so coerce rather than assume: an engine that
+  // starts wrapping it must not turn this into "[object Object]" at the CLI.
+  async getCrash(id) {
+    const result = await this._call('mobile_get_crash', { id });
+    if (typeof result === 'string') return result;
+    if (result && typeof result === 'object' && typeof result.content === 'string') {
+      return result.content;
+    }
+    return String(result == null ? '' : result);
   }
 }
 
