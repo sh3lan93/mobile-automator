@@ -6,6 +6,7 @@ const path = require('path');
 
 const { newSessionId, readHandle, readSessionId } = require('../../../src/device/session-handle');
 const paths = require('../../../src/device/session-paths');
+const { SESSION_ID_PATTERN } = require('../../../src/observe/event');
 
 function tmpRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-handle-'));
@@ -28,6 +29,10 @@ describe('newSessionId', () => {
     const ids = new Set();
     for (let i = 0; i < 1000; i++) ids.add(newSessionId());
     expect(ids.size).toBe(1000);
+  });
+
+  it('always matches SESSION_ID_PATTERN, so the mint and read sides cannot drift', () => {
+    for (let i = 0; i < 200; i++) expect(newSessionId()).toMatch(SESSION_ID_PATTERN);
   });
 
   it('takes no arguments, so it cannot be derived from a path, device or pid', () => {
@@ -70,6 +75,25 @@ describe('readSessionId', () => {
   it('returns null rather than a non-string when the handle is corrupt', () => {
     const root = tmpRoot();
     writeHandle(root, { session_id: 12345 });
+    expect(readSessionId(root)).toBeNull();
+  });
+
+  // session_id is sends:true on the grounds that it is random hex. A handle is
+  // a plain file, so a stale, hand-edited or corrupt one must not be able to
+  // put anything else on the wire.
+  it.each([
+    ['a path and app id', '/Users/alice/acme-checkout-v2 com.acme.unreleased'],
+    ['uppercase hex', 'ABCDEF0123456789'],
+    ['15 chars', 'abcdef012345678'],
+    ['17 chars', 'abcdef01234567890'],
+    ['empty string', ''],
+    ['a number', 12345],
+    ['an object', {}],
+    ['an array', []],
+    ['null', null],
+  ])('returns null for a session_id that is %s', (_label, value) => {
+    const root = tmpRoot();
+    writeHandle(root, { pid: 42, session_id: value });
     expect(readSessionId(root)).toBeNull();
   });
 });

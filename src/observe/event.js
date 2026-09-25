@@ -19,6 +19,13 @@ const pkg = require('../../package.json');
 
 const EVENT_VERSION = 1;
 
+// The shape of a session_id: what session-handle.newSessionId() mints (8 CSPRNG
+// bytes as hex) and the only shape readSessionId() will return. session_id is
+// sends:true on the grounds that it is random and carries no user content; the
+// handle file it is read back from is just a file, so the shape is what keeps
+// that true for a stale or hand-edited one.
+const SESSION_ID_PATTERN = /^[0-9a-f]{16}$/;
+
 // Ascending severity. Index order is the comparison order.
 const LEVELS = ['debug', 'info', 'warn', 'error'];
 
@@ -69,8 +76,9 @@ const EVENT_FIELDS = {
   // from crypto.randomBytes and derived from NOTHING — not the project root,
   // not the device, not the pid. Deliberately NOT persisted across restarts: a
   // stable id would be a machine fingerprint, whereas this one changes exactly
-  // when the daemon does, which is the fact it exists to report. Enforced by
-  // tests/unit/device/session-handle.test.js.
+  // when the daemon does, which is the fact it exists to report. Enforced on
+  // the mint side by tests/unit/device/session-handle.test.js and on the read
+  // side by readSessionId() checking SESSION_ID_PATTERN.
   session_id: { sends: true, basis: 'csprng', why: 'random id scoped to one daemon lifetime; no user-derived content' },
   // As with `verb`, the justification holds only because the value is enforced
   // to be one: src/device/device-call.js records this field ONLY when
@@ -192,4 +200,4 @@ function telemetryPayload(event = {}) {
   return out;
 }
 
-module.exports = { EVENT_VERSION, LEVELS, EVENT_FIELDS, NEVER_SENDS, SEND_BASES, makeEvent, telemetryPayload };
+module.exports = { EVENT_VERSION, SESSION_ID_PATTERN, LEVELS, EVENT_FIELDS, NEVER_SENDS, SEND_BASES, makeEvent, telemetryPayload };
