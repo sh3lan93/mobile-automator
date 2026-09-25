@@ -36,6 +36,11 @@ const KIND_TO_CODE = {
   partial: 1,
 };
 
+// The closed set of error.kind values. Single source: src/observe/event.js
+// validates the telemetry `error_kind` field against exactly this list, so a
+// new kind added to KIND_TO_CODE is accepted there without a second edit.
+const ERROR_KINDS = Object.freeze(Object.keys(KIND_TO_CODE));
+
 function ok(data, hint = null) {
   const env = { ok: true, data, schema_version: SCHEMA_VERSION };
   // A success can still carry an advisory hint (e.g. recovered corruption).
@@ -99,6 +104,7 @@ function render(envelope, { human = false } = {}) {
 module.exports = {
   SCHEMA_VERSION,
   EXIT,
+  ERROR_KINDS,
   ok,
   fail,
   exitCodeFor,
