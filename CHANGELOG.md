@@ -146,6 +146,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the stack excerpt reuses `message`, both already `sends: false` — a
   package name is an unreleased product's roadmap.
 
+- Vocabulary and a structural guard for the opt-in telemetry transport
+  (slice 5, in progress): three `sends: true` event fields — `msg_id`, `count`
+  and `http_status`. `msg_id` is a zero-arity CSPRNG token generated per
+  **event** and derived from nothing — not the project root, not the pid, not
+  the clock — so a re-sent batch deduplicates at ingestion without the token
+  ever being able to correlate two events, let alone two machines. There is
+  deliberately no stable install id.
+- Every `sends: true` field now declares a machine-readable `basis`
+  (`computed` | `closed-set` | `csprng` | `constant`), and a lint guard fails
+  the build on a field that declares none or an unknown one. The human-readable
+  `why` stays alongside it as the explanation, never as the check: a guard that
+  pattern-matches prose enforces vocabulary rather than the property, and can
+  be satisfied by rewording a privacy rationale.
+- A transport-isolation guard: exactly one file in `src/` or `bin/` may make an
+  outbound HTTP call, and the guard names it. A second `fetch(` anywhere — an
+  update check, a crash reporter, a docs ping — would bypass the redaction
+  catalog entirely, and no redaction test would notice, because none of them
+  inspect the wire.
+
 ---
 
 ## [0.25.0]
