@@ -153,17 +153,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the clock — so a re-sent batch deduplicates at ingestion without the token
   ever being able to correlate two events, let alone two machines. There is
   deliberately no stable install id.
-- Every `sends: true` field now declares a machine-readable `basis`
-  (`computed` | `closed-set` | `csprng` | `constant`), and a lint guard fails
-  the build on a field that declares none or an unknown one. The human-readable
-  `why` stays alongside it as the explanation, never as the check: a guard that
-  pattern-matches prose enforces vocabulary rather than the property, and can
-  be satisfied by rewording a privacy rationale.
-- A transport-isolation guard: exactly one file in `src/` or `bin/` may make an
-  outbound HTTP call, and the guard names it. A second `fetch(` anywhere — an
-  update check, a crash reporter, a docs ping — would bypass the redaction
-  catalog entirely, and no redaction test would notice, because none of them
-  inspect the wire.
+- Every `sends: true` field now carries an enforced check, and
+  `telemetryPayload()` applies it to the value before it can reach the wire: a
+  value that fails is dropped, never coerced or sent. `basis` (`computed` |
+  `closed-set` | `csprng` | `constant`) is no longer a hand-written claim — it is
+  read off the typed helper that builds the check (`oneOf`, `matches`,
+  `integer`, `boolean`, `isoTimestamp` in `src/observe/accepts.js`), so a field
+  cannot declare `csprng` without supplying a pattern. Closed vocabularies
+  (event names, verbs, stop reasons, errno codes) live in
+  `src/observe/vocab.js`; error kinds and tool names reuse their existing single
+  sources. Version fields are checked by shape, not equality with the running
+  process, because a spooled event is flushed after an upgrade. Local logs stay
+  lossless: validation happens at the wire only.
+- Lint guards for that: every `sends: true` field must carry a check, every
+  check must reject a fixed probe set (a path-bearing string, `{}`, `[]`, `NaN`,
+  `Infinity`, `null`, `undefined`, `-1`, `1e21`), a doctored catalog with a lying
+  field must be flagged, and the event, verb and stop-reason vocabularies are
+  pinned to the code in both directions.
+- A transport-isolation guard, in place of a three-regex check that caught only
+  `require('https')` and missed `node:https`, `http2`, `tls`, TCP `net`, `dns`,
+  `dgram`, dynamic and ESM imports, `undici`, spawned `curl` and
+  `globalThis['fetch']`. It now scans module specifiers, bans network modules
+  outside `src/observe/transport.js`, holds `net` and `child_process` to a
+  per-file allowlist (a stale entry fails), and flags network identifiers and
+  non-literal specifiers. It is a lint, not a sandbox: it cannot see a
+  specifier built at runtime beyond flagging it. Until `transport.js` exists it
+  asserts that file is absent or the only network importer, rather than claiming
+  "exactly one".
+
+### Fixed
+
+- `makeEvent` no longer lets a caller overwrite the ambient `ts`, `v`,
+  `mauto_version`, `node` and `os` fields. They are classified `sends: true` on
+  the grounds that `makeEvent` computes them, which was only true of the callers
+  that happened not to pass those keys.
+- `session_id` read back from `.session/session.json` is shape-checked
+  (16 lowercase hex characters). It was classified `csprng` but the CLI recorded
+  whatever string the file held, so a stale or hand-edited handle could put text
+  on the wire. `mauto session status` now reports `session_id: null` for a
+  malformed handle.
 
 ---
 
