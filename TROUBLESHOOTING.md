@@ -134,6 +134,30 @@ rm -rf mobile-automator/.session     # clear a wedged socket/pidfile/lock
 mauto devices                        # respawns the daemon
 ```
 
+### ❓ "Element not found" — but did the app crash?
+
+`mauto` cannot tell you from the error alone: a missing element and a dead app
+produce the same message. With `MAUTO_OBSERVE=1`, a failed device verb carries
+the answer in its envelope, and you can ask directly:
+
+```bash
+mauto crash list                  # scoped to the current device session
+mauto crash get <id> --out /tmp/crash.txt
+```
+
+Read the envelope carefully — `crashes: []` and no `crashes` key are different
+answers. The empty array means the device was asked and reported none. A missing
+key means `mauto` could not ask: the device engine's crash helper was
+unavailable, the lookup exceeded its 3-second budget, or there was no device
+session to scope the reports against. In the last case, `mauto session start`
+first and re-run.
+
+Structured detail for any of those is in the event log:
+
+```bash
+grep -E '"event":"crash\.' mobile-automator/.logs/mauto.ndjson
+```
+
 ---
 
 ## Test Execution Issues
