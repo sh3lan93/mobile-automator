@@ -1,6 +1,6 @@
 'use strict';
 
-const { makeEvent, telemetryPayload, EVENT_FIELDS, LEVELS } = require('../../../src/observe/event');
+const { makeEvent, telemetryPayload, EVENT_FIELDS, EVENT_VERSION, LEVELS } = require('../../../src/observe/event');
 
 describe('makeEvent', () => {
   it('stamps the ambient fields', () => {
@@ -12,6 +12,19 @@ describe('makeEvent', () => {
     expect(e.mauto_version).toBe(require('../../../package.json').version);
     expect(e.node).toBe(process.version);
     expect(e.os).toBe(process.platform);
+  });
+
+  it('does not let callers overwrite the ambient fields', () => {
+    const before = Date.now();
+    const e = makeEvent({ ts: 'x', v: 99, mauto_version: 'x', node: 'x', os: 'x', event: 'verb.end' });
+    const ts = Date.parse(e.ts);
+    expect(Number.isNaN(ts)).toBe(false);
+    expect(Math.abs(ts - before)).toBeLessThan(60 * 1000);
+    expect(e.v).toBe(EVENT_VERSION);
+    expect(e.mauto_version).toBe(require('../../../package.json').version);
+    expect(e.node).toBe(process.version);
+    expect(e.os).toBe(process.platform);
+    expect(e.event).toBe('verb.end');
   });
 
   it('drops keys the catalog does not declare', () => {

@@ -157,6 +157,11 @@ const NEVER_SENDS = [
 // a caller that invents a field must not be able to smuggle it into a log),
 // and undefined values are omitted so events stay sparse rather than
 // null-padded.
+// The ambient fields are classified sends:true on the grounds that makeEvent
+// computes them (basis computed/constant/closed-set). That is only true if a
+// caller cannot override them, so the caller loop below skips them.
+const AMBIENT_FIELDS = new Set(['ts', 'v', 'mauto_version', 'node', 'os']);
+
 function makeEvent(fields = {}) {
   const out = {
     ts: new Date().toISOString(),
@@ -166,6 +171,7 @@ function makeEvent(fields = {}) {
     os: process.platform,
   };
   for (const [k, val] of Object.entries(fields)) {
+    if (AMBIENT_FIELDS.has(k)) continue;
     if (!Object.prototype.hasOwnProperty.call(EVENT_FIELDS, k)) continue;
     if (val === undefined) continue;
     out[k] = val;
