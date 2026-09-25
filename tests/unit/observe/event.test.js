@@ -1,6 +1,6 @@
 'use strict';
 
-const { makeEvent, telemetryPayload, EVENT_FIELDS, LEVELS } = require('../../../src/observe/event');
+const { makeEvent, telemetryPayload, EVENT_FIELDS, EVENT_VERSION, LEVELS } = require('../../../src/observe/event');
 
 describe('makeEvent', () => {
   it('stamps the ambient fields', () => {
@@ -12,6 +12,19 @@ describe('makeEvent', () => {
     expect(e.mauto_version).toBe(require('../../../package.json').version);
     expect(e.node).toBe(process.version);
     expect(e.os).toBe(process.platform);
+  });
+
+  it('does not let callers overwrite the ambient fields', () => {
+    const before = Date.now();
+    const e = makeEvent({ ts: 'x', v: 99, mauto_version: 'x', node: 'x', os: 'x', event: 'verb.end' });
+    const ts = Date.parse(e.ts);
+    expect(Number.isNaN(ts)).toBe(false);
+    expect(Math.abs(ts - before)).toBeLessThan(60 * 1000);
+    expect(e.v).toBe(EVENT_VERSION);
+    expect(e.mauto_version).toBe(require('../../../package.json').version);
+    expect(e.node).toBe(process.version);
+    expect(e.os).toBe(process.platform);
+    expect(e.event).toBe('verb.end');
   });
 
   it('drops keys the catalog does not declare', () => {
@@ -156,5 +169,32 @@ describe('crash field classifications', () => {
     expect(p).not.toHaveProperty('app_id');
     expect(p).not.toHaveProperty('message');
     expect(p).not.toHaveProperty('path');
+  });
+});
+
+describe('telemetry transport field classifications', () => {
+  const { EVENT_FIELDS, makeEvent, telemetryPayload } = require('../../../src/observe/event');
+
+  it('lets a spooled line carry a delivery id, a batch size and an HTTP status', () => {
+    for (const f of ['msg_id', 'count', 'http_status']) {
+      expect(EVENT_FIELDS[f]).toBeDefined();
+      expect(EVENT_FIELDS[f].sends).toBe(true);
+    }
+  });
+
+  it('round-trips a flush event through makeEvent without dropping a field', () => {
+    const e = makeEvent({
+      src: 'daemon',
+      event: 'telemetry.flush',
+      msg_id: 'b3a1c0de4f5a6b7c8d9e0f1a2b3c4d5e',
+      count: 42,
+      http_status: 200,
+      ok: true,
+      dur_ms: 137,
+    });
+    const p = telemetryPayload(e);
+    expect(p.msg_id).toBe('b3a1c0de4f5a6b7c8d9e0f1a2b3c4d5e');
+    expect(p.count).toBe(42);
+    expect(p.http_status).toBe(200);
   });
 });

@@ -19,11 +19,13 @@ const realFs = require('fs');
 const crypto = require('crypto');
 
 const { handlePath } = require('./session-paths');
+const { SESSION_ID_PATTERN } = require('../observe/event');
 
 // 16 hex chars from the CSPRNG, derived from NOTHING — not the project root,
 // not the device, not the pid. That is what makes the event catalog's
 // `sends: true` on session_id true rather than merely asserted, and
 // tests/unit/device/session-handle.test.js is where the claim is enforced.
+// readSessionId() holds the read side to the same shape (SESSION_ID_PATTERN).
 //
 // Deliberately NOT persisted across daemon restarts. A stable id would be a
 // machine fingerprint; this one changes exactly when the daemon does, which is
@@ -45,7 +47,7 @@ function readHandle(projectRoot, { fs = realFs } = {}) {
 function readSessionId(projectRoot, { fs = realFs } = {}) {
   const handle = readHandle(projectRoot, { fs });
   const id = handle && handle.session_id;
-  return typeof id === 'string' && id ? id : null;
+  return typeof id === 'string' && SESSION_ID_PATTERN.test(id) ? id : null;
 }
 
 module.exports = { newSessionId, readHandle, readSessionId };
