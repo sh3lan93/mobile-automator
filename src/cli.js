@@ -1378,12 +1378,14 @@ function buildProgram(deps = {}) {
     // user stands in, never a discovered ancestor. Defaults to an injected
     // projectRoot so tests that inject only a root keep writing there.
     cwd = deps.projectRoot !== undefined ? deps.projectRoot : process.cwd(),
-    // The upward-discovery result `{ root, searched }` (#188). run() resolves
-    // it once and passes it in. When a caller injects a projectRoot WITHOUT
-    // one, that root is trusted as the workspace: injecting a root is an
-    // explicit statement of where the workspace is, and it is the seam every
-    // in-process test drives. With neither injected, discover from cwd exactly
-    // as run() does, so a bare buildProgram() behaves like production.
+    // The upward-discovery result `{ root, searched }` (#188): run() resolves
+    // it once and passes it in, tests inject it wholesale, and a bare
+    // buildProgram() discovers from cwd exactly as run() does. ONE fabrication
+    // rule, stated once: a caller that injects ONLY a projectRoot is trusted
+    // to know where the workspace is ({ root: projectRoot }) — the legacy
+    // handler-test seam, and deliberately gate-arming. run() passes cwd +
+    // workspace and NEVER projectRoot, so production cannot arm this branch
+    // and silently disable the requireWorkspace gate.
     workspace = deps.projectRoot !== undefined
       ? { root: deps.projectRoot, searched: [deps.projectRoot] }
       : findWorkspaceRoot(cwd),
@@ -2191,7 +2193,11 @@ async function run(argv) {
   const emitters = makeEmitters({ projectRoot });
   activeEmitters = emitters;
   try {
-    const program = buildProgram({ emitters, projectRoot, cwd, workspace });
+    // No projectRoot here, deliberately: buildProgram derives it as
+    // `workspace.root || cwd`, and an injected projectRoot is the test seam
+    // that FABRICATES a workspace — passing one would arm that branch and
+    // silently disable the requireWorkspace gate.
+    const program = buildProgram({ emitters, cwd, workspace });
     await program.parseAsync(argv);
   } catch (err) {
     // Help/version are NOT errors: commander already wrote the human-readable
