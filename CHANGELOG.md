@@ -216,6 +216,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   whatever string the file held, so a stale or hand-edited handle could put text
   on the wire. `mauto session status` now reports `session_id: null` for a
   malformed handle.
+- `mauto` now finds its workspace by walking up from the current directory, as
+  `git` and `npm` do (#188). It previously joined `<cwd>/mobile-automator` and
+  stopped, so from any subdirectory `config get` answered `ok:true` with the
+  value silently absent, `memory show` reported an empty store, and results and
+  `.logs/` went astray. The marker is `mobile-automator/config.json`, the
+  nearest workspace wins, and the walk stops at the repository's `.git` (file
+  or directory) or the filesystem root. With no workspace found, `config
+  get|set`, `memory show|add|forget` and `result add-step|add-assertion|
+  add-crash|finalize` now fail `environment` (exit 5) with a hint listing the
+  searched paths, instead of succeeding against the wrong directory; `config
+  set` no longer creates a stray `mobile-automator/`. `guide`, `mcp` and the
+  device/session verbs still fall back to the current directory. `setup` and
+  `init` still write to the current directory; `setup` adds a hint when that
+  new workspace shadows one in an ancestor.
 
 ---
 

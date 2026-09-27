@@ -209,7 +209,7 @@ Tracked under the `production-ready` milestone; worth knowing before you debug s
 ## Conventions
 
 - The `mobile-automator` namespace is used for workspace paths and the npm package.
-- Workspace paths (`mobile-automator/scenarios/`, etc.) are relative to the user's project root, not this repo.
+- Workspace paths (`mobile-automator/scenarios/`, etc.) are relative to the user's project root, not this repo. That root is discovered once, in `run()`, by `src/workspace/discover.js` (walk up to the nearest `mobile-automator/config.json`, stop at `.git`); verbs that need a workspace are wrapped in `requireWorkspace` and fail `environment` when none is found (#188).
 - CLAUDE.md is for humans maintaining the CLI.
 
 ## Metadata
