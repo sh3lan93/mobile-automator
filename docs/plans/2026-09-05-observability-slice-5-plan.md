@@ -48,6 +48,17 @@ The spool sink is synchronous, unconditional-success, and never blocks. The daem
 - **CI version gate:** this touches `src/`, `bin/` and `package.json`, so `version` must move to a value not yet in `git tag`. This is the graduation slice: **`0.26.0-rc.3` → `0.26.0`**. Task 12 asserts the starting version rather than assuming it.
 - **Platform-agnostic:** never emit `resource-id` or OS-specific element IDs in any artifact.
 
+### Addendum — review of PR #193 (rc.5), binding on Tasks 2–12
+
+Task 1 as originally written classified fields with a prose `why` (then a `basis` label) and a three-regex transport guard. Review showed both were self-declarations, so they were replaced (see `src/observe/accepts.js`, `src/observe/vocab.js`, `tests/lint/network-detector.js`). Consequences for the remaining tasks:
+
+- **`telemetryPayload()` can now return a payload with fields missing.** A value that fails its `accepts` check is dropped. `flush.js` and `transport.js` MUST skip a payload that has no `event` (an unrecognised event name is dropped, leaving nothing meaningful to send) rather than posting a fragment. Add a test for it in Task 6.
+- **A new `sends: true` field needs a check, and a new event name, verb or stop reason needs a vocabulary entry.** `tests/lint/telemetry-vocab-drift.test.js` fails otherwise. `telemetry.flush` is allowlisted there as "producer lands later"; remove that allowlist entry when Task 6 records it.
+- **Task 2 must flip the transport guard from "absent or sole importer" to "exists".** `tests/lint/telemetry-transport-isolation.test.js` carries a `TODO(slice-5 transport task)`. `src/observe/transport.js` is the only file allowed a `NETWORK_ALWAYS` module.
+- **`msg_id` is 32 lowercase hex.** PostHog's `uuid` needs UUID formatting, so `transport.js` hyphenates it into the wire envelope; the catalog and the spool keep the 32-hex form.
+- **`error_code` is checked against the running platform's errno names plus `ELOCKED`.** Node `ERR_*` codes and numeric MCP codes are dropped from the wire by design.
+- **Open design question, deliberately not decided here:** `tool` + `call_id` + `dur_ms` + millisecond `ts` + `session_id` are each cleared but together reconstruct the timed sequence of device primitives in a session. Decide whether to coarsen `ts` or drop `call_id` from the wire before graduation, and record the decision in the privacy doc (Task 10).
+
 ---
 
 ## The no-network-in-a-one-shot-process analysis

@@ -9,58 +9,104 @@
 // shipping a user's unreleased app id to a third party.
 //
 //   sends: true  — may appear in slice 5's telemetry payload. Only enumerated
-//                  values, counts, versions and durations qualify.
+//                  values, counts, versions and durations qualify, and the
+//                  entry carries an `accepts(value)` check that ENFORCES that
+//                  at the wire (see below).
 //   sends: false — local logs only. telemetryPayload() cannot serialize it.
 //
 // The allowlist direction is deliberate: a field nobody has classified is
-// silently DROPPED from telemetry rather than silently sent.
+// silently DROPPED from telemetry rather than silently sent, and so is a
+// classified field whose value fails its check.
+//
+// A `sends: true` entry is built with sendable(accepts(...), why). The helper
+// tags the check with the kind of guarantee it enforces and `basis` is read off
+// that tag — there is no hand-written basis to lie with. Validation happens at
+// the WIRE (telemetryPayload), not in makeEvent: local logs stay lossless, and
+// tests deliberately record arbitrary strings.
 
 const pkg = require('../../package.json');
+const {
+  SEND_BASES,
+  oneOf,
+  matches,
+  integer,
+  boolean,
+  isoTimestamp,
+  sendable,
+  findUnenforced,
+} = require('./accepts');
+const { OS_NAMES, EVENT_NAMES, VERB_NAMES, STOP_REASONS, ERROR_CODES } = require('./vocab');
+const { ERROR_KINDS } = require('../output/envelope');
+// Pure module with no requires, so this adds no cycle. It is THE closed set of
+// mobile-mcp primitive names and must not be restated here.
+const { MOBILE_MCP_TOOL_NAMES } = require('../device/mobile-mcp-tools');
 
 const EVENT_VERSION = 1;
+
+// The shape of a session_id: what session-handle.newSessionId() mints (8 CSPRNG
+// bytes as hex) and the only shape readSessionId() will return. session_id is
+// sends:true on the grounds that it is random and carries no user content; the
+// handle file it is read back from is just a file, so the shape is what keeps
+// that true for a stale or hand-edited one.
+const SESSION_ID_PATTERN = /^[0-9a-f]{16}$/;
 
 // Ascending severity. Index order is the comparison order.
 const LEVELS = ['debug', 'info', 'warn', 'error'];
 
+// Shapes of the `constant` and `csprng` string fields. Anchored: an unanchored
+// pattern would accept a match anywhere inside caller text.
+const SEMVER = /^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/;
+const NODE_VERSION = /^v\d+\.\d+\.\d+$/;
+const MSG_ID = /^[0-9a-f]{32}$/;
+
 const EVENT_FIELDS = {
   // --- ambient, stamped by makeEvent -------------------------------------
-  ts: { sends: true, why: 'ISO timestamp; carries no user content' },
-  v: { sends: true, why: 'event schema version' },
-  mauto_version: { sends: true, why: 'our own package version' },
-  node: { sends: true, why: 'node runtime version' },
-  os: { sends: true, why: 'process.platform; one of a fixed set' },
+  ts: sendable(isoTimestamp(), 'ISO timestamp; carries no user content'),
+  v: sendable(integer({ min: 1 }, 'constant'), 'event schema version'),
+  // Shape, not equality with pkg.version: a spooled event may be flushed after an
+  // upgrade, and must not be dropped for naming the version that wrote it.
+  mauto_version: sendable(matches(SEMVER, 'constant'), 'our own package version'),
+  node: sendable(matches(NODE_VERSION, 'constant'), 'node runtime version'),
+  os: sendable(oneOf(OS_NAMES), 'process.platform; one of a fixed set'),
 
   // --- classification ----------------------------------------------------
-  level: { sends: true, why: 'enumerated: debug|info|warn|error' },
-  src: { sends: true, why: 'enumerated: cli|daemon' },
-  event: { sends: true, why: 'enumerated event name' },
+  level: sendable(oneOf(LEVELS), 'enumerated: debug|info|warn|error'),
+  src: sendable(oneOf(['cli', 'daemon']), 'enumerated: cli|daemon'),
+  event: sendable(oneOf(EVENT_NAMES), 'enumerated event name'),
 
   // --- outcome -----------------------------------------------------------
-  // The justification is only true if the value is enforced to be one: cli.js
-  // takes it from commander's resolved command, never from argv, so an
-  // unparseable invocation records no verb rather than a user-supplied token.
-  verb: { sends: true, why: 'the mauto verb name; a fixed vocabulary we ship' },
-  ok: { sends: true, why: 'boolean outcome' },
-  error_kind: { sends: true, why: 'enumerated envelope taxonomy (device|timeout|...)' },
-  exit_code: { sends: true, why: 'enumerated exit code' },
-  dur_ms: { sends: true, why: 'duration; carries no user content' },
+  // The justification is only true if the value is enforced to be one, and it
+  // is enforced twice: cli.js takes it from commander's resolved command, never
+  // from argv (so an unparseable invocation records no verb rather than a
+  // user-supplied token), and the accepts check below rejects anything outside
+  // VERB_NAMES at the wire.
+  verb: sendable(oneOf(VERB_NAMES), 'the mauto verb name; a fixed vocabulary we ship'),
+  ok: sendable(boolean(), 'boolean outcome'),
+  // ERROR_KINDS is derived from the envelope's own taxonomy, not copied.
+  error_kind: sendable(oneOf(ERROR_KINDS), 'enumerated envelope taxonomy (device|timeout|...)'),
+  exit_code: sendable(integer({ min: 0, max: 255 }), 'process exit code; 0..255'),
+  dur_ms: sendable(integer({ min: 0 }), 'duration; carries no user content'),
 
   // --- daemon ------------------------------------------------------------
   // Random per-daemon-lifetime id, generated by session-handle.newSessionId()
   // from crypto.randomBytes and derived from NOTHING — not the project root,
   // not the device, not the pid. Deliberately NOT persisted across restarts: a
   // stable id would be a machine fingerprint, whereas this one changes exactly
-  // when the daemon does, which is the fact it exists to report. Enforced by
-  // tests/unit/device/session-handle.test.js.
-  session_id: { sends: true, why: 'random id scoped to one daemon lifetime; no user-derived content' },
+  // when the daemon does, which is the fact it exists to report. Enforced on
+  // the mint side by tests/unit/device/session-handle.test.js and on the read
+  // side by readSessionId() checking SESSION_ID_PATTERN — and at the wire by
+  // the same pattern, so a stale or hand-edited handle file cannot ship text.
+  session_id: sendable(matches(SESSION_ID_PATTERN, 'csprng'), 'random id scoped to one daemon lifetime; no user-derived content'),
   // As with `verb`, the justification holds only because the value is enforced
   // to be one: src/device/device-call.js records this field ONLY when
   // isKnownTool() accepts it (src/device/mobile-mcp-tools.js), because it
   // arrives inside a socket frame and the socket is reachable by anything on
   // the machine. It is checked there — in the one wrapper every daemon call
   // goes through — rather than at the daemon's frame router, so a second call
-  // site cannot appear that forgets to check.
-  tool: { sends: true, why: 'mobile-mcp primitive name, checked against the pinned tool set' },
+  // site cannot appear that forgets to check. The accepts check below applies
+  // the same set again at the wire, so a later recording site that forgets
+  // still cannot ship an unknown name.
+  tool: sendable(oneOf(MOBILE_MCP_TOOL_NAMES), 'mobile-mcp primitive name, checked against the pinned tool set'),
   // Monotonic integer minted by startDaemon, one per device call, scoped to one
   // daemon lifetime. It is what makes call.start and call.end PAIRABLE: every
   // call in a lifetime shares session_id and the daemon multiplexes, so a
@@ -73,22 +119,40 @@ const EVENT_FIELDS = {
   // text on a sends:true field — the same concern that produced
   // src/device/mobile-mcp-tools.js. A daemon-minted counter needs no redaction
   // argument at all, on exactly the grounds dur_ms is cleared.
-  call_id: { sends: true, why: 'daemon-minted counter scoped to one session; never the client-supplied frame id' },
-  stop_reason: { sends: true, why: 'enumerated: idle|signal|shutdown|crash|explicit' },
-  error_code: { sends: true, why: "Node/libuv errno string (EADDRINUSE|EACCES|…) plus our own ELOCKED" },
+  call_id: sendable(integer({ min: 1 }), 'daemon-minted counter scoped to one session; never the client-supplied frame id'),
+  stop_reason: sendable(oneOf(STOP_REASONS), 'enumerated: idle|signal|shutdown|crash|explicit'),
+  // Errno NAMES only: the numeric codes an MCP server reports, and Node's
+  // ERR_* codes, fail the check and are dropped rather than sent.
+  error_code: sendable(oneOf(ERROR_CODES), 'Node/libuv errno string (EADDRINUSE|EACCES|…) plus our own ELOCKED'),
 
   // --- crash (slice 4) ---------------------------------------------------
   // The ONLY new field slice 4 mints. As with `verb`, `tool` and `session_id`,
   // the sends:true justification is only true if the value is enforced to be
   // one: every record site coerces with Number.isFinite before recording, so a
-  // malformed engine payload records no field rather than an arbitrary value.
+  // malformed engine payload records no field rather than an arbitrary value,
+  // and the accepts check below re-verifies a non-negative integer at the wire.
   //
   // Deliberately no crash_process / crash_excerpt / crash_path fields: a
   // crashed process name IS an app id, a stack excerpt IS free text and a
   // report location IS a filesystem path. Those three entries already carry the
   // right classification, and a near-copy would be a second decision to keep in
   // sync with the first.
-  crash_count: { sends: true, why: 'integer count of crash reports observed; carries no user content' },
+  crash_count: sendable(integer({ min: 0 }), 'integer count of crash reports observed; carries no user content'),
+
+  // --- telemetry transport (slice 5) --------------------------------------
+  // Zero-arity CSPRNG token, generated per EVENT at spool time by
+  // src/observe/spool.js newMessageId() and derived from NOTHING — not the
+  // project root, not the pid, not the clock. It is sent as the PostHog
+  // event's `uuid` so a re-sent batch (delivery is at-least-once; see
+  // src/observe/flush.js) deduplicates at ingestion. Per-event and never
+  // reused, so it cannot correlate two events, let alone two machines — the
+  // opposite of the stable install id this design deliberately does not have.
+  // It is sends:true on EXACTLY the grounds session_id is.
+  msg_id: sendable(matches(MSG_ID, 'csprng'), 'zero-arity CSPRNG per-event delivery id; carries no user content'),
+  // Integer this code computes (batch size), never a caller-supplied value.
+  count: sendable(integer({ min: 0 }), 'integer count (batch size); carries no user content'),
+  // Integer our own telemetry endpoint returns; never a caller-supplied value.
+  http_status: sendable(integer({ min: 100, max: 599 }), 'integer HTTP status from our own telemetry endpoint'),
 
   // --- local only: every one of these can carry user content -------------
   run_id: { sends: false, why: 'agent-chosen; routinely names an unreleased feature' },
@@ -119,10 +183,16 @@ const NEVER_SENDS = [
   'path',
 ];
 
+// The ambient fields are classified sends:true on the grounds that makeEvent
+// computes them itself. That is only true if a caller cannot override them, so
+// the caller loop in makeEvent skips them.
+const AMBIENT_FIELDS = new Set(['ts', 'v', 'mauto_version', 'node', 'os']);
+
 // Build an event from caller fields. Unknown keys are dropped (not an error:
 // a caller that invents a field must not be able to smuggle it into a log),
 // and undefined values are omitted so events stay sparse rather than
-// null-padded.
+// null-padded. Values are NOT validated here: local logs stay lossless, and
+// the wire check lives in telemetryPayload.
 function makeEvent(fields = {}) {
   const out = {
     ts: new Date().toISOString(),
@@ -132,6 +202,7 @@ function makeEvent(fields = {}) {
     os: process.platform,
   };
   for (const [k, val] of Object.entries(fields)) {
+    if (AMBIENT_FIELDS.has(k)) continue;
     if (!Object.prototype.hasOwnProperty.call(EVENT_FIELDS, k)) continue;
     if (val === undefined) continue;
     out[k] = val;
@@ -140,16 +211,31 @@ function makeEvent(fields = {}) {
 }
 
 // The ONLY function permitted to build a network payload. Allowlist by
-// construction: it iterates the catalog, never the event.
+// construction: it iterates the catalog, never the event. A sends:true field
+// is copied only if its `accepts` check passes; a failing value is OMITTED,
+// never coerced and never sent, so a field's classification is enforced here
+// rather than merely declared.
 function telemetryPayload(event = {}) {
   const out = {};
   for (const [name, def] of Object.entries(EVENT_FIELDS)) {
     if (!def.sends) continue;
     if (!Object.prototype.hasOwnProperty.call(event, name)) continue;
-    if (event[name] === undefined) continue;
-    out[name] = event[name];
+    const value = event[name];
+    if (value === undefined) continue;
+    if (typeof def.accepts !== 'function' || !def.accepts(value)) continue;
+    out[name] = value;
   }
   return out;
 }
 
-module.exports = { EVENT_VERSION, LEVELS, EVENT_FIELDS, NEVER_SENDS, makeEvent, telemetryPayload };
+module.exports = {
+  EVENT_VERSION,
+  SESSION_ID_PATTERN,
+  LEVELS,
+  EVENT_FIELDS,
+  NEVER_SENDS,
+  SEND_BASES,
+  makeEvent,
+  telemetryPayload,
+  findUnenforced,
+};
