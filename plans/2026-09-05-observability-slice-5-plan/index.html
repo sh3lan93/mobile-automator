@@ -1270,6 +1270,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Global Constraints">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#addendum-review-of-pr-193-rc5-binding-on-tasks-212" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Addendum — review of PR #193 (rc.5), binding on Tasks 2–12
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1581,6 +1598,16 @@
 <li><strong>Bind, do not copy.</strong> The spool becomes a third entry in the existing <code>defaultSinks</code> list — not a second sink-list, not a parallel <code>record()</code>. That one edit covers the CLI and the daemon at once, because <code>bin/mauto-session-daemon.js</code> already builds its recorder through <code>boundRecorder</code> → <code>defaultSinks</code>.</li>
 <li><strong>CI version gate:</strong> this touches <code>src/</code>, <code>bin/</code> and <code>package.json</code>, so <code>version</code> must move to a value not yet in <code>git tag</code>. This is the graduation slice: <strong><code>0.26.0-rc.3</code> → <code>0.26.0</code></strong>. Task 12 asserts the starting version rather than assuming it.</li>
 <li><strong>Platform-agnostic:</strong> never emit <code>resource-id</code> or OS-specific element IDs in any artifact.</li>
+</ul>
+<h3 id="addendum-review-of-pr-193-rc5-binding-on-tasks-212">Addendum — review of PR #193 (rc.5), binding on Tasks 2–12<a class="headerlink" href="#addendum-review-of-pr-193-rc5-binding-on-tasks-212" title="Permanent link">&para;</a></h3>
+<p>Task 1 as originally written classified fields with a prose <code>why</code> (then a <code>basis</code> label) and a three-regex transport guard. Review showed both were self-declarations, so they were replaced (see <code>src/observe/accepts.js</code>, <code>src/observe/vocab.js</code>, <code>tests/lint/network-detector.js</code>). Consequences for the remaining tasks:</p>
+<ul>
+<li><strong><code>telemetryPayload()</code> can now return a payload with fields missing.</strong> A value that fails its <code>accepts</code> check is dropped. <code>flush.js</code> and <code>transport.js</code> MUST skip a payload that has no <code>event</code> (an unrecognised event name is dropped, leaving nothing meaningful to send) rather than posting a fragment. Add a test for it in Task 6.</li>
+<li><strong>A new <code>sends: true</code> field needs a check, and a new event name, verb or stop reason needs a vocabulary entry.</strong> <code>tests/lint/telemetry-vocab-drift.test.js</code> fails otherwise. <code>telemetry.flush</code> is allowlisted there as "producer lands later"; remove that allowlist entry when Task 6 records it.</li>
+<li><strong>Task 2 must flip the transport guard from "absent or sole importer" to "exists".</strong> <code>tests/lint/telemetry-transport-isolation.test.js</code> carries a <code>TODO(slice-5 transport task)</code>. <code>src/observe/transport.js</code> is the only file allowed a <code>NETWORK_ALWAYS</code> module.</li>
+<li><strong><code>msg_id</code> is 32 lowercase hex.</strong> PostHog's <code>uuid</code> needs UUID formatting, so <code>transport.js</code> hyphenates it into the wire envelope; the catalog and the spool keep the 32-hex form.</li>
+<li><strong><code>error_code</code> is checked against the running platform's errno names plus <code>ELOCKED</code>.</strong> Node <code>ERR_*</code> codes and numeric MCP codes are dropped from the wire by design.</li>
+<li><strong>Open design question, deliberately not decided here:</strong> <code>tool</code> + <code>call_id</code> + <code>dur_ms</code> + millisecond <code>ts</code> + <code>session_id</code> are each cleared but together reconstruct the timed sequence of device primitives in a session. Decide whether to coarsen <code>ts</code> or drop <code>call_id</code> from the wire before graduation, and record the decision in the privacy doc (Task 10).</li>
 </ul>
 <hr />
 <h2 id="the-no-network-in-a-one-shot-process-analysis">The no-network-in-a-one-shot-process analysis<a class="headerlink" href="#the-no-network-in-a-one-shot-process-analysis" title="Permanent link">&para;</a></h2>
