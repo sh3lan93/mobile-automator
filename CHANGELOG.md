@@ -145,6 +145,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   user content). The crashed process name reuses the existing `app_id` field
   and the stack excerpt reuses `message`, both already `sends: false` — a
   package name is an unreleased product's roadmap.
+- The durable half of crash visibility (#192): `mauto result add-crash` and a
+  new root-level `crashes` array in the result schema. A crash the agent saw
+  at 10:31 was surfaced in the envelope and the hint, then discarded when the
+  process exited — the result file a QA lead reads tomorrow had no record the
+  app died. The record carries `crash_id` (the handle for `mauto crash get`),
+  the crashed `process`, the device's own `timestamp`, `detected_at`, the
+  in-flight `step_id`, a bounded `excerpt`, and `report_path` to the full
+  report. The excerpt is capped at 2000 characters in the store, not trusted
+  from the caller — a result file is read into an agent's context and
+  committed to repos, and an inline native tombstone is a cost every future
+  reader pays. `crashes` is written only when non-empty, so a clean run emits
+  exactly the file it emitted before the field existed. The verb is
+  deliberately NOT gated behind `MAUTO_OBSERVE`, unlike `mauto crash`: it is
+  a device-free result writer with no partial state to hide, and the
+  result-coverage guard builds the program in a plain environment, where a
+  gated registration would red-tree CI. Every field is `sends: false`; none
+  reaches the telemetry path, where the only crash field is the integer
+  `crash_count`.
+- Crash triage in `mauto guide execute` (both platform modes) and a
+  TROUBLESHOOTING recipe. The prose teaches the three-state contract directly
+  — `crashes` non-empty means the app died, `[]` means it was asked and is
+  alive, absent means `mauto` could not check — and how to record a crash so
+  the result file carries it. The bootstrap verb map is untouched: it is the
+  always-loaded floor and must not advertise a gated verb.
 
 ---
 

@@ -17,6 +17,11 @@ const { OBSERVATION_TYPES } = require('./flags');
 
 const SCHEMA_VERSION = '2.0';
 
+// A crash report is read into an agent's context and routinely committed to a
+// repo. A native tombstone is tens of kilobytes, so the excerpt is bounded HERE
+// rather than trusted from the caller — the full report's home is report_path.
+const MAX_CRASH_EXCERPT = 2000;
+
 function defaultMetadata(overrides = {}) {
   return {
     app_version: overrides.app_version || 'unknown',
@@ -77,6 +82,7 @@ class ResultStore {
     this._assertions = loaded.assertion_results || [];
     this._observations = loaded.observations || [];
     this._capturedVariables = loaded.captured_variables || {};
+    this._crashes = loaded.crashes || [];
     if (!this.scenarioId && loaded.scenario_id) this.scenarioId = loaded.scenario_id;
   }
 
@@ -151,6 +157,7 @@ class ResultStore {
       assertion_results: this._assertions,
       observations: this._observations,
       captured_variables: this._capturedVariables,
+      crashes: this._crashes,
       _in_progress: true,
     };
     this._atomicWrite(JSON.stringify(snapshot, null, 2));
@@ -223,6 +230,29 @@ class ResultStore {
         message: message || '',
       };
       this._assertions.push(entry);
+      this._persistInProgress();
+      return entry;
+    });
+  }
+
+  addCrash({ crash_id, process = null, timestamp = null, step_id = null, excerpt = null, report_path = null } = {}) {
+    return withLock(this._lock, () => {
+      this._refreshFromDisk();
+      if (!crash_id || String(crash_id).trim() === '') {
+        // Without an id the full report is unreachable, which makes the record
+        // a claim nobody can check.
+        throw new Error('addCrash requires a crash_id');
+      }
+      const entry = {
+        crash_id: String(crash_id),
+        process: process == null ? null : String(process),
+        timestamp: timestamp == null ? null : String(timestamp),
+        detected_at: new Date().toISOString(),
+        step_id: step_id == null ? null : String(step_id),
+        excerpt: excerpt == null ? null : String(excerpt).slice(0, MAX_CRASH_EXCERPT),
+        report_path: report_path == null ? null : String(report_path),
+      };
+      this._crashes.push(entry);
       this._persistInProgress();
       return entry;
     });
@@ -325,6 +355,11 @@ class ResultStore {
       // trace must stay shaped exactly as 0.24.0 wrote it, so finalize never
       // emits an empty measurements object as a placeholder.
       if (measurements) result.measurements = measurements;
+
+      // Present only when non-empty. That is what makes `crashes` additive in
+      // PRACTICE and not merely in schema: a run with no crashes emits exactly
+      // the file it emitted before this field existed.
+      if (this._crashes.length > 0) result.crashes = this._crashes;
 
       this._atomicWrite(JSON.stringify(result, null, 2));
       return result;

@@ -195,5 +195,14 @@ describe('result coverage — schema ↔ store ↔ verbs', () => {
       expect(result.measurements.source).toBe('trace');
       expect(result.duration_seconds).toBe(12.5);
     });
+
+    test('a crash supplied to addCrash reaches the finalized result', () => {
+      const store = new ResultStore({ runId: 'run_20260101_000006', scenarioId: 's', projectRoot: tmpProjectRoot() });
+      store.addStep({ step_id: 'step_1', status: 'fail' });
+      store.addCrash({ crash_id: 'r1', process: 'com.acme.app', step_id: 'step_1' });
+      const result = store.finalize({});
+      expect(result.crashes[0].crash_id).toBe('r1');
+      expect(result.crashes[0].process).toBe('com.acme.app');
+    });
   });
 });

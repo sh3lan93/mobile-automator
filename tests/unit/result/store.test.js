@@ -324,4 +324,76 @@ describe('ResultStore', () => {
       expect(second.observations.filter((o) => o.type === 'state_context')).toHaveLength(1);
     });
   });
+
+  describe('addCrash', () => {
+    const newStore = (runId) =>
+      new ResultStore({ runId, scenarioId: 'login', projectRoot: tmpRoot() });
+
+    it('records a crash and carries it into the finalized result', () => {
+      const store = newStore('run_20260905_000001');
+      store.addStep({ step_id: 'step_3', status: 'fail' });
+      store.addCrash({
+        crash_id: 'r1',
+        process: 'com.acme.app',
+        timestamp: '2026-09-05T10:30:00.000Z',
+        step_id: 'step_3',
+        excerpt: 'FATAL EXCEPTION: main',
+        report_path: 'mobile-automator/results/r1.txt',
+      });
+      const result = store.finalize({});
+      expect(result.crashes).toEqual([
+        {
+          crash_id: 'r1',
+          process: 'com.acme.app',
+          timestamp: '2026-09-05T10:30:00.000Z',
+          step_id: 'step_3',
+          excerpt: 'FATAL EXCEPTION: main',
+          report_path: 'mobile-automator/results/r1.txt',
+          detected_at: expect.any(String),
+        },
+      ]);
+    });
+
+    it('omits `crashes` entirely when there were none — a clean run is byte-identical to today', () => {
+      const store = newStore('run_20260905_000002');
+      store.addStep({ step_id: 'step_1', status: 'pass' });
+      expect(store.finalize({})).not.toHaveProperty('crashes');
+    });
+
+    it('requires a crash_id, because without it the full report is unreachable', () => {
+      const store = newStore('run_20260905_000003');
+      expect(() => store.addCrash({ process: 'com.acme.app' })).toThrow(/crash_id/i);
+    });
+
+    it('caps the excerpt at 2000 chars in the STORE, not in the caller', () => {
+      // A result file gets read into an agent's context and committed to repos.
+      // Trusting the caller to bound a native tombstone is how a 60KB blob ends
+      // up inline in JSON forever.
+      const store = newStore('run_20260905_000004');
+      store.addCrash({ crash_id: 'r1', excerpt: 'x'.repeat(5000) });
+      const result = store.finalize({});
+      expect(result.crashes[0].excerpt).toHaveLength(2000);
+      expect(result.crashes[0].excerpt.startsWith('xx')).toBe(true);
+    });
+
+    it('survives the one-shot process boundary via the in-progress file', () => {
+      const root = tmpRoot();
+      const opts = { runId: 'run_20260905_000005', scenarioId: 'login', projectRoot: root };
+      new ResultStore(opts).addCrash({ crash_id: 'r1', process: 'com.acme.app' });
+      // A separate process would construct a fresh store against the same root.
+      const result = new ResultStore(opts).finalize({});
+      expect(result.crashes.map((c) => c.crash_id)).toEqual(['r1']);
+    });
+
+    it('nulls the optional fields rather than dropping them, so the shape is stable', () => {
+      const store = newStore('run_20260905_000006');
+      store.addCrash({ crash_id: 'r1' });
+      const [crash] = store.finalize({}).crashes;
+      expect(crash.process).toBeNull();
+      expect(crash.timestamp).toBeNull();
+      expect(crash.step_id).toBeNull();
+      expect(crash.excerpt).toBeNull();
+      expect(crash.report_path).toBeNull();
+    });
+  });
 });
