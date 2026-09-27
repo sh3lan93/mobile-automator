@@ -27,6 +27,22 @@ describe('connection', () => {
       expect(typeof r.close).toBe('function');
       expect(r).not.toHaveProperty('source');
     });
+
+    // cli.js's connectBridge passes autostart:false when no workspace was
+    // discovered (#188) so device verbs connect one-shot and create no
+    // mobile-automator/.session/ tree; the default stays true so a workspace
+    // keeps transparent daemon reuse.
+    test('forwards autostart to the resolver, defaulting it to true', async () => {
+      const seen = [];
+      const resolve = async (args) => {
+        seen.push(args);
+        return { bridge: {}, close: async () => {} };
+      };
+      await acquireConnection({ device: null, projectRoot: '/x', resolve });
+      await acquireConnection({ device: null, projectRoot: '/x', autostart: false, resolve });
+      expect(seen[0]).toMatchObject({ device: null, projectRoot: '/x', autostart: true });
+      expect(seen[1]).toMatchObject({ device: null, projectRoot: '/x', autostart: false });
+    });
   });
 
   describe('isSessionAlive', () => {

@@ -28,7 +28,7 @@ const realFs = require('fs');
 const path = require('path');
 
 const { record } = require('./recorder');
-const { runTracePath } = require('./paths');
+const { runTracePath, workspaceDir } = require('./paths');
 
 // The failure kinds worth a picture.
 //
@@ -104,6 +104,12 @@ async function captureOnFailure({
     tracePath = runTracePath(projectRoot, runId, env);
     if (!isCapturable(result)) return null;
     if (!tracePath) return null;
+    // The same permission the file sink requires (see sinks/file.js): an
+    // observability artifact may not create mobile-automator/ where no
+    // workspace exists. A valid run id is not consent to litter — without this
+    // gate a failing verb would mkdir screenshots/ into an undiscoverable
+    // tree, the #188 pathology.
+    if (!fs.existsSync(workspaceDir(projectRoot))) return null;
     if (!bridge || typeof bridge.screenshot !== 'function') return null;
 
     const dest = failureShotPath(projectRoot, runId, verb);

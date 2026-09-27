@@ -25,8 +25,17 @@ const { spawnSync } = require('child_process');
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const CLI = path.join(REPO_ROOT, 'bin', 'mauto.js');
 
+// A workspace `mauto setup` would have created. The workspace verbs this suite
+// drives (config, result) fail environment without one (#188), and what is
+// under test here is the instrumentation around a SUCCESSFUL verb.
+function seedWorkspace(cwd) {
+  fs.mkdirSync(path.join(cwd, 'mobile-automator'), { recursive: true });
+  fs.writeFileSync(path.join(cwd, 'mobile-automator', 'config.json'), '{"mode":"platform-aware"}\n');
+}
+
 function runCli(args, env = {}) {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-observe-cli-'));
+  seedWorkspace(cwd);
   const logDir = path.join(cwd, 'logs');
   const res = spawnSync(process.execPath, [CLI, ...args], {
     cwd,
@@ -168,6 +177,7 @@ describe('run traces (integration)', () => {
   // mauto.ndjson can be read too.
   function runTraced(args, env = {}) {
     const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-trace-cli-'));
+    seedWorkspace(cwd);
     const logDir = path.join(cwd, 'logs');
     const res = spawnSync(process.execPath, [CLI, ...args], {
       cwd,
@@ -242,6 +252,7 @@ describe('run traces (integration)', () => {
 
   it('measures a real run end to end', () => {
     const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-e2e-measure-'));
+    seedWorkspace(cwd);
     fs.mkdirSync(path.join(cwd, 'mobile-automator', 'results'), { recursive: true });
     const runId = 'run_20260905_141500';
     const env = { ...process.env, MAUTO_LOG_LEVEL: 'info', MAUTO_RUN_ID: runId };
