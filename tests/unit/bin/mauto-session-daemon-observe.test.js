@@ -244,3 +244,16 @@ describe('bin/mauto-session-daemon observability wiring', () => {
     if (release) release({ stop: async () => {}, whenStopped: new Promise(() => {}) });
   });
 });
+
+describe('the daemon process builds a real flusher', () => {
+  it('injects a flush seam into startDaemon', () => {
+    const src = require('fs').readFileSync(
+      require('path').join(__dirname, '..', '..', '..', 'bin', 'mauto-session-daemon.js'),
+      'utf8'
+    );
+    // The seam must be WIRED, not merely importable: an unwired flusher is a
+    // spool that grows forever and a feature that silently does nothing.
+    expect(src).toMatch(/makeFlusher\(/);
+    expect(src).toMatch(/startDaemon\(\{[^}]*flushFor/s);
+  });
+});
