@@ -32,6 +32,7 @@ const { captureOnFailure } = require('./observe/failure-capture');
 const { crashTimestampMs } = require('./device/crash-model');
 const { observeEnabled } = require('./observe/gate');
 const { probeCrashes } = require('./device/failure-probe');
+const { findWorkspaceRoot, noWorkspaceFailure } = require('./workspace/discover');
 
 // Commander throws (via exitOverride) for two very different reasons, and the
 // split below is the ONLY thing that tells them apart.
@@ -787,7 +788,11 @@ function storeHint(store) {
 // on success; only their ERROR paths (unknown topic/name) fall back to the
 // `fail(...)` envelope + exit 3.
 
-function handleSetup({ projectRoot }, opts = {}) {
+// `ancestorRoot` is the workspace discovery found ABOVE cwd, if any. setup
+// still scaffolds in cwd — it is the one verb whose job is to create a
+// workspace where the user stands — but a nested workspace silently shadows
+// the ancestor for every later verb run below it, so say so.
+function handleSetup({ projectRoot, ancestorRoot = null }, opts = {}) {
   const raw = opts.mode === undefined ? 'aware' : String(opts.mode);
   const mode = MODE_ALIASES[raw];
   if (!mode) {
@@ -797,8 +802,11 @@ function handleSetup({ projectRoot }, opts = {}) {
     };
   }
   const r = scaffold(projectRoot, { mode });
+  const hint = ancestorRoot
+    ? `An existing workspace was found in an ancestor directory (${ancestorRoot}). This new workspace in ${projectRoot} shadows it for every mauto verb run from here or below; remove it if you meant to use the ancestor's.`
+    : null;
   return {
-    envelope: ok({ created: r.created, mode: r.mode, next: 'run `mauto guide setup`' }),
+    envelope: ok({ created: r.created, mode: r.mode, next: 'run `mauto guide setup`' }, hint),
     exitKind: 'ok',
   };
 }
@@ -1366,9 +1374,24 @@ function buildProgram(deps = {}) {
     resultStoreFactory = (args) => new ResultStore(args),
     // Factory for the cross-session memory store. Overridable in tests.
     memoryStoreFactory = (args) => new MemoryStore(args),
+    // Where the creating verbs (setup, init) write: always the directory the
+    // user stands in, never a discovered ancestor. Defaults to an injected
+    // projectRoot so tests that inject only a root keep writing there.
+    cwd = deps.projectRoot !== undefined ? deps.projectRoot : process.cwd(),
+    // The upward-discovery result `{ root, searched }` (#188). run() resolves
+    // it once and passes it in. When a caller injects a projectRoot WITHOUT
+    // one, that root is trusted as the workspace: injecting a root is an
+    // explicit statement of where the workspace is, and it is the seam every
+    // in-process test drives. With neither injected, discover from cwd exactly
+    // as run() does, so a bare buildProgram() behaves like production.
+    workspace = deps.projectRoot !== undefined
+      ? { root: deps.projectRoot, searched: [deps.projectRoot] }
+      : findWorkspaceRoot(cwd),
     // Project root used to resolve mobile-automator/results/ — and, through the
-    // emitters below, mobile-automator/.logs/. One root, one tree.
-    projectRoot = process.cwd(),
+    // emitters below, mobile-automator/.logs/. One root, one tree. The
+    // discovered workspace when there is one; cwd otherwise, which is what the
+    // tolerant verbs (guide, mcp, device/session) have always used.
+    projectRoot = workspace.root || cwd,
     // The exit paths. run() passes its own instance so the help/version and
     // fatal paths it owns share this program's resolved verb.
     emitters = makeEmitters({ projectRoot }),
@@ -1454,6 +1477,20 @@ function buildProgram(deps = {}) {
       diagnose(err, classified.exitKind);
       emit(classified, humanFlag());
     }
+  };
+
+  // Gate for verbs whose whole job is reading or writing the workspace. With
+  // no workspace discovered, carrying on against cwd is what produced #188's
+  // confident wrong answers — `ok:true` with a value silently absent, an
+  // "empty" memory store, a result file written where nobody will look — and
+  // `config set` would even create a stray workspace. Fail environment
+  // (exit 5) naming where we looked, so the agent can recover.
+  const requireWorkspace = (action) => (...args) => {
+    if (!workspace.root) {
+      emit(noWorkspaceFailure(workspace.searched), humanFlag());
+      return undefined;
+    }
+    return action(...args);
   };
 
   // Resolve which device a verb targets: explicit --device wins, else the
@@ -1672,7 +1709,7 @@ function buildProgram(deps = {}) {
       []
     )
     .option('--capture <name=value>', 'captured variable; repeatable', collect, [])
-    .action(withEnvelope((opts) => {
+    .action(withEnvelope(requireWorkspace((opts) => {
       const r = handleResultAddStep(
         { resultStoreFactory, projectRoot },
         {
@@ -1688,7 +1725,7 @@ function buildProgram(deps = {}) {
         }
       );
       emit(r, humanFlag());
-    }));
+    })));
 
   result
     .command('add-assertion')
@@ -1702,7 +1739,7 @@ function buildProgram(deps = {}) {
     .option('--message <text>', 'human-readable justification for the verdict')
     .option('--expected <v>', 'expected value')
     .option('--actual <v>', 'observed value')
-    .action(withEnvelope((opts) => {
+    .action(withEnvelope(requireWorkspace((opts) => {
       const r = handleResultAddAssertion(
         { resultStoreFactory, projectRoot },
         {
@@ -1718,7 +1755,7 @@ function buildProgram(deps = {}) {
         }
       );
       emit(r, humanFlag());
-    }));
+    })));
 
   // Not gated behind MAUTO_OBSERVE — see handleResultAddCrash's comment.
   result
@@ -1732,7 +1769,7 @@ function buildProgram(deps = {}) {
     .option('--crash-timestamp <iso>', "the device's own time for the report")
     .option('--excerpt <text>', 'head of the crash report (stored capped at 2000 chars)')
     .option('--report-path <path>', 'path to the full report written by `mauto crash get --out`')
-    .action(withEnvelope((opts) => {
+    .action(withEnvelope(requireWorkspace((opts) => {
       const r = handleResultAddCrash(
         { resultStoreFactory, projectRoot },
         {
@@ -1747,7 +1784,7 @@ function buildProgram(deps = {}) {
         }
       );
       emit(r, humanFlag());
-    }));
+    })));
 
   result
     .command('finalize')
@@ -1761,7 +1798,7 @@ function buildProgram(deps = {}) {
     .option('--api-level <v>', 'OS API level / version')
     .option('--environment <v>', "target environment (e.g. 'staging')")
     .option('--summary <text>', 'override the generated one-line result summary')
-    .action(withEnvelope((opts) => {
+    .action(withEnvelope(requireWorkspace((opts) => {
       const r = handleResultFinalize(
         { resultStoreFactory, memoryStoreFactory, projectRoot },
         {
@@ -1777,7 +1814,7 @@ function buildProgram(deps = {}) {
         }
       );
       emit(r, humanFlag());
-    }));
+    })));
 
   // --- Slice 3 verbs --------------------------------------------------------
 
@@ -1797,7 +1834,10 @@ function buildProgram(deps = {}) {
     .description('Scaffold the workspace (mobile-automator/) and write a config')
     .option('--mode <mode>', 'aware (platform-aware, default) | agnostic (platform-agnostic)')
     .action(withEnvelope((opts) => {
-      const r = handleSetup({ projectRoot }, { mode: opts.mode });
+      // cwd, not the discovered root: setup creates a workspace where the user
+      // stands. A discovered root that is not cwd is an ancestor worth naming.
+      const ancestorRoot = workspace.root && workspace.root !== cwd ? workspace.root : null;
+      const r = handleSetup({ projectRoot: cwd, ancestorRoot }, { mode: opts.mode });
       emit(r, humanFlag());
     }));
 
@@ -1805,11 +1845,11 @@ function buildProgram(deps = {}) {
   config
     .command('get <key>')
     .description('Get a dotted-path config value')
-    .action(withEnvelope((key) => emit(handleConfigGet({ projectRoot }, key), humanFlag())));
+    .action(withEnvelope(requireWorkspace((key) => emit(handleConfigGet({ projectRoot }, key), humanFlag()))));
   config
     .command('set <key> <value>')
     .description('Set a dotted-path config value (coerced to its declared type per `mauto schema config`)')
-    .action(withEnvelope((key, value) => emit(handleConfigSet({ projectRoot }, key, value), humanFlag())));
+    .action(withEnvelope(requireWorkspace((key, value) => emit(handleConfigSet({ projectRoot }, key, value), humanFlag()))));
 
   program
     .command('guide <topic>')
@@ -1835,28 +1875,28 @@ function buildProgram(deps = {}) {
     .description('Print RAW memory markdown (run-history[, app-knowledge, preferences])')
     .option('--kind <k>', 'run-history | app-knowledge | preferences')
     .option('--scenario <id>', 'filter run-history to one scenario')
-    .action(withEnvelope((opts) =>
+    .action(withEnvelope(requireWorkspace((opts) =>
       emitMaybeRaw(
         handleMemoryShow({ memoryStoreFactory, projectRoot }, { kind: opts.kind, scenario: opts.scenario })
       )
-    ));
+    )));
 
   memory
     .command('add <text>')
     .description('Record an agent-authored memory entry (app-knowledge or preferences)')
     .requiredOption('--kind <k>', 'app-knowledge | preferences')
-    .action(withEnvelope((text, opts) =>
+    .action(withEnvelope(requireWorkspace((text, opts) =>
       emit(handleMemoryAdd({ memoryStoreFactory, projectRoot }, { kind: opts.kind, text }), humanFlag())
-    ));
+    )));
 
   memory
     .command('forget')
     .description('Remove agent-authored memory entries whose text contains a substring')
     .requiredOption('--kind <k>', 'app-knowledge | preferences')
     .requiredOption('--match <substr>', 'remove entries containing this substring')
-    .action(withEnvelope((opts) =>
+    .action(withEnvelope(requireWorkspace((opts) =>
       emit(handleMemoryForget({ memoryStoreFactory, projectRoot }, { kind: opts.kind, match: opts.match }), humanFlag())
-    ));
+    )));
 
   // --- Slice 7: vendor init + MCP prompts server ---------------------------
 
@@ -1865,7 +1905,9 @@ function buildProgram(deps = {}) {
     .description('Install native Agent Skills (+ slash commands/rules + MCP entry) for an agent')
     .requiredOption('--agent <name>', 'claude | cursor | gemini | copilot | agents | all')
     .action(withEnvelope((opts) => {
-      const r = handleInit({ projectRoot }, opts.agent);
+      // cwd, as before discovery existed: init writes host files where the
+      // user invoked it.
+      const r = handleInit({ projectRoot: cwd }, opts.agent);
       emit(r, humanFlag());
     }));
 
@@ -2137,10 +2179,19 @@ async function run(argv) {
   // `unhandledRejection` guard lives in bin/mauto.js (the process entry point),
   // not here, so calling run() in tests never installs a global exit-on-reject
   // listener that would leak across the suite.
-  const emitters = makeEmitters();
+  //
+  // The workspace is resolved ONCE, here, and the same root reaches both the
+  // emitters (the .logs/ file sink and run traces) and every handler — and,
+  // through connection.js, the session daemon's MAUTO_SESSION_PROJECT_ROOT.
+  // No workspace found falls back to cwd for the verbs that tolerate that;
+  // buildProgram fails the ones that cannot (#188).
+  const cwd = process.cwd();
+  const workspace = findWorkspaceRoot(cwd);
+  const projectRoot = workspace.root || cwd;
+  const emitters = makeEmitters({ projectRoot });
   activeEmitters = emitters;
   try {
-    const program = buildProgram({ emitters });
+    const program = buildProgram({ emitters, projectRoot, cwd, workspace });
     await program.parseAsync(argv);
   } catch (err) {
     // Help/version are NOT errors: commander already wrote the human-readable
