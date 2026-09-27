@@ -241,6 +241,23 @@
         }
       }
     },
+    "crashes": {
+      "type": "array",
+      "description": "App crash reports observed during this run. Present only when at least one was observed, so a clean run's file is unchanged. Populated by `mauto result add-crash`, typically from `mauto crash list`.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "crash_id": { "type": "string", "description": "Device-local report id; pass to `mauto crash get` for the full report" },
+          "process": { "type": ["string", "null"], "description": "Package/bundle identifier of the process that died" },
+          "timestamp": { "type": ["string", "null"], "description": "The device's own time for the report, when it reports one" },
+          "detected_at": { "type": "string", "description": "ISO time at which mauto observed the report" },
+          "step_id": { "type": ["string", "null"], "description": "Step in flight when the crash was observed" },
+          "excerpt": { "type": ["string", "null"], "description": "Bounded head of the crash report (max 2000 chars); the full report lives at report_path" },
+          "report_path": { "type": ["string", "null"], "description": "Path to the full report written by `mauto crash get --out`" }
+        },
+        "required": ["crash_id", "detected_at"]
+      }
+    },
     "summary": {
       "type": "string",
       "description": "Human-readable overall summary"
