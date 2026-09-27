@@ -103,3 +103,26 @@ describe('run trace paths', () => {
     }
   });
 });
+
+describe('telemetry spool path', () => {
+  const { SPOOL_NAME, spoolPath, MAIN_LOG_NAME, DAEMON_LOG_NAME } = require('../../../src/observe/paths');
+  const path = require('path');
+
+  it('lives beside the event logs', () => {
+    expect(spoolPath('/p', {})).toBe(path.join('/p', 'mobile-automator', '.logs', 'telemetry.spool'));
+  });
+
+  it('follows MAUTO_LOG_DIR like every other artifact in .logs/', () => {
+    expect(spoolPath('/p', { MAUTO_LOG_DIR: '/tmp/elsewhere' }))
+      .toBe(path.join('/tmp/elsewhere', 'telemetry.spool'));
+  });
+
+  it('is deliberately NOT a .ndjson file', () => {
+    // TROUBLESHOOTING.md documents `cat mobile-automator/.logs/*.ndjson` as the
+    // merged CLI+daemon timeline. The spool is a mutating queue that gets
+    // renamed out from under a reader, not part of that timeline, so it must
+    // not match that glob. The extension is the interface.
+    expect(SPOOL_NAME.endsWith('.ndjson')).toBe(false);
+    expect([MAIN_LOG_NAME, DAEMON_LOG_NAME].every((n) => n.endsWith('.ndjson'))).toBe(true);
+  });
+});
