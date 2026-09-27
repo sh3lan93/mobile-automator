@@ -60,6 +60,8 @@ describe('buildProgram workspace wiring (#188)', () => {
       [['result', 'add-assertion', '--run-id', 'r1', '--step-id', 's', '--type', 'element_visible', '--pass', 'true']],
       [['result', 'add-crash', '--run-id', 'r1', '--crash-id', 'c1']],
       [['result', 'finalize', '--run-id', 'r1']],
+      [['session', 'start']],
+      [['devices', 'use', 'emulator-5554']],
     ])('%j fails environment with the searched paths in the hint', async (argv) => {
       const calls = await runIn({ workspace, cwd }, ...argv);
       expect(calls).toHaveLength(1);
@@ -76,6 +78,26 @@ describe('buildProgram workspace wiring (#188)', () => {
       expect(calls[0].exitKind).toBe('ok');
       expect(typeof calls[0].raw).toBe('string');
       expect(calls[0].raw.length).toBeGreaterThan(0);
+    });
+
+    // The daemon is a per-workspace artifact; with no workspace there is
+    // nowhere legitimate to put its .session/ tree, so the connection seam
+    // must be told not to autostart one (the verb connects one-shot instead).
+    test('device verbs never autostart a daemon: connectBridge passes autostart:false', async () => {
+      const factoryArgs = [];
+      const { calls, emitters } = captureEmitters();
+      await buildProgram({
+        workspace,
+        cwd,
+        emitters,
+        deviceBridgeFactory: async (args) => {
+          factoryArgs.push(args);
+          return { bridge: { listDevices: async () => [] }, close: async () => {} };
+        },
+      }).parseAsync(['node', 'mauto', 'devices']);
+      expect(factoryArgs).toEqual([{ device: null, projectRoot: cwd, autostart: false }]);
+      expect(calls[0].envelope.ok).toBe(true);
+      expect(fs.existsSync(path.join(cwd, 'mobile-automator'))).toBe(false);
     });
 
     test('setup scaffolds in cwd with no ancestor hint', async () => {
@@ -103,6 +125,21 @@ describe('buildProgram workspace wiring (#188)', () => {
     test('config get reads the ancestor workspace', async () => {
       const calls = await runIn({ workspace, cwd: sub }, 'config', 'get', 'mode');
       expect(calls[0].envelope).toMatchObject({ ok: true, data: { value: 'platform-agnostic' } });
+    });
+
+    test('device verbs autostart the daemon inside the discovered workspace', async () => {
+      const factoryArgs = [];
+      const { emitters } = captureEmitters();
+      await buildProgram({
+        workspace,
+        cwd: sub,
+        emitters,
+        deviceBridgeFactory: async (args) => {
+          factoryArgs.push(args);
+          return { bridge: { listDevices: async () => [] }, close: async () => {} };
+        },
+      }).parseAsync(['node', 'mauto', 'devices']);
+      expect(factoryArgs).toEqual([{ device: null, projectRoot: root, autostart: true }]);
     });
 
     test('setup creates a nested workspace in cwd and hints at the ancestor', async () => {

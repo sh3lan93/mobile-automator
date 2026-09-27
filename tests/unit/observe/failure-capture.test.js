@@ -101,6 +101,21 @@ describe('screenshot on device failure', () => {
     }
   });
 
+  // The same permission the file sink requires: a valid run id is not consent
+  // to create mobile-automator/ where no workspace exists. Without this gate
+  // a failing verb would mkdir screenshots/ into an undiscoverable tree, the
+  // #188 pathology.
+  it('captures nothing when no mobile-automator/ workspace exists at projectRoot', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-failcap-nows-'));
+    const bridge = fakeBridge();
+    const shot = await captureOnFailure({
+      bridge, result: failing('device'), projectRoot: root, runId: 'smoke', verb: 'tap', env: ENV,
+    });
+    expect(shot).toBeNull();
+    expect(bridge.calls).toEqual([]);
+    expect(fs.existsSync(path.join(root, 'mobile-automator'))).toBe(false);
+  });
+
   // THE property. The capture is itself a daemon round-trip and can fail for
   // exactly the reasons the original call failed.
   it('records and discards its own failure, never throwing and never touching the result', async () => {

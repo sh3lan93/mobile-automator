@@ -1392,7 +1392,7 @@ function buildProgram(deps = {}) {
     // Project root used to resolve mobile-automator/results/ — and, through the
     // emitters below, mobile-automator/.logs/. One root, one tree. The
     // discovered workspace when there is one; cwd otherwise, which is what the
-    // tolerant verbs (guide, mcp, device/session) have always used.
+    // tolerant verbs (guide, mcp, read-only device/session) have always used.
     projectRoot = workspace.root || cwd,
     // The exit paths. run() passes its own instance so the help/version and
     // fatal paths it owns share this program's resolved verb.
@@ -1513,7 +1513,16 @@ function buildProgram(deps = {}) {
     let bridge;
     let close;
     try {
-      ({ bridge, close } = await deviceBridgeFactory({ device, projectRoot }));
+      // autostart: the daemon is a per-workspace artifact — its .session/ tree
+      // and logs live under mobile-automator/. With no discovered workspace
+      // there is nowhere legitimate to put one, so never autostart: the verb
+      // connects one-shot and creates nothing. `ok:true` plus a phantom
+      // workspace is the exact #188 pathology.
+      ({ bridge, close } = await deviceBridgeFactory({
+        device,
+        projectRoot,
+        autostart: Boolean(workspace.root),
+      }));
       // AFTER the connect, deliberately: the handle is written when the daemon
       // starts listening, so before this point it may legitimately not exist
       // yet. Best-effort — readSessionId never throws and returns null for an
@@ -1924,10 +1933,10 @@ function buildProgram(deps = {}) {
     .description('Start the device session daemon (subsequent verbs reuse its connection)')
     .option('--device <id>', 'pin the daemon to a target device id')
     .option('--idle <ms>', 'idle timeout in milliseconds before the daemon self-reaps')
-    .action(withEnvelope(async (opts) => {
+    .action(withEnvelope(requireWorkspace(async (opts) => {
       const r = await handleSessionStart({ projectRoot }, { device: opts.device, idle: opts.idle });
       emit(r, humanFlag());
-    }));
+    })));
 
   session
     .command('status')
@@ -1959,11 +1968,11 @@ function buildProgram(deps = {}) {
   devices
     .command('use <id>')
     .description('Persist a device selection so subsequent verbs reuse it (--device still overrides per-call)')
-    .action(withEnvelope((id) =>
+    .action(withEnvelope(requireWorkspace((id) =>
       connectBridge(null, (bridge) =>
         handleDevicesUse({ deviceBridge: bridge, projectRoot }, id)
       )
-    ));
+    )));
 
   devices
     .command('clear')

@@ -26,6 +26,10 @@
 - If the list stops short of your project, you are in a different repository (e.g. a
   submodule or nested checkout) — `cd` into the project that has the workspace.
 - If no workspace exists yet, run `mauto setup` from the project root.
+- `session start` and `devices use` also fail this way: they persist the session
+  daemon and the device selection under `mobile-automator/.session/`, so they need
+  a workspace to write into. The other device verbs run without one (one-shot
+  connection, nothing written).
 - Running `mauto setup` in a subdirectory creates a *nested* workspace that shadows the
   ancestor one for everything run below it; `setup`'s hint warns when that happens.
 

@@ -1473,7 +1473,13 @@ describe('cli handlers', () => {
   // a screenshot must actually have it called after a device-kind failure.
   describe('screenshot-on-failure wiring (buildProgram)', () => {
     function tmpRoot() {
-      return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-failcap-cli-'));
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-failcap-cli-'));
+      // A real workspace: the capture and the trace sink both treat an
+      // existing mobile-automator/ as the permission to write (#188). A bare
+      // root leaves both silent — which is the no-workspace behavior, not
+      // the one under test here.
+      fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+      return root;
     }
 
     async function withRunId(runId, fn) {

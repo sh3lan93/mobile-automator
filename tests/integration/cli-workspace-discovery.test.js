@@ -178,6 +178,31 @@ describe('workspace discovery (integration, #188)', () => {
       expectNoWorkspace(runCli(['result', 'finalize', '--run-id', 'run_20260928_120000'], sub));
     });
 
+    // The two device verbs whose whole job is persisting workspace state
+    // (the daemon handle, the device selection — both under
+    // mobile-automator/.session/) join the gated set: ok:true plus a phantom
+    // workspace tree is the exact #188 pathology.
+    test('session start fails and creates no mobile-automator/', () => {
+      expectNoWorkspace(runCli(['session', 'start'], sub));
+      expect(fs.existsSync(path.join(sub, 'mobile-automator'))).toBe(false);
+    });
+
+    test('devices use fails and creates no mobile-automator/', () => {
+      expectNoWorkspace(runCli(['devices', 'use', 'emulator-5554'], sub));
+      expect(fs.existsSync(path.join(sub, 'mobile-automator'))).toBe(false);
+    });
+
+    // Read-only device use stays zero-config, but the daemon must not
+    // autostart into a workspace-less cwd: the verb connects one-shot and
+    // leaves nothing behind.
+    test('devices stays tolerant but spawns no daemon and creates no mobile-automator/', () => {
+      const r = runCli(['devices'], sub);
+      expect(r.status).toBe(0);
+      expect(envelopeOf(r).ok).toBe(true);
+      expect(Array.isArray(envelopeOf(r).data)).toBe(true);
+      expect(fs.existsSync(path.join(sub, 'mobile-automator'))).toBe(false);
+    });
+
     test('guide stays tolerant: raw content, exit 0', () => {
       const r = runCli(['guide', 'execute'], sub);
       expect(r.status).toBe(0);
