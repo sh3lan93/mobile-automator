@@ -2219,7 +2219,7 @@
 </ul>
 <hr />
 <h2 id="file-locations">File Locations<a class="headerlink" href="#file-locations" title="Permanent link">&para;</a></h2>
-<p>All test artifacts are stored under the <code>mobile-automator/</code> directory in the project root:</p>
+<p>All test artifacts are stored under the <code>mobile-automator/</code> directory in the project root. <code>mauto</code> finds it from any subdirectory by walking up to the nearest <code>mobile-automator/config.json</code>, stopping at the repository root (<code>.git</code>):</p>
 <div class="highlight"><pre><span></span><code>mobile-automator/
 ├── config.json                 # Project configuration
 ├── index.md                    # Scenario index
