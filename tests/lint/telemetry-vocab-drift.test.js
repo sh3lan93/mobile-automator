@@ -60,13 +60,10 @@ describe('EVENT_NAMES', () => {
   }
 
   // Names a producer does not emit yet. Each needs a reason and a removal date.
-  const UNPRODUCED = [
-    // 'telemetry.flush' is emitted by src/observe/flush.js, which lands in a
-    // later slice-5 task. tests/unit/observe/event.test.js already round-trips
-    // it, so it is declared ahead of its producer. Delete this entry once the
-    // producer exists and the source scan finds it.
-    'telemetry.flush',
-  ];
+  // Empty: 'telemetry.flush' was declared here ahead of its producer
+  // (src/observe/flush.js); now that flush.js exists, the source scan finds
+  // it and the entry is dead weight.
+  const UNPRODUCED = [];
 
   it('knows every event name the source records', () => {
     expect(diff(EVENT_NAMES, eventNamesInSrc(), UNPRODUCED).missing).toEqual([]);

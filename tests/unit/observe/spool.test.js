@@ -116,6 +116,24 @@ describe('telemetry spool', () => {
     expect(spool.claim({ projectRoot: root, env: {} })).toBeNull();
   });
 
+  it('assigns a distinct claim name to two claims made back-to-back in the same process', () => {
+    // Date.now() alone is not unique enough for the claim suffix: two claims
+    // in one process (a flush that retries a leftover batch and then claims
+    // a fresh one) can land in the same millisecond, and renameSync onto an
+    // already-existing target silently REPLACES it on POSIX rather than
+    // erroring — destroying whichever claim got there first.
+    const root = workspace();
+    spool.write({ level: 'info', src: 'cli', event: 'verb.end', ok: true }, { projectRoot: root, env: {} });
+    const first = spool.claim({ projectRoot: root, env: {} });
+
+    spool.write({ level: 'info', src: 'cli', event: 'verb.end', ok: false }, { projectRoot: root, env: {} });
+    const second = spool.claim({ projectRoot: root, env: {} });
+
+    expect(first).not.toBe(second);
+    expect(spool.readBatch(first)).toHaveLength(1);
+    expect(spool.readBatch(second)).toHaveLength(1);
+  });
+
   it('lists leftover claimed batches oldest-first so retries stay in order', () => {
     const root = workspace();
     const dir = path.dirname(spoolPath(root, {}));

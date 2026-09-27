@@ -93,6 +93,23 @@ function write(event, { projectRoot, env = process.env, fs = realFs } = {}) {
   }
 }
 
+// Monotonic per-process claim stamp, seeded from wall-clock so listClaimed's
+// oldest-first sort (which parses this suffix as a number) still reflects
+// real ordering across process restarts. Date.now() ALONE is not unique
+// enough: a flush that finds a leftover batch and then claims a fresh one
+// back-to-back can complete both within the same millisecond, and a rename
+// onto an already-existing target SILENTLY REPLACES it on POSIX — destroying
+// whichever claim got there first rather than erroring. Falling back to
+// `lastClaimStamp + 1` when the clock hasn't advanced guarantees the target
+// is always new within this process; a different process can never collide
+// regardless, because its pid is already part of the filename.
+let lastClaimStamp = 0;
+function nextClaimStamp() {
+  const now = Date.now();
+  lastClaimStamp = now > lastClaimStamp ? now : lastClaimStamp + 1;
+  return lastClaimStamp;
+}
+
 // Atomic hand-off from "being appended to" to "being sent".
 //
 // renameSync within a directory is atomic, and it loses nothing: appendFileSync
@@ -102,7 +119,7 @@ function write(event, { projectRoot, env = process.env, fs = realFs } = {}) {
 // line lands nowhere, and no truncate that could clobber a concurrent writer.
 function claim({ projectRoot, env = process.env, fs = realFs } = {}) {
   const source = spoolPath(projectRoot, env);
-  const target = `${source}${CLAIM_SUFFIX}.${process.pid}.${Date.now()}`;
+  const target = `${source}${CLAIM_SUFFIX}.${process.pid}.${nextClaimStamp()}`;
   try {
     fs.renameSync(source, target);
     return target;
