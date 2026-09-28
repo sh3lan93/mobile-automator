@@ -237,6 +237,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the read-only device/session verbs still fall back to the current
   directory. `setup` and `init` still write to the current directory; `setup`
   adds a hint when that new workspace shadows one in an ancestor.
+- Device output that mauto cannot read now fails instead of passing as data
+  (#199, groundwork for the mobile-mcp 1.x migration). `mauto elements`
+  requests the engine's JSON element format explicitly, and an element list it
+  cannot parse returns `ok:false` (kind `device`) with an excerpt and a hint,
+  where it previously reported `ok:true` with an empty screen. A zero, negative
+  or non-numeric screen size is now an error rather than a size, so geometry
+  gestures (the iOS edge-swipe back) cannot silently act on a 0×0 screen.
+  `--at` rejects negative coordinates as `invalid_input` before they reach the
+  device.
 
 ### 🔒 Security
 
