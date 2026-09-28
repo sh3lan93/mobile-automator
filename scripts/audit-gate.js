@@ -35,10 +35,26 @@ function ghsaOf(url) {
   return m ? m[0] : null;
 }
 
+// Registry-failure reasons come from npm in a shape that has moved: real npm
+// (10 and 11) puts the reason in the TOP-LEVEL `message` field and leaves
+// error.summary/detail blank, while an older/legacy shape carries it under
+// error.{code,summary,detail}. Take the first non-empty of those, in that
+// order, so neither shape produces the empty `{"summary":"","detail":""}`
+// message this used to print.
+const TRANSIENT_REGISTRY_RE = /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|EAI_AGAIN|ECONNRESET|request to /;
+
+function auditFailureMessage(report) {
+  const e = report.error || {};
+  const reason = report.message || e.summary || e.detail || e.code || JSON.stringify(e);
+  const hint = TRANSIENT_REGISTRY_RE.test(reason)
+    ? ' — this is usually a transient registry failure; re-run the job.'
+    : '';
+  return `npm audit failed: ${reason}${hint}`;
+}
+
 function collectAdvisories(report) {
-  if (report && report.error) {
-    const e = report.error;
-    throw new Error(`npm audit failed: ${e.code || ''} ${e.summary || JSON.stringify(e)}`.trim());
+  if (report && (report.error || report.message)) {
+    throw new Error(auditFailureMessage(report));
   }
   if (!report || typeof report.vulnerabilities !== 'object' || report.vulnerabilities === null) {
     throw new Error('npm audit report has no "vulnerabilities" object');

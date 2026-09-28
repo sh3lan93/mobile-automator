@@ -47,8 +47,18 @@ describe('collectAdvisories', () => {
     r.vulnerabilities.other = { name: 'other', severity: 'high', via: [advisory(SHARP_A, 'high')] };
     expect(collectAdvisories(r)).toHaveLength(1);
   });
-  test('throws on an npm error payload (registry unreachable)', () => {
-    expect(() => collectAdvisories({ error: { code: 'ENOTFOUND', summary: 'x' } })).toThrow(/ENOTFOUND|error/i);
+  test('throws on an npm error payload, using the top-level message npm actually sends', () => {
+    // Real npm (10 and 11) puts the failure reason in the top-level `message`
+    // field and leaves error.summary/detail blank when the registry itself is
+    // unreachable.
+    const report = {
+      message: 'request to https://registry.npmjs.org/-/npm/v1/security/advisories/bulk failed, reason: connect ECONNREFUSED 127.0.0.1:9',
+      error: { summary: '', detail: '' },
+    };
+    expect(() => collectAdvisories(report)).toThrow(/ECONNREFUSED/);
+  });
+  test('throws on the legacy {error:{code,summary}} shape', () => {
+    expect(() => collectAdvisories({ error: { code: 'ENOTFOUND', summary: '', detail: '' } })).toThrow(/ENOTFOUND/);
   });
   test('throws when vulnerabilities is missing', () => {
     expect(() => collectAdvisories({})).toThrow(/vulnerabilities/);
@@ -145,6 +155,10 @@ describe('main', () => {
   };
   const spawnOf = (r) => () => ({ status: 1, stdout: JSON.stringify(r), stderr: '' });
   const log = () => {};
+  const logSpy = () => {
+    const lines = [];
+    return { fn: (msg) => lines.push(msg), lines };
+  };
 
   test('exits 0 when clean', () => {
     expect(main({ spawn: spawnOf(report()), allowlistPath: writeList([]), today: '2026-09-28', log })).toBe(0);
@@ -153,9 +167,14 @@ describe('main', () => {
     const r = report(advisory('GHSA-aaaa-bbbb-cccc', 'high', 'ws'));
     expect(main({ spawn: spawnOf(r), allowlistPath: writeList([]), today: '2026-09-28', log })).toBe(1);
   });
-  test('exits 2 (fail closed) when the registry is unreachable', () => {
-    const spawn = spawnOf({ error: { code: 'ENOTFOUND', summary: 'getaddrinfo ENOTFOUND' } });
-    expect(main({ spawn, allowlistPath: writeList([]), today: '2026-09-28', log })).toBe(2);
+  test('exits 2 (fail closed) when the registry is unreachable, and logs the reason with a re-run hint', () => {
+    const spawn = spawnOf({
+      message: 'request to https://registry.npmjs.org/-/npm/v1/security/advisories/bulk failed, reason: connect ECONNREFUSED 127.0.0.1:9',
+      error: { summary: '', detail: '' },
+    });
+    const spy = logSpy();
+    expect(main({ spawn, allowlistPath: writeList([]), today: '2026-09-28', log: spy.fn })).toBe(2);
+    expect(spy.lines.some((l) => l.includes('ECONNREFUSED') && l.includes('re-run'))).toBe(true);
   });
   test('exits 2 on a malformed allowlist', () => {
     const p = writeList([{ ghsa: SHARP_A }]);
