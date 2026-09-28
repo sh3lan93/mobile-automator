@@ -5,9 +5,9 @@
 const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
+const { REPO_ROOT } = require('./docs-corpus');
 
-const root = path.join(__dirname, '..', '..');
-const load = (rel) => yaml.load(fs.readFileSync(path.join(root, rel), 'utf8'));
+const load = (rel) => yaml.load(fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8'));
 const GATE = 'node scripts/audit-gate.js';
 const runs = (steps) => steps.map((s) => s.run || '');
 
@@ -21,11 +21,20 @@ function findGateStep(steps) {
   return step;
 }
 
+// The same escape hatches apply one level up: a job-level `continue-on-error`
+// or `if:` neutralises every step in it, including the gate step, without
+// touching the step itself. Find the job that owns the gate step so both
+// levels are checked against the same target.
+function findGateJob(jobs) {
+  const job = Object.values(jobs).find((j) => (j.steps || []).some((s) => s.run === GATE));
+  if (!job) throw new Error(`no job with a step running "${GATE}" found`);
+  return job;
+}
+
 describe('supply-chain gate wiring (#161)', () => {
   test('audit.yml runs the gate on PRs, pushes to main, and a schedule', () => {
     const wf = load('.github/workflows/audit.yml');
-    // js-yaml parses the bare `on` key as boolean true.
-    const on = wf.on || wf[true];
+    const on = wf.on;
     expect(on).toHaveProperty('pull_request');
     expect(on).toHaveProperty('push');
     expect(on).toHaveProperty('schedule');
@@ -39,6 +48,13 @@ describe('supply-chain gate wiring (#161)', () => {
     const gateStep = findGateStep(steps);
     expect(gateStep['continue-on-error']).toBeUndefined();
     expect(gateStep.if).toBeUndefined();
+  });
+
+  test('audit.yml gate job is not neutralised by continue-on-error or if', () => {
+    const wf = load('.github/workflows/audit.yml');
+    const gateJob = findGateJob(wf.jobs);
+    expect(gateJob['continue-on-error']).toBeUndefined();
+    expect(gateJob.if).toBeUndefined();
   });
 
   test('publish-npm runs the gate before npm publish', () => {
@@ -55,6 +71,14 @@ describe('supply-chain gate wiring (#161)', () => {
     const gateStep = findGateStep(steps);
     expect(gateStep['continue-on-error']).toBeUndefined();
     expect(gateStep.if).toBeUndefined();
+  });
+
+  test('publish-npm job is not neutralised by continue-on-error, and its if is exactly the rc-tag guard', () => {
+    const jobs = load('.github/workflows/release.yml').jobs;
+    const gateJob = findGateJob(jobs);
+    expect(gateJob).toBe(jobs['publish-npm']);
+    expect(gateJob['continue-on-error']).toBeUndefined();
+    expect(gateJob.if).toBe("${{ !contains(needs.resolve.outputs.version, '-') }}");
   });
 
   test('dependabot covers npm (lockfile-only) and github-actions', () => {

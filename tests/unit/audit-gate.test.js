@@ -1,5 +1,5 @@
 const {
-  ghsaOf, collectAdvisories, validateAllowlist, evaluate, runAudit, main,
+  ghsaOf, collectAdvisories, validateAllowlist, evaluate, runAudit, main, MAX_ACCEPTANCE_DAYS,
 } = require('../../scripts/audit-gate');
 
 const SHARP_A = 'GHSA-f88m-g3jw-g9cj';
@@ -74,6 +74,9 @@ describe('validateAllowlist', () => {
     ['bad ghsa', entry('CVE-2026-1', {})],
     ['non-integer issue', entry(SHARP_A, { issue: '999' })],
     ['non-ISO expiry', entry(SHARP_A, { expires: '12/27/2026' })],
+    ['a calendar month that does not exist', entry(SHARP_A, { expires: '2026-13-45' })],
+    ['a calendar day that does not exist', entry(SHARP_A, { expires: '2026-02-30' })],
+    ['a calendar month and day that do not exist', entry(SHARP_A, { expires: '9999-99-99' })],
   ])('rejects %s', (_label, bad) => {
     expect(() => validateAllowlist([bad])).toThrow();
   });
@@ -82,6 +85,29 @@ describe('validateAllowlist', () => {
   });
   test('rejects duplicate ghsa ids', () => {
     expect(() => validateAllowlist([entry(SHARP_A), entry(SHARP_A)])).toThrow(/duplicate/i);
+  });
+
+  describe('acceptance horizon', () => {
+    const today = '2026-09-28';
+
+    test('a past expiry is still valid — expiry is evaluate\'s job, not validation\'s', () => {
+      expect(validateAllowlist([entry(SHARP_A, { expires: '2020-01-01' })], today)).toHaveLength(1);
+    });
+    test('a distant-future but calendrically valid date is rejected beyond the horizon', () => {
+      expect(() => validateAllowlist([entry(SHARP_A, { expires: '9999-12-31' })], today)).toThrow();
+    });
+    test('exactly today + MAX_ACCEPTANCE_DAYS is accepted', () => {
+      const limit = new Date(`${today}T00:00:00Z`);
+      limit.setUTCDate(limit.getUTCDate() + MAX_ACCEPTANCE_DAYS);
+      const expires = limit.toISOString().slice(0, 10);
+      expect(validateAllowlist([entry(SHARP_A, { expires })], today)).toHaveLength(1);
+    });
+    test('today + MAX_ACCEPTANCE_DAYS + 1 is rejected', () => {
+      const overLimit = new Date(`${today}T00:00:00Z`);
+      overLimit.setUTCDate(overLimit.getUTCDate() + MAX_ACCEPTANCE_DAYS + 1);
+      const expires = overLimit.toISOString().slice(0, 10);
+      expect(() => validateAllowlist([entry(SHARP_A, { expires })], today)).toThrow();
+    });
   });
 });
 
@@ -180,10 +206,15 @@ describe('main', () => {
     const p = writeList([{ ghsa: SHARP_A }]);
     expect(main({ spawn: spawnOf(report()), allowlistPath: p, today: '2026-09-28', log })).toBe(2);
   });
+  test('exits 2 for an allowlist whose expiry is beyond the acceptance horizon', () => {
+    const p = writeList([entry(SHARP_A, { expires: '9999-12-31' })]);
+    expect(main({ spawn: spawnOf(report()), allowlistPath: p, today: '2026-09-28', log })).toBe(2);
+  });
 });
 
 describe('the checked-in allowlist', () => {
   test('is valid', () => {
-    expect(() => validateAllowlist(require('../../scripts/audit-allowlist.json'))).not.toThrow();
+    const today = new Date().toISOString().slice(0, 10);
+    expect(() => validateAllowlist(require('../../scripts/audit-allowlist.json'), today)).not.toThrow();
   });
 });

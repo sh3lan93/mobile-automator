@@ -28,7 +28,15 @@ const path = require('path');
 const BLOCKING = new Set(['high', 'critical']);
 const GHSA_RE = /GHSA-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}/;
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+// An acceptance must be re-decided at least twice a year, so it cannot
+// quietly become permanent by being dated far into the future.
+const MAX_ACCEPTANCE_DAYS = 180;
 const DEFAULT_ALLOWLIST = path.join(__dirname, 'audit-allowlist.json');
+
+function isValidCalendarDate(s) {
+  const d = new Date(`${s}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+}
 
 function ghsaOf(url) {
   const m = GHSA_RE.exec(url || '');
@@ -74,9 +82,14 @@ function collectAdvisories(report) {
   return [...byId.values()];
 }
 
-function validateAllowlist(list) {
+function validateAllowlist(list, today) {
   if (!Array.isArray(list)) throw new Error('audit allowlist must be a JSON array');
   const seen = new Set();
+  let latestAllowed = null;
+  if (typeof today === 'string') {
+    latestAllowed = new Date(`${today}T00:00:00Z`);
+    latestAllowed.setUTCDate(latestAllowed.getUTCDate() + MAX_ACCEPTANCE_DAYS);
+  }
   list.forEach((e, i) => {
     const where = `audit allowlist entry ${i}`;
     if (!e || typeof e !== 'object') throw new Error(`${where} is not an object`);
@@ -87,8 +100,16 @@ function validateAllowlist(list) {
       if (typeof e[key] !== 'string' || !e[key].trim()) throw new Error(`${where}: "${key}" is required`);
     }
     if (!Number.isInteger(e.issue) || e.issue <= 0) throw new Error(`${where}: "issue" must be an issue number`);
-    if (typeof e.expires !== 'string' || !ISO_DATE_RE.test(e.expires)) {
-      throw new Error(`${where}: "expires" must be YYYY-MM-DD`);
+    if (typeof e.expires !== 'string' || !ISO_DATE_RE.test(e.expires) || !isValidCalendarDate(e.expires)) {
+      throw new Error(`${where}: "expires" must be a real YYYY-MM-DD date`);
+    }
+    // Past dates are still valid here; a lapsed acceptance is evaluate's job.
+    if (latestAllowed && new Date(`${e.expires}T00:00:00Z`) > latestAllowed) {
+      const limit = latestAllowed.toISOString().slice(0, 10);
+      throw new Error(
+        `${where}: "expires" (${e.expires}) is more than ${MAX_ACCEPTANCE_DAYS} days after ${today}; ` +
+          `latest allowed is ${limit}`
+      );
     }
   });
   return list;
@@ -142,7 +163,7 @@ function main({
 } = {}) {
   let result;
   try {
-    const allowlist = validateAllowlist(JSON.parse(fs.readFileSync(allowlistPath, 'utf8')));
+    const allowlist = validateAllowlist(JSON.parse(fs.readFileSync(allowlistPath, 'utf8')), today);
     result = evaluate(runAudit(spawn), allowlist, today);
   } catch (err) {
     log(`audit-gate: cannot evaluate — failing closed. ${err.message}`);
@@ -164,4 +185,6 @@ function main({
 
 if (require.main === module) process.exitCode = main();
 
-module.exports = { ghsaOf, collectAdvisories, validateAllowlist, evaluate, runAudit, main };
+module.exports = {
+  ghsaOf, collectAdvisories, validateAllowlist, evaluate, runAudit, main, MAX_ACCEPTANCE_DAYS,
+};
