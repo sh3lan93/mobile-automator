@@ -170,6 +170,10 @@ jobs:
           echo "npm $NPM_VERSION satisfies the >= $MIN floor"
 
       - run: npm ci
+      # #161: refuse to publish over an unaccepted high/critical production
+      # advisory. This is the only enforcing run of the audit gate — the
+      # Dependency Audit workflow is a PR signal, and nothing requires it.
+      - run: node scripts/audit-gate.js
       - run: npm test
       - run: ./scripts/pack-smoke.sh
 

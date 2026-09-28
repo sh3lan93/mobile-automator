@@ -1,0 +1,27 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # Lockfile-only: Dependabot PRs never touch package.json, so they stay out
+    # of the version-bump gate. Nothing is lost for users — the lockfile is not
+    # published, and our caret ranges already resolve fresh on install.
+    versioning-strategy: lockfile-only
+    open-pull-requests-limit: 5
+    groups:
+      production:
+        dependency-type: production
+        update-types: [minor, patch]
+      development:
+        dependency-type: development
+    ignore:
+      # 1.x changes the mobile_list_elements_on_screen default format and
+      # needs a real-device re-verification — tracked in #199.
+      - dependency-name: '@mobilenext/mobile-mcp'
+        update-types: ['version-update:semver-major']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
