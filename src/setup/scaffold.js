@@ -52,6 +52,12 @@ function scaffold(projectRoot, { mode } = {}) {
       project_name: null,
       environments: [],
       default_environment: null,
+      // Written as a LITERAL false rather than omitted. An absent key that
+      // happens to default off is not discoverable; a visible false is, and
+      // discoverability is part of consent. The `else` branch below never
+      // touches this key: re-running setup must not silently revoke — or
+      // silently grant — a choice the project owner already made.
+      telemetry: { enabled: false },
     };
     fs.writeFileSync(cfgPath, JSON.stringify(skeleton, null, 2) + '\n');
     created.push(cfgPath);

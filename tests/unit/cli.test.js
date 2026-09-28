@@ -863,6 +863,15 @@ describe('cli handlers', () => {
       const { exitKind } = handleSetup({ projectRoot }, { mode: 'windows' });
       expect(exitKind).toBe('invalid_input');
     });
+
+    it('setup surfaces the telemetry notice in its envelope rather than printing a banner', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-notice-'));
+      const { envelope } = handleSetup({ projectRoot }, { mode: 'aware' });
+      expect(envelope.data.telemetry).toEqual({
+        enabled: false,
+        notice: require('../../src/observe/telemetry').CONSENT_NOTICE,
+      });
+    });
   });
 
   describe('config get/set', () => {

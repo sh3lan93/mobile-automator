@@ -802,7 +802,17 @@ function handleSetup({ projectRoot }, opts = {}) {
   }
   const r = scaffold(projectRoot, { mode });
   return {
-    envelope: ok({ created: r.created, mode: r.mode, next: 'run `mauto guide setup`' }),
+    envelope: ok({
+      created: r.created,
+      mode: r.mode,
+      // A NOTICE, not a prompt. mauto verbs are invoked by an agent, so there
+      // is nobody at the keyboard to answer a question — and an agent answering
+      // a consent question on a human's behalf is worse than not asking. It
+      // rides in the envelope (structured, in-band) rather than as a stderr
+      // banner, so the agent can surface it to the human it belongs to.
+      telemetry: { enabled: false, notice: observeTelemetry.CONSENT_NOTICE },
+      next: 'run `mauto guide setup`',
+    }),
     exitKind: 'ok',
   };
 }
