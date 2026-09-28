@@ -11,6 +11,7 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const { TOKEN_PLACEHOLDER } = require('../../src/observe/transport');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const CLI = path.join(REPO_ROOT, 'bin', 'mauto.js');
@@ -108,10 +109,14 @@ describe('telemetry verbs (integration)', () => {
   });
 
   it('enable emits exactly one JSON object on stdout', () => {
-    // Cleared explicitly, not just left ambient: the shipped placeholder
-    // token must resolve the durable intent as written but still unable to
-    // send, regardless of what happens to be exported in the dev/CI shell.
-    const envelope = assertsSingleEnvelope(['telemetry', 'enable'], { MAUTO_TELEMETRY_TOKEN: '' });
+    // No override needed: a real project token ships (Task 12 graduation),
+    // so enabling now genuinely resolves usable out of the box.
+    const envelope = assertsSingleEnvelope(['telemetry', 'enable']);
+    expect(envelope.data).toMatchObject({ enabled: true, reason: 'enabled' });
+  });
+
+  it('enable still resolves no_token when the configured token is explicitly the placeholder', () => {
+    const envelope = assertsSingleEnvelope(['telemetry', 'enable'], { MAUTO_TELEMETRY_TOKEN: TOKEN_PLACEHOLDER });
     expect(envelope.data.reason).toBe('no_token');
   });
 

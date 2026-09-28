@@ -31,7 +31,7 @@ const DEFAULT_HOST = 'https://eu.i.posthog.com';
 // resolves DISABLED with reason `no_token`. A fork or a mid-slice build can
 // therefore never post, even with telemetry.enabled true in its config.
 const TOKEN_PLACEHOLDER = 'phc_REPLACE_ME';
-const PROJECT_TOKEN = TOKEN_PLACEHOLDER;
+const PROJECT_TOKEN = 'phc_xD3rE7kJ76yIcVgBKfkarm6cXiNaiEEbSL8q4R5rpBi';
 
 // One event has one identity and no person. distinct_id is a constant and
 // $process_person_profile is false, so PostHog creates no person profile at

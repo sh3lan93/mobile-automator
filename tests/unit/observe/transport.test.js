@@ -19,9 +19,15 @@ describe('telemetry transport', () => {
     { ts: '2026-09-05T10:00:00.000Z', event: 'verb.end', msg_id: 'aaaa', verb: 'tap', ok: true, dur_ms: 41 },
   ];
 
-  it('has no usable token until a maintainer supplies one', () => {
-    expect(transport.resolveToken({})).toBe(transport.TOKEN_PLACEHOLDER);
-    expect(transport.hasToken({})).toBe(false);
+  it('ships a real token, distinct from the placeholder', () => {
+    // A maintainer has pasted the real project key (graduation, Task 12); the
+    // shipped default now resolves usable without any env override.
+    expect(transport.resolveToken({})).not.toBe(transport.TOKEN_PLACEHOLDER);
+    expect(transport.hasToken({})).toBe(true);
+  });
+
+  it('rejects the placeholder wherever it appears — shipped or explicitly set', () => {
+    expect(transport.hasToken({ MAUTO_TELEMETRY_TOKEN: transport.TOKEN_PLACEHOLDER })).toBe(false);
     expect(transport.hasToken({ MAUTO_TELEMETRY_TOKEN: 'phc_real' })).toBe(true);
   });
 
@@ -96,7 +102,10 @@ describe('telemetry transport', () => {
 
   it('refuses to post without a real token, and does not call fetch to find out', async () => {
     const f = fakeFetch(() => res(200));
-    const r = await transport.postBatch(PAYLOADS, { fetchImpl: f, env: {} });
+    const r = await transport.postBatch(PAYLOADS, {
+      fetchImpl: f,
+      env: { MAUTO_TELEMETRY_TOKEN: transport.TOKEN_PLACEHOLDER },
+    });
     expect(r).toEqual({ ok: false, retry: false, status: 0 });
     expect(f.calls).toHaveLength(0);
   });

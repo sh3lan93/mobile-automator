@@ -6,6 +6,7 @@ const path = require('path');
 
 const telemetry = require('../../../src/observe/telemetry');
 const { EVENT_FIELDS, NEVER_SENDS } = require('../../../src/observe/event');
+const { TOKEN_PLACEHOLDER } = require('../../../src/observe/transport');
 
 const ON = { telemetry: { enabled: true } };
 const TOKEN = { MAUTO_TELEMETRY_TOKEN: 'phc_real' };
@@ -64,8 +65,11 @@ describe('telemetry control surface', () => {
       .toEqual({ enabled: false, reason: 'not_configured' });
   });
 
-  it('stays off when the shipped token is still the placeholder', () => {
-    expect(telemetry.resolveTelemetry({ env: {}, config: ON }))
+  it('stays off when the resolved token is the placeholder', () => {
+    // A real token ships now (Task 12 graduation), so this state is no longer
+    // reachable via an absent override — only an explicit placeholder proves
+    // the mechanism still holds.
+    expect(telemetry.resolveTelemetry({ env: { MAUTO_TELEMETRY_TOKEN: TOKEN_PLACEHOLDER }, config: ON }))
       .toEqual({ enabled: false, reason: 'no_token' });
   });
 
