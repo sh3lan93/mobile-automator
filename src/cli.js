@@ -276,7 +276,20 @@ function parseCoordinates(raw) {
       error: fail('invalid_input', `coordinates must be numbers, got "${raw}"`, 'Pass --at <x,y>, e.g. --at 100,250.'),
     };
   }
-  return { x: Math.round(x), y: Math.round(y) };
+  // Check AFTER rounding: the device receives the rounded ints, so -0.4 (-> 0)
+  // is a valid on-screen point while -0.6 (-> -1) is not. `+ 0` normalizes -0
+  // to 0 so neither the envelope nor the engine sees a signed zero. Negatives
+  // must be caught here because mobile-mcp 1.0.5 declares coordinates .min(0)
+  // and would reject them device-side, misclassified as a device failure that
+  // triggers the crash probe (#199).
+  const rx = Math.round(x) + 0;
+  const ry = Math.round(y) + 0;
+  if (rx < 0 || ry < 0) {
+    return {
+      error: fail('invalid_input', `coordinates must be non-negative, got "${raw}"`, 'Coordinates must be >= 0 (screen pixels from the top-left), e.g. --at 100,250.'),
+    };
+  }
+  return { x: rx, y: ry };
 }
 
 async function handleTap({ deviceBridge }, raw) {

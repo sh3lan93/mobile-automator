@@ -115,6 +115,19 @@ describe('cli handlers', () => {
       expect(envelope.error.message).toMatch(/no device connected/);
     });
 
+    test('an unparseable element list becomes an ok:false device envelope, not a crash', async () => {
+      const { DeviceBridge } = require('../../src/device/bridge');
+      const deviceBridge = new DeviceBridge({
+        call: async () => 'One element per line: @ref Type [focused] [disabled]\n@e1 Button text="Login"',
+      });
+      const { envelope, exitKind } = await handleElements({ deviceBridge });
+      expect(exitKind).toBe('device');
+      expect(envelope.ok).toBe(false);
+      expect(envelope.error.kind).toBe('device');
+      expect(envelope.error.message).toMatch(/element list could not be parsed/i);
+      expect(envelope.hint).toMatch(/output format/i);
+    });
+
     test('handleElements surfaces a DeviceResolutionError hint into the envelope', async () => {
       const { DeviceResolutionError } = require('../../src/device/device-resolver');
       const deviceBridge = { listElements: async () => { throw new DeviceResolutionError('No active device or emulator found.', 'Start an emulator/simulator (or connect a device), or pass --device <id>.'); } };
@@ -205,6 +218,36 @@ describe('cli handlers', () => {
         const { exitKind } = await handleTap({ deviceBridge: bridge }, raw);
         expect(exitKind).toBe('invalid_input');
       }
+    });
+
+    // mobile-mcp 1.0.5 declares coordinates .min(0); a negative would come back
+    // as a device-side validation error and trigger the crash probe (#199).
+    test.each(['-1,20', '10,-5', '-3,-4', '-0.6,10'])('rejects negative coordinates "%s" before the device', async (raw) => {
+      const bridge = { tap: async () => { throw new Error('should not be called'); } };
+      const { envelope, exitKind } = await handleTap({ deviceBridge: bridge }, raw);
+      expect(exitKind).toBe('invalid_input');
+      expect(envelope.error.kind).toBe('invalid_input');
+      expect(envelope.error.message).toMatch(/non-negative|>= 0/);
+      expect(envelope.error.message).toContain(raw);
+      expect(envelope.hint).toMatch(/>= 0/);
+    });
+
+    test('accepts 0 and a tiny negative that rounds to 0 (-0.4 -> 0, never -0)', async () => {
+      const calls = [];
+      const bridge = { tap: async (c) => { calls.push(c); } };
+      const { envelope, exitKind } = await handleTap({ deviceBridge: bridge }, '-0.4,0');
+      expect(exitKind).toBe('ok');
+      expect(envelope.data).toEqual({ tapped: [0, 0] });
+      expect(Object.is(calls[0].x, 0)).toBe(true);
+    });
+
+    test('long-press and double-tap share the negative-coordinate guard', async () => {
+      const bridge = {
+        longPress: async () => { throw new Error('should not be called'); },
+        doubleTap: async () => { throw new Error('should not be called'); },
+      };
+      expect((await handleLongPress({ deviceBridge: bridge }, '-1,1')).exitKind).toBe('invalid_input');
+      expect((await handleDoubleTap({ deviceBridge: bridge }, '1,-1')).exitKind).toBe('invalid_input');
     });
   });
 

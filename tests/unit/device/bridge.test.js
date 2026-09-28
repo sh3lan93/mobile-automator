@@ -27,7 +27,9 @@ describe('DeviceBridge', () => {
       const bridge = new DeviceBridge({ call });
       const els = await bridge.listElements();
 
-      expect(calls).toEqual([['mobile_list_elements_on_screen', {}]]);
+      // mobile-mcp 1.0.5 defaults this tool to a line-per-element TEXT format;
+      // only format:"json" yields the parseable array (#199).
+      expect(calls).toEqual([['mobile_list_elements_on_screen', { format: 'json' }]]);
       expect(els).toHaveLength(1);
       expect(els[0]).toEqual({
         text: 'Login',
@@ -45,6 +47,14 @@ describe('DeviceBridge', () => {
       const els = await bridge.listElements();
       expect(els).toHaveLength(1);
       expect(els[0].center).toEqual([1, 1]);
+    });
+
+    test('rejects (never ok:true with []) when the engine answers in the 1.0.5 text format', async () => {
+      const call = async () =>
+        'One element per line: @ref Type text= label= name= value= id= at=x,y size=WxH [focused] [selected] [checked] [disabled]\n' +
+        '@e1 Button text="Login" at=10,20 size=100x40';
+      const bridge = new DeviceBridge({ call });
+      await expect(bridge.listElements()).rejects.toThrow(/could not be parsed/i);
     });
   });
 
@@ -268,6 +278,23 @@ describe('getScreenSize', () => {
     const call = async () => 'no dimensions here';
     const bridge = new DeviceBridge({ call });
     await expect(bridge.getScreenSize()).rejects.toThrow(/screen size/i);
+  });
+
+  // mobile-mcp 1.0.5's mobilecli path returns {width:0,height:0,scale:1} when
+  // the size is unknown instead of throwing (#199).
+  test.each([
+    ['structured all-zero', { width: 0, height: 0, scale: 1.0 }],
+    ['structured zero height', { width: 1080, height: 0 }],
+    ['structured negative', { width: -1, height: 1920 }],
+    ['structured non-numeric', { width: 'abc', height: 1920 }],
+    ['string 0x0', 'Screen size is 0x0 pixels'],
+    ['string zero width', 'Screen size is 0x1920 pixels'],
+  ])('hard-fails on a non-positive size (%s)', async (_label, value) => {
+    const bridge = new DeviceBridge({ call: async () => value });
+    const err = await bridge.getScreenSize().then(() => null, (e) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect(err.message).toMatch(/screen size/i);
+    expect(err.hint).toMatch(/device or simulator is connected/i);
   });
 });
 

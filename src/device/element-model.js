@@ -58,25 +58,47 @@ function normalize(rawElements) {
   return out;
 }
 
-// mobile-mcp 0.0.55 returns elements as the string
-// `Found these elements on screen: <JSON array>`. Earlier/other shapes may be
-// a bare array or `{elements:[...]}`. Parse all three into the raw element
-// array. Parse the WHOLE JSON array (never per-element regex) so labels
-// containing brackets/quotes/newlines survive.
+// Short, single-line excerpt of an unparseable payload for the error message:
+// the FIRST non-empty line only, capped, so a multi-kilobyte screen dump never
+// floods the envelope but the reader still sees what shape came back.
+const EXCERPT_MAX = 120;
+function excerptOf(text) {
+  const line = (text.split(/\r?\n/).find((l) => l.trim() !== '') || '').trim();
+  return line.length > EXCERPT_MAX ? `${line.slice(0, EXCERPT_MAX)}…` : line;
+}
+
+// mobile-mcp returns elements as the string
+// `Found these elements on screen: <JSON array>` (0.0.55, and 1.0.5 when called
+// with format:"json"). Earlier/other shapes may be a bare array or
+// `{elements:[...]}`. Parse all three into the raw element array. Parse the
+// WHOLE JSON array (never per-element regex) so labels containing
+// brackets/quotes/newlines survive.
+//
+// A non-empty string we cannot parse THROWS rather than returning []: mobile-mcp
+// 1.0.5 defaults this tool to a line-per-element text format whose header
+// contains `[focused] ... [disabled]`, and a silent [] there reported `ok:true`
+// with an empty screen — the failure probe then blamed the app (#199). An empty
+// or whitespace-only string stays [] because it carries no content to misread:
+// it is not evidence of a format change. null / non-string values stay [] for
+// the same reason.
 function parseElements(raw) {
   if (Array.isArray(raw)) return raw;
   if (raw && Array.isArray(raw.elements)) return raw.elements;
-  if (typeof raw === 'string') {
-    const start = raw.indexOf('[');
-    const end = raw.lastIndexOf(']');
-    if (start !== -1 && end > start) {
-      try {
-        const parsed = JSON.parse(raw.slice(start, end + 1));
-        if (Array.isArray(parsed)) return parsed;
-      } catch (_e) { /* fall through */ }
-    }
+  if (typeof raw !== 'string' || raw.trim() === '') return [];
+
+  const start = raw.indexOf('[');
+  const end = raw.lastIndexOf(']');
+  if (start !== -1 && end > start) {
+    try {
+      const parsed = JSON.parse(raw.slice(start, end + 1));
+      if (Array.isArray(parsed)) return parsed;
+    } catch (_e) { /* fall through to the loud failure below */ }
   }
-  return [];
+  const err = new Error(`The element list could not be parsed. Engine returned: "${excerptOf(raw)}"`);
+  err.hint =
+    'The mobile-mcp engine likely changed its element output format (e.g. text instead of JSON). ' +
+    'Check the installed @mobilenext/mobile-mcp version matches the one mobile-automator pins.';
+  throw err;
 }
 
 module.exports = { normalize, parseElements };

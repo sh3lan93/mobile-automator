@@ -24,8 +24,11 @@ class DeviceBridge {
     return normalizeDevices(result);
   }
 
+  // format:"json" is required from mobile-mcp 1.0.5, which defaults this tool
+  // to a line-per-element text format parseElements cannot read (#199). 0.0.55
+  // ignores the unknown key (its zod schema is non-strict), so it is safe on both.
   async listElements() {
-    const result = await this._call('mobile_list_elements_on_screen', {});
+    const result = await this._call('mobile_list_elements_on_screen', { format: 'json' });
     return normalize(parseElements(result));
   }
 
@@ -92,18 +95,25 @@ class DeviceBridge {
   // object), so we parse the WxH out of it; a structured {width,height} shape is
   // also accepted in case a future engine returns one. An unreadable size is a
   // hard error — never silently 0/NaN, which would make geometry gestures no-ops.
+  // That includes a READABLE zero: mobile-mcp 1.0.5's mobilecli path returns
+  // {width:0,height:0,scale:1} for an unknown size instead of throwing (#199).
   async getScreenSize() {
     const r = await this._call('mobile_get_screen_size', {});
+    let size = null;
     if (r && typeof r === 'object' && r.width != null && r.height != null) {
-      return { width: Number(r.width), height: Number(r.height) };
+      size = { width: Number(r.width), height: Number(r.height) };
+    } else {
+      const m = /(\d+)\s*x\s*(\d+)/i.exec(String(r));
+      if (m) size = { width: Number(m[1]), height: Number(m[2]) };
     }
-    const m = /(\d+)\s*x\s*(\d+)/i.exec(String(r));
-    if (!m) {
-      const err = new Error(`Could not read the device screen size from "${r}".`);
+    const positive = (n) => Number.isFinite(n) && n > 0;
+    if (!size || !positive(size.width) || !positive(size.height)) {
+      const shown = r && typeof r === 'object' ? JSON.stringify(r) : String(r);
+      const err = new Error(`Could not read the device screen size from "${shown}".`);
       err.hint = 'Ensure a device or simulator is connected.';
       throw err;
     }
-    return { width: Number(m[1]), height: Number(m[2]) };
+    return size;
   }
 
   // Press a hardware/system button (BACK, HOME, ENTER, ...).
