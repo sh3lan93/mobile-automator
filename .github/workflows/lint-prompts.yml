@@ -30,7 +30,7 @@ jobs:
       # errors. Running on '.' (default) keeps CI and pre-commit behavior
       # identical.
       - name: Run Vale
-        uses: errata-ai/vale-action@v2
+        uses: errata-ai/vale-action@v3
         with:
           version: 3.14.1
           fail_on_error: true
