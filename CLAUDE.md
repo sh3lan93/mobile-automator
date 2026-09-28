@@ -97,6 +97,8 @@ Two catalogs are the single source of truth for "does this capability actually r
 
 **`package-lock.json`** must mirror `package.json`'s `name`, `version` and `engines.node`. Guard: `tests/lint/lockfile-in-sync.test.js`. CI installs with `npm ci`, which installs *from the lockfile*, so a stale root entry is invisible until something downstream reads the wrong value — it has drifted twice.
 
+**Production-dependency advisories** (#161) are gated by `scripts/audit-gate.js`, which runs `npm audit --omit=dev` and fails on any high/critical advisory not listed in `scripts/audit-allowlist.json`. Every allowlist entry carries a reason, the issue that removes it, and an `expires` date. An expired entry fails, and so does a *stale* one (its advisory is no longer reported), so accepted risk can't outlive its reason. It runs in `audit.yml` (PR, main, weekly — a signal) and in `release.yml`'s `publish-npm` before `npm publish` (the actual gate). Wiring guard: `tests/lint/supply-chain-gate.test.js`. Dependabot is `lockfile-only` on purpose: a `package.json` change would trip the version-bump gate, and users resolve our ranges fresh anyway.
+
 **The shipping-doc corpus** is `tests/lint/docs-corpus.js`: every tracked `.md` minus historical records (`CHANGELOG.md`, `docs/changelog.md`, `docs/plans/**`), enumerated with `git ls-files` so `.gitignore` never has to be restated. Three guards scan it — `docs-counts.test.js` (capability counts vs the schema), `docs-no-stale-extension.test.js` (the removed Gemini-extension model), and the Node guard above. A new doc-scanning guard consumes `shippingDocs()`; do not hand-maintain a second file list, which is how `sample-app/README.md` kept teaching removed slash-command syntax for months.
 
 When you add an action or a result field, add its catalog entry in the same change. Do not hand-restate these counts in prose; derive them.
@@ -204,7 +206,6 @@ Tracked under the `production-ready` milestone; worth knowing before you debug s
 
 - Windows is silently unsupported: the session daemon binds a Unix domain socket — #165.
 - No JavaScript linter is configured (no ESLint config, dep, or script) — #164.
-- Production dependencies carry high-severity advisories; no audit gate, no Dependabot — #161.
 
 ## Conventions
 
