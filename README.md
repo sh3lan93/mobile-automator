@@ -114,6 +114,17 @@ In agnostic mode, OS-shaped gestures become four semantic actions — `press_bac
 
 ---
 
+### Telemetry
+
+`mauto` collects nothing by default. Anonymous usage telemetry is opt-in via
+`mauto telemetry enable` (currently gated behind `MAUTO_OBSERVE=1`), sends no
+free text of any kind, and carries no per-machine identifier.
+`MAUTO_TELEMETRY=0` and `DO_NOT_TRACK=1` force it off. Run `mauto telemetry
+status` for the exact field list, or read
+[Telemetry & Privacy](https://sh3lan93.github.io/mobile-automator/reference/telemetry/).
+
+---
+
 ## 📋 Command reference
 
 Most low-level verbs are called **by the agent**, not by you. The ones you'll run directly are at the top.
