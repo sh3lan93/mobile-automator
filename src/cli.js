@@ -32,6 +32,10 @@ const { captureOnFailure } = require('./observe/failure-capture');
 const { crashTimestampMs } = require('./device/crash-model');
 const { observeEnabled } = require('./observe/gate');
 const { probeCrashes } = require('./device/failure-probe');
+const observeTelemetry = require('./observe/telemetry');
+const observeSpool = require('./observe/spool');
+const observeTransport = require('./observe/transport');
+const { makeFlusher } = require('./observe/flush');
 
 // Commander throws (via exitOverride) for two very different reasons, and the
 // split below is the ONLY thing that tells them apart.
@@ -826,6 +830,76 @@ function handleConfigSet({ projectRoot }, key, rawValue) {
   }
   configManager.set(projectRoot, key, value);
   return { envelope: ok({ key, value }), exitKind: 'ok' };
+}
+
+// --- Slice 5: telemetry consent surface -----------------------------------
+//
+// `status` is the informed half of informed consent, and it is COMPUTED: the
+// field lists come from EVENT_FIELDS at runtime, so the disclosure a user reads
+// before opting in cannot drift from what the uploader actually sends. Prose
+// that restates a catalog is prose that will eventually be wrong.
+
+function telemetryReport({ projectRoot, env }, extra = {}) {
+  const decision = observeTelemetry.decideForProject(projectRoot, env);
+  return {
+    enabled: decision.enabled,
+    reason: decision.reason,
+    endpoint: observeTransport.endpointUrl(env),
+    fields_sent: observeTelemetry.sentFields(),
+    fields_never_sent: observeTelemetry.neverSentFields(),
+    spool: observeSpool.stats({ projectRoot, env }),
+    notice: observeTelemetry.CONSENT_NOTICE,
+    enable_with: 'mauto telemetry enable',
+    ...extra,
+  };
+}
+
+function handleTelemetryStatus({ projectRoot, env = process.env }) {
+  return { envelope: ok(telemetryReport({ projectRoot, env })), exitKind: 'ok' };
+}
+
+// Writes the durable intent, then reports the RESOLVED state — which may still
+// be off, because an env kill switch wins. Reporting `enabled: true` here when
+// MAUTO_TELEMETRY=0 is set would be a lie, and the config is not the place to
+// resolve a conflict the environment owns.
+function handleTelemetryEnable({ projectRoot, env = process.env }) {
+  configManager.set(projectRoot, 'telemetry.enabled', true);
+  observeTelemetry._resetMemo();
+  const data = telemetryReport({ projectRoot, env });
+  const hint =
+    data.reason === 'kill_switch'
+      ? 'Telemetry is enabled in config.json but MAUTO_TELEMETRY=0 is set in this environment and overrides it.'
+      : data.reason === 'do_not_track'
+        ? 'Telemetry is enabled in config.json but DO_NOT_TRACK is set in this environment and overrides it.'
+        : data.reason === 'no_token'
+          ? 'Telemetry is enabled in config.json but this build ships no project token, so nothing will be sent.'
+          : undefined;
+  return { envelope: ok(data, hint), exitKind: 'ok' };
+}
+
+function handleTelemetryDisable({ projectRoot, env = process.env }) {
+  configManager.set(projectRoot, 'telemetry.enabled', false);
+  observeTelemetry._resetMemo();
+  return { envelope: ok(telemetryReport({ projectRoot, env })), exitKind: 'ok' };
+}
+
+// The explicit escape hatch. This is the ONE verb allowed a network round trip,
+// because the user asked for one and is willing to wait for it — every other
+// verb appends to the spool and exits. A machine that never runs a daemon
+// drains here.
+async function handleTelemetryFlush({ projectRoot, env = process.env, flusher }) {
+  const flush = flusher || makeFlusher({ projectRoot, env });
+  const r = await flush();
+  return {
+    envelope: ok({
+      skipped: r.skipped,
+      sent: r.sent,
+      dropped: r.dropped,
+      kept: r.kept,
+      spool: observeSpool.stats({ projectRoot, env }),
+    }),
+    exitKind: 'ok',
+  };
 }
 
 // RAW content on success; fail envelope only when the topic is unknown.
@@ -1966,6 +2040,37 @@ function buildProgram(deps = {}) {
       ));
   }
 
+  // Gated behind MAUTO_OBSERVE=1, same reasoning as `crash` above: slices 2-5
+  // of the observability design gate their user-visible verbs so a partly
+  // built capability is ABSENT rather than present-and-broken.
+  if (observeEnabled(process.env)) {
+    // --- Slice 5: telemetry -------------------------------------------------
+
+    const telemetryCmd = program
+      .command('telemetry')
+      .description('Inspect and control anonymous usage telemetry (off by default)');
+
+    telemetryCmd
+      .command('status')
+      .description('Report whether telemetry is on, what would be sent, and what is queued')
+      .action(withEnvelope(() => emit(handleTelemetryStatus({ projectRoot }), humanFlag())));
+
+    telemetryCmd
+      .command('enable')
+      .description('Turn on anonymous usage telemetry')
+      .action(withEnvelope(() => emit(handleTelemetryEnable({ projectRoot }), humanFlag())));
+
+    telemetryCmd
+      .command('disable')
+      .description('Turn off anonymous usage telemetry')
+      .action(withEnvelope(() => emit(handleTelemetryDisable({ projectRoot }), humanFlag())));
+
+    telemetryCmd
+      .command('flush')
+      .description('Upload any spooled telemetry now instead of waiting for the daemon')
+      .action(withEnvelope(async () => emit(await handleTelemetryFlush({ projectRoot }), humanFlag())));
+  }
+
   program
     .command('mcp')
     .description('Run the MCP prompts server (stdio) exposing the mauto workflows as prompts')
@@ -2202,6 +2307,10 @@ module.exports = {
   handleDevices,
   handleDevicesUse,
   handleDevicesClear,
+  handleTelemetryStatus,
+  handleTelemetryEnable,
+  handleTelemetryDisable,
+  handleTelemetryFlush,
   handleCrashList,
   handleCrashGet,
 };

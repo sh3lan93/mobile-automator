@@ -83,6 +83,7 @@ const VERB_NAMES = Object.freeze([
   'devices',
   'crash',
   'mcp',
+  'telemetry',
 ]);
 
 // Why the daemon stopped. 'crash' is documented but not yet produced.

@@ -56,3 +56,37 @@ describe('stdout purity (integration)', () => {
     expect(stderr).toContain('verb.end');
   });
 });
+
+describe('telemetry verbs (integration)', () => {
+  // Gated behind MAUTO_OBSERVE=1, like `crash`. `flush` is the ONE verb
+  // permitted a network round trip, and it is run here with a kill switch set
+  // so the suite never reaches the wire while still exercising the path (a
+  // fresh, `mauto setup`-less workspace already resolves telemetry
+  // not_configured regardless, so this is belt-and-braces, not the only thing
+  // stopping a real POST).
+  const GATE = { MAUTO_OBSERVE: '1' };
+
+  function assertsSingleEnvelope(args, env) {
+    const { stdout } = runCli(args, env);
+    const lines = stdout.trim().split('\n').filter(Boolean);
+    expect(lines).toHaveLength(1);
+    expect(() => JSON.parse(lines[0])).not.toThrow();
+    expect(JSON.parse(lines[0])).toHaveProperty('schema_version');
+  }
+
+  it('status emits exactly one JSON object on stdout', () => {
+    assertsSingleEnvelope(['telemetry', 'status'], GATE);
+  });
+
+  it('enable emits exactly one JSON object on stdout', () => {
+    assertsSingleEnvelope(['telemetry', 'enable'], GATE);
+  });
+
+  it('disable emits exactly one JSON object on stdout', () => {
+    assertsSingleEnvelope(['telemetry', 'disable'], GATE);
+  });
+
+  it('flush emits exactly one JSON object on stdout, never reaching the wire', () => {
+    assertsSingleEnvelope(['telemetry', 'flush'], { ...GATE, MAUTO_TELEMETRY: '0' });
+  });
+});

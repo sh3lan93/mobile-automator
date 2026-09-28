@@ -36,6 +36,10 @@ const {
   handleDevices,
   handleDevicesUse,
   handleDevicesClear,
+  handleTelemetryStatus,
+  handleTelemetryEnable,
+  handleTelemetryDisable,
+  handleTelemetryFlush,
   buildProgram,
 } = require('../../src/cli');
 const selectionStore = require('../../src/device/selection');
@@ -2164,6 +2168,125 @@ describe('cli handlers', () => {
           summary: 'Custom narrative summary.',
         },
       ]);
+    });
+  });
+});
+
+describe('mauto telemetry', () => {
+  const telemetryModule = require('../../src/observe/telemetry');
+  const { EVENT_FIELDS, NEVER_SENDS } = require('../../src/observe/event');
+
+  function workspace(config = {}) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-tv-'));
+    fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'mobile-automator', 'config.json'), JSON.stringify(config, null, 2));
+    return root;
+  }
+
+  beforeEach(() => telemetryModule._resetMemo());
+
+  it('reports off, and says exactly how to turn it on', () => {
+    const root = workspace({});
+    const { envelope, exitKind } = handleTelemetryStatus({ projectRoot: root, env: {} });
+    expect(exitKind).toBe('ok');
+    expect(envelope.ok).toBe(true);
+    expect(envelope.data.enabled).toBe(false);
+    expect(envelope.data.reason).toBe('not_configured');
+    expect(envelope.data.enable_with).toBe('mauto telemetry enable');
+  });
+
+  it('renders the field list from the catalog, not from prose', () => {
+    const root = workspace({});
+    const { envelope } = handleTelemetryStatus({ projectRoot: root, env: {} });
+    expect(envelope.data.fields_sent.sort())
+      .toEqual(Object.keys(EVENT_FIELDS).filter((k) => EVENT_FIELDS[k].sends).sort());
+    expect(envelope.data.fields_never_sent.sort()).toEqual([...NEVER_SENDS].sort());
+    expect(envelope.data.notice).toBe(telemetryModule.CONSENT_NOTICE);
+  });
+
+  it('reports the spool so a user can see what is queued before opting in', () => {
+    const root = workspace({});
+    const { envelope } = handleTelemetryStatus({ projectRoot: root, env: {} });
+    expect(envelope.data.spool).toEqual({
+      path: expect.stringContaining('telemetry.spool'),
+      bytes: 0,
+      events: 0,
+      pending_batches: 0,
+    });
+  });
+
+  it('enable writes the config key', () => {
+    const root = workspace({});
+    const { envelope } = handleTelemetryEnable({ projectRoot: root, env: { MAUTO_TELEMETRY_TOKEN: 'phc_real' } });
+    expect(envelope.ok).toBe(true);
+    expect(envelope.data.enabled).toBe(true);
+    const cfg = JSON.parse(fs.readFileSync(path.join(root, 'mobile-automator', 'config.json'), 'utf8'));
+    expect(cfg.telemetry.enabled).toBe(true);
+  });
+
+  it('enable under a kill switch writes the intent but does NOT claim to be on', () => {
+    const root = workspace({});
+    const { envelope } = handleTelemetryEnable({
+      projectRoot: root,
+      env: { MAUTO_TELEMETRY_TOKEN: 'phc_real', MAUTO_TELEMETRY: '0' },
+    });
+    expect(envelope.ok).toBe(true);
+    expect(envelope.data.enabled).toBe(false);
+    expect(envelope.data.reason).toBe('kill_switch');
+    expect(envelope.hint).toMatch(/MAUTO_TELEMETRY/);
+    // The durable intent is still recorded — the env var is this shell's
+    // override, not a rewrite of what the project owner asked for.
+    const cfg = JSON.parse(fs.readFileSync(path.join(root, 'mobile-automator', 'config.json'), 'utf8'));
+    expect(cfg.telemetry.enabled).toBe(true);
+  });
+
+  it('disable writes false and reports off', () => {
+    const root = workspace({ telemetry: { enabled: true } });
+    const { envelope } = handleTelemetryDisable({ projectRoot: root, env: {} });
+    expect(envelope.data.enabled).toBe(false);
+    const cfg = JSON.parse(fs.readFileSync(path.join(root, 'mobile-automator', 'config.json'), 'utf8'));
+    expect(cfg.telemetry.enabled).toBe(false);
+  });
+
+  it('flush drains the spool through an injected flusher, never touching the real transport', async () => {
+    const root = workspace({ telemetry: { enabled: true } });
+    const calls = [];
+    const flusher = async () => {
+      calls.push(true);
+      return { sent: 3, dropped: 1, kept: 0, ok: false };
+    };
+    const { envelope, exitKind } = await handleTelemetryFlush({ projectRoot: root, env: {}, flusher });
+    expect(exitKind).toBe('ok');
+    expect(calls).toHaveLength(1);
+    expect(envelope.data).toMatchObject({ sent: 3, dropped: 1, kept: 0 });
+    expect(envelope.data.spool).toMatchObject({ events: 0 });
+  });
+
+  describe('gating', () => {
+    const withEnv = (value, fn) => {
+      const prev = process.env.MAUTO_OBSERVE;
+      if (value === undefined) delete process.env.MAUTO_OBSERVE;
+      else process.env.MAUTO_OBSERVE = value;
+      try {
+        return fn();
+      } finally {
+        if (prev === undefined) delete process.env.MAUTO_OBSERVE;
+        else process.env.MAUTO_OBSERVE = prev;
+      }
+    };
+
+    const hasTelemetry = () => Boolean(buildProgram().commands.find((c) => c.name() === 'telemetry'));
+
+    it('does not register `telemetry` when the gate is unset', () => {
+      expect(withEnv(undefined, hasTelemetry)).toBe(false);
+    });
+
+    it('registers all four telemetry subcommands when MAUTO_OBSERVE=1', () => {
+      withEnv('1', () => {
+        const cmd = buildProgram().commands.find((c) => c.name() === 'telemetry');
+        expect(cmd).toBeDefined();
+        expect(cmd.commands.map((c) => c.name()).sort()).toEqual(['disable', 'enable', 'flush', 'status']);
+      });
     });
   });
 });
