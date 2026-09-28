@@ -279,7 +279,7 @@ Scenario files and result files version themselves independently, with **differe
 
 ## File Locations
 
-All test artifacts are stored under the `mobile-automator/` directory in the project root:
+All test artifacts are stored under the `mobile-automator/` directory in the project root. `mauto` finds it from any subdirectory by walking up to the nearest `mobile-automator/config.json`, stopping at the repository root (`.git`):
 
 ```
 mobile-automator/

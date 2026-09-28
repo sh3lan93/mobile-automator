@@ -25,14 +25,19 @@ const sessionSpawn = require('./session-spawn');
 // { bridge, close }; close() releases this verb's hold — a no-op for the shared
 // daemon, a real transport teardown for a one-shot.
 //
-// `resolve` is an internal test seam only; verbs call acquireConnection with
-// just { device, projectRoot }.
+// `autostart` (default true: the daemon is the normal connection path) is the
+// daemon-vs-oneshot policy. cli.js's connectBridge passes false when no
+// workspace was discovered (#188), so a workspace-less cwd gets a one-shot
+// bridge and no mobile-automator/.session/ tree. `resolve` is an internal test
+// seam only; verbs call acquireConnection with just
+// { device, projectRoot, autostart }.
 async function acquireConnection({
   device = null,
   projectRoot = process.cwd(),
+  autostart = true,
   resolve = resolveDeviceConnection,
 } = {}) {
-  const { bridge, close } = await resolve({ device, projectRoot });
+  const { bridge, close } = await resolve({ device, projectRoot, autostart });
   return { bridge, close };
 }
 
