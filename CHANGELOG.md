@@ -238,6 +238,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   directory. `setup` and `init` still write to the current directory; `setup`
   adds a hint when that new workspace shadows one in an ancestor.
 
+### 🔒 Security
+
+- Cleared the `ws`, `fast-uri` and `ip-address` high-severity advisories (and
+  the moderate `hono`, `@hono/node-server`, `qs`, `body-parser` ones) in
+  production dependencies with a lockfile refresh (#161).
+- New production-dependency audit gate, `scripts/audit-gate.js`: fails on any
+  high/critical advisory not accepted in `scripts/audit-allowlist.json`, on an
+  expired acceptance, and on a stale one. It runs on every PR, weekly, and in
+  `publish-npm` before `npm publish`. It fails closed when `npm audit` cannot
+  reach the registry.
+- Accepted until 2026-12-27: two `sharp` advisories reachable only through the
+  `@mobilenext/mobile-mcp@0.0.55` pin; removal tracked in #199.
+- Dependabot now opens weekly lockfile-only npm PRs and GitHub Actions PRs.
+
 ---
 
 ## [0.25.0]

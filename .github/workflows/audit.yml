@@ -1,0 +1,32 @@
+name: Dependency Audit
+
+# #161: fail on any high/critical advisory in production dependencies that is
+# not explicitly accepted in scripts/audit-allowlist.json. The schedule is the
+# point — advisories are published against code that has not changed, so a
+# PR-only trigger would never see them. This workflow is a signal, not a gate
+# (the repo has no required status checks); the gate is the same script in
+# release.yml's publish-npm job.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Production dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # npm audit reads the lockfile; no install is needed.
+      - run: node scripts/audit-gate.js
