@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [0.26.0]
 
 ### ✨ Added
 
@@ -204,6 +204,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   specifier built at runtime beyond flagging it. Until `transport.js` exists it
   asserts that file is absent or the only network importer, rather than claiming
   "exactly one".
+- **Opt-in anonymous usage telemetry, off by default.** `mauto telemetry
+  enable` turns it on; `mauto telemetry status` prints the exact field list —
+  rendered from the event catalog at runtime, so the disclosure cannot drift
+  from what the uploader sends — alongside the endpoint and what is queued
+  locally. `MAUTO_TELEMETRY=0` and `DO_NOT_TRACK=1` force it off and always win
+  over config. `MAUTO_TELEMETRY=1` deliberately does *not* enable it: an
+  off-switch is safe to honour from the environment, an on-switch is a way to
+  turn collection on for a machine whose owner never consented. All four verbs
+  are `requireWorkspace`-gated like `config get`/`config set` — they read or
+  write the same per-project `config.json` (or, for `flush`, the same
+  `.logs/telemetry.spool`), so none of them will silently create or read a
+  workspace in the wrong directory.
+- **Verbs never touch the network.** Every verb ends in `process.exit()`, which
+  tears down a pending socket, so a fire-and-forget POST is dropped a large
+  fraction of the time and an awaited one adds a round trip to every `mauto
+  tap`. Instead a verb appends one line to
+  `mobile-automator/.logs/telemetry.spool` — and that line *is* the upload
+  payload, redacted at spool time, so a device serial is never written to the
+  file that gets sent — and the session daemon uploads it during its idle
+  window. `mauto telemetry flush` is the explicit escape hatch for a machine
+  with no daemon. An undelivered spool is just a file the next run picks up.
+- Delivery is at-least-once and bounded in every direction: each POST is capped
+  at 5s, retryable failures back off from 1 minute to 30, 4xx (except 429) is
+  permanent so a revoked token cannot wedge the queue, the spool is capped at
+  256 KiB, and at most three pending batches are kept. A permanently-offline
+  machine converges instead of growing.
+- Transport is PostHog's plain HTTP capture API on EU cloud with a write-only
+  public project token — **no SDK**, no new dependency. An SDK would cost
+  cold-start time on every one of the dozens of process spawns a scenario makes
+  and add supply-chain surface to a project already carrying high-severity
+  advisories (#161). `src/observe/transport.js` is the only file in `src/` or
+  `bin/` allowed to make an outbound HTTP call, enforced by
+  `tests/lint/telemetry-transport-isolation.test.js`.
+- No per-machine identifier exists anywhere in the system. Events carry a
+  constant `distinct_id` and a per-event random `msg_id` used only to
+  deduplicate a re-sent batch. `mauto setup` writes `telemetry.enabled: false`
+  into `config.json` as a literal, visible key rather than relying on an absent
+  one, and surfaces the notice in its envelope — a notice, never a prompt,
+  because `mauto` verbs are invoked by an agent and there is nobody at the
+  keyboard to consent on the human's behalf.
+- New docs page: **Telemetry & Privacy** (`docs/reference/telemetry.md`),
+  checked against the field catalog in both directions by
+  `tests/lint/telemetry-docs.test.js`.
+
+### 🔧 Changed
+
+- The observability feature is graduated. The `MAUTO_OBSERVE` gate is removed
+  and everything it hid is unconditional; a lint guard
+  (`tests/lint/no-observe-gate.test.js`) keeps it gone.
 
 ### Fixed
 
