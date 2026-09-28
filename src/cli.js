@@ -30,7 +30,6 @@ const { readTrace, deriveRun, pruneRunTraces } = require('./observe/trace');
 const { readHandle, readSessionId } = require('./device/session-handle');
 const { captureOnFailure } = require('./observe/failure-capture');
 const { crashTimestampMs } = require('./device/crash-model');
-const { observeEnabled } = require('./observe/gate');
 const { probeCrashes } = require('./device/failure-probe');
 const observeTelemetry = require('./observe/telemetry');
 const observeSpool = require('./observe/spool');
@@ -638,10 +637,7 @@ function handleResultAddAssertion({ resultStoreFactory, projectRoot }, opts) {
   return { envelope: ok({ run_id: runId, assertion: entry }, storeHint(store)), exitKind: 'ok' };
 }
 
-// Record an observed app crash. Deliberately NOT gated behind MAUTO_OBSERVE:
-// this is a complete, device-free result writer with no partial state to
-// hide, and tests/lint/result-coverage.test.js builds the program in a plain
-// environment — gating this verb would red-tree that guard in CI.
+// Record an observed app crash.
 function handleResultAddCrash({ resultStoreFactory, projectRoot }, opts = {}) {
   const store = resultStoreFactory({
     runId: opts.runId,
@@ -1589,11 +1585,7 @@ function buildProgram(deps = {}) {
         envelope: r.envelope,
         verb: emitters.getVerb(),
         projectRoot,
-        // Gated here too, not only inside probeCrashes: with the gate unset
-        // this must do ZERO extra work, not merely "produce no visible
-        // change" — sessionWatermark() is a filesystem read that an ungated
-        // user has never paid for on this path before.
-        watermark: observeEnabled(process.env) ? sessionWatermark(projectRoot) : null,
+        watermark: sessionWatermark(projectRoot),
       });
       await captureOnFailure({
         bridge,
@@ -1804,7 +1796,6 @@ function buildProgram(deps = {}) {
       emit(r, humanFlag());
     }));
 
-  // Not gated behind MAUTO_OBSERVE — see handleResultAddCrash's comment.
   result
     .command('add-crash')
     .description('Record an app crash observed during the run')
@@ -2013,73 +2004,61 @@ function buildProgram(deps = {}) {
       emit(r, humanFlag());
     }));
 
-  // Gated behind MAUTO_OBSERVE=1 per the observability design's slice ladder.
-  // Registration, not a stub: with the gate unset `mauto crash list` is an
-  // unknown command and lands as the usual invalid_input envelope, so a partly
-  // built capability is ABSENT rather than present-and-broken. The graduation
-  // PR deletes this branch and the one in connectBridge (Task 5) together.
-  if (observeEnabled(process.env)) {
-    const crash = program
-      .command('crash')
-      .description('Diagnostics: crash reports currently readable on the device');
+  const crash = program
+    .command('crash')
+    .description('Diagnostics: crash reports currently readable on the device');
 
-    crash
-      .command('list')
-      .description('List crash reports, scoped to the current device session by default')
-      .option('--device <id>', 'target device id')
-      .option('--since <iso>', 'only reports at or after this ISO timestamp (default: session start)')
-      .action(withEnvelope((opts) =>
-        connectBridge(resolveVerbDevice(opts.device), (bridge) =>
-          handleCrashList(
-            { deviceBridge: bridge, projectRoot },
-            opts.since === undefined ? {} : { since: opts.since }
-          )
+  crash
+    .command('list')
+    .description('List crash reports, scoped to the current device session by default')
+    .option('--device <id>', 'target device id')
+    .option('--since <iso>', 'only reports at or after this ISO timestamp (default: session start)')
+    .action(withEnvelope((opts) =>
+      connectBridge(resolveVerbDevice(opts.device), (bridge) =>
+        handleCrashList(
+          { deviceBridge: bridge, projectRoot },
+          opts.since === undefined ? {} : { since: opts.since }
         )
-      ));
+      )
+    ));
 
-    crash
-      .command('get <id>')
-      .description('Fetch one crash report (head by default)')
-      .option('--device <id>', 'target device id')
-      .option('--full', 'return the whole report instead of its head')
-      .option('--out <path>', 'write the full report to a file and return its path')
-      .action(withEnvelope((id, opts) =>
-        connectBridge(resolveVerbDevice(opts.device), (bridge) =>
-          handleCrashGet({ deviceBridge: bridge }, id, { full: opts.full, out: opts.out })
-        )
-      ));
-  }
+  crash
+    .command('get <id>')
+    .description('Fetch one crash report (head by default)')
+    .option('--device <id>', 'target device id')
+    .option('--full', 'return the whole report instead of its head')
+    .option('--out <path>', 'write the full report to a file and return its path')
+    .action(withEnvelope((id, opts) =>
+      connectBridge(resolveVerbDevice(opts.device), (bridge) =>
+        handleCrashGet({ deviceBridge: bridge }, id, { full: opts.full, out: opts.out })
+      )
+    ));
 
-  // Gated behind MAUTO_OBSERVE=1, same reasoning as `crash` above: slices 2-5
-  // of the observability design gate their user-visible verbs so a partly
-  // built capability is ABSENT rather than present-and-broken.
-  if (observeEnabled(process.env)) {
-    // --- Slice 5: telemetry -------------------------------------------------
+  // --- Slice 5: telemetry ---------------------------------------------------
 
-    const telemetryCmd = program
-      .command('telemetry')
-      .description('Inspect and control anonymous usage telemetry (off by default)');
+  const telemetryCmd = program
+    .command('telemetry')
+    .description('Inspect and control anonymous usage telemetry (off by default)');
 
-    telemetryCmd
-      .command('status')
-      .description('Report whether telemetry is on, what would be sent, and what is queued')
-      .action(withEnvelope(() => emit(handleTelemetryStatus({ projectRoot }), humanFlag())));
+  telemetryCmd
+    .command('status')
+    .description('Report whether telemetry is on, what would be sent, and what is queued')
+    .action(withEnvelope(() => emit(handleTelemetryStatus({ projectRoot }), humanFlag())));
 
-    telemetryCmd
-      .command('enable')
-      .description('Turn on anonymous usage telemetry')
-      .action(withEnvelope(() => emit(handleTelemetryEnable({ projectRoot }), humanFlag())));
+  telemetryCmd
+    .command('enable')
+    .description('Turn on anonymous usage telemetry')
+    .action(withEnvelope(() => emit(handleTelemetryEnable({ projectRoot }), humanFlag())));
 
-    telemetryCmd
-      .command('disable')
-      .description('Turn off anonymous usage telemetry')
-      .action(withEnvelope(() => emit(handleTelemetryDisable({ projectRoot }), humanFlag())));
+  telemetryCmd
+    .command('disable')
+    .description('Turn off anonymous usage telemetry')
+    .action(withEnvelope(() => emit(handleTelemetryDisable({ projectRoot }), humanFlag())));
 
-    telemetryCmd
-      .command('flush')
-      .description('Upload any spooled telemetry now instead of waiting for the daemon')
-      .action(withEnvelope(async () => emit(await handleTelemetryFlush({ projectRoot }), humanFlag())));
-  }
+  telemetryCmd
+    .command('flush')
+    .description('Upload any spooled telemetry now instead of waiting for the daemon')
+    .action(withEnvelope(async () => emit(await handleTelemetryFlush({ projectRoot }), humanFlag())));
 
   program
     .command('mcp')

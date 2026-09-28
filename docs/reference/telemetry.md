@@ -17,9 +17,6 @@ what it would collect if you did, exactly, field by field.
 
 ## Turning it on and off
 
-Currently gated behind `MAUTO_OBSERVE=1` (these verbs don't exist without it
-yet — see the project's production-readiness tracking issue).
-
 ```bash
 mauto telemetry status     # what is on, what would be sent, what is queued
 mauto telemetry enable     # opt in

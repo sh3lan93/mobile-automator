@@ -137,8 +137,8 @@ mauto devices                        # respawns the daemon
 ### ❓ "Element not found" — but did the app crash?
 
 `mauto` cannot tell you from the error alone: a missing element and a dead app
-produce the same message. With `MAUTO_OBSERVE=1`, a failed device verb carries
-the answer in its envelope, and you can ask directly:
+produce the same message. A failed device verb carries the answer in its
+envelope, and you can ask directly:
 
 ```bash
 mauto crash list                  # scoped to the current device session

@@ -58,14 +58,11 @@ describe('stdout purity (integration)', () => {
 });
 
 describe('telemetry verbs (integration)', () => {
-  // Gated behind MAUTO_OBSERVE=1, like `crash`. `flush` is the ONE verb
-  // permitted a network round trip, and it is run here with a kill switch set
-  // so the suite never reaches the wire while still exercising the path (a
-  // fresh, `mauto setup`-less workspace already resolves telemetry
-  // not_configured regardless, so this is belt-and-braces, not the only thing
-  // stopping a real POST).
-  const GATE = { MAUTO_OBSERVE: '1' };
-
+  // `flush` is the ONE verb permitted a network round trip, and it is run
+  // here with a kill switch set so the suite never reaches the wire while
+  // still exercising the path (a fresh, `mauto setup`-less workspace already
+  // resolves telemetry not_configured regardless, so this is belt-and-braces,
+  // not the only thing stopping a real POST).
   function assertsSingleEnvelope(args, env) {
     const { stdout } = runCli(args, env);
     const lines = stdout.trim().split('\n').filter(Boolean);
@@ -75,18 +72,18 @@ describe('telemetry verbs (integration)', () => {
   }
 
   it('status emits exactly one JSON object on stdout', () => {
-    assertsSingleEnvelope(['telemetry', 'status'], GATE);
+    assertsSingleEnvelope(['telemetry', 'status']);
   });
 
   it('enable emits exactly one JSON object on stdout', () => {
-    assertsSingleEnvelope(['telemetry', 'enable'], GATE);
+    assertsSingleEnvelope(['telemetry', 'enable']);
   });
 
   it('disable emits exactly one JSON object on stdout', () => {
-    assertsSingleEnvelope(['telemetry', 'disable'], GATE);
+    assertsSingleEnvelope(['telemetry', 'disable']);
   });
 
   it('flush emits exactly one JSON object on stdout, never reaching the wire', () => {
-    assertsSingleEnvelope(['telemetry', 'flush'], { ...GATE, MAUTO_TELEMETRY: '0' });
+    assertsSingleEnvelope(['telemetry', 'flush'], { MAUTO_TELEMETRY: '0' });
   });
 });

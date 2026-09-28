@@ -153,9 +153,9 @@ Device verbs are backed by a single persistent mobile-mcp session daemon. These 
 
 ## Telemetry verbs
 
-Anonymous usage telemetry, off by default. Currently gated behind
-`MAUTO_OBSERVE=1`. See [Telemetry & Privacy](telemetry.md) for the exact field
-list and delivery mechanics.
+Anonymous usage telemetry, off by default. See
+[Telemetry & Privacy](telemetry.md) for the exact field list and delivery
+mechanics.
 
 | Verb | Description |
 |------|-------------|

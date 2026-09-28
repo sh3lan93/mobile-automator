@@ -53,8 +53,7 @@ const EVENT_NAMES = Object.freeze([
 // The values cli.js's preAction hook can record as `verb`: the TOP-LEVEL
 // command commander resolved (`config get` records `config`). Commander's
 // implicit `help` command, `--help` and `-V` run no preAction hook, so they
-// record no verb at all and are deliberately absent. `crash` is registered only
-// under MAUTO_OBSERVE=1 and is listed so it ships when the gate graduates.
+// record no verb at all and are deliberately absent.
 const VERB_NAMES = Object.freeze([
   'elements',
   'screenshot',
