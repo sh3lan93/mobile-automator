@@ -90,6 +90,12 @@ describe('config schema — structural agreement', () => {
     });
   });
 
+  test('telemetry.enabled is declared boolean, so `config set` coerces "true" rather than storing a string', () => {
+    expect(declaredTypesAt('telemetry.enabled')).toContain('boolean');
+    expect(validateAt('telemetry.enabled', true)).toMatchObject({ valid: true });
+    expect(validateAt('telemetry.enabled', 'true')).toMatchObject({ valid: false });
+  });
+
   test('the shipped config fixtures conform once healed', () => {
     for (const name of ['config.platform-aware.json', 'config.platform-agnostic.json']) {
       const raw = JSON.parse(fs.readFileSync(path.join(REPO, 'tests', 'fixtures', name), 'utf8'));

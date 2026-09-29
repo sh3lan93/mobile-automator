@@ -37,6 +37,17 @@
     "environments": { "$ref": "#/definitions/stringList" },
     "protected_directories": { "$ref": "#/definitions/stringList" },
     "business_critical_paths": { "$ref": "#/definitions/stringList" },
+    "telemetry": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Anonymous usage telemetry. Off unless `enabled` is literally true. MAUTO_TELEMETRY=0 and DO_NOT_TRACK=1 override this and always win; MAUTO_TELEMETRY=1 deliberately does not enable. Run `mauto telemetry status` for the exact field list.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Opt in to anonymous usage telemetry. Default false. Set with `mauto telemetry enable`."
+        }
+      }
+    },
     "app": {
       "type": "object",
       "additionalProperties": true,

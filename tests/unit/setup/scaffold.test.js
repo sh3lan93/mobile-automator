@@ -30,6 +30,7 @@ describe('setup/scaffold', () => {
       project_name: null,
       environments: [],
       default_environment: null,
+      telemetry: { enabled: false },
     });
   });
 
@@ -100,5 +101,28 @@ describe('workspace .gitignore', () => {
     scaffold(root, { mode: 'platform-aware' });
 
     expect(fs.readFileSync(gi, 'utf8')).toBe('# mine\n');
+  });
+});
+
+describe('telemetry default', () => {
+  it('writes a visible false rather than relying on an absent key', () => {
+    const root = tmpRoot();
+    scaffold(root, { mode: 'platform-aware' });
+    const cfg = JSON.parse(fs.readFileSync(path.join(root, 'mobile-automator', 'config.json'), 'utf8'));
+    expect(cfg.telemetry).toEqual({ enabled: false });
+  });
+
+  it('never rewrites an existing config\'s telemetry choice', () => {
+    const root = tmpRoot();
+    fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'mobile-automator', 'config.json'),
+      JSON.stringify({ mode: 'platform-aware', telemetry: { enabled: true } }, null, 2)
+    );
+    scaffold(root, { mode: 'platform-agnostic' });
+    const cfg = JSON.parse(fs.readFileSync(path.join(root, 'mobile-automator', 'config.json'), 'utf8'));
+    // Re-running setup must not silently revoke — or silently grant — consent.
+    expect(cfg.telemetry.enabled).toBe(true);
+    expect(cfg.mode).toBe('platform-agnostic');
   });
 });

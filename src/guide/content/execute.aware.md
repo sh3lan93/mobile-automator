@@ -172,7 +172,7 @@ An action that fails, or an `elements` call that comes back empty, has two very
 different explanations: the UI changed, or the app died. They lead to opposite
 conclusions, and only one of them is worth reporting as a test failure.
 
-When `MAUTO_OBSERVE=1` is set, `mauto` checks for you. A failed device action
+`mauto` checks for you. A failed device action
 comes back with a `crashes` array in `data`, and the `hint` names the process
 that died. Three states, and they are not the same:
 

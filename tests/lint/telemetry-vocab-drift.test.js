@@ -60,13 +60,10 @@ describe('EVENT_NAMES', () => {
   }
 
   // Names a producer does not emit yet. Each needs a reason and a removal date.
-  const UNPRODUCED = [
-    // 'telemetry.flush' is emitted by src/observe/flush.js, which lands in a
-    // later slice-5 task. tests/unit/observe/event.test.js already round-trips
-    // it, so it is declared ahead of its producer. Delete this entry once the
-    // producer exists and the source scan finds it.
-    'telemetry.flush',
-  ];
+  // Empty: 'telemetry.flush' was declared here ahead of its producer
+  // (src/observe/flush.js); now that flush.js exists, the source scan finds
+  // it and the entry is dead weight.
+  const UNPRODUCED = [];
 
   it('knows every event name the source records', () => {
     expect(diff(EVENT_NAMES, eventNamesInSrc(), UNPRODUCED).missing).toEqual([]);
@@ -93,18 +90,10 @@ describe('VERB_NAMES', () => {
   // Commander's implicit `help` command, `--help` and `-V` dispatch without
   // running any preAction hook (verified against commander 12), so a help
   // invocation records NO verb rather than the word `help`; it is therefore not
-  // in the vocabulary. The `crash` command is registered only under
-  // MAUTO_OBSERVE=1, so the program is built with the gate on to see it.
+  // in the vocabulary.
   function topLevelCommandNames() {
-    const prior = process.env.MAUTO_OBSERVE;
-    process.env.MAUTO_OBSERVE = '1';
-    try {
-      const { buildProgram } = require('../../src/cli');
-      return new Set(buildProgram({}).commands.map((c) => c.name()));
-    } finally {
-      if (prior === undefined) delete process.env.MAUTO_OBSERVE;
-      else process.env.MAUTO_OBSERVE = prior;
-    }
+    const { buildProgram } = require('../../src/cli');
+    return new Set(buildProgram({}).commands.map((c) => c.name()));
   }
 
   it('knows every top-level command the program can resolve', () => {
