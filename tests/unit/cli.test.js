@@ -2210,13 +2210,27 @@ describe('mauto telemetry', () => {
     const calls = [];
     const flusher = async () => {
       calls.push(true);
-      return { sent: 3, dropped: 1, kept: 0, ok: false };
+      return { sent: 3, dropped: 1, kept: 0, kept_events: 0, ok: false };
     };
     const { envelope, exitKind } = await handleTelemetryFlush({ projectRoot: root, env: {}, flusher });
     expect(exitKind).toBe('ok');
     expect(calls).toHaveLength(1);
-    expect(envelope.data).toMatchObject({ sent: 3, dropped: 1, kept: 0 });
+    expect(envelope.data).toMatchObject({ sent: 3, dropped: 1, kept: 0, kept_events: 0, ok: false });
+    // The envelope's ok says the verb ran; data.ok carries the flush's verdict,
+    // and a permanent drop gets the hint that explains it.
+    expect(envelope.ok).toBe(true);
+    expect(envelope.hint).toMatch(/permanently discarded/);
     expect(envelope.data.spool).toMatchObject({ events: 0 });
+  });
+
+  it('flush explains kept batches without claiming the verb failed', async () => {
+    const root = workspace({ telemetry: { enabled: true } });
+    const flusher = async () => ({ sent: 0, dropped: 0, kept: 1, kept_events: 40, ok: false });
+    const { envelope, exitKind } = await handleTelemetryFlush({ projectRoot: root, env: {}, flusher });
+    expect(exitKind).toBe('ok');
+    expect(envelope.ok).toBe(true);
+    expect(envelope.data).toMatchObject({ kept: 1, kept_events: 40, ok: false });
+    expect(envelope.hint).toMatch(/kept for retry/);
   });
 
   it('registers all four telemetry subcommands', () => {

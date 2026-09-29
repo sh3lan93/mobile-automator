@@ -54,7 +54,7 @@ describe('telemetry flush', () => {
       },
     };
     const flush = makeFlusher({ projectRoot: root, env: TOKEN, transport });
-    await expect(flush()).resolves.toMatchObject({ skipped: 'not_configured', sent: 0 });
+    await expect(flush()).resolves.toMatchObject({ skipped: 'not_configured', sent: 0, kept_events: 0 });
   });
 
   it('never touches the transport under a kill switch, even with an enabled config', async () => {
@@ -65,7 +65,7 @@ describe('telemetry flush', () => {
       },
     };
     const flush = makeFlusher({ projectRoot: root, env: { ...TOKEN, MAUTO_TELEMETRY: '0' }, transport });
-    await expect(flush()).resolves.toMatchObject({ skipped: 'kill_switch', sent: 0 });
+    await expect(flush()).resolves.toMatchObject({ skipped: 'kill_switch', sent: 0, kept_events: 0 });
   });
 
   it('claims, posts and deletes', async () => {
@@ -97,7 +97,7 @@ describe('telemetry flush', () => {
     const flush = makeFlusher({ projectRoot: root, env: TOKEN, transport });
 
     const first = await flush();
-    expect(first).toMatchObject({ ok: false, sent: 0, kept: 1 });
+    expect(first).toMatchObject({ ok: false, sent: 0, kept: 1, kept_events: 2 });
     expect(spool.listClaimed({ projectRoot: root, env: {} })).toHaveLength(1);
 
     const second = await flush();
@@ -166,7 +166,10 @@ describe('telemetry flush', () => {
     const transport = stubTransport([OK, RETRY, OK]);
     const r = await makeFlusher({ projectRoot: root, env: TOKEN, transport })();
     expect(transport.calls.map((c) => c.length)).toEqual([250, 250]);
-    expect(r).toMatchObject({ ok: false, sent: 250, kept: 1 });
+    // kept_events counts the WHOLE claimed batch: the file stays claimed —
+    // including the 250 already sent — because delivery is at-least-once and
+    // the retry unit is the file, not the unsent remainder.
+    expect(r).toMatchObject({ ok: false, sent: 250, kept: 1, kept_events: 600 });
   });
 
   it('records its own outcome locally at debug — a user\'s flaky wifi is not a daemon failure', async () => {

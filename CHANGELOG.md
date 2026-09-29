@@ -230,6 +230,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   permanent so a revoked token cannot wedge the queue, the spool is capped at
   256 KiB, and at most three pending batches are kept. A permanently-offline
   machine converges instead of growing.
+- `mauto telemetry flush` reports the flush's own verdict, not just the verb's:
+  `data.ok` is false when events were permanently dropped or a batch was kept
+  for retry, `dropped` counts events discarded for good, `kept` counts batches
+  (files) while `kept_events` counts the events inside them, and a hint explains
+  either failure shape. The envelope's `ok` still means the verb ran — an
+  undelivered spool is a non-error state by design.
 - Transport is PostHog's plain HTTP capture API on EU cloud with a write-only
   public project token — **no SDK**, no new dependency. An SDK would cost
   cold-start time on every one of the dozens of process spawns a scenario makes

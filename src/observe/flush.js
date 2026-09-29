@@ -52,7 +52,7 @@ function makeFlusher({
     // is not merely unused here, it is not REACHED. The unit suite injects a
     // transport that throws if called and asserts this line returns first.
     if (!decision.enabled) {
-      return { skipped: decision.reason, sent: 0, dropped: 0, kept: 0, ok: true, nextDelayMs };
+      return { skipped: decision.reason, sent: 0, dropped: 0, kept: 0, kept_events: 0, ok: true, nextDelayMs };
     }
 
     const startedAt = Date.now();
@@ -157,7 +157,11 @@ function makeFlusher({
       });
     }
 
-    return { sent, dropped, kept, ok, nextDelayMs };
+    // Units: `kept` counts BATCHES (files) left claimed for retry; `sent`,
+    // `dropped` and `kept_events` count events. `kept_events` exists because a
+    // flush that only ever retries (nothing sent or dropped yet) still needs
+    // to report how many events it actually touched.
+    return { sent, dropped, kept, kept_events: keptEvents, ok, nextDelayMs };
   };
 }
 

@@ -905,14 +905,27 @@ function handleTelemetryDisable({ projectRoot, env = process.env }) {
 async function handleTelemetryFlush({ projectRoot, env = process.env, flusher }) {
   const flush = flusher || makeFlusher({ projectRoot, env });
   const r = await flush();
+  // exitKind stays 'ok': the envelope's own `ok` says the VERB executed — an
+  // undelivered spool is a non-error state by design (src/observe/spool.js).
+  // The flush's verdict — including permanently discarded events — is data:
+  // `ok` below, alongside the counts. Units: `kept` counts BATCHES (files);
+  // `sent`, `dropped` and `kept_events` count events.
+  const hint =
+    r.dropped > 0
+      ? `${r.dropped} event${r.dropped === 1 ? '' : 's'} permanently discarded — the endpoint rejected them (revoked token, wrong host, or a non-retryable status). They will not be retried.`
+      : r.kept > 0
+        ? `${r.kept} batch${r.kept === 1 ? '' : 'es'} (${r.kept_events} events) kept for retry — the next daemon drain or mauto telemetry flush will resend them.`
+        : undefined;
   return {
     envelope: ok({
       skipped: r.skipped,
       sent: r.sent,
       dropped: r.dropped,
       kept: r.kept,
+      kept_events: r.kept_events,
+      ok: r.ok,
       spool: observeSpool.stats({ projectRoot, env }),
-    }),
+    }, hint),
     exitKind: 'ok',
   };
 }

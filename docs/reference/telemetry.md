@@ -107,6 +107,13 @@ does it on demand. Nothing is retried forever: the spool is capped at 256 KiB,
 at most three pending batches are kept, and failed uploads back off from one
 minute to thirty.
 
+`mauto telemetry flush` reports its outcome in two units: `sent` and `dropped`
+count **events** (`dropped` events were permanently rejected by the endpoint
+and will not be retried), while `kept` counts **batches** left for retry — the
+next daemon drain or flush resends them — and `kept_events` counts the events
+inside those batches. The envelope's `ok` says the verb ran; `data.ok` is the
+flush's own verdict, false when events were dropped or a batch was kept.
+
 Data goes to PostHog's EU cloud (`https://eu.i.posthog.com/batch/`) using their
 plain HTTP capture API and a write-only public project token. No PostHog SDK is
 installed; `mauto` has no analytics dependency.
