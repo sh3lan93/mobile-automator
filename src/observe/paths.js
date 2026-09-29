@@ -14,6 +14,7 @@ const LOGS_DIRNAME = '.logs';
 const MAIN_LOG_NAME = 'mauto.ndjson';
 const DAEMON_LOG_NAME = 'daemon.ndjson';
 const RUN_TRACE_PREFIX = 'run-';
+const SPOOL_NAME = 'telemetry.spool';
 
 // The workspace root `mauto setup` creates. The file sink treats its existence
 // as permission to log: mauto runs from whatever directory a user is standing
@@ -61,6 +62,15 @@ function daemonEventLogPath(projectRoot, env = process.env) {
   return path.join(logsDir(projectRoot, env), DAEMON_LOG_NAME);
 }
 
+// The telemetry queue. Deliberately NOT a .ndjson name even though its content
+// is NDJSON: TROUBLESHOOTING.md documents `cat mobile-automator/.logs/*.ndjson`
+// as the merged CLI+daemon timeline, and the spool is not part of that timeline
+// — it is a queue that gets renamed out from under a reader mid-flush. The
+// extension is the interface that keeps the two apart.
+function spoolPath(projectRoot, env = process.env) {
+  return path.join(logsDir(projectRoot, env), SPOOL_NAME);
+}
+
 // A run id becomes a FILENAME, so it is validated rather than sanitized.
 //
 // Sanitizing — replacing the offending characters — is the tempting move and it
@@ -104,10 +114,12 @@ module.exports = {
   MAIN_LOG_NAME,
   DAEMON_LOG_NAME,
   RUN_TRACE_PREFIX,
+  SPOOL_NAME,
   workspaceDir,
   logsDir,
   mainLogPath,
   daemonEventLogPath,
   isValidRunId,
   runTracePath,
+  spoolPath,
 };

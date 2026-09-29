@@ -129,6 +129,24 @@ describe('workspace discovery (integration, #188)', () => {
       expect(env.hint).toContain(root);
       expect(fs.existsSync(path.join(nested, 'mobile-automator', 'config.json'))).toBe(true);
     });
+
+    // telemetry status/enable/disable/flush are requireWorkspace-gated on the
+    // same grounds as config get/set: they read or write the root workspace's
+    // config.json (status/enable/disable) or its .logs/telemetry.spool
+    // (flush), and none of that belongs in a phantom cwd-relative workspace.
+    test('telemetry status from a subdirectory reports the root workspace', () => {
+      const r = runCli(['telemetry', 'status'], nested);
+      expect(r.status).toBe(0);
+      expect(envelopeOf(r)).toMatchObject({ ok: true, data: { enabled: false, reason: 'not_configured' } });
+    });
+
+    test('telemetry enable from a subdirectory writes the root config, not a new one in cwd', () => {
+      const r = runCli(['telemetry', 'enable'], nested);
+      expect(r.status).toBe(0);
+      const cfg = JSON.parse(fs.readFileSync(path.join(root, 'mobile-automator', 'config.json'), 'utf8'));
+      expect(cfg.telemetry.enabled).toBe(true);
+      expect(fs.existsSync(path.join(nested, 'mobile-automator'))).toBe(false);
+    });
   });
 
   describe('with no workspace anywhere up to the .git boundary', () => {
@@ -176,6 +194,15 @@ describe('workspace discovery (integration, #188)', () => {
 
     test('result finalize fails', () => {
       expectNoWorkspace(runCli(['result', 'finalize', '--run-id', 'run_20260928_120000'], sub));
+    });
+
+    test('telemetry status fails instead of reporting not_configured for the wrong reason', () => {
+      expectNoWorkspace(runCli(['telemetry', 'status'], sub));
+    });
+
+    test('telemetry enable fails and creates no mobile-automator/', () => {
+      expectNoWorkspace(runCli(['telemetry', 'enable'], sub));
+      expect(fs.existsSync(path.join(sub, 'mobile-automator'))).toBe(false);
     });
 
     // The two device verbs whose whole job is persisting workspace state

@@ -90,6 +90,7 @@ nav:
       - Test Scenario Schema: reference/schema.md
       - Test Result Schema: reference/result-schema.md
       - Internal Engine (mobile-mcp): reference/mcp-tools.md
+      - Telemetry & Privacy: reference/telemetry.md
   - Examples:
       - Example Scenarios: examples/index.md
       - Android Examples: examples/android.md

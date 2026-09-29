@@ -127,52 +127,16 @@ describe('handleCrashGet', () => {
   });
 });
 
-describe('gating', () => {
-  const withEnv = (value, fn) => {
-    const prev = process.env.MAUTO_OBSERVE;
-    if (value === undefined) delete process.env.MAUTO_OBSERVE;
-    else process.env.MAUTO_OBSERVE = value;
-    try {
-      return fn();
-    } finally {
-      if (prev === undefined) delete process.env.MAUTO_OBSERVE;
-      else process.env.MAUTO_OBSERVE = prev;
-    }
-  };
-
-  const hasCrash = () => Boolean(buildProgram().commands.find((c) => c.name() === 'crash'));
-
-  it('does not register `crash` when the gate is unset', () => {
-    expect(withEnv(undefined, hasCrash)).toBe(false);
+describe('registration', () => {
+  it('registers `crash list` and `crash get`', () => {
+    const cmd = buildProgram().commands.find((c) => c.name() === 'crash');
+    expect(cmd).toBeDefined();
+    expect(cmd.commands.map((c) => c.name()).sort()).toEqual(['get', 'list']);
   });
 
-  it('registers `crash list` and `crash get` when MAUTO_OBSERVE=1', () => {
-    withEnv('1', () => {
-      const cmd = buildProgram().commands.find((c) => c.name() === 'crash');
-      expect(cmd).toBeDefined();
-      expect(cmd.commands.map((c) => c.name()).sort()).toEqual(['get', 'list']);
-    });
-  });
-
-  // NOTE on a plan defect: the slice-4 plan's original version of this test
-  // asserted `result add-crash` is registered regardless of the gate — but
-  // `add-crash` is a Task 6 deliverable, not Task 4's, and this repo cannot
-  // carry a knowingly-red test (a PreToolUse hook runs the full suite before
-  // every Bash call, and a red tree would deadlock every task after this one).
-  // What Task 4 CAN pin, and must, is the decision the plan was protecting:
-  // the gate must never remove anything from `result`'s subcommand list,
-  // because tests/lint/result-coverage.test.js:39 calls buildProgram() in a
-  // plain (gate-unset) environment. Asserting the list is IDENTICAL whether
-  // the gate is set or unset is true today and stays true once Task 6 adds
-  // `add-crash` unconditionally. Task 6 should extend this test to also
-  // assert the list contains `add-crash` by name.
-  it('keeps `result`\'s subcommand list identical regardless of the gate', () => {
-    const resultSubcommands = (value) =>
-      withEnv(value, () => {
-        const resultCmd = buildProgram().commands.find((c) => c.name() === 'result');
-        return resultCmd.commands.map((c) => c.name()).sort();
-      });
-    expect(resultSubcommands('1')).toEqual(resultSubcommands(undefined));
+  it('includes `add-crash` in `result`\'s subcommand list', () => {
+    const resultCmd = buildProgram().commands.find((c) => c.name() === 'result');
+    expect(resultCmd.commands.map((c) => c.name())).toContain('add-crash');
   });
 });
 
@@ -184,54 +148,41 @@ describe('gating', () => {
 // that through the real program, not just handleCrashGet in isolation —
 // handleCrashGet alone can't see connectBridge's probe wiring.
 describe('interaction with the failure-path crash probe', () => {
-  const withEnv = (value, fn) => {
-    const prev = process.env.MAUTO_OBSERVE;
-    if (value === undefined) delete process.env.MAUTO_OBSERVE;
-    else process.env.MAUTO_OBSERVE = value;
-    return Promise.resolve()
-      .then(fn)
-      .finally(() => {
-        if (prev === undefined) delete process.env.MAUTO_OBSERVE;
-        else process.env.MAUTO_OBSERVE = prev;
-      });
-  };
-
   function writeHandle(root, handle) {
     fs.mkdirSync(sessionPaths.sessionDir(root), { recursive: true });
     fs.writeFileSync(sessionPaths.handlePath(root), JSON.stringify(handle));
   }
 
-  it('does not re-probe crashes on its own failure — no double listCrashes call, no stapled hint', () =>
-    withEnv('1', async () => {
-      const root = tmpRoot();
-      writeHandle(root, { started_at: '2026-09-05T10:00:00.000Z' });
-      const listCrashesCalls = [];
-      const RECENT_CRASH = { id: 'c1', process: 'com.acme.app', timestamp: '2026-09-05T10:30:00.000Z' };
+  it('does not re-probe crashes on its own failure — no double listCrashes call, no stapled hint', async () => {
+    const root = tmpRoot();
+    writeHandle(root, { started_at: '2026-09-05T10:00:00.000Z' });
+    const listCrashesCalls = [];
+    const RECENT_CRASH = { id: 'c1', process: 'com.acme.app', timestamp: '2026-09-05T10:30:00.000Z' };
 
-      const deviceBridgeFactory = async () => ({
-        bridge: {
-          getCrash: async () => {
-            throw new Error('crash report c-bad-id not found');
-          },
-          listCrashes: async () => {
-            listCrashesCalls.push(true);
-            return [RECENT_CRASH];
-          },
+    const deviceBridgeFactory = async () => ({
+      bridge: {
+        getCrash: async () => {
+          throw new Error('crash report c-bad-id not found');
         },
-        close: async () => {},
-      });
-      const emitted = [];
+        listCrashes: async () => {
+          listCrashesCalls.push(true);
+          return [RECENT_CRASH];
+        },
+      },
+      close: async () => {},
+    });
+    const emitted = [];
 
-      await buildProgram({
-        projectRoot: root,
-        deviceBridgeFactory,
-        emit: (r) => emitted.push(r),
-      }).parseAsync(['node', 'mauto', 'crash', 'get', 'c-bad-id']);
+    await buildProgram({
+      projectRoot: root,
+      deviceBridgeFactory,
+      emit: (r) => emitted.push(r),
+    }).parseAsync(['node', 'mauto', 'crash', 'get', 'c-bad-id']);
 
-      expect(listCrashesCalls).toHaveLength(0);
-      expect(emitted).toHaveLength(1);
-      expect(emitted[0].envelope.error.message).toBe('crash report c-bad-id not found');
-      expect(emitted[0].envelope.data).toBeUndefined();
-      expect(emitted[0].envelope.hint).not.toMatch(/crashed during this session/);
-    }));
+    expect(listCrashesCalls).toHaveLength(0);
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0].envelope.error.message).toBe('crash report c-bad-id not found');
+    expect(emitted[0].envelope.data).toBeUndefined();
+    expect(emitted[0].envelope.hint).not.toMatch(/crashed during this session/);
+  });
 });

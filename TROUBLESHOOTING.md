@@ -151,8 +151,8 @@ mauto devices                        # respawns the daemon
 ### ❓ "Element not found" — but did the app crash?
 
 `mauto` cannot tell you from the error alone: a missing element and a dead app
-produce the same message. With `MAUTO_OBSERVE=1`, a failed device verb carries
-the answer in its envelope, and you can ask directly:
+produce the same message. A failed device verb carries the answer in its
+envelope, and you can ask directly:
 
 ```bash
 mauto crash list                  # scoped to the current device session
@@ -171,6 +171,24 @@ Structured detail for any of those is in the event log:
 ```bash
 grep -E '"event":"crash\.' mobile-automator/.logs/mauto.ndjson
 ```
+
+### ❔ "Is mauto sending anything anywhere?"
+
+Not unless you turned it on.
+
+```bash
+mauto telemetry status                          # on/off, endpoint, exact field list
+cat mobile-automator/.logs/telemetry.spool      # every payload waiting to be sent
+```
+
+The spool is deliberately not named `*.ndjson`, so it stays out of the
+`cat mobile-automator/.logs/*.ndjson` merged-timeline recipe above — it is a
+queue that gets renamed mid-flush, not part of the event log.
+
+If it is growing and never draining, the daemon is not running (it is what
+uploads) or the network is unreachable. `mauto telemetry flush` drains it
+synchronously and reports what happened. `mauto telemetry disable` stops it
+being written at all.
 
 ---
 

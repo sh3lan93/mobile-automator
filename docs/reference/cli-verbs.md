@@ -151,6 +151,21 @@ Device verbs are backed by a single persistent mobile-mcp session daemon. These 
 
 ---
 
+## Telemetry verbs
+
+Anonymous usage telemetry, off by default. See
+[Telemetry & Privacy](telemetry.md) for the exact field list and delivery
+mechanics.
+
+| Verb | Description |
+|------|-------------|
+| `mauto telemetry status` | Report whether telemetry is on, what would be sent, and what is queued |
+| `mauto telemetry enable` | Turn on anonymous usage telemetry |
+| `mauto telemetry disable` | Turn off anonymous usage telemetry |
+| `mauto telemetry flush` | Upload any spooled telemetry now instead of waiting for the daemon |
+
+---
+
 ## Memory verbs
 
 Cross-session memory lives in `mobile-automator/memory/`. There are three kinds across three files; only `app-knowledge` and `preferences` are agent-authored. See [Cross-Session Memory](../concepts/memory.md) for the full model.

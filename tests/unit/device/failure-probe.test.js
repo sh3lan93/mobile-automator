@@ -6,7 +6,6 @@ const { probeCrashes, shouldProbe, CRASH_PROBE_TIMEOUT_MS } = require('../../../
 
 const FAILURE_PROBE_PATH = path.join(__dirname, '..', '..', '..', 'src', 'device', 'failure-probe');
 
-const ON = { MAUTO_OBSERVE: '1' };
 const failEnv = (kind = 'device') => ({
   ok: false,
   error: { kind, message: 'element not found' },
@@ -68,7 +67,7 @@ describe('probeCrashes', () => {
     bridge,
     verb: 'tap',
     projectRoot: '/nope',
-    env: ON,
+    env: {},
     watermark: WATERMARK,
     sinks: [],
     ...extra,
@@ -138,17 +137,6 @@ describe('probeCrashes', () => {
     // 25000 here would keep passing after someone changed the daemon.
     const { DAEMON_CALL_TIMEOUT_MS } = require('../../../src/device/session-daemon');
     expect(CRASH_PROBE_TIMEOUT_MS).toBeLessThan(DAEMON_CALL_TIMEOUT_MS);
-  });
-
-  it('is inert when the gate is off', async () => {
-    const envelope = failEnv();
-    const before = JSON.stringify(envelope);
-    let called = false;
-    await probeCrashes(
-      opts({ listCrashes: async () => { called = true; return [recent]; } }, { envelope, env: {} })
-    );
-    expect(called).toBe(false);
-    expect(JSON.stringify(envelope)).toBe(before);
   });
 
   it('never throws, whatever the bridge does', async () => {
@@ -241,7 +229,7 @@ describe('probeCrashes deadline vs. an empty event loop', () => {
         envelope,
         verb: 'tap',
         projectRoot: '/nope',
-        env: { MAUTO_OBSERVE: '1' },
+        env: {},
         watermark: '2026-09-05T10:00:00.000Z',
         sinks: [],
         timeoutMs: 50,
