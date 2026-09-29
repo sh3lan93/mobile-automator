@@ -107,16 +107,20 @@ async function execTap(client, step, deviceId) {
 async function takeCheckpoint(client, step, deviceId) {
   log(`[${step.id}] checkpoint — taking screenshot`);
   const result = await callTool(client, 'mobile_take_screenshot', { device: deviceId });
-  const item = result.content[0];
+  // mobile-mcp >= 1.0 may put a coordinate-mapping text item before the image
+  // and may return JPEG, so find the image item rather than assuming content[0].
+  const item = result.content.find((c) => c.type === 'image');
   let base64;
-  if (item.type === 'image') {
+  let ext = 'png';
+  if (item) {
     base64 = item.data;
+    if (item.mimeType === 'image/jpeg') ext = 'jpg';
   } else {
     const parsed = parseToolResult(result);
     base64 = parsed.screenshot ?? parsed;
   }
   mkdirSync(screenshotDir, { recursive: true });
-  const outPath = join(screenshotDir, `step_${step.id}.png`);
+  const outPath = join(screenshotDir, `step_${step.id}.${ext}`);
   writeFileSync(outPath, Buffer.from(base64, 'base64'));
   log(`[${step.id}] screenshot saved → ${outPath}`);
 }
