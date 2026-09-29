@@ -41,6 +41,12 @@ for a machine — a CI image, a shared shell profile, an inherited Dockerfile �
 whose owner never consented to it. Opting in happens in a file the project owner
 edits.
 
+Two further environment variables can redirect **where** enabled telemetry is
+sent: `MAUTO_TELEMETRY_HOST` (default `eu.i.posthog.com`) and
+`MAUTO_TELEMETRY_TOKEN`. They exist for self-hosters pointing an enabled project
+at their own instance, and they do nothing while telemetry is off — there is
+nothing to redirect. Neither can turn collection on.
+
 ## What is sent
 
 These are the only fields that can ever cross the network. The list is enforced

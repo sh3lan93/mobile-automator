@@ -52,6 +52,10 @@ describe('telemetry documentation', () => {
       'MAUTO_TELEMETRY=0',
       'DO_NOT_TRACK',
       'eu.i.posthog.com',
+      // Where enabled telemetry is sent is env-overridable, so the page must
+      // say so — a user opting in needs to know the destination can redirect.
+      'MAUTO_TELEMETRY_TOKEN',
+      'MAUTO_TELEMETRY_HOST',
     ]) {
       expect(DOC).toContain(token);
     }

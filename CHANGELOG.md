@@ -252,7 +252,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   keyboard to consent on the human's behalf.
 - New docs page: **Telemetry & Privacy** (`docs/reference/telemetry.md`),
   checked against the field catalog in both directions by
-  `tests/lint/telemetry-docs.test.js`.
+  `tests/lint/telemetry-docs.test.js`. The page also documents the two
+  environment overrides that can redirect where enabled telemetry is sent —
+  `MAUTO_TELEMETRY_HOST` and `MAUTO_TELEMETRY_TOKEN`, for self-hosters — so a
+  user opting in knows the destination is env-overridable; the lint guard pins
+  their presence.
 
 ### 🔧 Changed
 
