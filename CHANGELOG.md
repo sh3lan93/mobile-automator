@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🔧 Changed
+
+- **Breaking: the supported Node floor moves from `>=20.0.0` to `>=22.12.0`.**
+  The pinned device engine's own dependencies (`mobilewright`,
+  `@mobilewright/core` and `@mobilewright/driver-mobilecli` 0.0.60) declare
+  `engines.node >=22.12.0`, so on an older Node an install warns
+  (`EBADENGINE`) and fails outright under `engine-strict` or yarn classic.
+  Node 20 has been EOL since April 2026. CI now tests Node 22 and 24 (#199).
+- The device engine is now `@mobilenext/mobile-mcp@1.0.5` (was 0.0.55). It
+  drives Android and iOS through `mobilecli` by default;
+  `MOBILEMCP_LEGACY_ROBOT=1` restores the previous adb/WDA robots, and takes
+  effect for a new session only — run `mauto session end` first. It is also
+  the first mobile-mcp release clear of the two `sharp` advisories (#199).
+
 ### ✨ Added
 
 - Observability recorder seam (`src/observe/`): a single `record(event)` with a
