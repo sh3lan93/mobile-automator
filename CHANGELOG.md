@@ -286,6 +286,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the read-only device/session verbs still fall back to the current
   directory. `setup` and `init` still write to the current directory; `setup`
   adds a hint when that new workspace shadows one in an ancestor.
+- `mauto telemetry enable`/`disable` now write through `setEnabled()` in
+  `src/observe/telemetry.js`, which invalidates the memoised consent decision
+  it owns. The write previously paired `configManager.set` with a cross-layer
+  `_resetMemo()` call enforced by nothing — no test failed when the pairing
+  was dropped, because nothing seeded the memo before the handler's own
+  report in a one-shot verb process. No behavior change; a unit test now pins
+  the write-invalidates-memo invariant.
 
 ### 🔒 Security
 

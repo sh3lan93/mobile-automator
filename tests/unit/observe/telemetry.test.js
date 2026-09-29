@@ -92,6 +92,18 @@ describe('telemetry control surface', () => {
     spy.mockRestore();
   });
 
+  it('invalidates the memoised decision when the config is written through setEnabled', () => {
+    const root = workspace();
+    expect(telemetry.decideForProject(root, TOKEN))
+      .toEqual({ enabled: false, reason: 'not_configured' });
+    telemetry.setEnabled(root, true);
+    expect(telemetry.decideForProject(root, TOKEN))
+      .toEqual({ enabled: true, reason: 'enabled' });
+    telemetry.setEnabled(root, false);
+    expect(telemetry.decideForProject(root, TOKEN))
+      .toEqual({ enabled: false, reason: 'not_configured' });
+  });
+
   it('degrades to disabled when the config is unreadable or corrupt', () => {
     const root = workspace();
     fs.writeFileSync(path.join(root, 'mobile-automator', 'config.json'), '{ not json');

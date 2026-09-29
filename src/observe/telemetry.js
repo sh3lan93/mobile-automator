@@ -99,6 +99,22 @@ function decideForProject(projectRoot, env = process.env) {
   return decision;
 }
 
+// A write through the module that owns the decision also invalidates it, so no
+// caller can forget a pairing it never sees. The delete is surgical — the
+// affected root's key only; other roots' memoised decisions survive.
+//
+// `config set` cannot route through this: its raw CLI strings need coerceValue
+// first, so that write stays in cli.js. That path does not invalidate, and
+// stays harmless for as long as nothing seeds the memo before a handler's own
+// report in a one-shot verb process.
+function setEnabled(projectRoot, value) {
+  configManager.set(projectRoot, 'telemetry.enabled', value);
+  memo.delete(String(projectRoot));
+}
+
+// Test isolation only: production writes go through setEnabled above. Kept
+// because a test process is long-lived where a verb process is not, and one
+// memo spans every workspace the suite builds.
 function _resetMemo() {
   memo.clear();
 }
@@ -120,6 +136,7 @@ module.exports = {
   envKillSwitch,
   resolveTelemetry,
   decideForProject,
+  setEnabled,
   _resetMemo,
   sentFields,
   neverSentFields,

@@ -880,8 +880,7 @@ function handleTelemetryStatus({ projectRoot, env = process.env }) {
 // MAUTO_TELEMETRY=0 is set would be a lie, and the config is not the place to
 // resolve a conflict the environment owns.
 function handleTelemetryEnable({ projectRoot, env = process.env }) {
-  configManager.set(projectRoot, 'telemetry.enabled', true);
-  observeTelemetry._resetMemo();
+  observeTelemetry.setEnabled(projectRoot, true);
   const data = telemetryReport({ projectRoot, env });
   const hint =
     data.reason === 'kill_switch'
@@ -895,8 +894,7 @@ function handleTelemetryEnable({ projectRoot, env = process.env }) {
 }
 
 function handleTelemetryDisable({ projectRoot, env = process.env }) {
-  configManager.set(projectRoot, 'telemetry.enabled', false);
-  observeTelemetry._resetMemo();
+  observeTelemetry.setEnabled(projectRoot, false);
   return { envelope: ok(telemetryReport({ projectRoot, env })), exitKind: 'ok' };
 }
 
