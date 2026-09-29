@@ -22,6 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `MOBILEMCP_LEGACY_ROBOT=1` restores the previous adb/WDA robots, and takes
   effect for a new session only — run `mauto session end` first. It is also
   the first mobile-mcp release clear of the two `sharp` advisories (#199).
+- A mobile-mcp bump that drops a tool mauto calls, stops accepting an
+  argument mauto sends, or starts requiring one it does not, now fails the
+  build. `tests/integration/mobile-mcp-contract.test.js` lists the pinned
+  engine's tools and checks them against what `DeviceBridge` actually puts on
+  the wire; the engine's non-strict schemas otherwise drop an unknown argument
+  and report success, which is how screenshots were once silent no-ops.
+  `scripts/pack-smoke.sh` now runs `mauto devices` from the packed tarball,
+  the only CI step that starts the real engine (#199).
 
 ### Fixed
 
