@@ -4,6 +4,7 @@ const { normalize, parseElements } = require('./element-model');
 const { normalizeDevices } = require('./device-model');
 const { normalizeCrashes } = require('./crash-model');
 const { resolveSingleDevice } = require('./device-resolver');
+const { centredSwipe } = require('./swipe-geometry');
 
 // Thin wrapper over an injected mobile-mcp `call(toolName, args)` function.
 // Returns the agnostic element model and exposes only the primitives the CLI needs.
@@ -65,10 +66,26 @@ class DeviceBridge {
     return this._call('mobile_type_keys', { text, submit: false });
   }
 
-  // Swipe in a cardinal direction. Optional x/y set the start point and
-  // distance the travel — used by the iOS edge-swipe back gesture. Absent keys
-  // are not sent so the cardinal-from-center default is preserved.
+  // Swipe in a cardinal direction.
+  //
+  // Direction-only (x, y and distance all undefined): mauto sends explicit
+  // centre ± 30% geometry from centredSwipe rather than trusting the engine
+  // default, which mobile-mcp 1.x changed from that proportional travel to a
+  // fixed 400px on Android and real iOS (#199; see swipe-geometry.js). This
+  // costs one extra mobile_get_screen_size round trip per direction-only swipe
+  // — acceptable because each verb is one-shot and swipes are not hot-path, so
+  // no caching. getScreenSize throws on a zero/unreadable size, so a 0x0 screen
+  // can never produce a degenerate swipe.
+  //
+  // Any explicit key (e.g. the iOS edge-swipe back's x/y/distance) means the
+  // caller owns the geometry: everything given is passed through as-is and
+  // absent keys are not sent — including partial input such as x,y without
+  // distance, which leaves the travel to the engine exactly as before.
   async swipe({ direction, x, y, distance } = {}) {
+    if (x === undefined && y === undefined && distance === undefined) {
+      const geometry = centredSwipe(await this.getScreenSize(), direction);
+      return this._call('mobile_swipe_on_screen', { direction, ...geometry });
+    }
     const args = { direction };
     if (x !== undefined) args.x = x;
     if (y !== undefined) args.y = y;

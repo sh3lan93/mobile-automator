@@ -157,12 +157,33 @@ describe('DeviceBridge', () => {
   });
 
   describe('swipe', () => {
-    test('invokes mobile_swipe_on_screen with the direction', async () => {
+    // Direction-only swipes send explicit geometry (centre ± 30%) instead of
+    // the engine default, which mobile-mcp 1.x changed to a fixed 400px (#199).
+    test('direction-only reads the screen size then sends explicit centred geometry', async () => {
       const calls = [];
-      const call = async (tool, args) => { calls.push([tool, args]); return {}; };
+      const call = async (tool, args) => {
+        calls.push([tool, args]);
+        if (tool === 'mobile_get_screen_size') return 'Screen size is 1080x2400 pixels';
+        return {};
+      };
       const bridge = new DeviceBridge({ call });
       await bridge.swipe({ direction: 'up' });
-      expect(calls).toEqual([['mobile_swipe_on_screen', { direction: 'up' }]]);
+      expect(calls).toEqual([
+        ['mobile_get_screen_size', {}],
+        ['mobile_swipe_on_screen', { direction: 'up', x: 540, y: 1920, distance: 1440 }],
+      ]);
+    });
+
+    test('direction-only on a 0x0 screen rejects and sends no swipe', async () => {
+      const calls = [];
+      const call = async (tool, args) => {
+        calls.push([tool, args]);
+        if (tool === 'mobile_get_screen_size') return { width: 0, height: 0, scale: 1 };
+        return {};
+      };
+      const bridge = new DeviceBridge({ call });
+      await expect(bridge.swipe({ direction: 'left' })).rejects.toThrow(/screen size/i);
+      expect(calls.map(([t]) => t)).toEqual(['mobile_get_screen_size']);
     });
   });
 
@@ -299,16 +320,20 @@ describe('getScreenSize', () => {
 });
 
 describe('swipe with coordinates', () => {
-  test('forwards optional x/y/distance and omits absent keys', async () => {
+  test('forwards explicit x/y/distance untouched and never reads the screen size', async () => {
     const calls = [];
     const call = async (tool, args) => { calls.push([tool, args]); return {}; };
     const bridge = new DeviceBridge({ call });
     await bridge.swipe({ direction: 'right', x: 1, y: 960, distance: 648 });
     expect(calls).toEqual([['mobile_swipe_on_screen', { direction: 'right', x: 1, y: 960, distance: 648 }]]);
+  });
 
-    calls.length = 0;
-    await bridge.swipe({ direction: 'down' });
-    expect(calls).toEqual([['mobile_swipe_on_screen', { direction: 'down' }]]);
+  test('partial explicit geometry passes through as given, absent keys omitted', async () => {
+    const calls = [];
+    const call = async (tool, args) => { calls.push([tool, args]); return {}; };
+    const bridge = new DeviceBridge({ call });
+    await bridge.swipe({ direction: 'down', x: 10, y: 20 });
+    expect(calls).toEqual([['mobile_swipe_on_screen', { direction: 'down', x: 10, y: 20 }]]);
   });
 });
 

@@ -417,6 +417,37 @@ describe('cli handlers', () => {
       expect(calls).toEqual([{ direction: 'up' }]);
     });
 
+    test('real bridge: sends centred geometry and still reports { swiped }', async () => {
+      const { DeviceBridge } = require('../../src/device/bridge');
+      const calls = [];
+      const call = async (tool, args) => {
+        calls.push([tool, args]);
+        if (tool === 'mobile_get_screen_size') return 'Screen size is 1080x2400 pixels';
+        return {};
+      };
+      const { envelope, exitKind } = await handleSwipe({ deviceBridge: new DeviceBridge({ call }) }, 'left');
+      expect(exitKind).toBe('ok');
+      expect(envelope.data).toEqual({ swiped: 'left' });
+      expect(calls[calls.length - 1]).toEqual(
+        ['mobile_swipe_on_screen', { direction: 'left', x: 864, y: 1200, distance: 648 }]
+      );
+    });
+
+    test('real bridge: an unreadable screen size is an ok:false device envelope', async () => {
+      const { DeviceBridge } = require('../../src/device/bridge');
+      const calls = [];
+      const call = async (tool, args) => {
+        calls.push([tool, args]);
+        if (tool === 'mobile_get_screen_size') return { width: 0, height: 0, scale: 1 };
+        return {};
+      };
+      const { envelope, exitKind } = await handleSwipe({ deviceBridge: new DeviceBridge({ call }) }, 'up');
+      expect(envelope.ok).toBe(false);
+      expect(envelope.error.kind).toBe('device');
+      expect(exitKind).toBe('device');
+      expect(calls.map(([t]) => t)).not.toContain('mobile_swipe_on_screen');
+    });
+
     test('rejects an invalid direction with invalid_input', async () => {
       const bridge = { swipe: async () => { throw new Error('nope'); } };
       const { envelope, exitKind } = await handleSwipe({ deviceBridge: bridge }, 'sideways');

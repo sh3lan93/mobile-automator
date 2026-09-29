@@ -246,6 +246,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   gestures (the iOS edge-swipe back) cannot silently act on a 0×0 screen.
   `--at` rejects negative coordinates as `invalid_input` before they reach the
   device.
+- `mauto swipe --direction` now sends explicit geometry — centre ± 30% of the
+  screen (60% travel), the pre-1.x Android and iOS-device behaviour — instead
+  of relying on the engine's default, which mobile-mcp 1.x changed to a fixed
+  400px (#199). iOS simulators move from 400px to the same proportional
+  travel. The downward swipe that the agnostic `dismiss_keyboard` semantic
+  press falls back to on iOS follows the same rule; the iOS edge-swipe back
+  gesture is unchanged. Each direction-only swipe now reads the screen size
+  first, so an unreadable size fails the swipe instead of sending it.
 
 ### 🔒 Security
 
