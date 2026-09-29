@@ -22,7 +22,8 @@ function log(msg) {
  * Handles two response shapes from mobile-mcp:
  *   1. Plain JSON  — e.g. '{"devices":[...]}' (mobile_list_available_devices)
  *   2. Prose-prefixed JSON — e.g. 'Found these elements on screen: [{...}]'
- *      (mobile_list_elements_on_screen)
+ *      (mobile_list_elements_on_screen — mobile-mcp >= 1.0 defaults this tool
+ *      to one-line-per-element text, so callers pass format: 'json')
  *
  * Image content items are returned as-is.
  */
@@ -66,7 +67,7 @@ async function execWaitForElement(client, step, deviceId) {
   log(`[${step.id}] wait_for_element target="${step.target}" timeout=${timeoutMs}ms`);
 
   while (Date.now() < deadline) {
-    const result = await callTool(client, 'mobile_list_elements_on_screen', { device: deviceId });
+    const result = await callTool(client, 'mobile_list_elements_on_screen', { device: deviceId, format: 'json' });
     // Response is a flat array, NOT { elements: [...] }
     const elements = parseToolResult(result);
     const found = (Array.isArray(elements) ? elements : []).find(
@@ -86,7 +87,7 @@ async function execWaitForElement(client, step, deviceId) {
 
 async function execTap(client, step, deviceId) {
   log(`[${step.id}] tap target="${step.target}"`);
-  const result = await callTool(client, 'mobile_list_elements_on_screen', { device: deviceId });
+  const result = await callTool(client, 'mobile_list_elements_on_screen', { device: deviceId, format: 'json' });
   // Response is a flat array; coordinates are nested under el.coordinates
   const elements = parseToolResult(result);
   const el = (Array.isArray(elements) ? elements : []).find((e) => e.identifier === step.target);
@@ -106,16 +107,20 @@ async function execTap(client, step, deviceId) {
 async function takeCheckpoint(client, step, deviceId) {
   log(`[${step.id}] checkpoint — taking screenshot`);
   const result = await callTool(client, 'mobile_take_screenshot', { device: deviceId });
-  const item = result.content[0];
+  // mobile-mcp >= 1.0 may put a coordinate-mapping text item before the image
+  // and may return JPEG, so find the image item rather than assuming content[0].
+  const item = result.content.find((c) => c.type === 'image');
   let base64;
-  if (item.type === 'image') {
+  let ext = 'png';
+  if (item) {
     base64 = item.data;
+    if (item.mimeType === 'image/jpeg') ext = 'jpg';
   } else {
     const parsed = parseToolResult(result);
     base64 = parsed.screenshot ?? parsed;
   }
   mkdirSync(screenshotDir, { recursive: true });
-  const outPath = join(screenshotDir, `step_${step.id}.png`);
+  const outPath = join(screenshotDir, `step_${step.id}.${ext}`);
   writeFileSync(outPath, Buffer.from(base64, 'base64'));
   log(`[${step.id}] screenshot saved → ${outPath}`);
 }
