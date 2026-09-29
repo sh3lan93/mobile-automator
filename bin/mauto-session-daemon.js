@@ -14,6 +14,7 @@ const { startDaemon } = require('../src/device/session-daemon');
 const paths = require('../src/device/session-paths');
 const { boundRecorder } = require('../src/observe/recorder');
 const { daemonEventLogPath } = require('../src/observe/paths');
+const { makeFlusher } = require('../src/observe/flush');
 
 // Best-effort synchronous unlink — never throws. Used by the crash guards so a
 // hard failure can't leave a stale lock/socket/pidfile wedging the next spawn.
@@ -142,7 +143,21 @@ async function main() {
   process.on('uncaughtException', onFatal('uncaughtException', 'uncaught'));
   process.on('unhandledRejection', onFatal('unhandledRejection', 'unhandled rejection'));
 
-  daemon = await startDaemon({ projectRoot, device, idleMs, recorderFor });
+  daemon = await startDaemon({
+    projectRoot,
+    device,
+    idleMs,
+    recorderFor,
+    // Same defensive shape as recorderFor's own construction guarantee: a
+    // telemetry fault must never be the reason a daemon fails to start.
+    flushFor: ({ observe: sessionObserve }) => {
+      try {
+        return makeFlusher({ projectRoot, env: process.env, observe: sessionObserve });
+      } catch (_) {
+        return null;
+      }
+    },
+  });
   // Adopt the daemon's own recorder: same log file, now bound to the session id
   // it minted and wrote into the handle. onFatal reads `observe` when it fires,
   // not when it was built, so every crash from here on is joinable to that

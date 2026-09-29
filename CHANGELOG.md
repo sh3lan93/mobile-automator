@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [0.27.0]
 
 ### 🔧 Changed
 
@@ -22,6 +22,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `MOBILEMCP_LEGACY_ROBOT=1` restores the previous adb/WDA robots, and takes
   effect for a new session only — run `mauto session end` first. It is also
   the first mobile-mcp release clear of the two `sharp` advisories (#199).
+
+### Fixed
+
+- Device output that mauto cannot read now fails instead of passing as data
+  (#199). `mauto elements` requests the engine's JSON element format
+  explicitly, and an element list it cannot parse returns `ok:false` (kind
+  `device`) with an excerpt and a hint, where it previously reported `ok:true`
+  with an empty screen. A zero, negative or non-numeric screen size is now an
+  error rather than a size, so geometry gestures (the iOS edge-swipe back)
+  cannot silently act on a 0×0 screen. `--at` rejects negative coordinates as
+  `invalid_input` before they reach the device.
+- `mauto swipe --direction` now sends explicit geometry — centre ± 30% of the
+  screen (60% travel), the pre-1.x Android and iOS-device behaviour — instead
+  of relying on the engine's default, which mobile-mcp 1.x changed to a fixed
+  400px (#199). iOS simulators move from 400px to the same proportional
+  travel. The downward swipe that the agnostic `dismiss_keyboard` semantic
+  press falls back to on iOS follows the same rule; the iOS edge-swipe back
+  gesture is unchanged. Each direction-only swipe now reads the screen size
+  first, so an unreadable size fails the swipe instead of sending it.
+
+### 🔒 Security
+
+- Cleared the two `sharp` advisories (GHSA-f88m-g3jw-g9cj,
+  GHSA-rgj7-g3m4-5g8c) accepted in 0.26.0: they were reachable only through
+  the `@mobilenext/mobile-mcp@0.0.55` pin, and the 1.0.5 upgrade brings
+  `sharp` 0.35.5. `scripts/audit-allowlist.json` is now empty and Dependabot
+  may propose mobile-mcp major versions again (#199).
+
+---
+
+## [0.26.0]
 
 ### ✨ Added
 
@@ -218,6 +249,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   specifier built at runtime beyond flagging it. Until `transport.js` exists it
   asserts that file is absent or the only network importer, rather than claiming
   "exactly one".
+- **Opt-in anonymous usage telemetry, off by default.** `mauto telemetry
+  enable` turns it on; `mauto telemetry status` prints the exact field list —
+  rendered from the event catalog at runtime, so the disclosure cannot drift
+  from what the uploader sends — alongside the endpoint and what is queued
+  locally. `MAUTO_TELEMETRY=0` and `DO_NOT_TRACK=1` force it off and always win
+  over config. `MAUTO_TELEMETRY=1` deliberately does *not* enable it: an
+  off-switch is safe to honour from the environment, an on-switch is a way to
+  turn collection on for a machine whose owner never consented. All four verbs
+  are `requireWorkspace`-gated like `config get`/`config set` — they read or
+  write the same per-project `config.json` (or, for `flush`, the same
+  `.logs/telemetry.spool`), so none of them will silently create or read a
+  workspace in the wrong directory.
+- **Verbs never touch the network.** Every verb ends in `process.exit()`, which
+  tears down a pending socket, so a fire-and-forget POST is dropped a large
+  fraction of the time and an awaited one adds a round trip to every `mauto
+  tap`. Instead a verb appends one line to
+  `mobile-automator/.logs/telemetry.spool` — and that line *is* the upload
+  payload, redacted at spool time, so a device serial is never written to the
+  file that gets sent — and the session daemon uploads it during its idle
+  window. `mauto telemetry flush` is the explicit escape hatch for a machine
+  with no daemon. An undelivered spool is just a file the next run picks up.
+- Delivery is at-least-once and bounded in every direction: each POST is capped
+  at 5s, retryable failures back off from 1 minute to 30, 4xx (except 429) is
+  permanent so a revoked token cannot wedge the queue, the spool is capped at
+  256 KiB, and at most three pending batches are kept. A permanently-offline
+  machine converges instead of growing.
+- `mauto telemetry flush` reports the flush's own verdict, not just the verb's:
+  `data.ok` is false when events were permanently dropped or a batch was kept
+  for retry, `dropped` counts events discarded for good, `kept` counts batches
+  (files) while `kept_events` counts the events inside them, and a hint explains
+  either failure shape. The envelope's `ok` still means the verb ran — an
+  undelivered spool is a non-error state by design.
+- Transport is PostHog's plain HTTP capture API on EU cloud with a write-only
+  public project token — **no SDK**, no new dependency. An SDK would cost
+  cold-start time on every one of the dozens of process spawns a scenario makes
+  and add supply-chain surface to a project already carrying high-severity
+  advisories (#161). `src/observe/transport.js` is the only file in `src/` or
+  `bin/` allowed to make an outbound HTTP call, enforced by
+  `tests/lint/telemetry-transport-isolation.test.js`.
+- No per-machine identifier exists anywhere in the system. Events carry a
+  constant `distinct_id` and a per-event random `msg_id` used only to
+  deduplicate a re-sent batch. `mauto setup` writes `telemetry.enabled: false`
+  into `config.json` as a literal, visible key rather than relying on an absent
+  one, and surfaces the notice in its envelope — a notice, never a prompt,
+  because `mauto` verbs are invoked by an agent and there is nobody at the
+  keyboard to consent on the human's behalf.
+- New docs page: **Telemetry & Privacy** (`docs/reference/telemetry.md`),
+  checked against the field catalog in both directions by
+  `tests/lint/telemetry-docs.test.js`. The page also documents the two
+  environment overrides that can redirect where enabled telemetry is sent —
+  `MAUTO_TELEMETRY_HOST` and `MAUTO_TELEMETRY_TOKEN`, for self-hosters — so a
+  user opting in knows the destination is env-overridable; the lint guard pins
+  their presence.
+
+### 🔧 Changed
+
+- The observability feature is graduated. The `MAUTO_OBSERVE` gate is removed
+  and everything it hid is unconditional; a lint guard
+  (`tests/lint/no-observe-gate.test.js`) keeps it gone.
 
 ### Fixed
 
@@ -251,23 +341,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the read-only device/session verbs still fall back to the current
   directory. `setup` and `init` still write to the current directory; `setup`
   adds a hint when that new workspace shadows one in an ancestor.
-- Device output that mauto cannot read now fails instead of passing as data
-  (#199, groundwork for the mobile-mcp 1.x migration). `mauto elements`
-  requests the engine's JSON element format explicitly, and an element list it
-  cannot parse returns `ok:false` (kind `device`) with an excerpt and a hint,
-  where it previously reported `ok:true` with an empty screen. A zero, negative
-  or non-numeric screen size is now an error rather than a size, so geometry
-  gestures (the iOS edge-swipe back) cannot silently act on a 0×0 screen.
-  `--at` rejects negative coordinates as `invalid_input` before they reach the
-  device.
-- `mauto swipe --direction` now sends explicit geometry — centre ± 30% of the
-  screen (60% travel), the pre-1.x Android and iOS-device behaviour — instead
-  of relying on the engine's default, which mobile-mcp 1.x changed to a fixed
-  400px (#199). iOS simulators move from 400px to the same proportional
-  travel. The downward swipe that the agnostic `dismiss_keyboard` semantic
-  press falls back to on iOS follows the same rule; the iOS edge-swipe back
-  gesture is unchanged. Each direction-only swipe now reads the screen size
-  first, so an unreadable size fails the swipe instead of sending it.
+- `mauto telemetry enable`/`disable` now write through `setEnabled()` in
+  `src/observe/telemetry.js`, which invalidates the memoised consent decision
+  it owns. The write previously paired `configManager.set` with a cross-layer
+  `_resetMemo()` call enforced by nothing — no test failed when the pairing
+  was dropped, because nothing seeded the memo before the handler's own
+  report in a one-shot verb process. No behavior change; a unit test now pins
+  the write-invalidates-memo invariant.
 
 ### 🔒 Security
 
@@ -279,10 +359,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   expired acceptance, and on a stale one. It runs on every PR, weekly, and in
   `publish-npm` before `npm publish`. It fails closed when `npm audit` cannot
   reach the registry.
-- Cleared the two `sharp` advisories (GHSA-f88m-g3jw-g9cj,
-  GHSA-rgj7-g3m4-5g8c) that were reachable only through the
-  `@mobilenext/mobile-mcp@0.0.55` pin: the mobile-mcp 1.0.5 upgrade brings
-  `sharp` 0.35.5, and `scripts/audit-allowlist.json` is now empty (#199).
+- Accepted until 2026-12-27: two `sharp` advisories reachable only through the
+  `@mobilenext/mobile-mcp@0.0.55` pin; removal tracked in #199.
 - Dependabot now opens weekly lockfile-only npm PRs and GitHub Actions PRs.
 
 ---

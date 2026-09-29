@@ -26,6 +26,8 @@ const { makeEvent } = require('./event');
 const { resolveLevels, atLeast } = require('./settings');
 const stderrSink = require('./sinks/stderr');
 const fileSink = require('./sinks/file');
+const spoolSink = require('./spool');
+const { decideForProject } = require('./telemetry');
 
 // `logPath` is passed straight through to the file sink, which already takes it
 // (sinks/file.js:44) and falls back to mauto.ndjson when it is undefined. So
@@ -67,6 +69,30 @@ function defaultSinks(projectRoot, env, { logPath, tracePath } = {}) {
       write: (e) => fileSink.write(e, { projectRoot, env, logPath: tracePath, bound: 'cap' }),
     });
   }
+
+  // The spool is the ONLY path by which an event can leave this machine, so
+  // it is not merely level-gated — it is not CONSTRUCTED at all until a
+  // human has opted in. While telemetry is off there is no spool file,
+  // which means there is nothing for a flusher to find even if one ran.
+  // That is the first of the three layers behind "no upload path is
+  // reachable while disabled"; the other two are flush()'s own early
+  // return and the one-file transport lint guard.
+  //
+  // Its threshold is spool.SPOOL_LEVEL, deliberately NOT levels.file:
+  // telemetry has its own separate control, so MAUTO_LOG_LEVEL=debug must
+  // not multiply what leaves the machine by 40x, and MAUTO_LOG_LEVEL=silent
+  // must not be read as consent withdrawal (there is an explicit control for
+  // that: MAUTO_TELEMETRY=0 / DO_NOT_TRACK=1).
+  //
+  // decideForProject memoises per project root — one config.json read per
+  // process, not one per event. See src/observe/telemetry.js.
+  if (decideForProject(projectRoot, env).enabled) {
+    sinks.push({
+      threshold: spoolSink.SPOOL_LEVEL,
+      write: (e) => spoolSink.write(e, { projectRoot, env }),
+    });
+  }
+
   return sinks;
 }
 

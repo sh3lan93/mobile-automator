@@ -30,8 +30,11 @@ const { readTrace, deriveRun, pruneRunTraces } = require('./observe/trace');
 const { readHandle, readSessionId } = require('./device/session-handle');
 const { captureOnFailure } = require('./observe/failure-capture');
 const { crashTimestampMs } = require('./device/crash-model');
-const { observeEnabled } = require('./observe/gate');
 const { probeCrashes } = require('./device/failure-probe');
+const observeTelemetry = require('./observe/telemetry');
+const observeSpool = require('./observe/spool');
+const observeTransport = require('./observe/transport');
+const { makeFlusher } = require('./observe/flush');
 const { findWorkspaceRoot, noWorkspaceFailure } = require('./workspace/discover');
 
 // Commander throws (via exitOverride) for two very different reasons, and the
@@ -648,10 +651,7 @@ function handleResultAddAssertion({ resultStoreFactory, projectRoot }, opts) {
   return { envelope: ok({ run_id: runId, assertion: entry }, storeHint(store)), exitKind: 'ok' };
 }
 
-// Record an observed app crash. Deliberately NOT gated behind MAUTO_OBSERVE:
-// this is a complete, device-free result writer with no partial state to
-// hide, and tests/lint/result-coverage.test.js builds the program in a plain
-// environment — gating this verb would red-tree that guard in CI.
+// Record an observed app crash.
 function handleResultAddCrash({ resultStoreFactory, projectRoot }, opts = {}) {
   const store = resultStoreFactory({
     runId: opts.runId,
@@ -819,7 +819,20 @@ function handleSetup({ projectRoot, ancestorRoot = null }, opts = {}) {
     ? `An existing workspace was found in an ancestor directory (${ancestorRoot}). This new workspace in ${projectRoot} shadows it for every mauto verb run from here or below; remove it if you meant to use the ancestor's.`
     : null;
   return {
-    envelope: ok({ created: r.created, mode: r.mode, next: 'run `mauto guide setup`' }, hint),
+    envelope: ok(
+      {
+        created: r.created,
+        mode: r.mode,
+        // A NOTICE, not a prompt. mauto verbs are invoked by an agent, so there
+        // is nobody at the keyboard to answer a question — and an agent answering
+        // a consent question on a human's behalf is worse than not asking. It
+        // rides in the envelope (structured, in-band) rather than as a stderr
+        // banner, so the agent can surface it to the human it belongs to.
+        telemetry: { enabled: false, notice: observeTelemetry.CONSENT_NOTICE },
+        next: 'run `mauto guide setup`',
+      },
+      hint
+    ),
     exitKind: 'ok',
   };
 }
@@ -847,6 +860,87 @@ function handleConfigSet({ projectRoot }, key, rawValue) {
   }
   configManager.set(projectRoot, key, value);
   return { envelope: ok({ key, value }), exitKind: 'ok' };
+}
+
+// --- Slice 5: telemetry consent surface -----------------------------------
+//
+// `status` is the informed half of informed consent, and it is COMPUTED: the
+// field lists come from EVENT_FIELDS at runtime, so the disclosure a user reads
+// before opting in cannot drift from what the uploader actually sends. Prose
+// that restates a catalog is prose that will eventually be wrong.
+
+function telemetryReport({ projectRoot, env }, extra = {}) {
+  const decision = observeTelemetry.decideForProject(projectRoot, env);
+  return {
+    enabled: decision.enabled,
+    reason: decision.reason,
+    endpoint: observeTransport.endpointUrl(env),
+    fields_sent: observeTelemetry.sentFields(),
+    fields_never_sent: observeTelemetry.neverSentFields(),
+    spool: observeSpool.stats({ projectRoot, env }),
+    notice: observeTelemetry.CONSENT_NOTICE,
+    enable_with: 'mauto telemetry enable',
+    ...extra,
+  };
+}
+
+function handleTelemetryStatus({ projectRoot, env = process.env }) {
+  return { envelope: ok(telemetryReport({ projectRoot, env })), exitKind: 'ok' };
+}
+
+// Writes the durable intent, then reports the RESOLVED state — which may still
+// be off, because an env kill switch wins. Reporting `enabled: true` here when
+// MAUTO_TELEMETRY=0 is set would be a lie, and the config is not the place to
+// resolve a conflict the environment owns.
+function handleTelemetryEnable({ projectRoot, env = process.env }) {
+  observeTelemetry.setEnabled(projectRoot, true);
+  const data = telemetryReport({ projectRoot, env });
+  const hint =
+    data.reason === 'kill_switch'
+      ? 'Telemetry is enabled in config.json but MAUTO_TELEMETRY=0 is set in this environment and overrides it.'
+      : data.reason === 'do_not_track'
+        ? 'Telemetry is enabled in config.json but DO_NOT_TRACK is set in this environment and overrides it.'
+        : data.reason === 'no_token'
+          ? 'Telemetry is enabled in config.json but this build ships no project token, so nothing will be sent.'
+          : undefined;
+  return { envelope: ok(data, hint), exitKind: 'ok' };
+}
+
+function handleTelemetryDisable({ projectRoot, env = process.env }) {
+  observeTelemetry.setEnabled(projectRoot, false);
+  return { envelope: ok(telemetryReport({ projectRoot, env })), exitKind: 'ok' };
+}
+
+// The explicit escape hatch. This is the ONE verb allowed a network round trip,
+// because the user asked for one and is willing to wait for it — every other
+// verb appends to the spool and exits. A machine that never runs a daemon
+// drains here.
+async function handleTelemetryFlush({ projectRoot, env = process.env, flusher }) {
+  const flush = flusher || makeFlusher({ projectRoot, env });
+  const r = await flush();
+  // exitKind stays 'ok': the envelope's own `ok` says the VERB executed — an
+  // undelivered spool is a non-error state by design (src/observe/spool.js).
+  // The flush's verdict — including permanently discarded events — is data:
+  // `ok` below, alongside the counts. Units: `kept` counts BATCHES (files);
+  // `sent`, `dropped` and `kept_events` count events.
+  const hint =
+    r.dropped > 0
+      ? `${r.dropped} event${r.dropped === 1 ? '' : 's'} permanently discarded — the endpoint rejected them (revoked token, wrong host, or a non-retryable status). They will not be retried.`
+      : r.kept > 0
+        ? `${r.kept} batch${r.kept === 1 ? '' : 'es'} (${r.kept_events} events) kept for retry — the next daemon drain or mauto telemetry flush will resend them.`
+        : undefined;
+  return {
+    envelope: ok({
+      skipped: r.skipped,
+      sent: r.sent,
+      dropped: r.dropped,
+      kept: r.kept,
+      kept_events: r.kept_events,
+      ok: r.ok,
+      spool: observeSpool.stats({ projectRoot, env }),
+    }, hint),
+    exitKind: 'ok',
+  };
 }
 
 // RAW content on success; fail envelope only when the topic is unknown.
@@ -1566,11 +1660,7 @@ function buildProgram(deps = {}) {
         envelope: r.envelope,
         verb: emitters.getVerb(),
         projectRoot,
-        // Gated here too, not only inside probeCrashes: with the gate unset
-        // this must do ZERO extra work, not merely "produce no visible
-        // change" — sessionWatermark() is a filesystem read that an ungated
-        // user has never paid for on this path before.
-        watermark: observeEnabled(process.env) ? sessionWatermark(projectRoot) : null,
+        watermark: sessionWatermark(projectRoot),
       });
       await captureOnFailure({
         bridge,
@@ -1781,7 +1871,6 @@ function buildProgram(deps = {}) {
       emit(r, humanFlag());
     })));
 
-  // Not gated behind MAUTO_OBSERVE — see handleResultAddCrash's comment.
   result
     .command('add-crash')
     .description('Record an app crash observed during the run')
@@ -1995,42 +2084,68 @@ function buildProgram(deps = {}) {
       emit(r, humanFlag());
     }));
 
-  // Gated behind MAUTO_OBSERVE=1 per the observability design's slice ladder.
-  // Registration, not a stub: with the gate unset `mauto crash list` is an
-  // unknown command and lands as the usual invalid_input envelope, so a partly
-  // built capability is ABSENT rather than present-and-broken. The graduation
-  // PR deletes this branch and the one in connectBridge (Task 5) together.
-  if (observeEnabled(process.env)) {
-    const crash = program
-      .command('crash')
-      .description('Diagnostics: crash reports currently readable on the device');
+  const crash = program
+    .command('crash')
+    .description('Diagnostics: crash reports currently readable on the device');
 
-    crash
-      .command('list')
-      .description('List crash reports, scoped to the current device session by default')
-      .option('--device <id>', 'target device id')
-      .option('--since <iso>', 'only reports at or after this ISO timestamp (default: session start)')
-      .action(withEnvelope((opts) =>
-        connectBridge(resolveVerbDevice(opts.device), (bridge) =>
-          handleCrashList(
-            { deviceBridge: bridge, projectRoot },
-            opts.since === undefined ? {} : { since: opts.since }
-          )
+  crash
+    .command('list')
+    .description('List crash reports, scoped to the current device session by default')
+    .option('--device <id>', 'target device id')
+    .option('--since <iso>', 'only reports at or after this ISO timestamp (default: session start)')
+    .action(withEnvelope((opts) =>
+      connectBridge(resolveVerbDevice(opts.device), (bridge) =>
+        handleCrashList(
+          { deviceBridge: bridge, projectRoot },
+          opts.since === undefined ? {} : { since: opts.since }
         )
-      ));
+      )
+    ));
 
-    crash
-      .command('get <id>')
-      .description('Fetch one crash report (head by default)')
-      .option('--device <id>', 'target device id')
-      .option('--full', 'return the whole report instead of its head')
-      .option('--out <path>', 'write the full report to a file and return its path')
-      .action(withEnvelope((id, opts) =>
-        connectBridge(resolveVerbDevice(opts.device), (bridge) =>
-          handleCrashGet({ deviceBridge: bridge }, id, { full: opts.full, out: opts.out })
-        )
-      ));
-  }
+  crash
+    .command('get <id>')
+    .description('Fetch one crash report (head by default)')
+    .option('--device <id>', 'target device id')
+    .option('--full', 'return the whole report instead of its head')
+    .option('--out <path>', 'write the full report to a file and return its path')
+    .action(withEnvelope((id, opts) =>
+      connectBridge(resolveVerbDevice(opts.device), (bridge) =>
+        handleCrashGet({ deviceBridge: bridge }, id, { full: opts.full, out: opts.out })
+      )
+    ));
+
+  // --- Slice 5: telemetry ---------------------------------------------------
+
+  const telemetryCmd = program
+    .command('telemetry')
+    .description('Inspect and control anonymous usage telemetry (off by default)');
+
+  // requireWorkspace, same as config get/set: telemetry status/enable/disable
+  // all read or write mobile-automator/config.json, and flush reads/claims
+  // mobile-automator/.logs/telemetry.spool, so all four have #188's exact
+  // failure mode without the gate — status would report the SAME
+  // not_configured/no_token answer for "no workspace here" as for "a real,
+  // just-unconfigured workspace", and enable/disable would create a stray
+  // mobile-automator/ wherever the caller happened to be standing.
+  telemetryCmd
+    .command('status')
+    .description('Report whether telemetry is on, what would be sent, and what is queued')
+    .action(withEnvelope(requireWorkspace(() => emit(handleTelemetryStatus({ projectRoot }), humanFlag()))));
+
+  telemetryCmd
+    .command('enable')
+    .description('Turn on anonymous usage telemetry')
+    .action(withEnvelope(requireWorkspace(() => emit(handleTelemetryEnable({ projectRoot }), humanFlag()))));
+
+  telemetryCmd
+    .command('disable')
+    .description('Turn off anonymous usage telemetry')
+    .action(withEnvelope(requireWorkspace(() => emit(handleTelemetryDisable({ projectRoot }), humanFlag()))));
+
+  telemetryCmd
+    .command('flush')
+    .description('Upload any spooled telemetry now instead of waiting for the daemon')
+    .action(withEnvelope(requireWorkspace(async () => emit(await handleTelemetryFlush({ projectRoot }), humanFlag()))));
 
   program
     .command('mcp')
@@ -2281,6 +2396,10 @@ module.exports = {
   handleDevices,
   handleDevicesUse,
   handleDevicesClear,
+  handleTelemetryStatus,
+  handleTelemetryEnable,
+  handleTelemetryDisable,
+  handleTelemetryFlush,
   handleCrashList,
   handleCrashGet,
 };

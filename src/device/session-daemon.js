@@ -27,6 +27,7 @@ const { FrameParser } = require('./session-protocol');
 const { newSessionId } = require('./session-handle');
 const { makeDeviceCall } = require('./device-call');
 const { safeObserve: guardObserve } = require('../observe/recorder');
+const { FLUSH_INTERVAL_MS } = require('../observe/flush');
 
 const DEFAULT_IDLE_MS = 5 * 60 * 1000;
 
@@ -173,6 +174,15 @@ async function startDaemon({
   // to an inert observe rather than throwing), because a recorder that cannot
   // be built must not be the reason a device session fails to start.
   recorderFor = () => () => {},
+  // The spool flusher, as a FACTORY — exactly recorderFor's shape, and for
+  // the same reason: it needs THIS daemon's own safeObserve (bound to the
+  // sessionId minted below), which doesn't exist until this function is
+  // already running. Defaulted to null: startDaemon runs IN-PROCESS across
+  // ~40 unit tests, and a default that built a real flusher would put
+  // network I/O in the unit suite. bin/mauto-session-daemon.js — the only
+  // process that is actually a daemon — injects makeFlusher.
+  flushFor = null,
+  flushIntervalMs = FLUSH_INTERVAL_MS,
 } = {}) {
   if (!projectRoot) throw new TypeError('startDaemon requires projectRoot');
 
@@ -210,6 +220,12 @@ async function startDaemon({
   // the failure paths, which observe BEFORE releaseLock() — a telemetry fault
   // masking the real error and leaking the lock, wedging every later spawn.
   const safeObserve = guardObserve(observe);
+
+  // Built here, unwrapped, on the same trust as recorderFor above: the
+  // factory must be construction-total (makeFlusher just destructures
+  // options and returns a closure — it cannot throw), so this is not a
+  // second hand-rolled guard, it is the same contract applied twice.
+  const flush = typeof flushFor === 'function' ? flushFor({ observe: safeObserve }) : null;
 
   // Zero point for every dur_ms this daemon reports: startup duration on
   // daemon.start, total session lifetime on daemon.stop.
@@ -381,10 +397,57 @@ async function startDaemon({
     }
   }
 
+  let flushTimer = null;
+
+  function clearFlush() {
+    if (flushTimer) {
+      clearTimeout(flushTimer);
+      flushTimer = null;
+    }
+  }
+
+  // Why the daemon does this at all: a one-shot verb cannot. process.exit()
+  // tears down a pending socket, so a verb's POST is dropped a large fraction
+  // of the time. The daemon is the only process here with an event loop, and
+  // between device calls it is doing nothing at all.
+  //
+  // A self-rescheduling setTimeout rather than setInterval: the flusher returns
+  // the delay it wants (exponential backoff on a retryable failure, reset on
+  // success), and setInterval cannot express that. unref'd, so a pending flush
+  // can never hold the process open past its idle reap or delay a stop().
+  //
+  // In-flight device calls are skipped rather than competed with — the flush is
+  // strictly lower priority than the device work the user is waiting on, and
+  // the very next tick picks it up.
+  function armFlush(delayMs) {
+    clearFlush();
+    if (!flush || stopping) return;
+    if (!(delayMs > 0) || !Number.isFinite(delayMs)) return;
+    flushTimer = setTimeout(async () => {
+      if (stopping) return;
+      if (inFlight > 0) {
+        armFlush(delayMs);
+        return;
+      }
+      let next = delayMs;
+      try {
+        const r = await flush();
+        if (r && Number.isFinite(r.nextDelayMs) && r.nextDelayMs > 0) next = r.nextDelayMs;
+      } catch (_) {
+        // flush() is already total (src/observe/flush.js); this is that
+        // guarantee restated as a property of the daemon rather than of its
+        // current caller.
+      }
+      armFlush(next);
+    }, delayMs);
+    if (typeof flushTimer.unref === 'function') flushTimer.unref();
+  }
+
   async function stop(reason = 'explicit') {
     if (stopping) return;
     stopping = true;
     clearIdle();
+    clearFlush();
 
     // Recorded HERE, before the drain, not after teardown. stop() can block on
     // an in-flight device call and on close()ing a mobile-mcp child that will
@@ -645,6 +708,7 @@ async function startDaemon({
   process.on('SIGINT', onSignal);
 
   armIdle();
+  armFlush(flushIntervalMs);
 
   // Recorded after the handle exists, so anything reading the log can also read
   // the handle it names. device_id is sends:false — a device serial never
