@@ -15,11 +15,6 @@ updates:
         update-types: [minor, patch]
       development:
         dependency-type: development
-    ignore:
-      # 1.x changes the mobile_list_elements_on_screen default format and
-      # needs a real-device re-verification — tracked in #199.
-      - dependency-name: '@mobilenext/mobile-mcp'
-        update-types: ['version-update:semver-major']
 
   - package-ecosystem: github-actions
     directory: /

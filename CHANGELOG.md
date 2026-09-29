@@ -279,8 +279,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   expired acceptance, and on a stale one. It runs on every PR, weekly, and in
   `publish-npm` before `npm publish`. It fails closed when `npm audit` cannot
   reach the registry.
-- Accepted until 2026-12-27: two `sharp` advisories reachable only through the
-  `@mobilenext/mobile-mcp@0.0.55` pin; removal tracked in #199.
+- Cleared the two `sharp` advisories (GHSA-f88m-g3jw-g9cj,
+  GHSA-rgj7-g3m4-5g8c) that were reachable only through the
+  `@mobilenext/mobile-mcp@0.0.55` pin: the mobile-mcp 1.0.5 upgrade brings
+  `sharp` 0.35.5, and `scripts/audit-allowlist.json` is now empty (#199).
 - Dependabot now opens weekly lockfile-only npm PRs and GitHub Actions PRs.
 
 ---
