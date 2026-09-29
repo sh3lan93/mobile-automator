@@ -60,7 +60,6 @@
 // leaves the envelope untouched.
 
 const { crashTimestampMs } = require('./crash-model');
-const { observeEnabled } = require('../observe/gate');
 const { record } = require('../observe/recorder');
 
 // The probe's own budget, deliberately far below the daemon's per-call timeout
@@ -170,7 +169,6 @@ async function probeCrashes({
 } = {}) {
   const recordOpts = { projectRoot, env, sinks };
   try {
-    if (!observeEnabled(env)) return;
     if (!bridge || typeof bridge.listCrashes !== 'function') return;
     if (!shouldProbe({ envelope, verb })) return;
 

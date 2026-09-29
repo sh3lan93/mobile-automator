@@ -338,3 +338,86 @@ describe('run trace sink', () => {
     expect(readLines(path.join(root, 'mobile-automator', '.logs', 'daemon.ndjson'))).toHaveLength(1);
   });
 });
+
+describe('the spool sink is constructed only when telemetry is enabled', () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+
+  const { defaultSinks, record } = require('../../../src/observe/recorder');
+  const telemetry = require('../../../src/observe/telemetry');
+  const { spoolPath } = require('../../../src/observe/paths');
+
+  const TOKEN = { MAUTO_TELEMETRY_TOKEN: 'phc_real' };
+
+  function workspace(config) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-sinks-'));
+    fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'mobile-automator', 'config.json'),
+      JSON.stringify(config, null, 2)
+    );
+    return root;
+  }
+
+  beforeEach(() => telemetry._resetMemo());
+
+  it('builds two sinks while telemetry is off', () => {
+    const root = workspace({ telemetry: { enabled: false } });
+    expect(defaultSinks(root, TOKEN)).toHaveLength(2);
+  });
+
+  it('builds three once a human has opted in', () => {
+    const root = workspace({ telemetry: { enabled: true } });
+    expect(defaultSinks(root, TOKEN)).toHaveLength(3);
+  });
+
+  it('writes no spool file at all while disabled, at EVERY level', () => {
+    const root = workspace({ telemetry: { enabled: false } });
+    for (const level of ['debug', 'info', 'warn', 'error']) {
+      record({ level, src: 'cli', event: 'verb.end', verb: 'tap', ok: true }, { projectRoot: root, env: { ...TOKEN, MAUTO_LOG_LEVEL: 'debug' } });
+    }
+    expect(fs.existsSync(spoolPath(root, {}))).toBe(false);
+  });
+
+  it('spools info and above, never debug', () => {
+    const root = workspace({ telemetry: { enabled: true } });
+    record({ level: 'debug', src: 'cli', event: 'call.start', verb: 'tap' }, { projectRoot: root, env: { ...TOKEN, MAUTO_LOG_LEVEL: 'debug' } });
+    expect(fs.existsSync(spoolPath(root, {}))).toBe(false);
+
+    record({ level: 'info', src: 'cli', event: 'verb.end', verb: 'tap', ok: true }, { projectRoot: root, env: { ...TOKEN, MAUTO_LOG_LEVEL: 'debug' } });
+    expect(fs.readFileSync(spoolPath(root, {}), 'utf8').trim().split('\n')).toHaveLength(1);
+  });
+
+  it('keeps spooling when MAUTO_LOG_LEVEL=silent — silencing logs is not withdrawing consent', () => {
+    const root = workspace({ telemetry: { enabled: true } });
+    record({ level: 'info', src: 'cli', event: 'verb.end', verb: 'tap', ok: true }, { projectRoot: root, env: { ...TOKEN, MAUTO_LOG_LEVEL: 'silent' } });
+    expect(fs.existsSync(spoolPath(root, {}))).toBe(true);
+  });
+
+  it('lets a kill switch override an enabled config with no spool file created', () => {
+    const root = workspace({ telemetry: { enabled: true } });
+    record({ level: 'info', src: 'cli', event: 'verb.end', verb: 'tap', ok: true }, { projectRoot: root, env: { ...TOKEN, MAUTO_TELEMETRY: '0' } });
+    expect(fs.existsSync(spoolPath(root, {}))).toBe(false);
+
+    telemetry._resetMemo();
+    record({ level: 'info', src: 'cli', event: 'verb.end', verb: 'tap', ok: true }, { projectRoot: root, env: { ...TOKEN, DO_NOT_TRACK: '1' } });
+    expect(fs.existsSync(spoolPath(root, {}))).toBe(false);
+  });
+
+  it('survives a throwing spool sink without depriving its neighbours', () => {
+    const seen = [];
+    record(
+      { level: 'info', src: 'cli', event: 'verb.end', ok: true },
+      {
+        projectRoot: '/nope',
+        env: {},
+        sinks: [
+          { threshold: 'info', write: () => { throw new Error('spool exploded'); } },
+          { threshold: 'info', write: (e) => seen.push(e) },
+        ],
+      }
+    );
+    expect(seen).toHaveLength(1);
+  });
+});
