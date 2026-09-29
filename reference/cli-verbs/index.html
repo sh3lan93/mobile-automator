@@ -1047,6 +1047,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#telemetry-verbs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Telemetry verbs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#memory-verbs" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1176,6 +1187,34 @@
     
   
     Internal Engine (mobile-mcp)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../telemetry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Telemetry & Privacy
   
 
     
@@ -1549,6 +1588,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#telemetry-verbs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Telemetry verbs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#memory-verbs" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1887,6 +1937,37 @@
 <tr>
 <td><code>mauto devices clear</code></td>
 <td>Remove the persisted selection</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="telemetry-verbs">Telemetry verbs<a class="headerlink" href="#telemetry-verbs" title="Permanent link">&para;</a></h2>
+<p>Anonymous usage telemetry, off by default. See
+<a href="../telemetry/">Telemetry &amp; Privacy</a> for the exact field list and delivery
+mechanics.</p>
+<table>
+<thead>
+<tr>
+<th>Verb</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mauto telemetry status</code></td>
+<td>Report whether telemetry is on, what would be sent, and what is queued</td>
+</tr>
+<tr>
+<td><code>mauto telemetry enable</code></td>
+<td>Turn on anonymous usage telemetry</td>
+</tr>
+<tr>
+<td><code>mauto telemetry disable</code></td>
+<td>Turn off anonymous usage telemetry</td>
+</tr>
+<tr>
+<td><code>mauto telemetry flush</code></td>
+<td>Upload any spooled telemetry now instead of waiting for the daemon</td>
 </tr>
 </tbody>
 </table>

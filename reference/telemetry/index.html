@@ -6,17 +6,17 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Architecture overview of mobile-automator - the agent (brain), the mauto CLI verbs, and the mobile-mcp automation engine it wraps.">
+        <meta name="description" content="Intelligent mobile QA automation for any AI coding agent via the mauto CLI - auto-generate test scenarios and execute them with AI-powered assertions on real devices and emulators">
       
       
       
-        <link rel="canonical" href="https://sh3lan93.github.io/mobile-automator/concepts/architecture/">
+        <link rel="canonical" href="https://sh3lan93.github.io/mobile-automator/reference/telemetry/">
       
       
-        <link rel="prev" href="../">
+        <link rel="prev" href="../mcp-tools/">
       
       
-        <link rel="next" href="../three-tier-design/">
+        <link rel="next" href="../../examples/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Architecture - mobile-automator</title>
+        <title>Telemetry & Privacy - mobile-automator</title>
       
     
     
@@ -64,16 +64,16 @@
   
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Architecture - mobile-automator" />
-  <meta property="og:description" content="Architecture overview of mobile-automator - the agent (brain), the mauto CLI verbs, and the mobile-mcp automation engine it wraps." />
-  <meta property="og:url" content="https://sh3lan93.github.io/mobile-automator/concepts/architecture/" />
+  <meta property="og:title" content="Telemetry & Privacy - mobile-automator" />
+  <meta property="og:description" content="Intelligent mobile QA automation for any AI coding agent via the mauto CLI - auto-generate test scenarios and execute them with AI-powered assertions on real devices and emulators" />
+  <meta property="og:url" content="https://sh3lan93.github.io/mobile-automator/reference/telemetry/" />
   <meta property="og:site_name" content="mobile-automator" />
   <meta property="og:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="Architecture - mobile-automator" />
-  <meta name="twitter:description" content="Architecture overview of mobile-automator - the agent (brain), the mauto CLI verbs, and the mobile-mcp automation engine it wraps." />
+  <meta name="twitter:title" content="Telemetry & Privacy - mobile-automator" />
+  <meta name="twitter:description" content="Intelligent mobile QA automation for any AI coding agent via the mauto CLI - auto-generate test scenarios and execute them with AI-powered assertions on real devices and emulators" />
   <meta name="twitter:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
   
 
@@ -96,7 +96,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#architecture-overview" class="md-skip">
+        <a href="#telemetry-privacy" class="md-skip">
           Skip to content
         </a>
       
@@ -131,7 +131,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Architecture
+              Telemetry & Privacy
             
           </span>
         </div>
@@ -440,20 +440,18 @@
       
   
   
-    
   
   
-  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
@@ -474,7 +472,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -492,7 +490,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../../concepts/" class="md-nav__link">
         
   
   
@@ -517,37 +515,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Architecture
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../concepts/architecture/" class="md-nav__link">
         
   
   
@@ -563,222 +534,6 @@
   
 
       </a>
-      
-        
-
-  
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of Contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of Contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#the-contract" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The contract
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#system-components" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        System Components
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="System Components">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#the-agent-brain" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The agent (brain)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#the-mauto-verbs" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The mauto verbs
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#the-mobile-mcp-engine" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The mobile-mcp engine
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#data-flow" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Data Flow
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#file-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        File Structure
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#mobile-mcp-integration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        mobile-mcp Integration
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#key-design-decisions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Key Design Decisions
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Key Design Decisions">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#why-the-brainhands-split" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why the brain/hands split?
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#why-pull-reasoning-on-demand" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why pull reasoning on demand?
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#why-this-schema-design" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why This Schema Design?
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#why-not-modify-your-source-code" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why Not Modify Your Source Code?
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#architecture-in-practice" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Architecture in Practice
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Architecture in Practice">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example-complete-login-flow" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example: Complete Login Flow
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Next Steps
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -791,7 +546,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../three-tier-design/" class="md-nav__link">
+      <a href="../../concepts/three-tier-design/" class="md-nav__link">
         
   
   
@@ -819,7 +574,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../skills/" class="md-nav__link">
+      <a href="../../concepts/skills/" class="md-nav__link">
         
   
   
@@ -847,7 +602,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../memory/" class="md-nav__link">
+      <a href="../../concepts/memory/" class="md-nav__link">
         
   
   
@@ -1045,18 +800,20 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
@@ -1077,7 +834,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1095,7 +852,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -1123,7 +880,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/cli-verbs/" class="md-nav__link">
+      <a href="../cli-verbs/" class="md-nav__link">
         
   
   
@@ -1151,7 +908,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/assertions/" class="md-nav__link">
+      <a href="../assertions/" class="md-nav__link">
         
   
   
@@ -1179,7 +936,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/schema/" class="md-nav__link">
+      <a href="../schema/" class="md-nav__link">
         
   
   
@@ -1207,7 +964,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/result-schema/" class="md-nav__link">
+      <a href="../result-schema/" class="md-nav__link">
         
   
   
@@ -1235,7 +992,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/mcp-tools/" class="md-nav__link">
+      <a href="../mcp-tools/" class="md-nav__link">
         
   
   
@@ -1260,10 +1017,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../reference/telemetry/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Telemetry & Privacy
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1279,6 +1063,94 @@
   
 
       </a>
+      
+        
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of Contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of Contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-short-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The short version
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#turning-it-on-and-off" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Turning it on and off
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-sent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is sent
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-never-sent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is never sent
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-is-delivered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it is delivered
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-the-queue-yourself" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading the queue yourself
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1539,10 +1411,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#the-contract" class="md-nav__link">
+  <a href="#the-short-version" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The contract
+        The short version
       
     </span>
   </a>
@@ -1550,60 +1422,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#system-components" class="md-nav__link">
+  <a href="#turning-it-on-and-off" class="md-nav__link">
     <span class="md-ellipsis">
       
-        System Components
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="System Components">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#the-agent-brain" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The agent (brain)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#the-mauto-verbs" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The mauto verbs
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#the-mobile-mcp-engine" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The mobile-mcp engine
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#data-flow" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Data Flow
+        Turning it on and off
       
     </span>
   </a>
@@ -1611,10 +1433,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#file-structure" class="md-nav__link">
+  <a href="#what-is-sent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        File Structure
+        What is sent
       
     </span>
   </a>
@@ -1622,10 +1444,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mobile-mcp-integration" class="md-nav__link">
+  <a href="#what-is-never-sent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        mobile-mcp Integration
+        What is never sent
       
     </span>
   </a>
@@ -1633,99 +1455,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#key-design-decisions" class="md-nav__link">
+  <a href="#how-it-is-delivered" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Key Design Decisions
+        How it is delivered
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Key Design Decisions">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#why-the-brainhands-split" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why the brain/hands split?
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#why-pull-reasoning-on-demand" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why pull reasoning on demand?
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#why-this-schema-design" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why This Schema Design?
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#why-not-modify-your-source-code" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why Not Modify Your Source Code?
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#architecture-in-practice" class="md-nav__link">
+  <a href="#reading-the-queue-yourself" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Architecture in Practice
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Architecture in Practice">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example-complete-login-flow" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example: Complete Login Flow
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Next Steps
+        Reading the queue yourself
       
     </span>
   </a>
@@ -1752,221 +1496,249 @@
   
 
 
-<h1 id="architecture-overview">Architecture Overview<a class="headerlink" href="#architecture-overview" title="Permanent link">&para;</a></h1>
-<p>mobile-automator is a <strong>host-agnostic <code>mauto</code> CLI</strong> for AI-driven mobile QA automation. Any AI agent drives a real device or emulator through <code>mauto</code> verbs; the agent pulls its reasoning on demand via <code>mauto guide</code>. The CLI never reasons for the agent and the agent never touches the device directly — each does what it is best at.</p>
-<h2 id="the-contract">The contract<a class="headerlink" href="#the-contract" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>agent (brain) → mauto verbs → mobile-mcp engine → device
+<h1 id="telemetry-privacy">Telemetry &amp; Privacy<a class="headerlink" href="#telemetry-privacy" title="Permanent link">&para;</a></h1>
+<p><code>mauto</code> collects <strong>nothing</strong> unless you turn telemetry on. This page describes
+what it would collect if you did, exactly, field by field.</p>
+<h2 id="the-short-version">The short version<a class="headerlink" href="#the-short-version" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Off by default. No prompt, no banner, no opt-out flow — you turn it on or it
+  stays off.</li>
+<li>No free text of any kind ever leaves your machine: no scenario ids, app
+  package names, device serials, element labels, typed input or filesystem
+  paths.</li>
+<li>No per-machine identifier. There is no install id, no device fingerprint and
+  no user id. Events are anonymous and uncorrelated.</li>
+<li>Everything is spooled to a local file first. You can read it before it goes:
+  <code>cat mobile-automator/.logs/telemetry.spool</code>.</li>
+</ul>
+<h2 id="turning-it-on-and-off">Turning it on and off<a class="headerlink" href="#turning-it-on-and-off" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>telemetry<span class="w"> </span>status<span class="w">     </span><span class="c1"># what is on, what would be sent, what is queued</span>
+mauto<span class="w"> </span>telemetry<span class="w"> </span><span class="nb">enable</span><span class="w">     </span><span class="c1"># opt in</span>
+mauto<span class="w"> </span>telemetry<span class="w"> </span>disable<span class="w">    </span><span class="c1"># opt back out</span>
+mauto<span class="w"> </span>telemetry<span class="w"> </span>flush<span class="w">      </span><span class="c1"># upload what is queued now</span>
 </code></pre></div>
-<ul>
-<li>The <strong>agent</strong> decides <em>what</em> to do: it resolves "the Login button" to a concrete element, judges visual assertions, assembles scenarios, and reads guidance via <code>mauto guide &lt;topic&gt;</code>.</li>
-<li><strong><code>mauto</code></strong> does the deterministic work: each verb performs one mechanical action or assertion and emits the uniform JSON envelope <code>{ok,data,error,hint,schema_version}</code>.</li>
-<li><strong>mobile-mcp</strong> is the internal automation engine that <code>mauto</code> wraps. The agent never calls <code>mobile_*</code> tools directly — <code>mauto</code> is the only surface the agent uses, and it translates verbs into mobile-mcp calls behind a single persistent session daemon.</li>
-</ul>
-<h2 id="system-components">System Components<a class="headerlink" href="#system-components" title="Permanent link">&para;</a></h2>
-<h3 id="the-agent-brain">The agent (brain)<a class="headerlink" href="#the-agent-brain" title="Permanent link">&para;</a></h3>
-<p>Any AI agent (Claude Code, Cursor, Gemini CLI, Copilot, and more) drives the workflow. It pulls reasoning on demand rather than carrying an always-loaded skill:</p>
-<ul>
-<li><code>mauto guide &lt;generate|execute|setup&gt;</code> — task-specific reasoning prose</li>
-<li><code>mauto bootstrap</code> — verb map + invariants</li>
-<li><code>mauto schema &lt;scenario|result|config&gt;</code> — the JSON schemas</li>
-</ul>
-<p><code>mauto init --agent &lt;host&gt;</code> installs native Agent Skills per host so the agent knows when to pull each guide.</p>
-<h3 id="the-mauto-verbs">The <code>mauto</code> verbs<a class="headerlink" href="#the-mauto-verbs" title="Permanent link">&para;</a></h3>
-<p>The deterministic surface the agent drives. Every verb emits <code>{ok,data,error,hint,schema_version}</code>; <code>--human</code> is an opt-in readable flag.</p>
-<ul>
-<li><strong>Device actions:</strong> <code>elements</code>, <code>tap</code>, <code>type &lt;text&gt;</code>, <code>swipe</code>, <code>press &lt;button&gt;</code>, <code>screenshot &lt;path&gt;</code>, <code>long-press</code>, <code>double-tap</code>, <code>launch &lt;appId&gt;</code>, <code>install &lt;path&gt;</code>, <code>uninstall &lt;appId&gt;</code>, <code>open-url &lt;url&gt;</code>, <code>orientation &lt;portrait|landscape&gt;</code></li>
-<li><strong>Author &amp; verify:</strong> <code>validate &lt;file&gt;</code>, <code>assert &lt;type&gt;</code>, <code>result add-step</code>, <code>result finalize</code></li>
-<li><strong>Workspace:</strong> <code>setup</code>, <code>config get &lt;key&gt;</code>, <code>config set &lt;key&gt; &lt;value&gt;</code></li>
-<li><strong>Reasoning:</strong> <code>guide &lt;topic&gt;</code>, <code>bootstrap</code>, <code>schema &lt;name&gt;</code></li>
-<li><strong>Agent integration:</strong> <code>init --agent &lt;host&gt;</code>, <code>mcp</code> (MCP prompts server)</li>
-<li><strong>Device session:</strong> <code>session start|status|end</code>; <code>devices</code>, <code>devices use &lt;id&gt;</code>, <code>devices clear</code></li>
-<li><strong>Memory:</strong> <code>memory show</code>, <code>memory add</code>, <code>memory forget</code> — the cross-session learning subsystem (see <a href="../memory/">Memory</a> and the <a href="../../reference/cli-verbs/">CLI Verbs reference</a>)</li>
-</ul>
-<h3 id="the-mobile-mcp-engine">The mobile-mcp engine<a class="headerlink" href="#the-mobile-mcp-engine" title="Permanent link">&para;</a></h3>
-<p><code>mobile-mcp</code> is bundled as a pinned dependency and spawned from <code>node_modules</code> — never fetched at runtime. It is the internal engine, not an agent-facing API. It provides the cross-platform device primitives that <code>mauto</code> verbs are built on:</p>
-<ul>
-<li>Device enumeration</li>
-<li>App launch and control</li>
-<li>Screen interaction (tap, swipe, type, scroll)</li>
-<li>Screenshot capture</li>
-<li>Element detection and inspection</li>
-<li>Button press (back, home, volume)</li>
-<li>URL opening and orientation control</li>
-</ul>
-<p><code>src/device/</code> wraps this engine via one persistent session daemon so device state survives across verb invocations.</p>
-<h2 id="data-flow">Data Flow<a class="headerlink" href="#data-flow" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>User Input (natural language)
-        ↓
-agent pulls reasoning: mauto guide generate
-        ↓
-agent drives mauto verbs (elements, tap, type, …)
-        ↓   each verb → mobile-mcp engine → device
-agent assembles + validates JSON scenario
-        ↓
-Saved to mobile-automator/scenarios/
-        ↓
-agent pulls reasoning: mauto guide execute
-        ↓
-For each step:
-  - agent drives the action via a mauto verb (→ mobile-mcp → device)
-  - agent judges the assertion (mauto assert for mechanical checks)
-  - agent records the step via mauto result add-step
-        ↓
-mauto result finalize → mobile-automator/results/
+<p><code>mauto telemetry enable</code> writes <code>telemetry.enabled: true</code> into
+<code>mobile-automator/config.json</code>. <code>mauto config set telemetry.enabled true</code> does
+the same thing.</p>
+<p>Two environment variables override the config and always win:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MAUTO_TELEMETRY=0</code></td>
+<td>Disables telemetry regardless of config.</td>
+</tr>
+<tr>
+<td><code>DO_NOT_TRACK=1</code></td>
+<td>Disables telemetry regardless of config.</td>
+</tr>
+</tbody>
+</table>
+<p><code>MAUTO_TELEMETRY=1</code> deliberately does <strong>not</strong> enable telemetry. An off-switch is
+safe to honour from the environment; an on-switch is a way to turn collection on
+for a machine — a CI image, a shared shell profile, an inherited Dockerfile —
+whose owner never consented to it. Opting in happens in a file the project owner
+edits.</p>
+<p>Two further environment variables can redirect <strong>where</strong> enabled telemetry is
+sent: <code>MAUTO_TELEMETRY_HOST</code> (default <code>eu.i.posthog.com</code>) and
+<code>MAUTO_TELEMETRY_TOKEN</code>. They exist for self-hosters pointing an enabled project
+at their own instance, and they do nothing while telemetry is off — there is
+nothing to redirect. Neither can turn collection on.</p>
+<h2 id="what-is-sent">What is sent<a class="headerlink" href="#what-is-sent" title="Permanent link">&para;</a></h2>
+<p>These are the only fields that can ever cross the network. The list is enforced
+by <code>src/observe/event.js</code>, which builds the payload by iterating this catalog
+rather than by iterating the event — so a field nobody has classified is
+<em>dropped</em>, never sent. <code>tests/lint/telemetry-docs.test.js</code> fails the build if
+this table and that catalog disagree.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ts</code></td>
+<td>ISO timestamp of the event.</td>
+</tr>
+<tr>
+<td><code>v</code></td>
+<td>Event schema version.</td>
+</tr>
+<tr>
+<td><code>mauto_version</code></td>
+<td>The <code>mauto</code> version that produced the event.</td>
+</tr>
+<tr>
+<td><code>node</code></td>
+<td>Node runtime version.</td>
+</tr>
+<tr>
+<td><code>os</code></td>
+<td><code>process.platform</code> — <code>darwin</code>, <code>linux</code>, <code>win32</code>.</td>
+</tr>
+<tr>
+<td><code>level</code></td>
+<td><code>debug</code>, <code>info</code>, <code>warn</code> or <code>error</code>.</td>
+</tr>
+<tr>
+<td><code>src</code></td>
+<td><code>cli</code> or <code>daemon</code>.</td>
+</tr>
+<tr>
+<td><code>event</code></td>
+<td>The event name, e.g. <code>verb.end</code>, <code>call.end</code>, <code>daemon.start</code>.</td>
+</tr>
+<tr>
+<td><code>verb</code></td>
+<td>The <code>mauto</code> verb, taken from commander's resolved command — never from your command line.</td>
+</tr>
+<tr>
+<td><code>ok</code></td>
+<td>Whether the operation succeeded.</td>
+</tr>
+<tr>
+<td><code>error_kind</code></td>
+<td>The envelope's error taxonomy: <code>device</code>, <code>timeout</code>, <code>invalid_input</code>, …</td>
+</tr>
+<tr>
+<td><code>exit_code</code></td>
+<td>The process exit code.</td>
+</tr>
+<tr>
+<td><code>dur_ms</code></td>
+<td>How long it took.</td>
+</tr>
+<tr>
+<td><code>session_id</code></td>
+<td>A random id regenerated every time the device daemon starts. Not persisted, not derived from your machine.</td>
+</tr>
+<tr>
+<td><code>tool</code></td>
+<td>The mobile-mcp primitive behind the verb, checked against a pinned allowlist.</td>
+</tr>
+<tr>
+<td><code>call_id</code></td>
+<td>A monotonic per-call counter minted by the daemon, scoped to one daemon lifetime — pairs <code>call.start</code> and <code>call.end</code>.</td>
+</tr>
+<tr>
+<td><code>stop_reason</code></td>
+<td>Why the daemon stopped: <code>idle</code>, <code>signal</code>, <code>shutdown</code>, <code>crash</code>, <code>explicit</code>.</td>
+</tr>
+<tr>
+<td><code>error_code</code></td>
+<td>A Node/libuv errno string such as <code>EACCES</code>.</td>
+</tr>
+<tr>
+<td><code>crash_count</code></td>
+<td>Integer count of crash reports observed.</td>
+</tr>
+<tr>
+<td><code>msg_id</code></td>
+<td>A random per-event id used to deduplicate a re-sent batch. Never reused, so it cannot correlate two events.</td>
+</tr>
+<tr>
+<td><code>count</code></td>
+<td>An integer count, e.g. a batch size.</td>
+</tr>
+<tr>
+<td><code>http_status</code></td>
+<td>The HTTP status our own telemetry endpoint returned.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="what-is-never-sent">What is never sent<a class="headerlink" href="#what-is-never-sent" title="Permanent link">&para;</a></h2>
+<p>These fields exist in your <strong>local</strong> logs (<code>mobile-automator/.logs/</code>) and are
+permanently barred from the network path. <code>tests/lint/telemetry-redaction.test.js</code>
+fails the build if any of them is reclassified.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Why it stays local</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>run_id</code></td>
+<td>Agent-chosen; routinely names an unreleased feature.</td>
+</tr>
+<tr>
+<td><code>scenario_id</code></td>
+<td>Names the feature you are testing.</td>
+</tr>
+<tr>
+<td><code>app_id</code></td>
+<td>An unreleased product's package name.</td>
+</tr>
+<tr>
+<td><code>device_id</code></td>
+<td>A hardware identifier / serial.</td>
+</tr>
+<tr>
+<td><code>device_model</code></td>
+<td>Narrows a device to an individual tester.</td>
+</tr>
+<tr>
+<td><code>project_name</code></td>
+<td>Your project's name.</td>
+</tr>
+<tr>
+<td><code>pid</code></td>
+<td>No aggregate value, and a weak host correlator alongside a timestamp.</td>
+</tr>
+<tr>
+<td><code>message</code></td>
+<td>Free text; may embed labels, paths or typed input.</td>
+</tr>
+<tr>
+<td><code>hint</code></td>
+<td>Free text; may embed filesystem paths.</td>
+</tr>
+<tr>
+<td><code>path</code></td>
+<td>A filesystem path; leaks usernames and project layout.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="how-it-is-delivered">How it is delivered<a class="headerlink" href="#how-it-is-delivered" title="Permanent link">&para;</a></h2>
+<p>Verbs never talk to the network. Every <code>mauto</code> verb ends by exiting, which tears
+down a pending socket, so a verb that tried to POST would drop the event a large
+fraction of the time and a verb that waited for one would add a network round
+trip to every tap.</p>
+<p>Instead a verb appends one line to <code>mobile-automator/.logs/telemetry.spool</code> —
+that line is the exact payload that would be uploaded, nothing more — and the
+device session daemon uploads it during its idle window. <code>mauto telemetry flush</code>
+does it on demand. Nothing is retried forever: the spool is capped at 256 KiB,
+at most three pending batches are kept, and failed uploads back off from one
+minute to thirty.</p>
+<p><code>mauto telemetry flush</code> reports its outcome in two units: <code>sent</code> and <code>dropped</code>
+count <strong>events</strong> (<code>dropped</code> events were permanently rejected by the endpoint
+and will not be retried), while <code>kept</code> counts <strong>batches</strong> left for retry — the
+next daemon drain or flush resends them — and <code>kept_events</code> counts the events
+inside those batches. The envelope's <code>ok</code> says the verb ran; <code>data.ok</code> is the
+flush's own verdict, false when events were dropped or a batch was kept.</p>
+<p>Data goes to PostHog's EU cloud (<code>https://eu.i.posthog.com/batch/</code>) using their
+plain HTTP capture API and a write-only public project token. No PostHog SDK is
+installed; <code>mauto</code> has no analytics dependency.</p>
+<h2 id="reading-the-queue-yourself">Reading the queue yourself<a class="headerlink" href="#reading-the-queue-yourself" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>telemetry<span class="w"> </span>status
+cat<span class="w"> </span>mobile-automator/.logs/telemetry.spool
 </code></pre></div>
-<p>On <code>mauto result finalize</code>, the <strong>memory subsystem</strong> (<code>src/memory/</code>) auto-harvests typed observations into a cross-session <code>mobile-automator/memory/</code> store, so the agent gets smarter about <em>this</em> app over time. The agent can also author durable app-knowledge and preferences directly via <code>mauto memory add</code> / <code>mauto memory forget</code>. See <a href="../memory/">Memory</a>.</p>
-<h2 id="file-structure">File Structure<a class="headerlink" href="#file-structure" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>mobile-automator/                          # created in the user's project by mauto setup
-├── config.json                            # project knowledge + mode
-├── scenarios/                             # test scenario JSON files
-│   ├── login_flow.json
-│   ├── checkout.json
-│   └── ...
-├── screenshots/                           # reference screenshots for assertions
-│   ├── login_screen.png
-│   └── ...
-├── results/                               # test execution result reports
-│   ├── login_flow_20250227_143022.json
-│   └── ...
-└── .session/                              # persistent device-session state
-</code></pre></div>
-<p>Guide prose and schemas live in the installed package, not the workspace:</p>
-<div class="highlight"><pre><span></span><code>src/
-├── guide/content/
-│   ├── &lt;topic&gt;.aware.md                   # platform-aware guide prose
-│   └── &lt;topic&gt;.agnostic.md                # platform-agnostic guide prose
-└── schemas/
-    ├── scenario_schema.json               # v2.1
-    └── result_schema.json
-</code></pre></div>
-<h2 id="mobile-mcp-integration">mobile-mcp Integration<a class="headerlink" href="#mobile-mcp-integration" title="Permanent link">&para;</a></h2>
-<p><code>mobile-mcp</code> is pinned in <code>package.json</code> (<code>@mobilenext/mobile-mcp</code>) and resolved from <code>node_modules</code> at runtime (see <code>src/device/mobile-mcp-client.js</code>). It is spawned as a single persistent session daemon and never fetched ad hoc. This provides 20+ automation primitives that work across all supported platforms — but they are an implementation detail of <code>mauto</code>, not something the agent calls.</p>
-<h2 id="key-design-decisions">Key Design Decisions<a class="headerlink" href="#key-design-decisions" title="Permanent link">&para;</a></h2>
-<h3 id="why-the-brainhands-split">Why the brain/hands split?<a class="headerlink" href="#why-the-brainhands-split" title="Permanent link">&para;</a></h3>
-<p><strong>Separation of concerns:</strong></p>
-<ul>
-<li>The <strong>agent (brain)</strong> owns judgment — resolving element references, evaluating visual assertions, and assembling scenarios. This is the part that genuinely needs an LLM.</li>
-<li><strong><code>mauto</code></strong> owns determinism — each verb is a small, testable action that emits a predictable JSON envelope.</li>
-<li><strong>mobile-mcp</strong> owns the platform mechanics — translating a tap into the right adb/xcrun call.</li>
-</ul>
-<p><strong>Benefits:</strong>
-- Each layer evolves independently
-- Deterministic verbs are easy to test and mock
-- Clear responsibility boundaries
-- One reusable automation engine across hosts
-- The agent stays host-agnostic — only the thin Agent Skill installed by <code>mauto init</code> differs per host</p>
-<h3 id="why-pull-reasoning-on-demand">Why pull reasoning on demand?<a class="headerlink" href="#why-pull-reasoning-on-demand" title="Permanent link">&para;</a></h3>
-<p>Reasoning is delivered via <code>mauto guide &lt;topic&gt;</code> at explicit invocation, never as an ambient always-loaded skill. This keeps the agent's context lean and lets each host install only a thin skill that knows <em>when</em> to pull the relevant guide.</p>
-<h3 id="why-this-schema-design">Why This Schema Design?<a class="headerlink" href="#why-this-schema-design" title="Permanent link">&para;</a></h3>
-<p>The test scenario schema provides rich, expressive capabilities:</p>
-<ul>
-<li><strong>18 action types</strong> — tap, swipe, scroll_to_element, wait_for_loading_complete, capture_value, and the four semantic actions used by platform-agnostic mode</li>
-<li><strong>27 assertion types</strong> — comprehensive coverage across text, visibility, collections, visual, navigation</li>
-<li><strong>Advanced control</strong> — retry policies, conditions, sub-steps</li>
-<li><strong>Better debugging</strong> — capture values for later assertion, detailed step context</li>
-<li><strong>Flakiness handling</strong> — explicit retry policies for async operations</li>
-<li><strong>String step IDs</strong> — readable names (<code>tap_login</code> instead of <code>1</code>)</li>
-</ul>
-<h3 id="why-not-modify-your-source-code">Why Not Modify Your Source Code?<a class="headerlink" href="#why-not-modify-your-source-code" title="Permanent link">&para;</a></h3>
-<p>All tests live in the <code>mobile-automator/</code> directory, completely separate from your source code. This means:</p>
-<ul>
-<li>Source code remains untouched and pristine</li>
-<li>Tests don't interfere with builds or deployments</li>
-<li>Different projects can have different test suites</li>
-<li>Easy to delete or regenerate tests without impacting code</li>
-<li>Clear separation between app and test infrastructure</li>
-</ul>
-<h2 id="architecture-in-practice">Architecture in Practice<a class="headerlink" href="#architecture-in-practice" title="Permanent link">&para;</a></h2>
-<h3 id="example-complete-login-flow">Example: Complete Login Flow<a class="headerlink" href="#example-complete-login-flow" title="Permanent link">&para;</a></h3>
-<p>Here's exactly what happens when you generate and execute a login test:</p>
-<div class="highlight"><pre><span></span><code>1. User Input
-   "Tap login button, enter email user@example.com, wait for spinner,
-    verify success message"
-
-2. Agent pulls reasoning:
-   - mauto guide generate
-   - mauto bootstrap (verb map + invariants)
-
-3. Agent generates the scenario (brain):
-   - Parses natural language
-   - Two-pass semantic model:
-     * Pass 1: classify each step as action or assertion
-     * Pass 2: resolve element references (mauto elements → mobile-mcp → device)
-   - Assembles JSON, then mauto validate &lt;file&gt;
-
-4. Scenario JSON Created:
-   {
-     "$schema_version": "2.1",
-     "mode": "platform-aware",
-     "steps": [
-       {
-         "id": "tap_login",
-         "action": "tap",
-         "target": "login_button",
-         "description": "Tap the login button"
-       },
-       {
-         "id": "enter_email",
-         "action": "type",
-         "target": "email_field",
-         "value": "user@example.com",
-         "description": "Enter the email address"
-       },
-       {
-         "id": "wait_spinner",
-         "action": "wait_for_loading_complete",
-         "description": "Wait for the loading spinner to disappear"
-       }
-     ],
-     "assertions": [
-       {
-         "id": "verify_success",
-         "after_step": "wait_spinner",
-         "type": "element_text",
-         "element_description": "success_message",
-         "expected_value": "Success",
-         "description": "Success message is shown after login"
-       }
-     ]
-   }
-
-5. Execution Phase:
-   - Agent pulls reasoning: mauto guide execute
-   - For each step (agent drives verbs):
-     * mauto elements / screenshot → mobile-mcp → device (read state)
-     * mauto tap / type / swipe → mobile-mcp → device (act)
-     * mauto assert (mechanical) or agent vision judgment (visual)
-     * mauto result add-step (record)
-   - mauto result finalize
-
-6. Result JSON:
-   {
-     "run_id": "run_2026-02-27_145230",
-     "status": "passed",
-     "steps_executed": [
-       {"step_id": "tap_login", "status": "passed", "duration_ms": 245},
-       {"step_id": "enter_email", "status": "passed", "duration_ms": 320},
-       {"step_id": "wait_spinner", "status": "passed", "duration_ms": 1200},
-       {"step_id": "verify_success", "status": "passed", "duration_ms": 150}
-     ],
-     "observations": []
-   }
-</code></pre></div>
-<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
-<ul>
-<li><a href="../three-tier-design/">Brain/Hands Layering Deep Dive</a> — Detailed breakdown of each layer</li>
-<li><a href="../skills/">How Skills Work</a> — How native Agent Skills and guide content fit together</li>
-<li><a href="../../guides/setup/">Setup Guide</a> — Walkthrough of the setup workflow</li>
-</ul>
+<p>The spool is plain NDJSON — one upload payload per line. If you disagree with
+anything in it, <code>mauto telemetry disable</code> and delete the file.</p>
 
 
 
 
 
 
-
-  
-  
 
 
 
@@ -1996,7 +1768,7 @@ mauto result finalize → mobile-automator/results/
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../" class="md-footer__link md-footer__link--prev" aria-label="Previous: Core Concepts">
+          <a href="../mcp-tools/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Internal Engine (mobile-mcp)">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -2006,20 +1778,20 @@ mauto result finalize → mobile-automator/results/
                 Previous
               </span>
               <div class="md-ellipsis">
-                Core Concepts
+                Internal Engine (mobile-mcp)
               </div>
             </div>
           </a>
         
         
           
-          <a href="../three-tier-design/" class="md-footer__link md-footer__link--next" aria-label="Next: Layered Architecture">
+          <a href="../../examples/" class="md-footer__link md-footer__link--next" aria-label="Next: Example Scenarios">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Layered Architecture
+                Example Scenarios
               </div>
             </div>
             <div class="md-footer__button md-icon">
