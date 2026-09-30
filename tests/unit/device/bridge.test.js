@@ -278,7 +278,8 @@ describe('getPlatform', () => {
 describe('getScreenSize', () => {
   test('parses mobile-mcp\'s real "Screen size is WxH pixels" string', async () => {
     const call = async (tool) => {
-      // This is the shape mobile-mcp 0.0.55 actually returns (server.js:296).
+      // This is the shape mobile-mcp returns (0.0.55 server.js:296; 1.0.5
+      // unchanged — real captures in contract-1.0.5.test.js).
       if (tool === 'mobile_get_screen_size') return 'Screen size is 1080x1920 pixels';
       return {};
     };

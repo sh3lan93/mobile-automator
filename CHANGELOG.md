@@ -36,8 +36,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   build. `tests/integration/mobile-mcp-contract.test.js` lists the pinned
   engine's tools and checks them against what `DeviceBridge` actually puts on
   the wire; the engine's non-strict schemas otherwise drop an unknown argument
-  and report success, which is how screenshots were once silent no-ops.
-  `scripts/pack-smoke.sh` now runs `mauto devices` from the packed tarball,
+  and report success, which is how screenshots were once silent no-ops. The
+  output shapes mauto parses are pinned too: recorded 1.0.5 output from an
+  Android emulator (both robots) and an iOS simulator replaces the 0.0.55
+  fixtures. `scripts/pack-smoke.sh` now runs `mauto devices` from the packed tarball,
   the only CI step that starts the real engine (#199).
 
 ### Fixed
