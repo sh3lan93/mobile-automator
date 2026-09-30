@@ -11,7 +11,8 @@ class DeviceResolutionError extends Error {
   }
 }
 
-// mobile-mcp 0.0.55 requires a concrete device id on every action/read tool.
+// mobile-mcp 1.0.5 requires a concrete device id on every action/read tool
+// (tests/integration/mobile-mcp-contract.test.js pins this against the engine).
 // When the caller pinned nothing (no --device, no persisted selection), we
 // auto-discover: exactly one active device is used; zero or many is a clear,
 // actionable failure rather than a silent empty result.

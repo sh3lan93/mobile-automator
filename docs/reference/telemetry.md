@@ -3,6 +3,10 @@
 `mauto` collects **nothing** unless you turn telemetry on. This page describes
 what it would collect if you did, exactly, field by field.
 
+This page covers `mauto`'s own telemetry. The device engine `mauto` runs,
+mobile-mcp, has separate telemetry that is on by default — see
+[The device engine's own telemetry](#the-device-engines-own-telemetry).
+
 ## The short version
 
 - Off by default. No prompt, no banner, no opt-out flow — you turn it on or it
@@ -133,3 +137,29 @@ cat mobile-automator/.logs/telemetry.spool
 
 The spool is plain NDJSON — one upload payload per line. If you disagree with
 anything in it, `mauto telemetry disable` and delete the file.
+
+## The device engine's own telemetry
+
+Everything above is about `mauto`. To drive devices, `mauto` runs mobile-mcp
+(`@mobilenext/mobile-mcp`, pinned at 1.0.5), and mobile-mcp — not `mauto` —
+reports usage to its own maintainers, on by default:
+
+- a PostHog event per device call (`tool_invoked` or `tool_failed`, carrying
+  the tool name, duration and device counts);
+- since mobile-mcp 1.0.5, a scarf.sh pixel fetched once per engine process, on
+  its first device call.
+
+None of this goes through `mauto`'s spool, and `mauto telemetry` neither
+controls nor reports it. mobile-mcp turns both off when
+`MOBILEMCP_DISABLE_TELEMETRY=1` is set in its environment. The engine lives
+inside the device session daemon, which inherits the environment it was started
+with, so end the session before setting it:
+
+```bash
+mauto session end
+export MOBILEMCP_DISABLE_TELEMETRY=1
+mauto devices          # the new daemon starts the engine with telemetry off
+```
+
+`mauto` does not set this variable for you today; whether it should by default
+is tracked in [#213](https://github.com/sh3lan93/mobile-automator/issues/213).

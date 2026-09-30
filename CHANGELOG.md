@@ -49,6 +49,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   press falls back to on iOS follows the same rule; the iOS edge-swipe back
   gesture is unchanged. Each direction-only swipe now reads the screen size
   first, so an unreadable size fails the swipe instead of sending it.
+- The docs now disclose the device engine's own telemetry (a PostHog event
+  per call; a scarf.sh pixel since mobile-mcp 1.0.5), which is on by default
+  and independent of mauto's opt-in telemetry, and document the engine's
+  controls: `MOBILEMCP_DISABLE_TELEMETRY`, `MOBILEMCP_LEGACY_ROBOT`,
+  `MOBILEMCP_ALLOW_UNSAFE_URLS` and `MOBILECLI_PATH`. TROUBLESHOOTING's "Is
+  mauto sending anything anywhere?" no longer answers "not unless you turned
+  it on" (#199).
 
 ### 🔒 Security
 
