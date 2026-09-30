@@ -8,6 +8,7 @@ const { version: PKG_VERSION } = require('../package.json');
 const { ok, fail, render, exitCodeFor } = require('./output/envelope');
 const { DeviceBridge } = require('./device/bridge');
 const selectionStore = require('./device/selection');
+const { engineHint } = require('./device/engine-hints');
 const { ScenarioValidator } = require('./scenario/validator');
 const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
 const { ResultStore } = require('./result/store');
@@ -158,6 +159,16 @@ function toEnvelope(err) {
   };
 }
 
+// The hint for any device-kind failure. Precedence: an explicit err.hint wins
+// (our own code attached it knowing the exact cause — a DeviceResolutionError,
+// the daemon-log pointer, a timeout); then engineHint, which recognises engine
+// messages that are useless on their own (the 1.0.5 engine's missing iOS agent
+// and changed Android device ids, #199); then the handler's generic fallback.
+// Every device fail() below goes through here so no handler can miss it.
+function deviceHint(err, fallback) {
+  return (err && err.hint) || engineHint(err && err.message) || fallback;
+}
+
 // ---------------------------------------------------------------------------
 // Handlers — pure-ish: accept injected deps, return { envelope, exitKind }.
 // No process.exit / printing here so they are trivially unit-testable.
@@ -172,7 +183,7 @@ async function handleElements({ deviceBridge }) {
       envelope: fail(
         'device',
         err.message || String(err),
-        err.hint || 'Ensure a device or simulator is connected and the app is running.'
+        deviceHint(err, 'Ensure a device or simulator is connected and the app is running.')
       ),
       exitKind: 'device',
     };
@@ -188,7 +199,7 @@ async function handleScreenshot({ deviceBridge }, destPath) {
       envelope: fail(
         'device',
         err.message || String(err),
-        err.hint || 'Ensure a device or simulator is connected.'
+        deviceHint(err, 'Ensure a device or simulator is connected.')
       ),
       exitKind: 'device',
     };
@@ -247,7 +258,7 @@ function deviceFail(err) {
     envelope: fail(
       kind,
       err.message || String(err),
-      err.hint || 'Ensure a device or simulator is connected and the app is running.'
+      deviceHint(err, 'Ensure a device or simulator is connected and the app is running.')
     ),
     exitKind: kind,
   };
@@ -1254,7 +1265,7 @@ async function handleDevices({ deviceBridge }) {
       envelope: fail(
         'device',
         err.message || String(err),
-        err.hint || 'Ensure a device or simulator is connected and reachable.'
+        deviceHint(err, 'Ensure a device or simulator is connected and reachable.')
       ),
       exitKind: 'device',
     };
@@ -1278,7 +1289,7 @@ async function handleDevicesUse({ deviceBridge, store = selectionStore, projectR
     devices = await deviceBridge.listDevices();
   } catch (err) {
     return {
-      envelope: fail('device', err.message || String(err), err.hint || 'Ensure a device or simulator is connected and reachable.'),
+      envelope: fail('device', err.message || String(err), deviceHint(err, 'Ensure a device or simulator is connected and reachable.')),
       exitKind: 'device',
     };
   }
@@ -1389,7 +1400,7 @@ async function handleCrashList({ deviceBridge, projectRoot }, opts = {}) {
     // "Could not look" is NOT "found none". Reporting ok:true with an empty
     // list here would be this slice's own bug with the sign flipped.
     return {
-      envelope: fail(err.kind || 'device', err.message || String(err), err.hint || CRASH_LIST_HINT),
+      envelope: fail(err.kind || 'device', err.message || String(err), deviceHint(err, CRASH_LIST_HINT)),
       exitKind: err.kind || 'device',
     };
   }
@@ -1421,7 +1432,7 @@ async function handleCrashGet({ deviceBridge, fs: fsDep = fs }, id, opts = {}) {
     report = await deviceBridge.getCrash(id);
   } catch (err) {
     return {
-      envelope: fail(err.kind || 'device', err.message || String(err), err.hint || CRASH_LIST_HINT),
+      envelope: fail(err.kind || 'device', err.message || String(err), deviceHint(err, CRASH_LIST_HINT)),
       exitKind: err.kind || 'device',
     };
   }
