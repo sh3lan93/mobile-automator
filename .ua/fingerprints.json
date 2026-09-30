@@ -1,0 +1,6706 @@
+{
+  "version": "1.0.0",
+  "gitCommitHash": "7be03094ebd8641af6487d0990a1e2554b049156",
+  "generatedAt": "2026-09-29T23:53:16.044Z",
+  "files": {
+    ".env.example": {
+      "filePath": ".env.example",
+      "contentHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 1,
+      "hasStructuralAnalysis": false
+    },
+    ".github/ISSUE_TEMPLATE/bug_report.yml": {
+      "filePath": ".github/ISSUE_TEMPLATE/bug_report.yml",
+      "contentHash": "d1bcf49b1831c5138f273d1032925b178e457e9b973da1065e9f5a3a89e603d8",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 132,
+      "hasStructuralAnalysis": false
+    },
+    ".github/ISSUE_TEMPLATE/config.yml": {
+      "filePath": ".github/ISSUE_TEMPLATE/config.yml",
+      "contentHash": "d168a199e300659ae20c5888cfd374a073ed3f823645e2512500cf23ea7dc249",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 9,
+      "hasStructuralAnalysis": false
+    },
+    ".github/ISSUE_TEMPLATE/feature_request.yml": {
+      "filePath": ".github/ISSUE_TEMPLATE/feature_request.yml",
+      "contentHash": "e0775f7c8f3d17fa0dee8dbff0887c60478d6b41a7e020258c1b1b880ca7174e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 117,
+      "hasStructuralAnalysis": false
+    },
+    ".github/dependabot.yml": {
+      "filePath": ".github/dependabot.yml",
+      "contentHash": "32a7449d05a8063b46da5226c63dda1cf66d6c182132fd08a304fe62eb098e9e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 28,
+      "hasStructuralAnalysis": false
+    },
+    ".github/workflows/audit.yml": {
+      "filePath": ".github/workflows/audit.yml",
+      "contentHash": "cdff64a389f2449d0e7382c6fcd8243999533079df208352ed1fcbd61d6069e4",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 33,
+      "hasStructuralAnalysis": false
+    },
+    ".github/workflows/auto-tag.yml": {
+      "filePath": ".github/workflows/auto-tag.yml",
+      "contentHash": "d6cb8cc43a2c74d780820cfd98732a58755d682fb8cf9028eda77cfb6c45b5b7",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 112,
+      "hasStructuralAnalysis": false
+    },
+    ".github/workflows/docs.yml": {
+      "filePath": ".github/workflows/docs.yml",
+      "contentHash": "6b55a5395929d6d8ee0d905aed8e2d61c73d6cb2a42ad0f1ea5a3796f2499af8",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 59,
+      "hasStructuralAnalysis": false
+    },
+    ".github/workflows/lint-prompts.yml": {
+      "filePath": ".github/workflows/lint-prompts.yml",
+      "contentHash": "d4578dbe58e8950783018902b74a499a674473141ef7d4868d7c93bdc5eb55e2",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 40,
+      "hasStructuralAnalysis": false
+    },
+    ".github/workflows/release.yml": {
+      "filePath": ".github/workflows/release.yml",
+      "contentHash": "fe615b87fe8b1b4fe9b8a0c135fc03f9ca9d4a7baf8a0a8015fcba16cd324e93",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 191,
+      "hasStructuralAnalysis": false
+    },
+    ".github/workflows/sample-app-e2e-android.yml": {
+      "filePath": ".github/workflows/sample-app-e2e-android.yml",
+      "contentHash": "94a3734339fcf373ba021d9a2d4382920f21265225bed25ac441da807a92dd1d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 76,
+      "hasStructuralAnalysis": false
+    },
+    ".github/workflows/sample-app.yml": {
+      "filePath": ".github/workflows/sample-app.yml",
+      "contentHash": "f7011a181780ec243e79282d09b8c1706e303ffbf07d51b5aee8b3da091afaf7",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 51,
+      "hasStructuralAnalysis": false
+    },
+    ".github/workflows/test.yml": {
+      "filePath": ".github/workflows/test.yml",
+      "contentHash": "d4e9c02a2f46f474643ed562b2daf3dabd4180c119655a3536da6edf97679a8e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 46,
+      "hasStructuralAnalysis": false
+    },
+    ".github/workflows/validate-schemas.js": {
+      "filePath": ".github/workflows/validate-schemas.js",
+      "contentHash": "f02e8c90e9764670e8e809b6d9c6f0779957518dcaa412a6170480cf8cb9de1a",
+      "functions": [
+        {
+          "name": "findJsonFiles",
+          "params": [
+            "dir"
+          ],
+          "exported": false,
+          "lineCount": 17
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 145,
+      "hasStructuralAnalysis": true
+    },
+    ".github/workflows/validate-schemas.yml": {
+      "filePath": ".github/workflows/validate-schemas.yml",
+      "contentHash": "9b52bbca239b585e41995ed9aedc00a4d2877867abf90ced666d7e4cf18f73d1",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 34,
+      "hasStructuralAnalysis": false
+    },
+    ".github/workflows/version-check.yml": {
+      "filePath": ".github/workflows/version-check.yml",
+      "contentHash": "fdf251a0e9d178549cd7dea3510e10969b711aa2d9e91f98bfc5f711cac1a26f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 90,
+      "hasStructuralAnalysis": false
+    },
+    ".pre-commit-config.yaml": {
+      "filePath": ".pre-commit-config.yaml",
+      "contentHash": "4e9ab891177f68d0a44883737075f7c47dc09f89c975b897a8f0d41a17e4d322",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 13,
+      "hasStructuralAnalysis": false
+    },
+    ".ua/config.json": {
+      "filePath": ".ua/config.json",
+      "contentHash": "08d37f20ea0af2233ae24f094723759f952381ecb6dd7f2aaa05ef96e95eae6b",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 4,
+      "hasStructuralAnalysis": false
+    },
+    ".vale.ini": {
+      "filePath": ".vale.ini",
+      "contentHash": "03321e99bdda433f14291c2654759203522b8bd81cc5cf30658b76efd774a9e9",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 16,
+      "hasStructuralAnalysis": false
+    },
+    "CHANGELOG.md": {
+      "filePath": "CHANGELOG.md",
+      "contentHash": "246a48a775475b02be4da6b0e0894eba2d15d6b524219482a440f34d65a1c5b2",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 1265,
+      "hasStructuralAnalysis": false
+    },
+    "CLAUDE.md": {
+      "filePath": "CLAUDE.md",
+      "contentHash": "9b98e17b2aabd3b4a8c2a7ae9c424c92b28e924b4f2e326c0f025dccb4039c20",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 219,
+      "hasStructuralAnalysis": false
+    },
+    "CONTRIBUTING.md": {
+      "filePath": "CONTRIBUTING.md",
+      "contentHash": "3544118f7f2d1646b196656ace13f1e907bf53692dcee950ef267749d9daf69e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 356,
+      "hasStructuralAnalysis": false
+    },
+    "README.md": {
+      "filePath": "README.md",
+      "contentHash": "ac372d4f56bfe8e20a5a9b245e28d5b8ff8655d383634b8e0f6673f27ab9301e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 191,
+      "hasStructuralAnalysis": false
+    },
+    "ROADMAP.md": {
+      "filePath": "ROADMAP.md",
+      "contentHash": "57339c535ab00ba44de8765e66b5bff6081671507368f321e6dd448c94096f85",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 72,
+      "hasStructuralAnalysis": false
+    },
+    "TROUBLESHOOTING.md": {
+      "filePath": "TROUBLESHOOTING.md",
+      "contentHash": "3893b34eb548e342c610c0fd7c2cc530260d82323f0dfba55e76e9137ca7420f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 304,
+      "hasStructuralAnalysis": false
+    },
+    "bin/mauto-session-daemon.js": {
+      "filePath": "bin/mauto-session-daemon.js",
+      "contentHash": "d68e96c85d51e8d5195d9845142ed1d946c80fc5114383e889abe377c1aa88d9",
+      "functions": [
+        {
+          "name": "safeUnlinkSync",
+          "params": [
+            "p"
+          ],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "cleanupWorkspaceIfOwned",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 13
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": false,
+          "lineCount": 120
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 180,
+      "hasStructuralAnalysis": true
+    },
+    "bin/mauto.js": {
+      "filePath": "bin/mauto.js",
+      "contentHash": "afade86af3a0fe2044d73db5688ca0de67754c33acd538e6cb7fb80653f5c4f8",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 14,
+      "hasStructuralAnalysis": true
+    },
+    "docs/changelog.md": {
+      "filePath": "docs/changelog.md",
+      "contentHash": "abef3da08242acdd90456a371cb494dbd92234656bbcf099f54a9a8d4be5552a",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 263,
+      "hasStructuralAnalysis": false
+    },
+    "docs/concepts/architecture.md": {
+      "filePath": "docs/concepts/architecture.md",
+      "contentHash": "f702f668be9a5770f1c24c6531545c0a1adaa7892a21dd8adc30196bad254440",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 244,
+      "hasStructuralAnalysis": false
+    },
+    "docs/concepts/index.md": {
+      "filePath": "docs/concepts/index.md",
+      "contentHash": "6f69d4ad3627d8922ba0b1eddd64dbea8f9c74da65aac2421000e6ae1f2bdaed",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 121,
+      "hasStructuralAnalysis": false
+    },
+    "docs/concepts/memory.md": {
+      "filePath": "docs/concepts/memory.md",
+      "contentHash": "344a3aa92322ef78a9fd4a8677d081e36752f4fefc53bb32e6bef485f9846a1e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 112,
+      "hasStructuralAnalysis": false
+    },
+    "docs/concepts/skills.md": {
+      "filePath": "docs/concepts/skills.md",
+      "contentHash": "4abffb9858918578b65b381a287a81d98908e91f183c2521f0e17f5caec0dd76",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 540,
+      "hasStructuralAnalysis": false
+    },
+    "docs/concepts/three-tier-design.md": {
+      "filePath": "docs/concepts/three-tier-design.md",
+      "contentHash": "fe0c7606c15a705cd3761138f79579e9abd7d9d18a9547bfa0b7cc0624fb19b6",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 226,
+      "hasStructuralAnalysis": false
+    },
+    "docs/contributing.md": {
+      "filePath": "docs/contributing.md",
+      "contentHash": "46a931992b67efb518d24c21f3281b30905e9851370de4da2ea5f1590d8031bf",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 695,
+      "hasStructuralAnalysis": false
+    },
+    "docs/examples/android.md": {
+      "filePath": "docs/examples/android.md",
+      "contentHash": "7ad05c04a415de9d6055b9ac19d3d652fe548bdae3be0449163f303d745089a1",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 400,
+      "hasStructuralAnalysis": false
+    },
+    "docs/examples/index.md": {
+      "filePath": "docs/examples/index.md",
+      "contentHash": "6751f2def84bbbd2ff36472a2e7b2f7d823728910dee168ce788b77c624135b4",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 54,
+      "hasStructuralAnalysis": false
+    },
+    "docs/examples/ios.md": {
+      "filePath": "docs/examples/ios.md",
+      "contentHash": "6533e768c93432d56bd2973de1ee1b52be1ae7a84c83719007b12193cce501d5",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 418,
+      "hasStructuralAnalysis": false
+    },
+    "docs/faq.md": {
+      "filePath": "docs/faq.md",
+      "contentHash": "7e211b06fcb977061ffdeda6c07e99235362292552b9516182966e79435ca5ab",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 763,
+      "hasStructuralAnalysis": false
+    },
+    "docs/getting-started/index.md": {
+      "filePath": "docs/getting-started/index.md",
+      "contentHash": "1342ae183ca760c2885d86b107b4ec4565723981f9f8dbfd57e25ffff7f2aec0",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 156,
+      "hasStructuralAnalysis": false
+    },
+    "docs/getting-started/installation.md": {
+      "filePath": "docs/getting-started/installation.md",
+      "contentHash": "ec85dac0c8ef59df53eabc3d79d68aaab54386d1e73cb3f504790b8d830615ba",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 171,
+      "hasStructuralAnalysis": false
+    },
+    "docs/getting-started/quick-start.md": {
+      "filePath": "docs/getting-started/quick-start.md",
+      "contentHash": "c63f195d63d9ec21cab7f28adbf8b7dc93a8bb8b972aaeaafc4ce4396732d78d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 206,
+      "hasStructuralAnalysis": false
+    },
+    "docs/guides/execute.md": {
+      "filePath": "docs/guides/execute.md",
+      "contentHash": "9fcbf6059038320e185b49a479e2c88ac3960f7d9d945457049790a2b8cfd6fd",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 832,
+      "hasStructuralAnalysis": false
+    },
+    "docs/guides/generate.md": {
+      "filePath": "docs/guides/generate.md",
+      "contentHash": "73fd1ba02930d90c95aa7f4798cdd4fa2468fc7d95914a15a6c3219c45f6bb1f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 638,
+      "hasStructuralAnalysis": false
+    },
+    "docs/guides/index.md": {
+      "filePath": "docs/guides/index.md",
+      "contentHash": "a8532a9de8e357441e423715f9a45b21cf61249415b86c4e07fb6c347ad58c9e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 59,
+      "hasStructuralAnalysis": false
+    },
+    "docs/guides/setup.md": {
+      "filePath": "docs/guides/setup.md",
+      "contentHash": "b226eb0ff4548a5d9430c8bb418d66ac889a3d0fbf332c40a7ba1b84f5a70a42",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 287,
+      "hasStructuralAnalysis": false
+    },
+    "docs/index.md": {
+      "filePath": "docs/index.md",
+      "contentHash": "3a5c8ad16d31119c4ccabb4445bc530de3bb1a6868cde5808bf4ecf07f26a6bf",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 153,
+      "hasStructuralAnalysis": false
+    },
+    "docs/overrides/.gitkeep": {
+      "filePath": "docs/overrides/.gitkeep",
+      "contentHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 1,
+      "hasStructuralAnalysis": false
+    },
+    "docs/overrides/main.html": {
+      "filePath": "docs/overrides/main.html",
+      "contentHash": "0abc7c1e0924b4c4eb7eebd36ac54d13923c327f4298a3bab8729aa3e428e12e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 20,
+      "hasStructuralAnalysis": false
+    },
+    "docs/overrides/partials/logo.html": {
+      "filePath": "docs/overrides/partials/logo.html",
+      "contentHash": "d15685e5080bf82c005a80f57afa19449f5d0ee77d1ee30242a2a6358dcc3ce1",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 13,
+      "hasStructuralAnalysis": false
+    },
+    "docs/plans/2026-03-03-ui-ux-design-system.md": {
+      "filePath": "docs/plans/2026-03-03-ui-ux-design-system.md",
+      "contentHash": "75795e03bda443b0a624bd0df8355edf20e4531da2faf789330eae8ac2efcf3e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 346,
+      "hasStructuralAnalysis": false
+    },
+    "docs/plans/2026-03-03-ui-ux-implementation.md": {
+      "filePath": "docs/plans/2026-03-03-ui-ux-implementation.md",
+      "contentHash": "01274ffa1c7825d01e054884b2dba444192924169d65284c3f204df9a72bcc9e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 887,
+      "hasStructuralAnalysis": false
+    },
+    "docs/plans/2026-06-14-cli-migration-prd.md": {
+      "filePath": "docs/plans/2026-06-14-cli-migration-prd.md",
+      "contentHash": "b7f79f406266ecb3273dc3677eb98aa68662175d8f792f6b7559db3c3c0d53ee",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 124,
+      "hasStructuralAnalysis": false
+    },
+    "docs/plans/2026-06-21-mobile-mcp-contract-fix-design.md": {
+      "filePath": "docs/plans/2026-06-21-mobile-mcp-contract-fix-design.md",
+      "contentHash": "c1d27ea8c7482e07d5c7e1709bed0519a57ca69586aa3a5b5774f4b342549008",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 117,
+      "hasStructuralAnalysis": false
+    },
+    "docs/plans/2026-06-21-mobile-mcp-contract-fix-plan.md": {
+      "filePath": "docs/plans/2026-06-21-mobile-mcp-contract-fix-plan.md",
+      "contentHash": "201d90b4df6a4a381b5b904debd4b0eb3a0cd83154bca5d3ccc472b6f6d6aa1f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 765,
+      "hasStructuralAnalysis": false
+    },
+    "docs/plans/2026-06-21-recorder-live-capture-design.md": {
+      "filePath": "docs/plans/2026-06-21-recorder-live-capture-design.md",
+      "contentHash": "ee196c240435701bca55cab16aaf578e599bf627c28f916aac9f479e122ba824",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 104,
+      "hasStructuralAnalysis": false
+    },
+    "docs/plans/2026-06-21-recorder-live-capture-plan.md": {
+      "filePath": "docs/plans/2026-06-21-recorder-live-capture-plan.md",
+      "contentHash": "24dc99860c4e2feaa1c870b690c007061f1d2dc48105907c91a0e53846b419eb",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 1182,
+      "hasStructuralAnalysis": false
+    },
+    "docs/plans/2026-06-28-mauto-init-agent-skills-design.md": {
+      "filePath": "docs/plans/2026-06-28-mauto-init-agent-skills-design.md",
+      "contentHash": "53c78c39224bf8ba086524eebf497f52968461fa119afafc17f7f3f09b3e3069",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 236,
+      "hasStructuralAnalysis": false
+    },
+    "docs/plans/2026-06-28-mauto-init-agent-skills-plan.md": {
+      "filePath": "docs/plans/2026-06-28-mauto-init-agent-skills-plan.md",
+      "contentHash": "0e012e5e909312a3efa8b23220d88f207be057028462f6829ac7018136ceb7cc",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 902,
+      "hasStructuralAnalysis": false
+    },
+    "docs/plans/2026-08-31-observability-design.md": {
+      "filePath": "docs/plans/2026-08-31-observability-design.md",
+      "contentHash": "d489a073a4088a1fe74cc4510402fa5c6ef747c815fee30241fccdde9066ab81",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 388,
+      "hasStructuralAnalysis": false
+    },
+    "docs/plans/2026-08-31-observability-plan.md": {
+      "filePath": "docs/plans/2026-08-31-observability-plan.md",
+      "contentHash": "f4c92c2518c5e7a252fa9424bb0f88eb5668db1c1e8b7d343c37295309a4d739",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 1260,
+      "hasStructuralAnalysis": false
+    },
+    "docs/plans/2026-09-01-node-version-matrix.md": {
+      "filePath": "docs/plans/2026-09-01-node-version-matrix.md",
+      "contentHash": "d0112497bcef57c977677c758608c576731d5238036ec6193f59cddf62517abb",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 483,
+      "hasStructuralAnalysis": false
+    },
+    "docs/plans/2026-09-01-observability-slice-2-plan.md": {
+      "filePath": "docs/plans/2026-09-01-observability-slice-2-plan.md",
+      "contentHash": "3397a95c9b647fd5e552dcaf04db51a65e7eeed7f5de8bc27e873d48fcf0229e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 2268,
+      "hasStructuralAnalysis": false
+    },
+    "docs/plans/2026-09-05-observability-slice-3-plan.md": {
+      "filePath": "docs/plans/2026-09-05-observability-slice-3-plan.md",
+      "contentHash": "ed0cc6c249415706c4a210b487c652e8e2e8fe46c06da670d27d1faeaad74e03",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 2902,
+      "hasStructuralAnalysis": false
+    },
+    "docs/plans/2026-09-05-observability-slice-4-plan.md": {
+      "filePath": "docs/plans/2026-09-05-observability-slice-4-plan.md",
+      "contentHash": "048cf709d2fffa1dbabb2733304d676d21243fed5a1e88edde7e9c61747cfc71",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 2098,
+      "hasStructuralAnalysis": false
+    },
+    "docs/plans/2026-09-05-observability-slice-5-plan.md": {
+      "filePath": "docs/plans/2026-09-05-observability-slice-5-plan.md",
+      "contentHash": "60b2bb85f19a673a8f851bf80f3d74c5f71ea775375fd32191f764d931a7867e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 3370,
+      "hasStructuralAnalysis": false
+    },
+    "docs/plans/2026-09-28-dependency-audit-gate-plan.md": {
+      "filePath": "docs/plans/2026-09-28-dependency-audit-gate-plan.md",
+      "contentHash": "98a1b72cd52014313a8734aff4731cff76b7e6cb0841f05e464acec195b9217d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 801,
+      "hasStructuralAnalysis": false
+    },
+    "docs/reference/assertions.md": {
+      "filePath": "docs/reference/assertions.md",
+      "contentHash": "95ffac2dc50b6340e15066049652d4eae268d30addabca6b761eb0fd96fe90e4",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 779,
+      "hasStructuralAnalysis": false
+    },
+    "docs/reference/cli-verbs.md": {
+      "filePath": "docs/reference/cli-verbs.md",
+      "contentHash": "33de259dc3911e988f81eff0b0bf8d6c48f145778b859a77c085b0ebc646cd07",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 192,
+      "hasStructuralAnalysis": false
+    },
+    "docs/reference/index.md": {
+      "filePath": "docs/reference/index.md",
+      "contentHash": "a55e937ce95fbb9cda3ed2ccebda24939c79069c7857a0616e5d28f24b8ffc7f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 325,
+      "hasStructuralAnalysis": false
+    },
+    "docs/reference/mcp-tools.md": {
+      "filePath": "docs/reference/mcp-tools.md",
+      "contentHash": "87c218cad5f16497adade060c754dbcb46c5eb383bb5c574975e74e170c6b73f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 726,
+      "hasStructuralAnalysis": false
+    },
+    "docs/reference/result-schema.md": {
+      "filePath": "docs/reference/result-schema.md",
+      "contentHash": "a493d1d038351babc44a5f0df9901e507ec61a691245187a5d23fe3472993e24",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 483,
+      "hasStructuralAnalysis": false
+    },
+    "docs/reference/schema.md": {
+      "filePath": "docs/reference/schema.md",
+      "contentHash": "1520ce2438f9f9d8be90ef3f2841a2d09a31f6796272c024c8f5354f6ee69963",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 866,
+      "hasStructuralAnalysis": false
+    },
+    "docs/reference/telemetry.md": {
+      "filePath": "docs/reference/telemetry.md",
+      "contentHash": "81896a148893bced3e394c1b8bb2beb77eac8766bd117d1511c49cbeae24afbf",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 136,
+      "hasStructuralAnalysis": false
+    },
+    "docs/references/mobile-mcp-tools.md": {
+      "filePath": "docs/references/mobile-mcp-tools.md",
+      "contentHash": "c74fc79be3fce16190638e5b9c1e9d9970051ccf3303fe86c4a061f91bba5cd7",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 72,
+      "hasStructuralAnalysis": false
+    },
+    "docs/references/platform-resolutions.md": {
+      "filePath": "docs/references/platform-resolutions.md",
+      "contentHash": "0d45b8fce9aefd5e462568539731910028836e93aa09808122351cb23486aea4",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 45,
+      "hasStructuralAnalysis": false
+    },
+    "docs/robots.txt": {
+      "filePath": "docs/robots.txt",
+      "contentHash": "e2ffb39e7650b7711cb3a7274beaedf91cd804193efd91363c399c0844a9dfb2",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 5,
+      "hasStructuralAnalysis": false
+    },
+    "docs/stylesheets/extra.css": {
+      "filePath": "docs/stylesheets/extra.css",
+      "contentHash": "a05654f28d923c9bebe4ba5c161631c4f8634290f367daa0074ccfa18e98abe4",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 542,
+      "hasStructuralAnalysis": false
+    },
+    "jest.config.js": {
+      "filePath": "jest.config.js",
+      "contentHash": "8719273fe5b81e9a4e5f94043999e7fd347a0dfef20f4bcdbc2586fa57dcdf40",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 15,
+      "hasStructuralAnalysis": true
+    },
+    "mkdocs.yml": {
+      "filePath": "mkdocs.yml",
+      "contentHash": "fe982f5951bbb6d8175905c0e727edff34c59f92a0a15d22358e47940833a4cb",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 102,
+      "hasStructuralAnalysis": false
+    },
+    "mobile-automator.pen": {
+      "filePath": "mobile-automator.pen",
+      "contentHash": "72d1c3b92d38ff9db80356eda80772ae75a52228b964a911c06d4a6aa5be0a2e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 875,
+      "hasStructuralAnalysis": false
+    },
+    "package.json": {
+      "filePath": "package.json",
+      "contentHash": "b842d9d8c0a12f0597af71b9fc45ade3aa47516869c5da2fef5001d23919f8fa",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 51,
+      "hasStructuralAnalysis": false
+    },
+    "requirements.txt": {
+      "filePath": "requirements.txt",
+      "contentHash": "e7605ed970d8f4b8345c1225d61d3ba2c7025d35733e7972025df06d4b43f224",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 7,
+      "hasStructuralAnalysis": false
+    },
+    "scripts/audit-allowlist.json": {
+      "filePath": "scripts/audit-allowlist.json",
+      "contentHash": "69f6e9a4fa8a3bfb8130ff5ac266ce5d5531df25185e4d021fb213d25dca6680",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 17,
+      "hasStructuralAnalysis": false
+    },
+    "scripts/audit-gate.js": {
+      "filePath": "scripts/audit-gate.js",
+      "contentHash": "349c09485178c7a0458471f45a89e7e0d0ff89e9a16753cef26d220c8785a5f8",
+      "functions": [
+        {
+          "name": "isValidCalendarDate",
+          "params": [
+            "s"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "ghsaOf",
+          "params": [
+            "url"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "auditFailureMessage",
+          "params": [
+            "report"
+          ],
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "collectAdvisories",
+          "params": [
+            "report"
+          ],
+          "exported": false,
+          "lineCount": 21
+        },
+        {
+          "name": "validateAllowlist",
+          "params": [
+            "list",
+            "today"
+          ],
+          "exported": false,
+          "lineCount": 32
+        },
+        {
+          "name": "evaluate",
+          "params": [
+            "report",
+            "allowlist",
+            "today"
+          ],
+          "exported": false,
+          "lineCount": 18
+        },
+        {
+          "name": "runAudit",
+          "params": [],
+          "exported": false,
+          "lineCount": 16
+        },
+        {
+          "name": "line",
+          "params": [
+            "a"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": false,
+          "lineCount": 27
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 191,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/pack-smoke.sh": {
+      "filePath": "scripts/pack-smoke.sh",
+      "contentHash": "d473bda76e38ebdf813b6f74023c7b002dd4d099ba18e0023be58ed7c258213a",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 62,
+      "hasStructuralAnalysis": false
+    },
+    "squirrel.toml": {
+      "filePath": "squirrel.toml",
+      "contentHash": "59fbe762489dba49c5da7253b270aacddc5859f2544f2536a78525281d0f88f3",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 37,
+      "hasStructuralAnalysis": false
+    },
+    "src/assertion/evaluator.js": {
+      "filePath": "src/assertion/evaluator.js",
+      "contentHash": "ecd554d821601964acb32141d55b064e057ad60f6a09bff4e1181b0d241ffe57",
+      "functions": [
+        {
+          "name": "labelOf",
+          "params": [
+            "e"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "textOf",
+          "params": [
+            "e"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "matches",
+          "params": [
+            "e",
+            "target"
+          ],
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "findFirst",
+          "params": [
+            "elements",
+            "target"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "countMatching",
+          "params": [
+            "elements",
+            "target"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "compare",
+          "params": [
+            "actual",
+            "operator",
+            "expected"
+          ],
+          "exported": false,
+          "lineCount": 20
+        },
+        {
+          "name": "boolFromFlag",
+          "params": [
+            "v"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "result",
+          "params": [
+            "type",
+            "mechanical",
+            "pass",
+            "message"
+          ],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "needsAgent",
+          "params": [
+            "type"
+          ],
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "evaluate",
+          "params": [],
+          "exported": false,
+          "lineCount": 163
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 286,
+      "hasStructuralAnalysis": true
+    },
+    "src/cli.js": {
+      "filePath": "src/cli.js",
+      "contentHash": "b50e8fcb513faf181e43f50523a3f6109a0c4494dd52b48f79924851b70bf804",
+      "functions": [
+        {
+          "name": "isCommanderParseFailure",
+          "params": [
+            "err"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "usageLine",
+          "params": [
+            "cmd"
+          ],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "toEnvelope",
+          "params": [
+            "err"
+          ],
+          "exported": false,
+          "lineCount": 36
+        },
+        {
+          "name": "handleElements",
+          "params": [],
+          "exported": false,
+          "lineCount": 15
+        },
+        {
+          "name": "handleScreenshot",
+          "params": [
+            "destPath"
+          ],
+          "exported": false,
+          "lineCount": 15
+        },
+        {
+          "name": "handleValidate",
+          "params": [
+            "file"
+          ],
+          "exported": false,
+          "lineCount": 42
+        },
+        {
+          "name": "deviceFail",
+          "params": [
+            "err"
+          ],
+          "exported": false,
+          "lineCount": 14
+        },
+        {
+          "name": "parseCoordinates",
+          "params": [
+            "raw"
+          ],
+          "exported": false,
+          "lineCount": 25
+        },
+        {
+          "name": "handleTap",
+          "params": [
+            "raw"
+          ],
+          "exported": false,
+          "lineCount": 13
+        },
+        {
+          "name": "handleLongPress",
+          "params": [
+            "raw"
+          ],
+          "exported": false,
+          "lineCount": 29
+        },
+        {
+          "name": "handleDoubleTap",
+          "params": [
+            "raw"
+          ],
+          "exported": false,
+          "lineCount": 13
+        },
+        {
+          "name": "handleLaunch",
+          "params": [
+            "appId"
+          ],
+          "exported": false,
+          "lineCount": 15
+        },
+        {
+          "name": "handleInstall",
+          "params": [
+            "appPath"
+          ],
+          "exported": false,
+          "lineCount": 15
+        },
+        {
+          "name": "handleUninstall",
+          "params": [
+            "appId"
+          ],
+          "exported": false,
+          "lineCount": 15
+        },
+        {
+          "name": "handleOpenUrl",
+          "params": [
+            "url"
+          ],
+          "exported": false,
+          "lineCount": 15
+        },
+        {
+          "name": "handleOrientation",
+          "params": [
+            "orientation"
+          ],
+          "exported": false,
+          "lineCount": 15
+        },
+        {
+          "name": "handleType",
+          "params": [
+            "text"
+          ],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "handleSwipe",
+          "params": [
+            "direction"
+          ],
+          "exported": false,
+          "lineCount": 15
+        },
+        {
+          "name": "handlePress",
+          "params": [
+            "button"
+          ],
+          "exported": false,
+          "lineCount": 33
+        },
+        {
+          "name": "handleAssert",
+          "params": [
+            "type"
+          ],
+          "exported": false,
+          "lineCount": 46
+        },
+        {
+          "name": "collect",
+          "params": [
+            "value",
+            "previous"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "handleResultAddStep",
+          "params": [
+            "opts"
+          ],
+          "exported": false,
+          "lineCount": 63
+        },
+        {
+          "name": "handleResultAddAssertion",
+          "params": [
+            "opts"
+          ],
+          "exported": false,
+          "lineCount": 35
+        },
+        {
+          "name": "handleResultAddCrash",
+          "params": [],
+          "exported": false,
+          "lineCount": 16
+        },
+        {
+          "name": "measureRun",
+          "params": [],
+          "exported": false,
+          "lineCount": 34
+        },
+        {
+          "name": "handleResultFinalize",
+          "params": [
+            "opts"
+          ],
+          "exported": false,
+          "lineCount": 64
+        },
+        {
+          "name": "storeHint",
+          "params": [
+            "store"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "handleSetup",
+          "params": [],
+          "exported": false,
+          "lineCount": 31
+        },
+        {
+          "name": "handleConfigGet",
+          "params": [
+            "key"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "handleConfigSet",
+          "params": [
+            "key",
+            "rawValue"
+          ],
+          "exported": false,
+          "lineCount": 16
+        },
+        {
+          "name": "telemetryReport",
+          "params": [],
+          "exported": false,
+          "lineCount": 14
+        },
+        {
+          "name": "handleTelemetryStatus",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "handleTelemetryEnable",
+          "params": [],
+          "exported": false,
+          "lineCount": 13
+        },
+        {
+          "name": "handleTelemetryDisable",
+          "params": [],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "handleTelemetryFlush",
+          "params": [],
+          "exported": false,
+          "lineCount": 27
+        },
+        {
+          "name": "handleGuide",
+          "params": [
+            "topic"
+          ],
+          "exported": false,
+          "lineCount": 14
+        },
+        {
+          "name": "handleSchema",
+          "params": [
+            "name"
+          ],
+          "exported": false,
+          "lineCount": 12
+        },
+        {
+          "name": "handleBootstrap",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "handleMemoryShow",
+          "params": [],
+          "exported": false,
+          "lineCount": 16
+        },
+        {
+          "name": "validateAgentKind",
+          "params": [
+            "kind"
+          ],
+          "exported": false,
+          "lineCount": 10
+        },
+        {
+          "name": "handleMemoryAdd",
+          "params": [],
+          "exported": false,
+          "lineCount": 18
+        },
+        {
+          "name": "handleMemoryForget",
+          "params": [],
+          "exported": false,
+          "lineCount": 15
+        },
+        {
+          "name": "adapterErrorClass",
+          "params": [
+            "err"
+          ],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "hintForAdapterError",
+          "params": [
+            "cls"
+          ],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "applyOneAdapter",
+          "params": [
+            "adapter",
+            "agent",
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 13
+        },
+        {
+          "name": "handleInit",
+          "params": [
+            "agent"
+          ],
+          "exported": false,
+          "lineCount": 52
+        },
+        {
+          "name": "handleSessionStart",
+          "params": [],
+          "exported": false,
+          "lineCount": 60
+        },
+        {
+          "name": "handleSessionStatus",
+          "params": [],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "handleSessionEnd",
+          "params": [],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "handleDevices",
+          "params": [],
+          "exported": false,
+          "lineCount": 16
+        },
+        {
+          "name": "handleDevicesUse",
+          "params": [
+            "id"
+          ],
+          "exported": false,
+          "lineCount": 38
+        },
+        {
+          "name": "handleDevicesClear",
+          "params": [],
+          "exported": false,
+          "lineCount": 25
+        },
+        {
+          "name": "sessionWatermark",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "scopeCrashes",
+          "params": [
+            "crashes",
+            "sinceMs"
+          ],
+          "exported": false,
+          "lineCount": 11
+        },
+        {
+          "name": "handleCrashList",
+          "params": [],
+          "exported": false,
+          "lineCount": 49
+        },
+        {
+          "name": "handleCrashGet",
+          "params": [
+            "id"
+          ],
+          "exported": false,
+          "lineCount": 41
+        },
+        {
+          "name": "realDeviceBridge",
+          "params": [
+            "args"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "buildProgram",
+          "params": [],
+          "exported": false,
+          "lineCount": 687
+        },
+        {
+          "name": "diagnose",
+          "params": [
+            "err",
+            "exitKind"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "makeEmitters",
+          "params": [],
+          "exported": false,
+          "lineCount": 125
+        },
+        {
+          "name": "emitFatal",
+          "params": [
+            "err"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "run",
+          "params": [
+            "argv"
+          ],
+          "exported": false,
+          "lineCount": 44
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 2393,
+      "hasStructuralAnalysis": true
+    },
+    "src/config/coerce.js": {
+      "filePath": "src/config/coerce.js",
+      "contentHash": "547d56566c3e77c92e28501b611260b8461f39569b112971cf0d1da25a46d91f",
+      "functions": [
+        {
+          "name": "splitList",
+          "params": [
+            "raw"
+          ],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "tryJson",
+          "params": [
+            "raw"
+          ],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "coerceValue",
+          "params": [
+            "dottedKey",
+            "rawValue"
+          ],
+          "exported": false,
+          "lineCount": 31
+        },
+        {
+          "name": "getPath",
+          "params": [
+            "obj",
+            "parts"
+          ],
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "setPath",
+          "params": [
+            "obj",
+            "parts",
+            "value"
+          ],
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "normalizeConfig",
+          "params": [
+            "cfg"
+          ],
+          "exported": false,
+          "lineCount": 12
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 98,
+      "hasStructuralAnalysis": true
+    },
+    "src/config/manager.js": {
+      "filePath": "src/config/manager.js",
+      "contentHash": "e009becfcfc7cbb8aa6f1521860984e9dbfac6b01a752cc58c14f18822d12850",
+      "functions": [
+        {
+          "name": "configDir",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "configPath",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "load",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "resolveMode",
+          "params": [
+            "cfg"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "get",
+          "params": [
+            "projectRoot",
+            "key"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "set",
+          "params": [
+            "projectRoot",
+            "key",
+            "value"
+          ],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "getPath",
+          "params": [
+            "obj",
+            "key"
+          ],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "setPath",
+          "params": [
+            "obj",
+            "key",
+            "value"
+          ],
+          "exported": false,
+          "lineCount": 12
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 76,
+      "hasStructuralAnalysis": true
+    },
+    "src/config/schema.js": {
+      "filePath": "src/config/schema.js",
+      "contentHash": "d25292037f4e829633a9f60d22c113c8d9b3770d53d0d9941ee23404e72bccaa",
+      "functions": [
+        {
+          "name": "deref",
+          "params": [
+            "node"
+          ],
+          "exported": false,
+          "lineCount": 17
+        },
+        {
+          "name": "subschemaAt",
+          "params": [
+            "dottedKey"
+          ],
+          "exported": false,
+          "lineCount": 11
+        },
+        {
+          "name": "declaredTypesAt",
+          "params": [
+            "dottedKey"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "collectListPaths",
+          "params": [
+            "node",
+            "prefix",
+            "out"
+          ],
+          "exported": false,
+          "lineCount": 12
+        },
+        {
+          "name": "validateAt",
+          "params": [
+            "dottedKey",
+            "value"
+          ],
+          "exported": false,
+          "lineCount": 31
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 125,
+      "hasStructuralAnalysis": true
+    },
+    "src/device/action-catalog.js": {
+      "filePath": "src/device/action-catalog.js",
+      "contentHash": "3552e552cde4cfdcf1a435509044011283c856c3f430c6a3d3cbaa81082956ab",
+      "functions": [
+        {
+          "name": "actionsByResolution",
+          "params": [
+            "resolution"
+          ],
+          "exported": false,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 100,
+      "hasStructuralAnalysis": true
+    },
+    "src/device/bridge.js": {
+      "filePath": "src/device/bridge.js",
+      "contentHash": "93b763ecf3d4297740be43d54c204d7fd44498e89f104a287bf91ba74f02686c",
+      "functions": [],
+      "classes": [
+        {
+          "name": "DeviceBridge",
+          "methods": [
+            "constructor",
+            "listDevices",
+            "listElements",
+            "screenshot",
+            "tap",
+            "longPress",
+            "doubleTap",
+            "type",
+            "swipe",
+            "getPlatform",
+            "getScreenSize",
+            "pressButton",
+            "launchApp",
+            "installApp",
+            "uninstallApp",
+            "openUrl",
+            "setOrientation",
+            "listCrashes",
+            "getCrash"
+          ],
+          "properties": [],
+          "exported": false,
+          "lineCount": 158
+        }
+      ],
+      "imports": [],
+      "exports": [],
+      "totalLines": 170,
+      "hasStructuralAnalysis": true
+    },
+    "src/device/connection.js": {
+      "filePath": "src/device/connection.js",
+      "contentHash": "752bc60d07fb558b8f17fcf95de10623e1e0afe32213e931ca738d3b256ebd90",
+      "functions": [
+        {
+          "name": "acquireConnection",
+          "params": [],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "isSessionAlive",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "sessionStatus",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 17
+        },
+        {
+          "name": "startSession",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "endSession",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 101,
+      "hasStructuralAnalysis": true
+    },
+    "src/device/crash-model.js": {
+      "filePath": "src/device/crash-model.js",
+      "contentHash": "e9ebf0ac0751d3e1e547cdcabe685f5e907e398a3e98aa596d80ee9985749007",
+      "functions": [
+        {
+          "name": "firstString",
+          "params": [
+            "obj",
+            "keys"
+          ],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "firstValue",
+          "params": [
+            "obj",
+            "keys"
+          ],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "toArray",
+          "params": [
+            "raw"
+          ],
+          "exported": false,
+          "lineCount": 16
+        },
+        {
+          "name": "normalizeCrashes",
+          "params": [
+            "raw"
+          ],
+          "exported": false,
+          "lineCount": 12
+        },
+        {
+          "name": "crashTimestampMs",
+          "params": [
+            "crash"
+          ],
+          "exported": false,
+          "lineCount": 19
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 111,
+      "hasStructuralAnalysis": true
+    },
+    "src/device/device-call.js": {
+      "filePath": "src/device/device-call.js",
+      "contentHash": "372b3b007fa54ecab1ca4637feb88919be03a15c2c84953da9e0a6f0a4a3fd09",
+      "functions": [
+        {
+          "name": "makeDeviceCall",
+          "params": [
+            "call"
+          ],
+          "exported": false,
+          "lineCount": 110
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 146,
+      "hasStructuralAnalysis": true
+    },
+    "src/device/device-model.js": {
+      "filePath": "src/device/device-model.js",
+      "contentHash": "d20984ab6b9f5dfc262dc88f3e96a167f5a2a0f5662ffe5144db358291d75db0",
+      "functions": [
+        {
+          "name": "nullable",
+          "params": [
+            "v"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "normalizeOne",
+          "params": [
+            "raw"
+          ],
+          "exported": false,
+          "lineCount": 27
+        },
+        {
+          "name": "normalizeDevices",
+          "params": [
+            "raw"
+          ],
+          "exported": false,
+          "lineCount": 17
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 60,
+      "hasStructuralAnalysis": true
+    },
+    "src/device/device-resolver.js": {
+      "filePath": "src/device/device-resolver.js",
+      "contentHash": "49fe47f1211702371122939cae61297d34611b1b0b0b5f86edda652b943c75dd",
+      "functions": [
+        {
+          "name": "resolveSingleDevice",
+          "params": [
+            "devices"
+          ],
+          "exported": false,
+          "lineCount": 15
+        }
+      ],
+      "classes": [
+        {
+          "name": "DeviceResolutionError",
+          "methods": [
+            "constructor"
+          ],
+          "properties": [],
+          "exported": false,
+          "lineCount": 8
+        }
+      ],
+      "imports": [],
+      "exports": [],
+      "totalLines": 35,
+      "hasStructuralAnalysis": true
+    },
+    "src/device/element-model.js": {
+      "filePath": "src/device/element-model.js",
+      "contentHash": "30cdedf4b4a50c21bdd61834c411b2d620efd012a05bbd4aefd37c15c60258be",
+      "functions": [
+        {
+          "name": "resolveBounds",
+          "params": [
+            "raw"
+          ],
+          "exported": false,
+          "lineCount": 23
+        },
+        {
+          "name": "centerOf",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "nullable",
+          "params": [
+            "v"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "normalize",
+          "params": [
+            "rawElements"
+          ],
+          "exported": false,
+          "lineCount": 21
+        },
+        {
+          "name": "parseElements",
+          "params": [
+            "raw"
+          ],
+          "exported": false,
+          "lineCount": 15
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 83,
+      "hasStructuralAnalysis": true
+    },
+    "src/device/failure-probe.js": {
+      "filePath": "src/device/failure-probe.js",
+      "contentHash": "33f5bb22c0af28cf64ed3551a8b78e27d27592778aaae0b6e35a6a0cf662565f",
+      "functions": [
+        {
+          "name": "shouldProbe",
+          "params": [],
+          "exported": false,
+          "lineCount": 11
+        },
+        {
+          "name": "crashHint",
+          "params": [
+            "crashes"
+          ],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "unattributedHint",
+          "params": [
+            "count"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "amendHint",
+          "params": [
+            "envelope",
+            "note"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "withDeadline",
+          "params": [
+            "promise",
+            "ms"
+          ],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "probeCrashes",
+          "params": [],
+          "exported": false,
+          "lineCount": 109
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 277,
+      "hasStructuralAnalysis": true
+    },
+    "src/device/mobile-mcp-client.js": {
+      "filePath": "src/device/mobile-mcp-client.js",
+      "contentHash": "09b5112a458a4a69133ef3bdbb6b83d8d36101da2e0e5236ab4e6afc7446116d",
+      "functions": [
+        {
+          "name": "resolveServerEntry",
+          "params": [],
+          "exported": false,
+          "lineCount": 10
+        },
+        {
+          "name": "createCall",
+          "params": [],
+          "exported": false,
+          "lineCount": 33
+        },
+        {
+          "name": "makeCall",
+          "params": [],
+          "exported": false,
+          "lineCount": 39
+        },
+        {
+          "name": "textContent",
+          "params": [
+            "res"
+          ],
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "parseToolResult",
+          "params": [
+            "res"
+          ],
+          "exported": false,
+          "lineCount": 33
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 164,
+      "hasStructuralAnalysis": true
+    },
+    "src/device/mobile-mcp-tools.js": {
+      "filePath": "src/device/mobile-mcp-tools.js",
+      "contentHash": "318291c0e2645e655acff9a5bbe40f83e2b8cdd0647cfb4e1fa1b53b3421bfd0",
+      "functions": [
+        {
+          "name": "isKnownTool",
+          "params": [
+            "name"
+          ],
+          "exported": false,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 65,
+      "hasStructuralAnalysis": true
+    },
+    "src/device/resolve-connection.js": {
+      "filePath": "src/device/resolve-connection.js",
+      "contentHash": "20e489f529b3b74df9d8ef5883bc1c5b537132ee6193ffca02171250f969f3c0",
+      "functions": [
+        {
+          "name": "defaultCreateCall",
+          "params": [
+            "opts"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "NOOP_CLOSE",
+          "params": [],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "readHandleDevice",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "deviceMatches",
+          "params": [
+            "requested",
+            "handleDevice"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "chooseConnectionStrategy",
+          "params": [],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "resolveDeviceConnection",
+          "params": [],
+          "exported": false,
+          "lineCount": 95
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 175,
+      "hasStructuralAnalysis": true
+    },
+    "src/device/selection.js": {
+      "filePath": "src/device/selection.js",
+      "contentHash": "810811926b51fedbf33119a7cf7f9b8a90141f24eee1393d51630c77bb729608",
+      "functions": [
+        {
+          "name": "selectionPath",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "read",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 10
+        },
+        {
+          "name": "write",
+          "params": [
+            "projectRoot",
+            "id"
+          ],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "clear",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "resolveDevice",
+          "params": [],
+          "exported": false,
+          "lineCount": 10
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 81,
+      "hasStructuralAnalysis": true
+    },
+    "src/device/semantic-press/index.js": {
+      "filePath": "src/device/semantic-press/index.js",
+      "contentHash": "d2a08332a1b3f6522637e4731e462c341376e5117540b34866aea84539b727b9",
+      "functions": [
+        {
+          "name": "isSemanticAction",
+          "params": [
+            "token"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "selectResolver",
+          "params": [
+            "platform",
+            "bridge"
+          ],
+          "exported": false,
+          "lineCount": 10
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 39,
+      "hasStructuralAnalysis": true
+    },
+    "src/device/semantic-press/labels.js": {
+      "filePath": "src/device/semantic-press/labels.js",
+      "contentHash": "bacd7df0c8f14edbd9b1a6a4da76499f4b98c59c9d931edd7f27e4eafe29e40e",
+      "functions": [
+        {
+          "name": "norm",
+          "params": [
+            "s"
+          ],
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "findByLabels",
+          "params": [
+            "elements",
+            "labels"
+          ],
+          "exported": false,
+          "lineCount": 11
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 40,
+      "hasStructuralAnalysis": true
+    },
+    "src/device/semantic-press/resolver.js": {
+      "filePath": "src/device/semantic-press/resolver.js",
+      "contentHash": "e2185cb8ef0280e8d3e4d45b7c2da9e13b09c8cf8fd19e4166a8e1009026e837",
+      "functions": [],
+      "classes": [
+        {
+          "name": "SemanticResolutionError",
+          "methods": [
+            "constructor"
+          ],
+          "properties": [],
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "SemanticResolver",
+          "methods": [
+            "constructor",
+            "_tapByLabels"
+          ],
+          "properties": [],
+          "exported": false,
+          "lineCount": 17
+        },
+        {
+          "name": "AndroidResolver",
+          "methods": [
+            "pressBack",
+            "dismissKeyboard",
+            "grantPermission",
+            "denyPermission"
+          ],
+          "properties": [],
+          "exported": false,
+          "lineCount": 21
+        },
+        {
+          "name": "IOSResolver",
+          "methods": [
+            "pressBack",
+            "dismissKeyboard",
+            "grantPermission",
+            "denyPermission"
+          ],
+          "properties": [],
+          "exported": false,
+          "lineCount": 40
+        }
+      ],
+      "imports": [],
+      "exports": [],
+      "totalLines": 101,
+      "hasStructuralAnalysis": true
+    },
+    "src/device/session-client.js": {
+      "filePath": "src/device/session-client.js",
+      "contentHash": "f4dba41cb90b64c208a482c979a212ae9ea19cc96ec9b745411e19687ce85fcc",
+      "functions": [
+        {
+          "name": "connectSocket",
+          "params": [
+            "socketPath"
+          ],
+          "exported": false,
+          "lineCount": 13
+        },
+        {
+          "name": "wrapSocket",
+          "params": [
+            "socket"
+          ],
+          "exported": false,
+          "lineCount": 75
+        },
+        {
+          "name": "tryConnect",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "isAlive",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 13
+        },
+        {
+          "name": "requestShutdown",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 13
+        },
+        {
+          "name": "getSessionStatus",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 19
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 174,
+      "hasStructuralAnalysis": true
+    },
+    "src/device/session-daemon.js": {
+      "filePath": "src/device/session-daemon.js",
+      "contentHash": "81052f966a2d462b95f6d3f1dd6256b3d3fddbdfb1f378110f6863b1951a7d74",
+      "functions": [
+        {
+          "name": "defaultScheduleTimeout",
+          "params": [
+            "ms"
+          ],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "defaultCreateCall",
+          "params": [
+            "opts"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "safeUnlink",
+          "params": [
+            "p"
+          ],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "pidAlive",
+          "params": [
+            "pid"
+          ],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "pidIdentity",
+          "params": [
+            "pid"
+          ],
+          "exported": false,
+          "lineCount": 23
+        },
+        {
+          "name": "readPidFile",
+          "params": [
+            "file"
+          ],
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "cleanStale",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 23
+        },
+        {
+          "name": "startDaemon",
+          "params": [],
+          "exported": false,
+          "lineCount": 586
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 745,
+      "hasStructuralAnalysis": true
+    },
+    "src/device/session-handle.js": {
+      "filePath": "src/device/session-handle.js",
+      "contentHash": "475f2e091fa8c48d161133dd9106849a24f68fd183978897cb48555bd5dcf3e4",
+      "functions": [
+        {
+          "name": "newSessionId",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "readHandle",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "readSessionId",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 5
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 54,
+      "hasStructuralAnalysis": true
+    },
+    "src/device/session-log.js": {
+      "filePath": "src/device/session-log.js",
+      "contentHash": "17fb0393d6bc30a8b6af66d633d6eecb2353a60d4871739e33422520469d9d4d",
+      "functions": [
+        {
+          "name": "daemonLogHint",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "openDaemonLog",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 39
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 85,
+      "hasStructuralAnalysis": true
+    },
+    "src/device/session-paths.js": {
+      "filePath": "src/device/session-paths.js",
+      "contentHash": "14ab4d77282abc589c2758274ea99c5b15e0714b9f4fa072de3ec9467200434a",
+      "functions": [
+        {
+          "name": "sessionDir",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "workspaceSocketPath",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "socketPath",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 10
+        },
+        {
+          "name": "logFilePath",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "pidFilePath",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "handlePath",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "lockPath",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 93,
+      "hasStructuralAnalysis": true
+    },
+    "src/device/session-protocol.js": {
+      "filePath": "src/device/session-protocol.js",
+      "contentHash": "9c62b6b5437559476482ac3eebbe6f93c50d44bbee2125dcb6805f308c84cdab",
+      "functions": [],
+      "classes": [
+        {
+          "name": "FrameParser",
+          "methods": [
+            "encode",
+            "constructor",
+            "push"
+          ],
+          "properties": [],
+          "exported": false,
+          "lineCount": 27
+        }
+      ],
+      "imports": [],
+      "exports": [],
+      "totalLines": 61,
+      "hasStructuralAnalysis": true
+    },
+    "src/device/session-spawn.js": {
+      "filePath": "src/device/session-spawn.js",
+      "contentHash": "71dcf9e8f28bf0a7df64d7058434ea24b84dc02a20af86523d09cfa05a9d073c",
+      "functions": [
+        {
+          "name": "sleep",
+          "params": [
+            "ms"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "spawnDaemon",
+          "params": [],
+          "exported": false,
+          "lineCount": 66
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 93,
+      "hasStructuralAnalysis": true
+    },
+    "src/device/tool-args.js": {
+      "filePath": "src/device/tool-args.js",
+      "contentHash": "d56781e4f148b3e67ffb011c90754942d225726b7e8afcd698a76ffd21f4dcf8",
+      "functions": [
+        {
+          "name": "injectDeviceArg",
+          "params": [
+            "toolName"
+          ],
+          "exported": false,
+          "lineCount": 5
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 15,
+      "hasStructuralAnalysis": true
+    },
+    "src/guide/content/execute.agnostic.md": {
+      "filePath": "src/guide/content/execute.agnostic.md",
+      "contentHash": "195b9a499ad2d38334dd4c4e2fe74731a986b8d3974043bbfd38391f2faeda17",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 251,
+      "hasStructuralAnalysis": false
+    },
+    "src/guide/content/execute.aware.md": {
+      "filePath": "src/guide/content/execute.aware.md",
+      "contentHash": "da93086c8660d7e2b3652ccbfe5e4768a8e969db11dcdd0b106d179b1116ec4e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 323,
+      "hasStructuralAnalysis": false
+    },
+    "src/guide/content/execute.invariants.md": {
+      "filePath": "src/guide/content/execute.invariants.md",
+      "contentHash": "39ce9f1b0ac5f5ff7cfb37c056ead88fc19d6f386f2e3298c630d110341512a0",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 6,
+      "hasStructuralAnalysis": false
+    },
+    "src/guide/content/generate.agnostic.md": {
+      "filePath": "src/guide/content/generate.agnostic.md",
+      "contentHash": "41adab39860899299e6e6ba8874fdb77b809a1d6f167a6e02c633586d67ce53a",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 237,
+      "hasStructuralAnalysis": false
+    },
+    "src/guide/content/generate.aware.md": {
+      "filePath": "src/guide/content/generate.aware.md",
+      "contentHash": "74c65b275e086d491c5d119ecdba25fc8bcc13b90cc5834502c918fada2213b0",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 328,
+      "hasStructuralAnalysis": false
+    },
+    "src/guide/content/generate.invariants.md": {
+      "filePath": "src/guide/content/generate.invariants.md",
+      "contentHash": "05236a09614051f7009efd9535de6aac4e21060824968796d9d4606c175a24b1",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 6,
+      "hasStructuralAnalysis": false
+    },
+    "src/guide/content/setup.agnostic.md": {
+      "filePath": "src/guide/content/setup.agnostic.md",
+      "contentHash": "b55d312e38582f18589fc895121558470881034bb87852363c7ca4d077c32623",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 64,
+      "hasStructuralAnalysis": false
+    },
+    "src/guide/content/setup.aware.md": {
+      "filePath": "src/guide/content/setup.aware.md",
+      "contentHash": "fed7356fb60a66e0ad8befceacfd481e41b4040377c93a24c852601d71b40827",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 92,
+      "hasStructuralAnalysis": false
+    },
+    "src/guide/content/setup.invariants.md": {
+      "filePath": "src/guide/content/setup.invariants.md",
+      "contentHash": "a8145c3dfb4070525a1a5d5371db8675bf5a0d98ce8fdfd675cb90ce365838f0",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 4,
+      "hasStructuralAnalysis": false
+    },
+    "src/guide/emitter.js": {
+      "filePath": "src/guide/emitter.js",
+      "contentHash": "a069830f21e7a1e6e71387e6827d9c70d29d18086beb64ba4bcf4cdd659d3ea9",
+      "functions": [
+        {
+          "name": "emitGuide",
+          "params": [
+            "topic"
+          ],
+          "exported": false,
+          "lineCount": 36
+        },
+        {
+          "name": "emitSchema",
+          "params": [
+            "name"
+          ],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "emitBootstrap",
+          "params": [],
+          "exported": false,
+          "lineCount": 40
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 138,
+      "hasStructuralAnalysis": true
+    },
+    "src/guide/placeholders.js": {
+      "filePath": "src/guide/placeholders.js",
+      "contentHash": "302d5df12182b120e01594285867039e0943bb4d79fb4424198ef3f701f465ab",
+      "functions": [
+        {
+          "name": "fallbackFor",
+          "params": [
+            "spec"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "firstDefined",
+          "params": [
+            "projectRoot",
+            "keys"
+          ],
+          "exported": false,
+          "lineCount": 10
+        },
+        {
+          "name": "renderValue",
+          "params": [
+            "value",
+            "spec"
+          ],
+          "exported": false,
+          "lineCount": 12
+        },
+        {
+          "name": "interpolate",
+          "params": [
+            "template"
+          ],
+          "exported": false,
+          "lineCount": 10
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 133,
+      "hasStructuralAnalysis": true
+    },
+    "src/init/adapters.js": {
+      "filePath": "src/init/adapters.js",
+      "contentHash": "c7318b784f4f051d0a174157f6d5a0139b12949df18c2bd64d6a5393669f3f6f",
+      "functions": [
+        {
+          "name": "claudeCommandBody",
+          "params": [
+            "topic"
+          ],
+          "exported": false,
+          "lineCount": 10
+        },
+        {
+          "name": "cursorRuleBody",
+          "params": [],
+          "exported": false,
+          "lineCount": 11
+        },
+        {
+          "name": "writeIfChanged",
+          "params": [
+            "filePath",
+            "content"
+          ],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "mergeMcpConfig",
+          "params": [
+            "filePath"
+          ],
+          "exported": false,
+          "lineCount": 27
+        },
+        {
+          "name": "writeSkills",
+          "params": [
+            "projectRoot",
+            "agent",
+            "written"
+          ],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "makeAdapter",
+          "params": [
+            "agent",
+            "extra"
+          ],
+          "exported": false,
+          "lineCount": 11
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 163,
+      "hasStructuralAnalysis": true
+    },
+    "src/init/skill-meta.js": {
+      "filePath": "src/init/skill-meta.js",
+      "contentHash": "e290dc3ea6eedfe6e97054747afb6d87d8139a7bc4051b06ef2d76d8e434dfc8",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 32,
+      "hasStructuralAnalysis": true
+    },
+    "src/init/skill-renderer.js": {
+      "filePath": "src/init/skill-renderer.js",
+      "contentHash": "c95dbec1a58f047985ed40621991dec1cc6456401d5999e04f75f7027f7aea4e",
+      "functions": [
+        {
+          "name": "readInvariants",
+          "params": [
+            "topic"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "renderSkill",
+          "params": [
+            "topic"
+          ],
+          "exported": false,
+          "lineCount": 30
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 61,
+      "hasStructuralAnalysis": true
+    },
+    "src/mcp/prompts.js": {
+      "filePath": "src/mcp/prompts.js",
+      "contentHash": "fb37f8b00c4d9351fb37ed8a8570b5a5c21fc5d3abac75cef5ff1bc56fa2a0ba",
+      "functions": [
+        {
+          "name": "buildPromptHandlers",
+          "params": [],
+          "exported": false,
+          "lineCount": 26
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 56,
+      "hasStructuralAnalysis": true
+    },
+    "src/mcp/server.js": {
+      "filePath": "src/mcp/server.js",
+      "contentHash": "b9261906b931cbd7a9ea63d5d1ff0aedd1c2a729d0c02c092c51dbd605ec1cd5",
+      "functions": [
+        {
+          "name": "buildServer",
+          "params": [],
+          "exported": false,
+          "lineCount": 18
+        },
+        {
+          "name": "runServer",
+          "params": [],
+          "exported": false,
+          "lineCount": 7
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 56,
+      "hasStructuralAnalysis": true
+    },
+    "src/memory/entries.js": {
+      "filePath": "src/memory/entries.js",
+      "contentHash": "ddf3f95673d6de31c1398d9bbf54587fb359df74db26192488fc33fd3cc2e2a5",
+      "functions": [
+        {
+          "name": "sanitizeEntryText",
+          "params": [
+            "raw"
+          ],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "validateEntryText",
+          "params": [
+            "raw"
+          ],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "parseEntries",
+          "params": [
+            "md"
+          ],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "renderEntries",
+          "params": [
+            "kind",
+            "entries"
+          ],
+          "exported": false,
+          "lineCount": 10
+        },
+        {
+          "name": "hasText",
+          "params": [
+            "entries",
+            "text"
+          ],
+          "exported": false,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 62,
+      "hasStructuralAnalysis": true
+    },
+    "src/memory/history.js": {
+      "filePath": "src/memory/history.js",
+      "contentHash": "74c01bdd4ecc2148b0298d66113b42a4042c5fb8e2153030c9d0e47e121a1f3c",
+      "functions": [
+        {
+          "name": "emptyModel",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "ensure",
+          "params": [
+            "model",
+            "scenarioId"
+          ],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "recordInModel",
+          "params": [
+            "model"
+          ],
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "parseRunHistory",
+          "params": [
+            "md"
+          ],
+          "exported": false,
+          "lineCount": 20
+        },
+        {
+          "name": "renderRunHistory",
+          "params": [
+            "model"
+          ],
+          "exported": false,
+          "lineCount": 12
+        },
+        {
+          "name": "countEntries",
+          "params": [
+            "model"
+          ],
+          "exported": false,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 87,
+      "hasStructuralAnalysis": true
+    },
+    "src/memory/lock.js": {
+      "filePath": "src/memory/lock.js",
+      "contentHash": "0b05b9e41878df851cff65fa53abccbae0f514801b3fb6e661da959c183305dc",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 6,
+      "hasStructuralAnalysis": true
+    },
+    "src/memory/paths.js": {
+      "filePath": "src/memory/paths.js",
+      "contentHash": "ee37a6b6c4707a54d1c126f61f7e61c1f63dc293328eb774f30b0303f5fdb367",
+      "functions": [
+        {
+          "name": "memoryDir",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "memoryFile",
+          "params": [
+            "projectRoot",
+            "name"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "sessionDir",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "lockPath",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 48,
+      "hasStructuralAnalysis": true
+    },
+    "src/memory/store.js": {
+      "filePath": "src/memory/store.js",
+      "contentHash": "dc7569a94bb6ba5f447fdc597f96101d2c2f5a113b9c4bcb69093ac2411b6c85",
+      "functions": [
+        {
+          "name": "todayISO",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "statusLetter",
+          "params": [
+            "status"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "notesFromResult",
+          "params": [
+            "result"
+          ],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "filterScenario",
+          "params": [
+            "md",
+            "scenario"
+          ],
+          "exported": false,
+          "lineCount": 28
+        },
+        {
+          "name": "countEntriesFor",
+          "params": [
+            "name",
+            "raw"
+          ],
+          "exported": false,
+          "lineCount": 6
+        }
+      ],
+      "classes": [
+        {
+          "name": "MemoryStore",
+          "methods": [
+            "constructor",
+            "_file",
+            "_readRaw",
+            "_preserveCorrupt",
+            "_atomicWrite",
+            "_editUnderLock",
+            "recordRun",
+            "add",
+            "forget",
+            "render",
+            "_safeRead",
+            "_mtimeDate"
+          ],
+          "properties": [],
+          "exported": false,
+          "lineCount": 144
+        }
+      ],
+      "imports": [],
+      "exports": [],
+      "totalLines": 231,
+      "hasStructuralAnalysis": true
+    },
+    "src/observe/accepts.js": {
+      "filePath": "src/observe/accepts.js",
+      "contentHash": "f8d2386f4c92f22da24057f14883d53275ae37bd7addbfd59ba2a737c5fd6241",
+      "functions": [
+        {
+          "name": "tag",
+          "params": [
+            "fn",
+            "basis"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "oneOf",
+          "params": [
+            "list"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "matches",
+          "params": [
+            "regex",
+            "basis"
+          ],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "integer",
+          "params": [],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "boolean",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "isoTimestamp",
+          "params": [],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "sendable",
+          "params": [
+            "accepts",
+            "why"
+          ],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "findUnenforced",
+          "params": [
+            "catalog"
+          ],
+          "exported": false,
+          "lineCount": 10
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 109,
+      "hasStructuralAnalysis": true
+    },
+    "src/observe/event.js": {
+      "filePath": "src/observe/event.js",
+      "contentHash": "de4cb5be27de2039d9d3b3fe6d3af6347f1599d13c747a3c2f2c4a3a02a353d2",
+      "functions": [
+        {
+          "name": "makeEvent",
+          "params": [],
+          "exported": false,
+          "lineCount": 16
+        },
+        {
+          "name": "telemetryPayload",
+          "params": [],
+          "exported": false,
+          "lineCount": 12
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 242,
+      "hasStructuralAnalysis": true
+    },
+    "src/observe/failure-capture.js": {
+      "filePath": "src/observe/failure-capture.js",
+      "contentHash": "22cd725dfb90ab95718d38e818b330717e3aa7ca7b93ba5de3975e099c2068bb",
+      "functions": [
+        {
+          "name": "isCapturable",
+          "params": [
+            "result"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "safeVerbToken",
+          "params": [
+            "verb"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "failureShotPath",
+          "params": [
+            "projectRoot",
+            "runId",
+            "verb"
+          ],
+          "exported": false,
+          "lineCount": 10
+        },
+        {
+          "name": "captureOnFailure",
+          "params": [],
+          "exported": false,
+          "lineCount": 77
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 167,
+      "hasStructuralAnalysis": true
+    },
+    "src/observe/flush.js": {
+      "filePath": "src/observe/flush.js",
+      "contentHash": "a4f5b040c61fed0c61b95e8f30926ff14b30329ff43e39ec5cc9fa44a5e69514",
+      "functions": [
+        {
+          "name": "chunk",
+          "params": [
+            "items",
+            "size"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "makeFlusher",
+          "params": [],
+          "exported": false,
+          "lineCount": 127
+        },
+        {
+          "name": "safeUnlink",
+          "params": [
+            "file",
+            "fs"
+          ],
+          "exported": false,
+          "lineCount": 8
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 178,
+      "hasStructuralAnalysis": true
+    },
+    "src/observe/paths.js": {
+      "filePath": "src/observe/paths.js",
+      "contentHash": "1b5cb5763629659cbbf19a7ef8c3342b0083ed73d85d9638a41ec4a43516b75e",
+      "functions": [
+        {
+          "name": "workspaceDir",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "logsDir",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "mainLogPath",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "daemonEventLogPath",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "spoolPath",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "isValidRunId",
+          "params": [
+            "runId"
+          ],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "runTracePath",
+          "params": [
+            "projectRoot",
+            "runId"
+          ],
+          "exported": false,
+          "lineCount": 4
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 126,
+      "hasStructuralAnalysis": true
+    },
+    "src/observe/recorder.js": {
+      "filePath": "src/observe/recorder.js",
+      "contentHash": "771f96d71c1fd7297bbacded0bbfd7fb63d9b20223e1691505ce5d60ab301c51",
+      "functions": [
+        {
+          "name": "defaultSinks",
+          "params": [
+            "projectRoot",
+            "env"
+          ],
+          "exported": false,
+          "lineCount": 39
+        },
+        {
+          "name": "record",
+          "params": [],
+          "exported": false,
+          "lineCount": 22
+        },
+        {
+          "name": "safeObserve",
+          "params": [
+            "observe"
+          ],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "boundRecorder",
+          "params": [],
+          "exported": false,
+          "lineCount": 11
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 179,
+      "hasStructuralAnalysis": true
+    },
+    "src/observe/settings.js": {
+      "filePath": "src/observe/settings.js",
+      "contentHash": "b3c21fc727f263afd0ba76fb04742a931be6f274212e6ea440142169f394092d",
+      "functions": [
+        {
+          "name": "resolveLevels",
+          "params": [],
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "atLeast",
+          "params": [
+            "level",
+            "threshold"
+          ],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "resolveRunId",
+          "params": [],
+          "exported": false,
+          "lineCount": 6
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 52,
+      "hasStructuralAnalysis": true
+    },
+    "src/observe/sinks/file.js": {
+      "filePath": "src/observe/sinks/file.js",
+      "contentHash": "79fd60f43746a02714d55c41676e5d49d97025bf4400caa13b193d2487454824",
+      "functions": [
+        {
+          "name": "format",
+          "params": [
+            "event"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "allowed",
+          "params": [
+            "projectRoot",
+            "env",
+            "fs"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "atCap",
+          "params": [
+            "target"
+          ],
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "shouldAppend",
+          "params": [
+            "target",
+            "bound",
+            "fs"
+          ],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "write",
+          "params": [
+            "event"
+          ],
+          "exported": false,
+          "lineCount": 12
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 102,
+      "hasStructuralAnalysis": true
+    },
+    "src/observe/sinks/stderr.js": {
+      "filePath": "src/observe/sinks/stderr.js",
+      "contentHash": "7aae750f4e50b79728747123ac6248b57ed83cb6ec7eca932088ddbe70ad83c5",
+      "functions": [
+        {
+          "name": "write",
+          "params": [],
+          "exported": false,
+          "lineCount": 9
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 21,
+      "hasStructuralAnalysis": true
+    },
+    "src/observe/spool.js": {
+      "filePath": "src/observe/spool.js",
+      "contentHash": "6257a9ba62710392e34be63496c6912a9789819e8ad3176a2dee9a79b8d554aa",
+      "functions": [
+        {
+          "name": "newMessageId",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "isSelfReferential",
+          "params": [
+            "event"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "allowed",
+          "params": [
+            "projectRoot",
+            "env",
+            "fs"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "write",
+          "params": [
+            "event"
+          ],
+          "exported": false,
+          "lineCount": 25
+        },
+        {
+          "name": "nextClaimStamp",
+          "params": [],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "claim",
+          "params": [],
+          "exported": false,
+          "lineCount": 10
+        },
+        {
+          "name": "listClaimed",
+          "params": [],
+          "exported": false,
+          "lineCount": 15
+        },
+        {
+          "name": "readBatch",
+          "params": [
+            "file"
+          ],
+          "exported": false,
+          "lineCount": 18
+        },
+        {
+          "name": "stats",
+          "params": [],
+          "exported": false,
+          "lineCount": 17
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 200,
+      "hasStructuralAnalysis": true
+    },
+    "src/observe/telemetry.js": {
+      "filePath": "src/observe/telemetry.js",
+      "contentHash": "97bc7d47da30ff4e02619893e5cfd099a89a5fe97e21667c758ed9e4369c5b14",
+      "functions": [
+        {
+          "name": "envKillSwitch",
+          "params": [],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "resolveTelemetry",
+          "params": [],
+          "exported": false,
+          "lineCount": 11
+        },
+        {
+          "name": "decideForProject",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 17
+        },
+        {
+          "name": "setEnabled",
+          "params": [
+            "projectRoot",
+            "value"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "_resetMemo",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "sentFields",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "neverSentFields",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 144,
+      "hasStructuralAnalysis": true
+    },
+    "src/observe/trace.js": {
+      "filePath": "src/observe/trace.js",
+      "contentHash": "a53e4efd328e97b5616de04466b8613c73b53fea5d1fdeac76b6198ab00b643d",
+      "functions": [
+        {
+          "name": "parseTrace",
+          "params": [
+            "text"
+          ],
+          "exported": false,
+          "lineCount": 13
+        },
+        {
+          "name": "readTrace",
+          "params": [
+            "tracePath"
+          ],
+          "exported": false,
+          "lineCount": 12
+        },
+        {
+          "name": "millis",
+          "params": [
+            "event"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "deriveRun",
+          "params": [
+            "trace"
+          ],
+          "exported": false,
+          "lineCount": 38
+        },
+        {
+          "name": "pruneRunTraces",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 38
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 175,
+      "hasStructuralAnalysis": true
+    },
+    "src/observe/transport.js": {
+      "filePath": "src/observe/transport.js",
+      "contentHash": "274b23e509b59d081265a21b76937ae223eec50df89495dcbaaf3b3480204551",
+      "functions": [
+        {
+          "name": "resolveToken",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "hasToken",
+          "params": [],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "endpointUrl",
+          "params": [],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "toWireEvent",
+          "params": [
+            "payload"
+          ],
+          "exported": false,
+          "lineCount": 13
+        },
+        {
+          "name": "withDeadline",
+          "params": [
+            "promise",
+            "ms",
+            "controller"
+          ],
+          "exported": false,
+          "lineCount": 14
+        },
+        {
+          "name": "postBatch",
+          "params": [
+            "payloads"
+          ],
+          "exported": false,
+          "lineCount": 48
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 170,
+      "hasStructuralAnalysis": true
+    },
+    "src/observe/vocab.js": {
+      "filePath": "src/observe/vocab.js",
+      "contentHash": "9629b979b57222862d433612f3c3282cb3d3d9d941d571170077b01e472779b8",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 97,
+      "hasStructuralAnalysis": true
+    },
+    "src/output/envelope.js": {
+      "filePath": "src/output/envelope.js",
+      "contentHash": "c7f9c9186a1e47a1f1d7ac0a5b80db1660938ef2cd965e9beba6aab65cfc2da3",
+      "functions": [
+        {
+          "name": "ok",
+          "params": [
+            "data"
+          ],
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "fail",
+          "params": [
+            "kind",
+            "message"
+          ],
+          "exported": false,
+          "lineCount": 13
+        },
+        {
+          "name": "exitCodeFor",
+          "params": [
+            "kind"
+          ],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "render",
+          "params": [
+            "envelope"
+          ],
+          "exported": false,
+          "lineCount": 29
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 113,
+      "hasStructuralAnalysis": true
+    },
+    "src/result/capability-catalog.js": {
+      "filePath": "src/result/capability-catalog.js",
+      "contentHash": "5f4536644c7bf32c3d0daff8173f0af333336c717b210cd2c5ddb1fa04406eed",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 159,
+      "hasStructuralAnalysis": true
+    },
+    "src/result/flags.js": {
+      "filePath": "src/result/flags.js",
+      "contentHash": "3d80dfccefa135d13ab5543a87c086ff7c0128f08ad7ba8fbe419eb5830eb350",
+      "functions": [
+        {
+          "name": "parseObservation",
+          "params": [
+            "spec"
+          ],
+          "exported": false,
+          "lineCount": 18
+        },
+        {
+          "name": "parseCapture",
+          "params": [
+            "spec"
+          ],
+          "exported": false,
+          "lineCount": 11
+        },
+        {
+          "name": "parseBool",
+          "params": [
+            "raw",
+            "flagName"
+          ],
+          "exported": false,
+          "lineCount": 5
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 53,
+      "hasStructuralAnalysis": true
+    },
+    "src/result/store.js": {
+      "filePath": "src/result/store.js",
+      "contentHash": "8b90bb34e41027aa0160a079c3bac383b62f8df7de0923dd956ed31920806b81",
+      "functions": [
+        {
+          "name": "defaultMetadata",
+          "params": [],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "stepStatus",
+          "params": [
+            "status"
+          ],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "assertionStatus",
+          "params": [
+            "pass"
+          ],
+          "exported": false,
+          "lineCount": 3
+        }
+      ],
+      "classes": [
+        {
+          "name": "ResultStore",
+          "methods": [
+            "constructor",
+            "_refreshFromDisk",
+            "_load",
+            "_preserveCorrupt",
+            "_atomicWrite",
+            "_persistInProgress",
+            "addStep",
+            "addObservation",
+            "addAssertion",
+            "addCrash",
+            "captureVariable",
+            "_measurementObservations",
+            "finalize"
+          ],
+          "properties": [],
+          "exported": false,
+          "lineCount": 322
+        }
+      ],
+      "imports": [],
+      "exports": [],
+      "totalLines": 371,
+      "hasStructuralAnalysis": true
+    },
+    "src/scenario/validator.js": {
+      "filePath": "src/scenario/validator.js",
+      "contentHash": "e3ee91afb74ad4759982adc786431b738f7479ef6468a0d5ce22b219babacc74",
+      "functions": [],
+      "classes": [
+        {
+          "name": "ScenarioValidator",
+          "methods": [
+            "constructor",
+            "validate"
+          ],
+          "properties": [],
+          "exported": false,
+          "lineCount": 16
+        }
+      ],
+      "imports": [],
+      "exports": [],
+      "totalLines": 31,
+      "hasStructuralAnalysis": true
+    },
+    "src/schemas/config_schema.json": {
+      "filePath": "src/schemas/config_schema.json",
+      "contentHash": "8f6136549deb9c9853a676097aada1a357d867c7b3e958f4e057b75495593d3c",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 80,
+      "hasStructuralAnalysis": false
+    },
+    "src/schemas/format-error.js": {
+      "filePath": "src/schemas/format-error.js",
+      "contentHash": "4859be4d0155bfcb5bf3e05cf306dc1766708354983153057f0993d71f0dcf81",
+      "functions": [
+        {
+          "name": "formatError",
+          "params": [
+            "err"
+          ],
+          "exported": false,
+          "lineCount": 12
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 20,
+      "hasStructuralAnalysis": true
+    },
+    "src/schemas/result_schema.json": {
+      "filePath": "src/schemas/result_schema.json",
+      "contentHash": "4f7cf2bf02b41db3702d3902b93e2bf446ce47f92c6b61a431cd531c51d625dd",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 266,
+      "hasStructuralAnalysis": false
+    },
+    "src/schemas/scenario_schema.json": {
+      "filePath": "src/schemas/scenario_schema.json",
+      "contentHash": "4f70d83415baf37ae7b3bcfb385a777eb93269abda16b93b29c6e861f60ad508",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 587,
+      "hasStructuralAnalysis": false
+    },
+    "src/setup/scaffold.js": {
+      "filePath": "src/setup/scaffold.js",
+      "contentHash": "862ffe8b21c16ccd8ff94daf07c9ff2b57e9f938ea3ee62950d16a2fcddd3b54",
+      "functions": [
+        {
+          "name": "scaffold",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 41
+        },
+        {
+          "name": "ensureDir",
+          "params": [
+            "dir",
+            "created"
+          ],
+          "exported": false,
+          "lineCount": 6
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 81,
+      "hasStructuralAnalysis": true
+    },
+    "src/util/atomic.js": {
+      "filePath": "src/util/atomic.js",
+      "contentHash": "758b45cde3677c477b46e09e815be3845754904377d45d4933504b8d603e9f47",
+      "functions": [
+        {
+          "name": "atomicWrite",
+          "params": [
+            "file",
+            "contents"
+          ],
+          "exported": false,
+          "lineCount": 30
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 42,
+      "hasStructuralAnalysis": true
+    },
+    "src/util/lock.js": {
+      "filePath": "src/util/lock.js",
+      "contentHash": "5010e92df44dc4896f73da37a20a41f0be45791c9604685e5dea1fa86fe02d54",
+      "functions": [
+        {
+          "name": "sleepSync",
+          "params": [
+            "ms"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "acquire",
+          "params": [
+            "lockPath"
+          ],
+          "exported": false,
+          "lineCount": 38
+        },
+        {
+          "name": "release",
+          "params": [
+            "lockPath"
+          ],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "withLock",
+          "params": [
+            "lockPath",
+            "fn"
+          ],
+          "exported": false,
+          "lineCount": 8
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 85,
+      "hasStructuralAnalysis": true
+    },
+    "src/util/log-rotate.js": {
+      "filePath": "src/util/log-rotate.js",
+      "contentHash": "5f0a9ea94bec7ebcd88339053d07829e8490402aa612e4952b7d4ffce0971042",
+      "functions": [
+        {
+          "name": "rotateIfLarge",
+          "params": [
+            "logPath"
+          ],
+          "exported": false,
+          "lineCount": 7
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 35,
+      "hasStructuralAnalysis": true
+    },
+    "src/workspace/discover.js": {
+      "filePath": "src/workspace/discover.js",
+      "contentHash": "cf0322673911e45ec47b727abed30cbffde36d05fcaab114222e1c342ab9dd2f",
+      "functions": [
+        {
+          "name": "markerPath",
+          "params": [
+            "dir"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "findWorkspaceRoot",
+          "params": [
+            "startDir"
+          ],
+          "exported": false,
+          "lineCount": 13
+        },
+        {
+          "name": "noWorkspaceFailure",
+          "params": [
+            "searched"
+          ],
+          "exported": false,
+          "lineCount": 10
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 70,
+      "hasStructuralAnalysis": true
+    },
+    "tests/fixtures/config.platform-agnostic.json": {
+      "filePath": "tests/fixtures/config.platform-agnostic.json",
+      "contentHash": "0fb7d495a12ce231be8038272a165c7e6bc6e049888ffcec78046a7b8d8ba041",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 13,
+      "hasStructuralAnalysis": false
+    },
+    "tests/fixtures/config.platform-aware.json": {
+      "filePath": "tests/fixtures/config.platform-aware.json",
+      "contentHash": "860fa905c4e029b2872a70ae18b0a59e93b423873d1e12b49680bdf4ee020926",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 29,
+      "hasStructuralAnalysis": false
+    },
+    "tests/fixtures/device/mcp-list-devices-0.0.55.json": {
+      "filePath": "tests/fixtures/device/mcp-list-devices-0.0.55.json",
+      "contentHash": "86580ee44e066d9babdbdf566da4c4d8b66780f91f33eaf3fbc376325e30238a",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 2,
+      "hasStructuralAnalysis": false
+    },
+    "tests/fixtures/device/mcp-list-elements-0.0.55.txt": {
+      "filePath": "tests/fixtures/device/mcp-list-elements-0.0.55.txt",
+      "contentHash": "bbd3e251ac44e4aa3ac8c7e9250de6c4f77585381708ff3fe2644ce19ad168f4",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 1,
+      "hasStructuralAnalysis": false
+    },
+    "tests/fixtures/result_schema_v2.0.json": {
+      "filePath": "tests/fixtures/result_schema_v2.0.json",
+      "contentHash": "5c963209054a5b2e9c2134493c5c4793a96850e7d8bf194ebbb8c55f0ae14d54",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 211,
+      "hasStructuralAnalysis": false
+    },
+    "tests/fixtures/scenario_schema_v2.0.json": {
+      "filePath": "tests/fixtures/scenario_schema_v2.0.json",
+      "contentHash": "2f7e0f2bb5aa1aede7d8b8fae7ce88f86055f6db7be96b64c98186f7239896e8",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 578,
+      "hasStructuralAnalysis": false
+    },
+    "tests/fixtures/scenarios/scenario-clean.json": {
+      "filePath": "tests/fixtures/scenarios/scenario-clean.json",
+      "contentHash": "669c9cbfc7d21a972816c105b997f57728b0c7dbfe28eafdea1f4677dbea4f0a",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 11,
+      "hasStructuralAnalysis": false
+    },
+    "tests/fixtures/scenarios/scenario-with-back.json": {
+      "filePath": "tests/fixtures/scenarios/scenario-with-back.json",
+      "contentHash": "8f0c69aeed74124a0d52391fb861e6f405d23672c37de04af743b42ab6e2180b",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 11,
+      "hasStructuralAnalysis": false
+    },
+    "tests/helpers.js": {
+      "filePath": "tests/helpers.js",
+      "contentHash": "103cc7db62bd7ea24d0fd81cfd5dc1f0d5a5585b2d380d6bc36aed860b30eac5",
+      "functions": [
+        {
+          "name": "loadAllCommands",
+          "params": [],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "getPromptText",
+          "params": [
+            "command"
+          ],
+          "exported": false,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 20,
+      "hasStructuralAnalysis": true
+    },
+    "tests/integration/cli-observability.test.js": {
+      "filePath": "tests/integration/cli-observability.test.js",
+      "contentHash": "f2a18794a281204f506afa0f39a408472d04e423807e97f4e06bc7a901f9fd29",
+      "functions": [
+        {
+          "name": "seedWorkspace",
+          "params": [
+            "cwd"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "runCli",
+          "params": [
+            "args"
+          ],
+          "exported": false,
+          "lineCount": 22
+        },
+        {
+          "name": "verbEnds",
+          "params": [
+            "run"
+          ],
+          "exported": false,
+          "lineCount": 1
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 274,
+      "hasStructuralAnalysis": true
+    },
+    "tests/integration/cli-smoke.test.js": {
+      "filePath": "tests/integration/cli-smoke.test.js",
+      "contentHash": "ed9eba161e0b999a711980ece9f293f07f1f5a768521378276edab9828780b92",
+      "functions": [
+        {
+          "name": "runCli",
+          "params": [
+            "args"
+          ],
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "makeWorkspace",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 124,
+      "hasStructuralAnalysis": true
+    },
+    "tests/integration/cli-workspace-discovery.test.js": {
+      "filePath": "tests/integration/cli-workspace-discovery.test.js",
+      "contentHash": "2e44440d8f5a8b0c810998ae1d5730722d259238d2df49cf3a9a8e2ec4f23376",
+      "functions": [
+        {
+          "name": "childEnv",
+          "params": [],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "runCli",
+          "params": [
+            "args",
+            "cwd"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "envelopeOf",
+          "params": [
+            "r"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "tmpProject",
+          "params": [],
+          "exported": false,
+          "lineCount": 5
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 247,
+      "hasStructuralAnalysis": true
+    },
+    "tests/integration/fixtures/scenario-valid.json": {
+      "filePath": "tests/integration/fixtures/scenario-valid.json",
+      "contentHash": "f42483c1c736e9850d899092b8a42a98267c81a245a28d4df6c2d401c59a6850",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 19,
+      "hasStructuralAnalysis": false
+    },
+    "tests/integration/stdout-purity.test.js": {
+      "filePath": "tests/integration/stdout-purity.test.js",
+      "contentHash": "a992f488dd7b3b24cf8fc920e21ddf2d515d3512f0c58a767a49ecdc01d05dc9",
+      "functions": [
+        {
+          "name": "runCli",
+          "params": [
+            "args"
+          ],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "runCliWithWorkspace",
+          "params": [
+            "args"
+          ],
+          "exported": false,
+          "lineCount": 11
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 133,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/action-coverage.test.js": {
+      "filePath": "tests/lint/action-coverage.test.js",
+      "contentHash": "840b4aa7242d748c9347635646fd96bb1b8d509388a9c8b35e0012f0f594896d",
+      "functions": [
+        {
+          "name": "entries",
+          "params": [
+            "resolution"
+          ],
+          "exported": false,
+          "lineCount": 2
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 117,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/changelog-structure.test.js": {
+      "filePath": "tests/lint/changelog-structure.test.js",
+      "contentHash": "c0d710bebf7b141da5713c5dc25bb32592cae8f3ae4b899730144e30335135e4",
+      "functions": [
+        {
+          "name": "changelogHeadings",
+          "params": [
+            "text"
+          ],
+          "exported": false,
+          "lineCount": 25
+        },
+        {
+          "name": "compareVersions",
+          "params": [
+            "a",
+            "b"
+          ],
+          "exported": false,
+          "lineCount": 21
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 188,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/config-schema.test.js": {
+      "filePath": "tests/lint/config-schema.test.js",
+      "contentHash": "6357f87b46411d7bd8ba54dd5492840153ae2c282efdbfd42c0c6b623a71f8bb",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 126,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/docs-corpus.js": {
+      "filePath": "tests/lint/docs-corpus.js",
+      "contentHash": "fc3d6351eeae6a2f6ec0b9d2d594f0fcd6fcd9b3af75819285ea8b6e72790582",
+      "functions": [
+        {
+          "name": "shippingDocs",
+          "params": [],
+          "exported": false,
+          "lineCount": 18
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 61,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/docs-counts.test.js": {
+      "filePath": "tests/lint/docs-counts.test.js",
+      "contentHash": "9b8e7362fe3b9eadcb44e7bce686986d585d1b8c31856621f87994ee2e051f94",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 106,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/docs-no-stale-extension.test.js": {
+      "filePath": "tests/lint/docs-no-stale-extension.test.js",
+      "contentHash": "97c90bf083fdf2878c5fa111d6ece5e1b920e780c0e8a8ad871c3c808c71d84d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 84,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/guide-agnostic-no-os.test.js": {
+      "filePath": "tests/lint/guide-agnostic-no-os.test.js",
+      "contentHash": "a151dbf809a44b25a066318b5620dbfcfdc8bff425b89a962fab7dee1f3c52ad",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 35,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/guide-artifact-reuse.test.js": {
+      "filePath": "tests/lint/guide-artifact-reuse.test.js",
+      "contentHash": "b423d24c025a37b0156b397e9ca82553b92e8b12a6fefd0dbc1f74722a30d211",
+      "functions": [
+        {
+          "name": "preflightSection",
+          "params": [
+            "out"
+          ],
+          "exported": false,
+          "lineCount": 18
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 66,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/guide-memory-instruction.test.js": {
+      "filePath": "tests/lint/guide-memory-instruction.test.js",
+      "contentHash": "f4136014d727b9cb4312808d4fcb409da48f8495a0a436b8fba0bee41426f540",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 21,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/guide-no-mcp-tool-leak.test.js": {
+      "filePath": "tests/lint/guide-no-mcp-tool-leak.test.js",
+      "contentHash": "804f676a4fc668876b99c122cf1105ccb50357b7f6c338bac46aea27e99f6c96",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 26,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/guide-no-placeholder-leak.test.js": {
+      "filePath": "tests/lint/guide-no-placeholder-leak.test.js",
+      "contentHash": "4a549c8fc994f979750a5e7d3a52d5207f9ef7d9b578e454def6eba819f293f4",
+      "functions": [
+        {
+          "name": "codeSpanInteriors",
+          "params": [
+            "line"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "eachLine",
+          "params": [
+            "text",
+            "fn"
+          ],
+          "exported": false,
+          "lineCount": 7
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 71,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/guide-run-correlation.test.js": {
+      "filePath": "tests/lint/guide-run-correlation.test.js",
+      "contentHash": "1eb28b906888f13b66b431a9adbf376eec9af6a1af947367c9abd9e7e423c538",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 29,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/lockfile-in-sync.test.js": {
+      "filePath": "tests/lint/lockfile-in-sync.test.js",
+      "contentHash": "f8dc28bbdf0ed9010192e2615be32fa3d262af443c67724ea20c787c7c6bf6fd",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 41,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/mobile-mcp-tool-coverage.test.js": {
+      "filePath": "tests/lint/mobile-mcp-tool-coverage.test.js",
+      "contentHash": "2ce372ed831906457ccaf7f93cf807ce1031319b0581e445d9a6f52ee8eabb0d",
+      "functions": [
+        {
+          "name": "toolsCalledByBridge",
+          "params": [],
+          "exported": false,
+          "lineCount": 7
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 125,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/network-detector.js": {
+      "filePath": "tests/lint/network-detector.js",
+      "contentHash": "4be4f6fda31999161987b0a40f60c4fee09aa80b97238b548906642850dbfb55",
+      "functions": [
+        {
+          "name": "isNewline",
+          "params": [
+            "ch"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "stripSource",
+          "params": [
+            "src"
+          ],
+          "exported": false,
+          "lineCount": 129
+        },
+        {
+          "name": "normalizeSpecifier",
+          "params": [
+            "spec"
+          ],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "skipSpace",
+          "params": [
+            "text",
+            "i"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "readQuoted",
+          "params": [
+            "text",
+            "i"
+          ],
+          "exported": false,
+          "lineCount": 12
+        },
+        {
+          "name": "snippet",
+          "params": [
+            "text",
+            "i"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "analyze",
+          "params": [
+            "src"
+          ],
+          "exported": false,
+          "lineCount": 44
+        },
+        {
+          "name": "collectSpecifiers",
+          "params": [
+            "src"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "callSlice",
+          "params": [
+            "text",
+            "from"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "findNetworkUse",
+          "params": [
+            "sourceText",
+            "relPath"
+          ],
+          "exported": false,
+          "lineCount": 83
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 476,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/no-observe-gate.test.js": {
+      "filePath": "tests/lint/no-observe-gate.test.js",
+      "contentHash": "29758e66f4cc70b9021a0785ae95eb6c4111861397237ecf31ab69419e5d6221",
+      "functions": [
+        {
+          "name": "walk",
+          "params": [
+            "dir"
+          ],
+          "exported": false,
+          "lineCount": 10
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 47,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/node-version-agreement.test.js": {
+      "filePath": "tests/lint/node-version-agreement.test.js",
+      "contentHash": "fad9516d44816349bdeb8d94330a9e11117d350421cf784013ac0053627a0b0d",
+      "functions": [
+        {
+          "name": "decodePercentEscapes",
+          "params": [
+            "line"
+          ],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "nodeClaims",
+          "params": [
+            "text"
+          ],
+          "exported": false,
+          "lineCount": 11
+        },
+        {
+          "name": "loadWorkflow",
+          "params": [
+            "name"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "workflowFiles",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "setupNodeVersions",
+          "params": [
+            "workflow"
+          ],
+          "exported": false,
+          "lineCount": 10
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 239,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/result-coverage.test.js": {
+      "filePath": "tests/lint/result-coverage.test.js",
+      "contentHash": "df4cfb62f7755cf309161c1364d9790d08748b17a092199c63cb66f6cea18fab",
+      "functions": [
+        {
+          "name": "resolvePointer",
+          "params": [
+            "pointer"
+          ],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "topLevelProperty",
+          "params": [
+            "pointer"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "tmpProjectRoot",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "subcommand",
+          "params": [
+            "name"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "longFlags",
+          "params": [
+            "cmd"
+          ],
+          "exported": false,
+          "lineCount": 1
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 209,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/result-schema-additive.test.js": {
+      "filePath": "tests/lint/result-schema-additive.test.js",
+      "contentHash": "0bbc375d3723eee414611e8ea9ea44e015f53508d60b0e00a29eb17e3d7de6cc",
+      "functions": [
+        {
+          "name": "typeSet",
+          "params": [
+            "node"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "narrowedTypes",
+          "params": [
+            "walker",
+            "base",
+            "cur"
+          ],
+          "exported": false,
+          "lineCount": 12
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 229,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/schema-additive.test.js": {
+      "filePath": "tests/lint/schema-additive.test.js",
+      "contentHash": "c2f354fc564b9f1580b74f0dc62348a016291b17aef14acdb0ff2c8dd5f11531",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 57,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/skill-frontmatter-valid.test.js": {
+      "filePath": "tests/lint/skill-frontmatter-valid.test.js",
+      "contentHash": "9be74fd3b4fad8537255f3890a0e32bbfac68e89063c2ced7a7a732119c5e905",
+      "functions": [
+        {
+          "name": "parseFrontmatter",
+          "params": [
+            "content"
+          ],
+          "exported": false,
+          "lineCount": 10
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 38,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/skill-invariants.test.js": {
+      "filePath": "tests/lint/skill-invariants.test.js",
+      "contentHash": "9c1fb1df565d38295077d2d13e17bd4a8a671d7ddccfb0d4477df43ef2f3c8e2",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 48,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/skill-no-placeholder-leak.test.js": {
+      "filePath": "tests/lint/skill-no-placeholder-leak.test.js",
+      "contentHash": "99b2a8a08e715d2327e6a0c42d4a666ebe753ec77fe7740a8451de08106adb24",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 14,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/supply-chain-gate.test.js": {
+      "filePath": "tests/lint/supply-chain-gate.test.js",
+      "contentHash": "2203735be72ee68aee4c6839af6469d767a0aab7655abcfef27f9de06d0eb261",
+      "functions": [
+        {
+          "name": "load",
+          "params": [
+            "rel"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "runs",
+          "params": [
+            "steps"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "findGateStep",
+          "params": [
+            "steps"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "findGateJob",
+          "params": [
+            "jobs"
+          ],
+          "exported": false,
+          "lineCount": 5
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 95,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/telemetry-docs.test.js": {
+      "filePath": "tests/lint/telemetry-docs.test.js",
+      "contentHash": "3479aa7d89b70a114c5f7b69d36a1dee01ef1ca8b4da0d4ac24143572a9b1d0a",
+      "functions": [
+        {
+          "name": "documented",
+          "params": [
+            "section"
+          ],
+          "exported": false,
+          "lineCount": 8
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 69,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/telemetry-redaction.test.js": {
+      "filePath": "tests/lint/telemetry-redaction.test.js",
+      "contentHash": "289d671cf223dc0dfaf94e440b1bf5c02041d7b3602f3252dea87c8651bb33b5",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 229,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/telemetry-transport-isolation.test.js": {
+      "filePath": "tests/lint/telemetry-transport-isolation.test.js",
+      "contentHash": "5680f7f59c14d890ebbc786be4d6e6900230e0ffa30419f6afd02a9b60df6a2d",
+      "functions": [
+        {
+          "name": "kinds",
+          "params": [
+            "text"
+          ],
+          "exported": false,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 360,
+      "hasStructuralAnalysis": true
+    },
+    "tests/lint/telemetry-vocab-drift.test.js": {
+      "filePath": "tests/lint/telemetry-vocab-drift.test.js",
+      "contentHash": "b96a9f4ee999203dc4629905ff7a89d6c6082839ccc2f0693e15c9e3c74a299b",
+      "functions": [
+        {
+          "name": "jsFilesUnder",
+          "params": [
+            "dir"
+          ],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "diff",
+          "params": [
+            "vocab",
+            "produced"
+          ],
+          "exported": false,
+          "lineCount": 5
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 143,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/assertion/evaluator.test.js": {
+      "filePath": "tests/unit/assertion/evaluator.test.js",
+      "contentHash": "d195c03676f08dfe8e67de41225a2ebc691715f33621c8d902faebfb9c80f23b",
+      "functions": [
+        {
+          "name": "el",
+          "params": [
+            "text"
+          ],
+          "exported": false,
+          "lineCount": 10
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 254,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/audit-gate.test.js": {
+      "filePath": "tests/unit/audit-gate.test.js",
+      "contentHash": "63933710a8dd95fcc9d17a2b049974c3efbb7cf5a7424f25dd9e735dc44d557e",
+      "functions": [
+        {
+          "name": "advisory",
+          "params": [
+            "ghsa",
+            "severity"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "report",
+          "params": [
+            "...advisories"
+          ],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "entry",
+          "params": [
+            "ghsa"
+          ],
+          "exported": false,
+          "lineCount": 4
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 221,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/bin/mauto-session-daemon-cleanup.test.js": {
+      "filePath": "tests/unit/bin/mauto-session-daemon-cleanup.test.js",
+      "contentHash": "6b94dff1eb91fc1da515e075e34343422034fb7193d738d3ff23d1c5995b2801",
+      "functions": [
+        {
+          "name": "tmpRoot",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "workspaceFiles",
+          "params": [
+            "root"
+          ],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "seedWorkspace",
+          "params": [
+            "root",
+            "lockPid"
+          ],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "allExist",
+          "params": [
+            "root"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "noneExist",
+          "params": [
+            "root"
+          ],
+          "exported": false,
+          "lineCount": 1
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 61,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/bin/mauto-session-daemon-observe.test.js": {
+      "filePath": "tests/unit/bin/mauto-session-daemon-observe.test.js",
+      "contentHash": "67780c5039fd8f002eed063fec96fc0108b926a544305dafb1bbaff8a98b7667",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 260,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/bin/mauto-session-daemon.smoke.test.js": {
+      "filePath": "tests/unit/bin/mauto-session-daemon.smoke.test.js",
+      "contentHash": "98741ef91981800da8f58379e913c10c5179160b0a8f98f8948d0c27ecb11fb9",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 17,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/cli-envelope-boundary.test.js": {
+      "filePath": "tests/unit/cli-envelope-boundary.test.js",
+      "contentHash": "8a28d971682e2015a0cd6a74753b6e7dda5ac191663da84d7f3f86e874b44f2e",
+      "functions": [
+        {
+          "name": "tmpRoot",
+          "params": [
+            "prefix"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "captureProgram",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "argv",
+          "params": [
+            "...rest"
+          ],
+          "exported": false,
+          "lineCount": 1
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 246,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/cli-observe-project-root.test.js": {
+      "filePath": "tests/unit/cli-observe-project-root.test.js",
+      "contentHash": "606c37babc60aa4a52b14ead3db3350415569e4caf2a996b8d29f47fcdf26c01",
+      "functions": [
+        {
+          "name": "makeWorkspace",
+          "params": [],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "readEvents",
+          "params": [
+            "root"
+          ],
+          "exported": false,
+          "lineCount": 10
+        },
+        {
+          "name": "runProgram",
+          "params": [
+            "argv"
+          ],
+          "exported": false,
+          "lineCount": 14
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 108,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/cli-parse-error-envelope.test.js": {
+      "filePath": "tests/unit/cli-parse-error-envelope.test.js",
+      "contentHash": "132c21d81aebf14c79b744d10c93918f6514ccb49f726651e0fb4f578441756f",
+      "functions": [
+        {
+          "name": "runCli",
+          "params": [
+            "argv"
+          ],
+          "exported": false,
+          "lineCount": 26
+        },
+        {
+          "name": "envelopeLine",
+          "params": [
+            "writes"
+          ],
+          "exported": false,
+          "lineCount": 5
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 222,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/cli-workspace-discovery.test.js": {
+      "filePath": "tests/unit/cli-workspace-discovery.test.js",
+      "contentHash": "dc666ae6b1fc80e3d575cdf9bb9451a0cae226fea3e221dc5ba7162c3a81ecd9",
+      "functions": [
+        {
+          "name": "tmpDir",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "captureEmitters",
+          "params": [],
+          "exported": false,
+          "lineCount": 16
+        },
+        {
+          "name": "runIn",
+          "params": [
+            "...argv"
+          ],
+          "exported": false,
+          "lineCount": 5
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 160,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/cli.test.js": {
+      "filePath": "tests/unit/cli.test.js",
+      "contentHash": "02b3bbee7c90d2337bfcddd55846f445895d056b3b145e3a0c37aacbe63fe98a",
+      "functions": [
+        {
+          "name": "validScenario",
+          "params": [],
+          "exported": false,
+          "lineCount": 20
+        },
+        {
+          "name": "writeTmp",
+          "params": [
+            "name",
+            "contents"
+          ],
+          "exported": false,
+          "lineCount": 5
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 2242,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/cli/crash-verb.test.js": {
+      "filePath": "tests/unit/cli/crash-verb.test.js",
+      "contentHash": "40bac3be5d849af711d6dad7b1d42251512a17408986f89bdf5a9bd5cc8d4a57",
+      "functions": [
+        {
+          "name": "bridgeReturning",
+          "params": [
+            "crashes"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "tmpRoot",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 189,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/config/coerce.test.js": {
+      "filePath": "tests/unit/config/coerce.test.js",
+      "contentHash": "763778e10cd1f3544763c9c7bcdc0175ed9e751708a32dfe4c0a7b3b3e82aec8",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 136,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/config/manager.test.js": {
+      "filePath": "tests/unit/config/manager.test.js",
+      "contentHash": "1149941ee4fc16c52623b9a9b2d90e3041a3bce79bb7baaa36c9b09b72b79981",
+      "functions": [
+        {
+          "name": "tmpRoot",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "configPath",
+          "params": [
+            "root"
+          ],
+          "exported": false,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 141,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/config/schema.test.js": {
+      "filePath": "tests/unit/config/schema.test.js",
+      "contentHash": "92f4258a8bae9b91e2ad3c89c6687e8207c179a90d789cae00c9e32e264594a6",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 130,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/bridge.test.js": {
+      "filePath": "tests/unit/device/bridge.test.js",
+      "contentHash": "3f6be7c7b9adc4b71a23953d564be8f9a94f98caf73b4ae0edb859e98a900556",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 333,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/connection.test.js": {
+      "filePath": "tests/unit/device/connection.test.js",
+      "contentHash": "293fdefbaca9decdc12c538202b20a13421fca3c373ae383defb0d06143655fc",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 141,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/contract-0.0.55.test.js": {
+      "filePath": "tests/unit/device/contract-0.0.55.test.js",
+      "contentHash": "4889fa1e22a21ab135e4c24873bc44518fdc77c8a6475bf06cb9520e9281c8ec",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 38,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/crash-model.test.js": {
+      "filePath": "tests/unit/device/crash-model.test.js",
+      "contentHash": "76625eff2ec4a2535fa07f64ad98fd059dcfa3c8ae75f5191e835643522ea8bc",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 88,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/daemon-observability.test.js": {
+      "filePath": "tests/unit/device/daemon-observability.test.js",
+      "contentHash": "dc5082aff82f91d3a93a224d18b8ac112ce967c043ae6dfa0f2afd7e7e70e741",
+      "functions": [
+        {
+          "name": "tmpRoot",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "collector",
+          "params": [],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "always",
+          "params": [
+            "observe"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "recorderInto",
+          "params": [
+            "root",
+            "logDir"
+          ],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "readLog",
+          "params": [
+            "logDir"
+          ],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "makeFakeCreateCall",
+          "params": [
+            "impl"
+          ],
+          "exported": false,
+          "lineCount": 6
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 595,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/daemon-pid-identity.test.js": {
+      "filePath": "tests/unit/device/daemon-pid-identity.test.js",
+      "contentHash": "c58feeb8fb19eec5872c4a2c38af8d0220f9deed5fb89495a281ac18db99db66",
+      "functions": [
+        {
+          "name": "tmpRoot",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 86,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/daemon-telemetry-flush.test.js": {
+      "filePath": "tests/unit/device/daemon-telemetry-flush.test.js",
+      "contentHash": "00c913fefaee4547433d584be770bdf4a592a85584b2a97b57597d72a8661eb0",
+      "functions": [
+        {
+          "name": "workspace",
+          "params": [],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "createCall",
+          "params": [],
+          "exported": false,
+          "lineCount": 4
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 106,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/daemon-timeout.test.js": {
+      "filePath": "tests/unit/device/daemon-timeout.test.js",
+      "contentHash": "ac3c30f03d784d339168fa8adfdd37ff261e856940083fcdd1ee73e614cd9374",
+      "functions": [
+        {
+          "name": "tmpRoot",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "hangingCreateCall",
+          "params": [],
+          "exported": false,
+          "lineCount": 10
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 244,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/device-call.test.js": {
+      "filePath": "tests/unit/device/device-call.test.js",
+      "contentHash": "6c4e7552e02239537145f59fefffd065528bc23a9b38b54473fb278343deb1f7",
+      "functions": [
+        {
+          "name": "collector",
+          "params": [],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "build",
+          "params": [
+            "call"
+          ],
+          "exported": false,
+          "lineCount": 11
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 356,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/device-model.test.js": {
+      "filePath": "tests/unit/device/device-model.test.js",
+      "contentHash": "ff6246d5ea0c0601bf0e20f52da7629c2d03c20ffed106d207ab9f6a7240edbd",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 67,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/device-resolver.test.js": {
+      "filePath": "tests/unit/device/device-resolver.test.js",
+      "contentHash": "a9e2cdb88350f55e7f95b86f52eeb1d571809b8f8b2d60219d5f69cc88c65362",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 28,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/element-model.test.js": {
+      "filePath": "tests/unit/device/element-model.test.js",
+      "contentHash": "40106e982a6970b61ccfb218efbabf34af0551a17a59e6ead6bcd90f16b5e387",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 127,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/failure-probe.test.js": {
+      "filePath": "tests/unit/device/failure-probe.test.js",
+      "contentHash": "4aae4f2b954dc167f925cb2a1e00d2aaf0d61edadd52a1d8f00c2986a6ac055a",
+      "functions": [
+        {
+          "name": "failEnv",
+          "params": [],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "okElements",
+          "params": [
+            "items"
+          ],
+          "exported": false,
+          "lineCount": 1
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 244,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/mobile-mcp-client-inject.test.js": {
+      "filePath": "tests/unit/device/mobile-mcp-client-inject.test.js",
+      "contentHash": "a3d34e2a000e583a0479bdff4b3a0b0249b5d9679114e5ee1949c2d61852ae12",
+      "functions": [
+        {
+          "name": "rawWith",
+          "params": [
+            "devices"
+          ],
+          "exported": false,
+          "lineCount": 9
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 170,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/mobile-mcp-client.smoke.test.js": {
+      "filePath": "tests/unit/device/mobile-mcp-client.smoke.test.js",
+      "contentHash": "0b8cc6b19ca4147eefc9b7307715f7eb10037fab5f5ddaf62e0cdae424962e33",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 11,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/resolve-connection.test.js": {
+      "filePath": "tests/unit/device/resolve-connection.test.js",
+      "contentHash": "f5ae0dbe72dec0fe877bb4f9bce81d645b46b2cf8c7d8ee02637369de3be5a3d",
+      "functions": [
+        {
+          "name": "tmpRoot",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "writeHandle",
+          "params": [
+            "root",
+            "device"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "fakeClient",
+          "params": [],
+          "exported": false,
+          "lineCount": 17
+        },
+        {
+          "name": "fakeDaemonConn",
+          "params": [],
+          "exported": false,
+          "lineCount": 10
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 215,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/selection.test.js": {
+      "filePath": "tests/unit/device/selection.test.js",
+      "contentHash": "82a51782e19319b1119cffe7f8a9e3575618ecb64029a8e445d86e5a05ab669a",
+      "functions": [
+        {
+          "name": "tmpRoot",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 81,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/semantic-press/index.test.js": {
+      "filePath": "tests/unit/device/semantic-press/index.test.js",
+      "contentHash": "0aa22d02e14b47dd5516aba55e86cbf606f77ee1323fe3d3a722464cbc0ba871",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 40,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/semantic-press/labels.test.js": {
+      "filePath": "tests/unit/device/semantic-press/labels.test.js",
+      "contentHash": "c32a18636f17cc2baffba7bd157756e98a28ff3e1a066a2fe19f4e23f785f096",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 28,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/semantic-press/resolver.test.js": {
+      "filePath": "tests/unit/device/semantic-press/resolver.test.js",
+      "contentHash": "dd320bb8576fe1ab63b7edca20140f4cded07cead4d02ea90bbf7c7f462d2f17",
+      "functions": [
+        {
+          "name": "fakeBridge",
+          "params": [],
+          "exported": false,
+          "lineCount": 12
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 85,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/session-client.test.js": {
+      "filePath": "tests/unit/device/session-client.test.js",
+      "contentHash": "6843a30468f788546e26ed31f2aaab04a868a7fbacfea1419c055e92d8ec2c7c",
+      "functions": [
+        {
+          "name": "tmpRoot",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "fakeCreateCall",
+          "params": [],
+          "exported": false,
+          "lineCount": 6
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 117,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/session-daemon-honesty.test.js": {
+      "filePath": "tests/unit/device/session-daemon-honesty.test.js",
+      "contentHash": "a027c6d691f58fdf7162487a6e9f13f7bbd3edd01cfd0eabdeca33c071bd1217",
+      "functions": [
+        {
+          "name": "tmpRoot",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "makeStubCreateCall",
+          "params": [],
+          "exported": false,
+          "lineCount": 28
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 166,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/session-daemon.test.js": {
+      "filePath": "tests/unit/device/session-daemon.test.js",
+      "contentHash": "95022c62fc041d65fc5e3c07be3a1e4dfb9a85309c9e9c403a80aa4afbd7d729",
+      "functions": [
+        {
+          "name": "tmpRoot",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "makeFakeCreateCall",
+          "params": [],
+          "exported": false,
+          "lineCount": 17
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 154,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/session-handle.test.js": {
+      "filePath": "tests/unit/device/session-handle.test.js",
+      "contentHash": "23ab2c32d37447226635d1e3afed3c5a191802c59d75ddfdbfd5aa6e114ed8b9",
+      "functions": [
+        {
+          "name": "tmpRoot",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "writeHandle",
+          "params": [
+            "root",
+            "handle"
+          ],
+          "exported": false,
+          "lineCount": 4
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 100,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/session-log.test.js": {
+      "filePath": "tests/unit/device/session-log.test.js",
+      "contentHash": "32e30c116268014d690877f21920b041f4569cf1422edf0b3a51af1b9f5abfb5",
+      "functions": [
+        {
+          "name": "makeFakeFs",
+          "params": [],
+          "exported": false,
+          "lineCount": 15
+        },
+        {
+          "name": "enoent",
+          "params": [],
+          "exported": false,
+          "lineCount": 1
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 198,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/session-paths.test.js": {
+      "filePath": "tests/unit/device/session-paths.test.js",
+      "contentHash": "6ddd4a83b2874c20a3633aac4ac1c657d2ab0d0e9ecb319c084eb41439c2ae82",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 51,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/session-protocol.test.js": {
+      "filePath": "tests/unit/device/session-protocol.test.js",
+      "contentHash": "d1f97e9712d973241b7f746cdb0d2c6ca73bb8bf9822569127e044a36a6597bf",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 58,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/session-spawn.test.js": {
+      "filePath": "tests/unit/device/session-spawn.test.js",
+      "contentHash": "48a7e0dc674dae2f171609586868d679e45b0074c27c5f492a09962644973535",
+      "functions": [
+        {
+          "name": "fakeChild",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "fakeLog",
+          "params": [],
+          "exported": false,
+          "lineCount": 9
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 200,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/timeout-invariant.test.js": {
+      "filePath": "tests/unit/device/timeout-invariant.test.js",
+      "contentHash": "4fe77665415f40b9cfc12e936fed4224c86112d503e8696776511c2121dcd4a5",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 16,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/device/tool-args.test.js": {
+      "filePath": "tests/unit/device/tool-args.test.js",
+      "contentHash": "b1ce14220427dde510e3b15923a9ecec0cd3e194c232d6be63b919b4eb8b112f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 21,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/guide/emitter.test.js": {
+      "filePath": "tests/unit/guide/emitter.test.js",
+      "contentHash": "b0f9a3ef62b2c2f8086209e31d583b35ef915d87a76deb321a5b598954c7c1ea",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 97,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/guide/execute-content.test.js": {
+      "filePath": "tests/unit/guide/execute-content.test.js",
+      "contentHash": "b2d29cb16b95238c529221a55dfbe88a6c9203aeb51e838cc4110474a387e02c",
+      "functions": [
+        {
+          "name": "tmpProject",
+          "params": [
+            "config"
+          ],
+          "exported": false,
+          "lineCount": 9
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 184,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/guide/generate-content.test.js": {
+      "filePath": "tests/unit/guide/generate-content.test.js",
+      "contentHash": "b07e99d816835652c9a46c6eeeb1273471f63594fd8ad513f75fc6ec7e863412",
+      "functions": [
+        {
+          "name": "tmpProject",
+          "params": [
+            "config"
+          ],
+          "exported": false,
+          "lineCount": 9
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 134,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/guide/placeholders.test.js": {
+      "filePath": "tests/unit/guide/placeholders.test.js",
+      "contentHash": "6e1e474e272e8a472955bbb8ad669fe632bbfb7203e30327e90e08b76fe50ac0",
+      "functions": [
+        {
+          "name": "tmpProject",
+          "params": [
+            "config"
+          ],
+          "exported": false,
+          "lineCount": 9
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 134,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/guide/setup-content.test.js": {
+      "filePath": "tests/unit/guide/setup-content.test.js",
+      "contentHash": "42d3e014633a16af0b2259454fca29e5feea89a902d484e668291c4e2266a7ba",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 105,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/init/adapters.test.js": {
+      "filePath": "tests/unit/init/adapters.test.js",
+      "contentHash": "5025814173b5fd40de88a350f366f897d7f4a90ebf8a127d9edb9169c764ac8f",
+      "functions": [
+        {
+          "name": "invariantLines",
+          "params": [
+            "topic"
+          ],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "tmpRoot",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "readJson",
+          "params": [
+            "p"
+          ],
+          "exported": false,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 226,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/init/skill-meta.test.js": {
+      "filePath": "tests/unit/init/skill-meta.test.js",
+      "contentHash": "2b2654dcb36b5189875a45ade15d514035807b97a1b9f18226cfa0223944d1b1",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 34,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/init/skill-renderer.test.js": {
+      "filePath": "tests/unit/init/skill-renderer.test.js",
+      "contentHash": "00b4216d70b16e8f4498f14a9b51da8ec4d6d2bc5defac00c866c745c2328f5d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 38,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/mcp/prompts.test.js": {
+      "filePath": "tests/unit/mcp/prompts.test.js",
+      "contentHash": "b7ec4c21dc37d358a0f10e62f6bc0b6f512efde1608980fed9c4985755ffe99a",
+      "functions": [
+        {
+          "name": "fakeEmitGuide",
+          "params": [
+            "calls"
+          ],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "tmpRoot",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 113,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/mcp/server.test.js": {
+      "filePath": "tests/unit/mcp/server.test.js",
+      "contentHash": "9a46364154be7f27ca5ab250a212e379e3e1704e65d2a8e19f46be26b9b9b28e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 24,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/memory/cli-memory-add-forget.test.js": {
+      "filePath": "tests/unit/memory/cli-memory-add-forget.test.js",
+      "contentHash": "bd2a79bfb72f48e29c72daa3c44ad6b7c94c066daf54d4a79ebab1e2bb7b2f41",
+      "functions": [
+        {
+          "name": "tmpRoot",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "factory",
+          "params": [
+            "args"
+          ],
+          "exported": false,
+          "lineCount": 1
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 73,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/memory/cli-memory-show.test.js": {
+      "filePath": "tests/unit/memory/cli-memory-show.test.js",
+      "contentHash": "9c5593db1022d5ccdc9a37b5366d20becddde2d5efc71dda9af754bb551c835c",
+      "functions": [
+        {
+          "name": "tmpRoot",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "factory",
+          "params": [
+            "args"
+          ],
+          "exported": false,
+          "lineCount": 1
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 130,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/memory/entries.test.js": {
+      "filePath": "tests/unit/memory/entries.test.js",
+      "contentHash": "a3b1cbad0faa84d6e0bb38cf0226b9d4c3afbfdd5e13c451036917819154695a",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 51,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/memory/history.test.js": {
+      "filePath": "tests/unit/memory/history.test.js",
+      "contentHash": "d98c3c25a42f814908d60c5a0ff43eef20a3fb06ab9ad92534403acbda3b6180",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 67,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/memory/lock.test.js": {
+      "filePath": "tests/unit/memory/lock.test.js",
+      "contentHash": "c7215562cc3900350b9082ef2559c5ba8e50c446aab23a5b0a14143189136751",
+      "functions": [
+        {
+          "name": "tmpLock",
+          "params": [],
+          "exported": false,
+          "lineCount": 4
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 75,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/memory/paths.test.js": {
+      "filePath": "tests/unit/memory/paths.test.js",
+      "contentHash": "d9a230850998f21806b81a0dfe0fc3c7d1bd3c73e070f1a6c08c81e8cd1b2629",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 37,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/memory/store.test.js": {
+      "filePath": "tests/unit/memory/store.test.js",
+      "contentHash": "f50c59892367b3f8b41cb5cf493fd8828be2ef96260ef28575ea5a8aa07e8cac",
+      "functions": [
+        {
+          "name": "tmpRoot",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "readHistory",
+          "params": [
+            "root"
+          ],
+          "exported": false,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 174,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/observe/event.test.js": {
+      "filePath": "tests/unit/observe/event.test.js",
+      "contentHash": "0b39f0a9081fb626a96868a15084d2fd97e5536a684d01f99208480735fe2553",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 201,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/observe/failure-capture.test.js": {
+      "filePath": "tests/unit/observe/failure-capture.test.js",
+      "contentHash": "baca3e290b4ddddfcdc05beef96b0f1dadedb0d6cddf325cca914328dd800241",
+      "functions": [
+        {
+          "name": "workspace",
+          "params": [],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "traceEvents",
+          "params": [
+            "root",
+            "runId"
+          ],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "failing",
+          "params": [
+            "kind"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "passing",
+          "params": [],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "fakeBridge",
+          "params": [],
+          "exported": false,
+          "lineCount": 12
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 214,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/observe/flush.test.js": {
+      "filePath": "tests/unit/observe/flush.test.js",
+      "contentHash": "21ad2b769f02b841333e9429288a93c1e7a4649fb9154bf1e2ca1cc79e9dfce5",
+      "functions": [
+        {
+          "name": "workspace",
+          "params": [],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "spoolN",
+          "params": [
+            "root",
+            "n"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "stubTransport",
+          "params": [
+            "results"
+          ],
+          "exported": false,
+          "lineCount": 11
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 201,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/observe/paths.test.js": {
+      "filePath": "tests/unit/observe/paths.test.js",
+      "contentHash": "0943a70dd3d54a6387f41d88e080132dfa7e743a4daf6824a94fb76da76fcfd5",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 129,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/observe/recorder.test.js": {
+      "filePath": "tests/unit/observe/recorder.test.js",
+      "contentHash": "755e85c1a4545c5f14ae1faf9a898e37d293cdc68cb040811952399e24d19885",
+      "functions": [
+        {
+          "name": "workspace",
+          "params": [],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "readLines",
+          "params": [
+            "file"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "collector",
+          "params": [],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "spyDefaults",
+          "params": [
+            "env"
+          ],
+          "exported": false,
+          "lineCount": 8
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 424,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/observe/settings.test.js": {
+      "filePath": "tests/unit/observe/settings.test.js",
+      "contentHash": "d25ec8549603c7e243676f2e0cb2fad326ae43254d439e2c7b38d7cee8433eda",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 69,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/observe/sinks.test.js": {
+      "filePath": "tests/unit/observe/sinks.test.js",
+      "contentHash": "a248d8ca67f02af3e5e94bfa8b65442912b6ee87d6ee8d908bfa89dfd0cd330c",
+      "functions": [
+        {
+          "name": "workspace",
+          "params": [],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "bareDir",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 250,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/observe/spool.test.js": {
+      "filePath": "tests/unit/observe/spool.test.js",
+      "contentHash": "b44ef1710c55c9c838acce9007f7eb2b11db4aee75c0bf2dea358e68ae6deb06",
+      "functions": [
+        {
+          "name": "workspace",
+          "params": [],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "readLines",
+          "params": [
+            "p"
+          ],
+          "exported": false,
+          "lineCount": 2
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 176,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/observe/telemetry.test.js": {
+      "filePath": "tests/unit/observe/telemetry.test.js",
+      "contentHash": "9e346ae7303f4fc23f85737fb9f8188b33cdd3153fc73483bbdb3503cb9214ec",
+      "functions": [
+        {
+          "name": "workspace",
+          "params": [
+            "config"
+          ],
+          "exported": false,
+          "lineCount": 11
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 131,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/observe/trace.test.js": {
+      "filePath": "tests/unit/observe/trace.test.js",
+      "contentHash": "2dbd5442f5b11e872fa20111881b42a2b2de26aac4d42233d669cd42dd8bed48",
+      "functions": [
+        {
+          "name": "logsRoot",
+          "params": [],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "writeTrace",
+          "params": [
+            "root",
+            "runId",
+            "events"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "at",
+          "params": [
+            "iso"
+          ],
+          "exported": false,
+          "lineCount": 1
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 168,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/observe/transport.test.js": {
+      "filePath": "tests/unit/observe/transport.test.js",
+      "contentHash": "7c484a323296f28d35471dec6938cd0cabfd450f43f1322ef3fe991fcede951f",
+      "functions": [
+        {
+          "name": "fakeFetch",
+          "params": [
+            "impl"
+          ],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "res",
+          "params": [
+            "status"
+          ],
+          "exported": false,
+          "lineCount": 1
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 193,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/output/envelope.test.js": {
+      "filePath": "tests/unit/output/envelope.test.js",
+      "contentHash": "bcf1aa7414c79b9ef727f155ce37f9a4564cd0ccfac52168091a491eed3cc1af",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 99,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/result/flags.test.js": {
+      "filePath": "tests/unit/result/flags.test.js",
+      "contentHash": "cfbf6653c32adef47316144f612e7d43016fd101edfe20a004540acf2b0ff1e5",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 65,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/result/store-lock.test.js": {
+      "filePath": "tests/unit/result/store-lock.test.js",
+      "contentHash": "1df56c83aad67d574cbd4cf3d994c976e7f4d3b1e6de81d2ff78176ec8ce9704",
+      "functions": [
+        {
+          "name": "tmpRoot",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "resultsDir",
+          "params": [
+            "projectRoot"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "readResult",
+          "params": [
+            "projectRoot",
+            "runId"
+          ],
+          "exported": false,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 130,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/result/store.test.js": {
+      "filePath": "tests/unit/result/store.test.js",
+      "contentHash": "01fa48ccbf5dba484ba7bc25b448a6493c20cbb42cd242cdefd09be546210cd3",
+      "functions": [
+        {
+          "name": "ajvValidator",
+          "params": [],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "tmpRoot",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 400,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/scenario/validator.test.js": {
+      "filePath": "tests/unit/scenario/validator.test.js",
+      "contentHash": "046025dd61c526ae96e5f2c6c0f23606f029e574c6d214d26aa13d68c014e485",
+      "functions": [
+        {
+          "name": "validScenario",
+          "params": [],
+          "exported": false,
+          "lineCount": 29
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 77,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/setup/scaffold.test.js": {
+      "filePath": "tests/unit/setup/scaffold.test.js",
+      "contentHash": "1cf9698cfc629be16fcaad8bb15c0a8bfd9c852f1155ffacb0b63bd8d451538e",
+      "functions": [
+        {
+          "name": "tmpRoot",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "set_app_package",
+          "params": [
+            "root"
+          ],
+          "exported": false,
+          "lineCount": 4
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 129,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/util/log-rotate.test.js": {
+      "filePath": "tests/unit/util/log-rotate.test.js",
+      "contentHash": "80e39bc0744faf6579d8b95b419f55553ab8695e25b99d3d7447f7437b3b1f6d",
+      "functions": [
+        {
+          "name": "workspace",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 89,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/workspace/discover.test.js": {
+      "filePath": "tests/unit/workspace/discover.test.js",
+      "contentHash": "a45f29aab39a0ea40da1123381f24eb320909be52a70d6d81a9581aa10412239",
+      "functions": [
+        {
+          "name": "tmpProject",
+          "params": [],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "makeWorkspace",
+          "params": [
+            "dir"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "mkdirp",
+          "params": [
+            "...parts"
+          ],
+          "exported": false,
+          "lineCount": 5
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 149,
+      "hasStructuralAnalysis": true
+    }
+  }
+}
