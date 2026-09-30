@@ -20,3 +20,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # One grouped PR per week instead of one per action. Ungrouped, each
+    # action gets its own PR and the default open-PR limit (5) queues the
+    # rest — actions/checkout sat on v4 behind five other bumps.
+    groups:
+      actions:
+        patterns: ['*']

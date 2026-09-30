@@ -376,7 +376,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reach the registry.
 - Accepted until 2026-12-27: two `sharp` advisories reachable only through the
   `@mobilenext/mobile-mcp@0.0.55` pin; removal tracked in #199.
-- Dependabot now opens weekly lockfile-only npm PRs and GitHub Actions PRs.
+- Dependabot now opens weekly lockfile-only npm PRs and one grouped GitHub
+  Actions PR (grouping keeps action bumps from queueing behind the open-PR
+  limit).
 
 ---
 
