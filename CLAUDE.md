@@ -208,6 +208,8 @@ Tracked under the `production-ready` milestone; worth knowing before you debug s
 
 - Windows is silently unsupported: the session daemon binds a Unix domain socket — #165.
 - No JavaScript linter is configured (no ESLint config, dep, or script) — #164.
+- iOS simulators fail every verb with "Agent is not installed on the device" until a one-time `npx -y mobilecli@<pinned> agent install --device <udid>`; the engine's auto-install is unreachable — upstream [mobile-mcp#459](https://github.com/mobile-next/mobile-mcp/issues/459). `src/device/engine-hints.js` prints the command.
+- On Android, mobilecli's `DeviceServer` outlives the session and holds UiAutomation (kills `uiautomator dump`, Appium, legacy `elements`); release with `adb shell pkill -f com.mobilenext.mobilecli.DeviceServer` — upstream [mobilecli#470](https://github.com/mobile-next/mobilecli/issues/470).
 
 ## Conventions
 

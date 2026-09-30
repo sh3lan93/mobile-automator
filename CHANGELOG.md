@@ -22,6 +22,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `MOBILEMCP_LEGACY_ROBOT=1` restores the previous adb/WDA robots, and takes
   effect for a new session only — run `mauto session end` first. It is also
   the first mobile-mcp release clear of the two `sharp` advisories (#199).
+  Three behaviours change with it. Android emulators are now identified by
+  AVD name (`Pixel_9_Pro`) rather than adb serial (`emulator-5554`), so a
+  device pinned before the upgrade must be re-selected with `mauto devices
+  use`. iOS simulators need a one-time agent install before any verb works
+  (upstream mobile-mcp#459); mauto's error hint prints the command. The
+  Android agent (`com.mobilenext.mobilecli.DeviceServer`) persists on the
+  device after the session ends and blocks `uiautomator dump`, Appium and
+  other UiAutomator tools until released (mobilecli#470). TROUBLESHOOTING
+  covers all three.
 - A mobile-mcp bump that drops a tool mauto calls, stops accepting an
   argument mauto sends, or starts requiring one it does not, now fails the
   build. `tests/integration/mobile-mcp-contract.test.js` lists the pinned
@@ -33,6 +42,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Two device-engine failures now carry an actionable hint instead of "Ensure
+  a device or simulator is connected" (#199). "Agent is not installed on the
+  device" (iOS) names the one-time `npx -y mobilecli@<pinned> agent install
+  --device <udid>` command, with the simulator's id filled in; `Device "…"
+  not found` explains that ids differ between the default and legacy engines
+  and points at `mauto devices` / `mauto devices use`. Every device verb's
+  failure hint goes through the same check.
 - Device output that mauto cannot read now fails instead of passing as data
   (#199). `mauto elements` requests the engine's JSON element format
   explicitly, and an element list it cannot parse returns `ok:false` (kind

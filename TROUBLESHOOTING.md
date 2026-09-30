@@ -93,13 +93,24 @@ mauto devices
 through `mobilecli` instead of the previous robots (adb on Android, WDA +
 go-ios on real iOS devices). To compare against the previous robots, opt back
 in and restart the session — the engine picks its robot once per device and
-keeps it for the life of the session daemon:
+keeps it for the life of the session daemon. On Android, release the
+`mobilecli` agent first (see the "`uiautomator dump` is killed" entry below),
+or the legacy robot's `elements` fails with `Cannot read properties of
+undefined (reading 'node')`:
 
 ```bash
 mauto session end
+adb -s <serial> shell pkill -f com.mobilenext.mobilecli.DeviceServer   # Android only
 export MOBILEMCP_LEGACY_ROBOT=1
 mauto devices                                 # new daemon, legacy robot
+mauto devices use <id>                        # ids change between robots
 ```
+
+Switching robots changes Android emulator ids (AVD name vs adb serial — see
+the next entry), so re-select the device with `mauto devices use`. In legacy
+mode `mauto crash list` fails with `device not found: emulator-5554` and the
+failure probe gathers no crash evidence: crash reports still go through
+`mobilecli`, which does not know the adb-serial id.
 
 iOS simulators use `mobilecli` either way. If the legacy robot behaves
 correctly and the default does not, please report the difference — with the
@@ -107,17 +118,54 @@ verb, platform and both envelopes — on a
 [new issue](https://github.com/sh3lan93/mobile-automator/issues/new) referencing
 [#199](https://github.com/sh3lan93/mobile-automator/issues/199).
 
-### ❌ First command against a fresh iOS simulator is slow, or fails offline
+### ❌ `Device "emulator-5554" not found` after upgrading to 0.27
 
-On first use of each simulator the engine checks for its on-device agent and,
-if it is missing, installs it — `mobilecli` downloads it from
-`github.com/mobile-next/devicekit-ios/releases`. That first verb needs network
-access and can take a while; once the agent is installed, later verbs skip the
-download. Re-run once you are online.
+Every verb fails with this even though the emulator is running. The 0.27
+engine lists Android emulators by AVD name (`Pixel_9_Pro`), while
+`MOBILEMCP_LEGACY_ROBOT=1` and mauto before 0.27 used the adb serial
+(`emulator-5554`); each rejects the other's id. A device pinned with
+`mauto devices use` (or a `--device` in a script) from before the upgrade is
+now unknown. Re-select it — iOS simulator UDIDs are the same either way:
 
-On Android, `mobilecli` may install a helper app on the device (package
-names starting `com.mobilenext.`); that is the engine, not your app under
-test.
+```bash
+mauto devices                  # ids as the current engine sees them
+mauto devices use Pixel_9_Pro  # or pass that id to --device
+```
+
+### ❌ "Agent is not installed on the device" (iOS simulator)
+
+Every device verb fails on a simulator that has never had the engine's
+on-device agent, with a message like `Command failed: …/mobilecli-… agent
+status --device <udid>` followed by `Agent is not installed on the device`.
+The engine is meant to install the agent itself, but `mobilecli agent status`
+exits non-zero when it is missing and the engine treats that as a failure
+before reaching its install step
+([mobile-mcp#459](https://github.com/mobile-next/mobile-mcp/issues/459)).
+Install it once per simulator (needs network, takes about 4 seconds; mauto's
+error hint prints this command with your simulator's id filled in):
+
+```bash
+npx -y mobilecli@1.0.13 agent install --device <udid>   # udid from `mauto devices`
+```
+
+This adds a "Device Kit" app to the simulator; that is the engine's agent,
+not your app under test.
+
+### ❌ `uiautomator dump` is killed, Appium dies, or `elements` fails with "reading 'node'"
+
+On Android, `mobilecli` pushes `/data/local/tmp/mobilecli.dex` (no package is
+installed) and starts `com.mobilenext.mobilecli.DeviceServer` via
+`app_process`. That server outlives `mauto session end` and the daemon, and
+it holds the device's single UiAutomation connection — so `uiautomator dump`
+is killed (exit 137), Appium/UiAutomator2 sessions on that device are killed,
+and the legacy robot's `elements` fails with `Cannot read properties of
+undefined (reading 'node')`. Release it when you are done with mauto or
+before using another UiAutomator tool
+([mobilecli#470](https://github.com/mobile-next/mobilecli/issues/470)):
+
+```bash
+adb -s <serial> shell pkill -f com.mobilenext.mobilecli.DeviceServer
+```
 
 ### ❌ `mauto open-url myapp://…` fails with "Only http:// and https:// URLs are allowed"
 
