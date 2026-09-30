@@ -27,7 +27,9 @@ describe('DeviceBridge', () => {
       const bridge = new DeviceBridge({ call });
       const els = await bridge.listElements();
 
-      expect(calls).toEqual([['mobile_list_elements_on_screen', {}]]);
+      // mobile-mcp 1.0.5 defaults this tool to a line-per-element TEXT format;
+      // only format:"json" yields the parseable array (#199).
+      expect(calls).toEqual([['mobile_list_elements_on_screen', { format: 'json' }]]);
       expect(els).toHaveLength(1);
       expect(els[0]).toEqual({
         text: 'Login',
@@ -45,6 +47,14 @@ describe('DeviceBridge', () => {
       const els = await bridge.listElements();
       expect(els).toHaveLength(1);
       expect(els[0].center).toEqual([1, 1]);
+    });
+
+    test('rejects (never ok:true with []) when the engine answers in the 1.0.5 text format', async () => {
+      const call = async () =>
+        'One element per line: @ref Type text= label= name= value= id= at=x,y size=WxH [focused] [selected] [checked] [disabled]\n' +
+        '@e1 Button text="Login" at=10,20 size=100x40';
+      const bridge = new DeviceBridge({ call });
+      await expect(bridge.listElements()).rejects.toThrow(/could not be parsed/i);
     });
   });
 
@@ -147,12 +157,33 @@ describe('DeviceBridge', () => {
   });
 
   describe('swipe', () => {
-    test('invokes mobile_swipe_on_screen with the direction', async () => {
+    // Direction-only swipes send explicit geometry (centre ± 30%) instead of
+    // the engine default, which mobile-mcp 1.x changed to a fixed 400px (#199).
+    test('direction-only reads the screen size then sends explicit centred geometry', async () => {
       const calls = [];
-      const call = async (tool, args) => { calls.push([tool, args]); return {}; };
+      const call = async (tool, args) => {
+        calls.push([tool, args]);
+        if (tool === 'mobile_get_screen_size') return 'Screen size is 1080x2400 pixels';
+        return {};
+      };
       const bridge = new DeviceBridge({ call });
       await bridge.swipe({ direction: 'up' });
-      expect(calls).toEqual([['mobile_swipe_on_screen', { direction: 'up' }]]);
+      expect(calls).toEqual([
+        ['mobile_get_screen_size', {}],
+        ['mobile_swipe_on_screen', { direction: 'up', x: 540, y: 1920, distance: 1440 }],
+      ]);
+    });
+
+    test('direction-only on a 0x0 screen rejects and sends no swipe', async () => {
+      const calls = [];
+      const call = async (tool, args) => {
+        calls.push([tool, args]);
+        if (tool === 'mobile_get_screen_size') return { width: 0, height: 0, scale: 1 };
+        return {};
+      };
+      const bridge = new DeviceBridge({ call });
+      await expect(bridge.swipe({ direction: 'left' })).rejects.toThrow(/screen size/i);
+      expect(calls.map(([t]) => t)).toEqual(['mobile_get_screen_size']);
     });
   });
 
@@ -247,7 +278,8 @@ describe('getPlatform', () => {
 describe('getScreenSize', () => {
   test('parses mobile-mcp\'s real "Screen size is WxH pixels" string', async () => {
     const call = async (tool) => {
-      // This is the shape mobile-mcp 0.0.55 actually returns (server.js:296).
+      // This is the shape mobile-mcp returns (0.0.55 server.js:296; 1.0.5
+      // unchanged — real captures in contract-1.0.5.test.js).
       if (tool === 'mobile_get_screen_size') return 'Screen size is 1080x1920 pixels';
       return {};
     };
@@ -269,19 +301,40 @@ describe('getScreenSize', () => {
     const bridge = new DeviceBridge({ call });
     await expect(bridge.getScreenSize()).rejects.toThrow(/screen size/i);
   });
+
+  // mobile-mcp 1.0.5's mobilecli path returns {width:0,height:0,scale:1} when
+  // the size is unknown instead of throwing (#199).
+  test.each([
+    ['structured all-zero', { width: 0, height: 0, scale: 1.0 }],
+    ['structured zero height', { width: 1080, height: 0 }],
+    ['structured negative', { width: -1, height: 1920 }],
+    ['structured non-numeric', { width: 'abc', height: 1920 }],
+    ['string 0x0', 'Screen size is 0x0 pixels'],
+    ['string zero width', 'Screen size is 0x1920 pixels'],
+  ])('hard-fails on a non-positive size (%s)', async (_label, value) => {
+    const bridge = new DeviceBridge({ call: async () => value });
+    const err = await bridge.getScreenSize().then(() => null, (e) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect(err.message).toMatch(/screen size/i);
+    expect(err.hint).toMatch(/device or simulator is connected/i);
+  });
 });
 
 describe('swipe with coordinates', () => {
-  test('forwards optional x/y/distance and omits absent keys', async () => {
+  test('forwards explicit x/y/distance untouched and never reads the screen size', async () => {
     const calls = [];
     const call = async (tool, args) => { calls.push([tool, args]); return {}; };
     const bridge = new DeviceBridge({ call });
     await bridge.swipe({ direction: 'right', x: 1, y: 960, distance: 648 });
     expect(calls).toEqual([['mobile_swipe_on_screen', { direction: 'right', x: 1, y: 960, distance: 648 }]]);
+  });
 
-    calls.length = 0;
-    await bridge.swipe({ direction: 'down' });
-    expect(calls).toEqual([['mobile_swipe_on_screen', { direction: 'down' }]]);
+  test('partial explicit geometry passes through as given, absent keys omitted', async () => {
+    const calls = [];
+    const call = async (tool, args) => { calls.push([tool, args]); return {}; };
+    const bridge = new DeviceBridge({ call });
+    await bridge.swipe({ direction: 'down', x: 10, y: 20 });
+    expect(calls).toEqual([['mobile_swipe_on_screen', { direction: 'down', x: 10, y: 20 }]]);
   });
 });
 

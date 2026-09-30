@@ -89,7 +89,9 @@ Two catalogs are the single source of truth for "does this capability actually r
 | `verb` | 11 | dedicated one-shot `mauto` verb → DeviceBridge → one mobile-mcp primitive |
 | `semantic` | 4 | invoked as `mauto press <action>`, resolved per-platform by `src/device/semantic-press/` |
 | `composed` | 5 | no verb; the agent composes it from existing verbs (the execute guide documents how) |
-| `unsupported` | 3 | mobile-mcp 0.0.55 exposes no primitive (`clear_app_data`, `enable_wifi`, `disable_wifi`) — guides must **not** promise a verb |
+| `unsupported` | 3 | mobile-mcp 1.0.5 exposes no primitive (`clear_app_data`, `enable_wifi`, `disable_wifi`) — guides must **not** promise a verb |
+
+**`tests/integration/mobile-mcp-contract.test.js`** (#199) is the engine-side counterpart of `tests/lint/mobile-mcp-tool-coverage.test.js`. That lint guard pins our tool-name list to what `bridge.js` calls — both sides are our code, so it cannot see the engine move. The contract test spawns the pinned mobile-mcp, sends only `listTools` (no device needed), and fails when a tool we call disappears, a key we send is no longer accepted, or a newly required key appears that we do not send. The keys are derived by driving every `DeviceBridge` method through production's `makeCall`, not hand-restated. It exists because mobile-mcp's argument schemas are non-strict: an unknown key is dropped and the call still reports success — `bridge.screenshot` once sent `path` instead of `saveTo`, and every screenshot was a silent no-op.
 
 **`src/result/capability-catalog.js`** (#140) binds every fact a result file can carry to the result schema, the `ResultStore` method that writes it, and the `mauto result` flag that supplies it. Guard: `tests/lint/result-coverage.test.js`. This exists because `assertion_results` silently stayed empty for months — the schema had a home for it and no verb could fill it.
 
@@ -159,13 +161,13 @@ This workflow lives here (not in per-issue bodies) so it applies uniformly and s
 
 ## Releasing & version handling
 
-The package is **published on npm**; installs come from the registry. mobile-mcp is pinned as a dependency (`@mobilenext/mobile-mcp@0.0.55`) and spawned from `node_modules` — never fetched at runtime. `package.json` `files` ships only `bin/` and `src/`.
+The package is **published on npm**; installs come from the registry. mobile-mcp is pinned as a dependency (`@mobilenext/mobile-mcp@1.0.5`) and spawned from `node_modules` — never fetched at runtime. Since 1.0 it drives every device through `mobilecli`, a native binary shipped as per-platform optional dependencies (`@mobilenext/mobilecli-<os>-<arch>`, no postinstall); `MOBILEMCP_LEGACY_ROBOT=1` restores the previous adb / WDA+go-ios robots for Android and real iOS devices (#199). `package.json` `files` ships only `bin/` and `src/`.
 
 **The pipeline, as it actually behaves:**
 
 1. Merge to `main` → `auto-tag.yml` mints a **GitHub App installation token** (repo secrets `RELEASE_APP_ID` / `RELEASE_APP_PRIVATE_KEY`), reads `package.json` `version`, and pushes tag `v<version>` if it does not already exist. The App identity is load-bearing, not incidental: Actions does not start workflow runs from events raised with the default `GITHUB_TOKEN`, so a `GITHUB_TOKEN`-pushed tag lands and reaches nobody — that was [#170](https://github.com/sh3lan93/mobile-automator/issues/170), which silently killed every release between v0.22.0 and v0.23.7. Missing App secrets **hard-fail** the job rather than falling back.
 2. Tag push → `release.yml` cuts a GitHub Release with the matching `CHANGELOG.md` section. It has two other entry points: `release: [published]` (a Release created by hand in the UI, which pushes no tag and so emits no tag-push event) and `workflow_dispatch` (pick the **tag**, not a branch, in the ref dropdown). A `resolve` job rejects any ref that is not `refs/tags/vX.Y.Z`, so a manual run on a branch cannot publish `refs/heads/main` as a version.
-3. `release.yml`'s `publish-npm` job runs `npm ci` → `npm test` → `scripts/pack-smoke.sh` → `npm publish --provenance --access public` via **trusted publishing (OIDC)** — there is no `NPM_TOKEN` anywhere, the workflow's `id-token` is the credential. It upgrades npm in-job because trusted publishing needs `npm >= 11.5.1` and Node 22 ships 10.x. Only graduated tags publish (`if: !contains(needs.resolve.outputs.version, '-')` — the *resolved version*, not `github.ref`, so a hyphen elsewhere in the ref cannot fool it), so `-rc.N` tags are never published.
+3. `release.yml`'s `publish-npm` job runs `npm ci` → `npm test` → `scripts/pack-smoke.sh` (which ends with `mauto devices` from the packed tarball — the only step that starts the pinned engine and resolves its `mobilecli` binary) → `npm publish --provenance --access public` via **trusted publishing (OIDC)** — there is no `NPM_TOKEN` anywhere, the workflow's `id-token` is the credential. It upgrades npm in-job because trusted publishing needs `npm >= 11.5.1` and Node 22 ships 10.x. Only graduated tags publish (`if: !contains(needs.resolve.outputs.version, '-')` — the *resolved version*, not `github.ref`, so a hyphen elsewhere in the ref cannot fool it), so `-rc.N` tags are never published.
 
 **Four things worth knowing:**
 
@@ -193,10 +195,10 @@ npm run test:unit         # tests/unit
 npm run test:integration  # tests/integration (CLI smoke over the real binary)
 npm run lint:guides       # every lint guard in tests/lint (guide, skill, coverage, drift)
 npm run lint:schema-additive
-./scripts/pack-smoke.sh   # install the packed tarball and exercise the bin — CI gates on this
+./scripts/pack-smoke.sh   # install the packed tarball and exercise the bin, incl. `mauto devices` against the real engine — CI gates on this
 ```
 
-The mobile-mcp version is pinned in `package.json` (`@mobilenext/mobile-mcp`) and resolved from `node_modules` at runtime (see `src/device/mobile-mcp-client.js`). Bump the pin there if you need a newer engine.
+The mobile-mcp version is pinned in `package.json` (`@mobilenext/mobile-mcp`, 1.0.5) and resolved from `node_modules` at runtime (see `src/device/mobile-mcp-client.js`). Bump the pin there if you need a newer engine, then run `npm run test:integration` — `mobile-mcp-contract.test.js` fails if the new engine's tool schemas no longer match what `DeviceBridge` sends. The session daemon keeps one mobile-mcp process alive and mobile-mcp caches its robot per device for that process's life, so after changing any `MOBILEMCP_*` env var run `mauto session end` before the next verb.
 
 Note: `jest.config` `testPathIgnorePatterns` must stay `<rootDir>`-anchored — an unanchored pattern makes `npm test` silently match zero tests inside a worktree checkout.
 
@@ -206,6 +208,8 @@ Tracked under the `production-ready` milestone; worth knowing before you debug s
 
 - Windows is silently unsupported: the session daemon binds a Unix domain socket — #165.
 - No JavaScript linter is configured (no ESLint config, dep, or script) — #164.
+- iOS simulators fail every verb with "Agent is not installed on the device" until a one-time `npx -y mobilecli@<pinned> agent install --device <udid>`; the engine's auto-install is unreachable — upstream [mobile-mcp#459](https://github.com/mobile-next/mobile-mcp/issues/459). `src/device/engine-hints.js` prints the command.
+- On Android, mobilecli's `DeviceServer` outlives the session and holds UiAutomation (kills `uiautomator dump`, Appium, legacy `elements`); release with `adb shell pkill -f com.mobilenext.mobilecli.DeviceServer` — upstream [mobilecli#470](https://github.com/mobile-next/mobilecli/issues/470).
 
 ## Conventions
 
@@ -215,4 +219,4 @@ Tracked under the `production-ready` milestone; worth knowing before you debug s
 
 ## Metadata
 
-Repo: https://github.com/sh3lan93/mobile-automator · Version: see `package.json` (0.24.0 at last edit) · License: Apache 2.0 (note: `LICENSE` currently ships a stub, not the full text — #160) · Status: published on npm since v0.23.8 (2026-08-30).
+Repo: https://github.com/sh3lan93/mobile-automator · Version: see `package.json` (0.27.0 at last edit) · License: Apache 2.0 (note: `LICENSE` currently ships a stub, not the full text — #160) · Status: published on npm since v0.23.8 (2026-08-30).

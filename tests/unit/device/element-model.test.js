@@ -115,9 +115,43 @@ describe('parseElements', () => {
   test('handles the {elements:[...]} envelope', () => {
     expect(parseElements({ elements: [{ label: 'y' }] })).toEqual([{ label: 'y' }]);
   });
-  test('returns [] for unparseable input', () => {
-    expect(parseElements('totally not elements')).toEqual([]);
+  // Non-string, non-array values carry no element text at all, so [] is honest.
+  test('returns [] for null / non-string non-array input', () => {
     expect(parseElements(null)).toEqual([]);
+    expect(parseElements(undefined)).toEqual([]);
+    expect(parseElements(42)).toEqual([]);
+    expect(parseElements({ nope: true })).toEqual([]);
+  });
+  test('returns [] for an empty / whitespace-only string', () => {
+    expect(parseElements('')).toEqual([]);
+    expect(parseElements('  \n ')).toEqual([]);
+  });
+  test('accepts a genuinely empty screen', () => {
+    expect(parseElements('Found these elements on screen: []')).toEqual([]);
+  });
+  // Previously this returned [] silently, which surfaced as `ok:true` with an
+  // empty screen and sent the failure probe after the app (#199).
+  test('throws on non-empty text it cannot parse', () => {
+    expect(() => parseElements('totally not elements')).toThrow(/element list could not be parsed/i);
+  });
+  test('throws on the mobile-mcp 1.0.5 text format, with an excerpt and a hint', () => {
+    const TEXT_1_0_5 =
+      'One element per line: @ref Type text= label= name= value= id= at=x,y size=WxH [focused] [selected] [checked] [disabled]\n' +
+      '@e1 Button text="Login" at=10,20 size=100x40';
+    let err;
+    try { parseElements(TEXT_1_0_5); } catch (e) { err = e; }
+    expect(err).toBeInstanceOf(Error);
+    expect(err.message).toMatch(/element list could not be parsed/i);
+    expect(err.message).toContain('One element per line');
+    // Excerpt is truncated so a huge dump never floods the envelope.
+    expect(err.message).not.toContain('@e1 Button');
+    expect(err.hint).toMatch(/output format/i);
+  });
+  test('truncates a long unparseable payload to a short excerpt', () => {
+    const long = 'x'.repeat(5000);
+    let err;
+    try { parseElements(long); } catch (e) { err = e; }
+    expect(err.message.length).toBeLessThan(300);
   });
   test('tolerates labels containing brackets/quotes', () => {
     const tricky = 'Found these elements on screen: ' + JSON.stringify([{ label: 'a]b"c', coordinates: { x: 0, y: 0, width: 1, height: 1 } }]);

@@ -4,6 +4,7 @@ const { normalize, parseElements } = require('./element-model');
 const { normalizeDevices } = require('./device-model');
 const { normalizeCrashes } = require('./crash-model');
 const { resolveSingleDevice } = require('./device-resolver');
+const { centredSwipe } = require('./swipe-geometry');
 
 // Thin wrapper over an injected mobile-mcp `call(toolName, args)` function.
 // Returns the agnostic element model and exposes only the primitives the CLI needs.
@@ -24,8 +25,11 @@ class DeviceBridge {
     return normalizeDevices(result);
   }
 
+  // format:"json" is required from mobile-mcp 1.0.5, which defaults this tool
+  // to a line-per-element text format parseElements cannot read (#199). 0.0.55
+  // ignores the unknown key (its zod schema is non-strict), so it is safe on both.
   async listElements() {
-    const result = await this._call('mobile_list_elements_on_screen', {});
+    const result = await this._call('mobile_list_elements_on_screen', { format: 'json' });
     return normalize(parseElements(result));
   }
 
@@ -62,10 +66,26 @@ class DeviceBridge {
     return this._call('mobile_type_keys', { text, submit: false });
   }
 
-  // Swipe in a cardinal direction. Optional x/y set the start point and
-  // distance the travel — used by the iOS edge-swipe back gesture. Absent keys
-  // are not sent so the cardinal-from-center default is preserved.
+  // Swipe in a cardinal direction.
+  //
+  // Direction-only (x, y and distance all undefined): mauto sends explicit
+  // centre ± 30% geometry from centredSwipe rather than trusting the engine
+  // default, which mobile-mcp 1.x changed from that proportional travel to a
+  // fixed 400px on Android and real iOS (#199; see swipe-geometry.js). This
+  // costs one extra mobile_get_screen_size round trip per direction-only swipe
+  // — acceptable because each verb is one-shot and swipes are not hot-path, so
+  // no caching. getScreenSize throws on a zero/unreadable size, so a 0x0 screen
+  // can never produce a degenerate swipe.
+  //
+  // Any explicit key (e.g. the iOS edge-swipe back's x/y/distance) means the
+  // caller owns the geometry: everything given is passed through as-is and
+  // absent keys are not sent — including partial input such as x,y without
+  // distance, which leaves the travel to the engine exactly as before.
   async swipe({ direction, x, y, distance } = {}) {
+    if (x === undefined && y === undefined && distance === undefined) {
+      const geometry = centredSwipe(await this.getScreenSize(), direction);
+      return this._call('mobile_swipe_on_screen', { direction, ...geometry });
+    }
     const args = { direction };
     if (x !== undefined) args.x = x;
     if (y !== undefined) args.y = y;
@@ -92,18 +112,25 @@ class DeviceBridge {
   // object), so we parse the WxH out of it; a structured {width,height} shape is
   // also accepted in case a future engine returns one. An unreadable size is a
   // hard error — never silently 0/NaN, which would make geometry gestures no-ops.
+  // That includes a READABLE zero: mobile-mcp 1.0.5's mobilecli path returns
+  // {width:0,height:0,scale:1} for an unknown size instead of throwing (#199).
   async getScreenSize() {
     const r = await this._call('mobile_get_screen_size', {});
+    let size = null;
     if (r && typeof r === 'object' && r.width != null && r.height != null) {
-      return { width: Number(r.width), height: Number(r.height) };
+      size = { width: Number(r.width), height: Number(r.height) };
+    } else {
+      const m = /(\d+)\s*x\s*(\d+)/i.exec(String(r));
+      if (m) size = { width: Number(m[1]), height: Number(m[2]) };
     }
-    const m = /(\d+)\s*x\s*(\d+)/i.exec(String(r));
-    if (!m) {
-      const err = new Error(`Could not read the device screen size from "${r}".`);
+    const positive = (n) => Number.isFinite(n) && n > 0;
+    if (!size || !positive(size.width) || !positive(size.height)) {
+      const shown = r && typeof r === 'object' ? JSON.stringify(r) : String(r);
+      const err = new Error(`Could not read the device screen size from "${shown}".`);
       err.hint = 'Ensure a device or simulator is connected.';
       throw err;
     }
-    return { width: Number(m[1]), height: Number(m[2]) };
+    return size;
   }
 
   // Press a hardware/system button (BACK, HOME, ENTER, ...).

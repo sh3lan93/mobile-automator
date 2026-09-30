@@ -1,6 +1,8 @@
 'use strict';
 
-// mobile-mcp 0.0.55 requires `device` on every tool EXCEPT the discovery verb.
+// mobile-mcp 1.0.5 requires `device` on every tool EXCEPT the discovery verb;
+// tests/integration/mobile-mcp-contract.test.js enforces this against the
+// pinned engine's own tool schemas.
 // Centralizing the injection (and its one exception) here keeps every call
 // site correct. Pure + non-mutating so it is trivially testable.
 const NO_DEVICE_TOOLS = new Set(['mobile_list_available_devices']);

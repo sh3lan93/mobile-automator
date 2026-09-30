@@ -1,16 +1,1 @@
-[
-  {
-    "ghsa": "GHSA-f88m-g3jw-g9cj",
-    "package": "sharp",
-    "reason": "sharp@0.34.5 (libvips CVEs) arrives only via @mobilenext/mobile-mcp@0.0.55 -> mobilewright -> @mobilewright/core; every 0.0.x mobile-mcp is affected and 1.0.5 changes the elements output format. sharp decodes screenshots produced by the user's own device, not untrusted network input.",
-    "issue": 199,
-    "expires": "2026-12-27"
-  },
-  {
-    "ghsa": "GHSA-rgj7-g3m4-5g8c",
-    "package": "sharp",
-    "reason": "sharp@0.34.5 (libheif) — same path and exposure as GHSA-f88m-g3jw-g9cj.",
-    "issue": 199,
-    "expires": "2026-12-27"
-  }
-]
+[]
