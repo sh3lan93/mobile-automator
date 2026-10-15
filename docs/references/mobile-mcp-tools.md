@@ -14,7 +14,9 @@ verbs that execute them, and the mobile-mcp engine primitives those verbs wrap.
 ## Tool Mapping
 
 Each scenario action is executed by a `mauto` verb, which internally calls the
-mobile-mcp engine primitive shown below:
+mobile-mcp engine primitive shown below. The engine is pinned at
+`@mobilenext/mobile-mcp` 1.0.5; every tool except `mobile_list_available_devices`
+takes a `device` id, which `mauto` injects for you.
 
 | Scenario Action   | `mauto` Verb            | Internal mobile-mcp Engine Tool              | Description |
 |-------------------|-------------------------|----------------------------------------------|-------------|
@@ -24,9 +26,9 @@ mobile-mcp engine primitive shown below:
 | `swipe`           | `mauto swipe`           | `mobile_swipe_on_screen`                     | Swipe in a direction (up, down, left, right) |
 | `press_button`    | `mauto press <button>`  | `mobile_press_button`                        | Press hardware/system buttons (back, home) |
 | `wait`            | (use delay/polling)     | (use delay/polling)                          | Wait for a condition or duration |
-| `open_url`        | `mauto open-url`        | `mobile_open_url`                            | Open a URL in the device browser |
-| (screenshot)      | `mauto screenshot`      | `mobile_take_screenshot` / `mobile_save_screenshot` | Capture screenshot for verification |
-| (find element)    | `mauto elements`        | `mobile_list_elements_on_screen`             | List all interactive elements on screen |
+| `open_url`        | `mauto open-url`        | `mobile_open_url`                            | Open an `http(s)` URL; other schemes need `MOBILEMCP_ALLOW_UNSAFE_URLS=1` ([#212](https://github.com/sh3lan93/mobile-automator/issues/212)) |
+| (screenshot)      | `mauto screenshot`      | `mobile_save_screenshot`                     | Save a screenshot to a file for verification |
+| (find element)    | `mauto elements`        | `mobile_list_elements_on_screen`             | List all interactive elements on screen (called with `format: "json"` — 1.0.5 defaults to a text format) |
 
 ## Common Usage Patterns
 
@@ -40,7 +42,7 @@ Use `mobile_take_screenshot()` and `mobile_list_elements_on_screen()` in a polli
 
 ### Screenshot Comparison
 - `mobile_take_screenshot()` - Returns screenshot data directly
-- `mobile_save_screenshot(path)` - Saves screenshot to specified path for later comparison
+- `mobile_save_screenshot({ saveTo })` - Saves screenshot to the given path (`.png`/`.jpg`/`.jpeg`) for later comparison — `mauto screenshot` uses this
 
 ## Platform-Specific Notes
 

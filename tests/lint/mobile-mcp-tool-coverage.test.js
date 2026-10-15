@@ -10,6 +10,10 @@
 // calls, in BOTH directions: a new bridge call that forgets the set records no
 // tool name at all (silent metric loss), and a stale entry is a lie about what
 // mauto does.
+//
+// Both sides of this guard are OUR code. Its engine-side counterpart,
+// tests/integration/mobile-mcp-contract.test.js, checks the same set against
+// the pinned mobile-mcp's own tool list and argument schemas.
 
 const fs = require('fs');
 const path = require('path');

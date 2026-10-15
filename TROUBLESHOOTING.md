@@ -72,6 +72,114 @@ Then re-run `mauto devices` to confirm it now appears.
 - The generate/execute workflows will offer to build and install
 - Or install manually before running tests
 
+### ❌ "mobilecli is not available or not working properly"
+
+Every device verb fails with this message. The device engine (mobile-mcp
+1.0.5) drives devices through `mobilecli`, a native binary installed as a
+per-platform optional dependency (`@mobilenext/mobilecli-<os>-<arch>`). If
+that package is missing — an install with `--omit=optional`, or some pnpm
+layouts — the engine has nothing to run.
+
+```bash
+npm i -g mobile-automator                     # reinstall WITHOUT --omit=optional
+export MOBILECLI_PATH=/path/to/mobilecli      # or point at a working binary
+mauto session end                             # the next verb picks it up
+mauto devices
+```
+
+### ❌ Swipes, element lists or gestures behave differently after upgrading to 0.27
+
+0.27 moved the device engine to mobile-mcp 1.0.5, which drives every device
+through `mobilecli` instead of the previous robots (adb on Android, WDA +
+go-ios on real iOS devices). To compare against the previous robots, opt back
+in and restart the session — the engine picks its robot once per device and
+keeps it for the life of the session daemon. On Android, release the
+`mobilecli` agent first (see the "`uiautomator dump` is killed" entry below),
+or the legacy robot's `elements` fails with `Cannot read properties of
+undefined (reading 'node')`:
+
+```bash
+mauto session end
+adb -s <serial> shell pkill -f com.mobilenext.mobilecli.DeviceServer   # Android only
+export MOBILEMCP_LEGACY_ROBOT=1
+mauto devices                                 # new daemon, legacy robot
+mauto devices use <id>                        # ids change between robots
+```
+
+Switching robots changes Android emulator ids (AVD name vs adb serial — see
+the next entry), so re-select the device with `mauto devices use`. In legacy
+mode `mauto crash list` fails with `device not found: emulator-5554` and the
+failure probe gathers no crash evidence: crash reports still go through
+`mobilecli`, which does not know the adb-serial id.
+
+iOS simulators use `mobilecli` either way. If the legacy robot behaves
+correctly and the default does not, please report the difference — with the
+verb, platform and both envelopes — on a
+[new issue](https://github.com/sh3lan93/mobile-automator/issues/new) referencing
+[#199](https://github.com/sh3lan93/mobile-automator/issues/199).
+
+### ❌ `Device "emulator-5554" not found` after upgrading to 0.27
+
+Every verb fails with this even though the emulator is running. The 0.27
+engine lists Android emulators by AVD name (`Pixel_9_Pro`), while
+`MOBILEMCP_LEGACY_ROBOT=1` and mauto before 0.27 used the adb serial
+(`emulator-5554`); each rejects the other's id. A device pinned with
+`mauto devices use` (or a `--device` in a script) from before the upgrade is
+now unknown. Re-select it — iOS simulator UDIDs are the same either way:
+
+```bash
+mauto devices                  # ids as the current engine sees them
+mauto devices use Pixel_9_Pro  # or pass that id to --device
+```
+
+### ❌ "Agent is not installed on the device" (iOS simulator)
+
+Every device verb fails on a simulator that has never had the engine's
+on-device agent, with a message like `Command failed: …/mobilecli-… agent
+status --device <udid>` followed by `Agent is not installed on the device`.
+The engine is meant to install the agent itself, but `mobilecli agent status`
+exits non-zero when it is missing and the engine treats that as a failure
+before reaching its install step
+([mobile-mcp#459](https://github.com/mobile-next/mobile-mcp/issues/459)).
+Install it once per simulator (needs network, takes about 4 seconds; mauto's
+error hint prints this command with your simulator's id filled in):
+
+```bash
+npx -y mobilecli@1.0.13 agent install --device <udid>   # udid from `mauto devices`
+```
+
+This adds a "Device Kit" app to the simulator; that is the engine's agent,
+not your app under test.
+
+### ❌ `uiautomator dump` is killed, Appium dies, or `elements` fails with "reading 'node'"
+
+On Android, `mobilecli` pushes `/data/local/tmp/mobilecli.dex` (no package is
+installed) and starts `com.mobilenext.mobilecli.DeviceServer` via
+`app_process`. That server outlives `mauto session end` and the daemon, and
+it holds the device's single UiAutomation connection — so `uiautomator dump`
+is killed (exit 137), Appium/UiAutomator2 sessions on that device are killed,
+and the legacy robot's `elements` fails with `Cannot read properties of
+undefined (reading 'node')`. Release it when you are done with mauto or
+before using another UiAutomator tool
+([mobilecli#470](https://github.com/mobile-next/mobilecli/issues/470)):
+
+```bash
+adb -s <serial> shell pkill -f com.mobilenext.mobilecli.DeviceServer
+```
+
+### ❌ `mauto open-url myapp://…` fails with "Only http:// and https:// URLs are allowed"
+
+The device engine rejects non-web URLs unless you opt in. Deep links need:
+
+```bash
+mauto session end
+export MOBILEMCP_ALLOW_UNSAFE_URLS=1
+mauto open-url myapp://path
+```
+
+Whether mauto should handle this for you is
+[#212](https://github.com/sh3lan93/mobile-automator/issues/212).
+
 ### ❌ "failed to start the device session daemon"
 
 Device verbs share one background daemon per workspace. When it cannot start,
@@ -90,7 +198,7 @@ The log is appended across spawns and rotates to `daemon.log.1` once it passes
 
 **There are two log artifacts, and they answer different questions.**
 `.session/daemon.log` is raw process output — the daemon's own stderr plus the
-mobile-mcp engine's adb/simctl chatter — meant for a human to read top to
+mobile-mcp engine's own stderr (its tool invocations and device tooling) — meant for a human to read top to
 bottom. `.logs/daemon.ndjson` is one JSON object per line, carrying per-call
 latencies, timeout counts, mobile-mcp error kinds, and the daemon's lifecycle
 events (`daemon.start`, `daemon.lock_conflict`, `daemon.connect_failure`,
@@ -174,7 +282,9 @@ grep -E '"event":"crash\.' mobile-automator/.logs/mauto.ndjson
 
 ### ❔ "Is mauto sending anything anywhere?"
 
-Not unless you turned it on.
+Two separate answers: mauto's own telemetry, and the device engine's.
+
+**mauto's own telemetry** is opt-in — nothing is sent unless you turned it on.
 
 ```bash
 mauto telemetry status                          # on/off, endpoint, exact field list
@@ -189,6 +299,22 @@ If it is growing and never draining, the daemon is not running (it is what
 uploads) or the network is unreachable. `mauto telemetry flush` drains it
 synchronously and reports what happened. `mauto telemetry disable` stops it
 being written at all.
+
+**The device engine** (mobile-mcp, which mauto runs to drive devices) has its
+own telemetry, on by default and independent of the above: a PostHog event per
+device call (`tool_invoked` / `tool_failed` — tool name, duration, device
+counts), and since mobile-mcp 1.0.5 a scarf.sh pixel fetched once per engine
+process. `mauto telemetry` neither controls nor reports it. To turn it off,
+set this before the session daemon starts:
+
+```bash
+mauto session end
+export MOBILEMCP_DISABLE_TELEMETRY=1
+mauto devices                                 # new daemon, engine telemetry off
+```
+
+Whether mauto should set this by default is
+[#213](https://github.com/sh3lan93/mobile-automator/issues/213).
 
 ---
 
