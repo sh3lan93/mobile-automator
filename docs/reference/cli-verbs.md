@@ -143,8 +143,8 @@ Device verbs are backed by a single persistent mobile-mcp session daemon. These 
 | Verb | Description |
 |------|-------------|
 | `mauto session start [--device <id>] [--idle <ms>]` | Start the persistent session daemon (idempotent; returns `already_running: true` if alive) |
-| `mauto session status` | Report `{ running, in_flight, device, log_path }` — `log_path` is reported whether or not a daemon is up |
-| `mauto session end` | Stop the daemon and remove the socket / pidfile |
+| `mauto session status` | Report `{ running, reason, in_flight, device, log_path }` — `log_path` is reported whether or not a daemon is up; `reason` is `engine_exited` when a reachable daemon's device engine has died (it is shutting down and the next verb starts a fresh one), otherwise `null` |
+| `mauto session end` | Stop the daemon and wait until it has exited. A daemon still alive 35s after acknowledging is terminated (`forced: true`). Fails with `kind: device` and the `pid` if the daemon cannot be stopped |
 | `mauto devices` | List connected devices/simulators (id / name / platform / state) |
 | `mauto devices use <id>` | Validate the id against the live list, then persist the selection |
 | `mauto devices clear` | Remove the persisted selection |
