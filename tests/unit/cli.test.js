@@ -1317,18 +1317,52 @@ describe('cli handlers', () => {
     });
   });
 
-  describe('handleSessionEnd', () => {
-    test('stopped:true when a daemon acknowledged shutdown', async () => {
-      const r = await handleSessionEnd({ projectRoot: '/x', client: { requestShutdown: async () => true } });
+  describe('handleSessionEnd (#156)', () => {
+    // Stub connection.endSession's dependencies so it returns a chosen outcome.
+    function run(outcome) {
+      const reaper = {
+        waitForDeath: async () => outcome !== 'escalated' && outcome !== 'survived',
+        terminate: async () => (outcome === 'escalated' ? 'dead' : 'survived'),
+      };
+      return handleSessionEnd({
+        projectRoot: '/x',
+        client: { requestShutdown: async () => outcome !== 'none' },
+        end: {
+          readPid: () => (outcome === 'none' ? null : 4000),
+          identify: () => 'ours',
+          reaper,
+        },
+      });
+    }
+
+    test('stopped cleanly: ok, forced:false, no hint', async () => {
+      const r = await run('clean');
       expect(r.exitKind).toBe('ok');
-      expect(r.envelope.data.stopped).toBe(true);
-      expect(r.envelope.data.already_stopped).toBe(false);
+      expect(r.envelope.data).toEqual({ stopped: true, already_stopped: false, forced: false });
+      expect(r.envelope.hint).toBeUndefined();
     });
 
-    test('already_stopped:true when no daemon was reachable', async () => {
-      const r = await handleSessionEnd({ projectRoot: '/x', client: { requestShutdown: async () => false } });
-      expect(r.envelope.data.stopped).toBe(false);
-      expect(r.envelope.data.already_stopped).toBe(true);
+    test('stopped by escalation: ok, forced:true, hint names the pid', async () => {
+      const r = await run('escalated');
+      expect(r.exitKind).toBe('ok');
+      expect(r.envelope.data).toEqual({ stopped: true, already_stopped: false, forced: true });
+      expect(r.envelope.hint).toContain('terminated pid 4000');
+    });
+
+    test('nothing running: ok, already_stopped', async () => {
+      const r = await run('none');
+      expect(r.exitKind).toBe('ok');
+      expect(r.envelope.data).toEqual({ stopped: false, already_stopped: true, forced: false });
+    });
+
+    test('survivor: fail(device) with the pid, pidfile and log in the hint', async () => {
+      const r = await run('survived');
+      expect(r.exitKind).toBe('device');
+      expect(r.envelope.ok).toBe(false);
+      expect(r.envelope.error.message).toBe('device session daemon pid 4000 did not exit');
+      expect(r.envelope.data).toEqual({ stopped: false, already_stopped: false, pid: 4000 });
+      expect(r.envelope.hint).toContain(sessionPaths.pidFilePath('/x'));
+      expect(r.envelope.hint).toContain(sessionPaths.logFilePath('/x'));
     });
   });
 

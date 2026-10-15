@@ -14,3 +14,13 @@ describe('daemon/client timeout invariant (#149)', () => {
     expect(sessionClient.DEFAULT_TIMEOUT_MS).toBeGreaterThan(sessionDaemon.DAEMON_CALL_TIMEOUT_MS);
   });
 });
+
+// #156: `session end` must outwait a daemon that is legitimately finishing —
+// a drain bounded by the daemon call timeout, then the SDK's ~4s close ladder —
+// before it concludes the daemon is stuck and escalates.
+describe('session end budget invariant (#156)', () => {
+  test('END_BUDGET > DAEMON_CALL_TIMEOUT + SDK close escalation', () => {
+    const { END_BUDGET_MS } = require('../../../src/device/connection');
+    expect(END_BUDGET_MS).toBeGreaterThan(sessionDaemon.DAEMON_CALL_TIMEOUT_MS + 4000);
+  });
+});

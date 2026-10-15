@@ -793,4 +793,4 @@ async function startDaemon({
   };
 }
 
-module.exports = { startDaemon, cleanStale, pidAlive, pidIdentity, DAEMON_CALL_TIMEOUT_MS, DEFAULT_IDLE_MS };
+module.exports = { startDaemon, cleanStale, pidAlive, pidIdentity, readPidFile, DAEMON_CALL_TIMEOUT_MS, DEFAULT_IDLE_MS };
