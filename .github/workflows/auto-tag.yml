@@ -26,11 +26,11 @@ jobs:
       # multiline PEM and would break the shell if pasted into the script body.
       - name: Fail early if the release App is not configured
         env:
-          APP_ID: ${{ secrets.RELEASE_APP_ID }}
+          APP_CLIENT_ID: ${{ secrets.RELEASE_APP_CLIENT_ID }}
           APP_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
         run: |
           MISSING=""
-          if [ -z "$APP_ID" ]; then MISSING="$MISSING RELEASE_APP_ID"; fi
+          if [ -z "$APP_CLIENT_ID" ]; then MISSING="$MISSING RELEASE_APP_CLIENT_ID"; fi
           if [ -z "$APP_PRIVATE_KEY" ]; then MISSING="$MISSING RELEASE_APP_PRIVATE_KEY"; fi
 
           if [ -n "$MISSING" ]; then
@@ -41,23 +41,22 @@ jobs:
             echo "  trigger release.yml — the exact invisible breakage of #170."
             echo ""
             echo "  Create a GitHub App with Repository permissions > Contents: Read"
-            echo "  and write, install it on this repo, then add its App ID and"
-            echo "  private key as the secrets above."
+            echo "  and write, install it on this repo, then add its Client ID"
+            echo "  (Iv23li…, NOT the numeric App ID) and private key as the"
+            echo "  secrets above."
             exit 1
           fi
           echo "✅ Release App secrets present."
 
       - name: Mint a GitHub App installation token
         id: app-token
-        # v3 keeps `app-id` working but marks it deprecated in favour of
-        # `client-id`. Those are DIFFERENT identifiers — the App ID is numeric,
-        # the Client ID looks like `Iv23li…` — so migrating means storing a new
-        # secret value, not renaming this input. Passing RELEASE_APP_ID as
-        # `client-id` would fail auth and silently stop tagging. Staying on
-        # `app-id` until that secret exists. See #182.
+        # `client-id`, not the deprecated `app-id` (#182). They are DIFFERENT
+        # identifiers — the App ID is numeric, the Client ID looks like
+        # `Iv23li…` — so RELEASE_APP_CLIENT_ID must hold the Client ID. A wrong
+        # value fails this step loudly; it cannot fall back to GITHUB_TOKEN.
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets.RELEASE_APP_ID }}
+          client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
 
       - name: Checkout code
