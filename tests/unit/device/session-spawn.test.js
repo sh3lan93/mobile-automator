@@ -196,4 +196,75 @@ describe('session-spawn', () => {
     // closing before the loop would silently drop the write above.
     expect(log.closes).toBe(1);
   });
+  // #156: a running ChildProcess has exitCode === null AND signalCode === null.
+  // The existing fakeChild() leaves both undefined, i.e. "not a live child".
+  function liveChild(pid = 5151) {
+    return { ...fakeChild(pid), exitCode: null, signalCode: null };
+  }
+
+  test('readiness timeout terminates the live child and logs it', async () => {
+    const log = fakeLog();
+    const terminated = [];
+    const ok = await spawnDaemon({
+      projectRoot: '/proj',
+      spawn: () => liveChild(5151),
+      openLog: () => log,
+      isAlive: async () => false,
+      terminate: async (pid) => { terminated.push(pid); return 'dead'; },
+      pollMs: 5,
+      readyTimeoutMs: 30,
+    });
+    expect(ok).toBe(false);
+    expect(terminated).toEqual([5151]);
+    expect(log.writes.join('')).toContain('daemon not ready after 30ms; terminated pid=5151 (dead)');
+    expect(log.closes).toBe(1);
+  });
+
+  test('readiness timeout leaves an already-exited child alone (ELOCKED loser)', async () => {
+    const terminated = [];
+    const ok = await spawnDaemon({
+      projectRoot: '/proj',
+      spawn: () => ({ ...fakeChild(5152), exitCode: 1, signalCode: null }),
+      openLog: () => fakeLog(),
+      isAlive: async () => false,
+      terminate: async (pid) => { terminated.push(pid); return 'dead'; },
+      pollMs: 5,
+      readyTimeoutMs: 30,
+    });
+    expect(ok).toBe(false);
+    expect(terminated).toEqual([]);
+  });
+
+  test('a spawn error never terminates anything', async () => {
+    const terminated = [];
+    const child = Object.assign(new EventEmitter(), liveChild(5153));
+    const ok = await spawnDaemon({
+      projectRoot: '/proj',
+      spawn: () => {
+        setImmediate(() => child.emit('error', new Error('EACCES')));
+        return child;
+      },
+      openLog: () => fakeLog(),
+      isAlive: async () => false,
+      terminate: async (pid) => { terminated.push(pid); return 'dead'; },
+      pollMs: 5,
+      readyTimeoutMs: 200,
+    });
+    expect(ok).toBe(false);
+    expect(terminated).toEqual([]);
+  });
+
+  test('a ready daemon is never terminated', async () => {
+    const terminated = [];
+    const ok = await spawnDaemon({
+      projectRoot: '/proj',
+      spawn: () => liveChild(5154),
+      openLog: () => fakeLog(),
+      isAlive: async () => true,
+      terminate: async (pid) => { terminated.push(pid); return 'dead'; },
+      pollMs: 1,
+    });
+    expect(ok).toBe(true);
+    expect(terminated).toEqual([]);
+  });
 });

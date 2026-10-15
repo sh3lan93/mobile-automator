@@ -12,6 +12,7 @@ const childProcess = require('child_process');
 
 const sessionClient = require('./session-client');
 const sessionLog = require('./session-log');
+const reaper = require('./process-reaper');
 
 const DAEMON_BIN = path.join(__dirname, '..', '..', 'bin', 'mauto-session-daemon.js');
 const DEFAULT_READY_TIMEOUT_MS = 15000;
@@ -31,6 +32,10 @@ async function spawnDaemon({
   pollMs = DEFAULT_POLL_MS,
   isAlive = sessionClient.isAlive,
   openLog = sessionLog.openDaemonLog,
+  // Kills a daemon that never became ready (#156). group:true reaches the
+  // daemon AND its mobile-mcp engine: `detached: true` below makes the daemon
+  // a process-group leader, and the engine is spawned into its group.
+  terminate = (pid) => reaper.terminate(pid, { group: true }),
 } = {}) {
   if (!projectRoot) throw new TypeError('spawnDaemon requires projectRoot');
 
@@ -79,6 +84,18 @@ async function spawnDaemon({
       if (spawnError) return false;
       if (await isAlive(projectRoot)) return true;
       await sleep(pollMs);
+    }
+
+    // Not ready in time. Without this the child lives on — typically still
+    // inside createCall, holding the O_EXCL lock — and every later verb burns
+    // its own readiness window against it (#156). Only OUR child, and only if
+    // it is still running: an ELOCKED spawn-race loser has already exited and
+    // must never signal anything. Node tracked this exact child, so its state
+    // needs no pidIdentity check and has no pid-reuse window.
+    if (child && child.pid && child.exitCode === null && child.signalCode === null) {
+      const outcome = await terminate(child.pid);
+      // The parent is the only witness to this kill — write it down (#163).
+      log.write(`mauto: daemon not ready after ${readyTimeoutMs}ms; terminated pid=${child.pid} (${outcome})\n`);
     }
     return false;
   } finally {

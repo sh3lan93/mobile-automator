@@ -10,7 +10,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { pidIdentity, cleanStale } = require('../../../src/device/session-daemon');
+const { pidIdentity, cleanStale, startDaemon } = require('../../../src/device/session-daemon');
 const paths = require('../../../src/device/session-paths');
 
 function tmpRoot() {
@@ -82,5 +82,24 @@ describe('cleanStale with pid identity (#150)', () => {
     expect(r.cleaned).toBe(false);
     expect(r.livePid).toBe(process.ppid);
     expect(fs.existsSync(paths.socketPath(root))).toBe(true);
+  });
+});
+
+// #156: a daemon SIGTERMed during createCall has no handler installed yet, so it
+// dies without its 'exit' cleanup and leaves its lock behind. The next start
+// must treat that lock as stale (dead pid), not as a held lock.
+describe('stale lock from a daemon killed mid-startup (#156)', () => {
+  test('a lock left by a dead daemon does not block the next start', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-deadlock-'));
+    fs.mkdirSync(paths.sessionDir(root), { recursive: true });
+    const dead = require('child_process').spawnSync(process.execPath, ['-e', '']).pid;
+    fs.writeFileSync(paths.lockPath(root), `${dead}\n`);
+
+    const daemon = await startDaemon({
+      projectRoot: root,
+      createCall: async () => ({ call: async () => ({}), close: async () => {} }),
+    });
+    expect(fs.readFileSync(paths.lockPath(root), 'utf8').trim()).toBe(String(process.pid));
+    await daemon.stop();
   });
 });
