@@ -77,8 +77,8 @@ this table and that catalog disagree.
 | `session_id` | A random id regenerated every time the device daemon starts. Not persisted, not derived from your machine. |
 | `tool` | The mobile-mcp primitive behind the verb, checked against a pinned allowlist. |
 | `call_id` | A monotonic per-call counter minted by the daemon, scoped to one daemon lifetime — pairs `call.start` and `call.end`. |
-| `stop_reason` | Why the daemon stopped: `idle`, `signal`, `shutdown`, `crash`, `explicit`. |
-| `error_code` | A Node/libuv errno string such as `EACCES`. |
+| `stop_reason` | Why the daemon stopped: `idle`, `signal`, `shutdown`, `crash`, `explicit`, `engine_exit` (the device engine died under it). |
+| `error_code` | A Node/libuv errno string such as `EACCES`, or one of mauto's own: `ELOCKED`, `ENGINE_CONNECT_TIMEOUT`, `ENGINE_EXITED`. |
 | `crash_count` | Integer count of crash reports observed. |
 | `msg_id` | A random per-event id used to deduplicate a re-sent batch. Never reused, so it cannot correlate two events. |
 | `count` | An integer count, e.g. a batch size. |

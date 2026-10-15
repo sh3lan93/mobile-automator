@@ -120,10 +120,10 @@ const EVENT_FIELDS = {
   // src/device/mobile-mcp-tools.js. A daemon-minted counter needs no redaction
   // argument at all, on exactly the grounds dur_ms is cleared.
   call_id: sendable(integer({ min: 1 }), 'daemon-minted counter scoped to one session; never the client-supplied frame id'),
-  stop_reason: sendable(oneOf(STOP_REASONS), 'enumerated: idle|signal|shutdown|crash|explicit'),
+  stop_reason: sendable(oneOf(STOP_REASONS), 'enumerated: idle|signal|shutdown|crash|explicit|engine_exit'),
   // Errno NAMES only: the numeric codes an MCP server reports, and Node's
   // ERR_* codes, fail the check and are dropped rather than sent.
-  error_code: sendable(oneOf(ERROR_CODES), 'Node/libuv errno string (EADDRINUSE|EACCES|…) plus our own ELOCKED'),
+  error_code: sendable(oneOf(ERROR_CODES), 'Node/libuv errno string (EADDRINUSE|EACCES|…) plus our own ELOCKED|ENGINE_CONNECT_TIMEOUT|ENGINE_EXITED'),
 
   // --- crash (slice 4) ---------------------------------------------------
   // The ONLY new field slice 4 mints. As with `verb`, `tool` and `session_id`,
