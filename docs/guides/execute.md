@@ -133,7 +133,7 @@ For each step in your scenario:
 | `launch_app` | Starts your app |
 | `clear_app_data` | Resets app to fresh state |
 | `capture_value` | Extracts text/value from element |
-| `open_url` | Opens URL in browser |
+| `open_url` | Opens a web URL or deep link on the device |
 
 #### 2c. Wait & Observe
 

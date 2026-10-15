@@ -26,7 +26,7 @@ takes a `device` id, which `mauto` injects for you.
 | `swipe`           | `mauto swipe`           | `mobile_swipe_on_screen`                     | Swipe in a direction (up, down, left, right) |
 | `press_button`    | `mauto press <button>`  | `mobile_press_button`                        | Press hardware/system buttons (back, home) |
 | `wait`            | (use delay/polling)     | (use delay/polling)                          | Wait for a condition or duration |
-| `open_url`        | `mauto open-url`        | `mobile_open_url`                            | Open an `http(s)` URL; other schemes need `MOBILEMCP_ALLOW_UNSAFE_URLS=1` ([#212](https://github.com/sh3lan93/mobile-automator/issues/212)) |
+| `open_url`        | `mauto open-url`        | `mobile_open_url`                            | Open a URL of any scheme, deep links included — mauto sets `MOBILEMCP_ALLOW_UNSAFE_URLS=1` for its engine; `=0` restores http(s)-only ([#212](https://github.com/sh3lan93/mobile-automator/issues/212)) |
 | (screenshot)      | `mauto screenshot`      | `mobile_save_screenshot`                     | Save a screenshot to a file for verification |
 | (find element)    | `mauto elements`        | `mobile_list_elements_on_screen`             | List all interactive elements on screen (called with `format: "json"` — 1.0.5 defaults to a text format) |
 

@@ -196,7 +196,7 @@ How mobile-automator learns across sessions: the auto-harvested `run-history` pl
 
 **Control Flow:**
 - `launch_app` — Start app
-- `open_url` — Open URL in browser
+- `open_url` — Open a web URL or deep link
 - `press_button` — Press device button (BACK, HOME, ENTER)
 
 **Interaction:**
