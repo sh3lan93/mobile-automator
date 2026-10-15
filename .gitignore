@@ -55,3 +55,12 @@ sample-app/ios/Pods/
 sample-app/ios/.symlinks/
 sample-app/android/.gradle/
 sample-app/android/local.properties
+
+# Knowledge base (Understand Anything) — the durable analysis artifacts are
+# tracked (knowledge-graph.json, fingerprints.json, meta.json, config.json,
+# .understandignore); the volatile, regenerable ones are not: intermediate/
+# batch + merge scratch, .trash-*/ post-run cleanup dirs, and diff-overlay
+# files the dashboard writes.
+.ua/intermediate/
+.ua/.trash-*/
+.ua/diff-overlay.json
