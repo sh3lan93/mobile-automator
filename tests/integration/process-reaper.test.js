@@ -45,3 +45,34 @@ test('terminate(group:false) kills only the pid', async () => {
     await terminate(leader.pid, { group: true });
   }
 });
+
+// #156 regression: the shape of the spawn-timeout kill. The leader has no
+// SIGTERM handler (a daemon before listen()), so it dies at once; its child
+// ignores SIGTERM (an engine whose handler cannot run on a blocked loop). The
+// group kill must still reach the child.
+test('terminate(group) SIGKILLs a member that outlives SIGTERM after the leader died', async () => {
+  const leaderSrc = `
+    const { spawn } = require('child_process');
+    const c = spawn(process.execPath, ['-e', "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000)"], { stdio: 'ignore' });
+    process.stdout.write(String(c.pid) + '\\n');
+    setInterval(() => {}, 1000);
+  `;
+  const { leader, childPid } = await new Promise((resolve, reject) => {
+    const l = spawn(process.execPath, ['-e', leaderSrc], { detached: true, stdio: ['ignore', 'pipe', 'ignore'] });
+    l.on('error', reject);
+    l.stdout.once('data', (buf) => resolve({ leader: l, childPid: Number(String(buf).trim()) }));
+  });
+  try {
+    // Let the child install its SIGTERM handler before we signal.
+    await new Promise((r) => setTimeout(r, 300));
+    expect(await terminate(leader.pid, { group: true, graceMs: 1000 })).toBe('dead');
+    expect(await waitForDeath(childPid, { budgetMs: 3000 })).toBe(true);
+  } finally {
+    try {
+      process.kill(childPid, 'SIGKILL');
+    } catch (_) {
+      /* already gone */
+    }
+  }
+});
+

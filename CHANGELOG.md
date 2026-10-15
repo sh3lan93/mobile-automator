@@ -24,7 +24,8 @@ engine has died.
 - **A daemon that is not ready in time is killed.** When `session start` or a
   verb's autostart gives up after 15s, it terminates that daemon's process
   group — daemon and engine — instead of leaving it holding the workspace lock
-  for every later verb.
+  for every later verb. Any group member that outlives SIGTERM gets SIGKILL,
+  even once the daemon itself has died.
 - **`session end` reports `stopped: true` only once the daemon has exited.**
   It previously trusted the shutdown acknowledgement, which the daemon sends
   before tearing down. A daemon still alive 35s later is terminated
