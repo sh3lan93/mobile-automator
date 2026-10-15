@@ -10,16 +10,22 @@ const { ErrorCode } = require('@modelcontextprotocol/sdk/types.js');
 
 // Bound on mobile-mcp's MCP initialize handshake (#156). Measured at ~200ms on
 // mobile-mcp 1.0.5 — initialize touches no device — so 10s is ~50x headroom.
-// It MUST stay below session-spawn's DEFAULT_READY_TIMEOUT_MS: the spawner
-// kills an unready daemon when its window closes, so a longer connect bound
-// would have the daemon killed instead of failing with its own
-// daemon.connect_failure. Pinned by tests/unit/device/timeout-invariant.test.js.
+// The spawner kills an unready daemon when its readiness window closes, and a
+// failed connect is reported only once the engine is reaped, so
+// CONNECT_TIMEOUT_MS + ENGINE_REAP_MAX_MS, plus headroom for the daemon's own
+// boot, MUST stay below session-spawn's DEFAULT_READY_TIMEOUT_MS — or the
+// daemon is killed instead of failing with its own daemon.connect_failure.
+// Pinned by tests/unit/device/timeout-invariant.test.js.
 // (The SDK's own default is 60s, which is longer than the window watching it.)
 const CONNECT_TIMEOUT_MS = 10000;
 
-// How long a failed connect waits for the engine child to exit before
-// escalating. Covers the SDK's own close ladder: stdin end → 2s → SIGTERM → 2s.
-const ENGINE_REAP_BUDGET_MS = 5000;
+// A failed connect terminates the engine at once rather than waiting out the
+// SDK's fire-and-forget close (stdin end → 2s → SIGTERM → 2s → SIGKILL): an
+// engine that never initialized has nothing to flush, and every second spent
+// here is spent inside the spawner's readiness window. SIGTERM, SIGKILL after
+// ENGINE_KILL_GRACE_MS, then up to ENGINE_KILL_GRACE_MS more for the death.
+const ENGINE_KILL_GRACE_MS = 1000;
+const ENGINE_REAP_MAX_MS = 2 * ENGINE_KILL_GRACE_MS;
 
 // Resolve the mobile-mcp server entry point from the bundled, pinned
 // dependency rather than fetching `@latest` at runtime. We read the package's
@@ -117,14 +123,15 @@ async function createCall({
   return { call, close };
 }
 
-// The SDK's connect-failure cleanup is fire-and-forget, so wait for the engine
-// to actually exit (and escalate if it will not) before the error leaves
-// createCall — nothing may outlive the failure it reports. group:false: the
-// engine is not a process-group leader.
+// The SDK's connect-failure cleanup is fire-and-forget, so the engine is
+// terminated here, at once, and the error leaves createCall only once it is
+// gone — nothing may outlive the failure it reports. The budget-0 check first:
+// an engine that already exited (the ConnectionClosed path) is not signalled.
+// group:false: the engine is not a process-group leader.
 async function reapEngine(pid, reaper) {
   if (!pid) return;
-  if (await reaper.waitForDeath(pid, { budgetMs: ENGINE_REAP_BUDGET_MS })) return;
-  await reaper.terminate(pid, { group: false, graceMs: 1000 });
+  if (await reaper.waitForDeath(pid, { budgetMs: 0 })) return;
+  await reaper.terminate(pid, { group: false, graceMs: ENGINE_KILL_GRACE_MS });
 }
 
 // A timed-out initialize becomes an error that names the bound; anything else
@@ -236,4 +243,11 @@ function parseToolResult(res) {
 
 // resolveServerEntry is exported so tests/integration/mobile-mcp-contract.test.js
 // spawns the pinned engine by the exact path production does, not a copy of it.
-module.exports = { createCall, makeCall, parseToolResult, resolveServerEntry, CONNECT_TIMEOUT_MS };
+module.exports = {
+  createCall,
+  makeCall,
+  parseToolResult,
+  resolveServerEntry,
+  CONNECT_TIMEOUT_MS,
+  ENGINE_REAP_MAX_MS,
+};

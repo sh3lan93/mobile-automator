@@ -4,22 +4,45 @@
 // a fake SDK, which can only behave the way we believe the SDK behaves; this
 // file is what shows the timeout option and onclose actually do that.
 
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
-const { createCall } = require('../../src/device/mobile-mcp-client');
+const { createCall, ENGINE_REAP_MAX_MS } = require('../../src/device/mobile-mcp-client');
+const { pidAlive } = require('../../src/device/session-daemon');
 
 jest.setTimeout(15000);
 
 const FIXTURE = path.join(__dirname, '..', 'fixtures', 'mcp-fixture-server.js');
-const server = (mode) => ({ command: process.execPath, args: [FIXTURE, mode] });
+const server = (mode, pidFile) => ({
+  command: process.execPath,
+  args: pidFile ? [FIXTURE, mode, pidFile] : [FIXTURE, mode],
+});
+const pidFileIn = () => path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-engine-')), 'engine.pid');
+const enginePid = (file) => Number(fs.readFileSync(file, 'utf8'));
+
+// Slack for spawning the fixture and polling; the bound under test is the sum.
+const SLACK_MS = 1000;
 
 test('a server that never initializes fails with ENGINE_CONNECT_TIMEOUT, and is gone', async () => {
+  const pidFile = pidFileIn();
   const started = Date.now();
-  const err = await createCall({ server: server('never-init'), connectTimeoutMs: 500 }).catch((e) => e);
+  const err = await createCall({ server: server('never-init', pidFile), connectTimeoutMs: 500 }).catch((e) => e);
   expect(err.code).toBe('ENGINE_CONNECT_TIMEOUT');
-  // Bounded: the timeout plus the SDK's close ladder, never the 60s SDK default.
-  expect(Date.now() - started).toBeLessThan(8000);
-  // createCall only returns after reapEngine confirmed the child is dead; the
-  // fixture ignores stdin EOF, so this proves the escalation really happened.
+  // The engine is terminated at once (#156), not after the SDK's 2s stdin-EOF
+  // grace: the whole failure fits inside the bound plus ENGINE_REAP_MAX_MS.
+  expect(Date.now() - started).toBeLessThan(500 + ENGINE_REAP_MAX_MS + SLACK_MS);
+  // createCall only rejects once the engine is dead; the fixture ignores stdin
+  // EOF, so this is the kill, not the engine leaving on its own.
+  expect(pidAlive(enginePid(pidFile))).toBe(false);
+});
+
+test('an engine that ignores SIGTERM too is SIGKILLed before the error is reported', async () => {
+  const pidFile = pidFileIn();
+  const started = Date.now();
+  const err = await createCall({ server: server('wedged', pidFile), connectTimeoutMs: 500 }).catch((e) => e);
+  expect(err.code).toBe('ENGINE_CONNECT_TIMEOUT');
+  expect(Date.now() - started).toBeLessThan(500 + ENGINE_REAP_MAX_MS + SLACK_MS);
+  expect(pidAlive(enginePid(pidFile))).toBe(false);
 });
 
 test('an engine that exits after initialize fires onEngineExit once', async () => {

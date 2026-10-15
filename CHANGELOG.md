@@ -19,8 +19,9 @@ engine has died.
 - **A wedged engine no longer hangs a verb or the session.** mobile-mcp's MCP
   handshake is now bounded at 10s (it normally takes ~0.2s); previously only
   the SDK's 60s default bounded it, longer than the 15s window watching it. A
-  timed-out engine is terminated before the error is reported
-  (`ENGINE_CONNECT_TIMEOUT`).
+  timed-out engine is terminated at once, before the error is reported
+  (`ENGINE_CONNECT_TIMEOUT`), so the daemon records the failure well inside
+  that window instead of being killed first.
 - **A daemon that is not ready in time is killed.** When `session start` or a
   verb's autostart gives up after 15s, it terminates that daemon's process
   group — daemon and engine — instead of leaving it holding the workspace lock

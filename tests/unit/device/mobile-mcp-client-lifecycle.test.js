@@ -1,7 +1,7 @@
 'use strict';
 
 const { McpError, ErrorCode } = require('@modelcontextprotocol/sdk/types.js');
-const { createCall, CONNECT_TIMEOUT_MS } = require('../../../src/device/mobile-mcp-client');
+const { createCall, CONNECT_TIMEOUT_MS, ENGINE_REAP_MAX_MS } = require('../../../src/device/mobile-mcp-client');
 
 // Fake SDK. The fake Client mirrors the real one where it matters: connect()
 // calls transport.start(), honours options.timeout by rejecting with
@@ -95,18 +95,28 @@ describe('createCall lifecycle (#156)', () => {
     expect(err.cause).toBeInstanceOf(McpError);
   });
 
-  test('a failed connect waits for the engine pid captured at start, before throwing', async () => {
+  test('a failed connect checks the engine pid captured at start; an engine already gone is not signalled', async () => {
     const { sdk } = fakeSdk({ connect: 'timeout', pid: 777 });
     const reaper = fakeReaper({ dies: true });
     await createCall({ sdk, server, reaper }).catch(() => {});
-    expect(reaper.calls).toEqual([['waitForDeath', 777, { budgetMs: 5000 }]]);
+    expect(reaper.calls).toEqual([['waitForDeath', 777, { budgetMs: 0 }]]);
   });
 
-  test('an engine that outlives the reap budget is terminated by pid, not group', async () => {
+  // #156: no passive wait for the SDK's fire-and-forget close ladder (stdin end,
+  // 2s, SIGTERM, 2s, SIGKILL) — that time is spent inside the spawner's 15s
+  // readiness window, before the daemon can record its connect_failure.
+  test('a live engine is terminated at once, by pid, not group', async () => {
     const { sdk } = fakeSdk({ connect: 'timeout', pid: 777 });
     const reaper = fakeReaper({ dies: false });
     await createCall({ sdk, server, reaper }).catch(() => {});
-    expect(reaper.calls[1]).toEqual(['terminate', 777, { group: false, graceMs: 1000 }]);
+    expect(reaper.calls).toEqual([
+      ['waitForDeath', 777, { budgetMs: 0 }],
+      ['terminate', 777, { group: false, graceMs: 1000 }],
+    ]);
+  });
+
+  test('ENGINE_REAP_MAX_MS is the full SIGTERM-grace-then-SIGKILL bound', () => {
+    expect(ENGINE_REAP_MAX_MS).toBe(2000);
   });
 
   test('a non-timeout connect error passes through unchanged', async () => {
