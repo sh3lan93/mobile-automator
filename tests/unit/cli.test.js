@@ -1298,7 +1298,7 @@ describe('cli handlers', () => {
       });
       expect(up.exitKind).toBe('ok');
       expect(up.envelope.data).toEqual({
-        running: true, in_flight: 2, device: 'A',
+        running: true, reason: null, in_flight: 2, device: 'A',
         log_path: sessionPaths.logFilePath('/x'), session_id: null,
       });
     });
@@ -1311,9 +1311,29 @@ describe('cli handlers', () => {
       expect(down.exitKind).toBe('ok');
       // log_path survives the not-running shape: that is when it is needed.
       expect(down.envelope.data).toEqual({
-        running: false, in_flight: null, device: null,
+        running: false, reason: null, in_flight: null, device: null,
         log_path: sessionPaths.logFilePath('/x'), session_id: null,
       });
+    });
+
+    test('a dead engine: running:false with a hint that says why (#156)', async () => {
+      const r = await handleSessionStatus({
+        projectRoot: '/x',
+        client: { getSessionStatus: async () => ({ running: false, reason: 'engine_exited', in_flight: 0, device: 'A' }) },
+      });
+      expect(r.exitKind).toBe('ok');
+      expect(r.envelope.data.running).toBe(false);
+      expect(r.envelope.data.reason).toBe('engine_exited');
+      expect(r.envelope.hint).toContain('device engine exited');
+      expect(r.envelope.hint).toContain(sessionPaths.logFilePath('/x'));
+    });
+
+    test('a healthy session carries no hint', async () => {
+      const r = await handleSessionStatus({
+        projectRoot: '/x',
+        client: { getSessionStatus: async () => ({ running: true, in_flight: 0, device: 'A' }) },
+      });
+      expect(r.envelope.hint).toBeUndefined();
     });
   });
 

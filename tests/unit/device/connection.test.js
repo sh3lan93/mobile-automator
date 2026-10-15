@@ -61,6 +61,7 @@ describe('connection', () => {
       const client = { getSessionStatus: async () => ({ running: true, in_flight: 2, device: 'A' }) };
       expect(await sessionStatus('/x', { client })).toEqual({
         running: true,
+        reason: null,
         in_flight: 2,
         device: 'A',
         log_path: paths.logFilePath('/x'),
@@ -76,6 +77,7 @@ describe('connection', () => {
       const client = { getSessionStatus: async () => ({ running: false, in_flight: null, device: null }) };
       expect(await sessionStatus('/x', { client })).toEqual({
         running: false,
+        reason: null,
         in_flight: null,
         device: null,
         log_path: paths.logFilePath('/x'),
@@ -108,6 +110,11 @@ describe('connection', () => {
 
       const client = { getSessionStatus: async () => ({ running: false, in_flight: null, device: null }) };
       expect((await sessionStatus(root, { client })).session_id).toBeNull();
+    });
+
+    test('passes reason through from the client', async () => {
+      const client = { getSessionStatus: async () => ({ running: false, reason: 'engine_exited', in_flight: 0, device: 'A' }) };
+      expect((await sessionStatus('/x', { client })).reason).toBe('engine_exited');
     });
   });
 

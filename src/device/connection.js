@@ -65,6 +65,8 @@ async function sessionStatus(projectRoot, { client = sessionClient } = {}) {
   const status = await client.getSessionStatus(projectRoot);
   return {
     ...status,
+    // Always present (#156): null, or why a reachable daemon is not running.
+    reason: (status && status.reason) || null,
     log_path: paths.logFilePath(projectRoot),
     // Read from the handle, not from the ping reply. The handle is written once
     // the daemon is listening and removed by stop(), so it is the same fact

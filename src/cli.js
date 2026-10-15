@@ -1234,7 +1234,11 @@ async function handleSessionStatus(
   { projectRoot, client = require('./device/session-client') } = {}
 ) {
   const status = await connection.sessionStatus(projectRoot, { client });
-  return { envelope: ok(status), exitKind: 'ok' };
+  const hint =
+    status.reason === 'engine_exited'
+      ? `The device engine exited; this session is shutting down and the next verb starts a fresh one. ${connection.daemonLogHint(projectRoot)}`
+      : null;
+  return { envelope: ok(status, hint), exitKind: 'ok' };
 }
 
 async function handleSessionEnd(

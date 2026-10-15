@@ -65,14 +65,51 @@ describe('session-client', () => {
 
   test('getSessionStatus reports running:false with nulls when no daemon is up', async () => {
     const root = tmpRoot();
-    expect(await getSessionStatus(root)).toEqual({ running: false, in_flight: null, device: null });
+    expect(await getSessionStatus(root)).toEqual({ running: false, reason: null, in_flight: null, device: null });
   });
 
   test('getSessionStatus reports running:true with in_flight and device against a live daemon', async () => {
     const root = tmpRoot();
     const daemon = await startDaemon({ projectRoot: root, device: 'emulator-5554', idleMs: 0, createCall: fakeCreateCall() });
-    expect(await getSessionStatus(root)).toEqual({ running: true, in_flight: 0, device: 'emulator-5554' });
+    expect(await getSessionStatus(root)).toEqual({ running: true, reason: null, in_flight: 0, device: 'emulator-5554' });
     await daemon.stop();
+  });
+
+  // A server speaking the daemon protocol with a chosen ping result.
+  function fakeDaemon(root, result) {
+    const sock = paths.socketPath(root);
+    fs.mkdirSync(path.dirname(sock), { recursive: true });
+    const server = net.createServer((s) => {
+      const parser = new FrameParser();
+      s.setEncoding('utf8');
+      s.on('data', (chunk) => {
+        for (const f of parser.push(chunk)) {
+          if (f.value) s.write(FrameParser.encode({ id: f.value.id, ok: true, result }));
+        }
+      });
+    });
+    return new Promise((resolve) => server.listen(sock, () => resolve(server)));
+  }
+
+  test('getSessionStatus reports running:false + engine_exited when the engine is dead (#156)', async () => {
+    const root = tmpRoot();
+    const server = await fakeDaemon(root, { pong: true, device: 'A', in_flight: 1, engine_alive: false });
+    try {
+      expect(await getSessionStatus(root)).toEqual({ running: false, reason: 'engine_exited', in_flight: 1, device: 'A' });
+    } finally {
+      await new Promise((r) => server.close(r));
+    }
+  });
+
+  // Review Focus 2: a 0.27.x daemon still running across the upgrade.
+  test('a pre-0.28 daemon without engine_alive is running', async () => {
+    const root = tmpRoot();
+    const server = await fakeDaemon(root, { pong: true, device: null, in_flight: 0 });
+    try {
+      expect(await getSessionStatus(root)).toEqual({ running: true, reason: null, in_flight: 0, device: null });
+    } finally {
+      await new Promise((r) => server.close(r));
+    }
   });
 
   test('call propagates kind + hint from an ok:false reply', async () => {
