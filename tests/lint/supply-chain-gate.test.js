@@ -89,6 +89,9 @@ describe('supply-chain gate wiring (#161)', () => {
     // lockfile-only keeps Dependabot PRs out of the version-bump gate, which
     // fails any PR touching package.json without a version bump.
     expect(npm['versioning-strategy']).toBe('lockfile-only');
-    expect(updates.some((u) => u['package-ecosystem'] === 'github-actions')).toBe(true);
+    const actions = updates.find((u) => u['package-ecosystem'] === 'github-actions');
+    expect(actions).toBeDefined();
+    // Grouped, so action bumps never queue behind the open-PR limit.
+    expect(actions.groups).toBeDefined();
   });
 });

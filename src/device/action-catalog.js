@@ -16,7 +16,7 @@
 //   'composed'    — no dedicated verb; the agent composes it from existing verbs
 //                   (e.g. poll `mauto elements`, repeat `mauto swipe`). The
 //                   execute guide documents the composition.
-//   'unsupported' — mobile-mcp 0.0.55 exposes no primitive for it. Not
+//   'unsupported' — mobile-mcp 1.0.5 exposes no primitive for it. Not
 //                   mechanically executable; the guide must NOT promise a verb,
 //                   and the agent reports it honestly / handles it manually.
 //
@@ -84,7 +84,7 @@ const ACTION_CATALOG = {
   wait_for_loading_complete: { resolution: 'composed' },
   capture_value: { resolution: 'composed' },
 
-  // --- unsupported (no mobile-mcp 0.0.55 primitive) ----------------------
+  // --- unsupported (no mobile-mcp 1.0.5 primitive) -----------------------
   clear_app_data: { resolution: 'unsupported' },
   enable_wifi: { resolution: 'unsupported' },
   disable_wifi: { resolution: 'unsupported' },
