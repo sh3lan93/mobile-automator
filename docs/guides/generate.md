@@ -150,7 +150,7 @@ The generator parses your natural language and recognizes actions:
 | "Long press" | `long_press` | Long-press gesture |
 | "Press back/home/enter" | `press_button` | Hardware button press |
 | "Launch the app" | `launch_app` | Starts your app |
-| "Open URL" | `open_url` | Opens a web link |
+| "Open URL", "Open deep link" | `open_url` | Opens a web URL or deep link |
 | "Clear app data" | `clear_app_data` | Resets app state |
 | "Verify/Check/Ensure element" | `element_exists` | Assertion: element is visible |
 | "Verify text says" | `element_text` | Assertion: text content matches |

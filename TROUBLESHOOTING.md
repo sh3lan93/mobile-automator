@@ -169,16 +169,23 @@ adb -s <serial> shell pkill -f com.mobilenext.mobilecli.DeviceServer
 
 ### ❌ `mauto open-url myapp://…` fails with "Only http:// and https:// URLs are allowed"
 
-The device engine rejects non-web URLs unless you opt in. Deep links need:
+The device engine only accepts non-web URLs when `MOBILEMCP_ALLOW_UNSAFE_URLS=1`.
+Since 0.27.2 mauto sets that for the engine it spawns
+([#212](https://github.com/sh3lan93/mobile-automator/issues/212)), so deep links
+work by default. If you still see this error, `MOBILEMCP_ALLOW_UNSAFE_URLS` is
+set to something other than `1` (e.g. `0`) in the environment the session
+daemon started from. Unset it and restart the session — the variable is read
+only when the daemon spawns its engine:
 
 ```bash
+unset MOBILEMCP_ALLOW_UNSAFE_URLS
 mauto session end
-export MOBILEMCP_ALLOW_UNSAFE_URLS=1
 mauto open-url myapp://path
 ```
 
-Whether mauto should handle this for you is
-[#212](https://github.com/sh3lan93/mobile-automator/issues/212).
+If the verb succeeds but the deep link opens nothing, no installed app has
+registered that scheme — check the app's intent-filter (Android) or URL types
+(iOS).
 
 ### ❌ "failed to start the device session daemon"
 

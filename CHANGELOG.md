@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.27.2]
+
+### 🐛 Fixed
+
+- `mauto open-url` now opens deep links (`myapp://…`, `tel:`, etc.), not just
+  `http(s)` URLs. The device engine refuses non-web schemes unless
+  `MOBILEMCP_ALLOW_UNSAFE_URLS=1`, so mauto now sets it for the engine process
+  it spawns. That upstream guard protects an LLM whose only reach is MCP; an
+  agent driving mauto already has a shell, so it adds no protection here. A
+  value you set yourself wins: `export MOBILEMCP_ALLOW_UNSAFE_URLS=0`, then
+  `mauto session end`, restores the http(s)-only guard
+  ([#212](https://github.com/sh3lan93/mobile-automator/issues/212)).
+
+---
+
 ## [0.27.1]
 
 **The first npm release of the 0.27 line.** `v0.27.0` was tagged but never

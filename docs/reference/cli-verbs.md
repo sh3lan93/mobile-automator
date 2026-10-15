@@ -61,7 +61,7 @@ These verbs drive the screen. Each accepts `--device <id>` to target a specific 
 | `mauto launch <appId>` | Launch an installed app by package/bundle id **(new in 0.21.0)** |
 | `mauto install <path>` | Install an app from a local `.apk` / `.app` / `.ipa` **(new in 0.21.0)** |
 | `mauto uninstall <appId>` | Uninstall an app by id **(new in 0.21.0)** |
-| `mauto open-url <url>` | Open an `http(s)` URL on the device; deep links (`myapp://…`) need `MOBILEMCP_ALLOW_UNSAFE_URLS=1` set before the session starts ([#212](https://github.com/sh3lan93/mobile-automator/issues/212)) **(new in 0.21.0)** |
+| `mauto open-url <url>` | Open a URL on the device — web (`https://…`) or deep link (`myapp://…`). To restore the engine's http(s)-only guard, `export MOBILEMCP_ALLOW_UNSAFE_URLS=0` and run `mauto session end` ([#212](https://github.com/sh3lan93/mobile-automator/issues/212)) **(new in 0.21.0)** |
 | `mauto orientation <portrait\|landscape>` | Set device orientation **(new in 0.21.0)** |
 
 !!! tip "New in v0.21.0"
