@@ -8,7 +8,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { createCall, ENGINE_REAP_MAX_MS } = require('../../src/device/mobile-mcp-client');
-const { pidAlive } = require('../../src/device/session-daemon');
+// Exited, not merely unreaped: the engine is this test process's own child, and
+// the instant createCall rejects it may still be a zombie that libuv reaps on
+// the next turn of the loop. kill(pid, 0) alone would call that alive.
+const { processAlive } = require('../../src/device/process-reaper');
 
 jest.setTimeout(15000);
 
@@ -33,7 +36,7 @@ test('a server that never initializes fails with ENGINE_CONNECT_TIMEOUT, and is 
   expect(Date.now() - started).toBeLessThan(500 + ENGINE_REAP_MAX_MS + SLACK_MS);
   // createCall only rejects once the engine is dead; the fixture ignores stdin
   // EOF, so this is the kill, not the engine leaving on its own.
-  expect(pidAlive(enginePid(pidFile))).toBe(false);
+  expect(processAlive(enginePid(pidFile))).toBe(false);
 });
 
 test('an engine that ignores SIGTERM too is SIGKILLed before the error is reported', async () => {
@@ -42,7 +45,7 @@ test('an engine that ignores SIGTERM too is SIGKILLed before the error is report
   const err = await createCall({ server: server('wedged', pidFile), connectTimeoutMs: 500 }).catch((e) => e);
   expect(err.code).toBe('ENGINE_CONNECT_TIMEOUT');
   expect(Date.now() - started).toBeLessThan(500 + ENGINE_REAP_MAX_MS + SLACK_MS);
-  expect(pidAlive(enginePid(pidFile))).toBe(false);
+  expect(processAlive(enginePid(pidFile))).toBe(false);
 });
 
 test('an engine that exits after initialize fires onEngineExit once', async () => {

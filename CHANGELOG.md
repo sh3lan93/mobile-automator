@@ -35,7 +35,10 @@ engine has died.
   longer reported as `already_stopped`. Only a process whose command line
   names this workspace is ever signalled — the daemon now carries
   `--project-root <root>` in its argv — so a copied workspace or a recycled
-  pid can never reach another workspace's daemon.
+  pid can never reach another workspace's daemon. A daemon that has exited
+  but is still awaiting its reaper (a zombie, the norm in a container whose
+  PID 1 does not reap, such as a CI job container) counts as stopped instead
+  of being waited on for the whole 35s.
 - **A daemon whose engine dies now shuts itself down** (`daemon.engine_exit`,
   `stop_reason: "engine_exit"`), and the next verb starts a fresh one.
   `session status` reports such a daemon as `running: false` with

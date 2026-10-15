@@ -9,7 +9,16 @@
 // Every effect (kill, liveness, clock) is injected so the escalation policy is
 // tested once, here, against a fake process table.
 
-const { pidAlive } = require('./session-daemon');
+const { pidAlive, isZombie } = require('./session-daemon');
+
+// Alive, and not merely awaiting a reaper (#156): kill(pid, 0) succeeds on a
+// zombie, so plain liveness waits out a whole budget for a daemon that has
+// already exited wherever PID 1 does not reap (see isZombie). The default
+// liveness for every wait below; the zombie check runs only for a pid that
+// kill(pid, 0) calls alive.
+function processAlive(pid) {
+  return pidAlive(pid) && !isZombie(pid);
+}
 
 // Deliberately NOT unref'd: `session end` is a one-shot verb process with
 // nothing else on its event loop while it waits, so an unref'd timer would let
@@ -34,7 +43,7 @@ async function waitUntil(done, { budgetMs, pollMs, sleep, now }) {
 // budgetMs 0 is a single check.
 function waitForDeath(
   pid,
-  { budgetMs, pollMs = 100, isAlive = pidAlive, sleep = defaultSleep, now = Date.now } = {}
+  { budgetMs, pollMs = 100, isAlive = processAlive, sleep = defaultSleep, now = Date.now } = {}
 ) {
   return waitUntil(() => !isAlive(pid), { budgetMs, pollMs, sleep, now });
 }
@@ -87,7 +96,7 @@ async function terminate(
     graceMs = 2000,
     pollMs = 50,
     kill = process.kill.bind(process),
-    isAlive = pidAlive,
+    isAlive = processAlive,
     sleep = defaultSleep,
     now = Date.now,
   } = {}
@@ -111,4 +120,4 @@ async function terminate(
   return 'survived';
 }
 
-module.exports = { waitForDeath, terminate };
+module.exports = { waitForDeath, terminate, processAlive };

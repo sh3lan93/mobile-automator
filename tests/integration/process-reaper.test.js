@@ -76,3 +76,20 @@ test('terminate(group) SIGKILLs a member that outlives SIGTERM after the leader 
   }
 });
 
+// #156 regression: a real zombie. `exec sleep` replaces the shell and sleep
+// never reaps, so the backgrounded child stays a zombie until its parent exits —
+// the state an exited daemon is left in under a PID 1 that does not reap.
+test('waitForDeath treats a zombie as dead instead of waiting out its budget', async () => {
+  const parent = spawn('sh', ['-c', 'sleep 0.1 & echo $!; exec sleep 5'], { stdio: ['ignore', 'pipe', 'ignore'] });
+  const zombie = await new Promise((resolve) => parent.stdout.once('data', (b) => resolve(Number(String(b).trim()))));
+  try {
+    await new Promise((r) => setTimeout(r, 500)); // the child has exited by now
+    expect(pidAlive(zombie)).toBe(true); // kill(pid, 0) still succeeds on a zombie
+    const started = Date.now();
+    expect(await waitForDeath(zombie, { budgetMs: 3000 })).toBe(true);
+    expect(Date.now() - started).toBeLessThan(1000);
+  } finally {
+    parent.kill('SIGKILL');
+  }
+});
+

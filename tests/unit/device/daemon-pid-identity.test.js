@@ -10,7 +10,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { pidIdentity, cleanStale, startDaemon } = require('../../../src/device/session-daemon');
+const { pidIdentity, cleanStale, startDaemon, isZombie } = require('../../../src/device/session-daemon');
 const paths = require('../../../src/device/session-paths');
 
 function tmpRoot() {
@@ -142,5 +142,49 @@ describe('stale lock from a daemon killed mid-startup (#156)', () => {
     });
     expect(fs.readFileSync(paths.lockPath(root), 'utf8').trim()).toBe(String(process.pid));
     await daemon.stop();
+  });
+});
+
+// #156: kill(pid, 0) succeeds on a zombie, so where PID 1 never reaps adopted
+// orphans (Docker without --init, CI job containers running `tail -f
+// /dev/null`, a Node agent host as PID 1) a daemon that already exited looked
+// alive and `session end` waited out its whole 35s budget.
+describe('isZombie', () => {
+  const linux = (stat) => ({ platform: 'linux', readFile: () => stat });
+
+  test('linux: state Z (or X) in /proc/<pid>/stat is a zombie', () => {
+    expect(isZombie(7, linux('7 (node) Z 1 7 7 0 -1'))).toBe(true);
+    expect(isZombie(7, linux('7 (node) X 1 7 7 0 -1'))).toBe(true);
+    expect(isZombie(7, linux('7 (node) S 1 7 7 0 -1'))).toBe(false);
+  });
+
+  test('linux: the state is read after the LAST ")" — a command name may contain one', () => {
+    expect(isZombie(7, linux('7 (a) Z (b) S 1 7 7 0 -1'))).toBe(false);
+    expect(isZombie(7, linux('7 (a) S (b) Z 1 7 7 0 -1'))).toBe(true);
+  });
+
+  test('linux: needs no ps — an unreadable /proc entry is simply not a zombie', () => {
+    const readFile = () => {
+      throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+    };
+    expect(isZombie(7, { platform: 'linux', readFile })).toBe(false);
+  });
+
+  test('elsewhere: asks ps for the state', () => {
+    let args;
+    const execFile = (_bin, a) => {
+      args = a;
+      return 'Z\n';
+    };
+    expect(isZombie(7, { platform: 'darwin', execFile })).toBe(true);
+    expect(args).toEqual(['-o', 'stat=', '-p', '7']);
+    expect(isZombie(7, { platform: 'darwin', execFile: () => 'Ss\n' })).toBe(false);
+  });
+
+  test('elsewhere: a failing ps is not a zombie (plain liveness decides)', () => {
+    const execFile = () => {
+      throw new Error('ps: not found');
+    };
+    expect(isZombie(7, { platform: 'darwin', execFile })).toBe(false);
   });
 });

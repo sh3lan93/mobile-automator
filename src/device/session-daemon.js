@@ -75,6 +75,37 @@ function pidAlive(pid) {
   }
 }
 
+// Has `pid` exited and is only awaiting a parent to reap it? kill(pid, 0)
+// succeeds on a zombie, so pidAlive alone calls an exited process alive (#156).
+// That is the normal end state of a daemon wherever PID 1 does not reap
+// adopted orphans — Docker without --init, CI job containers whose PID 1 is
+// `tail -f /dev/null`, a Node agent host running as PID 1 — because the
+// detached daemon is reparented to it when the verb that spawned it exits.
+// Any failure to tell answers "not a zombie", so liveness decides as before.
+// Used by process-reaper.js's waits; lives here, beside pidAlive and
+// pidIdentity, because this is the module that may run `ps`.
+function isZombie(
+  pid,
+  { platform = process.platform, readFile = fs.readFileSync, execFile = childProcess.execFileSync } = {}
+) {
+  try {
+    if (platform === 'linux') {
+      // "pid (comm) S ..." — comm may itself contain spaces or ')', so the state
+      // is the field after the LAST ')'. Reading /proc needs no `ps`, which
+      // slim container images do not ship.
+      const stat = String(readFile(`/proc/${pid}/stat`, 'utf8'));
+      return /^\s*[ZX]/.test(stat.slice(stat.lastIndexOf(')') + 1));
+    }
+    const out = execFile('ps', ['-o', 'stat=', '-p', String(pid)], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    return /^\s*Z/.test(String(out));
+  } catch (_) {
+    return false;
+  }
+}
+
 // Classify a pid by liveness AND identity. Liveness alone is not enough: a
 // recycled pid (an unrelated process that inherited the dead daemon's pid) is
 // "alive" but is NOT our daemon, so a stale lock/pidfile pointing at it must be
@@ -811,4 +842,13 @@ async function startDaemon({
   };
 }
 
-module.exports = { startDaemon, cleanStale, pidAlive, pidIdentity, readPidFile, DAEMON_CALL_TIMEOUT_MS, DEFAULT_IDLE_MS };
+module.exports = {
+  startDaemon,
+  cleanStale,
+  pidAlive,
+  isZombie,
+  pidIdentity,
+  readPidFile,
+  DAEMON_CALL_TIMEOUT_MS,
+  DEFAULT_IDLE_MS,
+};
