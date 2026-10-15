@@ -1,6 +1,6 @@
 {
   "name": "mobile-automator",
-  "version": "0.26.0",
+  "version": "0.27.0",
   "description": "Host-agnostic mauto CLI for AI-driven mobile QA automation — analyzes a mobile project and drives devices through mobile-mcp.",
   "homepage": "https://github.com/sh3lan93/mobile-automator#readme",
   "repository": {
@@ -33,7 +33,7 @@
     "test:all": "jest"
   },
   "dependencies": {
-    "@mobilenext/mobile-mcp": "0.0.55",
+    "@mobilenext/mobile-mcp": "1.0.5",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "ajv": "^8.20.0",
     "commander": "^12.1.0"
@@ -45,6 +45,6 @@
     "toml": "^3.0.0"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.12.0"
   }
 }

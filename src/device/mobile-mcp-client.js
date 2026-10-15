@@ -160,4 +160,6 @@ function parseToolResult(res) {
   return res;
 }
 
-module.exports = { createCall, makeCall, parseToolResult };
+// resolveServerEntry is exported so tests/integration/mobile-mcp-contract.test.js
+// spawns the pinned engine by the exact path production does, not a copy of it.
+module.exports = { createCall, makeCall, parseToolResult, resolveServerEntry };

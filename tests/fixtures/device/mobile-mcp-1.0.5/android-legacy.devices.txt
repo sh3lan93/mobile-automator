@@ -1,0 +1,1 @@
+{"devices":[{"id":"emulator-5554","name":"Pixel 9 Pro","platform":"android","type":"emulator","version":"16","state":"online"},{"id":"C6C6FFB9-7382-456B-9EE8-0047C8EEA80B","name":"iPhone 15","platform":"ios","type":"simulator","version":"17.0","state":"online","model":"com.apple.CoreSimulator.SimDeviceType.iPhone-15"}]}

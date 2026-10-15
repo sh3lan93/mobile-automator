@@ -58,4 +58,45 @@ if printf '%s' "$GUIDE" | grep -q '{{'; then
   exit 1
 fi
 
+# 6. `mauto devices` starts the real engine and answers ok:true with a list.
+#
+#    Every check above runs without mobile-mcp; this is the only step that
+#    starts the pinned engine from the PACKED tarball. It proves two things
+#    nothing else does: the MCP handshake between our client SDK (1.x) and the
+#    engine's server SDK (2.0) completes, and the per-platform `mobilecli`
+#    binary resolved on this OS. The --ignore-scripts install above is fine for
+#    that: mobilecli ships its binaries as per-platform optionalDependencies,
+#    not a postinstall download (#199).
+#
+#    No device is attached in CI (and adb may be absent), so the expected
+#    answer is an empty list — the point is ok:true, not what is listed. It runs
+#    from a fresh empty directory so no workspace is discovered, and that
+#    directory must still be empty afterwards: `devices` needs no workspace and
+#    must not create one (#188). Telemetry is disabled for this one call.
+DEVICES_DIR="$TMP_DIR/devices-cwd"
+mkdir "$DEVICES_DIR"
+DEVICES_STDERR="$TMP_DIR/devices.stderr"
+DEVICES_STATUS=0
+DEVICES_OUT="$(cd "$DEVICES_DIR" && MOBILEMCP_DISABLE_TELEMETRY=1 "$MAUTO" devices 2>"$DEVICES_STDERR")" || DEVICES_STATUS=$?
+devices_fail() {
+  echo "FAIL: 'mauto devices' $1" >&2
+  echo "  exit: $DEVICES_STATUS" >&2
+  echo "  stdout: $DEVICES_OUT" >&2
+  echo "  stderr:" >&2
+  sed 's/^/    /' "$DEVICES_STDERR" >&2
+  exit 1
+}
+if [ "$DEVICES_STATUS" -ne 0 ]; then
+  devices_fail "exited non-zero"
+fi
+if ! printf '%s' "$DEVICES_OUT" | node -e "
+  const env = JSON.parse(require('fs').readFileSync(0, 'utf8'));
+  process.exit(env.ok === true && Array.isArray(env.data) ? 0 : 1);
+" >/dev/null 2>&1; then
+  devices_fail "did not print an ok:true envelope with a device array"
+fi
+if [ -n "$(ls -A "$DEVICES_DIR")" ]; then
+  devices_fail "wrote into its working directory: $(ls -A "$DEVICES_DIR" | tr '\n' ' ')"
+fi
+
 echo "pack-smoke OK: tarball $TARBALL installed and CLI verified"

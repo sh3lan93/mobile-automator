@@ -7,6 +7,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.27.0]
+
+### 🔧 Changed
+
+- **Breaking: the supported Node floor moves from `>=20.0.0` to `>=22.12.0`.**
+  The pinned device engine's own dependencies (`mobilewright`,
+  `@mobilewright/core` and `@mobilewright/driver-mobilecli` 0.0.60) declare
+  `engines.node >=22.12.0`, so on an older Node an install warns
+  (`EBADENGINE`) and fails outright under `engine-strict` or yarn classic.
+  Node 20 has been EOL since April 2026. CI now tests Node 22 and 24 (#199).
+- The device engine is now `@mobilenext/mobile-mcp@1.0.5` (was 0.0.55). It
+  drives Android and iOS through `mobilecli` by default;
+  `MOBILEMCP_LEGACY_ROBOT=1` restores the previous adb/WDA robots, and takes
+  effect for a new session only — run `mauto session end` first. It is also
+  the first mobile-mcp release clear of the two `sharp` advisories (#199).
+  Three behaviours change with it. Android emulators are now identified by
+  AVD name (`Pixel_9_Pro`) rather than adb serial (`emulator-5554`), so a
+  device pinned before the upgrade must be re-selected with `mauto devices
+  use`. iOS simulators need a one-time agent install before any verb works
+  (upstream mobile-mcp#459); mauto's error hint prints the command. The
+  Android agent (`com.mobilenext.mobilecli.DeviceServer`) persists on the
+  device after the session ends and blocks `uiautomator dump`, Appium and
+  other UiAutomator tools until released (mobilecli#470). TROUBLESHOOTING
+  covers all three.
+- A mobile-mcp bump that drops a tool mauto calls, stops accepting an
+  argument mauto sends, or starts requiring one it does not, now fails the
+  build. `tests/integration/mobile-mcp-contract.test.js` lists the pinned
+  engine's tools and checks them against what `DeviceBridge` actually puts on
+  the wire; the engine's non-strict schemas otherwise drop an unknown argument
+  and report success, which is how screenshots were once silent no-ops. The
+  output shapes mauto parses are pinned too: recorded 1.0.5 output from an
+  Android emulator (both robots) and an iOS simulator replaces the 0.0.55
+  fixtures. `scripts/pack-smoke.sh` now runs `mauto devices` from the packed tarball,
+  the only CI step that starts the real engine (#199).
+
+### Fixed
+
+- Two device-engine failures now carry an actionable hint instead of "Ensure
+  a device or simulator is connected" (#199). "Agent is not installed on the
+  device" (iOS) names the one-time `npx -y mobilecli@<pinned> agent install
+  --device <udid>` command, with the simulator's id filled in; `Device "…"
+  not found` explains that ids differ between the default and legacy engines
+  and points at `mauto devices` / `mauto devices use`. Every device verb's
+  failure hint goes through the same check.
+- Device output that mauto cannot read now fails instead of passing as data
+  (#199). `mauto elements` requests the engine's JSON element format
+  explicitly, and an element list it cannot parse returns `ok:false` (kind
+  `device`) with an excerpt and a hint, where it previously reported `ok:true`
+  with an empty screen. A zero, negative or non-numeric screen size is now an
+  error rather than a size, so geometry gestures (the iOS edge-swipe back)
+  cannot silently act on a 0×0 screen. `--at` rejects negative coordinates as
+  `invalid_input` before they reach the device.
+- `mauto swipe --direction` now sends explicit geometry — centre ± 30% of the
+  screen (60% travel), the pre-1.x Android and iOS-device behaviour — instead
+  of relying on the engine's default, which mobile-mcp 1.x changed to a fixed
+  400px (#199). iOS simulators move from 400px to the same proportional
+  travel. The downward swipe that the agnostic `dismiss_keyboard` semantic
+  press falls back to on iOS follows the same rule; the iOS edge-swipe back
+  gesture is unchanged. Each direction-only swipe now reads the screen size
+  first, so an unreadable size fails the swipe instead of sending it.
+- The docs now disclose the device engine's own telemetry (a PostHog event
+  per call; a scarf.sh pixel since mobile-mcp 1.0.5), which is on by default
+  and independent of mauto's opt-in telemetry, and document the engine's
+  controls: `MOBILEMCP_DISABLE_TELEMETRY`, `MOBILEMCP_LEGACY_ROBOT`,
+  `MOBILEMCP_ALLOW_UNSAFE_URLS` and `MOBILECLI_PATH`. TROUBLESHOOTING's "Is
+  mauto sending anything anywhere?" no longer answers "not unless you turned
+  it on" (#199).
+
+### 🔒 Security
+
+- Cleared the two `sharp` advisories (GHSA-f88m-g3jw-g9cj,
+  GHSA-rgj7-g3m4-5g8c) accepted in 0.26.0: they were reachable only through
+  the `@mobilenext/mobile-mcp@0.0.55` pin, and the 1.0.5 upgrade brings
+  `sharp` 0.35.5. `scripts/audit-allowlist.json` is now empty and Dependabot
+  may propose mobile-mcp major versions again (#199).
+
+---
+
 ## [0.26.0]
 
 ### ✨ Added

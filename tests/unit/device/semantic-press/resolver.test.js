@@ -75,6 +75,42 @@ describe('IOSResolver', () => {
     expect(b.calls).toEqual([['swipe', { direction: 'down' }]]);
   });
 
+  // Through a real DeviceBridge (fake engine `call`): the resolver still asks
+  // for a plain direction-only swipe, and the bridge turns it into explicit
+  // centred geometry rather than the engine's 400px default (#199).
+  describe('through a real DeviceBridge', () => {
+    const { DeviceBridge } = require('../../../../src/device/bridge');
+
+    function engine() {
+      const calls = [];
+      const call = async (tool, args) => {
+        calls.push([tool, args]);
+        if (tool === 'mobile_get_screen_size') return 'Screen size is 1179x2556 pixels';
+        if (tool === 'mobile_list_elements_on_screen') return [];
+        return {};
+      };
+      return { calls, bridge: new DeviceBridge({ call }) };
+    }
+
+    test('dismiss_keyboard fallback swipe carries explicit centred geometry', async () => {
+      const { calls, bridge } = engine();
+      const r = await new IOSResolver(bridge).dismissKeyboard();
+      expect(r).toEqual({ mechanism: 'swipe:down' });
+      expect(calls.filter(([t]) => t === 'mobile_swipe_on_screen')).toEqual([
+        ['mobile_swipe_on_screen', { direction: 'down', x: 589, y: 511, distance: 1533 }],
+      ]);
+    });
+
+    test('press_back edge-swipe is forwarded byte-for-byte, one screen-size read', async () => {
+      const { calls, bridge } = engine();
+      await new IOSResolver(bridge).pressBack();
+      expect(calls).toEqual([
+        ['mobile_get_screen_size', {}],
+        ['mobile_swipe_on_screen', { direction: 'right', x: 1, y: 1278, distance: 707 }],
+      ]);
+    });
+  });
+
   test('grant_permission accepts an iOS-specific label', async () => {
     const b = fakeBridge({ elements: [{ accessibility_label: 'Allow While Using App', center: [400, 1600] }] });
     const r = await new IOSResolver(b).grantPermission();
