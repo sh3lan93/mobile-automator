@@ -7,7 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.27.1]
+
+**The first npm release of the 0.27 line.** `v0.27.0` was tagged but never
+published: the release pipeline's audit gate stopped `npm publish` on two
+advisories disclosed after that release was cut (below). Everything listed
+under [0.27.0] ships in this version, including its breaking changes:
+
+- **Node `>=22.12.0` is now required** (was `>=20.0.0`).
+- **The device engine is `@mobilenext/mobile-mcp@1.0.5`**, which drives
+  devices through `mobilecli`. Android emulators are identified by AVD name
+  (`Pixel_9_Pro`, not `emulator-5554`), so re-select a pinned device with
+  `mauto devices use`; iOS simulators need a one-time agent install, and
+  mauto's error hint prints the command. See [0.27.0] and TROUBLESHOOTING.
+
+### 🔒 Security
+
+- Cleared GHSA-6qxp-vccf-f47h (high, `@modelcontextprotocol/sdk`: its OAuth
+  client could send credentials to an authorization server chosen by the MCP
+  server) and GHSA-jqcg-44mw-7w3h (critical, `proxy-addr`: IP spoofing via an
+  IPv4-mapped IPv6 trust subnet, reached through `express`) with a lockfile
+  refresh to `@modelcontextprotocol/sdk` 1.32.1 and `proxy-addr` 2.0.8. Both
+  are within the existing ranges, so `package.json` is unchanged. Neither was
+  reachable in mauto, which uses only the SDK's stdio client and runs no HTTP
+  server, but the audit gate accepts no exceptions without an allowlist entry,
+  and a fix is cheaper than one.
+
+---
+
 ## [0.27.0]
+
+> Tagged but not published to npm — see [0.27.1].
 
 ### 🔧 Changed
 
