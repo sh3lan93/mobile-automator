@@ -26,6 +26,31 @@ function resolveServerEntry() {
   return path.join(pkgDir, binRel);
 }
 
+// The environment mauto's own engine process is spawned with. Pure: returns a
+// new object and never mutates baseEnv.
+//
+// MOBILEMCP_ALLOW_UNSAFE_URLS defaults to "1" (#212). mobile-mcp rejects every
+// non-http(s) URL in mobile_open_url unless it is set, which blocks the
+// documented `open_url` deep-link capability (myapp://...). That guard exists to
+// stop an LLM whose ONLY reach is MCP from opening arbitrary schemes; an agent
+// driving mauto already has a shell and could open the same URL via adb or
+// simctl, so under mauto it protects nothing. The URL reaches the device as an
+// argv element on the default mobilecli robot (no shell), and the legacy adb
+// robot escapes shell metacharacters. A user-set value wins: the engine only
+// accepts the exact string "1", so MOBILEMCP_ALLOW_UNSAFE_URLS=0 restores the
+// guard. The env is read when the engine spawns, so a running session daemon
+// must be ended (`mauto session end`) before a change takes effect.
+function buildEngineEnv({ device = null, baseEnv = process.env } = {}) {
+  const env = {
+    ...baseEnv,
+    MOBILEMCP_ALLOW_UNSAFE_URLS: baseEnv.MOBILEMCP_ALLOW_UNSAFE_URLS ?? '1',
+  };
+  // mobile-mcp reads the target device from the environment / its own
+  // selection; we pass it through when provided so callers can pin a device.
+  if (device) env.MOBILE_MCP_DEVICE = device;
+  return env;
+}
+
 // Integration glue: spawns mobile-mcp over stdio and returns a `call`
 // function shaped exactly like the one DeviceBridge expects.
 // NOT unit-tested (would require spawning mobile-mcp); see the smoke test.
@@ -34,9 +59,7 @@ async function createCall({ device } = {}) {
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: [serverEntry],
-    // mobile-mcp reads the target device from the environment / its own
-    // selection; we pass it through when provided so callers can pin a device.
-    env: device ? { ...process.env, MOBILE_MCP_DEVICE: device } : process.env,
+    env: buildEngineEnv({ device }),
   });
 
   const client = new Client(
@@ -162,4 +185,4 @@ function parseToolResult(res) {
 
 // resolveServerEntry is exported so tests/integration/mobile-mcp-contract.test.js
 // spawns the pinned engine by the exact path production does, not a copy of it.
-module.exports = { createCall, makeCall, parseToolResult, resolveServerEntry };
+module.exports = { createCall, makeCall, parseToolResult, resolveServerEntry, buildEngineEnv };
