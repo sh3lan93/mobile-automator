@@ -81,12 +81,21 @@ function pidAlive(pid) {
 // cleaned rather than respected. Returns one of:
 //   'dead'    - no such process (ESRCH or any non-EPERM kill error)
 //   'ours'    - alive AND its command line contains `mauto-session-daemon`
+//               (and, when `projectRoot` is given, names THAT workspace)
+//   'foreign' - only with `projectRoot`: alive and a mauto daemon, but its
+//               command line does not name that workspace (#156) — another
+//               workspace's daemon, one started before the workspace marker
+//               existed, or an editor open on the bin. Never ours to signal.
 //   'other'   - alive AND its command line does NOT (recycled pid)
 //   'unknown' - alive but `ps` itself failed (e.g. no `ps` on the host) —
 //               treated as 'ours' by cleanStale: never clean when unsure.
 // `execFile` is injectable for tests; a failure there must never crash the
 // daemon, hence the 'unknown' fallback.
-function pidIdentity(pid, { execFile = childProcess.execFileSync } = {}) {
+//
+// cleanStale passes no projectRoot and keeps the binary-level answer: there a
+// wrong 'ours' only means stale files are left alone. `session end` passes one,
+// because there a wrong 'ours' sends a process-group kill (src/device/connection.js).
+function pidIdentity(pid, { execFile = childProcess.execFileSync, projectRoot = null } = {}) {
   if (!pid || !Number.isInteger(pid)) return 'dead';
   // Our own pid is the in-process daemon (unit tests run startDaemon in the
   // test process, so the lock/pidfile carry the test runner's pid). Never clean
@@ -103,8 +112,17 @@ function pidIdentity(pid, { execFile = childProcess.execFileSync } = {}) {
   }
   if (!alive) return 'dead';
   try {
-    const out = execFile('ps', ['-p', String(pid), '-o', 'command='], { encoding: 'utf8' });
-    return /mauto-session-daemon/.test(String(out || '')) ? 'ours' : 'other';
+    // -ww: never truncate the line — the workspace marker is at its END. stderr
+    // ignored: a failing `ps` is already the 'unknown' answer, not verb output.
+    const out = String(
+      execFile('ps', ['-ww', '-p', String(pid), '-o', 'command='], {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }) || ''
+    );
+    if (!/mauto-session-daemon/.test(out)) return 'other';
+    if (projectRoot == null) return 'ours';
+    return paths.commandNamesWorkspace(out, projectRoot) ? 'ours' : 'foreign';
   } catch (_) {
     return 'unknown';
   }

@@ -1252,7 +1252,7 @@ async function handleSessionEnd(
       envelope: fail(
         'device',
         `device session daemon pid ${r.pid} did not exit`,
-        `It may still hold the workspace lock, or could not be confirmed as a mauto daemon and so was not signalled. Check it with \`ps -p ${r.pid}\` and stop it with \`kill -9 ${r.pid}\` (pidfile: ${pidFile}). ${logHint}`,
+        `It may still hold the workspace lock, or could not be confirmed as this workspace's mauto daemon and so was not signalled. Check it with \`ps -p ${r.pid}\` and stop it with \`kill -9 ${r.pid}\` (pidfile: ${pidFile}). ${logHint}`,
         { stopped: false, already_stopped: false, pid: r.pid }
       ),
       exitKind: 'device',

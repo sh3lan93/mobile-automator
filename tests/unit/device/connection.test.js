@@ -198,6 +198,31 @@ describe('connection', () => {
       expect(d.log.find((e) => e[0] === 'terminate')).toBeUndefined();
     });
 
+    test("another workspace's daemon (foreign) is never signalled; without an ack none of ours was running", async () => {
+      const d = deps({ acked: false, diesWithin: false, identity: 'foreign' });
+      expect(await endSession('/x', d.opts)).toEqual({ ...none, pid: 4000 });
+      expect(d.log.find((e) => e[0] === 'terminate')).toBeUndefined();
+    });
+
+    test('an acked daemon that outlives the budget but cannot be tied to this workspace is reported, never signalled', async () => {
+      const d = deps({ acked: true, diesWithin: false, identity: 'foreign' });
+      expect(await endSession('/x', d.opts)).toEqual({ stopped: false, already_stopped: false, forced: false, pid: 4000 });
+      expect(d.log.find((e) => e[0] === 'terminate')).toBeUndefined();
+    });
+
+    test('the default identity check is bound to this workspace', async () => {
+      const sessionDaemon = require('../../../src/device/session-daemon');
+      const spy = jest.spyOn(sessionDaemon, 'pidIdentity').mockReturnValue('other');
+      try {
+        const d = deps({ acked: false, diesWithin: false });
+        delete d.opts.identify;
+        await endSession('/x', d.opts);
+        expect(spy).toHaveBeenCalledWith(4000, { projectRoot: '/x' });
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
     test('no ack but a live daemon of ours: escalated with budget 0', async () => {
       const d = deps({ acked: false, diesWithin: false, identity: 'ours', outcome: 'dead' });
       expect(await endSession('/x', d.opts)).toEqual({ stopped: true, already_stopped: false, forced: true, pid: 4000 });

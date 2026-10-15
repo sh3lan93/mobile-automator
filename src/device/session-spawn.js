@@ -12,6 +12,7 @@ const childProcess = require('child_process');
 
 const sessionClient = require('./session-client');
 const sessionLog = require('./session-log');
+const paths = require('./session-paths');
 const reaper = require('./process-reaper');
 
 const DAEMON_BIN = path.join(__dirname, '..', '..', 'bin', 'mauto-session-daemon.js');
@@ -51,7 +52,9 @@ async function spawnDaemon({
   const log = openLog(projectRoot);
 
   try {
-    const child = spawn(process.execPath, [DAEMON_BIN], {
+    // The root in argv is an identity marker only (see paths.daemonArgv): env
+    // stays the daemon's source of truth, but `ps` can only see argv.
+    const child = spawn(process.execPath, [DAEMON_BIN, ...paths.daemonArgv(projectRoot)], {
       detached: true,
       stdio: log.stdio,
       env,

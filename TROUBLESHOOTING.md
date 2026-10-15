@@ -270,9 +270,9 @@ starts a fresh session. The cause is in the engine's own output in
 The daemon acknowledged the shutdown but was still alive 35 seconds later —
 usually a device call that never returned, or an engine that would not exit.
 `forced: true` means mauto terminated it. A failure with `pid` means it could
-not be stopped (or could not be confirmed as a mauto daemon, so it was left
-alone): check it with `ps -p <pid>` and stop it with `kill -9 <pid>`. Its stale
-lock and socket are cleaned automatically by the next session start.
+not be stopped (or could not be confirmed as this workspace's daemon, so it was
+left alone): check it with `ps -p <pid>` and stop it with `kill -9 <pid>`. Its
+stale lock and socket are cleaned automatically by the next session start.
 
 ### ❌ A verb failed with "mobile-mcp did not finish initializing within 10000ms"
 

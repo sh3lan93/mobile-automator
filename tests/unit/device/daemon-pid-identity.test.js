@@ -40,6 +40,47 @@ describe('pidIdentity (#150)', () => {
   });
 });
 
+// #156: `session end` escalates to a process-group kill, so "a mauto daemon"
+// is not enough — it has to be THIS workspace's daemon. A copied workspace
+// (`cp -R` carries daemon.pid) or a recycled pid would otherwise name another
+// workspace's live daemon.
+describe('pidIdentity bound to a workspace (#156)', () => {
+  const root = '/a/proj';
+  const cmd = (r) => `node /x/bin/mauto-session-daemon.js --project-root ${r}\n`;
+
+  test("a daemon whose command line names this workspace is ours", () => {
+    expect(pidIdentity(process.ppid, { projectRoot: root, execFile: () => cmd(root) })).toBe('ours');
+  });
+
+  test("another workspace's daemon is foreign, not ours", () => {
+    expect(pidIdentity(process.ppid, { projectRoot: root, execFile: () => cmd('/b/other') })).toBe('foreign');
+  });
+
+  test('a daemon that names no workspace (an older daemon, an editor on the bin) is foreign', () => {
+    expect(pidIdentity(process.ppid, { projectRoot: root, execFile: () => 'vim bin/mauto-session-daemon.js' })).toBe('foreign');
+  });
+
+  test('a process that is not a mauto daemon at all is still other', () => {
+    expect(pidIdentity(process.ppid, { projectRoot: root, execFile: () => 'sleep 120' })).toBe('other');
+  });
+
+  test('without a projectRoot the binary-level answer is unchanged (cleanStale)', () => {
+    expect(pidIdentity(process.ppid, { execFile: () => cmd('/b/other') })).toBe('ours');
+  });
+
+  test('asks ps for the full, untruncated command line', () => {
+    let args;
+    pidIdentity(process.ppid, {
+      projectRoot: root,
+      execFile: (_bin, a) => {
+        args = a;
+        return cmd(root);
+      },
+    });
+    expect(args).toEqual(['-ww', '-p', String(process.ppid), '-o', 'command=']);
+  });
+});
+
 describe('cleanStale with pid identity (#150)', () => {
   test('a lockfile pointing at a recycled (other) pid is cleaned — wedge cleared', () => {
     const root = tmpRoot();

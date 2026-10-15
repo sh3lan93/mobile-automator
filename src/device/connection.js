@@ -103,7 +103,9 @@ async function endSession(
   {
     client = sessionClient,
     reaper = processReaper,
-    identify = (pid) => sessionDaemon.pidIdentity(pid),
+    // Bound to THIS workspace (#156): a group kill must never reach another
+    // workspace's daemon through a copied or recycled pidfile.
+    identify = (pid) => sessionDaemon.pidIdentity(pid, { projectRoot }),
     readPid = () => sessionDaemon.readPidFile(paths.pidFilePath(projectRoot)),
     budgetMs = END_BUDGET_MS,
   } = {}
@@ -131,6 +133,15 @@ async function endSession(
     case 'dead':
     case 'other': // the pid was recycled: our daemon is gone
       return result(acked);
+    case 'foreign':
+      // A mauto daemon whose command line does not name this workspace:
+      // another workspace's, reached through a copied or recycled pidfile.
+      // Never signalled. Without an ack nothing answered on OUR socket, so none
+      // of ours was running. With an ack the daemon that answered is ours, but
+      // its command line cannot prove it (one started before the workspace
+      // marker), so it is reported rather than killed.
+      if (!acked) return result(false);
+      return { stopped: false, already_stopped: false, forced: false, pid };
     case 'ours':
       if ((await reaper.terminate(pid, { group: true })) === 'dead') {
         return { stopped: true, already_stopped: false, forced: true, pid };

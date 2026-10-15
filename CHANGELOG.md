@@ -30,7 +30,10 @@ engine has died.
   before tearing down. A daemon still alive 35s later is terminated
   (`forced: true`); one that cannot be stopped is reported as a `device`
   failure with its `pid`. A daemon too stuck to acknowledge at all is no
-  longer reported as `already_stopped`.
+  longer reported as `already_stopped`. Only a process whose command line
+  names this workspace is ever signalled — the daemon now carries
+  `--project-root <root>` in its argv — so a copied workspace or a recycled
+  pid can never reach another workspace's daemon.
 - **A daemon whose engine dies now shuts itself down** (`daemon.engine_exit`,
   `stop_reason: "engine_exit"`), and the next verb starts a fresh one.
   `session status` reports such a daemon as `running: false` with

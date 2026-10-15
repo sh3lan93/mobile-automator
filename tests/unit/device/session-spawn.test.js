@@ -1,6 +1,7 @@
 'use strict';
 
 const { EventEmitter } = require('events');
+const path = require('path');
 
 const { spawnDaemon, DAEMON_BIN } = require('../../../src/device/session-spawn');
 const { IGNORED } = require('../../../src/device/session-log');
@@ -44,7 +45,9 @@ describe('session-spawn', () => {
     });
     expect(ok).toBe(true);
     expect(captured.cmd).toBe(process.execPath);
-    expect(captured.args).toEqual([DAEMON_BIN]);
+    // The root rides in argv as an identity marker `ps` can see (#156); env stays
+    // the daemon's source of truth.
+    expect(captured.args).toEqual([DAEMON_BIN, '--project-root', path.resolve('/proj')]);
     expect(captured.opts.detached).toBe(true);
     // Pass-through, not re-derivation: whatever session-log decided is what the
     // child gets. The "fd 2 must be the log" guard for #163 lives in
