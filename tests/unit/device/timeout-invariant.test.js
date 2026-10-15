@@ -24,3 +24,14 @@ describe('session end budget invariant (#156)', () => {
     expect(END_BUDGET_MS).toBeGreaterThan(sessionDaemon.DAEMON_CALL_TIMEOUT_MS + 4000);
   });
 });
+
+// #156: the spawner kills a daemon that is not ready when its window closes, so
+// the engine connect bound must expire first — otherwise a slow-but-healthy
+// connect is killed instead of failing honestly with daemon.connect_failure.
+describe('connect/readiness timeout invariant (#156)', () => {
+  test('CONNECT_TIMEOUT < DEFAULT_READY_TIMEOUT', () => {
+    const { CONNECT_TIMEOUT_MS } = require('../../../src/device/mobile-mcp-client');
+    const { DEFAULT_READY_TIMEOUT_MS } = require('../../../src/device/session-spawn');
+    expect(CONNECT_TIMEOUT_MS).toBeLessThan(DEFAULT_READY_TIMEOUT_MS);
+  });
+});

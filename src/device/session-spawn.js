@@ -106,4 +106,4 @@ async function spawnDaemon({
   }
 }
 
-module.exports = { spawnDaemon, DAEMON_BIN };
+module.exports = { spawnDaemon, DAEMON_BIN, DEFAULT_READY_TIMEOUT_MS };
