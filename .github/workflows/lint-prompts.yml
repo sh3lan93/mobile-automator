@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Scoping is configured in .vale.ini via path globs - PromptHygiene
       # only attaches to src/guide/content/**/*.md (the CLI guide prose).
