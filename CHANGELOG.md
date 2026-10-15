@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.28.0]
+
+**Device session lifecycle honesty (#156).** The session daemon no longer
+hangs on a wedged engine, leaves an unready daemon holding the workspace lock,
+reports `session end` as stopped before it is, or keeps serving after its
+engine has died.
+
+---
+
 ## [0.27.1]
 
 **The first npm release of the 0.27 line.** `v0.27.0` was tagged but never
