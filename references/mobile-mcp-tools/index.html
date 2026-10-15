@@ -1445,7 +1445,9 @@ what each verb does under the hood.</p>
 verbs that execute them, and the mobile-mcp engine primitives those verbs wrap.</p>
 <h2 id="tool-mapping">Tool Mapping<a class="headerlink" href="#tool-mapping" title="Permanent link">&para;</a></h2>
 <p>Each scenario action is executed by a <code>mauto</code> verb, which internally calls the
-mobile-mcp engine primitive shown below:</p>
+mobile-mcp engine primitive shown below. The engine is pinned at
+<code>@mobilenext/mobile-mcp</code> 1.0.5; every tool except <code>mobile_list_available_devices</code>
+takes a <code>device</code> id, which <code>mauto</code> injects for you.</p>
 <table>
 <thead>
 <tr>
@@ -1496,19 +1498,19 @@ mobile-mcp engine primitive shown below:</p>
 <td><code>open_url</code></td>
 <td><code>mauto open-url</code></td>
 <td><code>mobile_open_url</code></td>
-<td>Open a URL in the device browser</td>
+<td>Open an <code>http(s)</code> URL; other schemes need <code>MOBILEMCP_ALLOW_UNSAFE_URLS=1</code> (<a href="https://github.com/sh3lan93/mobile-automator/issues/212">#212</a>)</td>
 </tr>
 <tr>
 <td>(screenshot)</td>
 <td><code>mauto screenshot</code></td>
-<td><code>mobile_take_screenshot</code> / <code>mobile_save_screenshot</code></td>
-<td>Capture screenshot for verification</td>
+<td><code>mobile_save_screenshot</code></td>
+<td>Save a screenshot to a file for verification</td>
 </tr>
 <tr>
 <td>(find element)</td>
 <td><code>mauto elements</code></td>
 <td><code>mobile_list_elements_on_screen</code></td>
-<td>List all interactive elements on screen</td>
+<td>List all interactive elements on screen (called with <code>format: "json"</code> — 1.0.5 defaults to a text format)</td>
 </tr>
 </tbody>
 </table>
@@ -1521,7 +1523,7 @@ mobile-mcp engine primitive shown below:</p>
 <h3 id="screenshot-comparison">Screenshot Comparison<a class="headerlink" href="#screenshot-comparison" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>mobile_take_screenshot()</code> - Returns screenshot data directly</li>
-<li><code>mobile_save_screenshot(path)</code> - Saves screenshot to specified path for later comparison</li>
+<li><code>mobile_save_screenshot({ saveTo })</code> - Saves screenshot to the given path (<code>.png</code>/<code>.jpg</code>/<code>.jpeg</code>) for later comparison — <code>mauto screenshot</code> uses this</li>
 </ul>
 <h2 id="platform-specific-notes">Platform-Specific Notes<a class="headerlink" href="#platform-specific-notes" title="Permanent link">&para;</a></h2>
 <h3 id="android">Android<a class="headerlink" href="#android" title="Permanent link">&para;</a></h3>
