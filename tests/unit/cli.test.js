@@ -1298,7 +1298,7 @@ describe('cli handlers', () => {
       });
       expect(up.exitKind).toBe('ok');
       expect(up.envelope.data).toEqual({
-        running: true, in_flight: 2, device: 'A',
+        running: true, reason: null, in_flight: 2, device: 'A',
         log_path: sessionPaths.logFilePath('/x'), session_id: null,
       });
     });
@@ -1311,24 +1311,78 @@ describe('cli handlers', () => {
       expect(down.exitKind).toBe('ok');
       // log_path survives the not-running shape: that is when it is needed.
       expect(down.envelope.data).toEqual({
-        running: false, in_flight: null, device: null,
+        running: false, reason: null, in_flight: null, device: null,
         log_path: sessionPaths.logFilePath('/x'), session_id: null,
       });
     });
-  });
 
-  describe('handleSessionEnd', () => {
-    test('stopped:true when a daemon acknowledged shutdown', async () => {
-      const r = await handleSessionEnd({ projectRoot: '/x', client: { requestShutdown: async () => true } });
+    test('a dead engine: running:false with a hint that says why (#156)', async () => {
+      const r = await handleSessionStatus({
+        projectRoot: '/x',
+        client: { getSessionStatus: async () => ({ running: false, reason: 'engine_exited', in_flight: 0, device: 'A' }) },
+      });
       expect(r.exitKind).toBe('ok');
-      expect(r.envelope.data.stopped).toBe(true);
-      expect(r.envelope.data.already_stopped).toBe(false);
+      expect(r.envelope.data.running).toBe(false);
+      expect(r.envelope.data.reason).toBe('engine_exited');
+      expect(r.envelope.hint).toContain('device engine exited');
+      expect(r.envelope.hint).toContain(sessionPaths.logFilePath('/x'));
     });
 
-    test('already_stopped:true when no daemon was reachable', async () => {
-      const r = await handleSessionEnd({ projectRoot: '/x', client: { requestShutdown: async () => false } });
-      expect(r.envelope.data.stopped).toBe(false);
-      expect(r.envelope.data.already_stopped).toBe(true);
+    test('a healthy session carries no hint', async () => {
+      const r = await handleSessionStatus({
+        projectRoot: '/x',
+        client: { getSessionStatus: async () => ({ running: true, in_flight: 0, device: 'A' }) },
+      });
+      expect(r.envelope.hint).toBeUndefined();
+    });
+  });
+
+  describe('handleSessionEnd (#156)', () => {
+    // Stub connection.endSession's dependencies so it returns a chosen outcome.
+    function run(outcome) {
+      const reaper = {
+        waitForDeath: async () => outcome !== 'escalated' && outcome !== 'survived',
+        terminate: async () => (outcome === 'escalated' ? 'dead' : 'survived'),
+      };
+      return handleSessionEnd({
+        projectRoot: '/x',
+        client: { requestShutdown: async () => outcome !== 'none' },
+        end: {
+          readPid: () => (outcome === 'none' ? null : 4000),
+          identify: () => 'ours',
+          reaper,
+        },
+      });
+    }
+
+    test('stopped cleanly: ok, forced:false, no hint', async () => {
+      const r = await run('clean');
+      expect(r.exitKind).toBe('ok');
+      expect(r.envelope.data).toEqual({ stopped: true, already_stopped: false, forced: false });
+      expect(r.envelope.hint).toBeUndefined();
+    });
+
+    test('stopped by escalation: ok, forced:true, hint names the pid', async () => {
+      const r = await run('escalated');
+      expect(r.exitKind).toBe('ok');
+      expect(r.envelope.data).toEqual({ stopped: true, already_stopped: false, forced: true });
+      expect(r.envelope.hint).toContain('terminated pid 4000');
+    });
+
+    test('nothing running: ok, already_stopped', async () => {
+      const r = await run('none');
+      expect(r.exitKind).toBe('ok');
+      expect(r.envelope.data).toEqual({ stopped: false, already_stopped: true, forced: false });
+    });
+
+    test('survivor: fail(device) with the pid, pidfile and log in the hint', async () => {
+      const r = await run('survived');
+      expect(r.exitKind).toBe('device');
+      expect(r.envelope.ok).toBe(false);
+      expect(r.envelope.error.message).toBe('device session daemon pid 4000 did not exit');
+      expect(r.envelope.data).toEqual({ stopped: false, already_stopped: false, pid: 4000 });
+      expect(r.envelope.hint).toContain(sessionPaths.pidFilePath('/x'));
+      expect(r.envelope.hint).toContain(sessionPaths.logFilePath('/x'));
     });
   });
 

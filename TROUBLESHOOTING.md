@@ -202,7 +202,7 @@ mobile-mcp engine's own stderr (its tool invocations and device tooling) — mea
 bottom. `.logs/daemon.ndjson` is one JSON object per line, carrying per-call
 latencies, timeout counts, mobile-mcp error kinds, and the daemon's lifecycle
 events (`daemon.start`, `daemon.lock_conflict`, `daemon.connect_failure`,
-`daemon.listen_failure`, `daemon.stop`, `daemon.crash`). It answers "how long
+`daemon.listen_failure`, `daemon.engine_exit`, `daemon.stop`, `daemon.crash`). It answers "how long
 do taps take on this device", "how often does mobile-mcp time out" and "did the
 daemon die and respawn mid-run" — none of which the raw log can. Both are
 bounded at 1 MiB with a single `.1` generation.
@@ -255,6 +255,32 @@ mauto session end                    # ask a live daemon to stop
 rm -rf mobile-automator/.session     # clear a wedged socket/pidfile/lock
 mauto devices                        # respawns the daemon
 ```
+
+### ❌ `session status` reports `reason: "engine_exited"`
+
+The daemon is reachable but its mobile-mcp engine has died, so it can no longer
+drive the device. It is already shutting itself down; the next device verb
+starts a fresh session. The cause is in the engine's own output in
+`mobile-automator/.session/daemon.log`; the structured record is a
+`daemon.engine_exit` event followed by `daemon.stop` with
+`stop_reason: "engine_exit"` in `mobile-automator/.logs/daemon.ndjson`.
+
+### ❌ `session end` reported `forced: true`, or failed with a `pid`
+
+The daemon acknowledged the shutdown but was still alive 35 seconds later —
+usually a device call that never returned, or an engine that would not exit.
+`forced: true` means mauto terminated it. A failure with `pid` means it could
+not be stopped (or could not be confirmed as this workspace's daemon, so it was
+left alone): check it with `ps -p <pid>` and stop it with `kill -9 <pid>`. Its
+stale lock and socket are cleaned automatically by the next session start.
+
+### ❌ A verb failed with "mobile-mcp did not finish initializing within 10000ms"
+
+The engine started but never completed its MCP handshake. Nothing is left
+running — the engine is terminated before the error is reported. The
+structured record is `daemon.connect_failure` with
+`error_code: "ENGINE_CONNECT_TIMEOUT"`. Check `daemon.log` for the engine's
+own output.
 
 ### ❓ "Element not found" — but did the app crash?
 

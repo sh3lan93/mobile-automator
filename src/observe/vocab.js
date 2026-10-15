@@ -43,6 +43,7 @@ const EVENT_NAMES = Object.freeze([
   'daemon.start_failure',
   'daemon.listen_failure',
   'daemon.connect_failure',
+  'daemon.engine_exit',
   'daemon.lock_conflict',
   'daemon.undeliverable',
   // Emitted by the flush path, which lands in a later slice-5 task; declared
@@ -86,11 +87,20 @@ const VERB_NAMES = Object.freeze([
 ]);
 
 // Why the daemon stopped. 'crash' is documented but not yet produced.
-const STOP_REASONS = Object.freeze(['idle', 'signal', 'shutdown', 'crash', 'explicit']);
+// 'engine_exit': the mobile-mcp engine died under a serving daemon (#156).
+const STOP_REASONS = Object.freeze(['idle', 'signal', 'shutdown', 'crash', 'explicit', 'engine_exit']);
 
-// Node/libuv errno names for this platform, plus our own ELOCKED (a lock
-// conflict, recorded by src/device/session-daemon.js). Names only: the numeric codes an MCP
-// server reports are not in this set and so never pass.
-const ERROR_CODES = Object.freeze([...Object.keys(os.constants.errno), 'ELOCKED']);
+// Node/libuv errno names for this platform, plus our own codes, all recorded by
+// src/device/: ELOCKED (a lock conflict, session-daemon.js),
+// ENGINE_CONNECT_TIMEOUT (initialize exceeded its bound, mobile-mcp-client.js)
+// and ENGINE_EXITED (the engine died before the daemon was serving,
+// session-daemon.js). Names only: the numeric codes an MCP server reports are
+// not in this set and so never pass.
+const ERROR_CODES = Object.freeze([
+  ...Object.keys(os.constants.errno),
+  'ELOCKED',
+  'ENGINE_CONNECT_TIMEOUT',
+  'ENGINE_EXITED',
+]);
 
 module.exports = { OS_NAMES, EVENT_NAMES, VERB_NAMES, STOP_REASONS, ERROR_CODES };

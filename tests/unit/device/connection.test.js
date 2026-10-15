@@ -61,6 +61,7 @@ describe('connection', () => {
       const client = { getSessionStatus: async () => ({ running: true, in_flight: 2, device: 'A' }) };
       expect(await sessionStatus('/x', { client })).toEqual({
         running: true,
+        reason: null,
         in_flight: 2,
         device: 'A',
         log_path: paths.logFilePath('/x'),
@@ -76,6 +77,7 @@ describe('connection', () => {
       const client = { getSessionStatus: async () => ({ running: false, in_flight: null, device: null }) };
       expect(await sessionStatus('/x', { client })).toEqual({
         running: false,
+        reason: null,
         in_flight: null,
         device: null,
         log_path: paths.logFilePath('/x'),
@@ -109,6 +111,11 @@ describe('connection', () => {
       const client = { getSessionStatus: async () => ({ running: false, in_flight: null, device: null }) };
       expect((await sessionStatus(root, { client })).session_id).toBeNull();
     });
+
+    test('passes reason through from the client', async () => {
+      const client = { getSessionStatus: async () => ({ running: false, reason: 'engine_exited', in_flight: 0, device: 'A' }) };
+      expect((await sessionStatus('/x', { client })).reason).toBe('engine_exited');
+    });
   });
 
   // cli.js already imports this module as its one device facade, so naming the
@@ -131,10 +138,124 @@ describe('connection', () => {
     });
   });
 
-  describe('endSession', () => {
-    test('delegates to the client requestShutdown', async () => {
+  describe('endSession (#156)', () => {
+    // Every dependency faked: no socket, no pidfile, no signals.
+    function deps({ pid = 4000, acked = true, diesWithin = true, identity = 'ours', outcome = 'dead' } = {}) {
+      const log = [];
+      return {
+        log,
+        opts: {
+          client: { requestShutdown: async () => { log.push('shutdown'); return acked; } },
+          readPid: () => pid,
+          identify: (p) => { log.push(['identify', p]); return identity; },
+          budgetMs: 35000,
+          reaper: {
+            waitForDeath: async (p, o) => { log.push(['wait', p, o.budgetMs]); return diesWithin; },
+            terminate: async (p, o) => { log.push(['terminate', p, o.group]); return outcome; },
+          },
+        },
+      };
+    }
+    const ok = { stopped: true, already_stopped: false, forced: false };
+    const none = { stopped: false, already_stopped: true, forced: false };
+
+    test('reads the pid BEFORE asking the daemon to shut down', async () => {
+      const order = [];
+      const d = deps();
+      d.opts.readPid = () => { order.push('readPid'); return 4000; };
+      d.opts.client.requestShutdown = async () => { order.push('shutdown'); return true; };
+      await endSession('/x', d.opts);
+      expect(order).toEqual(['readPid', 'shutdown']);
+    });
+
+    test('ack + death within the budget: stopped, not forced', async () => {
+      const d = deps();
+      expect(await endSession('/x', d.opts)).toEqual({ ...ok, pid: 4000 });
+      expect(d.log).toContainEqual(['wait', 4000, 35000]);
+      expect(d.log.find((e) => e[0] === 'terminate')).toBeUndefined();
+    });
+
+    test('ack + outlives the budget + ours: escalated, forced', async () => {
+      const d = deps({ diesWithin: false, identity: 'ours', outcome: 'dead' });
+      expect(await endSession('/x', d.opts)).toEqual({ stopped: true, already_stopped: false, forced: true, pid: 4000 });
+      expect(d.log).toContainEqual(['terminate', 4000, true]);
+    });
+
+    test('ack + outlives the budget + survives escalation: failure with pid', async () => {
+      const d = deps({ diesWithin: false, identity: 'ours', outcome: 'survived' });
+      expect(await endSession('/x', d.opts)).toEqual({ stopped: false, already_stopped: false, forced: false, pid: 4000 });
+    });
+
+    test('unknown identity is never signalled', async () => {
+      const d = deps({ diesWithin: false, identity: 'unknown' });
+      expect(await endSession('/x', d.opts)).toEqual({ stopped: false, already_stopped: false, forced: false, pid: 4000 });
+      expect(d.log.find((e) => e[0] === 'terminate')).toBeUndefined();
+    });
+
+    test('a recycled pid (other) is reported gone, never signalled', async () => {
+      const d = deps({ diesWithin: false, identity: 'other' });
+      expect(await endSession('/x', d.opts)).toEqual({ ...ok, pid: 4000 });
+      expect(d.log.find((e) => e[0] === 'terminate')).toBeUndefined();
+    });
+
+    test("another workspace's daemon (foreign) is never signalled; without an ack none of ours was running", async () => {
+      const d = deps({ acked: false, diesWithin: false, identity: 'foreign' });
+      expect(await endSession('/x', d.opts)).toEqual({ ...none, pid: 4000 });
+      expect(d.log.find((e) => e[0] === 'terminate')).toBeUndefined();
+    });
+
+    test('an acked daemon that outlives the budget but cannot be tied to this workspace is reported, never signalled', async () => {
+      const d = deps({ acked: true, diesWithin: false, identity: 'foreign' });
+      expect(await endSession('/x', d.opts)).toEqual({ stopped: false, already_stopped: false, forced: false, pid: 4000 });
+      expect(d.log.find((e) => e[0] === 'terminate')).toBeUndefined();
+    });
+
+    test('the default identity check is bound to this workspace', async () => {
+      const sessionDaemon = require('../../../src/device/session-daemon');
+      const spy = jest.spyOn(sessionDaemon, 'pidIdentity').mockReturnValue('other');
+      try {
+        const d = deps({ acked: false, diesWithin: false });
+        delete d.opts.identify;
+        await endSession('/x', d.opts);
+        expect(spy).toHaveBeenCalledWith(4000, { projectRoot: '/x' });
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    test('no ack but a live daemon of ours: escalated with budget 0', async () => {
+      const d = deps({ acked: false, diesWithin: false, identity: 'ours', outcome: 'dead' });
+      expect(await endSession('/x', d.opts)).toEqual({ stopped: true, already_stopped: false, forced: true, pid: 4000 });
+      expect(d.log).toContainEqual(['wait', 4000, 0]);
+    });
+
+    test('no ack and a dead pidfile pid: nothing was running', async () => {
+      const d = deps({ acked: false, diesWithin: true });
+      expect(await endSession('/x', d.opts)).toEqual({ ...none, pid: 4000 });
+    });
+
+    test('no pidfile + ack: stopped (as before)', async () => {
+      const d = deps({ pid: null, acked: true });
+      expect(await endSession('/x', d.opts)).toEqual({ ...ok, pid: null });
+    });
+
+    test('no pidfile + no ack: already stopped (as before)', async () => {
+      const d = deps({ pid: null, acked: false });
+      expect(await endSession('/x', d.opts)).toEqual({ ...none, pid: null });
+    });
+
+    // Review Focus 1: in-process daemon tests write the TEST RUNNER's pid to
+    // the pidfile. Waiting on it would burn the budget; signalling it would
+    // kill jest.
+    test('never signals its own process', async () => {
+      const d = deps({ pid: process.pid, diesWithin: false, identity: 'ours' });
+      expect(await endSession('/x', d.opts)).toEqual({ ...ok, pid: process.pid });
+      expect(d.log.find((e) => e[0] === 'wait' || e[0] === 'terminate')).toBeUndefined();
+    });
+
+    test('defaults: a workspace with no pidfile behaves as before', async () => {
       const client = { requestShutdown: async () => true };
-      expect(await endSession('/x', { client })).toBe(true);
+      expect(await endSession('/nonexistent-mauto-root', { client })).toEqual({ ...ok, pid: null });
     });
   });
 });

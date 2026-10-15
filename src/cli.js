@@ -1234,17 +1234,35 @@ async function handleSessionStatus(
   { projectRoot, client = require('./device/session-client') } = {}
 ) {
   const status = await connection.sessionStatus(projectRoot, { client });
-  return { envelope: ok(status), exitKind: 'ok' };
+  const hint =
+    status.reason === 'engine_exited'
+      ? `The device engine exited; this session is shutting down and the next verb starts a fresh one. ${connection.daemonLogHint(projectRoot)}`
+      : null;
+  return { envelope: ok(status, hint), exitKind: 'ok' };
 }
 
 async function handleSessionEnd(
-  { projectRoot, client = require('./device/session-client') } = {}
+  { projectRoot, client = require('./device/session-client'), end = {} } = {}
 ) {
-  const stopped = await connection.endSession(projectRoot, { client });
-  return {
-    envelope: ok({ stopped, already_stopped: !stopped }),
-    exitKind: 'ok',
-  };
+  const r = await connection.endSession(projectRoot, { client, ...end });
+  const logHint = connection.daemonLogHint(projectRoot);
+  if (!r.stopped && !r.already_stopped) {
+    const pidFile = require('./device/session-paths').pidFilePath(projectRoot);
+    return {
+      envelope: fail(
+        'device',
+        `device session daemon pid ${r.pid} did not exit`,
+        `It may still hold the workspace lock, or could not be confirmed as this workspace's mauto daemon and so was not signalled. Check it with \`ps -p ${r.pid}\` and stop it with \`kill -9 ${r.pid}\` (pidfile: ${pidFile}). ${logHint}`,
+        { stopped: false, already_stopped: false, pid: r.pid }
+      ),
+      exitKind: 'device',
+    };
+  }
+  const data = { stopped: r.stopped, already_stopped: r.already_stopped, forced: r.forced };
+  const hint = r.forced
+    ? `The daemon did not exit after shutdown; terminated pid ${r.pid}. ${logHint}`
+    : null;
+  return { envelope: ok(data, hint), exitKind: 'ok' };
 }
 
 // --- Issue #92: device discovery + persisted selection -------------------

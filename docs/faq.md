@@ -646,7 +646,7 @@ mauto devices use <id>     # mauto devices clear to unpin
 **Solutions:**
 ```bash
 # Check whether the daemon is alive, and where its output was captured
-mauto session status        # -> { running, in_flight, device, log_path }
+mauto session status        # -> { running, reason, in_flight, device, log_path }
 tail -50 mobile-automator/.session/daemon.log   # stack traces live here
 
 # Stop it (removes the socket/pidfile); it auto-restarts on the next device verb
@@ -660,7 +660,7 @@ mauto devices               # list connected devices/simulators
 mauto devices use <id>      # pin the intended one (mauto devices clear to unpin)
 ```
 
-Device precedence is: explicit `--device <id>` > persisted selection (`mauto devices use`) > auto-selected lone device. If you have several devices attached and haven't pinned one, pin it to avoid the daemon acting on the wrong target.
+Device precedence is: explicit `--device <id>` > persisted selection (`mauto devices use`) > auto-selected lone device. If you have several devices attached and haven't pinned one, pin it to avoid the daemon acting on the wrong target. `session end` reports `stopped: true` only once the daemon process is gone; a daemon stuck in teardown is terminated and reported with `forced: true`.
 
 ### App Installation Failures
 
