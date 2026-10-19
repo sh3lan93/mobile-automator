@@ -10,7 +10,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { pidIdentity, cleanStale, startDaemon, isZombie } = require('../../../src/device/session-daemon');
+const { cleanStale, startDaemon } = require('../../../src/device/session-daemon');
+const { pidIdentity, isZombie } = require('../../../src/device/process-identity');
 const paths = require('../../../src/device/session-paths');
 
 function tmpRoot() {

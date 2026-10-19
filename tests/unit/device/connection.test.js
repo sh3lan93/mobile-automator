@@ -211,8 +211,8 @@ describe('connection', () => {
     });
 
     test('the default identity check is bound to this workspace', async () => {
-      const sessionDaemon = require('../../../src/device/session-daemon');
-      const spy = jest.spyOn(sessionDaemon, 'pidIdentity').mockReturnValue('other');
+      const processIdentity = require('../../../src/device/process-identity');
+      const spy = jest.spyOn(processIdentity, 'pidIdentity').mockReturnValue('other');
       try {
         const d = deps({ acked: false, diesWithin: false });
         delete d.opts.identify;

@@ -169,7 +169,7 @@ describe('network-detector: legitimate code is not flagged', () => {
 
   it('child_process inside src/device/session-spawn.js is fine', () => {
     expect(findNetworkUse("const cp = require('child_process');", 'src/device/session-spawn.js')).toEqual([]);
-    expect(findNetworkUse("const cp = require('node:child_process');", 'src/device/session-daemon.js')).toEqual([]);
+    expect(findNetworkUse("const cp = require('node:child_process');", 'src/device/process-identity.js')).toEqual([]);
   });
 
   it('the sanctioned transport file may import network modules', () => {
@@ -336,7 +336,7 @@ describe('telemetry transport isolation (real tree)', () => {
     );
     expect(withoutTransport).toEqual({
       net: ['src/device/session-client.js', 'src/device/session-daemon.js'],
-      child_process: ['src/device/session-daemon.js', 'src/device/session-spawn.js'],
+      child_process: ['src/device/process-identity.js', 'src/device/session-spawn.js'],
     });
     expect(DYNAMIC_SPECIFIER_ALLOWLIST).toEqual({});
   });

@@ -6,7 +6,7 @@
 
 const { spawn } = require('child_process');
 const { terminate, waitForDeath } = require('../../src/device/process-reaper');
-const { pidAlive } = require('../../src/device/session-daemon');
+const { pidAlive } = require('../../src/device/process-identity');
 
 jest.setTimeout(15000);
 

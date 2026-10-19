@@ -9,7 +9,7 @@
 // Every effect (kill, liveness, clock) is injected so the escalation policy is
 // tested once, here, against a fake process table.
 
-const { pidAlive, isZombie } = require('./session-daemon');
+const { pidAlive, isZombie } = require('./process-identity');
 
 // Alive, and not merely awaiting a reaper (#156): kill(pid, 0) succeeds on a
 // zombie, so plain liveness waits out a whole budget for a daemon that has

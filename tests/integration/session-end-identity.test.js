@@ -11,7 +11,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 
 const { endSession } = require('../../src/device/connection');
-const { pidAlive } = require('../../src/device/session-daemon');
+const { pidAlive } = require('../../src/device/process-identity');
 const { waitForDeath } = require('../../src/device/process-reaper');
 const paths = require('../../src/device/session-paths');
 

@@ -20,6 +20,7 @@ const paths = require('./session-paths');
 const sessionClient = require('./session-client');
 const sessionSpawn = require('./session-spawn');
 const sessionDaemon = require('./session-daemon');
+const processIdentity = require('./process-identity');
 const processReaper = require('./process-reaper');
 
 // Acquire a device connection, transparently reusing a live daemon when one
@@ -105,8 +106,8 @@ async function endSession(
     reaper = processReaper,
     // Bound to THIS workspace (#156): a group kill must never reach another
     // workspace's daemon through a copied or recycled pidfile.
-    identify = (pid) => sessionDaemon.pidIdentity(pid, { projectRoot }),
-    readPid = () => sessionDaemon.readPidFile(paths.pidFilePath(projectRoot)),
+    identify = (pid) => processIdentity.pidIdentity(pid, { projectRoot }),
+    readPid = () => processIdentity.readPidFile(paths.pidFilePath(projectRoot)),
     budgetMs = END_BUDGET_MS,
   } = {}
 ) {
