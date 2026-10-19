@@ -1920,11 +1920,11 @@
 </tr>
 <tr>
 <td><code>mauto session status</code></td>
-<td>Report <code>{ running, in_flight, device, log_path }</code> — <code>log_path</code> is reported whether or not a daemon is up</td>
+<td>Report <code>{ running, reason, in_flight, device, log_path }</code> — <code>log_path</code> is reported whether or not a daemon is up; <code>reason</code> is <code>engine_exited</code> when a reachable daemon's device engine has died (it is shutting down and the next verb starts a fresh one), otherwise <code>null</code></td>
 </tr>
 <tr>
 <td><code>mauto session end</code></td>
-<td>Stop the daemon and remove the socket / pidfile</td>
+<td>Stop the daemon and wait until it has exited. A daemon still alive 35s after acknowledging is terminated (<code>forced: true</code>). Fails with <code>kind: device</code> and the <code>pid</code> if the daemon cannot be stopped</td>
 </tr>
 <tr>
 <td><code>mauto devices</code></td>

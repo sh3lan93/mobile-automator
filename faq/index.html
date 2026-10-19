@@ -3043,7 +3043,7 @@ xcrun<span class="w"> </span>simctl<span class="w"> </span>list<span class="w"> 
 <p><strong>Cause:</strong> Device actions run through one long-lived session daemon (a persistent mobile-mcp process). If it wedged — verbs hang, target the wrong device, or return stale screen state — reset it.</p>
 <p><strong>Solutions:</strong>
 <div class="highlight"><pre><span></span><code><span class="c1"># Check whether the daemon is alive, and where its output was captured</span>
-mauto<span class="w"> </span>session<span class="w"> </span>status<span class="w">        </span><span class="c1"># -&gt; { running, in_flight, device, log_path }</span>
+mauto<span class="w"> </span>session<span class="w"> </span>status<span class="w">        </span><span class="c1"># -&gt; { running, reason, in_flight, device, log_path }</span>
 tail<span class="w"> </span>-50<span class="w"> </span>mobile-automator/.session/daemon.log<span class="w">   </span><span class="c1"># stack traces live here</span>
 
 <span class="c1"># Stop it (removes the socket/pidfile); it auto-restarts on the next device verb</span>
@@ -3056,7 +3056,7 @@ mauto<span class="w"> </span>session<span class="w"> </span>start
 mauto<span class="w"> </span>devices<span class="w">               </span><span class="c1"># list connected devices/simulators</span>
 mauto<span class="w"> </span>devices<span class="w"> </span>use<span class="w"> </span>&lt;id&gt;<span class="w">      </span><span class="c1"># pin the intended one (mauto devices clear to unpin)</span>
 </code></pre></div></p>
-<p>Device precedence is: explicit <code>--device &lt;id&gt;</code> &gt; persisted selection (<code>mauto devices use</code>) &gt; auto-selected lone device. If you have several devices attached and haven't pinned one, pin it to avoid the daemon acting on the wrong target.</p>
+<p>Device precedence is: explicit <code>--device &lt;id&gt;</code> &gt; persisted selection (<code>mauto devices use</code>) &gt; auto-selected lone device. If you have several devices attached and haven't pinned one, pin it to avoid the daemon acting on the wrong target. <code>session end</code> reports <code>stopped: true</code> only once the daemon process is gone; a daemon stuck in teardown is terminated and reported with <code>forced: true</code>.</p>
 <h3 id="app-installation-failures">App Installation Failures<a class="headerlink" href="#app-installation-failures" title="Permanent link">&para;</a></h3>
 <p><strong>"App not installed" error:</strong>
 1. <strong>Check build succeeded</strong> — Try building manually first

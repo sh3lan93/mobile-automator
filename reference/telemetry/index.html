@@ -1654,11 +1654,11 @@ this table and that catalog disagree.</p>
 </tr>
 <tr>
 <td><code>stop_reason</code></td>
-<td>Why the daemon stopped: <code>idle</code>, <code>signal</code>, <code>shutdown</code>, <code>crash</code>, <code>explicit</code>.</td>
+<td>Why the daemon stopped: <code>idle</code>, <code>signal</code>, <code>shutdown</code>, <code>crash</code>, <code>explicit</code>, <code>engine_exit</code> (the device engine died under it).</td>
 </tr>
 <tr>
 <td><code>error_code</code></td>
-<td>A Node/libuv errno string such as <code>EACCES</code>.</td>
+<td>A Node/libuv errno string such as <code>EACCES</code>, or one of mauto's own: <code>ELOCKED</code>, <code>ENGINE_CONNECT_TIMEOUT</code>, <code>ENGINE_EXITED</code>.</td>
 </tr>
 <tr>
 <td><code>crash_count</code></td>
