@@ -240,23 +240,31 @@ async function startDaemon({
     safeUnlink(lockFile);
   }
 
-  // Engine liveness (#156), in two phases. Until the daemon is serving, an
-  // engine exit only marks the flag — the check after listen() below turns it
-  // into a failed start, so no handle is ever written for a dead engine. Once
-  // serving, `onEngineGone` is rebound to reap the daemon. The arrow passed to
-  // createCall reads the binding at call time, which is what makes the rebind
-  // take effect.
+  // Engine liveness (#156). `serving` flips once the daemon is listening and
+  // about to write its handle. Before that an engine exit only clears
+  // `engineAlive` — the check after listen() below turns it into a failed start,
+  // so no handle is ever written for a dead engine. After it, an engine exit
+  // reaps the daemon: recorded first and synchronously, like the crash guards,
+  // because stop() can block on the in-flight drain. stop() is the existing path
+  // unchanged: drain, destroy sockets, close the server, close() (a no-op on a
+  // dead engine), unlink, release the lock, resolve whenStopped. The next verb
+  // autostarts a fresh daemon.
   let engineAlive = true;
-  let onEngineGone = () => {
+  let serving = false;
+  function onEngineExit() {
+    if (!engineAlive) return;
     engineAlive = false;
-  };
+    if (!serving) return;
+    safeObserve({ level: 'error', event: 'daemon.engine_exit', dur_ms: Date.now() - startedAtMs });
+    stop('engine_exit').catch(() => {});
+  }
 
   // Build the single shared connection up front. If it rejects, never leak the
   // lock (and the child it may have started is the connection's own to clean).
   let call;
   let close;
   try {
-    ({ call, close } = await createCall({ device, onEngineExit: () => onEngineGone() }));
+    ({ call, close } = await createCall({ device, onEngineExit }));
   } catch (err) {
     // #156's core symptom: mobile-mcp never came up, and until now the only
     // trace was a 15s readiness timeout in the spawning verb.
@@ -620,6 +628,32 @@ async function startDaemon({
 
   const socketPath = paths.socketPath(projectRoot);
 
+  // A start that fails once the connection exists: record why, undo what was
+  // built (the listening socket, if any, then the engine), release the lock, and
+  // rethrow — so a failed start never leaks the mobile-mcp child or wedges the
+  // next spawn behind a held lock. The connect failure above has no `close` yet
+  // and so does its own, smaller teardown.
+  async function abortStart({ event, err, listening }) {
+    safeObserve({
+      level: 'error',
+      event,
+      error_code: err && err.code,
+      message: err && (err.message || String(err)),
+      dur_ms: Date.now() - startedAtMs,
+    });
+    if (listening) {
+      await new Promise((resolve) => server.close(() => resolve()));
+      safeUnlink(socketPath);
+    }
+    try {
+      await close();
+    } catch (_) {
+      /* best-effort */
+    }
+    releaseLock();
+    throw err;
+  }
+
   try {
     await new Promise((resolve, reject) => {
       server.once('error', reject);
@@ -630,22 +664,9 @@ async function startDaemon({
     });
   } catch (err) {
     // listen failed (e.g. EADDRINUSE from a double-spawn that beat us to the
-    // bind, or a recycled-pid wedge). The connection was already built — close
-    // it so we never leak the mobile-mcp child, and release the lock.
-    safeObserve({
-      level: 'error',
-      event: 'daemon.listen_failure',
-      error_code: err && err.code,
-      message: err && (err.message || String(err)),
-      dur_ms: Date.now() - startedAtMs,
-    });
-    try {
-      await close();
-    } catch (_) {
-      /* best-effort */
-    }
-    releaseLock();
-    throw err;
+    // bind, or a recycled-pid wedge). Nothing is listening, so only the engine
+    // and the lock are undone.
+    await abortStart({ event: 'daemon.listen_failure', err, listening: false });
   }
 
   // The engine died between connect and listen. Fail the start exactly like a
@@ -653,37 +674,14 @@ async function startDaemon({
   // dead session is ready. The bin's main().catch exits 1; the spawner sees a
   // start that never became ready.
   if (!engineAlive) {
-    safeObserve({
-      level: 'error',
-      event: 'daemon.connect_failure',
-      error_code: 'ENGINE_EXITED',
-      message: 'mobile-mcp exited before the device session daemon was ready',
-      dur_ms: Date.now() - startedAtMs,
-    });
-    await new Promise((resolve) => server.close(() => resolve()));
-    safeUnlink(socketPath);
-    try {
-      await close();
-    } catch (_) {
-      /* best-effort */
-    }
-    releaseLock();
-    const e = new Error('mobile-mcp exited before the device session daemon was ready');
-    e.code = 'ENGINE_EXITED';
-    throw e;
+    const err = new Error('mobile-mcp exited before the device session daemon was ready');
+    err.code = 'ENGINE_EXITED';
+    await abortStart({ event: 'daemon.connect_failure', err, listening: true });
   }
 
-  // Serving from here on: an engine exit reaps the daemon. Recorded first and
-  // synchronously, like the crash guards — stop() can block on the in-flight
-  // drain. stop() is the existing path unchanged: drain, destroy sockets, close
-  // the server, close() (a no-op on a dead engine), unlink, release the lock,
-  // resolve whenStopped. The next verb autostarts a fresh daemon.
-  onEngineGone = () => {
-    if (!engineAlive) return;
-    engineAlive = false;
-    safeObserve({ level: 'error', event: 'daemon.engine_exit', dur_ms: Date.now() - startedAtMs });
-    stop('engine_exit').catch(() => {});
-  };
+  // Serving from here on: an engine exit reaps the daemon (see onEngineExit).
+  // Set synchronously after the check above, so no exit can fall between them.
+  serving = true;
 
   // Persist handle + pidfile now that we are actually listening.
   const handle = {
