@@ -46,6 +46,23 @@ function resolveServerEntry() {
   return path.join(pkgDir, binRel);
 }
 
+// The SDK transport, remembering the engine pid the moment the child is spawned
+// (#156). It has to be remembered: on a failed connect the SDK runs
+// `void this.close()`, and StdioClientTransport.close() clears its pid
+// synchronously — so by the time createCall's catch runs, `pid` is already null
+// while the child may still be alive. `spawnedPid` is never cleared.
+// Client.connect() awaits transport.start(), which is what makes start() the
+// place to read it; tests/integration/engine-lifecycle.test.js pins that against
+// the real SDK (a failed connect still reaps the engine).
+function pidTracking(Transport) {
+  return class PidTrackingTransport extends Transport {
+    async start() {
+      await super.start();
+      this.spawnedPid = this.pid;
+    }
+  };
+}
+
 // Integration glue: spawns mobile-mcp over stdio and returns a `call`
 // function shaped exactly like the one DeviceBridge expects.
 //
@@ -63,26 +80,14 @@ async function createCall({
 } = {}) {
   // Resolved lazily, here, so the module still loads without mobile-mcp installed.
   const { command, args } = server || { command: process.execPath, args: [resolveServerEntry()] };
-  const transport = new sdk.StdioClientTransport({
+  const Transport = pidTracking(sdk.StdioClientTransport);
+  const transport = new Transport({
     command,
     args,
     // mobile-mcp reads the target device from the environment / its own
     // selection; we pass it through when provided so callers can pin a device.
     env: device ? { ...process.env, MOBILE_MCP_DEVICE: device } : process.env,
   });
-
-  // The engine pid, captured the moment the child is spawned. It has to be
-  // captured HERE: on a failed connect the SDK runs `void this.close()`, and
-  // StdioClientTransport.close() clears its pid synchronously — so by the time
-  // our catch runs, transport.pid is already null while the child may still be
-  // alive. Client.connect() awaits transport.start(), so wrapping the instance
-  // method is enough.
-  let enginePid = null;
-  const start = transport.start.bind(transport);
-  transport.start = async () => {
-    await start();
-    enginePid = transport.pid;
-  };
 
   const client = new sdk.Client({ name: 'mauto', version: '0.1.0' }, { capabilities: {} });
 
@@ -101,7 +106,7 @@ async function createCall({
     await client.connect(transport, { timeout: connectTimeoutMs });
   } catch (err) {
     closing = true;
-    await reapEngine(enginePid, reaper);
+    await reapEngine(transport.spawnedPid, reaper);
     throw connectError(err, connectTimeoutMs);
   }
 
