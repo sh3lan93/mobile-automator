@@ -54,12 +54,7 @@ test("a pidfile naming another workspace's live daemon is never signalled", asyn
   try {
     // e.g. `cp -R theirs mine` while their daemon ran: the pidfile came along.
     fs.writeFileSync(paths.pidFilePath(mine), `${daemon.pid}\n`);
-    expect(await endSession(mine)).toEqual({
-      stopped: false,
-      already_stopped: true,
-      forced: false,
-      pid: daemon.pid,
-    });
+    expect(await endSession(mine)).toEqual({ outcome: 'already_stopped', pid: daemon.pid });
     expect(pidAlive(daemon.pid)).toBe(true);
   } finally {
     killGroup(daemon.pid);
@@ -71,12 +66,7 @@ test("this workspace's own unresponsive daemon is still escalated", async () => 
   const daemon = standIn(mine);
   try {
     fs.writeFileSync(paths.pidFilePath(mine), `${daemon.pid}\n`);
-    expect(await endSession(mine)).toEqual({
-      stopped: true,
-      already_stopped: false,
-      forced: true,
-      pid: daemon.pid,
-    });
+    expect(await endSession(mine)).toEqual({ outcome: 'forced', pid: daemon.pid });
     expect(await waitForDeath(daemon.pid, { budgetMs: 2000 })).toBe(true);
   } finally {
     killGroup(daemon.pid);

@@ -1383,6 +1383,36 @@ describe('cli handlers', () => {
       expect(r.envelope.data).toEqual({ stopped: false, already_stopped: false, pid: 4000 });
       expect(r.envelope.hint).toContain(sessionPaths.pidFilePath('/x'));
       expect(r.envelope.hint).toContain(sessionPaths.logFilePath('/x'));
+      expect(r.envelope.hint).toContain('still alive after SIGTERM and SIGKILL');
+      expect(r.envelope.hint).toContain('kill -9 4000');
+    });
+
+    // Each failure outcome gets the hint that is true for it, not one hint
+    // hedging across all three.
+    function runStuck(identity) {
+      return handleSessionEnd({
+        projectRoot: '/x',
+        client: { requestShutdown: async () => true },
+        end: {
+          readPid: () => 4000,
+          identify: () => identity,
+          reaper: { waitForDeath: async () => false, terminate: async () => { throw new Error('signalled'); } },
+        },
+      });
+    }
+
+    test.each([
+      ['foreign', /does not name this workspace \(possibly started by mauto < 0\.28\), so it was not signalled/],
+      ['unknown', /could not be identified \(`ps` failed\), so it was not signalled/],
+    ])('%s identity: fail(device), never signalled, with its own hint', async (identity, hint) => {
+      const r = await runStuck(identity);
+      expect(r.exitKind).toBe('device');
+      expect(r.envelope.error.message).toBe('device session daemon pid 4000 did not exit');
+      expect(r.envelope.data).toEqual({ stopped: false, already_stopped: false, pid: 4000 });
+      expect(r.envelope.hint).toMatch(hint);
+      expect(r.envelope.hint).not.toContain('SIGKILL');
+      expect(r.envelope.hint).toContain(sessionPaths.pidFilePath('/x'));
+      expect(r.envelope.hint).toContain(sessionPaths.logFilePath('/x'));
     });
   });
 

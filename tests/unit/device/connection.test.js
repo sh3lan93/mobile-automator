@@ -156,8 +156,8 @@ describe('connection', () => {
         },
       };
     }
-    const ok = { stopped: true, already_stopped: false, forced: false };
-    const none = { stopped: false, already_stopped: true, forced: false };
+    const ok = { outcome: 'stopped' };
+    const none = { outcome: 'already_stopped' };
 
     test('reads the pid BEFORE asking the daemon to shut down', async () => {
       const order = [];
@@ -177,18 +177,18 @@ describe('connection', () => {
 
     test('ack + outlives the budget + ours: escalated, forced', async () => {
       const d = deps({ diesWithin: false, identity: 'ours', outcome: 'dead' });
-      expect(await endSession('/x', d.opts)).toEqual({ stopped: true, already_stopped: false, forced: true, pid: 4000 });
+      expect(await endSession('/x', d.opts)).toEqual({ outcome: 'forced', pid: 4000 });
       expect(d.log).toContainEqual(['terminate', 4000, true]);
     });
 
     test('ack + outlives the budget + survives escalation: failure with pid', async () => {
       const d = deps({ diesWithin: false, identity: 'ours', outcome: 'survived' });
-      expect(await endSession('/x', d.opts)).toEqual({ stopped: false, already_stopped: false, forced: false, pid: 4000 });
+      expect(await endSession('/x', d.opts)).toEqual({ outcome: 'survived', pid: 4000 });
     });
 
     test('unknown identity is never signalled', async () => {
       const d = deps({ diesWithin: false, identity: 'unknown' });
-      expect(await endSession('/x', d.opts)).toEqual({ stopped: false, already_stopped: false, forced: false, pid: 4000 });
+      expect(await endSession('/x', d.opts)).toEqual({ outcome: 'unverified', pid: 4000 });
       expect(d.log.find((e) => e[0] === 'terminate')).toBeUndefined();
     });
 
@@ -206,7 +206,7 @@ describe('connection', () => {
 
     test('an acked daemon that outlives the budget but cannot be tied to this workspace is reported, never signalled', async () => {
       const d = deps({ acked: true, diesWithin: false, identity: 'foreign' });
-      expect(await endSession('/x', d.opts)).toEqual({ stopped: false, already_stopped: false, forced: false, pid: 4000 });
+      expect(await endSession('/x', d.opts)).toEqual({ outcome: 'foreign', pid: 4000 });
       expect(d.log.find((e) => e[0] === 'terminate')).toBeUndefined();
     });
 
@@ -225,7 +225,7 @@ describe('connection', () => {
 
     test('no ack but a live daemon of ours: escalated with budget 0', async () => {
       const d = deps({ acked: false, diesWithin: false, identity: 'ours', outcome: 'dead' });
-      expect(await endSession('/x', d.opts)).toEqual({ stopped: true, already_stopped: false, forced: true, pid: 4000 });
+      expect(await endSession('/x', d.opts)).toEqual({ outcome: 'forced', pid: 4000 });
       expect(d.log).toContainEqual(['wait', 4000, 0]);
     });
 
