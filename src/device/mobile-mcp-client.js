@@ -6,6 +6,26 @@ const { StdioClientTransport } = require('@modelcontextprotocol/sdk/client/stdio
 const { injectDeviceArg } = require('./tool-args');
 const { resolveSingleDevice } = require('./device-resolver');
 const { normalizeDevices } = require('./device-model');
+const { ErrorCode } = require('@modelcontextprotocol/sdk/types.js');
+
+// Bound on mobile-mcp's MCP initialize handshake (#156). Measured at ~200ms on
+// mobile-mcp 1.0.5 — initialize touches no device — so 10s is ~50x headroom.
+// The spawner kills an unready daemon when its readiness window closes, and a
+// failed connect is reported only once the engine is reaped, so
+// CONNECT_TIMEOUT_MS + ENGINE_REAP_MAX_MS, plus headroom for the daemon's own
+// boot, MUST stay below session-spawn's DEFAULT_READY_TIMEOUT_MS — or the
+// daemon is killed instead of failing with its own daemon.connect_failure.
+// Pinned by tests/unit/device/timeout-invariant.test.js.
+// (The SDK's own default is 60s, which is longer than the window watching it.)
+const CONNECT_TIMEOUT_MS = 10000;
+
+// A failed connect terminates the engine at once rather than waiting out the
+// SDK's fire-and-forget close (stdin end → 2s → SIGTERM → 2s → SIGKILL): an
+// engine that never initialized has nothing to flush, and every second spent
+// here is spent inside the spawner's readiness window. SIGTERM, SIGKILL after
+// ENGINE_KILL_GRACE_MS, then up to ENGINE_KILL_GRACE_MS more for the death.
+const ENGINE_KILL_GRACE_MS = 1000;
+const ENGINE_REAP_MAX_MS = 2 * ENGINE_KILL_GRACE_MS;
 
 // Resolve the mobile-mcp server entry point from the bundled, pinned
 // dependency rather than fetching `@latest` at runtime. We read the package's
@@ -26,25 +46,69 @@ function resolveServerEntry() {
   return path.join(pkgDir, binRel);
 }
 
+// The SDK transport, remembering the engine pid the moment the child is spawned
+// (#156). It has to be remembered: on a failed connect the SDK runs
+// `void this.close()`, and StdioClientTransport.close() clears its pid
+// synchronously — so by the time createCall's catch runs, `pid` is already null
+// while the child may still be alive. `spawnedPid` is never cleared.
+// Client.connect() awaits transport.start(), which is what makes start() the
+// place to read it; tests/integration/engine-lifecycle.test.js pins that against
+// the real SDK (a failed connect still reaps the engine).
+function pidTracking(Transport) {
+  return class PidTrackingTransport extends Transport {
+    async start() {
+      await super.start();
+      this.spawnedPid = this.pid;
+    }
+  };
+}
+
 // Integration glue: spawns mobile-mcp over stdio and returns a `call`
 // function shaped exactly like the one DeviceBridge expects.
-// NOT unit-tested (would require spawning mobile-mcp); see the smoke test.
-async function createCall({ device } = {}) {
-  const serverEntry = resolveServerEntry();
-  const transport = new StdioClientTransport({
-    command: process.execPath,
-    args: [serverEntry],
+//
+// `sdk`, `server` and `reaper` are test seams: production passes none of them.
+// tests/unit/device/mobile-mcp-client-lifecycle.test.js drives this against a
+// fake SDK; tests/integration/engine-lifecycle.test.js against the real SDK and
+// a fixture MCP server.
+async function createCall({
+  device,
+  connectTimeoutMs = CONNECT_TIMEOUT_MS,
+  onEngineExit = null,
+  sdk = { Client, StdioClientTransport },
+  server = null,
+  reaper = require('./process-reaper'),
+} = {}) {
+  // Resolved lazily, here, so the module still loads without mobile-mcp installed.
+  const { command, args } = server || { command: process.execPath, args: [resolveServerEntry()] };
+  const Transport = pidTracking(sdk.StdioClientTransport);
+  const transport = new Transport({
+    command,
+    args,
     // mobile-mcp reads the target device from the environment / its own
     // selection; we pass it through when provided so callers can pin a device.
     env: device ? { ...process.env, MOBILE_MCP_DEVICE: device } : process.env,
   });
 
-  const client = new Client(
-    { name: 'mauto', version: '0.1.0' },
-    { capabilities: {} }
-  );
+  const client = new sdk.Client({ name: 'mauto', version: '0.1.0' }, { capabilities: {} });
 
-  await client.connect(transport);
+  // Engine liveness (#156). The SDK fires onclose on EVERY child close — a real
+  // engine death and our own close() alike — so `closing` separates the two.
+  // A failed connect also sets it: that failure is reported by the throw.
+  let closing = false;
+  let reported = false;
+  client.onclose = () => {
+    if (closing || reported) return;
+    reported = true;
+    if (typeof onEngineExit === 'function') onEngineExit();
+  };
+
+  try {
+    await client.connect(transport, { timeout: connectTimeoutMs });
+  } catch (err) {
+    closing = true;
+    await reapEngine(transport.spawnedPid, reaper);
+    throw connectError(err, connectTimeoutMs);
+  }
 
   async function rawCall(toolName, args = {}) {
     const res = await client.callTool({ name: toolName, arguments: args });
@@ -53,6 +117,7 @@ async function createCall({ device } = {}) {
   const { call } = makeCall({ rawCall, device });
 
   async function close() {
+    closing = true;
     try {
       await client.close();
     } catch (_e) {
@@ -61,6 +126,27 @@ async function createCall({ device } = {}) {
   }
 
   return { call, close };
+}
+
+// The SDK's connect-failure cleanup is fire-and-forget, so the engine is
+// terminated here, at once, and the error leaves createCall only once it is
+// gone — nothing may outlive the failure it reports. The budget-0 check first:
+// an engine that already exited (the ConnectionClosed path) is not signalled.
+// group:false: the engine is not a process-group leader.
+async function reapEngine(pid, reaper) {
+  if (!pid) return;
+  if (await reaper.waitForDeath(pid, { budgetMs: 0 })) return;
+  await reaper.terminate(pid, { group: false, graceMs: ENGINE_KILL_GRACE_MS });
+}
+
+// A timed-out initialize becomes an error that names the bound; anything else
+// (spawn ENOENT, a protocol mismatch) passes through untouched.
+function connectError(err, timeoutMs) {
+  if (!(err && err.code === ErrorCode.RequestTimeout)) return err;
+  const e = new Error(`mobile-mcp did not finish initializing within ${timeoutMs}ms`);
+  e.code = 'ENGINE_CONNECT_TIMEOUT';
+  e.cause = err;
+  return e;
 }
 
 // Pure orchestration over a low-level rawCall(toolName, args) => Promise<parsed>.
@@ -162,4 +248,11 @@ function parseToolResult(res) {
 
 // resolveServerEntry is exported so tests/integration/mobile-mcp-contract.test.js
 // spawns the pinned engine by the exact path production does, not a copy of it.
-module.exports = { createCall, makeCall, parseToolResult, resolveServerEntry };
+module.exports = {
+  createCall,
+  makeCall,
+  parseToolResult,
+  resolveServerEntry,
+  CONNECT_TIMEOUT_MS,
+  ENGINE_REAP_MAX_MS,
+};

@@ -14,3 +14,30 @@ describe('daemon/client timeout invariant (#149)', () => {
     expect(sessionClient.DEFAULT_TIMEOUT_MS).toBeGreaterThan(sessionDaemon.DAEMON_CALL_TIMEOUT_MS);
   });
 });
+
+// #156: `session end` must outwait a daemon that is legitimately finishing —
+// a drain bounded by the daemon call timeout, then the SDK's ~4s close ladder —
+// before it concludes the daemon is stuck and escalates.
+describe('session end budget invariant (#156)', () => {
+  test('END_BUDGET > DAEMON_CALL_TIMEOUT + SDK close escalation', () => {
+    const { END_BUDGET_MS } = require('../../../src/device/connection');
+    expect(END_BUDGET_MS).toBeGreaterThan(sessionDaemon.DAEMON_CALL_TIMEOUT_MS + 4000);
+  });
+});
+
+// #156: the spawner kills a daemon that is not ready when its window closes, so
+// the daemon's WHOLE connect-failure path must end first — otherwise it is
+// killed instead of failing honestly with daemon.connect_failure. That path is
+// not the connect bound alone: the failure is recorded only after the engine is
+// reaped (ENGINE_REAP_MAX_MS), and the window is counted from spawn(), so the
+// daemon's own boot (node start, module load, cleanStale's `ps`) comes first.
+// Comparing CONNECT_TIMEOUT_MS alone once let a 14.1s failure race a 15s kill.
+const DAEMON_BOOT_MARGIN_MS = 2000;
+
+describe('connect/readiness timeout invariant (#156)', () => {
+  test('CONNECT_TIMEOUT + ENGINE_REAP_MAX + boot margin < DEFAULT_READY_TIMEOUT', () => {
+    const { CONNECT_TIMEOUT_MS, ENGINE_REAP_MAX_MS } = require('../../../src/device/mobile-mcp-client');
+    const { DEFAULT_READY_TIMEOUT_MS } = require('../../../src/device/session-spawn');
+    expect(CONNECT_TIMEOUT_MS + ENGINE_REAP_MAX_MS + DAEMON_BOOT_MARGIN_MS).toBeLessThan(DEFAULT_READY_TIMEOUT_MS);
+  });
+});

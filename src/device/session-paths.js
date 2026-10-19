@@ -74,6 +74,26 @@ function lockPath(projectRoot) {
   return path.join(sessionDir(projectRoot), LOCK_NAME);
 }
 
+// The workspace a daemon serves, as it appears on its command line (#156).
+// The daemon itself reads its root from env (MAUTO_SESSION_PROJECT_ROOT), which
+// `ps` cannot see, so every daemon's command line used to be identical. This
+// marker is what lets `session end` tell THIS workspace's daemon from another
+// workspace's before it signals a process group: a copied workspace (`cp -R`
+// carries daemon.pid) or a recycled pid can name a different live daemon.
+// The root is the LAST argument so a match can be anchored at the end.
+const DAEMON_ROOT_FLAG = '--project-root';
+
+function daemonArgv(projectRoot) {
+  return [DAEMON_ROOT_FLAG, path.resolve(projectRoot)];
+}
+
+// Does a `ps -o command=` line name exactly this workspace? Anchored at the end
+// of the line so `/a/proj` never matches a daemon serving `/a/proj2`.
+function commandNamesWorkspace(command, projectRoot) {
+  const line = String(command || '').replace(/\s+$/, '');
+  return line.endsWith(` ${DAEMON_ROOT_FLAG} ${path.resolve(projectRoot)}`);
+}
+
 module.exports = {
   SESSION_DIRNAME,
   SOCKET_NAME,
@@ -89,4 +109,7 @@ module.exports = {
   pidFilePath,
   handlePath,
   lockPath,
+  DAEMON_ROOT_FLAG,
+  daemonArgv,
+  commandNamesWorkspace,
 };

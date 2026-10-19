@@ -18,7 +18,6 @@
 // Everything that touches a real device is injected, so the full lifecycle is
 // unit-testable with a fake createCall and a mkdtemp project root.
 
-const childProcess = require('child_process');
 const fs = require('fs');
 const net = require('net');
 
@@ -28,6 +27,7 @@ const { newSessionId } = require('./session-handle');
 const { makeDeviceCall } = require('./device-call');
 const { safeObserve: guardObserve } = require('../observe/recorder');
 const { FLUSH_INTERVAL_MS } = require('../observe/flush');
+const { pidIdentity, readPidFile } = require('./process-identity');
 
 const DEFAULT_IDLE_MS = 5 * 60 * 1000;
 
@@ -59,64 +59,6 @@ function safeUnlink(p) {
     fs.unlinkSync(p);
   } catch (_) {
     /* not present */
-  }
-}
-
-// True when a pid is a live process we own. ESRCH => dead; EPERM => alive.
-// Kept exported for back-compat; cleanStale routes through pidIdentity, which
-// also checks the process's identity (not just liveness).
-function pidAlive(pid) {
-  if (!pid || !Number.isInteger(pid)) return false;
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    return err.code === 'EPERM';
-  }
-}
-
-// Classify a pid by liveness AND identity. Liveness alone is not enough: a
-// recycled pid (an unrelated process that inherited the dead daemon's pid) is
-// "alive" but is NOT our daemon, so a stale lock/pidfile pointing at it must be
-// cleaned rather than respected. Returns one of:
-//   'dead'    - no such process (ESRCH or any non-EPERM kill error)
-//   'ours'    - alive AND its command line contains `mauto-session-daemon`
-//   'other'   - alive AND its command line does NOT (recycled pid)
-//   'unknown' - alive but `ps` itself failed (e.g. no `ps` on the host) —
-//               treated as 'ours' by cleanStale: never clean when unsure.
-// `execFile` is injectable for tests; a failure there must never crash the
-// daemon, hence the 'unknown' fallback.
-function pidIdentity(pid, { execFile = childProcess.execFileSync } = {}) {
-  if (!pid || !Number.isInteger(pid)) return 'dead';
-  // Our own pid is the in-process daemon (unit tests run startDaemon in the
-  // test process, so the lock/pidfile carry the test runner's pid). Never clean
-  // files that point at ourselves. In production cleanStale runs before the
-  // daemon writes its own pid/lock, so this branch only fires in-process.
-  if (pid === process.pid) return 'ours';
-  let alive;
-  try {
-    process.kill(pid, 0);
-    alive = true;
-  } catch (err) {
-    if (err.code === 'EPERM') alive = true;
-    else return 'dead';
-  }
-  if (!alive) return 'dead';
-  try {
-    const out = execFile('ps', ['-p', String(pid), '-o', 'command='], { encoding: 'utf8' });
-    return /mauto-session-daemon/.test(String(out || '')) ? 'ours' : 'other';
-  } catch (_) {
-    return 'unknown';
-  }
-}
-
-// Read a pid out of a one-line pid/lock file, or null when absent/garbage.
-function readPidFile(file) {
-  try {
-    const pid = parseInt(fs.readFileSync(file, 'utf8').trim(), 10);
-    return Number.isInteger(pid) ? pid : null;
-  } catch (_) {
-    return null;
   }
 }
 
@@ -161,7 +103,9 @@ async function startDaemon({
   createCall = defaultCreateCall,
   onUndeliverable = null,
   scheduleTimeout = defaultScheduleTimeout,
-  execFile = childProcess.execFileSync,
+  // `ps` seam for cleanStale's identity check; undefined keeps
+  // process-identity.js's real execFileSync, so this module runs no `ps` itself.
+  execFile,
   // Structured observability, injected as a FACTORY rather than as a ready-made
   // recorder. See the binding below for why it has to be a factory.
   //
@@ -296,12 +240,31 @@ async function startDaemon({
     safeUnlink(lockFile);
   }
 
+  // Engine liveness (#156). `serving` flips once the daemon is listening and
+  // about to write its handle. Before that an engine exit only clears
+  // `engineAlive` — the check after listen() below turns it into a failed start,
+  // so no handle is ever written for a dead engine. After it, an engine exit
+  // reaps the daemon: recorded first and synchronously, like the crash guards,
+  // because stop() can block on the in-flight drain. stop() is the existing path
+  // unchanged: drain, destroy sockets, close the server, close() (a no-op on a
+  // dead engine), unlink, release the lock, resolve whenStopped. The next verb
+  // autostarts a fresh daemon.
+  let engineAlive = true;
+  let serving = false;
+  function onEngineExit() {
+    if (!engineAlive) return;
+    engineAlive = false;
+    if (!serving) return;
+    safeObserve({ level: 'error', event: 'daemon.engine_exit', dur_ms: Date.now() - startedAtMs });
+    stop('engine_exit').catch(() => {});
+  }
+
   // Build the single shared connection up front. If it rejects, never leak the
   // lock (and the child it may have started is the connection's own to clean).
   let call;
   let close;
   try {
-    ({ call, close } = await createCall({ device }));
+    ({ call, close } = await createCall({ device, onEngineExit }));
   } catch (err) {
     // #156's core symptom: mobile-mcp never came up, and until now the only
     // trace was a 15s readiness timeout in the spawning verb.
@@ -599,7 +562,11 @@ async function startDaemon({
           continue;
         }
         if (req.type === 'ping') {
-          await reply({ id: req.id, ok: true, result: { pong: true, device, in_flight: inFlight } });
+          await reply({
+            id: req.id,
+            ok: true,
+            result: { pong: true, device, in_flight: inFlight, engine_alive: engineAlive },
+          });
           armIdle();
           continue;
         }
@@ -661,6 +628,32 @@ async function startDaemon({
 
   const socketPath = paths.socketPath(projectRoot);
 
+  // A start that fails once the connection exists: record why, undo what was
+  // built (the listening socket, if any, then the engine), release the lock, and
+  // rethrow — so a failed start never leaks the mobile-mcp child or wedges the
+  // next spawn behind a held lock. The connect failure above has no `close` yet
+  // and so does its own, smaller teardown.
+  async function abortStart({ event, err, listening }) {
+    safeObserve({
+      level: 'error',
+      event,
+      error_code: err && err.code,
+      message: err && (err.message || String(err)),
+      dur_ms: Date.now() - startedAtMs,
+    });
+    if (listening) {
+      await new Promise((resolve) => server.close(() => resolve()));
+      safeUnlink(socketPath);
+    }
+    try {
+      await close();
+    } catch (_) {
+      /* best-effort */
+    }
+    releaseLock();
+    throw err;
+  }
+
   try {
     await new Promise((resolve, reject) => {
       server.once('error', reject);
@@ -671,23 +664,24 @@ async function startDaemon({
     });
   } catch (err) {
     // listen failed (e.g. EADDRINUSE from a double-spawn that beat us to the
-    // bind, or a recycled-pid wedge). The connection was already built — close
-    // it so we never leak the mobile-mcp child, and release the lock.
-    safeObserve({
-      level: 'error',
-      event: 'daemon.listen_failure',
-      error_code: err && err.code,
-      message: err && (err.message || String(err)),
-      dur_ms: Date.now() - startedAtMs,
-    });
-    try {
-      await close();
-    } catch (_) {
-      /* best-effort */
-    }
-    releaseLock();
-    throw err;
+    // bind, or a recycled-pid wedge). Nothing is listening, so only the engine
+    // and the lock are undone.
+    await abortStart({ event: 'daemon.listen_failure', err, listening: false });
   }
+
+  // The engine died between connect and listen. Fail the start exactly like a
+  // listen failure — before the handle exists, so nothing reading it is told a
+  // dead session is ready. The bin's main().catch exits 1; the spawner sees a
+  // start that never became ready.
+  if (!engineAlive) {
+    const err = new Error('mobile-mcp exited before the device session daemon was ready');
+    err.code = 'ENGINE_EXITED';
+    await abortStart({ event: 'daemon.connect_failure', err, listening: true });
+  }
+
+  // Serving from here on: an engine exit reaps the daemon (see onEngineExit).
+  // Set synchronously after the check above, so no exit can fall between them.
+  serving = true;
 
   // Persist handle + pidfile now that we are actually listening.
   const handle = {
@@ -741,4 +735,9 @@ async function startDaemon({
   };
 }
 
-module.exports = { startDaemon, cleanStale, pidAlive, pidIdentity, DAEMON_CALL_TIMEOUT_MS, DEFAULT_IDLE_MS };
+module.exports = {
+  startDaemon,
+  cleanStale,
+  DAEMON_CALL_TIMEOUT_MS,
+  DEFAULT_IDLE_MS,
+};

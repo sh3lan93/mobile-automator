@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.28.0]
+
+**Device session lifecycle honesty (#156).** The session daemon no longer
+hangs on a wedged engine, leaves an unready daemon holding the workspace lock,
+reports `session end` as stopped before it is, or keeps serving after its
+engine has died.
+
+### Fixed
+
+- **A wedged engine no longer hangs a verb or the session.** mobile-mcp's MCP
+  handshake is now bounded at 10s (it normally takes ~0.2s); previously only
+  the SDK's 60s default bounded it, longer than the 15s window watching it. A
+  timed-out engine is terminated at once, before the error is reported
+  (`ENGINE_CONNECT_TIMEOUT`), so the daemon records the failure well inside
+  that window instead of being killed first.
+- **A daemon that is not ready in time is killed.** When `session start` or a
+  verb's autostart gives up after 15s, it terminates that daemon's process
+  group — daemon and engine — instead of leaving it holding the workspace lock
+  for every later verb. Any group member that outlives SIGTERM gets SIGKILL,
+  even once the daemon itself has died.
+- **`session end` reports `stopped: true` only once the daemon has exited.**
+  It previously trusted the shutdown acknowledgement, which the daemon sends
+  before tearing down. A daemon still alive 35s later is terminated
+  (`forced: true`); one that cannot be stopped is reported as a `device`
+  failure with its `pid`. A daemon too stuck to acknowledge at all is no
+  longer reported as `already_stopped`. Only a process whose command line
+  names this workspace is ever signalled — the daemon now carries
+  `--project-root <root>` in its argv — so a copied workspace or a recycled
+  pid can never reach another workspace's daemon. A daemon that has exited
+  but is still awaiting its reaper (a zombie, the norm in a container whose
+  PID 1 does not reap, such as a CI job container) counts as stopped instead
+  of being waited on for the whole 35s.
+- **A daemon whose engine dies now shuts itself down** (`daemon.engine_exit`,
+  `stop_reason: "engine_exit"`), and the next verb starts a fresh one.
+  `session status` reports such a daemon as `running: false` with
+  `reason: "engine_exited"`.
+
+### Changed
+
+- `session end`'s `data` gains `forced`; it can now fail (`ok: false`,
+  `kind: device`) when the daemon cannot be stopped.
+- `session status`'s `data` gains `reason` (`null` or `"engine_exited"`).
+- New telemetry vocabulary: event `daemon.engine_exit`, stop reason
+  `engine_exit`, error codes `ENGINE_CONNECT_TIMEOUT` and `ENGINE_EXITED`.
+
+---
+
 ## [0.27.1]
 
 **The first npm release of the 0.27 line.** `v0.27.0` was tagged but never

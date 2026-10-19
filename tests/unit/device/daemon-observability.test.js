@@ -346,7 +346,7 @@ describe('observability is never load-bearing', () => {
     // Still usable afterwards, and the frame accounting is intact.
     await expect(conn.call('mobile_press_button', { button: 'HOME' })).resolves.toBeDefined();
     expect(calls).toBe(2);
-    expect(await sessionClient.getSessionStatus(root)).toEqual({ running: true, in_flight: 0, device: null });
+    expect(await sessionClient.getSessionStatus(root)).toEqual({ running: true, reason: null, in_flight: 0, device: null });
 
     await conn.close();
     await expect(daemon.stop()).resolves.toBeUndefined();
@@ -375,7 +375,7 @@ describe('observability is never load-bearing', () => {
     expect(err.message).toBe('adb: device offline');
     expect(err.message).not.toMatch(/observe exploded/);
 
-    expect(await sessionClient.getSessionStatus(root)).toEqual({ running: true, in_flight: 0, device: null });
+    expect(await sessionClient.getSessionStatus(root)).toEqual({ running: true, reason: null, in_flight: 0, device: null });
 
     await conn.close();
     await daemon.stop();
