@@ -223,3 +223,49 @@ describe('skill installation across agents', () => {
     expect(fs.readFileSync(foreign, 'utf8')).toBe('KEEP ME');
   });
 });
+
+// #144 — apply reports a per-file change status, and every owned file (not just
+// one skill) is byte-identical on a rerun. Driven by planHost so a newly owned
+// file is covered without editing this test.
+describe('apply: per-file changes + full idempotence (#144)', () => {
+  const { planHost } = require('../../../src/init/host-plan');
+
+  for (const agent of ALL_AGENTS) {
+    test(`${agent}: changes are created, then unchanged on rerun, then updated after a hand edit`, () => {
+      const projectRoot = tmpRoot();
+      const A = require('../../../src/init/adapters').ADAPTERS[agent];
+      const plan = planHost(agent);
+      const expectedPaths = plan.files
+        .map((f) => path.join(projectRoot, f.rel))
+        .concat(plan.mcp ? [path.join(projectRoot, plan.mcp)] : []);
+
+      const first = A.apply({ projectRoot });
+      expect(first.changes.map((c) => c.path)).toEqual(expectedPaths);
+      expect(first.changes.every((c) => c.status === 'created')).toBe(true);
+      // written/merged keep their pre-#144 shape and order.
+      expect(first.written).toEqual(plan.files.map((f) => path.join(projectRoot, f.rel)));
+      expect(first.merged).toEqual(plan.mcp ? [path.join(projectRoot, plan.mcp)] : []);
+
+      const before = Object.fromEntries(expectedPaths.map((p) => [p, fs.readFileSync(p, 'utf8')]));
+      const second = A.apply({ projectRoot });
+      expect(second.changes.every((c) => c.status === 'unchanged')).toBe(true);
+      for (const p of expectedPaths) expect(fs.readFileSync(p, 'utf8')).toBe(before[p]);
+
+      const edited = expectedPaths[0];
+      fs.appendFileSync(edited, '\nhand edit\n');
+      const third = A.apply({ projectRoot });
+      const byPath = Object.fromEntries(third.changes.map((c) => [c.path, c.status]));
+      expect(byPath[edited]).toBe('updated');
+      expect(third.changes.filter((c) => c.status !== 'unchanged')).toHaveLength(1);
+      expect(fs.readFileSync(edited, 'utf8')).toBe(before[edited]);
+    });
+  }
+
+  test('mcp merge into an existing file without a mauto entry reports updated', () => {
+    const projectRoot = tmpRoot();
+    const mcpPath = path.join(projectRoot, '.mcp.json');
+    fs.writeFileSync(mcpPath, JSON.stringify({ mcpServers: { other: { command: 'x' } } }));
+    const r = require('../../../src/init/adapters').ADAPTERS.claude.apply({ projectRoot });
+    expect(r.changes.find((c) => c.path === mcpPath).status).toBe('updated');
+  });
+});

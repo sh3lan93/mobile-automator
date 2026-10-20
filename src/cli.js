@@ -24,6 +24,7 @@ const { validateAt } = require('./config/schema');
 const { scaffold } = require('./setup/scaffold');
 const guideEmitter = require('./guide/emitter');
 const { ADAPTERS } = require('./init/adapters');
+const { inspectHosts } = require('./init/host-plan');
 const { isSemanticAction, ACTION_METHOD, selectResolver } = require('./device/semantic-press');
 const connection = require('./device/connection');
 const { record } = require('./observe/recorder');
@@ -1116,7 +1117,7 @@ function hintForAdapterError(cls) {
 function applyOneAdapter(adapter, agent, projectRoot) {
   try {
     const r = adapter.apply({ projectRoot });
-    return { agent, ok: true, written: r.written, merged: r.merged };
+    return { agent, ok: true, written: r.written, merged: r.merged, changes: r.changes };
   } catch (err) {
     return {
       agent,
@@ -1127,15 +1128,39 @@ function applyOneAdapter(adapter, agent, projectRoot) {
   }
 }
 
-function handleInit({ projectRoot, adapters = ADAPTERS }, agent) {
+// #144: which hosts already had an integration BEFORE this run. A refresh of a
+// host that was never installed is a fresh install, not an upgrade, so it gets
+// no hint. Advisory only — an inspection failure must never fail init.
+function installedBefore(inspect, projectRoot) {
+  try {
+    return new Set(inspect(projectRoot).filter((h) => h.installed).map((h) => h.agent));
+  } catch {
+    return new Set();
+  }
+}
+
+// `refreshed N stale file(s) for <agent>` for each previously-installed host
+// whose run created or updated anything; null when there is nothing to say.
+function refreshHint(results, wasInstalled) {
+  const parts = [];
+  for (const r of results) {
+    if (!r.ok || !wasInstalled.has(r.agent) || !Array.isArray(r.changes)) continue;
+    const n = r.changes.filter((c) => c.status === 'created' || c.status === 'updated').length;
+    if (n > 0) parts.push(`refreshed ${n} stale file(s) for ${r.agent}`);
+  }
+  return parts.length ? parts.join('; ') : null;
+}
+
+function handleInit({ projectRoot, adapters = ADAPTERS, inspect = inspectHosts }, agent) {
   const known = Object.keys(adapters);
   if (agent === 'all') {
+    const wasInstalled = installedBefore(inspect, projectRoot);
     // Continue-on-error: every host is attempted; the result is ONE envelope
     // carrying a per-agent ok/failed map. `ok` only when all succeed.
     const perAgent = known.map((a) => applyOneAdapter(adapters[a], a, projectRoot));
     const failed = perAgent.filter((r) => !r.ok);
     if (failed.length === 0) {
-      return { envelope: ok({ agents: perAgent }), exitKind: 'ok' };
+      return { envelope: ok({ agents: perAgent }, refreshHint(perAgent, wasInstalled)), exitKind: 'ok' };
     }
     return {
       envelope: fail(
@@ -1158,6 +1183,7 @@ function handleInit({ projectRoot, adapters = ADAPTERS }, agent) {
       exitKind: 'invalid_input',
     };
   }
+  const wasInstalled = installedBefore(inspect, projectRoot);
   const r = applyOneAdapter(adapter, agent, projectRoot);
   if (!r.ok) {
     // A malformed host config is the user's input, not an environment fault —
@@ -1175,7 +1201,10 @@ function handleInit({ projectRoot, adapters = ADAPTERS }, agent) {
     };
   }
   return {
-    envelope: ok({ agent: r.agent, written: r.written, merged: r.merged }),
+    envelope: ok(
+      { agent: r.agent, written: r.written, merged: r.merged, changes: r.changes },
+      refreshHint([r], wasInstalled)
+    ),
     exitKind: 'ok',
   };
 }

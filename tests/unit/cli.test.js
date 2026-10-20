@@ -2211,6 +2211,95 @@ describe('cli handlers', () => {
       const byAgent = Object.fromEntries(r.envelope.data.agents.map((a) => [a.agent, a]));
       expect(byAgent.copilot.error).toBe('EACCES');
     });
+
+    // --- Issue #144: per-file change report + refresh hint ----------------
+    function seedPre021(root) {
+      for (const topic of ['generate', 'execute', 'setup']) {
+        const f = pathForInit.join(root, '.claude', 'commands', `mobile-automator-${topic}.md`);
+        fsForInit.mkdirSync(pathForInit.dirname(f), { recursive: true });
+        fsForInit.writeFileSync(
+          f,
+          `Run \`mauto guide ${topic}\` and follow it. Drive the device only through \`mauto\` verbs (never assume resource-ids).\n`
+        );
+      }
+      // Byte-for-byte what a pre-0.21 init's merge wrote (2-space JSON + newline).
+      // init canonicalises the file's formatting on every run, so a compact
+      // fixture would also report the mcp file as 'updated'.
+      fsForInit.writeFileSync(
+        pathForInit.join(root, '.mcp.json'),
+        JSON.stringify({ mcpServers: { mauto: { command: 'mauto', args: ['mcp'] } } }, null, 2) + '\n'
+      );
+    }
+
+    test('single agent: data.changes lists every owned file + the mcp config', () => {
+      const projectRoot = initTmpRoot();
+      const r = handleInit({ projectRoot }, 'claude');
+      expect(r.exitKind).toBe('ok');
+      const { changes, written, merged } = r.envelope.data;
+      expect(changes.map((c) => c.path)).toEqual([...written, ...merged]);
+      expect(changes.every((c) => c.status === 'created')).toBe(true);
+    });
+
+    test('all: every data.agents[] entry carries its own changes', () => {
+      const projectRoot = initTmpRoot();
+      const r = handleInit({ projectRoot }, 'all');
+      expect(r.exitKind).toBe('ok');
+      for (const a of r.envelope.data.agents) {
+        expect(Array.isArray(a.changes)).toBe(true);
+        expect(a.changes.length).toBeGreaterThan(0);
+        expect(a.changes.every((c) => c.status === 'created')).toBe(true);
+      }
+    });
+
+    test('a fresh install carries no refresh hint', () => {
+      const r = handleInit({ projectRoot: initTmpRoot() }, 'claude');
+      expect(r.envelope.hint).toBeUndefined();
+    });
+
+    test('an unchanged rerun carries no refresh hint', () => {
+      const projectRoot = initTmpRoot();
+      handleInit({ projectRoot }, 'claude');
+      const r = handleInit({ projectRoot }, 'claude');
+      expect(r.envelope.data.changes.every((c) => c.status === 'unchanged')).toBe(true);
+      expect(r.envelope.hint).toBeUndefined();
+    });
+
+    test('a pre-0.21 workspace: init refreshes it and says so in the hint', () => {
+      const projectRoot = initTmpRoot();
+      seedPre021(projectRoot);
+      const r = handleInit({ projectRoot }, 'claude');
+      expect(r.exitKind).toBe('ok');
+      const statuses = r.envelope.data.changes.map((c) => c.status);
+      // 3 outdated commands updated + 3 skills created; mcp already current.
+      expect(statuses.filter((s) => s === 'updated')).toHaveLength(3);
+      expect(statuses.filter((s) => s === 'created')).toHaveLength(3);
+      expect(r.envelope.hint).toBe('refreshed 6 stale file(s) for claude');
+    });
+
+    test('all on a pre-0.21 workspace: hint names only the already-installed host', () => {
+      const projectRoot = initTmpRoot();
+      seedPre021(projectRoot);
+      const r = handleInit({ projectRoot }, 'all');
+      expect(r.exitKind).toBe('ok');
+      expect(r.envelope.hint).toBe('refreshed 6 stale file(s) for claude');
+    });
+
+    test('the pre-run inspection is injectable', () => {
+      const projectRoot = initTmpRoot();
+      const inspect = () => [{ agent: 'gemini', installed: true }];
+      const r = handleInit({ projectRoot, inspect }, 'gemini');
+      expect(r.envelope.hint).toBe('refreshed 3 stale file(s) for gemini');
+    });
+
+    test('all: a failure hint is never overridden by the refresh hint', () => {
+      const projectRoot = initTmpRoot();
+      seedPre021(projectRoot);
+      const { ADAPTERS } = require('../../src/init/adapters');
+      const adapters = { ...ADAPTERS, copilot: { apply() { throw new Error('nope'); } } };
+      const r = handleInit({ projectRoot, adapters }, 'all');
+      expect(r.envelope.error.kind).toBe('partial_failure');
+      expect(r.envelope.hint).toMatch(/data\.agents\[\]\.error/);
+    });
   });
 
   // --- Fix-wave FIX 1: argv -> action body -> handler -> store wiring ------
