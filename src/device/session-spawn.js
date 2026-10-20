@@ -54,7 +54,12 @@ async function spawnDaemon({
   try {
     // The root in argv is an identity marker only (see paths.daemonArgv): env
     // stays the daemon's source of truth, but `ps` can only see argv.
+    // cwd: the engine inherits the daemon's cwd, and mobile-mcp's
+    // validateOutputPath only allows screenshots under its own process.cwd()
+    // (or the temp dir). Pin it to the project root so the allow-list never
+    // depends on which subdirectory happened to spawn the daemon (#214).
     const child = spawn(process.execPath, [DAEMON_BIN, ...paths.daemonArgv(projectRoot)], {
+      cwd: projectRoot,
       detached: true,
       stdio: log.stdio,
       env,

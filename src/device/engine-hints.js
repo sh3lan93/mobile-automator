@@ -66,6 +66,14 @@ function deviceNotFoundHint(id) {
   );
 }
 
+// B3 (#214): mobile-mcp's validateOutputPath only allows screenshots under the
+// engine's cwd or the temp dir, and its message calls the former "the current
+// directory". The engine runs from the project root (the daemon is spawned
+// there), which is not necessarily the directory the user ran the verb from.
+const OUTSIDE_ALLOWED_DIRS_HINT =
+  'Screenshots must be saved under the project root (the directory containing mobile-automator/) ' +
+  'or the system temp directory. Choose a path inside one of them and retry.';
+
 function engineHint(message, { mobilecliVersion = resolveMobilecliVersion } = {}) {
   try {
     if (typeof message !== 'string' || !message) return null;
@@ -74,6 +82,7 @@ function engineHint(message, { mobilecliVersion = resolveMobilecliVersion } = {}
     }
     const notFound = /Device "([^"]+)" not found/.exec(message);
     if (notFound) return deviceNotFoundHint(notFound[1]);
+    if (/not in the list of allowed directories/.test(message)) return OUTSIDE_ALLOWED_DIRS_HINT;
     return null;
   } catch {
     return null;

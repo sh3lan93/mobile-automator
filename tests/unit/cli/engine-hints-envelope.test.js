@@ -45,6 +45,18 @@ describe('device-failure envelopes carry the engine hint', () => {
     expect(envelope.hint).toMatch(/agent install --device C6C6FFB9/);
   });
 
+  it('screenshot outside the allowed directories gets the project-root hint (#214)', async () => {
+    const msg =
+      '"/elsewhere" is not in the list of allowed directories. Allowed directories include ' +
+      'the current directory and the temp directory on this host.';
+    const { envelope, exitKind } = await handleScreenshot(
+      { deviceBridge: { screenshot: throwing(msg) } },
+      '/elsewhere/x.png'
+    );
+    expect(exitKind).toBe('device');
+    expect(envelope.hint).toContain('project root');
+  });
+
   it('devices, devices use and crash list get the engine hint too', async () => {
     const bridge = { listDevices: throwing(B2_MESSAGE), listCrashes: throwing(B1_MESSAGE) };
     expect((await handleDevices({ deviceBridge: bridge })).envelope.hint).toContain('"emulator-5554"');

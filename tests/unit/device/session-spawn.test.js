@@ -49,6 +49,10 @@ describe('session-spawn', () => {
     // the daemon's source of truth.
     expect(captured.args).toEqual([DAEMON_BIN, '--project-root', path.resolve('/proj')]);
     expect(captured.opts.detached).toBe(true);
+    // The engine inherits the daemon's cwd, and mobile-mcp only lets screenshots
+    // land under its own cwd — so the daemon must run from the project root,
+    // not from whichever subdirectory spawned it (#214).
+    expect(captured.opts.cwd).toBe('/proj');
     // Pass-through, not re-derivation: whatever session-log decided is what the
     // child gets. The "fd 2 must be the log" guard for #163 lives in
     // session-log.test.js, where that decision is actually made.

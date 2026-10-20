@@ -153,6 +153,34 @@ describe('cli handlers', () => {
       expect(exitKind).toBe('ok');
       expect(envelope.data).toEqual({ path: '/tmp/shot.png' });
     });
+
+    // #214: the daemon's cwd is not the caller's, so a relative path is
+    // resolved here, against the directory the verb was run from.
+    test('resolves a relative path against the caller cwd', async () => {
+      const calls = [];
+      const fakeBridge = { screenshot: async (p) => { calls.push(p); return p; } };
+      const { envelope, exitKind } = await handleScreenshot(
+        { deviceBridge: fakeBridge, cwd: '/work/sub' },
+        'shots/home.png'
+      );
+      expect(exitKind).toBe('ok');
+      expect(calls).toEqual(['/work/sub/shots/home.png']);
+      expect(envelope.data).toEqual({ path: '/work/sub/shots/home.png' });
+    });
+
+    test('passes an absolute path through unchanged', async () => {
+      const calls = [];
+      const fakeBridge = { screenshot: async (p) => { calls.push(p); return p; } };
+      await handleScreenshot({ deviceBridge: fakeBridge, cwd: '/work/sub' }, '/tmp/shot.png');
+      expect(calls).toEqual(['/tmp/shot.png']);
+    });
+
+    test('normalizes .. segments', async () => {
+      const calls = [];
+      const fakeBridge = { screenshot: async (p) => { calls.push(p); return p; } };
+      await handleScreenshot({ deviceBridge: fakeBridge, cwd: '/work/sub' }, '../x.png');
+      expect(calls).toEqual(['/work/x.png']);
+    });
   });
 
   describe('handleValidate', () => {
@@ -401,18 +429,43 @@ describe('cli handlers', () => {
   });
 
   describe('handleInstall', () => {
-    test('installs an app and reports the path', async () => {
+    test('installs an app and reports the resolved path', async () => {
       const calls = [];
       const bridge = { installApp: async (p) => { calls.push(p); } };
-      const { envelope, exitKind } = await handleInstall({ deviceBridge: bridge }, './app.apk');
+      const { envelope, exitKind } = await handleInstall({ deviceBridge: bridge, cwd: '/work' }, './app.apk');
       expect(exitKind).toBe('ok');
-      expect(envelope.data).toEqual({ installed: './app.apk' });
-      expect(calls).toEqual(['./app.apk']);
+      expect(envelope.data).toEqual({ installed: '/work/app.apk' });
+      expect(calls).toEqual(['/work/app.apk']);
+    });
+
+    // #214: the daemon's cwd is not the caller's, so a relative path is
+    // resolved here, against the directory the verb was run from.
+    test('resolves a relative path against the caller cwd', async () => {
+      const calls = [];
+      const bridge = { installApp: async (p) => { calls.push(p); } };
+      const { envelope } = await handleInstall({ deviceBridge: bridge, cwd: '/work/sub' }, 'build/app.apk');
+      expect(calls).toEqual(['/work/sub/build/app.apk']);
+      expect(envelope.data).toEqual({ installed: '/work/sub/build/app.apk' });
+    });
+
+    test('passes an absolute path through unchanged', async () => {
+      const calls = [];
+      const bridge = { installApp: async (p) => { calls.push(p); } };
+      await handleInstall({ deviceBridge: bridge, cwd: '/work/sub' }, '/abs/app.apk');
+      expect(calls).toEqual(['/abs/app.apk']);
+    });
+
+    test('normalizes .. segments', async () => {
+      const calls = [];
+      const bridge = { installApp: async (p) => { calls.push(p); } };
+      await handleInstall({ deviceBridge: bridge, cwd: '/work/sub' }, '../build/app.apk');
+      expect(calls).toEqual(['/work/build/app.apk']);
     });
 
     test('rejects a missing path with invalid_input', async () => {
       const bridge = { installApp: async () => { throw new Error('should not be called'); } };
-      const { exitKind } = await handleInstall({ deviceBridge: bridge }, '');
+      // The guard runs before resolution: '' must not resolve to the cwd itself.
+      const { exitKind } = await handleInstall({ deviceBridge: bridge, cwd: '/work' }, '');
       expect(exitKind).toBe('invalid_input');
     });
   });

@@ -73,6 +73,21 @@ describe('engineHint — device id not found (ids differ between engines)', () =
   });
 });
 
+// mobile-mcp 1.0.5 validateOutputPath's rejection. Its "current directory" is
+// the engine's cwd — the project root since #214 — which the user cannot see.
+const B3_MESSAGE =
+  '"/Users/me/elsewhere" is not in the list of allowed directories. Allowed directories ' +
+  'include the current directory and the temp directory on this host.';
+
+describe('engineHint — screenshot path outside the allowed directories (#214)', () => {
+  it('names the project root and the temp directory instead of "the current directory"', () => {
+    const hint = engineHint(B3_MESSAGE);
+    expect(hint).toContain('project root');
+    expect(hint).toContain('mobile-automator/');
+    expect(hint).toContain('temp directory');
+  });
+});
+
 describe('engineHint — hygiene', () => {
   it('returns null for an unrelated message', () => {
     expect(engineHint('no device connected')).toBeNull();
@@ -86,7 +101,7 @@ describe('engineHint — hygiene', () => {
   });
 
   it('never names a raw mobile-mcp tool or leaves a template token', () => {
-    for (const msg of [B1_MESSAGE, B2_MESSAGE, 'Agent is not installed on the device']) {
+    for (const msg of [B1_MESSAGE, B2_MESSAGE, B3_MESSAGE, 'Agent is not installed on the device']) {
       const hint = engineHint(msg, { mobilecliVersion: () => '1.0.13' });
       expect(hint).not.toMatch(MCP_TOOL);
       expect(hint).not.toMatch(TEMPLATE_TOKEN);
