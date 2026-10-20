@@ -586,17 +586,7 @@ jobs:
 
 **Answer:**
 1. **Run tests individually** — Not in parallel
-2. **Reset app state** between tests (uninstall, then reinstall the build):
-   ```json
-   {
-     "preconditions": {
-       "device_actions": [
-         {"action": "uninstall_app", "target_package": "com.example.myapp"},
-         {"action": "install_app", "value": "./builds/app-debug.apk"}
-       ]
-     }
-   }
-   ```
+2. **Close background apps** on the device before a run to free memory
 
 3. **Reduce screenshot resolution** — Configure in the workspace config
 4. **Use lightweight assertions** — Text checks > visual analysis

@@ -541,7 +541,7 @@ Define setup requirements and device state before test execution.
 | `device_properties` | object | Required device properties (network, location_services, orientation) |
 | `notes` | array | Human-readable notes about preconditions that cannot be automated |
 
-Each `device_actions` item has an `action` (`uninstall_app`, `install_app`, `set_orientation`, plus the unsupported `clear_app_data`, `enable_wifi`, `disable_wifi`, which have no execution path) plus optional `target_package`, `value`, and `description`.
+Each `device_actions` item has an `action` (`uninstall_app`, `install_app`, `set_orientation`, plus the unsupported `clear_app_data`, `enable_wifi`, `disable_wifi`, which have no execution path) plus optional `target_package`, `value`, and `description`. For `uninstall_app` and `install_app` both fields are optional: `target_package` defaults to the config app id and `value` (the build path) defaults to the build installed in pre-flight.
 
 **Example:**
 ```json

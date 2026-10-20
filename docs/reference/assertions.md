@@ -10,7 +10,7 @@ Every assertion object requires `id`, `after_step` (the step `id` it runs after)
 
 ## Mechanical vs agent-judged assertions
 
-Not every assertion is decided by the CLI. 15 of the 27 types are evaluated deterministically by `mauto assert` over the element list. The other 12 return `needs_agent` with `pass: null`: the host agent judges them (often from a screenshot) and records the verdict with `mauto result add-assertion`. An agent-judged pass is only as reliable as the agent that judged it.
+Not every assertion is decided by the CLI. 15 of the 27 assertion types are evaluated deterministically by `mauto assert` over the element list. The other 12 return `needs_agent` with `pass: null`: the host agent judges them (often from a screenshot) and records the verdict with `mauto result add-assertion`. An agent-judged pass is only as reliable as the agent that judged it.
 
 `element_state` is agent-judged because the element model drops enabled, focused and checked state, so the CLI cannot decide it mechanically.
 
