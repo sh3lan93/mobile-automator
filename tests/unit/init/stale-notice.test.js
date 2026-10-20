@@ -4,7 +4,7 @@
 // `mauto init` wrote is missing or out of date. Pure function of the
 // inspectHosts() report, so these tests feed it hand-built reports.
 
-const { renderStaleNotice, initCommands } = require('../../../src/init/stale-notice');
+const { renderStaleNotice, initCommands, installedBefore, refreshHint } = require('../../../src/init/stale-notice');
 const { HOSTS } = require('../../../src/init/host-plan');
 
 function host(agent, { missing = 0, outdated = 0, current = 0, mcp = null } = {}) {
@@ -84,5 +84,66 @@ describe('initCommands', () => {
 
   test('all hosts → --agent all', () => {
     expect(initCommands([...HOSTS])).toEqual(['mauto init --agent all']);
+  });
+});
+
+describe('installedBefore', () => {
+  test('collects the agents of installed hosts', () => {
+    const inspect = () => [
+      { agent: 'claude', installed: true },
+      { agent: 'cursor', installed: false },
+      { agent: 'gemini', installed: true },
+    ];
+    expect([...installedBefore(inspect, '/p')].sort()).toEqual(['claude', 'gemini']);
+  });
+
+  test('an inspection failure is advisory — no hosts, never a throw', () => {
+    const inspect = () => {
+      throw new Error('EACCES');
+    };
+    expect(installedBefore(inspect, '/p')).toEqual(new Set());
+  });
+});
+
+describe('refreshHint', () => {
+  const change = (path, status) => ({ path, status });
+
+  test('counts created + updated changes for previously-installed hosts', () => {
+    const hint = refreshHint(
+      [
+        { ok: true, agent: 'claude', changes: [change('/a', 'updated'), change('/b', 'created'), change('/c', 'unchanged')] },
+        { ok: true, agent: 'cursor', changes: [change('/d', 'unchanged')] },
+      ],
+      new Set(['claude', 'cursor'])
+    );
+    expect(hint).toBe('refreshed 2 stale file(s) for claude');
+  });
+
+  test('a fresh install (host not previously installed) gets no hint', () => {
+    const hint = refreshHint(
+      [{ ok: true, agent: 'claude', changes: [change('/a', 'created')] }],
+      new Set()
+    );
+    expect(hint).toBeNull();
+  });
+
+  test('multiple refreshed hosts join with "; " (results order)',
+    () => {
+      const hint = refreshHint(
+        [
+          { ok: true, agent: 'gemini', changes: [change('/a', 'updated')] },
+          { ok: true, agent: 'claude', changes: [change('/b', 'updated')] },
+        ],
+        new Set(['claude', 'gemini'])
+      );
+      expect(hint).toBe('refreshed 1 stale file(s) for gemini; refreshed 1 stale file(s) for claude');
+    });
+
+  test('failed agents are skipped', () => {
+    const hint = refreshHint(
+      [{ ok: false, agent: 'claude', changes: [] }],
+      new Set(['claude'])
+    );
+    expect(hint).toBeNull();
   });
 });

@@ -24,8 +24,9 @@ const { validateAt } = require('./config/schema');
 const { scaffold } = require('./setup/scaffold');
 const guideEmitter = require('./guide/emitter');
 const { ADAPTERS } = require('./init/adapters');
-const { inspectHosts } = require('./init/host-plan');
-const { renderStaleNotice, initCommands } = require('./init/stale-notice');
+const { inspectHosts, ADVISORY_FS_CODES } = require('./init/host-plan');
+const { renderStaleNotice, installedBefore, refreshHint } = require('./init/stale-notice');
+const { doctorReport } = require('./init/doctor');
 const { isSemanticAction, ACTION_METHOD, selectResolver } = require('./device/semantic-press');
 const connection = require('./device/connection');
 const { record } = require('./observe/recorder');
@@ -985,7 +986,10 @@ async function handleTelemetryFlush({ projectRoot, env = process.env, flusher })
 // emitBootstrap: init embeds emitBootstrap in the cursor rule and the MCP
 // prompts server serves emitGuide, so putting it there would make init's
 // output depend on workspace state (and break byte-identical reruns). The
-// inspection is advisory — any failure means no notice, never a failed guide.
+// inspection is advisory: a filesystem fault that means "the workspace's
+// integration files can't be read" simply yields no notice, while any other
+// failure escapes to the envelope boundary — a defect in the inspection must
+// be visible, not silently disable the notice forever.
 function handleGuide(
   { projectRoot, emitter = guideEmitter, config = configManager, inspect = inspectHosts },
   topic
@@ -1004,7 +1008,8 @@ function handleGuide(
   let stale;
   try {
     stale = inspect(projectRoot).filter((h) => h.stale);
-  } catch {
+  } catch (err) {
+    if (!(err && ADVISORY_FS_CODES.has(err.code))) throw err;
     stale = [];
   }
   if (stale.length) raw = renderStaleNotice(stale) + raw;
@@ -1135,7 +1140,7 @@ function hintForAdapterError(cls) {
 function applyOneAdapter(adapter, agent, projectRoot) {
   try {
     const r = adapter.apply({ projectRoot });
-    return { agent, ok: true, written: r.written, merged: r.merged, changes: r.changes };
+    return { agent, ok: true, changes: r.changes };
   } catch (err) {
     return {
       agent,
@@ -1144,29 +1149,6 @@ function applyOneAdapter(adapter, agent, projectRoot) {
       message: (err && err.message) || String(err),
     };
   }
-}
-
-// #144: which hosts already had an integration BEFORE this run. A refresh of a
-// host that was never installed is a fresh install, not an upgrade, so it gets
-// no hint. Advisory only — an inspection failure must never fail init.
-function installedBefore(inspect, projectRoot) {
-  try {
-    return new Set(inspect(projectRoot).filter((h) => h.installed).map((h) => h.agent));
-  } catch {
-    return new Set();
-  }
-}
-
-// `refreshed N stale file(s) for <agent>` for each previously-installed host
-// whose run created or updated anything; null when there is nothing to say.
-function refreshHint(results, wasInstalled) {
-  const parts = [];
-  for (const r of results) {
-    if (!r.ok || !wasInstalled.has(r.agent) || !Array.isArray(r.changes)) continue;
-    const n = r.changes.filter((c) => c.status === 'created' || c.status === 'updated').length;
-    if (n > 0) parts.push(`refreshed ${n} stale file(s) for ${r.agent}`);
-  }
-  return parts.length ? parts.join('; ') : null;
 }
 
 function handleInit({ projectRoot, adapters = ADAPTERS, inspect = inspectHosts }, agent) {
@@ -1219,33 +1201,18 @@ function handleInit({ projectRoot, adapters = ADAPTERS, inspect = inspectHosts }
     };
   }
   return {
-    envelope: ok(
-      { agent: r.agent, written: r.written, merged: r.merged, changes: r.changes },
-      refreshHint([r], wasInstalled)
-    ),
+    envelope: ok({ agent: r.agent, changes: r.changes }, refreshHint([r], wasInstalled)),
     exitKind: 'ok',
   };
 }
 
 // `mauto doctor` (#144): report whether the host integration `mauto init`
-// wrote is missing or out of date. A report, not a gate — always ok. An
-// unexpected fs error from the inspection (EACCES, ...) is left to the
-// envelope boundary to classify.
+// wrote is missing or out of date. A report, not a gate — always ok. The
+// report itself (data + hint) lives in src/init/doctor.js; this is the
+// handler-shape adapter to the emit contract. An unexpected fs error from the
+// inspection (EACCES, ...) is left to the envelope boundary to classify.
 function handleDoctor({ projectRoot, inspect = inspectHosts }) {
-  const installed = inspect(projectRoot).filter((h) => h.installed);
-  const stale = installed.filter((h) => h.stale).map((h) => h.agent);
-  const data = {
-    initialised: installed.length > 0,
-    hosts: installed.map(({ agent, stale: s, files, mcp }) => ({ agent, stale: s, files, mcp })),
-    stale,
-  };
-  let hint = null;
-  if (stale.length) {
-    hint = initCommands(stale).map((c) => `run \`${c}\``).join('; ');
-  } else if (installed.length === 0) {
-    hint =
-      'no host integration found — run `mauto init --agent <host>` (claude | cursor | gemini | copilot | agents | all)';
-  }
+  const { data, hint } = doctorReport({ projectRoot, inspect });
   return { envelope: ok(data, hint), exitKind: 'ok' };
 }
 

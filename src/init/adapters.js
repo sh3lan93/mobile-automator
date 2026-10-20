@@ -60,20 +60,16 @@ function makeAdapter(agent) {
   return {
     apply({ projectRoot }) {
       const plan = planHost(agent);
-      const written = [];
-      const merged = [];
       const changes = [];
       for (const { rel, content } of plan.files) {
         const file = path.join(projectRoot, rel);
         changes.push({ path: file, status: writeIfChanged(file, content) });
-        written.push(file);
       }
       if (plan.mcp) {
         const mcpPath = path.join(projectRoot, plan.mcp);
         changes.push({ path: mcpPath, status: mergeMcpConfig(mcpPath).status });
-        merged.push(mcpPath);
       }
-      return { agent, written, merged, changes };
+      return { agent, changes };
     },
   };
 }

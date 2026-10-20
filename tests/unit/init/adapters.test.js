@@ -41,7 +41,7 @@ describe('ADAPTERS.claude.apply', () => {
       expect(body).not.toContain('{{');
       expect(body).not.toMatch(/\bmobile_[a-z_]+/);
     }
-    expect(res.written.length).toBeGreaterThanOrEqual(3);
+    expect(res.changes.length).toBeGreaterThanOrEqual(3);
   });
 
   // Drift guard for #139. A same-named skill takes precedence over a command,
@@ -102,7 +102,8 @@ describe('ADAPTERS.claude.apply', () => {
     expect(mcp.$schema).toBe('https://example/schema.json');
     // mauto added.
     expect(mcp.mcpServers.mauto).toEqual({ command: 'mauto', args: ['mcp'] });
-    expect(res.merged).toContain(mcpPath);
+    // The merge added the mauto entry to a file that lacked it.
+    expect(res.changes.find((c) => c.path === mcpPath).status).toBe('updated');
   });
 
   test('a corrupt pre-existing .mcp.json throws a typed corrupt_mcp_config error, not a raw SyntaxError, and is left untouched', () => {
@@ -155,7 +156,7 @@ describe('ADAPTERS.cursor.apply', () => {
     const body = fs.readFileSync(rule, 'utf8');
     expect(body).toContain('mauto');
     expect(body).not.toContain('{{');
-    expect(res.written).toContain(rule);
+    expect(res.changes.find((c) => c.path === rule).status).toBe('created');
   });
 
   test('merges the mauto server into .cursor/mcp.json preserving others', () => {
@@ -242,9 +243,9 @@ describe('apply: per-file changes + full idempotence (#144)', () => {
       const first = A.apply({ projectRoot });
       expect(first.changes.map((c) => c.path)).toEqual(expectedPaths);
       expect(first.changes.every((c) => c.status === 'created')).toBe(true);
-      // written/merged keep their pre-#144 shape and order.
-      expect(first.written).toEqual(plan.files.map((f) => path.join(projectRoot, f.rel)));
-      expect(first.merged).toEqual(plan.mcp ? [path.join(projectRoot, plan.mcp)] : []);
+      // `changes` is the only per-file record apply reports, and it carries
+      // every owned file in plan order (mcp last, when the host owns one).
+      expect(first.changes.every((c) => expectedPaths.includes(c.path))).toBe(true);
 
       const before = Object.fromEntries(expectedPaths.map((p) => [p, fs.readFileSync(p, 'utf8')]));
       const second = A.apply({ projectRoot });

@@ -37,6 +37,15 @@ const SKILL_DEST = {
 
 const HOSTS = Object.keys(SKILL_DEST);
 
+// Filesystem errno values that mean "the workspace's integration files can't
+// be read the way they normally sit" — a file or its parent is missing,
+// unreadable, or a directory sits where a file is expected. The advisory
+// surfaces that consume the inspection without failing (`guide`'s notice,
+// init's pre-run probe) treat these as "say nothing", never as a reason to
+// fail the verb. Any other errno (or a non-errno throw) escapes: a defect in
+// the inspection itself must be visible, not silently absorbed.
+const ADVISORY_FS_CODES = new Set(['ENOENT', 'EACCES', 'EPERM', 'EISDIR', 'ENOTDIR']);
+
 // BACK-COMPAT FALLBACK — NOT the live instruction surface for a current host.
 //
 // Claude Code merged custom commands into skills, and a same-named skill wins:
@@ -177,6 +186,7 @@ function inspectHosts(projectRoot) {
 
 module.exports = {
   HOSTS,
+  ADVISORY_FS_CODES,
   MAUTO_SERVER,
   SKILL_DEST,
   TOPICS,

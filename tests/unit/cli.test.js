@@ -30,7 +30,6 @@ const {
   handleSchema,
   handleBootstrap,
   handleInit,
-  handleDoctor,
   handleSessionStart,
   handleSessionStatus,
   handleSessionEnd,
@@ -1267,7 +1266,7 @@ describe('cli handlers', () => {
       expect(r.raw).toBe(guideEmitter.emitGuide('setup', { mode: 'platform-aware', projectRoot }));
     });
 
-    test('inspect throws → guide still ok, no notice', () => {
+    test('inspect throws a filesystem fault (EACCES) → guide still ok, no notice', () => {
       const projectRoot = freshRoot();
       const r = handleGuide(
         {
@@ -1284,101 +1283,43 @@ describe('cli handlers', () => {
       expect(r.raw).toBe(guideEmitter.emitGuide('execute', { mode: 'platform-aware', projectRoot }));
     });
 
+    test('a non-fs fault in the inspection propagates — a detector defect must be visible, not silently silence the notice', () => {
+      const defect = new TypeError('boom: inspect defect');
+      expect(() =>
+        handleGuide(
+          {
+            projectRoot: freshRoot(),
+            inspect: () => {
+              throw defect;
+            },
+          },
+          'execute'
+        )
+      ).toThrow(defect);
+    });
+
+    test('a missing parent dir (ENOENT) is advisory — no notice, guide still ok', () => {
+      const projectRoot = freshRoot();
+      const r = handleGuide(
+        {
+          projectRoot,
+          inspect: () => {
+            const e = new Error("ENOENT: no such file or directory, lstat '/gone'");
+            e.code = 'ENOENT';
+            throw e;
+          },
+        },
+        'generate'
+      );
+      expect(r.exitKind).toBe('ok');
+      expect(r.raw).toBe(guideEmitter.emitGuide('generate', { mode: 'platform-aware', projectRoot }));
+    });
+
     test('unknown topic never inspects', () => {
       const inspect = jest.fn(() => [staleClaude]);
       const r = handleGuide({ projectRoot: freshRoot(), inspect }, 'bogus');
       expect(r.exitKind).toBe('invalid_input');
       expect(inspect).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('handleDoctor (#144)', () => {
-    const { HOSTS } = require('../../src/init/host-plan');
-    const { render } = require('../../src/output/envelope');
-    const entry = (agent, { installed = true, stale = false } = {}) => ({
-      agent,
-      installed,
-      stale,
-      files: [{ path: `/p/${agent}/f`, status: stale ? 'outdated' : installed ? 'current' : 'missing' }],
-      mcp: null,
-    });
-    const report = (overrides) => HOSTS.map((a) => entry(a, overrides[a] || { installed: false }));
-
-    test('nothing installed → ok, not initialised, hint names init', () => {
-      const r = handleDoctor({ projectRoot: '/p', inspect: () => report({}) });
-      expect(r.exitKind).toBe('ok');
-      expect(r.envelope.ok).toBe(true);
-      expect(r.envelope.data).toEqual({ initialised: false, hosts: [], stale: [] });
-      expect(r.envelope.hint).toBe(
-        'no host integration found — run `mauto init --agent <host>` (claude | cursor | gemini | copilot | agents | all)'
-      );
-    });
-
-    test('all installed hosts current → ok, no hint', () => {
-      const r = handleDoctor({ projectRoot: '/p', inspect: () => report({ claude: {}, cursor: {} }) });
-      expect(r.envelope.data.initialised).toBe(true);
-      expect(r.envelope.data.hosts.map((h) => h.agent)).toEqual(['claude', 'cursor']);
-      expect(r.envelope.data.stale).toEqual([]);
-      expect(r.envelope.hint).toBeUndefined();
-      // Only {agent, stale, files, mcp} per host.
-      expect(Object.keys(r.envelope.data.hosts[0]).sort()).toEqual(['agent', 'files', 'mcp', 'stale']);
-    });
-
-    test('one stale host → hint names its init command', () => {
-      const r = handleDoctor({
-        projectRoot: '/p',
-        inspect: () => report({ claude: { stale: true }, gemini: {} }),
-      });
-      expect(r.exitKind).toBe('ok');
-      expect(r.envelope.data.stale).toEqual(['claude']);
-      expect(r.envelope.hint).toBe('run `mauto init --agent claude`');
-    });
-
-    test('two stale hosts → one command per host, joined with "; "', () => {
-      const r = handleDoctor({
-        projectRoot: '/p',
-        inspect: () => report({ copilot: { stale: true }, claude: { stale: true } }),
-      });
-      expect(r.envelope.data.stale).toEqual(['claude', 'copilot']);
-      expect(r.envelope.hint).toBe('run `mauto init --agent claude`; run `mauto init --agent copilot`');
-    });
-
-    test('every host stale → --agent all', () => {
-      const all = Object.fromEntries(HOSTS.map((a) => [a, { stale: true }]));
-      const r = handleDoctor({ projectRoot: '/p', inspect: () => report(all) });
-      expect(r.envelope.data.stale).toEqual(HOSTS);
-      expect(r.envelope.hint).toBe('run `mauto init --agent all`');
-    });
-
-    test('inspects the given projectRoot', () => {
-      const inspect = jest.fn(() => report({}));
-      handleDoctor({ projectRoot: '/some/root', inspect });
-      expect(inspect).toHaveBeenCalledWith('/some/root');
-    });
-
-    test('inspect failure propagates (classified by the envelope boundary)', () => {
-      const err = Object.assign(new Error('EACCES'), { code: 'EACCES' });
-      expect(() =>
-        handleDoctor({
-          projectRoot: '/p',
-          inspect: () => {
-            throw err;
-          },
-        })
-      ).toThrow(err);
-    });
-
-    test('--human renders the data keys and the hint', () => {
-      const r = handleDoctor({ projectRoot: '/p', inspect: () => report({ claude: { stale: true } }) });
-      const out = render(r.envelope, { human: true });
-      expect(out).toContain('ok: initialised, hosts, stale');
-      expect(out).toContain('hint: run `mauto init --agent claude`');
-    });
-
-    test('a real empty dir reports nothing installed', () => {
-      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-doctor-'));
-      const r = handleDoctor({ projectRoot });
-      expect(r.envelope.data).toEqual({ initialised: false, hosts: [], stale: [] });
     });
   });
 
@@ -1430,14 +1371,14 @@ describe('cli handlers', () => {
   });
 
   describe('handleInit (vendor adapters)', () => {
-    test('claude applies into the injected projectRoot and returns written/merged', () => {
+    test('claude applies into the injected projectRoot and reports per-file changes', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-init-h-'));
       const { envelope, exitKind } = handleInit({ projectRoot }, 'claude');
       expect(exitKind).toBe('ok');
       expect(envelope.ok).toBe(true);
       expect(envelope.data.agent).toBe('claude');
-      expect(Array.isArray(envelope.data.written)).toBe(true);
-      expect(Array.isArray(envelope.data.merged)).toBe(true);
+      expect(Array.isArray(envelope.data.changes)).toBe(true);
+      expect(envelope.data.changes.every((c) => c.path && c.status)).toBe(true);
       expect(fs.existsSync(path.join(projectRoot, '.mcp.json'))).toBe(true);
     });
 
@@ -2392,12 +2333,19 @@ describe('cli handlers', () => {
       );
     }
 
-    test('single agent: data.changes lists every owned file + the mcp config', () => {
+    test('single agent: data.changes lists every owned file + the mcp config, in plan order', () => {
       const projectRoot = initTmpRoot();
+      const { planHost } = require('../../src/init/host-plan');
       const r = handleInit({ projectRoot }, 'claude');
       expect(r.exitKind).toBe('ok');
-      const { changes, written, merged } = r.envelope.data;
-      expect(changes.map((c) => c.path)).toEqual([...written, ...merged]);
+      const { changes } = r.envelope.data;
+      const plan = planHost('claude');
+      const expected = plan.files
+        .map((f) => path.join(projectRoot, f.rel))
+        .concat(plan.mcp ? [path.join(projectRoot, plan.mcp)] : []);
+      // `changes` is the only per-file record the init envelope carries.
+      expect(Object.keys(r.envelope.data).sort()).toEqual(['agent', 'changes']);
+      expect(changes.map((c) => c.path)).toEqual(expected);
       expect(changes.every((c) => c.status === 'created')).toBe(true);
     });
 

@@ -140,6 +140,8 @@ Wire `mauto` into a host AI agent.
 
 All five hosts get native Agent Skills (one per workflow topic: generate / execute / setup). Claude and Cursor additionally get slash-commands / project rules plus a `mauto` MCP server entry (`{ "command": "mauto", "args": ["mcp"] }`). `init --agent all` continues on error and returns one envelope with a per-agent ok/failed map in `data.agents[]`.
 
+A successful `init` reports the canonical per-file record in `data.changes[]` (or `data.agents[].changes[]` for `--agent all`): one `{ path, status }` entry per owned file in write order, where status is `created`, `updated`, or `unchanged`. When a run refreshes a host that was previously installed, the envelope hint carries `refreshed N stale file(s) for <agent>`; a fresh install gets no hint.
+
 ---
 
 ## Device session verbs

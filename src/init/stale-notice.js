@@ -42,6 +42,31 @@ function joinList(items) {
   return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
 }
 
+// Which hosts already had an integration BEFORE this init run (#144). A
+// refresh of a host that was never installed is a fresh install, not an
+// upgrade, so it gets no hint. Advisory only — an inspection failure (an
+// unreadable workspace) must never fail init, so it means "no hosts".
+function installedBefore(inspect, projectRoot) {
+  try {
+    return new Set(inspect(projectRoot).filter((h) => h.installed).map((h) => h.agent));
+  } catch {
+    return new Set();
+  }
+}
+
+// `refreshed N stale file(s) for <agent>` for each previously-installed host
+// whose run created or updated anything; null when there is nothing to say.
+// `results` hold per-agent adapter results (`{ ok, agent, changes }`).
+function refreshHint(results, wasInstalled) {
+  const parts = [];
+  for (const r of results) {
+    if (!r.ok || !wasInstalled.has(r.agent)) continue;
+    const n = r.changes.filter((c) => c.status === 'created' || c.status === 'updated').length;
+    if (n > 0) parts.push(`refreshed ${n} stale file(s) for ${r.agent}`);
+  }
+  return parts.length ? parts.join('; ') : null;
+}
+
 // `staleHosts`: entries from inspectHosts() with `stale: true`. Returns a
 // markdown blockquote followed by a blank line, or '' when there is nothing
 // stale. Output is independent of input order.
@@ -57,4 +82,4 @@ function renderStaleNotice(staleHosts) {
   );
 }
 
-module.exports = { renderStaleNotice, initCommands };
+module.exports = { renderStaleNotice, initCommands, installedBefore, refreshHint };
