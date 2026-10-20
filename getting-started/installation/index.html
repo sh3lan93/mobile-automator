@@ -456,6 +456,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#windows-hosts-wsl2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Windows hosts (WSL2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#platform-specific-requirements" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1596,6 +1607,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#windows-hosts-wsl2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Windows hosts (WSL2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#platform-specific-requirements" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1847,11 +1869,15 @@
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <p>Before installing mobile-automator, ensure you have:</p>
 <ul>
+<li><strong>Host OS</strong> — macOS or Linux. On Windows, use WSL2 (see below)</li>
 <li><strong>Node.js</strong> v22.12 or higher (required for mobile-mcp automation engine)</li>
 <li><strong>An AI coding agent</strong> — Claude Code, Cursor, Gemini CLI, GitHub Copilot, OpenAI Agents, or any MCP-capable agent</li>
 <li>A <strong>mobile project</strong> (Android, iOS, Flutter, React Native, KMP, or CMP)</li>
 <li>A <strong>connected device or simulator</strong> for running tests</li>
 </ul>
+<h3 id="windows-hosts-wsl2">Windows hosts (WSL2)<a class="headerlink" href="#windows-hosts-wsl2" title="Permanent link">&para;</a></h3>
+<p><code>mauto</code> runs on macOS and Linux only. Its device session is built on POSIX primitives (a Unix domain socket, <code>ps</code>, process-group signals), so on native Windows npm refuses the install with <code>EBADPLATFORM</code>. Install and run <code>mauto</code> inside a WSL2 Linux distribution instead.</p>
+<p>The device or emulator must be reachable from inside WSL — for example, pass a USB device through with <a href="https://github.com/dorssel/usbipd-win"><code>usbipd-win</code></a>, or <code>adb connect</code> to an emulator running on the Windows side. WSL2 is the expected route, but it is not exercised in CI. See <a href="https://github.com/sh3lan93/mobile-automator/blob/main/TROUBLESHOOTING.md#-mauto-refuses-to-run-on-windows">Troubleshooting</a>.</p>
 <h3 id="platform-specific-requirements">Platform-Specific Requirements<a class="headerlink" href="#platform-specific-requirements" title="Permanent link">&para;</a></h3>
 <h4 id="android">Android<a class="headerlink" href="#android" title="Permanent link">&para;</a></h4>
 <ul>

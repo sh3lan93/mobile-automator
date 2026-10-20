@@ -1320,6 +1320,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#does-mauto-run-on-windows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Does mauto run on Windows?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#when-should-i-use-agnostic-vs-aware-mode" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1980,6 +1991,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#does-mauto-run-on-windows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Does mauto run on Windows?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#when-should-i-use-agnostic-vs-aware-mode" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2591,6 +2613,9 @@ Executed Automatically: Tap fields, type text, verify dashboard
 - ✅ <strong>Kotlin Multiplatform (KMP)</strong> (Android &amp; iOS)
 - ✅ <strong>Compose Multiplatform (CMP)</strong> (Android &amp; iOS)</p>
 <p>See our <a href="../examples/">examples</a> for Android and iOS patterns.</p>
+<h3 id="does-mauto-run-on-windows">Does mauto run on Windows?<a class="headerlink" href="#does-mauto-run-on-windows" title="Permanent link">&para;</a></h3>
+<p><strong>Answer:</strong> Not natively. There are two different "platforms" here: the <strong>target</strong> platform (the app under test — Android or iOS) and the <strong>host</strong> OS (the machine running <code>mauto</code>). <code>mauto</code> runs on macOS and Linux hosts; on native Windows npm refuses the install, because the device session relies on POSIX primitives that Windows does not have.</p>
+<p>On Windows, install and run <code>mauto</code> inside WSL2. Android apps developed on Windows are testable that way, as long as the device or emulator is reachable from inside WSL (see <a href="../getting-started/installation/#windows-hosts-wsl2">Installation</a>). iOS testing needs a macOS host regardless.</p>
 <h3 id="when-should-i-use-agnostic-vs-aware-mode">When should I use agnostic vs aware mode?<a class="headerlink" href="#when-should-i-use-agnostic-vs-aware-mode" title="Permanent link">&para;</a></h3>
 <p><strong>Answer:</strong> Choose <strong>platform-agnostic</strong> when your app ships to both Android and iOS from a shared codebase (Flutter, React Native, Kotlin Multiplatform, Compose Multiplatform) and you want a single set of test scenarios that run on either platform without modification.</p>
 <p>Choose <strong>platform-aware</strong> when:
