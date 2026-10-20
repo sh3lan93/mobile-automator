@@ -113,9 +113,10 @@ describe('cli smoke (integration)', () => {
     const w = JSON.parse(warn.stdout);
     expect(w.ok).toBe(true);
     expect(w.data.warnings[0]).toMatchObject({ code: 'unsupported_action', path: 'steps[0]', step_id: 's1' });
+    expect(w.hint).toBe('1 action(s) cannot replay unattended — see data.warnings');
 
     const strict = runCli(['validate', file, '--strict']);
-    expect(strict.status).not.toBe(0);
+    expect(strict.status).toBe(3); // EXIT.INVALID_INPUT
     const s = JSON.parse(strict.stdout);
     expect(s.ok).toBe(false);
     expect(s.data.warnings).toHaveLength(1);

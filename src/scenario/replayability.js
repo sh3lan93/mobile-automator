@@ -22,18 +22,28 @@ function finding(action, path, stepId) {
   return f;
 }
 
-// Returns one finding per use of an unsupported action: steps first, then
-// precondition device actions, each in document order.
+// Walks a step list depth-first in document order, descending into each
+// step's `sub_steps` (the schema types them as steps, so they nest freely).
+function scanSteps(steps, basePath, unsupported, findings) {
+  if (!Array.isArray(steps)) return;
+  steps.forEach((step, i) => {
+    if (!step) return;
+    const path = `${basePath}[${i}]`;
+    if (unsupported.has(step.action)) {
+      findings.push(finding(step.action, path, step.id));
+    }
+    scanSteps(step.sub_steps, `${path}.sub_steps`, unsupported, findings);
+  });
+}
+
+// Returns one finding per use of an unsupported action: steps first (including
+// nested sub_steps, depth-first in document order), then precondition device
+// actions in document order.
 function findUnsupportedActions(scenario) {
   const unsupported = new Set(actionsByResolution('unsupported'));
   const findings = [];
 
-  const steps = scenario && Array.isArray(scenario.steps) ? scenario.steps : [];
-  steps.forEach((step, i) => {
-    if (step && unsupported.has(step.action)) {
-      findings.push(finding(step.action, `steps[${i}]`, step.id));
-    }
-  });
+  scanSteps(scenario && scenario.steps, 'steps', unsupported, findings);
 
   const pre = scenario && scenario.preconditions;
   const deviceActions = pre && Array.isArray(pre.device_actions) ? pre.device_actions : [];

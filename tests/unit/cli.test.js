@@ -195,7 +195,7 @@ describe('cli handlers', () => {
           path: 'steps[1]',
           step_id: 'wipe',
         });
-        expect(envelope.hint).toMatch(/cannot replay unattended/);
+        expect(envelope.hint).toBe('1 action(s) cannot replay unattended — see data.warnings');
       });
 
       test('--strict + unsupported -> invalid_input failure carrying warnings', () => {
@@ -206,6 +206,25 @@ describe('cli handlers', () => {
         expect(envelope.data.valid).toBe(false);
         expect(envelope.data.errors).toEqual([]);
         expect(envelope.data.warnings).toHaveLength(1);
+      });
+
+      test('--strict + unsupported action only inside sub_steps -> invalid_input', () => {
+        const s = validScenario();
+        s.steps.push({
+          id: 'branch',
+          action: 'tap',
+          description: 'Branch',
+          sub_steps: [{ id: 'nested_wipe', action: 'clear_app_data', target_package: 'com.example.app', description: 'Clear' }],
+        });
+        const { envelope, exitKind } = run(s, { strict: true });
+        expect(exitKind).toBe('invalid_input');
+        expect(envelope.data.valid).toBe(false);
+        expect(envelope.data.warnings).toHaveLength(1);
+        expect(envelope.data.warnings[0]).toMatchObject({
+          action: 'clear_app_data',
+          path: `steps[${s.steps.length - 1}].sub_steps[0]`,
+          step_id: 'nested_wipe',
+        });
       });
 
       test('--strict + clean scenario -> ok', () => {
