@@ -2191,7 +2191,7 @@ describe('cli handlers', () => {
         ['agents', 'claude', 'copilot', 'cursor', 'gemini']
       );
       expect(r.envelope.data.agents.every((a) => a.ok === true)).toBe(true);
-      for (const [agent, dir] of [
+      for (const [, dir] of [
         ['claude', '.claude/skills'],
         ['cursor', '.cursor/skills'],
         ['gemini', '.gemini/skills'],

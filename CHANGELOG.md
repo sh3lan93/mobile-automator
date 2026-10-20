@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.30.0]
+## [0.31.0]
 
 ### ✨ Added
 
@@ -28,13 +28,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   hint gives the `mauto init` command to run. It always returns `ok: true`, so
   it is safe to run as a first diagnostic
   ([#144](https://github.com/sh3lan93/mobile-automator/issues/144)).
-- **`mauto init` reports what it changed — one canonical field.** The envelope
-  carries `data.changes: [{ path, status }]`, where `status` is `created`,
-  `updated` or `unchanged` (one list per agent entry for `--agent all`). This
-  replaces the earlier `data.written` and `data.merged` lists on this
-  unreleased version; `changes` subsumes both, in write order. When init
-  refreshes a host that was already installed, the hint says
-  `refreshed N stale file(s) for <agent>`; a fresh install carries no hint
+- **`mauto init` reports what it changed.** The envelope gains
+  `data.changes: [{ path, status }]`, where `status` is `created`, `updated` or
+  `unchanged` (one list per agent entry for `--agent all`). When init refreshes
+  a host that was already installed, the hint says
+  `refreshed N stale file(s) for <agent>`. The field is additive; existing
+  fields are unchanged
   ([#144](https://github.com/sh3lan93/mobile-automator/issues/144)).
 
 ### 🔧 Changed
@@ -51,6 +50,66 @@ rule embeds that map, so existing Cursor installs are flagged as stale after
 you upgrade. This is intended. Run `mauto init --agent cursor` once. Any later
 release that changes skill, invariant or verb-map content will flag the
 affected hosts the same way.
+
+## [0.30.1]
+
+### 🐛 Fixed
+
+- A stray or malformed client could kill the session daemon. A frame that
+  parsed as JSON but was not an object (`null`, a number, an array) threw
+  inside an `async` socket listener; nothing observed the rejection, so it
+  reached the daemon's unhandled-rejection hook and the daemon exited, ending
+  the device session. Such frames now get the `malformed frame: not a JSON
+  object` reply, and any other handler failure is logged as
+  `daemon.handler_error` instead of taking the daemon down
+  ([#164](https://github.com/sh3lan93/mobile-automator/issues/164)).
+
+### 🔧 Changed
+
+- The JavaScript is now linted with ESLint (`npm run lint`), including
+  type-aware rules for `src/`, `bin/` and `scripts/` that catch unobserved
+  promises and `async` callbacks handed to event emitters. Those rules found
+  the daemon crash above on their first run. The rule set and its conventions
+  are documented in `CONTRIBUTING.md`
+  ([#164](https://github.com/sh3lan93/mobile-automator/issues/164)).
+- ESLint runs on every PR and push to `main` (`lint.yml`), and `publish-npm`
+  runs it before `npm publish`, so a release cannot ship code that fails it.
+  `tests/lint/eslint-gate.test.js` fails the build if the script, the async
+  rules, or either CI run is removed or neutralised
+  ([#164](https://github.com/sh3lan93/mobile-automator/issues/164)).
+
+## [0.30.0]
+
+### 🔧 Changed
+
+- npm now refuses to install `mobile-automator` on Windows. `package.json`
+  declares `os: ["darwin", "linux"]`, so a native Windows install fails with
+  `EBADPLATFORM` instead of succeeding and then failing every device verb with a
+  misleading `device` error. The session daemon binds a Unix domain socket and
+  the session layer relies on `ps`, process-group kill and POSIX signals, none
+  of which exist on Windows. Run `mauto` inside WSL2 instead
+  ([#165](https://github.com/sh3lan93/mobile-automator/issues/165)).
+
+### ✨ Added
+
+- A runtime host guard for installs that get past npm (`--force`, `npm link`).
+  On an unsupported host, every device verb and `session start|status|end`
+  fails with an `environment` envelope (exit code 5) — on Windows with a hint
+  pointing at WSL2, on any other unsupported host with a generic
+  troubleshooting pointer. Device-free verbs (`validate`, `schema`, `guide`,
+  `init`, `setup`, `config`, `memory`, `result …`) keep working
+  ([#165](https://github.com/sh3lan93/mobile-automator/issues/165)).
+- A lint guard, `tests/lint/host-support-agreement.test.js`, that keeps the
+  runtime guard, the install docs and the troubleshooting entry in step with
+  `package.json` `os`. `tests/lint/lockfile-in-sync.test.js` now also checks
+  the lockfile's copy of `os`.
+
+### 📝 Docs
+
+- The README, installation guide and FAQ state the supported hosts (macOS and
+  Linux) and the WSL2 route on Windows, including how to reach a device from
+  inside WSL. `TROUBLESHOOTING.md` gains a "mauto refuses to run on Windows"
+  entry.
 
 ## [0.29.0]
 

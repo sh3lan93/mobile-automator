@@ -386,7 +386,13 @@ async function startDaemon({
     clearFlush();
     if (!flush || stopping) return;
     if (!(delayMs > 0) || !Number.isFinite(delayMs)) return;
-    flushTimer = setTimeout(async () => {
+    // tick() never rejects (its flush() is wrapped), so `void` is honest here.
+    flushTimer = setTimeout(() => {
+      void tick();
+    }, delayMs);
+    if (typeof flushTimer.unref === 'function') flushTimer.unref();
+
+    async function tick() {
       if (stopping) return;
       if (inFlight > 0) {
         armFlush(delayMs);
@@ -402,8 +408,7 @@ async function startDaemon({
         // current caller.
       }
       armFlush(next);
-    }, delayMs);
-    if (typeof flushTimer.unref === 'function') flushTimer.unref();
+    }
   }
 
   async function stop(reason = 'explicit') {
@@ -541,7 +546,27 @@ async function startDaemon({
       return true;
     };
 
-    socket.on('data', async (chunk) => {
+    // A plain listener around an async body, never `socket.on('data', async …)`:
+    // the emitter ignores the returned promise, so a throw in the body would be
+    // an unhandled rejection, and bin/mauto-session-daemon.js exits on those.
+    // Found by @typescript-eslint/no-misused-promises (#164).
+    socket.on('data', (chunk) => {
+      handleData(chunk).catch(onHandlerError);
+    });
+
+    // Recorded, then the idle clock re-armed: handleData paused it for the
+    // frame that threw, and nothing else would restart it. The remaining frames
+    // of that chunk are lost; the socket and the daemon both keep serving.
+    function onHandlerError(err) {
+      safeObserve({
+        level: 'error',
+        event: 'daemon.handler_error',
+        message: err && (err.message || String(err)),
+      });
+      armIdle();
+    }
+
+    async function handleData(chunk) {
       const frames = parser.push(chunk);
       for (const f of frames) {
         // Pause the idle clock while we handle a frame so it can never fire
@@ -554,11 +579,20 @@ async function startDaemon({
           continue;
         }
         const req = f.value;
+        // Valid JSON is not yet a request: `null` would throw on `req.type`
+        // below, and a primitive or array is no frame the protocol defines.
+        if (req === null || typeof req !== 'object' || Array.isArray(req)) {
+          await reply({ id: null, ok: false, error: { message: 'malformed frame: not a JSON object' } });
+          armIdle();
+          continue;
+        }
 
         if (req.type === 'shutdown') {
           await reply({ id: req.id, ok: true, result: { stopping: true } });
           // Reply already flushed (awaited) — now tear down.
-          setImmediate(() => stop('shutdown').catch(() => {}));
+          setImmediate(() => {
+            stop('shutdown').catch(() => {});
+          });
           continue;
         }
         if (req.type === 'ping') {
@@ -616,7 +650,7 @@ async function startDaemon({
         await reply({ id: req.id, ok: false, error: { message: `unknown request type: ${req.type}` } });
         armIdle();
       }
-    });
+    }
 
     socket.on('error', () => {
       sockets.delete(socket);

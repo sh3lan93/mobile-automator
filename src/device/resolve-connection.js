@@ -31,8 +31,6 @@ function defaultCreateCall(opts) {
   return require('./mobile-mcp-client').createCall(opts);
 }
 
-const NOOP_CLOSE = () => Promise.resolve();
-
 // Read the live daemon's pinned device from its handle, or null. A null pin
 // means the daemon serves whatever device mobile-mcp selected (matches any
 // request that doesn't pin a specific device).

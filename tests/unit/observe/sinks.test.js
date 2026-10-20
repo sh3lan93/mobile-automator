@@ -177,7 +177,7 @@ describe('file sink', () => {
 describe('file sink bounding modes', () => {
   const { MAX_LOG_BYTES: MAX_LOG_BYTES_CANONICAL } = require('../../../src/util/log-rotate');
 
-  function workspace() {
+  function boundedWorkspace() {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-sink-bound-'));
     fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
     return root;
@@ -186,7 +186,7 @@ describe('file sink bounding modes', () => {
   const event = { ts: '2026-09-05T10:00:00.000Z', v: 1, level: 'info', event: 'verb.end' };
 
   it("defaults to 'rotate' — unchanged behaviour for mauto.ndjson", () => {
-    const root = workspace();
+    const root = boundedWorkspace();
     const target = path.join(root, 'mobile-automator', '.logs', 'mauto.ndjson');
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, 'x'.repeat(MAX_LOG_BYTES_CANONICAL));
@@ -202,7 +202,7 @@ describe('file sink bounding modes', () => {
   // finalize would compute the span of an arbitrary suffix and report a
   // three-minute run as forty seconds — measured-looking fiction.
   it("'cap' stops appending instead of rotating the run's beginning away", () => {
-    const root = workspace();
+    const root = boundedWorkspace();
     const target = path.join(root, 'mobile-automator', '.logs', 'run-smoke.ndjson');
     fs.mkdirSync(path.dirname(target), { recursive: true });
     const original = 'x'.repeat(MAX_LOG_BYTES_CANONICAL);
@@ -215,7 +215,7 @@ describe('file sink bounding modes', () => {
   });
 
   it("'cap' appends normally below the cap", () => {
-    const root = workspace();
+    const root = boundedWorkspace();
     const target = path.join(root, 'mobile-automator', '.logs', 'run-smoke.ndjson');
 
     fileSink.write(event, { projectRoot: root, env: {}, logPath: target, bound: 'cap' });
@@ -227,7 +227,7 @@ describe('file sink bounding modes', () => {
   });
 
   it('atCap answers the same question finalize needs to ask', () => {
-    const root = workspace();
+    const root = boundedWorkspace();
     const target = path.join(root, 'mobile-automator', '.logs', 'run-smoke.ndjson');
     fs.mkdirSync(path.dirname(target), { recursive: true });
 

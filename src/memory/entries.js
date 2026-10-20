@@ -12,6 +12,7 @@ const ENTRY_RE = /^-\s+\[(\d{4}-\d{2}-\d{2})\]\[asserted\]\s+(.*)$/;
 
 function sanitizeEntryText(raw) {
   return String(raw == null ? '' : raw)
+    // eslint-disable-next-line no-control-regex -- matching control chars is the point
     .replace(/[\u0000-\u001F\u007F]+/g, ' ') // control chars / newlines / tabs -> space
     .replace(/\s+/g, ' ')
     .trim();

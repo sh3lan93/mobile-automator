@@ -46,6 +46,7 @@ const EVENT_NAMES = Object.freeze([
   'daemon.engine_exit',
   'daemon.lock_conflict',
   'daemon.undeliverable',
+  'daemon.handler_error',
   // Emitted by the flush path, which lands in a later slice-5 task; declared
   // now because its event shape is already exercised by unit tests.
   'telemetry.flush',

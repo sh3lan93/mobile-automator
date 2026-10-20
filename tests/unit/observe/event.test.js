@@ -65,7 +65,7 @@ describe('telemetryPayload', () => {
 
 describe('catalog integrity', () => {
   it('declares sends and a reason for every field', () => {
-    for (const [name, def] of Object.entries(EVENT_FIELDS)) {
+    for (const def of Object.values(EVENT_FIELDS)) {
       expect(typeof def.sends).toBe('boolean');
       expect(typeof def.why).toBe('string');
       expect(def.why.length).toBeGreaterThan(0);
@@ -90,7 +90,7 @@ describe('catalog integrity', () => {
 });
 
 describe('daemon field classifications', () => {
-  const { EVENT_FIELDS, NEVER_SENDS, makeEvent, telemetryPayload } = require('../../../src/observe/event');
+  const { NEVER_SENDS } = require('../../../src/observe/event');
 
   it('lets the daemon carry a session id, a call id, a primitive name, a stop reason and an errno', () => {
     // call_id is sends:true on the same grounds as dur_ms: a daemon-minted
@@ -129,7 +129,7 @@ describe('daemon field classifications', () => {
 });
 
 describe('crash field classifications', () => {
-  const { EVENT_FIELDS, NEVER_SENDS, makeEvent, telemetryPayload } = require('../../../src/observe/event');
+  const { NEVER_SENDS } = require('../../../src/observe/event');
 
   it('lets a crash event carry a count', () => {
     expect(EVENT_FIELDS.crash_count).toBeDefined();
@@ -173,8 +173,6 @@ describe('crash field classifications', () => {
 });
 
 describe('telemetry transport field classifications', () => {
-  const { EVENT_FIELDS, makeEvent, telemetryPayload } = require('../../../src/observe/event');
-
   it('lets a spooled line carry a delivery id, a batch size and an HTTP status', () => {
     for (const f of ['msg_id', 'count', 'http_status']) {
       expect(EVENT_FIELDS[f]).toBeDefined();

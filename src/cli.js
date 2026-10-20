@@ -7,7 +7,6 @@ const { Command } = require('commander');
 const { version: PKG_VERSION } = require('../package.json');
 
 const { ok, fail, render, exitCodeFor } = require('./output/envelope');
-const { DeviceBridge } = require('./device/bridge');
 const selectionStore = require('./device/selection');
 const { engineHint } = require('./device/engine-hints');
 const { ScenarioValidator } = require('./scenario/validator');
@@ -29,6 +28,7 @@ const { renderStaleNotice, installedBefore, refreshHint } = require('./init/stal
 const { doctorReport } = require('./init/doctor');
 const { isSemanticAction, ACTION_METHOD, selectResolver } = require('./device/semantic-press');
 const connection = require('./device/connection');
+const { isSupportedHost, unsupportedHostError } = require('./device/host-support');
 const { record } = require('./observe/recorder');
 const { resolveRunId } = require('./observe/settings');
 const { runTracePath } = require('./observe/paths');
@@ -268,6 +268,19 @@ function handleValidate({ validator }, file, opts = {}) {
   );
   env.data = { valid: false, errors: result.errors };
   return { envelope: env, exitKind: 'invalid_input' };
+}
+
+// The unsupported-host gate (#165), shared by every site that reaches the
+// session layer: connectBridge (all device verbs) and the `session` verbs,
+// which talk to connection.* directly. Null on a supported host; otherwise an
+// `environment` failure (exit 5). Deliberately NOT routed through deviceFail —
+// a `device` kind is exactly the misdiagnosis this exists to prevent: on
+// Windows the session layer's Unix socket, `ps` and process-group kill fail in
+// ways that read as "no device connected".
+function hostGate(platform) {
+  if (isSupportedHost(platform)) return null;
+  const err = unsupportedHostError(platform);
+  return { envelope: fail(err.kind, err.message, err.hint), exitKind: err.kind };
 }
 
 function deviceFail(err) {
@@ -1232,7 +1245,7 @@ async function handleSessionStart(
     projectRoot,
     spawn = require('./device/session-spawn'),
     client = require('./device/session-client'),
-    readHandle = require('./device/resolve-connection').readHandleDevice,
+    readHandle: readHandleDevice = require('./device/resolve-connection').readHandleDevice,
   },
   opts = {}
 ) {
@@ -1255,7 +1268,7 @@ async function handleSessionStart(
     // pinned to A reported already_running:true, device:B while every verb
     // kept driving A. Fail with a hint instead — the agent stays in control
     // and decides whether to `session end` and repin.
-    const pinned = readHandle(projectRoot);
+    const pinned = readHandleDevice(projectRoot);
     if (device !== null && device !== pinned) {
       return {
         envelope: fail(
@@ -1413,7 +1426,7 @@ async function handleDevicesClear({
   store = selectionStore,
   projectRoot,
   isAlive = require('./device/connection').isSessionAlive,
-  readHandle = require('./device/resolve-connection').readHandleDevice,
+  readHandle: readHandleDevice = require('./device/resolve-connection').readHandleDevice,
 } = {}) {
   const previous = store.read(projectRoot);
   store.clear(projectRoot);
@@ -1425,7 +1438,7 @@ async function handleDevicesClear({
   if (!alive) {
     return { envelope: ok({ cleared: previous || null }), exitKind: 'ok' };
   }
-  const pinned = readHandle(projectRoot);
+  const pinned = readHandleDevice(projectRoot);
   return {
     envelope: ok(
       { cleared: previous || null, daemon_still_pinned: pinned },
@@ -1612,6 +1625,8 @@ function buildProgram(deps = {}) {
     emitters = makeEmitters({ projectRoot }),
     // Sink used to emit the rendered envelope + drive the exit code.
     emit = emitters.emit,
+    // Host OS, for the unsupported-host gate (#165). Overridable in tests.
+    platform = process.platform,
   } = deps;
 
   const program = new Command();
@@ -1708,6 +1723,18 @@ function buildProgram(deps = {}) {
     return action(...args);
   };
 
+  // Gate for verbs that reach the device session layer (#165). Runs before
+  // anything is spawned or connected; see hostGate. Emits and returns true when
+  // the host is unsupported, so a caller can bail out.
+  const refuseUnsupportedHost = () => {
+    const refusal = hostGate(platform);
+    if (!refusal) return false;
+    emit(refusal, humanFlag());
+    return true;
+  };
+  const requireSupportedHost = (action) => (...args) =>
+    (refuseUnsupportedHost() ? undefined : action(...args));
+
   // Resolve which device a verb targets: explicit --device wins, else the
   // persisted selection, else null (mobile-mcp auto-selects a single device).
   // Keeping the no-selection fast path returning null preserves zero-config use.
@@ -1723,6 +1750,9 @@ function buildProgram(deps = {}) {
   // (the single connection seam), so this keeps both the envelope boundary and
   // the acquire-seam refactor.
   const connectBridge = async (device, fn) => {
+    // Before the factory: on an unsupported host there is nothing to connect,
+    // and a connect failure would land below as a misleading `device` kind.
+    if (refuseUnsupportedHost()) return;
     let bridge;
     let close;
     try {
@@ -2149,26 +2179,26 @@ function buildProgram(deps = {}) {
     .description('Start the device session daemon (subsequent verbs reuse its connection)')
     .option('--device <id>', 'pin the daemon to a target device id')
     .option('--idle <ms>', 'idle timeout in milliseconds before the daemon self-reaps')
-    .action(withEnvelope(requireWorkspace(async (opts) => {
+    .action(withEnvelope(requireSupportedHost(requireWorkspace(async (opts) => {
       const r = await handleSessionStart({ projectRoot }, { device: opts.device, idle: opts.idle });
       emit(r, humanFlag());
-    })));
+    }))));
 
   session
     .command('status')
     .description('Report whether a device session daemon is running')
-    .action(withEnvelope(async () => {
+    .action(withEnvelope(requireSupportedHost(async () => {
       const r = await handleSessionStatus({ projectRoot });
       emit(r, humanFlag());
-    }));
+    })));
 
   session
     .command('end')
     .description('Stop the device session daemon and remove its socket/pidfile')
-    .action(withEnvelope(async () => {
+    .action(withEnvelope(requireSupportedHost(async () => {
       const r = await handleSessionEnd({ projectRoot });
       emit(r, humanFlag());
-    }));
+    })));
 
   // --- Issue #92: device discovery + persisted selection -------------------
 
@@ -2193,6 +2223,12 @@ function buildProgram(deps = {}) {
   devices
     .command('clear')
     .description('Remove the persisted device selection')
+    // Deliberately OUTSIDE the host gate (#165): its only session-layer probe,
+    // sessionClient.isAlive, is a socket ping — it never runs `ps` or signals a
+    // process, so it answers safely on an unsupported host too. That invariant
+    // is executable, not just prose: the canary in
+    // tests/unit/cli-host-support.test.js ("devices clear stays process-free")
+    // fails if this verb ever starts spawning child processes.
     .action(withEnvelope(async () => {
       const r = await handleDevicesClear({ projectRoot });
       emit(r, humanFlag());
@@ -2331,7 +2367,7 @@ function makeEmitters({ projectRoot = process.cwd() } = {}) {
   // needed). A Date.now() stamped at require time would measure from whenever
   // cli.js was loaded, which is not process start for anything that requires it
   // first (a test harness, bin/mauto.js's own guards).
-  function finish({ text = '', exitKind, ok, errorKind, exitCode = exitCodeFor(exitKind) }) {
+  function finish({ text = '', exitKind, ok: succeeded, errorKind, exitCode = exitCodeFor(exitKind) }) {
     // The flag-resolved id when a command parsed, the environment otherwise: a
     // parse failure reaches no preAction hook and so has no flag, but it is
     // still part of the run and is exactly the class of failure (#146) this
@@ -2361,7 +2397,7 @@ function makeEmitters({ projectRoot = process.cwd() } = {}) {
       // tying this line to a run. sends:false in the event catalog.
       run_id: runId || undefined,
       session_id: resolvedSessionId || undefined,
-      ok,
+      ok: succeeded,
       error_kind: errorKind,
       exit_code: exitCode,
       dur_ms: Math.round(process.uptime() * 1000),

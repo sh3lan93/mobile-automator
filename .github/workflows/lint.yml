@@ -1,0 +1,30 @@
+name: Lint
+
+# #164: ESLint, including the type-aware floating/misused-promise rules. One
+# job on one Node: there is a single parse target, so test.yml's version
+# matrix would only repeat it (and node-version-agreement.test.js requires
+# every test.yml job to run that matrix, which is why this is its own file).
+# This workflow is a signal, not a gate (the repo has no required status
+# checks); the gate is the same command in release.yml's publish-npm job.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: ESLint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint

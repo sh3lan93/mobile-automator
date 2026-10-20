@@ -133,8 +133,8 @@ async function createCall({
     throw connectError(err, connectTimeoutMs);
   }
 
-  async function rawCall(toolName, args = {}) {
-    const res = await client.callTool({ name: toolName, arguments: args });
+  async function rawCall(toolName, toolArgs = {}) {
+    const res = await client.callTool({ name: toolName, arguments: toolArgs });
     return parseToolResult(res);
   }
   const { call } = makeCall({ rawCall, device });

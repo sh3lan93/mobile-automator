@@ -31,11 +31,14 @@ function buildServer({ projectRoot } = {}) {
     { capabilities: { prompts: {} } }
   );
 
-  server.setRequestHandler(ListPromptsRequestSchema, async () => ({
+  // Plain functions, not async: both handlers are synchronous, and the SDK
+  // accepts a result or a promise of one. It calls them inside a .then(), so a
+  // throw (an unknown prompt name) still becomes an MCP error reply.
+  server.setRequestHandler(ListPromptsRequestSchema, () => ({
     prompts: handlers.listPrompts(),
   }));
 
-  server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+  server.setRequestHandler(GetPromptRequestSchema, (request) => {
     return handlers.getPrompt(request.params.name);
   });
 
