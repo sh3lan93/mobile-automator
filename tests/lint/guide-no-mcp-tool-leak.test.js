@@ -1,6 +1,7 @@
 'use strict';
 
 const { emitGuide, emitBootstrap } = require('../../src/guide/emitter');
+const { allHostsStaleNotice } = require('./stale-notice-fixture');
 
 const TOPICS = ['generate', 'execute', 'setup'];
 const MODES = ['platform-aware', 'platform-agnostic'];
@@ -21,5 +22,10 @@ describe('guide emitter — no leaked mobile-mcp tool names', () => {
 
   it('bootstrap names no mobile_* tool', () => {
     expect(emitBootstrap()).not.toMatch(MCP_TOOL);
+  });
+
+  // #144: prepended to guide output when a host integration is stale.
+  it('the stale-integration notice names no mobile_* tool', () => {
+    expect(allHostsStaleNotice()).not.toMatch(MCP_TOOL);
   });
 });

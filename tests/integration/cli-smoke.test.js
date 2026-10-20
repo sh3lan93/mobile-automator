@@ -135,6 +135,58 @@ describe('cli smoke (integration)', () => {
     expect(r.stdout).not.toContain('{{');
   });
 
+  // #144: a workspace initialised by a pre-0.21 `mauto init --agent claude`
+  // (one-line command files, no skills) is flagged by guide and doctor, and a
+  // re-run of init clears both.
+  test('stale pre-0.21 claude integration: guide notice + doctor, cleared by init', () => {
+    for (const topic of ['generate', 'execute', 'setup']) {
+      const f = path.join(workspace, '.claude', 'commands', `mobile-automator-${topic}.md`);
+      fs.mkdirSync(path.dirname(f), { recursive: true });
+      fs.writeFileSync(
+        f,
+        `Run \`mauto guide ${topic}\` and follow it. Drive the device only through \`mauto\` verbs (never assume resource-ids).\n`
+      );
+    }
+    fs.writeFileSync(
+      path.join(workspace, '.mcp.json'),
+      JSON.stringify({ mcpServers: { mauto: { command: 'mauto', args: ['mcp'] } } }, null, 2) + '\n'
+    );
+
+    const staleGuide = runCli(['guide', 'execute'], { cwd: workspace });
+    expect(staleGuide.status).toBe(0);
+    expect(staleGuide.stdout.startsWith('> **Notice')).toBe(true);
+    expect(staleGuide.stdout).toContain('`mauto init --agent claude`');
+
+    const staleDoctor = runCli(['doctor'], { cwd: workspace });
+    expect(staleDoctor.status).toBe(0);
+    const before = JSON.parse(staleDoctor.stdout);
+    expect(before.ok).toBe(true);
+    expect(before.data.initialised).toBe(true);
+    expect(before.data.stale).toEqual(['claude']);
+    expect(before.hint).toBe('run `mauto init --agent claude`');
+
+    const init = runCli(['init', '--agent', 'claude'], { cwd: workspace });
+    expect(init.status).toBe(0);
+    expect(JSON.parse(init.stdout).ok).toBe(true);
+
+    const freshGuide = runCli(['guide', 'execute'], { cwd: workspace });
+    expect(freshGuide.status).toBe(0);
+    expect(freshGuide.stdout).not.toContain('**Notice');
+
+    const after = JSON.parse(runCli(['doctor'], { cwd: workspace }).stdout);
+    expect(after.ok).toBe(true);
+    expect(after.data.stale).toEqual([]);
+    expect(after.hint).toBeUndefined();
+  });
+
+  test('doctor in an empty dir is ok and points at init', () => {
+    const r = runCli(['doctor'], { cwd: workspace });
+    expect(r.status).toBe(0);
+    const env = JSON.parse(r.stdout);
+    expect(env.data).toEqual({ initialised: false, hosts: [], stale: [] });
+    expect(env.hint).toMatch(/mauto init --agent <host>/);
+  });
+
   test('config get mode reads the workspace config value', () => {
     // Hand-write a workspace config (mirrors what `mauto setup` produces).
     const configDir = path.join(workspace, 'mobile-automator');

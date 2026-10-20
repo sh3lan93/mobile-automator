@@ -30,6 +30,7 @@ const {
   handleSchema,
   handleBootstrap,
   handleInit,
+  handleDoctor,
   handleSessionStart,
   handleSessionStatus,
   handleSessionEnd,
@@ -1218,6 +1219,166 @@ describe('cli handlers', () => {
       expect(r.exitKind).toBe('invalid_input');
       expect(r.envelope.error.kind).toBe('invalid_input');
       expect(r.raw).toBeUndefined();
+    });
+  });
+
+  // #144: a stale host integration is flagged in guide output — and ONLY there
+  // (never in emitGuide, which init and the MCP prompts server also consume).
+  describe('handleGuide — stale host integration notice', () => {
+    const { renderStaleNotice } = require('../../src/init/stale-notice');
+    const guideEmitter = require('../../src/guide/emitter');
+    const host = (agent, over = {}) => ({
+      agent,
+      installed: true,
+      stale: false,
+      files: [{ path: `/p/${agent}/f`, status: 'current' }],
+      mcp: null,
+      ...over,
+    });
+    const staleClaude = host('claude', {
+      stale: true,
+      files: [
+        { path: '/p/a', status: 'missing' },
+        { path: '/p/b', status: 'outdated' },
+      ],
+      mcp: { path: '/p/.mcp.json', status: 'current' },
+    });
+    const freshRoot = () => fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-guide-stale-'));
+
+    test('stale host → raw is the notice followed by the exact guide', () => {
+      const projectRoot = freshRoot();
+      const report = [staleClaude, host('cursor', { installed: false })];
+      const r = handleGuide({ projectRoot, inspect: () => report }, 'execute');
+      expect(r.exitKind).toBe('ok');
+      const notice = renderStaleNotice([staleClaude]);
+      expect(r.raw.startsWith('> **Notice')).toBe(true);
+      expect(r.raw).toBe(notice + guideEmitter.emitGuide('execute', { mode: 'platform-aware', projectRoot }));
+    });
+
+    test('all hosts current → raw byte-identical to emitGuide', () => {
+      const projectRoot = freshRoot();
+      const r = handleGuide({ projectRoot, inspect: () => [host('claude'), host('gemini')] }, 'generate');
+      expect(r.raw).toBe(guideEmitter.emitGuide('generate', { mode: 'platform-aware', projectRoot }));
+    });
+
+    test('nothing installed (real inspector, empty dir) → raw byte-identical to emitGuide', () => {
+      const projectRoot = freshRoot();
+      const r = handleGuide({ projectRoot }, 'setup');
+      expect(r.raw).toBe(guideEmitter.emitGuide('setup', { mode: 'platform-aware', projectRoot }));
+    });
+
+    test('inspect throws → guide still ok, no notice', () => {
+      const projectRoot = freshRoot();
+      const r = handleGuide(
+        {
+          projectRoot,
+          inspect: () => {
+            const e = new Error('EACCES: permission denied');
+            e.code = 'EACCES';
+            throw e;
+          },
+        },
+        'execute'
+      );
+      expect(r.exitKind).toBe('ok');
+      expect(r.raw).toBe(guideEmitter.emitGuide('execute', { mode: 'platform-aware', projectRoot }));
+    });
+
+    test('unknown topic never inspects', () => {
+      const inspect = jest.fn(() => [staleClaude]);
+      const r = handleGuide({ projectRoot: freshRoot(), inspect }, 'bogus');
+      expect(r.exitKind).toBe('invalid_input');
+      expect(inspect).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleDoctor (#144)', () => {
+    const { HOSTS } = require('../../src/init/host-plan');
+    const { render } = require('../../src/output/envelope');
+    const entry = (agent, { installed = true, stale = false } = {}) => ({
+      agent,
+      installed,
+      stale,
+      files: [{ path: `/p/${agent}/f`, status: stale ? 'outdated' : installed ? 'current' : 'missing' }],
+      mcp: null,
+    });
+    const report = (overrides) => HOSTS.map((a) => entry(a, overrides[a] || { installed: false }));
+
+    test('nothing installed → ok, not initialised, hint names init', () => {
+      const r = handleDoctor({ projectRoot: '/p', inspect: () => report({}) });
+      expect(r.exitKind).toBe('ok');
+      expect(r.envelope.ok).toBe(true);
+      expect(r.envelope.data).toEqual({ initialised: false, hosts: [], stale: [] });
+      expect(r.envelope.hint).toBe(
+        'no host integration found — run `mauto init --agent <host>` (claude | cursor | gemini | copilot | agents | all)'
+      );
+    });
+
+    test('all installed hosts current → ok, no hint', () => {
+      const r = handleDoctor({ projectRoot: '/p', inspect: () => report({ claude: {}, cursor: {} }) });
+      expect(r.envelope.data.initialised).toBe(true);
+      expect(r.envelope.data.hosts.map((h) => h.agent)).toEqual(['claude', 'cursor']);
+      expect(r.envelope.data.stale).toEqual([]);
+      expect(r.envelope.hint).toBeUndefined();
+      // Only {agent, stale, files, mcp} per host.
+      expect(Object.keys(r.envelope.data.hosts[0]).sort()).toEqual(['agent', 'files', 'mcp', 'stale']);
+    });
+
+    test('one stale host → hint names its init command', () => {
+      const r = handleDoctor({
+        projectRoot: '/p',
+        inspect: () => report({ claude: { stale: true }, gemini: {} }),
+      });
+      expect(r.exitKind).toBe('ok');
+      expect(r.envelope.data.stale).toEqual(['claude']);
+      expect(r.envelope.hint).toBe('run `mauto init --agent claude`');
+    });
+
+    test('two stale hosts → one command per host, joined with "; "', () => {
+      const r = handleDoctor({
+        projectRoot: '/p',
+        inspect: () => report({ copilot: { stale: true }, claude: { stale: true } }),
+      });
+      expect(r.envelope.data.stale).toEqual(['claude', 'copilot']);
+      expect(r.envelope.hint).toBe('run `mauto init --agent claude`; run `mauto init --agent copilot`');
+    });
+
+    test('every host stale → --agent all', () => {
+      const all = Object.fromEntries(HOSTS.map((a) => [a, { stale: true }]));
+      const r = handleDoctor({ projectRoot: '/p', inspect: () => report(all) });
+      expect(r.envelope.data.stale).toEqual(HOSTS);
+      expect(r.envelope.hint).toBe('run `mauto init --agent all`');
+    });
+
+    test('inspects the given projectRoot', () => {
+      const inspect = jest.fn(() => report({}));
+      handleDoctor({ projectRoot: '/some/root', inspect });
+      expect(inspect).toHaveBeenCalledWith('/some/root');
+    });
+
+    test('inspect failure propagates (classified by the envelope boundary)', () => {
+      const err = Object.assign(new Error('EACCES'), { code: 'EACCES' });
+      expect(() =>
+        handleDoctor({
+          projectRoot: '/p',
+          inspect: () => {
+            throw err;
+          },
+        })
+      ).toThrow(err);
+    });
+
+    test('--human renders the data keys and the hint', () => {
+      const r = handleDoctor({ projectRoot: '/p', inspect: () => report({ claude: { stale: true } }) });
+      const out = render(r.envelope, { human: true });
+      expect(out).toContain('ok: initialised, hosts, stale');
+      expect(out).toContain('hint: run `mauto init --agent claude`');
+    });
+
+    test('a real empty dir reports nothing installed', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-doctor-'));
+      const r = handleDoctor({ projectRoot });
+      expect(r.envelope.data).toEqual({ initialised: false, hosts: [], stale: [] });
     });
   });
 

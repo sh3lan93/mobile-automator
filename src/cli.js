@@ -25,6 +25,7 @@ const { scaffold } = require('./setup/scaffold');
 const guideEmitter = require('./guide/emitter');
 const { ADAPTERS } = require('./init/adapters');
 const { inspectHosts } = require('./init/host-plan');
+const { renderStaleNotice, initCommands } = require('./init/stale-notice');
 const { isSemanticAction, ACTION_METHOD, selectResolver } = require('./device/semantic-press');
 const connection = require('./device/connection');
 const { record } = require('./observe/recorder');
@@ -978,7 +979,17 @@ async function handleTelemetryFlush({ projectRoot, env = process.env, flusher })
 }
 
 // RAW content on success; fail envelope only when the topic is unknown.
-function handleGuide({ projectRoot, emitter = guideEmitter, config = configManager }, topic) {
+//
+// #144: when a host integration `mauto init` wrote is missing or out of date,
+// a notice is prepended. It lives HERE and never inside emitter.emitGuide /
+// emitBootstrap: init embeds emitBootstrap in the cursor rule and the MCP
+// prompts server serves emitGuide, so putting it there would make init's
+// output depend on workspace state (and break byte-identical reruns). The
+// inspection is advisory — any failure means no notice, never a failed guide.
+function handleGuide(
+  { projectRoot, emitter = guideEmitter, config = configManager, inspect = inspectHosts },
+  topic
+) {
   const cfg = config.load(projectRoot);
   const mode = config.resolveMode(cfg);
   let raw;
@@ -990,6 +1001,13 @@ function handleGuide({ projectRoot, emitter = guideEmitter, config = configManag
       exitKind: 'invalid_input',
     };
   }
+  let stale;
+  try {
+    stale = inspect(projectRoot).filter((h) => h.stale);
+  } catch {
+    stale = [];
+  }
+  if (stale.length) raw = renderStaleNotice(stale) + raw;
   return { raw, exitKind: 'ok' };
 }
 
@@ -1207,6 +1225,28 @@ function handleInit({ projectRoot, adapters = ADAPTERS, inspect = inspectHosts }
     ),
     exitKind: 'ok',
   };
+}
+
+// `mauto doctor` (#144): report whether the host integration `mauto init`
+// wrote is missing or out of date. A report, not a gate — always ok. An
+// unexpected fs error from the inspection (EACCES, ...) is left to the
+// envelope boundary to classify.
+function handleDoctor({ projectRoot, inspect = inspectHosts }) {
+  const installed = inspect(projectRoot).filter((h) => h.installed);
+  const stale = installed.filter((h) => h.stale).map((h) => h.agent);
+  const data = {
+    initialised: installed.length > 0,
+    hosts: installed.map(({ agent, stale: s, files, mcp }) => ({ agent, stale: s, files, mcp })),
+    stale,
+  };
+  let hint = null;
+  if (stale.length) {
+    hint = initCommands(stale).map((c) => `run \`${c}\``).join('; ');
+  } else if (installed.length === 0) {
+    hint =
+      'no host integration found — run `mauto init --agent <host>` (claude | cursor | gemini | copilot | agents | all)';
+  }
+  return { envelope: ok(data, hint), exitKind: 'ok' };
 }
 
 // --- Issue #91: persistent device session daemon -------------------------
@@ -2124,6 +2164,13 @@ function buildProgram(deps = {}) {
       emit(r, humanFlag());
     }));
 
+  // No requireWorkspace: like guide, doctor runs on the discovered workspace
+  // or cwd, and must work before `mauto setup` has ever run.
+  program
+    .command('doctor')
+    .description("Report whether this project's agent integration (mauto init) is missing or out of date")
+    .action(withEnvelope(() => emit(handleDoctor({ projectRoot }), humanFlag())));
+
   // --- Issue #91: device session lifecycle ---------------------------------
 
   const session = program
@@ -2490,6 +2537,7 @@ module.exports = {
   handleMemoryAdd,
   handleMemoryForget,
   handleInit,
+  handleDoctor,
   handleSessionStart,
   handleSessionStatus,
   handleSessionEnd,

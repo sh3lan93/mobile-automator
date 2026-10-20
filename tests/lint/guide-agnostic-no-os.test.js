@@ -1,6 +1,7 @@
 'use strict';
 
 const { emitGuide } = require('../../src/guide/emitter');
+const { allHostsStaleNotice } = require('./stale-notice-fixture');
 
 const TOPICS = ['generate', 'execute', 'setup'];
 
@@ -31,4 +32,15 @@ describe('guide emitter — agnostic mode names no OS', () => {
       expect(violations).toEqual([]);
     });
   }
+});
+
+// #144: `mauto guide` prepends a stale-integration notice to EVERY guide, in
+// either mode, so it is held to the agnostic standard too.
+describe('stale-integration notice names no OS', () => {
+  it('the all-hosts-stale notice contains no OS/platform words', () => {
+    const out = allHostsStaleNotice();
+    expect(out.length).toBeGreaterThan(0);
+    const violations = FORBIDDEN.filter((p) => p.test(out)).map((p) => p.toString());
+    expect(violations).toEqual([]);
+  });
 });
