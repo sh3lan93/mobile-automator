@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.29.0]
+
+### ✨ Added
+
+- `mauto validate` now reports actions that can never replay. A scenario that
+  uses `clear_app_data`, `enable_wifi` or `disable_wifi` still validates (so
+  existing files keep loading), but each use is listed in `data.warnings[]` as
+  an `unsupported_action` entry, because the pinned engine exposes no primitive
+  for them. `mauto validate --strict` turns those warnings into an
+  `invalid_input` failure
+  ([#166](https://github.com/sh3lan93/mobile-automator/issues/166)).
+- Two lint guards. `tests/lint/action-coverage.test.js` fails the build when a
+  shipping doc or guide presents an unsupported action as working.
+  `tests/lint/assertion-split-docs.test.js` keeps the assertions reference
+  table in step with the mechanical assertion types.
+
+### 🐛 Fixed
+
+- The generate guides and the docs taught `clear_app_data`, `enable_wifi` and
+  `disable_wifi` as usable actions, but none has an execution path. They are now
+  marked unsupported, and the guides point to `uninstall_app` plus `install_app`
+  preconditions for a clean slate
+  ([#166](https://github.com/sh3lan93/mobile-automator/issues/166)).
+
+### 📝 Docs
+
+- The assertions reference now documents the split between mechanical
+  assertions (15, checked by `mauto assert`) and agent-judged assertions (12,
+  decided by the agent from the screen).
+
 ## [0.28.1]
 
 ### 🐛 Fixed
