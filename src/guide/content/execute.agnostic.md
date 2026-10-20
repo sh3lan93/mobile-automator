@@ -58,8 +58,8 @@ Record each observation with `mauto result add-step --observation <type>:<messag
 4. **App under test.**
    - If the user pointed you at a prebuilt app artifact, install it with `mauto install <path>`.
    - Otherwise verify the app is already installed; if it is not, halt and ask the user to install it. This guide never builds.
+   - **Fresh install.** If the scenario's `preconditions.app_state` is `fresh_install` and the user pointed you at a prebuilt app artifact, uninstall the app first with `mauto uninstall <appId>` (the app identifier from `mobile-automator/config.json` — `android_package` / `ios_bundle_id`) and only then install that artifact, so the run starts with no app data. Without an artifact, do not uninstall — you could not reinstall the app. Leave it in place and report that the app state was not reset, so a failure that depends on existing app data is not mistaken for a regression.
    - If the install fails because a different build is already on the device, uninstall it with `mauto uninstall <appId>` (the app identifier from `mobile-automator/config.json` — `android_package` / `ios_bundle_id`), install again, and report that app data was wiped — a scenario whose preconditions assume existing app state may now fail for that reason.
-   - **Fresh install.** If the scenario's `preconditions.app_state` is `fresh_install`, uninstall the app first with `mauto uninstall <appId>` (the app identifier from `mobile-automator/config.json` — `android_package` / `ios_bundle_id`) and only then install, so the run starts with no app data.
    - State which path you took before continuing.
 5. **Validate schema version:** read the `$schema_version` field; it must be `"2.1"`. If absent or unrecognized, report an error and halt.
 6. Validate the scenario with `mauto validate <path>` against `mauto schema scenario`. If the result lists `data.warnings`, each entry (its `path` names the step or precondition) uses an action that is unsupported on this run: report it as unsupported in the result (see "Not mechanically executable" under step execution) and do not substitute a gesture for it.
@@ -69,7 +69,7 @@ Record each observation with `mauto result add-step --observation <type>:<messag
 | Device action | `mauto` verb | Notes |
 |---|---|---|
 | `install_app` | `mauto install <path>` | `path` = the device action's `value` if set and the file exists, else the build artifact used in pre-flight. If neither is available, report this precondition as not executed |
-| `uninstall_app` | `mauto uninstall <appId>` | `appId` = the device action's `target_package` if set, else the app identifier from `mobile-automator/config.json` (`android_package` / `ios_bundle_id`) for the connected device's platform |
+| `uninstall_app` | `mauto uninstall <appId>` | `appId` = the device action's `target_package` if set, else the app identifier from `mobile-automator/config.json` (`android_package` / `ios_bundle_id`) for the connected device's platform. If a later `install_app` in the same block has no resolvable path, skip this uninstall too and report both as not executed — never leave the device without the app under test |
 | `set_orientation` | `mauto orientation <portrait\|landscape>` | |
 
 The remaining precondition actions are not mechanically executable (see step execution): report them honestly or perform them out of band.

@@ -123,7 +123,7 @@ For each step in the scenario:
 | Device action | `mauto` verb | Notes |
 |---|---|---|
 | `install_app` | `mauto install <path>` | `path` = the device action's `value` if set and the file exists, else the build artifact used in pre-flight. If neither is available, report this precondition as not executed |
-| `uninstall_app` | `mauto uninstall <appId>` | `appId` = the device action's `target_package` if set, else the app package ({{app_package}}) |
+| `uninstall_app` | `mauto uninstall <appId>` | `appId` = the device action's `target_package` if set, else the app package ({{app_package}}). If a later `install_app` in the same block has no resolvable path, skip this uninstall too and report both as not executed — never leave the device without the app under test |
 | `set_orientation` | `mauto orientation <portrait\|landscape>` | `value` = target orientation |
 
 **Not mechanically executable** — these actions have no `mauto` verb and no underlying primitive. Do NOT improvise a gesture for them: report them honestly in the result (as unsupported on this run) and, if the run genuinely depends on them, perform them manually out of band before continuing.
