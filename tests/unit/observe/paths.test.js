@@ -31,9 +31,6 @@ describe('observe paths', () => {
 });
 
 describe('daemon event log', () => {
-  const path = require('path');
-  const paths = require('../../../src/observe/paths');
-
   it('is a separate file from the CLI log, in the same .logs dir', () => {
     expect(paths.daemonEventLogPath('/proj', {})).toBe(
       path.join('/proj', 'mobile-automator', '.logs', 'daemon.ndjson')
@@ -54,7 +51,6 @@ describe('daemon event log', () => {
 });
 
 describe('run trace paths', () => {
-  const path = require('path');
   const { RUN_TRACE_PREFIX, isValidRunId, runTracePath } = require('../../../src/observe/paths');
 
   it('names the trace after the run, inside the logs dir', () => {
@@ -106,7 +102,6 @@ describe('run trace paths', () => {
 
 describe('telemetry spool path', () => {
   const { SPOOL_NAME, spoolPath, MAIN_LOG_NAME, DAEMON_LOG_NAME } = require('../../../src/observe/paths');
-  const path = require('path');
 
   it('lives beside the event logs', () => {
     expect(spoolPath('/p', {})).toBe(path.join('/p', 'mobile-automator', '.logs', 'telemetry.spool'));

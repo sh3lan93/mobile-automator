@@ -40,7 +40,6 @@ describe('ResultStore', () => {
     const valid = validate(result);
     if (!valid) {
       // surface schema errors for debugging
-      // eslint-disable-next-line no-console
       console.error(validate.errors);
     }
     expect(valid).toBe(true);
