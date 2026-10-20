@@ -1498,7 +1498,7 @@ takes a <code>device</code> id, which <code>mauto</code> injects for you.</p>
 <td><code>open_url</code></td>
 <td><code>mauto open-url</code></td>
 <td><code>mobile_open_url</code></td>
-<td>Open an <code>http(s)</code> URL; other schemes need <code>MOBILEMCP_ALLOW_UNSAFE_URLS=1</code> (<a href="https://github.com/sh3lan93/mobile-automator/issues/212">#212</a>)</td>
+<td>Open a URL of any scheme, deep links included — mauto sets <code>MOBILEMCP_ALLOW_UNSAFE_URLS=1</code> for its engine; <code>=0</code> restores http(s)-only (<a href="https://github.com/sh3lan93/mobile-automator/issues/212">#212</a>)</td>
 </tr>
 <tr>
 <td>(screenshot)</td>

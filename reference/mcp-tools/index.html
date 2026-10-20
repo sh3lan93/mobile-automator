@@ -2640,7 +2640,7 @@ The contract is <strong>agent → <code>mauto</code> verbs → mobile-mcp engine
 <hr />
 <h2 id="navigation-tools">Navigation Tools<a class="headerlink" href="#navigation-tools" title="Permanent link">&para;</a></h2>
 <h3 id="mobile_open_urldevice-url">mobile_open_url(device, url)<a class="headerlink" href="#mobile_open_urldevice-url" title="Permanent link">&para;</a></h3>
-<p>Open a URL in the default browser on the device.</p>
+<p>Open a URL on the device. Web URLs open in the default browser; other schemes (deep links) are accepted only when the engine runs with <code>MOBILEMCP_ALLOW_UNSAFE_URLS=1</code>, which mauto sets for its own engine.</p>
 <p><strong>Parameters:</strong>
 - <code>device</code> (string, required) — Device ID
 - <code>url</code> (string, required) — Full URL to open</p>
