@@ -21,7 +21,7 @@ const TITLES = {
 
 // The non-negotiable directives for a topic, verbatim from disk. Exported so
 // every surface that has to carry these directives renders them from this one
-// source rather than restating them — see `claudeCommandBody` in adapters.js.
+// source rather than restating them — see `claudeCommandBody` in host-plan.js.
 function readInvariants(topic) {
   return fs.readFileSync(path.join(CONTENT_DIR, `${topic}.invariants.md`), 'utf8').trim();
 }

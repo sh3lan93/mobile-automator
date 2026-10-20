@@ -73,6 +73,8 @@ In **Cursor**, `init` installs a project rule instead — just ask the agent in 
 
 That's it. Scenarios land in `mobile-automator/scenarios/`, results in `mobile-automator/results/`.
 
+**Upgrading:** after `npm i -g mobile-automator@latest`, re-run `mauto init --agent <host>` in each project to refresh the skills, rules and commands it installed. Until you do, `mauto guide` starts with a notice that the host integration is out of date, and `mauto doctor` reports which hosts need refreshing.
+
 ---
 
 ## 🧠 How it works
@@ -135,6 +137,7 @@ Most low-level verbs are called **by the agent**, not by you. The ones you'll ru
 | Command | What it does |
 |---------|--------------|
 | `mauto init --agent <claude\|cursor\|gemini\|copilot\|agents\|all>` | Install native Agent Skills into each host's skills directory; also writes slash-commands/rules + MCP entry for claude/cursor |
+| `mauto doctor` | Report whether the integration `init` installed is missing or out of date, and the `init` command that refreshes it |
 | `mauto setup [--mode aware\|agnostic]` | Scaffold the `mobile-automator/` workspace + config |
 | `mauto devices` · `devices use <id>` · `devices clear` | List / pin / unpin the target device |
 | `mauto guide <generate\|execute\|setup>` | Print the workflow guidance for a topic |

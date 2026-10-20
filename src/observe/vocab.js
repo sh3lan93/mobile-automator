@@ -80,6 +80,7 @@ const VERB_NAMES = Object.freeze([
   'bootstrap',
   'memory',
   'init',
+  'doctor',
   'session',
   'devices',
   'crash',

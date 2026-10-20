@@ -62,6 +62,16 @@ describe('stdout purity (integration)', () => {
       expect(envelope).toMatchObject({ ok: true, data: { key: 'mode', value: 'platform-aware' } });
     });
 
+    // #144: doctor needs no workspace, so it runs in a bare temp dir.
+    it('doctor emits exactly one JSON object on stdout', () => {
+      const { stdout } = runCli(['doctor'], { MAUTO_LOG_LEVEL: level });
+      const lines = stdout.trim().split('\n').filter(Boolean);
+      expect(lines).toHaveLength(1);
+      const envelope = JSON.parse(lines[0]);
+      expect(envelope).toHaveProperty('schema_version');
+      expect(envelope).toMatchObject({ ok: true, data: { initialised: false, hosts: [], stale: [] } });
+    });
+
     it('a raw verb emits markdown identical to the silent baseline', () => {
       const baseline = runCli(['guide', 'setup'], { MAUTO_LOG_LEVEL: 'silent' }).stdout;
       const got = runCli(['guide', 'setup'], { MAUTO_LOG_LEVEL: level }).stdout;

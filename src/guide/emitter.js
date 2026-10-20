@@ -113,6 +113,7 @@ function emitBootstrap() {
     ['result', 'record step results and finalize a run'],
     ['setup', 'scaffold the workspace and write a config'],
     ['config', 'get/set values in the workspace config'],
+    ['doctor', 'report whether the agent integration `mauto init` installed is missing or out of date'],
     ['guide', 'print the guide for a workflow topic'],
     ['schema', 'print the scenario, result, or config JSON schema'],
   ];

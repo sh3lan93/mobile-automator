@@ -1221,6 +1221,108 @@ describe('cli handlers', () => {
     });
   });
 
+  // #144: a stale host integration is flagged in guide output — and ONLY there
+  // (never in emitGuide, which init and the MCP prompts server also consume).
+  describe('handleGuide — stale host integration notice', () => {
+    const { renderStaleNotice } = require('../../src/init/stale-notice');
+    const guideEmitter = require('../../src/guide/emitter');
+    const host = (agent, over = {}) => ({
+      agent,
+      installed: true,
+      stale: false,
+      files: [{ path: `/p/${agent}/f`, status: 'current' }],
+      mcp: null,
+      ...over,
+    });
+    const staleClaude = host('claude', {
+      stale: true,
+      files: [
+        { path: '/p/a', status: 'missing' },
+        { path: '/p/b', status: 'outdated' },
+      ],
+      mcp: { path: '/p/.mcp.json', status: 'current' },
+    });
+    const freshRoot = () => fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-guide-stale-'));
+
+    test('stale host → raw is the notice followed by the exact guide', () => {
+      const projectRoot = freshRoot();
+      const report = [staleClaude, host('cursor', { installed: false })];
+      const r = handleGuide({ projectRoot, inspect: () => report }, 'execute');
+      expect(r.exitKind).toBe('ok');
+      const notice = renderStaleNotice([staleClaude]);
+      expect(r.raw.startsWith('> **Notice')).toBe(true);
+      expect(r.raw).toBe(notice + guideEmitter.emitGuide('execute', { mode: 'platform-aware', projectRoot }));
+    });
+
+    test('all hosts current → raw byte-identical to emitGuide', () => {
+      const projectRoot = freshRoot();
+      const r = handleGuide({ projectRoot, inspect: () => [host('claude'), host('gemini')] }, 'generate');
+      expect(r.raw).toBe(guideEmitter.emitGuide('generate', { mode: 'platform-aware', projectRoot }));
+    });
+
+    test('nothing installed (real inspector, empty dir) → raw byte-identical to emitGuide', () => {
+      const projectRoot = freshRoot();
+      const r = handleGuide({ projectRoot }, 'setup');
+      expect(r.raw).toBe(guideEmitter.emitGuide('setup', { mode: 'platform-aware', projectRoot }));
+    });
+
+    test('inspect throws a filesystem fault (EACCES) → guide still ok, no notice', () => {
+      const projectRoot = freshRoot();
+      const r = handleGuide(
+        {
+          projectRoot,
+          inspect: () => {
+            const e = new Error('EACCES: permission denied');
+            e.code = 'EACCES';
+            throw e;
+          },
+        },
+        'execute'
+      );
+      expect(r.exitKind).toBe('ok');
+      expect(r.raw).toBe(guideEmitter.emitGuide('execute', { mode: 'platform-aware', projectRoot }));
+    });
+
+    test('a non-fs fault in the inspection propagates — a detector defect must be visible, not silently silence the notice', () => {
+      const defect = new TypeError('boom: inspect defect');
+      expect(() =>
+        handleGuide(
+          {
+            projectRoot: freshRoot(),
+            inspect: () => {
+              throw defect;
+            },
+          },
+          'execute'
+        )
+      ).toThrow(defect);
+    });
+
+    test('a missing parent dir (ENOENT) is advisory — no notice, guide still ok', () => {
+      const projectRoot = freshRoot();
+      const r = handleGuide(
+        {
+          projectRoot,
+          inspect: () => {
+            const e = new Error("ENOENT: no such file or directory, lstat '/gone'");
+            e.code = 'ENOENT';
+            throw e;
+          },
+        },
+        'generate'
+      );
+      expect(r.exitKind).toBe('ok');
+      expect(r.raw).toBe(guideEmitter.emitGuide('generate', { mode: 'platform-aware', projectRoot }));
+    });
+
+    test('unknown topic never inspects', () => {
+      const inspect = jest.fn(() => [staleClaude]);
+      const r = handleGuide({ projectRoot: freshRoot(), inspect }, 'bogus');
+      expect(r.exitKind).toBe('invalid_input');
+      expect(inspect).not.toHaveBeenCalled();
+    });
+  });
+
   describe('handleSchema (raw JSON / fail on unknown)', () => {
     test('returns raw JSON for scenario', () => {
       const r = handleSchema({}, 'scenario');
@@ -1269,14 +1371,14 @@ describe('cli handlers', () => {
   });
 
   describe('handleInit (vendor adapters)', () => {
-    test('claude applies into the injected projectRoot and returns written/merged', () => {
+    test('claude applies into the injected projectRoot and reports per-file changes', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-init-h-'));
       const { envelope, exitKind } = handleInit({ projectRoot }, 'claude');
       expect(exitKind).toBe('ok');
       expect(envelope.ok).toBe(true);
       expect(envelope.data.agent).toBe('claude');
-      expect(Array.isArray(envelope.data.written)).toBe(true);
-      expect(Array.isArray(envelope.data.merged)).toBe(true);
+      expect(Array.isArray(envelope.data.changes)).toBe(true);
+      expect(envelope.data.changes.every((c) => c.path && c.status)).toBe(true);
       expect(fs.existsSync(path.join(projectRoot, '.mcp.json'))).toBe(true);
     });
 
@@ -2210,6 +2312,102 @@ describe('cli handlers', () => {
       const r = handleInit({ projectRoot, adapters }, 'all');
       const byAgent = Object.fromEntries(r.envelope.data.agents.map((a) => [a.agent, a]));
       expect(byAgent.copilot.error).toBe('EACCES');
+    });
+
+    // --- Issue #144: per-file change report + refresh hint ----------------
+    function seedPre021(root) {
+      for (const topic of ['generate', 'execute', 'setup']) {
+        const f = pathForInit.join(root, '.claude', 'commands', `mobile-automator-${topic}.md`);
+        fsForInit.mkdirSync(pathForInit.dirname(f), { recursive: true });
+        fsForInit.writeFileSync(
+          f,
+          `Run \`mauto guide ${topic}\` and follow it. Drive the device only through \`mauto\` verbs (never assume resource-ids).\n`
+        );
+      }
+      // Byte-for-byte what a pre-0.21 init's merge wrote (2-space JSON + newline).
+      // init canonicalises the file's formatting on every run, so a compact
+      // fixture would also report the mcp file as 'updated'.
+      fsForInit.writeFileSync(
+        pathForInit.join(root, '.mcp.json'),
+        JSON.stringify({ mcpServers: { mauto: { command: 'mauto', args: ['mcp'] } } }, null, 2) + '\n'
+      );
+    }
+
+    test('single agent: data.changes lists every owned file + the mcp config, in plan order', () => {
+      const projectRoot = initTmpRoot();
+      const { planHost } = require('../../src/init/host-plan');
+      const r = handleInit({ projectRoot }, 'claude');
+      expect(r.exitKind).toBe('ok');
+      const { changes } = r.envelope.data;
+      const plan = planHost('claude');
+      const expected = plan.files
+        .map((f) => path.join(projectRoot, f.rel))
+        .concat(plan.mcp ? [path.join(projectRoot, plan.mcp)] : []);
+      // `changes` is the only per-file record the init envelope carries.
+      expect(Object.keys(r.envelope.data).sort()).toEqual(['agent', 'changes']);
+      expect(changes.map((c) => c.path)).toEqual(expected);
+      expect(changes.every((c) => c.status === 'created')).toBe(true);
+    });
+
+    test('all: every data.agents[] entry carries its own changes', () => {
+      const projectRoot = initTmpRoot();
+      const r = handleInit({ projectRoot }, 'all');
+      expect(r.exitKind).toBe('ok');
+      for (const a of r.envelope.data.agents) {
+        expect(Array.isArray(a.changes)).toBe(true);
+        expect(a.changes.length).toBeGreaterThan(0);
+        expect(a.changes.every((c) => c.status === 'created')).toBe(true);
+      }
+    });
+
+    test('a fresh install carries no refresh hint', () => {
+      const r = handleInit({ projectRoot: initTmpRoot() }, 'claude');
+      expect(r.envelope.hint).toBeUndefined();
+    });
+
+    test('an unchanged rerun carries no refresh hint', () => {
+      const projectRoot = initTmpRoot();
+      handleInit({ projectRoot }, 'claude');
+      const r = handleInit({ projectRoot }, 'claude');
+      expect(r.envelope.data.changes.every((c) => c.status === 'unchanged')).toBe(true);
+      expect(r.envelope.hint).toBeUndefined();
+    });
+
+    test('a pre-0.21 workspace: init refreshes it and says so in the hint', () => {
+      const projectRoot = initTmpRoot();
+      seedPre021(projectRoot);
+      const r = handleInit({ projectRoot }, 'claude');
+      expect(r.exitKind).toBe('ok');
+      const statuses = r.envelope.data.changes.map((c) => c.status);
+      // 3 outdated commands updated + 3 skills created; mcp already current.
+      expect(statuses.filter((s) => s === 'updated')).toHaveLength(3);
+      expect(statuses.filter((s) => s === 'created')).toHaveLength(3);
+      expect(r.envelope.hint).toBe('refreshed 6 stale file(s) for claude');
+    });
+
+    test('all on a pre-0.21 workspace: hint names only the already-installed host', () => {
+      const projectRoot = initTmpRoot();
+      seedPre021(projectRoot);
+      const r = handleInit({ projectRoot }, 'all');
+      expect(r.exitKind).toBe('ok');
+      expect(r.envelope.hint).toBe('refreshed 6 stale file(s) for claude');
+    });
+
+    test('the pre-run inspection is injectable', () => {
+      const projectRoot = initTmpRoot();
+      const inspect = () => [{ agent: 'gemini', installed: true }];
+      const r = handleInit({ projectRoot, inspect }, 'gemini');
+      expect(r.envelope.hint).toBe('refreshed 3 stale file(s) for gemini');
+    });
+
+    test('all: a failure hint is never overridden by the refresh hint', () => {
+      const projectRoot = initTmpRoot();
+      seedPre021(projectRoot);
+      const { ADAPTERS } = require('../../src/init/adapters');
+      const adapters = { ...ADAPTERS, copilot: { apply() { throw new Error('nope'); } } };
+      const r = handleInit({ projectRoot, adapters }, 'all');
+      expect(r.envelope.error.kind).toBe('partial_failure');
+      expect(r.envelope.hint).toMatch(/data\.agents\[\]\.error/);
     });
   });
 

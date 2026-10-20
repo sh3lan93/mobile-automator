@@ -12,6 +12,7 @@
 
 const { emitGuide } = require('../../src/guide/emitter');
 const { FALLBACK } = require('../../src/guide/placeholders');
+const { allHostsStaleNotice } = require('./stale-notice-fixture');
 
 const TOPICS = ['generate', 'execute', 'setup'];
 const MODES = ['platform-aware', 'platform-agnostic'];
@@ -67,4 +68,12 @@ describe('guide emitter — emitted output is well-formed', () => {
       });
     }
   }
+});
+
+// #144: `mauto guide` prepends this notice to emitted output when a host
+// integration is stale, so it is part of what the agent reads.
+describe('stale-integration notice is well-formed', () => {
+  it('contains no {{ token', () => {
+    expect(allHostsStaleNotice()).not.toContain('{{');
+  });
 });

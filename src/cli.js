@@ -23,6 +23,9 @@ const { validateAt } = require('./config/schema');
 const { scaffold } = require('./setup/scaffold');
 const guideEmitter = require('./guide/emitter');
 const { ADAPTERS } = require('./init/adapters');
+const { inspectHosts, ADVISORY_FS_CODES } = require('./init/host-plan');
+const { renderStaleNotice, installedBefore, refreshHint } = require('./init/stale-notice');
+const { doctorReport } = require('./init/doctor');
 const { isSemanticAction, ACTION_METHOD, selectResolver } = require('./device/semantic-press');
 const connection = require('./device/connection');
 const { isSupportedHost, unsupportedHostError } = require('./device/host-support');
@@ -990,7 +993,20 @@ async function handleTelemetryFlush({ projectRoot, env = process.env, flusher })
 }
 
 // RAW content on success; fail envelope only when the topic is unknown.
-function handleGuide({ projectRoot, emitter = guideEmitter, config = configManager }, topic) {
+//
+// #144: when a host integration `mauto init` wrote is missing or out of date,
+// a notice is prepended. It lives HERE and never inside emitter.emitGuide /
+// emitBootstrap: init embeds emitBootstrap in the cursor rule and the MCP
+// prompts server serves emitGuide, so putting it there would make init's
+// output depend on workspace state (and break byte-identical reruns). The
+// inspection is advisory: a filesystem fault that means "the workspace's
+// integration files can't be read" simply yields no notice, while any other
+// failure escapes to the envelope boundary — a defect in the inspection must
+// be visible, not silently disable the notice forever.
+function handleGuide(
+  { projectRoot, emitter = guideEmitter, config = configManager, inspect = inspectHosts },
+  topic
+) {
   const cfg = config.load(projectRoot);
   const mode = config.resolveMode(cfg);
   let raw;
@@ -1002,6 +1018,14 @@ function handleGuide({ projectRoot, emitter = guideEmitter, config = configManag
       exitKind: 'invalid_input',
     };
   }
+  let stale;
+  try {
+    stale = inspect(projectRoot).filter((h) => h.stale);
+  } catch (err) {
+    if (!(err && ADVISORY_FS_CODES.has(err.code))) throw err;
+    stale = [];
+  }
+  if (stale.length) raw = renderStaleNotice(stale) + raw;
   return { raw, exitKind: 'ok' };
 }
 
@@ -1129,7 +1153,7 @@ function hintForAdapterError(cls) {
 function applyOneAdapter(adapter, agent, projectRoot) {
   try {
     const r = adapter.apply({ projectRoot });
-    return { agent, ok: true, written: r.written, merged: r.merged };
+    return { agent, ok: true, changes: r.changes };
   } catch (err) {
     return {
       agent,
@@ -1140,15 +1164,16 @@ function applyOneAdapter(adapter, agent, projectRoot) {
   }
 }
 
-function handleInit({ projectRoot, adapters = ADAPTERS }, agent) {
+function handleInit({ projectRoot, adapters = ADAPTERS, inspect = inspectHosts }, agent) {
   const known = Object.keys(adapters);
   if (agent === 'all') {
+    const wasInstalled = installedBefore(inspect, projectRoot);
     // Continue-on-error: every host is attempted; the result is ONE envelope
     // carrying a per-agent ok/failed map. `ok` only when all succeed.
     const perAgent = known.map((a) => applyOneAdapter(adapters[a], a, projectRoot));
     const failed = perAgent.filter((r) => !r.ok);
     if (failed.length === 0) {
-      return { envelope: ok({ agents: perAgent }), exitKind: 'ok' };
+      return { envelope: ok({ agents: perAgent }, refreshHint(perAgent, wasInstalled)), exitKind: 'ok' };
     }
     return {
       envelope: fail(
@@ -1171,6 +1196,7 @@ function handleInit({ projectRoot, adapters = ADAPTERS }, agent) {
       exitKind: 'invalid_input',
     };
   }
+  const wasInstalled = installedBefore(inspect, projectRoot);
   const r = applyOneAdapter(adapter, agent, projectRoot);
   if (!r.ok) {
     // A malformed host config is the user's input, not an environment fault —
@@ -1188,9 +1214,19 @@ function handleInit({ projectRoot, adapters = ADAPTERS }, agent) {
     };
   }
   return {
-    envelope: ok({ agent: r.agent, written: r.written, merged: r.merged }),
+    envelope: ok({ agent: r.agent, changes: r.changes }, refreshHint([r], wasInstalled)),
     exitKind: 'ok',
   };
+}
+
+// `mauto doctor` (#144): report whether the host integration `mauto init`
+// wrote is missing or out of date. A report, not a gate — always ok. The
+// report itself (data + hint) lives in src/init/doctor.js; this is the
+// handler-shape adapter to the emit contract. An unexpected fs error from the
+// inspection (EACCES, ...) is left to the envelope boundary to classify.
+function handleDoctor({ projectRoot, inspect = inspectHosts }) {
+  const { data, hint } = doctorReport({ projectRoot, inspect });
+  return { envelope: ok(data, hint), exitKind: 'ok' };
 }
 
 // --- Issue #91: persistent device session daemon -------------------------
@@ -2125,6 +2161,13 @@ function buildProgram(deps = {}) {
       emit(r, humanFlag());
     }));
 
+  // No requireWorkspace: like guide, doctor runs on the discovered workspace
+  // or cwd, and must work before `mauto setup` has ever run.
+  program
+    .command('doctor')
+    .description("Report whether this project's agent integration (mauto init) is missing or out of date")
+    .action(withEnvelope(() => emit(handleDoctor({ projectRoot }), humanFlag())));
+
   // --- Issue #91: device session lifecycle ---------------------------------
 
   const session = program
@@ -2497,6 +2540,7 @@ module.exports = {
   handleMemoryAdd,
   handleMemoryForget,
   handleInit,
+  handleDoctor,
   handleSessionStart,
   handleSessionStatus,
   handleSessionEnd,
