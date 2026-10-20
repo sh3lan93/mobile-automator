@@ -1,6 +1,7 @@
 'use strict';
 
 const fs = require('fs');
+const path = require('path');
 const { Command } = require('commander');
 
 const { version: PKG_VERSION } = require('../package.json');
@@ -190,9 +191,12 @@ async function handleElements({ deviceBridge }) {
   }
 }
 
-async function handleScreenshot({ deviceBridge }, destPath) {
+// Relative paths resolve against the caller's cwd HERE, not in the daemon: the
+// daemon runs from the project root, which is not where a verb run from a
+// subdirectory meant `./shot.png` (#214).
+async function handleScreenshot({ deviceBridge, cwd = process.cwd() }, destPath) {
   try {
-    const savedPath = await deviceBridge.screenshot(destPath);
+    const savedPath = await deviceBridge.screenshot(path.resolve(cwd, destPath));
     return { envelope: ok({ path: savedPath }), exitKind: 'ok' };
   } catch (err) {
     return {
@@ -380,7 +384,10 @@ async function handleLaunch({ deviceBridge }, appId) {
   }
 }
 
-async function handleInstall({ deviceBridge }, appPath) {
+// Resolved against the caller's cwd for the same reason as handleScreenshot
+// (#214). The empty-path guard runs first: path.resolve(cwd, '') is the cwd
+// itself, which would turn a missing argument into a bogus install attempt.
+async function handleInstall({ deviceBridge, cwd = process.cwd() }, appPath) {
   const p = String(appPath == null ? '' : appPath);
   if (!p) {
     return {
@@ -388,9 +395,10 @@ async function handleInstall({ deviceBridge }, appPath) {
       exitKind: 'invalid_input',
     };
   }
+  const abs = path.resolve(cwd, p);
   try {
-    await deviceBridge.installApp(p);
-    return { envelope: ok({ installed: p }), exitKind: 'ok' };
+    await deviceBridge.installApp(abs);
+    return { envelope: ok({ installed: abs }), exitKind: 'ok' };
   } catch (err) {
     return deviceFail(err);
   }
@@ -1807,7 +1815,7 @@ function buildProgram(deps = {}) {
     .command('install <path>')
     .description('Install an app from a local .apk/.app/.ipa path')
     .option('--device <id>', 'target device id')
-    .action(withEnvelope((path, opts) => withBridge(opts.device, (bridge) => handleInstall({ deviceBridge: bridge }, path))));
+    .action(withEnvelope((appPath, opts) => withBridge(opts.device, (bridge) => handleInstall({ deviceBridge: bridge }, appPath))));
 
   program
     .command('uninstall <appId>')
