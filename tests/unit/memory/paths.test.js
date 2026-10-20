@@ -29,8 +29,8 @@ describe('memory/paths', () => {
   });
 
   test('scaffold creates mobile-automator/memory/', () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scaffold-'));
-    scaffold(root, { mode: 'platform-aware' });
-    expect(fs.existsSync(path.join(root, 'mobile-automator', 'memory'))).toBe(true);
+    const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scaffold-'));
+    scaffold(tmpRoot, { mode: 'platform-aware' });
+    expect(fs.existsSync(path.join(tmpRoot, 'mobile-automator', 'memory'))).toBe(true);
   });
 });

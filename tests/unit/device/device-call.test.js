@@ -274,7 +274,7 @@ describe('makeDeviceCall: failures', () => {
 
   test('a falsy rejection is an ordinary failure, not a TypeError', async () => {
     const { invoke, observe } = build(async () => {
-      throw null; // eslint-disable-line no-throw-literal
+      throw null;
     });
 
     let threw = false;

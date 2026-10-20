@@ -51,11 +51,11 @@ describe('collectAdvisories', () => {
     // Real npm (10 and 11) puts the failure reason in the top-level `message`
     // field and leaves error.summary/detail blank when the registry itself is
     // unreachable.
-    const report = {
+    const npmError = {
       message: 'request to https://registry.npmjs.org/-/npm/v1/security/advisories/bulk failed, reason: connect ECONNREFUSED 127.0.0.1:9',
       error: { summary: '', detail: '' },
     };
-    expect(() => collectAdvisories(report)).toThrow(/ECONNREFUSED/);
+    expect(() => collectAdvisories(npmError)).toThrow(/ECONNREFUSED/);
   });
   test('throws on the legacy {error:{code,summary}} shape', () => {
     expect(() => collectAdvisories({ error: { code: 'ENOTFOUND', summary: '', detail: '' } })).toThrow(/ENOTFOUND/);

@@ -13,13 +13,13 @@ describe('Schema additive over v2.0', () => {
   const v2 = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
   const cur = JSON.parse(fs.readFileSync(currentPath, 'utf8'));
 
-  function collectEnumValues(node, path, results = []) {
+  function collectEnumValues(node, at, results = []) {
     if (node && typeof node === 'object') {
-      if (Array.isArray(node.enum) && path.endsWith('.type')) {
-        results.push({ path, values: node.enum });
+      if (Array.isArray(node.enum) && at.endsWith('.type')) {
+        results.push({ path: at, values: node.enum });
       }
       for (const [k, v] of Object.entries(node)) {
-        collectEnumValues(v, `${path}.${k}`, results);
+        collectEnumValues(v, `${at}.${k}`, results);
       }
     }
     return results;
@@ -29,8 +29,8 @@ describe('Schema additive over v2.0', () => {
     const v2Enums = collectEnumValues(v2, '$');
     const curEnums = collectEnumValues(cur, '$');
     const curByPath = Object.fromEntries(curEnums.map(e => [e.path, e.values]));
-    for (const { path, values } of v2Enums) {
-      const currentValues = curByPath[path] || [];
+    for (const { path: at, values } of v2Enums) {
+      const currentValues = curByPath[at] || [];
       const missing = values.filter(v => !currentValues.includes(v));
       expect(missing).toEqual([]); // never remove enum values
     }
