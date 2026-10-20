@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.29.1]
+
+### 🐛 Fixed
+
+- A stray or malformed client could kill the session daemon. A frame that
+  parsed as JSON but was not an object (`null`, a number, an array) threw
+  inside an `async` socket listener; nothing observed the rejection, so it
+  reached the daemon's unhandled-rejection hook and the daemon exited, ending
+  the device session. Such frames now get the `malformed frame: not a JSON
+  object` reply, and any other handler failure is logged as
+  `daemon.handler_error` instead of taking the daemon down
+  ([#164](https://github.com/sh3lan93/mobile-automator/issues/164)).
+
+### 🔧 Changed
+
+- The JavaScript is now linted with ESLint (`npm run lint`), including
+  type-aware rules for `src/`, `bin/` and `scripts/` that catch unobserved
+  promises and `async` callbacks handed to event emitters. Those rules found
+  the daemon crash above on their first run. The rule set and its conventions
+  are documented in `CONTRIBUTING.md`
+  ([#164](https://github.com/sh3lan93/mobile-automator/issues/164)).
+- ESLint runs on every PR and push to `main` (`lint.yml`), and `publish-npm`
+  runs it before `npm publish`, so a release cannot ship code that fails it.
+  `tests/lint/eslint-gate.test.js` fails the build if the script, the async
+  rules, or either CI run is removed or neutralised
+  ([#164](https://github.com/sh3lan93/mobile-automator/issues/164)).
+
 ## [0.29.0]
 
 ### ✨ Added

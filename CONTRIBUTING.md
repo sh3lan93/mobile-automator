@@ -159,6 +159,40 @@ Path scoping lives in `.vale.ini` - `PromptHygiene` only attaches to `src/guide/
 
 If a rule fires, the message tells you what to replace it with. To add a new rule, drop a YAML file into `.vale/styles/PromptHygiene/`.
 
+### JavaScript Linting (ESLint)
+
+The JavaScript is linted by [ESLint](https://eslint.org) with a flat config in `eslint.config.js`. Run it before you push:
+
+```bash
+npm run lint
+```
+
+CI runs the same command in two places: the `ESLint` job in `.github/workflows/lint.yml` on every PR and push to `main`, and the `publish-npm` job in `release.yml` before `npm publish`. The repo has no required status checks, so the PR job is a signal; the publish run is the gate. `tests/lint/eslint-gate.test.js` fails the build if either run, or the rules below, is quietly removed or downgraded.
+
+**The rule set, and why each rule is there:**
+
+- **`eslint:recommended`** - the baseline: undefined variables, unreachable code, duplicate keys.
+- **`eqeqeq` (`smart`)** - no accidental type coercion, while still allowing `x == null` as the null-or-undefined check.
+- **`no-shadow`** - an inner binding that hides an outer one makes it easy to read or write the wrong variable.
+- **`no-unused-vars`** - dead bindings are noise or a missed call. Prefix an argument with `_` when the position is required but unused (callbacks, handler signatures).
+- **`no-implicit-globals`** - top-level declarations stay module-scoped.
+- **`prefer-const` / `no-var`** - a binding that never changes says so, and `var`'s function scoping never appears.
+
+**Type-aware async rules (`src/`, `bin/`, `scripts/`).** These use TypeScript's type information, read through `tsconfig.eslint.json` (`allowJs`, `checkJs` off: we want the types, not type errors):
+
+- **`@typescript-eslint/no-floating-promises`** - a promise nobody awaits or handles turns its rejection into an unhandled rejection.
+- **`@typescript-eslint/no-misused-promises`** - an `async` function handed to something that expects a plain callback (`socket.on('data', async ...)`) has its rejection dropped. This rule found a session-daemon crash on its first run.
+- **`@typescript-eslint/await-thenable`** - `await` on a value that is not a promise is a misunderstanding of what the call returns.
+- **`@typescript-eslint/require-await`** - an `async` function with no `await` changes how its errors surface (a rejection, not a throw) for no reason. It replaces the core `require-await`, so findings are not reported twice.
+
+Tests are outside the typed block on purpose. Fakes, stubs and `expect(...).rejects` would drown the signal in noise, and the code under test is what ships.
+
+**Conventions:**
+
+- Intentional fire-and-forget is written `void promise`, which `no-floating-promises` accepts. Make sure the promise handles its own errors; `void` only says "not awaited".
+- Every `eslint-disable` needs a reason after `--`, for example `// eslint-disable-next-line no-control-regex -- matching control chars is the point`.
+- `typescript` is pinned with `~` (patch updates only) because `typescript-eslint` supports a capped TypeScript range, and a minor TypeScript release can fall outside it.
+
 ---
 
 ## 📝 Coding Guidelines

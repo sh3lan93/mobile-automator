@@ -101,6 +101,8 @@ Two catalogs are the single source of truth for "does this capability actually r
 
 **Production-dependency advisories** (#161) are gated by `scripts/audit-gate.js`, which runs `npm audit --omit=dev` and fails on any high/critical advisory not listed in `scripts/audit-allowlist.json`. Every allowlist entry carries a reason, the issue that removes it, and an `expires` date. An expired entry fails, and so does a *stale* one (its advisory is no longer reported), so accepted risk can't outlive its reason. It runs in `audit.yml` (PR, main, weekly — a signal) and in `release.yml`'s `publish-npm` before `npm publish` (the actual gate). Wiring guard: `tests/lint/supply-chain-gate.test.js`. Dependabot is `lockfile-only` on purpose: a `package.json` change would trip the version-bump gate, and users resolve our ranges fresh anyway.
 
+**ESLint** (#164) runs `npm run lint` (`eslint.config.js`) in `lint.yml` (PR, main — a signal) and in `release.yml`'s `publish-npm` before `npm test` (the actual gate). Its point is the type-aware block over `src/`, `bin/` and `scripts/`: `no-floating-promises` and `no-misused-promises` catch the async callback whose rejection nobody observes — on its first run it found the session daemon exiting on a `null` frame. Guard: `tests/lint/eslint-gate.test.js` pins the script, both rules at `error`, and both CI runs. Those rules need TypeScript's types, and TS 6 no longer auto-loads `@types/*`, so the `@types/node` devDependency plus `"types": ["node"]` in `tsconfig.eslint.json` are load-bearing: without them every Node API is untyped, and the rules silently report nothing (they missed the daemon bug that way). It lives in its own workflow because `node-version-agreement.test.js` requires every `test.yml` job to run the Node matrix.
+
 **The shipping-doc corpus** is `tests/lint/docs-corpus.js`: every tracked `.md` minus historical records (`CHANGELOG.md`, `docs/changelog.md`, `docs/plans/**`), enumerated with `git ls-files` so `.gitignore` never has to be restated. Four guards scan it — `docs-counts.test.js` (capability counts vs the schema), `docs-no-stale-extension.test.js` (the removed Gemini-extension model), the Node guard above, and the unsupported-action rule below. A new doc-scanning guard consumes `shippingDocs()`; do not hand-maintain a second file list, which is how `sample-app/README.md` kept teaching removed slash-command syntax for months.
 
 **Docs vs unsupported actions** (#166): a rule in `tests/lint/action-coverage.test.js` scans the shipping-doc corpus and fails when a line names an `unsupported` action (`clear_app_data`, `enable_wifi`, `disable_wifi`) without also saying it is unsupported. **Assertion split**: `tests/lint/assertion-split-docs.test.js` pins `MECHANICAL_TYPES` to the mechanical-vs-agent-judged table in `docs/reference/assertions.md`, so a new assertion type must be placed in one column.
@@ -195,6 +197,7 @@ cd /path/to/test-mobile-app && mauto <verb>           # drive a device, e.g. mau
 npm test                  # full jest suite (also runs on prepublishOnly)
 npm run test:unit         # tests/unit
 npm run test:integration  # tests/integration (CLI smoke over the real binary)
+npm run lint              # ESLint over src/bin/scripts/tests (type-aware async rules on src/bin/scripts)
 npm run lint:guides       # every lint guard in tests/lint (guide, skill, coverage, drift)
 npm run lint:schema-additive
 ./scripts/pack-smoke.sh   # install the packed tarball and exercise the bin, incl. `mauto devices` against the real engine — CI gates on this
@@ -209,7 +212,6 @@ Note: `jest.config` `testPathIgnorePatterns` must stay `<rootDir>`-anchored — 
 Tracked under the `production-ready` milestone; worth knowing before you debug something.
 
 - Windows is silently unsupported: the session daemon binds a Unix domain socket — #165.
-- No JavaScript linter is configured (no ESLint config, dep, or script) — #164.
 - iOS simulators fail every verb with "Agent is not installed on the device" until a one-time `npx -y mobilecli@<pinned> agent install --device <udid>`; the engine's auto-install is unreachable — upstream [mobile-mcp#459](https://github.com/mobile-next/mobile-mcp/issues/459). `src/device/engine-hints.js` prints the command.
 - On Android, mobilecli's `DeviceServer` outlives the session and holds UiAutomation (kills `uiautomator dump`, Appium, legacy `elements`); release with `adb shell pkill -f com.mobilenext.mobilecli.DeviceServer` — upstream [mobilecli#470](https://github.com/mobile-next/mobilecli/issues/470).
 
@@ -221,4 +223,4 @@ Tracked under the `production-ready` milestone; worth knowing before you debug s
 
 ## Metadata
 
-Repo: https://github.com/sh3lan93/mobile-automator · Version: see `package.json` (0.29.0 at last edit) · License: Apache 2.0 (note: `LICENSE` currently ships a stub, not the full text — #160) · Status: published on npm since v0.23.8 (2026-08-30).
+Repo: https://github.com/sh3lan93/mobile-automator · Version: see `package.json` (0.29.1 at last edit) · License: Apache 2.0 (note: `LICENSE` currently ships a stub, not the full text — #160) · Status: published on npm since v0.23.8 (2026-08-30).
