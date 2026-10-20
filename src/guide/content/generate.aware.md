@@ -241,7 +241,7 @@ Translate user language to `mauto` verbs and schema actions:
 | "scroll to", "scroll until visible", "scroll down to find" | `scroll_to_element` | `mauto swipe --direction <dir>` (repeated) | Target is the element to scroll to |
 | "go back", "press back" | `press_button` | `mauto press <button>` | Use the back button |
 | "navigate to [tab]" | `tap` | `mauto elements` to find the tab, then `mauto tap --at <x,y>` | |
-| "open URL", "navigate to URL" | `open_url` | `mauto press` / open the URL | |
+| "open URL", "open deep link", "navigate to URL" | `open_url` | `mauto open-url <url>` | |
 | "wait until visible", "wait for [element] to appear" | `wait_for_element` | Poll `mauto elements` until present | Set `wait_config.type: "element_visible"` |
 | "wait until gone", "wait for [element] to disappear" | `wait_for_element_gone` | Poll `mauto elements` until absent | Set `wait_config.type: "element_gone"` |
 | "wait until loaded", "wait for shimmer to stop", "wait for loading to complete" | `wait_for_loading_complete` | Poll `mauto screenshot <path>` + visual check | Set `wait_config.indicator` to match project's loading style (shimmer/spinner/skeleton) |

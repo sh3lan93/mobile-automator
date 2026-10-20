@@ -112,7 +112,7 @@ Translate user language to action types and `mauto` verbs:
 | **"allow permission", "grant the permission"** | **`grant_permission`** | **`mauto press grant_permission`** | **Semantic — set optional `permission_name` if specific.** |
 | **"deny permission", "don't allow"** | **`deny_permission`** | **`mauto press deny_permission`** | **Semantic.** |
 | "navigate to [tab]" | `tap` | `mauto elements` to find the tab, then `mauto tap --at <x,y>` | |
-| "open URL", "navigate to URL" | `open_url` | `mauto press` / open the URL | |
+| "open URL", "open deep link", "navigate to URL" | `open_url` | `mauto open-url <url>` | |
 | "wait until visible" | `wait_for_element` | Poll `mauto elements` until present | Set `wait_config.type: "element_visible"` |
 | "wait until gone" | `wait_for_element_gone` | Poll `mauto elements` until absent | |
 | "wait until loaded", "wait for shimmer to stop" | `wait_for_loading_complete` | Poll `mauto screenshot <path>` + visual check | Set `wait_config.indicator` to match project's loading style |

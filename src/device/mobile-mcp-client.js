@@ -46,6 +46,31 @@ function resolveServerEntry() {
   return path.join(pkgDir, binRel);
 }
 
+// The environment mauto's own engine process is spawned with. Pure: returns a
+// new object and never mutates baseEnv.
+//
+// MOBILEMCP_ALLOW_UNSAFE_URLS defaults to "1" (#212). mobile-mcp rejects every
+// non-http(s) URL in mobile_open_url unless it is set, which blocks the
+// documented `open_url` deep-link capability (myapp://...). That guard exists to
+// stop an LLM whose ONLY reach is MCP from opening arbitrary schemes; an agent
+// driving mauto already has a shell and could open the same URL via adb or
+// simctl, so under mauto it protects nothing. The URL reaches the device as an
+// argv element on the default mobilecli robot (no shell), and the legacy adb
+// robot escapes shell metacharacters. A user-set value wins: the engine only
+// accepts the exact string "1", so MOBILEMCP_ALLOW_UNSAFE_URLS=0 restores the
+// guard. The env is read when the engine spawns, so a running session daemon
+// must be ended (`mauto session end`) before a change takes effect.
+function buildEngineEnv({ device = null, baseEnv = process.env } = {}) {
+  const env = {
+    ...baseEnv,
+    MOBILEMCP_ALLOW_UNSAFE_URLS: baseEnv.MOBILEMCP_ALLOW_UNSAFE_URLS ?? '1',
+  };
+  // mobile-mcp reads the target device from the environment / its own
+  // selection; we pass it through when provided so callers can pin a device.
+  if (device) env.MOBILE_MCP_DEVICE = device;
+  return env;
+}
+
 // The SDK transport, remembering the engine pid the moment the child is spawned
 // (#156). It has to be remembered: on a failed connect the SDK runs
 // `void this.close()`, and StdioClientTransport.close() clears its pid
@@ -84,9 +109,7 @@ async function createCall({
   const transport = new Transport({
     command,
     args,
-    // mobile-mcp reads the target device from the environment / its own
-    // selection; we pass it through when provided so callers can pin a device.
-    env: device ? { ...process.env, MOBILE_MCP_DEVICE: device } : process.env,
+    env: buildEngineEnv({ device }),
   });
 
   const client = new sdk.Client({ name: 'mauto', version: '0.1.0' }, { capabilities: {} });
@@ -255,4 +278,5 @@ module.exports = {
   resolveServerEntry,
   CONNECT_TIMEOUT_MS,
   ENGINE_REAP_MAX_MS,
+  buildEngineEnv,
 };

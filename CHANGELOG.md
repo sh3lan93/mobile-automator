@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.28.1]
+
+### 🐛 Fixed
+
+- `mauto open-url` now opens deep links (`myapp://…`, `tel:`, etc.), not just
+  `http(s)` URLs. The device engine refuses non-web schemes unless
+  `MOBILEMCP_ALLOW_UNSAFE_URLS=1`, so mauto now sets it for the engine process
+  it spawns. That upstream guard protects an LLM whose only reach is MCP; an
+  agent driving mauto already has a shell, so it adds no protection here. A
+  value you set yourself wins: `export MOBILEMCP_ALLOW_UNSAFE_URLS=0`, then
+  `mauto session end`, restores the http(s)-only guard
+  ([#212](https://github.com/sh3lan93/mobile-automator/issues/212)).
+
+### 🔒 Security
+
+- Dropped the `toml` devDependency and the unused `tests/helpers.js` that was
+  its only consumer (it parsed the removed Gemini-extension `.toml` commands).
+  Clears two dev-only advisories, GHSA-v5mp-jgw5-2x6j and GHSA-82x6-q7mm-w9cf;
+  neither ever shipped in the npm package.
+
 ## [0.28.0]
 
 **Device session lifecycle honesty (#156).** The session daemon no longer

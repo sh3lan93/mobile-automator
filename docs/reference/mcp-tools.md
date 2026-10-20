@@ -519,7 +519,7 @@ Press a device button (hardware or virtual).
 
 ### mobile_open_url(device, url)
 
-Open a URL in the default browser on the device.
+Open a URL on the device. Web URLs open in the default browser; other schemes (deep links) are accepted only when the engine runs with `MOBILEMCP_ALLOW_UNSAFE_URLS=1`, which mauto sets for its own engine.
 
 **Parameters:**
 - `device` (string, required) — Device ID
