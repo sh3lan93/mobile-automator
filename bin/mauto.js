@@ -10,4 +10,5 @@ const { run, emitFatal } = require('../src/cli');
 // exit-on-reject listener.
 process.on('unhandledRejection', emitFatal);
 
-run(process.argv);
+// run() catches everything into emitFatal itself, so the promise never rejects.
+void run(process.argv);

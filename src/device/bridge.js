@@ -44,7 +44,7 @@ class DeviceBridge {
   // Tap at absolute screen coordinates. The agent derives x,y from listElements
   // centers, so the bridge stays free of any element targeting logic.
   async tap({ x, y } = {}) {
-    return this._call('mobile_click_on_screen_at_coordinates', { x, y });
+    return await this._call('mobile_click_on_screen_at_coordinates', { x, y });
   }
 
   // Long-press at absolute screen coordinates. Optional duration (ms) overrides
@@ -52,18 +52,18 @@ class DeviceBridge {
   async longPress({ x, y, duration } = {}) {
     const args = { x, y };
     if (duration !== undefined) args.duration = duration;
-    return this._call('mobile_long_press_on_screen_at_coordinates', args);
+    return await this._call('mobile_long_press_on_screen_at_coordinates', args);
   }
 
   // Double-tap at absolute screen coordinates.
   async doubleTap({ x, y } = {}) {
-    return this._call('mobile_double_tap_on_screen', { x, y });
+    return await this._call('mobile_double_tap_on_screen', { x, y });
   }
 
   // Type into the focused element. We never auto-submit; pressing ENTER is a
   // distinct, explicit action via pressButton.
   async type(text) {
-    return this._call('mobile_type_keys', { text, submit: false });
+    return await this._call('mobile_type_keys', { text, submit: false });
   }
 
   // Swipe in a cardinal direction.
@@ -135,32 +135,32 @@ class DeviceBridge {
 
   // Press a hardware/system button (BACK, HOME, ENTER, ...).
   async pressButton(button) {
-    return this._call('mobile_press_button', { button });
+    return await this._call('mobile_press_button', { button });
   }
 
   // Launch an installed app by its package/bundle identifier.
   async launchApp(packageName) {
-    return this._call('mobile_launch_app', { packageName });
+    return await this._call('mobile_launch_app', { packageName });
   }
 
   // Install an app from a local artifact (apk/ipa) path.
   async installApp(appPath) {
-    return this._call('mobile_install_app', { path: appPath });
+    return await this._call('mobile_install_app', { path: appPath });
   }
 
   // Uninstall an app by its bundle/package identifier.
   async uninstallApp(appId) {
-    return this._call('mobile_uninstall_app', { bundle_id: appId });
+    return await this._call('mobile_uninstall_app', { bundle_id: appId });
   }
 
   // Open a URL (deep link or web) on the device.
   async openUrl(url) {
-    return this._call('mobile_open_url', { url });
+    return await this._call('mobile_open_url', { url });
   }
 
   // Set the device orientation ('portrait'/'landscape').
   async setOrientation(orientation) {
-    return this._call('mobile_set_orientation', { orientation });
+    return await this._call('mobile_set_orientation', { orientation });
   }
 
   // Crash reports currently readable on the device, as the agnostic crash
