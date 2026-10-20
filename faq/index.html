@@ -2998,15 +2998,7 @@ cat<span class="w"> </span>mobile-automator/results/latest.json<span class="w"> 
 <h3 id="how-do-i-optimize-for-mobile-devices-with-low-memory">How do I optimize for mobile devices with low memory?<a class="headerlink" href="#how-do-i-optimize-for-mobile-devices-with-low-memory" title="Permanent link">&para;</a></h3>
 <p><strong>Answer:</strong>
 1. <strong>Run tests individually</strong> — Not in parallel
-2. <strong>Clear app cache</strong> between tests:
-   <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">"preconditions"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">"device_actions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">      </span><span class="p">{</span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"clear_app_data"</span><span class="p">}</span>
-<span class="w">    </span><span class="p">]</span>
-<span class="w">  </span><span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div></p>
+2. <strong>Close background apps</strong> on the device before a run to free memory</p>
 <ol>
 <li><strong>Reduce screenshot resolution</strong> — Configure in the workspace config</li>
 <li><strong>Use lightweight assertions</strong> — Text checks &gt; visual analysis</li>

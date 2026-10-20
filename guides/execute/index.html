@@ -2492,10 +2492,6 @@ data was wiped.</p>
 <td>Starts your app</td>
 </tr>
 <tr>
-<td><code>clear_app_data</code></td>
-<td>Resets app to fresh state</td>
-</tr>
-<tr>
 <td><code>capture_value</code></td>
 <td>Extracts text/value from element</td>
 </tr>
@@ -2968,7 +2964,8 @@ data was wiped.</p>
 <span class="w">  </span><span class="nt">"preconditions"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">"app_state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fresh_install"</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">"device_actions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">      </span><span class="p">{</span><span class="w"> </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"clear_app_data"</span><span class="p">,</span><span class="w"> </span><span class="nt">"target_package"</span><span class="p">:</span><span class="w"> </span><span class="s2">"com.example.myapp"</span><span class="w"> </span><span class="p">}</span>
+<span class="w">      </span><span class="p">{</span><span class="w"> </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"uninstall_app"</span><span class="p">,</span><span class="w"> </span><span class="nt">"target_package"</span><span class="p">:</span><span class="w"> </span><span class="s2">"com.example.myapp"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="p">{</span><span class="w"> </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"install_app"</span><span class="p">,</span><span class="w"> </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./builds/app-debug.apk"</span><span class="w"> </span><span class="p">}</span>
 <span class="w">    </span><span class="p">]</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>

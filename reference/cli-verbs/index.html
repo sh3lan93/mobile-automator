@@ -1805,8 +1805,8 @@
 </thead>
 <tbody>
 <tr>
-<td><code>mauto validate &lt;file&gt;</code></td>
-<td>Validate a scenario JSON file against the <a href="../schema/">scenario schema</a></td>
+<td><code>mauto validate &lt;file&gt; [--strict]</code></td>
+<td>Validate a scenario JSON file against the <a href="../schema/">scenario schema</a>; warns (or, with <code>--strict</code>, fails) on actions that cannot replay unattended</td>
 </tr>
 <tr>
 <td><code>mauto assert &lt;type&gt; [--target --expected --operator --count --pattern --variable --device]</code></td>
@@ -1826,6 +1826,11 @@
 </tr>
 </tbody>
 </table>
+<div class="admonition note">
+<p class="admonition-title"><code>validate</code> and unsupported actions</p>
+<p>Schema-valid is not the same as replayable. Some schema actions are marked <code>unsupported</code> in the action catalog: the engine exposes no primitive for them, so no <code>mauto</code> verb can execute them and the step cannot replay unattended. By default <code>validate</code> still succeeds but adds <code>data.warnings</code> (and a <code>hint</code>); with <code>--strict</code> it fails with <code>invalid_input</code> and <code>data.valid: false</code>. A scenario with no such actions gets the bare <code>{"valid": true}</code>.</p>
+<p>Each warning is <code>{code: "unsupported_action", action, path, message}</code> plus <code>step_id</code> for steps. <code>path</code> is <code>steps[N]</code> or <code>preconditions.device_actions[N]</code>.</p>
+</div>
 <div class="admonition note">
 <p class="admonition-title"><code>result finalize</code> and memory</p>
 <p>On finalize, <code>mauto</code> auto-harvests typed observations into cross-session memory. This is best-effort: a memory failure never fails an otherwise-successful finalize — it folds into the envelope <code>hint</code> instead. See <a href="../../concepts/memory/">Cross-Session Memory</a>.</p>

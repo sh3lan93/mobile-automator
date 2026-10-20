@@ -1237,10 +1237,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#14-clear_app_data" class="md-nav__link">
+  <a href="#14-clear_app_data-unsupported" class="md-nav__link">
     <span class="md-ellipsis">
       
-        14. clear_app_data
+        14. clear_app_data (unsupported)
       
     </span>
   </a>
@@ -2015,10 +2015,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#14-clear_app_data" class="md-nav__link">
+  <a href="#14-clear_app_data-unsupported" class="md-nav__link">
     <span class="md-ellipsis">
       
-        14. clear_app_data
+        14. clear_app_data (unsupported)
       
     </span>
   </a>
@@ -2583,17 +2583,10 @@
 <span class="p">}</span>
 </code></pre></div></p>
 <hr />
-<h4 id="14-clear_app_data">14. clear_app_data<a class="headerlink" href="#14-clear_app_data" title="Permanent link">&para;</a></h4>
-<p>Clear app data and cache (setup action).</p>
+<h4 id="14-clear_app_data-unsupported">14. clear_app_data (unsupported)<a class="headerlink" href="#14-clear_app_data-unsupported" title="Permanent link">&para;</a></h4>
+<p>Not executable: <code>clear_app_data</code> is accepted by the schema, but the engine exposes no primitive for it, so no <code>mauto</code> verb runs it and a scenario using it cannot replay unattended. <code>mauto validate</code> warns about it (<code>--strict</code> fails). To reset app state, use <code>app_state: "fresh_install"</code> with <code>uninstall_app</code> then <code>install_app</code> precondition device actions.</p>
 <p><strong>Fields:</strong>
-- <code>action</code> — <code>"clear_app_data"</code></p>
-<p><strong>Example:</strong>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"reset_app"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"clear_app_data"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Clear app data to start from a clean state"</span>
-<span class="p">}</span>
-</code></pre></div></p>
+- <code>action</code> — <code>"clear_app_data"</code> (unsupported, not executable)</p>
 <hr />
 <h3 id="step-field-options">Step Field Options<a class="headerlink" href="#step-field-options" title="Permanent link">&para;</a></h3>
 <p>Additional optional fields that can be added to any step object:</p>
@@ -2749,16 +2742,21 @@
 </tr>
 </tbody>
 </table>
-<p>Each <code>device_actions</code> item has an <code>action</code> (<code>clear_app_data</code>, <code>uninstall_app</code>, <code>install_app</code>, <code>enable_wifi</code>, <code>disable_wifi</code>, <code>set_orientation</code>) plus optional <code>target_package</code>, <code>value</code>, and <code>description</code>.</p>
+<p>Each <code>device_actions</code> item has an <code>action</code> (<code>uninstall_app</code>, <code>install_app</code>, <code>set_orientation</code>, plus the unsupported <code>clear_app_data</code>, <code>enable_wifi</code>, <code>disable_wifi</code>, which have no execution path) plus optional <code>target_package</code>, <code>value</code>, and <code>description</code>. For <code>uninstall_app</code> and <code>install_app</code> both fields are optional: <code>target_package</code> defaults to the config app id and <code>value</code> (the build path) defaults to the build installed in pre-flight.</p>
 <p><strong>Example:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">"preconditions"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">"app_state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"logged_out"</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">"device_actions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">      </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"clear_app_data"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"uninstall_app"</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">"target_package"</span><span class="p">:</span><span class="w"> </span><span class="s2">"com.example.app"</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Clear any cached login data"</span>
+<span class="w">        </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Remove the app to discard cached login data"</span>
+<span class="w">      </span><span class="p">},</span>
+<span class="w">      </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"install_app"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./builds/app-debug.apk"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Reinstall the app from the build under test"</span>
 <span class="w">      </span><span class="p">}</span>
 <span class="w">    </span><span class="p">],</span>
 <span class="w">    </span><span class="nt">"device_properties"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -2936,9 +2934,14 @@
 <span class="w">    </span><span class="nt">"app_state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"logged_out"</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">"device_actions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">      </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"clear_app_data"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"uninstall_app"</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">"target_package"</span><span class="p">:</span><span class="w"> </span><span class="s2">"com.example.app"</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Clear cached login data"</span>
+<span class="w">        </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Remove the app to discard cached login data"</span>
+<span class="w">      </span><span class="p">},</span>
+<span class="w">      </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"install_app"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./builds/app-debug.apk"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Reinstall the app from the build under test"</span>
 <span class="w">      </span><span class="p">}</span>
 <span class="w">    </span><span class="p">],</span>
 <span class="w">    </span><span class="nt">"notes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"A valid test account must exist in the staging environment"</span><span class="p">]</span>

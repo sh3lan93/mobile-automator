@@ -970,6 +970,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#mechanical-vs-agent-judged-assertions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mechanical vs agent-judged assertions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#quick-reference-table" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1911,6 +1922,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#mechanical-vs-agent-judged-assertions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mechanical vs agent-judged assertions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#quick-reference-table" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2499,55 +2521,153 @@
 <h1 id="assertion-types-reference">Assertion Types Reference<a class="headerlink" href="#assertion-types-reference" title="Permanent link">&para;</a></h1>
 <p>mobile-automator supports 27 assertion types organized in 8 categories for comprehensive test verification.</p>
 <p>Every assertion object requires <code>id</code>, <code>after_step</code> (the step <code>id</code> it runs after), <code>type</code>, and <code>description</code>. Element-based assertions locate their target with <code>element_description</code> — a <em>semantic</em> description of the element, never a <code>resource-id</code> or OS-specific locator. The syntax snippets below show only the type-specific fields for brevity.</p>
+<h2 id="mechanical-vs-agent-judged-assertions">Mechanical vs agent-judged assertions<a class="headerlink" href="#mechanical-vs-agent-judged-assertions" title="Permanent link">&para;</a></h2>
+<p>Not every assertion is decided by the CLI. 15 of the 27 assertion types are evaluated deterministically by <code>mauto assert</code> over the element list. The other 12 return <code>needs_agent</code> with <code>pass: null</code>: the host agent judges them (often from a screenshot) and records the verdict with <code>mauto result add-assertion</code>. An agent-judged pass is only as reliable as the agent that judged it.</p>
+<p><code>element_state</code> is agent-judged because the element model drops enabled, focused and checked state, so the CLI cannot decide it mechanically.</p>
 <h2 id="quick-reference-table">Quick Reference Table<a class="headerlink" href="#quick-reference-table" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
+<th>Type</th>
 <th>Category</th>
-<th>Types</th>
-<th>Count</th>
+<th>Evaluated by</th>
 </tr>
 </thead>
 <tbody>
 <tr>
+<td>element_exists</td>
 <td>Element State</td>
-<td>element_exists, element_not_exists, element_visible, element_state</td>
-<td>4</td>
+<td><code>mauto assert</code> (mechanical)</td>
 </tr>
 <tr>
+<td>element_not_exists</td>
+<td>Element State</td>
+<td><code>mauto assert</code> (mechanical)</td>
+</tr>
+<tr>
+<td>element_visible</td>
+<td>Element State</td>
+<td><code>mauto assert</code> (mechanical)</td>
+</tr>
+<tr>
+<td>element_state</td>
+<td>Element State</td>
+<td>agent</td>
+</tr>
+<tr>
+<td>element_text</td>
 <td>Text &amp; Content</td>
-<td>element_text, text_contains, text_not_empty, element_hint, pattern_match, text_changed, content_description</td>
-<td>7</td>
+<td><code>mauto assert</code> (mechanical)</td>
 </tr>
 <tr>
+<td>text_contains</td>
+<td>Text &amp; Content</td>
+<td><code>mauto assert</code> (mechanical)</td>
+</tr>
+<tr>
+<td>text_not_empty</td>
+<td>Text &amp; Content</td>
+<td><code>mauto assert</code> (mechanical)</td>
+</tr>
+<tr>
+<td>element_hint</td>
+<td>Text &amp; Content</td>
+<td><code>mauto assert</code> (mechanical)</td>
+</tr>
+<tr>
+<td>pattern_match</td>
+<td>Text &amp; Content</td>
+<td><code>mauto assert</code> (mechanical)</td>
+</tr>
+<tr>
+<td>text_changed</td>
+<td>Text &amp; Content</td>
+<td><code>mauto assert</code> (mechanical)</td>
+</tr>
+<tr>
+<td>content_description</td>
+<td>Text &amp; Content</td>
+<td><code>mauto assert</code> (mechanical)</td>
+</tr>
+<tr>
+<td>element_count</td>
 <td>Count &amp; Collections</td>
-<td>element_count, list_item_count, list_is_empty</td>
-<td>3</td>
+<td><code>mauto assert</code> (mechanical)</td>
 </tr>
 <tr>
+<td>list_item_count</td>
+<td>Count &amp; Collections</td>
+<td><code>mauto assert</code> (mechanical)</td>
+</tr>
+<tr>
+<td>list_is_empty</td>
+<td>Count &amp; Collections</td>
+<td><code>mauto assert</code> (mechanical)</td>
+</tr>
+<tr>
+<td>screenshot_match</td>
 <td>Visual &amp; Layout</td>
-<td>screenshot_match, visual_state, element_fully_visible, color_style</td>
-<td>4</td>
+<td>agent</td>
 </tr>
 <tr>
+<td>visual_state</td>
+<td>Visual &amp; Layout</td>
+<td>agent</td>
+</tr>
+<tr>
+<td>element_fully_visible</td>
+<td>Visual &amp; Layout</td>
+<td>agent</td>
+</tr>
+<tr>
+<td>color_style</td>
+<td>Visual &amp; Layout</td>
+<td>agent</td>
+</tr>
+<tr>
+<td>screen_title</td>
 <td>Navigation &amp; Screen</td>
-<td>screen_title, alert_present, alert_text, toast_visible, keyboard_visible</td>
-<td>5</td>
+<td>agent</td>
 </tr>
 <tr>
-<td>Accessibility</td>
+<td>alert_present</td>
+<td>Navigation &amp; Screen</td>
+<td>agent</td>
+</tr>
+<tr>
+<td>alert_text</td>
+<td>Navigation &amp; Screen</td>
+<td>agent</td>
+</tr>
+<tr>
+<td>toast_visible</td>
+<td>Navigation &amp; Screen</td>
+<td>agent</td>
+</tr>
+<tr>
+<td>keyboard_visible</td>
+<td>Navigation &amp; Screen</td>
+<td>agent</td>
+</tr>
+<tr>
 <td>has_accessibility_label</td>
-<td>1</td>
+<td>Accessibility</td>
+<td><code>mauto assert</code> (mechanical)</td>
 </tr>
 <tr>
-<td>Data &amp; Variables</td>
 <td>value_matches_variable</td>
-<td>1</td>
+<td>Data &amp; Variables</td>
+<td><code>mauto assert</code> (mechanical)</td>
 </tr>
 <tr>
+<td>permission_dialog_shown</td>
 <td>Platform-Specific</td>
-<td>permission_dialog_shown, dark_mode_active</td>
-<td>2</td>
+<td>agent</td>
+</tr>
+<tr>
+<td>dark_mode_active</td>
+<td>Platform-Specific</td>
+<td>agent</td>
 </tr>
 </tbody>
 </table>
