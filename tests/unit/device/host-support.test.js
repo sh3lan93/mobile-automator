@@ -3,6 +3,7 @@
 const pkg = require('../../../package.json');
 const {
   SUPPORTED_HOSTS,
+  HOST_NAMES,
   isSupportedHost,
   unsupportedHostError,
 } = require('../../../src/device/host-support');
@@ -15,6 +16,11 @@ describe('host-support (#165)', () => {
   test('SUPPORTED_HOSTS mirrors package.json os, and is frozen', () => {
     expect(SUPPORTED_HOSTS).toEqual(pkg.os);
     expect(Object.isFrozen(SUPPORTED_HOSTS)).toBe(true);
+  });
+
+  test('HOST_NAMES knows every supported host, and is frozen', () => {
+    expect(Object.keys(HOST_NAMES)).toEqual(pkg.os);
+    expect(Object.isFrozen(HOST_NAMES)).toBe(true);
   });
 
   test.each(['darwin', 'linux'])('%s is supported', (platform) => {
@@ -43,5 +49,13 @@ describe('host-support (#165)', () => {
     expect(hint).toMatch(/WSL2/);
     expect(hint).toContain('TROUBLESHOOTING.md');
     expect(hint).toContain('mauto refuses to run on Windows');
+  });
+
+  test('a non-Windows unsupported host gets a generic hint, not a WSL2 route', () => {
+    for (const platform of ['freebsd', 'aix']) {
+      const { hint } = unsupportedHostError(platform);
+      expect(hint).toContain('TROUBLESHOOTING.md');
+      expect(hint).not.toMatch(/WSL2|Windows/);
+    }
   });
 });

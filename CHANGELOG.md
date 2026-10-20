@@ -23,9 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A runtime host guard for installs that get past npm (`--force`, `npm link`).
   On an unsupported host, every device verb and `session start|status|end`
-  fails with an `environment` envelope (exit code 5) and a hint pointing at
-  WSL2. Device-free verbs (`validate`, `schema`, `guide`, `init`, `setup`,
-  `config`, `memory`, `result …`) keep working
+  fails with an `environment` envelope (exit code 5) — on Windows with a hint
+  pointing at WSL2, on any other unsupported host with a generic
+  troubleshooting pointer. Device-free verbs (`validate`, `schema`, `guide`,
+  `init`, `setup`, `config`, `memory`, `result …`) keep working
   ([#165](https://github.com/sh3lan93/mobile-automator/issues/165)).
 - A lint guard, `tests/lint/host-support-agreement.test.js`, that keeps the
   runtime guard, the install docs and the troubleshooting entry in step with

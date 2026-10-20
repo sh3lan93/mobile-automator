@@ -16,23 +16,25 @@
 //   - TROUBLESHOOTING.md, which the runtime hint points at by heading — rename
 //     the heading and the hint dangles.
 //
-// Hosts are named through HOST_NAMES below, keyed on `os`, so adding a host to
-// package.json fails here until both the map and the docs learn its name.
-// The lockfile's copy of `os` is asserted by ./lockfile-in-sync.test.js.
+// Hosts are named through the ONE map in src/device/host-support.js, keyed on
+// `os`, so adding a host to package.json fails here until the map and the docs
+// learn its name. The lockfile's copy of `os` is asserted by
+// ./lockfile-in-sync.test.js.
 
 const fs = require('fs');
 const path = require('path');
 
 const { REPO_ROOT } = require('./docs-corpus');
 const pkg = require('../../package.json');
+const { HOST_NAMES } = require('../../src/device/host-support');
 
 // --- Derived truth (never hardcode the host list) -------------------------
 
 const OS = pkg.os;
 
-// Human names for each `os` entry. Deliberately has no fallback: a host the
-// map does not know is a test failure, not a raw platform id in the docs.
-const HOST_NAMES = { darwin: 'macOS', linux: 'Linux' };
+// Human names come FROM src/device/host-support.js — the single copy. Because
+// that map has no fallback, this guard's name checks and the runtime error text
+// can never disagree, and a host missing a name fails both here and at render.
 
 // The heading the runtime hint in host-support.js cites.
 const TROUBLESHOOTING_HEADING = 'mauto refuses to run on Windows';
@@ -67,7 +69,7 @@ describe('supported hosts — structural agreement', () => {
     const text = read(rel);
     const missing = [];
     for (const p of OS) {
-      const name = HOST_NAMES[p] || p;
+      const name = HOST_NAMES[p];
       if (!text.includes(name)) missing.push(name);
     }
     for (const word of ['Windows', 'WSL2']) {
