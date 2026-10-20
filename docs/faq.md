@@ -66,6 +66,12 @@ Executed Automatically: Tap fields, type text, verify dashboard
 
 See our [examples](examples/index.md) for Android and iOS patterns.
 
+### Does mauto run on Windows?
+
+**Answer:** Not natively. There are two different "platforms" here: the **target** platform (the app under test — Android or iOS) and the **host** OS (the machine running `mauto`). `mauto` runs on macOS and Linux hosts; on native Windows npm refuses the install, because the device session relies on POSIX primitives that Windows does not have.
+
+On Windows, install and run `mauto` inside WSL2. Android apps developed on Windows are testable that way, as long as the device or emulator is reachable from inside WSL (see [Installation](getting-started/installation.md#windows-hosts-wsl2)). iOS testing needs a macOS host regardless.
+
 ### When should I use agnostic vs aware mode?
 
 **Answer:** Choose **platform-agnostic** when your app ships to both Android and iOS from a shared codebase (Flutter, React Native, Kotlin Multiplatform, Compose Multiplatform) and you want a single set of test scenarios that run on either platform without modification.
