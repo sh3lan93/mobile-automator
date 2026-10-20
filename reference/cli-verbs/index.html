@@ -1905,9 +1905,14 @@
 <td><code>mauto mcp</code></td>
 <td>Run the MCP prompts server (stdio) that exposes the workflows as prompts</td>
 </tr>
+<tr>
+<td><code>mauto doctor</code></td>
+<td>Report whether this project's agent integration (what <code>mauto init</code> installed) is missing or out of date. Always <code>ok</code>; <code>data.hosts[]</code> carries per-file status, <code>data.stale[]</code> names the hosts to refresh, and the hint gives the <code>mauto init</code> command to run</td>
+</tr>
 </tbody>
 </table>
 <p>All five hosts get native Agent Skills (one per workflow topic: generate / execute / setup). Claude and Cursor additionally get slash-commands / project rules plus a <code>mauto</code> MCP server entry (<code>{ "command": "mauto", "args": ["mcp"] }</code>). <code>init --agent all</code> continues on error and returns one envelope with a per-agent ok/failed map in <code>data.agents[]</code>.</p>
+<p>A successful <code>init</code> reports the canonical per-file record in <code>data.changes[]</code> (or <code>data.agents[].changes[]</code> for <code>--agent all</code>): one <code>{ path, status }</code> entry per owned file in write order, where status is <code>created</code>, <code>updated</code>, or <code>unchanged</code>. When a run refreshes a host that was previously installed, the envelope hint carries <code>refreshed N stale file(s) for &lt;agent&gt;</code>; a fresh install gets no hint.</p>
 <hr />
 <h2 id="device-session-verbs">Device session verbs<a class="headerlink" href="#device-session-verbs" title="Permanent link">&para;</a></h2>
 <p>Device verbs are backed by a single persistent mobile-mcp session daemon. These verbs manage that daemon and the device selection.</p>

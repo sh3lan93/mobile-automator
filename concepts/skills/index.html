@@ -2473,8 +2473,9 @@ Agent reads guidance, drives mauto verbs (→ mobile-mcp → device)
 Scenario validated / result finalized into the workspace
 </code></pre></div>
 <h3 id="4-updates">4. Updates<a class="headerlink" href="#4-updates" title="Permanent link">&para;</a></h3>
-<p><strong>CLI updates</strong>: pull the latest source and re-link. The verbs and bundled guide content update together; mobile-mcp updates with its pin in <code>package.json</code>.</p>
-<p><strong>Re-install skills</strong>: re-run <code>mauto init --agent &lt;host&gt;</code> to refresh the host's native Agent Skills.</p>
+<p><strong>CLI updates</strong>: run <code>npm i -g mobile-automator@latest</code>. The verbs and bundled guide content update together; mobile-mcp updates with its pin in <code>package.json</code>.</p>
+<p><strong>Re-install skills</strong>: upgrading the CLI does not touch the files <code>mauto init</code> wrote into your project, so re-run <code>mauto init --agent &lt;host&gt;</code> after every upgrade to refresh the host's native Agent Skills, rules and commands. The init envelope's <code>data.changes</code> lists each file as <code>created</code>, <code>updated</code> or <code>unchanged</code>.</p>
+<p><strong>Stale-integration detection</strong>: <code>mauto guide &lt;topic&gt;</code> and <code>mauto doctor</code> compare each installed host's files byte-for-byte against what the installed <code>mauto</code> would write, and compare the <code>mauto</code> MCP entry by meaning. The content itself is the version check: no stamp file is written, and the check works whether or not <code>mauto setup</code> has run. When a host is stale, <code>guide</code> starts its output with a "host integration out of date" notice telling the agent to ask you to run <code>mauto init --agent &lt;host&gt;</code>, and <code>doctor</code> lists the host in <code>data.stale[]</code>.</p>
 <p><strong>Refresh project knowledge</strong>: re-run <code>mauto setup</code>, or edit <code>mobile-automator/config.json</code> directly — the next <code>mauto guide</code> emit picks up the new values.</p>
 <h2 id="accessing-project-knowledge">Accessing Project Knowledge<a class="headerlink" href="#accessing-project-knowledge" title="Permanent link">&para;</a></h2>
 <p>The full project configuration lives in <code>mobile-automator/config.json</code>:</p>
@@ -2697,7 +2698,7 @@ mauto<span class="w"> </span>schema<span class="w"> </span>scenario
 <li><strong>Check the emitted guide</strong>: run <code>mauto guide &lt;topic&gt;</code> and confirm no <code>{{</code> remains</li>
 <li><strong>Review config.json</strong>: verify project knowledge was recorded correctly</li>
 <li><strong>Check schemas</strong>: review with <code>mauto schema scenario</code> / <code>mauto schema result</code></li>
-<li><strong>Re-install skills</strong>: re-run <code>mauto init --agent &lt;host&gt;</code> if a host's skill is stale</li>
+<li><strong>Check for a stale integration</strong>: run <code>mauto doctor</code>; if it lists a host in <code>data.stale[]</code>, re-run <code>mauto init --agent &lt;host&gt;</code></li>
 </ol>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>

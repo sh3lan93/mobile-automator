@@ -2706,17 +2706,18 @@ Enter your platform: ios
 - Or check <code>${PROJECT_DIR}/project.pbxproj</code> for <code>PRODUCT_BUNDLE_IDENTIFIER</code></p>
 <p>When setup prompts, enter the full package ID (e.g., <code>com.example.app</code> for Android, <code>com.example.MyApp</code> for iOS).</p>
 <h3 id="agent-skills-werent-installed-why">"Agent skills weren't installed" — Why?<a class="headerlink" href="#agent-skills-werent-installed-why" title="Permanent link">&para;</a></h3>
-<p><strong>Cause:</strong> <code>mauto init</code> didn't write the Agent Skills into your host's skills directory.</p>
+<p><strong>Cause:</strong> <code>mauto init</code> didn't write the Agent Skills into your host's skills directory, or the files it wrote came from an older <code>mauto</code> and are now out of date.</p>
 <p><strong>Solutions:</strong>
-1. <strong>Re-run init for your agent</strong> — <code>mauto init --agent claude</code> (or <code>cursor | gemini | copilot | agents | all</code>)
-2. <strong>Check the skills directory</strong> — Confirm the files landed in your host's skills dir:
+1. <strong>Run <code>mauto doctor</code> first</strong> — it lists each host installed in the project and whether any of its files are missing or outdated (<code>data.stale[]</code>), and its hint gives the exact <code>mauto init</code> command to run. <code>mauto guide &lt;topic&gt;</code> shows the same problem as a "host integration out of date" notice at the top of its output.
+2. <strong>Re-run init for your agent</strong> — <code>mauto init --agent claude</code> (or <code>cursor | gemini | copilot | agents | all</code>)
+3. <strong>Check the skills directory</strong> — Confirm the files landed in your host's skills dir:
    <div class="highlight"><pre><span></span><code><span class="c1"># examples per host</span>
 ls<span class="w"> </span>-la<span class="w"> </span>.claude/skills/
 ls<span class="w"> </span>-la<span class="w"> </span>.cursor/skills/
 ls<span class="w"> </span>-la<span class="w"> </span>.gemini/skills/
 </code></pre></div>
-3. <strong>Verify the workspace config</strong> — <code>mauto config get mode</code> should return your mode
-4. <strong>For Claude Code / Cursor</strong>, confirm <code>init</code> also wrote the command files and MCP entry:
+4. <strong>Verify the workspace config</strong> — <code>mauto config get mode</code> should return your mode
+5. <strong>For Claude Code / Cursor</strong>, confirm <code>init</code> also wrote the command files and MCP entry:
    <div class="highlight"><pre><span></span><code>ls<span class="w"> </span>-la<span class="w"> </span>.claude/commands/<span class="w"> </span>.mcp.json
 </code></pre></div></p>
 <hr />
