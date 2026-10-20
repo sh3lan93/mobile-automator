@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.30.0]
+
+### ✨ Added
+
+- **`mauto guide` now tells you when your agent integration is out of date.**
+  Upgrading `mauto` never touched the files `mauto init` had written, so a
+  project kept running old skills, rules and commands against a new CLI with
+  nothing to say so. When any installed host is missing a file or has one that
+  differs from what this version would write, `mauto guide <topic>` now starts
+  with a "Notice — host integration out of date" blockquote that tells the
+  agent to ask you to run `mauto init --agent <host>`. Every instruction file
+  init has ever written, including the one-line commands from before 0.21,
+  says to run `mauto guide`, so the notice reaches every stale project. The
+  check only reads files and never makes `guide` fail
+  ([#144](https://github.com/sh3lan93/mobile-automator/issues/144)).
+- **New `mauto doctor` verb.** It reports which hosts are installed in this
+  project and whether each one is current: `data.initialised`, `data.hosts[]`
+  with a per-file status, and `data.stale[]` naming the hosts to refresh. The
+  hint gives the `mauto init` command to run. It always returns `ok: true`, so
+  it is safe to run as a first diagnostic
+  ([#144](https://github.com/sh3lan93/mobile-automator/issues/144)).
+- **`mauto init` reports what it changed.** The envelope gains
+  `data.changes: [{ path, status }]`, where `status` is `created`, `updated` or
+  `unchanged` (one list per agent entry for `--agent all`). When init refreshes
+  a host that was already installed, the hint says
+  `refreshed N stale file(s) for <agent>`. The field is additive; existing
+  fields are unchanged
+  ([#144](https://github.com/sh3lan93/mobile-automator/issues/144)).
+
+### 🔧 Changed
+
+- **Staleness is detected by content, not by a version stamp.** One plan now
+  describes every file `mauto init` writes for a host. `guide` and `doctor`
+  compare the files on disk byte-for-byte against that plan, and compare the
+  `mauto` MCP entry by meaning. No stamp file is written, and the check works
+  whether or not `mauto setup` has run
+  ([#144](https://github.com/sh3lan93/mobile-automator/issues/144)).
+
+**Upgrade note:** this release adds `doctor` to the verb map, and the Cursor
+rule embeds that map, so existing Cursor installs are flagged as stale after
+you upgrade. This is intended. Run `mauto init --agent cursor` once. Any later
+release that changes skill, invariant or verb-map content will flag the
+affected hosts the same way.
+
 ## [0.29.0]
 
 ### ✨ Added

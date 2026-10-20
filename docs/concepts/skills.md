@@ -297,9 +297,11 @@ Scenario validated / result finalized into the workspace
 
 ### 4. Updates
 
-**CLI updates**: pull the latest source and re-link. The verbs and bundled guide content update together; mobile-mcp updates with its pin in `package.json`.
+**CLI updates**: run `npm i -g mobile-automator@latest`. The verbs and bundled guide content update together; mobile-mcp updates with its pin in `package.json`.
 
-**Re-install skills**: re-run `mauto init --agent <host>` to refresh the host's native Agent Skills.
+**Re-install skills**: upgrading the CLI does not touch the files `mauto init` wrote into your project, so re-run `mauto init --agent <host>` after every upgrade to refresh the host's native Agent Skills, rules and commands. The init envelope's `data.changes` lists each file as `created`, `updated` or `unchanged`.
+
+**Stale-integration detection**: `mauto guide <topic>` and `mauto doctor` compare each installed host's files byte-for-byte against what the installed `mauto` would write, and compare the `mauto` MCP entry by meaning. The content itself is the version check: no stamp file is written, and the check works whether or not `mauto setup` has run. When a host is stale, `guide` starts its output with a "host integration out of date" notice telling the agent to ask you to run `mauto init --agent <host>`, and `doctor` lists the host in `data.stale[]`.
 
 **Refresh project knowledge**: re-run `mauto setup`, or edit `mobile-automator/config.json` directly — the next `mauto guide` emit picks up the new values.
 
@@ -530,7 +532,7 @@ If the agent isn't behaving as expected:
 1. **Check the emitted guide**: run `mauto guide <topic>` and confirm no `{{` remains
 2. **Review config.json**: verify project knowledge was recorded correctly
 3. **Check schemas**: review with `mauto schema scenario` / `mauto schema result`
-4. **Re-install skills**: re-run `mauto init --agent <host>` if a host's skill is stale
+4. **Check for a stale integration**: run `mauto doctor`; if it lists a host in `data.stale[]`, re-run `mauto init --agent <host>`
 
 ## Next Steps
 

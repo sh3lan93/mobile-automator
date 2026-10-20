@@ -204,19 +204,20 @@ When setup prompts, enter the full package ID (e.g., `com.example.app` for Andro
 
 ### "Agent skills weren't installed" — Why?
 
-**Cause:** `mauto init` didn't write the Agent Skills into your host's skills directory.
+**Cause:** `mauto init` didn't write the Agent Skills into your host's skills directory, or the files it wrote came from an older `mauto` and are now out of date.
 
 **Solutions:**
-1. **Re-run init for your agent** — `mauto init --agent claude` (or `cursor | gemini | copilot | agents | all`)
-2. **Check the skills directory** — Confirm the files landed in your host's skills dir:
+1. **Run `mauto doctor` first** — it lists each host installed in the project and whether any of its files are missing or outdated (`data.stale[]`), and its hint gives the exact `mauto init` command to run. `mauto guide <topic>` shows the same problem as a "host integration out of date" notice at the top of its output.
+2. **Re-run init for your agent** — `mauto init --agent claude` (or `cursor | gemini | copilot | agents | all`)
+3. **Check the skills directory** — Confirm the files landed in your host's skills dir:
    ```bash
    # examples per host
    ls -la .claude/skills/
    ls -la .cursor/skills/
    ls -la .gemini/skills/
    ```
-3. **Verify the workspace config** — `mauto config get mode` should return your mode
-4. **For Claude Code / Cursor**, confirm `init` also wrote the command files and MCP entry:
+4. **Verify the workspace config** — `mauto config get mode` should return your mode
+5. **For Claude Code / Cursor**, confirm `init` also wrote the command files and MCP entry:
    ```bash
    ls -la .claude/commands/ .mcp.json
    ```
