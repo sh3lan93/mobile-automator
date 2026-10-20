@@ -100,7 +100,7 @@ Translate user language to action types and `mauto` verbs:
 |---|---|---|---|
 | "open the app", "launch" | `launch_app` | `mauto press` / launch the app under test | |
 | "uninstall", "remove the app" | (precondition `device_action`) | uninstall before scenario | |
-| "clear app data", "fresh install" | `uninstall_app` + `install_app` | reset app to a clean state before scenario | Set `app_state: "fresh_install"` in preconditions and add `device_actions`: `uninstall_app` (with `target_package`) then `install_app` (with `value` = path to the build). If the build path is unknown, ask the user, or report that the reset must be done manually |
+| "clear app data", "fresh install" | `uninstall_app` + `install_app` | reset app to a clean state before scenario | Set `app_state: "fresh_install"` in preconditions and add `device_actions`: `[{ "action": "uninstall_app" }, { "action": "install_app" }]`. Leave out `target_package` and `value`: a cross-platform scenario must not bake in one platform's app identifier or build path, and the executor fills both per platform from config and the pre-flight build |
 | "tap", "click", "press" | `tap` | `mauto tap --at <x,y>` | Resolve coords from `mauto elements` |
 | "long press", "hold" | `long_press` | `mauto tap --at <x,y>` (long-press variant) | Resolve coords from `mauto elements` |
 | "double tap", "double click" | `double_tap` | `mauto tap --at <x,y>` (double-tap variant) | Resolve coords from `mauto elements` |

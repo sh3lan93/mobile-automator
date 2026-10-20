@@ -56,18 +56,19 @@ Record each observation with `mauto result add-step --observation <type>:<messag
 - **App under test.** If the user pointed you at a prebuilt artifact, install it with `mauto install <path>` and do NOT build — reusing a ready artifact is the point.
 - If no artifact was named: check whether the app is already installed. If it is, say so and ask whether to rebuild before running the build command ({{build_command}}) — a previous run may have just built it. If it is not installed, build and install with the build command ({{build_command}}).
 - If that install fails because a different build of the app is already on the device, uninstall it — run `mauto uninstall` with the app package ({{app_package}}) — then install again, and report that app data was wiped — a scenario whose preconditions assume existing app state may now fail for that reason.
+- **Fresh install.** If the scenario's `preconditions.app_state` is `fresh_install` (read it from the scenario file now), uninstall the app first — `mauto uninstall` with the app package ({{app_package}}) — and only then install, so the run starts with no app data.
 - State which path you took — installed a supplied artifact, or built — before continuing.
 
 ### 2. Load Scenario
 
 - Read the JSON scenario file from `mobile-automator/scenarios/`.
 - **Validate schema version:** Read the `$schema_version` field. It must be `"2.1"`. If absent or unrecognized, report an error and halt.
-- Validate the scenario with `mauto validate <path>` against `mauto schema scenario`.
+- Validate the scenario with `mauto validate <path>` against `mauto schema scenario`. If the result lists `data.warnings`, each entry (its `path` names the step or precondition) uses an action that is unsupported on this run: report it as unsupported in the result, as described under "Not mechanically executable" below, and do not substitute a gesture for it.
 - Read the `metadata` to compare the recording environment against the current execution environment. Note any differences (different device, API level, environment).
 
 ### 3. Verify Preconditions
 
-- **Note:** preconditions like `app_uninstalled` and `fresh_install` are handled by the `execute` pre-flight before this workflow runs.
+- **Note:** an `app_state` of `fresh_install` is handled in pre-flight (uninstall before the install, see above), and precondition `device_actions` run per the table in step 4.
 - Review the scenario's `preconditions` array to understand the expected starting state.
 - If any preconditions are state-based (e.g., `"user_logged_out"`, `"no_network"`, `"dark_mode_enabled"`), verify or configure them now:
   - For app-state preconditions: launch the app and check/configure the state.
@@ -121,8 +122,8 @@ For each step in the scenario:
 
 | Device action | `mauto` verb | Notes |
 |---|---|---|
-| `install_app` | `mauto install <path>` | `path` = the build artifact to install |
-| `uninstall_app` | `mauto uninstall <appId>` | `appId` from config / scenario metadata |
+| `install_app` | `mauto install <path>` | `path` = the device action's `value` if set and the file exists, else the build artifact used in pre-flight. If neither is available, report this precondition as not executed |
+| `uninstall_app` | `mauto uninstall <appId>` | `appId` = the device action's `target_package` if set, else the app package ({{app_package}}) |
 | `set_orientation` | `mauto orientation <portrait\|landscape>` | `value` = target orientation |
 
 **Not mechanically executable** — these actions have no `mauto` verb and no underlying primitive. Do NOT improvise a gesture for them: report them honestly in the result (as unsupported on this run) and, if the run genuinely depends on them, perform them manually out of band before continuing.

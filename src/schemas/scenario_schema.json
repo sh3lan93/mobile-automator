@@ -144,11 +144,11 @@
               },
               "target_package": {
                 "type": "string",
-                "description": "App package to target (for clear_app_data and uninstall_app)"
+                "description": "App package to target, for uninstall_app; defaults to the config app id"
               },
               "value": {
                 "type": "string",
-                "description": "Value parameter for the action (e.g., orientation value)"
+                "description": "Value parameter for the action: the orientation for set_orientation, or the build path for install_app (defaults to the pre-flight build)"
               },
               "description": {
                 "type": "string",
