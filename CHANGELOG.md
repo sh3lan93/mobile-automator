@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.30.0]
+
+### 🔧 Changed
+
+- npm now refuses to install `mobile-automator` on Windows. `package.json`
+  declares `os: ["darwin", "linux"]`, so a native Windows install fails with
+  `EBADPLATFORM` instead of succeeding and then failing every device verb with a
+  misleading `device` error. The session daemon binds a Unix domain socket and
+  the session layer relies on `ps`, process-group kill and POSIX signals, none
+  of which exist on Windows. Run `mauto` inside WSL2 instead
+  ([#165](https://github.com/sh3lan93/mobile-automator/issues/165)).
+
+### ✨ Added
+
+- A runtime host guard for installs that get past npm (`--force`, `npm link`).
+  On an unsupported host, every device verb and `session start|status|end`
+  fails with an `environment` envelope (exit code 5) and a hint pointing at
+  WSL2. Device-free verbs (`validate`, `schema`, `guide`, `init`, `setup`,
+  `config`, `memory`, `result …`) keep working
+  ([#165](https://github.com/sh3lan93/mobile-automator/issues/165)).
+- A lint guard, `tests/lint/host-support-agreement.test.js`, that keeps the
+  runtime guard, the install docs and the troubleshooting entry in step with
+  `package.json` `os`. `tests/lint/lockfile-in-sync.test.js` now also checks
+  the lockfile's copy of `os`.
+
+### 📝 Docs
+
+- The README, installation guide and FAQ state the supported hosts (macOS and
+  Linux) and the WSL2 route on Windows, including how to reach a device from
+  inside WSL. `TROUBLESHOOTING.md` gains a "mauto refuses to run on Windows"
+  entry.
+
 ## [0.29.0]
 
 ### ✨ Added
