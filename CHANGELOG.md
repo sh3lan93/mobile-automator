@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.28.2]
+
+### 🐛 Fixed
+
+- Relative paths given to `mauto install` and `mauto screenshot` now resolve
+  against the directory you ran the verb from, from any subdirectory of the
+  project. They were forwarded as typed and resolved in the session daemon's
+  working directory — whichever directory happened to start it — so
+  `mauto install ./build/app.apk` could look in the wrong place. The envelope
+  now reports the resolved absolute path
+  ([#214](https://github.com/sh3lan93/mobile-automator/issues/214)).
+- The session daemon, and the device engine it spawns, now run from the
+  project root. The engine only allows screenshots under its own working
+  directory or the system temp directory, so screenshots anywhere under the
+  project are now allowed regardless of where the session was started. A
+  rejected screenshot path now gets a hint naming those two locations
+  ([#214](https://github.com/sh3lan93/mobile-automator/issues/214)).
+
+**Upgrade note:** a session daemon started by an older version keeps its old
+working directory. Run `mauto session end` once after upgrading.
+
 ## [0.28.1]
 
 ### 🐛 Fixed
