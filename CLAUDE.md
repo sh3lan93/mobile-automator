@@ -101,7 +101,9 @@ Two catalogs are the single source of truth for "does this capability actually r
 
 **Production-dependency advisories** (#161) are gated by `scripts/audit-gate.js`, which runs `npm audit --omit=dev` and fails on any high/critical advisory not listed in `scripts/audit-allowlist.json`. Every allowlist entry carries a reason, the issue that removes it, and an `expires` date. An expired entry fails, and so does a *stale* one (its advisory is no longer reported), so accepted risk can't outlive its reason. It runs in `audit.yml` (PR, main, weekly — a signal) and in `release.yml`'s `publish-npm` before `npm publish` (the actual gate). Wiring guard: `tests/lint/supply-chain-gate.test.js`. Dependabot is `lockfile-only` on purpose: a `package.json` change would trip the version-bump gate, and users resolve our ranges fresh anyway.
 
-**The shipping-doc corpus** is `tests/lint/docs-corpus.js`: every tracked `.md` minus historical records (`CHANGELOG.md`, `docs/changelog.md`, `docs/plans/**`), enumerated with `git ls-files` so `.gitignore` never has to be restated. Three guards scan it — `docs-counts.test.js` (capability counts vs the schema), `docs-no-stale-extension.test.js` (the removed Gemini-extension model), and the Node guard above. A new doc-scanning guard consumes `shippingDocs()`; do not hand-maintain a second file list, which is how `sample-app/README.md` kept teaching removed slash-command syntax for months.
+**The shipping-doc corpus** is `tests/lint/docs-corpus.js`: every tracked `.md` minus historical records (`CHANGELOG.md`, `docs/changelog.md`, `docs/plans/**`), enumerated with `git ls-files` so `.gitignore` never has to be restated. Four guards scan it — `docs-counts.test.js` (capability counts vs the schema), `docs-no-stale-extension.test.js` (the removed Gemini-extension model), the Node guard above, and the unsupported-action rule below. A new doc-scanning guard consumes `shippingDocs()`; do not hand-maintain a second file list, which is how `sample-app/README.md` kept teaching removed slash-command syntax for months.
+
+**Docs vs unsupported actions** (#166): a rule in `tests/lint/action-coverage.test.js` scans the shipping-doc corpus and fails when a line names an `unsupported` action (`clear_app_data`, `enable_wifi`, `disable_wifi`) without also saying it is unsupported. **Assertion split**: `tests/lint/assertion-split-docs.test.js` pins `MECHANICAL_TYPES` to the mechanical-vs-agent-judged table in `docs/reference/assertions.md`, so a new assertion type must be placed in one column.
 
 When you add an action or a result field, add its catalog entry in the same change. Do not hand-restate these counts in prose; derive them.
 
@@ -146,7 +148,7 @@ This workflow lives here (not in per-issue bodies) so it applies uniformly and s
 
 ## Schemas
 
-- Scenario: `src/schemas/scenario_schema.json` (`$schema_version` `"2.0"` or `"2.1"`; **18** step actions + **6** precondition device actions, **27** assertion types, named string IDs, root-level `variables`/`preconditions`). Print with `mauto schema scenario`; validate a file with `mauto validate <file>`. Note: `validate` accepts actions the action-catalog marks `unsupported` — known gap, issue #166.
+- Scenario: `src/schemas/scenario_schema.json` (`$schema_version` `"2.0"` or `"2.1"`; **18** step actions + **6** precondition device actions, **27** assertion types, named string IDs, root-level `variables`/`preconditions`). Print with `mauto schema scenario`; validate a file with `mauto validate <file>`. Note: `validate` still accepts actions the action-catalog marks `unsupported` (schema compatibility) but reports each as a `data.warnings[]` entry with `code: 'unsupported_action'`; `--strict` turns them into `invalid_input`. A lint guard in `tests/lint/action-coverage.test.js` fails the build if a shipping doc presents one as working (#166).
 - Result: `src/schemas/result_schema.json` (typed root-level `observations`: `regression`, `flakiness`, `state_context`). Print with `mauto schema result`.
 - Config: `src/schemas/config_schema.json`. Print with `mauto schema config`.
 
@@ -219,4 +221,4 @@ Tracked under the `production-ready` milestone; worth knowing before you debug s
 
 ## Metadata
 
-Repo: https://github.com/sh3lan93/mobile-automator · Version: see `package.json` (0.27.0 at last edit) · License: Apache 2.0 (note: `LICENSE` currently ships a stub, not the full text — #160) · Status: published on npm since v0.23.8 (2026-08-30).
+Repo: https://github.com/sh3lan93/mobile-automator · Version: see `package.json` (0.29.0 at last edit) · License: Apache 2.0 (note: `LICENSE` currently ships a stub, not the full text — #160) · Status: published on npm since v0.23.8 (2026-08-30).

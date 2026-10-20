@@ -1,5 +1,5 @@
 - **You do NOT plan or suggest steps.** The user tells you exactly what to do; you execute, document, and verify — never add extra steps.
 - Capture a screenshot after every single step. No exceptions.
 - Drive the device **only** through `mauto` verbs; never assume resource-ids or OS-specific element IDs.
-- Assemble the scenario JSON to match `mauto schema scenario`: use named string IDs (snake_case, never integers), then validate with `mauto validate <path>` before finishing.
+- Assemble the scenario JSON to match `mauto schema scenario`: use named string IDs (snake_case, never integers), then validate with `mauto validate <path>` before finishing, and resolve any `data.warnings` it reports.
 - If this workspace has memory, read it first with `mauto memory show`; save durable app facts and user corrections with `mauto memory add`.

@@ -193,6 +193,75 @@ describe('cli handlers', () => {
       expect(envelope.data).toEqual({ valid: true });
     });
 
+    describe('unsupported actions (#166)', () => {
+      const unsupportedScenario = () => {
+        const s = validScenario();
+        s.steps.push({ id: 'wipe', action: 'clear_app_data', target_package: 'com.example.app', description: 'Clear' });
+        return s;
+      };
+      const run = (scenario, opts) => {
+        const file = writeTmp('u.json', JSON.stringify(scenario));
+        const validator = new ScenarioValidator({ schemaPath: SCHEMA_PATH });
+        return handleValidate({ validator }, file, opts);
+      };
+
+      test('clean scenario -> no warnings key, no hint', () => {
+        const { envelope } = run(validScenario());
+        expect(envelope.data).toEqual({ valid: true });
+        expect(envelope).not.toHaveProperty('hint');
+      });
+
+      test('unsupported action -> ok with warnings and a hint', () => {
+        const { envelope, exitKind } = run(unsupportedScenario());
+        expect(exitKind).toBe('ok');
+        expect(envelope.ok).toBe(true);
+        expect(envelope.data.valid).toBe(true);
+        expect(envelope.data.warnings).toHaveLength(1);
+        expect(envelope.data.warnings[0]).toMatchObject({
+          code: 'unsupported_action',
+          action: 'clear_app_data',
+          path: 'steps[1]',
+          step_id: 'wipe',
+        });
+        expect(envelope.hint).toBe('1 action(s) cannot replay unattended — see data.warnings');
+      });
+
+      test('--strict + unsupported -> invalid_input failure carrying warnings', () => {
+        const { envelope, exitKind } = run(unsupportedScenario(), { strict: true });
+        expect(exitKind).toBe('invalid_input');
+        expect(envelope.ok).toBe(false);
+        expect(envelope.error.kind).toBe('invalid_input');
+        expect(envelope.data.valid).toBe(false);
+        expect(envelope.data.errors).toEqual([]);
+        expect(envelope.data.warnings).toHaveLength(1);
+      });
+
+      test('--strict + unsupported action only inside sub_steps -> invalid_input', () => {
+        const s = validScenario();
+        s.steps.push({
+          id: 'branch',
+          action: 'tap',
+          description: 'Branch',
+          sub_steps: [{ id: 'nested_wipe', action: 'clear_app_data', target_package: 'com.example.app', description: 'Clear' }],
+        });
+        const { envelope, exitKind } = run(s, { strict: true });
+        expect(exitKind).toBe('invalid_input');
+        expect(envelope.data.valid).toBe(false);
+        expect(envelope.data.warnings).toHaveLength(1);
+        expect(envelope.data.warnings[0]).toMatchObject({
+          action: 'clear_app_data',
+          path: `steps[${s.steps.length - 1}].sub_steps[0]`,
+          step_id: 'nested_wipe',
+        });
+      });
+
+      test('--strict + clean scenario -> ok', () => {
+        const { envelope, exitKind } = run(validScenario(), { strict: true });
+        expect(exitKind).toBe('ok');
+        expect(envelope.data).toEqual({ valid: true });
+      });
+    });
+
     test('invalid scenario -> invalid_input fail, exitKind invalid_input, errors in data', () => {
       const bad = validScenario();
       delete bad.app_package;

@@ -94,6 +94,34 @@ describe('cli smoke (integration)', () => {
     expect(parsed.data.valid).toBe(true);
   });
 
+  test('validate warns on an unsupported action; --strict turns it into a failure (#166)', () => {
+    const file = path.join(workspace, 'clear-data.json');
+    fs.writeFileSync(file, JSON.stringify({
+      $schema_version: '2.1',
+      scenario_id: 'clear_data_probe',
+      name: 'Clear data probe',
+      description: 'probe',
+      platform: 'android',
+      app_package: 'com.example.app',
+      metadata: { app_version: '1.0.0', environment: 'staging' },
+      steps: [{ id: 's1', action: 'clear_app_data', target_package: 'com.example.app', description: 'Clear app data' }],
+      assertions: [],
+    }));
+
+    const warn = runCli(['validate', file]);
+    expect(warn.status).toBe(0);
+    const w = JSON.parse(warn.stdout);
+    expect(w.ok).toBe(true);
+    expect(w.data.warnings[0]).toMatchObject({ code: 'unsupported_action', path: 'steps[0]', step_id: 's1' });
+    expect(w.hint).toBe('1 action(s) cannot replay unattended — see data.warnings');
+
+    const strict = runCli(['validate', file, '--strict']);
+    expect(strict.status).toBe(3); // EXIT.INVALID_INPUT
+    const s = JSON.parse(strict.stdout);
+    expect(s.ok).toBe(false);
+    expect(s.data.warnings).toHaveLength(1);
+  });
+
   test('schema scenario prints parseable JSON', () => {
     const r = runCli(['schema', 'scenario']);
     expect(r.status).toBe(0);

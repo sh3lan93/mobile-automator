@@ -214,7 +214,7 @@ How mobile-automator learns across sessions: the auto-harvested `run-history` pl
 
 **Data Capture:**
 - `capture_value` — Extract value from element into variable
-- `clear_app_data` — Clear app cache and data (precondition)
+- `clear_app_data` — unsupported: no execution path; use `uninstall_app` + `install_app` preconditions instead
 
 ### Assertion Types by Purpose
 

@@ -55,9 +55,14 @@ A realistic login scenario demonstrating email validation, password entry, loadi
     "app_state": "logged_out",
     "device_actions": [
       {
-        "action": "clear_app_data",
+        "action": "uninstall_app",
         "target_package": "com.example.app",
-        "description": "Clear app cache to ensure a fresh login state"
+        "description": "Remove the app to ensure a fresh login state"
+      },
+      {
+        "action": "install_app",
+        "value": "./builds/app-debug.apk",
+        "description": "Reinstall the app from the build under test"
       }
     ],
     "notes": ["A clean login screen is required before the scenario starts"]
@@ -194,7 +199,8 @@ Demonstrates handling Android runtime permission dialogs and permission-dependen
   "preconditions": {
     "app_state": "fresh_install",
     "device_actions": [
-      { "action": "clear_app_data", "target_package": "com.example.photoapp", "description": "Clear app data to reset the permission state" }
+      { "action": "uninstall_app", "target_package": "com.example.photoapp", "description": "Remove the app to reset the permission state" },
+      { "action": "install_app", "value": "./builds/photoapp-debug.apk", "description": "Reinstall the app from the build under test" }
     ],
     "notes": ["Camera permission has not yet been granted"]
   },
@@ -332,7 +338,8 @@ Demonstrates verification of error states, network errors, and validation error 
   "preconditions": {
     "app_state": "logged_out",
     "device_actions": [
-      { "action": "clear_app_data", "target_package": "com.example.app", "description": "Clear app data for a clean state" }
+      { "action": "uninstall_app", "target_package": "com.example.app", "description": "Remove the app for a clean state" },
+      { "action": "install_app", "value": "./builds/app-debug.apk", "description": "Reinstall the app from the build under test" }
     ],
     "notes": ["Start on the login screen"]
   },

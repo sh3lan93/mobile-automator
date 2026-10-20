@@ -140,15 +140,15 @@
                   "disable_wifi",
                   "set_orientation"
                 ],
-                "description": "The setup action to perform"
+                "description": "The setup action to perform. enable_wifi, disable_wifi and clear_app_data are accepted by the schema but are not mechanically executable (no device primitive), so they cannot replay unattended; mauto validate warns."
               },
               "target_package": {
                 "type": "string",
-                "description": "App package to target (for clear_app_data and uninstall_app)"
+                "description": "App package to target, for uninstall_app; defaults to the config app id"
               },
               "value": {
                 "type": "string",
-                "description": "Value parameter for the action (e.g., orientation value)"
+                "description": "Value parameter for the action: the orientation for set_orientation, or the build path for install_app (defaults to the pre-flight build)"
               },
               "description": {
                 "type": "string",
@@ -247,7 +247,7 @@
             "grant_permission",
             "deny_permission"
           ],
-          "description": "The automation action to perform. Supported types: wait_for_element, wait_for_element_gone, wait_for_loading_complete, capture_value, clear_app_data, long_press, double_tap, scroll_to_element, press_back, dismiss_keyboard, grant_permission, deny_permission."
+          "description": "The automation action to perform. Supported types: wait_for_element, wait_for_element_gone, wait_for_loading_complete, capture_value, long_press, double_tap, scroll_to_element, press_back, dismiss_keyboard, grant_permission, deny_permission. clear_app_data is accepted by the schema but is not mechanically executable: mobile-mcp exposes no primitive for it, so it cannot replay unattended (mauto validate warns)."
         },
         "description": {
           "type": "string",
