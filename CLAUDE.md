@@ -211,7 +211,7 @@ Note: `jest.config` `testPathIgnorePatterns` must stay `<rootDir>`-anchored — 
 
 Tracked under the `production-ready` milestone; worth knowing before you debug something.
 
-- Windows is unsupported by declaration — `package.json` `os` (`darwin`, `linux`) refuses the install and `src/device/host-support.js` fails device/session verbs with an `environment` envelope; real support would need named pipes plus replacements for `ps`, process-group kill and signals — #165.
+- Windows is unsupported by declaration — two deliberate enforcement layers (#165): `package.json` `os` (`darwin`, `linux`) refuses the install (npm's `EBADPLATFORM` carries no WSL2 hint — accepted, it is the only gate npm actually enforces), and `src/device/host-support.js` fails device/session verbs with a rich `environment` envelope for what slips past (`--force`, `npm link`). Device-free verbs already installed on a forced Windows machine keep working; real support would need named pipes plus replacements for `ps`, process-group kill and signals.
 - No JavaScript linter is configured (no ESLint config, dep, or script) — #164.
 - iOS simulators fail every verb with "Agent is not installed on the device" until a one-time `npx -y mobilecli@<pinned> agent install --device <udid>`; the engine's auto-install is unreachable — upstream [mobile-mcp#459](https://github.com/mobile-next/mobile-mcp/issues/459). `src/device/engine-hints.js` prints the command.
 - On Android, mobilecli's `DeviceServer` outlives the session and holds UiAutomation (kills `uiautomator dump`, Appium, legacy `elements`); release with `adb shell pkill -f com.mobilenext.mobilecli.DeviceServer` — upstream [mobilecli#470](https://github.com/mobile-next/mobilecli/issues/470).

@@ -51,6 +51,9 @@
   inside WSL — USB passthrough via `usbipd-win`, or `adb connect` to an emulator on the Windows side.
 - Device-free verbs (`validate`, `schema`, `guide`, `bootstrap`, `init`, `setup`, `config`, `memory`,
   `result …`) still work on a forced Windows install; only verbs that need the device session are refused.
+- **Note the two layers**: npm's refusal is the primary gate and it cannot carry the WSL2 hint (npm does
+  not let a package customize `EBADPLATFORM`); the runtime envelope above is the secondary gate for
+  installs forced past npm. Reaching the runtime error at all means you are on a forced or linked install.
 
 ---
 
