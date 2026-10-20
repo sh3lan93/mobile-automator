@@ -138,3 +138,36 @@ describe('unsupported host guard (#165)', () => {
     });
   });
 });
+
+// The `devices clear` exception is deliberate and documented at its command
+// registration (cli.js): its only session-layer probe is sessionClient.isAlive,
+// which is a socket ping — never `ps`, never a signal. If a future change
+// routes that probe through process-identity.js instead, `devices clear`
+// becomes a process-spawning verb on Windows with no gate, and the mocked test
+// above would never notice. This canary runs the REAL connection module on an
+// injected win32 platform and fails if any child process is spawned; the socket
+// connect to a daemon that cannot exist fails harmlessly inside the client.
+describe('devices clear stays process-free on an unsupported host (#165)', () => {
+  test('win32 devices clear spawns nothing (the exception is pinned, not just documented)', async () => {
+    const childProcess = require('child_process');
+    const spawns = [];
+    const names = ['exec', 'execFile', 'fork', 'spawn', 'execSync', 'execFileSync', 'spawnSync'];
+    const restores = names.map((name) => {
+      const spy = jest.spyOn(childProcess, name).mockImplementation((...args) => {
+        spawns.push({ name, args });
+        return { unref() {}, on() {}, kill() {}, stdout: null, stderr: null, pid: 1, status: 0 };
+      });
+      return () => spy.mockRestore();
+    });
+
+    try {
+      const root = workspaceRoot();
+      const calls = await run({ projectRoot: root, platform: 'win32' }, 'devices', 'clear');
+      expect(calls).toHaveLength(1);
+      expect(calls[0].exitKind).toBe('ok');
+      expect(spawns.map((s) => s.name)).toEqual([]);
+    } finally {
+      for (const restore of restores) restore();
+    }
+  });
+});

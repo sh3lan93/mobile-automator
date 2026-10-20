@@ -2181,6 +2181,12 @@ function buildProgram(deps = {}) {
   devices
     .command('clear')
     .description('Remove the persisted device selection')
+    // Deliberately OUTSIDE the host gate (#165): its only session-layer probe,
+    // sessionClient.isAlive, is a socket ping — it never runs `ps` or signals a
+    // process, so it answers safely on an unsupported host too. That invariant
+    // is executable, not just prose: the canary in
+    // tests/unit/cli-host-support.test.js ("devices clear stays process-free")
+    // fails if this verb ever starts spawning child processes.
     .action(withEnvelope(async () => {
       const r = await handleDevicesClear({ projectRoot });
       emit(r, humanFlag());
