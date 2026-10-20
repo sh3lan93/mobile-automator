@@ -14,6 +14,7 @@ const { DeviceBridge } = require('../../src/device/bridge');
 const { ACTION_METHOD } = require('../../src/device/semantic-press');
 const { buildProgram } = require('../../src/cli');
 const { emitBootstrap } = require('../../src/guide/emitter');
+const { shippingDocs } = require('./docs-corpus');
 
 const REPO = path.join(__dirname, '..', '..');
 const schema = require('../../src/schemas/scenario_schema.json');
@@ -113,4 +114,42 @@ describe('action coverage — schema ↔ catalog ↔ verbs ↔ guide', () => {
       expect(guideAgnostic).toContain(`\`mauto ${verb}`);
     });
   });
+});
+
+// The prose half of the #166 contract. The catalog marks some schema actions
+// `unsupported` (no verb, no primitive), so a doc that shows one as a working
+// step or precondition teaches an agent to author a scenario that can never
+// replay. `mauto validate` now warns at authoring time; this keeps the docs and
+// guides from telling the reader to write them in the first place. The action
+// names come from the catalog, never from this file.
+describe('shipping docs never teach an unsupported action as working', () => {
+  const MARKED_UNSUPPORTED = /unsupported|not (mechanically )?executable|no (verb|primitive|execution path)/i;
+  const files = shippingDocs();
+
+  for (const action of entries('unsupported')) {
+    const asAction = new RegExp(`"action"\\s*:\\s*"${action}"`);
+    const mentions = new RegExp(`\\b${action}\\b`);
+
+    test(`${action}: never appears as an "action" value in a doc example`, () => {
+      const offenders = [];
+      for (const rel of files) {
+        fs.readFileSync(path.join(REPO, rel), 'utf8').split('\n').forEach((line, i) => {
+          if (asAction.test(line)) offenders.push(`${rel}:${i + 1}: ${line.trim()}`);
+        });
+      }
+      expect(offenders).toEqual([]);
+    });
+
+    test(`${action}: every other mention says it is unsupported`, () => {
+      const offenders = [];
+      for (const rel of files) {
+        fs.readFileSync(path.join(REPO, rel), 'utf8').split('\n').forEach((line, i) => {
+          if (mentions.test(line) && !asAction.test(line) && !MARKED_UNSUPPORTED.test(line)) {
+            offenders.push(`${rel}:${i + 1}: ${line.trim()}`);
+          }
+        });
+      }
+      expect(offenders).toEqual([]);
+    });
+  }
 });

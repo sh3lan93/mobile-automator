@@ -5,6 +5,7 @@ const path = require('path');
 
 const scenarioSchema = require('../../src/schemas/scenario_schema.json');
 const { ACTION_CATALOG } = require('../../src/device/action-catalog');
+const { MECHANICAL_TYPES } = require('../../src/assertion/evaluator');
 
 // Hand-maintained capability counts in prose drift the moment the schema grows.
 // They already did once: #117 wired 7 stranded mobile-mcp primitives into flat
@@ -39,6 +40,10 @@ const COUNTS = {
   assertionTypes: ASSERTION_TYPES.length,
   // The catalog covers the union of both action enums (clear_app_data is in
   // both), which is why it is not simply the sum.
+  // The assertion split: MECHANICAL_TYPES are decided by `mauto assert`; every
+  // other schema type returns needs_agent and is judged by the host agent.
+  mechanicalAssertions: MECHANICAL_TYPES.size,
+  agentAssertions: ASSERTION_TYPES.length - MECHANICAL_TYPES.size,
   catalogEntries: new Set([...STEP_ACTIONS, ...PRECONDITION_ACTIONS]).size,
 };
 
@@ -64,6 +69,21 @@ const CLAIM_PATTERNS = [
     name: '"N assertion types"',
     regex: /(\d+)\s+assertion types/gi,
     expected: () => COUNTS.assertionTypes,
+  },
+  {
+    name: '"of the N types" (assertion split)',
+    regex: /of the (\d+) types/gi,
+    expected: () => COUNTS.assertionTypes,
+  },
+  {
+    name: '"N ... evaluated deterministically / decided mechanically" (mechanical assertions)',
+    regex: /(\d+)(?: of the \d+ types)? are (?:evaluated deterministically|decided mechanically)/gi,
+    expected: () => COUNTS.mechanicalAssertions,
+  },
+  {
+    name: '"other N return needs_agent" (agent-judged assertions)',
+    regex: /other (\d+) return `needs_agent`/gi,
+    expected: () => COUNTS.agentAssertions,
   },
 ];
 
