@@ -86,11 +86,16 @@ Used to author scenario JSON, evaluate assertions, and assemble result files.
 
 | Verb | Description |
 |------|-------------|
-| `mauto validate <file>` | Validate a scenario JSON file against the [scenario schema](schema.md) |
+| `mauto validate <file> [--strict]` | Validate a scenario JSON file against the [scenario schema](schema.md); warns (or, with `--strict`, fails) on actions that cannot replay unattended |
 | `mauto assert <type> [--target --expected --operator --count --pattern --variable --device]` | Evaluate an assertion; mechanical types are decided by the CLI, visual types are deferred to the agent |
 | `mauto result add-step --run-id --step-id --status [--scenario-id --attempts --screenshot --error-message --observation <type>:<message> --capture <name>=<value>]` | Append a step result to a run; `--observation` and `--capture` are repeatable |
 | `mauto result add-assertion --run-id --step-id --type --pass [--scenario-id --assertion-id --message --expected --actual]` | Record an assertion verdict against a step |
 | `mauto result finalize --run-id [--scenario-id --status --duration --app-version --device-model --api-level --environment --summary]` | Assemble the final [result file](result-schema.md) and auto-harvest memory |
+
+!!! note "`validate` and unsupported actions"
+    Schema-valid is not the same as replayable. Some schema actions are marked `unsupported` in the action catalog: the engine exposes no primitive for them, so no `mauto` verb can execute them and the step cannot replay unattended. By default `validate` still succeeds but adds `data.warnings` (and a `hint`); with `--strict` it fails with `invalid_input` and `data.valid: false`. A scenario with no such actions gets the bare `{"valid": true}`.
+
+    Each warning is `{code: "unsupported_action", action, path, message}` plus `step_id` for steps. `path` is `steps[N]` or `preconditions.device_actions[N]`.
 
 !!! note "`result finalize` and memory"
     On finalize, `mauto` auto-harvests typed observations into cross-session memory. This is best-effort: a memory failure never fails an otherwise-successful finalize — it folds into the envelope `hint` instead. See [Cross-Session Memory](../concepts/memory.md).

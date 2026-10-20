@@ -10,6 +10,7 @@ const { DeviceBridge } = require('./device/bridge');
 const selectionStore = require('./device/selection');
 const { engineHint } = require('./device/engine-hints');
 const { ScenarioValidator } = require('./scenario/validator');
+const { findUnsupportedActions } = require('./scenario/replayability');
 const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
 const { ResultStore } = require('./result/store');
 const { OBSERVATION_TYPES, parseObservation, parseCapture, parseBool } = require('./result/flags');
@@ -206,7 +207,7 @@ async function handleScreenshot({ deviceBridge }, destPath) {
   }
 }
 
-function handleValidate({ validator }, file) {
+function handleValidate({ validator }, file, opts = {}) {
   let raw;
   try {
     raw = fs.readFileSync(file, 'utf8');
@@ -237,7 +238,20 @@ function handleValidate({ validator }, file) {
 
   const result = validator.validate(scenario);
   if (result.valid) {
-    return { envelope: ok({ valid: true }), exitKind: 'ok' };
+    // Schema-valid is not the same as replayable: surface actions the catalog
+    // marks unsupported. A warning by default so existing scenarios keep
+    // validating; `--strict` makes it a failure (#166).
+    const warnings = findUnsupportedActions(scenario);
+    if (warnings.length === 0) {
+      return { envelope: ok({ valid: true }), exitKind: 'ok' };
+    }
+    const hint = `${warnings.length} step(s) cannot replay unattended — see data.warnings`;
+    if (opts.strict) {
+      const env = fail('invalid_input', 'scenario uses actions with no execution path', hint);
+      env.data = { valid: false, errors: [], warnings };
+      return { envelope: env, exitKind: 'invalid_input' };
+    }
+    return { envelope: ok({ valid: true, warnings }, hint), exitKind: 'ok' };
   }
 
   const env = fail(
@@ -1746,8 +1760,9 @@ function buildProgram(deps = {}) {
   program
     .command('validate <file>')
     .description('Validate a scenario JSON file against the scenario schema')
-    .action(withEnvelope((file) => {
-      const r = handleValidate({ validator }, file);
+    .option('--strict', 'fail (instead of warn) when the scenario uses actions that cannot replay unattended')
+    .action(withEnvelope((file, opts) => {
+      const r = handleValidate({ validator }, file, { strict: Boolean(opts && opts.strict) });
       emit(r, humanFlag());
     }));
 
