@@ -8,18 +8,43 @@ mobile-automator supports 27 assertion types organized in 8 categories for compr
 
 Every assertion object requires `id`, `after_step` (the step `id` it runs after), `type`, and `description`. Element-based assertions locate their target with `element_description` — a *semantic* description of the element, never a `resource-id` or OS-specific locator. The syntax snippets below show only the type-specific fields for brevity.
 
+## Mechanical vs agent-judged assertions
+
+Not every assertion is decided by the CLI. 15 of the 27 types are evaluated deterministically by `mauto assert` over the element list. The other 12 return `needs_agent` with `pass: null`: the host agent judges them (often from a screenshot) and records the verdict with `mauto result add-assertion`. An agent-judged pass is only as reliable as the agent that judged it.
+
+`element_state` is agent-judged because the element model drops enabled, focused and checked state, so the CLI cannot decide it mechanically.
+
 ## Quick Reference Table
 
-| Category | Types | Count |
-|----------|-------|-------|
-| Element State | element_exists, element_not_exists, element_visible, element_state | 4 |
-| Text & Content | element_text, text_contains, text_not_empty, element_hint, pattern_match, text_changed, content_description | 7 |
-| Count & Collections | element_count, list_item_count, list_is_empty | 3 |
-| Visual & Layout | screenshot_match, visual_state, element_fully_visible, color_style | 4 |
-| Navigation & Screen | screen_title, alert_present, alert_text, toast_visible, keyboard_visible | 5 |
-| Accessibility | has_accessibility_label | 1 |
-| Data & Variables | value_matches_variable | 1 |
-| Platform-Specific | permission_dialog_shown, dark_mode_active | 2 |
+| Type | Category | Evaluated by |
+|------|----------|--------------|
+| element_exists | Element State | `mauto assert` (mechanical) |
+| element_not_exists | Element State | `mauto assert` (mechanical) |
+| element_visible | Element State | `mauto assert` (mechanical) |
+| element_state | Element State | agent |
+| element_text | Text & Content | `mauto assert` (mechanical) |
+| text_contains | Text & Content | `mauto assert` (mechanical) |
+| text_not_empty | Text & Content | `mauto assert` (mechanical) |
+| element_hint | Text & Content | `mauto assert` (mechanical) |
+| pattern_match | Text & Content | `mauto assert` (mechanical) |
+| text_changed | Text & Content | `mauto assert` (mechanical) |
+| content_description | Text & Content | `mauto assert` (mechanical) |
+| element_count | Count & Collections | `mauto assert` (mechanical) |
+| list_item_count | Count & Collections | `mauto assert` (mechanical) |
+| list_is_empty | Count & Collections | `mauto assert` (mechanical) |
+| screenshot_match | Visual & Layout | agent |
+| visual_state | Visual & Layout | agent |
+| element_fully_visible | Visual & Layout | agent |
+| color_style | Visual & Layout | agent |
+| screen_title | Navigation & Screen | agent |
+| alert_present | Navigation & Screen | agent |
+| alert_text | Navigation & Screen | agent |
+| toast_visible | Navigation & Screen | agent |
+| keyboard_visible | Navigation & Screen | agent |
+| has_accessibility_label | Accessibility | `mauto assert` (mechanical) |
+| value_matches_variable | Data & Variables | `mauto assert` (mechanical) |
+| permission_dialog_shown | Platform-Specific | agent |
+| dark_mode_active | Platform-Specific | agent |
 
 ## Element State Assertions (4 types)
 

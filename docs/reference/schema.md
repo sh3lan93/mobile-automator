@@ -373,20 +373,11 @@ Extract text/value from an element and store it in a variable.
 
 ---
 
-#### 14. clear_app_data
-Clear app data and cache (setup action).
+#### 14. clear_app_data (unsupported)
+Not executable: `clear_app_data` is accepted by the schema, but the engine exposes no primitive for it, so no `mauto` verb runs it and a scenario using it cannot replay unattended. `mauto validate` warns about it (`--strict` fails). To reset app state, use `app_state: "fresh_install"` with `uninstall_app` then `install_app` precondition device actions.
 
 **Fields:**
-- `action` — `"clear_app_data"`
-
-**Example:**
-```json
-{
-  "id": "reset_app",
-  "action": "clear_app_data",
-  "description": "Clear app data to start from a clean state"
-}
-```
+- `action` — `"clear_app_data"` (unsupported, not executable)
 
 ---
 
@@ -550,7 +541,7 @@ Define setup requirements and device state before test execution.
 | `device_properties` | object | Required device properties (network, location_services, orientation) |
 | `notes` | array | Human-readable notes about preconditions that cannot be automated |
 
-Each `device_actions` item has an `action` (`clear_app_data`, `uninstall_app`, `install_app`, `enable_wifi`, `disable_wifi`, `set_orientation`) plus optional `target_package`, `value`, and `description`.
+Each `device_actions` item has an `action` (`uninstall_app`, `install_app`, `set_orientation`, plus the unsupported `clear_app_data`, `enable_wifi`, `disable_wifi`, which have no execution path) plus optional `target_package`, `value`, and `description`.
 
 **Example:**
 ```json
@@ -559,9 +550,14 @@ Each `device_actions` item has an `action` (`clear_app_data`, `uninstall_app`, `
     "app_state": "logged_out",
     "device_actions": [
       {
-        "action": "clear_app_data",
+        "action": "uninstall_app",
         "target_package": "com.example.app",
-        "description": "Clear any cached login data"
+        "description": "Remove the app to discard cached login data"
+      },
+      {
+        "action": "install_app",
+        "value": "./builds/app-debug.apk",
+        "description": "Reinstall the app from the build under test"
       }
     ],
     "device_properties": {
@@ -700,9 +696,14 @@ Categorization tags for filtering and organizing scenarios.
     "app_state": "logged_out",
     "device_actions": [
       {
-        "action": "clear_app_data",
+        "action": "uninstall_app",
         "target_package": "com.example.app",
-        "description": "Clear cached login data"
+        "description": "Remove the app to discard cached login data"
+      },
+      {
+        "action": "install_app",
+        "value": "./builds/app-debug.apk",
+        "description": "Reinstall the app from the build under test"
       }
     ],
     "notes": ["A valid test account must exist in the staging environment"]

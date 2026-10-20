@@ -139,7 +139,7 @@ Reasoning is delivered via `mauto guide <topic>` at explicit invocation, never a
 The test scenario schema provides rich, expressive capabilities:
 
 - **18 action types** — tap, swipe, scroll_to_element, wait_for_loading_complete, capture_value, and the four semantic actions used by platform-agnostic mode
-- **27 assertion types** — comprehensive coverage across text, visibility, collections, visual, navigation
+- **27 assertion types** — comprehensive coverage across text, visibility, collections, visual, navigation (15 are decided mechanically by `mauto assert`, the rest are agent-judged; see the [assertions reference](../reference/assertions.md#mechanical-vs-agent-judged-assertions))
 - **Advanced control** — retry policies, conditions, sub-steps
 - **Better debugging** — capture values for later assertion, detailed step context
 - **Flakiness handling** — explicit retry policies for async operations

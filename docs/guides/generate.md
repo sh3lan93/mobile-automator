@@ -151,7 +151,7 @@ The generator parses your natural language and recognizes actions:
 | "Press back/home/enter" | `press_button` | Hardware button press |
 | "Launch the app" | `launch_app` | Starts your app |
 | "Open URL", "Open deep link" | `open_url` | Opens a web URL or deep link |
-| "Clear app data" | `clear_app_data` | Resets app state |
+| "Clear app data", "Fresh install" | `uninstall_app` + `install_app` preconditions | Resets app state (`clear_app_data` is unsupported — no execution path) |
 | "Verify/Check/Ensure element" | `element_exists` | Assertion: element is visible |
 | "Verify text says" | `element_text` | Assertion: text content matches |
 | "Verify text contains" | `text_contains` | Assertion: text includes value |

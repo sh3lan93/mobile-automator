@@ -586,12 +586,13 @@ jobs:
 
 **Answer:**
 1. **Run tests individually** — Not in parallel
-2. **Clear app cache** between tests:
+2. **Reset app state** between tests (uninstall, then reinstall the build):
    ```json
    {
      "preconditions": {
        "device_actions": [
-         {"action": "clear_app_data"}
+         {"action": "uninstall_app", "target_package": "com.example.myapp"},
+         {"action": "install_app", "value": "./builds/app-debug.apk"}
        ]
      }
    }

@@ -131,7 +131,6 @@ For each step in your scenario:
 | `wait_for_loading_complete` | Waits for loading indicators to disappear |
 | `press_button` | Presses hardware button (back, home) |
 | `launch_app` | Starts your app |
-| `clear_app_data` | Resets app to fresh state |
 | `capture_value` | Extracts text/value from element |
 | `open_url` | Opens a web URL or deep link on the device |
 
@@ -633,7 +632,8 @@ mobile-automator/results/
      "preconditions": {
        "app_state": "fresh_install",
        "device_actions": [
-         { "action": "clear_app_data", "target_package": "com.example.myapp" }
+         { "action": "uninstall_app", "target_package": "com.example.myapp" },
+         { "action": "install_app", "value": "./builds/app-debug.apk" }
        ]
      }
    }
