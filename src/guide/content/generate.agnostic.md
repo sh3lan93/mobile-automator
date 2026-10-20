@@ -100,7 +100,7 @@ Translate user language to action types and `mauto` verbs:
 |---|---|---|---|
 | "open the app", "launch" | `launch_app` | `mauto press` / launch the app under test | |
 | "uninstall", "remove the app" | (precondition `device_action`) | uninstall before scenario | |
-| "clear app data", "fresh install" | `clear_app_data` | clear app data before scenario | Set `app_state: "fresh_install"` in preconditions |
+| "clear app data", "fresh install" | `uninstall_app` + `install_app` | reset app to a clean state before scenario | Set `app_state: "fresh_install"` in preconditions and add `device_actions`: `uninstall_app` (with `target_package`) then `install_app` (with `value` = path to the build). If the build path is unknown, ask the user, or report that the reset must be done manually |
 | "tap", "click", "press" | `tap` | `mauto tap --at <x,y>` | Resolve coords from `mauto elements` |
 | "long press", "hold" | `long_press` | `mauto tap --at <x,y>` (long-press variant) | Resolve coords from `mauto elements` |
 | "double tap", "double click" | `double_tap` | `mauto tap --at <x,y>` (double-tap variant) | Resolve coords from `mauto elements` |
@@ -202,7 +202,7 @@ After all steps are executed and recorded:
 2. Obtain the scenario schema by running `mauto schema scenario`, and assemble the JSON scenario to match it. Include the `tags` array.
 3. **Always include `"$schema_version": "2.1"` as the first field** in agnostic-mode scenarios.
 4. **Use named string IDs** for all steps and assertions (snake_case, e.g., `"id": "tap_login"`).
-5. Validate the assembled scenario with `mauto validate <path>` against `mauto schema scenario`.
+5. Validate the assembled scenario with `mauto validate <path>` against `mauto schema scenario`. If it returns `data.warnings`, revise the scenario to drop those steps, or tell the user the step needs manual handling.
 6. Save to `mobile-automator/scenarios/<scenario_id>.json`.
 7. Present summary:
    > "Scenario saved: `mobile-automator/scenarios/<scenario_id>.json`
