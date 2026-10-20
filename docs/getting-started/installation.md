@@ -10,10 +10,17 @@ description: "Install the host-agnostic mauto CLI from npm, wire it into your pr
 
 Before installing mobile-automator, ensure you have:
 
+- **Host OS** — macOS or Linux. On Windows, use WSL2 (see below)
 - **Node.js** v22.12 or higher (required for mobile-mcp automation engine)
 - **An AI coding agent** — Claude Code, Cursor, Gemini CLI, GitHub Copilot, OpenAI Agents, or any MCP-capable agent
 - A **mobile project** (Android, iOS, Flutter, React Native, KMP, or CMP)
 - A **connected device or simulator** for running tests
+
+### Windows hosts (WSL2)
+
+`mauto` runs on macOS and Linux only. Its device session is built on POSIX primitives (a Unix domain socket, `ps`, process-group signals), so on native Windows npm refuses the install with `EBADPLATFORM`. Install and run `mauto` inside a WSL2 Linux distribution instead.
+
+The device or emulator must be reachable from inside WSL — for example, pass a USB device through with [`usbipd-win`](https://github.com/dorssel/usbipd-win), or `adb connect` to an emulator running on the Windows side. WSL2 is the expected route, but it is not exercised in CI. See [Troubleshooting](https://github.com/sh3lan93/mobile-automator/blob/main/TROUBLESHOOTING.md#-mauto-refuses-to-run-on-windows).
 
 ### Platform-Specific Requirements
 

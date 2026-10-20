@@ -8,6 +8,7 @@ Claude Code, Cursor, Gemini CLI, GitHub Copilot, and OpenAI Agents all have one-
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Flutter%20%7C%20RN%20%7C%20KMP%20%7C%20CMP-green.svg)](#)
+[![Host](https://img.shields.io/badge/Host-macOS%20%7C%20Linux-lightgrey.svg)](#)
 [![Node](https://img.shields.io/badge/Node-%E2%89%A522.12-brightgreen.svg)](#)
 
 ---
@@ -23,6 +24,8 @@ Claude Code, Cursor, Gemini CLI, GitHub Copilot, and OpenAI Agents all have one-
 ```bash
 npm i -g mobile-automator      # exposes `mauto` globally
 ```
+
+> **Supported hosts:** macOS and Linux. Windows is not supported natively (npm refuses the install) — run `mauto` inside WSL2. See [TROUBLESHOOTING.md](TROUBLESHOOTING.md#-mauto-refuses-to-run-on-windows).
 
 <details>
 <summary>Or run it without installing / build from source</summary>

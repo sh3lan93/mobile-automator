@@ -26,6 +26,7 @@ const guideEmitter = require('./guide/emitter');
 const { ADAPTERS } = require('./init/adapters');
 const { isSemanticAction, ACTION_METHOD, selectResolver } = require('./device/semantic-press');
 const connection = require('./device/connection');
+const { isSupportedHost, unsupportedHostError } = require('./device/host-support');
 const { record } = require('./observe/recorder');
 const { resolveRunId } = require('./observe/settings');
 const { runTracePath } = require('./observe/paths');
@@ -265,6 +266,19 @@ function handleValidate({ validator }, file, opts = {}) {
   );
   env.data = { valid: false, errors: result.errors };
   return { envelope: env, exitKind: 'invalid_input' };
+}
+
+// The unsupported-host gate (#165), shared by every site that reaches the
+// session layer: connectBridge (all device verbs) and the `session` verbs,
+// which talk to connection.* directly. Null on a supported host; otherwise an
+// `environment` failure (exit 5). Deliberately NOT routed through deviceFail —
+// a `device` kind is exactly the misdiagnosis this exists to prevent: on
+// Windows the session layer's Unix socket, `ps` and process-group kill fail in
+// ways that read as "no device connected".
+function hostGate(platform) {
+  if (isSupportedHost(platform)) return null;
+  const err = unsupportedHostError(platform);
+  return { envelope: fail(err.kind, err.message, err.hint), exitKind: err.kind };
 }
 
 function deviceFail(err) {
@@ -1576,6 +1590,8 @@ function buildProgram(deps = {}) {
     emitters = makeEmitters({ projectRoot }),
     // Sink used to emit the rendered envelope + drive the exit code.
     emit = emitters.emit,
+    // Host OS, for the unsupported-host gate (#165). Overridable in tests.
+    platform = process.platform,
   } = deps;
 
   const program = new Command();
@@ -1672,6 +1688,18 @@ function buildProgram(deps = {}) {
     return action(...args);
   };
 
+  // Gate for verbs that reach the device session layer (#165). Runs before
+  // anything is spawned or connected; see hostGate. Emits and returns true when
+  // the host is unsupported, so a caller can bail out.
+  const refuseUnsupportedHost = () => {
+    const refusal = hostGate(platform);
+    if (!refusal) return false;
+    emit(refusal, humanFlag());
+    return true;
+  };
+  const requireSupportedHost = (action) => (...args) =>
+    (refuseUnsupportedHost() ? undefined : action(...args));
+
   // Resolve which device a verb targets: explicit --device wins, else the
   // persisted selection, else null (mobile-mcp auto-selects a single device).
   // Keeping the no-selection fast path returning null preserves zero-config use.
@@ -1687,6 +1715,9 @@ function buildProgram(deps = {}) {
   // (the single connection seam), so this keeps both the envelope boundary and
   // the acquire-seam refactor.
   const connectBridge = async (device, fn) => {
+    // Before the factory: on an unsupported host there is nothing to connect,
+    // and a connect failure would land below as a misleading `device` kind.
+    if (refuseUnsupportedHost()) return;
     let bridge;
     let close;
     try {
@@ -2106,26 +2137,26 @@ function buildProgram(deps = {}) {
     .description('Start the device session daemon (subsequent verbs reuse its connection)')
     .option('--device <id>', 'pin the daemon to a target device id')
     .option('--idle <ms>', 'idle timeout in milliseconds before the daemon self-reaps')
-    .action(withEnvelope(requireWorkspace(async (opts) => {
+    .action(withEnvelope(requireSupportedHost(requireWorkspace(async (opts) => {
       const r = await handleSessionStart({ projectRoot }, { device: opts.device, idle: opts.idle });
       emit(r, humanFlag());
-    })));
+    }))));
 
   session
     .command('status')
     .description('Report whether a device session daemon is running')
-    .action(withEnvelope(async () => {
+    .action(withEnvelope(requireSupportedHost(async () => {
       const r = await handleSessionStatus({ projectRoot });
       emit(r, humanFlag());
-    }));
+    })));
 
   session
     .command('end')
     .description('Stop the device session daemon and remove its socket/pidfile')
-    .action(withEnvelope(async () => {
+    .action(withEnvelope(requireSupportedHost(async () => {
       const r = await handleSessionEnd({ projectRoot });
       emit(r, humanFlag());
-    }));
+    })));
 
   // --- Issue #92: device discovery + persisted selection -------------------
 
@@ -2150,6 +2181,12 @@ function buildProgram(deps = {}) {
   devices
     .command('clear')
     .description('Remove the persisted device selection')
+    // Deliberately OUTSIDE the host gate (#165): its only session-layer probe,
+    // sessionClient.isAlive, is a socket ping — it never runs `ps` or signals a
+    // process, so it answers safely on an unsupported host too. That invariant
+    // is executable, not just prose: the canary in
+    // tests/unit/cli-host-support.test.js ("devices clear stays process-free")
+    // fails if this verb ever starts spawning child processes.
     .action(withEnvelope(async () => {
       const r = await handleDevicesClear({ projectRoot });
       emit(r, humanFlag());
