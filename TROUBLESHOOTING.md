@@ -33,6 +33,25 @@
 - Running `mauto setup` in a subdirectory creates a *nested* workspace that shadows the
   ancestor one for everything run below it; `setup`'s hint warns when that happens.
 
+### ❌ mauto refuses to run on Windows
+- **At install**, npm stops with:
+  ```
+  npm ERR! code EBADPLATFORM
+  ```
+  (newer npm prints `npm error code EBADPLATFORM`). `package.json` declares `os: ["darwin", "linux"]`,
+  so npm refuses the install on Windows.
+- **At runtime** (an install forced past that with `--force`, or a source checkout via `npm link`),
+  every device verb and `session start|status|end` fails with an `environment` envelope, exit 5:
+  ```
+  mauto's device session needs a POSIX host (macOS or Linux); "win32" is not supported
+  ```
+- **Why:** the session layer is POSIX-only. The daemon binds a Unix domain socket, and the CLI
+  identifies and reaps it with `ps`, process-group kill and POSIX signals — none of which exist on Windows.
+- **Fix:** install and run `mauto` inside WSL2 (a Linux distribution). The device must be reachable from
+  inside WSL — USB passthrough via `usbipd-win`, or `adb connect` to an emulator on the Windows side.
+- Device-free verbs (`validate`, `schema`, `guide`, `bootstrap`, `init`, `setup`, `config`, `memory`,
+  `result …`) still work on a forced Windows install; only verbs that need the device session are refused.
+
 ---
 
 ## Device Connection Issues

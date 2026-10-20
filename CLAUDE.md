@@ -33,6 +33,7 @@ src/
     session-daemon.js         # persistent mobile-mcp session behind a Unix socket
     session-client.js  session-spawn.js  session-paths.js  session-protocol.js  session-log.js
     bridge.js  mobile-mcp-client.js  semantic-press/  device-resolver.js  selection.js
+    host-support.js           # supported host OSes (package.json os) + the unsupported-host error
   result/
     capability-catalog.js     # result field → verb → store method → schema pointer (drift guard)
     store.js                  # ResultStore, mutations serialized per runId
@@ -97,7 +98,9 @@ Two catalogs are the single source of truth for "does this capability actually r
 
 **`package.json` `engines.node`** (#162) is the single source of truth for the supported Node range, and must stay a bare `>=X.Y.Z` floor — the guard rejects a compound range like `^20 || ^22` outright, because there is no single floor to check prose against. Guard: `tests/lint/node-version-agreement.test.js` — derives the floor and fails when the README badge, any prose claim in a shipping doc, `test.yml`'s matrix, or any workflow's literal `node-version` disagrees. It matches *any* Node-adjacent major rather than an enumerated list of phrasings, so a newly-written claim is caught by default; the rare sentence that names a Node version without claiming support goes in `NOT_A_CLAIM`.
 
-**`package-lock.json`** must mirror `package.json`'s `name`, `version` and `engines.node`. Guard: `tests/lint/lockfile-in-sync.test.js`. CI installs with `npm ci`, which installs *from the lockfile*, so a stale root entry is invisible until something downstream reads the wrong value — it has drifted twice.
+**`package.json` `os`** (#165) is the single source of truth for which host OSes run mauto (`darwin`, `linux`) — npm enforces it at install (`EBADPLATFORM`), and `src/device/host-support.js` derives `SUPPORTED_HOSTS` from it to fail device/session verbs on anything that slips past (`--force`, `npm link`). Guard: `tests/lint/host-support-agreement.test.js` — fails when `os` is empty or claims `win32`, when `SUPPORTED_HOSTS` disagrees with it, when `README.md` or `docs/getting-started/installation.md` fails to name every host (via a map keyed on `os`, so a new host forces a doc update) plus Windows/WSL2, or when `TROUBLESHOOTING.md` loses the heading the runtime hint cites.
+
+**`package-lock.json`** must mirror `package.json`'s `name`, `version`, `engines.node` and `os`. Guard: `tests/lint/lockfile-in-sync.test.js`. CI installs with `npm ci`, which installs *from the lockfile*, so a stale root entry is invisible until something downstream reads the wrong value — it has drifted twice.
 
 **Production-dependency advisories** (#161) are gated by `scripts/audit-gate.js`, which runs `npm audit --omit=dev` and fails on any high/critical advisory not listed in `scripts/audit-allowlist.json`. Every allowlist entry carries a reason, the issue that removes it, and an `expires` date. An expired entry fails, and so does a *stale* one (its advisory is no longer reported), so accepted risk can't outlive its reason. It runs in `audit.yml` (PR, main, weekly — a signal) and in `release.yml`'s `publish-npm` before `npm publish` (the actual gate). Wiring guard: `tests/lint/supply-chain-gate.test.js`. Dependabot is `lockfile-only` on purpose: a `package.json` change would trip the version-bump gate, and users resolve our ranges fresh anyway.
 
@@ -208,7 +211,7 @@ Note: `jest.config` `testPathIgnorePatterns` must stay `<rootDir>`-anchored — 
 
 Tracked under the `production-ready` milestone; worth knowing before you debug something.
 
-- Windows is silently unsupported: the session daemon binds a Unix domain socket — #165.
+- Windows is unsupported by declaration — `package.json` `os` (`darwin`, `linux`) refuses the install and `src/device/host-support.js` fails device/session verbs with an `environment` envelope; real support would need named pipes plus replacements for `ps`, process-group kill and signals — #165.
 - No JavaScript linter is configured (no ESLint config, dep, or script) — #164.
 - iOS simulators fail every verb with "Agent is not installed on the device" until a one-time `npx -y mobilecli@<pinned> agent install --device <udid>`; the engine's auto-install is unreachable — upstream [mobile-mcp#459](https://github.com/mobile-next/mobile-mcp/issues/459). `src/device/engine-hints.js` prints the command.
 - On Android, mobilecli's `DeviceServer` outlives the session and holds UiAutomation (kills `uiautomator dump`, Appium, legacy `elements`); release with `adb shell pkill -f com.mobilenext.mobilecli.DeviceServer` — upstream [mobilecli#470](https://github.com/mobile-next/mobilecli/issues/470).
