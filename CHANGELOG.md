@@ -28,12 +28,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   hint gives the `mauto init` command to run. It always returns `ok: true`, so
   it is safe to run as a first diagnostic
   ([#144](https://github.com/sh3lan93/mobile-automator/issues/144)).
-- **`mauto init` reports what it changed.** The envelope gains
-  `data.changes: [{ path, status }]`, where `status` is `created`, `updated` or
-  `unchanged` (one list per agent entry for `--agent all`). When init refreshes
-  a host that was already installed, the hint says
-  `refreshed N stale file(s) for <agent>`. The field is additive; existing
-  fields are unchanged
+- **`mauto init` reports what it changed — one canonical field.** The envelope
+  carries `data.changes: [{ path, status }]`, where `status` is `created`,
+  `updated` or `unchanged` (one list per agent entry for `--agent all`). This
+  replaces the earlier `data.written` and `data.merged` lists on this
+  unreleased version; `changes` subsumes both, in write order. When init
+  refreshes a host that was already installed, the hint says
+  `refreshed N stale file(s) for <agent>`; a fresh install carries no hint
   ([#144](https://github.com/sh3lan93/mobile-automator/issues/144)).
 
 ### 🔧 Changed
