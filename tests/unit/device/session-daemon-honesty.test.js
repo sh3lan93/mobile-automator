@@ -162,4 +162,96 @@ describe('session-daemon honesty + lifecycle (#122)', () => {
 
     await new Promise((resolve) => blocker.close(resolve));
   });
+
+  // A frame that is valid JSON but not an object (`null`, a primitive, an
+  // array) used to reach `req.type`. For `null` that threw inside the async
+  // data handler, the rejection reached bin/'s unhandledRejection hook, and
+  // the daemon exited. Found by @typescript-eslint/no-misused-promises (#164).
+  describe('non-object frames get a malformed-frame reply, and the daemon keeps serving', () => {
+    // Raw socket so the test can send lines no client would ever encode.
+    async function rawExchange(root, lines, expected) {
+      const socket = net.createConnection(paths.socketPath(root));
+      await new Promise((resolve, reject) => {
+        socket.once('connect', resolve);
+        socket.once('error', reject);
+      });
+      const parser = new FrameParser();
+      const replies = [];
+      const done = new Promise((resolve) => {
+        socket.on('data', (chunk) => {
+          for (const f of parser.push(chunk)) replies.push(f.value);
+          if (replies.length >= expected) resolve();
+        });
+      });
+      for (const line of lines) socket.write(line);
+      // Bounded wait: a dropped reply must fail the assertion, not hang jest.
+      await Promise.race([done, new Promise((r) => setTimeout(r, 500))]);
+      socket.destroy();
+      return replies;
+    }
+
+    test.each([
+      ['null', 'null\n'],
+      ['a number', '5\n'],
+      ['a string', '"x"\n'],
+      ['an array', '[{"id":1,"type":"ping"}]\n'],
+    ])('%s', async (_label, line) => {
+      const root = tmpRoot();
+      const { createCall } = makeStubCreateCall();
+      const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall });
+      try {
+        const replies = await rawExchange(root, [line, FrameParser.encode({ id: 2, type: 'ping' })], 2);
+        expect(replies[0]).toEqual({
+          id: null,
+          ok: false,
+          error: { message: expect.stringMatching(/malformed frame/) },
+        });
+        expect(replies[1]).toMatchObject({ id: 2, ok: true, result: { pong: true } });
+        expect(await sessionClient.isAlive(root)).toBe(true);
+      } finally {
+        await daemon.stop();
+      }
+    });
+  });
+
+  // Anything else that throws inside the data handler must be recorded, not
+  // left as an unhandled rejection (which bin/ turns into a process exit). The
+  // seam: an onUndeliverable that throws, reached by a peer that hangs up
+  // mid-call.
+  test('a throw inside the data handler is recorded and the daemon keeps serving', async () => {
+    const root = tmpRoot();
+    const events = [];
+    const { createCall } = makeStubCreateCall({ delayMs: 100 });
+    const daemon = await startDaemon({
+      projectRoot: root,
+      idleMs: 0,
+      createCall,
+      recorderFor: () => (e) => events.push(e),
+      onUndeliverable: () => {
+        throw new Error('undeliverable sink exploded');
+      },
+    });
+    try {
+      const socket = net.createConnection(paths.socketPath(root));
+      await new Promise((resolve, reject) => {
+        socket.once('connect', resolve);
+        socket.once('error', reject);
+      });
+      socket.write(FrameParser.encode({ id: 1, type: 'call', tool: 'mobile_press_button', args: { button: 'BACK' } }));
+      await new Promise((r) => setTimeout(r, 20));
+      socket.destroy();
+      await new Promise((r) => setTimeout(r, 200));
+
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          level: 'error',
+          event: 'daemon.handler_error',
+          message: expect.stringMatching(/undeliverable sink exploded/),
+        })
+      );
+      expect(await sessionClient.isAlive(root)).toBe(true);
+    } finally {
+      await daemon.stop();
+    }
+  });
 });
