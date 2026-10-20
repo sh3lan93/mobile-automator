@@ -150,21 +150,27 @@ async function requestShutdown(projectRoot) {
 // Rich status probe: connect + ping and report whether a daemon is running,
 // how many device calls are currently in flight (the double-execution window
 // is visible here), and which device it is pinned to. `null`s when not running.
+//
+// A daemon whose engine has died is NOT running (#156): it is draining toward
+// its own exit and can never serve a call. Only an explicit engine_alive:false
+// counts — a pre-0.28 daemon omits the field and is treated as alive.
 async function getSessionStatus(projectRoot) {
+  const down = { running: false, reason: null, in_flight: null, device: null };
   const socket = await connectSocket(paths.socketPath(projectRoot));
-  if (!socket) return { running: false, in_flight: null, device: null };
+  if (!socket) return down;
   const client = wrapSocket(socket);
   try {
     const res = await client.request({ type: 'ping' }, { timeoutMs: 2000 });
-    if (!(res && res.ok)) return { running: false, in_flight: null, device: null };
+    if (!(res && res.ok)) return down;
     const result = res.result || {};
-    return {
-      running: true,
+    const seen = {
       in_flight: typeof result.in_flight === 'number' ? result.in_flight : null,
       device: result.device != null ? result.device : null,
     };
+    if (result.engine_alive === false) return { running: false, reason: 'engine_exited', ...seen };
+    return { running: true, reason: null, ...seen };
   } catch (_) {
-    return { running: false, in_flight: null, device: null };
+    return down;
   } finally {
     await client.close();
   }

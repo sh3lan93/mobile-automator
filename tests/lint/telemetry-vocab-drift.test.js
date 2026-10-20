@@ -116,9 +116,9 @@ describe('STOP_REASONS', () => {
   function stopReasonsInDaemon() {
     const found = new Set();
     let m;
-    const call = /\bstop\(\s*'([a-z]+)'/g;
+    const call = /\bstop\(\s*'([a-z_]+)'/g;
     while ((m = call.exec(DAEMON_SRC)) !== null) found.add(m[1]);
-    const dflt = /function stop\(\s*reason\s*=\s*'([a-z]+)'/g;
+    const dflt = /function stop\(\s*reason\s*=\s*'([a-z_]+)'/g;
     while ((m = dflt.exec(DAEMON_SRC)) !== null) found.add(m[1]);
     return found;
   }

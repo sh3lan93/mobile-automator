@@ -69,8 +69,9 @@ const NETWORK_ALWAYS = new Set([
 const DUAL_USE_ALLOWLIST = {
   // Unix-domain socket to the session daemon; never leaves the machine.
   net: ['src/device/session-client.js', 'src/device/session-daemon.js', TRANSPORT],
-  // Spawns the session daemon / mobile-mcp child process.
-  child_process: ['src/device/session-daemon.js', 'src/device/session-spawn.js', TRANSPORT],
+  // Spawns the session daemon (session-spawn.js); runs `ps` to identify a
+  // daemon pid (process-identity.js, #156).
+  child_process: ['src/device/process-identity.js', 'src/device/session-spawn.js', TRANSPORT],
 };
 
 // path -> reason. A non-literal `require(x)` / `import(x)` cannot be verified,

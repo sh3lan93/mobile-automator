@@ -55,7 +55,7 @@ describe('session-daemon per-call timeout (#149)', () => {
     expect(err.hint).toMatch(/verify state/);
 
     // in_flight returned to 0 after the timeout reply went out.
-    expect(await sessionClient.getSessionStatus(root)).toEqual({ running: true, in_flight: 0, device: null });
+    expect(await sessionClient.getSessionStatus(root)).toEqual({ running: true, reason: null, in_flight: 0, device: null });
 
     await conn.close();
     await daemon.stop();
@@ -89,7 +89,7 @@ describe('session-daemon per-call timeout (#149)', () => {
     expect(err.kind).toBeUndefined();
     expect(err.hint).toBeUndefined();
 
-    expect(await sessionClient.getSessionStatus(root)).toEqual({ running: true, in_flight: 0, device: null });
+    expect(await sessionClient.getSessionStatus(root)).toEqual({ running: true, reason: null, in_flight: 0, device: null });
 
     await conn.close();
     await daemon.stop();
@@ -124,7 +124,7 @@ describe('session-daemon per-call timeout (#149)', () => {
     expect(err.message).toMatch(/shutting down/);
 
     // in_flight is still 1 — the rejected call never incremented it.
-    expect(await sessionClient.getSessionStatus(root)).toEqual({ running: true, in_flight: 1, device: null });
+    expect(await sessionClient.getSessionStatus(root)).toEqual({ running: true, reason: null, in_flight: 1, device: null });
 
     // Release the hanging call so stop()'s drain completes.
     resolvers[0]({ done: true });
@@ -153,13 +153,13 @@ describe('session-daemon per-call timeout (#149)', () => {
     const pB = connB.call('b', {});
     await new Promise((r) => setTimeout(r, 20));
 
-    expect(await sessionClient.getSessionStatus(root)).toEqual({ running: true, in_flight: 2, device: null });
+    expect(await sessionClient.getSessionStatus(root)).toEqual({ running: true, reason: null, in_flight: 2, device: null });
 
     resolvers[0]({ done: 'a' });
     resolvers[1]({ done: 'b' });
     await Promise.all([pA, pB]);
 
-    expect(await sessionClient.getSessionStatus(root)).toEqual({ running: true, in_flight: 0, device: null });
+    expect(await sessionClient.getSessionStatus(root)).toEqual({ running: true, reason: null, in_flight: 0, device: null });
 
     await connA.close();
     await connB.close();

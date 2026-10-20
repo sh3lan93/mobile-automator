@@ -10,7 +10,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { pidIdentity, cleanStale } = require('../../../src/device/session-daemon');
+const { cleanStale, startDaemon } = require('../../../src/device/session-daemon');
+const { pidIdentity, isZombie } = require('../../../src/device/process-identity');
 const paths = require('../../../src/device/session-paths');
 
 function tmpRoot() {
@@ -37,6 +38,47 @@ describe('pidIdentity (#150)', () => {
       throw new Error('ENOENT: no ps on this host');
     };
     expect(pidIdentity(process.ppid, { execFile })).toBe('unknown');
+  });
+});
+
+// #156: `session end` escalates to a process-group kill, so "a mauto daemon"
+// is not enough — it has to be THIS workspace's daemon. A copied workspace
+// (`cp -R` carries daemon.pid) or a recycled pid would otherwise name another
+// workspace's live daemon.
+describe('pidIdentity bound to a workspace (#156)', () => {
+  const root = '/a/proj';
+  const cmd = (r) => `node /x/bin/mauto-session-daemon.js --project-root ${r}\n`;
+
+  test("a daemon whose command line names this workspace is ours", () => {
+    expect(pidIdentity(process.ppid, { projectRoot: root, execFile: () => cmd(root) })).toBe('ours');
+  });
+
+  test("another workspace's daemon is foreign, not ours", () => {
+    expect(pidIdentity(process.ppid, { projectRoot: root, execFile: () => cmd('/b/other') })).toBe('foreign');
+  });
+
+  test('a daemon that names no workspace (an older daemon, an editor on the bin) is foreign', () => {
+    expect(pidIdentity(process.ppid, { projectRoot: root, execFile: () => 'vim bin/mauto-session-daemon.js' })).toBe('foreign');
+  });
+
+  test('a process that is not a mauto daemon at all is still other', () => {
+    expect(pidIdentity(process.ppid, { projectRoot: root, execFile: () => 'sleep 120' })).toBe('other');
+  });
+
+  test('without a projectRoot the binary-level answer is unchanged (cleanStale)', () => {
+    expect(pidIdentity(process.ppid, { execFile: () => cmd('/b/other') })).toBe('ours');
+  });
+
+  test('asks ps for the full, untruncated command line', () => {
+    let args;
+    pidIdentity(process.ppid, {
+      projectRoot: root,
+      execFile: (_bin, a) => {
+        args = a;
+        return cmd(root);
+      },
+    });
+    expect(args).toEqual(['-ww', '-p', String(process.ppid), '-o', 'command=']);
   });
 });
 
@@ -82,5 +124,68 @@ describe('cleanStale with pid identity (#150)', () => {
     expect(r.cleaned).toBe(false);
     expect(r.livePid).toBe(process.ppid);
     expect(fs.existsSync(paths.socketPath(root))).toBe(true);
+  });
+});
+
+// #156: a daemon SIGTERMed during createCall has no handler installed yet, so it
+// dies without its 'exit' cleanup and leaves its lock behind. The next start
+// must treat that lock as stale (dead pid), not as a held lock.
+describe('stale lock from a daemon killed mid-startup (#156)', () => {
+  test('a lock left by a dead daemon does not block the next start', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-deadlock-'));
+    fs.mkdirSync(paths.sessionDir(root), { recursive: true });
+    const dead = require('child_process').spawnSync(process.execPath, ['-e', '']).pid;
+    fs.writeFileSync(paths.lockPath(root), `${dead}\n`);
+
+    const daemon = await startDaemon({
+      projectRoot: root,
+      createCall: async () => ({ call: async () => ({}), close: async () => {} }),
+    });
+    expect(fs.readFileSync(paths.lockPath(root), 'utf8').trim()).toBe(String(process.pid));
+    await daemon.stop();
+  });
+});
+
+// #156: kill(pid, 0) succeeds on a zombie, so where PID 1 never reaps adopted
+// orphans (Docker without --init, CI job containers running `tail -f
+// /dev/null`, a Node agent host as PID 1) a daemon that already exited looked
+// alive and `session end` waited out its whole 35s budget.
+describe('isZombie', () => {
+  const linux = (stat) => ({ platform: 'linux', readFile: () => stat });
+
+  test('linux: state Z (or X) in /proc/<pid>/stat is a zombie', () => {
+    expect(isZombie(7, linux('7 (node) Z 1 7 7 0 -1'))).toBe(true);
+    expect(isZombie(7, linux('7 (node) X 1 7 7 0 -1'))).toBe(true);
+    expect(isZombie(7, linux('7 (node) S 1 7 7 0 -1'))).toBe(false);
+  });
+
+  test('linux: the state is read after the LAST ")" — a command name may contain one', () => {
+    expect(isZombie(7, linux('7 (a) Z (b) S 1 7 7 0 -1'))).toBe(false);
+    expect(isZombie(7, linux('7 (a) S (b) Z 1 7 7 0 -1'))).toBe(true);
+  });
+
+  test('linux: needs no ps — an unreadable /proc entry is simply not a zombie', () => {
+    const readFile = () => {
+      throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+    };
+    expect(isZombie(7, { platform: 'linux', readFile })).toBe(false);
+  });
+
+  test('elsewhere: asks ps for the state', () => {
+    let args;
+    const execFile = (_bin, a) => {
+      args = a;
+      return 'Z\n';
+    };
+    expect(isZombie(7, { platform: 'darwin', execFile })).toBe(true);
+    expect(args).toEqual(['-o', 'stat=', '-p', '7']);
+    expect(isZombie(7, { platform: 'darwin', execFile: () => 'Ss\n' })).toBe(false);
+  });
+
+  test('elsewhere: a failing ps is not a zombie (plain liveness decides)', () => {
+    const execFile = () => {
+      throw new Error('ps: not found');
+    };
+    expect(isZombie(7, { platform: 'darwin', execFile })).toBe(false);
   });
 });

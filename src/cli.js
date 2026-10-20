@@ -1234,17 +1234,54 @@ async function handleSessionStatus(
   { projectRoot, client = require('./device/session-client') } = {}
 ) {
   const status = await connection.sessionStatus(projectRoot, { client });
-  return { envelope: ok(status), exitKind: 'ok' };
+  const hint =
+    status.reason === 'engine_exited'
+      ? `The device engine exited; this session is shutting down and the next verb starts a fresh one. ${connection.daemonLogHint(projectRoot)}`
+      : null;
+  return { envelope: ok(status, hint), exitKind: 'ok' };
 }
 
+// endSession's failure outcomes (#156), each with the hint that is true for it.
+// All three may leave a daemon alive and holding the workspace lock; what
+// differs is WHY, and so what the user should do about it. One vague hint used
+// to cover all three.
+const SESSION_END_FAILURE_HINTS = {
+  survived: (pid, pidFile) =>
+    `It is still alive after SIGTERM and SIGKILL and may still hold the workspace lock. Check it with \`ps -p ${pid}\` and stop it with \`kill -9 ${pid}\` (pidfile: ${pidFile}).`,
+  foreign: (pid, pidFile) =>
+    `It answered the shutdown, but its command line does not name this workspace (possibly started by mauto < 0.28), so it was not signalled. Check it with \`ps -p ${pid}\` and stop it manually (pidfile: ${pidFile}).`,
+  unverified: (pid, pidFile) =>
+    `It could not be identified (\`ps\` failed), so it was not signalled. Check it with \`ps -p ${pid}\` and stop it manually if it is this workspace's mauto daemon (pidfile: ${pidFile}).`,
+};
+
 async function handleSessionEnd(
-  { projectRoot, client = require('./device/session-client') } = {}
+  { projectRoot, client = require('./device/session-client'), end = {} } = {}
 ) {
-  const stopped = await connection.endSession(projectRoot, { client });
-  return {
-    envelope: ok({ stopped, already_stopped: !stopped }),
-    exitKind: 'ok',
+  const { outcome, pid } = await connection.endSession(projectRoot, { client, ...end });
+  const logHint = connection.daemonLogHint(projectRoot);
+  if (Object.prototype.hasOwnProperty.call(SESSION_END_FAILURE_HINTS, outcome)) {
+    const pidFile = require('./device/session-paths').pidFilePath(projectRoot);
+    return {
+      envelope: fail(
+        'device',
+        `device session daemon pid ${pid} did not exit`,
+        `${SESSION_END_FAILURE_HINTS[outcome](pid, pidFile)} ${logHint}`,
+        { stopped: false, already_stopped: false, pid }
+      ),
+      exitKind: 'device',
+    };
+  }
+  // 'stopped' | 'forced' | 'already_stopped'. The ok envelope keeps the boolean
+  // shape it had before endSession returned an outcome.
+  const data = {
+    stopped: outcome === 'stopped' || outcome === 'forced',
+    already_stopped: outcome === 'already_stopped',
+    forced: outcome === 'forced',
   };
+  const hint = outcome === 'forced'
+    ? `The daemon did not exit after shutdown; terminated pid ${pid}. ${logHint}`
+    : null;
+  return { envelope: ok(data, hint), exitKind: 'ok' };
 }
 
 // --- Issue #92: device discovery + persisted selection -------------------
