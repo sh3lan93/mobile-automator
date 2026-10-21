@@ -15,11 +15,28 @@ const { SEMANTIC_ACTIONS } = require('../../../sample-app/scripts/lib/executor')
 const { homeElements, moreElements } = require('./fixtures');
 
 const SCENARIOS = path.join(__dirname, '..', '..', '..', 'sample-app', 'scenarios');
+const GOLDEN_DIR = path.join(SCENARIOS, 'golden');
 const load = (name) => JSON.parse(fs.readFileSync(path.join(SCENARIOS, name), 'utf8'));
 const HARNESS_ACTIONS = new Set(['launch_app', 'wait_for_element', 'tap', 'type', ...SEMANTIC_ACTIONS]);
 const OS_ID_SHAPE = /^[a-z0-9]+(_[a-z0-9]+)+$/; // e.g. bottom_nav_home
 
-describe.each(['smoke_nav.json', 'golden_search_empty.json'])('%s', (file) => {
+// Every scenario in scenarios/ is pre-flighted here, discovered the same way
+// the runner (run-e2e.mjs) and the lint guard (e2e-agnostic.test.js) discover
+// them — readdirSync — so a new scenario cannot reach the 10-minute emulator
+// job, or silently skip an assertion (an `after_step` matching no step is
+// never run, and the run passes), without passing these checks first.
+const scenarioFiles = fs
+  .readdirSync(SCENARIOS)
+  .filter((f) => f.endsWith('.json'))
+  .map((f) => path.basename(f));
+
+describe('scenario discovery', () => {
+  test('finds the shipped scenarios (the per-scenario checks below are not vacuous)', () => {
+    expect(scenarioFiles).toEqual(expect.arrayContaining(['smoke_nav.json', 'golden_search_empty.json']));
+  });
+});
+
+describe.each(scenarioFiles)('%s', (file) => {
   const sc = load(file);
 
   test('is a valid 2.1 platform-agnostic scenario', () => {
@@ -43,6 +60,14 @@ describe.each(['smoke_nav.json', 'golden_search_empty.json'])('%s', (file) => {
   test('every assertion follows a real step', () => {
     const ids = new Set(sc.steps.map((s) => s.id));
     for (const a of sc.assertions) expect(ids.has(a.after_step)).toBe(true);
+  });
+
+  test('is tagged golden if and only if a golden fixture exists for it', () => {
+    // The golden gate (lib/golden.js) is the `golden` tag, loud in both
+    // directions; the shipped data must agree with itself.
+    const tagged = (sc.tags || []).includes('golden');
+    const fixture = path.join(GOLDEN_DIR, `${sc.scenario_id}.result.json`);
+    expect(fs.existsSync(fixture)).toBe(tagged);
   });
 });
 
