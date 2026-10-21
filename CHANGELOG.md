@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.31.1]
+
+### 🔧 Changed
+
+- **The real-device E2E now drives the shipped `mauto` CLI.** The sample-app
+  smoke run used its own MCP client, its own mobile-mcp pin and OS element ids,
+  so a green run said nothing about the verbs users actually call. It now runs
+  `mauto` from the packed tarball against a scratch workspace: `setup`,
+  `validate`, `launch`, `elements`, `tap`, `type`, `press`, `assert` and the
+  `result` verbs, resolving every target through the CLI's own matcher
+  ([#94](https://github.com/sh3lan93/mobile-automator/issues/94)).
+- **`src/assertion/evaluator.js` exports `matches` and `findFirst`**, so the E2E
+  harness resolves tap targets with the same case-insensitive text/label
+  matcher as `mauto assert` instead of a copy of it
+  ([#94](https://github.com/sh3lan93/mobile-automator/issues/94)).
+
 ## [0.31.0]
 
 ### ✨ Added
