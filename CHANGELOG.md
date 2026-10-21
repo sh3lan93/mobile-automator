@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.31.1]
+
+### 🔧 Changed
+
+- **Schema validity is now guarded where every change runs it.** Every
+  `src/schemas/*.json` must parse, be valid Draft-07, compile under Ajv strict
+  mode (which rejects misspelled keywords like `"requird"` that the CLI's
+  options silently accept), and compile with the CLI's own Ajv —
+  `createCliAjv()` in `src/schemas/cli-ajv.js`, now the only place that
+  instance is constructed, with the guard failing on any second construction
+  site. This replaces the old path-filtered CI workflow, which installed
+  `ajv` outside the lockfile and compiled with options the CLI never uses
+  ([#191](https://github.com/sh3lan93/mobile-automator/issues/191)).
+
 ## [0.31.0]
 
 ### ✨ Added

@@ -3,9 +3,9 @@
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
-const Ajv = require('ajv');
 
 const { ResultStore } = require('../../../src/result/store');
+const { createCliAjv } = require('../../../src/schemas/cli-ajv');
 
 const RESULT_SCHEMA_PATH = path.resolve(
   __dirname,
@@ -14,7 +14,7 @@ const RESULT_SCHEMA_PATH = path.resolve(
 
 function ajvValidator() {
   const schema = JSON.parse(fs.readFileSync(RESULT_SCHEMA_PATH, 'utf8'));
-  const ajv = new Ajv({ allErrors: true, strict: false });
+  const ajv = createCliAjv();
   return ajv.compile(schema);
 }
 
