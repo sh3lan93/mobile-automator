@@ -171,6 +171,16 @@ mauto config set android_package <id>     # e.g. com.example.myapp
 mauto config set ios_bundle_id <id>       # e.g. com.example.MyApp
 ```
 
+### Device engine
+
+`engine` selects the robot mobile-mcp drives the device with: `mobilecli` (the default) or `legacy` (adb/uiautomator on Android, go-ios/WDA on real iOS devices; iOS simulators always use `mobilecli`). For Flutter apps on Android — and other apps that draw their own UI — set `legacy`: the default engine drops text-field labels and lists content from hidden tabs in `mauto elements` ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
+
+```bash
+mauto config set engine legacy
+```
+
+Switching clears the pinned device (the engines name Android emulators differently — re-select with `mauto devices use <id>`), and the next device verb restarts the session on the new engine. An exported `MOBILEMCP_LEGACY_ROBOT` overrides the key. See [TROUBLESHOOTING.md](https://github.com/sh3lan93/mobile-automator/blob/main/TROUBLESHOOTING.md) for the Android `DeviceServer` cleanup the hint mentions.
+
 ### Project knowledge
 
 The agent infers and persists the deeper context that makes generated tests project-aware:

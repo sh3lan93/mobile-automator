@@ -109,30 +109,50 @@ mauto session end                             # the next verb picks it up
 mauto devices
 ```
 
+### ❌ Text-field labels are missing, or `elements` lists a hidden tab's content
+
+On the default engine (`mobilecli`), Flutter apps on Android — and other apps
+that draw their own UI — lose the label of a `TextField` (and of a child that
+shares its parent's bounds) in `mauto elements`, and content from an offstage
+`IndexedStack` tab is listed as if it were on screen. Fields cannot be
+targeted by their label, and a target such as `Home` can match a tile on a
+hidden tab before the visible one. The legacy engine reports both correctly
+([#251](https://github.com/sh3lan93/mobile-automator/issues/251), upstream
+[mobilecli#534](https://github.com/mobile-next/mobilecli/issues/534)). Switch
+the workspace to it — see the next entry.
+
 ### ❌ Swipes, element lists or gestures behave differently after upgrading to 0.27
 
 0.27 moved the device engine to mobile-mcp 1.0.5, which drives every device
 through `mobilecli` instead of the previous robots (adb on Android, WDA +
-go-ios on real iOS devices). To compare against the previous robots, opt back
-in and restart the session — the engine picks its robot once per device and
-keeps it for the life of the session daemon. On Android, release the
-`mobilecli` agent first (see the "`uiautomator dump` is killed" entry below),
-or the legacy robot's `elements` fails with `Cannot read properties of
-undefined (reading 'node')`:
+go-ios on real iOS devices). Since 0.32 the workspace `engine` key selects the
+previous robots — `mobilecli` (default) or `legacy`:
 
 ```bash
-mauto session end
+mauto config set engine legacy                # clears the pinned device, prints a hint
 adb -s <serial> shell pkill -f com.mobilenext.mobilecli.DeviceServer   # Android only
-export MOBILEMCP_LEGACY_ROBOT=1
-mauto devices                                 # new daemon, legacy robot
+mauto devices                                 # restarts the session on the legacy robot
 mauto devices use <id>                        # ids change between robots
 ```
 
+The next device verb restarts a session daemon that is running the other
+engine, so no `mauto session end` is needed; `mauto session status` reports
+the running `engine` next to the `resolved_engine` the workspace asks for. On
+Android, release the `mobilecli` agent first (see the "`uiautomator dump` is
+killed" entry below), or the legacy robot's `elements` fails with `Cannot read
+properties of undefined (reading 'node')`. `mauto config set engine mobilecli`
+switches back.
+
+An exported `MOBILEMCP_LEGACY_ROBOT` overrides the key (`1` selects legacy,
+any other value `mobilecli`), and `config set engine` warns when it does.
+The engine reads that variable once per session daemon, so after changing it
+run `mauto session end` before the next verb.
+
 Switching robots changes Android emulator ids (AVD name vs adb serial — see
-the next entry), so re-select the device with `mauto devices use`. In legacy
-mode `mauto crash list` fails with `device not found: emulator-5554` and the
-failure probe gathers no crash evidence: crash reports still go through
-`mobilecli`, which does not know the adb-serial id.
+the next entry), which is why `config set engine` clears a device pinned with
+`mauto devices use`. In legacy mode `mauto crash list` fails with `device not
+found: emulator-5554` and the failure probe gathers no crash evidence: crash
+reports still go through `mobilecli`, which does not know the adb-serial id.
 
 iOS simulators use `mobilecli` either way. If the legacy robot behaves
 correctly and the default does not, please report the difference — with the
@@ -143,9 +163,9 @@ verb, platform and both envelopes — on a
 ### ❌ `Device "emulator-5554" not found` after upgrading to 0.27
 
 Every verb fails with this even though the emulator is running. The 0.27
-engine lists Android emulators by AVD name (`Pixel_9_Pro`), while
-`MOBILEMCP_LEGACY_ROBOT=1` and mauto before 0.27 used the adb serial
-(`emulator-5554`); each rejects the other's id. A device pinned with
+engine lists Android emulators by AVD name (`Pixel_9_Pro`), while the legacy
+engine (`engine: legacy` or `MOBILEMCP_LEGACY_ROBOT=1`) and mauto before 0.27
+used the adb serial (`emulator-5554`); each rejects the other's id. A device pinned with
 `mauto devices use` (or a `--device` in a script) from before the upgrade is
 now unknown. Re-select it — iOS simulator UDIDs are the same either way:
 

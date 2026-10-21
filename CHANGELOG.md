@@ -7,6 +7,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.32.0]
+
+### ✨ Added
+
+- **`engine` workspace config key selects the device robot.** `mauto config
+  set engine legacy` drives the device with mobile-mcp's legacy robot
+  (adb/uiautomator on Android, go-ios/WDA on real iOS devices) without
+  exporting `MOBILEMCP_LEGACY_ROBOT`; `mobilecli` stays the default and iOS
+  simulators use it either way. An exported `MOBILEMCP_LEGACY_ROBOT` still
+  overrides the key. Use it for Flutter apps on Android — and other apps that
+  draw their own UI — where the default engine drops text-field labels and
+  lists offstage tab content in `mauto elements`
+  ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
+- **`mauto session status` reports the engine.** `engine` / `engine_source`
+  are the running daemon's (`null` when none is up); `resolved_engine` /
+  `resolved_engine_source` are what the workspace resolves now (`env`,
+  `config` or `default`). When they differ, the hint says the next device
+  verb restarts the session ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
+
+### 🔧 Changed
+
+- **`config set engine` clears the pinned device when the engine changes.**
+  Device ids differ between engines (Android emulators: AVD name on
+  `mobilecli`, adb serial on legacy), so a `mauto devices use` selection would
+  fail every verb after a switch. The envelope carries `previous` and
+  `device_selection_cleared`, and the hint says to re-pin, that the next
+  device verb restarts the session, and — when switching to legacy — how to
+  release a leftover Android `DeviceServer`. When an exported
+  `MOBILEMCP_LEGACY_ROBOT` overrides the key, the hint says so instead.
+  Setting the engine already in effect has no side effects ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
+- **A session daemon running the wrong engine restarts itself.** The engine
+  is resolved per verb and recorded in the session handle; the next device
+  verb ends a daemon on a stale engine and starts one on the resolved engine,
+  so switching the config key needs no `mauto session end`. Changing a
+  `MOBILEMCP_*` environment variable still does ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
+- **The real-device E2E runs on both engines.** The Android job is a matrix
+  over `mobilecli` and `legacy`, selected through the shipped binary's `config
+  set engine` and verified with `session status`. A known failure may list
+  `engines`; `golden_search_empty` is excused on `mobilecli` only and must
+  pass on legacy, and its entry XPASSes (failing the job) once the upstream
+  fix ships ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
+
+### 🐛 Fixed
+
+- **`mauto elements` decodes entity-escaped labels and collapses unlabeled
+  twins.** The legacy robot reports Flutter labels escaped (`Home&#10;Tab 1
+  of 3`) and every field twice with identical bounds, once labeled and once
+  bare. Labels are now decoded once, and an unlabeled element is dropped when
+  a labeled one shares its bounds — it carried nothing a target could match.
+  Both rules apply on every engine ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
+
+### 🐛 Known issues
+
+- **The default engine still drops TextField labels and reports offstage tab
+  content** until upstream
+  [mobilecli#534](https://github.com/mobile-next/mobilecli/issues/534) ships.
+  Set `engine` to `legacy` for affected apps ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
+
+### 📝 Docs
+
+- `TROUBLESHOOTING.md` makes `mauto config set engine legacy` the recipe for
+  the previous robots and adds an entry for missing text-field labels / hidden
+  tab content. The setup guides recommend the legacy engine for Flutter-style
+  apps, the execute guides say to check `mauto config get engine` when the
+  element list looks wrong, and the docs site documents the key and the new
+  `session status` fields ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
+
 ## [0.31.2]
 
 ### 🔧 Changed

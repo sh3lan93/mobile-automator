@@ -80,7 +80,7 @@ All verbs emit `{ok,data,error,hint,schema_version}`; `--human` is an opt-in rea
 
 - **Device actions:** `elements`, `tap`, `long-press`, `double-tap`, `type <text>`, `swipe`, `press <button>`, `screenshot <path>`, `launch <appId>`, `install <path>`, `uninstall <appId>`, `open-url <url>`, `orientation <orientation>`
 - **Author & verify:** `validate <file>`, `assert <type>`, `result add-step`, `result add-assertion`, `result finalize`
-- **Workspace:** `setup`, `config get <key>`, `config set <key> <value>`
+- **Workspace:** `setup`, `config get <key>`, `config set <key> <value>` (`config set engine` clears the device pin when the engine changes)
 - **Reasoning** (agent pulls on demand): `guide <topic>` (topics: `generate`, `execute`, `setup`); `bootstrap` (verb map + invariants); `schema <name>` (names: `scenario`, `result`, `config`)
 - **Agent integration:** `init --agent <claude|cursor|gemini|copilot|agents|all>` (installs native Agent Skills per host + writes slash-commands/rules + MCP entry for claude/cursor); `mcp` (runs an MCP prompts server exposing guide topics); `doctor` (reports installed hosts whose init-written files are missing or out of date; `guide` prepends a notice for the same condition)
 - **Device session:** `session start|status|end`; `devices` (list); `devices use <id>`; `devices clear`
@@ -179,7 +179,7 @@ This workflow lives here (not in per-issue bodies) so it applies uniformly and s
 
 ## Releasing & version handling
 
-The package is **published on npm**; installs come from the registry. mobile-mcp is pinned as a dependency (`@mobilenext/mobile-mcp@1.0.5`) and spawned from `node_modules` — never fetched at runtime. Since 1.0 it drives every device through `mobilecli`, a native binary shipped as per-platform optional dependencies (`@mobilenext/mobilecli-<os>-<arch>`, no postinstall); `MOBILEMCP_LEGACY_ROBOT=1` restores the previous adb / WDA+go-ios robots for Android and real iOS devices (#199). `package.json` `files` ships only `bin/` and `src/`.
+The package is **published on npm**; installs come from the registry. mobile-mcp is pinned as a dependency (`@mobilenext/mobile-mcp@1.0.5`) and spawned from `node_modules` — never fetched at runtime. Since 1.0 it drives every device through `mobilecli`, a native binary shipped as per-platform optional dependencies (`@mobilenext/mobilecli-<os>-<arch>`, no postinstall); the workspace `engine: legacy` key (or an exported `MOBILEMCP_LEGACY_ROBOT=1`, which wins) restores the previous adb / WDA+go-ios robots for Android and real iOS devices (#199, #251). `package.json` `files` ships only `bin/` and `src/`.
 
 **The pipeline, as it actually behaves:**
 
@@ -218,7 +218,7 @@ npm run lint:schema-additive
 MAUTO_BIN=$(command -v mauto) node sample-app/scripts/run-e2e.mjs   # real-device E2E against an emulator with the sample app installed (see sample-app/README.md)
 ```
 
-The mobile-mcp version is pinned in `package.json` (`@mobilenext/mobile-mcp`, 1.0.5) and resolved from `node_modules` at runtime (see `src/device/mobile-mcp-client.js`). Bump the pin there if you need a newer engine, then run `npm run test:integration` — `mobile-mcp-contract.test.js` fails if the new engine's tool schemas no longer match what `DeviceBridge` sends. The session daemon keeps one mobile-mcp process alive and mobile-mcp caches its robot per device for that process's life, so after changing any `MOBILEMCP_*` env var run `mauto session end` before the next verb.
+The mobile-mcp version is pinned in `package.json` (`@mobilenext/mobile-mcp`, 1.0.5) and resolved from `node_modules` at runtime (see `src/device/mobile-mcp-client.js`). Bump the pin there if you need a newer engine, then run `npm run test:integration` — `mobile-mcp-contract.test.js` fails if the new engine's tool schemas no longer match what `DeviceBridge` sends. The session daemon keeps one mobile-mcp process alive and mobile-mcp caches its robot per device for that process's life, so after changing any `MOBILEMCP_*` env var run `mauto session end` before the next verb. The `engine` config key needs no such step: the daemon handle records its engine, and the next device verb restarts a daemon running a stale one (`session status` reports `engine` vs `resolved_engine`).
 
 Note: `jest.config` `testPathIgnorePatterns` must stay `<rootDir>`-anchored — an unanchored pattern makes `npm test` silently match zero tests inside a worktree checkout.
 
@@ -228,7 +228,7 @@ Tracked under the `production-ready` milestone; worth knowing before you debug s
 
 - Windows is unsupported by declaration — two deliberate enforcement layers (#165): `package.json` `os` (`darwin`, `linux`) refuses the install (npm's `EBADPLATFORM` carries no WSL2 hint — accepted, it is the only gate npm actually enforces), and `src/device/host-support.js` fails device/session verbs with a rich `environment` envelope for what slips past (`--force`, `npm link`). Device-free verbs already installed on a forced Windows machine keep working; real support would need named pipes plus replacements for `ps`, process-group kill and signals.
 - iOS simulators fail every verb with "Agent is not installed on the device" until a one-time `npx -y mobilecli@<pinned> agent install --device <udid>`; the engine's auto-install is unreachable — upstream [mobile-mcp#459](https://github.com/mobile-next/mobile-mcp/issues/459). `src/device/engine-hints.js` prints the command.
-- On the default engine (mobilecli), TextField labels are dropped and offstage `IndexedStack` content leaks into `elements` — [#251](https://github.com/sh3lan93/mobile-automator/issues/251). It is why `golden_search_empty` is a pinned known failure and why `smoke_nav` targets the Home tab as `Tab 1 of 3`.
+- On the default engine (mobilecli), Flutter TextField labels are dropped and offstage `IndexedStack` content leaks into `elements` — [#251](https://github.com/sh3lan93/mobile-automator/issues/251), upstream [mobilecli#534](https://github.com/mobile-next/mobilecli/issues/534). Workaround: the opt-in workspace key `engine: legacy` (`src/device/engine.js`); the default stays affected until mobilecli#534 lands. The E2E runs both engines and `golden_search_empty` is a known failure on the mobilecli leg only (`engines` in `known-failures.json`); `smoke_nav` still targets the Home tab as `Tab 1 of 3`.
 - On Android, mobilecli's `DeviceServer` outlives the session and holds UiAutomation (kills `uiautomator dump`, Appium, legacy `elements`); release with `adb shell pkill -f com.mobilenext.mobilecli.DeviceServer` — upstream [mobilecli#470](https://github.com/mobile-next/mobilecli/issues/470).
 
 ## Conventions
@@ -239,4 +239,4 @@ Tracked under the `production-ready` milestone; worth knowing before you debug s
 
 ## Metadata
 
-Repo: https://github.com/sh3lan93/mobile-automator · Version: see `package.json` (0.31.2 at last edit) · License: Apache 2.0 (note: `LICENSE` currently ships a stub, not the full text — #160) · Status: published on npm since v0.23.8 (2026-08-30).
+Repo: https://github.com/sh3lan93/mobile-automator · Version: see `package.json` (0.32.0 at last edit) · License: Apache 2.0 (note: `LICENSE` currently ships a stub, not the full text — #160) · Status: published on npm since v0.23.8 (2026-08-30).
