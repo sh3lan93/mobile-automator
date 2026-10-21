@@ -2,9 +2,9 @@
 
 const fs = require('fs');
 const path = require('path');
-const Ajv = require('ajv');
 
 const { formatError } = require('../schemas/format-error');
+const { createCliAjv } = require('../schemas/cli-ajv');
 
 // Path to the canonical scenario schema, bundled inside the package.
 // src/scenario/validator.js -> ../schemas/scenario_schema.json
@@ -13,7 +13,7 @@ const DEFAULT_SCHEMA_PATH = path.resolve(__dirname, '../schemas/scenario_schema.
 class ScenarioValidator {
   constructor({ schemaPath = DEFAULT_SCHEMA_PATH } = {}) {
     const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
-    const ajv = new Ajv({ allErrors: true, strict: false });
+    const ajv = createCliAjv();
     this._validateFn = ajv.compile(schema);
   }
 

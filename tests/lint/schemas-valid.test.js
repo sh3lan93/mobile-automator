@@ -15,13 +15,20 @@
 //
 // Here every schema is checked with the lockfile-pinned ajv, three ways: it is
 // valid Draft-07, it compiles under strict mode (which rejects unknown
-// keywords), and it compiles with the CLI's own options.
+// keywords), and it compiles with the CLI's own Ajv — the createCliAjv()
+// factory imported from src/schemas/cli-ajv.js, not a mirrored copy of its
+// options. Mirroring is how the old workflow lied: nothing tied its options to
+// the CLI's, so nothing failed when they disagreed. The suite also pins that
+// cli-ajv.js stays the only construction site in shipped code, so the options
+// cannot drift back into hand-copied literals.
 
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 const Ajv = require('ajv');
 
 const { REPO_ROOT } = require('./docs-corpus');
+const { createCliAjv } = require('../../src/schemas/cli-ajv');
 
 const SCHEMA_DIR = path.join(REPO_ROOT, 'src', 'schemas');
 
@@ -38,6 +45,32 @@ function load(file) {
 describe('src/schemas (#191)', () => {
   test('discovers the schemas (scenario, result, config at least)', () => {
     expect(SCHEMA_FILES.length).toBeGreaterThanOrEqual(3);
+  });
+
+  // What keeps the "the CLI's own Ajv" test below honest: a second Ajv
+  // construction site in shipped code is a new silent divergence from what
+  // the CLI actually validates with — options hand-set per site, nothing
+  // failing when they disagree, which is exactly how this guard's own
+  // mirrored copy would have drifted. Enumerated with `git ls-files` the way
+  // docs-corpus does, for the same reasons: git already knows what belongs to
+  // the repo, and `--others` catches a file written but not yet staged.
+  test('the CLI constructs its Ajv in one place only (src/schemas/cli-ajv.js)', () => {
+    let stdout;
+    try {
+      stdout = execFileSync(
+        'git',
+        ['ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', 'src', 'bin'],
+        { cwd: REPO_ROOT, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }
+      );
+    } catch (err) {
+      throw new Error(`could not enumerate src/ and bin/ with git ls-files: ${err.message}`);
+    }
+    const files = stdout.split('\0').filter((f) => f.endsWith('.js')).sort();
+    const offenders = files.filter((f) => {
+      const text = fs.readFileSync(path.join(REPO_ROOT, f), 'utf8');
+      return f !== 'src/schemas/cli-ajv.js' && /new Ajv\s*\(/.test(text);
+    });
+    expect(offenders).toEqual([]);
   });
 
   describe.each(SCHEMA_FILES)('%s', (file) => {
@@ -65,14 +98,14 @@ describe('src/schemas (#191)', () => {
       expect(() => ajv.compile(load(file))).not.toThrow();
     });
 
-    test("compiles with the CLI's own Ajv options", () => {
-      // Mirrors src/scenario/validator.js and src/config/schema.js.
+    test("compiles with the CLI's own Ajv", () => {
+      // The real factory from src/schemas/cli-ajv.js — imported, not mirrored.
       // With strict: false, Ajv warns (not throws) on the unregistered
       // `date-time` format; that is the CLI's real behaviour, so the options
       // stay as-is and only the console noise is muted here.
       const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
       try {
-        const ajv = new Ajv({ allErrors: true, strict: false });
+        const ajv = createCliAjv();
         expect(() => ajv.compile(load(file))).not.toThrow();
       } finally {
         warn.mockRestore();

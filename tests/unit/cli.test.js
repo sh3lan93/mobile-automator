@@ -44,7 +44,7 @@ const {
 } = require('../../src/cli');
 const selectionStore = require('../../src/device/selection');
 const sessionPaths = require('../../src/device/session-paths');
-const Ajv = require('ajv');
+const { createCliAjv } = require('../../src/schemas/cli-ajv');
 
 const RESULT_SCHEMA_PATH = path.resolve(
   __dirname,
@@ -721,7 +721,7 @@ describe('cli handlers', () => {
       expect(f.envelope.data.run_id).toBe(runId);
 
       const schema = JSON.parse(fs.readFileSync(RESULT_SCHEMA_PATH, 'utf8'));
-      const validate = new Ajv({ allErrors: true, strict: false }).compile(schema);
+      const validate = createCliAjv().compile(schema);
       expect(validate(f.envelope.data)).toBe(true);
     });
 
@@ -769,7 +769,7 @@ describe('cli handlers', () => {
       expect(f.envelope.data.captured_variables).toEqual({ order_id: 'A-1729' });
 
       const schema = JSON.parse(fs.readFileSync(RESULT_SCHEMA_PATH, 'utf8'));
-      expect(new Ajv({ allErrors: true, strict: false }).compile(schema)(f.envelope.data)).toBe(true);
+      expect(createCliAjv().compile(schema)(f.envelope.data)).toBe(true);
     });
 
     test('rejects an unknown observation type with invalid_input', () => {
@@ -822,7 +822,7 @@ describe('cli handlers', () => {
       expect(typeof f.envelope.data.metadata.timestamp).toBe('string');
 
       const schema = JSON.parse(fs.readFileSync(RESULT_SCHEMA_PATH, 'utf8'));
-      expect(new Ajv({ allErrors: true, strict: false }).compile(schema)(f.envelope.data)).toBe(true);
+      expect(createCliAjv().compile(schema)(f.envelope.data)).toBe(true);
     });
 
     test('omitting every metadata flag keeps the previous all-unknown behaviour', () => {
@@ -1001,7 +1001,7 @@ describe('cli handlers', () => {
       });
 
       const schema = JSON.parse(fs.readFileSync(RESULT_SCHEMA_PATH, 'utf8'));
-      expect(new Ajv({ allErrors: true, strict: false }).compile(schema)(f.envelope.data)).toBe(true);
+      expect(createCliAjv().compile(schema)(f.envelope.data)).toBe(true);
     });
 
     test('rejects a non-boolean --pass with invalid_input', () => {
