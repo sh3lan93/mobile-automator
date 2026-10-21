@@ -16,7 +16,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   so a green run said nothing about the verbs users actually call. It now runs
   `mauto` from the packed tarball against a scratch workspace: `setup`,
   `validate`, `launch`, `elements`, `tap`, `type`, `press`, `assert` and the
-  `result` verbs, resolving every target through the CLI's own matcher
+  `result` verbs, resolving every target through the CLI's own matcher. A
+  launch that succeeds but leaves an empty element list fails as engine drift,
+  never as "target not found"
+  ([#94](https://github.com/sh3lan93/mobile-automator/issues/94)).
+- **Sample-app scenarios are platform-agnostic and target on-screen text.**
+  `smoke_nav` proves each tab active by its app-bar header, and the new
+  `golden_search_empty` is compared against a checked-in golden of its
+  normalized result. A scenario listed in `golden/known-failures.json` is
+  expected to fail and fails the job if it passes, so the entry has to be
+  removed once the fix lands; `golden_search_empty` is listed until
+  [#251](https://github.com/sh3lan93/mobile-automator/issues/251) is fixed
   ([#94](https://github.com/sh3lan93/mobile-automator/issues/94)).
 - **`src/assertion/evaluator.js` exports `matches` and `findFirst`**, so the E2E
   harness resolves tap targets with the same case-insensitive text/label
