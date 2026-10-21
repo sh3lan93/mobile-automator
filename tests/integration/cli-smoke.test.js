@@ -200,4 +200,32 @@ describe('cli smoke (integration)', () => {
     expect(parsed.data.key).toBe('mode');
     expect(parsed.data.value).toBe('platform-aware');
   });
+
+  // #251: an engine switch clears the persisted device selection (ids differ
+  // between engines) and says so in the envelope. Device-free.
+  test('config set engine legacy clears the device selection and explains why', () => {
+    const configDir = path.join(workspace, 'mobile-automator');
+    fs.mkdirSync(path.join(configDir, '.session'), { recursive: true });
+    fs.copyFileSync(CONFIG_FIXTURE, path.join(configDir, 'config.json'));
+    const selection = path.join(configDir, '.session', 'selection.json');
+    fs.writeFileSync(selection, JSON.stringify({ device: 'Pixel_9_Pro' }));
+    const env = { ...process.env };
+    delete env.MOBILEMCP_LEGACY_ROBOT;
+
+    const r = runCli(['config', 'set', 'engine', 'legacy'], { cwd: workspace, env });
+    expect(r.status).toBe(0);
+    const parsed = JSON.parse(r.stdout);
+    expect(parsed.ok).toBe(true);
+    expect(parsed.data).toEqual({
+      key: 'engine',
+      value: 'legacy',
+      previous: 'mobilecli',
+      device_selection_cleared: true,
+    });
+    expect(parsed.hint).toContain('`mauto devices use <id>`');
+    expect(fs.existsSync(selection)).toBe(false);
+
+    const again = JSON.parse(runCli(['config', 'set', 'engine', 'legacy'], { cwd: workspace, env }).stdout);
+    expect(again).toEqual({ ok: true, data: { key: 'engine', value: 'legacy' }, schema_version: parsed.schema_version });
+  });
 });

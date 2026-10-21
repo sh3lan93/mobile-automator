@@ -1192,6 +1192,104 @@ describe('cli handlers', () => {
       const r = handleConfigSet({ projectRoot }, 'project_name', 'Demo');
       expect(r.exitKind).toBe('ok');
     });
+
+    // #251: device ids differ between engines (AVD name vs adb serial), so a
+    // switch invalidates a persisted `mauto devices use` selection.
+    describe('engine switch (#251)', () => {
+      const noEnv = {};
+      function fakeStore(initial) {
+        let device = initial;
+        const calls = { clear: 0 };
+        return {
+          calls,
+          read: () => device,
+          write: (_root, id) => (device = String(id)),
+          clear: () => {
+            calls.clear += 1;
+            device = null;
+          },
+        };
+      }
+      const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-engine-'));
+
+      test('a change clears the device selection and reports previous + hint', () => {
+        const projectRoot = tmp();
+        const store = fakeStore('Pixel_9_Pro');
+        const r = handleConfigSet({ projectRoot, env: noEnv, store }, 'engine', 'legacy');
+        expect(r.exitKind).toBe('ok');
+        expect(r.envelope.ok).toBe(true);
+        expect(r.envelope.data).toEqual({
+          key: 'engine',
+          value: 'legacy',
+          previous: 'mobilecli',
+          device_selection_cleared: true,
+        });
+        expect(store.calls.clear).toBe(1);
+        expect(store.read()).toBeNull();
+        expect(handleConfigGet({ projectRoot }, 'engine').envelope.data.value).toBe('legacy');
+        const { hint } = r.envelope;
+        expect(hint).toContain('`mauto devices`');
+        expect(hint).toContain('`mauto devices use');
+        expect(hint).toMatch(/next device verb/);
+        expect(hint).toContain('adb shell pkill -f com.mobilenext.mobilecli.DeviceServer');
+        expect(hint).toContain('mobilecli#470');
+        expect(hint).not.toContain('MOBILEMCP_LEGACY_ROBOT');
+      });
+
+      test('with no persisted selection, device_selection_cleared is false', () => {
+        const store = fakeStore(null);
+        const r = handleConfigSet({ projectRoot: tmp(), env: noEnv, store }, 'engine', 'legacy');
+        expect(r.envelope.data.device_selection_cleared).toBe(false);
+        expect(r.envelope.hint).toMatch(/next device verb/);
+      });
+
+      test('switching back to mobilecli does not carry the legacy-only uiautomator advice', () => {
+        const projectRoot = tmp();
+        handleConfigSet({ projectRoot, env: noEnv, store: fakeStore(null) }, 'engine', 'legacy');
+        const store = fakeStore('emulator-5554');
+        const r = handleConfigSet({ projectRoot, env: noEnv, store }, 'engine', 'mobilecli');
+        expect(r.envelope.data).toEqual({
+          key: 'engine',
+          value: 'mobilecli',
+          previous: 'legacy',
+          device_selection_cleared: true,
+        });
+        expect(r.envelope.hint).not.toContain('pkill');
+      });
+
+      test('setting the effective value again is a plain ok with no side effects', () => {
+        const projectRoot = tmp();
+        // Missing key == the default (mobilecli).
+        const store = fakeStore('Pixel_9_Pro');
+        const r = handleConfigSet({ projectRoot, env: noEnv, store }, 'engine', 'mobilecli');
+        expect(r.envelope.data).toEqual({ key: 'engine', value: 'mobilecli' });
+        expect(r.envelope.hint).toBeUndefined();
+        expect(store.calls.clear).toBe(0);
+        expect(store.read()).toBe('Pixel_9_Pro');
+      });
+
+      test('an exported MOBILEMCP_LEGACY_ROBOT is called out as overriding the key', () => {
+        const store = fakeStore(null);
+        const r = handleConfigSet(
+          { projectRoot: tmp(), env: { MOBILEMCP_LEGACY_ROBOT: '0' }, store },
+          'engine',
+          'legacy'
+        );
+        expect(r.envelope.data.value).toBe('legacy');
+        expect(r.envelope.hint).toMatch(/MOBILEMCP_LEGACY_ROBOT.*overrides/);
+        // The env forces mobilecli: no restart promise, no legacy-only advice.
+        expect(r.envelope.hint).toContain('the mobilecli engine keeps running');
+        expect(r.envelope.hint).not.toMatch(/next device verb restarts/);
+        expect(r.envelope.hint).not.toContain('pkill');
+      });
+
+      test('an invalid engine is rejected before any selection is touched', () => {
+        const store = fakeStore('Pixel_9_Pro');
+        const r = handleConfigSet({ projectRoot: tmp(), env: noEnv, store }, 'engine', 'appium');
+        expect(r.exitKind).toBe('invalid_input');
+        expect(store.calls.clear).toBe(0);
+      });
+    });
   });
 
   describe('handleGuide (raw content / fail on unknown)', () => {

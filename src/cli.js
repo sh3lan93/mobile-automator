@@ -894,7 +894,7 @@ function handleConfigGet({ projectRoot }, key) {
 // Coerce the raw CLI string into the type config_schema.json declares for this
 // key, then validate that one key before writing. Per-key (not whole-document)
 // so unrelated pre-existing drift never blocks an otherwise-valid write.
-function handleConfigSet({ projectRoot }, key, rawValue) {
+function handleConfigSet({ projectRoot, env = process.env, store = selectionStore }, key, rawValue) {
   const value = coerceValue(key, rawValue);
   const { valid, errors } = validateAt(key, value);
   if (!valid) {
@@ -907,8 +907,52 @@ function handleConfigSet({ projectRoot }, key, rawValue) {
       exitKind: 'invalid_input',
     };
   }
+  if (key === 'engine') return setEngine({ projectRoot, env, store }, value);
   configManager.set(projectRoot, key, value);
   return { envelope: ok({ key, value }), exitKind: 'ok' };
+}
+
+// #251: switching the engine invalidates device ids — the default robot lists
+// Android emulators by AVD name, the legacy one by adb serial — so a persisted
+// `devices use` selection is cleared rather than left to fail every verb. The
+// session is NOT ended here: the next device verb restarts a daemon running
+// the stale engine on its own. Setting the effective value again (a missing
+// key is the default) is a plain write with no side effects.
+function setEngine({ projectRoot, env, store }, value) {
+  const engineModule = require('./device/engine');
+  const stored = configManager.get(projectRoot, 'engine');
+  const previous = engineModule.isEngine(stored) ? stored : engineModule.DEFAULT_ENGINE;
+  configManager.set(projectRoot, 'engine', value);
+  if (value === previous) return { envelope: ok({ key: 'engine', value }), exitKind: 'ok' };
+
+  const cleared = store.read(projectRoot) != null;
+  store.clear(projectRoot);
+  // The engine that will actually run: an exported MOBILEMCP_LEGACY_ROBOT
+  // beats the key, so promising a restart onto `value` would be a lie.
+  const resolved = engineModule.resolveEngine({ config: { engine: value }, env });
+  const overridden = resolved.source === 'env';
+  const hints = [
+    overridden
+      ? `MOBILEMCP_LEGACY_ROBOT is exported in this environment and overrides the engine key — the ${resolved.engine} engine keeps running until you unset it.`
+      : `Engine switched from ${previous} to ${value}; the next device verb restarts the session on it.`,
+    'Device ids differ between engines (Android emulators: AVD name on mobilecli, adb serial on legacy) — ' +
+      (cleared
+        ? 'the persisted device selection was cleared; run `mauto devices`, then `mauto devices use <id>` to pin one again.'
+        : 'if you pin a device, take its id from `mauto devices`, then `mauto devices use <id>`.'),
+  ];
+  if (resolved.engine === 'legacy') {
+    hints.push(
+      'On Android, if a verb then fails with a uiautomator error, a leftover mobilecli DeviceServer is holding ' +
+        'UiAutomation: run `adb shell pkill -f com.mobilenext.mobilecli.DeviceServer` (upstream mobilecli#470).'
+    );
+  }
+  return {
+    envelope: ok(
+      { key: 'engine', value, previous, device_selection_cleared: cleared },
+      hints.join(' ')
+    ),
+    exitKind: 'ok',
+  };
 }
 
 // --- Slice 5: telemetry consent surface -----------------------------------
