@@ -22,7 +22,7 @@ import { fileURLToPath } from 'node:url';
 const require = createRequire(import.meta.url);
 const { createMauto } = require('./lib/mauto.js');
 const { runScenario, makeRunId } = require('./lib/executor.js');
-const { normalizeResult, diffNormalized } = require('./lib/normalize-result.js');
+const { goldenProblems } = require('./lib/golden.js');
 const { classify, isJobFailure, outcomeMessage } = require('./lib/known-failures.js');
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -104,28 +104,6 @@ function nextRunId() {
   return id;
 }
 
-// Problems with the golden comparison, as report lines; empty when there are
-// none. A missing fixture is always a problem. The diff only runs when
-// `compare` is set (the run passed): a run that stopped early differs from the
-// golden by construction, and listing every unreached step would bury the
-// failure that matters.
-function goldenCheck(scenarioId, resultPath, { compare }) {
-  const goldenPath = path.join(GOLDEN_DIR, `${scenarioId}.result.json`);
-  if (!fs.existsSync(goldenPath)) {
-    const lines = [`golden fixture missing: sample-app/scenarios/golden/${scenarioId}.result.json`];
-    if (fs.existsSync(resultPath)) {
-      log(`no golden for ${scenarioId}. Normalized result of this run:`);
-      console.log(JSON.stringify(normalizeResult(JSON.parse(fs.readFileSync(resultPath, 'utf8'))), null, 2));
-      lines.push('once a PASSING run is the intended behaviour, save its normalized JSON (printed above) as that file');
-    }
-    return lines;
-  }
-  if (!compare) return [];
-  const expected = JSON.parse(fs.readFileSync(goldenPath, 'utf8'));
-  const actual = normalizeResult(JSON.parse(fs.readFileSync(resultPath, 'utf8')));
-  return diffNormalized(expected, actual).map((line) => `golden mismatch: ${line}`);
-}
-
 async function main() {
   log(`scratch project: ${projectDir}`);
   await mauto.run(['setup', '--mode', 'agnostic']);
@@ -175,12 +153,18 @@ async function main() {
       passed = r.status === 'passed';
       failedStep = r.failedStep;
       // Golden problems are kept apart from the run's outcome so a known
-      // failure can never absorb them: a missing fixture is always reported
-      // and always fails the job, and a mismatch is only meaningful for a run
-      // that got all the way through.
-      if (fs.existsSync(path.join(GOLDEN_DIR, `${id}.result.json`)) || id.startsWith('golden_')) {
-        golden = goldenCheck(id, r.resultPath, { compare: passed });
-      }
+      // failure can never absorb them: the gate is the scenario's `golden`
+      // tag (lib/golden.js — loud in both directions), a missing fixture is
+      // always reported and always fails the job, and a mismatch is only
+      // meaningful for a run that got all the way through.
+      golden = goldenProblems({
+        scenarioId: id,
+        tags: scenario.tags,
+        goldenDir: GOLDEN_DIR,
+        resultPath: r.resultPath,
+        passed,
+        log,
+      });
     } catch (err) {
       // A recording verb (`result ...`) failing is a harness-level fault.
       details = [`harness error: ${err.message}`];

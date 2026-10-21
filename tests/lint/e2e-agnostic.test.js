@@ -18,7 +18,10 @@
 //   4. the harness has no package.json, so no private dependency pins;
 //   5. every known failure is pinned to an issue, a reason, and the step it
 //      fails at — an entry that excuses "failed somewhere" hid a launch crash
-//      behind #251 on a real device.
+//      behind #251 on a real device;
+//   6. the golden gate is the scenario's `golden` tag — a `golden_` id prefix
+//      was a convention nobody declared anywhere, so a renamed scenario
+//      silently lost its golden: no missing-fixture failure, no comparison.
 
 const fs = require('fs');
 const path = require('path');
@@ -185,5 +188,31 @@ describe('E2E known failures — each pinned to an issue, a reason and a step', 
     expect(typeof entry.failing_step).toBe('string');
     const steps = byId.has(id) ? byId.get(id).steps.map((s) => s.id) : [];
     expect(steps).toContain(entry.failing_step);
+  });
+});
+
+// --- 6. The golden gate is the scenario's `golden` tag ---------------------------
+
+// Which scenarios get a golden comparison is declared data (the scenario's
+// `tags`, checked by tests/unit/e2e-harness/golden.test.js against
+// lib/golden.js), so the runner must hand the tags through — not re-derive the
+// decision from the id.
+
+describe('E2E harness — the golden gate is the golden tag', () => {
+  const runnerSrc = read(path.join(SCRIPTS, 'run-e2e.mjs'));
+
+  test('no file under sample-app/scripts keys the golden gate on a golden_ id prefix', () => {
+    const offenders = [];
+    for (const file of scriptFiles) {
+      read(file).split('\n').forEach((line, i) => {
+        if (/startsWith\(\s*['"]golden_/.test(line)) offenders.push(`${rel(file)}:${i + 1}: ${line.trim()}`);
+      });
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  test('run-e2e.mjs hands the scenario tags to the golden decision (lib/golden.js)', () => {
+    expect(runnerSrc).toMatch(/goldenProblems\(/);
+    expect(runnerSrc).toMatch(/tags:\s*scenario\.tags/);
   });
 });

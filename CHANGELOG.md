@@ -25,7 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sample-app scenarios are platform-agnostic and target on-screen text.**
   `smoke_nav` proves each tab is active by its app-bar header. The new
   `golden_search_empty` is compared against a checked-in golden of its
-  normalized result, generated from a real run
+  normalized result, generated from a real run. The `golden` tag — not a
+  naming convention on the id — declares which scenarios get a golden, and the
+  gate is loud in both directions: a tagged scenario without its fixture fails
+  the job, and so does a fixture for an untagged one
   ([#94](https://github.com/sh3lan93/mobile-automator/issues/94)).
 - **Known failures are pinned to the step they fail at.** A scenario listed in
   `sample-app/scenarios/golden/known-failures.json` is excused (XFAIL) only

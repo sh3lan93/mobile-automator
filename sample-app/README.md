@@ -33,7 +33,7 @@ A launch that succeeds but leaves the element list empty fails with *engine retu
 Scenarios:
 
 - `smoke_nav` — switches between the three bottom-nav tabs and checks each tab's app-bar header. The Home tab is targeted by its tab label `Tab 1 of 3`, because on the default engine `Home` first matches the leaked "Home & Kitchen" tile ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
-- `golden_search_empty` — searches for a query with no matches on More. Its result is normalized (only steps, assertions and their statuses; no run ids, timings, device data or messages) and compared with `scenarios/golden/golden_search_empty.result.json`.
+- `golden_search_empty` — searches for a query with no matches on More. Its result is normalized (only steps, assertions and their statuses; no run ids, timings, device data or messages) and compared with `scenarios/golden/golden_search_empty.result.json`. Which scenarios get a golden is declared by the scenario's `golden` tag, not a naming convention: a tagged scenario without its fixture fails the job, and so does a fixture for an untagged one.
 
 ### Known failures (xfail / xpass)
 
