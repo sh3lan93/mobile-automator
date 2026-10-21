@@ -1,0 +1,45 @@
+{
+  "_provenance": "Generated 2026-10-21 from a real run on a Pixel 9 Pro AVD with MOBILEMCP_LEGACY_ROBOT=1, because the default engine cannot reach this scenario until #251 is fixed (it drops the 'Search products' TextField label). Normalized by sample-app/scripts/lib/normalize-result.js; top-level keys starting with '_' are ignored by the comparison.",
+  "scenario_id": "golden_search_empty",
+  "status": "passed",
+  "total_assertions": 2,
+  "passed_assertions": 2,
+  "failed_assertions": 0,
+  "step_count": 6,
+  "steps_executed": [
+    {
+      "step_id": "launch",
+      "status": "passed"
+    },
+    {
+      "step_id": "wait_home",
+      "status": "passed"
+    },
+    {
+      "step_id": "tap_more",
+      "status": "passed"
+    },
+    {
+      "step_id": "tap_search",
+      "status": "passed"
+    },
+    {
+      "step_id": "type_query",
+      "status": "passed"
+    },
+    {
+      "step_id": "hide_keyboard",
+      "status": "passed"
+    }
+  ],
+  "assertion_results": [
+    {
+      "assertion_id": "empty_state_shown",
+      "status": "passed"
+    },
+    {
+      "assertion_id": "settings_still_present",
+      "status": "passed"
+    }
+  ]
+}

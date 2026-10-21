@@ -282,4 +282,8 @@ function evaluate(assertion = {}, ctx = {}) {
   return result(type, true, pass, message);
 }
 
-module.exports = { MECHANICAL_TYPES, evaluate };
+// `matches`/`findFirst` are exported for the real-device E2E harness
+// (sample-app/scripts/lib/resolve.js), which resolves tap targets with THIS
+// matcher so the harness and `mauto assert` can never disagree about what a
+// target string means (#94).
+module.exports = { MECHANICAL_TYPES, evaluate, matches, findFirst };

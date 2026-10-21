@@ -251,3 +251,35 @@ describe('evaluate — non-mechanical (needs agent)', () => {
     expect(r.mechanical).toBe(false);
   });
 });
+
+// The real-device E2E harness (sample-app/scripts/lib/resolve.js) resolves tap
+// targets through the CLI's OWN matcher rather than a copy of it, so a change
+// to how `assert` matches is a change to how the harness taps. Pin the export.
+describe('matcher exports (consumed by the real-device E2E harness, #94)', () => {
+  const evaluator = require('../../../src/assertion/evaluator');
+
+  test('matches and findFirst are exported functions', () => {
+    expect(typeof evaluator.matches).toBe('function');
+    expect(typeof evaluator.findFirst).toBe('function');
+  });
+
+  test('matches is a case-insensitive substring over text', () => {
+    expect(evaluator.matches(el('Sample Shop'), 'sample shop')).toBe(true);
+    expect(evaluator.matches(el('Sample Shop'), 'SHOP')).toBe(true);
+    expect(evaluator.matches(el('Sample Shop'), 'Cart')).toBe(false);
+  });
+
+  test('matches falls back to the accessibility label when text is absent', () => {
+    const nav = el(null, { accessibility_label: 'More\nTab 3 of 3' });
+    expect(evaluator.matches(nav, 'more')).toBe(true);
+    expect(evaluator.matches(nav, 'tab 3')).toBe(true);
+  });
+
+  test('findFirst returns the first match in list order, or null', () => {
+    const header = el('More');
+    const nav = el(null, { accessibility_label: 'More\nTab 3 of 3' });
+    expect(evaluator.findFirst([header, nav], 'more')).toBe(header);
+    expect(evaluator.findFirst([nav, header], 'more')).toBe(nav);
+    expect(evaluator.findFirst([header, nav], 'Settings')).toBeNull();
+  });
+});

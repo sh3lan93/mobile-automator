@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.31.2]
+
+### 🔧 Changed
+
+- **The real-device E2E now drives the shipped `mauto` CLI.** The sample-app
+  smoke run used its own MCP client, its own mobile-mcp pin and OS element ids,
+  so a green run said nothing about the verbs users actually call. CI now packs
+  the npm tarball, installs it into a temp prefix and runs
+  `sample-app/scripts/run-e2e.mjs` against it on an emulator: `setup`,
+  `validate`, `launch`, `elements`, `tap`, `type`, `press`, `screenshot`,
+  `assert` and the `result` verbs, with every target resolved through the
+  CLI's own matcher. A launch that succeeds but leaves an empty element list
+  fails as engine drift, never as "target not found". Screenshots, result
+  files and the session log are uploaded as a CI artifact even when the run
+  fails ([#94](https://github.com/sh3lan93/mobile-automator/issues/94)).
+- **Sample-app scenarios are platform-agnostic and target on-screen text.**
+  `smoke_nav` proves each tab is active by its app-bar header. The new
+  `golden_search_empty` is compared against a checked-in golden of its
+  normalized result, generated from a real run. The `golden` tag — not a
+  naming convention on the id — declares which scenarios get a golden, and the
+  gate is loud in both directions: a tagged scenario without its fixture fails
+  the job, and so does a fixture for an untagged one
+  ([#94](https://github.com/sh3lan93/mobile-automator/issues/94)).
+- **Known failures are pinned to the step they fail at.** A scenario listed in
+  `sample-app/scenarios/golden/known-failures.json` is excused (XFAIL) only
+  when its first failed step is the entry's `failing_step`. Failing anywhere
+  else is a plain failure, and passing (XPASS) fails the job until the entry
+  is removed. Without the pin, a launch crash on a real device had been
+  excused as the search bug
+  ([#94](https://github.com/sh3lan93/mobile-automator/issues/94)).
+- **`src/assertion/evaluator.js` exports `matches` and `findFirst`**, so the E2E
+  harness resolves tap targets with the same case-insensitive text/label
+  matcher as `mauto assert` instead of a copy of it
+  ([#94](https://github.com/sh3lan93/mobile-automator/issues/94)).
+
+### 🐛 Known issues
+
+- **On the default engine, TextField labels are missing and offstage tab
+  content leaks into `mauto elements`.** The first real-device run of the
+  new E2E surfaced this. Fields are hard to target by label, and a target such
+  as `Home` can match a tile from a hidden tab before the visible one.
+  `golden_search_empty` is a pinned known failure until it is fixed; under
+  `MOBILEMCP_LEGACY_ROBOT=1` it passes
+  ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
+
+### 📝 Docs
+
+- `sample-app/README.md` explains how the E2E works, the known-failure
+  outcomes and how to run it locally. `TROUBLESHOOTING.md` covers "engine
+  returned zero elements after a successful launch"
+  ([#94](https://github.com/sh3lan93/mobile-automator/issues/94)).
+
 ## [0.31.1]
 
 ### 🔧 Changed

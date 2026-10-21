@@ -1,0 +1,7 @@
+{
+  "golden_search_empty": {
+    "issue": 251,
+    "reason": "default engine (mobilecli) drops TextField labels, so \"Search products\" is unreachable; see #251 / mobile-next/mobilecli#534",
+    "failing_step": "tap_search"
+  }
+}
