@@ -28,8 +28,8 @@ describe('buildEngineEnv (#212)', () => {
   });
 
   test('carries through other baseEnv keys', () => {
-    const env = buildEngineEnv({ baseEnv: { PATH: '/bin', HOME: '/h', MOBILEMCP_DISABLE_TELEMETRY: '1' } });
-    expect(env).toMatchObject({ PATH: '/bin', HOME: '/h', MOBILEMCP_DISABLE_TELEMETRY: '1' });
+    const env = buildEngineEnv({ baseEnv: { PATH: '/bin', HOME: '/h', MOBILE_MCP_EXTRA: 'x' } });
+    expect(env).toMatchObject({ PATH: '/bin', HOME: '/h', MOBILE_MCP_EXTRA: 'x' });
   });
 
   test('does not mutate baseEnv and returns a distinct object', () => {
@@ -44,5 +44,32 @@ describe('buildEngineEnv (#212)', () => {
     const env = buildEngineEnv();
     expect(env).not.toBe(process.env);
     expect(env.PATH).toBe(process.env.PATH);
+  });
+});
+
+describe('buildEngineEnv engine telemetry (#213)', () => {
+  test('defaults MOBILEMCP_DISABLE_TELEMETRY to "1" when unset', () => {
+    const env = buildEngineEnv({ baseEnv: { PATH: '/bin' } });
+    expect(env.MOBILEMCP_DISABLE_TELEMETRY).toBe('1');
+  });
+
+  test('preserves a user-set value verbatim', () => {
+    const env = buildEngineEnv({ baseEnv: { MOBILEMCP_DISABLE_TELEMETRY: 'yes' } });
+    expect(env.MOBILEMCP_DISABLE_TELEMETRY).toBe('yes');
+  });
+
+  test('preserves a user-set empty string, the engine opt-in', () => {
+    const env = buildEngineEnv({ baseEnv: { MOBILEMCP_DISABLE_TELEMETRY: '' } });
+    expect(env.MOBILEMCP_DISABLE_TELEMETRY).toBe('');
+  });
+
+  test('MAUTO_TELEMETRY=0 overrides an engine opt-in', () => {
+    const env = buildEngineEnv({ baseEnv: { MAUTO_TELEMETRY: '0', MOBILEMCP_DISABLE_TELEMETRY: '' } });
+    expect(env.MOBILEMCP_DISABLE_TELEMETRY).toBe('1');
+  });
+
+  test('DO_NOT_TRACK=1 overrides an engine opt-in', () => {
+    const env = buildEngineEnv({ baseEnv: { DO_NOT_TRACK: '1', MOBILEMCP_DISABLE_TELEMETRY: '' } });
+    expect(env.MOBILEMCP_DISABLE_TELEMETRY).toBe('1');
   });
 });

@@ -70,6 +70,29 @@ function resolveTelemetry({ env = process.env, config = null } = {}) {
   return { enabled: true, reason: 'enabled' };
 }
 
+// The device engine's own telemetry (#213). mobile-mcp sends a PostHog event
+// per tool call and a scarf.sh pixel per process unless
+// MOBILEMCP_DISABLE_TELEMETRY is set, and its gate is a plain truthiness check:
+// any non-empty string turns it off, and only an empty string leaves it on.
+//
+// mauto's own telemetry is opt-in, so an engine mauto spawns must not be
+// opt-out — the default here is off. The user's opt-in is the engine's own
+// variable, passed through verbatim the way #212 passes through
+// MOBILEMCP_ALLOW_UNSAFE_URLS: if they set it at all, even to '', they meant
+// it. The env kill switches still win, because they promise "nothing leaves
+// this machine", and a promise with an exception is not one.
+//
+// One function decides, and both buildEngineEnv (what the engine receives) and
+// `mauto telemetry status` (what the user is told) call it, so the env and the
+// report cannot disagree.
+function resolveEngineTelemetry(env = process.env) {
+  const killed = envKillSwitch(env);
+  if (killed) return { disableValue: '1', enabled: false, reason: killed };
+  const value = env && env.MOBILEMCP_DISABLE_TELEMETRY;
+  if (value === undefined) return { disableValue: '1', enabled: false, reason: 'default_off' };
+  return { disableValue: value, enabled: value === '', reason: 'user_env' };
+}
+
 // Memoised per project root. resolveLevels() is re-derived per record() call
 // because it reads only env; this one reads config.json, and a file read per
 // event is not acceptable on a path that runs on every verb.
@@ -135,6 +158,7 @@ module.exports = {
   REASONS,
   envKillSwitch,
   resolveTelemetry,
+  resolveEngineTelemetry,
   decideForProject,
   setEnabled,
   _resetMemo,
