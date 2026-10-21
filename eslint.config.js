@@ -9,12 +9,13 @@ module.exports = [
     // Nested worktrees (.claude/, .worktrees/) hold stale copies of this repo,
     // the Flutter fixture is not our JS, and site/ + coverage/ are generated.
     // sample-app/scripts/ is the one piece of the fixture that is our JS.
+    // `sample-app/*` (not `sample-app/**`): a `**` ignore also matches
+    // scripts/'s own subdirectories, and a negation cannot re-include a file
+    // whose parent directory is ignored, so scripts/ was silently skipped.
     ignores: [
       '**/node_modules/**',
-      'sample-app/**',
+      'sample-app/*',
       '!sample-app/scripts/',
-      '!sample-app/scripts/**',
-      'sample-app/scripts/node_modules/**',
       '.claude/**',
       '.worktrees/**',
       'coverage/**',
