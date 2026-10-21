@@ -43,6 +43,66 @@ describe('classify', () => {
   });
 });
 
+describe('classify — per-engine entries (#251)', () => {
+  const scoped = {
+    golden_search_empty: { issue: 251, reason: 'r', failing_step: 'tap_search', engines: ['mobilecli'] },
+  };
+
+  test('an entry scoped to the current engine excuses a failure at its failing_step', () => {
+    expect(
+      classify({ scenarioId: 'golden_search_empty', passed: false, failedStep: 'tap_search', knownFailures: scoped, engine: 'mobilecli' })
+    ).toBe('xfail');
+  });
+
+  test('an entry scoped to the current engine still makes a pass an xpass', () => {
+    expect(
+      classify({ scenarioId: 'golden_search_empty', passed: true, failedStep: null, knownFailures: scoped, engine: 'mobilecli' })
+    ).toBe('xpass');
+  });
+
+  test('on another engine the entry is ignored: passing is a plain pass', () => {
+    expect(
+      classify({ scenarioId: 'golden_search_empty', passed: true, failedStep: null, knownFailures: scoped, engine: 'legacy' })
+    ).toBe('pass');
+  });
+
+  test('on another engine the entry is ignored: failing, even at failing_step, is fail', () => {
+    expect(
+      classify({ scenarioId: 'golden_search_empty', passed: false, failedStep: 'tap_search', knownFailures: scoped, engine: 'legacy' })
+    ).toBe('fail');
+  });
+
+  test('an entry without engines applies to every engine', () => {
+    for (const engine of ['mobilecli', 'legacy']) {
+      expect(classify({ scenarioId: 'golden_search_empty', passed: true, failedStep: null, knownFailures, engine })).toBe('xpass');
+    }
+  });
+
+  test('an engine-scoped entry with no current engine is a harness error, not a silent pass', () => {
+    expect(() =>
+      classify({ scenarioId: 'golden_search_empty', passed: true, failedStep: null, knownFailures: scoped })
+    ).toThrow(/engine/);
+  });
+
+  test('outcomeMessage ignores an entry scoped to another engine', () => {
+    expect(
+      outcomeMessage({ scenarioId: 'golden_search_empty', outcome: 'fail', knownFailures: scoped, failedStep: 'tap_search', engine: 'legacy' })
+    ).toBe('golden_search_empty: FAIL');
+  });
+
+  test('outcomeMessage names the engine an xfail is scoped to', () => {
+    const msg = outcomeMessage({
+      scenarioId: 'golden_search_empty',
+      outcome: 'xfail',
+      knownFailures: scoped,
+      failedStep: 'tap_search',
+      engine: 'mobilecli',
+    });
+    expect(msg).toContain('XFAIL');
+    expect(msg).toContain('mobilecli');
+  });
+});
+
 describe('isJobFailure', () => {
   test('fail and xpass fail the job; pass and xfail do not', () => {
     expect(isJobFailure('fail')).toBe(true);

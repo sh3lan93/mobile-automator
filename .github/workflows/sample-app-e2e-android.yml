@@ -15,9 +15,16 @@ on:
 
 jobs:
   smoke-android:
-    name: Android emulator E2E via the shipped mauto CLI (API 33)
+    name: Android emulator E2E via the shipped mauto CLI (API 33, ${{ matrix.engine }} engine)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # One leg per device engine (#251). The engine is applied by the harness
+    # with `mauto config set engine`, and known-failures.json entries carry the
+    # engines they apply to, so each leg is held to its own expectations.
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [mobilecli, legacy]
 
     steps:
       - uses: actions/checkout@v7
@@ -72,6 +79,7 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         env:
           E2E_ARTIFACTS_DIR: ${{ runner.temp }}/e2e-artifacts
+          E2E_ENGINE: ${{ matrix.engine }}
           MOBILEMCP_DISABLE_TELEMETRY: '1'
         with:
           api-level: 33
@@ -87,6 +95,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: e2e-android-artifacts
+          name: e2e-android-artifacts-${{ matrix.engine }}
           path: ${{ runner.temp }}/e2e-artifacts
           if-no-files-found: warn

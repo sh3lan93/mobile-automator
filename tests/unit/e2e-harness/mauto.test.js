@@ -35,6 +35,20 @@ describe('createMauto().run', () => {
     expect(env.MAUTO_RUN_ID).toBe('run_20260101_000000');
   });
 
+  test('scrubs MOBILEMCP_LEGACY_ROBOT so the engine comes from the workspace config (#251)', async () => {
+    const saved = process.env.MOBILEMCP_LEGACY_ROBOT;
+    process.env.MOBILEMCP_LEGACY_ROBOT = '1';
+    try {
+      const { exec, calls } = fakeExec({ stdout: envelope({ ok: true, data: null }), stderr: '', code: 0 });
+      const mauto = createMauto({ bin: 'mauto', cwd: '/p', env: { MOBILEMCP_LEGACY_ROBOT: '1' }, exec });
+      await mauto.run(['elements'], { env: { MOBILEMCP_LEGACY_ROBOT: '1' } });
+      expect(Object.prototype.hasOwnProperty.call(calls[0].options.env, 'MOBILEMCP_LEGACY_ROBOT')).toBe(false);
+    } finally {
+      if (saved === undefined) delete process.env.MOBILEMCP_LEGACY_ROBOT;
+      else process.env.MOBILEMCP_LEGACY_ROBOT = saved;
+    }
+  });
+
   test('ok:false throws a MautoError naming the verb, error, hint and stderr tail', async () => {
     const { exec } = fakeExec({
       stdout: envelope({ ok: false, error: { kind: 'device', message: 'no device' }, hint: 'connect one' }),
