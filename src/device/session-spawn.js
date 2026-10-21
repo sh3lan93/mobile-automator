@@ -28,6 +28,11 @@ async function spawnDaemon({
   projectRoot,
   device = null,
   idleMs = undefined,
+  // The engine the caller resolved (src/device/engine.js) and where it came
+  // from (#251). The daemon passes `engine` to createCall and records both in
+  // its handle, which is how a later verb spots a daemon on a stale engine.
+  engine = null,
+  engineSource = null,
   spawn = childProcess.spawn,
   readyTimeoutMs = DEFAULT_READY_TIMEOUT_MS,
   pollMs = DEFAULT_POLL_MS,
@@ -43,6 +48,12 @@ async function spawnDaemon({
   const env = { ...process.env, MAUTO_SESSION_PROJECT_ROOT: projectRoot };
   if (device) env.MAUTO_SESSION_DEVICE = device;
   if (idleMs !== undefined && idleMs !== null) env.MAUTO_SESSION_IDLE_MS = String(idleMs);
+  // Never inherited: a value leaking in from the parent's env would make the
+  // daemon record an engine nobody resolved for it.
+  delete env.MAUTO_SESSION_ENGINE;
+  delete env.MAUTO_SESSION_ENGINE_SOURCE;
+  if (engine) env.MAUTO_SESSION_ENGINE = engine;
+  if (engine && engineSource) env.MAUTO_SESSION_ENGINE_SOURCE = engineSource;
 
   // Must precede the spawn: the fd has to exist before the child can inherit it.
   // Never null — a workspace we cannot write to yields the `stdio: 'ignore'`

@@ -21,6 +21,12 @@
       "enum": ["platform-aware", "platform-agnostic"],
       "description": "Selected at setup. Configs predating this field are treated as platform-aware."
     },
+    "engine": {
+      "type": "string",
+      "enum": ["mobilecli", "legacy"],
+      "default": "mobilecli",
+      "description": "Which mobile-mcp device robot drives the device. `mobilecli` (default) is mobile-mcp's mobilecli robot. `legacy` selects mobile-mcp's legacy robot (MOBILEMCP_LEGACY_ROBOT=1) — adb/uiautomator on Android, go-ios/WDA on real iOS devices (iOS simulators always use mobilecli). An exported MOBILEMCP_LEGACY_ROBOT overrides this key. Device ids differ between engines (AVD name vs adb serial), so re-run `mauto devices` after switching. A running session on the other engine is restarted by the next device verb. See #251."
+    },
     "project_name": { "$ref": "#/definitions/nullableString" },
     "platform": { "type": "string", "description": "Detected platform (platform-aware mode)." },
     "platform_details": { "type": "string" },

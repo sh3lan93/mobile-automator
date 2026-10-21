@@ -1246,6 +1246,9 @@ async function handleSessionStart(
     spawn = require('./device/session-spawn'),
     client = require('./device/session-client'),
     readHandle: readHandleDevice = require('./device/resolve-connection').readHandleDevice,
+    // #251: the workspace's engine, and the one a live daemon records.
+    resolveEngine = require('./device/engine').readEngine,
+    readHandleEngine = (root) => require('./device/engine').handleEngine(readHandle(root)),
   },
   opts = {}
 ) {
@@ -1280,13 +1283,23 @@ async function handleSessionStart(
         exitKind: 'device',
       };
     }
+    // The live daemon's engine, not the resolved one: reporting the resolved
+    // engine here would repeat #148's lie for the robot instead of the device.
+    // A stale engine is not an error — the next device verb restarts the
+    // daemon on the resolved one — but it is worth saying.
+    const running = readHandleEngine(projectRoot);
+    const resolved = resolveEngine(projectRoot);
     return {
-      envelope: ok({ started: false, already_running: true, device }),
+      envelope: ok(
+        { started: false, already_running: true, device, engine: running },
+        running !== resolved.engine ? staleEngineHint(running, resolved) : null
+      ),
       exitKind: 'ok',
     };
   }
 
-  const started = await connection.startSession({ projectRoot, device, idleMs, spawn });
+  const { engine, source: engineSource } = resolveEngine(projectRoot);
+  const started = await connection.startSession({ projectRoot, device, idleMs, engine, engineSource, spawn });
   if (!started) {
     // The daemon's stdout/stderr are captured to the workspace log, so the
     // "why" of a startup crash exists on disk — but only this hint tells the
@@ -1298,17 +1311,31 @@ async function handleSessionStart(
       exitKind: 'device',
     };
   }
-  return { envelope: ok({ started: true, device }), exitKind: 'ok' };
+  return { envelope: ok({ started: true, device, engine }), exitKind: 'ok' };
+}
+
+// A live daemon on a different engine than the workspace resolves (#251).
+function staleEngineHint(running, resolved) {
+  return `The running session uses the ${running} engine, but this workspace resolves ${resolved.engine} (from ${resolved.source}); the next device verb will restart the session on ${resolved.engine}.`;
 }
 
 async function handleSessionStatus(
-  { projectRoot, client = require('./device/session-client') } = {}
+  {
+    projectRoot,
+    client = require('./device/session-client'),
+    resolveEngine = require('./device/engine').readEngine,
+  } = {}
 ) {
-  const status = await connection.sessionStatus(projectRoot, { client });
-  const hint =
-    status.reason === 'engine_exited'
-      ? `The device engine exited; this session is shutting down and the next verb starts a fresh one. ${connection.daemonLogHint(projectRoot)}`
-      : null;
+  const status = await connection.sessionStatus(projectRoot, { client, resolveEngine });
+  let hint = null;
+  if (status.reason === 'engine_exited') {
+    hint = `The device engine exited; this session is shutting down and the next verb starts a fresh one. ${connection.daemonLogHint(projectRoot)}`;
+  } else if (status.running && status.engine !== status.resolved_engine) {
+    hint = staleEngineHint(status.engine, {
+      engine: status.resolved_engine,
+      source: status.resolved_engine_source,
+    });
+  }
   return { envelope: ok(status, hint), exitKind: 'ok' };
 }
 

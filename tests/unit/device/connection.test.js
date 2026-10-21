@@ -57,15 +57,52 @@ describe('connection', () => {
     const fs = require('fs');
     const os = require('os');
 
+    const resolveEngine = () => ({ engine: 'mobilecli', source: 'default' });
+
     test('merges the daemon-reported status with the workspace log path', async () => {
       const client = { getSessionStatus: async () => ({ running: true, in_flight: 2, device: 'A' }) };
-      expect(await sessionStatus('/x', { client })).toEqual({
+      expect(await sessionStatus('/x', { client, resolveEngine })).toEqual({
         running: true,
         reason: null,
         in_flight: 2,
         device: 'A',
         log_path: paths.logFilePath('/x'),
         session_id: null,
+        // No handle: a running daemon without a recorded engine is mobilecli.
+        engine: 'mobilecli',
+        engine_source: null,
+        resolved_engine: 'mobilecli',
+        resolved_engine_source: 'default',
+      });
+    });
+
+    // #251: a live daemon reports the engine it was spawned with (handle), and
+    // the workspace reports what the next spawn would use (resolution).
+    test('reports engine + engine_source from the handle of a running daemon', async () => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-conn-status-'));
+      fs.mkdirSync(paths.sessionDir(root), { recursive: true });
+      fs.writeFileSync(paths.handlePath(root), JSON.stringify({ pid: 1, engine: 'legacy', engine_source: 'config' }));
+      const client = { getSessionStatus: async () => ({ running: true, in_flight: 0, device: null }) };
+      const s = await sessionStatus(root, { client, resolveEngine: () => ({ engine: 'legacy', source: 'config' }) });
+      expect(s).toMatchObject({
+        engine: 'legacy',
+        engine_source: 'config',
+        resolved_engine: 'legacy',
+        resolved_engine_source: 'config',
+      });
+    });
+
+    test('reports engine null when not running, but still the resolved engine', async () => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-conn-status-'));
+      fs.mkdirSync(paths.sessionDir(root), { recursive: true });
+      fs.writeFileSync(paths.handlePath(root), JSON.stringify({ pid: 1, engine: 'legacy' }));
+      const client = { getSessionStatus: async () => ({ running: false, in_flight: null, device: null }) };
+      const s = await sessionStatus(root, { client, resolveEngine: () => ({ engine: 'legacy', source: 'env' }) });
+      expect(s).toMatchObject({
+        engine: null,
+        engine_source: null,
+        resolved_engine: 'legacy',
+        resolved_engine_source: 'env',
       });
     });
 
@@ -75,13 +112,17 @@ describe('connection', () => {
     // makes the log worth reading. Computing it locally keeps it available.
     test('reports log_path even when no daemon is running (a dead daemon cannot tell us where its log is)', async () => {
       const client = { getSessionStatus: async () => ({ running: false, in_flight: null, device: null }) };
-      expect(await sessionStatus('/x', { client })).toEqual({
+      expect(await sessionStatus('/x', { client, resolveEngine })).toEqual({
         running: false,
         reason: null,
         in_flight: null,
         device: null,
         log_path: paths.logFilePath('/x'),
         session_id: null,
+        engine: null,
+        engine_source: null,
+        resolved_engine: 'mobilecli',
+        resolved_engine_source: 'default',
       });
     });
 
@@ -135,6 +176,13 @@ describe('connection', () => {
       const started = await startSession({ projectRoot: '/x', device: 'A', idleMs: 1000, spawn });
       expect(started).toBe(true);
       expect(seen).toEqual({ projectRoot: '/x', device: 'A', idleMs: 1000 });
+    });
+
+    test('passes the engine and its source through to spawnDaemon (#251)', async () => {
+      let seen = null;
+      const spawn = { spawnDaemon: async (a) => { seen = a; return true; } };
+      await startSession({ projectRoot: '/x', device: null, engine: 'legacy', engineSource: 'config', spawn });
+      expect(seen).toMatchObject({ projectRoot: '/x', engine: 'legacy', engineSource: 'config' });
     });
   });
 

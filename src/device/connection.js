@@ -14,7 +14,8 @@
 // handlers.
 
 const { resolveDeviceConnection } = require('./resolve-connection');
-const { readSessionId } = require('./session-handle');
+const { readHandle, readSessionId } = require('./session-handle');
+const { readEngine, handleEngine } = require('./engine');
 const { daemonLogHint } = require('./session-log');
 const paths = require('./session-paths');
 const sessionClient = require('./session-client');
@@ -62,8 +63,21 @@ function isSessionAlive(projectRoot, { client = sessionClient } = {}) {
 // case where a user is reaching for `session status` to find out why the daemon
 // is dead. The path is a pure function of the workspace, so we can always
 // answer it. Do not "simplify" this into the ping payload.
-async function sessionStatus(projectRoot, { client = sessionClient } = {}) {
+//
+// The engine (#251) is reported twice, on purpose. engine/engine_source are the
+// LIVE daemon's, read from its handle (null when not running, like session_id;
+// a pre-#251 handle without one is mobilecli with an unknown source).
+// resolved_engine/resolved_engine_source are what this workspace resolves now —
+// what the next spawn would use — and are always present. When they differ the
+// daemon is stale and the next device verb restarts it.
+async function sessionStatus(
+  projectRoot,
+  { client = sessionClient, resolveEngine = readEngine } = {}
+) {
   const status = await client.getSessionStatus(projectRoot);
+  const running = !!(status && status.running);
+  const handle = running ? readHandle(projectRoot) : null;
+  const resolved = resolveEngine(projectRoot);
   return {
     ...status,
     // Always present (#156): null, or why a reachable daemon is not running.
@@ -78,13 +92,24 @@ async function sessionStatus(projectRoot, { client = sessionClient } = {}) {
     // purpose (a dead daemon's log is exactly what you want then). A SIGKILLed
     // daemon leaves its handle behind, so reporting that id alongside
     // running:false would name a session that no longer exists.
-    session_id: status && status.running ? readSessionId(projectRoot) : null,
+    session_id: running ? readSessionId(projectRoot) : null,
+    engine: running ? handleEngine(handle) : null,
+    engine_source: (handle && handle.engine_source) || null,
+    resolved_engine: resolved.engine,
+    resolved_engine_source: resolved.source,
   };
 }
 
 // Spawn a daemon and wait until it answers. Resolves true on success.
-function startSession({ projectRoot, device = null, idleMs, spawn = sessionSpawn } = {}) {
-  return spawn.spawnDaemon({ projectRoot, device, idleMs });
+function startSession({
+  projectRoot,
+  device = null,
+  idleMs,
+  engine,
+  engineSource,
+  spawn = sessionSpawn,
+} = {}) {
+  return spawn.spawnDaemon({ projectRoot, device, idleMs, engine, engineSource });
 }
 
 // How long `session end` waits for an acknowledged daemon to exit before it

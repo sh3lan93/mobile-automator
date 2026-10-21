@@ -1407,14 +1407,36 @@ describe('cli handlers', () => {
       let spawned = null;
       const spawn = { spawnDaemon: async (a) => { spawned = a; return true; } };
       const client = { isAlive: async () => false };
+      const resolveEngine = () => ({ engine: 'legacy', source: 'config' });
       const { envelope, exitKind } = await handleSessionStart(
-        { projectRoot, spawn, client },
+        { projectRoot, spawn, client, resolveEngine },
         { device: 'A', idle: '1000' }
       );
       expect(exitKind).toBe('ok');
-      expect(envelope.data).toEqual({ started: true, device: 'A' });
+      expect(envelope.data).toEqual({ started: true, device: 'A', engine: 'legacy' });
       expect(spawned.device).toBe('A');
       expect(spawned.idleMs).toBe(1000);
+      // #251: the workspace's resolved engine reaches the spawned daemon.
+      expect(spawned.engine).toBe('legacy');
+      expect(spawned.engineSource).toBe('config');
+    });
+
+    test('an already-running daemon reports its own engine, with a hint when stale (#251)', async () => {
+      const spawn = { spawnDaemon: async () => { throw new Error('should not spawn'); } };
+      const client = { isAlive: async () => true };
+      const { envelope, exitKind } = await handleSessionStart(
+        {
+          projectRoot, spawn, client,
+          readHandle: () => 'A',
+          readHandleEngine: () => 'mobilecli',
+          resolveEngine: () => ({ engine: 'legacy', source: 'config' }),
+        },
+        {}
+      );
+      expect(exitKind).toBe('ok');
+      expect(envelope.data.already_running).toBe(true);
+      expect(envelope.data.engine).toBe('mobilecli');
+      expect(envelope.hint).toContain('legacy');
     });
 
     test('is idempotent when a daemon is already running', async () => {
@@ -1515,15 +1537,20 @@ describe('cli handlers', () => {
   });
 
   describe('handleSessionStatus', () => {
+    const defaultEngine = () => ({ engine: 'mobilecli', source: 'default' });
+
     test('reports running:true with in_flight and device from the client', async () => {
       const up = await handleSessionStatus({
         projectRoot: '/x',
         client: { getSessionStatus: async () => ({ running: true, in_flight: 2, device: 'A' }) },
+        resolveEngine: defaultEngine,
       });
       expect(up.exitKind).toBe('ok');
       expect(up.envelope.data).toEqual({
         running: true, reason: null, in_flight: 2, device: 'A',
         log_path: sessionPaths.logFilePath('/x'), session_id: null,
+        engine: 'mobilecli', engine_source: null,
+        resolved_engine: 'mobilecli', resolved_engine_source: 'default',
       });
     });
 
@@ -1531,13 +1558,31 @@ describe('cli handlers', () => {
       const down = await handleSessionStatus({
         projectRoot: '/x',
         client: { getSessionStatus: async () => ({ running: false, in_flight: null, device: null }) },
+        resolveEngine: defaultEngine,
       });
       expect(down.exitKind).toBe('ok');
       // log_path survives the not-running shape: that is when it is needed.
       expect(down.envelope.data).toEqual({
         running: false, reason: null, in_flight: null, device: null,
         log_path: sessionPaths.logFilePath('/x'), session_id: null,
+        engine: null, engine_source: null,
+        resolved_engine: 'mobilecli', resolved_engine_source: 'default',
       });
+    });
+
+    // #251: a live daemon on a different engine than the workspace resolves is
+    // stale; the next device verb restarts it. Say so.
+    test('a running daemon on a stale engine carries a hint naming the restart', async () => {
+      const r = await handleSessionStatus({
+        projectRoot: '/x',
+        client: { getSessionStatus: async () => ({ running: true, in_flight: 0, device: 'A' }) },
+        resolveEngine: () => ({ engine: 'legacy', source: 'config' }),
+      });
+      expect(r.exitKind).toBe('ok');
+      expect(r.envelope.data.engine).toBe('mobilecli');
+      expect(r.envelope.data.resolved_engine).toBe('legacy');
+      expect(r.envelope.hint).toContain('legacy');
+      expect(r.envelope.hint).toContain('restart');
     });
 
     test('a dead engine: running:false with a hint that says why (#156)', async () => {
@@ -1556,6 +1601,7 @@ describe('cli handlers', () => {
       const r = await handleSessionStatus({
         projectRoot: '/x',
         client: { getSessionStatus: async () => ({ running: true, in_flight: 0, device: 'A' }) },
+        resolveEngine: defaultEngine,
       });
       expect(r.envelope.hint).toBeUndefined();
     });

@@ -28,6 +28,7 @@ const { makeDeviceCall } = require('./device-call');
 const { safeObserve: guardObserve } = require('../observe/recorder');
 const { FLUSH_INTERVAL_MS } = require('../observe/flush');
 const { pidIdentity, readPidFile } = require('./process-identity');
+const { DEFAULT_ENGINE } = require('./engine');
 
 const DEFAULT_IDLE_MS = 5 * 60 * 1000;
 
@@ -99,6 +100,13 @@ function cleanStale(projectRoot, { execFile } = {}) {
 async function startDaemon({
   projectRoot,
   device = null,
+  // The device robot this daemon's engine runs (#251) and where that choice
+  // came from. Recorded in the handle beside `device`, for the same reason: a
+  // verb compares it with what it resolved and restarts a stale daemon.
+  // Defaulted to the default robot with an unknown source — the in-process
+  // tests that omit it run no real engine at all.
+  engine = DEFAULT_ENGINE,
+  engineSource = null,
   idleMs = DEFAULT_IDLE_MS,
   createCall = defaultCreateCall,
   onUndeliverable = null,
@@ -264,7 +272,7 @@ async function startDaemon({
   let call;
   let close;
   try {
-    ({ call, close } = await createCall({ device, onEngineExit }));
+    ({ call, close } = await createCall({ device, engine, onEngineExit }));
   } catch (err) {
     // #156's core symptom: mobile-mcp never came up, and until now the only
     // trace was a 15s readiness timeout in the spawning verb.
@@ -725,6 +733,8 @@ async function startDaemon({
     // there instead of paying a socket round trip (src/device/session-handle.js).
     session_id: sessionId,
     device: device || null,
+    engine,
+    engine_source: engineSource,
     socket: socketPath,
     started_at: new Date().toISOString(),
     idle_ms: idleMs,

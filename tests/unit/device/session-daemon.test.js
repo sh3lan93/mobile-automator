@@ -64,6 +64,29 @@ describe('session-daemon', () => {
     await daemon.stop();
   });
 
+  // #251: the engine is recorded in the handle exactly like the device pin, so
+  // a verb resolving a different engine can tell the live daemon is stale.
+  test('passes engine to createCall and records engine + engine_source in the handle', async () => {
+    const root = tmpRoot();
+    let seen = null;
+    const createCall = async (opts) => {
+      seen = opts;
+      return { call: async () => ({}), close: async () => {} };
+    };
+    const daemon = await startDaemon({
+      projectRoot: root,
+      engine: 'legacy',
+      engineSource: 'config',
+      idleMs: 0,
+      createCall,
+    });
+    expect(seen.engine).toBe('legacy');
+    const handle = JSON.parse(fs.readFileSync(paths.handlePath(root), 'utf8'));
+    expect(handle.engine).toBe('legacy');
+    expect(handle.engine_source).toBe('config');
+    await daemon.stop();
+  });
+
   test('writes handle + pidfile on listen and removes them on stop', async () => {
     const root = tmpRoot();
     const { createCall } = makeFakeCreateCall();
@@ -74,6 +97,9 @@ describe('session-daemon', () => {
     const handle = JSON.parse(fs.readFileSync(paths.handlePath(root), 'utf8'));
     expect(handle.device).toBe('emulator-5554');
     expect(handle.pid).toBe(process.pid);
+    // No engine given: the default robot, source unknown to the daemon.
+    expect(handle.engine).toBe('mobilecli');
+    expect(handle.engine_source).toBeNull();
 
     await daemon.stop();
     expect(fs.existsSync(paths.handlePath(root))).toBe(false);

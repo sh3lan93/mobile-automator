@@ -98,6 +98,41 @@ describe('session-spawn', () => {
     expect(captured.env.MAUTO_SESSION_DEVICE).toBeUndefined();
   });
 
+  // #251: the daemon records the engine it was spawned for in its handle, so a
+  // verb resolving a different engine can tell the live daemon is stale.
+  test('passes the resolved engine and its source via env', async () => {
+    let captured = null;
+    await spawnDaemon({
+      projectRoot: '/proj',
+      engine: 'legacy',
+      engineSource: 'config',
+      spawn: (cmd, args, opts) => { captured = opts; return fakeChild(); },
+      isAlive: async () => true,
+      pollMs: 1,
+    });
+    expect(captured.env.MAUTO_SESSION_ENGINE).toBe('legacy');
+    expect(captured.env.MAUTO_SESSION_ENGINE_SOURCE).toBe('config');
+  });
+
+  test('omits engine env when no engine is given (the daemon resolves its own)', async () => {
+    let captured = null;
+    const saved = process.env.MAUTO_SESSION_ENGINE;
+    process.env.MAUTO_SESSION_ENGINE = 'legacy'; // an inherited value must not leak through
+    try {
+      await spawnDaemon({
+        projectRoot: '/proj',
+        spawn: (cmd, args, opts) => { captured = opts; return fakeChild(); },
+        isAlive: async () => true,
+        pollMs: 1,
+      });
+    } finally {
+      if (saved === undefined) delete process.env.MAUTO_SESSION_ENGINE;
+      else process.env.MAUTO_SESSION_ENGINE = saved;
+    }
+    expect(captured.env.MAUTO_SESSION_ENGINE).toBeUndefined();
+    expect(captured.env.MAUTO_SESSION_ENGINE_SOURCE).toBeUndefined();
+  });
+
   test('opens the log with the project root, before the spawn', async () => {
     const order = [];
     let seenRoot = null;
