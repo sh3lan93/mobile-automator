@@ -51,6 +51,13 @@ src/
     config_schema.json
 tests/
   unit/  integration/  lint/  fixtures/
+  unit/e2e-harness/           # unit tests for sample-app/scripts/lib
+sample-app/                   # Flutter fixture app (see sample-app/README.md)
+  scenarios/                  # agnostic scenarios the real-device E2E runs
+    golden/                   # golden normalized results + known-failures.json
+  scripts/
+    run-e2e.mjs               # real-device E2E entry: drives the shipped `mauto` (MAUTO_BIN)
+    lib/                      # harness logic (CommonJS); no package.json, no own deps
 mobile-automator/             # created in user's project by `mauto setup`
   config.json  scenarios/  screenshots/  results/  .session/
   memory/                     # cross-session memory (run-history.md, …)
@@ -107,6 +114,8 @@ Two catalogs are the single source of truth for "does this capability actually r
 **ESLint** (#164) runs `npm run lint` (`eslint.config.js`) in `lint.yml` (PR, main — a signal) and in `release.yml`'s `publish-npm` before `npm test` (the actual gate). Its point is the type-aware block over `src/`, `bin/` and `scripts/`: `no-floating-promises` and `no-misused-promises` catch the async callback whose rejection nobody observes — on its first run it found the session daemon exiting on a `null` frame. Guard: `tests/lint/eslint-gate.test.js` pins the script, both rules at `error`, and both CI runs. Those rules need TypeScript's types, and TS 6 no longer auto-loads `@types/*`, so the `@types/node` devDependency plus `"types": ["node"]` in `tsconfig.eslint.json` are load-bearing: without them every Node API is untyped, and the rules silently report nothing (they missed the daemon bug that way). It lives in its own workflow because `node-version-agreement.test.js` requires every `test.yml` job to run the Node matrix.
 
 **The shipping-doc corpus** is `tests/lint/docs-corpus.js`: every tracked `.md` minus historical records (`CHANGELOG.md`, `docs/changelog.md`, `docs/plans/**`), enumerated with `git ls-files` so `.gitignore` never has to be restated. Four guards scan it — `docs-counts.test.js` (capability counts vs the schema), `docs-no-stale-extension.test.js` (the removed Gemini-extension model), the Node guard above, and the unsupported-action rule below. A new doc-scanning guard consumes `shippingDocs()`; do not hand-maintain a second file list, which is how `sample-app/README.md` kept teaching removed slash-command syntax for months.
+
+**The real-device E2E** (#94) is `sample-app/scripts/run-e2e.mjs`, run by `sample-app-e2e-android.yml` on an emulator. It drives the **shipped** `mauto` binary (`MAUTO_BIN`; in CI the packed tarball) through one-shot verbs and resolves targets with `findFirst` from that same install's `src/assertion/evaluator.js` — never a private MCP client, engine pin or matcher, which is what the harness it replaced had. `sample-app/scenarios/golden/known-failures.json` excuses a scenario only when its first failed step is the entry's `failing_step` (XFAIL); failing elsewhere is FAIL and passing is XPASS, both job failures. Guard: `tests/lint/e2e-agnostic.test.js` — no OS element-id tokens in the harness, no own matcher, no scenario target equal to an app Semantics id, no `sample-app/scripts/package.json`, and every known failure pinned to an issue, reason and existing step.
 
 **Docs vs unsupported actions** (#166): a rule in `tests/lint/action-coverage.test.js` scans the shipping-doc corpus and fails when a line names an `unsupported` action (`clear_app_data`, `enable_wifi`, `disable_wifi`) without also saying it is unsupported. **Assertion split**: `tests/lint/assertion-split-docs.test.js` pins `MECHANICAL_TYPES` to the mechanical-vs-agent-judged table in `docs/reference/assertions.md`, so a new assertion type must be placed in one column.
 
@@ -204,6 +213,7 @@ npm run lint              # ESLint over src/bin/scripts/tests (type-aware async 
 npm run lint:guides       # every lint guard in tests/lint (guide, skill, coverage, drift)
 npm run lint:schema-additive
 ./scripts/pack-smoke.sh   # install the packed tarball and exercise the bin, incl. `mauto devices` against the real engine — CI gates on this
+MAUTO_BIN=$(command -v mauto) node sample-app/scripts/run-e2e.mjs   # real-device E2E against an emulator with the sample app installed (see sample-app/README.md)
 ```
 
 The mobile-mcp version is pinned in `package.json` (`@mobilenext/mobile-mcp`, 1.0.5) and resolved from `node_modules` at runtime (see `src/device/mobile-mcp-client.js`). Bump the pin there if you need a newer engine, then run `npm run test:integration` — `mobile-mcp-contract.test.js` fails if the new engine's tool schemas no longer match what `DeviceBridge` sends. The session daemon keeps one mobile-mcp process alive and mobile-mcp caches its robot per device for that process's life, so after changing any `MOBILEMCP_*` env var run `mauto session end` before the next verb.
@@ -216,6 +226,7 @@ Tracked under the `production-ready` milestone; worth knowing before you debug s
 
 - Windows is unsupported by declaration — two deliberate enforcement layers (#165): `package.json` `os` (`darwin`, `linux`) refuses the install (npm's `EBADPLATFORM` carries no WSL2 hint — accepted, it is the only gate npm actually enforces), and `src/device/host-support.js` fails device/session verbs with a rich `environment` envelope for what slips past (`--force`, `npm link`). Device-free verbs already installed on a forced Windows machine keep working; real support would need named pipes plus replacements for `ps`, process-group kill and signals.
 - iOS simulators fail every verb with "Agent is not installed on the device" until a one-time `npx -y mobilecli@<pinned> agent install --device <udid>`; the engine's auto-install is unreachable — upstream [mobile-mcp#459](https://github.com/mobile-next/mobile-mcp/issues/459). `src/device/engine-hints.js` prints the command.
+- On the default engine (mobilecli), TextField labels are dropped and offstage `IndexedStack` content leaks into `elements` — [#251](https://github.com/sh3lan93/mobile-automator/issues/251). It is why `golden_search_empty` is a pinned known failure and why `smoke_nav` targets the Home tab as `Tab 1 of 3`.
 - On Android, mobilecli's `DeviceServer` outlives the session and holds UiAutomation (kills `uiautomator dump`, Appium, legacy `elements`); release with `adb shell pkill -f com.mobilenext.mobilecli.DeviceServer` — upstream [mobilecli#470](https://github.com/mobile-next/mobilecli/issues/470).
 
 ## Conventions
@@ -226,4 +237,4 @@ Tracked under the `production-ready` milestone; worth knowing before you debug s
 
 ## Metadata
 
-Repo: https://github.com/sh3lan93/mobile-automator · Version: see `package.json` (0.31.0 at last edit) · License: Apache 2.0 (note: `LICENSE` currently ships a stub, not the full text — #160) · Status: published on npm since v0.23.8 (2026-08-30).
+Repo: https://github.com/sh3lan93/mobile-automator · Version: see `package.json` (0.31.1 at last edit) · License: Apache 2.0 (note: `LICENSE` currently ships a stub, not the full text — #160) · Status: published on npm since v0.23.8 (2026-08-30).

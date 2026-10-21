@@ -311,6 +311,24 @@ structured record is `daemon.connect_failure` with
 `error_code: "ENGINE_CONNECT_TIMEOUT"`. Check `daemon.log` for the engine's
 own output.
 
+### ❌ "engine returned zero elements after a successful launch"
+
+Reported by the sample-app E2E (`sample-app/scripts/run-e2e.mjs`) when
+`mauto launch` succeeded but `mauto elements` kept answering `ok: true` with
+an empty list for the whole wait. That is never "the target is missing" — no
+target was looked for. It means one of:
+
+- **The engine's element response changed shape.** A new mobile-mcp or
+  mobilecli can return elements in a form the parser no longer reads; this
+  is how #199 first looked like an app bug. Check that the installed
+  `@mobilenext/mobile-mcp` is the version `package.json` pins and run
+  `npm run test:integration` (`mobile-mcp-contract.test.js`).
+- **The app did not render.** Take a screenshot (`mauto screenshot /tmp/s.png`)
+  and check `mauto crash list`.
+
+Run the harness with `E2E_ARTIFACTS_DIR=<dir>` to keep the failure screenshot,
+the result file and `.session/daemon.log` for the run.
+
 ### ❓ "Element not found" — but did the app crash?
 
 `mauto` cannot tell you from the error alone: a missing element and a dead app
