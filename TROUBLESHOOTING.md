@@ -356,20 +356,27 @@ synchronously and reports what happened. `mauto telemetry disable` stops it
 being written at all.
 
 **The device engine** (mobile-mcp, which mauto runs to drive devices) has its
-own telemetry, on by default and independent of the above: a PostHog event per
-device call (`tool_invoked` / `tool_failed` — tool name, duration, device
-counts), and since mobile-mcp 1.0.5 a scarf.sh pixel fetched once per engine
-process. `mauto telemetry` neither controls nor reports it. To turn it off,
-set this before the session daemon starts:
+own telemetry, independent of the above: a PostHog event per device call
+(`tool_invoked` / `tool_failed` — tool name, duration, device counts), and
+since mobile-mcp 1.0.5 a scarf.sh pixel fetched once per engine process.
+Upstream it is on by default; **mauto turns it off** by starting the engine
+with `MOBILEMCP_DISABLE_TELEMETRY=1`. Check what the engine was handed:
+
+```bash
+mauto telemetry status | jq .data.engine      # {"enabled":false,"reason":"default_off"}
+```
+
+If you set `MOBILEMCP_DISABLE_TELEMETRY` yourself, mauto passes it through
+unchanged. The engine treats any non-empty value as "off", so only an explicit
+empty string (`MOBILEMCP_DISABLE_TELEMETRY=`) opts it back in, and
+`MAUTO_TELEMETRY=0` or `DO_NOT_TRACK=1` still force it off. `reason:
+"user_env"` means your value is in effect. The engine lives in the session
+daemon, which keeps the environment it started with, so end it after a change:
 
 ```bash
 mauto session end
-export MOBILEMCP_DISABLE_TELEMETRY=1
-mauto devices                                 # new daemon, engine telemetry off
+mauto devices                                 # new daemon, new engine env
 ```
-
-Whether mauto should set this by default is
-[#213](https://github.com/sh3lan93/mobile-automator/issues/213).
 
 ---
 
