@@ -38,14 +38,27 @@ const show = (v) => JSON.stringify(v);
 // (`steps_executed[1].status: expected "passed", got "failed"`). Empty when
 // equal. Generic over the shape so a field added to normalizeResult is diffed
 // without touching this.
-function diffNormalized(expected, actual, at = '') {
+//
+// Top-level keys starting with `_` are annotations on a checked-in golden
+// (`_provenance`: where and how it was generated), not facts about a run, so
+// they are dropped from both sides before comparing.
+function diffNormalized(expected, actual) {
+  return diffValues(stripAnnotations(expected), stripAnnotations(actual), '');
+}
+
+function stripAnnotations(v) {
+  if (!isObject(v) || Array.isArray(v)) return v;
+  return Object.fromEntries(Object.entries(v).filter(([k]) => !k.startsWith('_')));
+}
+
+function diffValues(expected, actual, at) {
   if (Array.isArray(expected) && Array.isArray(actual)) {
     const lines = [];
     for (let i = 0; i < Math.max(expected.length, actual.length); i++) {
       const p = `${at}[${i}]`;
       if (i >= actual.length) lines.push(`${p}: missing (expected ${show(expected[i])})`);
       else if (i >= expected.length) lines.push(`${p}: unexpected ${show(actual[i])}`);
-      else lines.push(...diffNormalized(expected[i], actual[i], p));
+      else lines.push(...diffValues(expected[i], actual[i], p));
     }
     return lines;
   }
@@ -56,7 +69,7 @@ function diffNormalized(expected, actual, at = '') {
       const p = at ? `${at}.${k}` : k;
       if (!(k in actual)) lines.push(`${p}: missing (expected ${show(expected[k])})`);
       else if (!(k in expected)) lines.push(`${p}: unexpected ${show(actual[k])}`);
-      else lines.push(...diffNormalized(expected[k], actual[k], p));
+      else lines.push(...diffValues(expected[k], actual[k], p));
     }
     return lines;
   }

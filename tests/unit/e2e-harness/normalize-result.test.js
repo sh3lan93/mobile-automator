@@ -83,6 +83,35 @@ describe('diffNormalized', () => {
     expect(lines[0]).toContain('"failed"');
   });
 
+  test('ignores top-level keys starting with "_" (fixture annotations like _provenance)', () => {
+    const golden = { _provenance: 'generated on a Pixel 9 Pro AVD', ...normalizeResult(result()) };
+    expect(diffNormalized(golden, normalizeResult(result()))).toEqual([]);
+    expect(diffNormalized(normalizeResult(result()), { ...normalizeResult(result()), _note: 'x' })).toEqual([]);
+  });
+
+  test('"_" keys are ignored only at the top level', () => {
+    const a = normalizeResult(result());
+    const b = normalizeResult(result());
+    b.steps_executed[0] = { ...b.steps_executed[0], _extra: 1 };
+    expect(diffNormalized(a, b)).toEqual(['steps_executed[0]._extra: unexpected 1']);
+  });
+
+  test('the checked-in golden matches a passing run of its own steps', () => {
+    const golden = require('../../../sample-app/scenarios/golden/golden_search_empty.result.json');
+    const scenario = require('../../../sample-app/scenarios/golden_search_empty.json');
+    expect(typeof golden._provenance).toBe('string');
+    const run = {
+      scenario_id: scenario.scenario_id,
+      status: 'passed',
+      total_assertions: scenario.assertions.length,
+      passed_assertions: scenario.assertions.length,
+      failed_assertions: 0,
+      steps_executed: scenario.steps.map((s) => ({ step_id: s.id, status: 'passed' })),
+      assertion_results: scenario.assertions.map((a) => ({ assertion_id: a.id, status: 'passed' })),
+    };
+    expect(diffNormalized(golden, normalizeResult(run))).toEqual([]);
+  });
+
   test('reports missing and unexpected entries', () => {
     const a = normalizeResult(result());
     const shorter = result();
