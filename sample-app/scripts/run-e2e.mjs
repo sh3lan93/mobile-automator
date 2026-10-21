@@ -60,7 +60,7 @@ try {
 if (pkgName !== 'mobile-automator') {
   die(`MAUTO_BIN resolves to ${fs.realpathSync(bin)}, which is not inside a mobile-automator package (found ${pkgDir}).`);
 }
-const evaluator = require(path.join(pkgDir, 'src', 'assertion', 'evaluator.js'));
+const evaluator = require(path.join(pkgDir, 'src/assertion/evaluator.js'));
 if (typeof evaluator.findFirst !== 'function' || typeof evaluator.matches !== 'function') {
   die(`${pkgDir} does not export the target matcher (findFirst/matches); it predates the CLI-driven E2E.`);
 }
