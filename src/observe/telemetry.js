@@ -49,6 +49,9 @@ const CONSENT_NOTICE = [
   'Run `mauto telemetry status` to see the exact field list, read from the same',
   'catalog the uploader uses. Run `mauto telemetry enable` to turn it on, or set',
   'MAUTO_TELEMETRY=0 (or DO_NOT_TRACK=1) to force it off everywhere.',
+  '',
+  'The device engine mauto drives (mobile-mcp) has telemetry of its own, and it',
+  'is off too: mauto starts it with MOBILEMCP_DISABLE_TELEMETRY=1.',
 ].join('\n');
 
 function envKillSwitch(env = process.env) {

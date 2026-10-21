@@ -2630,6 +2630,21 @@ describe('mauto telemetry', () => {
     expect(envelope.data.enable_with).toBe('mauto telemetry enable');
   });
 
+  it('reports the device engine\'s own telemetry, off by default (#213)', () => {
+    const root = workspace({});
+    const { envelope } = handleTelemetryStatus({ projectRoot: root, env: {} });
+    expect(envelope.data.engine).toEqual({ enabled: false, reason: 'default_off' });
+  });
+
+  it('reports an engine opt-in, and a kill switch overriding it (#213)', () => {
+    const root = workspace({});
+    expect(handleTelemetryStatus({ projectRoot: root, env: { MOBILEMCP_DISABLE_TELEMETRY: '' } }).envelope.data.engine)
+      .toEqual({ enabled: true, reason: 'user_env' });
+    telemetryModule._resetMemo();
+    expect(handleTelemetryStatus({ projectRoot: root, env: { MOBILEMCP_DISABLE_TELEMETRY: '', MAUTO_TELEMETRY: '0' } }).envelope.data.engine)
+      .toEqual({ enabled: false, reason: 'kill_switch' });
+  });
+
   it('renders the field list from the catalog, not from prose', () => {
     const root = workspace({});
     const { envelope } = handleTelemetryStatus({ projectRoot: root, env: {} });

@@ -127,6 +127,10 @@ describe('telemetry control surface', () => {
     // A notice, not a prompt: nothing in it may read as a question to answer.
     expect(telemetry.CONSENT_NOTICE).not.toMatch(/\?/);
   });
+
+  it('tells the user the device engine is silenced too, and by which variable (#213)', () => {
+    expect(telemetry.CONSENT_NOTICE).toContain('MOBILEMCP_DISABLE_TELEMETRY');
+  });
 });
 
 describe('resolveEngineTelemetry (#213)', () => {
