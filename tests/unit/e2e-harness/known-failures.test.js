@@ -2,27 +2,44 @@
 
 const { classify, isJobFailure, outcomeMessage } = require('../../../sample-app/scripts/lib/known-failures');
 
-const knownFailures = { golden_search_empty: { issue: 251, reason: 'engine drops TextField labels' } };
+const knownFailures = {
+  golden_search_empty: { issue: 251, reason: 'engine drops TextField labels', failing_step: 'tap_search' },
+};
 
 describe('classify', () => {
   test('an unlisted scenario that passed is pass', () => {
-    expect(classify({ scenarioId: 'smoke_nav', passed: true, knownFailures })).toBe('pass');
+    expect(classify({ scenarioId: 'smoke_nav', passed: true, failedStep: null, knownFailures })).toBe('pass');
   });
 
   test('an unlisted scenario that failed is fail', () => {
-    expect(classify({ scenarioId: 'smoke_nav', passed: false, knownFailures })).toBe('fail');
+    expect(classify({ scenarioId: 'smoke_nav', passed: false, failedStep: 'tap_more', knownFailures })).toBe('fail');
   });
 
-  test('a listed scenario that failed is xfail', () => {
-    expect(classify({ scenarioId: 'golden_search_empty', passed: false, knownFailures })).toBe('xfail');
+  test('a listed scenario that failed AT its failing_step is xfail', () => {
+    expect(classify({ scenarioId: 'golden_search_empty', passed: false, failedStep: 'tap_search', knownFailures })).toBe('xfail');
+  });
+
+  test('a listed scenario that failed at a DIFFERENT step is fail, not xfail', () => {
+    // The real case: a launch failure (an unrelated uiautomator crash) was
+    // once excused as the #251 known failure.
+    expect(classify({ scenarioId: 'golden_search_empty', passed: false, failedStep: 'launch', knownFailures })).toBe('fail');
+  });
+
+  test('a listed scenario that failed only on assertions (no failed step) is fail', () => {
+    expect(classify({ scenarioId: 'golden_search_empty', passed: false, failedStep: null, knownFailures })).toBe('fail');
   });
 
   test('a listed scenario that passed is xpass', () => {
-    expect(classify({ scenarioId: 'golden_search_empty', passed: true, knownFailures })).toBe('xpass');
+    expect(classify({ scenarioId: 'golden_search_empty', passed: true, failedStep: null, knownFailures })).toBe('xpass');
+  });
+
+  test('an entry without failing_step never excuses a failure', () => {
+    const loose = { golden_search_empty: { issue: 251, reason: 'r' } };
+    expect(classify({ scenarioId: 'golden_search_empty', passed: false, failedStep: 'tap_search', knownFailures: loose })).toBe('fail');
   });
 
   test('a missing known-failures map treats everything as unlisted', () => {
-    expect(classify({ scenarioId: 'golden_search_empty', passed: false })).toBe('fail');
+    expect(classify({ scenarioId: 'golden_search_empty', passed: false, failedStep: 'tap_search' })).toBe('fail');
   });
 });
 
@@ -43,9 +60,27 @@ describe('outcomeMessage', () => {
     expect(msg).toContain('#251');
   });
 
-  test('xfail names the tracking issue and reason', () => {
-    const msg = outcomeMessage({ scenarioId: 'golden_search_empty', outcome: 'xfail', knownFailures });
+  test('xfail names the tracking issue, reason and failure point', () => {
+    const msg = outcomeMessage({ scenarioId: 'golden_search_empty', outcome: 'xfail', knownFailures, failedStep: 'tap_search' });
     expect(msg).toContain('#251');
     expect(msg).toContain('engine drops TextField labels');
+    expect(msg).toContain('tap_search');
+  });
+
+  test('a listed scenario failing elsewhere names the expected and actual failure points', () => {
+    const msg = outcomeMessage({ scenarioId: 'golden_search_empty', outcome: 'fail', knownFailures, failedStep: 'launch' });
+    expect(msg).toMatch(/FAIL/);
+    expect(msg).toContain('expected to fail at step "tap_search"');
+    expect(msg).toContain('failed at step "launch"');
+  });
+
+  test('a listed scenario failing only on assertions says so', () => {
+    const msg = outcomeMessage({ scenarioId: 'golden_search_empty', outcome: 'fail', knownFailures, failedStep: null });
+    expect(msg).toContain('expected to fail at step "tap_search"');
+    expect(msg).toMatch(/every step passed/);
+  });
+
+  test('an unlisted failure is a plain FAIL', () => {
+    expect(outcomeMessage({ scenarioId: 'smoke_nav', outcome: 'fail', knownFailures, failedStep: 'x' })).toBe('smoke_nav: FAIL');
   });
 });

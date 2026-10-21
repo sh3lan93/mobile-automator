@@ -220,7 +220,8 @@ async function runScenario({ scenario, mauto, evaluator, workspaceDir, runId, sl
   }
 
   const assertions = Array.isArray(scenario.assertions) ? scenario.assertions : [];
-  let stepFailed = false;
+  // The first step that failed, if any. Known failures are pinned to it.
+  let failedStep = null;
 
   for (const step of scenario.steps || []) {
     log(`[${scenarioId}] step ${step.id} (${step.action})`);
@@ -245,7 +246,7 @@ async function runScenario({ scenario, mauto, evaluator, workspaceDir, runId, sl
 
     if (!outcome.ok) {
       failures.push(`step ${step.id} (${step.action}): ${outcome.error.message}`);
-      stepFailed = true;
+      failedStep = step.id;
       // Later steps would run against a screen nobody predicted; their
       // failures would only bury this one.
       break;
@@ -256,13 +257,14 @@ async function runScenario({ scenario, mauto, evaluator, workspaceDir, runId, sl
     }
   }
 
-  const status = stepFailed || failures.length > 0 ? 'failed' : 'passed';
+  const status = failedStep || failures.length > 0 ? 'failed' : 'passed';
   await verb(['result', 'finalize', '--run-id', runId, '--scenario-id', scenarioId, '--status', status]);
 
   return {
     status,
     resultPath: path.join(workspaceDir, 'mobile-automator', 'results', `${runId}.json`),
     failures,
+    failedStep,
   };
 }
 

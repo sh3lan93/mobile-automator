@@ -199,6 +199,7 @@ describe('runScenario', () => {
       m
     );
     expect(r.status).toBe('failed');
+    expect(r.failedStep).toBe('tap_home');
     expect(r.failures.join('\n')).toContain('tap broke');
     expect(m.verbs()).not.toContain('type');
     const steps = m.calls.filter((c) => c.verb === 'result add-step');
@@ -270,6 +271,8 @@ describe('runScenario', () => {
       m
     );
     expect(r.status).toBe('failed');
+    // Failed on an assertion, not a step.
+    expect(r.failedStep).toBeNull();
     expect(m.verbs()).toContain('press');
     expect(argAfter(m.calls.find((c) => c.verb === 'result add-assertion').args, '--pass')).toBe('false');
     expect(r.failures.join('\n')).toContain('hdr');

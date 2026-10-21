@@ -104,18 +104,25 @@ function nextRunId() {
   return id;
 }
 
-function goldenCheck(scenarioId, resultPath) {
+// Problems with the golden comparison, as report lines; empty when there are
+// none. A missing fixture is always a problem. The diff only runs when
+// `compare` is set (the run passed): a run that stopped early differs from the
+// golden by construction, and listing every unreached step would bury the
+// failure that matters.
+function goldenCheck(scenarioId, resultPath, { compare }) {
   const goldenPath = path.join(GOLDEN_DIR, `${scenarioId}.result.json`);
-  const actual = normalizeResult(JSON.parse(fs.readFileSync(resultPath, 'utf8')));
   if (!fs.existsSync(goldenPath)) {
-    log(`no golden at ${path.relative(process.cwd(), goldenPath)}. Normalized result of this run:`);
-    console.log(JSON.stringify(actual, null, 2));
-    return [
-      `golden fixture missing: once this run's result is the intended behaviour, save the JSON above as ` +
-        `sample-app/scenarios/golden/${scenarioId}.result.json`,
-    ];
+    const lines = [`golden fixture missing: sample-app/scenarios/golden/${scenarioId}.result.json`];
+    if (fs.existsSync(resultPath)) {
+      log(`no golden for ${scenarioId}. Normalized result of this run:`);
+      console.log(JSON.stringify(normalizeResult(JSON.parse(fs.readFileSync(resultPath, 'utf8'))), null, 2));
+      lines.push('once a PASSING run is the intended behaviour, save its normalized JSON (printed above) as that file');
+    }
+    return lines;
   }
+  if (!compare) return [];
   const expected = JSON.parse(fs.readFileSync(goldenPath, 'utf8'));
+  const actual = normalizeResult(JSON.parse(fs.readFileSync(resultPath, 'utf8')));
   return diffNormalized(expected, actual).map((line) => `golden mismatch: ${line}`);
 }
 
@@ -144,13 +151,15 @@ async function main() {
   for (const id of requested) {
     const scenario = scenarios.get(id);
     if (!scenario) {
-      summary.push({ id, outcome: 'fail', details: [`no scenario with id "${id}" in ${SCENARIOS_DIR}`] });
+      summary.push({ id, outcome: 'fail', failedStep: null, details: [`no scenario with id "${id}" in ${SCENARIOS_DIR}`], golden: [] });
       continue;
     }
     const runId = nextRunId();
     log(`=== ${id} (${runId}) ===`);
-    let details;
-    let passed;
+    let details = [];
+    let golden = [];
+    let passed = false;
+    let failedStep = null;
     try {
       const r = await runScenario({
         scenario,
@@ -163,25 +172,32 @@ async function main() {
         log,
       });
       details = [...r.failures];
+      passed = r.status === 'passed';
+      failedStep = r.failedStep;
+      // Golden problems are kept apart from the run's outcome so a known
+      // failure can never absorb them: a missing fixture is always reported
+      // and always fails the job, and a mismatch is only meaningful for a run
+      // that got all the way through.
       if (fs.existsSync(path.join(GOLDEN_DIR, `${id}.result.json`)) || id.startsWith('golden_')) {
-        details.push(...goldenCheck(id, r.resultPath));
+        golden = goldenCheck(id, r.resultPath, { compare: passed });
       }
-      passed = r.status === 'passed' && details.length === 0;
     } catch (err) {
       // A recording verb (`result ...`) failing is a harness-level fault.
       details = [`harness error: ${err.message}`];
-      passed = false;
     }
-    const outcome = classify({ scenarioId: id, passed, knownFailures });
-    summary.push({ id, outcome, details });
+    const outcome = classify({ scenarioId: id, passed, failedStep, knownFailures });
+    summary.push({ id, outcome, failedStep, details, golden });
   }
 
   console.log('\n[e2e] ===== summary =====');
-  for (const { id, outcome, details } of summary) {
-    console.log(`[e2e] ${outcomeMessage({ scenarioId: id, outcome, knownFailures })}`);
+  for (const { id, outcome, failedStep, details, golden } of summary) {
+    console.log(`[e2e] ${outcomeMessage({ scenarioId: id, outcome, knownFailures, failedStep })}`);
     for (const d of details) console.log(`[e2e]     ${d}`);
+    for (const g of golden) console.log(`[e2e]     ${g}`);
   }
-  return summary.some((s) => isJobFailure(s.outcome)) ? 1 : 0;
+  const failed = summary.filter((s) => isJobFailure(s.outcome) || s.golden.length > 0);
+  if (failed.length) console.log(`[e2e] job FAILED: ${failed.map((s) => s.id).join(', ')}`);
+  return failed.length ? 1 : 0;
 }
 
 let exitCode = 1;
