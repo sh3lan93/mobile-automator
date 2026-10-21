@@ -183,7 +183,7 @@ The package is **published on npm**; installs come from the registry. mobile-mcp
 
 **Five things worth knowing:**
 
-- **No CI check is a gate.** The `main-branch` ruleset has no required status checks, and `auto-tag.yml` does not wait for `test.yml`, so a tag can land while (or after) the suite fails. PR and `main` checks are signals; the enforcing runs are `release.yml`'s `verify` matrix plus `publish-npm`'s audit and lint. Required checks on the ruleset are deferred to a follow-up to #186.
+- **No CI check is a gate.** The `main-branch` ruleset has no required status checks, and `auto-tag.yml` does not wait for `test.yml`, so a tag can land while (or after) the suite fails. PR and `main` checks are signals; the enforcing runs are `release.yml`'s `verify` matrix plus `publish-npm`'s audit and lint. Required checks on the ruleset are deferred to [#249](https://github.com/sh3lan93/mobile-automator/issues/249).
 - **rc versions *are* tagged.** `auto-tag.yml` has no prerelease guard, so `v0.21.0-rc.13` and 20 other rc tags exist in the repo. Only *npm publishing* is gated on graduation, not tagging.
 - **`release.yml`'s `release` job must keep `GITHUB_TOKEN`.** The same suppression rule that caused #170 is what stops the Release it creates from re-triggering the workflow through its own `release: [published]` trigger. Handing that step the App token would loop forever.
 - **Trusted publishing names this workflow file.** The trust relationship lives on the npm package and names both this repo and `release.yml`. Renaming that file, or moving the publish step into another workflow, breaks publishing until the trusted publisher is updated — check with `npm trust list mobile-automator`.
