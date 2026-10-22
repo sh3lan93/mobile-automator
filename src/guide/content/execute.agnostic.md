@@ -165,8 +165,11 @@ If the app is alive but `mauto elements` misses the label of a text field you
 can see on screen, or lists content from a tab that is not showing, the device
 engine is the likely cause, not the app. Run `mauto config get engine`: if it is
 `mobilecli` or unset, record the step as failed with that observation and tell
-the user that `mauto config set engine legacy` fixes it. Do not switch the
-engine mid-run yourself.
+the user that `mauto config set engine legacy` should fix it. On older device
+OS versions the legacy engine still hides inactive-tab content but may not
+recover text-field labels; if the engine is already `legacy`, a missing
+text-field label is the device OS version, not the engine setting. Do not
+switch the engine mid-run yourself.
 
 ### 4. Validate Assertions (27 types)
 

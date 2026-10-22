@@ -173,7 +173,7 @@ mauto config set ios_bundle_id <id>       # e.g. com.example.MyApp
 
 ### Device engine
 
-`engine` selects the robot mobile-mcp drives the device with: `mobilecli` (the default) or `legacy` (adb/uiautomator on Android, go-ios/WDA on real iOS devices; iOS simulators always use `mobilecli`). For Flutter apps on Android — and other apps that draw their own UI — set `legacy`: the default engine drops text-field labels and lists content from hidden tabs in `mauto elements` ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
+`engine` selects the robot mobile-mcp drives the device with: `mobilecli` (the default) or `legacy` (adb/uiautomator on Android, go-ios/WDA on real iOS devices; iOS simulators always use `mobilecli`). For Flutter apps on Android — and other apps that draw their own UI — set `legacy`: the default engine drops text-field labels and lists content from hidden tabs in `mauto elements` ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)). `legacy` hides the hidden-tab content on every Android version tested, but recovers text-field labels only on recent Android versions (verified on Android 16 / API 36; not on API 33).
 
 ```bash
 mauto config set engine legacy

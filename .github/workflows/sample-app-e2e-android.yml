@@ -15,7 +15,7 @@ on:
 
 jobs:
   smoke-android:
-    name: Android emulator E2E via the shipped mauto CLI (API 33, ${{ matrix.engine }} engine)
+    name: Android emulator E2E via the shipped mauto CLI (API 36, ${{ matrix.engine }} engine)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # One leg per device engine (#251). The engine is applied by the harness
@@ -82,7 +82,10 @@ jobs:
           E2E_ENGINE: ${{ matrix.engine }}
           MOBILEMCP_DISABLE_TELEMETRY: '1'
         with:
-          api-level: 33
+          # API 36, not 33: on API 33 even the legacy engine's uiautomator dump
+          # carries no TextField hint, so `engine: legacy` cannot recover Flutter
+          # field labels there and the legacy leg would prove nothing (#251).
+          api-level: 36
           arch: x86_64
           target: default
           disable-animations: true

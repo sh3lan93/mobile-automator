@@ -18,7 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   simulators use it either way. An exported `MOBILEMCP_LEGACY_ROBOT` still
   overrides the key. Use it for Flutter apps on Android — and other apps that
   draw their own UI — where the default engine drops text-field labels and
-  lists offstage tab content in `mauto elements`
+  lists offstage tab content in `mauto elements`. The legacy engine hides
+  offstage tab content on every Android version tested, but recovers
+  text-field labels only on recent ones (verified on Android 16 / API 36; not
+  on API 33, whose uiautomator dump carries no field hint either)
   ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
 - **`mauto session status` reports the engine.** `engine` / `engine_source`
   are the running daemon's (`null` when none is up); `resolved_engine` /
@@ -48,6 +51,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `engines`; `golden_search_empty` is excused on `mobilecli` only and must
   pass on legacy, and its entry XPASSes (failing the job) once the upstream
   fix ships ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
+- **The Android E2E emulator moved from API 33 to API 36** on both engine
+  legs. On API 33 the legacy engine cannot recover TextField labels either, so
+  the legacy leg would have proved nothing ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
 
 ### 🐛 Fixed
 
@@ -63,14 +69,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The default engine still drops TextField labels and reports offstage tab
   content** until upstream
   [mobilecli#534](https://github.com/mobile-next/mobilecli/issues/534) ships.
-  Set `engine` to `legacy` for affected apps ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
+  Set `engine` to `legacy` for affected apps: it hides offstage tab content on
+  every Android version tested, but recovers TextField labels only on recent
+  Android versions (verified on Android 16 / API 36; not on API 33)
+  ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
 
 ### 📝 Docs
 
 - `TROUBLESHOOTING.md` makes `mauto config set engine legacy` the recipe for
   the previous robots and adds an entry for missing text-field labels / hidden
-  tab content. The setup guides recommend the legacy engine for Flutter-style
-  apps, the execute guides say to check `mauto config get engine` when the
+  tab content, noting that label recovery depends on the Android version. The
+  setup guides recommend the legacy engine for Flutter-style apps, the execute guides say to check `mauto config get engine` when the
   element list looks wrong, and the docs site documents the key and the new
   `session status` fields ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
 

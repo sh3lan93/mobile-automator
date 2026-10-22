@@ -116,7 +116,11 @@ that draw their own UI — lose the label of a `TextField` (and of a child that
 shares its parent's bounds) in `mauto elements`, and content from an offstage
 `IndexedStack` tab is listed as if it were on screen. Fields cannot be
 targeted by their label, and a target such as `Home` can match a tile on a
-hidden tab before the visible one. The legacy engine reports both correctly
+hidden tab before the visible one. The legacy engine hides offstage tab
+content on every Android version tested, and recovers the labels on recent
+Android versions (verified on Android 16 / API 36). On older ones (not on API
+33, for example) its uiautomator dump carries no field label either, so labels
+stay missing on both engines, though legacy still fixes the hidden-tab content
 ([#251](https://github.com/sh3lan93/mobile-automator/issues/251), upstream
 [mobilecli#534](https://github.com/mobile-next/mobilecli/issues/534)). Switch
 the workspace to it — see the next entry.

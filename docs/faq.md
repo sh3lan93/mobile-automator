@@ -359,7 +359,7 @@ Results saved to: `mobile-automator/results/<run_id>.json`
 2. **Verify app state** — Ensure app is in expected state before executing
 3. **Check the target** — Verify you're using the element's visible text/role
 4. **Increase timeout** — Slow devices may need longer waits
-5. **Check the device engine** — If `mauto elements` misses a text field's label or lists content from a tab that is not showing (common with Flutter on Android), run `mauto config set engine legacy` ([#251](https://github.com/sh3lan93/mobile-automator/issues/251))
+5. **Check the device engine** — If `mauto elements` misses a text field's label or lists content from a tab that is not showing (common with Flutter on Android), run `mauto config set engine legacy`. It hides inactive-tab content on every Android version tested, but recovers text-field labels only on recent Android versions (verified on Android 16 / API 36; not on API 33) ([#251](https://github.com/sh3lan93/mobile-automator/issues/251))
 6. **Add screenshot assertion** — Debug what's actually on screen:
    ```json
    {

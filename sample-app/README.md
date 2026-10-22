@@ -19,7 +19,7 @@ Every interactive widget also carries a stable `Semantics` id in the form `{scre
 
 ## The real-device E2E
 
-`scripts/run-e2e.mjs` runs the scenarios in `scenarios/` against this app by driving the **shipped `mauto` CLI** — the same binary a user installs, nothing else. In CI (`.github/workflows/sample-app-e2e-android.yml`) that binary is the packed npm tarball, installed into a temp prefix, and the job runs once per device engine (`mobilecli` and `legacy`, a matrix with `fail-fast: false`).
+`scripts/run-e2e.mjs` runs the scenarios in `scenarios/` against this app by driving the **shipped `mauto` CLI** — the same binary a user installs, nothing else. In CI (`.github/workflows/sample-app-e2e-android.yml`) that binary is the packed npm tarball, installed into a temp prefix, and the job runs once per device engine (`mobilecli` and `legacy`, a matrix with `fail-fast: false`) on an API 36 emulator — not API 33, where even the legacy engine cannot recover the text-field labels the legacy leg exists to prove.
 
 For each run the harness:
 
@@ -46,7 +46,7 @@ Scenarios:
 | XFAIL | listed, and the first failed step is its `failing_step` | ok |
 | XPASS | listed, but passed | **fails** — the fix landed; remove the entry |
 
-A failure anywhere other than the pinned step is never excused, and a missing or mismatched golden fixture fails the job on its own, whatever the classification. `golden_search_empty` is listed for `engines: ["mobilecli"]` until #251 is fixed: the default engine drops the "Search products" field's label, so `tap_search` cannot resolve. On the legacy engine the label is there, so the same scenario must PASS and match its golden.
+A failure anywhere other than the pinned step is never excused, and a missing or mismatched golden fixture fails the job on its own, whatever the classification. `golden_search_empty` is listed for `engines: ["mobilecli"]` until #251 is fixed: the default engine drops the "Search products" field's label, so `tap_search` cannot resolve. On the legacy engine the label is there on recent Android versions (verified on API 36, the CI level; not on API 33), so the same scenario must PASS and match its golden — run it locally on an API 33 emulator and it fails on the legacy leg too.
 
 ### Running it locally
 

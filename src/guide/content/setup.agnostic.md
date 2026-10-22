@@ -50,7 +50,7 @@ Leave `engine` at its default unless the element list is wrong. With a device co
 mauto config set engine legacy
 ```
 
-Follow the `hint` the command prints. Switching clears any pinned device, because the engines may name the same device differently; re-select it with `mauto devices` and `mauto devices use <id>`.
+Follow the `hint` the command prints, then run `mauto elements` again. On older device OS versions the legacy engine still hides inactive-tab content but may not recover text-field labels; if a label stays missing, keep `legacy` for the tab fix and tell the user the label gap is the device OS version. Switching clears any pinned device, because the engines may name the same device differently; re-select it with `mauto devices` and `mauto devices use <id>`.
 
 ## 7. Confirm the config
 

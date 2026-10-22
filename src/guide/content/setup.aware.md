@@ -74,7 +74,7 @@ Infer each of the following from the codebase, confirm uncertain values with the
 
 ## 5. Choose the device engine
 
-For a Flutter app (or another app that draws its own UI, such as Compose Multiplatform) tested on Android, set the legacy engine: the default `mobilecli` engine drops text-field labels and reports content from hidden tabs in `mauto elements`. Native Android and iOS apps can keep the default.
+For a Flutter app (or another app that draws its own UI, such as Compose Multiplatform) tested on Android, set the legacy engine: the default `mobilecli` engine drops text-field labels and reports content from hidden tabs in `mauto elements`. The legacy engine hides hidden-tab content on every Android version tested, but recovers text-field labels only on recent Android versions (verified on Android 16 / API 36; not on API 33) — on older devices, labels may stay missing on both engines. Native Android and iOS apps can keep the default.
 
 ```
 mauto config set engine legacy
