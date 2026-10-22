@@ -58,12 +58,16 @@ jobs:
   # #186: nothing upstream is a gate. The ruleset requires no status checks
   # and auto-tag.yml does not wait for test.yml, so a tag can land while the
   # suite is still running — or after it failed. This job is the enforcing
-  # run: the suite and the packed-tarball smoke on the same Node matrix
-  # test.yml proves (tests/lint/release-gate.test.js keeps the two equal), so
-  # a regression on any supported Node stops the release, not just Node 22.
-  # It runs for rc tags too, so an rc Release is proven on the whole matrix.
+  # run: the same suite command and the same Node matrix test.yml's test job
+  # runs, plus the packed-tarball smoke (tests/lint/release-gate.test.js pins
+  # the equality), so a regression on any supported Node stops the release,
+  # not just Node 22. It runs for rc tags too, so an rc Release is proven on
+  # the whole matrix.
   verify:
     name: Verify (Node ${{ matrix.node-version }})
+    # needs resolve not for its outputs but for the skip: a rejected ref must
+    # skip this job, or a bad manual ref could pass verify and reach the
+    # release job with an empty tag. release-gate.test.js pins this.
     needs: resolve
     runs-on: ubuntu-latest
     strategy:
@@ -77,7 +81,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
       - run: npm ci
-      - run: npm test
+      - run: npm run test:all
       - run: ./scripts/pack-smoke.sh
 
   release:
@@ -215,7 +219,7 @@ jobs:
       # floating/misused-promise rules). Like the audit gate, this is the only
       # enforcing run — the PR-side ESLint job is a signal, nothing requires it.
       - run: npm run lint
-      # No `npm test` or pack-smoke here: verify ran both on every supported
+      # No suite run or pack-smoke here: verify ran both on every supported
       # Node before this job could start, and `npm publish` re-runs jest
       # through prepublishOnly as a last line.
 
