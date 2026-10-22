@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   whatever screen the previous run or manual session left behind, and steps
   written against the first screen failed. `mauto launch <appId>` now stops
   the app (`mobile_terminate_app`) and then launches it, returning
-  `{ launched, cold: true, terminated: true }`. This resets the screen, not
+  `{ launched, cold: true }`. This resets the screen, not
   app data: `app_state: "fresh_install"` is still the data reset
   ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
 - **Opt out with `"cold": false` / `--resume`.** The new optional scenario
@@ -25,20 +25,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `false` keeps the old behaviour: the executor runs `mauto launch <appId>
   --resume`, which brings a running app to the front in its current state and
   returns `{ launched, cold: false }`. Existing scenarios stay valid; the
-  field is additive. The sample-app E2E harness passes `--resume` for such
-  steps ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
-- **A failed stop does not fail the launch.** Some engines report an error
-  when asked to stop an app that is not running. `mauto launch` still
-  launches and adds `terminated: false` plus a
-  `warnings: [{ code: "terminate_failed", message }]` entry, so the agent
-  knows the app may not have been restarted and can note it in the run report
-  if later steps fail ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
+  field is additive. The action catalog records the `cold` → `--resume`
+  mapping (and that `launch_app` now calls terminate, then launch), and the
+  sample-app E2E harness derives the flag from it
+  ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
+- **An app that cannot be stopped fails the launch.** Some engines report an
+  error when asked to stop an app that is not running (the iOS simulator and
+  real iOS devices); `mauto launch` recognises exactly that case and simply
+  starts the app. Any other stop failure fails the launch with a `device`
+  error whose hint suggests `--resume`, so `cold: true` in a successful
+  result always means the app was restarted
+  ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
 
 ### ✨ Added
 
 - **`mauto terminate <appId> [--device <id>]`** stops a running app and
-  returns `{ terminated: <appId> }`. It adds no scenario action; the action
-  catalog is unchanged
+  returns `{ terminated: <appId> }`. It adds no scenario action
   ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
 
 ### 🐛 Fixed
@@ -48,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `launch_app`; it now says `mauto launch <appId>`, and gains a "return to
   the app" / "resume the app" row that records `launch_app` with
   `"cold": false`. The execute guide documents the cold-start default,
-  `--resume` and the `terminate_failed` warning
+  `--resume`, and that a launch which cannot stop the app fails
   ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
 
 ---

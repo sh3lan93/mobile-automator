@@ -71,8 +71,8 @@ These verbs drive the screen. Each accepts `--device <id>` to target a specific 
 !!! note "`launch` cold-starts by default (0.34.0)"
     `mauto launch <appId>` stops the app, then launches it, so a scenario's `launch_app` step starts on the app's initial screen even when a previous run left the app open ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)). It resets the screen, not app data — use the `app_state: "fresh_install"` precondition for that.
 
-    - Default result: `{"launched": "<appId>", "cold": true, "terminated": true}`.
-    - If stopping the app fails (some engines report an error when the app is not running), the launch still runs and the result is `{"launched": "<appId>", "cold": true, "terminated": false, "warnings": [{"code": "terminate_failed", "message": "…"}]}`. The app may not have been restarted; note it if the steps that follow fail.
+    - Default result: `{"launched": "<appId>", "cold": true}`. An app that is not running is simply started.
+    - If the app cannot be stopped, the launch fails with a `device` error whose hint suggests `--resume`; nothing is launched.
     - `--resume` skips the stop and keeps the old behaviour: `{"launched": "<appId>", "cold": false}`. A scenario step asks for it with `"cold": false`.
 
     `mauto terminate <appId>` stops the app on its own and returns `{"terminated": "<appId>"}`.

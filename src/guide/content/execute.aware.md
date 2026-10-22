@@ -118,7 +118,7 @@ For each step in the scenario:
 | `wait_for_loading_complete` | Poll `mauto screenshot <path>` + visual check | Wait for loading indicators ({{loading_indicators}}) to be absent |
 | `capture_value` | `mauto elements` | Extract text from the target element, store in the `capture_to` variable |
 
-A plain `mauto launch` resets the screen, not app data: `app_state: "fresh_install"` is still the data reset. If the launch result carries a `terminate_failed` warning, the app may not have been restarted — note it in the run report if the following steps fail.
+A plain `mauto launch` resets the screen, not app data: `app_state: "fresh_install"` is still the data reset. It returns `{launched, cold}`; an app that is not running is simply started. If the app cannot be stopped, the launch fails with a device error and a hint to use `--resume` — record the step as failed rather than retrying blindly.
 
 **Precondition `device_actions`** (run before the step replay, from the scenario's `preconditions`):
 
