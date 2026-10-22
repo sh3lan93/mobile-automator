@@ -67,6 +67,7 @@ const VERB_NAMES = Object.freeze([
   'long-press',
   'double-tap',
   'launch',
+  'terminate',
   'install',
   'uninstall',
   'open-url',

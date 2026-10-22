@@ -398,7 +398,14 @@ async function handleDoubleTap({ deviceBridge }, raw) {
   }
 }
 
-async function handleLaunch({ deviceBridge }, appId) {
+// Cold start by default (#255): mobile_launch_app alone brings an already
+// running app to the front with its state kept, so a scenario that starts with
+// launch_app would inherit the previous run's screen. Stop it first. A
+// terminate failure is deliberately not fatal — simctl terminate exits
+// non-zero when the app simply is not running — and a real device fault still
+// surfaces through the launch that follows. The warning keeps it from being
+// silent. `resume` opts out and keeps the old bring-to-front behaviour.
+async function handleLaunch({ deviceBridge }, appId, { resume } = {}) {
   const id = String(appId == null ? '' : appId);
   if (!id) {
     return {
@@ -407,8 +414,42 @@ async function handleLaunch({ deviceBridge }, appId) {
     };
   }
   try {
+    if (resume) {
+      await deviceBridge.launchApp(id);
+      return { envelope: ok({ launched: id, cold: false }), exitKind: 'ok' };
+    }
+    let terminateError = null;
+    try {
+      await deviceBridge.terminateApp(id);
+    } catch (err) {
+      terminateError = err;
+    }
     await deviceBridge.launchApp(id);
-    return { envelope: ok({ launched: id }), exitKind: 'ok' };
+    const data = terminateError
+      ? {
+          launched: id,
+          cold: true,
+          terminated: false,
+          warnings: [{ code: 'terminate_failed', message: terminateError.message || String(terminateError) }],
+        }
+      : { launched: id, cold: true, terminated: true };
+    return { envelope: ok(data), exitKind: 'ok' };
+  } catch (err) {
+    return deviceFail(err);
+  }
+}
+
+async function handleTerminate({ deviceBridge }, appId) {
+  const id = String(appId == null ? '' : appId);
+  if (!id) {
+    return {
+      envelope: fail('invalid_input', 'an app id is required', 'e.g. mauto terminate com.example.app'),
+      exitKind: 'invalid_input',
+    };
+  }
+  try {
+    await deviceBridge.terminateApp(id);
+    return { envelope: ok({ terminated: id }), exitKind: 'ok' };
   } catch (err) {
     return deviceFail(err);
   }
@@ -1975,9 +2016,16 @@ function buildProgram(deps = {}) {
 
   program
     .command('launch <appId>')
-    .description('Launch an installed app by its package/bundle id')
+    .description('Launch an installed app by its package/bundle id, restarting it if it is already running')
+    .option('--resume', 'bring a running app to the front instead of restarting it')
     .option('--device <id>', 'target device id')
-    .action(withEnvelope((appId, opts) => withBridge(opts.device, (bridge) => handleLaunch({ deviceBridge: bridge }, appId))));
+    .action(withEnvelope((appId, opts) => withBridge(opts.device, (bridge) => handleLaunch({ deviceBridge: bridge }, appId, { resume: Boolean(opts.resume) }))));
+
+  program
+    .command('terminate <appId>')
+    .description('Stop a running app by its package/bundle id')
+    .option('--device <id>', 'target device id')
+    .action(withEnvelope((appId, opts) => withBridge(opts.device, (bridge) => handleTerminate({ deviceBridge: bridge }, appId))));
 
   program
     .command('install <path>')
@@ -2608,6 +2656,7 @@ module.exports = {
   handleSwipe,
   handlePress,
   handleLaunch,
+  handleTerminate,
   handleInstall,
   handleUninstall,
   handleOpenUrl,
