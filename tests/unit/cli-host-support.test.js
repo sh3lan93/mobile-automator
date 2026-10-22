@@ -12,6 +12,7 @@ const path = require('path');
 
 const { buildProgram } = require('../../src/cli');
 const connection = require('../../src/device/connection');
+const sessionEnd = require('../../src/device/session-end');
 
 const FIXTURE = path.join(__dirname, '..', 'integration', 'fixtures', 'scenario-valid.json');
 
@@ -59,10 +60,17 @@ describe('unsupported host guard (#165)', () => {
   beforeEach(() => {
     root = workspaceRoot();
     // The session handlers reach connection.* directly (not via the bridge
-    // factory), so spy on that seam to prove nothing was attempted.
-    spies = ['isSessionAlive', 'startSession', 'sessionStatus', 'endSession'].map((name) =>
+    // factory), so spy on that seam to prove nothing was attempted — except
+    // `session end`, which reaches session-end.endSession since the same
+    // module became the path the stale-engine restart uses (#251).
+    spies = ['isSessionAlive', 'startSession', 'sessionStatus'].map((name) =>
       jest.spyOn(connection, name).mockImplementation(async () => {
         throw new Error(`connection.${name} must not be called on an unsupported host`);
+      })
+    );
+    spies.push(
+      jest.spyOn(sessionEnd, 'endSession').mockImplementation(async () => {
+        throw new Error('session-end.endSession must not be called on an unsupported host');
       })
     );
   });

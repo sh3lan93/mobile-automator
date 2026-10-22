@@ -1,0 +1,72 @@
+{
+  "$schema_version": "2.1",
+  "scenario_id": "golden_search_empty",
+  "name": "Search with no results (golden)",
+  "description": "Opens the More tab, types a query that matches no product into the 'Search products' field, dismisses the keyboard and checks the empty-state message, by driving the shipped mauto CLI. Its normalized result is compared against golden/golden_search_empty.result.json. Known to fail on the default engine until #251 is fixed: the TextField label is dropped, so 'Search products' cannot be resolved (see golden/known-failures.json).",
+  "platform": "android",
+  "app_package": "io.github.sh3lan93.mobile_automator.sample_shop",
+  "mode": "platform-agnostic",
+  "metadata": {
+    "app_version": "debug",
+    "environment": "ci"
+  },
+  "tags": ["golden", "search", "empty-state"],
+  "steps": [
+    {
+      "id": "launch",
+      "action": "launch_app",
+      "description": "Launch Sample Shop"
+    },
+    {
+      "id": "wait_home",
+      "action": "wait_for_element",
+      "description": "Wait for the Home app-bar title, which confirms the app launched and rendered",
+      "target": "Sample Shop",
+      "wait_config": { "type": "element_visible", "timeout_ms": 30000 },
+      "on_failure": "fail"
+    },
+    {
+      "id": "tap_more",
+      "action": "tap",
+      "description": "Open the More tab",
+      "target": "More",
+      "on_failure": "retry",
+      "retry_policy": { "max_attempts": 2, "backoff_ms": 1500 }
+    },
+    {
+      "id": "tap_search",
+      "action": "tap",
+      "description": "Focus the product search field",
+      "target": "Search products",
+      "on_failure": "retry",
+      "retry_policy": { "max_attempts": 2, "backoff_ms": 1500 }
+    },
+    {
+      "id": "type_query",
+      "action": "type",
+      "description": "Type a query no product name contains",
+      "value": "zzzz"
+    },
+    {
+      "id": "hide_keyboard",
+      "action": "dismiss_keyboard",
+      "description": "Dismiss the keyboard so the results area is fully on screen"
+    }
+  ],
+  "assertions": [
+    {
+      "id": "empty_state_shown",
+      "after_step": "hide_keyboard",
+      "type": "text_contains",
+      "description": "The empty-state message is shown for a query with no matches",
+      "expected_substring": "No products match"
+    },
+    {
+      "id": "settings_still_present",
+      "after_step": "hide_keyboard",
+      "type": "element_exists",
+      "description": "The rest of the More screen is still rendered after the search",
+      "element_description": "Notifications"
+    }
+  ]
+}

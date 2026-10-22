@@ -110,7 +110,7 @@ Scaffold and configure the `mobile-automator/` workspace.
 |------|-------------|
 | `mauto setup [--mode aware\|agnostic]` | Scaffold `mobile-automator/` (subdirs `scenarios/`, `screenshots/`, `results/`, `memory/`) and write `config.json` |
 | `mauto config get <key>` | Read a config value by dotted path |
-| `mauto config set <key> <value>` | Write a config value by dotted path |
+| `mauto config set <key> <value>` | Write a config value by dotted path. `config set engine <mobilecli\|legacy>` also clears the pinned device when the engine changes, since device ids differ between engines |
 
 The mode is chosen at setup and stored as `mode` in `config.json`: `--mode aware` → `platform-aware` (single-OS / OS-specific UI tests); `--mode agnostic` → `platform-agnostic` (one scenario runs across platforms such as Flutter / RN / KMP / CMP). Configs predating the field are treated as `platform-aware`.
 
@@ -151,7 +151,7 @@ Device verbs are backed by a single persistent mobile-mcp session daemon. These 
 | Verb | Description |
 |------|-------------|
 | `mauto session start [--device <id>] [--idle <ms>]` | Start the persistent session daemon (idempotent; returns `already_running: true` if alive) |
-| `mauto session status` | Report `{ running, reason, in_flight, device, log_path }` — `log_path` is reported whether or not a daemon is up; `reason` is `engine_exited` when a reachable daemon's device engine has died (it is shutting down and the next verb starts a fresh one), otherwise `null` |
+| `mauto session status` | Report `{ running, reason, in_flight, device, log_path, engine, engine_source, resolved_engine, resolved_engine_source }` — `log_path` is reported whether or not a daemon is up; `reason` is `engine_exited` when a reachable daemon's device engine has died (it is shutting down and the next verb starts a fresh one), otherwise `null`. `engine` is the running daemon's device engine (`null` when none is up); `resolved_engine` is what the workspace `engine` key (or an exported `MOBILEMCP_LEGACY_ROBOT`) asks for — when they differ, the next device verb restarts the session on `resolved_engine` |
 | `mauto session end` | Stop the daemon and wait until it has exited. A daemon still alive 35s after acknowledging is terminated (`forced: true`). Fails with `kind: device` and the `pid` if the daemon cannot be stopped |
 | `mauto devices` | List connected devices/simulators (id / name / platform / state) |
 | `mauto devices use <id>` | Validate the id against the live list, then persist the selection |

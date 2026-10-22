@@ -72,7 +72,17 @@ Infer each of the following from the codebase, confirm uncertain values with the
 - **Loading indicators** — grep for loading widgets/components (progress indicators, spinners, shimmer/skeleton placeholders) and any `*Loading*`/`*Spinner*`/`*Shimmer*`/`*Skeleton*` classes. Persist the found names, or a description like `"progress bars, spinners, shimmer effects"` if none found. Persist: `mauto config set loading_indicators "<list>"`.
 - **Protected directories** — list the source directories the QA tooling must NEVER modify (e.g. `app/src/`, `lib/`, `src/`, `shared/`, `composeApp/`, `iosApp/`). Confirm with the user. Persist a comma-separated value (stored as a list): `mauto config set protected_directories "<app/src/, lib/, core/>"`.
 
-## 5. Confirm the config
+## 5. Choose the device engine
+
+For a Flutter app (or another app that draws its own UI, such as Compose Multiplatform) tested on Android, set the legacy engine: the default `mobilecli` engine drops text-field labels and reports content from hidden tabs in `mauto elements`. The legacy engine hides hidden-tab content on every Android version tested, but recovers text-field labels only on recent Android versions (verified on Android 16 / API 36; not on API 33) — on older devices, labels may stay missing on both engines. Native Android and iOS apps can keep the default.
+
+```
+mauto config set engine legacy
+```
+
+Follow the `hint` the command prints. Switching clears any pinned device, because the engines name Android devices differently; re-select it with `mauto devices` and `mauto devices use <id>`. iOS simulators use `mobilecli` whatever this key says.
+
+## 6. Confirm the config
 
 Read the persisted values back with `mauto config get <key>` for each finding, and present a concise summary to the user. The workspace is now analyzed and configured: `mauto guide generate` and `mauto guide execute` will read these values to drive scenario authoring and execution.
 

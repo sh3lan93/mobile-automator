@@ -12,14 +12,14 @@
 
 const fs = require('fs');
 const path = require('path');
-const Ajv = require('ajv');
 
 const { formatError } = require('../schemas/format-error');
+const { createCliAjv } = require('../schemas/cli-ajv');
 
 const CONFIG_SCHEMA_PATH = path.resolve(__dirname, '../schemas/config_schema.json');
 
 const schema = JSON.parse(fs.readFileSync(CONFIG_SCHEMA_PATH, 'utf8'));
-const ajv = new Ajv({ allErrors: true, strict: false });
+const ajv = createCliAjv();
 
 // Resolve a local `$ref` ("#/definitions/stringList") to a fixpoint: a
 // resolved node may itself be another `$ref` (e.g. a `$ref` to a `$ref`), so

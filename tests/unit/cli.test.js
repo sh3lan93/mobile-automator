@@ -44,7 +44,7 @@ const {
 } = require('../../src/cli');
 const selectionStore = require('../../src/device/selection');
 const sessionPaths = require('../../src/device/session-paths');
-const Ajv = require('ajv');
+const { createCliAjv } = require('../../src/schemas/cli-ajv');
 
 const RESULT_SCHEMA_PATH = path.resolve(
   __dirname,
@@ -721,7 +721,7 @@ describe('cli handlers', () => {
       expect(f.envelope.data.run_id).toBe(runId);
 
       const schema = JSON.parse(fs.readFileSync(RESULT_SCHEMA_PATH, 'utf8'));
-      const validate = new Ajv({ allErrors: true, strict: false }).compile(schema);
+      const validate = createCliAjv().compile(schema);
       expect(validate(f.envelope.data)).toBe(true);
     });
 
@@ -769,7 +769,7 @@ describe('cli handlers', () => {
       expect(f.envelope.data.captured_variables).toEqual({ order_id: 'A-1729' });
 
       const schema = JSON.parse(fs.readFileSync(RESULT_SCHEMA_PATH, 'utf8'));
-      expect(new Ajv({ allErrors: true, strict: false }).compile(schema)(f.envelope.data)).toBe(true);
+      expect(createCliAjv().compile(schema)(f.envelope.data)).toBe(true);
     });
 
     test('rejects an unknown observation type with invalid_input', () => {
@@ -822,7 +822,7 @@ describe('cli handlers', () => {
       expect(typeof f.envelope.data.metadata.timestamp).toBe('string');
 
       const schema = JSON.parse(fs.readFileSync(RESULT_SCHEMA_PATH, 'utf8'));
-      expect(new Ajv({ allErrors: true, strict: false }).compile(schema)(f.envelope.data)).toBe(true);
+      expect(createCliAjv().compile(schema)(f.envelope.data)).toBe(true);
     });
 
     test('omitting every metadata flag keeps the previous all-unknown behaviour', () => {
@@ -1001,7 +1001,7 @@ describe('cli handlers', () => {
       });
 
       const schema = JSON.parse(fs.readFileSync(RESULT_SCHEMA_PATH, 'utf8'));
-      expect(new Ajv({ allErrors: true, strict: false }).compile(schema)(f.envelope.data)).toBe(true);
+      expect(createCliAjv().compile(schema)(f.envelope.data)).toBe(true);
     });
 
     test('rejects a non-boolean --pass with invalid_input', () => {
@@ -1191,6 +1191,104 @@ describe('cli handlers', () => {
       );
       const r = handleConfigSet({ projectRoot }, 'project_name', 'Demo');
       expect(r.exitKind).toBe('ok');
+    });
+
+    // #251: device ids differ between engines (AVD name vs adb serial), so a
+    // switch invalidates a persisted `mauto devices use` selection.
+    describe('engine switch (#251)', () => {
+      const noEnv = {};
+      function fakeStore(initial) {
+        let device = initial;
+        const calls = { clear: 0 };
+        return {
+          calls,
+          read: () => device,
+          write: (_root, id) => (device = String(id)),
+          clear: () => {
+            calls.clear += 1;
+            device = null;
+          },
+        };
+      }
+      const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-engine-'));
+
+      test('a change clears the device selection and reports previous + hint', () => {
+        const projectRoot = tmp();
+        const store = fakeStore('Pixel_9_Pro');
+        const r = handleConfigSet({ projectRoot, env: noEnv, store }, 'engine', 'legacy');
+        expect(r.exitKind).toBe('ok');
+        expect(r.envelope.ok).toBe(true);
+        expect(r.envelope.data).toEqual({
+          key: 'engine',
+          value: 'legacy',
+          previous: 'mobilecli',
+          device_selection_cleared: true,
+        });
+        expect(store.calls.clear).toBe(1);
+        expect(store.read()).toBeNull();
+        expect(handleConfigGet({ projectRoot }, 'engine').envelope.data.value).toBe('legacy');
+        const { hint } = r.envelope;
+        expect(hint).toContain('`mauto devices`');
+        expect(hint).toContain('`mauto devices use');
+        expect(hint).toMatch(/next device verb/);
+        expect(hint).toContain('adb shell pkill -f com.mobilenext.mobilecli.DeviceServer');
+        expect(hint).toContain('mobilecli#470');
+        expect(hint).not.toContain('MOBILEMCP_LEGACY_ROBOT');
+      });
+
+      test('with no persisted selection, device_selection_cleared is false', () => {
+        const store = fakeStore(null);
+        const r = handleConfigSet({ projectRoot: tmp(), env: noEnv, store }, 'engine', 'legacy');
+        expect(r.envelope.data.device_selection_cleared).toBe(false);
+        expect(r.envelope.hint).toMatch(/next device verb/);
+      });
+
+      test('switching back to mobilecli does not carry the legacy-only uiautomator advice', () => {
+        const projectRoot = tmp();
+        handleConfigSet({ projectRoot, env: noEnv, store: fakeStore(null) }, 'engine', 'legacy');
+        const store = fakeStore('emulator-5554');
+        const r = handleConfigSet({ projectRoot, env: noEnv, store }, 'engine', 'mobilecli');
+        expect(r.envelope.data).toEqual({
+          key: 'engine',
+          value: 'mobilecli',
+          previous: 'legacy',
+          device_selection_cleared: true,
+        });
+        expect(r.envelope.hint).not.toContain('pkill');
+      });
+
+      test('setting the effective value again is a plain ok with no side effects', () => {
+        const projectRoot = tmp();
+        // Missing key == the default (mobilecli).
+        const store = fakeStore('Pixel_9_Pro');
+        const r = handleConfigSet({ projectRoot, env: noEnv, store }, 'engine', 'mobilecli');
+        expect(r.envelope.data).toEqual({ key: 'engine', value: 'mobilecli' });
+        expect(r.envelope.hint).toBeUndefined();
+        expect(store.calls.clear).toBe(0);
+        expect(store.read()).toBe('Pixel_9_Pro');
+      });
+
+      test('an exported MOBILEMCP_LEGACY_ROBOT is called out as overriding the key', () => {
+        const store = fakeStore(null);
+        const r = handleConfigSet(
+          { projectRoot: tmp(), env: { MOBILEMCP_LEGACY_ROBOT: '0' }, store },
+          'engine',
+          'legacy'
+        );
+        expect(r.envelope.data.value).toBe('legacy');
+        expect(r.envelope.hint).toMatch(/MOBILEMCP_LEGACY_ROBOT.*overrides/);
+        // The env forces mobilecli: no restart promise, no legacy-only advice.
+        expect(r.envelope.hint).toContain('the mobilecli engine keeps running');
+        expect(r.envelope.hint).not.toMatch(/next device verb restarts/);
+        expect(r.envelope.hint).not.toContain('pkill');
+      });
+
+      test('an invalid engine is rejected before any selection is touched', () => {
+        const store = fakeStore('Pixel_9_Pro');
+        const r = handleConfigSet({ projectRoot: tmp(), env: noEnv, store }, 'engine', 'appium');
+        expect(r.exitKind).toBe('invalid_input');
+        expect(store.calls.clear).toBe(0);
+      });
     });
   });
 
@@ -1407,14 +1505,36 @@ describe('cli handlers', () => {
       let spawned = null;
       const spawn = { spawnDaemon: async (a) => { spawned = a; return true; } };
       const client = { isAlive: async () => false };
+      const resolveEngine = () => ({ engine: 'legacy', source: 'config' });
       const { envelope, exitKind } = await handleSessionStart(
-        { projectRoot, spawn, client },
+        { projectRoot, spawn, client, resolveEngine },
         { device: 'A', idle: '1000' }
       );
       expect(exitKind).toBe('ok');
-      expect(envelope.data).toEqual({ started: true, device: 'A' });
+      expect(envelope.data).toEqual({ started: true, device: 'A', engine: 'legacy' });
       expect(spawned.device).toBe('A');
       expect(spawned.idleMs).toBe(1000);
+      // #251: the workspace's resolved engine reaches the spawned daemon.
+      expect(spawned.engine).toBe('legacy');
+      expect(spawned.engineSource).toBe('config');
+    });
+
+    test('an already-running daemon reports its own engine, with a hint when stale (#251)', async () => {
+      const spawn = { spawnDaemon: async () => { throw new Error('should not spawn'); } };
+      const client = { isAlive: async () => true };
+      const { envelope, exitKind } = await handleSessionStart(
+        {
+          projectRoot, spawn, client,
+          // One read, both projections: the daemon's pin and its engine.
+          readHandle: () => ({ device: 'A', engine: 'mobilecli' }),
+          resolveEngine: () => ({ engine: 'legacy', source: 'config' }),
+        },
+        {}
+      );
+      expect(exitKind).toBe('ok');
+      expect(envelope.data.already_running).toBe(true);
+      expect(envelope.data.engine).toBe('mobilecli');
+      expect(envelope.hint).toContain('legacy');
     });
 
     test('is idempotent when a daemon is already running', async () => {
@@ -1459,7 +1579,7 @@ describe('cli handlers', () => {
     test('fails with a device error when a live daemon is pinned to a different device', async () => {
       const spawn = { spawnDaemon: async () => { throw new Error('should not spawn'); } };
       const client = { isAlive: async () => true };
-      const readHandle = () => 'A';
+      const readHandle = () => ({ device: 'A' });
       const { envelope, exitKind } = await handleSessionStart(
         { projectRoot, spawn, client, readHandle },
         { device: 'B' }
@@ -1476,7 +1596,7 @@ describe('cli handlers', () => {
     test('reuses a live daemon when the requested device matches the handle pin', async () => {
       const spawn = { spawnDaemon: async () => { throw new Error('should not spawn'); } };
       const client = { isAlive: async () => true };
-      const readHandle = () => 'A';
+      const readHandle = () => ({ device: 'A' });
       const { envelope, exitKind } = await handleSessionStart(
         { projectRoot, spawn, client, readHandle },
         { device: 'A' }
@@ -1503,7 +1623,7 @@ describe('cli handlers', () => {
     test('reuses a live daemon when no device is requested, whatever its pin', async () => {
       const spawn = { spawnDaemon: async () => { throw new Error('should not spawn'); } };
       const client = { isAlive: async () => true };
-      const readHandle = () => 'A';
+      const readHandle = () => ({ device: 'A' });
       const { envelope, exitKind } = await handleSessionStart(
         { projectRoot, spawn, client, readHandle },
         {}
@@ -1515,15 +1635,20 @@ describe('cli handlers', () => {
   });
 
   describe('handleSessionStatus', () => {
+    const defaultEngine = () => ({ engine: 'mobilecli', source: 'default' });
+
     test('reports running:true with in_flight and device from the client', async () => {
       const up = await handleSessionStatus({
         projectRoot: '/x',
         client: { getSessionStatus: async () => ({ running: true, in_flight: 2, device: 'A' }) },
+        resolveEngine: defaultEngine,
       });
       expect(up.exitKind).toBe('ok');
       expect(up.envelope.data).toEqual({
         running: true, reason: null, in_flight: 2, device: 'A',
         log_path: sessionPaths.logFilePath('/x'), session_id: null,
+        engine: 'mobilecli', engine_source: null,
+        resolved_engine: 'mobilecli', resolved_engine_source: 'default',
       });
     });
 
@@ -1531,13 +1656,31 @@ describe('cli handlers', () => {
       const down = await handleSessionStatus({
         projectRoot: '/x',
         client: { getSessionStatus: async () => ({ running: false, in_flight: null, device: null }) },
+        resolveEngine: defaultEngine,
       });
       expect(down.exitKind).toBe('ok');
       // log_path survives the not-running shape: that is when it is needed.
       expect(down.envelope.data).toEqual({
         running: false, reason: null, in_flight: null, device: null,
         log_path: sessionPaths.logFilePath('/x'), session_id: null,
+        engine: null, engine_source: null,
+        resolved_engine: 'mobilecli', resolved_engine_source: 'default',
       });
+    });
+
+    // #251: a live daemon on a different engine than the workspace resolves is
+    // stale; the next device verb restarts it. Say so.
+    test('a running daemon on a stale engine carries a hint naming the restart', async () => {
+      const r = await handleSessionStatus({
+        projectRoot: '/x',
+        client: { getSessionStatus: async () => ({ running: true, in_flight: 0, device: 'A' }) },
+        resolveEngine: () => ({ engine: 'legacy', source: 'config' }),
+      });
+      expect(r.exitKind).toBe('ok');
+      expect(r.envelope.data.engine).toBe('mobilecli');
+      expect(r.envelope.data.resolved_engine).toBe('legacy');
+      expect(r.envelope.hint).toContain('legacy');
+      expect(r.envelope.hint).toContain('restart');
     });
 
     test('a dead engine: running:false with a hint that says why (#156)', async () => {
@@ -1556,13 +1699,14 @@ describe('cli handlers', () => {
       const r = await handleSessionStatus({
         projectRoot: '/x',
         client: { getSessionStatus: async () => ({ running: true, in_flight: 0, device: 'A' }) },
+        resolveEngine: defaultEngine,
       });
       expect(r.envelope.hint).toBeUndefined();
     });
   });
 
   describe('handleSessionEnd (#156)', () => {
-    // Stub connection.endSession's dependencies so it returns a chosen outcome.
+    // Stub session-end.endSession's dependencies so it returns a chosen outcome.
     function run(outcome) {
       const reaper = {
         waitForDeath: async () => outcome !== 'escalated' && outcome !== 'survived',
@@ -1768,7 +1912,7 @@ describe('cli handlers', () => {
         store,
         projectRoot: '/x',
         isAlive: async () => true,
-        readHandle: () => 'A',
+        readHandle: () => ({ device: 'A' }),
       });
       expect(exitKind).toBe('ok');
       expect(envelope.ok).toBe(true);

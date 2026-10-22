@@ -6,14 +6,25 @@ on:
       - 'sample-app/**'
       - 'src/guide/content/execute.*.md'
       - 'src/**'
+      - 'bin/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tests/lint/e2e-agnostic.test.js'
       - '.github/workflows/sample-app-e2e-android.yml'
   workflow_dispatch: {}
 
 jobs:
   smoke-android:
-    name: Android emulator smoke (API 33)
+    name: Android emulator E2E via the shipped mauto CLI (API 36, ${{ matrix.engine }} engine)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
+    # One leg per device engine (#251). The engine is applied by the harness
+    # with `mauto config set engine`, and known-failures.json entries carry the
+    # engines they apply to, so each leg is held to its own expectations.
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [mobilecli, legacy]
 
     steps:
       - uses: actions/checkout@v7
@@ -42,11 +53,21 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: sample-app/scripts/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Install smoke runner deps
-        working-directory: sample-app/scripts
+      - name: Install mauto dependencies
         run: npm ci
+
+      # The E2E drives the SHIPPED CLI, so it runs the packed tarball installed
+      # into a fresh prefix, exactly as scripts/pack-smoke.sh does. mobilecli
+      # ships its binaries as optionalDependencies, so --ignore-scripts is safe.
+      - name: Pack and install the mauto tarball
+        run: |
+          TARBALL="$(npm pack --silent)"
+          npm install "$GITHUB_WORKSPACE/$TARBALL" --prefix "$RUNNER_TEMP/mauto-prefix" --no-save --ignore-scripts
+          MAUTO_BIN="$RUNNER_TEMP/mauto-prefix/node_modules/.bin/mauto"
+          "$MAUTO_BIN" --version
+          echo "MAUTO_BIN=$MAUTO_BIN" >> "$GITHUB_ENV"
 
       - name: Enable KVM
         run: |
@@ -54,22 +75,29 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Run smoke scenario on Android emulator
+      - name: Run E2E scenarios on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
+        env:
+          E2E_ARTIFACTS_DIR: ${{ runner.temp }}/e2e-artifacts
+          E2E_ENGINE: ${{ matrix.engine }}
+          MOBILEMCP_DISABLE_TELEMETRY: '1'
         with:
-          api-level: 33
+          # API 36, not 33: on API 33 even the legacy engine's uiautomator dump
+          # carries no TextField hint, so `engine: legacy` cannot recover Flutter
+          # field labels there and the legacy leg would prove nothing (#251).
+          api-level: 36
           arch: x86_64
           target: default
           disable-animations: true
           emulator-boot-timeout: 300
+          # Each line runs as its own `sh -c`, so keep commands single-line.
           script: |
-            adb install sample-app/build/app/outputs/flutter-apk/app-debug.apk
-            node sample-app/scripts/run-smoke.mjs
+            adb install sample-app/build/app/outputs/flutter-apk/app-debug.apk && node sample-app/scripts/run-e2e.mjs
 
-      - name: Upload screenshots
+      - name: Upload E2E artifacts
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: smoke-screenshots-android
-          path: sample-app/screenshots/smoke_nav/
+          name: e2e-android-artifacts-${{ matrix.engine }}
+          path: ${{ runner.temp }}/e2e-artifacts
           if-no-files-found: warn

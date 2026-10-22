@@ -66,7 +66,13 @@ describe('engineHint — device id not found (ids differ between engines)', () =
     const hint = engineHint(B2_MESSAGE);
     expect(hint).toContain('"emulator-5554"');
     expect(hint).toContain('Pixel_9_Pro');
-    expect(hint).toContain('MOBILEMCP_LEGACY_ROBOT=1');
+    expect(hint).toContain('emulator-5554');
+    // #251: the workspace `engine` key is the primary control...
+    expect(hint).toContain('`mauto config get engine`');
+    expect(hint).toContain('`mauto config set engine <mobilecli|legacy>`');
+    // ...and an exported variable still overrides it.
+    expect(hint).toContain('MOBILEMCP_LEGACY_ROBOT');
+    expect(hint).toMatch(/MOBILEMCP_LEGACY_ROBOT[^.]*overrides/);
     expect(hint).toContain('`mauto devices`');
     expect(hint).toContain('`mauto devices use');
     expect(hint).toContain('--device');

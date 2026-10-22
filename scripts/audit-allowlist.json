@@ -1,1 +1,16 @@
-[]
+[
+  {
+    "ghsa": "GHSA-jm63-cq47-j5jp",
+    "package": "@modelcontextprotocol/server",
+    "reason": "@modelcontextprotocol/server@2.0.0 is pinned exactly by every @mobilenext/mobile-mcp release through 1.0.12 (fixed in 2.3.0). The flaw is in the HTTP transport; mauto spawns mobile-mcp over stdio only and never starts its HTTP server.",
+    "issue": 248,
+    "expires": "2027-01-19"
+  },
+  {
+    "ghsa": "GHSA-46jr-4wx8-v453",
+    "package": "@modelcontextprotocol/server",
+    "reason": "@modelcontextprotocol/server@2.0.0 — same pin and exposure as GHSA-jm63-cq47-j5jp: memory exhaustion via an HTTP request, unreachable over mauto's stdio transport.",
+    "issue": 248,
+    "expires": "2027-01-19"
+  }
+]

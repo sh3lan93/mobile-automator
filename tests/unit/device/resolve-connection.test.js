@@ -80,6 +80,145 @@ describe('resolve-connection', () => {
     test('no daemon + autostart off -> oneshot', () => {
       expect(chooseConnectionStrategy({ alive: false, handleDevice: null, requestedDevice: null, autostart: false })).toBe('oneshot');
     });
+
+    // --- #251: engine staleness -------------------------------------------
+    const base = { alive: true, handleDevice: 'A', requestedDevice: 'A', autostart: true };
+
+    test('live daemon + matching engine -> daemon', () => {
+      expect(chooseConnectionStrategy({ ...base, runningEngine: 'legacy', requestedEngine: 'legacy' })).toBe('daemon');
+      expect(chooseConnectionStrategy({ ...base, runningEngine: 'mobilecli', requestedEngine: 'mobilecli' })).toBe('daemon');
+    });
+
+    test('a handle with no recorded engine (pre-#251 daemon) counts as mobilecli', () => {
+      expect(chooseConnectionStrategy({ ...base, runningEngine: null, requestedEngine: 'mobilecli' })).toBe('daemon');
+      expect(chooseConnectionStrategy({ ...base, runningEngine: undefined, requestedEngine: 'legacy' })).toBe('restart-then-daemon');
+    });
+
+    test('no requested engine -> the engine is not compared (pre-#251 callers)', () => {
+      expect(chooseConnectionStrategy({ ...base, runningEngine: 'legacy' })).toBe('daemon');
+    });
+
+    test('live daemon + engine mismatch + autostart -> restart-then-daemon', () => {
+      expect(chooseConnectionStrategy({ ...base, runningEngine: 'mobilecli', requestedEngine: 'legacy' })).toBe('restart-then-daemon');
+      expect(chooseConnectionStrategy({ ...base, requestedDevice: null, runningEngine: 'legacy', requestedEngine: 'mobilecli' })).toBe('restart-then-daemon');
+    });
+
+    test('live daemon + engine mismatch + autostart off -> oneshot', () => {
+      expect(chooseConnectionStrategy({ ...base, autostart: false, runningEngine: 'mobilecli', requestedEngine: 'legacy' })).toBe('oneshot');
+    });
+
+    // Device-pin mismatch keeps its one-shot: restarting would repin the
+    // session to the requested device, which is the silent switch (b) refuses.
+    test('device AND engine mismatch -> oneshot (the device rule wins)', () => {
+      expect(chooseConnectionStrategy({ ...base, requestedDevice: 'B', runningEngine: 'mobilecli', requestedEngine: 'legacy' })).toBe('oneshot');
+    });
+
+    test('no daemon -> engine is irrelevant', () => {
+      expect(chooseConnectionStrategy({ alive: false, handleDevice: null, requestedDevice: null, autostart: true, runningEngine: 'mobilecli', requestedEngine: 'legacy' })).toBe('spawn-then-daemon');
+    });
+  });
+
+  // --- #251: the engine reaches every connection path ----------------------
+  describe('engine (#251)', () => {
+    function writeHandleObj(root, obj) {
+      fs.mkdirSync(paths.sessionDir(root), { recursive: true });
+      fs.writeFileSync(paths.handlePath(root), JSON.stringify(obj));
+    }
+    const legacy = () => ({ engine: 'legacy', source: 'config' });
+    const mobilecli = () => ({ engine: 'mobilecli', source: 'default' });
+
+    test('one-shot createCall receives the resolved engine', async () => {
+      const root = tmpRoot();
+      let seen = null;
+      const createCall = async (opts) => { seen = opts; return { call: async () => {}, close: async () => {} }; };
+      const client = fakeClient({ alive: false });
+      await resolveDeviceConnection({ device: 'A', projectRoot: root, autostart: false, client, createCall, resolveEngine: legacy });
+      expect(seen).toEqual({ device: 'A', engine: 'legacy' });
+    });
+
+    test('spawn-then-daemon passes the engine and its source to spawnDaemon', async () => {
+      const root = tmpRoot();
+      let seen = null;
+      const spawn = { spawnDaemon: async (a) => { seen = a; return true; } };
+      const client = fakeClient({ alive: false, conn: fakeDaemonConn() });
+      const r = await resolveDeviceConnection({ device: null, projectRoot: root, client, spawn, resolveEngine: legacy, idleMs: 5 });
+      expect(r.source).toBe('daemon');
+      expect(seen).toEqual({ projectRoot: root, device: null, idleMs: 5, engine: 'legacy', engineSource: 'config' });
+    });
+
+    test('a live daemon on the requested engine is reused', async () => {
+      const root = tmpRoot();
+      writeHandleObj(root, { device: 'A', engine: 'legacy' });
+      const client = fakeClient({ alive: true, conn: fakeDaemonConn() });
+      const end = async () => { throw new Error('must not end'); };
+      const r = await resolveDeviceConnection({ device: 'A', projectRoot: root, client, end, resolveEngine: legacy });
+      expect(r.source).toBe('daemon');
+    });
+
+    test('a pre-#251 handle (no engine) is reused when mobilecli is requested', async () => {
+      const root = tmpRoot();
+      writeHandleObj(root, { device: 'A' });
+      const client = fakeClient({ alive: true, conn: fakeDaemonConn() });
+      const end = async () => { throw new Error('must not end'); };
+      const r = await resolveDeviceConnection({ device: 'A', projectRoot: root, client, end, resolveEngine: mobilecli });
+      expect(r.source).toBe('daemon');
+    });
+
+    // One decoder of a handle's engine (engine.js's handleEngine): a corrupt
+    // value counts as the default robot HERE exactly as it does in
+    // `session status`, instead of the raw-field compare that read the same
+    // handle as "stale" and silently restarted a daemon status called healthy.
+    test('a handle with a corrupt engine value is read as the default robot, not as stale', async () => {
+      const root = tmpRoot();
+      writeHandleObj(root, { device: 'A', engine: 'turbo' });
+      const client = fakeClient({ alive: true, conn: fakeDaemonConn() });
+      const end = async () => { throw new Error('must not end'); };
+      const r = await resolveDeviceConnection({ device: 'A', projectRoot: root, client, end, resolveEngine: mobilecli });
+      expect(r.source).toBe('daemon');
+    });
+
+    test('a stale-engine daemon is ended, then respawned on the requested engine keeping its pin', async () => {
+      const root = tmpRoot();
+      writeHandleObj(root, { device: 'A', engine: 'mobilecli' });
+      const order = [];
+      const end = async (r) => { order.push(['end', r]); return { outcome: 'stopped', pid: 1 }; };
+      let seen = null;
+      const spawn = { spawnDaemon: async (a) => { order.push(['spawn']); seen = a; return true; } };
+      const client = fakeClient({ alive: true, conn: fakeDaemonConn() });
+      const createCall = async () => { throw new Error('must not one-shot'); };
+      // No --device on the verb: the restart must keep the handle's pin (A).
+      const r = await resolveDeviceConnection({ device: null, projectRoot: root, client, spawn, createCall, end, resolveEngine: legacy });
+      expect(r.source).toBe('daemon');
+      expect(order).toEqual([['end', root], ['spawn']]);
+      expect(seen).toMatchObject({ projectRoot: root, device: 'A', engine: 'legacy', engineSource: 'config' });
+    });
+
+    test('a stale daemon that will not stop -> one-shot on the requested engine, never respawn', async () => {
+      const root = tmpRoot();
+      writeHandleObj(root, { device: 'A', engine: 'mobilecli' });
+      const end = async () => ({ outcome: 'survived', pid: 1 });
+      let spawned = 0;
+      const spawn = { spawnDaemon: async () => { spawned += 1; return true; } };
+      let seen = null;
+      const createCall = async (opts) => { seen = opts; return { call: async () => {}, close: async () => {} }; };
+      const client = fakeClient({ alive: true, conn: fakeDaemonConn() });
+      const r = await resolveDeviceConnection({ device: 'A', projectRoot: root, client, spawn, createCall, end, resolveEngine: legacy });
+      expect(r.source).toBe('oneshot');
+      expect(spawned).toBe(0);
+      expect(seen).toEqual({ device: 'A', engine: 'legacy' });
+    });
+
+    test('device AND engine mismatch -> one-shot on the requested engine, the daemon is left alone', async () => {
+      const root = tmpRoot();
+      writeHandleObj(root, { device: 'A', engine: 'mobilecli' });
+      const end = async () => { throw new Error('must not end'); };
+      let seen = null;
+      const createCall = async (opts) => { seen = opts; return { call: async () => {}, close: async () => {} }; };
+      const client = fakeClient({ alive: true, conn: fakeDaemonConn() });
+      const r = await resolveDeviceConnection({ device: 'B', projectRoot: root, client, createCall, end, resolveEngine: legacy });
+      expect(r.source).toBe('oneshot');
+      expect(seen).toEqual({ device: 'B', engine: 'legacy' });
+    });
   });
 
   test('(a) daemon live + device match -> source daemon, close is a no-op for the daemon', async () => {

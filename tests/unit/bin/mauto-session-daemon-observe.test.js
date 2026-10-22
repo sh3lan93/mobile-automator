@@ -100,6 +100,35 @@ describe('bin/mauto-session-daemon observability wiring', () => {
   // absorbed here rather than escaping as an unhandled rejection into jest.
   const start = () => main().catch(() => {});
 
+  // #251: the spawner resolves the engine; the daemon passes it through.
+  it('passes MAUTO_SESSION_ENGINE / _SOURCE through to startDaemon', async () => {
+    process.env.MAUTO_SESSION_ENGINE = 'legacy';
+    process.env.MAUTO_SESSION_ENGINE_SOURCE = 'config';
+    try {
+      start();
+      await settle();
+    } finally {
+      delete process.env.MAUTO_SESSION_ENGINE;
+      delete process.env.MAUTO_SESSION_ENGINE_SOURCE;
+    }
+    expect(started.engine).toBe('legacy');
+    expect(started.engineSource).toBe('config');
+  });
+
+  it('without MAUTO_SESSION_ENGINE, resolves the engine from its own env', async () => {
+    const saved = process.env.MOBILEMCP_LEGACY_ROBOT;
+    process.env.MOBILEMCP_LEGACY_ROBOT = '1';
+    try {
+      start();
+      await settle();
+    } finally {
+      if (saved === undefined) delete process.env.MOBILEMCP_LEGACY_ROBOT;
+      else process.env.MOBILEMCP_LEGACY_ROBOT = saved;
+    }
+    expect(started.engine).toBe('legacy');
+    expect(started.engineSource).toBe('env');
+  });
+
   it('builds a boot recorder bound to the project root and this process', async () => {
     start();
     await settle();
