@@ -79,6 +79,7 @@ async function recordWhatTheBridgeSends() {
   await bridge.pressButton('BACK');
   await bridge.launchApp('com.example');
   await bridge.terminateApp('com.example');
+  await bridge.restartApp('com.example');
   await bridge.installApp('/tmp/app.apk');
   await bridge.uninstallApp('com.example');
   await bridge.openUrl('https://example.com');
