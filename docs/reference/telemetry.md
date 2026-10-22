@@ -4,7 +4,8 @@
 what it would collect if you did, exactly, field by field.
 
 This page covers `mauto`'s own telemetry. The device engine `mauto` runs,
-mobile-mcp, has separate telemetry that is on by default — see
+mobile-mcp, has separate telemetry of its own. Upstream it is on by default;
+`mauto` starts the engine with it turned off — see
 [The device engine's own telemetry](#the-device-engines-own-telemetry).
 
 ## The short version
@@ -142,24 +143,37 @@ anything in it, `mauto telemetry disable` and delete the file.
 
 Everything above is about `mauto`. To drive devices, `mauto` runs mobile-mcp
 (`@mobilenext/mobile-mcp`, pinned at 1.0.5), and mobile-mcp — not `mauto` —
-reports usage to its own maintainers, on by default:
+can report usage to its own maintainers:
 
 - a PostHog event per device call (`tool_invoked` or `tool_failed`, carrying
   the tool name, duration and device counts);
 - since mobile-mcp 1.0.5, a scarf.sh pixel fetched once per engine process, on
   its first device call.
 
-None of this goes through `mauto`'s spool, and `mauto telemetry` neither
-controls nor reports it. mobile-mcp turns both off when
-`MOBILEMCP_DISABLE_TELEMETRY=1` is set in its environment. The engine lives
-inside the device session daemon, which inherits the environment it was started
-with, so end the session before setting it:
+Upstream, both are on unless `MOBILEMCP_DISABLE_TELEMETRY` is set. **`mauto`
+turns them off**: it starts the engine with `MOBILEMCP_DISABLE_TELEMETRY=1`,
+for the same reason its own telemetry is opt-in. None of this goes through
+`mauto`'s spool. `mauto telemetry status` reports the engine's state under
+`data.engine`:
+
+| `reason` | Meaning |
+|---|---|
+| `default_off` | You set nothing; `mauto` passed `MOBILEMCP_DISABLE_TELEMETRY=1`. |
+| `user_env` | You set `MOBILEMCP_DISABLE_TELEMETRY`; your value was passed through unchanged. |
+| `kill_switch` | `MAUTO_TELEMETRY=0` is set, so the engine is off whatever else you set. |
+| `do_not_track` | `DO_NOT_TRACK` is set, so the engine is off whatever else you set. |
+
+If you set `MOBILEMCP_DISABLE_TELEMETRY` yourself, `mauto` passes your value
+through as-is. mobile-mcp checks only whether the value is non-empty, so any
+non-empty value (`1`, `0`, `false` alike) keeps its telemetry off, and only an
+explicit empty string turns it back on. `MAUTO_TELEMETRY=0` and `DO_NOT_TRACK=1`
+win over that opt-in.
+
+The engine lives inside the device session daemon, which inherits the
+environment it was started with, so end the session before changing it:
 
 ```bash
 mauto session end
-export MOBILEMCP_DISABLE_TELEMETRY=1
-mauto devices          # the new daemon starts the engine with telemetry off
+export MOBILEMCP_DISABLE_TELEMETRY=   # empty string: opt the engine back in
+mauto devices                         # the new daemon starts the engine with it
 ```
-
-`mauto` does not set this variable for you today; whether it should by default
-is tracked in [#213](https://github.com/sh3lan93/mobile-automator/issues/213).

@@ -157,4 +157,22 @@ describe('createCall lifecycle (#156)', () => {
     expect(made.transport.params.command).toBe('fake-node');
     expect(made.transport.params.args).toEqual(['fake-entry.js']);
   });
+
+  // #213: pinned at the spawn seam, not only on the pure helper — this is the
+  // env the engine process actually receives.
+  test('the engine is spawned with its telemetry disabled by default', async () => {
+    const keys = ['MOBILEMCP_DISABLE_TELEMETRY', 'MAUTO_TELEMETRY', 'DO_NOT_TRACK'];
+    const saved = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
+    for (const k of keys) delete process.env[k];
+    try {
+      const { sdk, made } = fakeSdk();
+      await createCall({ sdk, server, reaper: fakeReaper() });
+      expect(made.transport.params.env.MOBILEMCP_DISABLE_TELEMETRY).toBe('1');
+    } finally {
+      for (const k of keys) {
+        if (saved[k] === undefined) delete process.env[k];
+        else process.env[k] = saved[k];
+      }
+    }
+  });
 });

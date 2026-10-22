@@ -6,6 +6,7 @@ const { StdioClientTransport } = require('@modelcontextprotocol/sdk/client/stdio
 const { injectDeviceArg } = require('./tool-args');
 const { resolveSingleDevice } = require('./device-resolver');
 const { normalizeDevices } = require('./device-model');
+const { resolveEngineTelemetry } = require('../observe/telemetry');
 const { ErrorCode } = require('@modelcontextprotocol/sdk/types.js');
 
 // Bound on mobile-mcp's MCP initialize handshake (#156). Measured at ~200ms on
@@ -68,10 +69,22 @@ function resolveServerEntry() {
 // resolveEngine reports the env as the source so the recorded engine matches
 // the one that runs. Unlike the URL guard, a running daemon on the other
 // engine needs no manual `session end`: resolve-connection.js restarts it.
+//
+// MOBILEMCP_DISABLE_TELEMETRY defaults to "1" (#213). Left unset, mobile-mcp
+// sends a PostHog event on every tool call and a scarf.sh pixel once per
+// process. mauto's own telemetry is opt-in, and an engine it spawns on the
+// user's behalf should not be quietly opt-out. The engine's gate is truthiness,
+// so any non-empty value keeps it off and only an explicit empty string
+// (MOBILEMCP_DISABLE_TELEMETRY=) opts back in; a user-set value is passed
+// through verbatim. MAUTO_TELEMETRY=0 and DO_NOT_TRACK=1 force it off whatever
+// the user set. The decision lives in resolveEngineTelemetry so that
+// `mauto telemetry status` reports exactly what this hands the engine, and the
+// same `mauto session end` rule applies to a change.
 function buildEngineEnv({ device = null, baseEnv = process.env, engine = null } = {}) {
   const env = {
     ...baseEnv,
     MOBILEMCP_ALLOW_UNSAFE_URLS: baseEnv.MOBILEMCP_ALLOW_UNSAFE_URLS ?? '1',
+    MOBILEMCP_DISABLE_TELEMETRY: resolveEngineTelemetry(baseEnv).disableValue,
   };
   if (engine === 'legacy' && baseEnv.MOBILEMCP_LEGACY_ROBOT === undefined) {
     env.MOBILEMCP_LEGACY_ROBOT = '1';

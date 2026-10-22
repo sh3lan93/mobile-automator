@@ -127,4 +127,40 @@ describe('telemetry control surface', () => {
     // A notice, not a prompt: nothing in it may read as a question to answer.
     expect(telemetry.CONSENT_NOTICE).not.toMatch(/\?/);
   });
+
+  it('tells the user the device engine is silenced too, and by which variable (#213)', () => {
+    expect(telemetry.CONSENT_NOTICE).toContain('MOBILEMCP_DISABLE_TELEMETRY');
+  });
+});
+
+describe('resolveEngineTelemetry (#213)', () => {
+  it('defaults the engine off when the user set nothing', () => {
+    expect(telemetry.resolveEngineTelemetry({}))
+      .toEqual({ disableValue: '1', enabled: false, reason: 'default_off' });
+  });
+
+  it('passes a user-set "1" through verbatim', () => {
+    expect(telemetry.resolveEngineTelemetry({ MOBILEMCP_DISABLE_TELEMETRY: '1' }))
+      .toEqual({ disableValue: '1', enabled: false, reason: 'user_env' });
+  });
+
+  it('treats any non-empty user value as off, mirroring the engine\'s truthiness gate', () => {
+    expect(telemetry.resolveEngineTelemetry({ MOBILEMCP_DISABLE_TELEMETRY: '0' }))
+      .toEqual({ disableValue: '0', enabled: false, reason: 'user_env' });
+  });
+
+  it('passes an empty string through, which is the engine opt-in', () => {
+    expect(telemetry.resolveEngineTelemetry({ MOBILEMCP_DISABLE_TELEMETRY: '' }))
+      .toEqual({ disableValue: '', enabled: true, reason: 'user_env' });
+  });
+
+  it('MAUTO_TELEMETRY=0 overrides an engine opt-in', () => {
+    expect(telemetry.resolveEngineTelemetry({ MAUTO_TELEMETRY: '0', MOBILEMCP_DISABLE_TELEMETRY: '' }))
+      .toEqual({ disableValue: '1', enabled: false, reason: 'kill_switch' });
+  });
+
+  it.each(['1', 'true'])('DO_NOT_TRACK=%s overrides an engine opt-in', (dnt) => {
+    expect(telemetry.resolveEngineTelemetry({ DO_NOT_TRACK: dnt, MOBILEMCP_DISABLE_TELEMETRY: '' }))
+      .toEqual({ disableValue: '1', enabled: false, reason: 'do_not_track' });
+  });
 });

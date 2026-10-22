@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.33.0]
+
+### 🔒 Changed
+
+- **The device engine's own telemetry is now off by default.** mobile-mcp,
+  which `mauto` runs to drive devices, sends a PostHog event on every device
+  call and, since 1.0.5, a scarf.sh pixel once per engine process, unless
+  `MOBILEMCP_DISABLE_TELEMETRY` is set. `mauto` never set it, so a tool whose
+  own telemetry is opt-in ran an engine that was opt-out. Every engine `mauto`
+  spawns, in the session daemon and in the one-shot fallback alike, now gets
+  `MOBILEMCP_DISABLE_TELEMETRY=1`. A value you set yourself is passed through
+  unchanged, following the `MOBILEMCP_ALLOW_UNSAFE_URLS` pattern from #212.
+  The engine only checks whether the value is non-empty, so an explicit empty
+  string (`MOBILEMCP_DISABLE_TELEMETRY=`) is how you opt it back in.
+  `MAUTO_TELEMETRY=0` and `DO_NOT_TRACK=1` override that opt-in. A running
+  session keeps the environment it started with, so run `mauto session end`
+  after changing it
+  ([#213](https://github.com/sh3lan93/mobile-automator/issues/213)).
+- **`mauto telemetry status` reports the engine too.** The envelope gains
+  `data.engine: { enabled, reason }`, where `reason` is `default_off`,
+  `user_env`, `kill_switch` or `do_not_track`. It is computed by the same
+  function that builds the engine's environment, so it reports the value the
+  engine actually receives. The consent notice shown by `mauto setup` and
+  `telemetry status` now says the engine's telemetry is off as well
+  ([#213](https://github.com/sh3lan93/mobile-automator/issues/213)).
+
+---
+
 ## [0.32.0]
 
 ### ✨ Added

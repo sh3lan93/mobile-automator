@@ -961,12 +961,18 @@ function setEngine({ projectRoot, env, store }, value) {
 // field lists come from EVENT_FIELDS at runtime, so the disclosure a user reads
 // before opting in cannot drift from what the uploader actually sends. Prose
 // that restates a catalog is prose that will eventually be wrong.
-
+//
+// `engine` is the device engine's (mobile-mcp's) own telemetry (#213), a
+// separate sender with a separate switch. It comes from the same resolver
+// buildEngineEnv uses, so the report states what the engine is actually handed
+// rather than a second opinion about it.
 function telemetryReport({ projectRoot, env }, extra = {}) {
   const decision = observeTelemetry.decideForProject(projectRoot, env);
+  const engine = observeTelemetry.resolveEngineTelemetry(env);
   return {
     enabled: decision.enabled,
     reason: decision.reason,
+    engine: { enabled: engine.enabled, reason: engine.reason },
     endpoint: observeTransport.endpointUrl(env),
     fields_sent: observeTelemetry.sentFields(),
     fields_never_sent: observeTelemetry.neverSentFields(),
