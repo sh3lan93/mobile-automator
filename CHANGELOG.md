@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.34.0]
+
+### 🔧 Changed
+
+- **`mauto launch` / `launch_app` now restarts a running app, so a scenario
+  starts on the app's initial screen.** The engine's launch call only brings
+  an already-running app to the front, so a `launch_app` step inherited
+  whatever screen the previous run or manual session left behind, and steps
+  written against the first screen failed. `mauto launch <appId>` now stops
+  the app (`mobile_terminate_app`) and then launches it, returning
+  `{ launched, cold: true, terminated: true }`. This resets the screen, not
+  app data: `app_state: "fresh_install"` is still the data reset
+  ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
+- **Opt out with `"cold": false` / `--resume`.** The new optional scenario
+  step field `cold` (boolean, default `true`, `launch_app` only) set to
+  `false` keeps the old behaviour: the executor runs `mauto launch <appId>
+  --resume`, which brings a running app to the front in its current state and
+  returns `{ launched, cold: false }`. Existing scenarios stay valid; the
+  field is additive. The sample-app E2E harness passes `--resume` for such
+  steps ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
+- **A failed stop does not fail the launch.** Some engines report an error
+  when asked to stop an app that is not running. `mauto launch` still
+  launches and adds `terminated: false` plus a
+  `warnings: [{ code: "terminate_failed", message }]` entry, so the agent
+  knows the app may not have been restarted and can note it in the run report
+  if later steps fail ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
+
+### ✨ Added
+
+- **`mauto terminate <appId> [--device <id>]`** stops a running app and
+  returns `{ terminated: <appId> }`. It adds no scenario action; the action
+  catalog is unchanged
+  ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
+
+### 🐛 Fixed
+
+- **The generate guide mapped "open the app" to the wrong verb.** Its
+  step-translation table told the agent to use `mauto press` for
+  `launch_app`; it now says `mauto launch <appId>`, and gains a "return to
+  the app" / "resume the app" row that records `launch_app` with
+  `"cold": false`. The execute guide documents the cold-start default,
+  `--resume` and the `terminate_failed` warning
+  ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
+
+---
+
 ## [0.33.0]
 
 ### 🔒 Changed
