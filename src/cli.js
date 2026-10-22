@@ -398,13 +398,8 @@ async function handleDoubleTap({ deviceBridge }, raw) {
   }
 }
 
-// Cold start by default (#255): mobile_launch_app alone brings an already
-// running app to the front with its state kept, so a scenario that starts with
-// launch_app would inherit the previous run's screen. Stop it first. A
-// terminate failure is deliberately not fatal — simctl terminate exits
-// non-zero when the app simply is not running — and a real device fault still
-// surfaces through the launch that follows. The warning keeps it from being
-// silent. `resume` opts out and keeps the old bring-to-front behaviour.
+// Cold start by default (#255; the why lives in DeviceBridge#restartApp).
+// `resume` opts out and keeps the old bring-to-front behaviour.
 async function handleLaunch({ deviceBridge }, appId, { resume } = {}) {
   const id = String(appId == null ? '' : appId);
   if (!id) {
@@ -414,26 +409,9 @@ async function handleLaunch({ deviceBridge }, appId, { resume } = {}) {
     };
   }
   try {
-    if (resume) {
-      await deviceBridge.launchApp(id);
-      return { envelope: ok({ launched: id, cold: false }), exitKind: 'ok' };
-    }
-    let terminateError = null;
-    try {
-      await deviceBridge.terminateApp(id);
-    } catch (err) {
-      terminateError = err;
-    }
-    await deviceBridge.launchApp(id);
-    const data = terminateError
-      ? {
-          launched: id,
-          cold: true,
-          terminated: false,
-          warnings: [{ code: 'terminate_failed', message: terminateError.message || String(terminateError) }],
-        }
-      : { launched: id, cold: true, terminated: true };
-    return { envelope: ok(data), exitKind: 'ok' };
+    const cold = !resume;
+    await (cold ? deviceBridge.restartApp(id) : deviceBridge.launchApp(id));
+    return { envelope: ok({ launched: id, cold }), exitKind: 'ok' };
   } catch (err) {
     return deviceFail(err);
   }
