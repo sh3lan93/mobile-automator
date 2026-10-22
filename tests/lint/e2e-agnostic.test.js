@@ -18,7 +18,8 @@
 //   4. the harness has no package.json, so no private dependency pins;
 //   5. every known failure is pinned to an issue, a reason, and the step it
 //      fails at — an entry that excuses "failed somewhere" hid a launch crash
-//      behind #251 on a real device;
+//      behind #251 on a real device — and an entry scoped to `engines` names
+//      only engines the config schema accepts;
 //   6. the golden gate is the scenario's `golden` tag — a `golden_` id prefix
 //      was a convention nobody declared anywhere, so a renamed scenario
 //      silently lost its golden: no missing-fixture failure, no comparison.
@@ -32,6 +33,7 @@ const SCRIPTS = path.join(REPO_ROOT, 'sample-app', 'scripts');
 const SCENARIOS = path.join(REPO_ROOT, 'sample-app', 'scenarios');
 const APP_LIB = path.join(REPO_ROOT, 'sample-app', 'lib');
 const KNOWN_FAILURES = path.join(SCENARIOS, 'golden', 'known-failures.json');
+const configSchema = require('../../src/schemas/config_schema.json');
 
 function walk(dir, keep) {
   if (!fs.existsSync(dir)) return [];
@@ -188,6 +190,43 @@ describe('E2E known failures — each pinned to an issue, a reason and a step', 
     expect(typeof entry.failing_step).toBe('string');
     const steps = byId.has(id) ? byId.get(id).steps.map((s) => s.id) : [];
     expect(steps).toContain(entry.failing_step);
+  });
+
+  // `engines` scopes an entry to the device engines it fails on (#251). The
+  // valid values are the config schema's `engine` enum — derived, not restated —
+  // so a typo ("mobileCli") cannot scope an excuse to an engine no leg runs,
+  // and an empty array cannot quietly mean "applies nowhere".
+  const ENGINES = configSchema.properties.engine.enum;
+
+  test('the config schema declares an engine enum (the rule below is not vacuous)', () => {
+    expect(Array.isArray(ENGINES) && ENGINES.length).toBeTruthy();
+  });
+
+  test.each(Object.keys(known))('%s: engines, if present, is a non-empty array of config-schema engines', (id) => {
+    const entry = known[id];
+    if (!Object.prototype.hasOwnProperty.call(entry, 'engines')) return;
+    expect(Array.isArray(entry.engines)).toBe(true);
+    expect(entry.engines.length).toBeGreaterThan(0);
+    expect(entry.engines.filter((e) => !ENGINES.includes(e))).toEqual([]);
+    expect(new Set(entry.engines).size).toBe(entry.engines.length);
+  });
+});
+
+// The harness selects the engine through the workspace config only; a script
+// that set MOBILEMCP_LEGACY_ROBOT would test the variable instead (#251).
+describe('E2E harness — the engine comes from the workspace config', () => {
+  test('no file under sample-app/scripts assigns MOBILEMCP_LEGACY_ROBOT', () => {
+    const offenders = [];
+    for (const file of scriptFiles) {
+      read(file).split('\n').forEach((line, i) => {
+        if (/MOBILEMCP_LEGACY_ROBOT['"]?\s*(:|=(?!=))/.test(line)) offenders.push(`${rel(file)}:${i + 1}: ${line.trim()}`);
+      });
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  test('run-e2e.mjs applies E2E_ENGINE with `mauto config set engine`', () => {
+    expect(read(path.join(SCRIPTS, 'run-e2e.mjs'))).toMatch(/\[\s*'config'\s*,\s*'set'\s*,\s*'engine'\s*,\s*engine\s*\]/);
   });
 });
 

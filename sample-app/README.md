@@ -19,11 +19,11 @@ Every interactive widget also carries a stable `Semantics` id in the form `{scre
 
 ## The real-device E2E
 
-`scripts/run-e2e.mjs` runs the scenarios in `scenarios/` against this app by driving the **shipped `mauto` CLI** — the same binary a user installs, nothing else. In CI (`.github/workflows/sample-app-e2e-android.yml`) that binary is the packed npm tarball, installed into a temp prefix.
+`scripts/run-e2e.mjs` runs the scenarios in `scenarios/` against this app by driving the **shipped `mauto` CLI** — the same binary a user installs, nothing else. In CI (`.github/workflows/sample-app-e2e-android.yml`) that binary is the packed npm tarball, installed into a temp prefix, and the job runs once per device engine (`mobilecli` and `legacy`, a matrix with `fail-fast: false`) on an API 36 emulator — not API 33, where even the legacy engine cannot recover the text-field labels the legacy leg exists to prove.
 
 For each run the harness:
 
-1. creates a scratch project, runs `mauto setup --mode agnostic`, copies the scenarios in and checks each with `mauto validate --strict`;
+1. creates a scratch project, runs `mauto setup --mode agnostic`, selects the device engine with `mauto config set engine <E2E_ENGINE>` (and checks `mauto session status` resolves it from config), copies the scenarios in and checks each with `mauto validate --strict`;
 2. executes every step with one-shot verbs — `launch`, `elements`, `tap --at`, `type`, `press <semantic action>`, `screenshot` — following the `mauto guide execute` recipe;
 3. resolves every target with the CLI's own matcher (`findFirst` from `src/assertion/evaluator.js` of the install under test), so a target means exactly what it means to `mauto assert`;
 4. checks assertions with `mauto assert` and records everything through `mauto result add-step` / `add-assertion` / `finalize`, so the result file is the CLI's own.
@@ -37,7 +37,7 @@ Scenarios:
 
 ### Known failures (xfail / xpass)
 
-`scenarios/golden/known-failures.json` lists scenarios that fail for a tracked reason outside this repo, each pinned to an `issue`, a `reason` and the `failing_step` it fails at:
+`scenarios/golden/known-failures.json` lists scenarios that fail for a tracked reason outside this repo, each pinned to an `issue`, a `reason` and the `failing_step` it fails at. An entry may also carry `engines`, a non-empty list of `engine` config values (`mobilecli`, `legacy`); it then applies only on those engines, and on any other engine the scenario is treated as unlisted — it must pass, and a failure is a plain FAIL. An entry without `engines` applies on every engine.
 
 | Outcome | When | Job |
 |---|---|---|
@@ -46,7 +46,7 @@ Scenarios:
 | XFAIL | listed, and the first failed step is its `failing_step` | ok |
 | XPASS | listed, but passed | **fails** — the fix landed; remove the entry |
 
-A failure anywhere other than the pinned step is never excused, and a missing or mismatched golden fixture fails the job on its own, whatever the classification. `golden_search_empty` is listed until #251 is fixed: the default engine drops the "Search products" field's label, so `tap_search` cannot resolve.
+A failure anywhere other than the pinned step is never excused, and a missing or mismatched golden fixture fails the job on its own, whatever the classification. `golden_search_empty` is listed for `engines: ["mobilecli"]` until #251 is fixed: the default engine drops the "Search products" field's label, so `tap_search` cannot resolve. On the legacy engine the label is there on recent Android versions (verified on API 36, the CI level; not on API 33), so the same scenario must PASS and match its golden — run it locally on an API 33 emulator and it fails on the legacy leg too.
 
 ### Running it locally
 
@@ -65,13 +65,13 @@ or test whatever `mauto` is on your `PATH` (for example an `npm link`ed checkout
 MAUTO_BIN=$(command -v mauto) node sample-app/scripts/run-e2e.mjs
 ```
 
-Optional environment: `E2E_SCENARIOS=smoke_nav` runs a subset; `E2E_ARTIFACTS_DIR=<dir>` receives the screenshots, results and session log at the end, pass or fail.
+Optional environment: `E2E_SCENARIOS=smoke_nav` runs a subset; `E2E_ENGINE=legacy` runs on the legacy engine (default `mobilecli`; any other value is rejected); `E2E_ARTIFACTS_DIR=<dir>` receives the screenshots, results, session log and a `summary.json` naming the engine at the end, pass or fail.
 
-To run against the legacy robot (`MOBILEMCP_LEGACY_ROBOT=1`, which reaches the search field), first release the default engine's device server, which outlives every session and holds the device's UiAutomation connection (each harness run gets a fresh scratch project, so there is no old session to end):
+The harness applies `E2E_ENGINE` through the workspace config, exactly as a user would, and removes any exported `MOBILEMCP_LEGACY_ROBOT` from the environment of every `mauto` it runs, so the config key is what is tested. To run on the legacy engine after the default one has used the device, first release the default engine's device server, which outlives every session and holds the device's UiAutomation connection (each harness run gets a fresh scratch project, so there is no old session to end):
 
 ```bash
 adb shell pkill -f com.mobilenext.mobilecli.DeviceServer
-MOBILEMCP_LEGACY_ROBOT=1 MAUTO_BIN=$(command -v mauto) node sample-app/scripts/run-e2e.mjs
+E2E_ENGINE=legacy MAUTO_BIN=$(command -v mauto) node sample-app/scripts/run-e2e.mjs
 ```
 
 The harness logic lives in `scripts/lib/` (CommonJS, unit-tested under `tests/unit/e2e-harness/`); `scripts/` has no `package.json` and no dependencies of its own.

@@ -27,7 +27,7 @@
 const fs = require('fs');
 const path = require('path');
 const { parseToolResult } = require('../../../src/device/mobile-mcp-client');
-const { parseElements, normalize } = require('../../../src/device/element-model');
+const { parseElements, normalize, decodeEntities } = require('../../../src/device/element-model');
 const { normalizeDevices } = require('../../../src/device/device-model');
 const { normalizeCrashes, crashTimestampMs } = require('../../../src/device/crash-model');
 const { DeviceBridge } = require('../../../src/device/bridge');
@@ -67,7 +67,14 @@ describe('mobile-mcp 1.0.5 contract (recorded real-device fixtures)', () => {
     test('parses and normalizes every captured element', () => {
       expect(() => parseElements(raw)).not.toThrow();
       expect(rawElements).toHaveLength(rawCount);
-      expect(els).toHaveLength(rawCount);
+      // normalize() may only shed unlabeled same-bounds twins (#251), so the
+      // count can shrink but no matchable string may be lost.
+      expect(els.length).toBeLessThanOrEqual(rawCount);
+      const rawStrings = rawElements
+        .flatMap((e) => [e.text, e.label])
+        .filter((v) => typeof v === 'string' && v.length > 0)
+        .map(decodeEntities);
+      rawStrings.forEach((s) => expect(visible.has(s)).toBe(true));
     });
 
     test('every element has four finite bounds and a center inside them', () => {

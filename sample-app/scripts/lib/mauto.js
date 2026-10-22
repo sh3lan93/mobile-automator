@@ -18,6 +18,8 @@ const { execFile } = require('child_process');
 // Enough stderr to show a stack or a daemon complaint, not a whole log.
 const STDERR_TAIL_LINES = 15;
 
+const LEGACY_ROBOT_ENV = 'MOBILEMCP_LEGACY_ROBOT';
+
 class MautoError extends Error {
   constructor(message, { verb, args, envelope = null, stderr = '', code = null } = {}) {
     super(message);
@@ -80,17 +82,19 @@ function createMauto({ bin, cwd, env = {}, log = () => {}, exec = defaultExec } 
   async function run(args, opts = {}) {
     const verb = verbOf(args);
     log(`$ mauto ${args.join(' ')}`);
-    const { stdout, stderr, code } = await exec(bin, args, {
-      cwd,
-      env: {
-        ...process.env,
-        ...env,
-        ...(opts.env || {}),
-        // Never phone home from CI, whatever the caller's environment says.
-        MOBILEMCP_DISABLE_TELEMETRY: '1',
-        MAUTO_TELEMETRY: '0',
-      },
-    });
+    const childEnv = {
+      ...process.env,
+      ...env,
+      ...(opts.env || {}),
+      // Never phone home from CI, whatever the caller's environment says.
+      MOBILEMCP_DISABLE_TELEMETRY: '1',
+      MAUTO_TELEMETRY: '0',
+    };
+    // The engine is selected through the workspace's `engine` config key
+    // (lib/engine.js, #251). An exported MOBILEMCP_LEGACY_ROBOT overrides that
+    // key, so it would make a legacy run test the variable, not the config.
+    delete childEnv[LEGACY_ROBOT_ENV];
+    const { stdout, stderr, code } = await exec(bin, args, { cwd, env: childEnv });
 
     const envelope = parseEnvelope(stdout);
     const stderrTail = tail(stderr);

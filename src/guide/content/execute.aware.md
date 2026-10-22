@@ -207,6 +207,19 @@ default — a report from last week is not evidence about this step. And a repor
 whose own timestamp is unreadable is counted in `unattributed` rather than
 included; if that count is non-zero, widen `--since` and look yourself.
 
+### When the element list looks wrong, check the engine
+
+If the app is alive but `mauto elements` misses the label of a text field you
+can see on screen, or lists content from a tab that is not showing (common in
+Flutter and other cross-platform apps on Android), the device engine is the
+likely cause, not the app. Run `mauto config get engine`: if it is `mobilecli`
+or unset, record the step as failed with that observation and tell the user
+that `mauto config set engine legacy` should fix it — it hides hidden-tab
+content on every Android version tested, but recovers text-field labels only on recent Android
+versions (verified on API 36; not on API 33). If the engine is already
+`legacy`, a missing text-field label is the Android version, not the engine
+setting. Do not switch the engine mid-run yourself.
+
 ### 5. Validate Assertions (27 types)
 
 For each assertion in the scenario (evaluated after the referenced step), pick the type recorded in the scenario and evaluate it. The 27 types split into two tiers by **who decides pass/fail**:

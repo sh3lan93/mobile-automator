@@ -55,14 +55,17 @@ function missingAgentHint(message, resolver) {
 }
 
 // B2: mobile-mcp 1.0.5's default robot lists Android emulators by AVD name,
-// MOBILEMCP_LEGACY_ROBOT=1 (and 0.0.55) by adb serial, and each rejects the
-// other's id — so a selection persisted before the upgrade fails every verb.
+// the legacy robot (and 0.0.55) by adb serial, and each rejects the other's id
+// — so a selection made under the other engine fails every verb. Since #251
+// the workspace `engine` key selects the robot; the env var still overrides it.
 function deviceNotFoundHint(id) {
   return (
-    `Device "${id}" is not known to the current engine. Device ids can differ between engines: ` +
-    "mauto 0.27's default engine lists Android emulators by AVD name (e.g. Pixel_9_Pro), while " +
-    'MOBILEMCP_LEGACY_ROBOT=1 uses the adb serial (e.g. emulator-5554). Run `mauto devices`, then ' +
-    '`mauto devices use` with an id from that list (or pass that id to --device).'
+    `Device "${id}" is not known to the current engine. Device ids differ between engines: ` +
+    'the default mobilecli engine lists Android emulators by AVD name (e.g. Pixel_9_Pro), while the ' +
+    'legacy engine uses the adb serial (e.g. emulator-5554). Check which engine this workspace uses with ' +
+    '`mauto config get engine` and change it with `mauto config set engine <mobilecli|legacy>`; an exported ' +
+    'MOBILEMCP_LEGACY_ROBOT overrides that key. Then run `mauto devices` and `mauto devices use` with an id ' +
+    'from that list (or pass that id to --device).'
   );
 }
 

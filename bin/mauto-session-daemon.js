@@ -12,6 +12,7 @@ const fs = require('fs');
 
 const { startDaemon } = require('../src/device/session-daemon');
 const paths = require('../src/device/session-paths');
+const { sessionEngineFromEnv } = require('../src/device/engine');
 const { boundRecorder } = require('../src/observe/recorder');
 const { daemonEventLogPath } = require('../src/observe/paths');
 const { makeFlusher } = require('../src/observe/flush');
@@ -66,6 +67,9 @@ async function main() {
   const device = process.env.MAUTO_SESSION_DEVICE || null;
   const idleRaw = process.env.MAUTO_SESSION_IDLE_MS;
   const idleMs = idleRaw ? Number(idleRaw) : undefined;
+  // The engine the spawner resolved (MAUTO_SESSION_ENGINE / _SOURCE), or —
+  // when started without one — what this process's own env resolves to (#251).
+  const { engine, source: engineSource } = sessionEngineFromEnv(process.env);
 
   // Where this process's events go: its own log file (daemon.ndjson, not the
   // CLI's mauto.ndjson — see observe/paths.js). `env` is read once and the log
@@ -146,6 +150,8 @@ async function main() {
   daemon = await startDaemon({
     projectRoot,
     device,
+    engine,
+    engineSource,
     idleMs,
     recorderFor,
     // Same defensive shape as recorderFor's own construction guarantee: a

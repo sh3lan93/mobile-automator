@@ -42,7 +42,17 @@ List the source directories the QA tooling must NEVER modify (it operates on tes
 
 In this mode environments are decoupled from build flavors — they are just labels for the test target. Ask the user whether the project has named environments (e.g. `production, staging, dev`). If yes, persist the list: `mauto config set environments <production,staging,dev>`. If no, leave it unset (or persist an empty list).
 
-## 6. Confirm the config
+## 6. Device engine (check once a device is connected)
+
+Leave `engine` at its default unless the element list is wrong. With a device connected and the app on a screen that has a text field or tabs, run `mauto elements`. If it misses the label of a text field you can see, or lists content from a tab that is not showing — common with apps that draw their own UI — switch engines:
+
+```
+mauto config set engine legacy
+```
+
+Follow the `hint` the command prints, then run `mauto elements` again. On older device OS versions the legacy engine still hides inactive-tab content but may not recover text-field labels; if a label stays missing, keep `legacy` for the tab fix and tell the user the label gap is the device OS version. Switching clears any pinned device, because the engines may name the same device differently; re-select it with `mauto devices` and `mauto devices use <id>`.
+
+## 7. Confirm the config
 
 Read the persisted values back with `mauto config get <key>` for each finding, and present a concise summary to the user. The workspace is now analyzed and configured: `mauto guide generate` and `mauto guide execute` will read these values to drive portable scenario authoring and execution. At execute time the four semantic actions — `press_back`, `dismiss_keyboard`, `grant_permission`, `deny_permission` — resolve per platform automatically, so nothing platform-specific needs to live in this config.
 

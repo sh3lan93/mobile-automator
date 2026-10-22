@@ -18,7 +18,11 @@ function readJson(name) {
 
 const homeElements = () => normalize(readJson('home.mobilecli.raw.json'));
 const moreElements = () => normalize(readJson('more.mobilecli.raw.json'));
-const moreLegacyElements = () => readJson('more.legacy-robot.envelope.json').data;
+// The legacy capture is an already-normalized `mauto elements` envelope, taken
+// before normalize() learned to decode `&#10;` and collapse bare same-bounds
+// twins (#251). Re-running it through normalize (which accepts the normalized
+// shape) yields what the CLI emits today, keeping it comparable to the others.
+const moreLegacyElements = () => normalize(readJson('more.legacy-robot.envelope.json').data);
 
 function el(text, extra = {}) {
   return {
