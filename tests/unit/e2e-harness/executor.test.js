@@ -89,6 +89,18 @@ describe('runScenario', () => {
     expect(m.verbs().filter((v) => v === 'elements')).toHaveLength(3);
   });
 
+  // #255: mauto launch cold-starts by default; only cold: false asks it to resume.
+  test.each([
+    ['absent', {}, ['launch', 'com.example.app']],
+    ['true', { cold: true }, ['launch', 'com.example.app']],
+    ['false', { cold: false }, ['launch', 'com.example.app', '--resume']],
+  ])('launch_app with cold %s passes --resume only when cold === false', async (_label, extra, args) => {
+    const m = fakeMauto({ elements: [homeElements()] });
+    const r = await exec(scenario([{ id: 'launch', action: 'launch_app', description: 'd', ...extra }]), m);
+    expect(r.status).toBe('passed');
+    expect(m.calls[0].args).toEqual(args);
+  });
+
   test('drift gate: zero elements after a successful launch fails with the drift message, never "not found"', async () => {
     const m = fakeMauto({ elements: [[]] });
     const r = await exec(scenario([{ id: 'launch', action: 'launch_app', description: 'd' }]), m);
