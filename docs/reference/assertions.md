@@ -322,7 +322,7 @@ Count specific elements matching a description.
 }
 ```
 
-`operator` is one of `==`, `!=`, `>=`, `<=`, `>`, `<` (default `==`).
+`operator` is one of `==`, `!=`, `>=`, `<=`, `>`, `<` (default `==`). Without `element_description`, the count is over every element on screen — the deduplicated list `mauto elements` reports (an unlabeled element that shares its bounds with a labeled one is dropped, so it is not counted twice).
 
 **Example scenario usage:**
 ```

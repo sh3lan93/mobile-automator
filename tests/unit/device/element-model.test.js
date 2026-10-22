@@ -231,6 +231,32 @@ describe('collapseUnlabeledTwins (via normalize)', () => {
     const bare = { text: null, accessibility_label: null, bounds: [...B], center: [0, 0], type: null };
     expect(collapseUnlabeledTwins([bare, lab])).toEqual([lab]);
   });
+
+  // The collapse's one visible effect: `matches()` treats a null/empty target
+  // as matching ALL elements, so the count assertions (element_count /
+  // list_item_count / list_is_empty) with NO target count the deduplicated
+  // list. evaluate here is the evaluator's public surface — the exact call
+  // `mauto assert element_count` makes — so this pins the real assertion
+  // outcome, not a restatement of it.
+  describe('empty-target counts after the collapse (#251)', () => {
+    const { evaluate } = require('../../../src/assertion/evaluator');
+
+    test('a targeted count still finds the labeled twin; an untargeted count excludes the bare one', () => {
+      const elements = normalize([
+        { label: 'Header', bounds: [0, 0, 5, 5] },
+        { bounds: B, type: 'EditText' },                     // the bare twin
+        { label: 'Name', bounds: B, type: 'EditText' },      // ...of this labeled one
+        { bounds: [0, 10, 5, 15], type: 'Button' },          // bare, no twin: kept
+      ]);
+      // A non-empty target only ever matches text/label, so the collapse
+      // cannot change what a step or a targeted assertion resolves to.
+      expect(evaluate({ type: 'element_count', target: 'Name', count: 1 }, { elements }).pass).toBe(true);
+      // An empty target matches all: the count is over the collapsed list
+      // (3 — header, labeled twin, kept bare), not the raw 4.
+      expect(evaluate({ type: 'element_count', count: 3 }, { elements }).pass).toBe(true);
+      expect(evaluate({ type: 'element_count', count: 4 }, { elements }).pass).toBe(false);
+    });
+  });
 });
 
 describe('normalize over the legacy-robot More screen (#251)', () => {

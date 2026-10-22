@@ -59,10 +59,20 @@ function decodeEntities(value) {
 // The legacy robot also reports every Flutter field twice with identical
 // bounds: once carrying the semantics label (`Name`) and once with neither
 // text nor label. Drop the bare twin when a labeled element shares its bounds.
-// This is safe: a target only ever matches on text or label (see `matches()` in
-// src/assertion/evaluator.js), so the bare twin can never be what a step
-// resolves to, and its geometry survives on the labeled sibling. A bare element
-// with no labeled twin is kept — it still occupies the screen. Order is kept.
+// Safe for every NON-empty target: a target only ever matches on text or label
+// (see `matches()` in src/assertion/evaluator.js), so the bare twin can never
+// be what a step or a targeted assertion resolves to, and its geometry survives
+// on the labeled sibling. A bare element with no labeled twin is kept — it
+// still occupies the screen. Order is kept.
+//
+// The one place the collapse IS visible: `matches()` treats a null/empty target
+// as matching ALL elements, so an `element_count` / `list_item_count` /
+// `list_is_empty` assertion with NO target counts the whole list — and the
+// collapse changes that count, on every engine (a native bare wrapper sharing
+// its labeled child's bounds drops too). That is deliberate: the pre-collapse
+// count double-counted each twin and counted a wrapper no target could ever
+// reach. Pinned by the empty-target count test below the collapse tests, which
+// uses the evaluator's own countMatching.
 function isBare(e) {
   return e.text === null && e.accessibility_label === null;
 }

@@ -61,8 +61,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   twins.** The legacy robot reports Flutter labels escaped (`Home&#10;Tab 1
   of 3`) and every field twice with identical bounds, once labeled and once
   bare. Labels are now decoded once, and an unlabeled element is dropped when
-  a labeled one shares its bounds — it carried nothing a target could match.
-  Both rules apply on every engine ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
+  a labeled one shares its bounds — it carried nothing a non-empty target
+  could match, and an `element_count` / `list_is_empty` assertion without a
+  target now counts the deduplicated list instead of double-counting the
+  twin. Both rules apply on every engine ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
 
 ### 🐛 Known issues
 
