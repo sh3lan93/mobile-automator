@@ -104,7 +104,7 @@ For each step in the scenario:
 
 | Action | `mauto` verb | Notes |
 |---|---|---|
-| `launch_app` | `mauto launch <appId>` | `appId` from config / scenario metadata |
+| `launch_app` | `mauto launch <appId>` (add `--resume` when the step sets `"cold": false`) | `appId` from config / scenario metadata. Restarts the app so the step starts on its initial screen; `--resume` brings a running app to the front in its current state instead |
 | `tap` | `mauto tap --at <x,y>` | Find element first via `mauto elements` |
 | `long_press` | `mauto long-press --at <x,y>` | Optional `--duration <ms>` |
 | `double_tap` | `mauto double-tap --at <x,y>` | |
@@ -117,6 +117,8 @@ For each step in the scenario:
 | `wait_for_element_gone` | Poll `mauto elements` | Repeat until the element is absent or timeout |
 | `wait_for_loading_complete` | Poll `mauto screenshot <path>` + visual check | Wait for loading indicators ({{loading_indicators}}) to be absent |
 | `capture_value` | `mauto elements` | Extract text from the target element, store in the `capture_to` variable |
+
+A plain `mauto launch` resets the screen, not app data: `app_state: "fresh_install"` is still the data reset. If the launch result carries a `terminate_failed` warning, the app may not have been restarted — note it in the run report if the following steps fail.
 
 **Precondition `device_actions`** (run before the step replay, from the scenario's `preconditions`):
 
