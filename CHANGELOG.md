@@ -222,6 +222,21 @@ affected hosts the same way.
   `tests/lint/eslint-gate.test.js` fails the build if the script, the async
   rules, or either CI run is removed or neutralised
   ([#164](https://github.com/sh3lan93/mobile-automator/issues/164)).
+- The release path is gated on the supported Node range instead of one leg of
+  it. No CI check was a gate: the `main-branch` ruleset requires no status
+  checks and `auto-tag.yml` does not wait for `test.yml`, so a tag could land
+  while the suite was still running — or after it failed — and `release.yml`'s
+  `publish-npm` job then ran the suite on Node 22 alone. A new `verify` job
+  runs the same suite command and the packed-tarball smoke on the same Node
+  matrix `test.yml` proves, for every tag including rc, and both `npm publish`
+  and the GitHub Release now wait on it. The GitHub Release is additionally
+  cut only after the publish actually happened (for rc tags, which are never
+  published, after `verify` passes), so a gate-stopped publish no longer
+  leaves a Release telling users to `npm i -g` a version npm never had —
+  v0.27.0 did. `tests/lint/release-gate.test.js` fails the build if the
+  matrix or suite command drifts from `test.yml`, or the job order is
+  quietly undone
+  ([#186](https://github.com/sh3lan93/mobile-automator/issues/186)).
 
 ## [0.30.0]
 
