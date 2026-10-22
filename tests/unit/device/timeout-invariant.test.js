@@ -20,7 +20,7 @@ describe('daemon/client timeout invariant (#149)', () => {
 // before it concludes the daemon is stuck and escalates.
 describe('session end budget invariant (#156)', () => {
   test('END_BUDGET > DAEMON_CALL_TIMEOUT + SDK close escalation', () => {
-    const { END_BUDGET_MS } = require('../../../src/device/connection');
+    const { END_BUDGET_MS } = require('../../../src/device/session-end');
     expect(END_BUDGET_MS).toBeGreaterThan(sessionDaemon.DAEMON_CALL_TIMEOUT_MS + 4000);
   });
 });

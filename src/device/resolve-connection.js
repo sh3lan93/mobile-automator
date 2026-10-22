@@ -31,22 +31,11 @@ const sessionClient = require('./session-client');
 const { daemonLogHint } = require('./session-log');
 const sessionSpawn = require('./session-spawn');
 const { readEngine, DEFAULT_ENGINE } = require('./engine');
+const { endSession, ENDED_OUTCOMES } = require('./session-end');
 
 function defaultCreateCall(opts) {
   return require('./mobile-mcp-client').createCall(opts);
 }
-
-// Ending a stale daemon goes through the same path `mauto session end` uses,
-// so the restart inherits its honesty about pids that will not die. Required
-// lazily: connection.js requires this module.
-function defaultEnd(projectRoot, { client }) {
-  return require('./connection').endSession(projectRoot, { client });
-}
-
-// endSession outcomes after which no daemon of ours is left holding the
-// workspace. Anything else ('survived', 'foreign', 'unverified') may leave the
-// stale daemon alive — spawning then would just find it answering pings.
-const ENDED_OUTCOMES = new Set(['stopped', 'forced', 'already_stopped']);
 
 // Read the live daemon's pinned device from its handle, or null. A null pin
 // means the daemon serves whatever device mobile-mcp selected (matches any
@@ -123,8 +112,11 @@ async function resolveDeviceConnection({
   idleMs = undefined,
   // (projectRoot) => { engine, source } — the workspace's engine (#251).
   resolveEngine = readEngine,
-  // (projectRoot, { client }) => { outcome } — ends a stale-engine daemon.
-  end = defaultEnd,
+  // Ends a stale-engine daemon through the same honest path `mauto session end`
+  // uses — session-end.js's endSession, verbatim: its signature is already
+  // (projectRoot, { client }), so the seam defaults to it directly, no wrapper.
+  // The restart inherits its refusal to lie about pids that will not die.
+  end = endSession,
 } = {}) {
   // Resolved once per verb, and used by every path below: the one-shot, the
   // spawned daemon, and the staleness check against a live one.

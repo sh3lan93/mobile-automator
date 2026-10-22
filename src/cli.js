@@ -1399,7 +1399,11 @@ const SESSION_END_FAILURE_HINTS = {
 async function handleSessionEnd(
   { projectRoot, client = require('./device/session-client'), end = {} } = {}
 ) {
-  const { outcome, pid } = await connection.endSession(projectRoot, { client, ...end });
+  // session-end.js, not the connection facade: the same module the stale-engine
+  // restart goes through (resolve-connection.js), so `session end` and an
+  // engine switch report identical outcomes for an identical daemon.
+  const { endSession } = require('./device/session-end');
+  const { outcome, pid } = await endSession(projectRoot, { client, ...end });
   const logHint = connection.daemonLogHint(projectRoot);
   if (Object.prototype.hasOwnProperty.call(SESSION_END_FAILURE_HINTS, outcome)) {
     const pidFile = require('./device/session-paths').pidFilePath(projectRoot);

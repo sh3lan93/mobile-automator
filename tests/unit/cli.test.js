@@ -1706,7 +1706,7 @@ describe('cli handlers', () => {
   });
 
   describe('handleSessionEnd (#156)', () => {
-    // Stub connection.endSession's dependencies so it returns a chosen outcome.
+    // Stub session-end.endSession's dependencies so it returns a chosen outcome.
     function run(outcome) {
       const reaper = {
         waitForDeath: async () => outcome !== 'escalated' && outcome !== 'survived',
