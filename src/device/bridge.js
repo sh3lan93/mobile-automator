@@ -143,6 +143,11 @@ class DeviceBridge {
     return await this._call('mobile_launch_app', { packageName });
   }
 
+  // Stop a running app by its package/bundle identifier.
+  async terminateApp(packageName) {
+    return await this._call('mobile_terminate_app', { packageName });
+  }
+
   // Install an app from a local artifact (apk/ipa) path.
   async installApp(appPath) {
     return await this._call('mobile_install_app', { path: appPath });

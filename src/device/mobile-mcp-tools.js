@@ -40,6 +40,7 @@ const MOBILE_MCP_TOOL_NAMES = Object.freeze([
   'mobile_get_screen_size',
   'mobile_press_button',
   'mobile_launch_app',
+  'mobile_terminate_app',
   'mobile_install_app',
   'mobile_uninstall_app',
   'mobile_open_url',
