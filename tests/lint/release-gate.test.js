@@ -6,14 +6,7 @@
 // packed-tarball smoke on the same Node matrix test.yml proves, and both
 // `publish-npm` and the GitHub Release wait on it. This guard fails the build
 // if that matrix drifts from test.yml, or if the ordering is quietly undone.
-const fs = require('fs');
-const path = require('path');
-const yaml = require('js-yaml');
-const { REPO_ROOT } = require('./docs-corpus');
-
-const load = (rel) => yaml.load(fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8'));
-const runs = (steps) => steps.map((s) => s.run || '');
-const asList = (needs) => (Array.isArray(needs) ? needs : [needs]);
+const { loadWorkflow, runs, findStep, asList } = require('./workflow-guard');
 
 const TEST = 'npm test';
 const SMOKE = './scripts/pack-smoke.sh';
@@ -26,20 +19,11 @@ const RELEASE_IF =
   "always() && github.event_name != 'release' && needs.verify.result == 'success'" +
   " && (needs.publish-npm.result == 'success' || needs.publish-npm.result == 'skipped')";
 
-const release = () => load('.github/workflows/release.yml').jobs;
-
-// Same escape hatches as supply-chain-gate.test.js: `continue-on-error: true`
-// or an `if:` on a step, or on the job that owns it, lets the check be present
-// while never failing the workflow.
-function findStep(steps, run) {
-  const step = steps.find((s) => s.run === run);
-  if (!step) throw new Error(`no step with run: "${run}" found`);
-  return step;
-}
+const release = () => loadWorkflow('.github/workflows/release.yml').jobs;
 
 describe('release gate wiring (#186)', () => {
   test('release.yml verify runs the same Node matrix as test.yml', () => {
-    const testMatrix = load('.github/workflows/test.yml').jobs.test.strategy.matrix['node-version'];
+    const testMatrix = loadWorkflow('.github/workflows/test.yml').jobs.test.strategy.matrix['node-version'];
     const verify = release().verify;
     expect(verify).toBeDefined();
     expect(verify.strategy.matrix['node-version']).toEqual(testMatrix);

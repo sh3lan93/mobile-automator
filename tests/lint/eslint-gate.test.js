@@ -7,12 +7,11 @@
 // or neutralised.
 const fs = require('fs');
 const path = require('path');
-const yaml = require('js-yaml');
+const { loadWorkflow, runs, findStep, findJobWithRun } = require('./workflow-guard');
+
 const { REPO_ROOT } = require('./docs-corpus');
 
-const load = (rel) => yaml.load(fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8'));
 const LINT = 'npm run lint';
-const runs = (steps) => steps.map((s) => s.run || '');
 
 // The rules that are the point of #164. A downgrade to 'warn' or 'off' would
 // keep `npm run lint` green while the daemon-crash class of bug slips through.
@@ -24,21 +23,6 @@ const ASYNC_RULES = [
 // A rule is either a bare severity or `[severity, options]`.
 const severity = (rule) => (Array.isArray(rule) ? rule[0] : rule);
 const isError = (rule) => severity(rule) === 'error' || severity(rule) === 2;
-
-// Same escape hatches as supply-chain-gate.test.js: `continue-on-error: true`
-// or an `if:` on the step, or on the job that owns it, lets the lint run be
-// present while never failing the workflow.
-function findLintStep(steps) {
-  const step = steps.find((s) => s.run === LINT);
-  if (!step) throw new Error(`no step with run: "${LINT}" found`);
-  return step;
-}
-
-function findLintJob(jobs) {
-  const job = Object.values(jobs).find((j) => (j.steps || []).some((s) => s.run === LINT));
-  if (!job) throw new Error(`no job with a step running "${LINT}" found`);
-  return job;
-}
 
 describe('ESLint gate wiring (#164)', () => {
   test('package.json scripts.lint runs eslint', () => {
@@ -59,7 +43,7 @@ describe('ESLint gate wiring (#164)', () => {
   // lint.yml, not test.yml: node-version-agreement.test.js requires every
   // test.yml job to run the Node matrix, and one parse target needs one Node.
   test('lint.yml runs ESLint on PRs and pushes', () => {
-    const wf = load('.github/workflows/lint.yml');
+    const wf = loadWorkflow('.github/workflows/lint.yml');
     expect(wf.on).toHaveProperty('pull_request');
     expect(wf.on).toHaveProperty('push');
     const steps = Object.values(wf.jobs).flatMap((j) => j.steps);
@@ -67,17 +51,17 @@ describe('ESLint gate wiring (#164)', () => {
   });
 
   test('lint.yml lint step and job are not neutralised by continue-on-error or if', () => {
-    const wf = load('.github/workflows/lint.yml');
-    const lintStep = findLintStep(Object.values(wf.jobs).flatMap((j) => j.steps));
+    const wf = loadWorkflow('.github/workflows/lint.yml');
+    const lintStep = findStep(Object.values(wf.jobs).flatMap((j) => j.steps), LINT);
     expect(lintStep['continue-on-error']).toBeUndefined();
     expect(lintStep.if).toBeUndefined();
-    const lintJob = findLintJob(wf.jobs);
+    const lintJob = findJobWithRun(wf.jobs, LINT);
     expect(lintJob['continue-on-error']).toBeUndefined();
     expect(lintJob.if).toBeUndefined();
   });
 
   test('publish-npm runs ESLint before npm publish', () => {
-    const steps = load('.github/workflows/release.yml').jobs['publish-npm'].steps;
+    const steps = loadWorkflow('.github/workflows/release.yml').jobs['publish-npm'].steps;
     const r = runs(steps);
     const lint = r.indexOf(LINT);
     const publish = r.findIndex((cmd) => cmd.startsWith('npm publish'));
@@ -88,8 +72,8 @@ describe('ESLint gate wiring (#164)', () => {
   // The publish-npm job's own `if:` (the rc-tag guard) is pinned by
   // supply-chain-gate.test.js; only the step is checked here.
   test('publish-npm lint step is not neutralised by continue-on-error or if', () => {
-    const steps = load('.github/workflows/release.yml').jobs['publish-npm'].steps;
-    const lintStep = findLintStep(steps);
+    const steps = loadWorkflow('.github/workflows/release.yml').jobs['publish-npm'].steps;
+    const lintStep = findStep(steps, LINT);
     expect(lintStep['continue-on-error']).toBeUndefined();
     expect(lintStep.if).toBeUndefined();
   });
