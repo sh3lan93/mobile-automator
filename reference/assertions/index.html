@@ -2860,7 +2860,7 @@ Check the accessibility label of the button
 <span class="w">  </span><span class="nt">"expected_count"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span>
 <span class="p">}</span>
 </code></pre></div></p>
-<p><code>operator</code> is one of <code>==</code>, <code>!=</code>, <code>&gt;=</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&lt;</code> (default <code>==</code>).</p>
+<p><code>operator</code> is one of <code>==</code>, <code>!=</code>, <code>&gt;=</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&lt;</code> (default <code>==</code>). Without <code>element_description</code>, the count is over every element on screen — the deduplicated list <code>mauto elements</code> reports (an unlabeled element that shares its bounds with a labeled one is dropped, so it is not counted twice).</p>
 <p><strong>Example scenario usage:</strong>
 <div class="highlight"><pre><span></span><code>Verify there are exactly 5 items in the list
 Check that the search results show 10 products

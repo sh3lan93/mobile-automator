@@ -1856,7 +1856,7 @@
 </tr>
 <tr>
 <td><code>mauto config set &lt;key&gt; &lt;value&gt;</code></td>
-<td>Write a config value by dotted path</td>
+<td>Write a config value by dotted path. <code>config set engine &lt;mobilecli\|legacy&gt;</code> also clears the pinned device when the engine changes, since device ids differ between engines</td>
 </tr>
 </tbody>
 </table>
@@ -1930,7 +1930,7 @@
 </tr>
 <tr>
 <td><code>mauto session status</code></td>
-<td>Report <code>{ running, reason, in_flight, device, log_path }</code> — <code>log_path</code> is reported whether or not a daemon is up; <code>reason</code> is <code>engine_exited</code> when a reachable daemon's device engine has died (it is shutting down and the next verb starts a fresh one), otherwise <code>null</code></td>
+<td>Report <code>{ running, reason, in_flight, device, log_path, engine, engine_source, resolved_engine, resolved_engine_source }</code> — <code>log_path</code> is reported whether or not a daemon is up; <code>reason</code> is <code>engine_exited</code> when a reachable daemon's device engine has died (it is shutting down and the next verb starts a fresh one), otherwise <code>null</code>. <code>engine</code> is the running daemon's device engine (<code>null</code> when none is up); <code>resolved_engine</code> is what the workspace <code>engine</code> key (or an exported <code>MOBILEMCP_LEGACY_ROBOT</code>) asks for — when they differ, the next device verb restarts the session on <code>resolved_engine</code></td>
 </tr>
 <tr>
 <td><code>mauto session end</code></td>

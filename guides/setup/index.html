@@ -893,6 +893,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#device-engine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Device engine
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#project-knowledge" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1722,6 +1733,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#device-engine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Device engine
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#project-knowledge" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2026,6 +2048,11 @@ mauto<span class="w"> </span>devices<span class="w"> </span>clear<span class="w"
 <div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>android_package<span class="w"> </span>&lt;id&gt;<span class="w">     </span><span class="c1"># e.g. com.example.myapp</span>
 mauto<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>ios_bundle_id<span class="w"> </span>&lt;id&gt;<span class="w">       </span><span class="c1"># e.g. com.example.MyApp</span>
 </code></pre></div>
+<h3 id="device-engine">Device engine<a class="headerlink" href="#device-engine" title="Permanent link">&para;</a></h3>
+<p><code>engine</code> selects the robot mobile-mcp drives the device with: <code>mobilecli</code> (the default) or <code>legacy</code> (adb/uiautomator on Android, go-ios/WDA on real iOS devices; iOS simulators always use <code>mobilecli</code>). For Flutter apps on Android — and other apps that draw their own UI — set <code>legacy</code>: the default engine drops text-field labels and lists content from hidden tabs in <code>mauto elements</code> (<a href="https://github.com/sh3lan93/mobile-automator/issues/251">#251</a>). <code>legacy</code> hides the hidden-tab content on every Android version tested, but recovers text-field labels only on recent Android versions (verified on Android 16 / API 36; not on API 33).</p>
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>engine<span class="w"> </span>legacy
+</code></pre></div>
+<p>Switching clears the pinned device (the engines name Android emulators differently — re-select with <code>mauto devices use &lt;id&gt;</code>), and the next device verb restarts the session on the new engine. An exported <code>MOBILEMCP_LEGACY_ROBOT</code> overrides the key. See <a href="https://github.com/sh3lan93/mobile-automator/blob/main/TROUBLESHOOTING.md">TROUBLESHOOTING.md</a> for the Android <code>DeviceServer</code> cleanup the hint mentions.</p>
 <h3 id="project-knowledge">Project knowledge<a class="headerlink" href="#project-knowledge" title="Permanent link">&para;</a></h3>
 <p>The agent infers and persists the deeper context that makes generated tests project-aware:</p>
 <table>

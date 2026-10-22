@@ -2823,6 +2823,7 @@ ls<span class="w"> </span>-la<span class="w"> </span>.gemini/skills/
 <li><strong>Verify app state</strong> — Ensure app is in expected state before executing</li>
 <li><strong>Check the target</strong> — Verify you're using the element's visible text/role</li>
 <li><strong>Increase timeout</strong> — Slow devices may need longer waits</li>
+<li><strong>Check the device engine</strong> — If <code>mauto elements</code> misses a text field's label or lists content from a tab that is not showing (common with Flutter on Android), run <code>mauto config set engine legacy</code>. It hides inactive-tab content on every Android version tested, but recovers text-field labels only on recent Android versions (verified on Android 16 / API 36; not on API 33) (<a href="https://github.com/sh3lan93/mobile-automator/issues/251">#251</a>)</li>
 <li><strong>Add screenshot assertion</strong> — Debug what's actually on screen:
    <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">"assertions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
