@@ -119,10 +119,11 @@ Each step's `action` field is one of these values: the **14 core actions** docum
 Note that `clear_app_data` is accepted by the schema but is **not mechanically executable** — the underlying automation engine exposes no primitive for it, so a scenario using it cannot replay unattended. The same applies to the `enable_wifi` and `disable_wifi` precondition device actions.
 
 #### 1. launch_app
-Launch the app under test on the device.
+Launch the app under test on the device. By default the app is restarted first, so the step starts on its initial screen even if the app was already running. This resets the screen, not app data (use `app_state: "fresh_install"` for that).
 
 **Fields:**
 - `action` — `"launch_app"`
+- `cold` *(optional, boolean, default `true`)* — set `false` to bring a running app to the front in its current state instead of restarting it (`mauto launch --resume`)
 
 **Example:**
 ```json
@@ -395,6 +396,18 @@ If `true`, failure to find or interact with the target is silently ignored and e
   "description": "Dismiss the promo banner if it appears",
   "target": "Promo banner close button",
   "optional": true
+}
+```
+
+#### cold
+`launch_app` only. If `true` (the default), the app is stopped before it is launched, so the step starts on its initial screen. Set `false` to resume a running app in its current state. Default: `true`
+
+```json
+{
+  "id": "return_to_app",
+  "action": "launch_app",
+  "description": "Return to the app where the user left it",
+  "cold": false
 }
 ```
 

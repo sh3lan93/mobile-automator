@@ -58,7 +58,8 @@ These verbs drive the screen. Each accepts `--device <id>` to target a specific 
 | `mauto press <button>` | Press a hardware button (`BACK`, `HOME`, `ENTER`, …) or a semantic action |
 | `mauto long-press --at <x,y> [--duration <ms>]` | Long-press at coordinates **(new in 0.21.0)** |
 | `mauto double-tap --at <x,y>` | Double-tap at coordinates **(new in 0.21.0)** |
-| `mauto launch <appId>` | Launch an installed app by package/bundle id **(new in 0.21.0)** |
+| `mauto launch <appId> [--resume]` | Launch an installed app by package/bundle id. Restarts the app if it is running, so it opens on its initial screen; `--resume` brings a running app to the front in its current state instead **(new in 0.21.0; cold start by default since 0.34.0)** |
+| `mauto terminate <appId>` | Stop a running app by package/bundle id **(new in 0.34.0)** |
 | `mauto install <path>` | Install an app from a local `.apk` / `.app` / `.ipa` **(new in 0.21.0)** |
 | `mauto uninstall <appId>` | Uninstall an app by id **(new in 0.21.0)** |
 | `mauto open-url <url>` | Open a URL on the device — web (`https://…`) or deep link (`myapp://…`). To restore the engine's http(s)-only guard, `export MOBILEMCP_ALLOW_UNSAFE_URLS=0` and run `mauto session end` ([#212](https://github.com/sh3lan93/mobile-automator/issues/212)) **(new in 0.21.0)** |
@@ -66,6 +67,15 @@ These verbs drive the screen. Each accepts `--device <id>` to target a specific 
 
 !!! tip "New in v0.21.0"
     Seven device verbs were added in **v0.21.0**: `long-press`, `double-tap`, `launch`, `install`, `uninstall`, `open-url`, and `orientation`.
+
+!!! note "`launch` cold-starts by default (0.34.0)"
+    `mauto launch <appId>` stops the app, then launches it, so a scenario's `launch_app` step starts on the app's initial screen even when a previous run left the app open ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)). It resets the screen, not app data — use the `app_state: "fresh_install"` precondition for that.
+
+    - Default result: `{"launched": "<appId>", "cold": true, "terminated": true}`.
+    - If stopping the app fails (some engines report an error when the app is not running), the launch still runs and the result is `{"launched": "<appId>", "cold": true, "terminated": false, "warnings": [{"code": "terminate_failed", "message": "…"}]}`. The app may not have been restarted; note it if the steps that follow fail.
+    - `--resume` skips the stop and keeps the old behaviour: `{"launched": "<appId>", "cold": false}`. A scenario step asks for it with `"cold": false`.
+
+    `mauto terminate <appId>` stops the app on its own and returns `{"terminated": "<appId>"}`.
 
 ### Semantic actions (platform-agnostic mode)
 

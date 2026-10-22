@@ -130,7 +130,7 @@ For each step in your scenario:
 | `wait_for_element` | Waits up to timeout for element |
 | `wait_for_loading_complete` | Waits for loading indicators to disappear |
 | `press_button` | Presses hardware button (back, home) |
-| `launch_app` | Starts your app |
+| `launch_app` | Restarts your app on its initial screen (`"cold": false` resumes it instead) |
 | `capture_value` | Extracts text/value from element |
 | `open_url` | Opens a web URL or deep link on the device |
 

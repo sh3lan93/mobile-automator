@@ -78,7 +78,7 @@ Agnostic mode maps OS gestures to four semantic actions resolved to per-platform
 
 All verbs emit `{ok,data,error,hint,schema_version}`; `--human` is an opt-in readable flag. Commander parse failures are routed through the same envelope (#146) — a bad flag must never print bare text.
 
-- **Device actions:** `elements`, `tap`, `long-press`, `double-tap`, `type <text>`, `swipe`, `press <button>`, `screenshot <path>`, `launch <appId>`, `install <path>`, `uninstall <appId>`, `open-url <url>`, `orientation <orientation>`
+- **Device actions:** `elements`, `tap`, `long-press`, `double-tap`, `type <text>`, `swipe`, `press <button>`, `screenshot <path>`, `launch <appId>` (cold start; `--resume` keeps state), `terminate <appId>`, `install <path>`, `uninstall <appId>`, `open-url <url>`, `orientation <orientation>`
 - **Author & verify:** `validate <file>`, `assert <type>`, `result add-step`, `result add-assertion`, `result finalize`
 - **Workspace:** `setup`, `config get <key>`, `config set <key> <value>` (`config set engine` clears the device pin when the engine changes)
 - **Reasoning** (agent pulls on demand): `guide <topic>` (topics: `generate`, `execute`, `setup`); `bootstrap` (verb map + invariants); `schema <name>` (names: `scenario`, `result`, `config`)
