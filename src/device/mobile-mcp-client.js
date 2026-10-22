@@ -62,6 +62,14 @@ function resolveServerEntry() {
 // guard. The env is read when the engine spawns, so a running session daemon
 // must be ended (`mauto session end`) before a change takes effect.
 //
+// MOBILEMCP_LEGACY_ROBOT is set to "1" when `engine` is 'legacy' (#251), the
+// workspace `engine` key resolved by src/device/engine.js. mobile-mcp picks its
+// robot once per process from that exact string. Same rule as above: a
+// user-set value always wins, in either direction, and engine.js's
+// resolveEngine reports the env as the source so the recorded engine matches
+// the one that runs. Unlike the URL guard, a running daemon on the other
+// engine needs no manual `session end`: resolve-connection.js restarts it.
+//
 // MOBILEMCP_DISABLE_TELEMETRY defaults to "1" (#213). Left unset, mobile-mcp
 // sends a PostHog event on every tool call and a scarf.sh pixel once per
 // process. mauto's own telemetry is opt-in, and an engine it spawns on the
@@ -72,12 +80,15 @@ function resolveServerEntry() {
 // the user set. The decision lives in resolveEngineTelemetry so that
 // `mauto telemetry status` reports exactly what this hands the engine, and the
 // same `mauto session end` rule applies to a change.
-function buildEngineEnv({ device = null, baseEnv = process.env } = {}) {
+function buildEngineEnv({ device = null, baseEnv = process.env, engine = null } = {}) {
   const env = {
     ...baseEnv,
     MOBILEMCP_ALLOW_UNSAFE_URLS: baseEnv.MOBILEMCP_ALLOW_UNSAFE_URLS ?? '1',
     MOBILEMCP_DISABLE_TELEMETRY: resolveEngineTelemetry(baseEnv).disableValue,
   };
+  if (engine === 'legacy' && baseEnv.MOBILEMCP_LEGACY_ROBOT === undefined) {
+    env.MOBILEMCP_LEGACY_ROBOT = '1';
+  }
   // mobile-mcp reads the target device from the environment / its own
   // selection; we pass it through when provided so callers can pin a device.
   if (device) env.MOBILE_MCP_DEVICE = device;
@@ -110,6 +121,7 @@ function pidTracking(Transport) {
 // a fixture MCP server.
 async function createCall({
   device,
+  engine = null,
   connectTimeoutMs = CONNECT_TIMEOUT_MS,
   onEngineExit = null,
   sdk = { Client, StdioClientTransport },
@@ -122,7 +134,7 @@ async function createCall({
   const transport = new Transport({
     command,
     args,
-    env: buildEngineEnv({ device }),
+    env: buildEngineEnv({ device, engine }),
   });
 
   const client = new sdk.Client({ name: 'mauto', version: '0.1.0' }, { capabilities: {} });

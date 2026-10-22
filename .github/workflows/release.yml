@@ -55,12 +55,53 @@ jobs:
           echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           echo "Resolved version $VERSION from ${GITHUB_REF#refs/tags/}"
 
+  # #186: nothing upstream is a gate. The ruleset requires no status checks
+  # and auto-tag.yml does not wait for test.yml, so a tag can land while the
+  # suite is still running — or after it failed. This job is the enforcing
+  # run: the same suite command and the same Node matrix test.yml's test job
+  # runs, plus the packed-tarball smoke (tests/lint/release-gate.test.js pins
+  # the equality), so a regression on any supported Node stops the release,
+  # not just Node 22. It runs for rc tags too, so an rc Release is proven on
+  # the whole matrix.
+  verify:
+    name: Verify (Node ${{ matrix.node-version }})
+    # needs resolve not for its outputs but for the skip: a rejected ref must
+    # skip this job, or a bad manual ref could pass verify and reach the
+    # release job with an empty tag. release-gate.test.js pins this.
+    needs: resolve
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['22', '24']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run test:all
+      - run: ./scripts/pack-smoke.sh
+
   release:
     name: Create Release
-    needs: resolve
+    # The Release body tells users to `npm i -g mobile-automator`, so it is
+    # created only once the package is actually on npm — or, for rc tags,
+    # which are never published, once verify has passed. Before this it only
+    # needed resolve, and v0.27.0 got a Release for a version npm never had.
+    needs: [resolve, verify, publish-npm]
     # On the `release` entry point the Release already exists — that event is
     # what triggered us. Re-creating it is a no-op at best.
-    if: github.event_name != 'release'
+    #
+    # always() is load-bearing: on rc tags publish-npm is skipped, and a
+    # skipped dependency would otherwise skip this job too. On a graduated tag
+    # publish-npm can only be skipped by its rc guard, so `skipped` never lets
+    # an unpublished version through.
+    if: >-
+      always() && github.event_name != 'release'
+      && needs.verify.result == 'success'
+      && (needs.publish-npm.result == 'success' || needs.publish-npm.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
       contents: write  # Required to create releases
@@ -130,7 +171,7 @@ jobs:
 
   publish-npm:
     name: Publish to npm
-    needs: resolve
+    needs: [resolve, verify]
     # Only publish graduated (non-prerelease) versions. The workflow triggers on
     # v*.*.* which also matches rc tags like v0.21.0-rc.13; this guard skips
     # those so release candidates are never published to the registry. It reads
@@ -178,8 +219,9 @@ jobs:
       # floating/misused-promise rules). Like the audit gate, this is the only
       # enforcing run — the PR-side ESLint job is a signal, nothing requires it.
       - run: npm run lint
-      - run: npm test
-      - run: ./scripts/pack-smoke.sh
+      # No suite run or pack-smoke here: verify ran both on every supported
+      # Node before this job could start, and `npm publish` re-runs jest
+      # through prepublishOnly as a last line.
 
       # Published via trusted publishing (OIDC) — no NPM_TOKEN, nothing to
       # rotate, and no long-lived credential in repository secrets. The trust

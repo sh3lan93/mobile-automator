@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.32.0]
+## [0.33.0]
 
 ### 🔒 Changed
 
@@ -34,6 +34,150 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ([#213](https://github.com/sh3lan93/mobile-automator/issues/213)).
 
 ---
+
+## [0.32.0]
+
+### ✨ Added
+
+- **`engine` workspace config key selects the device robot.** `mauto config
+  set engine legacy` drives the device with mobile-mcp's legacy robot
+  (adb/uiautomator on Android, go-ios/WDA on real iOS devices) without
+  exporting `MOBILEMCP_LEGACY_ROBOT`; `mobilecli` stays the default and iOS
+  simulators use it either way. An exported `MOBILEMCP_LEGACY_ROBOT` still
+  overrides the key. Use it for Flutter apps on Android — and other apps that
+  draw their own UI — where the default engine drops text-field labels and
+  lists offstage tab content in `mauto elements`. The legacy engine hides
+  offstage tab content on every Android version tested, but recovers
+  text-field labels only on recent ones (verified on Android 16 / API 36; not
+  on API 33, whose uiautomator dump carries no field hint either)
+  ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
+- **`mauto session status` reports the engine.** `engine` / `engine_source`
+  are the running daemon's (`null` when none is up); `resolved_engine` /
+  `resolved_engine_source` are what the workspace resolves now (`env`,
+  `config` or `default`). When they differ, the hint says the next device
+  verb restarts the session ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
+
+### 🔧 Changed
+
+- **`config set engine` clears the pinned device when the engine changes.**
+  Device ids differ between engines (Android emulators: AVD name on
+  `mobilecli`, adb serial on legacy), so a `mauto devices use` selection would
+  fail every verb after a switch. The envelope carries `previous` and
+  `device_selection_cleared`, and the hint says to re-pin, that the next
+  device verb restarts the session, and — when switching to legacy — how to
+  release a leftover Android `DeviceServer`. When an exported
+  `MOBILEMCP_LEGACY_ROBOT` overrides the key, the hint says so instead.
+  Setting the engine already in effect has no side effects ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
+- **A session daemon running the wrong engine restarts itself.** The engine
+  is resolved per verb and recorded in the session handle; the next device
+  verb ends a daemon on a stale engine and starts one on the resolved engine,
+  so switching the config key needs no `mauto session end`. Changing a
+  `MOBILEMCP_*` environment variable still does ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
+- **The real-device E2E runs on both engines.** The Android job is a matrix
+  over `mobilecli` and `legacy`, selected through the shipped binary's `config
+  set engine` and verified with `session status`. A known failure may list
+  `engines`; `golden_search_empty` is excused on `mobilecli` only and must
+  pass on legacy, and its entry XPASSes (failing the job) once the upstream
+  fix ships ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
+- **The Android E2E emulator moved from API 33 to API 36** on both engine
+  legs. On API 33 the legacy engine cannot recover TextField labels either, so
+  the legacy leg would have proved nothing ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
+
+### 🐛 Fixed
+
+- **`mauto elements` decodes entity-escaped labels and collapses unlabeled
+  twins.** The legacy robot reports Flutter labels escaped (`Home&#10;Tab 1
+  of 3`) and every field twice with identical bounds, once labeled and once
+  bare. Labels are now decoded once, and an unlabeled element is dropped when
+  a labeled one shares its bounds — it carried nothing a non-empty target
+  could match, and an `element_count` / `list_is_empty` assertion without a
+  target now counts the deduplicated list instead of double-counting the
+  twin. Both rules apply on every engine ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
+
+### 🐛 Known issues
+
+- **The default engine still drops TextField labels and reports offstage tab
+  content** until upstream
+  [mobilecli#534](https://github.com/mobile-next/mobilecli/issues/534) ships.
+  Set `engine` to `legacy` for affected apps: it hides offstage tab content on
+  every Android version tested, but recovers TextField labels only on recent
+  Android versions (verified on Android 16 / API 36; not on API 33)
+  ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
+
+### 📝 Docs
+
+- `TROUBLESHOOTING.md` makes `mauto config set engine legacy` the recipe for
+  the previous robots and adds an entry for missing text-field labels / hidden
+  tab content, noting that label recovery depends on the Android version. The
+  setup guides recommend the legacy engine for Flutter-style apps, the execute guides say to check `mauto config get engine` when the
+  element list looks wrong, and the docs site documents the key and the new
+  `session status` fields ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
+
+## [0.31.2]
+
+### 🔧 Changed
+
+- **The real-device E2E now drives the shipped `mauto` CLI.** The sample-app
+  smoke run used its own MCP client, its own mobile-mcp pin and OS element ids,
+  so a green run said nothing about the verbs users actually call. CI now packs
+  the npm tarball, installs it into a temp prefix and runs
+  `sample-app/scripts/run-e2e.mjs` against it on an emulator: `setup`,
+  `validate`, `launch`, `elements`, `tap`, `type`, `press`, `screenshot`,
+  `assert` and the `result` verbs, with every target resolved through the
+  CLI's own matcher. A launch that succeeds but leaves an empty element list
+  fails as engine drift, never as "target not found". Screenshots, result
+  files and the session log are uploaded as a CI artifact even when the run
+  fails ([#94](https://github.com/sh3lan93/mobile-automator/issues/94)).
+- **Sample-app scenarios are platform-agnostic and target on-screen text.**
+  `smoke_nav` proves each tab is active by its app-bar header. The new
+  `golden_search_empty` is compared against a checked-in golden of its
+  normalized result, generated from a real run. The `golden` tag — not a
+  naming convention on the id — declares which scenarios get a golden, and the
+  gate is loud in both directions: a tagged scenario without its fixture fails
+  the job, and so does a fixture for an untagged one
+  ([#94](https://github.com/sh3lan93/mobile-automator/issues/94)).
+- **Known failures are pinned to the step they fail at.** A scenario listed in
+  `sample-app/scenarios/golden/known-failures.json` is excused (XFAIL) only
+  when its first failed step is the entry's `failing_step`. Failing anywhere
+  else is a plain failure, and passing (XPASS) fails the job until the entry
+  is removed. Without the pin, a launch crash on a real device had been
+  excused as the search bug
+  ([#94](https://github.com/sh3lan93/mobile-automator/issues/94)).
+- **`src/assertion/evaluator.js` exports `matches` and `findFirst`**, so the E2E
+  harness resolves tap targets with the same case-insensitive text/label
+  matcher as `mauto assert` instead of a copy of it
+  ([#94](https://github.com/sh3lan93/mobile-automator/issues/94)).
+
+### 🐛 Known issues
+
+- **On the default engine, TextField labels are missing and offstage tab
+  content leaks into `mauto elements`.** The first real-device run of the
+  new E2E surfaced this. Fields are hard to target by label, and a target such
+  as `Home` can match a tile from a hidden tab before the visible one.
+  `golden_search_empty` is a pinned known failure until it is fixed; under
+  `MOBILEMCP_LEGACY_ROBOT=1` it passes
+  ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
+
+### 📝 Docs
+
+- `sample-app/README.md` explains how the E2E works, the known-failure
+  outcomes and how to run it locally. `TROUBLESHOOTING.md` covers "engine
+  returned zero elements after a successful launch"
+  ([#94](https://github.com/sh3lan93/mobile-automator/issues/94)).
+
+## [0.31.1]
+
+### 🔧 Changed
+
+- **Schema validity is now guarded where every change runs it.** Every
+  `src/schemas/*.json` must parse, be valid Draft-07, compile under Ajv strict
+  mode (which rejects misspelled keywords like `"requird"` that the CLI's
+  options silently accept), and compile with the CLI's own Ajv —
+  `createCliAjv()` in `src/schemas/cli-ajv.js`, now the only place that
+  instance is constructed, with the guard failing on any second construction
+  site. This replaces the old path-filtered CI workflow, which installed
+  `ajv` outside the lockfile and compiled with options the CLI never uses
+  ([#191](https://github.com/sh3lan93/mobile-automator/issues/191)).
 
 ## [0.31.0]
 
@@ -106,6 +250,21 @@ affected hosts the same way.
   `tests/lint/eslint-gate.test.js` fails the build if the script, the async
   rules, or either CI run is removed or neutralised
   ([#164](https://github.com/sh3lan93/mobile-automator/issues/164)).
+- The release path is gated on the supported Node range instead of one leg of
+  it. No CI check was a gate: the `main-branch` ruleset requires no status
+  checks and `auto-tag.yml` does not wait for `test.yml`, so a tag could land
+  while the suite was still running — or after it failed — and `release.yml`'s
+  `publish-npm` job then ran the suite on Node 22 alone. A new `verify` job
+  runs the same suite command and the packed-tarball smoke on the same Node
+  matrix `test.yml` proves, for every tag including rc, and both `npm publish`
+  and the GitHub Release now wait on it. The GitHub Release is additionally
+  cut only after the publish actually happened (for rc tags, which are never
+  published, after `verify` passes), so a gate-stopped publish no longer
+  leaves a Release telling users to `npm i -g` a version npm never had —
+  v0.27.0 did. `tests/lint/release-gate.test.js` fails the build if the
+  matrix or suite command drifts from `test.yml`, or the job order is
+  quietly undone
+  ([#186](https://github.com/sh3lan93/mobile-automator/issues/186)).
 
 ## [0.30.0]
 

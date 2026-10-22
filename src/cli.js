@@ -33,7 +33,7 @@ const { record } = require('./observe/recorder');
 const { resolveRunId } = require('./observe/settings');
 const { runTracePath } = require('./observe/paths');
 const { readTrace, deriveRun, pruneRunTraces } = require('./observe/trace');
-const { readHandle, readSessionId } = require('./device/session-handle');
+const { readSessionId } = require('./device/session-handle');
 const { captureOnFailure } = require('./observe/failure-capture');
 const { crashTimestampMs } = require('./device/crash-model');
 const { probeCrashes } = require('./device/failure-probe');
@@ -894,7 +894,7 @@ function handleConfigGet({ projectRoot }, key) {
 // Coerce the raw CLI string into the type config_schema.json declares for this
 // key, then validate that one key before writing. Per-key (not whole-document)
 // so unrelated pre-existing drift never blocks an otherwise-valid write.
-function handleConfigSet({ projectRoot }, key, rawValue) {
+function handleConfigSet({ projectRoot, env = process.env, store = selectionStore }, key, rawValue) {
   const value = coerceValue(key, rawValue);
   const { valid, errors } = validateAt(key, value);
   if (!valid) {
@@ -907,8 +907,52 @@ function handleConfigSet({ projectRoot }, key, rawValue) {
       exitKind: 'invalid_input',
     };
   }
+  if (key === 'engine') return setEngine({ projectRoot, env, store }, value);
   configManager.set(projectRoot, key, value);
   return { envelope: ok({ key, value }), exitKind: 'ok' };
+}
+
+// #251: switching the engine invalidates device ids — the default robot lists
+// Android emulators by AVD name, the legacy one by adb serial — so a persisted
+// `devices use` selection is cleared rather than left to fail every verb. The
+// session is NOT ended here: the next device verb restarts a daemon running
+// the stale engine on its own. Setting the effective value again (a missing
+// key is the default) is a plain write with no side effects.
+function setEngine({ projectRoot, env, store }, value) {
+  const engineModule = require('./device/engine');
+  const stored = configManager.get(projectRoot, 'engine');
+  const previous = engineModule.isEngine(stored) ? stored : engineModule.DEFAULT_ENGINE;
+  configManager.set(projectRoot, 'engine', value);
+  if (value === previous) return { envelope: ok({ key: 'engine', value }), exitKind: 'ok' };
+
+  const cleared = store.read(projectRoot) != null;
+  store.clear(projectRoot);
+  // The engine that will actually run: an exported MOBILEMCP_LEGACY_ROBOT
+  // beats the key, so promising a restart onto `value` would be a lie.
+  const resolved = engineModule.resolveEngine({ config: { engine: value }, env });
+  const overridden = resolved.source === 'env';
+  const hints = [
+    overridden
+      ? `MOBILEMCP_LEGACY_ROBOT is exported in this environment and overrides the engine key — the ${resolved.engine} engine keeps running until you unset it.`
+      : `Engine switched from ${previous} to ${value}; the next device verb restarts the session on it.`,
+    'Device ids differ between engines (Android emulators: AVD name on mobilecli, adb serial on legacy) — ' +
+      (cleared
+        ? 'the persisted device selection was cleared; run `mauto devices`, then `mauto devices use <id>` to pin one again.'
+        : 'if you pin a device, take its id from `mauto devices`, then `mauto devices use <id>`.'),
+  ];
+  if (resolved.engine === 'legacy') {
+    hints.push(
+      'On Android, if a verb then fails with a uiautomator error, a leftover mobilecli DeviceServer is holding ' +
+        'UiAutomation: run `adb shell pkill -f com.mobilenext.mobilecli.DeviceServer` (upstream mobilecli#470).'
+    );
+  }
+  return {
+    envelope: ok(
+      { key: 'engine', value, previous, device_selection_cleared: cleared },
+      hints.join(' ')
+    ),
+    exitKind: 'ok',
+  };
 }
 
 // --- Slice 5: telemetry consent surface -----------------------------------
@@ -1251,7 +1295,12 @@ async function handleSessionStart(
     projectRoot,
     spawn = require('./device/session-spawn'),
     client = require('./device/session-client'),
-    readHandle: readHandleDevice = require('./device/resolve-connection').readHandleDevice,
+    // The live daemon's handle — ONE read; the device pin and the engine are
+    // both projections of it below (session-handle.js owns the file).
+    readHandle = require('./device/session-handle').readHandle,
+    // #251: the workspace's engine, and the one decoder of the handle's.
+    resolveEngine = require('./device/engine').readEngine,
+    handleEngine = require('./device/engine').handleEngine,
   },
   opts = {}
 ) {
@@ -1274,7 +1323,8 @@ async function handleSessionStart(
     // pinned to A reported already_running:true, device:B while every verb
     // kept driving A. Fail with a hint instead — the agent stays in control
     // and decides whether to `session end` and repin.
-    const pinned = readHandleDevice(projectRoot);
+    const handle = readHandle(projectRoot);
+    const pinned = (handle && handle.device) || null;
     if (device !== null && device !== pinned) {
       return {
         envelope: fail(
@@ -1286,13 +1336,23 @@ async function handleSessionStart(
         exitKind: 'device',
       };
     }
+    // The live daemon's engine, not the resolved one: reporting the resolved
+    // engine here would repeat #148's lie for the robot instead of the device.
+    // A stale engine is not an error — the next device verb restarts the
+    // daemon on the resolved one — but it is worth saying.
+    const running = handleEngine(handle);
+    const resolved = resolveEngine(projectRoot);
     return {
-      envelope: ok({ started: false, already_running: true, device }),
+      envelope: ok(
+        { started: false, already_running: true, device, engine: running },
+        running !== resolved.engine ? staleEngineHint(running, resolved.engine, resolved.source) : null
+      ),
       exitKind: 'ok',
     };
   }
 
-  const started = await connection.startSession({ projectRoot, device, idleMs, spawn });
+  const { engine, source: engineSource } = resolveEngine(projectRoot);
+  const started = await connection.startSession({ projectRoot, device, idleMs, engine, engineSource, spawn });
   if (!started) {
     // The daemon's stdout/stderr are captured to the workspace log, so the
     // "why" of a startup crash exists on disk — but only this hint tells the
@@ -1304,17 +1364,30 @@ async function handleSessionStart(
       exitKind: 'device',
     };
   }
-  return { envelope: ok({ started: true, device }), exitKind: 'ok' };
+  return { envelope: ok({ started: true, device, engine }), exitKind: 'ok' };
+}
+
+// A live daemon on a different engine than the workspace resolves (#251).
+// Plain strings, not a reconstituted {engine, source} object: both callers
+// already have the fields as fields.
+function staleEngineHint(runningEngine, resolvedEngine, resolvedSource) {
+  return `The running session uses the ${runningEngine} engine, but this workspace resolves ${resolvedEngine} (from ${resolvedSource}); the next device verb will restart the session on ${resolvedEngine}.`;
 }
 
 async function handleSessionStatus(
-  { projectRoot, client = require('./device/session-client') } = {}
+  {
+    projectRoot,
+    client = require('./device/session-client'),
+    resolveEngine = require('./device/engine').readEngine,
+  } = {}
 ) {
-  const status = await connection.sessionStatus(projectRoot, { client });
-  const hint =
-    status.reason === 'engine_exited'
-      ? `The device engine exited; this session is shutting down and the next verb starts a fresh one. ${connection.daemonLogHint(projectRoot)}`
-      : null;
+  const status = await connection.sessionStatus(projectRoot, { client, resolveEngine });
+  let hint = null;
+  if (status.reason === 'engine_exited') {
+    hint = `The device engine exited; this session is shutting down and the next verb starts a fresh one. ${connection.daemonLogHint(projectRoot)}`;
+  } else if (status.running && status.engine !== status.resolved_engine) {
+    hint = staleEngineHint(status.engine, status.resolved_engine, status.resolved_engine_source);
+  }
   return { envelope: ok(status, hint), exitKind: 'ok' };
 }
 
@@ -1334,7 +1407,11 @@ const SESSION_END_FAILURE_HINTS = {
 async function handleSessionEnd(
   { projectRoot, client = require('./device/session-client'), end = {} } = {}
 ) {
-  const { outcome, pid } = await connection.endSession(projectRoot, { client, ...end });
+  // session-end.js, not the connection facade: the same module the stale-engine
+  // restart goes through (resolve-connection.js), so `session end` and an
+  // engine switch report identical outcomes for an identical daemon.
+  const { endSession } = require('./device/session-end');
+  const { outcome, pid } = await endSession(projectRoot, { client, ...end });
   const logHint = connection.daemonLogHint(projectRoot);
   if (Object.prototype.hasOwnProperty.call(SESSION_END_FAILURE_HINTS, outcome)) {
     const pidFile = require('./device/session-paths').pidFilePath(projectRoot);
@@ -1432,7 +1509,9 @@ async function handleDevicesClear({
   store = selectionStore,
   projectRoot,
   isAlive = require('./device/connection').isSessionAlive,
-  readHandle: readHandleDevice = require('./device/resolve-connection').readHandleDevice,
+  // The live daemon's handle, same seam as handleSessionStart: one read, the
+  // pin is a projection of it.
+  readHandle = require('./device/session-handle').readHandle,
 } = {}) {
   const previous = store.read(projectRoot);
   store.clear(projectRoot);
@@ -1444,7 +1523,8 @@ async function handleDevicesClear({
   if (!alive) {
     return { envelope: ok({ cleared: previous || null }), exitKind: 'ok' };
   }
-  const pinned = readHandleDevice(projectRoot);
+  const handle = readHandle(projectRoot);
+  const pinned = (handle && handle.device) || null;
   return {
     envelope: ok(
       { cleared: previous || null, daemon_still_pinned: pinned },
@@ -1470,6 +1550,7 @@ const CRASH_LIST_HINT =
 // begin". No handle means no watermark, which means UNSCOPED, which the envelope
 // reports as `since: null` rather than pretending the list is recent.
 function sessionWatermark(projectRoot) {
+  const { readHandle } = require('./device/session-handle');
   const handle = readHandle(projectRoot);
   const t = handle && handle.started_at;
   return typeof t === 'string' && Number.isFinite(Date.parse(t)) ? t : null;

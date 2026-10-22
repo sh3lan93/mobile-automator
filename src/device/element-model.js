@@ -36,6 +36,56 @@ function nullable(v) {
   return v === undefined || v === null || v === '' ? null : v;
 }
 
+// The legacy robot (MOBILEMCP_LEGACY_ROBOT=1) reads uiautomator XML and hands
+// attribute values back still entity-escaped: a Flutter nav label arrives as
+// `Home&#10;Tab 1 of 3` instead of `Home\nTab 1 of 3` (#251). Decode numeric
+// (decimal / hex) references and the five XML named entities in ONE pass, so
+// `&amp;#10;` becomes the literal `&#10;` rather than a newline. Unknown named
+// entities and out-of-range code points are left exactly as received.
+const NAMED_ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
+const ENTITY_RE = /&(?:#(\d+)|#[xX]([0-9a-fA-F]+)|([a-zA-Z]+));/g;
+
+function decodeEntities(value) {
+  if (typeof value !== 'string' || !value.includes('&')) return value;
+  return value.replace(ENTITY_RE, (whole, dec, hex, name) => {
+    if (name !== undefined) {
+      return Object.prototype.hasOwnProperty.call(NAMED_ENTITIES, name) ? NAMED_ENTITIES[name] : whole;
+    }
+    const code = dec !== undefined ? parseInt(dec, 10) : parseInt(hex, 16);
+    return Number.isInteger(code) && code >= 0 && code <= 0x10ffff ? String.fromCodePoint(code) : whole;
+  });
+}
+
+// The legacy robot also reports every Flutter field twice with identical
+// bounds: once carrying the semantics label (`Name`) and once with neither
+// text nor label. Drop the bare twin when a labeled element shares its bounds.
+// Safe for every NON-empty target: a target only ever matches on text or label
+// (see `matches()` in src/assertion/evaluator.js), so the bare twin can never
+// be what a step or a targeted assertion resolves to, and its geometry survives
+// on the labeled sibling. A bare element with no labeled twin is kept — it
+// still occupies the screen. Order is kept.
+//
+// The one place the collapse IS visible: `matches()` treats a null/empty target
+// as matching ALL elements, so an `element_count` / `list_item_count` /
+// `list_is_empty` assertion with NO target counts the whole list — and the
+// collapse changes that count, on every engine (a native bare wrapper sharing
+// its labeled child's bounds drops too). That is deliberate: the pre-collapse
+// count double-counted each twin and counted a wrapper no target could ever
+// reach. Pinned by the empty-target count test below the collapse tests, which
+// uses the evaluator's own countMatching.
+function isBare(e) {
+  return e.text === null && e.accessibility_label === null;
+}
+
+function collapseUnlabeledTwins(elements) {
+  const labeledBounds = new Set(elements.filter((e) => !isBare(e)).map((e) => e.bounds.join(',')));
+  return elements.filter((e) => !(isBare(e) && labeledBounds.has(e.bounds.join(','))));
+}
+
+// Both rules above are engine-independent. On the default engine (mobilecli)
+// labels carry no references, but the collapse still fires on native layouts:
+// a bare wrapper container (FrameLayout/ViewGroup) sharing bounds with its
+// labeled child is dropped — equally unmatchable, so equally safe.
 function normalize(rawElements) {
   if (!Array.isArray(rawElements)) return [];
 
@@ -46,16 +96,16 @@ function normalize(rawElements) {
     if (!bounds) continue; // can't position it -> not useful, skip
 
     out.push({
-      text: nullable(raw.text),
+      text: nullable(decodeEntities(raw.text)),
       accessibility_label: nullable(
-        raw.accessibility_label !== undefined ? raw.accessibility_label : raw.label
+        decodeEntities(raw.accessibility_label !== undefined ? raw.accessibility_label : raw.label)
       ),
       bounds,
       center: centerOf(bounds),
       type: nullable(raw.type),
     });
   }
-  return out;
+  return collapseUnlabeledTwins(out);
 }
 
 // Short, single-line excerpt of an unparseable payload for the error message:
@@ -101,4 +151,4 @@ function parseElements(raw) {
   throw err;
 }
 
-module.exports = { normalize, parseElements };
+module.exports = { normalize, parseElements, decodeEntities, collapseUnlabeledTwins };

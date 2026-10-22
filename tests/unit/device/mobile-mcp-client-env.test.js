@@ -45,6 +45,23 @@ describe('buildEngineEnv (#212)', () => {
     expect(env).not.toBe(process.env);
     expect(env.PATH).toBe(process.env.PATH);
   });
+
+  // #251: the `engine` config key selects mobile-mcp's legacy robot.
+  describe('engine', () => {
+    test('legacy sets MOBILEMCP_LEGACY_ROBOT=1 when unset', () => {
+      expect(buildEngineEnv({ engine: 'legacy', baseEnv: {} }).MOBILEMCP_LEGACY_ROBOT).toBe('1');
+    });
+
+    test('mobilecli (or no engine) leaves MOBILEMCP_LEGACY_ROBOT unset', () => {
+      expect(buildEngineEnv({ engine: 'mobilecli', baseEnv: {} })).not.toHaveProperty('MOBILEMCP_LEGACY_ROBOT');
+      expect(buildEngineEnv({ baseEnv: {} })).not.toHaveProperty('MOBILEMCP_LEGACY_ROBOT');
+    });
+
+    test('a user-set MOBILEMCP_LEGACY_ROBOT always wins', () => {
+      expect(buildEngineEnv({ engine: 'legacy', baseEnv: { MOBILEMCP_LEGACY_ROBOT: '0' } }).MOBILEMCP_LEGACY_ROBOT).toBe('0');
+      expect(buildEngineEnv({ engine: 'mobilecli', baseEnv: { MOBILEMCP_LEGACY_ROBOT: '1' } }).MOBILEMCP_LEGACY_ROBOT).toBe('1');
+    });
+  });
 });
 
 describe('buildEngineEnv engine telemetry (#213)', () => {

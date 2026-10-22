@@ -11,6 +11,10 @@
 //            shared daemon down — other verbs depend on it).
 //   (b) device-pin MISMATCH (daemon bound to A, verb asks for B)
 //         -> one-shot connection for this call (do not silently reuse A).
+//   (b') device pin fits but the daemon runs a different ENGINE than the one
+//         this workspace resolves (#251) -> the daemon is stale: end it, then
+//         spawn on the requested engine (keeping its device pin) and connect
+//         daemon-backed. If it cannot be ended, one-shot instead.
 //   (c) autostart && no reachable daemon
 //         -> spawn a daemon, then connect daemon-backed (no-op close).
 //   (d) spawn failed, or autostart:false
@@ -26,6 +30,8 @@ const { readHandle } = require('./session-handle');
 const sessionClient = require('./session-client');
 const { daemonLogHint } = require('./session-log');
 const sessionSpawn = require('./session-spawn');
+const { readEngine, DEFAULT_ENGINE, handleEngine } = require('./engine');
+const { endSession, ENDED_OUTCOMES } = require('./session-end');
 
 function defaultCreateCall(opts) {
   return require('./mobile-mcp-client').createCall(opts);
@@ -52,18 +58,49 @@ function deviceMatches(requested, handleDevice) {
   return requested === handleDevice;
 }
 
+// Does a daemon running `runningEngine` satisfy a request for `requested`?
+// The production caller passes engine.js's handleEngine() — the ONE decoder of
+// a handle's engine (a missing or invalid value is the default robot), so
+// `session status` and the restart decision can never disagree about the same
+// handle. A falsy `runningEngine` here (a direct caller's pre-#251 handle)
+// still counts as the default robot. A caller that resolved no engine does not
+// compare at all.
+function engineMatches(requested, runningEngine) {
+  if (!requested) return true;
+  return requested === (runningEngine || DEFAULT_ENGINE);
+}
+
 // PURE decision: given the observed facts, which strategy should we run?
-//   'daemon'           — a live daemon fits; connect daemon-backed (no-op close)
-//   'oneshot'          — connect once for this call (real close)
-//   'spawn-then-daemon'— no daemon fits but autostart is on; spawn then connect
+//   'daemon'              — a live daemon fits; connect daemon-backed (no-op close)
+//   'oneshot'             — connect once for this call (real close)
+//   'spawn-then-daemon'   — no daemon fits but autostart is on; spawn then connect
+//   'restart-then-daemon' — a live daemon on the requested device runs a stale
+//                           engine (#251); end it, spawn on the requested
+//                           engine, then connect
+//
+// Device before engine, deliberately. A device-pin mismatch stays 'oneshot'
+// even when the engines differ too: a restart would respawn the session pinned
+// to the REQUESTED device, which is exactly the silent repin (b) refuses. The
+// one-shot already runs on the requested engine, so this call is correct; the
+// stale daemon is restarted by the next verb whose device fits it. Only when
+// the device fits is a different engine reason enough to replace the daemon —
+// reusing it would answer with the robot the user configured away from.
 //
 // Zero collaborators, no I/O — value-in/value-out so the branching can be tested
 // without faking a client/spawn/createCall or writing a handle to disk. The
 // effectful resolver (below) gathers the facts, calls this, and runs exactly one
-// of the three thin effect paths.
-function chooseConnectionStrategy({ alive, handleDevice, requestedDevice, autostart }) {
-  if (alive && deviceMatches(requestedDevice, handleDevice)) return 'daemon';
-  if (alive) return 'oneshot'; // live daemon, but its device pin mismatches
+// of the thin effect paths.
+function chooseConnectionStrategy({
+  alive,
+  handleDevice,
+  requestedDevice,
+  autostart,
+  runningEngine = null,
+  requestedEngine = null,
+}) {
+  if (alive && !deviceMatches(requestedDevice, handleDevice)) return 'oneshot';
+  if (alive && engineMatches(requestedEngine, runningEngine)) return 'daemon';
+  if (alive) return autostart ? 'restart-then-daemon' : 'oneshot';
   if (autostart) return 'spawn-then-daemon';
   return 'oneshot';
 }
@@ -77,10 +114,38 @@ async function resolveDeviceConnection({
   spawn = sessionSpawn,
   createCall = defaultCreateCall,
   idleMs = undefined,
+  // (projectRoot) => { engine, source } — the workspace's engine (#251).
+  resolveEngine = readEngine,
+  // Ends a stale-engine daemon through the same honest path `mauto session end`
+  // uses — session-end.js's endSession, verbatim: its signature is already
+  // (projectRoot, { client }), so the seam defaults to it directly, no wrapper.
+  // The restart inherits its refusal to lie about pids that will not die.
+  end = endSession,
 } = {}) {
+  // Resolved once per verb, and used by every path below: the one-shot, the
+  // spawned daemon, and the staleness check against a live one.
+  const { engine, source: engineSource } = resolveEngine(projectRoot);
+
   const oneShot = async () => {
-    const { call, close } = await createCall({ device });
+    const { call, close } = await createCall({ device, engine });
     return { bridge: new DeviceBridge({ call, device }), close, source: 'oneshot' };
+  };
+
+  // (d) explicit one-shot, or spawn failed / unreachable. When the SPAWN is
+  // what failed, the daemon's log is the only record of why, and transparent
+  // autostart is the common path — most users never type `mauto session start`,
+  // so without this the log stays invisible to almost everyone. The signal
+  // rides err.hint because deviceFail() in cli.js already surfaces it on every
+  // device verb, so acquireConnection's deliberately narrow contract is
+  // untouched (#163).
+  const oneShotWithLogHint = async (afterFailedSpawn) => {
+    try {
+      return await oneShot();
+    } catch (err) {
+      // Never clobber a more specific hint the transport already attached.
+      if (afterFailedSpawn && !err.hint) err.hint = daemonLogHint(projectRoot);
+      throw err;
+    }
   };
 
   const daemonBacked = async () => {
@@ -105,15 +170,30 @@ async function resolveDeviceConnection({
     };
   };
 
+  // Spawn a daemon on the resolved engine, then connect to it. Resolves the
+  // connection, null when the daemon came up but was unreachable, or false when
+  // the spawn itself failed.
+  const spawnThenConnect = async (spawnDevice) => {
+    const started = await spawn.spawnDaemon({ projectRoot, device: spawnDevice, idleMs, engine, engineSource });
+    if (!started) return false;
+    return daemonBacked();
+  };
+
   const alive = await client.isAlive(projectRoot);
 
   if (alive) {
-    const handleDevice = readHandleDevice(projectRoot);
+    const handle = readHandle(projectRoot);
+    const handleDevice = (handle && handle.device) || null;
     const strategy = chooseConnectionStrategy({
       alive: true,
       handleDevice,
       requestedDevice: device,
       autostart,
+      // engine.js's canonical projection — the same decoder `session status`
+      // reads the handle through — never the raw field, which a hand-edited or
+      // half-written handle can corrupt into a "stale" verdict status denies.
+      runningEngine: handleEngine(handle),
+      requestedEngine: engine,
     });
     if (strategy === 'daemon') {
       // (a) reuse the live daemon.
@@ -121,8 +201,18 @@ async function resolveDeviceConnection({
       if (conn) return conn;
       // Race: daemon vanished between isAlive and connect — fall through and
       // re-decide as if no daemon were alive.
+    } else if (strategy === 'restart-then-daemon') {
+      // (b') stale engine. The respawn keeps the daemon's device pin when the
+      // verb named none: the user pinned it (`session start --device`), and an
+      // engine switch is no reason to forget that.
+      const { outcome } = await end(projectRoot, { client });
+      if (!ENDED_OUTCOMES.has(outcome)) return oneShot();
+      const conn = await spawnThenConnect(device || handleDevice);
+      if (conn) return conn;
+      return oneShotWithLogHint(conn === false);
     } else {
-      // (b) device-pin mismatch: never silently reuse the wrong device.
+      // (b) device-pin mismatch: never silently reuse the wrong device. Also a
+      // stale engine with autostart off: never reuse the wrong robot either.
       return oneShot();
     }
   }
@@ -137,36 +227,20 @@ async function resolveDeviceConnection({
   let spawnFailed = false;
   if (strategy === 'spawn-then-daemon') {
     // (c) spawn a daemon, then connect daemon-backed.
-    const started = await spawn.spawnDaemon({ projectRoot, device, idleMs });
-    if (started) {
-      const conn = await daemonBacked();
-      if (conn) return conn;
-      // Spawn worked; the daemon just wasn't reachable. Its log has nothing to
-      // say about a subsequent one-shot failure, so no hint — fall through.
-    } else {
-      spawnFailed = true;
-    }
+    const conn = await spawnThenConnect(device);
+    if (conn) return conn;
+    // null: spawn worked; the daemon just wasn't reachable. Its log has nothing
+    // to say about a subsequent one-shot failure, so no hint — fall through.
+    spawnFailed = conn === false;
   }
 
-  // (d) explicit one-shot, or spawn failed / unreachable. When the SPAWN is
-  // what failed, the daemon's log is the only record of why, and transparent
-  // autostart is the common path — most users never type `mauto session start`,
-  // so without this the log stays invisible to almost everyone. The signal
-  // rides err.hint because deviceFail() in cli.js already surfaces it on every
-  // device verb, so acquireConnection's deliberately narrow contract is
-  // untouched (#163).
-  try {
-    return await oneShot();
-  } catch (err) {
-    // Never clobber a more specific hint the transport already attached.
-    if (spawnFailed && !err.hint) err.hint = daemonLogHint(projectRoot);
-    throw err;
-  }
+  return oneShotWithLogHint(spawnFailed);
 }
 
 module.exports = {
   resolveDeviceConnection,
   chooseConnectionStrategy,
   deviceMatches,
+  engineMatches,
   readHandleDevice,
 };

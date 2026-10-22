@@ -1,6 +1,9 @@
 'use strict';
 
-const { normalize, parseElements } = require('../../../src/device/element-model');
+const fs = require('fs');
+const path = require('path');
+
+const { normalize, parseElements, decodeEntities, collapseUnlabeledTwins } = require('../../../src/device/element-model');
 
 describe('element-model.normalize', () => {
   test('normalizes a bounds-based element and computes center midpoint', () => {
@@ -156,5 +159,128 @@ describe('parseElements', () => {
   test('tolerates labels containing brackets/quotes', () => {
     const tricky = 'Found these elements on screen: ' + JSON.stringify([{ label: 'a]b"c', coordinates: { x: 0, y: 0, width: 1, height: 1 } }]);
     expect(parseElements(tricky)[0].label).toBe('a]b"c');
+  });
+});
+
+describe('decodeEntities', () => {
+  test('decodes decimal and hex numeric references', () => {
+    expect(decodeEntities('Home&#10;Tab 1 of 3')).toBe('Home\nTab 1 of 3');
+    expect(decodeEntities('a&#x0A;b&#X41;')).toBe('a\nbA');
+  });
+  test('decodes the five XML named entities', () => {
+    expect(decodeEntities('&amp;&lt;&gt;&quot;&apos;')).toBe('&<>"\'');
+  });
+  test('decodes exactly once (no double-unescape)', () => {
+    expect(decodeEntities('&amp;#10;')).toBe('&#10;');
+    expect(decodeEntities('&amp;amp;')).toBe('&amp;');
+  });
+  test('leaves unknown named entities and stray ampersands untouched', () => {
+    expect(decodeEntities('&nbsp;Fish &chips & co')).toBe('&nbsp;Fish &chips & co');
+  });
+  test('leaves an out-of-range code point untouched', () => {
+    expect(decodeEntities('&#x110000;')).toBe('&#x110000;');
+  });
+  test('passes non-strings through', () => {
+    expect(decodeEntities(null)).toBeNull();
+    expect(decodeEntities(undefined)).toBeUndefined();
+  });
+});
+
+describe('normalize decodes character references', () => {
+  test('in text, accessibility_label and the label fallback', () => {
+    const out = normalize([
+      { text: 'Tom &amp; Jerry', accessibility_label: 'Home&#10;Tab 1 of 3', bounds: [0, 0, 1, 1] },
+      { label: 'More&#x0A;Tab 3 of 3', bounds: [0, 0, 2, 2] },
+    ]);
+    expect(out[0].text).toBe('Tom & Jerry');
+    expect(out[0].accessibility_label).toBe('Home\nTab 1 of 3');
+    expect(out[1].accessibility_label).toBe('More\nTab 3 of 3');
+  });
+});
+
+describe('collapseUnlabeledTwins (via normalize)', () => {
+  const B = [48, 372, 1232, 540];
+  test('drops an unlabeled element that shares bounds with a labeled one, keeping order', () => {
+    const out = normalize([
+      { label: 'Header', bounds: [0, 0, 5, 5] },
+      { bounds: B, type: 'EditText' },
+      { label: 'Name', bounds: B, type: 'EditText' },
+      { text: 'After', bounds: [0, 10, 5, 15] },
+    ]);
+    expect(out.map((e) => e.text || e.accessibility_label)).toEqual(['Header', 'Name', 'After']);
+  });
+  test('a text-only twin also counts as labeled', () => {
+    const out = normalize([{ text: 'Go', bounds: B }, { bounds: B }]);
+    expect(out).toHaveLength(1);
+    expect(out[0].text).toBe('Go');
+  });
+  test('keeps two labeled elements with identical bounds', () => {
+    const out = normalize([{ label: 'A', bounds: B }, { text: 'B', bounds: B }]);
+    expect(out).toHaveLength(2);
+  });
+  test('keeps an unlabeled element with no labeled twin', () => {
+    const out = normalize([{ bounds: B, type: 'Button' }, { label: 'X', bounds: [0, 0, 1, 1] }]);
+    expect(out).toHaveLength(2);
+    expect(out[0].type).toBe('Button');
+  });
+  test('keeps unlabeled same-bounds elements when none is labeled', () => {
+    expect(normalize([{ bounds: B }, { bounds: B }])).toHaveLength(2);
+  });
+  test('is exported as a pure helper over normalized elements', () => {
+    const lab = { text: null, accessibility_label: 'L', bounds: B, center: [0, 0], type: null };
+    const bare = { text: null, accessibility_label: null, bounds: [...B], center: [0, 0], type: null };
+    expect(collapseUnlabeledTwins([bare, lab])).toEqual([lab]);
+  });
+
+  // The collapse's one visible effect: `matches()` treats a null/empty target
+  // as matching ALL elements, so the count assertions (element_count /
+  // list_item_count / list_is_empty) with NO target count the deduplicated
+  // list. evaluate here is the evaluator's public surface — the exact call
+  // `mauto assert element_count` makes — so this pins the real assertion
+  // outcome, not a restatement of it.
+  describe('empty-target counts after the collapse (#251)', () => {
+    const { evaluate } = require('../../../src/assertion/evaluator');
+
+    test('a targeted count still finds the labeled twin; an untargeted count excludes the bare one', () => {
+      const elements = normalize([
+        { label: 'Header', bounds: [0, 0, 5, 5] },
+        { bounds: B, type: 'EditText' },                     // the bare twin
+        { label: 'Name', bounds: B, type: 'EditText' },      // ...of this labeled one
+        { bounds: [0, 10, 5, 15], type: 'Button' },          // bare, no twin: kept
+      ]);
+      // A non-empty target only ever matches text/label, so the collapse
+      // cannot change what a step or a targeted assertion resolves to.
+      expect(evaluate({ type: 'element_count', target: 'Name', count: 1 }, { elements }).pass).toBe(true);
+      // An empty target matches all: the count is over the collapsed list
+      // (3 — header, labeled twin, kept bare), not the raw 4.
+      expect(evaluate({ type: 'element_count', count: 3 }, { elements }).pass).toBe(true);
+      expect(evaluate({ type: 'element_count', count: 4 }, { elements }).pass).toBe(false);
+    });
+  });
+});
+
+describe('normalize over the legacy-robot More screen (#251)', () => {
+  const FIXTURE = path.join(__dirname, '..', '..', 'fixtures', 'device', 'sample-app-probe', 'more.legacy-robot.envelope.json');
+  // Re-shape the captured envelope into the raw engine form (`label` +
+  // `coordinates`) so the whole normalize path, escaped labels included, runs.
+  const raw = JSON.parse(fs.readFileSync(FIXTURE, 'utf8')).data.map((e) => ({
+    type: e.type,
+    text: e.text === null ? '' : e.text,
+    label: e.accessibility_label === null ? '' : e.accessibility_label,
+    coordinates: { x: e.bounds[0], y: e.bounds[1], width: e.bounds[2] - e.bounds[0], height: e.bounds[3] - e.bounds[1] },
+  }));
+  const out = normalize(raw);
+
+  test.each(['Name', 'Email', 'Search products', 'Notifications'])('exactly one element labeled %s', (label) => {
+    expect(out.filter((e) => e.accessibility_label === label)).toHaveLength(1);
+  });
+  test('no unlabeled element survives beside a labeled twin', () => {
+    const labeled = out.filter((e) => e.text || e.accessibility_label).map((e) => e.bounds.join());
+    const bareTwins = out.filter((e) => !e.text && !e.accessibility_label && labeled.includes(e.bounds.join()));
+    expect(bareTwins).toEqual([]);
+  });
+  test('nav labels are decoded to real newlines', () => {
+    expect(out.map((e) => e.accessibility_label)).toContain('Home\nTab 1 of 3');
+    expect(JSON.stringify(out)).not.toContain('&#10;');
   });
 });
