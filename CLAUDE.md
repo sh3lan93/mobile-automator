@@ -94,7 +94,7 @@ Two catalogs are the single source of truth for "does this capability actually r
 
 | resolution | count | meaning |
 |---|---|---|
-| `verb` | 11 | dedicated one-shot `mauto` verb → DeviceBridge → one mobile-mcp primitive |
+| `verb` | 11 | dedicated one-shot `mauto` verb → DeviceBridge → one or more mobile-mcp primitives (`launch` is terminate + launch, #255) |
 | `semantic` | 4 | invoked as `mauto press <action>`, resolved per-platform by `src/device/semantic-press/` |
 | `composed` | 5 | no verb; the agent composes it from existing verbs (the execute guide documents how) |
 | `unsupported` | 3 | mobile-mcp 1.0.5 exposes no primitive (`clear_app_data`, `enable_wifi`, `disable_wifi`) — guides must **not** promise a verb |
