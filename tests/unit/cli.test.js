@@ -1525,8 +1525,8 @@ describe('cli handlers', () => {
       const { envelope, exitKind } = await handleSessionStart(
         {
           projectRoot, spawn, client,
-          readHandle: () => 'A',
-          readHandleEngine: () => 'mobilecli',
+          // One read, both projections: the daemon's pin and its engine.
+          readHandle: () => ({ device: 'A', engine: 'mobilecli' }),
           resolveEngine: () => ({ engine: 'legacy', source: 'config' }),
         },
         {}
@@ -1579,7 +1579,7 @@ describe('cli handlers', () => {
     test('fails with a device error when a live daemon is pinned to a different device', async () => {
       const spawn = { spawnDaemon: async () => { throw new Error('should not spawn'); } };
       const client = { isAlive: async () => true };
-      const readHandle = () => 'A';
+      const readHandle = () => ({ device: 'A' });
       const { envelope, exitKind } = await handleSessionStart(
         { projectRoot, spawn, client, readHandle },
         { device: 'B' }
@@ -1596,7 +1596,7 @@ describe('cli handlers', () => {
     test('reuses a live daemon when the requested device matches the handle pin', async () => {
       const spawn = { spawnDaemon: async () => { throw new Error('should not spawn'); } };
       const client = { isAlive: async () => true };
-      const readHandle = () => 'A';
+      const readHandle = () => ({ device: 'A' });
       const { envelope, exitKind } = await handleSessionStart(
         { projectRoot, spawn, client, readHandle },
         { device: 'A' }
@@ -1623,7 +1623,7 @@ describe('cli handlers', () => {
     test('reuses a live daemon when no device is requested, whatever its pin', async () => {
       const spawn = { spawnDaemon: async () => { throw new Error('should not spawn'); } };
       const client = { isAlive: async () => true };
-      const readHandle = () => 'A';
+      const readHandle = () => ({ device: 'A' });
       const { envelope, exitKind } = await handleSessionStart(
         { projectRoot, spawn, client, readHandle },
         {}
@@ -1912,7 +1912,7 @@ describe('cli handlers', () => {
         store,
         projectRoot: '/x',
         isAlive: async () => true,
-        readHandle: () => 'A',
+        readHandle: () => ({ device: 'A' }),
       });
       expect(exitKind).toBe('ok');
       expect(envelope.ok).toBe(true);

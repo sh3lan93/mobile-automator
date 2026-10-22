@@ -33,7 +33,7 @@ const { record } = require('./observe/recorder');
 const { resolveRunId } = require('./observe/settings');
 const { runTracePath } = require('./observe/paths');
 const { readTrace, deriveRun, pruneRunTraces } = require('./observe/trace');
-const { readHandle, readSessionId } = require('./device/session-handle');
+const { readSessionId } = require('./device/session-handle');
 const { captureOnFailure } = require('./observe/failure-capture');
 const { crashTimestampMs } = require('./device/crash-model');
 const { probeCrashes } = require('./device/failure-probe');
@@ -1289,10 +1289,12 @@ async function handleSessionStart(
     projectRoot,
     spawn = require('./device/session-spawn'),
     client = require('./device/session-client'),
-    readHandle: readHandleDevice = require('./device/resolve-connection').readHandleDevice,
-    // #251: the workspace's engine, and the one a live daemon records.
+    // The live daemon's handle — ONE read; the device pin and the engine are
+    // both projections of it below (session-handle.js owns the file).
+    readHandle = require('./device/session-handle').readHandle,
+    // #251: the workspace's engine, and the one decoder of the handle's.
     resolveEngine = require('./device/engine').readEngine,
-    readHandleEngine = (root) => require('./device/engine').handleEngine(readHandle(root)),
+    handleEngine = require('./device/engine').handleEngine,
   },
   opts = {}
 ) {
@@ -1315,7 +1317,8 @@ async function handleSessionStart(
     // pinned to A reported already_running:true, device:B while every verb
     // kept driving A. Fail with a hint instead — the agent stays in control
     // and decides whether to `session end` and repin.
-    const pinned = readHandleDevice(projectRoot);
+    const handle = readHandle(projectRoot);
+    const pinned = (handle && handle.device) || null;
     if (device !== null && device !== pinned) {
       return {
         envelope: fail(
@@ -1331,12 +1334,12 @@ async function handleSessionStart(
     // engine here would repeat #148's lie for the robot instead of the device.
     // A stale engine is not an error — the next device verb restarts the
     // daemon on the resolved one — but it is worth saying.
-    const running = readHandleEngine(projectRoot);
+    const running = handleEngine(handle);
     const resolved = resolveEngine(projectRoot);
     return {
       envelope: ok(
         { started: false, already_running: true, device, engine: running },
-        running !== resolved.engine ? staleEngineHint(running, resolved) : null
+        running !== resolved.engine ? staleEngineHint(running, resolved.engine, resolved.source) : null
       ),
       exitKind: 'ok',
     };
@@ -1359,8 +1362,10 @@ async function handleSessionStart(
 }
 
 // A live daemon on a different engine than the workspace resolves (#251).
-function staleEngineHint(running, resolved) {
-  return `The running session uses the ${running} engine, but this workspace resolves ${resolved.engine} (from ${resolved.source}); the next device verb will restart the session on ${resolved.engine}.`;
+// Plain strings, not a reconstituted {engine, source} object: both callers
+// already have the fields as fields.
+function staleEngineHint(runningEngine, resolvedEngine, resolvedSource) {
+  return `The running session uses the ${runningEngine} engine, but this workspace resolves ${resolvedEngine} (from ${resolvedSource}); the next device verb will restart the session on ${resolvedEngine}.`;
 }
 
 async function handleSessionStatus(
@@ -1375,10 +1380,7 @@ async function handleSessionStatus(
   if (status.reason === 'engine_exited') {
     hint = `The device engine exited; this session is shutting down and the next verb starts a fresh one. ${connection.daemonLogHint(projectRoot)}`;
   } else if (status.running && status.engine !== status.resolved_engine) {
-    hint = staleEngineHint(status.engine, {
-      engine: status.resolved_engine,
-      source: status.resolved_engine_source,
-    });
+    hint = staleEngineHint(status.engine, status.resolved_engine, status.resolved_engine_source);
   }
   return { envelope: ok(status, hint), exitKind: 'ok' };
 }
@@ -1501,7 +1503,9 @@ async function handleDevicesClear({
   store = selectionStore,
   projectRoot,
   isAlive = require('./device/connection').isSessionAlive,
-  readHandle: readHandleDevice = require('./device/resolve-connection').readHandleDevice,
+  // The live daemon's handle, same seam as handleSessionStart: one read, the
+  // pin is a projection of it.
+  readHandle = require('./device/session-handle').readHandle,
 } = {}) {
   const previous = store.read(projectRoot);
   store.clear(projectRoot);
@@ -1513,7 +1517,8 @@ async function handleDevicesClear({
   if (!alive) {
     return { envelope: ok({ cleared: previous || null }), exitKind: 'ok' };
   }
-  const pinned = readHandleDevice(projectRoot);
+  const handle = readHandle(projectRoot);
+  const pinned = (handle && handle.device) || null;
   return {
     envelope: ok(
       { cleared: previous || null, daemon_still_pinned: pinned },
@@ -1539,6 +1544,7 @@ const CRASH_LIST_HINT =
 // begin". No handle means no watermark, which means UNSCOPED, which the envelope
 // reports as `since: null` rather than pretending the list is recent.
 function sessionWatermark(projectRoot) {
+  const { readHandle } = require('./device/session-handle');
   const handle = readHandle(projectRoot);
   const t = handle && handle.started_at;
   return typeof t === 'string' && Number.isFinite(Date.parse(t)) ? t : null;

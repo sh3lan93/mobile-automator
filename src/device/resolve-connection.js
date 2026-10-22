@@ -30,7 +30,7 @@ const { readHandle } = require('./session-handle');
 const sessionClient = require('./session-client');
 const { daemonLogHint } = require('./session-log');
 const sessionSpawn = require('./session-spawn');
-const { readEngine, DEFAULT_ENGINE } = require('./engine');
+const { readEngine, DEFAULT_ENGINE, handleEngine } = require('./engine');
 const { endSession, ENDED_OUTCOMES } = require('./session-end');
 
 function defaultCreateCall(opts) {
@@ -58,12 +58,16 @@ function deviceMatches(requested, handleDevice) {
   return requested === handleDevice;
 }
 
-// Does a daemon running `handleEngine` satisfy a request for `requested`?
-// A handle with no recorded engine predates #251 and ran the default robot. A
-// caller that resolved no engine does not compare at all.
-function engineMatches(requested, handleEngine) {
+// Does a daemon running `runningEngine` satisfy a request for `requested`?
+// The production caller passes engine.js's handleEngine() — the ONE decoder of
+// a handle's engine (a missing or invalid value is the default robot), so
+// `session status` and the restart decision can never disagree about the same
+// handle. A falsy `runningEngine` here (a direct caller's pre-#251 handle)
+// still counts as the default robot. A caller that resolved no engine does not
+// compare at all.
+function engineMatches(requested, runningEngine) {
   if (!requested) return true;
-  return requested === (handleEngine || DEFAULT_ENGINE);
+  return requested === (runningEngine || DEFAULT_ENGINE);
 }
 
 // PURE decision: given the observed facts, which strategy should we run?
@@ -91,11 +95,11 @@ function chooseConnectionStrategy({
   handleDevice,
   requestedDevice,
   autostart,
-  handleEngine = null,
+  runningEngine = null,
   requestedEngine = null,
 }) {
   if (alive && !deviceMatches(requestedDevice, handleDevice)) return 'oneshot';
-  if (alive && engineMatches(requestedEngine, handleEngine)) return 'daemon';
+  if (alive && engineMatches(requestedEngine, runningEngine)) return 'daemon';
   if (alive) return autostart ? 'restart-then-daemon' : 'oneshot';
   if (autostart) return 'spawn-then-daemon';
   return 'oneshot';
@@ -185,7 +189,10 @@ async function resolveDeviceConnection({
       handleDevice,
       requestedDevice: device,
       autostart,
-      handleEngine: handle && handle.engine,
+      // engine.js's canonical projection — the same decoder `session status`
+      // reads the handle through — never the raw field, which a hand-edited or
+      // half-written handle can corrupt into a "stale" verdict status denies.
+      runningEngine: handleEngine(handle),
       requestedEngine: engine,
     });
     if (strategy === 'daemon') {
