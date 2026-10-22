@@ -71,7 +71,7 @@ function assertFlags(assertion) {
   return flags;
 }
 
-async function runScenario({ scenario, mauto, evaluator, workspaceDir, runId, sleep, now = Date.now, log = () => {} }) {
+async function runScenario({ scenario, mauto, evaluator, catalog, workspaceDir, runId, sleep, now = Date.now, log = () => {} }) {
   const scenarioId = scenario.scenario_id;
   // Every verb carries the run id, so the CLI writes a trace for this run and
   // `result finalize` measures the duration instead of taking our word for it.
@@ -105,8 +105,9 @@ async function runScenario({ scenario, mauto, evaluator, workspaceDir, runId, sl
   }
 
   async function launchApp(step) {
-    // mauto launch cold-starts by default (#255); `cold: false` resumes instead.
-    await verb(['launch', scenario.app_package, ...(step.cold === false ? ['--resume'] : [])]);
+    // mauto launch cold-starts by default (#255); the step fields that change
+    // that (`cold: false`) map to flags in the install's action catalog.
+    await verb(['launch', scenario.app_package, ...catalog.stepFlagsFor('launch_app', step)]);
     // The drift gate. A launch that succeeded and a screen with nothing on it
     // is not "the target is missing": it is the engine's element response
     // changing shape under us, or the app failing to render. Reporting it as

@@ -5,6 +5,7 @@ const os = require('os');
 const path = require('path');
 
 const evaluator = require('../../../src/assertion/evaluator');
+const catalog = require('../../../src/device/action-catalog');
 const { runScenario, makeRunId } = require('../../../sample-app/scripts/lib/executor');
 const { homeElements, el } = require('./fixtures');
 
@@ -63,6 +64,7 @@ function exec(sc, mauto, extra = {}) {
     scenario: sc,
     mauto,
     evaluator,
+    catalog,
     workspaceDir,
     runId: RUN_ID,
     sleep: clock.sleep,
