@@ -327,6 +327,11 @@ not be stopped (or could not be confirmed as this workspace's daemon, so it was
 left alone): check it with `ps -p <pid>` and stop it with `kill -9 <pid>`. Its
 stale lock and socket are cleaned automatically by the next session start.
 
+A daemon's command line ends in `--workspace-key <digest>`, a digest of its
+project root rather than the path itself, so `ps` never shows other users where
+your project lives. Daemons started by 0.28.0–0.33.0 end in
+`--project-root <root>` instead, and are still recognised.
+
 ### ❌ A verb failed with "mobile-mcp did not finish initializing within 10000ms"
 
 The engine started but never completed its MCP handshake. Nothing is left

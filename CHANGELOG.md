@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.33.1]
+
+### 🔒 Changed
+
+- **The session daemon's command line no longer shows your project path.**
+  Since 0.28.0 the daemon carried `--project-root <absolute root>` in its
+  argv, so `session end` could confirm a pid belongs to this workspace before
+  signalling it. Anyone who can run `ps` on the machine, including other
+  users on a shared host or CI runner, could read that path, and paths often
+  name the client or project. The marker is now `--workspace-key <digest>`,
+  a 16-hex digest of the resolved root (the same one that already names the
+  temp-dir socket fallback), and the daemon still reads the root itself from
+  its environment. When mobile-automator is installed inside the project,
+  the daemon script is also passed relative to the project root, so its own
+  path does not reveal the root either. Daemons started by 0.28.0–0.33.0 are
+  still recognised by their old marker, so `session end` can still
+  force-stop a stuck one after you upgrade
+  ([#236](https://github.com/sh3lan93/mobile-automator/issues/236)).
+
+---
+
 ## [0.33.0]
 
 ### 🔒 Changed
