@@ -268,6 +268,11 @@
           ],
           "description": "Input value for the action: text to type, swipe direction (up/down/left/right), button name (HOME/BACK/ENTER), URL to open, or scroll direction"
         },
+        "cold": {
+          "type": "boolean",
+          "default": true,
+          "description": "launch_app only: stop the app before launching it, so the scenario starts on the app's initial screen. Set false to bring an already-running app to the front with its state intact (mauto launch --resume)."
+        },
         "checkpoint": {
           "type": "boolean",
           "default": false,
