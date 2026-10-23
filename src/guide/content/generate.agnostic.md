@@ -203,7 +203,7 @@ After all steps are executed and recorded:
 2. Obtain the scenario schema by running `mauto schema scenario`, and assemble the JSON scenario to match it. Include the `tags` array.
 3. **Always include `"$schema_version": "2.1"` as the first field** in agnostic-mode scenarios.
 4. **Use named string IDs** for all steps and assertions (snake_case, e.g., `"id": "tap_login"`).
-5. Validate the assembled scenario with `mauto validate <path>` against `mauto schema scenario`. If it returns `data.warnings`, revise the scenario to drop those steps, or tell the user the step needs manual handling.
+5. Validate the assembled scenario with `mauto validate <path>` against `mauto schema scenario`. If it returns `data.warnings`, revise the scenario to drop each `unsupported_action` step, or tell the user the step needs manual handling; for a `launch_cold_default` entry, set the step's `cold` explicitly (`false` when it means returning to the already-open app, `true` when it means a restart).
 6. Save to `mobile-automator/scenarios/<scenario_id>.json`.
 7. Present summary:
    > "Scenario saved: `mobile-automator/scenarios/<scenario_id>.json`

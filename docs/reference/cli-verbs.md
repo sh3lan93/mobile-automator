@@ -107,6 +107,8 @@ Used to author scenario JSON, evaluate assertions, and assemble result files.
 
     Each warning is `{code: "unsupported_action", action, path, message}` plus `step_id` for steps. `path` is `steps[N]` or `preconditions.device_actions[N]`.
 
+    A second, advisory code flags launch steps whose meaning changed when `launch_app` became a cold start. `{code: "launch_cold_default", action: "launch_app", path, step_id, message}` is reported for a `launch_app` step that leaves `cold` unset and is not the scenario's first top-level step (a launch inside `sub_steps` always counts). Such a step may have been written to return to the running app and now restarts it; set `"cold": false` to resume, or `"cold": true` to confirm the restart, and the warning goes away. It adds its own clause to the `hint` but never fails `--strict`; only `unsupported_action` does. Warnings are listed in document order.
+
 !!! note "`result finalize` and memory"
     On finalize, `mauto` auto-harvests typed observations into cross-session memory. This is best-effort: a memory failure never fails an otherwise-successful finalize — it folds into the envelope `hint` instead. See [Cross-Session Memory](../concepts/memory.md).
 

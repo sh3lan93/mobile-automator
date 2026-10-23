@@ -1,17 +1,23 @@
 'use strict';
 
-// Replayability check for scenarios (#166). The scenario schema accepts every
-// action in its enum, but the action catalog marks some `unsupported`: mobile-mcp
-// exposes no primitive for them, so no `mauto` verb can run them and the step
-// can never replay unattended. Schema validity alone therefore overstates what
-// a scenario can do; this module reports the gap.
+// Replayability check for scenarios. Schema validity alone overstates what a
+// scenario will do on replay; this module reports two kinds of gap:
+//
+// - `unsupported_action` (#166): the schema accepts every action in its enum,
+//   but the action catalog marks some `unsupported`. mobile-mcp exposes no
+//   primitive for them, so no `mauto` verb can run them and the step can never
+//   replay unattended. Blocking: `mauto validate --strict` fails on it.
+// - `launch_cold_default` (#255): `launch_app` now cold-starts the app unless
+//   the step sets `cold: false`. A launch after the first step that leaves
+//   `cold` unset may have been written to return to the running app, and now
+//   restarts it instead. Advisory: it never fails `--strict`.
 //
 // The unsupported set is derived from the catalog, never restated here, so it
 // moves when an action gains (or loses) a device primitive.
 
 const { actionsByResolution } = require('../device/action-catalog');
 
-function finding(action, path, stepId) {
+function unsupportedFinding(action, path, stepId) {
   const f = {
     code: 'unsupported_action',
     action,
@@ -22,38 +28,65 @@ function finding(action, path, stepId) {
   return f;
 }
 
+function coldLaunchFinding(path, stepId) {
+  const f = {
+    code: 'launch_cold_default',
+    action: 'launch_app',
+    path,
+    message: 'launch_app now cold-starts the app (stops it first); '
+      + 'set "cold": false if this step means to return to the running app',
+  };
+  if (stepId !== undefined) f.step_id = stepId;
+  return f;
+}
+
+// Only the scenario's first top-level step is unambiguously a fresh start; any
+// other launch that leaves `cold` to the default is worth a second look.
+function reliesOnColdDefault(step, isFirstStep) {
+  return step.action === 'launch_app'
+    && !isFirstStep
+    && !Object.prototype.hasOwnProperty.call(step, 'cold');
+}
+
 // Walks a step list depth-first in document order, descending into each
 // step's `sub_steps` (the schema types them as steps, so they nest freely).
-function scanSteps(steps, basePath, unsupported, findings) {
+function scanSteps(steps, basePath, unsupported, findings, topLevel) {
   if (!Array.isArray(steps)) return;
   steps.forEach((step, i) => {
     if (!step) return;
     const path = `${basePath}[${i}]`;
     if (unsupported.has(step.action)) {
-      findings.push(finding(step.action, path, step.id));
+      findings.push(unsupportedFinding(step.action, path, step.id));
     }
-    scanSteps(step.sub_steps, `${path}.sub_steps`, unsupported, findings);
+    if (reliesOnColdDefault(step, topLevel && i === 0)) {
+      findings.push(coldLaunchFinding(path, step.id));
+    }
+    scanSteps(step.sub_steps, `${path}.sub_steps`, unsupported, findings, false);
   });
 }
 
-// Returns one finding per use of an unsupported action: steps first (including
-// nested sub_steps, depth-first in document order), then precondition device
-// actions in document order.
-function findUnsupportedActions(scenario) {
+// Returns every finding in document order: steps first (including nested
+// sub_steps, depth-first), then precondition device actions.
+function findReplayWarnings(scenario) {
   const unsupported = new Set(actionsByResolution('unsupported'));
   const findings = [];
 
-  scanSteps(scenario && scenario.steps, 'steps', unsupported, findings);
+  scanSteps(scenario && scenario.steps, 'steps', unsupported, findings, true);
 
   const pre = scenario && scenario.preconditions;
   const deviceActions = pre && Array.isArray(pre.device_actions) ? pre.device_actions : [];
   deviceActions.forEach((da, i) => {
     if (da && unsupported.has(da.action)) {
-      findings.push(finding(da.action, `preconditions.device_actions[${i}]`));
+      findings.push(unsupportedFinding(da.action, `preconditions.device_actions[${i}]`));
     }
   });
 
   return findings;
 }
 
-module.exports = { findUnsupportedActions };
+// The `--strict` policy: only a step that cannot run at all fails validation.
+function isBlocking(finding) {
+  return finding.code === 'unsupported_action';
+}
+
+module.exports = { findReplayWarnings, isBlocking };

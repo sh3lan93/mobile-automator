@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.35.0]
+
+### ✨ Added
+
+- **`mauto validate` flags launch steps whose meaning changed.** A
+  `launch_app` step after the scenario's first step (or inside `sub_steps`)
+  that leaves `cold` unset now gets a `launch_cold_default` entry in
+  `data.warnings` and a hint, because a step written to return to the
+  running app would now restart it. Setting `cold` either way silences it.
+  The warning is advisory: `--strict` still fails only on unsupported
+  actions. The execute and generate guides now branch on each warning's
+  `code` instead of treating every entry as an unsupported action ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
+
+---
+
 ## [0.34.0]
 
 ### 🔧 Changed
