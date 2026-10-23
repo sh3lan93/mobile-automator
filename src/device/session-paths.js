@@ -44,12 +44,15 @@ function workspaceSocketPath(projectRoot) {
 function socketPath(projectRoot) {
   const inWorkspace = workspaceSocketPath(projectRoot);
   if (Buffer.byteLength(inWorkspace) <= SOCKET_PATH_LIMIT) return inWorkspace;
-  const hash = crypto
-    .createHash('sha1')
-    .update(path.resolve(projectRoot))
-    .digest('hex')
-    .slice(0, 16);
-  return path.join(os.tmpdir(), `mauto-${hash}.sock`);
+  return path.join(os.tmpdir(), `mauto-${workspaceKey(projectRoot)}.sock`);
+}
+
+// A short, opaque, deterministic name for a workspace: the first 16 hex chars
+// of sha1(resolved project root). It names the tmpdir socket fallback above and
+// the daemon's argv marker below. Changing it moves the socket a running daemon
+// is bound to, so its output is pinned by tests.
+function workspaceKey(projectRoot) {
+  return crypto.createHash('sha1').update(path.resolve(projectRoot)).digest('hex').slice(0, 16);
 }
 
 // Deliberately has no os.tmpdir() fallback, unlike socketPath(). That fallback
@@ -80,18 +83,33 @@ function lockPath(projectRoot) {
 // marker is what lets `session end` tell THIS workspace's daemon from another
 // workspace's before it signals a process group: a copied workspace (`cp -R`
 // carries daemon.pid) or a recycled pid can name a different live daemon.
-// The root is the LAST argument so a match can be anchored at the end.
-const DAEMON_ROOT_FLAG = '--project-root';
+//
+// The marker is the workspace's digest, not its path (#236). `ps` shows every
+// process's argv to every user on the host, and a project path can name a
+// client or an unreleased project. The daemon never reads its argv, so an
+// opaque key identifies the workspace just as well. It exposes nothing new:
+// the same digest already names the tmpdir socket fallback (socketPath).
+// The key is the LAST argument so a match can be anchored at the end.
+const DAEMON_WORKSPACE_FLAG = '--workspace-key';
+
+// Match-only, never emitted. Daemons started by 0.28.0-0.33.x carry the
+// absolute root behind this flag; still recognising them keeps a stuck one
+// force-stoppable by `session end` after an upgrade.
+const LEGACY_DAEMON_ROOT_FLAG = '--project-root';
 
 function daemonArgv(projectRoot) {
-  return [DAEMON_ROOT_FLAG, path.resolve(projectRoot)];
+  return [DAEMON_WORKSPACE_FLAG, workspaceKey(projectRoot)];
 }
 
-// Does a `ps -o command=` line name exactly this workspace? Anchored at the end
-// of the line so `/a/proj` never matches a daemon serving `/a/proj2`.
+// Does a `ps -o command=` line name exactly this workspace, by key or by the
+// legacy root? Anchored at the end of the line so `/a/proj` never matches a
+// daemon serving `/a/proj2`, and a key never matches a longer or shorter one.
 function commandNamesWorkspace(command, projectRoot) {
   const line = String(command || '').replace(/\s+$/, '');
-  return line.endsWith(` ${DAEMON_ROOT_FLAG} ${path.resolve(projectRoot)}`);
+  return (
+    line.endsWith(` ${DAEMON_WORKSPACE_FLAG} ${workspaceKey(projectRoot)}`) ||
+    line.endsWith(` ${LEGACY_DAEMON_ROOT_FLAG} ${path.resolve(projectRoot)}`)
+  );
 }
 
 module.exports = {
@@ -109,7 +127,9 @@ module.exports = {
   pidFilePath,
   handlePath,
   lockPath,
-  DAEMON_ROOT_FLAG,
+  workspaceKey,
+  DAEMON_WORKSPACE_FLAG,
+  LEGACY_DAEMON_ROOT_FLAG,
   daemonArgv,
   commandNamesWorkspace,
 };

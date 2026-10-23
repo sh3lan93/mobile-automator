@@ -2,6 +2,7 @@
 
 const os = require('os');
 const path = require('path');
+const crypto = require('crypto');
 const paths = require('../../../src/device/session-paths');
 
 describe('session-paths', () => {
@@ -50,26 +51,55 @@ describe('session-paths', () => {
 });
 
 // #156: `session end` signals a process only when its command line names THIS
-// workspace. The root travels in the daemon's argv because `ps` cannot see env.
-describe('daemon workspace marker (#156)', () => {
-  test('daemonArgv names the resolved project root', () => {
-    expect(paths.daemonArgv('/a/proj/')).toEqual(['--project-root', path.resolve('/a/proj')]);
+// workspace. #236: it names it by digest, because `ps` shows argv to every user
+// on the host and a project path can name a client or project.
+describe('daemon workspace marker (#156, #236)', () => {
+  const sha16 = (r) => crypto.createHash('sha1').update(path.resolve(r)).digest('hex').slice(0, 16);
+  const cmd = (r) => `node /x/bin/mauto-session-daemon.js ${paths.daemonArgv(r).join(' ')}`;
+  const legacy = (r) => `node /x/bin/mauto-session-daemon.js --project-root ${r}`;
+
+  test('daemonArgv names the workspace by an opaque digest, never its path', () => {
+    const argv = paths.daemonArgv('/a/proj/');
+    expect(argv).toHaveLength(2);
+    expect(argv[0]).toBe('--workspace-key');
+    expect(argv[1]).toMatch(/^[0-9a-f]{16}$/);
+    expect(argv).toEqual(paths.daemonArgv('/a/proj'));
+    for (const arg of argv) {
+      expect(arg).not.toContain('proj');
+      expect(arg).not.toContain('/a');
+    }
   });
 
-  test('commandNamesWorkspace matches the exact root at the end of the command line', () => {
-    const cmd = (r) => `node /x/bin/mauto-session-daemon.js --project-root ${r}`;
+  test('the tmpdir socket fallback is still named by the same, unchanged digest', () => {
+    // A running daemon is bound to this path; extracting workspaceKey must not move it.
+    const deepRoot = '/' + 'deeply-nested-project-dir/'.repeat(6) + 'app';
+    const base = path.basename(paths.socketPath(deepRoot));
+    expect(base).toBe(`mauto-${paths.workspaceKey(deepRoot)}.sock`);
+    expect(base).toBe(`mauto-${sha16(deepRoot)}.sock`);
+  });
+
+  test('commandNamesWorkspace matches this workspace\'s key at the end of the line', () => {
     expect(paths.commandNamesWorkspace(cmd('/a/proj'), '/a/proj')).toBe(true);
     // ps output ends in a newline; a root may be spelled with a trailing slash.
     expect(paths.commandNamesWorkspace(`${cmd('/a/proj')}\n`, '/a/proj/')).toBe(true);
   });
 
-  test('commandNamesWorkspace never matches another workspace or a bare daemon', () => {
-    const cmd = (r) => `node /x/bin/mauto-session-daemon.js --project-root ${r}`;
-    expect(paths.commandNamesWorkspace(cmd('/a/proj2'), '/a/proj')).toBe(false);
-    expect(paths.commandNamesWorkspace(cmd('/a/proj'), '/a/pro')).toBe(false);
-    expect(paths.commandNamesWorkspace(cmd('/b/a/proj'), '/a/proj')).toBe(false);
+  test('commandNamesWorkspace never matches another key, a mangled key, or a bare daemon', () => {
+    expect(paths.commandNamesWorkspace(cmd('/b/other'), '/a/proj')).toBe(false);
+    const key = paths.workspaceKey('/a/proj');
+    const line = (k) => `node /x/bin/mauto-session-daemon.js --workspace-key ${k}`;
+    expect(paths.commandNamesWorkspace(line(`${key}0`), '/a/proj')).toBe(false);
+    expect(paths.commandNamesWorkspace(line(key.slice(1)), '/a/proj')).toBe(false);
     // A pre-marker daemon, or an editor opened on the bin, names no workspace.
     expect(paths.commandNamesWorkspace('node /x/bin/mauto-session-daemon.js', '/a/proj')).toBe(false);
     expect(paths.commandNamesWorkspace('vim bin/mauto-session-daemon.js', '/a/proj')).toBe(false);
+  });
+
+  test('a legacy --project-root daemon (0.28.0-0.33.x) is still recognised, end-anchored', () => {
+    expect(paths.LEGACY_DAEMON_ROOT_FLAG).toBe('--project-root');
+    expect(paths.commandNamesWorkspace(legacy('/a/proj'), '/a/proj')).toBe(true);
+    expect(paths.commandNamesWorkspace(`${legacy('/a/proj')}\n`, '/a/proj/')).toBe(true);
+    expect(paths.commandNamesWorkspace(legacy('/a/proj2'), '/a/proj')).toBe(false);
+    expect(paths.commandNamesWorkspace(legacy('/b/a/proj'), '/a/proj')).toBe(false);
   });
 });

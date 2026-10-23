@@ -1,10 +1,10 @@
 'use strict';
 
 const { EventEmitter } = require('events');
-const path = require('path');
 
 const { spawnDaemon, DAEMON_BIN } = require('../../../src/device/session-spawn');
 const { IGNORED } = require('../../../src/device/session-log');
+const paths = require('../../../src/device/session-paths');
 
 function fakeChild(pid = 4242) {
   return { pid, unref() { this.unrefed = true; }, unrefed: false };
@@ -45,9 +45,9 @@ describe('session-spawn', () => {
     });
     expect(ok).toBe(true);
     expect(captured.cmd).toBe(process.execPath);
-    // The root rides in argv as an identity marker `ps` can see (#156); env stays
-    // the daemon's source of truth.
-    expect(captured.args).toEqual([DAEMON_BIN, '--project-root', path.resolve('/proj')]);
+    // The workspace rides in argv as an identity marker `ps` can see (#156) —
+    // by digest, never by path (#236); env stays the daemon's source of truth.
+    expect(captured.args).toEqual([DAEMON_BIN, ...paths.daemonArgv('/proj')]);
     expect(captured.opts.detached).toBe(true);
     // The engine inherits the daemon's cwd, and mobile-mcp only lets screenshots
     // land under its own cwd — so the daemon must run from the project root,
