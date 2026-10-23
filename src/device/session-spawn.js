@@ -19,6 +19,19 @@ const DAEMON_BIN = path.join(__dirname, '..', '..', 'bin', 'mauto-session-daemon
 const DEFAULT_READY_TIMEOUT_MS = 15000;
 const DEFAULT_POLL_MS = 100;
 
+// The daemon script as it should appear in argv (#236). When mobile-automator
+// is installed inside the project (a devDependency, a source checkout), the
+// absolute bin path contains the project root, and `ps` shows it to every user
+// on the host. The child runs with cwd = projectRoot, so the path relative to
+// the root reaches the same file. A bin outside the root (a global install), or
+// a root that is a symlink alias of the bin's real location (macOS /tmp vs
+// /private/tmp), keeps the absolute path, which reveals no project path.
+function daemonScriptArg(projectRoot, bin = DAEMON_BIN) {
+  const rel = path.relative(path.resolve(projectRoot), bin);
+  if (!rel || path.isAbsolute(rel) || rel === '..' || rel.startsWith('..' + path.sep)) return bin;
+  return rel;
+}
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -63,13 +76,15 @@ async function spawnDaemon({
   const log = openLog(projectRoot);
 
   try {
-    // The root in argv is an identity marker only (see paths.daemonArgv): env
-    // stays the daemon's source of truth, but `ps` can only see argv.
+    // The workspace key in argv is an identity marker only (see paths.daemonArgv):
+    // env stays the daemon's source of truth, but `ps` can only see argv. Neither
+    // argument names the project path, since `ps` shows argv to every user on
+    // the host (#236); an in-project bin is passed relative to cwd.
     // cwd: the engine inherits the daemon's cwd, and mobile-mcp's
     // validateOutputPath only allows screenshots under its own process.cwd()
     // (or the temp dir). Pin it to the project root so the allow-list never
     // depends on which subdirectory happened to spawn the daemon (#214).
-    const child = spawn(process.execPath, [DAEMON_BIN, ...paths.daemonArgv(projectRoot)], {
+    const child = spawn(process.execPath, [daemonScriptArg(projectRoot), ...paths.daemonArgv(projectRoot)], {
       cwd: projectRoot,
       detached: true,
       stdio: log.stdio,
@@ -125,4 +140,4 @@ async function spawnDaemon({
   }
 }
 
-module.exports = { spawnDaemon, DAEMON_BIN, DEFAULT_READY_TIMEOUT_MS };
+module.exports = { spawnDaemon, daemonScriptArg, DAEMON_BIN, DEFAULT_READY_TIMEOUT_MS };

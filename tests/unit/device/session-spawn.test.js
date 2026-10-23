@@ -3,8 +3,9 @@
 const { EventEmitter } = require('events');
 const path = require('path');
 
-const { spawnDaemon, DAEMON_BIN } = require('../../../src/device/session-spawn');
+const { spawnDaemon, daemonScriptArg } = require('../../../src/device/session-spawn');
 const { IGNORED } = require('../../../src/device/session-log');
+const paths = require('../../../src/device/session-paths');
 
 function fakeChild(pid = 4242) {
   return { pid, unref() { this.unrefed = true; }, unrefed: false };
@@ -23,6 +24,32 @@ function fakeLog(stdio = ['ignore', 55, 55]) {
     close() { this.closes += 1; },
   };
 }
+
+// #236: when mobile-automator is installed inside the project, the absolute
+// bin path would put the project root back on the daemon's `ps` line. The child
+// runs with cwd = projectRoot, so a path relative to it reaches the same file.
+describe('daemonScriptArg (#236)', () => {
+  test('a bin under the project root is passed relative to it', () => {
+    const bin = '/a/proj/node_modules/mobile-automator/bin/mauto-session-daemon.js';
+    expect(daemonScriptArg('/a/proj', bin)).toBe(
+      path.join('node_modules', 'mobile-automator', 'bin', 'mauto-session-daemon.js')
+    );
+  });
+
+  test('a trailing-slash root resolves the same', () => {
+    const bin = '/a/proj/node_modules/mobile-automator/bin/mauto-session-daemon.js';
+    expect(daemonScriptArg('/a/proj/', bin)).toBe(daemonScriptArg('/a/proj', bin));
+  });
+
+  test('a bin outside the root (e.g. a global install) stays absolute', () => {
+    const bin = '/usr/local/lib/node_modules/mobile-automator/bin/mauto-session-daemon.js';
+    expect(daemonScriptArg('/a/proj', bin)).toBe(bin);
+  });
+
+  test('a sibling directory sharing the root as a prefix is outside it', () => {
+    expect(daemonScriptArg('/a/proj', '/a/proj2/x.js')).toBe('/a/proj2/x.js');
+  });
+});
 
 describe('session-spawn', () => {
   test('spawns the daemon bin detached + unref, passing project root via env', async () => {
@@ -45,9 +72,12 @@ describe('session-spawn', () => {
     });
     expect(ok).toBe(true);
     expect(captured.cmd).toBe(process.execPath);
-    // The root rides in argv as an identity marker `ps` can see (#156); env stays
-    // the daemon's source of truth.
-    expect(captured.args).toEqual([DAEMON_BIN, '--project-root', path.resolve('/proj')]);
+    // The workspace rides in argv as an identity marker `ps` can see (#156) —
+    // by digest, never by path, and an in-project bin by its relative path
+    // (#236): `ps` is visible to every user on the host. Env stays the
+    // daemon's source of truth.
+    expect(captured.args).toEqual([daemonScriptArg('/proj'), ...paths.daemonArgv('/proj')]);
+    for (const arg of captured.args) expect(arg).not.toContain('/proj');
     expect(captured.opts.detached).toBe(true);
     // The engine inherits the daemon's cwd, and mobile-mcp only lets screenshots
     // land under its own cwd — so the daemon must run from the project root,

@@ -8,7 +8,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { spawn } = require('child_process');
+const { spawn, execFileSync } = require('child_process');
 
 const { endSession } = require('../../src/device/session-end');
 const { pidAlive } = require('../../src/device/process-identity');
@@ -26,12 +26,14 @@ function workspace() {
 // A stand-in daemon with the real command-line shape — a script named
 // mauto-session-daemon.js followed by the workspace marker — detached like the
 // real one, so it leads its own process group. It never listens, so it can
-// never acknowledge a shutdown: the path that escalates.
-function standIn(servesRoot) {
+// never acknowledge a shutdown: the path that escalates. `argv` defaults to the
+// marker the real spawn emits; a test passes the legacy one to stand in for a
+// daemon started by an older mauto.
+function standIn(servesRoot, argv = paths.daemonArgv(servesRoot)) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-standin-'));
   const bin = path.join(dir, 'mauto-session-daemon.js');
   fs.writeFileSync(bin, "process.on('SIGTERM', () => process.exit(0));\nsetInterval(() => {}, 1000);\n");
-  const child = spawn(process.execPath, [bin, ...paths.daemonArgv(servesRoot)], {
+  const child = spawn(process.execPath, [bin, ...argv], {
     detached: true,
     stdio: 'ignore',
   });
@@ -68,6 +70,36 @@ test("this workspace's own unresponsive daemon is still escalated", async () => 
     fs.writeFileSync(paths.pidFilePath(mine), `${daemon.pid}\n`);
     expect(await endSession(mine)).toEqual({ outcome: 'forced', pid: daemon.pid });
     expect(await waitForDeath(daemon.pid, { budgetMs: 2000 })).toBe(true);
+  } finally {
+    killGroup(daemon.pid);
+  }
+});
+
+// #236: daemons started by 0.28.0-0.33.x carry `--project-root <root>`. After an
+// upgrade, a stuck one must still be recognised as ours and force-stopped.
+test("a legacy --project-root daemon for this workspace is still escalated (#236)", async () => {
+  const mine = workspace();
+  const daemon = standIn(mine, [paths.LEGACY_DAEMON_ROOT_FLAG, path.resolve(mine)]);
+  try {
+    fs.writeFileSync(paths.pidFilePath(mine), `${daemon.pid}\n`);
+    expect(await endSession(mine)).toEqual({ outcome: 'forced', pid: daemon.pid });
+    expect(await waitForDeath(daemon.pid, { budgetMs: 2000 })).toBe(true);
+  } finally {
+    killGroup(daemon.pid);
+  }
+});
+
+// #236: `ps` shows argv to every user on the host, so the marker must not
+// carry the workspace path.
+test("the daemon's command line does not reveal the workspace path (#236)", () => {
+  const mine = workspace();
+  const daemon = standIn(mine);
+  try {
+    const line = execFileSync('ps', ['-ww', '-p', String(daemon.pid), '-o', 'command='], { encoding: 'utf8' });
+    expect(line).toMatch(/mauto-session-daemon/);
+    expect(line).not.toContain(mine);
+    expect(line).not.toContain(path.basename(mine));
+    expect(paths.commandNamesWorkspace(line, mine)).toBe(true);
   } finally {
     killGroup(daemon.pid);
   }

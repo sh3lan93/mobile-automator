@@ -47,7 +47,7 @@ describe('pidIdentity (#150)', () => {
 // workspace's live daemon.
 describe('pidIdentity bound to a workspace (#156)', () => {
   const root = '/a/proj';
-  const cmd = (r) => `node /x/bin/mauto-session-daemon.js --project-root ${r}\n`;
+  const cmd = (r) => `node /x/bin/mauto-session-daemon.js ${paths.daemonArgv(r).join(' ')}\n`;
 
   test("a daemon whose command line names this workspace is ours", () => {
     expect(pidIdentity(process.ppid, { projectRoot: root, execFile: () => cmd(root) })).toBe('ours');
@@ -59,6 +59,12 @@ describe('pidIdentity bound to a workspace (#156)', () => {
 
   test('a daemon that names no workspace (an older daemon, an editor on the bin) is foreign', () => {
     expect(pidIdentity(process.ppid, { projectRoot: root, execFile: () => 'vim bin/mauto-session-daemon.js' })).toBe('foreign');
+  });
+
+  test('a legacy --project-root daemon (0.28.0-0.33.x) is still ours for its own root only (#236)', () => {
+    const legacy = (r) => `node /x/bin/mauto-session-daemon.js --project-root ${r}\n`;
+    expect(pidIdentity(process.ppid, { projectRoot: root, execFile: () => legacy(root) })).toBe('ours');
+    expect(pidIdentity(process.ppid, { projectRoot: root, execFile: () => legacy('/b/other') })).toBe('foreign');
   });
 
   test('a process that is not a mauto daemon at all is still other', () => {
