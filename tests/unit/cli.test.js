@@ -15,6 +15,7 @@ const {
   handleSwipe,
   handlePress,
   handleLaunch,
+  LAUNCH_TERMINATE_HINT,
   handleInstall,
   handleUninstall,
   handleOpenUrl,
@@ -451,7 +452,7 @@ describe('cli handlers', () => {
       expect(envelope.data).toEqual({
         launched: 'com.example.app', cold: true, terminated: false, terminate_error: 'simctl exit status 3',
       });
-      expect(envelope.hint).toMatch(/could not stop the app/);
+      expect(envelope.hint).toBe(LAUNCH_TERMINATE_HINT);
       expect(calls).toEqual([['terminateApp', 'com.example.app'], ['launchApp', 'com.example.app']]);
     });
 

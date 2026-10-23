@@ -407,6 +407,9 @@ async function handleDoubleTap({ deviceBridge }, raw) {
 // which case the launch is cold anyway. `cold` is the mode requested,
 // `terminated` whether the stop succeeded; the agent decides what a false
 // `terminated` means.
+const LAUNCH_TERMINATE_HINT = 'could not stop the app before launching it; if it was not running this is expected '
+  + '(iOS reports an error for a stopped app), otherwise it may have resumed on its previous screen';
+
 async function handleLaunch({ deviceBridge }, appId, { resume = false } = {}) {
   const id = String(appId == null ? '' : appId);
   if (!id) {
@@ -428,20 +431,13 @@ async function handleLaunch({ deviceBridge }, appId, { resume = false } = {}) {
   } catch (err) {
     return deviceFail(err);
   }
-  if (resume) {
-    return { envelope: ok({ launched: id, cold: false }), exitKind: 'ok' };
-  }
-  if (terminateError !== null) {
-    return {
-      envelope: ok(
-        { launched: id, cold: true, terminated: false, terminate_error: terminateError },
-        'could not stop the app before launching it; if it was not running this is expected '
-          + '(iOS reports an error for a stopped app), otherwise it may have resumed on its previous screen'
-      ),
-      exitKind: 'ok',
-    };
-  }
-  return { envelope: ok({ launched: id, cold: true, terminated: true }), exitKind: 'ok' };
+  const data = { launched: id, cold: !resume };
+  if (!resume) data.terminated = terminateError === null;
+  if (terminateError !== null) data.terminate_error = terminateError;
+  return {
+    envelope: ok(data, terminateError === null ? undefined : LAUNCH_TERMINATE_HINT),
+    exitKind: 'ok',
+  };
 }
 
 // Resolved against the caller's cwd for the same reason as handleScreenshot
@@ -2639,6 +2635,7 @@ module.exports = {
   handleSwipe,
   handlePress,
   handleLaunch,
+  LAUNCH_TERMINATE_HINT,
   handleInstall,
   handleUninstall,
   handleOpenUrl,
