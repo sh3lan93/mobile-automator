@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.34.0]
+
+### 🔧 Changed
+
+- **`mauto launch` cold-starts the app by default.** It now stops the app
+  (`mobile_terminate_app`) before launching it, so a scenario's `launch_app`
+  step lands on the app's initial screen. Previously a launch only brought a
+  running app to the front with its state intact, so every scenario inherited
+  the screen the previous run left behind. Found while verifying #251
+  locally ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
+
+### ✨ Added
+
+- **`mauto launch --resume` and the step's `cold` field.** `--resume` skips
+  the stop and keeps a running app's state. A `launch_app` step takes an
+  optional boolean `cold` (default `true`); `"cold": false` executes as
+  `--resume`. The field is additive and valid in schema 2.0 and 2.1; no new
+  action is added ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
+- **The launch envelope says what happened.** `data` is `{launched, cold:
+  true, terminated: true}` for a cold start and `{launched, cold: false}`
+  with `--resume`. A failed stop does not fail the launch: it reports
+  `terminated: false` with `terminate_error` and a hint. On iOS that is
+  expected when the app was not running (`simctl terminate` exits non-zero
+  for a stopped app); Android's force-stop never fails ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
+
+### 🐛 Fixed
+
+- **The generate guides mapped `launch_app` to `mauto press`.** Both
+  variants now map it to `mauto launch <appId>` and record `"cold": false`
+  when the description means returning to an already-open app ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
+- **The execute guides promised a "force-close and relaunch" between
+  scenarios that no verb could perform.** They now say each scenario's
+  `launch_app` cold-starts the app, and that `app_state: "fresh_install"` is
+  only needed when app data must be wiped too ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
+
+---
+
 ## [0.33.0]
 
 ### 🔒 Changed
