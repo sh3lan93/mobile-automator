@@ -98,7 +98,7 @@ Translate user language to action types and `mauto` verbs:
 
 | User says | Action type | `mauto` verb | Notes |
 |---|---|---|---|
-| "open the app", "launch" | `launch_app` | `mauto press` / launch the app under test | |
+| "open the app", "launch" | `launch_app` | `mauto launch <appId>` | Cold-starts the app by default. When the description means returning to / resuming an already-open app, record `"cold": false` |
 | "uninstall", "remove the app" | (precondition `device_action`) | uninstall before scenario | |
 | "clear app data", "fresh install" | `uninstall_app` + `install_app` | reset app to a clean state before scenario | Set `app_state: "fresh_install"` in preconditions and add `device_actions`: `[{ "action": "uninstall_app" }, { "action": "install_app" }]`. Leave out `target_package` and `value`: a cross-platform scenario must not bake in one platform's app identifier or build path, and the executor fills both per platform from config and the pre-flight build |
 | "tap", "click", "press" | `tap` | `mauto tap --at <x,y>` | Resolve coords from `mauto elements` |

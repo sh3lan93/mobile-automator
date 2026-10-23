@@ -105,7 +105,8 @@ async function runScenario({ scenario, mauto, evaluator, workspaceDir, runId, sl
   }
 
   async function launchApp(step) {
-    await verb(['launch', scenario.app_package]);
+    // Cold by default (#255); a step with `cold: false` resumes the running app.
+    await verb(step.cold === false ? ['launch', scenario.app_package, '--resume'] : ['launch', scenario.app_package]);
     // The drift gate. A launch that succeeded and a screen with nothing on it
     // is not "the target is missing": it is the engine's element response
     // changing shape under us, or the app failing to render. Reporting it as

@@ -230,7 +230,7 @@ Translate user language to `mauto` verbs and schema actions:
 
 | User says | Action | `mauto` verb | Notes |
 |---|---|---|---|
-| "open the app", "launch" | `launch_app` | `mauto press` / launch the app under test | |
+| "open the app", "launch" | `launch_app` | `mauto launch <appId>` | Cold-starts the app by default. When the description means returning to / resuming an already-open app, record `"cold": false` |
 | "uninstall", "remove the app" | (precondition device_action) | uninstall before scenario | Use `device_actions` in `preconditions` block |
 | "clear app data", "fresh install" | `uninstall_app` + `install_app` | reset app to a clean state before scenario | Set `app_state: "fresh_install"` in preconditions and add `device_actions`: `uninstall_app` then `install_app`. Both fields are optional: `target_package` defaults to the config app package ({{app_package}}) and `install_app` `value` defaults to the build installed in pre-flight; set them only to override those |
 | "tap", "click", "press" | `tap` | `mauto tap --at <x,y>` | Resolve `<x,y>` from `mauto elements` |

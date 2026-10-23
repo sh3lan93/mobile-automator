@@ -89,6 +89,19 @@ describe('runScenario', () => {
     expect(m.verbs().filter((v) => v === 'elements')).toHaveLength(3);
   });
 
+  test('launch_app with cold: false resumes the running app (--resume)', async () => {
+    const m = fakeMauto({ elements: [homeElements()] });
+    const r = await exec(scenario([{ id: 'launch', action: 'launch_app', description: 'd', cold: false }]), m);
+    expect(r.status).toBe('passed');
+    expect(m.calls[0].args).toEqual(['launch', 'com.example.app', '--resume']);
+  });
+
+  test('launch_app with cold: true stays a cold launch (no --resume)', async () => {
+    const m = fakeMauto({ elements: [homeElements()] });
+    await exec(scenario([{ id: 'launch', action: 'launch_app', description: 'd', cold: true }]), m);
+    expect(m.calls[0].args).toEqual(['launch', 'com.example.app']);
+  });
+
   test('drift gate: zero elements after a successful launch fails with the drift message, never "not found"', async () => {
     const m = fakeMauto({ elements: [[]] });
     const r = await exec(scenario([{ id: 'launch', action: 'launch_app', description: 'd' }]), m);
