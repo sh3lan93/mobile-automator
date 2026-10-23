@@ -63,7 +63,7 @@ Record each observation with `mauto result add-step --observation <type>:<messag
 
 - Read the JSON scenario file from `mobile-automator/scenarios/`.
 - **Validate schema version:** Read the `$schema_version` field. It must be `"2.1"`. If absent or unrecognized, report an error and halt.
-- Validate the scenario with `mauto validate <path>` against `mauto schema scenario`. If the result lists `data.warnings`, each entry (its `path` names the step or precondition) uses an action that is unsupported on this run: report it as unsupported in the result, as described under "Not mechanically executable" below, and do not substitute a gesture for it.
+- Validate the scenario with `mauto validate <path>` against `mauto schema scenario`. If the result lists `data.warnings`, branch on each entry's `code` (its `path` names the step or precondition): `unsupported_action` means it uses an action that is unsupported on this run: report it as unsupported in the result, as described under "Not mechanically executable" below, and do not substitute a gesture for it. `launch_cold_default` means that `launch_app` step cold-starts the app: if the scenario's intent at that point is returning to the already-running app, run it with `mauto launch <appId> --resume`, and record a `state_context` step observation either way.
 - Read the `metadata` to compare the recording environment against the current execution environment. Note any differences (different device, API level, environment).
 
 ### 3. Verify Preconditions

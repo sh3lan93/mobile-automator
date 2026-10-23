@@ -263,6 +263,50 @@ describe('cli handlers', () => {
       });
     });
 
+    describe('mid-flow launch relying on the cold default (#255)', () => {
+      const ADVISORY_HINT = '1 launch step(s) now cold-start; set "cold" explicitly — see data.warnings';
+      const midLaunch = (s) => {
+        s.steps.push({ id: 'back_to_app', action: 'launch_app', description: 'Return to the app' });
+        return s;
+      };
+      const run = (scenario, opts) => {
+        const file = writeTmp('l.json', JSON.stringify(scenario));
+        const validator = new ScenarioValidator({ schemaPath: SCHEMA_PATH });
+        return handleValidate({ validator }, file, opts);
+      };
+
+      test('advisory only -> ok with the warning and an advisory hint', () => {
+        const { envelope, exitKind } = run(midLaunch(validScenario()));
+        expect(exitKind).toBe('ok');
+        expect(envelope.data.valid).toBe(true);
+        expect(envelope.data.warnings).toHaveLength(1);
+        expect(envelope.data.warnings[0]).toMatchObject({
+          code: 'launch_cold_default', path: 'steps[1]', step_id: 'back_to_app',
+        });
+        expect(envelope.hint).toBe(ADVISORY_HINT);
+      });
+
+      test('--strict + advisory only -> still ok', () => {
+        const { envelope, exitKind } = run(midLaunch(validScenario()), { strict: true });
+        expect(exitKind).toBe('ok');
+        expect(envelope.ok).toBe(true);
+        expect(envelope.data.warnings).toHaveLength(1);
+        expect(envelope.hint).toBe(ADVISORY_HINT);
+      });
+
+      test('--strict + unsupported + advisory -> invalid_input carrying both warnings', () => {
+        const s = midLaunch(validScenario());
+        s.steps.push({ id: 'wipe', action: 'clear_app_data', target_package: 'com.example.app', description: 'Clear' });
+        const { envelope, exitKind } = run(s, { strict: true });
+        expect(exitKind).toBe('invalid_input');
+        expect(envelope.data.valid).toBe(false);
+        expect(envelope.data.warnings.map((w) => w.code)).toEqual(['launch_cold_default', 'unsupported_action']);
+        expect(envelope.hint).toBe(
+          `1 action(s) cannot replay unattended — see data.warnings; ${ADVISORY_HINT}`
+        );
+      });
+    });
+
     test('invalid scenario -> invalid_input fail, exitKind invalid_input, errors in data', () => {
       const bad = validScenario();
       delete bad.app_package;
