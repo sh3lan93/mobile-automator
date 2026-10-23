@@ -429,6 +429,26 @@ mauto devices                                 # new daemon, new engine env
 - Check the observations in the result report for root cause
 - **Common causes:** loading delays, animations, network dependencies
 
+### ❌ Scenario starts on the wrong screen, or `launch` reports `terminated: false`
+
+Since 0.34.0 `mauto launch <appId>` cold-starts: it stops the app, then
+launches it, so a scenario's `launch_app` step lands on the app's initial
+screen. Before that, a launch only brought a running app to the front, and a
+scenario inherited whatever screen the previous run left behind.
+
+- **Starts on the previous run's screen.** Check the step: `"cold": false`
+  (or `mauto launch --resume`) deliberately keeps a running app's state. Drop
+  it for a fresh start. If `data.cold` is `true` and the screen is still
+  wrong, the app restores its own state on launch (saved navigation,
+  persisted session); reset its data with `app_state: "fresh_install"`
+  preconditions (`uninstall_app` + `install_app`).
+- **`data.terminated: false` with a `terminate_error`.** The stop failed but
+  the launch went ahead. On iOS this is expected when the app was not running
+  — `simctl terminate` reports an error for a stopped app — and the launch is
+  cold anyway. Android's force-stop does not fail, so on Android (or on iOS
+  when the app *was* running) read `terminate_error`: the app may have
+  resumed on its previous screen.
+
 ### ❌ "duration_seconds looks wrong"
 
 Since 0.26.0 that field is measured from the run trace rather than taken from

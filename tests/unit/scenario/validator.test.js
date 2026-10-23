@@ -73,4 +73,25 @@ describe('ScenarioValidator', () => {
     const res = v.validate(validScenario());
     expect(res.valid).toBe(true);
   });
+
+  // #255: launch_app cold-starts by default; `cold: false` opts out. The field
+  // is additive on the step object, so both schema versions accept it.
+  test.each(['2.0', '2.1'])('a launch_app step with cold: false is valid under $schema_version %s', (version) => {
+    const v = new ScenarioValidator({ schemaPath: SCHEMA_PATH });
+    const scenario = validScenario();
+    scenario.$schema_version = version;
+    scenario.steps[0].cold = false;
+    const res = v.validate(scenario);
+    expect(res.errors).toEqual([]);
+    expect(res.valid).toBe(true);
+  });
+
+  test('a non-boolean cold is invalid', () => {
+    const v = new ScenarioValidator({ schemaPath: SCHEMA_PATH });
+    const scenario = validScenario();
+    scenario.steps[0].cold = 'no';
+    const res = v.validate(scenario);
+    expect(res.valid).toBe(false);
+    expect(res.errors.join(' ')).toMatch(/cold/);
+  });
 });

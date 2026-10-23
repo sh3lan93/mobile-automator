@@ -63,6 +63,14 @@ describe('action coverage — schema ↔ catalog ↔ verbs ↔ guide', () => {
     });
   });
 
+  // launch cold-starts by default (#255); a scenario step that means to resume
+  // must reach `--resume`, so both execute guides must teach the flag.
+  test('both execute guides teach `mauto launch --resume`', () => {
+    for (const guide of [guideAware, guideAgnostic]) {
+      expect(guide).toContain('--resume');
+    }
+  });
+
   describe("resolution: 'semantic' — resolved via `mauto press`", () => {
     test.each(entries('semantic'))('%s is a known semantic action', (action) => {
       expect(Object.prototype.hasOwnProperty.call(ACTION_METHOD, action)).toBe(true);

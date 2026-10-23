@@ -50,6 +50,9 @@ const ACTION_CATALOG = {
     resolution: 'verb', verb: 'press', bridge: 'pressButton',
     primitive: 'mobile_press_button', args: ['button'],
   },
+  // `mauto launch` stops the app first via DeviceBridge#terminateApp (cold
+  // start, #255) unless `--resume` / the step's `cold: false`. The call order is
+  // pinned by the handleLaunch tests in tests/unit/cli.test.js, not by this catalog.
   launch_app: {
     resolution: 'verb', verb: 'launch', bridge: 'launchApp',
     primitive: 'mobile_launch_app', args: ['packageName'],

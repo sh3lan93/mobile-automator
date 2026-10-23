@@ -58,7 +58,7 @@ These verbs drive the screen. Each accepts `--device <id>` to target a specific 
 | `mauto press <button>` | Press a hardware button (`BACK`, `HOME`, `ENTER`, …) or a semantic action |
 | `mauto long-press --at <x,y> [--duration <ms>]` | Long-press at coordinates **(new in 0.21.0)** |
 | `mauto double-tap --at <x,y>` | Double-tap at coordinates **(new in 0.21.0)** |
-| `mauto launch <appId>` | Launch an installed app by package/bundle id **(new in 0.21.0)** |
+| `mauto launch <appId> [--resume]` | Launch an installed app by package/bundle id **(new in 0.21.0)**. Cold-starts by default: a running app is stopped first, so it opens on its initial screen; `data` is `{launched, cold: true, terminated: true}`. If the stop fails, the launch still goes ahead and reports `terminated: false` with `terminate_error` and a hint — expected on iOS when the app was not running. `--resume` skips the stop and brings a running app to the front with its state intact (`data` is `{launched, cold: false}`) **(cold by default since 0.34.0)** |
 | `mauto install <path>` | Install an app from a local `.apk` / `.app` / `.ipa` **(new in 0.21.0)** |
 | `mauto uninstall <appId>` | Uninstall an app by id **(new in 0.21.0)** |
 | `mauto open-url <url>` | Open a URL on the device — web (`https://…`) or deep link (`myapp://…`). To restore the engine's http(s)-only guard, `export MOBILEMCP_ALLOW_UNSAFE_URLS=0` and run `mauto session end` ([#212](https://github.com/sh3lan93/mobile-automator/issues/212)) **(new in 0.21.0)** |
@@ -96,6 +96,8 @@ Used to author scenario JSON, evaluate assertions, and assemble result files.
     Schema-valid is not the same as replayable. Some schema actions are marked `unsupported` in the action catalog: the engine exposes no primitive for them, so no `mauto` verb can execute them and the step cannot replay unattended. By default `validate` still succeeds but adds `data.warnings` (and a `hint`); with `--strict` it fails with `invalid_input` and `data.valid: false`. A scenario with no such actions gets the bare `{"valid": true}`.
 
     Each warning is `{code: "unsupported_action", action, path, message}` plus `step_id` for steps. `path` is `steps[N]` or `preconditions.device_actions[N]`.
+
+    A second, advisory code flags launch steps whose meaning changed when `launch_app` became a cold start. `{code: "launch_cold_default", action: "launch_app", path, step_id, message}` is reported for a `launch_app` step that leaves `cold` unset and is not the scenario's first top-level step (a launch inside `sub_steps` always counts). Such a step may have been written to return to the running app and now restarts it; set `"cold": false` to resume, or `"cold": true` to confirm the restart, and the warning goes away. It adds its own clause to the `hint` but never fails `--strict`; only `unsupported_action` does. Warnings are listed in document order.
 
 !!! note "`result finalize` and memory"
     On finalize, `mauto` auto-harvests typed observations into cross-session memory. This is best-effort: a memory failure never fails an otherwise-successful finalize — it folds into the envelope `hint` instead. See [Cross-Session Memory](../concepts/memory.md).

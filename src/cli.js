@@ -10,7 +10,7 @@ const { ok, fail, render, exitCodeFor } = require('./output/envelope');
 const selectionStore = require('./device/selection');
 const { engineHint } = require('./device/engine-hints');
 const { ScenarioValidator } = require('./scenario/validator');
-const { findUnsupportedActions } = require('./scenario/replayability');
+const { findReplayWarnings, isBlocking } = require('./scenario/replayability');
 const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
 const { ResultStore } = require('./result/store');
 const { OBSERVATION_TYPES, parseObservation, parseCapture, parseBool } = require('./result/flags');
@@ -246,14 +246,24 @@ function handleValidate({ validator }, file, opts = {}) {
   const result = validator.validate(scenario);
   if (result.valid) {
     // Schema-valid is not the same as replayable: surface actions the catalog
-    // marks unsupported. A warning by default so existing scenarios keep
-    // validating; `--strict` makes it a failure (#166).
-    const warnings = findUnsupportedActions(scenario);
+    // marks unsupported (#166) and mid-flow launches that now cold-start
+    // (#255). Warnings by default so existing scenarios keep validating;
+    // `--strict` fails only on the blocking ones.
+    const warnings = findReplayWarnings(scenario);
     if (warnings.length === 0) {
       return { envelope: ok({ valid: true }), exitKind: 'ok' };
     }
-    const hint = `${warnings.length} action(s) cannot replay unattended — see data.warnings`;
-    if (opts.strict) {
+    const blocking = warnings.filter(isBlocking);
+    const advisory = warnings.length - blocking.length;
+    const parts = [];
+    if (blocking.length > 0) {
+      parts.push(`${blocking.length} action(s) cannot replay unattended — see data.warnings`);
+    }
+    if (advisory > 0) {
+      parts.push(`${advisory} launch step(s) now cold-start; set "cold" explicitly — see data.warnings`);
+    }
+    const hint = parts.join('; ');
+    if (opts.strict && blocking.length > 0) {
       const env = fail('invalid_input', 'scenario uses actions with no execution path', hint);
       env.data = { valid: false, errors: [], warnings };
       return { envelope: env, exitKind: 'invalid_input' };
@@ -398,7 +408,19 @@ async function handleDoubleTap({ deviceBridge }, raw) {
   }
 }
 
-async function handleLaunch({ deviceBridge }, appId) {
+// Cold by default (#255): mobile_launch_app only brings a running app to the
+// front with its state intact, so a scenario starting with launch_app would
+// inherit the previous run's screen. Stop the app first unless `resume`.
+//
+// A failed stop does not fail the launch. It usually means the app was not
+// running (iOS reports an error for a stopped app; Android never does), in
+// which case the launch is cold anyway. `cold` is the mode requested,
+// `terminated` whether the stop succeeded; the agent decides what a false
+// `terminated` means.
+const LAUNCH_TERMINATE_HINT = 'could not stop the app before launching it; if it was not running this is expected '
+  + '(iOS reports an error for a stopped app), otherwise it may have resumed on its previous screen';
+
+async function handleLaunch({ deviceBridge }, appId, { resume = false } = {}) {
   const id = String(appId == null ? '' : appId);
   if (!id) {
     return {
@@ -406,12 +428,26 @@ async function handleLaunch({ deviceBridge }, appId) {
       exitKind: 'invalid_input',
     };
   }
+  let terminateError = null;
+  if (!resume) {
+    try {
+      await deviceBridge.terminateApp(id);
+    } catch (err) {
+      terminateError = err && err.message ? err.message : String(err);
+    }
+  }
   try {
     await deviceBridge.launchApp(id);
-    return { envelope: ok({ launched: id }), exitKind: 'ok' };
   } catch (err) {
     return deviceFail(err);
   }
+  const data = { launched: id, cold: !resume };
+  if (!resume) data.terminated = terminateError === null;
+  if (terminateError !== null) data.terminate_error = terminateError;
+  return {
+    envelope: ok(data, terminateError === null ? undefined : LAUNCH_TERMINATE_HINT),
+    exitKind: 'ok',
+  };
 }
 
 // Resolved against the caller's cwd for the same reason as handleScreenshot
@@ -1975,9 +2011,10 @@ function buildProgram(deps = {}) {
 
   program
     .command('launch <appId>')
-    .description('Launch an installed app by its package/bundle id')
+    .description('Launch an installed app by its package/bundle id, cold-starting it (stopping it first) by default')
+    .option('--resume', 'bring a running app to the front instead of restarting it')
     .option('--device <id>', 'target device id')
-    .action(withEnvelope((appId, opts) => withBridge(opts.device, (bridge) => handleLaunch({ deviceBridge: bridge }, appId))));
+    .action(withEnvelope((appId, opts) => withBridge(opts.device, (bridge) => handleLaunch({ deviceBridge: bridge }, appId, { resume: Boolean(opts.resume) }))));
 
   program
     .command('install <path>')
@@ -2608,6 +2645,7 @@ module.exports = {
   handleSwipe,
   handlePress,
   handleLaunch,
+  LAUNCH_TERMINATE_HINT,
   handleInstall,
   handleUninstall,
   handleOpenUrl,

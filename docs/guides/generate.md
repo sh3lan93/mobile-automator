@@ -149,7 +149,7 @@ The generator parses your natural language and recognizes actions:
 | "Double tap" | `double_tap` | Double-tap gesture |
 | "Long press" | `long_press` | Long-press gesture |
 | "Press back/home/enter" | `press_button` | Hardware button press |
-| "Launch the app" | `launch_app` | Starts your app |
+| "Launch the app" | `launch_app` | Cold-starts your app on its initial screen; "return to the app" / "resume" records `"cold": false` |
 | "Open URL", "Open deep link" | `open_url` | Opens a web URL or deep link |
 | "Clear app data", "Fresh install" | `uninstall_app` + `install_app` preconditions | Resets app state (`clear_app_data` is unsupported — no execution path) |
 | "Verify/Check/Ensure element" | `element_exists` | Assertion: element is visible |

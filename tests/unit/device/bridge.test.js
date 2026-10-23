@@ -207,6 +207,16 @@ describe('DeviceBridge', () => {
     });
   });
 
+  describe('terminateApp', () => {
+    test('invokes mobile_terminate_app with the packageName', async () => {
+      const calls = [];
+      const call = async (tool, args) => { calls.push([tool, args]); return {}; };
+      const bridge = new DeviceBridge({ call });
+      await bridge.terminateApp('com.example.app');
+      expect(calls).toEqual([['mobile_terminate_app', { packageName: 'com.example.app' }]]);
+    });
+  });
+
   describe('installApp', () => {
     test('invokes mobile_install_app with the artifact path', async () => {
       const calls = [];

@@ -15,6 +15,7 @@ const {
   handleSwipe,
   handlePress,
   handleLaunch,
+  LAUNCH_TERMINATE_HINT,
   handleInstall,
   handleUninstall,
   handleOpenUrl,
@@ -262,6 +263,50 @@ describe('cli handlers', () => {
       });
     });
 
+    describe('mid-flow launch relying on the cold default (#255)', () => {
+      const ADVISORY_HINT = '1 launch step(s) now cold-start; set "cold" explicitly — see data.warnings';
+      const midLaunch = (s) => {
+        s.steps.push({ id: 'back_to_app', action: 'launch_app', description: 'Return to the app' });
+        return s;
+      };
+      const run = (scenario, opts) => {
+        const file = writeTmp('l.json', JSON.stringify(scenario));
+        const validator = new ScenarioValidator({ schemaPath: SCHEMA_PATH });
+        return handleValidate({ validator }, file, opts);
+      };
+
+      test('advisory only -> ok with the warning and an advisory hint', () => {
+        const { envelope, exitKind } = run(midLaunch(validScenario()));
+        expect(exitKind).toBe('ok');
+        expect(envelope.data.valid).toBe(true);
+        expect(envelope.data.warnings).toHaveLength(1);
+        expect(envelope.data.warnings[0]).toMatchObject({
+          code: 'launch_cold_default', path: 'steps[1]', step_id: 'back_to_app',
+        });
+        expect(envelope.hint).toBe(ADVISORY_HINT);
+      });
+
+      test('--strict + advisory only -> still ok', () => {
+        const { envelope, exitKind } = run(midLaunch(validScenario()), { strict: true });
+        expect(exitKind).toBe('ok');
+        expect(envelope.ok).toBe(true);
+        expect(envelope.data.warnings).toHaveLength(1);
+        expect(envelope.hint).toBe(ADVISORY_HINT);
+      });
+
+      test('--strict + unsupported + advisory -> invalid_input carrying both warnings', () => {
+        const s = midLaunch(validScenario());
+        s.steps.push({ id: 'wipe', action: 'clear_app_data', target_package: 'com.example.app', description: 'Clear' });
+        const { envelope, exitKind } = run(s, { strict: true });
+        expect(exitKind).toBe('invalid_input');
+        expect(envelope.data.valid).toBe(false);
+        expect(envelope.data.warnings.map((w) => w.code)).toEqual(['launch_cold_default', 'unsupported_action']);
+        expect(envelope.hint).toBe(
+          `1 action(s) cannot replay unattended — see data.warnings; ${ADVISORY_HINT}`
+        );
+      });
+    });
+
     test('invalid scenario -> invalid_input fail, exitKind invalid_input, errors in data', () => {
       const bad = validScenario();
       delete bad.app_package;
@@ -410,21 +455,68 @@ describe('cli handlers', () => {
   });
 
   describe('handleLaunch', () => {
-    test('launches an app and reports the id', async () => {
+    // A bridge that records every call in order, so cold-start sequencing is
+    // observable: terminate must land before launch.
+    const recordingBridge = (overrides = {}) => {
       const calls = [];
-      const bridge = { launchApp: async (a) => { calls.push(a); } };
+      const bridge = {
+        terminateApp: async (a) => { calls.push(['terminateApp', a]); },
+        launchApp: async (a) => { calls.push(['launchApp', a]); },
+        ...overrides(calls),
+      };
+      return { bridge, calls };
+    };
+
+    test('cold-starts by default: stops the app, then launches it', async () => {
+      const { bridge, calls } = recordingBridge(() => ({}));
       const { envelope, exitKind } = await handleLaunch({ deviceBridge: bridge }, 'com.example.app');
       expect(exitKind).toBe('ok');
-      expect(envelope.data).toEqual({ launched: 'com.example.app' });
-      expect(calls).toEqual(['com.example.app']);
+      expect(envelope.data).toEqual({ launched: 'com.example.app', cold: true, terminated: true });
+      expect(envelope.hint).toBeFalsy();
+      expect(calls).toEqual([['terminateApp', 'com.example.app'], ['launchApp', 'com.example.app']]);
     });
 
-    test('rejects a missing appId with invalid_input', async () => {
-      const bridge = { launchApp: async () => { throw new Error('should not be called'); } };
+    test('--resume never stops the app and reports cold: false', async () => {
+      const { bridge, calls } = recordingBridge(() => ({
+        terminateApp: async () => { throw new Error('should not be called'); },
+      }));
+      const { envelope, exitKind } = await handleLaunch({ deviceBridge: bridge }, 'com.example.app', { resume: true });
+      expect(exitKind).toBe('ok');
+      expect(envelope.data).toEqual({ launched: 'com.example.app', cold: false });
+      expect(calls).toEqual([['launchApp', 'com.example.app']]);
+    });
+
+    test('a failed stop does not fail the launch; it is reported with a hint', async () => {
+      const { bridge, calls } = recordingBridge((c) => ({
+        terminateApp: async (a) => { c.push(['terminateApp', a]); throw new Error('simctl exit status 3'); },
+      }));
+      const { envelope, exitKind } = await handleLaunch({ deviceBridge: bridge }, 'com.example.app');
+      expect(exitKind).toBe('ok');
+      expect(envelope.ok).toBe(true);
+      expect(envelope.data).toEqual({
+        launched: 'com.example.app', cold: true, terminated: false, terminate_error: 'simctl exit status 3',
+      });
+      expect(envelope.hint).toBe(LAUNCH_TERMINATE_HINT);
+      expect(calls).toEqual([['terminateApp', 'com.example.app'], ['launchApp', 'com.example.app']]);
+    });
+
+    test('a launch failure is a device failure', async () => {
+      const { bridge } = recordingBridge(() => ({
+        launchApp: async () => { throw new Error('no such app'); },
+      }));
+      const { envelope, exitKind } = await handleLaunch({ deviceBridge: bridge }, 'com.example.app');
+      expect(envelope.ok).toBe(false);
+      expect(exitKind).not.toBe('ok');
+      expect(envelope.error.message).toMatch(/no such app/);
+    });
+
+    test('rejects a missing appId with invalid_input and never touches the device', async () => {
+      const { bridge, calls } = recordingBridge(() => ({}));
       const { envelope, exitKind } = await handleLaunch({ deviceBridge: bridge }, '');
       expect(exitKind).toBe('invalid_input');
       expect(envelope.error.kind).toBe('invalid_input');
       expect(envelope.hint).toBeTruthy();
+      expect(calls).toEqual([]);
     });
   });
 
