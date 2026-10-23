@@ -58,7 +58,7 @@ These verbs drive the screen. Each accepts `--device <id>` to target a specific 
 | `mauto press <button>` | Press a hardware button (`BACK`, `HOME`, `ENTER`, …) or a semantic action |
 | `mauto long-press --at <x,y> [--duration <ms>]` | Long-press at coordinates **(new in 0.21.0)** |
 | `mauto double-tap --at <x,y>` | Double-tap at coordinates **(new in 0.21.0)** |
-| `mauto launch <appId>` | Launch an installed app by package/bundle id **(new in 0.21.0)** |
+| `mauto launch <appId> [--resume]` | Launch an installed app by package/bundle id **(new in 0.21.0)**. Cold-starts by default: a running app is stopped first, so it opens on its initial screen; `data` is `{launched, cold: true, terminated: true}`. If the stop fails, the launch still goes ahead and reports `terminated: false` with `terminate_error` and a hint — expected on iOS when the app was not running. `--resume` skips the stop and brings a running app to the front with its state intact (`data` is `{launched, cold: false}`) **(cold by default since 0.34.0)** |
 | `mauto install <path>` | Install an app from a local `.apk` / `.app` / `.ipa` **(new in 0.21.0)** |
 | `mauto uninstall <appId>` | Uninstall an app by id **(new in 0.21.0)** |
 | `mauto open-url <url>` | Open a URL on the device — web (`https://…`) or deep link (`myapp://…`). To restore the engine's http(s)-only guard, `export MOBILEMCP_ALLOW_UNSAFE_URLS=0` and run `mauto session end` ([#212](https://github.com/sh3lan93/mobile-automator/issues/212)) **(new in 0.21.0)** |

@@ -355,7 +355,7 @@ Demonstrates handling background tasks and silent notifications during app usage
     { "id": "wait_for_sync_indicator", "action": "wait_for_element", "description": "Wait for the sync indicator if it is present", "target": "sync indicator", "optional": true, "wait_config": { "type": "element_visible", "timeout_ms": 2000 } },
     { "id": "press_home_button", "action": "press_button", "description": "Press the home button to background the app", "value": "HOME" },
     { "id": "wait_background_time", "action": "wait_for_loading_complete", "description": "Allow time for the background sync to occur", "wait_config": { "type": "loading_complete", "timeout_ms": 5000 } },
-    { "id": "relaunch_app", "action": "launch_app", "description": "Relaunch the app from the background", "target": "com.example.messages" },
+    { "id": "relaunch_app", "action": "launch_app", "description": "Bring the app back from the background", "target": "com.example.messages", "cold": false },
     { "id": "wait_for_list_reload", "action": "wait_for_element", "description": "Wait for the messages list to load after relaunch", "target": "messages list", "wait_config": { "type": "element_visible", "timeout_ms": 5000 } },
     { "id": "capture_updated_count", "action": "capture_value", "description": "Capture the updated message count", "target": "message count badge", "capture_to": "message_count_after" },
     { "id": "capture_sync_time", "action": "capture_value", "description": "Capture the last sync timestamp", "target": "last sync timestamp", "capture_to": "sync_timestamp" }

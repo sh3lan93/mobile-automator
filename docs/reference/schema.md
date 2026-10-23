@@ -121,8 +121,11 @@ Note that `clear_app_data` is accepted by the schema but is **not mechanically e
 #### 1. launch_app
 Launch the app under test on the device.
 
+The app is **cold-started**: if it is already running it is stopped first, so the step always lands on the app's initial screen and a scenario never inherits the previous run's state. Set `"cold": false` to bring an already-running app to the front with its state intact instead (for example, returning to an app after pressing home).
+
 **Fields:**
 - `action` — `"launch_app"`
+- `cold` (optional) — `true` (default) stops the app before launching it; `false` resumes a running app (`mauto launch --resume`). Valid in schema 2.0 and 2.1.
 
 **Example:**
 ```json
@@ -383,7 +386,7 @@ Not executable: `clear_app_data` is accepted by the schema, but the engine expos
 
 ### Step Field Options
 
-Additional optional fields that can be added to any step object:
+Additional optional fields that can be added to any step object (`cold` is the exception: it applies to `launch_app` only — see [launch_app](#1-launch_app)):
 
 #### optional
 If `true`, failure to find or interact with the target is silently ignored and execution continues. Default: `false`

@@ -20,7 +20,7 @@ takes a `device` id, which `mauto` injects for you.
 
 | Scenario Action   | `mauto` Verb            | Internal mobile-mcp Engine Tool              | Description |
 |-------------------|-------------------------|----------------------------------------------|-------------|
-| `launch_app`      | `mauto launch`          | `mobile_launch_app`                          | Launch the app on the connected device |
+| `launch_app`      | `mauto launch`          | `mobile_terminate_app`, then `mobile_launch_app` | Cold-start the app on the connected device: stop it, then launch it. A step with `"cold": false` (`mauto launch --resume`) skips `mobile_terminate_app` and resumes a running app |
 | `tap`             | `mauto tap`             | `mobile_click_on_screen_at_coordinates`      | Tap on screen at specific coordinates |
 | `type`            | `mauto type <text>`     | `mobile_type_keys`                           | Type text into focused input field |
 | `swipe`           | `mauto swipe`           | `mobile_swipe_on_screen`                     | Swipe in a direction (up, down, left, right) |
