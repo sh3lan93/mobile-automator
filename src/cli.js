@@ -398,7 +398,16 @@ async function handleDoubleTap({ deviceBridge }, raw) {
   }
 }
 
-async function handleLaunch({ deviceBridge }, appId) {
+// Cold by default (#255): mobile_launch_app only brings a running app to the
+// front with its state intact, so a scenario starting with launch_app would
+// inherit the previous run's screen. Stop the app first unless `resume`.
+//
+// A failed stop does not fail the launch. It usually means the app was not
+// running (iOS reports an error for a stopped app; Android never does), in
+// which case the launch is cold anyway. `cold` is the mode requested,
+// `terminated` whether the stop succeeded; the agent decides what a false
+// `terminated` means.
+async function handleLaunch({ deviceBridge }, appId, { resume = false } = {}) {
   const id = String(appId == null ? '' : appId);
   if (!id) {
     return {
@@ -406,12 +415,33 @@ async function handleLaunch({ deviceBridge }, appId) {
       exitKind: 'invalid_input',
     };
   }
+  let terminateError = null;
+  if (!resume) {
+    try {
+      await deviceBridge.terminateApp(id);
+    } catch (err) {
+      terminateError = err && err.message ? err.message : String(err);
+    }
+  }
   try {
     await deviceBridge.launchApp(id);
-    return { envelope: ok({ launched: id }), exitKind: 'ok' };
   } catch (err) {
     return deviceFail(err);
   }
+  if (resume) {
+    return { envelope: ok({ launched: id, cold: false }), exitKind: 'ok' };
+  }
+  if (terminateError !== null) {
+    return {
+      envelope: ok(
+        { launched: id, cold: true, terminated: false, terminate_error: terminateError },
+        'could not stop the app before launching it; if it was not running this is expected '
+          + '(iOS reports an error for a stopped app), otherwise it may have resumed on its previous screen'
+      ),
+      exitKind: 'ok',
+    };
+  }
+  return { envelope: ok({ launched: id, cold: true, terminated: true }), exitKind: 'ok' };
 }
 
 // Resolved against the caller's cwd for the same reason as handleScreenshot
@@ -1975,9 +2005,10 @@ function buildProgram(deps = {}) {
 
   program
     .command('launch <appId>')
-    .description('Launch an installed app by its package/bundle id')
+    .description('Launch an installed app by its package/bundle id, cold-starting it (stopping it first) by default')
+    .option('--resume', 'bring a running app to the front instead of restarting it')
     .option('--device <id>', 'target device id')
-    .action(withEnvelope((appId, opts) => withBridge(opts.device, (bridge) => handleLaunch({ deviceBridge: bridge }, appId))));
+    .action(withEnvelope((appId, opts) => withBridge(opts.device, (bridge) => handleLaunch({ deviceBridge: bridge }, appId, { resume: Boolean(opts.resume) }))));
 
   program
     .command('install <path>')

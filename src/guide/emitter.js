@@ -102,7 +102,7 @@ function emitBootstrap() {
     ['type', 'type text into the focused element'],
     ['swipe', 'swipe in a cardinal direction'],
     ['press', 'press a system/hardware button or semantic action'],
-    ['launch', 'launch an installed app by its package/bundle id'],
+    ['launch', "launch an installed app, stopping it first (--resume keeps a running app's state)"],
     ['install', 'install an app from a local artifact path'],
     ['uninstall', 'uninstall an app by its package/bundle id'],
     ['open-url', 'open a URL (deep link or web) on the device'],

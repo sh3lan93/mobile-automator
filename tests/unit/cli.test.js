@@ -410,21 +410,68 @@ describe('cli handlers', () => {
   });
 
   describe('handleLaunch', () => {
-    test('launches an app and reports the id', async () => {
+    // A bridge that records every call in order, so cold-start sequencing is
+    // observable: terminate must land before launch.
+    const recordingBridge = (overrides = {}) => {
       const calls = [];
-      const bridge = { launchApp: async (a) => { calls.push(a); } };
+      const bridge = {
+        terminateApp: async (a) => { calls.push(['terminateApp', a]); },
+        launchApp: async (a) => { calls.push(['launchApp', a]); },
+        ...overrides(calls),
+      };
+      return { bridge, calls };
+    };
+
+    test('cold-starts by default: stops the app, then launches it', async () => {
+      const { bridge, calls } = recordingBridge(() => ({}));
       const { envelope, exitKind } = await handleLaunch({ deviceBridge: bridge }, 'com.example.app');
       expect(exitKind).toBe('ok');
-      expect(envelope.data).toEqual({ launched: 'com.example.app' });
-      expect(calls).toEqual(['com.example.app']);
+      expect(envelope.data).toEqual({ launched: 'com.example.app', cold: true, terminated: true });
+      expect(envelope.hint).toBeFalsy();
+      expect(calls).toEqual([['terminateApp', 'com.example.app'], ['launchApp', 'com.example.app']]);
     });
 
-    test('rejects a missing appId with invalid_input', async () => {
-      const bridge = { launchApp: async () => { throw new Error('should not be called'); } };
+    test('--resume never stops the app and reports cold: false', async () => {
+      const { bridge, calls } = recordingBridge(() => ({
+        terminateApp: async () => { throw new Error('should not be called'); },
+      }));
+      const { envelope, exitKind } = await handleLaunch({ deviceBridge: bridge }, 'com.example.app', { resume: true });
+      expect(exitKind).toBe('ok');
+      expect(envelope.data).toEqual({ launched: 'com.example.app', cold: false });
+      expect(calls).toEqual([['launchApp', 'com.example.app']]);
+    });
+
+    test('a failed stop does not fail the launch; it is reported with a hint', async () => {
+      const { bridge, calls } = recordingBridge((c) => ({
+        terminateApp: async (a) => { c.push(['terminateApp', a]); throw new Error('simctl exit status 3'); },
+      }));
+      const { envelope, exitKind } = await handleLaunch({ deviceBridge: bridge }, 'com.example.app');
+      expect(exitKind).toBe('ok');
+      expect(envelope.ok).toBe(true);
+      expect(envelope.data).toEqual({
+        launched: 'com.example.app', cold: true, terminated: false, terminate_error: 'simctl exit status 3',
+      });
+      expect(envelope.hint).toMatch(/could not stop the app/);
+      expect(calls).toEqual([['terminateApp', 'com.example.app'], ['launchApp', 'com.example.app']]);
+    });
+
+    test('a launch failure is a device failure', async () => {
+      const { bridge } = recordingBridge(() => ({
+        launchApp: async () => { throw new Error('no such app'); },
+      }));
+      const { envelope, exitKind } = await handleLaunch({ deviceBridge: bridge }, 'com.example.app');
+      expect(envelope.ok).toBe(false);
+      expect(exitKind).not.toBe('ok');
+      expect(envelope.error.message).toMatch(/no such app/);
+    });
+
+    test('rejects a missing appId with invalid_input and never touches the device', async () => {
+      const { bridge, calls } = recordingBridge(() => ({}));
       const { envelope, exitKind } = await handleLaunch({ deviceBridge: bridge }, '');
       expect(exitKind).toBe('invalid_input');
       expect(envelope.error.kind).toBe('invalid_input');
       expect(envelope.hint).toBeTruthy();
+      expect(calls).toEqual([]);
     });
   });
 
