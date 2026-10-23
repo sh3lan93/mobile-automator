@@ -207,6 +207,79 @@ describe('DeviceBridge', () => {
     });
   });
 
+  describe('terminateApp', () => {
+    test('invokes mobile_terminate_app with exactly the packageName', async () => {
+      const calls = [];
+      const call = async (tool, args) => { calls.push([tool, args]); return {}; };
+      const bridge = new DeviceBridge({ call });
+      await bridge.terminateApp('com.example.app');
+      expect(calls).toEqual([['mobile_terminate_app', { packageName: 'com.example.app' }]]);
+    });
+  });
+
+  describe('restartApp', () => {
+    const SIMCTL_NOT_RUNNING =
+      'failed to terminate app on device X: failed to execute xcrun simctl command: exit status 3\n';
+
+    test('terminates then launches, in that order', async () => {
+      const calls = [];
+      const call = async (tool, args) => { calls.push([tool, args]); return {}; };
+      const bridge = new DeviceBridge({ call });
+      await bridge.restartApp('com.example.app');
+      expect(calls).toEqual([
+        ['mobile_terminate_app', { packageName: 'com.example.app' }],
+        ['mobile_launch_app', { packageName: 'com.example.app' }],
+      ]);
+    });
+
+    test('an app that is not running is still launched', async () => {
+      const calls = [];
+      const call = async (tool) => {
+        calls.push(tool);
+        if (tool === 'mobile_terminate_app') throw new Error(SIMCTL_NOT_RUNNING);
+        return { launched: true };
+      };
+      const bridge = new DeviceBridge({ call });
+      await expect(bridge.restartApp('com.example.app')).resolves.toEqual({ launched: true });
+      expect(calls).toEqual(['mobile_terminate_app', 'mobile_launch_app']);
+    });
+
+    test('any other terminate failure rejects with a --resume hint and never launches', async () => {
+      const calls = [];
+      const call = async (tool) => {
+        calls.push(tool);
+        if (tool === 'mobile_terminate_app') throw new Error('device offline');
+        return {};
+      };
+      const bridge = new DeviceBridge({ call });
+      const err = await bridge.restartApp('com.example.app').catch((e) => e);
+      expect(err).toBeInstanceOf(Error);
+      expect(err.message).toBe('device offline');
+      expect(err.hint).toMatch(/--resume/);
+      expect(calls).toEqual(['mobile_terminate_app']);
+    });
+
+    test('an existing hint on the terminate error is kept', async () => {
+      const call = async () => {
+        const e = new Error('boom');
+        e.hint = 'original hint';
+        throw e;
+      };
+      const bridge = new DeviceBridge({ call });
+      const err = await bridge.restartApp('com.example.app').catch((e) => e);
+      expect(err.hint).toBe('original hint');
+    });
+
+    test('a launch failure after a successful terminate propagates', async () => {
+      const call = async (tool) => {
+        if (tool === 'mobile_launch_app') throw new Error('not installed');
+        return {};
+      };
+      const bridge = new DeviceBridge({ call });
+      await expect(bridge.restartApp('com.example.app')).rejects.toThrow('not installed');
+    });
+  });
+
   describe('installApp', () => {
     test('invokes mobile_install_app with the artifact path', async () => {
       const calls = [];
