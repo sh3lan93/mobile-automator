@@ -61,16 +61,6 @@ describe('action coverage — schema ↔ catalog ↔ verbs ↔ guide', () => {
       // ...and a `mauto` verb is registered to drive it.
       expect(verbNames).toContain(def.verb);
     });
-
-    // A verb may run a prelude primitive before its own (launch stops the app
-    // first so the scenario starts cold). The prelude needs the same faithful
-    // path as the verb itself.
-    const withPrelude = entries('verb').filter((a) => ACTION_CATALOG[a].prelude);
-    test.each(withPrelude)('%s prelude is backed by a real bridge method + primitive', (action) => {
-      const { prelude } = ACTION_CATALOG[action];
-      expect(typeof DeviceBridge.prototype[prelude.bridge]).toBe('function');
-      expect(bridgeSource).toContain(prelude.primitive);
-    });
   });
 
   // launch cold-starts by default (#255); a scenario step that means to resume

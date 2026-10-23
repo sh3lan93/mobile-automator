@@ -10,8 +10,7 @@
 //
 // `resolution` declares the execution contract for each action:
 //   'verb'        — a dedicated one-shot `mauto` verb backed by a DeviceBridge
-//                   method that calls a single mobile-mcp primitive, optionally
-//                   preceded by a `prelude` primitive the verb runs first.
+//                   method that calls a single mobile-mcp primitive.
 //   'semantic'    — invoked via `mauto press <action>`; resolved to per-platform
 //                   mechanics by src/device/semantic-press (see ACTION_METHOD).
 //   'composed'    — no dedicated verb; the agent composes it from existing verbs
@@ -51,13 +50,12 @@ const ACTION_CATALOG = {
     resolution: 'verb', verb: 'press', bridge: 'pressButton',
     primitive: 'mobile_press_button', args: ['button'],
   },
-  // Cold by default (#255): `mauto launch` stops the app before launching it so
-  // the scenario starts on the app's initial screen. `--resume` (a step's
-  // `cold: false`) skips the prelude and keeps a running app's state.
+  // `mauto launch` stops the app first via DeviceBridge#terminateApp (cold
+  // start, #255) unless `--resume` / the step's `cold: false`. The call order is
+  // pinned by the handleLaunch tests in tests/unit/cli.test.js, not by this catalog.
   launch_app: {
     resolution: 'verb', verb: 'launch', bridge: 'launchApp',
     primitive: 'mobile_launch_app', args: ['packageName'],
-    prelude: { bridge: 'terminateApp', primitive: 'mobile_terminate_app', args: ['packageName'] },
   },
   install_app: {
     resolution: 'verb', verb: 'install', bridge: 'installApp',
