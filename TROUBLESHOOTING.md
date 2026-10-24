@@ -327,10 +327,23 @@ not be stopped (or could not be confirmed as this workspace's daemon, so it was
 left alone): check it with `ps -p <pid>` and stop it with `kill -9 <pid>`. Its
 stale lock and socket are cleaned automatically by the next session start.
 
-A daemon's command line ends in `--workspace-key <digest>`, a digest of its
-project root rather than the path itself, so `ps` never shows other users where
-your project lives. Daemons started by 0.28.0–0.33.0 end in
-`--project-root <root>` instead, and are still recognised.
+A daemon's command line ends in `--workspace-key <key>`. The key is derived from
+the project root and a random per-workspace secret in
+`mobile-automator/.session/marker.salt`, readable only by you, so another user
+who runs `ps` cannot confirm a guessed path by hashing it. Leave that file in
+place: the key is how `session end` recognises this workspace's daemon. Daemons
+started by 0.28.0–0.33.0 end in `--project-root <root>` instead, and are still
+recognised.
+
+When mobile-automator is installed inside your project (a devDependency or a
+source checkout), mauto passes its daemon, the mobile-mcp engine and `mobilecli`
+by paths relative to the project root, so none of their command lines show the
+root either. One process mauto does not control still does: `mobilecli` starts
+its own background `mobilecli … daemon start` by the binary's absolute path,
+and that process stays up for up to 30 minutes after the session ends. If
+other users on the machine must not see your project path, install
+mobile-automator globally (`npm i -g mobile-automator`) so that path names no
+project.
 
 ### ❌ A verb failed with "mobile-mcp did not finish initializing within 10000ms"
 
