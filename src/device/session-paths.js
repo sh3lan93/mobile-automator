@@ -113,7 +113,7 @@ function lockPath(projectRoot) {
 // the LAST argument so a match can be anchored at the end.
 const DAEMON_WORKSPACE_FLAG = '--workspace-key';
 
-// Match-only, never emitted. Daemons started by 0.28.0-0.33.0 carry the
+// Match-only, never emitted. Daemons started by 0.28.0-0.35.0 carry the
 // absolute root behind this flag; still recognising them keeps a stuck one
 // force-stoppable by `session end` after an upgrade.
 const LEGACY_DAEMON_ROOT_FLAG = '--project-root';

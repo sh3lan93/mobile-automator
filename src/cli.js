@@ -10,7 +10,7 @@ const { ok, fail, render, exitCodeFor } = require('./output/envelope');
 const selectionStore = require('./device/selection');
 const { engineHint } = require('./device/engine-hints');
 const { ScenarioValidator } = require('./scenario/validator');
-const { findUnsupportedActions } = require('./scenario/replayability');
+const { findReplayWarnings, summarize } = require('./scenario/replayability');
 const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
 const { ResultStore } = require('./result/store');
 const { OBSERVATION_TYPES, parseObservation, parseCapture, parseBool } = require('./result/flags');
@@ -245,15 +245,15 @@ function handleValidate({ validator }, file, opts = {}) {
 
   const result = validator.validate(scenario);
   if (result.valid) {
-    // Schema-valid is not the same as replayable: surface actions the catalog
-    // marks unsupported. A warning by default so existing scenarios keep
-    // validating; `--strict` makes it a failure (#166).
-    const warnings = findUnsupportedActions(scenario);
+    // Schema-valid is not the same as replayable: surface findings by default
+    // so existing scenarios keep validating; `--strict` fails only on the
+    // blocking ones. Codes, severity and wording live in the replayability module.
+    const warnings = findReplayWarnings(scenario);
     if (warnings.length === 0) {
       return { envelope: ok({ valid: true }), exitKind: 'ok' };
     }
-    const hint = `${warnings.length} action(s) cannot replay unattended — see data.warnings`;
-    if (opts.strict) {
+    const { blocking, hint } = summarize(warnings);
+    if (opts.strict && blocking.length > 0) {
       const env = fail('invalid_input', 'scenario uses actions with no execution path', hint);
       env.data = { valid: false, errors: [], warnings };
       return { envelope: env, exitKind: 'invalid_input' };
@@ -398,7 +398,9 @@ async function handleDoubleTap({ deviceBridge }, raw) {
   }
 }
 
-async function handleLaunch({ deviceBridge }, appId) {
+// Cold start by default (#255; the why lives in DeviceBridge#restartApp).
+// `resume` opts out and keeps the old bring-to-front behaviour.
+async function handleLaunch({ deviceBridge }, appId, { resume } = {}) {
   const id = String(appId == null ? '' : appId);
   if (!id) {
     return {
@@ -407,8 +409,25 @@ async function handleLaunch({ deviceBridge }, appId) {
     };
   }
   try {
-    await deviceBridge.launchApp(id);
-    return { envelope: ok({ launched: id }), exitKind: 'ok' };
+    const cold = !resume;
+    await (cold ? deviceBridge.restartApp(id) : deviceBridge.launchApp(id));
+    return { envelope: ok({ launched: id, cold }), exitKind: 'ok' };
+  } catch (err) {
+    return deviceFail(err);
+  }
+}
+
+async function handleTerminate({ deviceBridge }, appId) {
+  const id = String(appId == null ? '' : appId);
+  if (!id) {
+    return {
+      envelope: fail('invalid_input', 'an app id is required', 'e.g. mauto terminate com.example.app'),
+      exitKind: 'invalid_input',
+    };
+  }
+  try {
+    await deviceBridge.terminateApp(id);
+    return { envelope: ok({ terminated: id }), exitKind: 'ok' };
   } catch (err) {
     return deviceFail(err);
   }
@@ -1975,9 +1994,16 @@ function buildProgram(deps = {}) {
 
   program
     .command('launch <appId>')
-    .description('Launch an installed app by its package/bundle id')
+    .description('Launch an installed app by its package/bundle id, restarting it if it is already running')
+    .option('--resume', 'bring a running app to the front instead of restarting it')
     .option('--device <id>', 'target device id')
-    .action(withEnvelope((appId, opts) => withBridge(opts.device, (bridge) => handleLaunch({ deviceBridge: bridge }, appId))));
+    .action(withEnvelope((appId, opts) => withBridge(opts.device, (bridge) => handleLaunch({ deviceBridge: bridge }, appId, { resume: Boolean(opts.resume) }))));
+
+  program
+    .command('terminate <appId>')
+    .description('Stop a running app by its package/bundle id')
+    .option('--device <id>', 'target device id')
+    .action(withEnvelope((appId, opts) => withBridge(opts.device, (bridge) => handleTerminate({ deviceBridge: bridge }, appId))));
 
   program
     .command('install <path>')
@@ -2608,6 +2634,7 @@ module.exports = {
   handleSwipe,
   handlePress,
   handleLaunch,
+  handleTerminate,
   handleInstall,
   handleUninstall,
   handleOpenUrl,

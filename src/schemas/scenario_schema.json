@@ -277,6 +277,11 @@
           "type": "string",
           "description": "Description of the expected visual state after this step completes — used by the executor for semantic validation"
         },
+        "cold": {
+          "type": "boolean",
+          "default": true,
+          "description": "launch_app only: stop the app before launching it so the step starts on the app's initial screen. Set false to bring a running app to the front in its current state."
+        },
         "optional": {
           "type": "boolean",
           "default": false,

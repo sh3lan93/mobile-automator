@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.33.1]
+## [0.35.1]
 
 ### 🔒 Changed
 
@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   root itself from its environment. When mobile-automator is installed
   inside the project, the daemon script, the mobile-mcp engine and
   `mobilecli` are all passed relative to the project root, so their command
-  lines do not reveal it either. Daemons started by 0.28.0–0.33.0 are still
+  lines do not reveal it either. Daemons started by 0.28.0–0.35.0 are still
   recognised by their old marker, so `session end` can still force-stop a
   stuck one after you upgrade
   ([#236](https://github.com/sh3lan93/mobile-automator/issues/236)).
@@ -31,6 +31,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   path, and that process can outlive the session by up to 30 minutes. With an
   in-project install its command line still shows the project path. A global
   install (`npm i -g mobile-automator`) avoids it. See `TROUBLESHOOTING.md`.
+
+---
+
+## [0.35.0]
+
+### ✨ Added
+
+- **`mauto validate` flags launch steps that leave `cold` unset.** A
+  `launch_app` step after the scenario's first step (or inside `sub_steps`)
+  that leaves `cold` unset gets a `launch_cold_implicit` entry in
+  `data.warnings` and a hint, because it is ambiguous whether the author
+  meant to return to the running app or to restart it. Setting `cold` either
+  way silences it. The warning is advisory: `--strict` still fails only on
+  unsupported actions. The execute and generate guides branch on each
+  warning's `code` instead of treating every entry as an unsupported action;
+  execute replays each step exactly as written ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
+
+### 🐛 Fixed
+
+- **The execute guides still told agents to "force-close and relaunch"
+  between scenarios** without naming a verb. They now say each scenario's
+  leading `launch_app` already restarts the app, so back-to-back scenarios
+  need no separate reset, and `app_state: "fresh_install"` is only for
+  wiping app data ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
+- **Two high-severity advisories failed the production audit gate.** A
+  lockfile refresh moves `body-parser` (GHSA-27r3-jxmh-p828) and `zod`
+  (GHSA-mrhx-c7xc-m3w5) to patched releases; no `package.json` range
+  changed.
+
+---
+
+## [0.34.0]
+
+### 🔧 Changed
+
+- **`mauto launch` / `launch_app` now restarts a running app, so a scenario
+  starts on the app's initial screen.** The engine's launch call only brings
+  an already-running app to the front, so a `launch_app` step inherited
+  whatever screen the previous run or manual session left behind, and steps
+  written against the first screen failed. `mauto launch <appId>` now stops
+  the app (`mobile_terminate_app`) and then launches it, returning
+  `{ launched, cold: true }`. This resets the screen, not
+  app data: `app_state: "fresh_install"` is still the data reset
+  ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
+- **Opt out with `"cold": false` / `--resume`.** The new optional scenario
+  step field `cold` (boolean, default `true`, `launch_app` only) set to
+  `false` keeps the old behaviour: the executor runs `mauto launch <appId>
+  --resume`, which brings a running app to the front in its current state and
+  returns `{ launched, cold: false }`. Existing scenarios stay valid; the
+  field is additive. The action catalog records the `cold` → `--resume`
+  mapping (and that `launch_app` now calls terminate, then launch), and the
+  sample-app E2E harness derives the flag from it
+  ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
+- **An app that cannot be stopped fails the launch.** Some engines report an
+  error when asked to stop an app that is not running (the iOS simulator and
+  real iOS devices); `mauto launch` recognises exactly that case and simply
+  starts the app. Any other stop failure fails the launch with a `device`
+  error whose hint suggests `--resume`, so `cold: true` in a successful
+  result always means the app was restarted
+  ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
+- **`LICENSE` now ships the complete Apache-2.0 text.** It previously held
+  only the 644-byte short notice, and that stub is what the npm tarball
+  carried. The appendix copyright line reads `Copyright 2025 mobile-automator
+  contributors`, the project's current name, replacing "Mobile QA Skills
+  Contributors". A new lint guard, `tests/lint/license-full-text.test.js`,
+  pins the file to the canonical apache.org text, with the copyright line the
+  only free line
+  ([#160](https://github.com/sh3lan93/mobile-automator/issues/160)).
+
+### ✨ Added
+
+- **`mauto terminate <appId> [--device <id>]`** stops a running app and
+  returns `{ terminated: <appId> }`. It adds no scenario action
+  ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
+
+### 🐛 Fixed
+
+- **The generate guide mapped "open the app" to the wrong verb.** Its
+  step-translation table told the agent to use `mauto press` for
+  `launch_app`; it now says `mauto launch <appId>`, and gains a "return to
+  the app" / "resume the app" row that records `launch_app` with
+  `"cold": false`. The execute guide documents the cold-start default,
+  `--resume`, and that a launch which cannot stop the app fails
+  ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
 
 ---
 

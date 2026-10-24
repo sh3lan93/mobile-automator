@@ -62,7 +62,7 @@ Record each observation with `mauto result add-step --observation <type>:<messag
    - If the install fails because a different build is already on the device, uninstall it with `mauto uninstall <appId>` (the app identifier from `mobile-automator/config.json` — `android_package` / `ios_bundle_id`), install again, and report that app data was wiped — a scenario whose preconditions assume existing app state may now fail for that reason.
    - State which path you took before continuing.
 5. **Validate schema version:** read the `$schema_version` field; it must be `"2.1"`. If absent or unrecognized, report an error and halt.
-6. Validate the scenario with `mauto validate <path>` against `mauto schema scenario`. If the result lists `data.warnings`, each entry (its `path` names the step or precondition) uses an action that is unsupported on this run: report it as unsupported in the result (see "Not mechanically executable" under step execution) and do not substitute a gesture for it.
+6. Validate the scenario with `mauto validate <path>` against `mauto schema scenario`. If the result lists `data.warnings`, branch on each entry's `code` (its `path` names the step or precondition): `unsupported_action` means it uses an action that is unsupported on this run: report it as unsupported in the result (see "Not mechanically executable" under step execution) and do not substitute a gesture for it. `launch_cold_implicit` is advisory: replay that step exactly as written (a step that does not set `"cold": false` is a cold start, per the step table below) and do not substitute your own reading of what the author meant; record the warning's `message` as a `state_context` observation on that step (`mauto result add-step ... --observation state_context:<message>`).
 
 **Precondition `device_actions`** (from the scenario's `preconditions`, run before step replay):
 
@@ -100,7 +100,8 @@ For each step in the scenario:
 1. **Wait for prior stability:** poll `mauto elements` until loading indicators ({{loading_indicators}}) are absent before continuing.
 2. **Resolve the target:** for actions with a target, run `mauto elements` to locate by semantic description; never use stored coordinates. If `target_pattern` is set, use it as a regex to filter elements by text.
 3. **Execute the action:**
-   - Standard actions → run the corresponding `mauto` verb: `tap` → `mauto tap --at <x,y>`, `long_press` → `mauto long-press --at <x,y>` (optional `--duration <ms>`), `double_tap` → `mauto double-tap --at <x,y>`, `swipe` / `scroll_to_element` → `mauto swipe --direction <dir>`, `type` → `mauto type <text>`, `press_button` → `mauto press <button>`, `launch_app` → `mauto launch <appId>`, `open_url` → `mauto open-url <url>`, `wait_for_*` → poll `mauto elements`, `capture_value` → `mauto elements` (extract text). Resolve coordinates from the latest `mauto elements` output.
+   - Standard actions → run the corresponding `mauto` verb: `tap` → `mauto tap --at <x,y>`, `long_press` → `mauto long-press --at <x,y>` (optional `--duration <ms>`), `double_tap` → `mauto double-tap --at <x,y>`, `swipe` / `scroll_to_element` → `mauto swipe --direction <dir>`, `type` → `mauto type <text>`, `press_button` → `mauto press <button>`, `launch_app` → `mauto launch <appId>` (add `--resume` when the step sets `"cold": false`), `open_url` → `mauto open-url <url>`, `wait_for_*` → poll `mauto elements`, `capture_value` → `mauto elements` (extract text). Resolve coordinates from the latest `mauto elements` output.
+   - `launch_app` restarts the app so the step starts on its initial screen; `--resume` instead brings a running app to the front in its current state. A plain launch resets the screen, not app data: `app_state: "fresh_install"` is still the data reset. It returns `{launched, cold}`; an app that is not running is simply started. If the app cannot be stopped, the launch fails with a device error and a hint to use `--resume` — record the step as failed rather than retrying blindly.
    - Semantic actions → run `mauto press <action>` and let the CLI resolve them for the connected device.
    - Not mechanically executable → `clear_app_data` (and the precondition device actions `enable_wifi` / `disable_wifi`) have no verb and no underlying primitive. Do NOT substitute a gesture: report them honestly as unsupported on this run, or perform them manually out of band if the run depends on them.
 4. **Capture screenshot:** Run `mauto screenshot mobile-automator/screenshots/<scenario_id>/<run_id>/step_<step_id>.png`.
@@ -229,7 +230,7 @@ When neither attempt succeeds, fail the step and add a detailed observation desc
 
 ## Multi-Scenario Execution
 
-- Execute scenarios sequentially; reset app state (force-close and relaunch) between them.
+- Execute scenarios sequentially. Each scenario's leading `launch_app` restarts the app (`mauto launch <appId>`), so a scenario never inherits the previous one's screen and needs no separate reset; use `app_state: "fresh_install"` only when app data must be wiped too.
 - "run all smoke tests" → filter by the `smoke` tag. "run all" → every scenario in `mobile-automator/scenarios/`.
 - Present a combined summary with a per-scenario breakdown.
 

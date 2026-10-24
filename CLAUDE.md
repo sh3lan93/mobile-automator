@@ -78,7 +78,7 @@ Agnostic mode maps OS gestures to four semantic actions resolved to per-platform
 
 All verbs emit `{ok,data,error,hint,schema_version}`; `--human` is an opt-in readable flag. Commander parse failures are routed through the same envelope (#146) — a bad flag must never print bare text.
 
-- **Device actions:** `elements`, `tap`, `long-press`, `double-tap`, `type <text>`, `swipe`, `press <button>`, `screenshot <path>`, `launch <appId>`, `install <path>`, `uninstall <appId>`, `open-url <url>`, `orientation <orientation>`
+- **Device actions:** `elements`, `tap`, `long-press`, `double-tap`, `type <text>`, `swipe`, `press <button>`, `screenshot <path>`, `launch <appId>` (cold start; `--resume` keeps state), `terminate <appId>`, `install <path>`, `uninstall <appId>`, `open-url <url>`, `orientation <orientation>`
 - **Author & verify:** `validate <file>`, `assert <type>`, `result add-step`, `result add-assertion`, `result finalize`
 - **Workspace:** `setup`, `config get <key>`, `config set <key> <value>` (`config set engine` clears the device pin when the engine changes)
 - **Reasoning** (agent pulls on demand): `guide <topic>` (topics: `generate`, `execute`, `setup`); `bootstrap` (verb map + invariants); `schema <name>` (names: `scenario`, `result`, `config`)
@@ -94,7 +94,7 @@ Two catalogs are the single source of truth for "does this capability actually r
 
 | resolution | count | meaning |
 |---|---|---|
-| `verb` | 11 | dedicated one-shot `mauto` verb → DeviceBridge → one mobile-mcp primitive |
+| `verb` | 11 | dedicated one-shot `mauto` verb → DeviceBridge → one or more mobile-mcp primitives (`launch` is terminate + launch, #255) |
 | `semantic` | 4 | invoked as `mauto press <action>`, resolved per-platform by `src/device/semantic-press/` |
 | `composed` | 5 | no verb; the agent composes it from existing verbs (the execute guide documents how) |
 | `unsupported` | 3 | mobile-mcp 1.0.5 exposes no primitive (`clear_app_data`, `enable_wifi`, `disable_wifi`) — guides must **not** promise a verb |
@@ -108,6 +108,8 @@ Two catalogs are the single source of truth for "does this capability actually r
 **`package.json` `os`** (#165) is the single source of truth for which host OSes run mauto (`darwin`, `linux`) — npm enforces it at install (`EBADPLATFORM`), and `src/device/host-support.js` derives `SUPPORTED_HOSTS` from it to fail device/session verbs on anything that slips past (`--force`, `npm link`). Guard: `tests/lint/host-support-agreement.test.js` — fails when `os` is empty or claims `win32`, when `SUPPORTED_HOSTS` disagrees with it, when `README.md` or `docs/getting-started/installation.md` fails to name every host (via a map keyed on `os`, so a new host forces a doc update) plus Windows/WSL2, or when `TROUBLESHOOTING.md` loses the heading the runtime hint cites.
 
 **`package-lock.json`** must mirror `package.json`'s `name`, `version`, `engines.node` and `os`. Guard: `tests/lint/lockfile-in-sync.test.js`. CI installs with `npm ci`, which installs *from the lockfile*, so a stale root entry is invisible until something downstream reads the wrong value — it has drifted twice.
+
+**`LICENSE`** (#160) must be the verbatim Apache-2.0 text from apache.org — it shipped a 644-byte stub for months. Guard: `tests/lint/license-full-text.test.js` restores the appendix copyright line to its `[yyyy] [name of copyright owner]` template and compares the SHA-256 against the canonical file, so the copyright line is the only line that may differ. To change the text, re-fetch it rather than re-pin the hash.
 
 **Production-dependency advisories** (#161) are gated by `scripts/audit-gate.js`, which runs `npm audit --omit=dev` and fails on any high/critical advisory not listed in `scripts/audit-allowlist.json`. Every allowlist entry carries a reason, the issue that removes it, and an `expires` date. An expired entry fails, and so does a *stale* one (its advisory is no longer reported), so accepted risk can't outlive its reason. It runs in `audit.yml` (PR, main, weekly — a signal) and in `release.yml`'s `publish-npm` before `npm publish` (the actual gate). Wiring guard: `tests/lint/supply-chain-gate.test.js`. Dependabot is `lockfile-only` on purpose: a `package.json` change would trip the version-bump gate, and users resolve our ranges fresh anyway.
 
@@ -247,4 +249,4 @@ Tracked under the `production-ready` milestone; worth knowing before you debug s
 
 ## Metadata
 
-Repo: https://github.com/sh3lan93/mobile-automator · Version: see `package.json` (0.32.0 at last edit) · License: Apache 2.0 (note: `LICENSE` currently ships a stub, not the full text — #160) · Status: published on npm since v0.23.8 (2026-08-30).
+Repo: https://github.com/sh3lan93/mobile-automator · Version: see `package.json` (0.32.0 at last edit) · License: Apache 2.0 · Status: published on npm since v0.23.8 (2026-08-30).

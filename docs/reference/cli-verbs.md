@@ -58,7 +58,8 @@ These verbs drive the screen. Each accepts `--device <id>` to target a specific 
 | `mauto press <button>` | Press a hardware button (`BACK`, `HOME`, `ENTER`, …) or a semantic action |
 | `mauto long-press --at <x,y> [--duration <ms>]` | Long-press at coordinates **(new in 0.21.0)** |
 | `mauto double-tap --at <x,y>` | Double-tap at coordinates **(new in 0.21.0)** |
-| `mauto launch <appId>` | Launch an installed app by package/bundle id **(new in 0.21.0)** |
+| `mauto launch <appId> [--resume]` | Launch an installed app by package/bundle id. Restarts the app if it is running, so it opens on its initial screen; `--resume` brings a running app to the front in its current state instead **(new in 0.21.0; cold start by default since 0.34.0)** |
+| `mauto terminate <appId>` | Stop a running app by package/bundle id **(new in 0.34.0)** |
 | `mauto install <path>` | Install an app from a local `.apk` / `.app` / `.ipa` **(new in 0.21.0)** |
 | `mauto uninstall <appId>` | Uninstall an app by id **(new in 0.21.0)** |
 | `mauto open-url <url>` | Open a URL on the device — web (`https://…`) or deep link (`myapp://…`). To restore the engine's http(s)-only guard, `export MOBILEMCP_ALLOW_UNSAFE_URLS=0` and run `mauto session end` ([#212](https://github.com/sh3lan93/mobile-automator/issues/212)) **(new in 0.21.0)** |
@@ -66,6 +67,15 @@ These verbs drive the screen. Each accepts `--device <id>` to target a specific 
 
 !!! tip "New in v0.21.0"
     Seven device verbs were added in **v0.21.0**: `long-press`, `double-tap`, `launch`, `install`, `uninstall`, `open-url`, and `orientation`.
+
+!!! note "`launch` cold-starts by default (0.34.0)"
+    `mauto launch <appId>` stops the app, then launches it, so a scenario's `launch_app` step starts on the app's initial screen even when a previous run left the app open ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)). It resets the screen, not app data — use the `app_state: "fresh_install"` precondition for that.
+
+    - Default result: `{"launched": "<appId>", "cold": true}`. An app that is not running is simply started.
+    - If the app cannot be stopped, the launch fails with a `device` error whose hint suggests `--resume`; nothing is launched.
+    - `--resume` skips the stop and keeps the old behaviour: `{"launched": "<appId>", "cold": false}`. A scenario step asks for it with `"cold": false`.
+
+    `mauto terminate <appId>` stops the app on its own and returns `{"terminated": "<appId>"}`.
 
 ### Semantic actions (platform-agnostic mode)
 
@@ -86,16 +96,21 @@ Used to author scenario JSON, evaluate assertions, and assemble result files.
 
 | Verb | Description |
 |------|-------------|
-| `mauto validate <file> [--strict]` | Validate a scenario JSON file against the [scenario schema](schema.md); warns (or, with `--strict`, fails) on actions that cannot replay unattended |
+| `mauto validate <file> [--strict]` | Validate a scenario JSON file against the [scenario schema](schema.md); warns (or, with `--strict`, fails) on actions that cannot replay unattended, and warns on `launch_app` steps that leave `cold` unset |
 | `mauto assert <type> [--target --expected --operator --count --pattern --variable --device]` | Evaluate an assertion; mechanical types are decided by the CLI, visual types are deferred to the agent |
 | `mauto result add-step --run-id --step-id --status [--scenario-id --attempts --screenshot --error-message --observation <type>:<message> --capture <name>=<value>]` | Append a step result to a run; `--observation` and `--capture` are repeatable |
 | `mauto result add-assertion --run-id --step-id --type --pass [--scenario-id --assertion-id --message --expected --actual]` | Record an assertion verdict against a step |
 | `mauto result finalize --run-id [--scenario-id --status --duration --app-version --device-model --api-level --environment --summary]` | Assemble the final [result file](result-schema.md) and auto-harvest memory |
 
-!!! note "`validate` and unsupported actions"
-    Schema-valid is not the same as replayable. Some schema actions are marked `unsupported` in the action catalog: the engine exposes no primitive for them, so no `mauto` verb can execute them and the step cannot replay unattended. By default `validate` still succeeds but adds `data.warnings` (and a `hint`); with `--strict` it fails with `invalid_input` and `data.valid: false`. A scenario with no such actions gets the bare `{"valid": true}`.
+!!! note "`validate` and replay warnings"
+    Schema-valid is not the same as replayable, so `validate` also reports replay warnings in `data.warnings`, with a summarising `hint`. A scenario with nothing to report gets the bare `{"valid": true}`.
 
-    Each warning is `{code: "unsupported_action", action, path, message}` plus `step_id` for steps. `path` is `steps[N]` or `preconditions.device_actions[N]`.
+    Every warning has the shape `{code, action, path, message}`, plus `step_id` for steps. `path` is `steps[N]` (nested steps read `steps[N].sub_steps[M]`) or `preconditions.device_actions[N]`. Warnings are listed in document order, and the `hint` counts them per code, for example `N step(s) leave an optional field unset; set it explicitly — see data.warnings`.
+
+    | Code | Severity | Trigger | Under `--strict` |
+    |---|---|---|---|
+    | `unsupported_action` | blocking | The step or precondition uses an action the action catalog marks `unsupported`: the engine exposes no primitive for it, so no `mauto` verb can run it and it cannot replay unattended. | Fails with `invalid_input` and `data.valid: false` |
+    | `launch_cold_implicit` | advisory | A `launch_app` step leaves `cold` unset and is not the scenario's first top-level step (any launch inside `sub_steps` counts). It restarts the app; set `"cold": false` to resume or `"cold": true` to confirm the restart, and the warning goes away. | Never fails |
 
 !!! note "`result finalize` and memory"
     On finalize, `mauto` auto-harvests typed observations into cross-session memory. This is best-effort: a memory failure never fails an otherwise-successful finalize — it folds into the envelope `hint` instead. See [Cross-Session Memory](../concepts/memory.md).

@@ -15,6 +15,7 @@ const {
   handleSwipe,
   handlePress,
   handleLaunch,
+  handleTerminate,
   handleInstall,
   handleUninstall,
   handleOpenUrl,
@@ -262,6 +263,50 @@ describe('cli handlers', () => {
       });
     });
 
+    describe('mid-flow launch relying on the cold default (#255)', () => {
+      const ADVISORY_HINT = '1 step(s) leave an optional field unset; set it explicitly — see data.warnings';
+      const midLaunch = (s) => {
+        s.steps.push({ id: 'back_to_app', action: 'launch_app', description: 'Return to the app' });
+        return s;
+      };
+      const run = (scenario, opts) => {
+        const file = writeTmp('l.json', JSON.stringify(scenario));
+        const validator = new ScenarioValidator({ schemaPath: SCHEMA_PATH });
+        return handleValidate({ validator }, file, opts);
+      };
+
+      test('advisory only -> ok with the warning and an advisory hint', () => {
+        const { envelope, exitKind } = run(midLaunch(validScenario()));
+        expect(exitKind).toBe('ok');
+        expect(envelope.data.valid).toBe(true);
+        expect(envelope.data.warnings).toHaveLength(1);
+        expect(envelope.data.warnings[0]).toMatchObject({
+          code: 'launch_cold_implicit', path: 'steps[1]', step_id: 'back_to_app',
+        });
+        expect(envelope.hint).toBe(ADVISORY_HINT);
+      });
+
+      test('--strict + advisory only -> still ok', () => {
+        const { envelope, exitKind } = run(midLaunch(validScenario()), { strict: true });
+        expect(exitKind).toBe('ok');
+        expect(envelope.ok).toBe(true);
+        expect(envelope.data.warnings).toHaveLength(1);
+        expect(envelope.hint).toBe(ADVISORY_HINT);
+      });
+
+      test('--strict + unsupported + advisory -> invalid_input carrying both warnings', () => {
+        const s = midLaunch(validScenario());
+        s.steps.push({ id: 'wipe', action: 'clear_app_data', target_package: 'com.example.app', description: 'Clear' });
+        const { envelope, exitKind } = run(s, { strict: true });
+        expect(exitKind).toBe('invalid_input');
+        expect(envelope.data.valid).toBe(false);
+        expect(envelope.data.warnings.map((w) => w.code)).toEqual(['launch_cold_implicit', 'unsupported_action']);
+        expect(envelope.hint).toBe(
+          `1 action(s) cannot replay unattended — see data.warnings; ${ADVISORY_HINT}`
+        );
+      });
+    });
+
     test('invalid scenario -> invalid_input fail, exitKind invalid_input, errors in data', () => {
       const bad = validScenario();
       delete bad.app_package;
@@ -410,21 +455,107 @@ describe('cli handlers', () => {
   });
 
   describe('handleLaunch', () => {
-    test('launches an app and reports the id', async () => {
+    // The cold start itself (terminate, then launch) lives in
+    // DeviceBridge#restartApp; the handler only picks the bridge method.
+    function recordingBridge({ restartError, launchError } = {}) {
       const calls = [];
-      const bridge = { launchApp: async (a) => { calls.push(a); } };
+      return {
+        calls,
+        restartApp: async (a) => { calls.push(['restart', a]); if (restartError) throw restartError; },
+        launchApp: async (a) => { calls.push(['launch', a]); if (launchError) throw launchError; },
+        terminateApp: async (a) => { calls.push(['terminate', a]); },
+      };
+    }
+
+    test('cold-starts by default through restartApp only', async () => {
+      const bridge = recordingBridge();
       const { envelope, exitKind } = await handleLaunch({ deviceBridge: bridge }, 'com.example.app');
       expect(exitKind).toBe('ok');
-      expect(envelope.data).toEqual({ launched: 'com.example.app' });
-      expect(calls).toEqual(['com.example.app']);
+      expect(envelope.data).toEqual({ launched: 'com.example.app', cold: true });
+      expect(bridge.calls).toEqual([['restart', 'com.example.app']]);
+    });
+
+    test('resume launches only and never restarts', async () => {
+      const bridge = recordingBridge();
+      const { envelope, exitKind } = await handleLaunch({ deviceBridge: bridge }, 'com.example.app', { resume: true });
+      expect(exitKind).toBe('ok');
+      expect(envelope.data).toEqual({ launched: 'com.example.app', cold: false });
+      expect(bridge.calls).toEqual([['launch', 'com.example.app']]);
+    });
+
+    test('a restartApp rejection is a device failure envelope carrying its --resume hint', async () => {
+      const err = new Error('device offline');
+      err.hint = 'Could not stop the app before restarting it. Pass --resume to bring it to the front without restarting.';
+      const bridge = recordingBridge({ restartError: err });
+      const { envelope, exitKind } = await handleLaunch({ deviceBridge: bridge }, 'com.example.app');
+      expect(exitKind).toBe('device');
+      expect(envelope.ok).toBe(false);
+      expect(envelope.error.kind).toBe('device');
+      expect(envelope.error.message).toBe('device offline');
+      expect(envelope.hint).toMatch(/--resume/);
+    });
+
+    test('a restartApp rejection from the real bridge reaches the envelope with the --resume hint', async () => {
+      const { DeviceBridge } = require('../../src/device/bridge');
+      const calls = [];
+      const deviceBridge = new DeviceBridge({
+        call: async (tool) => {
+          calls.push(tool);
+          if (tool === 'mobile_terminate_app') throw new Error('device offline');
+          return {};
+        },
+      });
+      const { envelope, exitKind } = await handleLaunch({ deviceBridge }, 'com.example.app');
+      expect(exitKind).toBe('device');
+      expect(envelope.hint).toMatch(/--resume/);
+      expect(calls).toEqual(['mobile_terminate_app']);
+    });
+
+    test('a launch failure is a failure envelope', async () => {
+      const bridge = recordingBridge({ restartError: new Error('no such app') });
+      const { envelope, exitKind } = await handleLaunch({ deviceBridge: bridge }, 'com.example.app');
+      expect(exitKind).toBe('device');
+      expect(envelope.ok).toBe(false);
+      expect(envelope.error.kind).toBe('device');
+      expect(envelope.error.message).toBe('no such app');
     });
 
     test('rejects a missing appId with invalid_input', async () => {
-      const bridge = { launchApp: async () => { throw new Error('should not be called'); } };
+      const bridge = {
+        launchApp: async () => { throw new Error('should not be called'); },
+        restartApp: async () => { throw new Error('should not be called'); },
+      };
       const { envelope, exitKind } = await handleLaunch({ deviceBridge: bridge }, '');
       expect(exitKind).toBe('invalid_input');
       expect(envelope.error.kind).toBe('invalid_input');
       expect(envelope.hint).toBeTruthy();
+    });
+  });
+
+  describe('handleTerminate', () => {
+    test('terminates an app and reports the id', async () => {
+      const calls = [];
+      const bridge = { terminateApp: async (a) => { calls.push(a); } };
+      const { envelope, exitKind } = await handleTerminate({ deviceBridge: bridge }, 'com.example.app');
+      expect(exitKind).toBe('ok');
+      expect(envelope.data).toEqual({ terminated: 'com.example.app' });
+      expect(calls).toEqual(['com.example.app']);
+    });
+
+    test('an engine error is a failure envelope', async () => {
+      const bridge = { terminateApp: async () => { throw new Error('engine said no'); } };
+      const { envelope, exitKind } = await handleTerminate({ deviceBridge: bridge }, 'com.example.app');
+      expect(exitKind).toBe('device');
+      expect(envelope.ok).toBe(false);
+      expect(envelope.error.message).toBe('engine said no');
+    });
+
+    test('rejects a missing appId with invalid_input', async () => {
+      const bridge = { terminateApp: async () => { throw new Error('should not be called'); } };
+      const { envelope, exitKind } = await handleTerminate({ deviceBridge: bridge }, '');
+      expect(exitKind).toBe('invalid_input');
+      expect(envelope.error.kind).toBe('invalid_input');
+      expect(envelope.hint).toMatch(/mauto terminate/);
     });
   });
 
@@ -1999,6 +2130,43 @@ describe('cli handlers', () => {
       selectionStore.write(root, 'persisted-id');
       const seen = await runVerb(['tap', '--at', '1,2'], root);
       expect(seen).toEqual(['persisted-id']);
+    });
+  });
+
+  describe('launch / terminate parsing (buildProgram)', () => {
+    async function runLaunchVerb(argv) {
+      const calls = [];
+      const deviceBridgeFactory = async () => ({
+        bridge: {
+          restartApp: async (a) => { calls.push(['restart', a]); },
+          terminateApp: async (a) => { calls.push(['terminate', a]); },
+          launchApp: async (a) => { calls.push(['launch', a]); },
+        },
+        close: async () => {},
+      });
+      const emitted = [];
+      const program = buildProgram({
+        projectRoot: fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-launch-')),
+        deviceBridgeFactory,
+        emit: (r) => { emitted.push(r); },
+      });
+      await program.parseAsync(['node', 'mauto', ...argv]);
+      return { calls, emitted };
+    }
+
+    test('`launch <id>` cold-starts', async () => {
+      const { calls } = await runLaunchVerb(['launch', 'com.x']);
+      expect(calls).toEqual([['restart', 'com.x']]);
+    });
+
+    test('`launch <id> --resume` only launches', async () => {
+      const { calls } = await runLaunchVerb(['launch', 'com.x', '--resume']);
+      expect(calls).toEqual([['launch', 'com.x']]);
+    });
+
+    test('`terminate <id>` only terminates', async () => {
+      const { calls } = await runLaunchVerb(['terminate', 'com.x']);
+      expect(calls).toEqual([['terminate', 'com.x']]);
     });
   });
 

@@ -122,7 +122,7 @@ describe('daemon workspace marker (#156, #236)', () => {
     expect(paths.commandNamesWorkspace('vim bin/mauto-session-daemon.js', '/a/proj', SALT)).toBe(false);
   });
 
-  test('a legacy --project-root daemon (0.28.0-0.33.0) is still recognised, end-anchored, salt or not', () => {
+  test('a legacy --project-root daemon (0.28.0-0.35.0) is still recognised, end-anchored, salt or not', () => {
     expect(paths.LEGACY_DAEMON_ROOT_FLAG).toBe('--project-root');
     for (const salt of [SALT, null]) {
       expect(paths.commandNamesWorkspace(legacy('/a/proj'), '/a/proj', salt)).toBe(true);

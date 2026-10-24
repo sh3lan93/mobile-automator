@@ -90,7 +90,7 @@ describe('pidIdentity bound to a workspace (#156)', () => {
     expect(asked).toBe(root);
   });
 
-  test('a legacy --project-root daemon (0.28.0-0.33.x) is still ours for its own root only (#236)', () => {
+  test('a legacy --project-root daemon (0.28.0-0.35.0) is still ours for its own root only (#236)', () => {
     const legacy = (r) => `node /x/bin/mauto-session-daemon.js --project-root ${r}\n`;
     expect(pidIdentity(process.ppid, { projectRoot: root, readSalt: fixedSalt, execFile: () => legacy(root) })).toBe('ours');
     expect(pidIdentity(process.ppid, { projectRoot: root, readSalt: fixedSalt, execFile: () => legacy('/b/other') })).toBe('foreign');

@@ -332,7 +332,7 @@ the project root and a random per-workspace secret in
 `mobile-automator/.session/marker.salt`, readable only by you, so another user
 who runs `ps` cannot confirm a guessed path by hashing it. Leave that file in
 place: the key is how `session end` recognises this workspace's daemon. Daemons
-started by 0.28.0–0.33.0 end in `--project-root <root>` instead, and are still
+started by 0.28.0–0.35.0 end in `--project-root <root>` instead, and are still
 recognised.
 
 When mobile-automator is installed inside your project (a devDependency or a

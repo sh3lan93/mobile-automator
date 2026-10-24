@@ -217,7 +217,7 @@ After all steps are executed and recorded:
    - `app_version` — from the installed app
    - `environment` — ask the user or use `default_environment` from `mobile-automator/config.json`
    - Do NOT include `device_model`, `api_level`, or `timestamp` in metadata — these belong in the result schema, not the scenario.
-7. Validate the assembled scenario with `mauto validate <path>` against `mauto schema scenario`. If it returns `data.warnings`, revise the scenario to drop those steps, or tell the user the step needs manual handling.
+7. Validate the assembled scenario with `mauto validate <path>` against `mauto schema scenario`. If it returns `data.warnings`, revise the scenario to drop each `unsupported_action` step, or tell the user the step needs manual handling; for a `launch_cold_implicit` entry, set the step's `cold` explicitly (`false` when it means returning to the already-open app, `true` when it means a restart).
 8. Save to `mobile-automator/scenarios/<scenario_id>.json`.
 9. Present summary:
    > "Scenario saved: `mobile-automator/scenarios/<scenario_id>.json`
@@ -230,7 +230,8 @@ Translate user language to `mauto` verbs and schema actions:
 
 | User says | Action | `mauto` verb | Notes |
 |---|---|---|---|
-| "open the app", "launch" | `launch_app` | `mauto press` / launch the app under test | |
+| "open the app", "launch" | `launch_app` | `mauto launch <appId>` | Restarts the app by default, so the step starts on its initial screen |
+| "return to the app", "resume the app" | `launch_app` with `"cold": false` | `mauto launch <appId> --resume` | Brings a running app to the front in its current state; without `"cold": false`, `launch_app` restarts the app |
 | "uninstall", "remove the app" | (precondition device_action) | uninstall before scenario | Use `device_actions` in `preconditions` block |
 | "clear app data", "fresh install" | `uninstall_app` + `install_app` | reset app to a clean state before scenario | Set `app_state: "fresh_install"` in preconditions and add `device_actions`: `uninstall_app` then `install_app`. Both fields are optional: `target_package` defaults to the config app package ({{app_package}}) and `install_app` `value` defaults to the build installed in pre-flight; set them only to override those |
 | "tap", "click", "press" | `tap` | `mauto tap --at <x,y>` | Resolve `<x,y>` from `mauto elements` |
@@ -268,7 +269,7 @@ Translate user language to `mauto` verbs and schema actions:
    - Create assertion step using mapped type from Pass 2b
    - Evaluate via `mauto assert <type> ...` and record with appropriate fields
 6. Combine steps and assertions into ordered scenario
-7. Generate scenario JSON, then `mauto validate <path>` (if it returns `data.warnings`, revise the scenario to drop those steps, or tell the user the step needs manual handling)
+7. Generate scenario JSON, then `mauto validate <path>` (if it returns `data.warnings`, revise the scenario to drop each `unsupported_action` step, or tell the user the step needs manual handling; for a `launch_cold_implicit` entry, set the step's `cold` explicitly)
 ```
 
 ### Detecting and Encoding Patterns

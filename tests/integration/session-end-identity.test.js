@@ -97,7 +97,7 @@ test("this workspace's own unresponsive daemon is still escalated", async () => 
   }
 });
 
-// #236: daemons started by 0.28.0-0.33.x carry `--project-root <root>`. After an
+// #236: daemons started by 0.28.0-0.35.0 carry `--project-root <root>`. After an
 // upgrade, a stuck one must still be recognised as ours and force-stopped.
 test("a legacy --project-root daemon for this workspace is still escalated (#236)", async () => {
   const mine = workspace();

@@ -63,7 +63,7 @@ Record each observation with `mauto result add-step --observation <type>:<messag
 
 - Read the JSON scenario file from `mobile-automator/scenarios/`.
 - **Validate schema version:** Read the `$schema_version` field. It must be `"2.1"`. If absent or unrecognized, report an error and halt.
-- Validate the scenario with `mauto validate <path>` against `mauto schema scenario`. If the result lists `data.warnings`, each entry (its `path` names the step or precondition) uses an action that is unsupported on this run: report it as unsupported in the result, as described under "Not mechanically executable" below, and do not substitute a gesture for it.
+- Validate the scenario with `mauto validate <path>` against `mauto schema scenario`. If the result lists `data.warnings`, branch on each entry's `code` (its `path` names the step or precondition): `unsupported_action` means it uses an action that is unsupported on this run: report it as unsupported in the result, as described under "Not mechanically executable" below, and do not substitute a gesture for it. `launch_cold_implicit` is advisory: replay that step exactly as written (a step that does not set `"cold": false` is a cold start, per the step table below) and do not substitute your own reading of what the author meant; record the warning's `message` as a `state_context` observation on that step (`mauto result add-step ... --observation state_context:<message>`).
 - Read the `metadata` to compare the recording environment against the current execution environment. Note any differences (different device, API level, environment).
 
 ### 3. Verify Preconditions
@@ -104,7 +104,7 @@ For each step in the scenario:
 
 | Action | `mauto` verb | Notes |
 |---|---|---|
-| `launch_app` | `mauto launch <appId>` | `appId` from config / scenario metadata |
+| `launch_app` | `mauto launch <appId>` (add `--resume` when the step sets `"cold": false`) | `appId` from config / scenario metadata. Restarts the app so the step starts on its initial screen; `--resume` brings a running app to the front in its current state instead |
 | `tap` | `mauto tap --at <x,y>` | Find element first via `mauto elements` |
 | `long_press` | `mauto long-press --at <x,y>` | Optional `--duration <ms>` |
 | `double_tap` | `mauto double-tap --at <x,y>` | |
@@ -117,6 +117,8 @@ For each step in the scenario:
 | `wait_for_element_gone` | Poll `mauto elements` | Repeat until the element is absent or timeout |
 | `wait_for_loading_complete` | Poll `mauto screenshot <path>` + visual check | Wait for loading indicators ({{loading_indicators}}) to be absent |
 | `capture_value` | `mauto elements` | Extract text from the target element, store in the `capture_to` variable |
+
+A plain `mauto launch` resets the screen, not app data: `app_state: "fresh_install"` is still the data reset. It returns `{launched, cold}`; an app that is not running is simply started. If the app cannot be stopped, the launch fails with a device error and a hint to use `--resume` — record the step as failed rather than retrying blindly.
 
 **Precondition `device_actions`** (run before the step replay, from the scenario's `preconditions`):
 
@@ -301,7 +303,7 @@ State context:
 When asked to run multiple scenarios:
 
 - Execute them sequentially.
-- Reset app state between scenarios (force-close and relaunch).
+- Each scenario's leading `launch_app` restarts the app (`mauto launch <appId>`), so a scenario never inherits the previous one's screen and needs no separate reset. Use `app_state: "fresh_install"` only when app data must be wiped too.
 - If the user says "run all smoke tests", filter scenarios by the `smoke` tag.
 - If the user says "run all", execute every scenario in `mobile-automator/scenarios/`.
 - Present a combined summary at the end with a per-scenario breakdown.

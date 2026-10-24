@@ -101,6 +101,18 @@ describe('E2E harness — targets resolve through the CLI evaluator', () => {
     expect(runnerSrc).toMatch(/require\(\s*path\.join\(\s*pkgDir\s*,\s*['"]src\/assertion\/evaluator\.js['"]\s*\)\s*\)/);
   });
 
+  // #255: the launch_app step-field → flag mapping lives in the action
+  // catalog; the harness derives it from the install under test, never
+  // restating a flag literal of its own.
+  test('run-e2e.mjs loads src/device/action-catalog.js from the install under test', () => {
+    expect(runnerSrc).toMatch(/require\(\s*path\.join\(\s*pkgDir\s*,\s*['"]src\/device\/action-catalog\.js['"]\s*\)\s*\)/);
+  });
+
+  test('the executor derives launch flags from the catalog, with no literal --resume', () => {
+    expect(executorSrc).toMatch(/catalog\.stepFlagsFor\(\s*['"]launch_app['"]/);
+    expect(executorSrc).not.toMatch(/--resume/);
+  });
+
   test('no file under sample-app/scripts defines its own matcher', () => {
     const OWN_MATCHER = [
       /\bfunction\s+(matches|findFirst)\b/,
