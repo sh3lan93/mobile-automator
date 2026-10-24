@@ -10,7 +10,7 @@ const { ok, fail, render, exitCodeFor } = require('./output/envelope');
 const selectionStore = require('./device/selection');
 const { engineHint } = require('./device/engine-hints');
 const { ScenarioValidator } = require('./scenario/validator');
-const { findReplayWarnings, isBlocking } = require('./scenario/replayability');
+const { findReplayWarnings, summarize } = require('./scenario/replayability');
 const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
 const { ResultStore } = require('./result/store');
 const { OBSERVATION_TYPES, parseObservation, parseCapture, parseBool } = require('./result/flags');
@@ -245,24 +245,14 @@ function handleValidate({ validator }, file, opts = {}) {
 
   const result = validator.validate(scenario);
   if (result.valid) {
-    // Schema-valid is not the same as replayable: surface actions the catalog
-    // marks unsupported (#166) and mid-flow launches that now cold-start
-    // (#255). Warnings by default so existing scenarios keep validating;
-    // `--strict` fails only on the blocking ones.
+    // Schema-valid is not the same as replayable: surface findings by default
+    // so existing scenarios keep validating; `--strict` fails only on the
+    // blocking ones. Codes, severity and wording live in the replayability module.
     const warnings = findReplayWarnings(scenario);
     if (warnings.length === 0) {
       return { envelope: ok({ valid: true }), exitKind: 'ok' };
     }
-    const blocking = warnings.filter(isBlocking);
-    const advisory = warnings.length - blocking.length;
-    const parts = [];
-    if (blocking.length > 0) {
-      parts.push(`${blocking.length} action(s) cannot replay unattended — see data.warnings`);
-    }
-    if (advisory > 0) {
-      parts.push(`${advisory} launch step(s) now cold-start; set "cold" explicitly — see data.warnings`);
-    }
-    const hint = parts.join('; ');
+    const { blocking, hint } = summarize(warnings);
     if (opts.strict && blocking.length > 0) {
       const env = fail('invalid_input', 'scenario uses actions with no execution path', hint);
       env.data = { valid: false, errors: [], warnings };

@@ -1,6 +1,6 @@
 'use strict';
 
-const { findReplayWarnings, isBlocking } = require('../../src/scenario/replayability');
+const { findReplayWarnings, summarize, isBlocking, CODES } = require('../../src/scenario/replayability');
 const { actionsByResolution } = require('../../src/device/action-catalog');
 
 const UNSUPPORTED = actionsByResolution('unsupported');
@@ -168,10 +168,51 @@ describe('findReplayWarnings — launch_cold_default (#255)', () => {
   });
 });
 
-describe('isBlocking', () => {
-  test('only unsupported_action blocks', () => {
+describe('CODES / isBlocking', () => {
+  test.each(Object.entries(CODES))('%s row has blocking, clause and message', (code, row) => {
+    expect(typeof row.blocking).toBe('boolean');
+    expect(typeof row.clause(2)).toBe('string');
+    expect(typeof row.message({ action: 'x', field: 'f', value: false })).toBe('string');
+    expect(isBlocking({ code })).toBe(row.blocking);
+  });
+
+  test('only unsupported_action blocks; unknown codes do not', () => {
     expect(isBlocking({ code: 'unsupported_action' })).toBe(true);
-    expect(isBlocking({ code: 'launch_cold_default' })).toBe(false);
     expect(isBlocking({ code: 'anything_else' })).toBe(false);
+  });
+});
+
+describe('summarize', () => {
+  const U = { code: 'unsupported_action' };
+  const A = { code: 'launch_cold_default' };
+
+  test('blocking only', () => {
+    const r = summarize([U, U]);
+    expect(r.blocking).toEqual([U, U]);
+    expect(r.hint).toBe('2 action(s) cannot replay unattended — see data.warnings');
+  });
+
+  test('advisory only', () => {
+    const r = summarize([A]);
+    expect(r.blocking).toEqual([]);
+    expect(r.hint).toBe(`${CODES.launch_cold_default.clause(1)} — see data.warnings`);
+  });
+
+  test('both: blocking clause first, counts per code', () => {
+    const r = summarize([A, U, A, A]);
+    expect(r.blocking).toEqual([U]);
+    expect(r.hint).toBe(
+      `1 action(s) cannot replay unattended — see data.warnings; ${CODES.launch_cold_default.clause(3)} — see data.warnings`
+    );
+  });
+
+  test('unknown code is non-blocking with a generic clause', () => {
+    const r = summarize([{ code: 'brand_new' }]);
+    expect(r.blocking).toEqual([]);
+    expect(r.hint).toBe('1 brand_new finding(s) — see data.warnings');
+  });
+
+  test('empty -> no blocking, empty hint', () => {
+    expect(summarize([])).toEqual({ blocking: [], hint: '' });
   });
 });

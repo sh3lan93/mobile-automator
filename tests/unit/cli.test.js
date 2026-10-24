@@ -264,7 +264,7 @@ describe('cli handlers', () => {
     });
 
     describe('mid-flow launch relying on the cold default (#255)', () => {
-      const ADVISORY_HINT = '1 launch step(s) now cold-start; set "cold" explicitly — see data.warnings';
+      const ADVISORY_HINT = '1 step(s) leave an optional field unset; set it explicitly — see data.warnings';
       const midLaunch = (s) => {
         s.steps.push({ id: 'back_to_app', action: 'launch_app', description: 'Return to the app' });
         return s;

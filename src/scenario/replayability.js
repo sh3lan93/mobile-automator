@@ -7,40 +7,49 @@
 //   but the action catalog marks some `unsupported`. mobile-mcp exposes no
 //   primitive for them, so no `mauto` verb can run them and the step can never
 //   replay unattended. Blocking: `mauto validate --strict` fails on it.
-// - `launch_cold_default` (#255): `launch_app` now cold-starts the app unless
-//   the step sets `cold: false`. A launch after the first step that leaves
-//   `cold` unset may have been written to return to the running app, and now
-//   restarts it instead. Advisory: it never fails `--strict`.
+// - `launch_cold_default` (#255): a catalog `stepFlags` entry marked
+//   `warnWhenUnset`. A step after the first that leaves the marked field to its
+//   schema default is ambiguous about the author's intent. Advisory: it never
+//   fails `--strict`.
 //
 // The unsupported set is derived from the catalog, never restated here, so it
 // moves when an action gains (or loses) a device primitive.
 
 const { actionsByResolution, implicitStepFlags } = require('../device/action-catalog');
 
-function unsupportedFinding(action, path, stepId) {
-  const f = {
-    code: 'unsupported_action',
-    action,
-    path,
-    message: `${action} has no execution path in mauto; this step cannot replay unattended`,
-  };
+// Severity and wording for every finding code live here and nowhere else.
+// `blocking` is the `--strict` policy: only a step that cannot run at all fails
+// validation. `clause(n)` is the hint fragment for n findings of the code;
+// `message(f)` is the per-finding text. Advisory codes other than
+// `unsupported_action` are the catalog's `warnWhenUnset` markers.
+const CODES = {
+  unsupported_action: {
+    blocking: true,
+    clause: (n) => `${n} action(s) cannot replay unattended`,
+    message: (f) => `${f.action} has no execution path in mauto; this step cannot replay unattended`,
+  },
+  launch_cold_default: {
+    blocking: false,
+    clause: (n) => `${n} step(s) leave an optional field unset; set it explicitly`,
+    message: (f) => `${f.action} now cold-starts the app (stops it first); `
+      + `set "${f.field}": ${JSON.stringify(f.value)} if this step means to return to the running app`,
+  },
+};
+
+function makeFinding(code, fields, path, stepId) {
+  const f = { code, action: fields.action, path, message: CODES[code].message(fields) };
   if (stepId !== undefined) f.step_id = stepId;
   return f;
 }
 
+function unsupportedFinding(action, path, stepId) {
+  return makeFinding('unsupported_action', { action }, path, stepId);
+}
+
 // One advisory per catalog marker: the step leaves `sf.field` unset, so the
-// field's default decides. The catalog owns action/field/value; the wording is
-// built from them.
+// field's default decides. The catalog owns action/field/value.
 function implicitFinding(action, sf, path, stepId) {
-  const f = {
-    code: sf.warnWhenUnset,
-    action,
-    path,
-    message: `${action} now cold-starts the app (stops it first); `
-      + `set "${sf.field}": ${JSON.stringify(sf.value)} if this step means to return to the running app`,
-  };
-  if (stepId !== undefined) f.step_id = stepId;
-  return f;
+  return makeFinding(sf.warnWhenUnset, { action, field: sf.field, value: sf.value }, path, stepId);
 }
 
 // Walks a step list depth-first in document order, descending into each
@@ -83,14 +92,29 @@ function findReplayWarnings(scenario) {
   return findings;
 }
 
-// The `--strict` policy: only a step that cannot run at all fails validation.
 function isBlocking(finding) {
-  return finding.code === 'unsupported_action';
+  const row = CODES[finding.code];
+  return Boolean(row && row.blocking);
 }
 
-const CODES = {
-  unsupported_action: { blocking: true },
-  launch_cold_default: { blocking: false },
-};
+// Splits findings into the `--strict`-failing ones and builds the one-line
+// hint: blocking clauses first, then advisories, one clause per code (counted),
+// each ending `— see data.warnings`. A code without a CODES row is advisory
+// with a generic clause.
+function summarize(findings) {
+  const blocking = findings.filter(isBlocking);
+  const counts = new Map();
+  for (const f of findings) counts.set(f.code, (counts.get(f.code) || 0) + 1);
+  const clauseOf = (code, n) => {
+    const row = CODES[code];
+    return `${row && row.clause ? row.clause(n) : `${n} ${code} finding(s)`} — see data.warnings`;
+  };
+  const codes = [...counts.keys()];
+  const ordered = [
+    ...codes.filter((c) => CODES[c] && CODES[c].blocking),
+    ...codes.filter((c) => !(CODES[c] && CODES[c].blocking)),
+  ];
+  return { blocking, hint: ordered.map((c) => clauseOf(c, counts.get(c))).join('; ') };
+}
 
-module.exports = { findReplayWarnings, isBlocking, CODES };
+module.exports = { findReplayWarnings, summarize, isBlocking, CODES };
