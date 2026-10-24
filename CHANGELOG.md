@@ -36,6 +36,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   error whose hint suggests `--resume`, so `cold: true` in a successful
   result always means the app was restarted
   ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
+- **`LICENSE` now ships the complete Apache-2.0 text.** It previously held
+  only the 644-byte short notice, and that stub is what the npm tarball
+  carried. The appendix copyright line reads `Copyright 2025 mobile-automator
+  contributors`, the project's current name, replacing "Mobile QA Skills
+  Contributors". A new lint guard, `tests/lint/license-full-text.test.js`,
+  pins the file to the canonical apache.org text, with the copyright line the
+  only free line
+  ([#160](https://github.com/sh3lan93/mobile-automator/issues/160)).
 
 ### ✨ Added
 
