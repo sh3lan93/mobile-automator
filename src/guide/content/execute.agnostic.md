@@ -230,7 +230,7 @@ When neither attempt succeeds, fail the step and add a detailed observation desc
 
 ## Multi-Scenario Execution
 
-- Execute scenarios sequentially; reset app state (force-close and relaunch) between them.
+- Execute scenarios sequentially. Each scenario's leading `launch_app` restarts the app (`mauto launch <appId>`), so a scenario never inherits the previous one's screen and needs no separate reset; use `app_state: "fresh_install"` only when app data must be wiped too.
 - "run all smoke tests" → filter by the `smoke` tag. "run all" → every scenario in `mobile-automator/scenarios/`.
 - Present a combined summary with a per-scenario breakdown.
 

@@ -20,6 +20,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   actions. The execute and generate guides now branch on each warning's
   `code` instead of treating every entry as an unsupported action ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
 
+### 🐛 Fixed
+
+- **The execute guides still told agents to "force-close and relaunch"
+  between scenarios** without naming a verb. They now say each scenario's
+  leading `launch_app` already restarts the app, so back-to-back scenarios
+  need no separate reset, and `app_state: "fresh_install"` is only for
+  wiping app data ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
+
 ---
 
 ## [0.34.0]

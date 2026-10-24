@@ -303,7 +303,7 @@ State context:
 When asked to run multiple scenarios:
 
 - Execute them sequentially.
-- Reset app state between scenarios (force-close and relaunch).
+- Each scenario's leading `launch_app` restarts the app (`mauto launch <appId>`), so a scenario never inherits the previous one's screen and needs no separate reset. Use `app_state: "fresh_install"` only when app data must be wiped too.
 - If the user says "run all smoke tests", filter scenarios by the `smoke` tag.
 - If the user says "run all", execute every scenario in `mobile-automator/scenarios/`.
 - Present a combined summary at the end with a per-scenario breakdown.
