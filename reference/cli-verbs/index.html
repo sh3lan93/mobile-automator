@@ -1820,7 +1820,7 @@
 <tbody>
 <tr>
 <td><code>mauto validate &lt;file&gt; [--strict]</code></td>
-<td>Validate a scenario JSON file against the <a href="../schema/">scenario schema</a>; warns (or, with <code>--strict</code>, fails) on actions that cannot replay unattended</td>
+<td>Validate a scenario JSON file against the <a href="../schema/">scenario schema</a>; warns (or, with <code>--strict</code>, fails) on actions that cannot replay unattended, and warns on <code>launch_app</code> steps that leave <code>cold</code> unset</td>
 </tr>
 <tr>
 <td><code>mauto assert &lt;type&gt; [--target --expected --operator --count --pattern --variable --device]</code></td>
@@ -1841,9 +1841,33 @@
 </tbody>
 </table>
 <div class="admonition note">
-<p class="admonition-title"><code>validate</code> and unsupported actions</p>
-<p>Schema-valid is not the same as replayable. Some schema actions are marked <code>unsupported</code> in the action catalog: the engine exposes no primitive for them, so no <code>mauto</code> verb can execute them and the step cannot replay unattended. By default <code>validate</code> still succeeds but adds <code>data.warnings</code> (and a <code>hint</code>); with <code>--strict</code> it fails with <code>invalid_input</code> and <code>data.valid: false</code>. A scenario with no such actions gets the bare <code>{"valid": true}</code>.</p>
-<p>Each warning is <code>{code: "unsupported_action", action, path, message}</code> plus <code>step_id</code> for steps. <code>path</code> is <code>steps[N]</code> or <code>preconditions.device_actions[N]</code>.</p>
+<p class="admonition-title"><code>validate</code> and replay warnings</p>
+<p>Schema-valid is not the same as replayable, so <code>validate</code> also reports replay warnings in <code>data.warnings</code>, with a summarising <code>hint</code>. A scenario with nothing to report gets the bare <code>{"valid": true}</code>.</p>
+<p>Every warning has the shape <code>{code, action, path, message}</code>, plus <code>step_id</code> for steps. <code>path</code> is <code>steps[N]</code> (nested steps read <code>steps[N].sub_steps[M]</code>) or <code>preconditions.device_actions[N]</code>. Warnings are listed in document order, and the <code>hint</code> counts them per code, for example <code>N step(s) leave an optional field unset; set it explicitly — see data.warnings</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Severity</th>
+<th>Trigger</th>
+<th>Under <code>--strict</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>unsupported_action</code></td>
+<td>blocking</td>
+<td>The step or precondition uses an action the action catalog marks <code>unsupported</code>: the engine exposes no primitive for it, so no <code>mauto</code> verb can run it and it cannot replay unattended.</td>
+<td>Fails with <code>invalid_input</code> and <code>data.valid: false</code></td>
+</tr>
+<tr>
+<td><code>launch_cold_implicit</code></td>
+<td>advisory</td>
+<td>A <code>launch_app</code> step leaves <code>cold</code> unset and is not the scenario's first top-level step (any launch inside <code>sub_steps</code> counts). It restarts the app; set <code>"cold": false</code> to resume or <code>"cold": true</code> to confirm the restart, and the warning goes away.</td>
+<td>Never fails</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="admonition note">
 <p class="admonition-title"><code>result finalize</code> and memory</p>
