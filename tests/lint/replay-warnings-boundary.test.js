@@ -24,3 +24,32 @@ describe('replay warnings boundary', () => {
     expect(replaySrc).not.toContain('"cold"');
   });
 });
+
+// Guides (#255): reasoning is pulled, so the guides are where an agent learns
+// what a finding means. Execute must replay literally -- an agent that
+// substitutes its own reading of "intent" makes replay nondeterministic.
+const CONTENT = path.join(SRC, 'guide', 'content');
+const read = (name) => fs.readFileSync(path.join(CONTENT, name), 'utf8');
+const lineNaming = (text, code) => text.split('\n').filter((l) => l.includes(code));
+
+describe('replay warnings in guides', () => {
+  const executeGuides = ['execute.aware.md', 'execute.agnostic.md'];
+  const allGuides = [...executeGuides, 'generate.aware.md', 'generate.agnostic.md'];
+
+  test.each(executeGuides)('%s replays an implicit-launch warning literally', (file) => {
+    const lines = lineNaming(read(file), 'launch_cold_implicit');
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines) {
+      expect(line).toContain('state_context');
+      expect(line).not.toContain('--resume');
+      expect(line.toLowerCase()).not.toMatch(/\bintent\b/);
+    }
+  });
+
+  test.each(allGuides.flatMap((f) => Object.keys(CODES).map((c) => [f, c])))(
+    '%s names the code %s',
+    (file, code) => {
+      expect(read(file)).toContain(code);
+    }
+  );
+});
