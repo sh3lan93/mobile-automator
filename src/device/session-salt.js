@@ -19,21 +19,22 @@ const crypto = require('crypto');
 
 const paths = require('./session-paths');
 
-const SALT_RE = /^[0-9a-f]{64}$/;
-
-// The salt, or null when it is missing, unreadable or malformed. A null salt
-// means no keyed daemon can be proven this workspace's (commandNamesWorkspace).
+// The salt, or null when it is missing, unreadable or empty. Any other content
+// IS the salt: an HMAC key needs no particular shape, so there is no
+// "malformed" salt to detect or repair. A null salt means no keyed daemon can
+// be proven this workspace's (commandNamesWorkspace).
 function readSalt(projectRoot, { fs = realFs } = {}) {
   try {
-    const salt = String(fs.readFileSync(paths.saltPath(projectRoot), 'utf8')).trim();
-    return SALT_RE.test(salt) ? salt : null;
+    return String(fs.readFileSync(paths.saltPath(projectRoot), 'utf8')).trim() || null;
   } catch (_) {
     return null;
   }
 }
 
-// The salt, created if this workspace has none yet. Throws only when it can
-// neither read nor create one (an unwritable workspace).
+// The salt, created if this workspace has none yet. Throws when it can neither
+// read nor create one: an unwritable workspace, or an empty salt file, which
+// only a hand edit makes and which is never replaced behind a running
+// daemon's back.
 //
 // Race-free without a lock: the salt is written and fsynced in full to a
 // private temp file, then link(2)ed to its final name. link never replaces an
@@ -61,27 +62,16 @@ function ensureSalt(projectRoot, { fs = realFs } = {}) {
     } finally {
       fs.closeSync(fd);
     }
-    // Two attempts: a malformed salt (a truncated file from some other tool, a
-    // hand edit) is replaced once. It already matched no daemon, so replacing
-    // it orphans nothing.
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      try {
-        fs.linkSync(tmp, file);
-        return salt;
-      } catch (err) {
-        if (err.code !== 'EEXIST') throw err;
-        const theirs = readSalt(projectRoot, { fs });
-        if (theirs) return theirs; // another process won the race
-        try {
-          fs.unlinkSync(file);
-        } catch (_) {
-          /* raced with another repair */
-        }
-      }
+    try {
+      fs.linkSync(tmp, file);
+      return salt;
+    } catch (err) {
+      if (err.code !== 'EEXIST') throw err;
     }
+    // Another process won the race; its salt was complete before it was linked.
     const theirs = readSalt(projectRoot, { fs });
     if (theirs) return theirs;
-    throw new Error(`could not create the session marker salt at ${file}`);
+    throw new Error(`the session marker salt at ${file} is empty; delete it and retry`);
   } finally {
     try {
       fs.unlinkSync(tmp);
@@ -91,4 +81,4 @@ function ensureSalt(projectRoot, { fs = realFs } = {}) {
   }
 }
 
-module.exports = { ensureSalt, readSalt, SALT_RE };
+module.exports = { ensureSalt, readSalt };

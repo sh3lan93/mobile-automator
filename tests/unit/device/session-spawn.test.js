@@ -34,13 +34,13 @@ function fakeLog(stdio = ['ignore', 55, 55]) {
 const SALT = 'a'.repeat(64);
 
 describe('session-spawn', () => {
-  test('a salt that cannot be written spawns the daemon with no marker, and says so (#236)', async () => {
-    let captured = null;
+  test('a salt that cannot be written fails the spawn, and says so (#236)', async () => {
+    let spawned = false;
     const log = fakeLog();
     const ok = await spawnDaemon({
       projectRoot: '/proj',
-      spawn: (cmd, args, opts) => {
-        captured = { cmd, args, opts };
+      spawn: () => {
+        spawned = true;
         return fakeChild();
       },
       openLog: () => log,
@@ -50,11 +50,11 @@ describe('session-spawn', () => {
       isAlive: async () => true,
       pollMs: 1,
     });
-    expect(ok).toBe(true);
-    // No marker: `session end` then reports the daemon rather than group-kill
-    // a process it cannot tie to this workspace.
-    expect(captured.args).toEqual([paths.argvPath('/proj', DAEMON_BIN)]);
+    // Never an unmarked daemon: `session end` could not force-stop it.
+    expect(ok).toBe(false);
+    expect(spawned).toBe(false);
     expect(log.writes.join('')).toMatch(/marker salt/);
+    expect(log.closes).toBe(1);
   });
 
   test('spawns the daemon bin detached + unref, passing project root via env', async () => {

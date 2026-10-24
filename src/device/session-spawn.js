@@ -71,8 +71,9 @@ async function spawnDaemon({
     // env stays the daemon's source of truth, but `ps` can only see argv. It is
     // salted with the workspace's own secret, so `ps` readers cannot confirm a
     // guessed path by hashing it (#236). A salt we can neither read nor create
-    // leaves the marker off rather than failing the spawn: `session end` then
-    // reports that daemon instead of group-killing it, the safe direction. No
+    // fails the spawn, like a bin that cannot exec: a daemon with no marker is
+    // one `session end` can never force-stop, and a workspace that cannot hold
+    // the salt cannot hold the daemon's own lock and pidfile either. No
     // argument names the project path, since `ps` shows argv to every user on
     // the host (#236): an in-project bin is passed relative to the root
     // (paths.argvPath), which only resolves because the child's cwd IS that
@@ -81,11 +82,12 @@ async function spawnDaemon({
     // validateOutputPath only allows screenshots under its own process.cwd()
     // (or the temp dir). Pin it to the project root so the allow-list never
     // depends on which subdirectory happened to spawn the daemon (#214).
-    let marker = [];
+    let marker;
     try {
       marker = paths.daemonArgv(projectRoot, ensureSalt(projectRoot));
     } catch (err) {
-      log.write(`mauto: could not create the session marker salt; daemon spawned without a workspace marker: ${err && err.message ? err.message : err}\n`);
+      log.write(`mauto: daemon not spawned: could not create the session marker salt: ${err && err.message ? err.message : err}\n`);
+      return false;
     }
     const cwd = projectRoot;
     const child = spawn(process.execPath, [paths.argvPath(cwd, DAEMON_BIN), ...marker], {

@@ -49,13 +49,22 @@ describe('session-salt (#236)', () => {
     expect(readSalt(tmpRoot())).toBeNull();
   });
 
-  test('readSalt is null when the salt is malformed', () => {
+  test('any non-empty content is the salt: there is no "malformed" salt to repair', () => {
     const root = tmpRoot();
     fs.mkdirSync(paths.sessionDir(root), { recursive: true });
-    for (const bad of ['', 'xyz', 'a'.repeat(63), 'A'.repeat(64), 'g'.repeat(64), 'a'.repeat(65)]) {
-      fs.writeFileSync(paths.saltPath(root), bad);
-      expect(readSalt(root)).toBeNull();
-    }
+    fs.writeFileSync(paths.saltPath(root), 'xyz\n');
+    expect(readSalt(root)).toBe('xyz');
+    expect(ensureSalt(root)).toBe('xyz');
+  });
+
+  test('an empty salt file reads as null and is never silently replaced', () => {
+    const root = tmpRoot();
+    fs.mkdirSync(paths.sessionDir(root), { recursive: true });
+    fs.writeFileSync(paths.saltPath(root), '  \n');
+    expect(readSalt(root)).toBeNull();
+    expect(() => ensureSalt(root)).toThrow(/is empty; delete it/);
+    expect(fs.readFileSync(paths.saltPath(root), 'utf8')).toBe('  \n');
+    expect(fs.readdirSync(paths.sessionDir(root))).toEqual([paths.SALT_NAME]);
   });
 
   test('losing the link race (EEXIST) returns the winner\'s salt and cleans up', () => {
