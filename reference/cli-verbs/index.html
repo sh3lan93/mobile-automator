@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -31,10 +31,10 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -1759,8 +1759,12 @@
 <td>Double-tap at coordinates <strong>(new in 0.21.0)</strong></td>
 </tr>
 <tr>
-<td><code>mauto launch &lt;appId&gt;</code></td>
-<td>Launch an installed app by package/bundle id <strong>(new in 0.21.0)</strong></td>
+<td><code>mauto launch &lt;appId&gt; [--resume]</code></td>
+<td>Launch an installed app by package/bundle id. Restarts the app if it is running, so it opens on its initial screen; <code>--resume</code> brings a running app to the front in its current state instead <strong>(new in 0.21.0; cold start by default since 0.34.0)</strong></td>
+</tr>
+<tr>
+<td><code>mauto terminate &lt;appId&gt;</code></td>
+<td>Stop a running app by package/bundle id <strong>(new in 0.34.0)</strong></td>
 </tr>
 <tr>
 <td><code>mauto install &lt;path&gt;</code></td>
@@ -1783,6 +1787,16 @@
 <div class="admonition tip">
 <p class="admonition-title">New in v0.21.0</p>
 <p>Seven device verbs were added in <strong>v0.21.0</strong>: <code>long-press</code>, <code>double-tap</code>, <code>launch</code>, <code>install</code>, <code>uninstall</code>, <code>open-url</code>, and <code>orientation</code>.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title"><code>launch</code> cold-starts by default (0.34.0)</p>
+<p><code>mauto launch &lt;appId&gt;</code> stops the app, then launches it, so a scenario's <code>launch_app</code> step starts on the app's initial screen even when a previous run left the app open (<a href="https://github.com/sh3lan93/mobile-automator/issues/255">#255</a>). It resets the screen, not app data — use the <code>app_state: "fresh_install"</code> precondition for that.</p>
+<ul>
+<li>Default result: <code>{"launched": "&lt;appId&gt;", "cold": true}</code>. An app that is not running is simply started.</li>
+<li>If the app cannot be stopped, the launch fails with a <code>device</code> error whose hint suggests <code>--resume</code>; nothing is launched.</li>
+<li><code>--resume</code> skips the stop and keeps the old behaviour: <code>{"launched": "&lt;appId&gt;", "cold": false}</code>. A scenario step asks for it with <code>"cold": false</code>.</li>
+</ul>
+<p><code>mauto terminate &lt;appId&gt;</code> stops the app on its own and returns <code>{"terminated": "&lt;appId&gt;"}</code>.</p>
 </div>
 <h3 id="semantic-actions-platform-agnostic-mode">Semantic actions (platform-agnostic mode)<a class="headerlink" href="#semantic-actions-platform-agnostic-mode" title="Permanent link">&para;</a></h3>
 <p>In platform-agnostic mode, <code>mauto press</code> also resolves four <strong>semantic actions</strong> to per-platform mechanics at replay time:</p>
@@ -2133,10 +2147,10 @@ mechanics.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
       
     
   </body>

@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -31,10 +31,10 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -1276,6 +1276,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#cold" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cold
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#retry_policy" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2054,6 +2065,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#cold" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cold
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#retry_policy" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2395,9 +2417,10 @@
 <p>Each step's <code>action</code> field is one of these values: the <strong>14 core actions</strong> documented below, plus <strong>4 semantic actions</strong> available in platform-agnostic (<code>mode: "platform-agnostic"</code>) scenarios — <code>press_back</code>, <code>dismiss_keyboard</code>, <code>grant_permission</code>, and <code>deny_permission</code> — which resolve to the right per-platform mechanics at replay time.</p>
 <p>Note that <code>clear_app_data</code> is accepted by the schema but is <strong>not mechanically executable</strong> — the underlying automation engine exposes no primitive for it, so a scenario using it cannot replay unattended. The same applies to the <code>enable_wifi</code> and <code>disable_wifi</code> precondition device actions.</p>
 <h4 id="1-launch_app">1. launch_app<a class="headerlink" href="#1-launch_app" title="Permanent link">&para;</a></h4>
-<p>Launch the app under test on the device.</p>
+<p>Launch the app under test on the device. By default the app is restarted first, so the step starts on its initial screen even if the app was already running. This resets the screen, not app data (use <code>app_state: "fresh_install"</code> for that).</p>
 <p><strong>Fields:</strong>
-- <code>action</code> — <code>"launch_app"</code></p>
+- <code>action</code> — <code>"launch_app"</code>
+- <code>cold</code> <em>(optional, boolean, default <code>true</code>)</em> — set <code>false</code> to bring a running app to the front in its current state instead of restarting it (<code>mauto launch --resume</code>)</p>
 <p><strong>Example:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"launch_app"</span><span class="p">,</span>
@@ -2598,6 +2621,15 @@
 <span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Dismiss the promo banner if it appears"</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Promo banner close button"</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">"optional"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="p">}</span>
+</code></pre></div>
+<h4 id="cold">cold<a class="headerlink" href="#cold" title="Permanent link">&para;</a></h4>
+<p><code>launch_app</code> only. If <code>true</code> (the default), the app is stopped before it is launched, so the step starts on its initial screen. Set <code>false</code> to resume a running app in its current state. Default: <code>true</code></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"return_to_app"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"launch_app"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Return to the app where the user left it"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"cold"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
 <span class="p">}</span>
 </code></pre></div>
 <h4 id="retry_policy">retry_policy<a class="headerlink" href="#retry_policy" title="Permanent link">&para;</a></h4>
@@ -3204,10 +3236,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
       
     
   </body>
