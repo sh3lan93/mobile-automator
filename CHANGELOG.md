@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.35.0]
+
+### ✨ Added
+
+- **`mauto validate` flags launch steps that leave `cold` unset.** A
+  `launch_app` step after the scenario's first step (or inside `sub_steps`)
+  that leaves `cold` unset gets a `launch_cold_implicit` entry in
+  `data.warnings` and a hint, because it is ambiguous whether the author
+  meant to return to the running app or to restart it. Setting `cold` either
+  way silences it. The warning is advisory: `--strict` still fails only on
+  unsupported actions. The execute and generate guides branch on each
+  warning's `code` instead of treating every entry as an unsupported action;
+  execute replays each step exactly as written ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
+
+### 🐛 Fixed
+
+- **The execute guides still told agents to "force-close and relaunch"
+  between scenarios** without naming a verb. They now say each scenario's
+  leading `launch_app` already restarts the app, so back-to-back scenarios
+  need no separate reset, and `app_state: "fresh_install"` is only for
+  wiping app data ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
+- **Two high-severity advisories failed the production audit gate.** A
+  lockfile refresh moves `body-parser` (GHSA-27r3-jxmh-p828) and `zod`
+  (GHSA-mrhx-c7xc-m3w5) to patched releases; no `package.json` range
+  changed.
+
+---
+
 ## [0.34.0]
 
 ### 🔧 Changed

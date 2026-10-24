@@ -62,7 +62,7 @@ Record each observation with `mauto result add-step --observation <type>:<messag
    - If the install fails because a different build is already on the device, uninstall it with `mauto uninstall <appId>` (the app identifier from `mobile-automator/config.json` — `android_package` / `ios_bundle_id`), install again, and report that app data was wiped — a scenario whose preconditions assume existing app state may now fail for that reason.
    - State which path you took before continuing.
 5. **Validate schema version:** read the `$schema_version` field; it must be `"2.1"`. If absent or unrecognized, report an error and halt.
-6. Validate the scenario with `mauto validate <path>` against `mauto schema scenario`. If the result lists `data.warnings`, each entry (its `path` names the step or precondition) uses an action that is unsupported on this run: report it as unsupported in the result (see "Not mechanically executable" under step execution) and do not substitute a gesture for it.
+6. Validate the scenario with `mauto validate <path>` against `mauto schema scenario`. If the result lists `data.warnings`, branch on each entry's `code` (its `path` names the step or precondition): `unsupported_action` means it uses an action that is unsupported on this run: report it as unsupported in the result (see "Not mechanically executable" under step execution) and do not substitute a gesture for it. `launch_cold_implicit` is advisory: replay that step exactly as written (a step that does not set `"cold": false` is a cold start, per the step table below) and do not substitute your own reading of what the author meant; record the warning's `message` as a `state_context` observation on that step (`mauto result add-step ... --observation state_context:<message>`).
 
 **Precondition `device_actions`** (from the scenario's `preconditions`, run before step replay):
 
@@ -230,7 +230,7 @@ When neither attempt succeeds, fail the step and add a detailed observation desc
 
 ## Multi-Scenario Execution
 
-- Execute scenarios sequentially; reset app state (force-close and relaunch) between them.
+- Execute scenarios sequentially. Each scenario's leading `launch_app` restarts the app (`mauto launch <appId>`), so a scenario never inherits the previous one's screen and needs no separate reset; use `app_state: "fresh_install"` only when app data must be wiped too.
 - "run all smoke tests" → filter by the `smoke` tag. "run all" → every scenario in `mobile-automator/scenarios/`.
 - Present a combined summary with a per-scenario breakdown.
 

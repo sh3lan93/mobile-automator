@@ -96,16 +96,21 @@ Used to author scenario JSON, evaluate assertions, and assemble result files.
 
 | Verb | Description |
 |------|-------------|
-| `mauto validate <file> [--strict]` | Validate a scenario JSON file against the [scenario schema](schema.md); warns (or, with `--strict`, fails) on actions that cannot replay unattended |
+| `mauto validate <file> [--strict]` | Validate a scenario JSON file against the [scenario schema](schema.md); warns (or, with `--strict`, fails) on actions that cannot replay unattended, and warns on `launch_app` steps that leave `cold` unset |
 | `mauto assert <type> [--target --expected --operator --count --pattern --variable --device]` | Evaluate an assertion; mechanical types are decided by the CLI, visual types are deferred to the agent |
 | `mauto result add-step --run-id --step-id --status [--scenario-id --attempts --screenshot --error-message --observation <type>:<message> --capture <name>=<value>]` | Append a step result to a run; `--observation` and `--capture` are repeatable |
 | `mauto result add-assertion --run-id --step-id --type --pass [--scenario-id --assertion-id --message --expected --actual]` | Record an assertion verdict against a step |
 | `mauto result finalize --run-id [--scenario-id --status --duration --app-version --device-model --api-level --environment --summary]` | Assemble the final [result file](result-schema.md) and auto-harvest memory |
 
-!!! note "`validate` and unsupported actions"
-    Schema-valid is not the same as replayable. Some schema actions are marked `unsupported` in the action catalog: the engine exposes no primitive for them, so no `mauto` verb can execute them and the step cannot replay unattended. By default `validate` still succeeds but adds `data.warnings` (and a `hint`); with `--strict` it fails with `invalid_input` and `data.valid: false`. A scenario with no such actions gets the bare `{"valid": true}`.
+!!! note "`validate` and replay warnings"
+    Schema-valid is not the same as replayable, so `validate` also reports replay warnings in `data.warnings`, with a summarising `hint`. A scenario with nothing to report gets the bare `{"valid": true}`.
 
-    Each warning is `{code: "unsupported_action", action, path, message}` plus `step_id` for steps. `path` is `steps[N]` or `preconditions.device_actions[N]`.
+    Every warning has the shape `{code, action, path, message}`, plus `step_id` for steps. `path` is `steps[N]` (nested steps read `steps[N].sub_steps[M]`) or `preconditions.device_actions[N]`. Warnings are listed in document order, and the `hint` counts them per code, for example `N step(s) leave an optional field unset; set it explicitly — see data.warnings`.
+
+    | Code | Severity | Trigger | Under `--strict` |
+    |---|---|---|---|
+    | `unsupported_action` | blocking | The step or precondition uses an action the action catalog marks `unsupported`: the engine exposes no primitive for it, so no `mauto` verb can run it and it cannot replay unattended. | Fails with `invalid_input` and `data.valid: false` |
+    | `launch_cold_implicit` | advisory | A `launch_app` step leaves `cold` unset and is not the scenario's first top-level step (any launch inside `sub_steps` counts). It restarts the app; set `"cold": false` to resume or `"cold": true` to confirm the restart, and the warning goes away. | Never fails |
 
 !!! note "`result finalize` and memory"
     On finalize, `mauto` auto-harvests typed observations into cross-session memory. This is best-effort: a memory failure never fails an otherwise-successful finalize — it folds into the envelope `hint` instead. See [Cross-Session Memory](../concepts/memory.md).

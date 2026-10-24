@@ -10,7 +10,7 @@ const { ok, fail, render, exitCodeFor } = require('./output/envelope');
 const selectionStore = require('./device/selection');
 const { engineHint } = require('./device/engine-hints');
 const { ScenarioValidator } = require('./scenario/validator');
-const { findUnsupportedActions } = require('./scenario/replayability');
+const { findReplayWarnings, summarize } = require('./scenario/replayability');
 const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
 const { ResultStore } = require('./result/store');
 const { OBSERVATION_TYPES, parseObservation, parseCapture, parseBool } = require('./result/flags');
@@ -245,15 +245,15 @@ function handleValidate({ validator }, file, opts = {}) {
 
   const result = validator.validate(scenario);
   if (result.valid) {
-    // Schema-valid is not the same as replayable: surface actions the catalog
-    // marks unsupported. A warning by default so existing scenarios keep
-    // validating; `--strict` makes it a failure (#166).
-    const warnings = findUnsupportedActions(scenario);
+    // Schema-valid is not the same as replayable: surface findings by default
+    // so existing scenarios keep validating; `--strict` fails only on the
+    // blocking ones. Codes, severity and wording live in the replayability module.
+    const warnings = findReplayWarnings(scenario);
     if (warnings.length === 0) {
       return { envelope: ok({ valid: true }), exitKind: 'ok' };
     }
-    const hint = `${warnings.length} action(s) cannot replay unattended — see data.warnings`;
-    if (opts.strict) {
+    const { blocking, hint } = summarize(warnings);
+    if (opts.strict && blocking.length > 0) {
       const env = fail('invalid_input', 'scenario uses actions with no execution path', hint);
       env.data = { valid: false, errors: [], warnings };
       return { envelope: env, exitKind: 'invalid_input' };

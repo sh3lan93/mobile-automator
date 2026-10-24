@@ -63,7 +63,7 @@ Record each observation with `mauto result add-step --observation <type>:<messag
 
 - Read the JSON scenario file from `mobile-automator/scenarios/`.
 - **Validate schema version:** Read the `$schema_version` field. It must be `"2.1"`. If absent or unrecognized, report an error and halt.
-- Validate the scenario with `mauto validate <path>` against `mauto schema scenario`. If the result lists `data.warnings`, each entry (its `path` names the step or precondition) uses an action that is unsupported on this run: report it as unsupported in the result, as described under "Not mechanically executable" below, and do not substitute a gesture for it.
+- Validate the scenario with `mauto validate <path>` against `mauto schema scenario`. If the result lists `data.warnings`, branch on each entry's `code` (its `path` names the step or precondition): `unsupported_action` means it uses an action that is unsupported on this run: report it as unsupported in the result, as described under "Not mechanically executable" below, and do not substitute a gesture for it. `launch_cold_implicit` is advisory: replay that step exactly as written (a step that does not set `"cold": false` is a cold start, per the step table below) and do not substitute your own reading of what the author meant; record the warning's `message` as a `state_context` observation on that step (`mauto result add-step ... --observation state_context:<message>`).
 - Read the `metadata` to compare the recording environment against the current execution environment. Note any differences (different device, API level, environment).
 
 ### 3. Verify Preconditions
@@ -303,7 +303,7 @@ State context:
 When asked to run multiple scenarios:
 
 - Execute them sequentially.
-- Reset app state between scenarios (force-close and relaunch).
+- Each scenario's leading `launch_app` restarts the app (`mauto launch <appId>`), so a scenario never inherits the previous one's screen and needs no separate reset. Use `app_state: "fresh_install"` only when app data must be wiped too.
 - If the user says "run all smoke tests", filter scenarios by the `smoke` tag.
 - If the user says "run all", execute every scenario in `mobile-automator/scenarios/`.
 - Present a combined summary at the end with a per-scenario breakdown.

@@ -10,13 +10,14 @@ const fs = require('fs');
 const path = require('path');
 
 const {
-  ACTION_CATALOG, RESOLUTIONS, primitivesOf, stepFlagsFor,
+  ACTION_CATALOG, RESOLUTIONS, primitivesOf, stepFlagsFor, implicitStepFlags,
 } = require('../../src/device/action-catalog');
 const { MOBILE_MCP_TOOL_NAMES } = require('../../src/device/mobile-mcp-tools');
 const { DeviceBridge } = require('../../src/device/bridge');
 const { ACTION_METHOD } = require('../../src/device/semantic-press');
 const { buildProgram } = require('../../src/cli');
 const { emitBootstrap } = require('../../src/guide/emitter');
+const { CODES } = require('../../src/scenario/replayability');
 const { shippingDocs } = require('./docs-corpus');
 
 const REPO = path.join(__dirname, '..', '..');
@@ -100,6 +101,45 @@ describe('action coverage — schema ↔ catalog ↔ verbs ↔ guide', () => {
       // ...and stepFlagsFor derives it.
       expect(stepFlagsFor(action, { action, [field]: value })).toContain(flag);
       expect(stepFlagsFor(action, { action })).not.toContain(flag);
+    });
+
+    // `warnWhenUnset` markers: an unset field must really mean the no-flag
+    // behaviour, and each marker must name a finding code replayability knows.
+    const markerRows = Object.entries(ACTION_CATALOG).flatMap(([action, def]) =>
+      (def.stepFlags || []).filter((sf) => sf.warnWhenUnset).map((sf) => [action, sf])
+    );
+
+    test('at least one stepFlags entry carries a warnWhenUnset marker', () => {
+      expect(markerRows.length).toBeGreaterThan(0);
+    });
+
+    test.each(markerRows)('%s: warnWhenUnset marker is coherent with schema and CODES', (action, sf) => {
+      const prop = schema.definitions.step.properties[sf.field];
+      expect(prop).toBeDefined();
+      expect(prop).toHaveProperty('default');
+      // The flag fires on the non-default value, so unset == the other behaviour.
+      expect(sf.value).not.toBe(prop.default);
+      expect(Object.keys(CODES)).toContain(sf.warnWhenUnset);
+      expect(CODES[sf.warnWhenUnset].blocking).toBe(false);
+      expect(implicitStepFlags(action, { action })).toEqual([sf]);
+      expect(implicitStepFlags(action, { action, [sf.field]: sf.value })).toEqual([]);
+      expect(implicitStepFlags(action, { action, [sf.field]: !sf.value })).toEqual([]);
+    });
+
+    test('every CODES key other than unsupported_action is a catalog marker', () => {
+      const markers = markerRows.map(([, sf]) => sf.warnWhenUnset);
+      for (const code of Object.keys(CODES)) {
+        if (code === 'unsupported_action') continue;
+        expect(markers).toContain(code);
+      }
+    });
+
+    test('implicitStepFlags returns [] for unknown actions, no markers, non-object steps', () => {
+      expect(implicitStepFlags('no_such_action', {})).toEqual([]);
+      expect(implicitStepFlags('tap', { action: 'tap' })).toEqual([]);
+      expect(implicitStepFlags('launch_app', undefined)).toEqual([]);
+      expect(implicitStepFlags('launch_app', null)).toEqual([]);
+      expect(implicitStepFlags('launch_app', 'x')).toEqual([]);
     });
 
     test('stepFlagsFor returns [] for actions without stepFlags or unknown actions', () => {
