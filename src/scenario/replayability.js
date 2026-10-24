@@ -15,7 +15,7 @@
 // The unsupported set is derived from the catalog, never restated here, so it
 // moves when an action gains (or loses) a device primitive.
 
-const { actionsByResolution } = require('../device/action-catalog');
+const { actionsByResolution, implicitStepFlags } = require('../device/action-catalog');
 
 function unsupportedFinding(action, path, stepId) {
   const f = {
@@ -28,24 +28,19 @@ function unsupportedFinding(action, path, stepId) {
   return f;
 }
 
-function coldLaunchFinding(path, stepId) {
+// One advisory per catalog marker: the step leaves `sf.field` unset, so the
+// field's default decides. The catalog owns action/field/value; the wording is
+// built from them.
+function implicitFinding(action, sf, path, stepId) {
   const f = {
-    code: 'launch_cold_default',
-    action: 'launch_app',
+    code: sf.warnWhenUnset,
+    action,
     path,
-    message: 'launch_app now cold-starts the app (stops it first); '
-      + 'set "cold": false if this step means to return to the running app',
+    message: `${action} now cold-starts the app (stops it first); `
+      + `set "${sf.field}": ${JSON.stringify(sf.value)} if this step means to return to the running app`,
   };
   if (stepId !== undefined) f.step_id = stepId;
   return f;
-}
-
-// Only the scenario's first top-level step is unambiguously a fresh start; any
-// other launch that leaves `cold` to the default is worth a second look.
-function reliesOnColdDefault(step, isFirstStep) {
-  return step.action === 'launch_app'
-    && !isFirstStep
-    && !Object.prototype.hasOwnProperty.call(step, 'cold');
 }
 
 // Walks a step list depth-first in document order, descending into each
@@ -58,8 +53,12 @@ function scanSteps(steps, basePath, unsupported, findings, topLevel) {
     if (unsupported.has(step.action)) {
       findings.push(unsupportedFinding(step.action, path, step.id));
     }
-    if (reliesOnColdDefault(step, topLevel && i === 0)) {
-      findings.push(coldLaunchFinding(path, step.id));
+    // Only the scenario's first top-level step is unambiguously a fresh
+    // start; any other step that leaves a marked field unset is worth a look.
+    if (!(topLevel && i === 0)) {
+      for (const sf of implicitStepFlags(step.action, step)) {
+        findings.push(implicitFinding(step.action, sf, path, step.id));
+      }
     }
     scanSteps(step.sub_steps, `${path}.sub_steps`, unsupported, findings, false);
   });
@@ -89,4 +88,9 @@ function isBlocking(finding) {
   return finding.code === 'unsupported_action';
 }
 
-module.exports = { findReplayWarnings, isBlocking };
+const CODES = {
+  unsupported_action: { blocking: true },
+  launch_cold_default: { blocking: false },
+};
+
+module.exports = { findReplayWarnings, isBlocking, CODES };

@@ -31,6 +31,12 @@
 // is the one place the mapping lives; the E2E harness derives the flags via
 // stepFlagsFor and tests/lint/action-coverage.test.js checks the field, the
 // verb's option and both execute guides against it.
+//
+// `warnWhenUnset` on a stepFlags entry names the advisory finding code for a
+// step that leaves `field` unset: the field's schema default selects the
+// no-flag behaviour, so an unset field is ambiguous about the author's intent.
+// implicitStepFlags derives those entries; src/scenario/replayability.js turns
+// them into findings and owns the wording and severity for each code.
 
 const ACTION_CATALOG = {
   // --- direct verbs (engine-backed) --------------------------------------
@@ -63,7 +69,7 @@ const ACTION_CATALOG = {
     resolution: 'verb', verb: 'launch', bridge: 'restartApp',
     primitives: ['mobile_terminate_app', 'mobile_launch_app'], args: ['packageName'],
     // `cold: false` opts out of the restart (#255).
-    stepFlags: [{ field: 'cold', value: false, flag: '--resume' }],
+    stepFlags: [{ field: 'cold', value: false, flag: '--resume', warnWhenUnset: 'launch_cold_default' }],
   },
   install_app: {
     resolution: 'verb', verb: 'install', bridge: 'installApp',
@@ -122,4 +128,16 @@ function stepFlagsFor(action, step) {
   return def.stepFlags.filter((sf) => step[sf.field] === sf.value).map((sf) => sf.flag);
 }
 
-module.exports = { ACTION_CATALOG, RESOLUTIONS, actionsByResolution, primitivesOf, stepFlagsFor };
+// The stepFlags entries carrying a `warnWhenUnset` marker whose field the step
+// leaves unset (not an own property). [] for an unknown action or a non-object
+// step.
+function implicitStepFlags(action, step) {
+  const def = ACTION_CATALOG[action];
+  if (!def || !Array.isArray(def.stepFlags) || !step || typeof step !== 'object') return [];
+  return def.stepFlags.filter((sf) => sf.warnWhenUnset
+    && !Object.prototype.hasOwnProperty.call(step, sf.field));
+}
+
+module.exports = {
+  ACTION_CATALOG, RESOLUTIONS, actionsByResolution, primitivesOf, stepFlagsFor, implicitStepFlags,
+};
