@@ -1,5 +1,6 @@
 'use strict';
 
+const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
@@ -101,5 +102,55 @@ describe('daemon workspace marker (#156, #236)', () => {
     expect(paths.commandNamesWorkspace(`${legacy('/a/proj')}\n`, '/a/proj/')).toBe(true);
     expect(paths.commandNamesWorkspace(legacy('/a/proj2'), '/a/proj')).toBe(false);
     expect(paths.commandNamesWorkspace(legacy('/b/a/proj'), '/a/proj')).toBe(false);
+  });
+});
+
+// #236: `ps` shows every process's argv to every user on the host, so an
+// in-project absolute path (the daemon bin, the engine entry, mobilecli) would
+// put the project path on the command line. The child runs with cwd = root,
+// so the path relative to the root reaches the same file.
+describe('argvPath (#236)', () => {
+  test('a file under the project root is passed relative to it', () => {
+    const bin = '/a/proj/node_modules/mobile-automator/bin/mauto-session-daemon.js';
+    expect(paths.argvPath('/a/proj', bin)).toBe(
+      path.join('node_modules', 'mobile-automator', 'bin', 'mauto-session-daemon.js')
+    );
+  });
+
+  test('a trailing-slash root resolves the same', () => {
+    const bin = '/a/proj/node_modules/mobile-automator/bin/mauto-session-daemon.js';
+    expect(paths.argvPath('/a/proj/', bin)).toBe(paths.argvPath('/a/proj', bin));
+  });
+
+  test('a file outside the root (e.g. a global install) stays absolute', () => {
+    const bin = '/usr/local/lib/node_modules/mobile-automator/bin/mauto-session-daemon.js';
+    expect(paths.argvPath('/a/proj', bin)).toBe(bin);
+  });
+
+  test('a sibling directory sharing the root as a prefix is outside it', () => {
+    expect(paths.argvPath('/a/proj', '/a/proj2/x.js')).toBe('/a/proj2/x.js');
+  });
+
+  test('the root itself is not "under" the root', () => {
+    expect(paths.argvPath('/a/proj', '/a/proj')).toBe('/a/proj');
+  });
+
+  // macOS: os.tmpdir() is under /var, a symlink to /private/var. The project
+  // root may arrive as either spelling and the file as the other; comparing
+  // realpaths keeps the relative form either way.
+  test('a symlinked root still yields the relative form', () => {
+    const real = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-argv-real-')));
+    const link = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-argv-link-')), 'proj');
+    fs.symlinkSync(real, link);
+    fs.mkdirSync(path.join(real, 'bin'));
+    const file = path.join(real, 'bin', 'x.js');
+    fs.writeFileSync(file, '');
+    try {
+      expect(paths.argvPath(link, file)).toBe(path.join('bin', 'x.js'));
+      expect(paths.argvPath(real, path.join(link, 'bin', 'x.js'))).toBe(path.join('bin', 'x.js'));
+    } finally {
+      fs.rmSync(path.dirname(link), { recursive: true, force: true });
+      fs.rmSync(real, { recursive: true, force: true });
+    }
   });
 });

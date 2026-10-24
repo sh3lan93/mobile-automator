@@ -9,8 +9,10 @@
 //   daemon.log    — bounded stdout/stderr capture from the detached daemon
 //
 // These are intentionally side-effect-free so they can be unit-tested without
-// touching the filesystem.
+// touching the filesystem. argvPath is the one exception: it reads realpaths,
+// but never writes.
 
+const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
@@ -112,6 +114,37 @@ function commandNamesWorkspace(command, projectRoot) {
   );
 }
 
+// A path as it should appear in a child's argv (or an env var the child execs
+// by) (#236). `ps` shows every process's argv to every user on the host, and
+// when mobile-automator is installed inside the project (a devDependency, a
+// source checkout) the absolute paths of the daemon bin, the engine entry and
+// mobilecli all contain the project root, which often names a client. A file
+// under the root is returned relative to it; the caller MUST run the child with
+// cwd = projectRoot, or the relative path resolves somewhere else. A file
+// outside the root (a global install) is returned unchanged: it reveals no
+// project path.
+//
+// Both sides are compared by realpath, so a root reached through a symlink
+// (macOS /tmp vs /private/tmp, a symlinked checkout) still gets the relative
+// form, and the result is relative to the REAL root, which is what the child's
+// cwd resolves to. A path that cannot be realpath'd (it does not exist yet, or
+// in unit tests) falls back to path.resolve. "Under" is strict: the root itself
+// is not under it, and a sibling sharing its prefix (/a/proj2 vs /a/proj) is
+// outside it.
+function realOrResolved(p) {
+  try {
+    return fs.realpathSync(p);
+  } catch (_e) {
+    return path.resolve(p);
+  }
+}
+
+function argvPath(projectRoot, absPath) {
+  const rel = path.relative(realOrResolved(projectRoot), realOrResolved(absPath));
+  if (!rel || path.isAbsolute(rel) || rel === '..' || rel.startsWith('..' + path.sep)) return absPath;
+  return rel;
+}
+
 module.exports = {
   SESSION_DIRNAME,
   SOCKET_NAME,
@@ -132,4 +165,5 @@ module.exports = {
   LEGACY_DAEMON_ROOT_FLAG,
   daemonArgv,
   commandNamesWorkspace,
+  argvPath,
 };

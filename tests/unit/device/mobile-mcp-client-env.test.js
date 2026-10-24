@@ -1,5 +1,6 @@
 'use strict';
 const { buildEngineEnv } = require('../../../src/device/mobile-mcp-client');
+const path = require('path');
 
 describe('buildEngineEnv (#212)', () => {
   test('defaults MOBILEMCP_ALLOW_UNSAFE_URLS to "1" when unset', () => {
@@ -88,5 +89,58 @@ describe('buildEngineEnv engine telemetry (#213)', () => {
   test('DO_NOT_TRACK=1 overrides an engine opt-in', () => {
     const env = buildEngineEnv({ baseEnv: { DO_NOT_TRACK: '1', MOBILEMCP_DISABLE_TELEMETRY: '' } });
     expect(env.MOBILEMCP_DISABLE_TELEMETRY).toBe('1');
+  });
+});
+
+// #236: mobile-mcp runs mobilecli by the absolute path it resolves, so an
+// in-project install put the project path on mobilecli's `ps` line. Given the
+// workspace root, buildEngineEnv hands the engine a root-relative
+// MOBILECLI_PATH; the engine runs with cwd = root and spawns mobilecli without
+// a cwd of its own, so the relative path resolves to the same binary.
+describe('buildEngineEnv MOBILECLI_PATH (#236)', () => {
+  const root = '/a/proj';
+  const inRoot = '/a/proj/node_modules/@mobilenext/mobilecli-darwin-arm64/bin/mobilecli';
+
+  test('an in-root binary is passed relative to the root', () => {
+    const env = buildEngineEnv({ baseEnv: {}, projectRoot: root, resolveMobilecli: () => inRoot });
+    expect(env.MOBILECLI_PATH).toBe(
+      path.join('node_modules', '@mobilenext', 'mobilecli-darwin-arm64', 'bin', 'mobilecli')
+    );
+    expect(env.MOBILECLI_PATH).not.toContain(root);
+  });
+
+  test('a binary outside the root (a global install) stays absolute', () => {
+    const outside = '/usr/local/lib/node_modules/mobile-automator/node_modules/x/mobilecli';
+    const env = buildEngineEnv({ baseEnv: {}, projectRoot: root, resolveMobilecli: () => outside });
+    expect(env.MOBILECLI_PATH).toBe(outside);
+  });
+
+  test('a binary directly in the root keeps a separator, so it is never a PATH lookup', () => {
+    const env = buildEngineEnv({ baseEnv: {}, projectRoot: root, resolveMobilecli: () => '/a/proj/mobilecli' });
+    expect(env.MOBILECLI_PATH).toBe(`.${path.sep}mobilecli`);
+  });
+
+  test('a user-set MOBILECLI_PATH always wins', () => {
+    const resolveMobilecli = jest.fn(() => inRoot);
+    const env = buildEngineEnv({ baseEnv: { MOBILECLI_PATH: '/opt/mobilecli' }, projectRoot: root, resolveMobilecli });
+    expect(env.MOBILECLI_PATH).toBe('/opt/mobilecli');
+    expect(resolveMobilecli).not.toHaveBeenCalled();
+  });
+
+  test('a throwing resolver leaves it unset, so mobile-mcp reports its own error', () => {
+    const env = buildEngineEnv({
+      baseEnv: {},
+      projectRoot: root,
+      resolveMobilecli: () => {
+        throw new Error('not found');
+      },
+    });
+    expect(env).not.toHaveProperty('MOBILECLI_PATH');
+  });
+
+  test('no projectRoot: no MOBILECLI_PATH key, and the resolver is never asked', () => {
+    const resolveMobilecli = jest.fn(() => inRoot);
+    expect(buildEngineEnv({ baseEnv: {}, resolveMobilecli })).not.toHaveProperty('MOBILECLI_PATH');
+    expect(resolveMobilecli).not.toHaveBeenCalled();
   });
 });

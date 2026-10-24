@@ -81,6 +81,8 @@ describe('session-daemon', () => {
       createCall,
     });
     expect(seen.engine).toBe('legacy');
+    // #236: the engine runs from the root so its argv can be root-relative.
+    expect(seen.projectRoot).toBe(root);
     const handle = JSON.parse(fs.readFileSync(paths.handlePath(root), 'utf8'));
     expect(handle.engine).toBe('legacy');
     expect(handle.engine_source).toBe('config');

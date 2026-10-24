@@ -89,17 +89,58 @@ test("a legacy --project-root daemon for this workspace is still escalated (#236
   }
 });
 
-// #236: `ps` shows argv to every user on the host, so the marker must not
-// carry the workspace path.
-test("the daemon's command line does not reveal the workspace path (#236)", () => {
+// #236: `ps` shows argv to every user on the host, so neither the daemon nor
+// the engine it spawns may carry the workspace path. The stand-in mirrors an
+// in-project install: both scripts live UNDER the workspace, the daemon is
+// started by its argvPath (cwd = workspace) and starts a stand-in engine the
+// same way, as createCall does. Every process in the daemon's group is checked,
+// so an absolute path on either line fails.
+test("no command line in the daemon's process group reveals the workspace path (#236)", async () => {
   const mine = workspace();
-  const daemon = standIn(mine);
+  const bin = path.join(mine, 'node_modules', 'mobile-automator', 'bin', 'mauto-session-daemon.js');
+  const engineEntry = path.join(mine, 'node_modules', '@mobilenext', 'mobile-mcp', 'lib', 'index.js');
+  fs.mkdirSync(path.dirname(bin), { recursive: true });
+  fs.mkdirSync(path.dirname(engineEntry), { recursive: true });
+  fs.writeFileSync(engineEntry, 'setInterval(() => {}, 1000);\n');
+  fs.writeFileSync(
+    bin,
+    [
+      "const { spawn } = require('child_process');",
+      `spawn(process.execPath, [${JSON.stringify(paths.argvPath(mine, engineEntry))}], { cwd: ${JSON.stringify(mine)}, stdio: 'ignore' });`,
+      "process.on('SIGTERM', () => process.exit(0));",
+      'setInterval(() => {}, 1000);',
+      '',
+    ].join('\n')
+  );
+  const daemon = spawn(process.execPath, [paths.argvPath(mine, bin), ...paths.daemonArgv(mine)], {
+    cwd: mine,
+    detached: true,
+    stdio: 'ignore',
+  });
+  daemon.unref();
   try {
-    const line = execFileSync('ps', ['-ww', '-p', String(daemon.pid), '-o', 'command='], { encoding: 'utf8' });
-    expect(line).toMatch(/mauto-session-daemon/);
-    expect(line).not.toContain(mine);
-    expect(line).not.toContain(path.basename(mine));
-    expect(paths.commandNamesWorkspace(line, mine)).toBe(true);
+    const group = () =>
+      execFileSync('ps', ['-ww', '-axo', 'pgid=,command='], { encoding: 'utf8' })
+        .split('\n')
+        .map((l) => l.trim().match(/^(\d+)\s+(.*)$/))
+        .filter((m) => m && Number(m[1]) === daemon.pid)
+        .map((m) => m[2]);
+    // Wait for the stand-in engine to appear, or the check below proves nothing.
+    const deadline = Date.now() + 5000;
+    let lines = group();
+    while (lines.length < 2 && Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 50));
+      lines = group();
+    }
+    expect(lines).toHaveLength(2);
+    expect(lines.some((l) => /mauto-session-daemon/.test(l))).toBe(true);
+    expect(lines.some((l) => l.includes(path.join('mobile-mcp', 'lib', 'index.js')))).toBe(true);
+    for (const line of lines) {
+      expect(line).not.toContain(mine);
+      expect(line).not.toContain(fs.realpathSync(mine));
+      expect(line).not.toContain(path.basename(mine));
+    }
+    expect(paths.commandNamesWorkspace(lines.find((l) => /mauto-session-daemon/.test(l)), mine)).toBe(true);
   } finally {
     killGroup(daemon.pid);
   }

@@ -29,6 +29,7 @@
 // on the right-hand side are the ones mauto would put on the wire, including
 // the `device` makeCall injects (and withholds from NO_DEVICE_TOOLS).
 
+const fs = require('fs');
 const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
 const { StdioClientTransport } = require('@modelcontextprotocol/sdk/client/stdio.js');
 const { resolveServerEntry, makeCall } = require('../../src/device/mobile-mcp-client');
@@ -136,5 +137,27 @@ describe('pinned mobile-mcp engine contract (integration)', () => {
       }
     }
     expect(violations).toEqual([]);
+  });
+});
+
+// #236: buildEngineEnv hands the engine a root-relative MOBILECLI_PATH, computed
+// from mobile-mcp's OWN resolver rather than a copy of its lookup. That reaches
+// into a file the package does not export as API, so an engine bump that moves
+// or renames it must fail here, not silently fall back to an absolute path on
+// every user's `ps` line. Run with MOBILECLI_PATH unset: a set value is
+// returned verbatim and would prove nothing about the lookup.
+describe('pinned mobile-mcp mobilecli resolver (#236)', () => {
+  it('Mobilecli.getMobilecliPath exists and resolves an existing binary', () => {
+    const { Mobilecli } = require('@mobilenext/mobile-mcp/lib/mobilecli.js');
+    expect(typeof Mobilecli.getMobilecliPath).toBe('function');
+    const saved = process.env.MOBILECLI_PATH;
+    delete process.env.MOBILECLI_PATH;
+    try {
+      const resolved = Mobilecli.getMobilecliPath();
+      expect(typeof resolved).toBe('string');
+      expect(fs.statSync(resolved).isFile()).toBe(true);
+    } finally {
+      if (saved !== undefined) process.env.MOBILECLI_PATH = saved;
+    }
   });
 });
