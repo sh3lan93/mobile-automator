@@ -281,7 +281,7 @@ describe('cli handlers', () => {
         expect(envelope.data.valid).toBe(true);
         expect(envelope.data.warnings).toHaveLength(1);
         expect(envelope.data.warnings[0]).toMatchObject({
-          code: 'launch_cold_default', path: 'steps[1]', step_id: 'back_to_app',
+          code: 'launch_cold_implicit', path: 'steps[1]', step_id: 'back_to_app',
         });
         expect(envelope.hint).toBe(ADVISORY_HINT);
       });
@@ -300,7 +300,7 @@ describe('cli handlers', () => {
         const { envelope, exitKind } = run(s, { strict: true });
         expect(exitKind).toBe('invalid_input');
         expect(envelope.data.valid).toBe(false);
-        expect(envelope.data.warnings.map((w) => w.code)).toEqual(['launch_cold_default', 'unsupported_action']);
+        expect(envelope.data.warnings.map((w) => w.code)).toEqual(['launch_cold_implicit', 'unsupported_action']);
         expect(envelope.hint).toBe(
           `1 action(s) cannot replay unattended — see data.warnings; ${ADVISORY_HINT}`
         );

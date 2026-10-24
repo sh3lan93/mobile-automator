@@ -217,7 +217,7 @@ After all steps are executed and recorded:
    - `app_version` — from the installed app
    - `environment` — ask the user or use `default_environment` from `mobile-automator/config.json`
    - Do NOT include `device_model`, `api_level`, or `timestamp` in metadata — these belong in the result schema, not the scenario.
-7. Validate the assembled scenario with `mauto validate <path>` against `mauto schema scenario`. If it returns `data.warnings`, revise the scenario to drop each `unsupported_action` step, or tell the user the step needs manual handling; for a `launch_cold_default` entry, set the step's `cold` explicitly (`false` when it means returning to the already-open app, `true` when it means a restart).
+7. Validate the assembled scenario with `mauto validate <path>` against `mauto schema scenario`. If it returns `data.warnings`, revise the scenario to drop each `unsupported_action` step, or tell the user the step needs manual handling; for a `launch_cold_implicit` entry, set the step's `cold` explicitly (`false` when it means returning to the already-open app, `true` when it means a restart).
 8. Save to `mobile-automator/scenarios/<scenario_id>.json`.
 9. Present summary:
    > "Scenario saved: `mobile-automator/scenarios/<scenario_id>.json`
@@ -269,7 +269,7 @@ Translate user language to `mauto` verbs and schema actions:
    - Create assertion step using mapped type from Pass 2b
    - Evaluate via `mauto assert <type> ...` and record with appropriate fields
 6. Combine steps and assertions into ordered scenario
-7. Generate scenario JSON, then `mauto validate <path>` (if it returns `data.warnings`, revise the scenario to drop each `unsupported_action` step, or tell the user the step needs manual handling; for a `launch_cold_default` entry, set the step's `cold` explicitly)
+7. Generate scenario JSON, then `mauto validate <path>` (if it returns `data.warnings`, revise the scenario to drop each `unsupported_action` step, or tell the user the step needs manual handling; for a `launch_cold_implicit` entry, set the step's `cold` explicitly)
 ```
 
 ### Detecting and Encoding Patterns

@@ -115,7 +115,7 @@ describe('findReplayWarnings', () => {
   });
 });
 
-describe('findReplayWarnings — launch_cold_default (#255)', () => {
+describe('findReplayWarnings — launch_cold_implicit (#255)', () => {
   const launch = (id, extra = {}) => ({ id, action: 'launch_app', ...extra });
 
   test('a launch as the first top-level step is silent', () => {
@@ -126,12 +126,15 @@ describe('findReplayWarnings — launch_cold_default (#255)', () => {
     const w = findReplayWarnings({ steps: [launch('l0'), { id: 't', action: 'tap' }, launch('back')] });
     expect(w).toHaveLength(1);
     expect(w[0]).toMatchObject({
-      code: 'launch_cold_default',
+      code: 'launch_cold_implicit',
       action: 'launch_app',
       path: 'steps[2]',
       step_id: 'back',
     });
-    expect(w[0].message).toMatch(/"cold": false/);
+    expect(w[0].message).toBe(
+      'launch_app leaves "cold" unset, so it restarts the app; set "cold" explicitly '
+      + '(false to return to the running app, true to confirm the restart)'
+    );
   });
 
   test('an explicit cold: true or cold: false is silent', () => {
@@ -145,7 +148,7 @@ describe('findReplayWarnings — launch_cold_default (#255)', () => {
       steps: [launch('l0', { sub_steps: [launch('nested')] })],
     });
     expect(w).toHaveLength(1);
-    expect(w[0]).toMatchObject({ code: 'launch_cold_default', path: 'steps[0].sub_steps[0]', step_id: 'nested' });
+    expect(w[0]).toMatchObject({ code: 'launch_cold_implicit', path: 'steps[0].sub_steps[0]', step_id: 'nested' });
   });
 
   test('mixed with unsupported actions, findings stay in document order', () => {
@@ -161,8 +164,8 @@ describe('findReplayWarnings — launch_cold_default (#255)', () => {
     });
     expect(w.map((x) => [x.code, x.path])).toEqual([
       ['unsupported_action', 'steps[1]'],
-      ['launch_cold_default', 'steps[2].sub_steps[0]'],
-      ['launch_cold_default', 'steps[3]'],
+      ['launch_cold_implicit', 'steps[2].sub_steps[0]'],
+      ['launch_cold_implicit', 'steps[3]'],
       ['unsupported_action', 'preconditions.device_actions[0]'],
     ]);
   });
@@ -184,7 +187,7 @@ describe('CODES / isBlocking', () => {
 
 describe('summarize', () => {
   const U = { code: 'unsupported_action' };
-  const A = { code: 'launch_cold_default' };
+  const A = { code: 'launch_cold_implicit' };
 
   test('blocking only', () => {
     const r = summarize([U, U]);
@@ -195,14 +198,14 @@ describe('summarize', () => {
   test('advisory only', () => {
     const r = summarize([A]);
     expect(r.blocking).toEqual([]);
-    expect(r.hint).toBe(`${CODES.launch_cold_default.clause(1)} — see data.warnings`);
+    expect(r.hint).toBe(`${CODES.launch_cold_implicit.clause(1)} — see data.warnings`);
   });
 
   test('both: blocking clause first, counts per code', () => {
     const r = summarize([A, U, A, A]);
     expect(r.blocking).toEqual([U]);
     expect(r.hint).toBe(
-      `1 action(s) cannot replay unattended — see data.warnings; ${CODES.launch_cold_default.clause(3)} — see data.warnings`
+      `1 action(s) cannot replay unattended — see data.warnings; ${CODES.launch_cold_implicit.clause(3)} — see data.warnings`
     );
   });
 

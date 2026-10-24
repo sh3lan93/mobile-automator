@@ -69,7 +69,7 @@ const ACTION_CATALOG = {
     resolution: 'verb', verb: 'launch', bridge: 'restartApp',
     primitives: ['mobile_terminate_app', 'mobile_launch_app'], args: ['packageName'],
     // `cold: false` opts out of the restart (#255).
-    stepFlags: [{ field: 'cold', value: false, flag: '--resume', warnWhenUnset: 'launch_cold_default' }],
+    stepFlags: [{ field: 'cold', value: false, flag: '--resume', warnWhenUnset: 'launch_cold_implicit' }],
   },
   install_app: {
     resolution: 'verb', verb: 'install', bridge: 'installApp',

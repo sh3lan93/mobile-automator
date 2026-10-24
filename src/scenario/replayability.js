@@ -7,7 +7,7 @@
 //   but the action catalog marks some `unsupported`. mobile-mcp exposes no
 //   primitive for them, so no `mauto` verb can run them and the step can never
 //   replay unattended. Blocking: `mauto validate --strict` fails on it.
-// - `launch_cold_default` (#255): a catalog `stepFlags` entry marked
+// - `launch_cold_implicit` (#255): a catalog `stepFlags` entry marked
 //   `warnWhenUnset`. A step after the first that leaves the marked field to its
 //   schema default is ambiguous about the author's intent. Advisory: it never
 //   fails `--strict`.
@@ -28,11 +28,12 @@ const CODES = {
     clause: (n) => `${n} action(s) cannot replay unattended`,
     message: (f) => `${f.action} has no execution path in mauto; this step cannot replay unattended`,
   },
-  launch_cold_default: {
+  launch_cold_implicit: {
     blocking: false,
     clause: (n) => `${n} step(s) leave an optional field unset; set it explicitly`,
-    message: (f) => `${f.action} now cold-starts the app (stops it first); `
-      + `set "${f.field}": ${JSON.stringify(f.value)} if this step means to return to the running app`,
+    message: (f) => `${f.action} leaves "${f.field}" unset, so it restarts the app; `
+      + `set "${f.field}" explicitly (${JSON.stringify(f.value)} to return to the running app, `
+      + `${JSON.stringify(!f.value)} to confirm the restart)`,
   },
 };
 
