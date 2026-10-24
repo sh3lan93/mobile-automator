@@ -7,6 +7,9 @@
 //   daemon.pid    — pidfile written once the daemon is listening
 //   session.json  — handle describing the live session (device pin, socket, pid)
 //   daemon.log    — bounded stdout/stderr capture from the detached daemon
+//   marker.salt   — per-workspace secret salting the daemon's argv marker
+//                   (#236); created once (session-salt.js), never rotated or
+//                   deleted by any teardown
 //
 // These are intentionally side-effect-free so they can be unit-tested without
 // touching the filesystem. argvPath is the one exception: it reads realpaths,
@@ -23,6 +26,7 @@ const PID_NAME = 'daemon.pid';
 const HANDLE_NAME = 'session.json';
 const LOCK_NAME = 'daemon.lock';
 const LOG_NAME = 'daemon.log';
+const SALT_NAME = 'marker.salt';
 
 // Unix domain socket paths have a hard length limit (~104 bytes on macOS,
 // ~108 on Linux). Deep project roots blow past it, so when the in-workspace
@@ -49,10 +53,11 @@ function socketPath(projectRoot) {
   return path.join(os.tmpdir(), `mauto-${workspaceKey(projectRoot)}.sock`);
 }
 
-// A short, opaque, deterministic name for a workspace: the first 16 hex chars
-// of sha1(resolved project root). It names the tmpdir socket fallback above and
-// the daemon's argv marker below. Changing it moves the socket a running daemon
-// is bound to, so its output is pinned by tests.
+// A short, deterministic name for a workspace: the first 16 hex chars of
+// sha1(resolved project root). It names ONLY the tmpdir socket fallback above.
+// It is unsalted, so anyone who guesses the root can compute it; the daemon's
+// argv marker uses daemonMarkerKey below instead (#236). Changing it moves the
+// socket a running daemon is bound to, so its output is pinned by tests.
 function workspaceKey(projectRoot) {
   return crypto.createHash('sha1').update(path.resolve(projectRoot)).digest('hex').slice(0, 16);
 }
@@ -73,6 +78,12 @@ function handlePath(projectRoot) {
   return path.join(sessionDir(projectRoot), HANDLE_NAME);
 }
 
+// The per-workspace salt for the daemon's argv marker (#236). Read and created
+// by session-salt.js; this module stays free of IO.
+function saltPath(projectRoot) {
+  return path.join(sessionDir(projectRoot), SALT_NAME);
+}
+
 // Exclusive workspace lock acquired BEFORE building the mobile-mcp connection so
 // a double-spawn loser fails fast and exits before it ever spawns a child.
 function lockPath(projectRoot) {
@@ -86,32 +97,44 @@ function lockPath(projectRoot) {
 // workspace's before it signals a process group: a copied workspace (`cp -R`
 // carries daemon.pid) or a recycled pid can name a different live daemon.
 //
-// The marker is the workspace's digest, not its path (#236). `ps` shows every
-// process's argv to every user on the host, and a project path can name a
-// client or an unreleased project. The daemon never reads its argv, so an
-// opaque key identifies the workspace just as well. It exposes nothing new:
-// the same digest already names the tmpdir socket fallback (socketPath).
-// The key is the LAST argument so a match can be anchored at the end.
+// The marker is a SALTED key, not the path (#236). `ps` shows every process's
+// argv to every user on the host, and a project path can name a client or an
+// unreleased project. An unsalted digest would not hide it: another user can
+// guess `/Users/alice/clients/acme-app`, hash it, and compare. So the key is
+// HMAC-SHA256(salt, resolved root), where the salt is a per-workspace secret in
+// .session/marker.salt (mode 0600, session-salt.js). Both inputs are needed:
+//   - the salt makes the key unconfirmable by anyone who cannot read the
+//     workspace;
+//   - the root keeps `cp -R` safe: a copied workspace carries the salt AND
+//     daemon.pid, but its root differs, so the original daemon's key never
+//     names the copy.
+// Losing the salt strands nothing new: it lives beside daemon.pid, so whatever
+// removes one removes the other. The daemon never reads its argv. The key is
+// the LAST argument so a match can be anchored at the end.
 const DAEMON_WORKSPACE_FLAG = '--workspace-key';
 
-// Match-only, never emitted. Daemons started by 0.28.0-0.33.x carry the
+// Match-only, never emitted. Daemons started by 0.28.0-0.33.0 carry the
 // absolute root behind this flag; still recognising them keeps a stuck one
 // force-stoppable by `session end` after an upgrade.
 const LEGACY_DAEMON_ROOT_FLAG = '--project-root';
 
-function daemonArgv(projectRoot) {
-  return [DAEMON_WORKSPACE_FLAG, workspaceKey(projectRoot)];
+function daemonMarkerKey(projectRoot, salt) {
+  return crypto.createHmac('sha256', String(salt)).update(path.resolve(projectRoot)).digest('hex').slice(0, 16);
 }
 
-// Does a `ps -o command=` line name exactly this workspace, by key or by the
-// legacy root? Anchored at the end of the line so `/a/proj` never matches a
-// daemon serving `/a/proj2`, and a key never matches a longer or shorter one.
-function commandNamesWorkspace(command, projectRoot) {
+function daemonArgv(projectRoot, salt) {
+  return [DAEMON_WORKSPACE_FLAG, daemonMarkerKey(projectRoot, salt)];
+}
+
+// Does a `ps -o command=` line name exactly this workspace, by salted key or by
+// the legacy root? The key form needs the workspace's salt: with none (missing
+// or unreadable) no keyed daemon can be proven ours. The legacy form needs no
+// salt. Anchored at the end of the line so `/a/proj` never matches a daemon
+// serving `/a/proj2`, and a key never matches a longer or shorter one.
+function commandNamesWorkspace(command, projectRoot, salt = null) {
   const line = String(command || '').replace(/\s+$/, '');
-  return (
-    line.endsWith(` ${DAEMON_WORKSPACE_FLAG} ${workspaceKey(projectRoot)}`) ||
-    line.endsWith(` ${LEGACY_DAEMON_ROOT_FLAG} ${path.resolve(projectRoot)}`)
-  );
+  if (salt != null && line.endsWith(` ${DAEMON_WORKSPACE_FLAG} ${daemonMarkerKey(projectRoot, salt)}`)) return true;
+  return line.endsWith(` ${LEGACY_DAEMON_ROOT_FLAG} ${path.resolve(projectRoot)}`);
 }
 
 // A path as it should appear in a child's argv (or an env var the child execs
@@ -152,6 +175,7 @@ module.exports = {
   HANDLE_NAME,
   LOCK_NAME,
   LOG_NAME,
+  SALT_NAME,
   SOCKET_PATH_LIMIT,
   sessionDir,
   workspaceSocketPath,
@@ -160,7 +184,9 @@ module.exports = {
   pidFilePath,
   handlePath,
   lockPath,
+  saltPath,
   workspaceKey,
+  daemonMarkerKey,
   DAEMON_WORKSPACE_FLAG,
   LEGACY_DAEMON_ROOT_FLAG,
   daemonArgv,

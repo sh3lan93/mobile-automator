@@ -13,6 +13,7 @@ const childProcess = require('child_process');
 const fs = require('fs');
 
 const paths = require('./session-paths');
+const sessionSalt = require('./session-salt');
 
 // True when a pid is a live process we own. ESRCH => dead; EPERM => alive.
 // cleanStale routes through pidIdentity, which also checks the process's
@@ -73,12 +74,18 @@ function isZombie(
 //   'unknown' - alive but `ps` itself failed (e.g. no `ps` on the host) —
 //               treated as 'ours' by cleanStale: never clean when unsure.
 // `execFile` is injectable for tests; a failure there must never crash the
-// daemon, hence the 'unknown' fallback.
+// daemon, hence the 'unknown' fallback. So is `readSalt` (#236): the marker is
+// HMAC(salt, root), and the salt is read from THIS workspace's .session/, only
+// when a projectRoot is given. A copied workspace has the salt but not the
+// root, so the original's daemon stays 'foreign' to it.
 //
 // cleanStale passes no projectRoot and keeps the binary-level answer: there a
 // wrong 'ours' only means stale files are left alone. `session end` passes one,
 // because there a wrong 'ours' sends a process-group kill (src/device/connection.js).
-function pidIdentity(pid, { execFile = childProcess.execFileSync, projectRoot = null } = {}) {
+function pidIdentity(
+  pid,
+  { execFile = childProcess.execFileSync, projectRoot = null, readSalt = sessionSalt.readSalt } = {}
+) {
   if (!pid || !Number.isInteger(pid)) return 'dead';
   // Our own pid is the in-process daemon (unit tests run startDaemon in the
   // test process, so the lock/pidfile carry the test runner's pid). Never clean
@@ -105,7 +112,7 @@ function pidIdentity(pid, { execFile = childProcess.execFileSync, projectRoot = 
     );
     if (!/mauto-session-daemon/.test(out)) return 'other';
     if (projectRoot == null) return 'ours';
-    return paths.commandNamesWorkspace(out, projectRoot) ? 'ours' : 'foreign';
+    return paths.commandNamesWorkspace(out, projectRoot, readSalt(projectRoot)) ? 'ours' : 'foreign';
   } catch (_) {
     return 'unknown';
   }

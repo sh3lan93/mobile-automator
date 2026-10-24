@@ -2,6 +2,13 @@
 
 const { EventEmitter } = require('events');
 
+// The real ensureSalt writes <root>/mobile-automator/.session/marker.salt, and
+// these tests spawn for a fake '/proj'. Its own behaviour is session-salt.test.js's.
+jest.mock('../../../src/device/session-salt', () => ({
+  ensureSalt: () => 'a'.repeat(64),
+  readSalt: () => 'a'.repeat(64),
+}));
+
 const { spawnDaemon, DAEMON_BIN } = require('../../../src/device/session-spawn');
 const { IGNORED } = require('../../../src/device/session-log');
 const paths = require('../../../src/device/session-paths');
@@ -24,9 +31,35 @@ function fakeLog(stdio = ['ignore', 55, 55]) {
   };
 }
 
+const SALT = 'a'.repeat(64);
+
 describe('session-spawn', () => {
+  test('a salt that cannot be written spawns the daemon with no marker, and says so (#236)', async () => {
+    let captured = null;
+    const log = fakeLog();
+    const ok = await spawnDaemon({
+      projectRoot: '/proj',
+      spawn: (cmd, args, opts) => {
+        captured = { cmd, args, opts };
+        return fakeChild();
+      },
+      openLog: () => log,
+      ensureSalt: () => {
+        throw Object.assign(new Error('EACCES: permission denied'), { code: 'EACCES' });
+      },
+      isAlive: async () => true,
+      pollMs: 1,
+    });
+    expect(ok).toBe(true);
+    // No marker: `session end` then reports the daemon rather than group-kill
+    // a process it cannot tie to this workspace.
+    expect(captured.args).toEqual([paths.argvPath('/proj', DAEMON_BIN)]);
+    expect(log.writes.join('')).toMatch(/marker salt/);
+  });
+
   test('spawns the daemon bin detached + unref, passing project root via env', async () => {
     let captured = null;
+    let saltRoot = null;
     const child = fakeChild();
     const log = fakeLog();
     const spawn = (cmd, args, opts) => {
@@ -40,16 +73,21 @@ describe('session-spawn', () => {
       idleMs: 1234,
       spawn,
       openLog: () => log,
+      ensureSalt: (root) => {
+        saltRoot = root;
+        return SALT;
+      },
       isAlive: async () => true,
       pollMs: 1,
     });
     expect(ok).toBe(true);
+    expect(saltRoot).toBe('/proj');
     expect(captured.cmd).toBe(process.execPath);
     // The workspace rides in argv as an identity marker `ps` can see (#156) —
-    // by digest, never by path, and an in-project bin by its relative path
+    // by a digest salted with the workspace's own salt, never by path, and an in-project bin by its relative path
     // (#236): `ps` is visible to every user on the host. Env stays the
     // daemon's source of truth.
-    expect(captured.args).toEqual([paths.argvPath('/proj', DAEMON_BIN), ...paths.daemonArgv('/proj')]);
+    expect(captured.args).toEqual([paths.argvPath('/proj', DAEMON_BIN), ...paths.daemonArgv('/proj', SALT)]);
     for (const arg of captured.args) expect(arg).not.toContain('/proj');
     expect(captured.opts.detached).toBe(true);
     // The engine inherits the daemon's cwd, and mobile-mcp only lets screenshots

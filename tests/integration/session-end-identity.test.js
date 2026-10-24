@@ -14,6 +14,7 @@ const { endSession } = require('../../src/device/session-end');
 const { pidAlive } = require('../../src/device/process-identity');
 const { waitForDeath } = require('../../src/device/process-reaper');
 const paths = require('../../src/device/session-paths');
+const { ensureSalt, readSalt } = require('../../src/device/session-salt');
 
 jest.setTimeout(15000);
 
@@ -27,9 +28,10 @@ function workspace() {
 // mauto-session-daemon.js followed by the workspace marker — detached like the
 // real one, so it leads its own process group. It never listens, so it can
 // never acknowledge a shutdown: the path that escalates. `argv` defaults to the
-// marker the real spawn emits; a test passes the legacy one to stand in for a
+// marker the real spawn emits, keyed with the workspace's real salt (#236) so
+// `session end` can recognise it; a test passes the legacy one to stand in for a
 // daemon started by an older mauto.
-function standIn(servesRoot, argv = paths.daemonArgv(servesRoot)) {
+function standIn(servesRoot, argv = paths.daemonArgv(servesRoot, ensureSalt(servesRoot))) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-standin-'));
   const bin = path.join(dir, 'mauto-session-daemon.js');
   fs.writeFileSync(bin, "process.on('SIGTERM', () => process.exit(0));\nsetInterval(() => {}, 1000);\n");
@@ -58,6 +60,26 @@ test("a pidfile naming another workspace's live daemon is never signalled", asyn
     fs.writeFileSync(paths.pidFilePath(mine), `${daemon.pid}\n`);
     expect(await endSession(mine)).toEqual({ outcome: 'already_stopped', pid: daemon.pid });
     expect(pidAlive(daemon.pid)).toBe(true);
+  } finally {
+    killGroup(daemon.pid);
+  }
+});
+
+// #236: the marker is HMAC(salt, root). A `cp -R` copies the salt AND
+// daemon.pid, so the salt alone cannot tell the copy from the original; the
+// root it is keyed over can. The original's daemon is never the copy's.
+test("a cp -R'd workspace (salt and pidfile copied) never signals the original's daemon (#236)", async () => {
+  const theirs = workspace();
+  const daemon = standIn(theirs);
+  const mine = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-end-copy-'));
+  try {
+    fs.writeFileSync(paths.pidFilePath(theirs), `${daemon.pid}\n`);
+    fs.cpSync(path.join(theirs, 'mobile-automator'), path.join(mine, 'mobile-automator'), { recursive: true });
+    expect(readSalt(mine)).toBe(readSalt(theirs));
+    expect(await endSession(mine)).toEqual({ outcome: 'already_stopped', pid: daemon.pid });
+    expect(pidAlive(daemon.pid)).toBe(true);
+    // ...while the original still recognises, and escalates, its own daemon.
+    expect(await endSession(theirs)).toEqual({ outcome: 'forced', pid: daemon.pid });
   } finally {
     killGroup(daemon.pid);
   }
@@ -112,7 +134,7 @@ test("no command line in the daemon's process group reveals the workspace path (
       '',
     ].join('\n')
   );
-  const daemon = spawn(process.execPath, [paths.argvPath(mine, bin), ...paths.daemonArgv(mine)], {
+  const daemon = spawn(process.execPath, [paths.argvPath(mine, bin), ...paths.daemonArgv(mine, ensureSalt(mine))], {
     cwd: mine,
     detached: true,
     stdio: 'ignore',
@@ -140,7 +162,7 @@ test("no command line in the daemon's process group reveals the workspace path (
       expect(line).not.toContain(fs.realpathSync(mine));
       expect(line).not.toContain(path.basename(mine));
     }
-    expect(paths.commandNamesWorkspace(lines.find((l) => /mauto-session-daemon/.test(l)), mine)).toBe(true);
+    expect(paths.commandNamesWorkspace(lines.find((l) => /mauto-session-daemon/.test(l)), mine, readSalt(mine))).toBe(true);
   } finally {
     killGroup(daemon.pid);
   }

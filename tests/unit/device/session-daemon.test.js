@@ -7,6 +7,7 @@ const path = require('path');
 const { startDaemon, cleanStale } = require('../../../src/device/session-daemon');
 const sessionClient = require('../../../src/device/session-client');
 const paths = require('../../../src/device/session-paths');
+const { ensureSalt, readSalt } = require('../../../src/device/session-salt');
 
 function tmpRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-daemon-'));
@@ -107,6 +108,15 @@ describe('session-daemon', () => {
     expect(fs.existsSync(paths.handlePath(root))).toBe(false);
     expect(fs.existsSync(paths.pidFilePath(root))).toBe(false);
     expect(fs.existsSync(paths.socketPath(root))).toBe(false);
+  });
+
+  test('stop never deletes the marker salt: it is created once, never rotated (#236)', async () => {
+    const root = tmpRoot();
+    const salt = ensureSalt(root);
+    const { createCall } = makeFakeCreateCall();
+    const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall });
+    await daemon.stop();
+    expect(readSalt(root)).toBe(salt);
   });
 
   test('idle timeout reaps the daemon', async () => {

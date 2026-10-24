@@ -13,6 +13,7 @@ const path = require('path');
 const { cleanStale, startDaemon } = require('../../../src/device/session-daemon');
 const { pidIdentity, isZombie } = require('../../../src/device/process-identity');
 const paths = require('../../../src/device/session-paths');
+const { ensureSalt, readSalt } = require('../../../src/device/session-salt');
 
 function tmpRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-pid-'));
@@ -47,28 +48,56 @@ describe('pidIdentity (#150)', () => {
 // workspace's live daemon.
 describe('pidIdentity bound to a workspace (#156)', () => {
   const root = '/a/proj';
-  const cmd = (r) => `node /x/bin/mauto-session-daemon.js ${paths.daemonArgv(r).join(' ')}\n`;
+  // #236: the marker is salted per workspace; pidIdentity reads this
+  // workspace's salt through the injected readSalt (fixedSalt here).
+  const SALT = 'a'.repeat(64);
+  const fixedSalt = () => SALT;
+  const cmd = (r, salt = SALT) => `node /x/bin/mauto-session-daemon.js ${paths.daemonArgv(r, salt).join(' ')}\n`;
 
   test("a daemon whose command line names this workspace is ours", () => {
-    expect(pidIdentity(process.ppid, { projectRoot: root, execFile: () => cmd(root) })).toBe('ours');
+    expect(pidIdentity(process.ppid, { projectRoot: root, readSalt: fixedSalt, execFile: () => cmd(root) })).toBe('ours');
   });
 
   test("another workspace's daemon is foreign, not ours", () => {
-    expect(pidIdentity(process.ppid, { projectRoot: root, execFile: () => cmd('/b/other') })).toBe('foreign');
+    expect(pidIdentity(process.ppid, { projectRoot: root, readSalt: fixedSalt, execFile: () => cmd('/b/other') })).toBe('foreign');
   });
 
   test('a daemon that names no workspace (an older daemon, an editor on the bin) is foreign', () => {
-    expect(pidIdentity(process.ppid, { projectRoot: root, execFile: () => 'vim bin/mauto-session-daemon.js' })).toBe('foreign');
+    expect(pidIdentity(process.ppid, { projectRoot: root, readSalt: fixedSalt, execFile: () => 'vim bin/mauto-session-daemon.js' })).toBe('foreign');
+  });
+
+  test("a daemon keyed with another workspace's salt is foreign: a cp -R'd workspace has a new root (#236)", () => {
+    // The copy carries the salt AND daemon.pid, but the key is HMAC(salt, root),
+    // so the original daemon's line never names the copy.
+    expect(pidIdentity(process.ppid, { projectRoot: '/b/copy', readSalt: fixedSalt, execFile: () => cmd(root) })).toBe('foreign');
+    expect(pidIdentity(process.ppid, { projectRoot: root, readSalt: () => 'b'.repeat(64), execFile: () => cmd(root) })).toBe('foreign');
+  });
+
+  test('a workspace with no readable salt cannot claim a keyed daemon (#236)', () => {
+    expect(pidIdentity(process.ppid, { projectRoot: root, readSalt: () => null, execFile: () => cmd(root) })).toBe('foreign');
+  });
+
+  test('reads the salt of the workspace it was asked about', () => {
+    let asked;
+    pidIdentity(process.ppid, {
+      projectRoot: root,
+      readSalt: (r) => {
+        asked = r;
+        return SALT;
+      },
+      execFile: () => cmd(root),
+    });
+    expect(asked).toBe(root);
   });
 
   test('a legacy --project-root daemon (0.28.0-0.33.x) is still ours for its own root only (#236)', () => {
     const legacy = (r) => `node /x/bin/mauto-session-daemon.js --project-root ${r}\n`;
-    expect(pidIdentity(process.ppid, { projectRoot: root, execFile: () => legacy(root) })).toBe('ours');
-    expect(pidIdentity(process.ppid, { projectRoot: root, execFile: () => legacy('/b/other') })).toBe('foreign');
+    expect(pidIdentity(process.ppid, { projectRoot: root, readSalt: fixedSalt, execFile: () => legacy(root) })).toBe('ours');
+    expect(pidIdentity(process.ppid, { projectRoot: root, readSalt: fixedSalt, execFile: () => legacy('/b/other') })).toBe('foreign');
   });
 
   test('a process that is not a mauto daemon at all is still other', () => {
-    expect(pidIdentity(process.ppid, { projectRoot: root, execFile: () => 'sleep 120' })).toBe('other');
+    expect(pidIdentity(process.ppid, { projectRoot: root, readSalt: fixedSalt, execFile: () => 'sleep 120' })).toBe('other');
   });
 
   test('without a projectRoot the binary-level answer is unchanged (cleanStale)', () => {
@@ -79,6 +108,7 @@ describe('pidIdentity bound to a workspace (#156)', () => {
     let args;
     pidIdentity(process.ppid, {
       projectRoot: root,
+      readSalt: fixedSalt,
       execFile: (_bin, a) => {
         args = a;
         return cmd(root);
@@ -102,6 +132,17 @@ describe('cleanStale with pid identity (#150)', () => {
     expect(fs.existsSync(paths.socketPath(root))).toBe(false);
     expect(fs.existsSync(paths.lockPath(root))).toBe(false);
     expect(fs.existsSync(paths.pidFilePath(root))).toBe(false);
+  });
+
+  test('cleaning stale files never deletes the marker salt (#236)', () => {
+    const root = tmpRoot();
+    const salt = ensureSalt(root);
+    fs.writeFileSync(paths.lockPath(root), String(process.ppid) + '\n');
+    fs.writeFileSync(paths.pidFilePath(root), '999999999\n');
+    fs.writeFileSync(paths.handlePath(root), '{}');
+
+    expect(cleanStale(root, { execFile: () => 'node /usr/bin/something-else' }).cleaned).toBe(true);
+    expect(readSalt(root)).toBe(salt);
   });
 
   test('a lockfile pointing at an ours pid is respected', () => {
