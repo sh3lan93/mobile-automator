@@ -47,6 +47,25 @@ describe('ScenarioValidator', () => {
     expect(res.errors).toEqual([]);
   });
 
+  // #255: launch_app cold-starts by default; `cold: false` opts out.
+  test('a launch_app step with cold: false is valid', () => {
+    const v = new ScenarioValidator({ schemaPath: SCHEMA_PATH });
+    const s = validScenario();
+    s.steps[0].cold = false;
+    const res = v.validate(s);
+    expect(res.errors).toEqual([]);
+    expect(res.valid).toBe(true);
+  });
+
+  test('a non-boolean cold is invalid', () => {
+    const v = new ScenarioValidator({ schemaPath: SCHEMA_PATH });
+    const s = validScenario();
+    s.steps[0].cold = 'no';
+    const res = v.validate(s);
+    expect(res.valid).toBe(false);
+    expect(res.errors.join(' ')).toMatch(/cold/);
+  });
+
   test('a scenario missing a required top-level field is invalid with readable errors', () => {
     const v = new ScenarioValidator({ schemaPath: SCHEMA_PATH });
     const bad = validScenario();

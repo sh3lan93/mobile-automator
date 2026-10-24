@@ -9,7 +9,10 @@
 const fs = require('fs');
 const path = require('path');
 
-const { ACTION_CATALOG, RESOLUTIONS } = require('../../src/device/action-catalog');
+const {
+  ACTION_CATALOG, RESOLUTIONS, primitivesOf, stepFlagsFor,
+} = require('../../src/device/action-catalog');
+const { MOBILE_MCP_TOOL_NAMES } = require('../../src/device/mobile-mcp-tools');
 const { DeviceBridge } = require('../../src/device/bridge');
 const { ACTION_METHOD } = require('../../src/device/semantic-press');
 const { buildProgram } = require('../../src/cli');
@@ -29,7 +32,8 @@ const deviceActions =
 const schemaActions = new Set([...stepActions, ...deviceActions]);
 
 // Top-level command names registered on the program.
-const verbNames = new Set(buildProgram().commands.map((c) => c.name()));
+const program = buildProgram();
+const verbNames = new Set(program.commands.map((c) => c.name()));
 
 const entries = (resolution) =>
   Object.keys(ACTION_CATALOG).filter((a) => ACTION_CATALOG[a].resolution === resolution);
@@ -55,11 +59,53 @@ describe('action coverage — schema ↔ catalog ↔ verbs ↔ guide', () => {
       const def = ACTION_CATALOG[action];
       // The DeviceBridge method exists...
       expect(typeof DeviceBridge.prototype[def.bridge]).toBe('function');
-      // ...and bridge.js actually wires it to the declared mobile-mcp primitive
-      // (catches a method that calls the wrong/no primitive).
-      expect(bridgeSource).toContain(def.primitive);
+      // ...and bridge.js actually wires it to every declared mobile-mcp
+      // primitive (catches a method that calls the wrong/no primitive), each a
+      // real tool name of the pinned engine.
+      const primitives = primitivesOf(def);
+      expect(primitives.length).toBeGreaterThan(0);
+      for (const primitive of primitives) {
+        expect(bridgeSource).toContain(primitive);
+        expect(MOBILE_MCP_TOOL_NAMES).toContain(primitive);
+      }
       // ...and a `mauto` verb is registered to drive it.
       expect(verbNames).toContain(def.verb);
+    });
+  });
+
+  // A step field that changes how a verb runs (launch_app `cold: false` →
+  // `--resume`, #255) is recorded once in the catalog; the E2E harness derives
+  // the flag from it. Guard that the field, the flag and the guides all agree.
+  describe('stepFlags — step field → verb flag mapping', () => {
+    const rows = Object.entries(ACTION_CATALOG).flatMap(([action, def]) =>
+      (def.stepFlags || []).map((sf) => [action, sf.field, sf.value, sf.flag, def.verb])
+    );
+
+    test('at least launch_app records a step flag', () => {
+      expect(rows.map((r) => r[0])).toContain('launch_app');
+    });
+
+    test.each(rows)('%s: step field `%s` = %p maps to %s', (action, field, value, flag, verb) => {
+      // The field is a real step property...
+      expect(Object.keys(schema.definitions.step.properties)).toContain(field);
+      // ...the flag is a registered option on the verb...
+      const cmd = program.commands.find((c) => c.name() === verb);
+      expect(cmd).toBeDefined();
+      expect(cmd.options.map((o) => o.long)).toContain(flag);
+      // ...both execute guides teach the mapping...
+      for (const guide of [guideAware, guideAgnostic]) {
+        expect(guide).toContain(flag);
+        expect(guide).toContain(`"${field}": ${JSON.stringify(value)}`);
+      }
+      // ...and stepFlagsFor derives it.
+      expect(stepFlagsFor(action, { action, [field]: value })).toContain(flag);
+      expect(stepFlagsFor(action, { action })).not.toContain(flag);
+    });
+
+    test('stepFlagsFor returns [] for actions without stepFlags or unknown actions', () => {
+      expect(stepFlagsFor('tap', { action: 'tap', cold: false })).toEqual([]);
+      expect(stepFlagsFor('no_such_action', {})).toEqual([]);
+      expect(stepFlagsFor('launch_app', undefined)).toEqual([]);
     });
   });
 

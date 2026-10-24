@@ -134,7 +134,8 @@ Low-level device automation primitives for screen interaction, app management, a
 - **Device Control** — Orientation, screen size
 
 **`mauto` verbs and the engine primitives they wrap:**
-- `mauto launch` → `mobile_launch_app` — Launch app on device
+- `mauto launch` → `mobile_terminate_app` + `mobile_launch_app` — Restart app on device (`--resume`: `mobile_launch_app` only)
+- `mauto terminate` → `mobile_terminate_app` — Stop a running app
 - `mauto tap` → `mobile_click_on_screen_at_coordinates` — Tap at coordinates
 - `mauto screenshot` → `mobile_take_screenshot` — Capture screen
 - `mauto elements` → `mobile_list_elements_on_screen` — Get UI elements and coordinates

@@ -10,7 +10,9 @@
 //
 // `resolution` declares the execution contract for each action:
 //   'verb'        — a dedicated one-shot `mauto` verb backed by a DeviceBridge
-//                   method that calls a single mobile-mcp primitive.
+//                   method that calls one or more mobile-mcp primitives
+//                   (`primitive` for one, `primitives` for an ordered sequence;
+//                   read either through primitivesOf).
 //   'semantic'    — invoked via `mauto press <action>`; resolved to per-platform
 //                   mechanics by src/device/semantic-press (see ACTION_METHOD).
 //   'composed'    — no dedicated verb; the agent composes it from existing verbs
@@ -23,6 +25,12 @@
 // For 'verb' entries, `args` documents the mobile-mcp argument keys the bridge
 // method must pass — deliberately explicit because the keys are inconsistent
 // across the engine (launch=packageName, uninstall=bundle_id, install=path).
+//
+// `stepFlags` records a scenario step field that changes how the verb runs:
+// `{ field, value, flag }` means "when step[field] === value, pass flag". This
+// is the one place the mapping lives; the E2E harness derives the flags via
+// stepFlagsFor and tests/lint/action-coverage.test.js checks the field, the
+// verb's option and both execute guides against it.
 
 const ACTION_CATALOG = {
   // --- direct verbs (engine-backed) --------------------------------------
@@ -51,8 +59,11 @@ const ACTION_CATALOG = {
     primitive: 'mobile_press_button', args: ['button'],
   },
   launch_app: {
-    resolution: 'verb', verb: 'launch', bridge: 'launchApp',
-    primitive: 'mobile_launch_app', args: ['packageName'],
+    // Cold start (#255): restartApp terminates, then launches.
+    resolution: 'verb', verb: 'launch', bridge: 'restartApp',
+    primitives: ['mobile_terminate_app', 'mobile_launch_app'], args: ['packageName'],
+    // `cold: false` opts out of the restart (#255).
+    stepFlags: [{ field: 'cold', value: false, flag: '--resume' }],
   },
   install_app: {
     resolution: 'verb', verb: 'install', bridge: 'installApp',
@@ -96,4 +107,19 @@ function actionsByResolution(resolution) {
   return Object.keys(ACTION_CATALOG).filter((a) => ACTION_CATALOG[a].resolution === resolution);
 }
 
-module.exports = { ACTION_CATALOG, RESOLUTIONS, actionsByResolution };
+// The mobile-mcp primitives a 'verb' entry's bridge method calls, in order.
+function primitivesOf(def) {
+  if (!def) return [];
+  if (Array.isArray(def.primitives)) return def.primitives.slice();
+  return def.primitive ? [def.primitive] : [];
+}
+
+// The verb flags a scenario step's fields select for `action`, derived from
+// the entry's `stepFlags`. [] when the action has none or is unknown.
+function stepFlagsFor(action, step) {
+  const def = Object.prototype.hasOwnProperty.call(ACTION_CATALOG, action) ? ACTION_CATALOG[action] : null;
+  if (!def || !Array.isArray(def.stepFlags) || !step || typeof step !== 'object') return [];
+  return def.stepFlags.filter((sf) => step[sf.field] === sf.value).map((sf) => sf.flag);
+}
+
+module.exports = { ACTION_CATALOG, RESOLUTIONS, actionsByResolution, primitivesOf, stepFlagsFor };

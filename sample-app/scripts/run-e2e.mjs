@@ -69,6 +69,10 @@ const evaluator = require(path.join(pkgDir, 'src/assertion/evaluator.js'));
 if (typeof evaluator.findFirst !== 'function' || typeof evaluator.matches !== 'function') {
   die(`${pkgDir} does not export the target matcher (findFirst/matches); it predates the CLI-driven E2E.`);
 }
+const catalog = require(path.join(pkgDir, 'src/device/action-catalog.js'));
+if (typeof catalog.stepFlagsFor !== 'function') {
+  die(`${pkgDir} does not export stepFlagsFor from its action catalog; it predates cold-start launch (#255).`);
+}
 log(`mauto under test: ${fs.realpathSync(bin)} (package ${pkgDir})`);
 
 // --- The engine, validated against the install under test's config schema ---
@@ -183,6 +187,7 @@ async function main() {
         scenario,
         mauto,
         evaluator,
+        catalog,
         workspaceDir: projectDir,
         runId,
         sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),

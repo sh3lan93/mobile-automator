@@ -32,7 +32,7 @@ Any AI agent (Claude Code, Cursor, Gemini CLI, Copilot, and more) drives the wor
 
 The deterministic surface the agent drives. Every verb emits `{ok,data,error,hint,schema_version}`; `--human` is an opt-in readable flag.
 
-- **Device actions:** `elements`, `tap`, `type <text>`, `swipe`, `press <button>`, `screenshot <path>`, `long-press`, `double-tap`, `launch <appId>`, `install <path>`, `uninstall <appId>`, `open-url <url>`, `orientation <portrait|landscape>`
+- **Device actions:** `elements`, `tap`, `type <text>`, `swipe`, `press <button>`, `screenshot <path>`, `long-press`, `double-tap`, `launch <appId>`, `terminate <appId>`, `install <path>`, `uninstall <appId>`, `open-url <url>`, `orientation <portrait|landscape>`
 - **Author & verify:** `validate <file>`, `assert <type>`, `result add-step`, `result finalize`
 - **Workspace:** `setup`, `config get <key>`, `config set <key> <value>`
 - **Reasoning:** `guide <topic>`, `bootstrap`, `schema <name>`

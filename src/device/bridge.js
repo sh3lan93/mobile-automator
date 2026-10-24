@@ -5,6 +5,7 @@ const { normalizeDevices } = require('./device-model');
 const { normalizeCrashes } = require('./crash-model');
 const { resolveSingleDevice } = require('./device-resolver');
 const { centredSwipe } = require('./swipe-geometry');
+const { isAppNotRunning } = require('./app-not-running');
 
 // Thin wrapper over an injected mobile-mcp `call(toolName, args)` function.
 // Returns the agnostic element model and exposes only the primitives the CLI needs.
@@ -141,6 +142,31 @@ class DeviceBridge {
   // Launch an installed app by its package/bundle identifier.
   async launchApp(packageName) {
     return await this._call('mobile_launch_app', { packageName });
+  }
+
+  // Stop a running app by its package/bundle identifier.
+  async terminateApp(packageName) {
+    return await this._call('mobile_terminate_app', { packageName });
+  }
+
+  // Cold start (#255): mobile_launch_app alone brings a running app to the
+  // front with its state kept, so stop it first. "Not running" is the one
+  // terminate failure that still yields a cold start (iOS reports it as an
+  // error; Android does not); anything else is a real fault and propagates,
+  // carrying a hint that names the opt-out.
+  async restartApp(packageName) {
+    try {
+      await this.terminateApp(packageName);
+    } catch (err) {
+      if (!isAppNotRunning(err)) {
+        if (err && typeof err === 'object' && !err.hint) {
+          err.hint =
+            'Could not stop the app before restarting it. Pass --resume to bring it to the front without restarting.';
+        }
+        throw err;
+      }
+    }
+    return await this.launchApp(packageName);
   }
 
   // Install an app from a local artifact (apk/ipa) path.
