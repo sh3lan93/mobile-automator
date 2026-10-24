@@ -28,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   leading `launch_app` already restarts the app, so back-to-back scenarios
   need no separate reset, and `app_state: "fresh_install"` is only for
   wiping app data ([#255](https://github.com/sh3lan93/mobile-automator/issues/255)).
+- **Two high-severity advisories failed the production audit gate.** A
+  lockfile refresh moves `body-parser` (GHSA-27r3-jxmh-p828) and `zod`
+  (GHSA-mrhx-c7xc-m3w5) to patched releases; no `package.json` range
+  changed.
 
 ---
 
