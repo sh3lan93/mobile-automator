@@ -18,10 +18,11 @@
 // decision, whether a `/` opens a regex literal, is delegated to the TypeScript
 // parser (which supplies each regex literal's span), because no character
 // lookback resolves it (`x++ / 2`, `o.return / 2`, `if (x) /re/`) and a misread
-// `/` swallows code, so the guard fails open (#197). `typescript` is already a devDependency (ESLint's type-aware rules
-// need it) and this module is test infrastructure, so package.json's runtime
-// `dependencies` are untouched. The stripper (`stripSource`) yields two views
-// of the file that are aligned character-for-character:
+// `/` swallows code, so the guard fails open (#197). `typescript` is already a
+// devDependency (ESLint's type-aware rules need it) and this module is test
+// infrastructure, so package.json's runtime `dependencies` are untouched. The
+// stripper (`stripSource`) yields two views of the file that are aligned
+// character-for-character:
 //   text  the source with comments removed (string contents intact), used to
 //         READ a specifier out of a call the code view located;
 //   code  the source with comments removed AND string / template-text / regex
