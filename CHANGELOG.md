@@ -7,10 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [0.36.0]
+
+### 🔒 Security
+
+- Cleared GHSA-jm63-cq47-j5jp and GHSA-46jr-4wx8-v453, two
+  `@modelcontextprotocol/server` HTTP-transport advisories accepted in the
+  audit allowlist since 2026-10-20. Every mobile-mcp release through 1.0.12
+  pins the vulnerable `server` 2.0.0 exactly, so only an engine bump could
+  move it: mobile-mcp 1.0.13 brings `server` 2.4.0, and
+  `scripts/audit-allowlist.json` is empty again. Neither was reachable in
+  mauto, which runs the engine over stdio and never starts its HTTP transport
+  ([#248](https://github.com/sh3lan93/mobile-automator/issues/248)).
 
 ### 🔧 Changed
 
+- **The device engine is now `@mobilenext/mobile-mcp@1.0.13`** (was 1.0.5),
+  driving `mobilecli` 1.0.21. User-visible upstream improvements: iOS
+  simulators no longer need a manual agent install, because the engine now
+  installs its on-device agent itself
+  ([mobile-mcp#459](https://github.com/mobile-next/mobile-mcp/issues/459));
+  large UI hierarchies no longer fail with `ENOBUFS`; and on Android the
+  on-device `DeviceServer` now stops when mobilecli's host daemon exits or
+  after 30 idle minutes, though that daemon still outlives the session (see
+  TROUBLESHOOTING.md)
+  ([#248](https://github.com/sh3lan93/mobile-automator/issues/248)).
 - **PR checks now block merges.** The `main-branch` ruleset required no
   status checks, so a PR with every matrix leg red merged as easily as a green
   one. It now requires the checks listed in `.github/required-checks.json`
@@ -28,6 +49,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   matrix forces the list to be updated, and `scripts/apply-ruleset.js` applies
   the file to the ruleset and verifies the result
   ([#249](https://github.com/sh3lan93/mobile-automator/issues/249)).
+
+### 🐛 Fixed
+
+- **`mauto uninstall` keeps working on the new engine.** mobile-mcp 1.0.9
+  renamed `mobile_uninstall_app`'s argument from `bundle_id` to
+  `packageName`, and the engine silently drops a key it does not know, so the
+  old call would have failed on 1.0.13; mauto now sends the new key
+  ([#248](https://github.com/sh3lan93/mobile-automator/issues/248)).
+- **An iOS simulator's crash list no longer reports a false "no crashes".**
+  On macOS 27 hosts the engine returns an empty crash list for a simulator
+  even right after the app crashed (upstream
+  [mobilecli#539](https://github.com/mobile-next/mobilecli/issues/539)).
+  When that list is empty, `mauto crash list` now fails (`device`, exit 2)
+  with a hint to treat the crash status as unknown, and a failed device verb
+  leaves `crashes` out ("could not check") instead of reporting
+  `crashes: []`, which read as "the app is alive"; that case is logged as an
+  expected `info` event, not a `crash.probe_failed` warning on stderr. A list
+  that does contain reports, and Android and real iOS devices, are unchanged
+  ([#248](https://github.com/sh3lan93/mobile-automator/issues/248)).
+- **The missing-iOS-agent hint fires on the new engine's failure, and no
+  longer says the engine cannot install the agent.** mobile-mcp 1.0.13
+  installs the agent itself, so the old "Agent is not installed on the
+  device" message can no longer occur; the hint now matches what a failed
+  automatic install actually reports (`Command failed: … agent install
+  --device <udid>`), which previously got only the generic "Ensure a device
+  or simulator is connected" hint, and still prints the manual
+  `mobilecli agent install` command with that id filled in
+  ([#248](https://github.com/sh3lan93/mobile-automator/issues/248)).
 
 ---
 

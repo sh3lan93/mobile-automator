@@ -107,4 +107,26 @@ function crashTimestampMs(crash) {
   return parsed > 0 ? parsed : null;
 }
 
-module.exports = { normalizeCrashes, crashTimestampMs };
+// The engine bug behind the one platform where an empty crash list is not
+// evidence of "no crash": an iOS simulator on a macOS 27 host (mobilecli#539).
+const MOBILECLI_ISSUE_539 = 'https://github.com/mobile-next/mobilecli/issues/539';
+
+// Thrown by DeviceBridge#listCrashes when the engine's answer cannot be trusted.
+// Typed (in the shape of device-resolver.js's DeviceResolutionError) so the
+// failure probe can record it as the expected condition it is rather than as a
+// broken engine, and so the `crash` verb maps it onto the `device` envelope.
+class CrashListUnverifiableError extends Error {
+  constructor() {
+    super(
+      'The device engine cannot confirm the absence of crashes on an iOS simulator: it reports none even after a crash.'
+    );
+    this.name = 'CrashListUnverifiableError';
+    this.kind = 'device';
+    this.code = 'crash_list_unverifiable';
+    this.hint =
+      `On an iOS simulator an empty crash list is not evidence that the app did not crash (upstream bug ${MOBILECLI_ISSUE_539}). ` +
+      'Treat the crash status as unknown, and check that the app is still running by other means (e.g. `mauto elements` or a screenshot).';
+  }
+}
+
+module.exports = { normalizeCrashes, crashTimestampMs, CrashListUnverifiableError };

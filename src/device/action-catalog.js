@@ -24,7 +24,7 @@
 //
 // For 'verb' entries, `args` documents the mobile-mcp argument keys the bridge
 // method must pass — deliberately explicit because the keys are inconsistent
-// across the engine (launch=packageName, uninstall=bundle_id, install=path).
+// across the engine (launch=packageName, uninstall=packageName, install=path).
 //
 // `stepFlags` records a scenario step field that changes how the verb runs:
 // `{ field, value, flag }` means "when step[field] === value, pass flag". This
@@ -77,7 +77,7 @@ const ACTION_CATALOG = {
   },
   uninstall_app: {
     resolution: 'verb', verb: 'uninstall', bridge: 'uninstallApp',
-    primitive: 'mobile_uninstall_app', args: ['bundle_id'],
+    primitive: 'mobile_uninstall_app', args: ['packageName'],
   },
   open_url: {
     resolution: 'verb', verb: 'open-url', bridge: 'openUrl',

@@ -1,0 +1,1 @@
+[{"processName":"android.os.Parcel","timestamp":"2026-10-25 17:57:48.683","id":"2026-10-25_17:57:48.683_4398"},{"processName":"android.os.Parcel","timestamp":"2026-10-25 17:57:57.125","id":"2026-10-25_17:57:57.125_4418"},{"processName":"com.android.settings","timestamp":"2026-10-25 17:59:13.430","id":"2026-10-25_17:59:13.430_1166"}]

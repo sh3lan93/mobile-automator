@@ -1,8 +1,8 @@
 'use strict';
 
 const { normalize, parseElements } = require('./element-model');
-const { normalizeDevices } = require('./device-model');
-const { normalizeCrashes } = require('./crash-model');
+const { deviceRecords, normalizeDevices, isIosSimulator } = require('./device-model');
+const { normalizeCrashes, CrashListUnverifiableError } = require('./crash-model');
 const { resolveSingleDevice } = require('./device-resolver');
 const { centredSwipe } = require('./swipe-geometry');
 const { isAppNotRunning } = require('./app-not-running');
@@ -94,18 +94,28 @@ class DeviceBridge {
     return this._call('mobile_swipe_on_screen', args);
   }
 
-  // Platform ('android'/'ios') of the connected device. Uses the pinned id when
-  // one was provided, else the single auto-resolved device.
+  // The current device's record (id/name/platform/state/type): the pinned id
+  // when one was provided, else the single auto-resolved device. A pinned id
+  // that is not listed throws — callers treat that as "could not check".
+  async _currentDevice() {
+    const records = deviceRecords(await this._call('mobile_list_available_devices', {}));
+    const id = this._device || resolveSingleDevice(records); // throws DeviceResolutionError on 0/many
+    const match = records.find((d) => d.id === id);
+    if (!match) throw this._unknownPlatform(id);
+    return match;
+  }
+
+  _unknownPlatform(id) {
+    const err = new Error(`Cannot determine the platform of device "${id}".`);
+    err.hint = 'Ensure the device is listed by `mauto devices`.';
+    return err;
+  }
+
+  // Platform ('android'/'ios') of the current device.
   async getPlatform() {
-    const devices = normalizeDevices(await this._call('mobile_list_available_devices', {}));
-    const id = this._device || resolveSingleDevice(devices); // throws DeviceResolutionError on 0/many
-    const match = devices.find((d) => d.id === id);
-    if (!match || !match.platform) {
-      const err = new Error(`Cannot determine the platform of device "${id}".`);
-      err.hint = 'Ensure the device is listed by `mauto devices`.';
-      throw err;
-    }
-    return String(match.platform).toLowerCase();
+    const device = await this._currentDevice();
+    if (!device.platform) throw this._unknownPlatform(device.id);
+    return String(device.platform).toLowerCase();
   }
 
   // Physical screen size in pixels, for geometry-based gestures. mobile-mcp
@@ -176,7 +186,7 @@ class DeviceBridge {
 
   // Uninstall an app by its bundle/package identifier.
   async uninstallApp(appId) {
-    return await this._call('mobile_uninstall_app', { bundle_id: appId });
+    return await this._call('mobile_uninstall_app', { packageName: appId });
   }
 
   // Open a URL (deep link or web) on the device.
@@ -201,9 +211,27 @@ class DeviceBridge {
   // come from the device log and AGE OUT; iOS device/simulator reports are files
   // that PERSIST and accumulate across runs. Same call, under-inclusive on one
   // platform and over-inclusive on the other — hence the `since` scoping in
-  // src/device/failure-probe.js. There is deliberately no platform branch here.
+  // src/device/failure-probe.js.
+  //
+  // ONE platform exception, and only for an EMPTY list: on an iOS simulator the
+  // pinned engine (mobilecli 1.0.21, since mobilecli#482) returns `[]` on
+  // macOS 27 hosts even right after the app crashed — its filter requires an
+  // `is_simulated` key that those simulator reports lack (mobilecli#539). There
+  // an empty list is not evidence of "no crash", so we throw the typed
+  // CrashListUnverifiableError instead: callers treat it as "could not check"
+  // (handleCrashList fails the verb; the failure probe records it at info and
+  // leaves `crashes` absent), never as "found none". A
+  // non-empty list is real evidence on every platform and is returned as-is,
+  // and the device lookup is paid only on an empty list. Remove this guard
+  // when the pinned mobilecli fixes #539: re-capture
+  // tests/fixtures/device/mobile-mcp-<ver>/ios-sim.crashes.txt with a real
+  // crash in it, then drop the guard and its tests.
   async listCrashes() {
-    return normalizeCrashes(await this._call('mobile_list_crashes', {}));
+    const crashes = normalizeCrashes(await this._call('mobile_list_crashes', {}));
+    if (crashes.length === 0 && isIosSimulator(await this._currentDevice())) {
+      throw new CrashListUnverifiableError();
+    }
+    return crashes;
   }
 
   // The full text of one crash report. The engine returns a bare string (its

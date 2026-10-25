@@ -37,6 +37,7 @@ const EVENT_NAMES = Object.freeze([
   'crash.probe_clear',
   'crash.probe_unscoped',
   'crash.probe_failed',
+  'crash.probe_unverifiable',
   'crash.probe_timeout',
   'daemon.start',
   'daemon.stop',
