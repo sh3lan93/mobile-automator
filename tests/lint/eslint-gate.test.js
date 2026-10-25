@@ -1,10 +1,10 @@
 // tests/lint/eslint-gate.test.js
 //
-// #164: ESLint is only worth anything while it stays wired in. The repo has no
-// required status checks, so the PR-side ESLint job is a signal; the run inside
-// release.yml's publish-npm job is the real gate. This guard fails the build if
-// the script, the type-aware async rules, or either CI run is quietly removed
-// or neutralised.
+// #164: ESLint is only worth anything while it stays wired in. It runs twice:
+// the PR-side `ESLint` job, a required status check since #249, and the run
+// inside release.yml's publish-npm job before npm publish. This guard fails the
+// build if the script, the type-aware async rules, or either CI run is quietly
+// removed or neutralised.
 const fs = require('fs');
 const path = require('path');
 const { loadWorkflow, runs, findStep, findJobWithRun } = require('./workflow-guard');

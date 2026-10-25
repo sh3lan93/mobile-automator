@@ -1,11 +1,13 @@
 // tests/lint/release-gate.test.js
 //
-// #186: no CI check is a gate. The ruleset has no required status checks and
-// auto-tag.yml does not wait for test.yml, so the PR and main runs are signals.
-// The enforcing run is release.yml: a `verify` job runs the suite and the
-// packed-tarball smoke on the same Node matrix test.yml proves, and both
-// `publish-npm` and the GitHub Release wait on it. This guard fails the build
-// if that matrix drifts from test.yml, or if the ordering is quietly undone.
+// #186: auto-tag.yml does not wait for test.yml, so the tag for a merge can
+// land while the post-merge main run is still going, or after it failed. PR
+// checks are required since #249, but they prove the PR, not the tag; the
+// enforcing run for a release is release.yml: a `verify` job runs the suite
+// and the packed-tarball smoke on the same Node matrix test.yml proves, and
+// both `publish-npm` and the GitHub Release wait on it. This guard fails the
+// build if that matrix drifts from test.yml, or if the ordering is quietly
+// undone.
 const { loadWorkflow, runs, findStep, asList } = require('./workflow-guard');
 
 // The suite command test.yml's test job runs — the literal, not a synonym:

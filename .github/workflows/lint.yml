@@ -4,8 +4,9 @@ name: Lint
 # job on one Node: there is a single parse target, so test.yml's version
 # matrix would only repeat it (and node-version-agreement.test.js requires
 # every test.yml job to run that matrix, which is why this is its own file).
-# This workflow is a signal, not a gate (the repo has no required status
-# checks); the gate is the same command in release.yml's publish-npm job.
+# The `ESLint` job is a required status check on the main-branch ruleset
+# (.github/required-checks.json, #249), so a PR cannot merge with it red; the
+# same command also runs in release.yml's publish-npm job before npm publish.
 
 on:
   pull_request:

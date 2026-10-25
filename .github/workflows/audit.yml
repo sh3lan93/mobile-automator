@@ -3,9 +3,10 @@ name: Dependency Audit
 # #161: fail on any high/critical advisory in production dependencies that is
 # not explicitly accepted in scripts/audit-allowlist.json. The schedule is the
 # point — advisories are published against code that has not changed, so a
-# PR-only trigger would never see them. This workflow is a signal, not a gate
-# (the repo has no required status checks); the gate is the same script in
-# release.yml's publish-npm job.
+# PR-only trigger would never see them. This workflow is a signal, not a gate:
+# it is deliberately left out of .github/required-checks.json (#249), because a
+# newly disclosed advisory turns it red on PRs that touched nothing. The gate is
+# the same script in release.yml's publish-npm job.
 
 on:
   pull_request:
