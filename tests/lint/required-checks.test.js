@@ -8,12 +8,12 @@
 // waiting for status". So this guard pins every name to exactly one real job,
 // and a renamed job or a changed matrix fails the build instead of the ruleset.
 //
-// The file's other two keys are the ruleset's, mirrored so the apply recipe in
-// CLAUDE.md can read them straight from git: `integration_id` 15368 is the
-// GitHub Actions app (read off real check runs) — without it any app or token
-// could post a passing status under the same name — and `strict` is
-// require-branch-up-to-date.
-//
+// The file is the whole ruleset policy (repo, ruleset id, the GitHub Actions
+// integration_id, strict, approvals, bypass actors, checks), and
+// scripts/apply-ruleset.js is what applies it. This guard reads it through
+// that script's own loadPolicy, so the guard and the applier share one parser
+// and the shape is validated in one place (tests/unit/apply-ruleset.test.js).
+
 // Name-matching is necessary but not sufficient, because a required check can
 // also be satisfied without the work running:
 //   - a workflow-level `paths`/`paths-ignore` filter means no check run is
@@ -35,11 +35,11 @@ const { loadWorkflow, asList, expandJobNames, findProducer } = require('./workfl
 
 const { REPO_ROOT } = require('./docs-corpus');
 
-const REQUIRED_FILE = '.github/required-checks.json';
-const GITHUB_ACTIONS_APP_ID = 15368;
-const RULESET_ID = '13197042';
+const { loadPolicy } = require('../../scripts/apply-ruleset');
 
-const required = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, REQUIRED_FILE), 'utf8'));
+const REQUIRED_FILE = '.github/required-checks.json';
+
+const required = loadPolicy(fs.readFileSync(path.join(REPO_ROOT, REQUIRED_FILE), 'utf8'));
 
 const workflowFiles = fs
   .readdirSync(path.join(REPO_ROOT, '.github/workflows'))
@@ -159,22 +159,6 @@ function neutralisationProblems(id, job) {
 
 // --- the guard -------------------------------------------------------------
 
-describe(`${REQUIRED_FILE} shape (#249)`, () => {
-  test('integration_id is the GitHub Actions app', () => {
-    expect(required.integration_id).toBe(GITHUB_ACTIONS_APP_ID);
-  });
-
-  test('strict (branch must be up to date) is on', () => {
-    expect(required.strict).toBe(true);
-  });
-
-  test('checks is a non-empty list of unique names', () => {
-    expect(Array.isArray(required.checks)).toBe(true);
-    expect(required.checks.length).toBeGreaterThan(0);
-    expect(new Set(required.checks).size).toBe(required.checks.length);
-  });
-});
-
 describe('every required check is reportable on every PR into main (#249)', () => {
   // js-yaml's default schema is YAML 1.2 core, where `on` is a plain string.
   // A YAML 1.1 parser reads it as boolean `true`, and every trigger check
@@ -213,13 +197,6 @@ describe('every required check is reportable on every PR into main (#249)', () =
     });
   });
 
-  // The ruleset is outside git; CLAUDE.md is where the `gh api` call that
-  // applies this file to it is recorded.
-  test('CLAUDE.md records how the list is applied to the ruleset', () => {
-    const claude = fs.readFileSync(path.join(REPO_ROOT, 'CLAUDE.md'), 'utf8');
-    expect(claude).toContain(REQUIRED_FILE);
-    expect(claude).toContain(`rulesets/${RULESET_ID}`);
-  });
 });
 
 describe('the predicates bite (#249)', () => {

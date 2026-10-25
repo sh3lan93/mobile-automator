@@ -1,0 +1,79 @@
+{
+  "id": 13197042,
+  "name": "main-branch",
+  "target": "branch",
+  "source_type": "Repository",
+  "source": "sh3lan93/mobile-automator",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "exclude": [],
+      "include": [
+        "~DEFAULT_BRANCH"
+      ]
+    }
+  },
+  "rules": [
+    {
+      "type": "deletion"
+    },
+    {
+      "type": "non_fast_forward"
+    },
+    {
+      "type": "pull_request",
+      "parameters": {
+        "required_approving_review_count": 0,
+        "dismiss_stale_reviews_on_push": true,
+        "required_reviewers": [],
+        "require_code_owner_review": false,
+        "require_last_push_approval": false,
+        "required_review_thread_resolution": true,
+        "require_extra_approval_for_unattributed_changes": true,
+        "allowed_merge_methods": [
+          "merge",
+          "squash",
+          "rebase"
+        ]
+      }
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": true,
+        "do_not_enforce_on_create": false,
+        "required_status_checks": [
+          {
+            "context": "Test (Node 22)",
+            "integration_id": 15368
+          },
+          {
+            "context": "Test (Node 24)",
+            "integration_id": 15368
+          },
+          {
+            "context": "Packed-tarball smoke check (Node 22)",
+            "integration_id": 15368
+          },
+          {
+            "context": "Packed-tarball smoke check (Node 24)",
+            "integration_id": 15368
+          },
+          {
+            "context": "ESLint",
+            "integration_id": 15368
+          },
+          {
+            "context": "Detect CLI code changes",
+            "integration_id": 15368
+          },
+          {
+            "context": "Verify version is bumped",
+            "integration_id": 15368
+          }
+        ]
+      }
+    }
+  ],
+  "bypass_actors": []
+}

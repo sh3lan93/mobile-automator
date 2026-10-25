@@ -23,8 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   dependent, and a skipped check counts as passing. The dependency audit and
   the path-filtered workflows are deliberately left out.
   `tests/lint/required-checks.test.js` fails the build when a listed name can't
-  be produced by exactly one PR-triggered, unfiltered workflow job, so
-  renaming a job or changing a matrix forces the list to be updated
+  be produced by exactly one PR-triggered, unfiltered workflow job that no
+  `if:` or `continue-on-error` can neutralise, so renaming a job or changing a
+  matrix forces the list to be updated, and `scripts/apply-ruleset.js` applies
+  the file to the ruleset and verifies the result
   ([#249](https://github.com/sh3lan93/mobile-automator/issues/249)).
 
 ---
