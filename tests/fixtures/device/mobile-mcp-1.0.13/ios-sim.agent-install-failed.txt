@@ -1,0 +1,3 @@
+Error: Command failed: <project>/node_modules/@mobilenext/mobilecli-darwin-arm64/mobilecli-darwin-arm64 agent install --device C6C6FFB9-7382-456B-9EE8-0047C8EEA80B
+failed to install agent: failed to install app from <tmp>/zip_unzip_1564693259/devicekit-iosUITests-Runner.app: failed to execute xcrun simctl command: exit status 28
+

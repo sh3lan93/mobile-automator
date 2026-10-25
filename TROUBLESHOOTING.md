@@ -97,7 +97,7 @@ Then re-run `mauto devices` to confirm it now appears.
 ### ❌ "mobilecli is not available or not working properly"
 
 Every device verb fails with this message. The device engine (mobile-mcp
-1.0.5) drives devices through `mobilecli`, a native binary installed as a
+1.0.13) drives devices through `mobilecli`, a native binary installed as a
 per-platform optional dependency (`@mobilenext/mobilecli-<os>-<arch>`). If
 that package is missing — an install with `--omit=optional`, or some pnpm
 layouts — the engine has nothing to run.
@@ -178,40 +178,46 @@ mauto devices                  # ids as the current engine sees them
 mauto devices use Pixel_9_Pro  # or pass that id to --device
 ```
 
-### ❌ "Agent is not installed on the device" (iOS simulator)
+### ❌ "failed to install agent" (iOS simulator)
 
-Every device verb fails on a simulator that has never had the engine's
-on-device agent, with a message like `Command failed: …/mobilecli-… agent
-status --device <udid>` followed by `Agent is not installed on the device`.
-The engine is meant to install the agent itself, but `mobilecli agent status`
-exits non-zero when it is missing and the engine treats that as a failure
-before reaching its install step
-([mobile-mcp#459](https://github.com/mobile-next/mobile-mcp/issues/459)).
-Install it once per simulator (needs network, takes about 4 seconds; mauto's
-error hint prints this command with your simulator's id filled in):
+The engine drives a simulator through an on-device agent (a "Device Kit"
+app; that is the engine's agent, not your app under test). Since mobile-mcp
+1.0.11 the engine installs it by itself on first use
+([mobile-mcp#459](https://github.com/mobile-next/mobile-mcp/issues/459)),
+which needs network and takes a few seconds. If that automatic install
+fails, every device verb fails with a message like `Command failed:
+…/mobilecli-… agent install --device <udid>` followed by `failed to install
+agent: …`. Install it manually once per simulator (mauto's error hint prints
+this command with your simulator's id filled in):
 
 ```bash
-npx -y mobilecli@1.0.13 agent install --device <udid>   # udid from `mauto devices`
+npx -y mobilecli@1.0.21 agent install --device <udid>   # udid from `mauto devices`
 ```
-
-This adds a "Device Kit" app to the simulator; that is the engine's agent,
-not your app under test.
 
 ### ❌ `uiautomator dump` is killed, Appium dies, or `elements` fails with "reading 'node'"
 
 On Android, `mobilecli` pushes `/data/local/tmp/mobilecli.dex` (no package is
 installed) and starts `com.mobilenext.mobilecli.DeviceServer` via
-`app_process`. That server outlives `mauto session end` and the daemon, and
-it holds the device's single UiAutomation connection — so `uiautomator dump`
-is killed (exit 137), Appium/UiAutomator2 sessions on that device are killed,
-and the legacy robot's `elements` fails with `Cannot read properties of
-undefined (reading 'node')`. Release it when you are done with mauto or
-before using another UiAutomator tool
-([mobilecli#470](https://github.com/mobile-next/mobilecli/issues/470)):
+`app_process`. That server holds the device's single UiAutomation connection,
+so while it runs `uiautomator dump` is killed (exit 137), Appium/UiAutomator2
+sessions on that device are killed, and the legacy robot's `elements` fails
+with `Cannot read properties of undefined (reading 'node')`.
+
+Since mobile-mcp 1.0.7 the DeviceServer stops by itself when the host-side
+`mobilecli daemon` exits, or after 30 idle minutes
+([mobilecli#470](https://github.com/mobile-next/mobilecli/issues/470), partly
+fixed). But that host daemon runs detached and outlives `mauto session end`,
+so right after a session on the default engine the device is usually still
+held. Release it when you are done with mauto or before using another
+UiAutomator tool — stopping the host daemon is enough, the DeviceServer then
+exits on its own:
 
 ```bash
-adb -s <serial> shell pkill -f com.mobilenext.mobilecli.DeviceServer
+pkill -f 'mobilecli.* daemon'                                   # on the host
+adb -s <serial> shell pkill -f com.mobilenext.mobilecli.DeviceServer   # or on the device
 ```
+
+Or wait 30 minutes.
 
 ### ❌ `mauto open-url myapp://…` fails with "Only http:// and https:// URLs are allowed"
 
@@ -400,6 +406,27 @@ Structured detail for any of those is in the event log:
 
 ```bash
 grep -E '"event":"crash\.' mobile-automator/.logs/mauto.ndjson
+```
+
+### ❌ `mauto crash list` fails on an iOS simulator
+
+On an iOS simulator, `mauto crash list` can fail (kind `device`, exit 2) with
+`The device engine cannot confirm the absence of crashes on an iOS
+simulator`, and a failed device verb carries no `crashes` key. On macOS 27
+hosts the engine's crash lookup returns nothing for a simulator even right
+after the app crashed: its filter expects a field those simulator crash
+reports no longer carry (upstream
+[mobilecli#539](https://github.com/mobile-next/mobilecli/issues/539)). An
+empty list there would be a false "no crash", so mauto reports "could not
+check" instead. A list that does contain reports is returned as usual, and
+Android and real iOS devices are unaffected.
+
+Treat the crash status as unknown. To find out whether the app is still
+running, look at the screen (`mauto elements`, or `mauto screenshot <path>`),
+or read the simulator's crash reports on the host directly:
+
+```bash
+ls -t ~/Library/Logs/DiagnosticReports/*.ips | head    # newest first
 ```
 
 ### ❔ "Is mauto sending anything anywhere?"

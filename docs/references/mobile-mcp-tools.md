@@ -15,7 +15,7 @@ verbs that execute them, and the mobile-mcp engine primitives those verbs wrap.
 
 Each scenario action is executed by a `mauto` verb, which internally calls the
 mobile-mcp engine primitive shown below. The engine is pinned at
-`@mobilenext/mobile-mcp` 1.0.5; every tool except `mobile_list_available_devices`
+`@mobilenext/mobile-mcp` 1.0.13; every tool except `mobile_list_available_devices`
 takes a `device` id, which `mauto` injects for you.
 
 | Scenario Action   | `mauto` Verb            | Internal mobile-mcp Engine Tool              | Description |
@@ -29,7 +29,7 @@ takes a `device` id, which `mauto` injects for you.
 | `wait`            | (use delay/polling)     | (use delay/polling)                          | Wait for a condition or duration |
 | `open_url`        | `mauto open-url`        | `mobile_open_url`                            | Open a URL of any scheme, deep links included — mauto sets `MOBILEMCP_ALLOW_UNSAFE_URLS=1` for its engine; `=0` restores http(s)-only ([#212](https://github.com/sh3lan93/mobile-automator/issues/212)) |
 | (screenshot)      | `mauto screenshot`      | `mobile_save_screenshot`                     | Save a screenshot to a file for verification |
-| (find element)    | `mauto elements`        | `mobile_list_elements_on_screen`             | List all interactive elements on screen (called with `format: "json"` — 1.0.5 defaults to a text format) |
+| (find element)    | `mauto elements`        | `mobile_list_elements_on_screen`             | List all interactive elements on screen (called with `format: "json"` — since 1.0.5 the engine defaults to a text format) |
 
 ## Common Usage Patterns
 
