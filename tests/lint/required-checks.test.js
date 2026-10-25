@@ -175,28 +175,38 @@ describe('every required check is reportable on every PR into main (#249)', () =
     const producer = () => findProducer(prWorkflows(workflows), name);
 
     // findProducer throws a named error unless exactly one job reports the
-    // name, so each test below fails on its own cause rather than a
-    // TypeError from destructuring an empty list (#249).
+    // name, and the first test reports it. The other three stand down when
+    // there is no single producer: repeating the same cause four times per
+    // name buries it, and destructuring would only add a TypeError (#249).
+    const withProducer = (check) => () => {
+      let found;
+      try {
+        found = producer();
+      } catch {
+        return;
+      }
+      check(found);
+    };
+
     test('is produced by exactly one job across the PR-triggered workflows', () => {
       expect(producer).not.toThrow();
     });
 
-    test('its workflow runs on every pull_request into main', () => {
-      const { wf } = producer();
-      expect(prTriggerProblems(wf)).toEqual([]);
-    });
+    test(
+      'its workflow runs on every pull_request into main',
+      withProducer(({ wf }) => expect(prTriggerProblems(wf)).toEqual([])),
+    );
 
-    test('every job in its transitive needs is itself required', () => {
-      const { wf, id } = producer();
-      expect(closureProblems(wf.jobs, id, required.checks)).toEqual([]);
-    });
+    test(
+      'every job in its transitive needs is itself required',
+      withProducer(({ wf, id }) => expect(closureProblems(wf.jobs, id, required.checks)).toEqual([])),
+    );
 
-    test('its job is not neutralised by an if: or continue-on-error', () => {
-      const { id, job } = producer();
-      expect(neutralisationProblems(id, job)).toEqual([]);
-    });
+    test(
+      'its job is not neutralised by an if: or continue-on-error',
+      withProducer(({ id, job }) => expect(neutralisationProblems(id, job)).toEqual([])),
+    );
   });
-
 });
 
 describe('the predicates bite (#249)', () => {
