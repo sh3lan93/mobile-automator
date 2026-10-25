@@ -64,12 +64,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   When that list is empty, `mauto crash list` now fails (`device`, exit 2)
   with a hint to treat the crash status as unknown, and a failed device verb
   leaves `crashes` out ("could not check") instead of reporting
-  `crashes: []`, which read as "the app is alive". A list that does contain
-  reports, and Android and real iOS devices, are unchanged
+  `crashes: []`, which read as "the app is alive"; that case is logged as an
+  expected `info` event, not a `crash.probe_failed` warning on stderr. A list
+  that does contain reports, and Android and real iOS devices, are unchanged
   ([#248](https://github.com/sh3lan93/mobile-automator/issues/248)).
-- **The missing-iOS-agent hint no longer says the engine cannot install the
-  agent.** It now fires only when the engine's automatic install failed, and
-  still prints the manual `mobilecli agent install` command
+- **The missing-iOS-agent hint fires on the new engine's failure, and no
+  longer says the engine cannot install the agent.** mobile-mcp 1.0.13
+  installs the agent itself, so the old "Agent is not installed on the
+  device" message can no longer occur; the hint now matches what a failed
+  automatic install actually reports (`Command failed: … agent install
+  --device <udid>`), which previously got only the generic "Ensure a device
+  or simulator is connected" hint, and still prints the manual
+  `mobilecli agent install` command with that id filled in
   ([#248](https://github.com/sh3lan93/mobile-automator/issues/248)).
 
 ---

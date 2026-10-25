@@ -1,8 +1,9 @@
 'use strict';
 
 // Every device-failure path in cli.js must route its hint through
-// engineHint (#199): the 1.0.5 engine's missing-iOS-agent and changed-device-id
-// failures otherwise surface as the generic "Ensure a device … is connected".
+// engineHint (#199): a failed iOS-agent auto-install (1.0.13, #248) and the
+// changed-device-id failure otherwise surface as the generic "Ensure a device
+// … is connected".
 
 const {
   handleElements,
@@ -13,9 +14,25 @@ const {
   handleCrashList,
 } = require('../../../src/cli');
 
-const B1_MESSAGE =
-  'Error: Command failed: /x/mobilecli-darwin-arm64 agent status --device C6C6FFB9-7382-456B-9EE8-0047C8EEA80B\n' +
-  'Agent is not installed on the device\n';
+const fs = require('fs');
+const path = require('path');
+
+// The mobilecli the pinned mobile-mcp spawns — the version the hint must name.
+const MOBILECLI_VERSION = JSON.parse(
+  fs.readFileSync(
+    require.resolve('mobilecli/package.json', {
+      paths: [path.dirname(require.resolve('@mobilenext/mobile-mcp/package.json'))],
+    }),
+    'utf8'
+  )
+).version;
+
+// The REAL failed automatic agent install captured against mobile-mcp 1.0.13
+// (#248) — before this fix mauto answered it with the generic hint.
+const B1_MESSAGE = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'fixtures', 'device', 'mobile-mcp-1.0.13', 'ios-sim.agent-install-failed.txt'),
+  'utf8'
+);
 const B2_MESSAGE =
   'Device "emulator-5554" not found. Use the mobile_list_available_devices tool to see available devices.. Please fix the issue and try again.';
 
@@ -30,7 +47,9 @@ describe('device-failure envelopes carry the engine hint', () => {
     const { envelope, exitKind } = await handleElements({ deviceBridge: { listElements: throwing(B1_MESSAGE) } });
     expect(exitKind).toBe('device');
     expect(envelope.error.message).toBe(B1_MESSAGE);
-    expect(envelope.hint).toMatch(/agent install --device C6C6FFB9-7382-456B-9EE8-0047C8EEA80B/);
+    expect(envelope.hint).toContain(
+      `npx -y mobilecli@${MOBILECLI_VERSION} agent install --device C6C6FFB9-7382-456B-9EE8-0047C8EEA80B`
+    );
     expect(envelope.hint).toMatch(/normally installs it automatically/);
     expect(envelope.hint).not.toMatch(/cannot install/);
   });

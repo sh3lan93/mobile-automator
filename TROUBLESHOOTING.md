@@ -178,7 +178,7 @@ mauto devices                  # ids as the current engine sees them
 mauto devices use Pixel_9_Pro  # or pass that id to --device
 ```
 
-### ❌ "Agent is not installed on the device" (iOS simulator)
+### ❌ "failed to install agent" (iOS simulator)
 
 The engine drives a simulator through an on-device agent (a "Device Kit"
 app; that is the engine's agent, not your app under test). Since mobile-mcp
@@ -186,9 +186,9 @@ app; that is the engine's agent, not your app under test). Since mobile-mcp
 ([mobile-mcp#459](https://github.com/mobile-next/mobile-mcp/issues/459)),
 which needs network and takes a few seconds. If that automatic install
 fails, every device verb fails with a message like `Command failed:
-…/mobilecli-… agent status --device <udid>` followed by `Agent is not
-installed on the device`. Install it manually once per simulator (mauto's
-error hint prints this command with your simulator's id filled in):
+…/mobilecli-… agent install --device <udid>` followed by `failed to install
+agent: …`. Install it manually once per simulator (mauto's error hint prints
+this command with your simulator's id filled in):
 
 ```bash
 npx -y mobilecli@1.0.21 agent install --device <udid>   # udid from `mauto devices`
