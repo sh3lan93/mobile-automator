@@ -9,13 +9,14 @@ const { endSession, ENDED_OUTCOMES } = require('../../../src/device/session-end'
 describe('session-end', () => {
   describe('endSession (#156)', () => {
     // Every dependency faked: no socket, no pidfile, no signals.
-    function deps({ pid = 4000, acked = true, diesWithin = true, identity = 'ours', outcome = 'dead' } = {}) {
+    function deps({ pid = 4000, lockPid = pid, acked = true, diesWithin = true, identity = 'ours', outcome = 'dead' } = {}) {
       const log = [];
       return {
         log,
         opts: {
           client: { requestShutdown: async () => { log.push('shutdown'); return acked; } },
           readPid: () => pid,
+          readLockPid: () => { log.push('readLockPid'); return lockPid; },
           identify: (p) => { log.push(['identify', p]); return identity; },
           budgetMs: 35000,
           reaper: {
@@ -79,6 +80,52 @@ describe('session-end', () => {
       expect(d.log.find((e) => e[0] === 'terminate')).toBeUndefined();
     });
 
+    test('reads the lock pid BEFORE asking the daemon to shut down: a clean exit removes it (#237)', async () => {
+      const order = [];
+      const d = deps();
+      d.opts.readPid = () => { order.push('readPid'); return 4000; };
+      d.opts.readLockPid = () => { order.push('readLockPid'); return 4000; };
+      d.opts.client.requestShutdown = async () => { order.push('shutdown'); return true; };
+      await endSession('/x', d.opts);
+      expect(order.indexOf('readLockPid')).toBeGreaterThanOrEqual(0);
+      expect(order.indexOf('readLockPid')).toBeLessThan(order.indexOf('shutdown'));
+    });
+
+    // #237: a daemon started by mauto <= 0.27.x carries no workspace marker, so
+    // its command line proves nothing. An ack does: the socket lives inside this
+    // workspace and only the daemon that bound it can answer on it. The lock
+    // naming the same pid ties the ack to the pid we are about to signal.
+    describe('an unmarked daemon (mauto <= 0.27.x, #237)', () => {
+      test('acked, stuck, and the lock names the same pid: force-stopped by a group kill', async () => {
+        const d = deps({ diesWithin: false, identity: 'unmarked', outcome: 'dead' });
+        expect(await endSession('/x', d.opts)).toEqual({ outcome: 'forced', pid: 4000 });
+        expect(d.log).toContainEqual(['terminate', 4000, true]);
+      });
+
+      test('acked, stuck, lock matches, but it outlives the escalation: survived', async () => {
+        const d = deps({ diesWithin: false, identity: 'unmarked', outcome: 'survived' });
+        expect(await endSession('/x', d.opts)).toEqual({ outcome: 'survived', pid: 4000 });
+      });
+
+      test('acked but the lock names another pid: reported foreign, never signalled', async () => {
+        const d = deps({ diesWithin: false, identity: 'unmarked', lockPid: 4001 });
+        expect(await endSession('/x', d.opts)).toEqual({ outcome: 'foreign', pid: 4000 });
+        expect(d.log.find((e) => e[0] === 'terminate')).toBeUndefined();
+      });
+
+      test('acked but no lock pid: reported foreign, never signalled', async () => {
+        const d = deps({ diesWithin: false, identity: 'unmarked', lockPid: null });
+        expect(await endSession('/x', d.opts)).toEqual({ outcome: 'foreign', pid: 4000 });
+        expect(d.log.find((e) => e[0] === 'terminate')).toBeUndefined();
+      });
+
+      test('not acked: unproven, never signalled — and never reported stopped', async () => {
+        const d = deps({ acked: false, diesWithin: false, identity: 'unmarked' });
+        expect(await endSession('/x', d.opts)).toEqual({ outcome: 'unproven', pid: 4000 });
+        expect(d.log.find((e) => e[0] === 'terminate')).toBeUndefined();
+      });
+    });
+
     test('the default identity check is bound to this workspace', async () => {
       const processIdentity = require('../../../src/device/process-identity');
       const spy = jest.spyOn(processIdentity, 'pidIdentity').mockReturnValue('other');
@@ -135,7 +182,7 @@ describe('session-end', () => {
   describe('ENDED_OUTCOMES (#251)', () => {
     test('classifies exactly the outcomes that leave nothing of ours running', () => {
       expect([...ENDED_OUTCOMES].sort()).toEqual(['already_stopped', 'forced', 'stopped']);
-      for (const outcome of ['survived', 'foreign', 'unverified']) {
+      for (const outcome of ['survived', 'foreign', 'unverified', 'unproven']) {
         expect(ENDED_OUTCOMES.has(outcome)).toBe(false);
       }
     });

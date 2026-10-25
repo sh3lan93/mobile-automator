@@ -31,11 +31,17 @@ const END_BUDGET_MS = sessionDaemon.DAEMON_CALL_TIMEOUT_MS + 10000;
 //   'already_stopped' - nothing acked and nothing of ours was running
 //   'forced'          - ours, stuck in teardown, terminated by a group kill
 //   'survived'        - ours, stuck, and still alive after SIGTERM + SIGKILL
-//   'foreign'         - acked, but the live pid's command line does not name
-//                       this workspace, so it was reported, never signalled
+//   'foreign'         - acked, but the live pid cannot be tied to this
+//                       workspace: its command line names another one, or it
+//                       names none and the lock does not name the same pid —
+//                       reported, never signalled
+//   'unproven'        - not acked, and the live pid is a mauto daemon whose
+//                       command line names no workspace (mauto <= 0.27.x, #237):
+//                       nothing proves it ours, so it was never signalled, and
+//                       it may still hold this workspace's lock
 //   'unverified'      - the pid could not be identified (`ps` failed), so it
 //                       was never signalled
-// The last three are failures: a daemon may still be alive.
+// The last four are failures: a daemon may still be alive.
 async function endSession(
   projectRoot,
   {
@@ -45,12 +51,16 @@ async function endSession(
     // workspace's daemon through a copied or recycled pidfile.
     identify = (pid) => processIdentity.pidIdentity(pid, { projectRoot }),
     readPid = () => processIdentity.readPidFile(paths.pidFilePath(projectRoot)),
+    // The lock names the daemon that holds this workspace (#237). It is the
+    // second witness for a daemon whose command line carries no marker.
+    readLockPid = () => processIdentity.readPidFile(paths.lockPath(projectRoot)),
     budgetMs = END_BUDGET_MS,
   } = {}
 ) {
-  // Read BEFORE asking: a daemon that exits cleanly removes its pidfile, and we
-  // need to know whom to watch.
+  // Read BEFORE asking: a daemon that exits cleanly removes its pidfile and its
+  // lock, and we need to know whom to watch — and who held the lock.
   const pid = readPid();
+  const lockPid = readLockPid();
   const acked = await client.requestShutdown(projectRoot);
   const report = (outcome) => ({ outcome, pid: pid || null });
   // The daemon is gone: it stopped because we asked, or was never running.
@@ -69,13 +79,32 @@ async function endSession(
     case 'other': // the pid was recycled: our daemon is gone
       return gone();
     case 'foreign':
-      // A mauto daemon whose command line does not name this workspace:
-      // another workspace's, reached through a copied or recycled pidfile.
-      // Never signalled. Without an ack nothing answered on OUR socket, so none
-      // of ours was running. With an ack the daemon that answered is ours, but
-      // its command line cannot prove it (one started before the workspace
-      // marker), so it is reported rather than killed.
+      // A mauto daemon whose command line names ANOTHER workspace (or this
+      // one's under a salt we cannot read): reached through a copied or
+      // recycled pidfile. Never signalled. Without an ack nothing answered on
+      // OUR socket, so none of ours was running. With an ack something of ours
+      // answered, but this pid is provably not it, so it is reported rather
+      // than killed. (Marker-less daemons arrive as 'unmarked' below, #237.)
       return report(acked ? 'foreign' : 'already_stopped');
+    case 'unmarked':
+      // A mauto daemon whose command line names no workspace at all: one
+      // started by mauto <= 0.27.x (#237). Its line proves nothing, so two
+      // other witnesses must agree before it is signalled:
+      //   - the ack: the socket lives inside this workspace's .session/ and a
+      //     Unix socket only accepts on the inode the daemon bound, so a
+      //     `cp -R`'d workspace can never make the original's daemon answer;
+      //   - the lock naming this same pid, read before the ack, so the daemon
+      //     that answered is the one we are about to kill.
+      // 0.27.x spawned it detached, so it leads its own process group and the
+      // group kill reaches its engine too.
+      if (acked && lockPid === pid) {
+        return report((await reaper.terminate(pid, { group: true })) === 'dead' ? 'forced' : 'survived');
+      }
+      // Acked, but the lock does not tie the answer to this pid: report it.
+      // Not acked: nothing proves it ours — but nor is it proven gone, and
+      // cleanStale (which asks without a root) still respects its lock, so
+      // 'already_stopped' would be a lie the next spawn trips over.
+      return report(acked ? 'foreign' : 'unproven');
     case 'ours':
       return report((await reaper.terminate(pid, { group: true })) === 'dead' ? 'forced' : 'survived');
     default: // 'unknown': never signal a process we cannot identify
@@ -84,8 +113,9 @@ async function endSession(
 }
 
 // Outcomes after which no daemon of ours is left holding the workspace.
-// Anything else ('survived', 'foreign', 'unverified') may leave the stale
-// daemon alive — spawning then would just find it answering pings. Lives beside
+// Anything else ('survived', 'foreign', 'unproven', 'unverified') may leave
+// the stale daemon alive — spawning then would just find it answering pings,
+// or (for 'unproven') find its lock still held. Lives beside
 // the vocabulary it classifies so a new outcome can never drift from its
 // classification (#251's restart path, resolve-connection.js, reads it).
 const ENDED_OUTCOMES = new Set(['stopped', 'forced', 'already_stopped']);
