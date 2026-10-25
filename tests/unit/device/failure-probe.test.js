@@ -124,6 +124,46 @@ describe('probeCrashes', () => {
     expect(JSON.stringify(envelope)).toBe(before);
   });
 
+  // The iOS-simulator case is an expected engine limitation, not a broken
+  // engine: it is recorded at info as its own event, never as a warn
+  // `crash.probe_failed` on the user's stderr.
+  describe('what it records when it could not look', () => {
+    const { CrashListUnverifiableError } = require('../../../src/device/crash-model');
+    const capture = () => {
+      const events = [];
+      return { events, sinks: [{ threshold: 'debug', write: (e) => events.push(e) }] };
+    };
+
+    it('records an unverifiable crash list as info `crash.probe_unverifiable`, with no warn', async () => {
+      const { events, sinks } = capture();
+      const envelope = failEnv();
+      await probeCrashes(
+        opts({ listCrashes: async () => { throw new CrashListUnverifiableError(); } }, { envelope, sinks })
+      );
+      expect(envelope).not.toHaveProperty('data.crashes');
+      expect(events.filter((e) => e.level === 'warn')).toEqual([]);
+      expect(events).toEqual([
+        expect.objectContaining({ level: 'info', src: 'cli', event: 'crash.probe_unverifiable', verb: 'tap' }),
+      ]);
+    });
+
+    it('still records any other failure as warn `crash.probe_failed`', async () => {
+      const { events, sinks } = capture();
+      const envelope = failEnv();
+      await probeCrashes(
+        opts({ listCrashes: async () => { throw new Error('mobilecli is not available'); } }, { envelope, sinks })
+      );
+      expect(envelope).not.toHaveProperty('data.crashes');
+      expect(events).toEqual([
+        expect.objectContaining({
+          level: 'warn',
+          event: 'crash.probe_failed',
+          message: 'mobilecli is not available',
+        }),
+      ]);
+    });
+  });
+
   it('attaches NOTHING when there is no watermark to attribute against', async () => {
     const envelope = failEnv();
     const before = JSON.stringify(envelope);

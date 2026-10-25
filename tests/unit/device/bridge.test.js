@@ -491,6 +491,18 @@ describe('listCrashes: an empty iOS-simulator list is not evidence (mobilecli#53
     expect(err.hint).toContain('mobilecli/issues/539');
   });
 
+  it('rejects with the typed CrashListUnverifiableError, so callers can tell it from a broken engine', async () => {
+    const { CrashListUnverifiableError } = require('../../../src/device/crash-model');
+    const { bridge } = bridgeFor({ crashes: [], devices: [SIM], device: 'sim-1' });
+    const err = await bridge.listCrashes().then(
+      () => null,
+      (e) => e
+    );
+    expect(err).toBeInstanceOf(CrashListUnverifiableError);
+    expect(err.code).toBe('crash_list_unverifiable');
+    expect(err.kind).toBe('device');
+  });
+
   it('resolves the single connected simulator when nothing is pinned', async () => {
     const { bridge } = bridgeFor({ crashes: [], devices: [SIM] });
     await expect(bridge.listCrashes()).rejects.toThrow(/iOS simulator/);

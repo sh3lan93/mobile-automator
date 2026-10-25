@@ -59,7 +59,7 @@
 // the genuinely undetermined case (skipped, failed, timed out, unscoped)
 // leaves the envelope untouched.
 
-const { crashTimestampMs } = require('./crash-model');
+const { crashTimestampMs, CrashListUnverifiableError } = require('./crash-model');
 const { record } = require('../observe/recorder');
 
 // The probe's own budget, deliberately far below the daemon's per-call timeout
@@ -189,6 +189,13 @@ async function probeCrashes({
         timeoutMs
       );
     } catch (err) {
+      // An iOS simulator's untrustworthy empty list (mobilecli#539) is an
+      // expected engine limitation, not a broken probe: info, not a warn on
+      // the user's stderr. Either way `crashes` stays absent ("unknown").
+      if (err instanceof CrashListUnverifiableError) {
+        record({ level: 'info', src: 'cli', event: 'crash.probe_unverifiable', verb }, recordOpts);
+        return;
+      }
       record(
         {
           level: 'warn',

@@ -2,13 +2,10 @@
 
 const { normalize, parseElements } = require('./element-model');
 const { deviceRecords, normalizeDevices, isIosSimulator } = require('./device-model');
-const { normalizeCrashes } = require('./crash-model');
+const { normalizeCrashes, CrashListUnverifiableError } = require('./crash-model');
 const { resolveSingleDevice } = require('./device-resolver');
 const { centredSwipe } = require('./swipe-geometry');
 const { isAppNotRunning } = require('./app-not-running');
-
-// The engine bug behind DeviceBridge#listCrashes's one platform exception.
-const MOBILECLI_ISSUE_539 = 'https://github.com/mobile-next/mobilecli/issues/539';
 
 // Thin wrapper over an injected mobile-mcp `call(toolName, args)` function.
 // Returns the agnostic element model and exposes only the primitives the CLI needs.
@@ -220,9 +217,10 @@ class DeviceBridge {
   // pinned engine (mobilecli 1.0.21, since mobilecli#482) returns `[]` on
   // macOS 27 hosts even right after the app crashed — its filter requires an
   // `is_simulated` key that those simulator reports lack (mobilecli#539). There
-  // an empty list is not evidence of "no crash", so we throw instead: callers
-  // already treat a throw as "could not check" (handleCrashList fails the verb,
-  // the failure probe leaves `crashes` absent), never as "found none". A
+  // an empty list is not evidence of "no crash", so we throw the typed
+  // CrashListUnverifiableError instead: callers treat it as "could not check"
+  // (handleCrashList fails the verb; the failure probe records it at info and
+  // leaves `crashes` absent), never as "found none". A
   // non-empty list is real evidence on every platform and is returned as-is,
   // and the device lookup is paid only on an empty list. Remove this guard
   // when the pinned mobilecli fixes #539: re-capture
@@ -231,13 +229,7 @@ class DeviceBridge {
   async listCrashes() {
     const crashes = normalizeCrashes(await this._call('mobile_list_crashes', {}));
     if (crashes.length === 0 && isIosSimulator(await this._currentDevice())) {
-      const err = new Error(
-        'The device engine cannot confirm the absence of crashes on an iOS simulator: it reports none even after a crash.'
-      );
-      err.hint =
-        `On an iOS simulator an empty crash list is not evidence that the app did not crash (upstream bug ${MOBILECLI_ISSUE_539}). ` +
-        'Treat the crash status as unknown, and check that the app is still running by other means (e.g. `mauto elements` or a screenshot).';
-      throw err;
+      throw new CrashListUnverifiableError();
     }
     return crashes;
   }
