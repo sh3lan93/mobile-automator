@@ -62,8 +62,30 @@ describe('pidIdentity bound to a workspace (#156)', () => {
     expect(pidIdentity(process.ppid, { projectRoot: root, readSalt: fixedSalt, execFile: () => cmd('/b/other') })).toBe('foreign');
   });
 
-  test('a daemon that names no workspace (an older daemon, an editor on the bin) is foreign', () => {
-    expect(pidIdentity(process.ppid, { projectRoot: root, readSalt: fixedSalt, execFile: () => 'vim bin/mauto-session-daemon.js' })).toBe('foreign');
+  // #237: a daemon started by mauto <= 0.27.x carries no marker of either kind.
+  // It is not PROVEN foreign — it names no workspace at all — so it gets its
+  // own answer and `session end` decides from the socket and the lock.
+  test('a daemon line with no workspace marker (mauto <= 0.27.x, an editor on the bin) is unmarked (#237)', () => {
+    const bare = () => 'node /x/bin/mauto-session-daemon.js\n';
+    expect(pidIdentity(process.ppid, { projectRoot: root, readSalt: fixedSalt, execFile: bare })).toBe('unmarked');
+    expect(pidIdentity(process.ppid, { projectRoot: root, readSalt: fixedSalt, execFile: () => 'vim bin/mauto-session-daemon.js' })).toBe('unmarked');
+    // With no salt at all the answer is the same: there is no key to compare.
+    expect(pidIdentity(process.ppid, { projectRoot: root, readSalt: () => null, execFile: bare })).toBe('unmarked');
+  });
+
+  test('an unmarked daemon is still ours without a projectRoot (cleanStale unchanged, #237)', () => {
+    expect(pidIdentity(process.ppid, { execFile: () => 'node /x/bin/mauto-session-daemon.js' })).toBe('ours');
+  });
+
+  test('a marker naming another workspace stays foreign, never unmarked (#237)', () => {
+    expect(pidIdentity(process.ppid, { projectRoot: root, readSalt: fixedSalt, execFile: () => cmd('/b/other') })).toBe('foreign');
+    expect(
+      pidIdentity(process.ppid, {
+        projectRoot: root,
+        readSalt: fixedSalt,
+        execFile: () => 'node /x/bin/mauto-session-daemon.js --project-root /b/other\n',
+      })
+    ).toBe('foreign');
   });
 
   test("a daemon keyed with another workspace's salt is foreign: a cp -R'd workspace has a new root (#236)", () => {

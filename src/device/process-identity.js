@@ -66,10 +66,15 @@ function isZombie(
 //   'dead'    - no such process (ESRCH or any non-EPERM kill error)
 //   'ours'    - alive AND its command line contains `mauto-session-daemon`
 //               (and, when `projectRoot` is given, names THAT workspace)
-//   'foreign' - only with `projectRoot`: alive and a mauto daemon, but its
-//               command line does not name that workspace (#156) — another
-//               workspace's daemon, one started before the workspace marker
-//               existed, or an editor open on the bin. Never ours to signal.
+//   'foreign' - only with `projectRoot`: alive and a mauto daemon whose
+//               command line carries a workspace marker naming ANOTHER
+//               workspace (#156) — or this one's under a salt we cannot read.
+//               Never ours to signal.
+//   'unmarked'- only with `projectRoot`: alive and a mauto daemon whose command
+//               line carries no workspace marker at all (#237) — one started by
+//               mauto <= 0.27.x, or an editor open on the bin. Its line cannot
+//               prove whose it is either way; `session end` decides from the
+//               socket ack and the lock (src/device/session-end.js).
 //   'other'   - alive AND its command line does NOT (recycled pid)
 //   'unknown' - alive but `ps` itself failed (e.g. no `ps` on the host) —
 //               treated as 'ours' by cleanStale: never clean when unsure.
@@ -112,7 +117,8 @@ function pidIdentity(
     );
     if (!/mauto-session-daemon/.test(out)) return 'other';
     if (projectRoot == null) return 'ours';
-    return paths.commandNamesWorkspace(out, projectRoot, readSalt(projectRoot)) ? 'ours' : 'foreign';
+    if (paths.commandNamesWorkspace(out, projectRoot, readSalt(projectRoot))) return 'ours';
+    return paths.commandHasWorkspaceMarker(out) ? 'foreign' : 'unmarked';
   } catch (_) {
     return 'unknown';
   }

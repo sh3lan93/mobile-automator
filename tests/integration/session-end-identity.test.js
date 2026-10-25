@@ -11,6 +11,7 @@ const path = require('path');
 const { spawn, execFileSync } = require('child_process');
 
 const { endSession } = require('../../src/device/session-end');
+const { cleanStale } = require('../../src/device/session-daemon');
 const { pidAlive } = require('../../src/device/process-identity');
 const { waitForDeath } = require('../../src/device/process-reaper');
 const paths = require('../../src/device/session-paths');
@@ -106,6 +107,25 @@ test("a legacy --project-root daemon for this workspace is still escalated (#236
     fs.writeFileSync(paths.pidFilePath(mine), `${daemon.pid}\n`);
     expect(await endSession(mine)).toEqual({ outcome: 'forced', pid: daemon.pid });
     expect(await waitForDeath(daemon.pid, { budgetMs: 2000 })).toBe(true);
+  } finally {
+    killGroup(daemon.pid);
+  }
+});
+
+// #237: daemons started by mauto <= 0.27.x carry no workspace marker at all. One
+// too stuck to answer the shutdown used to be reported 'already_stopped' while
+// cleanStale (which asks without a root) still respected its lock, so the next
+// spawn failed. It is now a failure naming the pid, and it is never signalled.
+test("an unanswering marker-less daemon (mauto <= 0.27.x) is unproven, never signalled, never called stopped (#237)", async () => {
+  const mine = workspace();
+  const daemon = standIn(mine, []);
+  try {
+    fs.writeFileSync(paths.pidFilePath(mine), `${daemon.pid}\n`);
+    fs.writeFileSync(paths.lockPath(mine), `${daemon.pid}\n`);
+    expect(await endSession(mine)).toEqual({ outcome: 'unproven', pid: daemon.pid });
+    expect(pidAlive(daemon.pid)).toBe(true);
+    // Why 'already_stopped' was a lie: the lock is still held as far as a spawn knows.
+    expect(cleanStale(mine)).toEqual({ cleaned: false, livePid: daemon.pid });
   } finally {
     killGroup(daemon.pid);
   }
