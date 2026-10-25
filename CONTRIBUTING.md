@@ -167,7 +167,7 @@ The JavaScript is linted by [ESLint](https://eslint.org) with a flat config in `
 npm run lint
 ```
 
-CI runs the same command in two places: the `ESLint` job in `.github/workflows/lint.yml` on every PR and push to `main`, and the `publish-npm` job in `release.yml` before `npm publish`. The repo has no required status checks, so the PR job is a signal; the publish run is the gate. `tests/lint/eslint-gate.test.js` fails the build if either run, or the rules below, is quietly removed or downgraded.
+CI runs the same command in two places: the `ESLint` job in `.github/workflows/lint.yml` on every PR and push to `main`, and the `publish-npm` job in `release.yml` before `npm publish`. The PR job is a required status check (see `.github/required-checks.json`), so a PR cannot merge with it red; the publish run re-checks the exact tree that ships. `tests/lint/eslint-gate.test.js` fails the build if either run, or the rules below, is quietly removed or downgraded.
 
 **The rule set, and why each rule is there:**
 

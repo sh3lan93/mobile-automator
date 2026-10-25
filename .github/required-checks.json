@@ -1,0 +1,18 @@
+{
+  "repo": "sh3lan93/mobile-automator",
+  "ruleset_id": 13197042,
+  "enforcement": "active",
+  "integration_id": 15368,
+  "strict": true,
+  "required_approving_review_count": 0,
+  "bypass_actors": [],
+  "checks": [
+    "Test (Node 22)",
+    "Test (Node 24)",
+    "Packed-tarball smoke check (Node 22)",
+    "Packed-tarball smoke check (Node 24)",
+    "ESLint",
+    "Detect CLI code changes",
+    "Verify version is bumped"
+  ]
+}

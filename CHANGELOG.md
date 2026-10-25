@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### 🔧 Changed
+
+- **PR checks now block merges.** The `main-branch` ruleset required no
+  status checks, so a PR with every matrix leg red merged as easily as a green
+  one. It now requires the checks listed in `.github/required-checks.json`
+  (the test and packed-tarball legs on each supported Node, ESLint, and the
+  version-bump pair) from GitHub Actions only, with the branch up to date with
+  `main` and no bypass actor. The review rule drops to zero approvals, which is
+  what it enforced in practice: a solo maintainer can't approve their own PR,
+  so every merge went through the bypass. `Detect CLI code changes` is required
+  alongside `Verify version is bumped` because a failed needed job *skips* its
+  dependent, and a skipped check counts as passing. The dependency audit and
+  the path-filtered workflows are deliberately left out.
+  `tests/lint/required-checks.test.js` fails the build when a listed name can't
+  be produced by exactly one PR-triggered, unfiltered workflow job that no
+  `if:` or `continue-on-error` can neutralise, so renaming a job or changing a
+  matrix forces the list to be updated, and `scripts/apply-ruleset.js` applies
+  the file to the ruleset and verifies the result
+  ([#249](https://github.com/sh3lan93/mobile-automator/issues/249)).
+
+---
+
 ## [0.35.2]
 
 ### 🔧 Changed

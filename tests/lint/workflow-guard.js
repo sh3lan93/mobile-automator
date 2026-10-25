@@ -8,8 +8,8 @@
 // Three hand-maintained copies is the exact threshold at which the three doc
 // corpora had already diverged before docs-corpus.js (#162) collapsed them —
 // a guard's helpers are as much a drift surface as its corpus. The
-// workflow-parsing guards (supply-chain, ESLint, release) consume this module;
-// a fourth one does not grow another private copy.
+// workflow-parsing guards (supply-chain, ESLint, release, required-checks)
+// consume this module; the next one does not grow another private copy.
 //
 // Pure functions only, no jest globals in here, so the module stays
 // test-runner-agnostic the same way docs-corpus.js is.
@@ -70,6 +70,32 @@ function findJobWithRun(jobs, run) {
 }
 
 /**
+ * The one job, across these already-loaded workflows, whose check-run names
+ * include `name` (#249). Same principle as findStep: throws a named error
+ * unless there is exactly one, listing what it found — zero producers is a
+ * renamed job, two is a check whichever job reports first can satisfy, and
+ * destructuring a list of either would fail as a TypeError or check only the
+ * first.
+ *
+ * @param {{ file: string, wf: object }[]} workflows
+ * @param {string} name
+ * @returns {{ file: string, id: string, wf: object, job: object }}
+ */
+function findProducer(workflows, name) {
+  const found = workflows.flatMap(({ file, wf }) =>
+    Object.entries((wf && wf.jobs) || {})
+      .filter(([id, job]) => expandJobNames(job, id).includes(name))
+      .map(([id, job]) => ({ file, id, wf, job })),
+  );
+  if (found.length === 0) throw new Error(`no job in any workflow reports check "${name}"`);
+  if (found.length > 1) {
+    const where = found.map((p) => `${p.file}#${p.id}`).join(', ');
+    throw new Error(`${found.length} jobs report check "${name}": ${where}`);
+  }
+  return found[0];
+}
+
+/**
  * `needs:` accepts a single job id or a list; normalise to the list.
  *
  * @param {string|string[]} needs
@@ -79,4 +105,56 @@ function asList(needs) {
   return Array.isArray(needs) ? needs : [needs];
 }
 
-module.exports = { loadWorkflow, runs, findStep, findJobWithRun, asList };
+const EXPRESSION = /\$\{\{\s*(.*?)\s*\}\}/g;
+const MATRIX_REF = /^matrix\.([A-Za-z_][A-Za-z0-9_-]*)$/;
+
+/**
+ * The check-run names a job reports (#249): its `name`, or its id when it has
+ * none, with every `${{ matrix.<key> }}` expanded over the cartesian product
+ * of the job's `strategy.matrix` arrays, in matrix key order.
+ *
+ * Loud over clever: anything whose reported name GitHub computes rather than
+ * the YAML spelling out throws with a named cause — `include`/`exclude`, a
+ * matrix built from an expression, a referenced key that is absent or not an
+ * array of scalars, a matrix key the name leaves out (GitHub would append its
+ * value as `name (v)`), and any other `${{ }}` expression. A required check
+ * name derived by guessing is the forever-pending check this exists to stop.
+ *
+ * @param {object} job
+ * @param {string} id   the job's key under `jobs:`
+ * @returns {string[]}
+ */
+function expandJobNames(job, id) {
+  const name = job.name == null ? id : String(job.name);
+  const matrix = job.strategy && job.strategy.matrix;
+  if (matrix != null && (typeof matrix !== 'object' || Array.isArray(matrix))) {
+    throw new Error(`job "${id}": strategy.matrix is not a map of arrays: ${JSON.stringify(matrix)}`);
+  }
+  for (const key of ['include', 'exclude']) {
+    if (matrix && key in matrix) throw new Error(`job "${id}": matrix ${key} is not supported`);
+  }
+
+  const refs = [...name.matchAll(EXPRESSION)].map(([, expr]) => {
+    const m = MATRIX_REF.exec(expr);
+    if (!m) throw new Error(`job "${id}": unsupported expression in name: \${{ ${expr} }}`);
+    const values = matrix && matrix[m[1]];
+    if (!Array.isArray(values) || values.some((v) => v === null || typeof v === 'object')) {
+      throw new Error(`job "${id}": name references matrix.${m[1]}, which is not an array of scalars`);
+    }
+    return m[1];
+  });
+  for (const key of Object.keys(matrix || {})) {
+    if (!refs.includes(key)) {
+      throw new Error(`job "${id}": matrix key "${key}" is not in the job name; spell it out`);
+    }
+  }
+
+  // Cartesian product of the matrix, then substitute into the name.
+  const combos = Object.entries(matrix || {}).reduce(
+    (acc, [key, values]) => acc.flatMap((c) => values.map((v) => ({ ...c, [key]: v }))),
+    [{}],
+  );
+  return combos.map((c) => name.replace(EXPRESSION, (_, expr) => String(c[MATRIX_REF.exec(expr)[1]])));
+}
+
+module.exports = { loadWorkflow, runs, findStep, findJobWithRun, findProducer, asList, expandJobNames };
