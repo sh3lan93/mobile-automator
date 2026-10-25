@@ -13,8 +13,9 @@ const { ensureSalt, readSalt } = require('../../../src/device/session-salt');
 const realSetTimeout = setTimeout;
 const realClearTimeout = clearTimeout;
 
-// Reject instead of hanging: an unresolved promise in a fake-timer test never
-// reaches its `finally`, and the daemon it leaves listening keeps jest alive.
+// Reject instead of hanging: under fake timers, awaiting a promise that never
+// settles hangs the whole jest run, not just the test — seen with an idle
+// timer that never fires, even with afterEach cleanup in place.
 function within(promise, ms, what) {
   let timer;
   const expiry = new Promise((_, reject) => {
@@ -147,13 +148,25 @@ describe('session-daemon', () => {
   // than the gap between idleMs and the ping interval (GC, a loaded jest
   // worker) let the timer fire mid-test and fail it as "session daemon
   // connection closed". Socket I/O is not a timer, so it still runs for real.
-  test('idle timer resets on each request', async () => {
-    jest.useFakeTimers();
-    const root = tmpRoot();
-    const { createCall, state } = makeFakeCreateCall();
-    const idleMs = 1000;
-    const daemon = await startDaemon({ projectRoot: root, idleMs, createCall });
-    try {
+  describe('idle timer (fake clock)', () => {
+    let daemon = null;
+
+    beforeEach(() => jest.useFakeTimers());
+    // afterEach runs even when the test throws or times out, so the fake clock
+    // can never leak into later tests — stop() awaits a real setTimeout and
+    // would hang every one of them. Real timers first, for the same reason.
+    afterEach(async () => {
+      jest.useRealTimers();
+      if (daemon) await daemon.stop();
+      daemon = null;
+    });
+
+    test('idle timer resets on each request', async () => {
+      const root = tmpRoot();
+      const { createCall, state } = makeFakeCreateCall();
+      const idleMs = 1000;
+      daemon = await startDaemon({ projectRoot: root, idleMs, createCall });
+
       // Three pings, each just inside the idle window, keep it alive well past
       // the original one — only possible if every request re-arms the timer.
       for (let i = 0; i < 3; i++) {
@@ -171,10 +184,7 @@ describe('session-daemon', () => {
       await jest.advanceTimersByTimeAsync(1);
       await within(daemon.whenStopped, 2000, 'expected the idle timer to reap the daemon');
       expect(state.closed).toBe(1);
-    } finally {
-      jest.useRealTimers();
-      await daemon.stop();
-    }
+    });
   });
 
   test('cleanStale removes a stale socket/pidfile so a fresh daemon can bind', async () => {
