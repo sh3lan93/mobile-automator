@@ -5,12 +5,16 @@
 // — and drop every other raw mobile-mcp field (no resource-id, no OS-specific
 // internals). `os` is mapped onto `platform` so the output reads the same way
 // across the Android/iOS/simulator variants mobile-mcp returns.
+//
+// deviceRecords is the ONE parser of the raw list. Its records also carry
+// `type` (simulator/emulator/real), which DeviceBridge needs internally;
+// normalizeDevices is only the public 4-key view of those records.
 
 function nullable(v) {
   return v === undefined || v === null || v === '' ? null : v;
 }
 
-function normalizeOne(raw) {
+function recordOf(raw) {
   if (!raw || typeof raw !== 'object') return null;
 
   const id = nullable(
@@ -35,10 +39,12 @@ function normalizeOne(raw) {
 
   const state = nullable(raw.state !== undefined ? raw.state : raw.status);
 
-  return { id: String(id), name, platform, state };
+  const type = nullable(raw.type);
+
+  return { id: String(id), name, platform, state, type };
 }
 
-function normalizeDevices(raw) {
+function deviceRecords(raw) {
   let list;
   if (Array.isArray(raw)) {
     list = raw;
@@ -50,10 +56,26 @@ function normalizeDevices(raw) {
 
   const out = [];
   for (const item of list) {
-    const d = normalizeOne(item);
+    const d = recordOf(item);
     if (d) out.push(d);
   }
   return out;
 }
 
-module.exports = { normalizeDevices };
+function publicView({ id, name, platform, state }) {
+  return { id, name, platform, state };
+}
+
+function normalizeDevices(raw) {
+  return deviceRecords(raw).map(publicView);
+}
+
+function isIosSimulator(record) {
+  if (!record) return false;
+  return (
+    String(record.platform || '').toLowerCase() === 'ios' &&
+    String(record.type || '').toLowerCase() === 'simulator'
+  );
+}
+
+module.exports = { deviceRecords, normalizeDevices, isIosSimulator };

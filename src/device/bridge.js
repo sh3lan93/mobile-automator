@@ -1,7 +1,7 @@
 'use strict';
 
 const { normalize, parseElements } = require('./element-model');
-const { normalizeDevices } = require('./device-model');
+const { deviceRecords, normalizeDevices, isIosSimulator } = require('./device-model');
 const { normalizeCrashes } = require('./crash-model');
 const { resolveSingleDevice } = require('./device-resolver');
 const { centredSwipe } = require('./swipe-geometry');
@@ -97,18 +97,28 @@ class DeviceBridge {
     return this._call('mobile_swipe_on_screen', args);
   }
 
-  // Platform ('android'/'ios') of the connected device. Uses the pinned id when
-  // one was provided, else the single auto-resolved device.
+  // The current device's record (id/name/platform/state/type): the pinned id
+  // when one was provided, else the single auto-resolved device. A pinned id
+  // that is not listed throws — callers treat that as "could not check".
+  async _currentDevice() {
+    const records = deviceRecords(await this._call('mobile_list_available_devices', {}));
+    const id = this._device || resolveSingleDevice(records); // throws DeviceResolutionError on 0/many
+    const match = records.find((d) => d.id === id);
+    if (!match) throw this._unknownPlatform(id);
+    return match;
+  }
+
+  _unknownPlatform(id) {
+    const err = new Error(`Cannot determine the platform of device "${id}".`);
+    err.hint = 'Ensure the device is listed by `mauto devices`.';
+    return err;
+  }
+
+  // Platform ('android'/'ios') of the current device.
   async getPlatform() {
-    const devices = normalizeDevices(await this._call('mobile_list_available_devices', {}));
-    const id = this._device || resolveSingleDevice(devices); // throws DeviceResolutionError on 0/many
-    const match = devices.find((d) => d.id === id);
-    if (!match || !match.platform) {
-      const err = new Error(`Cannot determine the platform of device "${id}".`);
-      err.hint = 'Ensure the device is listed by `mauto devices`.';
-      throw err;
-    }
-    return String(match.platform).toLowerCase();
+    const device = await this._currentDevice();
+    if (!device.platform) throw this._unknownPlatform(device.id);
+    return String(device.platform).toLowerCase();
   }
 
   // Physical screen size in pixels, for geometry-based gestures. mobile-mcp
@@ -220,7 +230,7 @@ class DeviceBridge {
   // crash in it, then drop the guard and its tests.
   async listCrashes() {
     const crashes = normalizeCrashes(await this._call('mobile_list_crashes', {}));
-    if (crashes.length === 0 && (await this._isIosSimulator())) {
+    if (crashes.length === 0 && isIosSimulator(await this._currentDevice())) {
       const err = new Error(
         'The device engine cannot confirm the absence of crashes on an iOS simulator: it reports none even after a crash.'
       );
@@ -230,20 +240,6 @@ class DeviceBridge {
       throw err;
     }
     return crashes;
-  }
-
-  // Whether the current device is an iOS simulator. Reads `type` from the RAW
-  // device list: normalizeDevices deliberately drops it (`mauto devices` is a
-  // locked 4-key shape). Resolves the device exactly as getPlatform does, and
-  // lets a failed lookup propagate — that is "could not check", which is honest.
-  async _isIosSimulator() {
-    const raw = await this._call('mobile_list_available_devices', {});
-    const id = this._device || resolveSingleDevice(normalizeDevices(raw));
-    const list = Array.isArray(raw) ? raw : raw && Array.isArray(raw.devices) ? raw.devices : [];
-    const match = list.find((d) => d && normalizeDevices([d])[0]?.id === id);
-    if (!match) return false;
-    const platform = String(match.platform !== undefined ? match.platform : match.os || '').toLowerCase();
-    return platform === 'ios' && String(match.type || '').toLowerCase() === 'simulator';
   }
 
   // The full text of one crash report. The engine returns a bare string (its

@@ -64,3 +64,45 @@ describe('normalizeDevices', () => {
     expect(JSON.stringify(out)).not.toMatch(/leak/);
   });
 });
+
+// One parser owns the raw device list: deviceRecords keeps `type` (which the
+// crash guard needs), and normalizeDevices is only its 4-key public view.
+describe('deviceRecords', () => {
+  const { deviceRecords } = require('../../../src/device/device-model');
+
+  test('keeps type alongside the public keys, from either list shape', () => {
+    const raw = [{ id: 'sim-1', name: 'iPhone 15', os: 'ios', type: 'simulator', state: 'online' }];
+    const expected = [{ id: 'sim-1', name: 'iPhone 15', platform: 'ios', state: 'online', type: 'simulator' }];
+    expect(deviceRecords(raw)).toEqual(expected);
+    expect(deviceRecords({ devices: raw })).toEqual(expected);
+  });
+
+  test('type is nullable like the other fields; garbage input -> []', () => {
+    expect(deviceRecords([{ id: 'a' }])).toEqual([
+      { id: 'a', name: null, platform: null, state: null, type: null },
+    ]);
+    expect(deviceRecords(null)).toEqual([]);
+    expect(deviceRecords({ devices: 'x' })).toEqual([]);
+  });
+
+  test('the public view still drops type: exactly the four locked keys', () => {
+    const out = normalizeDevices([{ id: 'sim-1', name: 'n', os: 'ios', type: 'simulator', state: 's' }]);
+    expect(Object.keys(out[0])).toEqual(['id', 'name', 'platform', 'state']);
+  });
+});
+
+describe('isIosSimulator', () => {
+  const { isIosSimulator } = require('../../../src/device/device-model');
+
+  test.each([
+    [{ platform: 'ios', type: 'simulator' }, true],
+    [{ platform: 'iOS', type: 'Simulator' }, true],
+    [{ platform: 'ios', type: 'real' }, false],
+    [{ platform: 'ios', type: null }, false],
+    [{ platform: 'android', type: 'simulator' }, false],
+    [{ platform: 'android', type: 'emulator' }, false],
+    [{ platform: null, type: 'simulator' }, false],
+  ])('%j -> %s', (record, expected) => {
+    expect(isIosSimulator(record)).toBe(expected);
+  });
+});

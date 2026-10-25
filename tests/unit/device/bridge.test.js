@@ -519,4 +519,9 @@ describe('listCrashes: an empty iOS-simulator list is not evidence (mobilecli#53
     const { bridge } = bridgeFor({ crashes: [], devicesThrow: new Error('device list failed') });
     await expect(bridge.listCrashes()).rejects.toThrow('device list failed');
   });
+
+  it('rejects when the pinned device is absent from the list — an unmatched device is "could not check"', async () => {
+    const { bridge } = bridgeFor({ crashes: [], devices: [EMU], device: 'sim-gone' });
+    await expect(bridge.listCrashes()).rejects.toThrow('Cannot determine the platform of device "sim-gone".');
+  });
 });
