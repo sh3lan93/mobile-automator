@@ -152,7 +152,6 @@ There is also a **three-layer model** worth keeping straight: (1) the CLI contra
 
 | Milestone | PRD / gate | Branch prefix | State |
 |---|---|---|---|
-| 1.0 readiness | gate issue [#267](https://github.com/sh3lan93/mobile-automator/issues/267) (draft; no milestone until its tiers are confirmed) | `fix/<issue>-<slug>`, `feat/…`, `docs/…`, `chore/…` | **active** |
 | `production-ready` | gate issue [#168](https://github.com/sh3lan93/mobile-automator/issues/168) | `fix/<issue>-<slug>`, `feat/…`, `docs/…`, `chore/…` | **complete** (gate closed 2026-10-25) |
 | `sample-app` | PRD [#44](https://github.com/sh3lan93/mobile-automator/issues/44), slices #45–#49 | `sample-app/<issue-number>-<short-slug>` | active — slices 4–5 open |
 | `cli` | PRD [#69](https://github.com/sh3lan93/mobile-automator/issues/69), slices #70–#78 | — | **complete** (all 23 closed) |
@@ -160,7 +159,7 @@ There is also a **three-layer model** worth keeping straight: (1) the CLI contra
 
 **Any agent picking up a milestone issue MUST follow this workflow in order — it is not optional:**
 
-1. **Load full context first.** Fetch the issue **and** its PRD/gate issue together (`gh issue view <issue>` + `gh issue view 44|168`) before doing anything. Issue bodies are deliberately thin; the PRD holds the locked decisions, the slice ladder, and cross-issue constraints. Never act on a slice issue alone.
+1. **Load full context first.** Fetch the issue **and** the PRD/gate issue its milestone's row names in the table above, together (`gh issue view <issue>` + `gh issue view <prd-or-gate>`), before doing anything. Issue bodies are deliberately thin; the PRD holds the locked decisions, the slice ladder, and cross-issue constraints. Never act on a slice issue alone.
 2. **Isolate the workspace.** Before any edit, create a dedicated worktree on a new branch using the prefix above. Do not work directly in an existing checkout or on a shared branch. (Dispatched subagents start at the repo root, not the worktree — force `cd` into the worktree and verify before any commit.)
 3. **Plan before code.** Produce a written implementation plan (file structure, deps, module interfaces, CI changes, test list) and surface it for explicit user approval. No implementation before the user confirms the plan.
 4. **Implement via subagents (TDD for non-trivial work).** Dispatch implementation through subagents so the main agent's context stays lean. The main agent orchestrates and reviews; it does not hand-write the bulk of the work.
