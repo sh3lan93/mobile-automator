@@ -24,21 +24,21 @@ const { handlePath } = require('./session-paths');
 // not the device, not the pid. That is what makes the event catalog's
 // `sends: true` on session_id true rather than merely asserted, and
 // tests/unit/device/session-handle.test.js is where the claim is enforced.
-//
-// SESSION_ID_PATTERN is the shape of what newSessionId() mints (8 CSPRNG bytes
-// as hex) and the only shape readSessionId() will return. The handle file is
-// just a file, so the shape is what keeps `sends: true` true for a stale or
-// hand-edited one. It lives here, with its minter; the event catalog imports it.
+// readSessionId() holds the read side to the same shape (SESSION_ID_PATTERN).
 //
 // Deliberately NOT persisted across daemon restarts. A stable id would be a
 // machine fingerprint; this one changes exactly when the daemon does, which is
 // the fact it exists to report — run_id cannot express "the daemon died and
 // respawned mid-run".
-const SESSION_ID_PATTERN = /^[0-9a-f]{16}$/;
-
 function newSessionId() {
   return crypto.randomBytes(8).toString('hex');
 }
+
+// The shape of what newSessionId() mints (8 CSPRNG bytes as hex) and the only
+// shape readSessionId() will return. The handle file is just a file, so the
+// shape is what keeps `sends: true` true for a stale or hand-edited one. It
+// lives here, with its minter; the event catalog imports it (#196).
+const SESSION_ID_PATTERN = /^[0-9a-f]{16}$/;
 
 function readHandle(projectRoot, { fs = realFs } = {}) {
   try {
