@@ -16,9 +16,9 @@
 // Approach: regex plus one tiny state-machine stripper, no eval. The stripper
 // handles comments, strings and templates by hand; the one context-dependent
 // decision, whether a `/` opens a regex literal, is delegated to the TypeScript
-// parser, because no character lookback resolves it (`x++ / 2`, `o.return / 2`,
-// `if (x) /re/`) and a misread `/` swallows code, so the guard fails open
-// (#197). `typescript` is already a devDependency (ESLint's type-aware rules
+// parser (which supplies each regex literal's span), because no character
+// lookback resolves it (`x++ / 2`, `o.return / 2`, `if (x) /re/`) and a misread
+// `/` swallows code, so the guard fails open (#197). `typescript` is already a devDependency (ESLint's type-aware rules
 // need it) and this module is test infrastructure, so package.json's runtime
 // `dependencies` are untouched. The stripper (`stripSource`) yields two views
 // of the file that are aligned character-for-character:
@@ -120,22 +120,26 @@ function isNewline(ch) {
 }
 
 /**
- * Start offsets of every regex literal in `src`, as the TypeScript parser reads
- * them. A file without a `/` cannot hold one, so it skips the parse.
+ * Span of every regex literal in `src`, as the TypeScript parser reads them:
+ * start offset -> offset of the closing `/` (flags follow it). A file without a
+ * `/` cannot hold one, so it skips the parse.
  *
  * @param {string} src
- * @returns {Set<number>}
+ * @returns {Map<number, number>}
  */
-function regexLiteralStarts(src) {
-  const starts = new Set();
-  if (!src.includes('/')) return starts;
+function regexLiteralSpans(src) {
+  const spans = new Map();
+  if (!src.includes('/')) return spans;
   const sf = ts.createSourceFile('detector.js', src, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
   const visit = (node) => {
-    if (node.kind === ts.SyntaxKind.RegularExpressionLiteral) starts.add(node.getStart(sf));
+    if (node.kind === ts.SyntaxKind.RegularExpressionLiteral) {
+      const start = node.getStart(sf);
+      spans.set(start, start + node.text.lastIndexOf('/'));
+    }
     ts.forEachChild(node, visit);
   };
   visit(sf);
-  return starts;
+  return spans;
 }
 
 /**
@@ -162,9 +166,10 @@ function stripSource(src) {
   };
 
   // Regex-vs-division is a grammar question (`x++ / 2` divides, `if (x) /re/`
-  // does not), so the parser answers it: the start offset of every regex
-  // literal. Offsets index the raw `src`, the same space as the views.
-  const regexStarts = regexLiteralStarts(src);
+  // does not), so the parser answers it, and supplies the whole span of every
+  // regex literal: its start and its closing `/`. Offsets index the raw `src`,
+  // the same space as the views.
+  const regexSpans = regexLiteralSpans(src);
 
   const stack = [{ type: 'code', depth: 0 }];
   let i = 0;
@@ -225,26 +230,12 @@ function stripSource(src) {
     } else if (c === '`') {
       both(i++);
       stack.push({ type: 'template' });
-    } else if (c === '/' && regexStarts.has(i)) {
-      // Regex literal: scan to the closing `/`, honouring escapes and classes.
-      let j = i + 1;
-      let inClass = false;
-      let closed = false;
-      while (j < n && !isNewline(src[j])) {
-        if (src[j] === '\\') j += 2;
-        else if (src[j] === '[') { inClass = true; j++; }
-        else if (src[j] === ']') { inClass = false; j++; }
-        else if (src[j] === '/' && !inClass) { closed = true; break; }
-        else j++;
-      }
-      if (closed) {
-        both(i);
-        for (let k = i + 1; k < j; k++) raw(k);
-        both(j);
-        i = j + 1;
-      } else {
-        both(i++); // not a regex after all; carry on
-      }
+    } else if (c === '/' && regexSpans.has(i)) {
+      const close = regexSpans.get(i);
+      both(i);
+      for (let k = i + 1; k < close; k++) raw(k);
+      both(close);
+      i = close + 1;
     } else {
       if (stack.length > 1) {
         if (c === '{') top.depth++;

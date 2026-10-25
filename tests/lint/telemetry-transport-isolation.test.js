@@ -223,6 +223,11 @@ describe('network-detector: comment / string stripper', () => {
     expect(code).toMatch(/fetch\(u\)/);
   });
 
+  it('blanks a regex body whose closing slash the parser locates (class, escape, flags)', () => {
+    const { code } = stripSource('const a = /[/]fetch\\//gi; fetch(u);');
+    expect(code.match(/fetch/g)).toHaveLength(1);
+  });
+
   it('keeps division as division, not as a regex opener', () => {
     const { code } = stripSource('const q = a / b; const r = c / d; fetch(u);');
     expect(code).toMatch(/fetch\(u\)/);
