@@ -27,7 +27,7 @@
 // synthetic one that must fail, so the guard is proven to bite.
 const fs = require('fs');
 const path = require('path');
-const { loadWorkflow, asList, expandJobNames } = require('./workflow-guard');
+const { loadWorkflow, asList, expandJobNames, findProducer } = require('./workflow-guard');
 
 const { REPO_ROOT } = require('./docs-corpus');
 
@@ -76,15 +76,6 @@ function prTriggerProblems(wf) {
     if (pr[key]) problems.push(`pull_request has a \`${key}\` filter — no check run on unmatched PRs`);
   }
   return problems;
-}
-
-/** Every job, across every workflow, whose check-run names include `name`. */
-function producers(wfs, name) {
-  return wfs.flatMap(({ file, wf }) =>
-    Object.entries(wf.jobs || {})
-      .filter(([id, job]) => expandJobNames(job, id).includes(name))
-      .map(([id]) => ({ file, id })),
-  );
 }
 
 /** The transitive `needs:` of a job, by id. Throws on a dangling id. */
@@ -146,23 +137,26 @@ describe('every required check is reportable on every PR into main (#249)', () =
   });
 
   describe.each(required.checks)('%s', (name) => {
+    // findProducer throws a named error unless exactly one job reports the
+    // name, so each test below fails on its own cause rather than a
+    // TypeError from destructuring an empty list (#249).
     test('is produced by exactly one job across all workflows', () => {
-      expect(producers(workflows, name)).toHaveLength(1);
+      expect(() => findProducer(workflows, name)).not.toThrow();
     });
 
     test('its workflow runs on every pull_request into main', () => {
-      const [{ file }] = producers(workflows, name);
-      expect(prTriggerProblems(loadWorkflow(file))).toEqual([]);
+      const { wf } = findProducer(workflows, name);
+      expect(prTriggerProblems(wf)).toEqual([]);
     });
 
     test('every job in its transitive needs is itself required', () => {
-      const [{ file, id }] = producers(workflows, name);
-      expect(closureProblems(loadWorkflow(file).jobs, id, required.checks)).toEqual([]);
+      const { wf, id } = findProducer(workflows, name);
+      expect(closureProblems(wf.jobs, id, required.checks)).toEqual([]);
     });
 
     test('its job has no job-level continue-on-error', () => {
-      const [{ file, id }] = producers(workflows, name);
-      expect(continueOnErrorProblems(loadWorkflow(file).jobs[id])).toEqual([]);
+      const { job } = findProducer(workflows, name);
+      expect(continueOnErrorProblems(job)).toEqual([]);
     });
   });
 
@@ -206,13 +200,25 @@ describe('the predicates bite (#249)', () => {
     expect(prTriggerProblems({ on: { pull_request: { branches: ['main'] } } })).toEqual([]);
   });
 
-  test('producers finds zero and two producers', () => {
+  describe('findProducer', () => {
     const wfs = [
-      { file: 'a.yml', wf: { jobs: { a: job('Same') } } },
+      { file: 'a.yml', wf: { jobs: { a: job('Same'), solo: job('Solo') } } },
       { file: 'b.yml', wf: { jobs: { b: job('Same') } } },
     ];
-    expect(producers(wfs, 'Same')).toHaveLength(2);
-    expect(producers(wfs, 'Renamed')).toHaveLength(0);
+
+    test('returns the one producer with its already-loaded workflow and job', () => {
+      const found = findProducer(wfs, 'Solo');
+      expect(found).toEqual({ file: 'a.yml', id: 'solo', wf: wfs[0].wf, job: wfs[0].wf.jobs.solo });
+      expect(found.wf).toBe(wfs[0].wf);
+    });
+
+    test('throws a named error when no job reports the name', () => {
+      expect(() => findProducer(wfs, 'Renamed')).toThrow(/no job .*"Renamed"/);
+    });
+
+    test('throws a named error listing every producer when two jobs report it', () => {
+      expect(() => findProducer(wfs, 'Same')).toThrow(/2 jobs .*"Same".*a\.yml#a.*b\.yml#b/);
+    });
   });
 
   test('closureProblems flags an unrequired job anywhere in the transitive needs', () => {

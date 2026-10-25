@@ -70,6 +70,32 @@ function findJobWithRun(jobs, run) {
 }
 
 /**
+ * The one job, across these already-loaded workflows, whose check-run names
+ * include `name` (#249). Same principle as findStep: throws a named error
+ * unless there is exactly one, listing what it found — zero producers is a
+ * renamed job, two is a check whichever job reports first can satisfy, and
+ * destructuring a list of either would fail as a TypeError or check only the
+ * first.
+ *
+ * @param {{ file: string, wf: object }[]} workflows
+ * @param {string} name
+ * @returns {{ file: string, id: string, wf: object, job: object }}
+ */
+function findProducer(workflows, name) {
+  const found = workflows.flatMap(({ file, wf }) =>
+    Object.entries((wf && wf.jobs) || {})
+      .filter(([id, job]) => expandJobNames(job, id).includes(name))
+      .map(([id, job]) => ({ file, id, wf, job })),
+  );
+  if (found.length === 0) throw new Error(`no job in any workflow reports check "${name}"`);
+  if (found.length > 1) {
+    const where = found.map((p) => `${p.file}#${p.id}`).join(', ');
+    throw new Error(`${found.length} jobs report check "${name}": ${where}`);
+  }
+  return found[0];
+}
+
+/**
  * `needs:` accepts a single job id or a list; normalise to the list.
  *
  * @param {string|string[]} needs
@@ -131,4 +157,4 @@ function expandJobNames(job, id) {
   return combos.map((c) => name.replace(EXPRESSION, (_, expr) => String(c[MATRIX_REF.exec(expr)[1]])));
 }
 
-module.exports = { loadWorkflow, runs, findStep, findJobWithRun, asList, expandJobNames };
+module.exports = { loadWorkflow, runs, findStep, findJobWithRun, findProducer, asList, expandJobNames };
