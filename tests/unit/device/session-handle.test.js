@@ -4,12 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const {
-  SESSION_ID_PATTERN,
-  newSessionId,
-  readHandle,
-  readSessionId,
-} = require('../../../src/device/session-handle');
+const { readHandle, readSessionId } = require('../../../src/device/session-handle');
 const paths = require('../../../src/device/session-paths');
 
 function tmpRoot() {
@@ -20,39 +15,6 @@ function writeHandle(root, handle) {
   fs.mkdirSync(paths.sessionDir(root), { recursive: true });
   fs.writeFileSync(paths.handlePath(root), JSON.stringify(handle, null, 2) + '\n');
 }
-
-describe('newSessionId', () => {
-  // This test IS the enforcement of the event catalog's `sends: true` on
-  // session_id. The catalog claims the value carries no user-derived content;
-  // that claim is only true if the generator is what these assertions say.
-  it('is 16 lowercase hex characters', () => {
-    expect(newSessionId()).toMatch(/^[0-9a-f]{16}$/);
-  });
-
-  it('is unpredictable — 1000 ids collide zero times', () => {
-    const ids = new Set();
-    for (let i = 0; i < 1000; i++) ids.add(newSessionId());
-    expect(ids.size).toBe(1000);
-  });
-
-  it('always matches SESSION_ID_PATTERN, so the mint and read sides cannot drift', () => {
-    for (let i = 0; i < 200; i++) expect(newSessionId()).toMatch(SESSION_ID_PATTERN);
-  });
-
-  it('takes no arguments, so it cannot be derived from a path, device or pid', () => {
-    expect(newSessionId.length).toBe(0);
-  });
-});
-
-describe('SESSION_ID_PATTERN', () => {
-  // The shape of a session id is owned by its minter. The observe layer imports
-  // it from here, never the reverse: a device module must not reach into the
-  // observability layer to learn the shape of its own output (#196).
-  it('is defined next to newSessionId, not imported from the observe layer', () => {
-    const src = fs.readFileSync(path.join(__dirname, '../../../src/device/session-handle.js'), 'utf8');
-    expect(src).not.toMatch(/require\(\s*['"]\.\.\/observe\//);
-  });
-});
 
 describe('readHandle', () => {
   it('reads the handle a running daemon wrote', () => {

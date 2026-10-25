@@ -23,7 +23,7 @@ const net = require('net');
 
 const paths = require('./session-paths');
 const { FrameParser } = require('./session-protocol');
-const { newSessionId } = require('./session-handle');
+const { newSessionId } = require('./session-id');
 const { makeDeviceCall } = require('./device-call');
 const { safeObserve: guardObserve } = require('../observe/recorder');
 const { FLUSH_INTERVAL_MS } = require('../observe/flush');
