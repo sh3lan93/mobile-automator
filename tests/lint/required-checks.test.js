@@ -78,6 +78,17 @@ function prTriggerProblems(wf) {
   return problems;
 }
 
+/**
+ * The workflows that can report a check run on a PR: those with a
+ * `pull_request` trigger. A tag- or push-only workflow cannot satisfy a
+ * required check, so its jobs are not searched — and a matrix there that
+ * expandJobNames refuses cannot break this guard. Path-filtered PR workflows
+ * stay in: a same-named job there could satisfy the check on some PRs.
+ */
+function prWorkflows(wfs) {
+  return wfs.filter(({ wf }) => 'pull_request' in triggers(wf));
+}
+
 /** The transitive `needs:` of a job, by id. Throws on a dangling id. */
 function needsClosure(jobs, id, seen = new Set()) {
   const job = jobs[id];
@@ -137,25 +148,29 @@ describe('every required check is reportable on every PR into main (#249)', () =
   });
 
   describe.each(required.checks)('%s', (name) => {
+    // Filtered inside each test, not at load: triggers() throws on a workflow
+    // with no `on:` map, and that should fail the test above, not the suite.
+    const producer = () => findProducer(prWorkflows(workflows), name);
+
     // findProducer throws a named error unless exactly one job reports the
     // name, so each test below fails on its own cause rather than a
     // TypeError from destructuring an empty list (#249).
-    test('is produced by exactly one job across all workflows', () => {
-      expect(() => findProducer(workflows, name)).not.toThrow();
+    test('is produced by exactly one job across the PR-triggered workflows', () => {
+      expect(producer).not.toThrow();
     });
 
     test('its workflow runs on every pull_request into main', () => {
-      const { wf } = findProducer(workflows, name);
+      const { wf } = producer();
       expect(prTriggerProblems(wf)).toEqual([]);
     });
 
     test('every job in its transitive needs is itself required', () => {
-      const { wf, id } = findProducer(workflows, name);
+      const { wf, id } = producer();
       expect(closureProblems(wf.jobs, id, required.checks)).toEqual([]);
     });
 
     test('its job has no job-level continue-on-error', () => {
-      const { job } = findProducer(workflows, name);
+      const { job } = producer();
       expect(continueOnErrorProblems(job)).toEqual([]);
     });
   });
@@ -219,6 +234,26 @@ describe('the predicates bite (#249)', () => {
     test('throws a named error listing every producer when two jobs report it', () => {
       expect(() => findProducer(wfs, 'Same')).toThrow(/2 jobs .*"Same".*a\.yml#a.*b\.yml#b/);
     });
+  });
+
+  // A tag-only workflow cannot report a check on a PR, so a matrix there that
+  // expandJobNames refuses (release.yml's verify gaining an `include`) must
+  // not break the producer search.
+  test('prWorkflows drops a non-PR workflow, even one with an unexpandable job', () => {
+    const wfs = [
+      {
+        file: 'release.yml',
+        wf: {
+          on: { push: { tags: ['v*'] } },
+          jobs: { verify: job('V (${{ matrix.v }})', { strategy: { matrix: { v: [1], include: [{ v: 2 }] } } }) },
+        },
+      },
+      { file: 'test.yml', wf: { on: { pull_request: { branches: ['main'] } }, jobs: { t: job('X') } } },
+      { file: 'docs.yml', wf: { on: { pull_request: { paths: ['docs/**'] } }, jobs: { d: job('Y') } } },
+    ];
+    expect(() => findProducer(wfs, 'X')).toThrow(/matrix include/);
+    expect(prWorkflows(wfs).map((w) => w.file)).toEqual(['test.yml', 'docs.yml']);
+    expect(findProducer(prWorkflows(wfs), 'X')).toMatchObject({ file: 'test.yml', id: 't' });
   });
 
   test('closureProblems flags an unrequired job anywhere in the transitive needs', () => {
