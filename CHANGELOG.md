@@ -12,10 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🔧 Changed
 
 - **The session id's shape now lives with the function that mints it.**
-  `SESSION_ID_PATTERN` is defined next to `newSessionId()` in
-  `src/device/session-handle.js`, and the event catalog imports it from
-  there. The device module no longer reaches into the observability layer to
-  learn the shape of its own output. No behaviour change
+  The session id generator and its shape (`SESSION_ID_PATTERN`) now live in
+  `src/device/session-id.js`, a module that requires only `crypto`. The event
+  catalog imports the shape from there, so the device layer no longer reaches
+  into observability to learn its own output's shape, and a lint guard
+  (`tests/lint/session-id-pure.test.js`) keeps the module dependency-free so
+  the import can never form a cycle. No behaviour change
   ([#196](https://github.com/sh3lan93/mobile-automator/issues/196)).
 
 ---
