@@ -7,7 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [0.35.3]
+
+### 🐛 Fixed
+
+- **`session end` can stop a stuck daemon started by mauto 0.27 or earlier,
+  and no longer reports one it could not stop as stopped.** `session end`
+  only signalled a daemon whose command line named this workspace, and
+  daemons started before 0.28.0 carry no workspace marker at all. One that
+  answered the shutdown but stayed stuck was reported as another workspace's
+  and left running; one too stuck to answer was reported `already_stopped`,
+  while the next session start still respected its lock and failed. An
+  answer on this workspace's socket is ownership proof (the socket lives
+  inside the workspace, so a copied workspace can never reach the original's
+  daemon), so a marker-less daemon that answers, and whose pid the workspace
+  lock also names, is now force-stopped like any other stuck daemon of ours.
+  One that does not answer cannot be proven ours, so it is never signalled:
+  `session end` now fails with its `pid` and a `ps -p` / `kill -9` hint
+  instead ([#237](https://github.com/sh3lan93/mobile-automator/issues/237)).
 
 ### 🔧 Changed
 

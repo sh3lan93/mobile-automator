@@ -335,6 +335,13 @@ place: the key is how `session end` recognises this workspace's daemon. Daemons
 started by 0.28.0–0.35.0 end in `--project-root <root>` instead, and are still
 recognised.
 
+Daemons started by mauto 0.27 and earlier carry no marker at all. One that
+answers the shutdown is still recognised, by this workspace's socket and lock,
+and force-stopped. One too stuck to answer cannot be proven to be this
+workspace's, so it is left alone and `session end` fails with its `pid` rather
+than reporting it stopped — it may still hold the workspace lock. Check it with
+`ps -p <pid>` and stop it with `kill -9 <pid>` if it is this workspace's daemon.
+
 When mobile-automator is installed inside your project (a devDependency or a
 source checkout), mauto passes its daemon, the mobile-mcp engine and `mobilecli`
 by paths relative to the project root, so none of their command lines show the
