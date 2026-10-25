@@ -1888,12 +1888,13 @@ describe('cli handlers', () => {
 
     // Each failure outcome gets the hint that is true for it, not one hint
     // hedging across all three.
-    function runStuck(identity) {
+    function runStuck(identity, { acked = true } = {}) {
       return handleSessionEnd({
         projectRoot: '/x',
-        client: { requestShutdown: async () => true },
+        client: { requestShutdown: async () => acked },
         end: {
           readPid: () => 4000,
+          readLockPid: () => null,
           identify: () => identity,
           reaper: { waitForDeath: async () => false, terminate: async () => { throw new Error('signalled'); } },
         },
@@ -1901,10 +1902,14 @@ describe('cli handlers', () => {
     }
 
     test.each([
-      ['foreign', /does not name this workspace \(possibly started by mauto < 0\.28\), so it was not signalled/],
-      ['unknown', /could not be identified \(`ps` failed\), so it was not signalled/],
-    ])('%s identity: fail(device), never signalled, with its own hint', async (identity, hint) => {
-      const r = await runStuck(identity);
+      ['foreign', true, /cannot be tied to this workspace, so it was not signalled/],
+      // #237: acked, marker-less, but the lock does not name the same pid.
+      ['unmarked', true, /cannot be tied to this workspace, so it was not signalled/],
+      ['unknown', true, /could not be identified \(`ps` failed\), so it was not signalled/],
+      // #237: a marker-less (mauto < 0.28) daemon that did not answer.
+      ['unmarked', false, /did not answer the shutdown and its command line carries no workspace marker/],
+    ])('%s identity (acked: %s): fail(device), never signalled, with its own hint', async (identity, acked, hint) => {
+      const r = await runStuck(identity, { acked });
       expect(r.exitKind).toBe('device');
       expect(r.envelope.error.message).toBe('device session daemon pid 4000 did not exit');
       expect(r.envelope.data).toEqual({ stopped: false, already_stopped: false, pid: 4000 });
@@ -1912,6 +1917,16 @@ describe('cli handlers', () => {
       expect(r.envelope.hint).not.toContain('SIGKILL');
       expect(r.envelope.hint).toContain(sessionPaths.pidFilePath('/x'));
       expect(r.envelope.hint).toContain(sessionPaths.logFilePath('/x'));
+    });
+
+    test('an unproven daemon (#237) is a failure that tells the user how to stop it', async () => {
+      const r = await runStuck('unmarked', { acked: false });
+      expect(r.envelope.ok).toBe(false);
+      expect(r.envelope.error.kind).toBe('device');
+      expect(r.envelope.data).toEqual({ stopped: false, already_stopped: false, pid: 4000 });
+      expect(r.envelope.hint).toContain('ps -p 4000');
+      expect(r.envelope.hint).toContain('kill -9 4000');
+      expect(r.envelope.hint).toContain('mauto < 0.28');
     });
   });
 

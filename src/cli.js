@@ -1411,14 +1411,18 @@ async function handleSessionStatus(
 }
 
 // endSession's failure outcomes (#156), each with the hint that is true for it.
-// All three may leave a daemon alive and holding the workspace lock; what
-// differs is WHY, and so what the user should do about it. One vague hint used
-// to cover all three.
+// Every one of them may leave a daemon alive and holding the workspace lock;
+// what differs is WHY, and so what the user should do about it. One vague hint
+// used to cover them all.
 const SESSION_END_FAILURE_HINTS = {
   survived: (pid, pidFile) =>
     `It is still alive after SIGTERM and SIGKILL and may still hold the workspace lock. Check it with \`ps -p ${pid}\` and stop it with \`kill -9 ${pid}\` (pidfile: ${pidFile}).`,
   foreign: (pid, pidFile) =>
-    `It answered the shutdown, but its command line does not name this workspace (possibly started by mauto < 0.28), so it was not signalled. Check it with \`ps -p ${pid}\` and stop it manually (pidfile: ${pidFile}).`,
+    `Something answered the shutdown, but this pid cannot be tied to this workspace, so it was not signalled: its command line names another workspace, or names none and the workspace lock does not name it. Check it with \`ps -p ${pid}\` and stop it manually (pidfile: ${pidFile}).`,
+  // #237: a daemon started by mauto <= 0.27.x carries no workspace marker, and
+  // without an ack nothing else proves it ours.
+  unproven: (pid, pidFile) =>
+    `It did not answer the shutdown and its command line carries no workspace marker (a daemon started by mauto < 0.28), so this workspace cannot prove it is its own and it was not signalled. It may still hold the workspace lock. Check it with \`ps -p ${pid}\` and stop it with \`kill -9 ${pid}\` if it is this workspace's daemon (pidfile: ${pidFile}).`,
   unverified: (pid, pidFile) =>
     `It could not be identified (\`ps\` failed), so it was not signalled. Check it with \`ps -p ${pid}\` and stop it manually if it is this workspace's mauto daemon (pidfile: ${pidFile}).`,
 };
