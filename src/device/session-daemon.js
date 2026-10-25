@@ -272,7 +272,9 @@ async function startDaemon({
   let call;
   let close;
   try {
-    ({ call, close } = await createCall({ device, engine, onEngineExit }));
+    // projectRoot lets the engine run from the root with root-relative paths in
+    // its argv and MOBILECLI_PATH, so `ps` never shows the project path (#236).
+    ({ call, close } = await createCall({ device, engine, projectRoot, onEngineExit }));
   } catch (err) {
     // #156's core symptom: mobile-mcp never came up, and until now the only
     // trace was a 15s readiness timeout in the spawning verb.

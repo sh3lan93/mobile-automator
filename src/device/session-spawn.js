@@ -13,6 +13,7 @@ const childProcess = require('child_process');
 const sessionClient = require('./session-client');
 const sessionLog = require('./session-log');
 const paths = require('./session-paths');
+const sessionSalt = require('./session-salt');
 const reaper = require('./process-reaper');
 
 const DAEMON_BIN = path.join(__dirname, '..', '..', 'bin', 'mauto-session-daemon.js');
@@ -38,6 +39,9 @@ async function spawnDaemon({
   pollMs = DEFAULT_POLL_MS,
   isAlive = sessionClient.isAlive,
   openLog = sessionLog.openDaemonLog,
+  // Reads or creates the workspace's marker salt (#236). Injectable so the
+  // spawn args are testable without a writable workspace.
+  ensureSalt = sessionSalt.ensureSalt,
   // Kills a daemon that never became ready (#156). group:true reaches the
   // daemon AND its mobile-mcp engine: `detached: true` below makes the daemon
   // a process-group leader, and the engine is spawned into its group.
@@ -63,14 +67,31 @@ async function spawnDaemon({
   const log = openLog(projectRoot);
 
   try {
-    // The root in argv is an identity marker only (see paths.daemonArgv): env
-    // stays the daemon's source of truth, but `ps` can only see argv.
+    // The workspace key in argv is an identity marker only (see paths.daemonArgv):
+    // env stays the daemon's source of truth, but `ps` can only see argv. It is
+    // salted with the workspace's own secret, so `ps` readers cannot confirm a
+    // guessed path by hashing it (#236). A salt we can neither read nor create
+    // fails the spawn, like a bin that cannot exec: a daemon with no marker is
+    // one `session end` can never force-stop, and a workspace that cannot hold
+    // the salt cannot hold the daemon's own lock and pidfile either. No
+    // argument names the project path, since `ps` shows argv to every user on
+    // the host (#236): an in-project bin is passed relative to the root
+    // (paths.argvPath), which only resolves because the child's cwd IS that
+    // root. One `cwd` feeds both, so the two cannot drift apart.
     // cwd: the engine inherits the daemon's cwd, and mobile-mcp's
     // validateOutputPath only allows screenshots under its own process.cwd()
     // (or the temp dir). Pin it to the project root so the allow-list never
     // depends on which subdirectory happened to spawn the daemon (#214).
-    const child = spawn(process.execPath, [DAEMON_BIN, ...paths.daemonArgv(projectRoot)], {
-      cwd: projectRoot,
+    let marker;
+    try {
+      marker = paths.daemonArgv(projectRoot, ensureSalt(projectRoot));
+    } catch (err) {
+      log.write(`mauto: daemon not spawned: could not create the session marker salt: ${err && err.message ? err.message : err}\n`);
+      return false;
+    }
+    const cwd = projectRoot;
+    const child = spawn(process.execPath, [paths.argvPath(cwd, DAEMON_BIN), ...marker], {
+      cwd,
       detached: true,
       stdio: log.stdio,
       env,

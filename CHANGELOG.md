@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.35.1]
+
+### 🔒 Changed
+
+- **The session daemon's command line no longer shows your project path.**
+  Since 0.28.0 the daemon carried `--project-root <absolute root>` in its
+  argv, so `session end` could confirm a pid belongs to this workspace before
+  signalling it. Anyone who can run `ps` on the machine, including other
+  users on a shared host or CI runner, could read that path, and paths often
+  name the client or project. The marker is now `--workspace-key <key>`, an
+  HMAC of the resolved root keyed by a random per-workspace secret
+  (`mobile-automator/.session/marker.salt`, mode 0600), so a `ps` reader
+  cannot confirm a guessed path by hashing it. The daemon still reads the
+  root itself from its environment. When mobile-automator is installed
+  inside the project, the daemon script, the mobile-mcp engine and
+  `mobilecli` are all passed relative to the project root, so their command
+  lines do not reveal it either. Daemons started by 0.28.0–0.35.0 are still
+  recognised by their old marker, so `session end` can still force-stop a
+  stuck one after you upgrade
+  ([#236](https://github.com/sh3lan93/mobile-automator/issues/236)).
+- **Known gap:** `mobilecli` starts its own background daemon by its absolute
+  path, and that process can outlive the session by up to 30 minutes. With an
+  in-project install its command line still shows the project path. A global
+  install (`npm i -g mobile-automator`) avoids it. See `TROUBLESHOOTING.md`.
+
+---
+
 ## [0.35.0]
 
 ### ✨ Added

@@ -15,6 +15,7 @@ const path = require('path');
 
 const { cleanupWorkspaceIfOwned } = require('../../../bin/mauto-session-daemon');
 const paths = require('../../../src/device/session-paths');
+const { ensureSalt, readSalt } = require('../../../src/device/session-salt');
 
 function tmpRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-daemon-cleanup-'));
@@ -51,6 +52,15 @@ describe('daemon bin: ownership-gated workspace cleanup', () => {
     seedWorkspace(root, process.pid);
     cleanupWorkspaceIfOwned(root);
     expect(noneExist(root)).toBe(true);
+  });
+
+  test("the OWNER's teardown spares the marker salt (#236)", () => {
+    const root = tmpRoot();
+    seedWorkspace(root, process.pid);
+    const salt = ensureSalt(root);
+    cleanupWorkspaceIfOwned(root);
+    expect(noneExist(root)).toBe(true);
+    expect(readSalt(root)).toBe(salt);
   });
 
   test('no lock present -> a no-op that never throws', () => {

@@ -1,7 +1,13 @@
 'use strict';
 
+const path = require('path');
 const { McpError, ErrorCode } = require('@modelcontextprotocol/sdk/types.js');
-const { createCall, CONNECT_TIMEOUT_MS, ENGINE_REAP_MAX_MS } = require('../../../src/device/mobile-mcp-client');
+const {
+  createCall,
+  resolveServerEntry,
+  CONNECT_TIMEOUT_MS,
+  ENGINE_REAP_MAX_MS,
+} = require('../../../src/device/mobile-mcp-client');
 
 // Fake SDK. The fake Client mirrors the real one where it matters: connect()
 // calls transport.start(), honours options.timeout by rejecting with
@@ -174,5 +180,32 @@ describe('createCall lifecycle (#156)', () => {
         else process.env[k] = saved[k];
       }
     }
+  });
+});
+
+// #236: the engine is the daemon's long-lived child, so its argv is on `ps` for
+// every user on the host. Given the workspace root, the in-project entry is
+// passed relative to it and the engine runs with cwd = root, which is what
+// makes the relative path resolve.
+describe('createCall engine argv (#236)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+  test('with projectRoot: a root-relative entry and cwd = root', async () => {
+    const { sdk, made } = fakeSdk();
+    await createCall({ sdk, projectRoot: repoRoot, reaper: fakeReaper() });
+    const { args, cwd, command } = made.transport.params;
+    expect(command).toBe(process.execPath);
+    expect(cwd).toBe(repoRoot);
+    expect(args).toEqual([path.relative(repoRoot, resolveServerEntry())]);
+    expect(path.isAbsolute(args[0])).toBe(false);
+    expect(path.resolve(cwd, args[0])).toBe(resolveServerEntry());
+  });
+
+  test('without projectRoot: the absolute entry and no cwd, as before', async () => {
+    const { sdk, made } = fakeSdk();
+    await createCall({ sdk, reaper: fakeReaper() });
+    expect(made.transport.params.args).toEqual([resolveServerEntry()]);
+    expect(made.transport.params).not.toHaveProperty('cwd');
+    expect(made.transport.params.env.MOBILECLI_PATH).toBe(process.env.MOBILECLI_PATH);
   });
 });

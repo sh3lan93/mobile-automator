@@ -8,6 +8,7 @@ const { resolveSingleDevice } = require('./device-resolver');
 const { normalizeDevices } = require('./device-model');
 const { resolveEngineTelemetry } = require('../observe/telemetry');
 const { ErrorCode } = require('@modelcontextprotocol/sdk/types.js');
+const { argvPath } = require('./session-paths');
 
 // Bound on mobile-mcp's MCP initialize handshake (#156). Measured at ~200ms on
 // mobile-mcp 1.0.5 — initialize touches no device — so 10s is ~50x headroom.
@@ -80,7 +81,42 @@ function resolveServerEntry() {
 // the user set. The decision lives in resolveEngineTelemetry so that
 // `mauto telemetry status` reports exactly what this hands the engine, and the
 // same `mauto session end` rule applies to a change.
-function buildEngineEnv({ device = null, baseEnv = process.env, engine = null } = {}) {
+//
+// MOBILECLI_PATH is set root-relative when `projectRoot` is given (#236).
+// mobile-mcp runs mobilecli by the absolute path its own resolver finds, and
+// for an in-project install that path contains the project root, which `ps`
+// shows every user on the host. mobile-mcp 1.0.5 takes MOBILECLI_PATH verbatim
+// and spawns mobilecli without a cwd option, so the binary inherits the
+// engine's cwd, which createCall pins to projectRoot: a root-relative path
+// reaches the same file. The lookup itself stays mobile-mcp's
+// (resolveMobilecli; tests/integration/mobile-mcp-contract.test.js fails if an
+// engine bump moves it). A resolver that throws leaves the key unset, so the
+// engine surfaces its own "mobilecli not found". A user-set value always wins.
+// A bare relative name would be a PATH lookup for execFile, so a binary
+// sitting directly in the root keeps a `./`.
+function defaultResolveMobilecli() {
+  return require('@mobilenext/mobile-mcp/lib/mobilecli.js').Mobilecli.getMobilecliPath();
+}
+
+function relativeMobilecliPath(projectRoot, resolveMobilecli) {
+  let resolved;
+  try {
+    resolved = resolveMobilecli();
+  } catch (_e) {
+    return undefined;
+  }
+  if (!resolved) return undefined;
+  const p = argvPath(projectRoot, resolved);
+  return path.isAbsolute(p) || p.includes(path.sep) ? p : `.${path.sep}${p}`;
+}
+
+function buildEngineEnv({
+  device = null,
+  baseEnv = process.env,
+  engine = null,
+  projectRoot = null,
+  resolveMobilecli = defaultResolveMobilecli,
+} = {}) {
   const env = {
     ...baseEnv,
     MOBILEMCP_ALLOW_UNSAFE_URLS: baseEnv.MOBILEMCP_ALLOW_UNSAFE_URLS ?? '1',
@@ -92,6 +128,10 @@ function buildEngineEnv({ device = null, baseEnv = process.env, engine = null } 
   // mobile-mcp reads the target device from the environment / its own
   // selection; we pass it through when provided so callers can pin a device.
   if (device) env.MOBILE_MCP_DEVICE = device;
+  if (projectRoot && baseEnv.MOBILECLI_PATH === undefined) {
+    const mobilecli = relativeMobilecliPath(projectRoot, resolveMobilecli);
+    if (mobilecli !== undefined) env.MOBILECLI_PATH = mobilecli;
+  }
   return env;
 }
 
@@ -115,6 +155,12 @@ function pidTracking(Transport) {
 // Integration glue: spawns mobile-mcp over stdio and returns a `call`
 // function shaped exactly like the one DeviceBridge expects.
 //
+// `projectRoot` (#236): the daemon passes its workspace root. The engine then
+// runs with cwd = root, its in-project entry is passed relative to that root
+// (argvPath), and so is MOBILECLI_PATH (buildEngineEnv): the engine is the
+// daemon's long-lived child and `ps` shows its argv to every user on the host.
+// Null keeps the absolute entry and the inherited cwd.
+//
 // `sdk`, `server` and `reaper` are test seams: production passes none of them.
 // tests/unit/device/mobile-mcp-client-lifecycle.test.js drives this against a
 // fake SDK; tests/integration/engine-lifecycle.test.js against the real SDK and
@@ -122,6 +168,7 @@ function pidTracking(Transport) {
 async function createCall({
   device,
   engine = null,
+  projectRoot = null,
   connectTimeoutMs = CONNECT_TIMEOUT_MS,
   onEngineExit = null,
   sdk = { Client, StdioClientTransport },
@@ -129,12 +176,16 @@ async function createCall({
   reaper = require('./process-reaper'),
 } = {}) {
   // Resolved lazily, here, so the module still loads without mobile-mcp installed.
-  const { command, args } = server || { command: process.execPath, args: [resolveServerEntry()] };
+  // The relative entry and MOBILECLI_PATH only resolve because cwd is the same
+  // projectRoot, so both come from it here.
+  const entry = () => (projectRoot ? argvPath(projectRoot, resolveServerEntry()) : resolveServerEntry());
+  const { command, args } = server || { command: process.execPath, args: [entry()] };
   const Transport = pidTracking(sdk.StdioClientTransport);
   const transport = new Transport({
     command,
     args,
-    env: buildEngineEnv({ device, engine }),
+    env: buildEngineEnv({ device, engine, projectRoot }),
+    ...(projectRoot ? { cwd: projectRoot } : {}),
   });
 
   const client = new sdk.Client({ name: 'mauto', version: '0.1.0' }, { capabilities: {} });
