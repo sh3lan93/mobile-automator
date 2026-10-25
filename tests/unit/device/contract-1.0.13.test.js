@@ -1,26 +1,32 @@
 'use strict';
 
-// Recorded-fixture contract for the pinned device engine, mobile-mcp 1.0.5.
+// Recorded-fixture contract for the pinned device engine, mobile-mcp 1.0.13.
 //
-// Every file under tests/fixtures/device/mobile-mcp-1.0.5/ is a REAL capture,
-// not a hand-written shape. They were recorded on 2026-09-30 during the device
-// run for #199 (task T8), by an MCP client calling the pinned engine
-// (@mobilenext/mobile-mcp 1.0.5, driving mobilecli 1.0.13) with
+// Every file under tests/fixtures/device/mobile-mcp-1.0.13/ is a REAL capture,
+// not a hand-written shape. They were recorded on 2026-10-25 for #248 (first
+// set: 2026-09-30, mobile-mcp 1.0.5, #199), by an MCP client calling the
+// pinned engine (@mobilenext/mobile-mcp 1.0.13, driving mobilecli 1.0.21) with
 // format:"json" on the element tool — exactly the text our bridge receives:
 //
 //   android-default.*  Pixel 9 Pro emulator (API 36), default mobilecli robot,
 //                      Android Settings root screen. Device id `Pixel_9_Pro`.
+//                      The crash list holds a real `am crash` of Settings.
 //   android-legacy.*   the same emulator and screen under
 //                      MOBILEMCP_LEGACY_ROBOT=1 (uiautomator). Device id
 //                      `emulator-5554`. No crashes capture: the crash tool
 //                      fails in legacy mode (known, documented).
-//   ios-sim.*          iPhone 15 simulator (iOS 17.0), Settings root screen.
+//   ios-sim.*          iPhone 15 simulator (iOS 17.0), Settings root screen,
+//                      on a macOS 27 host. Its crash list is `[]` although
+//                      Settings had just been killed with SIGABRT and the
+//                      host holds its report: mobilecli#539. That empty
+//                      capture is the evidence DeviceBridge#listCrashes
+//                      refuses to trust.
 //
 // Why recorded fixtures exist: the contract test in tests/integration checks
 // the engine's tool SCHEMAS (names and arguments). It cannot see the OUTPUT
 // shapes our parsers consume — element JSON, device lists, the screen-size
 // string, crash reports — and those are what silently broke on the 1.0.5
-// upgrade. These tests pin the output shapes against real data.
+// upgrade, and the iOS crash list on the 1.0.13 one. These tests pin the output shapes against real data.
 //
 // Re-capture every file here when bumping the @mobilenext/mobile-mcp pin.
 
@@ -33,7 +39,7 @@ const { normalizeCrashes, crashTimestampMs } = require('../../../src/device/cras
 const { DeviceBridge } = require('../../../src/device/bridge');
 const { injectDeviceArg } = require('../../../src/device/tool-args');
 
-const FX = path.join(__dirname, '../../fixtures/device/mobile-mcp-1.0.5');
+const FX = path.join(__dirname, '../../fixtures/device/mobile-mcp-1.0.13');
 
 function readRaw(source, kind) {
   return fs.readFileSync(path.join(FX, `${source}.${kind}.txt`), 'utf8');
@@ -51,10 +57,10 @@ const ELEMENT_SOURCES = [
   // [source, raw element count, labels a real user sees on that screen]
   ['android-default', 96, ['Network & internet', 'Search Settings']],
   ['android-legacy', 62, ['Network & internet', 'Search Settings']],
-  ['ios-sim', 58, ['General', 'Settings']],
+  ['ios-sim', 53, ['General', 'Settings']],
 ];
 
-describe('mobile-mcp 1.0.5 contract (recorded real-device fixtures)', () => {
+describe('mobile-mcp 1.0.13 contract (recorded real-device fixtures)', () => {
   describe.each(ELEMENT_SOURCES)('elements: %s', (source, rawCount, knownLabels) => {
     const raw = captured(source, 'elements');
     const rawElements = parseElements(raw);
@@ -186,7 +192,11 @@ describe('mobile-mcp 1.0.5 contract (recorded real-device fixtures)', () => {
     });
   });
 
-  describe.each(['android-default', 'ios-sim'])('crashes: %s', (source) => {
+  test('crashes: ios-sim comes back empty although a crash was on the host (mobilecli#539)', () => {
+    expect(normalizeCrashes(captured('ios-sim', 'crashes'))).toEqual([]);
+  });
+
+  describe.each(['android-default'])('crashes: %s', (source) => {
     test('normalizes to id/process/timestamp with a readable, positive time', () => {
       const crashes = normalizeCrashes(captured(source, 'crashes'));
       expect(crashes.length).toBeGreaterThan(0);
