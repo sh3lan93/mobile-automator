@@ -296,16 +296,27 @@ function snippet(text, i) {
  * Every module specifier the file names, plus every place it names one that
  * cannot be read statically.
  *
+ * Exported for guards that need more than collectSpecifiers(): a guard that
+ * pins a file's WHOLE dependency set must also reject a relative require
+ * (`local` — normalizeSpecifier() maps those to null, so they never reach
+ * `specifiers`) and a computed one (`unverifiable`), which a list of literal
+ * package specifiers alone cannot show. tests/lint/session-id-pure.test.js is
+ * one (#196).
+ *
  * @returns {{ specifiers: Array<{specifier:string, raw:string, via:string}>,
- *             unverifiable: Array<{detail:string}> }}
+ *             local: Array<{raw:string, via:string}>,
+ *             unverifiable: Array<{detail:string}>,
+ *             text: string, code: string }}
  */
 function analyze(src) {
   const { text, code } = stripSource(src);
   const specifiers = [];
+  const local = [];
   const unverifiable = [];
   const add = (raw, via) => {
     const specifier = normalizeSpecifier(raw);
     if (specifier !== null) specifiers.push({ specifier, raw, via });
+    else local.push({ raw, via });
   };
 
   // require('x') — also matches `module.require(`; not `require.resolve(`.
@@ -341,7 +352,7 @@ function analyze(src) {
     if (hit) add(hit[2], 'export-from');
   }
 
-  return { specifiers, unverifiable, text, code };
+  return { specifiers, local, unverifiable, text, code };
 }
 
 /**
@@ -455,6 +466,7 @@ function findNetworkUse(sourceText, relPath) {
 
 module.exports = {
   findNetworkUse,
+  analyze,
   collectSpecifiers,
   stripSource,
   normalizeSpecifier,

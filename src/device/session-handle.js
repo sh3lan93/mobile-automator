@@ -1,9 +1,10 @@
 'use strict';
 
-// Read side of mobile-automator/.session/session.json — the ONLY one — plus the
-// generator for the session id it carries. resolve-connection.js's
-// readHandleDevice() is a projection onto the `device` field and delegates here;
-// it used to parse the file itself, which meant two readers of one artifact.
+// Read side of mobile-automator/.session/session.json — the ONLY one. The
+// session id it carries is minted, and its shape defined, in session-id.js.
+// resolve-connection.js's readHandleDevice() is a projection onto the `device`
+// field and delegates here; it used to parse the file itself, which meant two
+// readers of one artifact.
 //
 // The handle is where session_id lives because it is a file that is ALREADY
 // there, already written at exactly the right moment (once the daemon is
@@ -16,24 +17,9 @@
 // session", which is a normal state, not an error.
 
 const realFs = require('fs');
-const crypto = require('crypto');
 
 const { handlePath } = require('./session-paths');
-const { SESSION_ID_PATTERN } = require('../observe/event');
-
-// 16 hex chars from the CSPRNG, derived from NOTHING — not the project root,
-// not the device, not the pid. That is what makes the event catalog's
-// `sends: true` on session_id true rather than merely asserted, and
-// tests/unit/device/session-handle.test.js is where the claim is enforced.
-// readSessionId() holds the read side to the same shape (SESSION_ID_PATTERN).
-//
-// Deliberately NOT persisted across daemon restarts. A stable id would be a
-// machine fingerprint; this one changes exactly when the daemon does, which is
-// the fact it exists to report — run_id cannot express "the daemon died and
-// respawned mid-run".
-function newSessionId() {
-  return crypto.randomBytes(8).toString('hex');
-}
+const { SESSION_ID_PATTERN } = require('./session-id');
 
 function readHandle(projectRoot, { fs = realFs } = {}) {
   try {
@@ -50,4 +36,4 @@ function readSessionId(projectRoot, { fs = realFs } = {}) {
   return typeof id === 'string' && SESSION_ID_PATTERN.test(id) ? id : null;
 }
 
-module.exports = { newSessionId, readHandle, readSessionId };
+module.exports = { readHandle, readSessionId };
