@@ -126,12 +126,13 @@ function continueOnErrorProblems(job) {
 // A job-level `if:` that is false skips the job, and a skipped required check
 // counts as success — so `if: false` on the test job would pass every PR
 // without running a test. The one allowed `if:` is pinned to its exact
-// expression, keyed by job id, the way release-gate pins RC_GUARD.
+// expression, keyed by `file#id` (the form findProducer reports), the way
+// release-gate pins RC_GUARD.
 const ALLOWED_JOB_IFS = {
   // version-check.yml: when no src/, bin/ or package.json file changed,
   // nothing ships, so "no bump needed" — a skip — is the correct answer.
   // Its input, `Detect CLI code changes`, is itself required (closureProblems).
-  'check-version': "needs.detect-cli-changes.outputs.ships-code == 'true'",
+  '.github/workflows/version-check.yml#check-version': "needs.detect-cli-changes.outputs.ships-code == 'true'",
 };
 
 /**
@@ -142,9 +143,9 @@ const ALLOWED_JOB_IFS = {
  * has one today, and one that skips the step that does the work leaves the
  * job green.
  */
-function neutralisationProblems(id, job) {
+function neutralisationProblems(key, job) {
   const problems = [];
-  if (job.if !== undefined && job.if !== ALLOWED_JOB_IFS[id]) {
+  if (job.if !== undefined && job.if !== ALLOWED_JOB_IFS[key]) {
     problems.push(`job-level if: ${job.if} is not in ALLOWED_JOB_IFS`);
   }
   problems.push(...continueOnErrorProblems(job));
@@ -204,7 +205,7 @@ describe('every required check is reportable on every PR into main (#249)', () =
 
     test(
       'its job is not neutralised by an if: or continue-on-error',
-      withProducer(({ id, job }) => expect(neutralisationProblems(id, job)).toEqual([])),
+      withProducer(({ file, id, job }) => expect(neutralisationProblems(`${file}#${id}`, job)).toEqual([])),
     );
   });
 });
@@ -306,6 +307,7 @@ describe('the predicates bite (#249)', () => {
 });
 
 describe('neutralisationProblems bites (#249)', () => {
+  const CHECK_VERSION = '.github/workflows/version-check.yml#check-version';
   const step = (extra = {}) => ({ run: 'npm run test:all', ...extra });
   const job = (extra = {}) => ({ name: 'T', 'runs-on': 'ubuntu-latest', steps: [step()], ...extra });
 
@@ -321,13 +323,15 @@ describe('neutralisationProblems bites (#249)', () => {
   });
 
   test('accepts the allowlisted job-level if: only with its exact expression', () => {
-    const exact = ALLOWED_JOB_IFS['check-version'];
+    const exact = ALLOWED_JOB_IFS[CHECK_VERSION];
     expect(exact).toBe("needs.detect-cli-changes.outputs.ships-code == 'true'");
-    expect(neutralisationProblems('check-version', job({ if: exact }))).toEqual([]);
-    expect(neutralisationProblems('check-version', job({ if: `${exact} || true` }))).toHaveLength(1);
-    expect(neutralisationProblems('check-version', job({ if: `\${{ ${exact} }}` }))).toHaveLength(1);
-    // The allowlist is keyed by job id: another job may not borrow the expression.
-    expect(neutralisationProblems('test', job({ if: exact }))).toHaveLength(1);
+    expect(neutralisationProblems(CHECK_VERSION, job({ if: exact }))).toEqual([]);
+    expect(neutralisationProblems(CHECK_VERSION, job({ if: `${exact} || true` }))).toHaveLength(1);
+    expect(neutralisationProblems(CHECK_VERSION, job({ if: `\${{ ${exact} }}` }))).toHaveLength(1);
+    // Keyed by file#id: neither another job nor the same id in another
+    // workflow may borrow the expression.
+    expect(neutralisationProblems('.github/workflows/version-check.yml#test', job({ if: exact }))).toHaveLength(1);
+    expect(neutralisationProblems('.github/workflows/other.yml#check-version', job({ if: exact }))).toHaveLength(1);
   });
 
   test('flags a job-level continue-on-error', () => {

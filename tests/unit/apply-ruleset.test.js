@@ -13,6 +13,7 @@ const CHECKS = ['Test (Node 22)', 'ESLint', 'Verify version is bumped'];
 const policy = (over = {}) => ({
   repo: 'sh3lan93/mobile-automator',
   ruleset_id: 13197042,
+  enforcement: 'active',
   integration_id: 15368,
   strict: true,
   required_approving_review_count: 0,
@@ -51,6 +52,7 @@ describe('loadPolicy', () => {
     ['ruleset_id as a string', { ruleset_id: '13197042' }, /"ruleset_id"/],
     ['integration_id not an integer', { integration_id: 15368.5 }, /"integration_id"/],
     ['strict as a string', { strict: 'true' }, /"strict"/],
+    ['an unknown enforcement', { enforcement: 'on' }, /"enforcement"/],
     ['negative approvals', { required_approving_review_count: -1 }, /"required_approving_review_count"/],
     ['fractional approvals', { required_approving_review_count: 0.5 }, /"required_approving_review_count"/],
     ['bypass_actors not an array', { bypass_actors: null }, /"bypass_actors"/],
@@ -152,6 +154,14 @@ describe('buildRuleset', () => {
     expect(() => buildRuleset({ name: 'x' }, policy())).toThrow(/rules/);
   });
 
+  // The escape hatch is disabling the ruleset; re-applying must re-enable it,
+  // not carry `disabled` through and call that verified.
+  test('takes enforcement from the policy, not the fetched ruleset', () => {
+    const current = preApply();
+    current.enforcement = 'disabled';
+    expect(buildRuleset(current, policy()).enforcement).toBe('active');
+  });
+
   test('does not mutate the fetched ruleset', () => {
     const current = preApply();
     const before = clone(current);
@@ -174,6 +184,7 @@ describe('verifyApplied', () => {
   const params = (r) => statusRule(r.rules)[0].parameters;
 
   test.each([
+    ['a disabled ruleset', (r) => (r.enforcement = 'disabled'), /enforcement is disabled/],
     ['a bypass actor', (r) => r.bypass_actors.push({ actor_id: 5 }), /bypass_actors/],
     ['missing bypass_actors', (r) => delete r.bypass_actors, /bypass_actors/],
     [

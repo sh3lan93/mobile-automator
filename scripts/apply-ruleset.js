@@ -4,9 +4,9 @@
 // Apply .github/required-checks.json to the main-branch ruleset (#249).
 //
 // The ruleset lives outside git, so the JSON is the whole policy — repo,
-// ruleset id, the GitHub Actions integration_id, strict, approvals, bypass
-// actors and the required check names — and this is the one thing that
-// writes it. It replaced a jq recipe in CLAUDE.md: the part that actually
+// ruleset id, enforcement, the GitHub Actions integration_id, strict,
+// approvals, bypass actors and the required check names — and this is the one
+// thing that writes it. It replaced a jq recipe in CLAUDE.md: the part that actually
 // rewrote the live ruleset was the one part nothing tested.
 //
 //   node scripts/apply-ruleset.js           dry run: GET, print the PUT body
@@ -31,12 +31,18 @@ const DEFAULT_POLICY = path.join(__dirname, '..', '.github', 'required-checks.js
 const KEYS = [
   'repo',
   'ruleset_id',
+  'enforcement',
   'integration_id',
   'strict',
   'required_approving_review_count',
   'bypass_actors',
   'checks',
 ];
+
+// The policy owns enforcement rather than carrying the live value over: the
+// escape hatch is disabling the ruleset, and copying `disabled` through would
+// let `--apply` report "applied and verified" while nothing is enforced.
+const ENFORCEMENTS = ['active', 'evaluate', 'disabled'];
 
 // Everything here came from JSON, so a JSON round trip is a full copy. Not
 // structuredClone: under jest it returns host-realm arrays, which
@@ -62,6 +68,7 @@ function loadPolicy(text) {
   for (const key of ['ruleset_id', 'integration_id']) {
     if (!Number.isInteger(p[key]) || p[key] <= 0) fail(`"${key}" must be a positive integer`);
   }
+  if (!ENFORCEMENTS.includes(p.enforcement)) fail(`"enforcement" must be one of ${ENFORCEMENTS.join(', ')}`);
   if (typeof p.strict !== 'boolean') fail('"strict" must be a boolean');
   const count = p.required_approving_review_count;
   if (!Number.isInteger(count) || count < 0) fail('"required_approving_review_count" must be a non-negative integer');
@@ -78,7 +85,7 @@ function loadPolicy(text) {
 
 /**
  * The PUT body: the fetched ruleset's identity and conditions, the policy's
- * bypass actors, and its rules with the policy's approvals and one
+ * enforcement and bypass actors, and its rules with the policy's approvals and one
  * required_status_checks rule (any existing one is replaced, not doubled).
  * Read-only GET fields (id, source, _links, …) are dropped. Idempotent.
  */
@@ -114,7 +121,7 @@ function buildRuleset(current, policy) {
   return {
     name: current.name,
     target: current.target,
-    enforcement: current.enforcement,
+    enforcement: policy.enforcement,
     conditions: copy(current.conditions),
     bypass_actors: copy(policy.bypass_actors),
     rules,
@@ -125,6 +132,9 @@ function buildRuleset(current, policy) {
 function verifyApplied(after, policy) {
   const problems = [];
   const rules = (after && after.rules) || [];
+  if (after.enforcement !== policy.enforcement) {
+    problems.push(`enforcement is ${after.enforcement}, policy wants ${policy.enforcement}`);
+  }
   if (!isDeepStrictEqual(after.bypass_actors, policy.bypass_actors)) {
     problems.push(
       `bypass_actors is ${JSON.stringify(after.bypass_actors)}, policy wants ${JSON.stringify(policy.bypass_actors)}`,
