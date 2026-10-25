@@ -1,0 +1,13 @@
+{
+  "integration_id": 15368,
+  "strict": true,
+  "checks": [
+    "Test (Node 22)",
+    "Test (Node 24)",
+    "Packed-tarball smoke check (Node 22)",
+    "Packed-tarball smoke check (Node 24)",
+    "ESLint",
+    "Detect CLI code changes",
+    "Verify version is bumped"
+  ]
+}
