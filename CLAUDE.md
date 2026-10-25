@@ -6,7 +6,7 @@ Developer guide for maintaining the `mauto` CLI. User-facing docs live in `READM
 
 mobile-automator is a **host-agnostic `mauto` CLI** for AI-driven mobile QA automation. Any AI agent drives a device through `mauto` verbs (which wrap mobile-mcp); reasoning is pulled on demand via `mauto guide`.
 
-**Status (v0.24.0): published.** The package is on npm as `mobile-automator` — first published release **v0.23.8** (2026-08-30), `latest` is **v0.24.0**. `npm i -g mobile-automator` and `npx mobile-automator <verb>` both work. Publishing is automatic: merge a version bump to `main` and the pipeline tags, releases, and publishes (see [Releasing & version handling](#releasing--version-handling)). Milestone `production-ready` (gate issue [#168](https://github.com/sh3lan93/mobile-automator/issues/168)) tracks the remaining work; its Tier 0 ("not distributable") is now clear. User-facing docs (`README.md`, `docs/`) teach `npm i -g mobile-automator`; source install (`git clone` + `npm link`) is kept only as the path for unreleased changes and contributors.
+**Status: published.** The package is on npm as `mobile-automator` — first published release **v0.23.8** (2026-08-30); the current version is `package.json`'s `version` (`npm view mobile-automator dist-tags` for what the registry serves — not restated here, because a hand-written "latest" goes stale on the next merge). `npm i -g mobile-automator` and `npx mobile-automator <verb>` both work. Publishing is automatic: merge a version bump to `main` and the pipeline tags, releases, and publishes (see [Releasing & version handling](#releasing--version-handling)). The `production-ready` gate ([#168](https://github.com/sh3lan93/mobile-automator/issues/168)) is **closed** (2026-10-25, every tier done); its successor is the 1.0 readiness gate [#267](https://github.com/sh3lan93/mobile-automator/issues/267). User-facing docs (`README.md`, `docs/`) teach `npm i -g mobile-automator`; source install (`git clone` + `npm link`) is kept only as the path for unreleased changes and contributors.
 
 ## Architecture
 
@@ -152,7 +152,8 @@ There is also a **three-layer model** worth keeping straight: (1) the CLI contra
 
 | Milestone | PRD / gate | Branch prefix | State |
 |---|---|---|---|
-| `production-ready` | gate issue [#168](https://github.com/sh3lan93/mobile-automator/issues/168) | `fix/<issue>-<slug>`, `feat/…`, `docs/…`, `chore/…` | **active** — 13 open |
+| 1.0 readiness | gate issue [#267](https://github.com/sh3lan93/mobile-automator/issues/267) (draft; no milestone until its tiers are confirmed) | `fix/<issue>-<slug>`, `feat/…`, `docs/…`, `chore/…` | **active** |
+| `production-ready` | gate issue [#168](https://github.com/sh3lan93/mobile-automator/issues/168) | `fix/<issue>-<slug>`, `feat/…`, `docs/…`, `chore/…` | **complete** (gate closed 2026-10-25) |
 | `sample-app` | PRD [#44](https://github.com/sh3lan93/mobile-automator/issues/44), slices #45–#49 | `sample-app/<issue-number>-<short-slug>` | active — slices 4–5 open |
 | `cli` | PRD [#69](https://github.com/sh3lan93/mobile-automator/issues/69), slices #70–#78 | — | **complete** (all 23 closed) |
 | `interactive-recording` | — | — | **dead** — recorder excised in v0.20.0 (PR #110) |
@@ -236,7 +237,7 @@ Note: `jest.config` `testPathIgnorePatterns` must stay `<rootDir>`-anchored — 
 
 ## Known rough edges
 
-Tracked under the `production-ready` milestone; worth knowing before you debug something.
+The upstream-dependent ones have exit plans tracked under the 1.0 readiness gate ([#267](https://github.com/sh3lan93/mobile-automator/issues/267)); worth knowing before you debug something.
 
 - Windows is unsupported by declaration — two deliberate enforcement layers (#165): `package.json` `os` (`darwin`, `linux`) refuses the install (npm's `EBADPLATFORM` carries no WSL2 hint — accepted, it is the only gate npm actually enforces), and `src/device/host-support.js` fails device/session verbs with a rich `environment` envelope for what slips past (`--force`, `npm link`). Device-free verbs already installed on a forced Windows machine keep working; real support would need named pipes plus replacements for `ps`, process-group kill and signals.
 - iOS simulators need the engine's on-device agent (a "Device Kit" app). Since mobile-mcp 1.0.11 the engine installs it automatically ([mobile-mcp#459](https://github.com/mobile-next/mobile-mcp/issues/459) fixed in practice, still open upstream; verified 2026-10-25 by uninstalling the agent). When that install fails, every verb fails with `Command failed: … agent install --device <udid>` / `failed to install agent: …` and `src/device/engine-hints.js` prints the manual `npx -y mobilecli@<pinned> agent install --device <udid>`.
@@ -252,4 +253,4 @@ Tracked under the `production-ready` milestone; worth knowing before you debug s
 
 ## Metadata
 
-Repo: https://github.com/sh3lan93/mobile-automator · Version: see `package.json` (0.36.0 at last edit) · License: Apache 2.0 · Status: published on npm since v0.23.8 (2026-08-30).
+Repo: https://github.com/sh3lan93/mobile-automator · Version: see `package.json` · License: Apache 2.0 · Status: published on npm since v0.23.8 (2026-08-30).
