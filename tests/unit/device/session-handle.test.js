@@ -4,9 +4,13 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { newSessionId, readHandle, readSessionId } = require('../../../src/device/session-handle');
+const {
+  SESSION_ID_PATTERN,
+  newSessionId,
+  readHandle,
+  readSessionId,
+} = require('../../../src/device/session-handle');
 const paths = require('../../../src/device/session-paths');
-const { SESSION_ID_PATTERN } = require('../../../src/observe/event');
 
 function tmpRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-handle-'));
@@ -37,6 +41,16 @@ describe('newSessionId', () => {
 
   it('takes no arguments, so it cannot be derived from a path, device or pid', () => {
     expect(newSessionId.length).toBe(0);
+  });
+});
+
+describe('SESSION_ID_PATTERN', () => {
+  // The shape of a session id is owned by its minter. The observe layer imports
+  // it from here, never the reverse: a device module must not reach into the
+  // observability layer to learn the shape of its own output (#196).
+  it('is defined next to newSessionId, not imported from the observe layer', () => {
+    const src = fs.readFileSync(path.join(__dirname, '../../../src/device/session-handle.js'), 'utf8');
+    expect(src).not.toMatch(/require\(\s*['"]\.\.\/observe\//);
   });
 });
 
