@@ -291,12 +291,12 @@ describe('DeviceBridge', () => {
   });
 
   describe('uninstallApp', () => {
-    test('invokes mobile_uninstall_app with the bundle_id', async () => {
+    test('invokes mobile_uninstall_app with the packageName', async () => {
       const calls = [];
       const call = async (tool, args) => { calls.push([tool, args]); return {}; };
       const bridge = new DeviceBridge({ call });
       await bridge.uninstallApp('com.example.app');
-      expect(calls).toEqual([['mobile_uninstall_app', { bundle_id: 'com.example.app' }]]);
+      expect(calls).toEqual([['mobile_uninstall_app', { packageName: 'com.example.app' }]]);
     });
   });
 

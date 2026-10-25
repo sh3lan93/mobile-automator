@@ -176,7 +176,7 @@ class DeviceBridge {
 
   // Uninstall an app by its bundle/package identifier.
   async uninstallApp(appId) {
-    return await this._call('mobile_uninstall_app', { bundle_id: appId });
+    return await this._call('mobile_uninstall_app', { packageName: appId });
   }
 
   // Open a URL (deep link or web) on the device.

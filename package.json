@@ -34,7 +34,7 @@
     "test:all": "jest"
   },
   "dependencies": {
-    "@mobilenext/mobile-mcp": "1.0.5",
+    "@mobilenext/mobile-mcp": "1.0.13",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "ajv": "^8.20.0",
     "commander": "^12.1.0"
