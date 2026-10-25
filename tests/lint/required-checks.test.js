@@ -22,7 +22,11 @@
 //   - a job a required job `needs` that fails makes the dependent *skipped*,
 //     and skipped satisfies a required check — `Verify version is bumped`
 //     needs `Detect CLI code changes`, so that one must be required too;
-//   - a job-level `continue-on-error` lets a failure report as success.
+//   - a job-level `if:` that is false skips the required job itself, so only
+//     the one pinned in ALLOWED_JOB_IFS is accepted, and a step `if:` can
+//     skip the step doing the work, so none is;
+//   - a `continue-on-error`, on the job or any step, lets a failure report
+//     as success.
 // Each is a small pure predicate below, fed both the real workflows and a
 // synthetic one that must fail, so the guard is proven to bite.
 const fs = require('fs');
@@ -119,6 +123,40 @@ function continueOnErrorProblems(job) {
   return coe === undefined || coe === false ? [] : [`job-level continue-on-error: ${coe}`];
 }
 
+// A job-level `if:` that is false skips the job, and a skipped required check
+// counts as success — so `if: false` on the test job would pass every PR
+// without running a test. The one allowed `if:` is pinned to its exact
+// expression, keyed by job id, the way release-gate pins RC_GUARD.
+const ALLOWED_JOB_IFS = {
+  // version-check.yml: when no src/, bin/ or package.json file changed,
+  // nothing ships, so "no bump needed" — a skip — is the correct answer.
+  // Its input, `Detect CLI code changes`, is itself required (closureProblems).
+  'check-version': "needs.detect-cli-changes.outputs.ships-code == 'true'",
+};
+
+/**
+ * Ways a required job can report success without its work running: a job
+ * `if:` that is not the allowlisted one, a job-level continue-on-error, and
+ * any step with continue-on-error (anything but absent/false) or an `if:`.
+ * Step `if:`s are refused outright rather than allowlisted: no required job
+ * has one today, and one that skips the step that does the work leaves the
+ * job green.
+ */
+function neutralisationProblems(id, job) {
+  const problems = [];
+  if (job.if !== undefined && job.if !== ALLOWED_JOB_IFS[id]) {
+    problems.push(`job-level if: ${job.if} is not in ALLOWED_JOB_IFS`);
+  }
+  problems.push(...continueOnErrorProblems(job));
+  (job.steps || []).filter(Boolean).forEach((s, i) => {
+    const label = `step ${i} (${s.name || s.run || s.uses})`;
+    const coe = s['continue-on-error'];
+    if (coe !== undefined && coe !== false) problems.push(`${label}: continue-on-error: ${coe}`);
+    if (s.if !== undefined) problems.push(`${label}: if: ${s.if}`);
+  });
+  return problems;
+}
+
 // --- the guard -------------------------------------------------------------
 
 describe(`${REQUIRED_FILE} shape (#249)`, () => {
@@ -169,9 +207,9 @@ describe('every required check is reportable on every PR into main (#249)', () =
       expect(closureProblems(wf.jobs, id, required.checks)).toEqual([]);
     });
 
-    test('its job has no job-level continue-on-error', () => {
-      const { job } = producer();
-      expect(continueOnErrorProblems(job)).toEqual([]);
+    test('its job is not neutralised by an if: or continue-on-error', () => {
+      const { id, job } = producer();
+      expect(neutralisationProblems(id, job)).toEqual([]);
     });
   });
 
@@ -277,6 +315,55 @@ describe('the predicates bite (#249)', () => {
     expect(continueOnErrorProblems(job('X', { 'continue-on-error': '${{ matrix.x }}' }))).toHaveLength(1);
     expect(continueOnErrorProblems(job('X', { 'continue-on-error': false }))).toEqual([]);
     expect(continueOnErrorProblems(job('X'))).toEqual([]);
+  });
+});
+
+describe('neutralisationProblems bites (#249)', () => {
+  const step = (extra = {}) => ({ run: 'npm run test:all', ...extra });
+  const job = (extra = {}) => ({ name: 'T', 'runs-on': 'ubuntu-latest', steps: [step()], ...extra });
+
+  test('a plain job passes', () => {
+    expect(neutralisationProblems('test', job())).toEqual([]);
+  });
+
+  test('flags a job-level if:, including a literal false', () => {
+    expect(neutralisationProblems('test', job({ if: false }))).toEqual([
+      'job-level if: false is not in ALLOWED_JOB_IFS',
+    ]);
+    expect(neutralisationProblems('test', job({ if: "github.actor != 'x'" }))).toHaveLength(1);
+  });
+
+  test('accepts the allowlisted job-level if: only with its exact expression', () => {
+    const exact = ALLOWED_JOB_IFS['check-version'];
+    expect(exact).toBe("needs.detect-cli-changes.outputs.ships-code == 'true'");
+    expect(neutralisationProblems('check-version', job({ if: exact }))).toEqual([]);
+    expect(neutralisationProblems('check-version', job({ if: `${exact} || true` }))).toHaveLength(1);
+    expect(neutralisationProblems('check-version', job({ if: `\${{ ${exact} }}` }))).toHaveLength(1);
+    // The allowlist is keyed by job id: another job may not borrow the expression.
+    expect(neutralisationProblems('test', job({ if: exact }))).toHaveLength(1);
+  });
+
+  test('flags a job-level continue-on-error', () => {
+    expect(neutralisationProblems('test', job({ 'continue-on-error': true }))).toEqual([
+      'job-level continue-on-error: true',
+    ]);
+  });
+
+  test('flags a step continue-on-error of any value but false', () => {
+    expect(neutralisationProblems('test', job({ steps: [step({ 'continue-on-error': true })] }))).toEqual([
+      'step 0 (npm run test:all): continue-on-error: true',
+    ]);
+    const expr = job({ steps: [step({ 'continue-on-error': '${{ matrix.x }}' })] });
+    expect(neutralisationProblems('test', expr)).toHaveLength(1);
+    expect(neutralisationProblems('test', job({ steps: [step({ 'continue-on-error': false })] }))).toEqual([]);
+  });
+
+  test('flags a step-level if:', () => {
+    const uses = { uses: 'actions/checkout@v7', if: 'always()' };
+    expect(neutralisationProblems('test', job({ steps: [uses, step({ if: false })] }))).toEqual([
+      'step 0 (actions/checkout@v7): if: always()',
+      'step 1 (npm run test:all): if: false',
+    ]);
   });
 });
 
