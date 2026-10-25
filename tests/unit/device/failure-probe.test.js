@@ -108,6 +108,22 @@ describe('probeCrashes', () => {
     expect(JSON.stringify(envelope)).toBe(before);
   });
 
+  it('attaches NOTHING when an iOS simulator\'s empty list cannot be trusted (mobilecli#539)', async () => {
+    const { DeviceBridge } = require('../../../src/device/bridge');
+    const bridge = new DeviceBridge({
+      device: 'sim-1',
+      call: async (tool) =>
+        tool === 'mobile_list_crashes'
+          ? []
+          : { devices: [{ id: 'sim-1', name: 'iPhone 15', platform: 'ios', type: 'simulator', state: 'online' }] },
+    });
+    const envelope = failEnv();
+    const before = JSON.stringify(envelope);
+    await probeCrashes(opts(bridge, { envelope }));
+    expect(envelope).not.toHaveProperty('data.crashes');
+    expect(JSON.stringify(envelope)).toBe(before);
+  });
+
   it('attaches NOTHING when there is no watermark to attribute against', async () => {
     const envelope = failEnv();
     const before = JSON.stringify(envelope);

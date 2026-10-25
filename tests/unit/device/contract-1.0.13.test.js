@@ -196,6 +196,28 @@ describe('mobile-mcp 1.0.13 contract (recorded real-device fixtures)', () => {
     expect(normalizeCrashes(captured('ios-sim', 'crashes'))).toEqual([]);
   });
 
+  // DeviceBridge#listCrashes refuses that empty capture rather than reporting
+  // "no crash" (mobilecli#539), and still trusts the non-empty Android one.
+  test.each([
+    ['ios-sim', IOS_UDID, false],
+    ['android-default', 'Pixel_9_Pro', true],
+  ])('crashes: %s through DeviceBridge#listCrashes', async (source, device, resolves) => {
+    const call = async (tool) => {
+      if (tool === 'mobile_list_crashes') return captured(source, 'crashes');
+      if (tool === 'mobile_list_available_devices') return captured(source, 'devices');
+      throw new Error(`unexpected tool ${tool}`);
+    };
+    const bridge = new DeviceBridge({ call, device });
+    if (resolves) {
+      const crashes = await bridge.listCrashes();
+      expect(crashes.length).toBeGreaterThan(0);
+    } else {
+      await expect(bridge.listCrashes()).rejects.toMatchObject({
+        hint: expect.stringContaining('mobilecli/issues/539'),
+      });
+    }
+  });
+
   describe.each(['android-default'])('crashes: %s', (source) => {
     test('normalizes to id/process/timestamp with a readable, positive time', () => {
       const crashes = normalizeCrashes(captured(source, 'crashes'));

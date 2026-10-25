@@ -66,6 +66,24 @@ describe('handleCrashList', () => {
     expect(r.envelope.hint).not.toMatch(/mobile_/);
   });
 
+  it('surfaces the bridge hint when an iOS simulator\'s empty list cannot be trusted (mobilecli#539)', async () => {
+    const { DeviceBridge } = require('../../../src/device/bridge');
+    const deviceBridge = new DeviceBridge({
+      device: 'sim-1',
+      call: async (tool) =>
+        tool === 'mobile_list_crashes'
+          ? []
+          : { devices: [{ id: 'sim-1', name: 'iPhone 15', platform: 'ios', type: 'simulator', state: 'online' }] },
+    });
+    const r = await handleCrashList({ deviceBridge, projectRoot: tmpRoot() });
+    expect(r.exitKind).toBe('device');
+    expect(r.envelope.ok).toBe(false);
+    expect(r.envelope.error.kind).toBe('device');
+    expect(r.envelope.error.message).toMatch(/iOS simulator/);
+    expect(r.envelope.hint).toContain('mobilecli/issues/539');
+    expect(r.envelope.hint).not.toMatch(/mobile_/);
+  });
+
   it('reports an honest empty list when the device genuinely has none', async () => {
     const r = await handleCrashList({ deviceBridge: bridgeReturning([]), projectRoot: tmpRoot() });
     expect(r.exitKind).toBe('ok');

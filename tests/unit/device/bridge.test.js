@@ -456,3 +456,67 @@ describe('crash primitives', () => {
     await expect(bridge.listCrashes()).rejects.toThrow(/mobilecli is not available/);
   });
 });
+
+// mobilecli#539: on a macOS 27 host an iOS simulator's crash list is `[]` even
+// right after a crash, so an EMPTY list there is not evidence of no crash. Only
+// that one combination must refuse; positive evidence and every other device
+// keep today's behaviour, and the device lookup is paid only on an empty list.
+describe('listCrashes: an empty iOS-simulator list is not evidence (mobilecli#539)', () => {
+  const SIM = { id: 'sim-1', name: 'iPhone 15', platform: 'ios', type: 'simulator', state: 'online' };
+  const REAL_IOS = { id: 'ios-real', name: 'iPhone', platform: 'ios', type: 'real', state: 'online' };
+  const EMU = { id: 'Pixel_9_Pro', name: 'Pixel 9 Pro', platform: 'android', type: 'emulator', state: 'online' };
+
+  function bridgeFor({ crashes, devices, device = null, devicesThrow = null }) {
+    const calls = [];
+    const call = async (tool) => {
+      calls.push(tool);
+      if (tool === 'mobile_list_crashes') return crashes;
+      if (tool === 'mobile_list_available_devices') {
+        if (devicesThrow) throw devicesThrow;
+        return { devices };
+      }
+      throw new Error(`unexpected tool ${tool}`);
+    };
+    return { bridge: new DeviceBridge({ call, device }), calls };
+  }
+
+  it('rejects with a hint when an iOS simulator reports no crashes', async () => {
+    const { bridge } = bridgeFor({ crashes: [], devices: [SIM, EMU], device: 'sim-1' });
+    const err = await bridge.listCrashes().then(
+      () => null,
+      (e) => e
+    );
+    expect(err).toBeInstanceOf(Error);
+    expect(err.message).toMatch(/iOS simulator/);
+    expect(err.hint).toContain('mobilecli/issues/539');
+  });
+
+  it('resolves the single connected simulator when nothing is pinned', async () => {
+    const { bridge } = bridgeFor({ crashes: [], devices: [SIM] });
+    await expect(bridge.listCrashes()).rejects.toThrow(/iOS simulator/);
+  });
+
+  it('returns a non-empty iOS-simulator list without looking the device up', async () => {
+    const report = { id: 'r1', processName: 'Preferences', timestamp: '2026-10-25T10:00:00Z' };
+    const { bridge, calls } = bridgeFor({ crashes: [report], devices: [SIM], device: 'sim-1' });
+    await expect(bridge.listCrashes()).resolves.toEqual([
+      { id: 'r1', process: 'Preferences', timestamp: '2026-10-25T10:00:00Z' },
+    ]);
+    expect(calls).toEqual(['mobile_list_crashes']);
+  });
+
+  it('returns [] for an Android emulator with no crashes', async () => {
+    const { bridge } = bridgeFor({ crashes: [], devices: [SIM, EMU], device: 'Pixel_9_Pro' });
+    await expect(bridge.listCrashes()).resolves.toEqual([]);
+  });
+
+  it('returns [] for a real iOS device with no crashes', async () => {
+    const { bridge } = bridgeFor({ crashes: [], devices: [REAL_IOS, SIM], device: 'ios-real' });
+    await expect(bridge.listCrashes()).resolves.toEqual([]);
+  });
+
+  it('propagates a failing device lookup — that is "could not check", not "none"', async () => {
+    const { bridge } = bridgeFor({ crashes: [], devicesThrow: new Error('device list failed') });
+    await expect(bridge.listCrashes()).rejects.toThrow('device list failed');
+  });
+});
