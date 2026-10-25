@@ -13,9 +13,15 @@
 // import is worse than none, because the CHANGELOG claims it prevents exactly
 // that.
 //
-// Approach: regex plus one tiny state-machine stripper — no parser, no eval, no
-// dependencies. The stripper (`stripSource`) yields two views of the file that
-// are aligned character-for-character:
+// Approach: regex plus one tiny state-machine stripper, no eval. The stripper
+// handles comments, strings and templates by hand; the one context-dependent
+// decision, whether a `/` opens a regex literal, is delegated to the TypeScript
+// parser, because no character lookback resolves it (`x++ / 2`, `o.return / 2`,
+// `if (x) /re/`) and a misread `/` swallows code, so the guard fails open
+// (#197). `typescript` is already a devDependency (ESLint's type-aware rules
+// need it) and this module is test infrastructure, so package.json's runtime
+// `dependencies` are untouched. The stripper (`stripSource`) yields two views
+// of the file that are aligned character-for-character:
 //   text  the source with comments removed (string contents intact), used to
 //         READ a specifier out of a call the code view located;
 //   code  the source with comments removed AND string / template-text / regex
@@ -107,26 +113,29 @@ const NETWORK_GLOBALS = ['fetch', 'WebSocket', 'EventSource', 'XMLHttpRequest', 
 // Stripper
 // ---------------------------------------------------------------------------
 
-// Words after which a `/` starts a regex literal rather than a division.
-const REGEX_AFTER_WORD = new Set([
-  'return',
-  'typeof',
-  'case',
-  'in',
-  'of',
-  'delete',
-  'void',
-  'throw',
-  'new',
-  'else',
-  'do',
-  'yield',
-  'await',
-]);
-const IDENT_CHAR = /[\w$]/;
+const ts = require('typescript');
 
 function isNewline(ch) {
   return ch === '\n' || ch === '\r';
+}
+
+/**
+ * Start offsets of every regex literal in `src`, as the TypeScript parser reads
+ * them. A file without a `/` cannot hold one, so it skips the parse.
+ *
+ * @param {string} src
+ * @returns {Set<number>}
+ */
+function regexLiteralStarts(src) {
+  const starts = new Set();
+  if (!src.includes('/')) return starts;
+  const sf = ts.createSourceFile('detector.js', src, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+  const visit = (node) => {
+    if (node.kind === ts.SyntaxKind.RegularExpressionLiteral) starts.add(node.getStart(sf));
+    ts.forEachChild(node, visit);
+  };
+  visit(sf);
+  return starts;
 }
 
 /**
@@ -152,21 +161,10 @@ function stripSource(src) {
     text[i] = code[i] = src[i];
   };
 
-  // Last non-blank character already emitted in the code view, and the
-  // identifier that ends there (if any) — decides regex-vs-division.
-  const regexAllowedAt = (i) => {
-    let j = i - 1;
-    while (j >= 0 && (code[j] === ' ' || isNewline(code[j]) || code[j] === '\t')) j--;
-    if (j < 0) return true;
-    const p = code[j];
-    if (IDENT_CHAR.test(p)) {
-      let k = j;
-      while (k >= 0 && IDENT_CHAR.test(code[k])) k--;
-      return REGEX_AFTER_WORD.has(code.slice(k + 1, j + 1).join(''));
-    }
-    // After a closing bracket or a quote/backtick it is a division.
-    return !(p === ')' || p === ']' || p === "'" || p === '"' || p === '`');
-  };
+  // Regex-vs-division is a grammar question (`x++ / 2` divides, `if (x) /re/`
+  // does not), so the parser answers it: the start offset of every regex
+  // literal. Offsets index the raw `src`, the same space as the views.
+  const regexStarts = regexLiteralStarts(src);
 
   const stack = [{ type: 'code', depth: 0 }];
   let i = 0;
@@ -227,7 +225,7 @@ function stripSource(src) {
     } else if (c === '`') {
       both(i++);
       stack.push({ type: 'template' });
-    } else if (c === '/' && regexAllowedAt(i)) {
+    } else if (c === '/' && regexStarts.has(i)) {
       // Regex literal: scan to the closing `/`, honouring escapes and classes.
       let j = i + 1;
       let inClass = false;

@@ -130,6 +130,13 @@ describe('network-detector: every outbound shape is reported', () => {
     expect(kinds('const re = /[\'"]/; require("https");')).toContain('network-module');
   });
 
+  it('sees a network module that a division misread as a regex would hide (#197)', () => {
+    expect(kinds('let a = x++ / 2; const h = require("https"); const z = 1 / 2;')).toContain('network-module');
+    expect(kinds('let a = x-- / 2; const h = require("https"); const z = 1 / 2;')).toContain('network-module');
+    expect(kinds('const r = o.return / 2; const h = require("https"); const z = 1 / 2;')).toContain('network-module');
+    expect(kinds('const q = x++ / 2 / y; const h = require("https");')).toContain('network-module');
+  });
+
   it('normalises Windows path separators before consulting the allowlist', () => {
     expect(kinds("require('net')", 'src\\device\\session-client.js')).toEqual([]);
   });
@@ -219,6 +226,30 @@ describe('network-detector: comment / string stripper', () => {
   it('keeps division as division, not as a regex opener', () => {
     const { code } = stripSource('const q = a / b; const r = c / d; fetch(u);');
     expect(code).toMatch(/fetch\(u\)/);
+  });
+
+  // A `/` is a regex opener or a division depending on the grammar, not on the
+  // character before it (#197). Each case below is shaped so a misread `/`
+  // would swallow the asserted code into a fake regex body.
+  it('keeps division after a postfix ++ as division (x++ / 2 / y)', () => {
+    expect(stripSource('const q = x++ / 2 / y;').code).toMatch(/x\+\+ \/ 2 \/ y;/);
+    expect(stripSource('let a = x++ / 2; fetch(u); const z = 1 / 2;').code).toMatch(/fetch\(u\)/);
+  });
+
+  it('keeps division after a postfix -- as division', () => {
+    expect(stripSource('let a = x-- / 2; fetch(u); const z = 1 / 2;').code).toMatch(/fetch\(u\)/);
+  });
+
+  it('keeps division after a keyword used as a property name (o.return / 2)', () => {
+    expect(stripSource('let a = o.return / 2; fetch(u); const z = 1 / 2;').code).toMatch(/fetch\(u\)/);
+  });
+
+  it('reads a / after the ) of an if condition as a regex opener', () => {
+    expect(stripSource('if (ok) /fetch\\(/.test(s);').code).not.toMatch(/fetch/);
+  });
+
+  it('reads a / after a binary operator as a regex opener', () => {
+    expect(stripSource('const r = b + /fetch\\(/.source;').code).not.toMatch(/fetch/);
   });
 
   it('treats template text as a string but ${...} as code, including nesting', () => {
