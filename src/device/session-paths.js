@@ -137,6 +137,19 @@ function commandNamesWorkspace(command, projectRoot, salt = null) {
   return line.endsWith(` ${LEGACY_DAEMON_ROOT_FLAG} ${path.resolve(projectRoot)}`);
 }
 
+// Does a `ps -o command=` line carry a workspace marker of EITHER kind, whatever
+// workspace it names (#237)? Daemons started by mauto <= 0.27.x carry none, and
+// "names no workspace" is a different fact from "names another workspace": the
+// first cannot be told apart by its command line at all, so `session end`
+// falls back to the socket and the lock; the second is proof it is not ours.
+// Matched as a whole argv token (whitespace or line edge on both sides), so a
+// path that merely contains the flag's text is not a marker.
+const MARKER_FLAG_TOKEN = new RegExp(`(?:^|\\s)(?:${DAEMON_WORKSPACE_FLAG}|${LEGACY_DAEMON_ROOT_FLAG})(?=\\s|$)`);
+
+function commandHasWorkspaceMarker(command) {
+  return MARKER_FLAG_TOKEN.test(String(command || ''));
+}
+
 // A path as it should appear in a child's argv (or an env var the child execs
 // by) (#236). `ps` shows every process's argv to every user on the host, and
 // when mobile-automator is installed inside the project (a devDependency, a
@@ -191,5 +204,6 @@ module.exports = {
   LEGACY_DAEMON_ROOT_FLAG,
   daemonArgv,
   commandNamesWorkspace,
+  commandHasWorkspaceMarker,
   argvPath,
 };

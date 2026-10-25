@@ -131,6 +131,30 @@ describe('daemon workspace marker (#156, #236)', () => {
       expect(paths.commandNamesWorkspace(legacy('/b/a/proj'), '/a/proj', salt)).toBe(false);
     }
   });
+
+  // #237: a daemon started by mauto <= 0.27.x carries no marker at all. Telling
+  // "names no workspace" apart from "names ANOTHER workspace" is what lets
+  // `session end` recognise the former by its socket and lock instead.
+  test('commandHasWorkspaceMarker is true for either marker flag, whichever workspace it names (#237)', () => {
+    expect(paths.commandHasWorkspaceMarker(cmd('/a/proj'))).toBe(true);
+    expect(paths.commandHasWorkspaceMarker(cmd('/b/other', OTHER_SALT))).toBe(true);
+    expect(paths.commandHasWorkspaceMarker(legacy('/a/proj'))).toBe(true);
+    expect(paths.commandHasWorkspaceMarker(`${legacy('/b/other')}\n`)).toBe(true);
+    // A flag is a marker even with a value nobody can match (a mangled key).
+    expect(paths.commandHasWorkspaceMarker('node /x/bin/mauto-session-daemon.js --workspace-key zz')).toBe(true);
+  });
+
+  test('commandHasWorkspaceMarker is false for a pre-marker daemon and matches whole argv tokens only (#237)', () => {
+    expect(paths.commandHasWorkspaceMarker('node /x/bin/mauto-session-daemon.js')).toBe(false);
+    expect(paths.commandHasWorkspaceMarker('node /x/bin/mauto-session-daemon.js\n')).toBe(false);
+    expect(paths.commandHasWorkspaceMarker('vim bin/mauto-session-daemon.js')).toBe(false);
+    expect(paths.commandHasWorkspaceMarker('')).toBe(false);
+    expect(paths.commandHasWorkspaceMarker(null)).toBe(false);
+    // A flag-shaped substring inside another token is not the flag.
+    expect(paths.commandHasWorkspaceMarker('node /x/--workspace-key/bin/mauto-session-daemon.js')).toBe(false);
+    expect(paths.commandHasWorkspaceMarker('node /x/bin/mauto-session-daemon.js --project-root-x /a')).toBe(false);
+    expect(paths.commandHasWorkspaceMarker('node /x/bin/mauto-session-daemon.js x--workspace-key k')).toBe(false);
+  });
 });
 
 // #236: `ps` shows every process's argv to every user on the host, so an
