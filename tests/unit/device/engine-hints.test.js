@@ -18,7 +18,7 @@ const B2_MESSAGE =
 const MCP_TOOL = /\bmobile_[a-z_]+/;
 const TEMPLATE_TOKEN = /\{\{|<device-id>|<udid>/;
 
-describe('engineHint — missing iOS DeviceKit agent (mobile-mcp#459)', () => {
+describe('engineHint — missing iOS DeviceKit agent', () => {
   const version = () => '1.0.13';
 
   it('names the one-time install command with the UDID from the message', () => {
@@ -26,7 +26,18 @@ describe('engineHint — missing iOS DeviceKit agent (mobile-mcp#459)', () => {
     expect(hint).toContain(
       'npx -y mobilecli@1.0.13 agent install --device C6C6FFB9-7382-456B-9EE8-0047C8EEA80B'
     );
-    expect(hint).toContain('https://github.com/mobile-next/mobile-mcp/issues/459');
+  });
+
+  // mobile-mcp 1.0.11+ installs the simulator agent itself (mobile-mcp#459 is
+  // fixed), so the hint must not claim it cannot — it only fires when that
+  // automatic install failed.
+  it('says the automatic install failed rather than that the engine cannot install it', () => {
+    const hint = engineHint(B1_MESSAGE, { mobilecliVersion: version });
+    expect(hint).toMatch(/normally installs it automatically/);
+    expect(hint).toMatch(/that install failed/);
+    expect(hint).toMatch(/needs network/);
+    expect(hint).not.toMatch(/cannot install/);
+    expect(hint).not.toContain('mobile-mcp/issues/459');
   });
 
   it('without a --device in the message, points at `mauto devices` instead of a template token', () => {

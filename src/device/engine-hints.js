@@ -7,13 +7,13 @@ const path = require('path');
 // tell the user what to do. Pure: message in, hint string (or null) out. It
 // never throws — a hint classifier that crashes would turn a device failure
 // into an internal one. Found by the #199 real-device run against mobile-mcp
-// 1.0.5 / mobilecli 1.0.13.
+// 1.0.5 / mobilecli 1.0.13; the missing-agent case's auto-install was fixed
+// upstream in mobile-mcp 1.0.11 (#248), so that hint now covers only a failed
+// automatic install.
 //
 // mauto only TELLS the user which command to run; it never runs mobilecli
 // itself (the device is driven only through mauto verbs, which wrap
 // mobile-mcp).
-
-const ISSUE_459 = 'https://github.com/mobile-next/mobile-mcp/issues/459';
 
 // The mobilecli that the pinned mobile-mcp actually spawns — resolved from
 // mobile-mcp's own directory, since that is the copy whose agent the device
@@ -35,10 +35,11 @@ function safeVersion(resolver) {
   }
 }
 
-// B1 (iOS): mobilecli `agent status` exits 1 when the DeviceKit agent is
-// missing and mobile-mcp runs it via execFileSync, so the throw skips its own
-// auto-install (upstream mobile-mcp#459). Every verb fails until the agent is
-// installed once by hand.
+// B1 (iOS): the simulator is missing the DeviceKit agent. Against mobile-mcp
+// 1.0.5 (#199) the engine could not install it itself — `agent status` exited 1
+// under execFileSync and the throw skipped the auto-install (mobile-mcp#459).
+// mobile-mcp 1.0.11+ installs it automatically, so this message now means that
+// automatic install failed (e.g. offline); installing once by hand still works.
 function missingAgentHint(message, resolver) {
   const version = safeVersion(resolver);
   const pkg = version ? `mobilecli@${version}` : 'mobilecli';
@@ -48,8 +49,8 @@ function missingAgentHint(message, resolver) {
     ? `\`${cmd} ${m[1]}\``
     : `\`${cmd}\` followed by the simulator's id from \`mauto devices\``;
   return (
-    'The simulator is missing the device agent the engine needs, and the engine cannot install it ' +
-    `itself (upstream bug ${ISSUE_459}). Install it once with ${install} ` +
+    'The simulator is missing the device agent the engine needs. The engine normally installs it ' +
+    `automatically, but that install failed. Install it once by hand with ${install} ` +
     '(needs network, takes a few seconds), then retry.'
   );
 }

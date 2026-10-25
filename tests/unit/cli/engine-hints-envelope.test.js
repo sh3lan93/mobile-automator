@@ -31,6 +31,8 @@ describe('device-failure envelopes carry the engine hint', () => {
     expect(exitKind).toBe('device');
     expect(envelope.error.message).toBe(B1_MESSAGE);
     expect(envelope.hint).toMatch(/agent install --device C6C6FFB9-7382-456B-9EE8-0047C8EEA80B/);
+    expect(envelope.hint).toMatch(/normally installs it automatically/);
+    expect(envelope.hint).not.toMatch(/cannot install/);
   });
 
   it('a verb routed through deviceFail (tap) gets the changed-device-id hint', async () => {
