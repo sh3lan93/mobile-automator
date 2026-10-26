@@ -45,7 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   version left running (`pkill -f mauto-session-daemon`), delete `.mobile-automator/` if it
   already exists, then `mv mobile-automator .mobile-automator` before any other
   `mauto` verb. `mauto setup`
-  refuses to scaffold a new workspace beside one. The `execute` guide
+  refuses to scaffold a new workspace inside a project that still has one,
+  including when run from a subdirectory. The `execute` guide
   also tells agents to list `.mobile-automator/scenarios/` directly, because
   recursive search tools skip hidden directories.
 

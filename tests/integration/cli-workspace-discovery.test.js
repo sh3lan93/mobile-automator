@@ -252,5 +252,24 @@ describe('workspace discovery (integration, #188)', () => {
       expect(r.status).toBe(5);
       expect(envelopeOf(r).error.message).toContain('legacy');
     });
+
+    test('setup from a subdirectory refuses instead of nesting a second workspace', () => {
+      fs.mkdirSync(path.join(root, 'mobile-automator'));
+      fs.writeFileSync(path.join(root, 'mobile-automator', 'config.json'), '{"mode":"platform-aware"}\n');
+      const app = path.join(root, 'app');
+      fs.mkdirSync(app);
+      const r = runCli(['setup'], app);
+      expect(r.status).toBe(5);
+      expect(envelopeOf(r).error.message).toContain('legacy');
+      expect(fs.existsSync(path.join(app, '.mobile-automator'))).toBe(false);
+    });
+
+    test('setup at the project root refuses too', () => {
+      fs.mkdirSync(path.join(root, 'mobile-automator'));
+      fs.writeFileSync(path.join(root, 'mobile-automator', 'config.json'), '{"mode":"platform-aware"}\n');
+      const r = runCli(['setup'], root);
+      expect(r.status).toBe(5);
+      expect(fs.existsSync(path.join(root, '.mobile-automator'))).toBe(false);
+    });
   });
 });

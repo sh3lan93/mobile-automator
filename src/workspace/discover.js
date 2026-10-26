@@ -69,8 +69,7 @@ function findWorkspaceRoot(startDir, { fs = require('fs') } = {}) {
 // without a workspace. `environment` (exit 5), matching the CLI's other
 // fixable-by-the-caller faults: an agent reading `ok:true` with a missing value
 // cannot tell "unset" from "wrong directory", so this must not be a success.
-function noWorkspaceFailure(searched, legacy = null) {
-  if (legacy) return legacyWorkspaceFailure(legacy);
+function noWorkspaceFailure(searched) {
   return {
     envelope: fail(
       'environment',
@@ -96,10 +95,20 @@ function legacyWorkspaceFailure(dir) {
   };
 }
 
+// The failure for a `findWorkspaceRoot` result that has no workspace. Whether a
+// pre-rename folder was passed on the walk is policy owned here, so callers
+// hand over the whole result instead of choosing between the two failures.
+function workspaceFailure(workspace) {
+  return workspace.legacy
+    ? legacyWorkspaceFailure(workspace.legacy)
+    : noWorkspaceFailure(workspace.searched);
+}
+
 module.exports = {
   findWorkspaceRoot,
-  noWorkspaceFailure,
+  workspaceFailure,
   legacyWorkspaceFailure,
-  markerPath,
-  legacyMarkerPath,
+  // noWorkspaceFailure is exported for its own unit tests only; verbs go
+  // through workspaceFailure.
+  noWorkspaceFailure,
 };

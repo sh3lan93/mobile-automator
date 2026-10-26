@@ -14,7 +14,7 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 
-const { findWorkspaceRoot, noWorkspaceFailure } = require('../../../src/workspace/discover');
+const { findWorkspaceRoot, noWorkspaceFailure, workspaceFailure } = require('../../../src/workspace/discover');
 
 function tmpProject({ git = 'dir' } = {}) {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-discover-')));
@@ -183,15 +183,34 @@ describe('findWorkspaceRoot legacy detection', () => {
   });
 });
 
-describe('noWorkspaceFailure', () => {
+describe('workspaceFailure', () => {
   test('with a legacy dir names it and gives the mv fix', () => {
-    const r = noWorkspaceFailure(['/p'], '/p');
+    const r = workspaceFailure({ root: null, searched: ['/p'], legacy: '/p' });
     expect(r.exitKind).toBe('environment');
     expect(r.envelope.error.message).toContain('/p/mobile-automator/');
     expect(r.envelope.error.message).toContain('.mobile-automator/');
     expect(r.envelope.hint).toContain('pkill -f mauto-session-daemon');
     expect(r.envelope.hint).toContain('mv mobile-automator .mobile-automator');
     expect(r.envelope.hint).not.toMatch(/session end/);
+  });
+
+  test('without a legacy dir is the plain no-workspace failure', () => {
+    const r = workspaceFailure({ root: null, searched: ['/p/a', '/p'], legacy: null });
+    expect(r.envelope.error.message).toMatch(/\.mobile-automator/);
+    expect(r.envelope.error.message).not.toContain('legacy');
+    for (const p of ['/p/a', '/p']) expect(r.envelope.hint).toContain(p);
+  });
+
+  test('treats an absent legacy field as none', () => {
+    const r = workspaceFailure({ root: null, searched: ['/p'] });
+    expect(r.envelope.error.message).not.toContain('legacy');
+  });
+});
+
+describe('noWorkspaceFailure', () => {
+  test('has no legacy mode: a second argument changes nothing', () => {
+    const r = noWorkspaceFailure(['/p'], '/p');
+    expect(r.envelope.error.message).not.toContain('legacy');
   });
 
   test('is an environment failure whose hint names every searched path and `mauto setup`', () => {

@@ -43,10 +43,8 @@ const observeTransport = require('./observe/transport');
 const { makeFlusher } = require('./observe/flush');
 const {
   findWorkspaceRoot,
-  noWorkspaceFailure,
+  workspaceFailure,
   legacyWorkspaceFailure,
-  markerPath,
-  legacyMarkerPath,
 } = require('./workspace/discover');
 
 // Commander throws (via exitOverride) for two very different reasons, and the
@@ -879,7 +877,13 @@ function storeHint(store) {
 // still scaffolds in cwd — it is the one verb whose job is to create a
 // workspace where the user stands — but a nested workspace silently shadows
 // the ancestor for every later verb run below it, so say so.
-function handleSetup({ projectRoot, ancestorRoot = null }, opts = {}) {
+//
+// `legacyRoot` is the pre-rename workspace discovery found at or above cwd, if
+// any (and no new workspace beside or above it). Discovery owns that walk, so
+// setup honours the same answer every other verb does: checking only cwd let
+// `mauto setup` from a subdirectory scaffold a nested workspace under a legacy
+// project, the split state this refusal exists to prevent.
+function handleSetup({ projectRoot, ancestorRoot = null, legacyRoot = null }, opts = {}) {
   const raw = opts.mode === undefined ? 'aware' : String(opts.mode);
   const mode = MODE_ALIASES[raw];
   if (!mode) {
@@ -889,11 +893,9 @@ function handleSetup({ projectRoot, ancestorRoot = null }, opts = {}) {
     };
   }
   // Scaffolding beside an un-migrated legacy workspace would fork the user's
-  // state into two directories. If both exist the user is mid-recovery, so
-  // let setup proceed.
-  if (fs.existsSync(legacyMarkerPath(projectRoot)) && !fs.existsSync(markerPath(projectRoot))) {
-    return legacyWorkspaceFailure(projectRoot);
-  }
+  // state into two directories. Discovery reports no legacy root once a new
+  // workspace exists, so a user mid-recovery gets through.
+  if (legacyRoot) return legacyWorkspaceFailure(legacyRoot);
   const r = scaffold(projectRoot, { mode });
   const hint = ancestorRoot
     ? `An existing workspace was found in an ancestor directory (${ancestorRoot}). This new workspace in ${projectRoot} shadows it for every mauto verb run from here or below; remove it if you meant to use the ancestor's.`
@@ -1839,7 +1841,7 @@ function buildProgram(deps = {}) {
   // (exit 5) naming where we looked, so the agent can recover.
   const requireWorkspace = (action) => (...args) => {
     if (!workspace.root) {
-      emit(noWorkspaceFailure(workspace.searched, workspace.legacy), humanFlag());
+      emit(workspaceFailure(workspace), humanFlag());
       return undefined;
     }
     return action(...args);
@@ -2216,7 +2218,10 @@ function buildProgram(deps = {}) {
       // cwd, not the discovered root: setup creates a workspace where the user
       // stands. A discovered root that is not cwd is an ancestor worth naming.
       const ancestorRoot = workspace.root && workspace.root !== cwd ? workspace.root : null;
-      const r = handleSetup({ projectRoot: cwd, ancestorRoot }, { mode: opts.mode });
+      const r = handleSetup(
+        { projectRoot: cwd, ancestorRoot, legacyRoot: workspace.legacy || null },
+        { mode: opts.mode }
+      );
       emit(r, humanFlag());
     }));
 
