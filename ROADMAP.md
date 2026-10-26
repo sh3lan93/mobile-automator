@@ -4,10 +4,12 @@ Features and improvements currently on the radar for Mobile Automator.
 
 ---
 
-> **Current focus:** the [`production-ready`](https://github.com/sh3lan93/mobile-automator/milestone/4)
-> milestone — the work between today's source-only install and a first published
-> npm release. Gate issue:
-> [#168](https://github.com/sh3lan93/mobile-automator/issues/168).
+> **Current focus:** the 1.0 readiness gate,
+> [#267](https://github.com/sh3lan93/mobile-automator/issues/267) — defining what a
+> stable 1.0 promises and closing the gaps before it. The previous gate,
+> [`production-ready`](https://github.com/sh3lan93/mobile-automator/milestone/4)
+> ([#168](https://github.com/sh3lan93/mobile-automator/issues/168)), is complete:
+> `mobile-automator` is published on npm and every release is gated.
 
 ### Testing Features
 - [x] Tag-based test filtering and execution
@@ -68,4 +70,4 @@ Have a feature request? [Open an issue](https://github.com/sh3lan93/mobile-autom
 
 ---
 
-*Last updated: August 2026 (v0.23.7)*
+*Last updated: October 2026*
