@@ -30,14 +30,14 @@ mauto init --agent claude      # or: cursor | gemini | copilot | agents | all
 mauto setup                    # add --mode agnostic for cross-platform apps
 ```
 
-`setup` scaffolds the `mobile-automator/` workspace and writes its config. Add `--mode agnostic` for cross-platform apps (Flutter/RN/KMP/CMP) so one scenario runs on Android and iOS.
+`setup` scaffolds the `.mobile-automator/` workspace and writes its config. Add `--mode agnostic` for cross-platform apps (Flutter/RN/KMP/CMP) so one scenario runs on Android and iOS.
 
 ### What Gets Created
 
 After setup completes:
 
 ```
-mobile-automator/
+.mobile-automator/
 ├── config.json              # mode, environments, project config
 ├── scenarios/               # test scenario files (JSON, schema 2.1)
 ├── screenshots/             # reference screenshots
@@ -81,7 +81,7 @@ The agent drives the app through `mauto` verbs and writes a complete test scenar
 - Capture values for later verification
 - Retry logic for flaky operations
 
-A new scenario file is created in `mobile-automator/scenarios/`.
+A new scenario file is created in `.mobile-automator/scenarios/`.
 
 In **Cursor**, `init` installs a project rule instead — just ask the agent in plain language (e.g. *"generate a login test"*). **Any other agent:** run `mauto mcp` (MCP prompts server) or read `mauto bootstrap` + `mauto guide generate`, then call the verbs directly.
 
@@ -100,14 +100,14 @@ The agent replays the scenario and:
 5. Captures observations (flakiness, regressions, state context)
 6. Generates a detailed result report
 
-Results are saved to `mobile-automator/results/<run_id>.json`.
+Results are saved to `.mobile-automator/results/<run_id>.json`.
 
 ## Step 6: Review Results
 
 Open the result file in your editor:
 
 ```bash
-cat mobile-automator/results/<run_id>.json
+cat .mobile-automator/results/<run_id>.json
 ```
 
 The result includes:

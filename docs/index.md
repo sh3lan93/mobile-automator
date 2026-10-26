@@ -49,7 +49,7 @@ mauto init --agent claude      # or: cursor | gemini | copilot | agents | all
 mauto setup                    # add --mode agnostic for cross-platform apps
 ```
 
-`init` installs native Agent Skills (and, for Claude Code/Cursor, slash-commands/rules + the `mauto` MCP entry). `setup` scaffolds the `mobile-automator/` workspace and writes its config.
+`init` installs native Agent Skills (and, for Claude Code/Cursor, slash-commands/rules + the `mauto` MCP entry). `setup` scaffolds the `.mobile-automator/` workspace and writes its config.
 
 ### 3. Check your device
 
@@ -84,7 +84,7 @@ Tests execute with AI vision and capture observations (flakiness, regressions, e
 Check execution results:
 
 ```bash
-mobile-automator/results/<run_id>.json
+.mobile-automator/results/<run_id>.json
 ```
 
 Results include step details, assertion outcomes, captured variables, and observations for debugging.

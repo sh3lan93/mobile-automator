@@ -65,7 +65,7 @@ agent drives mauto verbs (elements, tap, type, …)
         ↓   each verb → mobile-mcp engine → device
 agent assembles + validates JSON scenario
         ↓
-Saved to mobile-automator/scenarios/
+Saved to .mobile-automator/scenarios/
         ↓
 agent pulls reasoning: mauto guide execute
         ↓
@@ -74,15 +74,15 @@ For each step:
   - agent judges the assertion (mauto assert for mechanical checks)
   - agent records the step via mauto result add-step
         ↓
-mauto result finalize → mobile-automator/results/
+mauto result finalize → .mobile-automator/results/
 ```
 
-On `mauto result finalize`, the **memory subsystem** (`src/memory/`) auto-harvests typed observations into a cross-session `mobile-automator/memory/` store, so the agent gets smarter about *this* app over time. The agent can also author durable app-knowledge and preferences directly via `mauto memory add` / `mauto memory forget`. See [Memory](memory.md).
+On `mauto result finalize`, the **memory subsystem** (`src/memory/`) auto-harvests typed observations into a cross-session `.mobile-automator/memory/` store, so the agent gets smarter about *this* app over time. The agent can also author durable app-knowledge and preferences directly via `mauto memory add` / `mauto memory forget`. See [Memory](memory.md).
 
 ## File Structure
 
 ```
-mobile-automator/                          # created in the user's project by mauto setup
+.mobile-automator/                          # created in the user's project by mauto setup
 ├── config.json                            # project knowledge + mode
 ├── scenarios/                             # test scenario JSON files
 │   ├── login_flow.json
@@ -147,7 +147,7 @@ The test scenario schema provides rich, expressive capabilities:
 
 ### Why Not Modify Your Source Code?
 
-All tests live in the `mobile-automator/` directory, completely separate from your source code. This means:
+All tests live in the `.mobile-automator/` directory, completely separate from your source code. This means:
 
 - Source code remains untouched and pristine
 - Tests don't interfere with builds or deployments

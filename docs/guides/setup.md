@@ -4,7 +4,7 @@ description: "Set up mobile-automator with the mauto CLI - install, init your ag
 
 # Setup Guide
 
-Setup is your entry point to mobile-automator. You install the host-agnostic `mauto` CLI, wire it into your AI agent, scaffold the `mobile-automator/` workspace, and let your agent analyze the project into `mobile-automator/config.json` — so later test generation and execution are tailored to your app.
+Setup is your entry point to mobile-automator. You install the host-agnostic `mauto` CLI, wire it into your AI agent, scaffold the `.mobile-automator/` workspace, and let your agent analyze the project into `.mobile-automator/config.json` — so later test generation and execution are tailored to your app.
 
 **Key benefit**: You set up once per project, and everything needed for intelligent test generation and execution is configured.
 
@@ -25,7 +25,7 @@ mauto setup                      # add --mode agnostic for cross-platform apps
 mauto devices
 ```
 
-After this, your agent analyzes the project and persists what it learns to `mobile-automator/config.json`.
+After this, your agent analyzes the project and persists what it learns to `.mobile-automator/config.json`.
 
 ---
 
@@ -76,7 +76,7 @@ mauto setup
 This creates:
 
 ```
-mobile-automator/
+.mobile-automator/
 ├── scenarios/      # generated test JSON files
 ├── screenshots/    # reference + execution screenshots
 ├── results/        # execution result reports
@@ -207,7 +207,7 @@ When analysis is done, the agent reads each value back with `mauto config get <k
 
 ## Configuration File (config.json)
 
-After analysis, `mobile-automator/config.json` looks something like:
+After analysis, `.mobile-automator/config.json` looks something like:
 
 ```json
 {
@@ -281,7 +281,7 @@ Configs that predate the `mode` field are treated as `platform-aware`.
 
 Once setup and analysis are complete:
 
-1. **Review configuration**: `mobile-automator/config.json`
+1. **Review configuration**: `.mobile-automator/config.json`
 2. **Generate your first test**: `/mobile-automator-generate` (or `mauto guide generate`)
 3. **Execute the test**: `/mobile-automator-execute` (or `mauto guide execute`)
 

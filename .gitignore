@@ -43,8 +43,8 @@ docs/superpowers/
 # / daemon.log); `.logs/` is the structured event stream, written since the CLI
 # was instrumented because tests/integration/cli-smoke.test.js spawns the CLI
 # with cwd=REPO_ROOT.
-mobile-automator/.session/
-mobile-automator/.logs/
+.mobile-automator/.session/
+.mobile-automator/.logs/
 
 # sample-app (Flutter) build artifacts
 sample-app/build/

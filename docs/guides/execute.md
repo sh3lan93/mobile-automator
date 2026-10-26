@@ -24,7 +24,7 @@ mauto guide execute
 # and writes a detailed result report
 ```
 
-Results are saved to: `mobile-automator/results/run_YYYYMMDD_HHMMSS.json`
+Results are saved to: `.mobile-automator/results/run_YYYYMMDD_HHMMSS.json`
 
 ---
 
@@ -33,10 +33,10 @@ Results are saved to: `mobile-automator/results/run_YYYYMMDD_HHMMSS.json`
 Before running execute, ensure:
 
 1. **Setup is complete**
-   - `mobile-automator/config.json` exists
+   - `.mobile-automator/config.json` exists
 
 2. **Scenarios exist**
-   - At least one scenario in `mobile-automator/scenarios/*.json`
+   - At least one scenario in `.mobile-automator/scenarios/*.json`
 
 3. **Device is connected**
    - Confirm with `mauto devices` (lists reachable devices)
@@ -52,7 +52,7 @@ When you start execution, the agent verifies:
 
 ```
 ✓ Checking setup state...
-✓ Found: mobile-automator/config.json
+✓ Found: .mobile-automator/config.json
 
 ✓ Detecting devices (mauto devices)...
   Available devices:
@@ -78,7 +78,7 @@ When you start execution, the agent verifies:
 
 If you don't name an artifact, what happens depends on your project's `mode`:
 a **platform-aware** project builds and installs using the `build_command`
-from `mobile-automator/config.json`, while a **platform-agnostic** project
+from `.mobile-automator/config.json`, while a **platform-agnostic** project
 never builds — it checks whether the app is already installed and asks you to
 install it if it isn't. To reuse a build you already have, name its path when
 you start the run — for example, "run checkout_flow using
@@ -231,11 +231,11 @@ After all steps execute:
    - Device/environment issues
 
 4. **Create result file**
-   - Saved to `mobile-automator/results/run_*.json`
+   - Saved to `.mobile-automator/results/run_*.json`
    - Ready for analysis
 
 5. **Harvest memory** (automatic)
-   - On `result finalize`, the typed observations (regression / flakiness / state_context) are folded into a bounded rolling per-scenario aggregate in `mobile-automator/memory/run-history.md`, so future runs carry forward what earlier runs learned.
+   - On `result finalize`, the typed observations (regression / flakiness / state_context) are folded into a bounded rolling per-scenario aggregate in `.mobile-automator/memory/run-history.md`, so future runs carry forward what earlier runs learned.
    - This is best-effort: a memory-write failure never fails an otherwise-successful finalize — it is reported in the envelope `hint` instead.
 
 ---
@@ -476,7 +476,7 @@ Executor captures screenshots at strategic points:
 
 **Storage:**
 ```
-mobile-automator/results/
+.mobile-automator/results/
 ├── run_20260301_143000/
 │   ├── step_1_tap_login.png
 │   ├── step_2_enter_email.png
@@ -623,7 +623,7 @@ mobile-automator/results/
 **Problem:** Application crashed mid-execution.
 
 **Solutions:**
-1. **Check result file** — `mobile-automator/results/run_*.json` shows which step caused crash
+1. **Check result file** — `.mobile-automator/results/run_*.json` shows which step caused crash
 2. **Review app logs** — use your platform's logging tools (Android logcat, Xcode debugger for iOS)
 3. **Check if known issue** — May be app bug, not test issue
 4. **Add preconditions** — Start from a fresh state before the test:
@@ -650,8 +650,8 @@ mobile-automator/results/
 
 **Solutions:**
 1. Check device still connected
-2. Verify free disk space: `du -sh mobile-automator/`
-3. Check folder permissions: `chmod 755 mobile-automator/results/`
+2. Verify free disk space: `du -sh .mobile-automator/`
+3. Check folder permissions: `chmod 755 .mobile-automator/results/`
 
 ---
 
@@ -693,7 +693,7 @@ mobile-automator/results/
 - Could be intentional UI update or unintended change
 
 **What to do:**
-- **If intentional:** Update baseline screenshots in `mobile-automator/screenshots/`
+- **If intentional:** Update baseline screenshots in `.mobile-automator/screenshots/`
 - **If not intentional:** File bug report, may be rendering issue
 - **If cosmetic:** Consider if assertion is too strict (color matching)
 
@@ -815,7 +815,7 @@ mobile-automator/results/
 
 After execution:
 
-1. **Review result file:** `mobile-automator/results/run_*.json`
+1. **Review result file:** `.mobile-automator/results/run_*.json`
 2. **Check observations:** Look for flakiness or regression insights
 3. **View screenshots:** Visual documentation of test flow
 4. **Refine scenario:** Based on observations, improve scenario

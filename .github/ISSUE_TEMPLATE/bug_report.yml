@@ -98,7 +98,7 @@ body:
     attributes:
       label: Setup Configuration
       description: |
-        If setup completed, paste the contents of `mobile-automator/config.json` here.
+        If setup completed, paste the contents of `.mobile-automator/config.json` here.
         **Remove any sensitive data (package IDs, app names) before pasting.**
       placeholder: |
         {

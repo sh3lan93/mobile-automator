@@ -63,7 +63,7 @@ The deterministic surface the agent drives. Every verb emits the uniform JSON en
 - **mobile-mcp** owns platform mechanics — translating a tap into the right device command
 
 ### Project-Specific Customization
-During setup, project knowledge is captured into `mobile-automator/config.json`:
+During setup, project knowledge is captured into `.mobile-automator/config.json`:
 - Architecture pattern (MVVM, Clean Architecture, BLoC, etc.)
 - Business domain (what your app does)
 - Loading indicators (how to detect async operations)
@@ -77,7 +77,7 @@ A mode is chosen at `mauto setup` and stored in `config.json`:
 - **platform-agnostic** (`--mode agnostic`) — cross-platform tests that map OS gestures to four semantic actions (`press_back`, `dismiss_keyboard`, `grant_permission`, `deny_permission`) resolved per platform at replay time
 
 ### No Source Code Modification
-Tests live in the `mobile-automator/` directory, never in your source code. Scenarios and results are version-controlled separately.
+Tests live in the `.mobile-automator/` directory, never in your source code. Scenarios and results are version-controlled separately.
 
 ### Semantic Testing
 Instead of brittle selectors and pixel-by-pixel comparisons, the agent uses AI vision to understand:
@@ -88,7 +88,7 @@ Instead of brittle selectors and pixel-by-pixel comparisons, the agent uses AI v
 
 ## Key Ideas
 
-- **No source modification** — Tests live in `mobile-automator/`, never in your source code
+- **No source modification** — Tests live in `.mobile-automator/`, never in your source code
 - **Project learning** — Setup captures your codebase context into `config.json`
 - **Pull-on-demand reasoning** — The agent reads guidance via `mauto guide <topic>`, never an ambient always-loaded skill
 - **Semantic testing** — AI vision understands your app, not just pixel values

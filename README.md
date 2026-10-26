@@ -46,10 +46,10 @@ npm install && npm link
 ```bash
 cd ~/projects/my-app
 mauto init --agent claude      # or: cursor | gemini | copilot | agents | all
-mauto setup                    # scaffolds mobile-automator/ + config
+mauto setup                    # scaffolds .mobile-automator/ + config
 ```
 
-`init` installs native Agent Skills into each host's skills directory and writes agent command files + MCP server entry (`.claude/commands/` + `.mcp.json` for Claude Code; `.cursor/` for Cursor). `setup` creates the `mobile-automator/` workspace. Add `--mode agnostic` to `setup` for cross-platform apps (Flutter/RN/KMP/CMP).
+`init` installs native Agent Skills into each host's skills directory and writes agent command files + MCP server entry (`.claude/commands/` + `.mcp.json` for Claude Code; `.cursor/` for Cursor). `setup` creates the `.mobile-automator/` workspace. Add `--mode agnostic` to `setup` for cross-platform apps (Flutter/RN/KMP/CMP).
 
 **3. Check your device is visible:**
 
@@ -71,7 +71,7 @@ Open your agent in the project. In **Claude Code**, `init` installs slash comman
 
 In **Cursor**, `init` installs a project rule instead — just ask the agent in plain language (e.g. *"generate a login test"* / *"execute the login scenario"*) and it follows the same workflow. **Any other agent:** see [Using another agent](#-using-another-agent) below.
 
-That's it. Scenarios land in `mobile-automator/scenarios/`, results in `mobile-automator/results/`.
+That's it. Scenarios land in `.mobile-automator/scenarios/`, results in `.mobile-automator/results/`.
 
 **Upgrading:** after `npm i -g mobile-automator@latest`, re-run `mauto init --agent <host>` in each project to refresh the skills, rules and commands it installed. Until you do, `mauto guide` starts with a notice that the host integration is out of date, and `mauto doctor` reports which hosts need refreshing.
 
@@ -108,7 +108,7 @@ Either way the workspace, scenarios, and schemas are identical — the agent is 
 
 ## 🔀 Platform modes
 
-Chosen at `mauto setup` (stored in `mobile-automator/config.json`):
+Chosen at `mauto setup` (stored in `.mobile-automator/config.json`):
 
 | Mode | Best for | Enable |
 |------|----------|--------|
@@ -140,7 +140,7 @@ Most low-level verbs are called **by the agent**, not by you. The ones you'll ru
 |---------|--------------|
 | `mauto init --agent <claude\|cursor\|gemini\|copilot\|agents\|all>` | Install native Agent Skills into each host's skills directory; also writes slash-commands/rules + MCP entry for claude/cursor |
 | `mauto doctor` | Report whether the integration `init` installed is missing or out of date, and the `init` command that refreshes it |
-| `mauto setup [--mode aware\|agnostic]` | Scaffold the `mobile-automator/` workspace + config |
+| `mauto setup [--mode aware\|agnostic]` | Scaffold the `.mobile-automator/` workspace + config |
 | `mauto devices` · `devices use <id>` · `devices clear` | List / pin / unpin the target device |
 | `mauto guide <generate\|execute\|setup>` | Print the workflow guidance for a topic |
 | `mauto mcp` | Run the MCP prompts server (for any MCP-capable agent) |
@@ -161,7 +161,7 @@ Run `mauto <command> --help` for full flags.
 After `mauto setup`:
 
 ```
-mobile-automator/
+.mobile-automator/
 ├── config.json        # mode, environments, project config
 ├── scenarios/         # test scenarios (JSON, schema 2.1)
 ├── screenshots/       # reference screenshots

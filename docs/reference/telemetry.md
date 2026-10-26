@@ -18,7 +18,7 @@ mobile-mcp, has separate telemetry of its own. Upstream it is on by default;
 - No per-machine identifier. There is no install id, no device fingerprint and
   no user id. Events are anonymous and uncorrelated.
 - Everything is spooled to a local file first. You can read it before it goes:
-  `cat mobile-automator/.logs/telemetry.spool`.
+  `cat .mobile-automator/.logs/telemetry.spool`.
 
 ## Turning it on and off
 
@@ -30,7 +30,7 @@ mauto telemetry flush      # upload what is queued now
 ```
 
 `mauto telemetry enable` writes `telemetry.enabled: true` into
-`mobile-automator/config.json`. `mauto config set telemetry.enabled true` does
+`.mobile-automator/config.json`. `mauto config set telemetry.enabled true` does
 the same thing.
 
 Two environment variables override the config and always win:
@@ -87,7 +87,7 @@ this table and that catalog disagree.
 
 ## What is never sent
 
-These fields exist in your **local** logs (`mobile-automator/.logs/`) and are
+These fields exist in your **local** logs (`.mobile-automator/.logs/`) and are
 permanently barred from the network path. `tests/lint/telemetry-redaction.test.js`
 fails the build if any of them is reclassified.
 
@@ -111,7 +111,7 @@ down a pending socket, so a verb that tried to POST would drop the event a large
 fraction of the time and a verb that waited for one would add a network round
 trip to every tap.
 
-Instead a verb appends one line to `mobile-automator/.logs/telemetry.spool` —
+Instead a verb appends one line to `.mobile-automator/.logs/telemetry.spool` —
 that line is the exact payload that would be uploaded, nothing more — and the
 device session daemon uploads it during its idle window. `mauto telemetry flush`
 does it on demand. Nothing is retried forever: the spool is capped at 256 KiB,
@@ -133,7 +133,7 @@ installed; `mauto` has no analytics dependency.
 
 ```bash
 mauto telemetry status
-cat mobile-automator/.logs/telemetry.spool
+cat .mobile-automator/.logs/telemetry.spool
 ```
 
 The spool is plain NDJSON — one upload payload per line. If you disagree with

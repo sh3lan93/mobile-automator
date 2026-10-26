@@ -16,7 +16,7 @@ AI agent (any) → pulls reasoning via `mauto guide` / `bootstrap` / MCP prompts
                → `src/device/` wraps mobile-mcp via one persistent session daemon
                → real device / emulator
 
-Artifacts live in the `mobile-automator/` workspace (created in the user's project).
+Artifacts live in the `.mobile-automator/` workspace (created in the user's project).
 ```
 
 ## File layout
@@ -58,14 +58,14 @@ sample-app/                   # Flutter fixture app (see sample-app/README.md)
   scripts/
     run-e2e.mjs               # real-device E2E entry: drives the shipped `mauto` (MAUTO_BIN)
     lib/                      # harness logic (CommonJS); no package.json, no own deps
-mobile-automator/             # created in user's project by `mauto setup`
+.mobile-automator/             # created in user's project by `mauto setup`
   config.json  scenarios/  screenshots/  results/  .session/
   memory/                     # cross-session memory (run-history.md, …)
 ```
 
 ## Modes
 
-Selected during setup; stored as `mode` in `mobile-automator/config.json`. Configs predating the field are treated as `platform-aware`.
+Selected during setup; stored as `mode` in `.mobile-automator/config.json`. Configs predating the field are treated as `platform-aware`.
 
 | Mode | Use for |
 |---|---|
@@ -133,7 +133,7 @@ When you add an action or a result field, add its catalog entry in the same chan
 
 ## Placeholder contract
 
-Guide content in `src/guide/content/<topic>.<aware|agnostic>.md` carries `{{placeholder}}` tokens filled by `src/guide/placeholders.js` (`interpolate`) from `mobile-automator/config.json` at emit time. Unset placeholders render per slot kind rather than emitting a bare token, and the emitted output is guarded so nothing `{{`-shaped survives (#143). Lint guards in `tests/lint/` enforce: no surviving `{{placeholders}}`, no leaked `mobile_*` tool names, agnostic files name no OS, skill invariants stay placeholder-free, and skill frontmatter stays valid.
+Guide content in `src/guide/content/<topic>.<aware|agnostic>.md` carries `{{placeholder}}` tokens filled by `src/guide/placeholders.js` (`interpolate`) from `.mobile-automator/config.json` at emit time. Unset placeholders render per slot kind rather than emitting a bare token, and the emitted output is guarded so nothing `{{`-shaped survives (#143). Lint guards in `tests/lint/` enforce: no surviving `{{placeholders}}`, no leaked `mobile_*` tool names, agnostic files name no OS, skill invariants stay placeholder-free, and skill frontmatter stays valid.
 
 ## Locked invariants — non-negotiable, all work
 
@@ -144,7 +144,7 @@ These were locked by PRD #69 and outlive it. Any change that breaks one is wrong
 - **One-shot verbs only.** No interactive `run` co-routine.
 - **Reasoning is pulled, never ambient.** Delivered via `mauto guide <topic>` at explicit invocation, never an always-loaded skill.
 - **The device is driven only through `mauto` verbs** (which wrap mobile-mcp). Never call mobile-mcp tools directly.
-- **Backwards compatibility.** Preserve the `mobile-automator/` workspace layout, scenario schema 2.0/2.1, and the result schema — existing data must keep working.
+- **Backwards compatibility.** Preserve the `.mobile-automator/` workspace layout, scenario schema 2.0/2.1, and the result schema — existing data must keep working.
 
 There is also a **three-layer model** worth keeping straight: (1) the CLI contract, (2) the per-host invocation surface (slash commands, rules, skills — host-specific, e.g. `$ARGUMENTS` is Claude-only), (3) the guide prose. Never put a contract in layer 2.
 
@@ -247,7 +247,7 @@ The upstream-dependent ones have exit plans tracked under the 1.0 readiness gate
 ## Conventions
 
 - The `mobile-automator` namespace is used for workspace paths and the npm package.
-- Workspace paths (`mobile-automator/scenarios/`, etc.) are relative to the user's project root, not this repo. That root is discovered once, in `run()`, by `src/workspace/discover.js` (walk up to the nearest `mobile-automator/config.json`, stop at `.git`); verbs that need a workspace are wrapped in `requireWorkspace` and fail `environment` when none is found (#188).
+- Workspace paths (`.mobile-automator/scenarios/`, etc.) are relative to the user's project root, not this repo. That root is discovered once, in `run()`, by `src/workspace/discover.js` (walk up to the nearest `.mobile-automator/config.json`, stop at `.git`); verbs that need a workspace are wrapped in `requireWorkspace` and fail `environment` when none is found (#188).
 - CLAUDE.md is for humans maintaining the CLI.
 
 ## Metadata

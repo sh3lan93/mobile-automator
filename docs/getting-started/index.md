@@ -44,7 +44,7 @@ mauto setup                    # add --mode agnostic for cross-platform apps
 mauto devices                  # confirm a device is visible
 ```
 
-`init` installs native Agent Skills and (for Claude Code/Cursor) slash-commands/rules + the `mauto` MCP entry. `setup` scaffolds the `mobile-automator/` workspace.
+`init` installs native Agent Skills and (for Claude Code/Cursor) slash-commands/rules + the `mauto` MCP entry. `setup` scaffolds the `.mobile-automator/` workspace.
 
 ### 3. Generate & Execute Tests
 

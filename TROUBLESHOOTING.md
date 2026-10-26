@@ -19,15 +19,15 @@
   `.cursor/skills/`, `.github/skills/`, or `.agents/skills/`.
 - Re-run `mauto init --agent <claude|cursor|gemini|copilot|agents|all>` to (re)install them.
 
-### ❌ "no mobile-automator/ workspace found" (exit 5)
-- `mauto` walks up from the current directory to the nearest `mobile-automator/config.json`,
+### ❌ "no .mobile-automator/ workspace found" (exit 5)
+- `mauto` walks up from the current directory to the nearest `.mobile-automator/config.json`,
   stopping at the repository root (the directory holding `.git`). The hint lists every
   directory it checked.
 - If the list stops short of your project, you are in a different repository (e.g. a
   submodule or nested checkout) — `cd` into the project that has the workspace.
 - If no workspace exists yet, run `mauto setup` from the project root.
 - `session start` and `devices use` also fail this way: they persist the session
-  daemon and the device selection under `mobile-automator/.session/`, so they need
+  daemon and the device selection under `.mobile-automator/.session/`, so they need
   a workspace to write into. The other device verbs run without one (one-shot
   connection, nothing written).
 - Running `mauto setup` in a subdirectory creates a *nested* workspace that shadows the
@@ -249,7 +249,7 @@ output, to a log inside the workspace:
 
 ```bash
 mauto session status                          # reports log_path and session_id
-tail -50 mobile-automator/.session/daemon.log # raw daemon + mobile-mcp output
+tail -50 .mobile-automator/.session/daemon.log # raw daemon + mobile-mcp output
 ```
 
 The log is appended across spawns and rotates to `daemon.log.1` once it passes
@@ -268,13 +268,13 @@ bounded at 1 MiB with a single `.1` generation.
 
 ```bash
 # What did the daemon do, most recent last?
-cat mobile-automator/.logs/daemon.ndjson
+cat .mobile-automator/.logs/daemon.ndjson
 
 # Only the failures
-grep -E '"level":"(warn|error)"' mobile-automator/.logs/daemon.ndjson
+grep -E '"level":"(warn|error)"' .mobile-automator/.logs/daemon.ndjson
 
 # CLI and daemon on one timeline — both files carry an ISO `ts` and a `src`
-jq -s 'sort_by(.ts) | .[]' mobile-automator/.logs/*.ndjson
+jq -s 'sort_by(.ts) | .[]' .mobile-automator/.logs/*.ndjson
 ```
 
 Every event from one daemon lifetime shares a `session_id`, so when a daemon
@@ -293,7 +293,7 @@ was doing.
 # Calls that started and never returned (needs MAUTO_LOG_LEVEL=debug — see below)
 jq -s '(map(select(.event == "call.end") | .call_id)) as $returned
        | map(select(.event == "call.start" and (.call_id as $id | $returned | index($id) | not)))' \
-  mobile-automator/.logs/daemon.ndjson
+  .mobile-automator/.logs/daemon.ndjson
 ```
 
 `MAUTO_LOG_LEVEL` (`silent|error|warn|info|debug`) raises the detail in both
@@ -311,7 +311,7 @@ To start clean, remove the session directory and re-run any device verb:
 
 ```bash
 mauto session end                    # ask a live daemon to stop
-rm -rf mobile-automator/.session     # clear a wedged socket/pidfile/lock
+rm -rf .mobile-automator/.session     # clear a wedged socket/pidfile/lock
 mauto devices                        # respawns the daemon
 ```
 
@@ -320,9 +320,9 @@ mauto devices                        # respawns the daemon
 The daemon is reachable but its mobile-mcp engine has died, so it can no longer
 drive the device. It is already shutting itself down; the next device verb
 starts a fresh session. The cause is in the engine's own output in
-`mobile-automator/.session/daemon.log`; the structured record is a
+`.mobile-automator/.session/daemon.log`; the structured record is a
 `daemon.engine_exit` event followed by `daemon.stop` with
-`stop_reason: "engine_exit"` in `mobile-automator/.logs/daemon.ndjson`.
+`stop_reason: "engine_exit"` in `.mobile-automator/.logs/daemon.ndjson`.
 
 ### ❌ `session end` reported `forced: true`, or failed with a `pid`
 
@@ -335,7 +335,7 @@ stale lock and socket are cleaned automatically by the next session start.
 
 A daemon's command line ends in `--workspace-key <key>`. The key is derived from
 the project root and a random per-workspace secret in
-`mobile-automator/.session/marker.salt`, readable only by you, so another user
+`.mobile-automator/.session/marker.salt`, readable only by you, so another user
 who runs `ps` cannot confirm a guessed path by hashing it. Leave that file in
 place: the key is how `session end` recognises this workspace's daemon. Daemons
 started by 0.28.0–0.35.0 end in `--project-root <root>` instead, and are still
@@ -405,7 +405,7 @@ first and re-run.
 Structured detail for any of those is in the event log:
 
 ```bash
-grep -E '"event":"crash\.' mobile-automator/.logs/mauto.ndjson
+grep -E '"event":"crash\.' .mobile-automator/.logs/mauto.ndjson
 ```
 
 ### ❌ `mauto crash list` fails on an iOS simulator
@@ -437,11 +437,11 @@ Two separate answers: mauto's own telemetry, and the device engine's.
 
 ```bash
 mauto telemetry status                          # on/off, endpoint, exact field list
-cat mobile-automator/.logs/telemetry.spool      # every payload waiting to be sent
+cat .mobile-automator/.logs/telemetry.spool      # every payload waiting to be sent
 ```
 
 The spool is deliberately not named `*.ndjson`, so it stays out of the
-`cat mobile-automator/.logs/*.ndjson` merged-timeline recipe above — it is a
+`cat .mobile-automator/.logs/*.ndjson` merged-timeline recipe above — it is a
 queue that gets renamed mid-flush, not part of the event log.
 
 If it is growing and never draining, the daemon is not running (it is what
@@ -487,7 +487,7 @@ Since 0.26.0 that field is measured from the run trace rather than taken from
 `--duration`, but only when the run had a trace. Check which:
 
 ```bash
-jq '.measurements' mobile-automator/results/<run_id>.json
+jq '.measurements' .mobile-automator/results/<run_id>.json
 ```
 
 - `"source": "trace"` — measured. If `duration_disagreement` is `true`, the
@@ -519,11 +519,11 @@ The trace itself is one JSON object per line, next to the other logs:
 
 ```bash
 # Everything mauto did during that run, in order
-cat mobile-automator/.logs/run-<run_id>.ndjson
+cat .mobile-automator/.logs/run-<run_id>.ndjson
 
 # Just the failures, and any screenshots taken at them
 jq 'select(.ok == false or .event == "screenshot.on_failure")' \
-  mobile-automator/.logs/run-<run_id>.ndjson
+  .mobile-automator/.logs/run-<run_id>.ndjson
 ```
 
 Run traces are **capped, not rotated**, and that is deliberate. Rotation
@@ -554,9 +554,9 @@ just measured. A trace from a run several sessions ago may therefore be gone.
 - Print the current schemas with `mauto schema scenario` / `mauto schema result`.
 
 ### ❌ "Setup didn't complete properly"
-- Re-run `mauto setup` to (re)scaffold the `mobile-automator/` workspace and config.
+- Re-run `mauto setup` to (re)scaffold the `.mobile-automator/` workspace and config.
 - Inspect the workspace config with `mauto config get <key>` (the config lives at
-  `mobile-automator/config.json`).
+  `.mobile-automator/config.json`).
 
 ---
 
@@ -579,7 +579,7 @@ If you encounter an issue not listed here:
 2. Review the [CLAUDE.md](CLAUDE.md) for architectural details
 3. Open a new issue with:
    - Error message
-   - Setup configuration (`mobile-automator/config.json`)
+   - Setup configuration (`.mobile-automator/config.json`)
    - Steps to reproduce
    - For anything device-related, the daemon log
-     (`mobile-automator/.session/daemon.log`) — it carries the stack traces
+     (`.mobile-automator/.session/daemon.log`) — it carries the stack traces

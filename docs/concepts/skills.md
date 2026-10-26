@@ -22,7 +22,7 @@ Skills are installed by `mauto init --agent <claude|cursor|gemini|copilot|agents
 
 In **Claude Code**, init installs the hyphen slash-commands `/mobile-automator-generate` and `/mobile-automator-execute`. Each command simply runs the matching `mauto guide <topic>` and follows it, driving the device through `mauto` verbs.
 
-There is **no template-interpolation-at-setup step** that writes skill bodies, and **no resume-state file**. Setup records project knowledge into `mobile-automator/config.json`; skills are installed by `init` independently.
+There is **no template-interpolation-at-setup step** that writes skill bodies, and **no resume-state file**. Setup records project knowledge into `.mobile-automator/config.json`; skills are installed by `init` independently.
 
 ### Guide content lives in the package
 
@@ -39,7 +39,7 @@ Each topic has an `.aware.md` (platform-aware) and an `.agnostic.md` (platform-a
 
 ## Customization via Placeholders
 
-Guide content carries `{{placeholder}}` tokens. These are **filled at emit time** — when the agent runs `mauto guide <topic>`, `src/guide/placeholders.js` interpolates the tokens from `mobile-automator/config.json`. A fallback guarantees no `{{` survives in emitted output, and lint guards enforce that no `mobile_*` tool names leak and that agnostic content names no OS.
+Guide content carries `{{placeholder}}` tokens. These are **filled at emit time** — when the agent runs `mauto guide <topic>`, `src/guide/placeholders.js` interpolates the tokens from `.mobile-automator/config.json`. A fallback guarantees no `{{` survives in emitted output, and lint guards enforce that no `mobile_*` tool names leak and that agnostic content names no OS.
 
 ### Example: Generate guide content
 
@@ -183,7 +183,7 @@ Replay test scenarios on a connected device and report detailed results with obs
 
 - Scenario JSON file
 - A connected device
-- Project configuration (`mobile-automator/config.json`)
+- Project configuration (`.mobile-automator/config.json`)
 - Reference screenshots (optional)
 
 ### Process
@@ -278,7 +278,7 @@ Skill ready: it knows when to pull a guide
 ```
 User runs mauto setup [--mode agnostic]
     ↓
-Project knowledge recorded into mobile-automator/config.json
+Project knowledge recorded into .mobile-automator/config.json
     ↓
 Mode stored (platform-aware default, or platform-agnostic)
 ```
@@ -303,11 +303,11 @@ Scenario validated / result finalized into the workspace
 
 **Stale-integration detection**: `mauto guide <topic>` and `mauto doctor` compare each installed host's files byte-for-byte against what the installed `mauto` would write, and compare the `mauto` MCP entry by meaning. The content itself is the version check: no stamp file is written, and the check works whether or not `mauto setup` has run. When a host is stale, `guide` starts its output with a "host integration out of date" notice telling the agent to ask you to run `mauto init --agent <host>`, and `doctor` lists the host in `data.stale[]`.
 
-**Refresh project knowledge**: re-run `mauto setup`, or edit `mobile-automator/config.json` directly — the next `mauto guide` emit picks up the new values.
+**Refresh project knowledge**: re-run `mauto setup`, or edit `.mobile-automator/config.json` directly — the next `mauto guide` emit picks up the new values.
 
 ## Accessing Project Knowledge
 
-The full project configuration lives in `mobile-automator/config.json`:
+The full project configuration lives in `.mobile-automator/config.json`:
 
 ```json
 {
@@ -519,7 +519,7 @@ mauto guide generate
 mauto bootstrap
 
 # Check what project knowledge was recorded
-cat mobile-automator/config.json
+cat .mobile-automator/config.json
 
 # Print a schema
 mauto schema scenario

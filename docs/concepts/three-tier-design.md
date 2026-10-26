@@ -139,7 +139,7 @@ Layer 1: Agent pulls `mauto guide generate`, `mauto bootstrap`
     * welcome_text matches "Welcome, {username}"
   - `mauto validate` the scenario, then save it
         ↓
-Saved to mobile-automator/scenarios/login_flow.json
+Saved to .mobile-automator/scenarios/login_flow.json
         ↓
 User: "Execute login test"
         ↓
@@ -162,7 +162,7 @@ Layer 1: Agent judges assertions
   - welcome_text matches? `mauto assert` mechanical check ✓
   - Records steps via `mauto result add-step`
         ↓
-mauto result finalize → mobile-automator/results/<run_id>.json
+mauto result finalize → .mobile-automator/results/<run_id>.json
 ```
 
 ## Communication Patterns
@@ -187,15 +187,15 @@ mauto result finalize → mobile-automator/results/<run_id>.json
 
 ### State Management
 
-**Config**: stored in `mobile-automator/config.json` during setup
+**Config**: stored in `.mobile-automator/config.json` during setup
 - Read by `mauto` verbs and used to interpolate guide content at emit time
 - Includes project knowledge, platform, environments, and the selected `mode`
 
-**Scenarios**: stored as JSON files in `mobile-automator/scenarios/`
+**Scenarios**: stored as JSON files in `.mobile-automator/scenarios/`
 - Assembled by the agent (validated with `mauto validate`)
 - Replayed step-by-step by the agent during execution
 
-**Results**: stored as JSON files in `mobile-automator/results/`
+**Results**: stored as JSON files in `.mobile-automator/results/`
 - Authored via `mauto result add-step` / `mauto result finalize`
 
 ## Extensibility
@@ -216,7 +216,7 @@ mobile-mcp is pinned outside this project. To pick up a newer engine, bump the `
 
 ### The Memory Subsystem
 
-Cross-session learning lives in `src/memory/`, backed by the `mobile-automator/memory/` store. It is **auto-harvested on `mauto result finalize`** — typed observations fold into a bounded per-scenario `run-history` — and **agent-authored** via `mauto memory add` / `mauto memory forget` for durable app-knowledge and preferences. This lets the agent get smarter about *this* app over time. See [Memory](memory.md).
+Cross-session learning lives in `src/memory/`, backed by the `.mobile-automator/memory/` store. It is **auto-harvested on `mauto result finalize`** — typed observations fold into a bounded per-scenario `run-history` — and **agent-authored** via `mauto memory add` / `mauto memory forget` for durable app-knowledge and preferences. This lets the agent get smarter about *this* app over time. See [Memory](memory.md).
 
 ## Next Steps
 
