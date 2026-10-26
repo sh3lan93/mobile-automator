@@ -13,7 +13,8 @@
 const realFs = require('fs');
 const path = require('path');
 
-const { mainLogPath, workspaceDir } = require('../paths');
+const { mainLogPath } = require('../paths');
+const { workspaceDir } = require('../../workspace/layout');
 const { MAX_LOG_BYTES, rotateIfLarge } = require('../../util/log-rotate');
 
 function format(event) {

@@ -8,14 +8,10 @@
 const fs = require('fs');
 const path = require('path');
 const { normalizeConfig } = require('./coerce');
-const { WORKSPACE_DIRNAME } = require('../workspace/dirname');
-
-function configDir(projectRoot) {
-  return path.join(projectRoot, WORKSPACE_DIRNAME);
-}
+const { workspaceDir } = require('../workspace/layout');
 
 function configPath(projectRoot) {
-  return path.join(configDir(projectRoot), 'config.json');
+  return path.join(workspaceDir(projectRoot), 'config.json');
 }
 
 // Parsed config object, or null when the file is absent. Values written before
@@ -45,7 +41,7 @@ function get(projectRoot, key) {
 function set(projectRoot, key, value) {
   const cfg = load(projectRoot) || {};
   setPath(cfg, key, value);
-  fs.mkdirSync(configDir(projectRoot), { recursive: true });
+  fs.mkdirSync(workspaceDir(projectRoot), { recursive: true });
   fs.writeFileSync(configPath(projectRoot), JSON.stringify(cfg, null, 2) + '\n');
   return cfg;
 }
@@ -73,4 +69,4 @@ function setPath(obj, key, value) {
   cur[parts[parts.length - 1]] = value;
 }
 
-module.exports = { load, resolveMode, get, set, configPath, configDir };
+module.exports = { load, resolveMode, get, set, configPath };

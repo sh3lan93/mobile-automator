@@ -9,7 +9,7 @@
 // Two artifacts, two homes: raw process output there, structured events here.
 
 const path = require('path');
-const { WORKSPACE_DIRNAME } = require('../workspace/dirname');
+const { workspaceDir } = require('../workspace/layout');
 
 const LOGS_DIRNAME = '.logs';
 const MAIN_LOG_NAME = 'mauto.ndjson';
@@ -17,17 +17,9 @@ const DAEMON_LOG_NAME = 'daemon.ndjson';
 const RUN_TRACE_PREFIX = 'run-';
 const SPOOL_NAME = 'telemetry.spool';
 
-// The workspace root `mauto setup` creates. The file sink treats its existence
-// as permission to log: mauto runs from whatever directory a user is standing
-// in, so creating this tree as a side effect of logging would litter unrelated
-// repos with a directory that has no .gitignore in it.
-function workspaceDir(projectRoot) {
-  return path.join(projectRoot, WORKSPACE_DIRNAME);
-}
-
 function logsDir(projectRoot, env = process.env) {
   if (env && env.MAUTO_LOG_DIR) return path.resolve(env.MAUTO_LOG_DIR);
-  return path.join(projectRoot, WORKSPACE_DIRNAME, LOGS_DIRNAME);
+  return path.join(workspaceDir(projectRoot), LOGS_DIRNAME);
 }
 
 function mainLogPath(projectRoot, env = process.env) {
@@ -116,7 +108,6 @@ module.exports = {
   DAEMON_LOG_NAME,
   RUN_TRACE_PREFIX,
   SPOOL_NAME,
-  workspaceDir,
   logsDir,
   mainLogPath,
   daemonEventLogPath,

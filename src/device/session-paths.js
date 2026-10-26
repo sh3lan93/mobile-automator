@@ -19,7 +19,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
-const { WORKSPACE_DIRNAME } = require('../workspace/dirname');
+const { workspaceDir } = require('../workspace/layout');
 
 const SESSION_DIRNAME = '.session';
 const SOCKET_NAME = 'mauto.sock';
@@ -38,7 +38,7 @@ const SALT_NAME = 'marker.salt';
 const SOCKET_PATH_LIMIT = 100;
 
 function sessionDir(projectRoot) {
-  return path.join(projectRoot, WORKSPACE_DIRNAME, SESSION_DIRNAME);
+  return path.join(workspaceDir(projectRoot), SESSION_DIRNAME);
 }
 
 // The canonical in-workspace socket path. Used when short enough.

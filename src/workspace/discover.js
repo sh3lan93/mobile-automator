@@ -16,7 +16,7 @@ const path = require('path');
 
 const { fail } = require('../output/envelope');
 
-const { WORKSPACE_DIRNAME, LEGACY_WORKSPACE_DIRNAME } = require('./dirname');
+const { WORKSPACE_DIRNAME, LEGACY_WORKSPACE_DIRNAME } = require('./layout');
 
 // The MARKER is `.mobile-automator/config.json`, not a bare `.mobile-automator/`
 // directory: `mauto setup` always writes config.json, so a real workspace
@@ -102,5 +102,4 @@ module.exports = {
   legacyWorkspaceFailure,
   markerPath,
   legacyMarkerPath,
-  WORKSPACE_DIRNAME,
 };

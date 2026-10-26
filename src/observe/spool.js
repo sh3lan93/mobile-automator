@@ -22,7 +22,8 @@ const realFs = require('fs');
 const crypto = require('crypto');
 const path = require('path');
 
-const { spoolPath, workspaceDir } = require('./paths');
+const { spoolPath } = require('./paths');
+const { workspaceDir } = require('../workspace/layout');
 const { telemetryPayload } = require('./event');
 
 // ~1000 lines at ~250 bytes. Not rotateIfLarge: that policy is for LOGS, and

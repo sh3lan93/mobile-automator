@@ -27,9 +27,9 @@
 const realFs = require('fs');
 const path = require('path');
 
-const { WORKSPACE_DIRNAME } = require('../workspace/dirname');
+const { workspaceDir } = require('../workspace/layout');
 const { record } = require('./recorder');
-const { runTracePath, workspaceDir } = require('./paths');
+const { runTracePath } = require('./paths');
 
 // The failure kinds worth a picture.
 //
@@ -78,8 +78,7 @@ function safeVerbToken(verb) {
 function failureShotPath(projectRoot, runId, verb) {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   return path.join(
-    projectRoot,
-    WORKSPACE_DIRNAME,
+    workspaceDir(projectRoot),
     'screenshots',
     runId,
     `${safeVerbToken(verb)}-${stamp}.png`

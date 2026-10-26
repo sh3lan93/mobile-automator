@@ -1,7 +1,8 @@
 'use strict';
 
 const path = require('path');
-const { WORKSPACE_DIRNAME } = require('../workspace/dirname');
+const { workspaceDir } = require('../workspace/layout');
+const { sessionDir } = require('../device/session-paths');
 
 // Canonical on-disk names for the three memory files. Keys are the stable
 // `--kind` identifiers used across verbs; values are the markdown filenames.
@@ -28,15 +29,11 @@ const HEADERS = {
 };
 
 function memoryDir(projectRoot) {
-  return path.join(projectRoot, WORKSPACE_DIRNAME, 'memory');
+  return path.join(workspaceDir(projectRoot), 'memory');
 }
 
 function memoryFile(projectRoot, name) {
   return path.join(memoryDir(projectRoot), FILES[name] || name);
-}
-
-function sessionDir(projectRoot) {
-  return path.join(projectRoot, WORKSPACE_DIRNAME, '.session');
 }
 
 // The advisory lock guarding read-modify-write of the shared memory files.
