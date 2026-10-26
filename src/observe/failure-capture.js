@@ -20,7 +20,7 @@
 //      to reference the file from and no finalize to collect it, so the PNG
 //      would be litter in a directory the user did not ask us to fill — the
 //      same argument the file sink already makes about creating
-//      mobile-automator/. It also makes the run id the single switch for this
+//      .mobile-automator/. It also makes the run id the single switch for this
 //      whole slice: export it and you get traces, measured durations and
 //      failure evidence; leave it unset and 0.24.0's behaviour is unchanged.
 
@@ -68,11 +68,11 @@ function safeVerbToken(verb) {
   return typeof verb === 'string' && SAFE_VERB_TOKEN.test(verb) ? verb : 'device';
 }
 
-// mobile-automator/screenshots/<runId>/<verb>-<ts>.png.
+// .mobile-automator/screenshots/<runId>/<verb>-<ts>.png.
 //
 // Under screenshots/, NOT results/<run_id>/screenshots/ which the execute guide
 // uses for agent-directed captures, because `mauto setup` writes
-// mobile-automator/.gitignore covering `screenshots/` and not the results tree.
+// .mobile-automator/.gitignore covering `screenshots/` and not the results tree.
 // A photograph of a failing app is precisely the artifact that must not ride
 // into a user's commit on a `git add -A`.
 function failureShotPath(projectRoot, runId, verb) {
@@ -106,7 +106,7 @@ async function captureOnFailure({
     if (!isCapturable(result)) return null;
     if (!tracePath) return null;
     // The same permission the file sink requires (see sinks/file.js): an
-    // observability artifact may not create mobile-automator/ where no
+    // observability artifact may not create .mobile-automator/ where no
     // workspace exists. A valid run id is not consent to litter — without this
     // gate a failing verb would mkdir screenshots/ into an undiscoverable
     // tree, the #188 pathology.

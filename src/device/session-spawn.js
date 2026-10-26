@@ -2,7 +2,7 @@
 
 // Spawns the device session daemon as a DETACHED background process and waits
 // until it is reachable. The daemon's output is captured to the workspace log
-// (mobile-automator/.session/daemon.log) instead of /dev/null, so a crashing
+// (.mobile-automator/.session/daemon.log) instead of /dev/null, so a crashing
 // engine leaves a readable trace behind. The spawn and openLog fns are
 // injectable so the spawn args, the log wiring and the readiness-poll contract
 // are all unit-testable without launching a real daemon or touching disk.

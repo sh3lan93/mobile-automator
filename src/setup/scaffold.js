@@ -2,7 +2,7 @@
 
 // Workspace scaffolding for `mauto setup`.
 //
-// Creates the mobile-automator/{scenarios,screenshots,results} tree and a
+// Creates the .mobile-automator/{scenarios,screenshots,results} tree and a
 // skeleton config.json. Idempotent: re-running never clobbers an existing
 // config's other fields — it only ensures the requested `mode` is set.
 

@@ -1,6 +1,6 @@
 'use strict';
 
-// Read side of mobile-automator/.session/session.json — the ONLY one. The
+// Read side of .mobile-automator/.session/session.json — the ONLY one. The
 // session id it carries is minted, and its shape defined, in session-id.js.
 // resolve-connection.js's readHandleDevice() is a projection onto the `device`
 // field and delegates here; it used to parse the file itself, which meant two

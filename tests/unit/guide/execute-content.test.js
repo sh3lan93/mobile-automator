@@ -181,3 +181,20 @@ describe('guide emitter — real execute content', () => {
     });
   });
 });
+
+describe('execute guide — hidden workspace', () => {
+  const BARE = /(^|[^.\w])mobile-automator\//m;
+  for (const mode of ['platform-aware', 'platform-agnostic']) {
+    describe(mode, () => {
+      const out = emitGuide('execute', { mode });
+      it('names the workspace as .mobile-automator/ and never the bare name', () => {
+        expect(out).toContain('.mobile-automator/scenarios/');
+        expect(out).not.toMatch(BARE);
+      });
+      it('tells the agent to list the scenarios directory directly', () => {
+        expect(out).toMatch(/list `?\.mobile-automator\/scenarios\/`? directly/i);
+        expect(out).toMatch(/hidden/i);
+      });
+    });
+  }
+});

@@ -2,7 +2,7 @@
 
 // Workspace config manager for the `mauto` CLI.
 //
-// Reads/writes mobile-automator/config.json under a project root.
+// Reads/writes .mobile-automator/config.json under a project root.
 // A config without an explicit `mode` is treated as `platform-aware`.
 
 const fs = require('fs');
@@ -41,7 +41,7 @@ function get(projectRoot, key) {
 }
 
 // Load-or-{}, set the dotted path, write back preserving every other field as
-// pretty 2-space JSON. Creates mobile-automator/ if needed.
+// pretty 2-space JSON. Creates .mobile-automator/ if needed.
 function set(projectRoot, key, value) {
   const cfg = load(projectRoot) || {};
   setPath(cfg, key, value);

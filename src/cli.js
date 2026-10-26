@@ -1737,8 +1737,8 @@ function buildProgram(deps = {}) {
     workspace = deps.projectRoot !== undefined
       ? { root: deps.projectRoot, searched: [deps.projectRoot] }
       : findWorkspaceRoot(cwd),
-    // Project root used to resolve mobile-automator/results/ — and, through the
-    // emitters below, mobile-automator/.logs/. One root, one tree. The
+    // Project root used to resolve .mobile-automator/results/ — and, through the
+    // emitters below, .mobile-automator/.logs/. One root, one tree. The
     // discovered workspace when there is one; cwd otherwise, which is what the
     // tolerant verbs (guide, mcp, read-only device/session) have always used.
     projectRoot = workspace.root || cwd,
@@ -1879,7 +1879,7 @@ function buildProgram(deps = {}) {
     let close;
     try {
       // autostart: the daemon is a per-workspace artifact — its .session/ tree
-      // and logs live under mobile-automator/. With no discovered workspace
+      // and logs live under .mobile-automator/. With no discovered workspace
       // there is nowhere legitimate to put one, so never autostart: the verb
       // connects one-shot and creates nothing. `ok:true` plus a phantom
       // workspace is the exact #188 pathology.
@@ -2210,7 +2210,7 @@ function buildProgram(deps = {}) {
 
   program
     .command('setup')
-    .description('Scaffold the workspace (mobile-automator/) and write a config')
+    .description('Scaffold the workspace (.mobile-automator/) and write a config')
     .option('--mode <mode>', 'aware (platform-aware, default) | agnostic (platform-agnostic)')
     .action(withEnvelope((opts) => {
       // cwd, not the discovered root: setup creates a workspace where the user
@@ -2400,12 +2400,12 @@ function buildProgram(deps = {}) {
     .description('Inspect and control anonymous usage telemetry (off by default)');
 
   // requireWorkspace, same as config get/set: telemetry status/enable/disable
-  // all read or write mobile-automator/config.json, and flush reads/claims
-  // mobile-automator/.logs/telemetry.spool, so all four have #188's exact
+  // all read or write .mobile-automator/config.json, and flush reads/claims
+  // .mobile-automator/.logs/telemetry.spool, so all four have #188's exact
   // failure mode without the gate — status would report the SAME
   // not_configured/no_token answer for "no workspace here" as for "a real,
   // just-unconfigured workspace", and enable/disable would create a stray
-  // mobile-automator/ wherever the caller happened to be standing.
+  // .mobile-automator/ wherever the caller happened to be standing.
   telemetryCmd
     .command('status')
     .description('Report whether telemetry is on, what would be sent, and what is queued')

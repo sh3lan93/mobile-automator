@@ -131,3 +131,13 @@ describe('guide emitter — real generate content', () => {
     });
   });
 });
+
+describe('generate guide — hidden workspace', () => {
+  for (const mode of ['platform-aware', 'platform-agnostic']) {
+    it(`${mode} names .mobile-automator/ and never the bare name`, () => {
+      const out = emitGuide('generate', { mode });
+      expect(out).toContain('.mobile-automator/scenarios/');
+      expect(out).not.toMatch(/(^|[^.\w])mobile-automator\//m);
+    });
+  }
+});

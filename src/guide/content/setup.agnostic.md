@@ -1,6 +1,6 @@
 # Guide: setup (platform-agnostic)
 
-You are configuring a mobile-QA workspace by **analyzing this project**. The mechanical part is already done: `mauto setup` has scaffolded the `mobile-automator/` tree (scenarios, screenshots, results) and written a starter `config.json`. **This guide completes the project analysis** — you inspect the codebase, infer each fact, confirm anything uncertain with the user, and PERSIST every finding with `mauto config set <key> <value>`. Read each value back with `mauto config get <key>` to confirm it landed.
+You are configuring a mobile-QA workspace by **analyzing this project**. The mechanical part is already done: `mauto setup` has scaffolded the `.mobile-automator/` tree (scenarios, screenshots, results) and written a starter `config.json`. **This guide completes the project analysis** — you inspect the codebase, infer each fact, confirm anything uncertain with the user, and PERSIST every finding with `mauto config set <key> <value>`. Read each value back with `mauto config get <key>` to confirm it landed.
 
 In this mode the configuration is **portable**: facts are captured as plain-English, platform-neutral descriptions so a single config and the scenarios it drives run unchanged across both supported mobile platforms. You are doing LLM analysis work, not running a fixed script — read real project files, reason about what you find, and only ask the user when a value genuinely cannot be inferred.
 

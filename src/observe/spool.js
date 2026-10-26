@@ -58,7 +58,7 @@ function isSelfReferential(event) {
   return typeof event.event === 'string' && event.event.startsWith('telemetry.');
 }
 
-// Same gate as the file sink: no mobile-automator/ workspace, no artifacts.
+// Same gate as the file sink: no .mobile-automator/ workspace, no artifacts.
 // mauto runs from wherever a user is standing, so creating this tree as a
 // side effect of logging would litter unrelated repos with a directory that
 // has no .gitignore in it.

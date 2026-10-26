@@ -5,7 +5,7 @@
 // src/device/session-paths.js.
 //
 // NOTE: this is NOT where the daemon's raw stdio goes. That lives at
-// mobile-automator/.session/daemon.log (session-paths.logFilePath, PR #176).
+// .mobile-automator/.session/daemon.log (session-paths.logFilePath, PR #176).
 // Two artifacts, two homes: raw process output there, structured events here.
 
 const path = require('path');
@@ -64,7 +64,7 @@ function daemonEventLogPath(projectRoot, env = process.env) {
 }
 
 // The telemetry queue. Deliberately NOT a .ndjson name even though its content
-// is NDJSON: TROUBLESHOOTING.md documents `cat mobile-automator/.logs/*.ndjson`
+// is NDJSON: TROUBLESHOOTING.md documents `cat .mobile-automator/.logs/*.ndjson`
 // as the merged CLI+daemon timeline, and the spool is not part of that timeline
 // — it is a queue that gets renamed out from under a reader mid-flush. The
 // extension is the interface that keeps the two apart.

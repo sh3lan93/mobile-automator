@@ -54,7 +54,7 @@ While recording, you also **passively observe and report** (but never add extra 
 
 - Verify a device is available with `mauto devices`.
 - **App under test.** If the user pointed you at a prebuilt app artifact, install it with `mauto install <path>`. Otherwise verify the app is installed on the device; if it is not, ask the user to install it manually before continuing. This guide never builds.
-- If that install fails because a different build is already on the device, uninstall it with `mauto uninstall <appId>` (the app identifier from `mobile-automator/config.json` — `android_package` / `ios_bundle_id`), install again, and report that app data was wiped.
+- If that install fails because a different build is already on the device, uninstall it with `mauto uninstall <appId>` (the app identifier from `.mobile-automator/config.json` — `android_package` / `ios_bundle_id`), install again, and report that app data was wiped.
 - State which path you took before continuing.
 
 ### 2. Receive Steps from User
@@ -86,7 +86,7 @@ For each step the user provided:
 1. **Find the target:** Run `mauto elements` to list the UI elements on screen and locate the target.
 2. **Execute the action:** Run the appropriate `mauto` verb. Resolve coordinates for taps from the `mauto elements` output and pass them with `mauto tap --at <x,y>`. For semantic actions (see Step Translation Guide), run `mauto press <action>` and let it resolve the action on the connected device.
 3. **Wait for stability:** Poll `mauto elements` until loading indicators ({{loading_indicators}}) have disappeared.
-4. **Capture screenshot:** Run `mauto screenshot mobile-automator/screenshots/<scenario_id>/step_<step_id>.png`.
+4. **Capture screenshot:** Run `mauto screenshot .mobile-automator/screenshots/<scenario_id>/step_<step_id>.png`.
 5. **Report back:** Describe what you see on screen after the action.
 6. **Record the step** with: action type (semantic or standard), semantic target description, value used, and a rich `expected_state` description of the resulting screen.
 
@@ -204,11 +204,11 @@ After all steps are executed and recorded:
 3. **Always include `"$schema_version": "2.1"` as the first field** in agnostic-mode scenarios.
 4. **Use named string IDs** for all steps and assertions (snake_case, e.g., `"id": "tap_login"`).
 5. Validate the assembled scenario with `mauto validate <path>` against `mauto schema scenario`. If it returns `data.warnings`, revise the scenario to drop each `unsupported_action` step, or tell the user the step needs manual handling; for a `launch_cold_implicit` entry, set the step's `cold` explicitly (`false` when it means returning to the already-open app, `true` when it means a restart).
-6. Save to `mobile-automator/scenarios/<scenario_id>.json`.
+6. Save to `.mobile-automator/scenarios/<scenario_id>.json`.
 7. Present summary:
-   > "Scenario saved: `mobile-automator/scenarios/<scenario_id>.json`
+   > "Scenario saved: `.mobile-automator/scenarios/<scenario_id>.json`
    > - Steps: [N] | Checkpoints: [N] screenshots | Assertions: [N] | Tags: [tag1, tag2]
-   > - Screenshots: `mobile-automator/screenshots/<scenario_id>/`"
+   > - Screenshots: `.mobile-automator/screenshots/<scenario_id>/`"
 
 ## Operational Boundaries
 
@@ -232,6 +232,6 @@ After all steps are executed and recorded:
 
 ## Resources
 
-- **mobile-automator/config.json**: Project configuration. Read it for any placeholder that was not filled in this guide.
+- **.mobile-automator/config.json**: Project configuration. Read it for any placeholder that was not filled in this guide.
 - **`mauto schema scenario`**: JSON schema for test scenarios. Use this when generating new scenarios and validating them with `mauto validate <path>`.
 {{additional_resources}}

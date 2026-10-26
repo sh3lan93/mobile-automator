@@ -24,8 +24,8 @@ function format(event) {
 //
 // `mauto` is a CLI run from wherever the user is standing, and unconditional
 // mkdir meant every invocation in any directory silently created
-// mobile-automator/. That is litter, and worse than litter: `mauto setup`
-// writes mobile-automator/.gitignore, so a tree created by the SINK instead of
+// .mobile-automator/. That is litter, and worse than litter: `mauto setup`
+// writes .mobile-automator/.gitignore, so a tree created by the SINK instead of
 // by setup is an un-ignored directory accumulating device serials in someone's
 // repo, ready for `git add -A`.
 //
