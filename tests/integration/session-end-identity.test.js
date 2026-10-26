@@ -139,7 +139,7 @@ test("an unanswering marker-less daemon (mauto <= 0.27.x) is unproven, never sig
 // so an absolute path on either line fails.
 test("no command line in the daemon's process group reveals the workspace path (#236)", async () => {
   const mine = workspace();
-  const bin = path.join(mine, 'node_modules', '.mobile-automator', 'bin', 'mauto-session-daemon.js');
+  const bin = path.join(mine, 'node_modules', 'mobile-automator', 'bin', 'mauto-session-daemon.js');
   const engineEntry = path.join(mine, 'node_modules', '@mobilenext', 'mobile-mcp', 'lib', 'index.js');
   fs.mkdirSync(path.dirname(bin), { recursive: true });
   fs.mkdirSync(path.dirname(engineEntry), { recursive: true });

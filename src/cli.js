@@ -41,7 +41,13 @@ const observeTelemetry = require('./observe/telemetry');
 const observeSpool = require('./observe/spool');
 const observeTransport = require('./observe/transport');
 const { makeFlusher } = require('./observe/flush');
-const { findWorkspaceRoot, noWorkspaceFailure } = require('./workspace/discover');
+const {
+  findWorkspaceRoot,
+  noWorkspaceFailure,
+  legacyWorkspaceFailure,
+  markerPath,
+  legacyMarkerPath,
+} = require('./workspace/discover');
 
 // Commander throws (via exitOverride) for two very different reasons, and the
 // split below is the ONLY thing that tells them apart.
@@ -881,6 +887,12 @@ function handleSetup({ projectRoot, ancestorRoot = null }, opts = {}) {
       envelope: fail('invalid_input', `unknown mode "${opts.mode}"`, 'Use --mode aware or --mode agnostic.'),
       exitKind: 'invalid_input',
     };
+  }
+  // Scaffolding beside an un-migrated legacy workspace would fork the user's
+  // state into two directories. If both exist the user is mid-recovery, so
+  // let setup proceed.
+  if (fs.existsSync(legacyMarkerPath(projectRoot)) && !fs.existsSync(markerPath(projectRoot))) {
+    return legacyWorkspaceFailure(projectRoot);
   }
   const r = scaffold(projectRoot, { mode });
   const hint = ancestorRoot
@@ -1827,7 +1839,7 @@ function buildProgram(deps = {}) {
   // (exit 5) naming where we looked, so the agent can recover.
   const requireWorkspace = (action) => (...args) => {
     if (!workspace.root) {
-      emit(noWorkspaceFailure(workspace.searched), humanFlag());
+      emit(noWorkspaceFailure(workspace.searched, workspace.legacy), humanFlag());
       return undefined;
     }
     return action(...args);

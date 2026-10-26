@@ -1179,6 +1179,25 @@ describe('cli handlers', () => {
       expect(cfg.mode).toBe('platform-agnostic');
     });
 
+    test('refuses when only a legacy workspace exists in projectRoot', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-legacy-'));
+      fs.mkdirSync(path.join(projectRoot, 'mobile-automator'));
+      fs.writeFileSync(path.join(projectRoot, 'mobile-automator', 'config.json'), '{}\n');
+      const { exitKind } = handleSetup({ projectRoot }, { mode: 'aware' });
+      expect(exitKind).toBe('environment');
+      expect(fs.existsSync(path.join(projectRoot, '.mobile-automator'))).toBe(false);
+    });
+
+    test('scaffolds normally when both a legacy and a new workspace exist', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-both-'));
+      for (const d of ['mobile-automator', '.mobile-automator']) {
+        fs.mkdirSync(path.join(projectRoot, d));
+        fs.writeFileSync(path.join(projectRoot, d, 'config.json'), '{"mode":"platform-aware"}\n');
+      }
+      const { envelope } = handleSetup({ projectRoot }, { mode: 'aware' });
+      expect(envelope.ok).toBe(true);
+    });
+
     test('defaults to platform-aware when no --mode given', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-'));
       const { envelope } = handleSetup({ projectRoot }, {});

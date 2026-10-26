@@ -243,4 +243,14 @@ describe('workspace discovery (integration, #188)', () => {
       expect(fs.existsSync(path.join(sub, '.mobile-automator', 'config.json'))).toBe(true);
     });
   });
+
+  describe('with only a legacy mobile-automator/ workspace', () => {
+    test('a requireWorkspace verb fails environment and names the legacy folder', () => {
+      fs.mkdirSync(path.join(root, 'mobile-automator'));
+      fs.writeFileSync(path.join(root, 'mobile-automator', 'config.json'), '{"mode":"platform-aware"}\n');
+      const r = runCli(['config', 'get', 'mode'], root);
+      expect(r.status).toBe(5);
+      expect(envelopeOf(r).error.message).toContain('legacy');
+    });
+  });
 });
