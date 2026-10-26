@@ -46,23 +46,25 @@ function legacyMarkerPath(dir) {
 // adopt whichever unrelated workspace happens to sit above it. The check is
 // inclusive — a workspace at the repository root is the common case.
 //
-// `legacy` is the nearest searched directory holding a pre-rename workspace,
-// recorded while walking (so it honours the same .git boundary) and returned
-// only when no new workspace was found — a new workspace always wins.
+// The walk stops at the first directory holding EITHER marker, so the nearest
+// workspace wins whichever name it uses — as it did before the rename. In that
+// directory the new marker wins over a legacy one beside it (the user is
+// mid-recovery). A legacy-only directory ends the walk with `legacy` set and no
+// root: carrying on to a new workspace further up would silently run every verb
+// against the ancestor's state while the project's own is left behind.
 function findWorkspaceRoot(startDir, { fs = require('fs') } = {}) {
   const searched = [];
-  let legacy = null;
   let dir = path.resolve(startDir);
   for (;;) {
     searched.push(dir);
     if (fs.existsSync(markerPath(dir))) return { root: dir, searched, legacy: null };
-    if (legacy === null && fs.existsSync(legacyMarkerPath(dir))) legacy = dir;
+    if (fs.existsSync(legacyMarkerPath(dir))) return { root: null, searched, legacy: dir };
     if (fs.existsSync(path.join(dir, '.git'))) break;
     const parent = path.dirname(dir);
     if (parent === dir) break; // filesystem root
     dir = parent;
   }
-  return { root: null, searched, legacy };
+  return { root: null, searched, legacy: null };
 }
 
 // The honest answer when discovery found nothing, for a verb that cannot work

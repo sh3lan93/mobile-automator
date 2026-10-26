@@ -166,6 +166,22 @@ describe('findWorkspaceRoot legacy detection', () => {
     expect(r.legacy).toBeNull();
   });
 
+  test('a nearer legacy workspace shadows a new one in an ancestor', () => {
+    const root = tmpProject();
+    makeWorkspace(root);
+    const app = mkdirp(root, 'app');
+    makeLegacy(app);
+    expect(findWorkspaceRoot(app)).toEqual({ root: null, searched: [app], legacy: app });
+  });
+
+  test('a nearer new workspace still wins over a legacy one above it', () => {
+    const root = tmpProject();
+    makeLegacy(root);
+    const app = mkdirp(root, 'app');
+    makeWorkspace(app);
+    expect(findWorkspaceRoot(app).root).toBe(app);
+  });
+
   test('a legacy folder without config.json is not legacy', () => {
     const root = tmpProject();
     fs.mkdirSync(path.join(root, 'mobile-automator'));

@@ -264,6 +264,20 @@ describe('workspace discovery (integration, #188)', () => {
       expect(fs.existsSync(path.join(app, '.mobile-automator'))).toBe(false);
     });
 
+    test('a legacy workspace nearer than a new one shadows it: setup refuses', () => {
+      fs.mkdirSync(path.join(root, '.mobile-automator'));
+      fs.writeFileSync(path.join(root, '.mobile-automator', 'config.json'), '{"mode":"platform-aware"}\n');
+      const app = path.join(root, 'app');
+      fs.mkdirSync(path.join(app, 'mobile-automator'), { recursive: true });
+      fs.writeFileSync(path.join(app, 'mobile-automator', 'config.json'), '{"mode":"platform-aware"}\n');
+      const r = runCli(['setup'], app);
+      expect(r.status).toBe(5);
+      expect(envelopeOf(r).error.message).toContain('legacy');
+      expect(fs.existsSync(path.join(app, '.mobile-automator'))).toBe(false);
+      const g = runCli(['config', 'get', 'mode'], app);
+      expect(g.status).toBe(5);
+    });
+
     test('setup at the project root refuses too', () => {
       fs.mkdirSync(path.join(root, 'mobile-automator'));
       fs.writeFileSync(path.join(root, 'mobile-automator', 'config.json'), '{"mode":"platform-aware"}\n');
