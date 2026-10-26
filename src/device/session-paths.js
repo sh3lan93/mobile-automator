@@ -2,7 +2,7 @@
 
 // Pure path helpers for the per-workspace device session daemon.
 //
-// Everything lives under <projectRoot>/mobile-automator/.session/:
+// Everything lives under <projectRoot>/.mobile-automator/.session/:
 //   mauto.sock    — Unix domain socket the daemon listens on
 //   daemon.pid    — pidfile written once the daemon is listening
 //   session.json  — handle describing the live session (device pin, socket, pid)

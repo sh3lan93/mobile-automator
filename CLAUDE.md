@@ -58,7 +58,7 @@ sample-app/                   # Flutter fixture app (see sample-app/README.md)
   scripts/
     run-e2e.mjs               # real-device E2E entry: drives the shipped `mauto` (MAUTO_BIN)
     lib/                      # harness logic (CommonJS); no package.json, no own deps
-.mobile-automator/             # created in user's project by `mauto setup`
+.mobile-automator/            # created in user's project by `mauto setup`
   config.json  scenarios/  screenshots/  results/  .session/
   memory/                     # cross-session memory (run-history.md, …)
 ```

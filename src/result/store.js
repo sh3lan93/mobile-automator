@@ -9,7 +9,7 @@ const { OBSERVATION_TYPES } = require('./flags');
 const { WORKSPACE_DIRNAME } = require('../workspace/dirname');
 
 // Incremental result accumulator that persists to
-//   <projectRoot>/mobile-automator/results/<runId>.json
+//   <projectRoot>/.mobile-automator/results/<runId>.json
 //
 // The CLI runs one-shot: each `result add-step` / `result finalize` invocation
 // is a fresh process. To support that, the store loads any existing in-progress
