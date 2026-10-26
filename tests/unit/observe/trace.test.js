@@ -9,12 +9,12 @@ const { MAX_LOG_BYTES } = require('../../../src/util/log-rotate');
 
 function logsRoot() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-trace-'));
-  fs.mkdirSync(path.join(root, 'mobile-automator', '.logs'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.mobile-automator', '.logs'), { recursive: true });
   return root;
 }
 
 function writeTrace(root, runId, events) {
-  const file = path.join(root, 'mobile-automator', '.logs', `run-${runId}.ndjson`);
+  const file = path.join(root, '.mobile-automator', '.logs', `run-${runId}.ndjson`);
   fs.writeFileSync(file, events.map((e) => JSON.stringify(e)).join('\n') + '\n');
   return file;
 }
@@ -32,7 +32,7 @@ describe('readTrace', () => {
   // most worth reading.
   it('skips unparseable lines rather than failing', () => {
     const root = logsRoot();
-    const file = path.join(root, 'mobile-automator', '.logs', 'run-x.ndjson');
+    const file = path.join(root, '.mobile-automator', '.logs', 'run-x.ndjson');
     fs.writeFileSync(file, `${JSON.stringify(at('2026-09-05T10:00:00.000Z'))}\n{"ts":"2026-09`);
     const trace = readTrace(file);
     expect(trace.events).toHaveLength(1);
@@ -41,7 +41,7 @@ describe('readTrace', () => {
 
   it('reports a trace that reached its cap', () => {
     const root = logsRoot();
-    const file = path.join(root, 'mobile-automator', '.logs', 'run-x.ndjson');
+    const file = path.join(root, '.mobile-automator', '.logs', 'run-x.ndjson');
     fs.writeFileSync(file, `${JSON.stringify(at('2026-09-05T10:00:00.000Z'))}\n`.padEnd(MAX_LOG_BYTES, ' '));
     expect(readTrace(file).truncated).toBe(true);
   });
@@ -115,7 +115,7 @@ describe('deriveRun', () => {
 
 describe('pruneRunTraces', () => {
   function seed(root, count) {
-    const dir = path.join(root, 'mobile-automator', '.logs');
+    const dir = path.join(root, '.mobile-automator', '.logs');
     for (let i = 0; i < count; i += 1) {
       const file = path.join(dir, `run-old${i}.ndjson`);
       fs.writeFileSync(file, '{}\n');
@@ -128,7 +128,7 @@ describe('pruneRunTraces', () => {
     const root = logsRoot();
     seed(root, KEEP_RUN_TRACES + 5);
     const removed = pruneRunTraces(root, { except: 'current', env: {} });
-    const left = fs.readdirSync(path.join(root, 'mobile-automator', '.logs')).filter((n) => n.startsWith('run-'));
+    const left = fs.readdirSync(path.join(root, '.mobile-automator', '.logs')).filter((n) => n.startsWith('run-'));
     expect(removed).toBe(6); // keep-1 slots, because `current` holds one
     expect(left).toHaveLength(KEEP_RUN_TRACES - 1);
     expect(left).toContain(`run-old${KEEP_RUN_TRACES + 4}.ndjson`);
@@ -141,12 +141,12 @@ describe('pruneRunTraces', () => {
     seed(root, KEEP_RUN_TRACES + 5);
     writeTrace(root, 'current', [at('2026-09-05T10:00:00.000Z')]);
     pruneRunTraces(root, { except: 'current', env: {} });
-    expect(fs.existsSync(path.join(root, 'mobile-automator', '.logs', 'run-current.ndjson'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.mobile-automator', '.logs', 'run-current.ndjson'))).toBe(true);
   });
 
   it('touches nothing that is not a run trace', () => {
     const root = logsRoot();
-    const dir = path.join(root, 'mobile-automator', '.logs');
+    const dir = path.join(root, '.mobile-automator', '.logs');
     fs.writeFileSync(path.join(dir, 'mauto.ndjson'), '{}\n');
     fs.writeFileSync(path.join(dir, 'daemon.ndjson'), '{}\n');
     fs.writeFileSync(path.join(dir, 'run-notes.txt'), 'x');

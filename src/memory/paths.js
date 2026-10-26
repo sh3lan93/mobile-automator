@@ -1,6 +1,7 @@
 'use strict';
 
 const path = require('path');
+const { WORKSPACE_DIRNAME } = require('../workspace/dirname');
 
 // Canonical on-disk names for the three memory files. Keys are the stable
 // `--kind` identifiers used across verbs; values are the markdown filenames.
@@ -27,7 +28,7 @@ const HEADERS = {
 };
 
 function memoryDir(projectRoot) {
-  return path.join(projectRoot, 'mobile-automator', 'memory');
+  return path.join(projectRoot, WORKSPACE_DIRNAME, 'memory');
 }
 
 function memoryFile(projectRoot, name) {
@@ -35,7 +36,7 @@ function memoryFile(projectRoot, name) {
 }
 
 function sessionDir(projectRoot) {
-  return path.join(projectRoot, 'mobile-automator', '.session');
+  return path.join(projectRoot, WORKSPACE_DIRNAME, '.session');
 }
 
 // The advisory lock guarding read-modify-write of the shared memory files.

@@ -9,7 +9,7 @@ const { spoolPath } = require('../../../src/observe/paths');
 
 function workspace() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-spool-'));
-  fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
   return root;
 }
 

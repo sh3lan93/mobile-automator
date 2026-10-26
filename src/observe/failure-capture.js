@@ -27,6 +27,7 @@
 const realFs = require('fs');
 const path = require('path');
 
+const { WORKSPACE_DIRNAME } = require('../workspace/dirname');
 const { record } = require('./recorder');
 const { runTracePath, workspaceDir } = require('./paths');
 
@@ -78,7 +79,7 @@ function failureShotPath(projectRoot, runId, verb) {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   return path.join(
     projectRoot,
-    'mobile-automator',
+    WORKSPACE_DIRNAME,
     'screenshots',
     runId,
     `${safeVerbToken(verb)}-${stamp}.png`

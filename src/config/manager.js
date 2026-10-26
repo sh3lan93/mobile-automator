@@ -8,9 +8,10 @@
 const fs = require('fs');
 const path = require('path');
 const { normalizeConfig } = require('./coerce');
+const { WORKSPACE_DIRNAME } = require('../workspace/dirname');
 
 function configDir(projectRoot) {
-  return path.join(projectRoot, 'mobile-automator');
+  return path.join(projectRoot, WORKSPACE_DIRNAME);
 }
 
 function configPath(projectRoot) {

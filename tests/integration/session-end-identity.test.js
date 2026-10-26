@@ -75,7 +75,7 @@ test("a cp -R'd workspace (salt and pidfile copied) never signals the original's
   const mine = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-end-copy-'));
   try {
     fs.writeFileSync(paths.pidFilePath(theirs), `${daemon.pid}\n`);
-    fs.cpSync(path.join(theirs, 'mobile-automator'), path.join(mine, 'mobile-automator'), { recursive: true });
+    fs.cpSync(path.join(theirs, '.mobile-automator'), path.join(mine, '.mobile-automator'), { recursive: true });
     expect(readSalt(mine)).toBe(readSalt(theirs));
     expect(await endSession(mine)).toEqual({ outcome: 'already_stopped', pid: daemon.pid });
     expect(pidAlive(daemon.pid)).toBe(true);
@@ -139,7 +139,7 @@ test("an unanswering marker-less daemon (mauto <= 0.27.x) is unproven, never sig
 // so an absolute path on either line fails.
 test("no command line in the daemon's process group reveals the workspace path (#236)", async () => {
   const mine = workspace();
-  const bin = path.join(mine, 'node_modules', 'mobile-automator', 'bin', 'mauto-session-daemon.js');
+  const bin = path.join(mine, 'node_modules', '.mobile-automator', 'bin', 'mauto-session-daemon.js');
   const engineEntry = path.join(mine, 'node_modules', '@mobilenext', 'mobile-mcp', 'lib', 'index.js');
   fs.mkdirSync(path.dirname(bin), { recursive: true });
   fs.mkdirSync(path.dirname(engineEntry), { recursive: true });

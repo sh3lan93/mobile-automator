@@ -18,7 +18,7 @@ describe('device selection store', () => {
   test('write -> read round-trips and lazily creates .session/', () => {
     const root = tmpRoot();
     selection.write(root, 'emulator-5554');
-    expect(fs.existsSync(path.join(root, 'mobile-automator', '.session'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.mobile-automator', '.session'))).toBe(true);
     expect(selection.read(root)).toBe('emulator-5554');
   });
 
@@ -26,9 +26,9 @@ describe('device selection store', () => {
     const root = tmpRoot();
     selection.write(root, 'A');
     const p = selection.selectionPath(root);
-    expect(p).toBe(path.join(root, 'mobile-automator', '.session', 'selection.json'));
-    expect(p).not.toContain(path.join('mobile-automator', 'config.json'));
-    expect(fs.existsSync(path.join(root, 'mobile-automator', 'config.json'))).toBe(false);
+    expect(p).toBe(path.join(root, '.mobile-automator', '.session', 'selection.json'));
+    expect(p).not.toContain(path.join('.mobile-automator', 'config.json'));
+    expect(fs.existsSync(path.join(root, '.mobile-automator', 'config.json'))).toBe(false);
   });
 
   test('clear is idempotent (no-op when absent, removes when present)', () => {

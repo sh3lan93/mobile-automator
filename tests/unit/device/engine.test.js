@@ -17,9 +17,9 @@ const { coerceValue } = require('../../../src/config/coerce');
 function tmpRoot(config) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-engine-'));
   if (config !== undefined) {
-    fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
     fs.writeFileSync(
-      path.join(root, 'mobile-automator', 'config.json'),
+      path.join(root, '.mobile-automator', 'config.json'),
       typeof config === 'string' ? config : JSON.stringify(config)
     );
   }

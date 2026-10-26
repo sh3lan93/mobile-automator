@@ -6,6 +6,7 @@ const path = require('path');
 const { atomicWrite } = require('../util/atomic');
 const { withLock } = require('../util/lock');
 const { OBSERVATION_TYPES } = require('./flags');
+const { WORKSPACE_DIRNAME } = require('../workspace/dirname');
 
 // Incremental result accumulator that persists to
 //   <projectRoot>/mobile-automator/results/<runId>.json
@@ -54,7 +55,7 @@ class ResultStore {
     this.projectRoot = projectRoot;
     this._metadataOverrides = metadata || {};
 
-    this._dir = path.join(projectRoot, 'mobile-automator', 'results');
+    this._dir = path.join(projectRoot, WORKSPACE_DIRNAME, 'results');
     this._file = path.join(this._dir, `${runId}.json`);
     // Per-runId advisory lock guarding every read-modify-write mutator. Lives
     // in the same directory as the result file, so the lock is scoped to this

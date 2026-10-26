@@ -8,12 +8,12 @@ const { captureOnFailure } = require('../../../src/observe/failure-capture');
 
 function workspace() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-failcap-'));
-  fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
   return root;
 }
 
 function traceEvents(root, runId) {
-  const file = path.join(root, 'mobile-automator', '.logs', `run-${runId}.ndjson`);
+  const file = path.join(root, '.mobile-automator', '.logs', `run-${runId}.ndjson`);
   return fs.existsSync(file)
     ? fs.readFileSync(file, 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l))
     : [];
@@ -51,8 +51,8 @@ describe('screenshot on device failure', () => {
 
     expect(shot).toBeTruthy();
     expect(fs.existsSync(shot)).toBe(true);
-    // Under screenshots/, which mobile-automator/.gitignore covers.
-    expect(shot.startsWith(path.join(root, 'mobile-automator', 'screenshots', 'smoke'))).toBe(true);
+    // Under screenshots/, which .mobile-automator/.gitignore covers.
+    expect(shot.startsWith(path.join(root, '.mobile-automator', 'screenshots', 'smoke'))).toBe(true);
 
     const events = traceEvents(root, 'smoke');
     expect(events).toHaveLength(1);
@@ -102,10 +102,10 @@ describe('screenshot on device failure', () => {
   });
 
   // The same permission the file sink requires: a valid run id is not consent
-  // to create mobile-automator/ where no workspace exists. Without this gate
+  // to create .mobile-automator/ where no workspace exists. Without this gate
   // a failing verb would mkdir screenshots/ into an undiscoverable tree, the
   // #188 pathology.
-  it('captures nothing when no mobile-automator/ workspace exists at projectRoot', async () => {
+  it('captures nothing when no .mobile-automator/ workspace exists at projectRoot', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-failcap-nows-'));
     const bridge = fakeBridge();
     const shot = await captureOnFailure({
@@ -113,7 +113,7 @@ describe('screenshot on device failure', () => {
     });
     expect(shot).toBeNull();
     expect(bridge.calls).toEqual([]);
-    expect(fs.existsSync(path.join(root, 'mobile-automator'))).toBe(false);
+    expect(fs.existsSync(path.join(root, '.mobile-automator'))).toBe(false);
   });
 
   // THE property. The capture is itself a daemon round-trip and can fail for
@@ -179,7 +179,7 @@ describe('screenshot on device failure', () => {
   // always command.name() from a successfully-parsed commander command — a
   // guarantee this module does not control and should not depend on.
   describe('sanitizes verb before it becomes a path segment', () => {
-    const screenshotsDir = (root) => path.join(root, 'mobile-automator', 'screenshots', 'smoke');
+    const screenshotsDir = (root) => path.join(root, '.mobile-automator', 'screenshots', 'smoke');
 
     it.each([
       ['../../../../tmp/evil', 'a traversal that escapes screenshots/<runId>/'],

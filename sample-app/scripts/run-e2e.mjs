@@ -100,7 +100,7 @@ log(`engine: ${engine}`);
 // --- Scratch project ---------------------------------------------------------
 
 const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-e2e-'));
-const workspace = path.join(projectDir, 'mobile-automator');
+const workspace = path.join(projectDir, '.mobile-automator');
 const mauto = createMauto({ bin, cwd: projectDir, log });
 
 function copyArtifacts() {

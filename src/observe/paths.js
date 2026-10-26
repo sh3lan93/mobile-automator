@@ -9,6 +9,7 @@
 // Two artifacts, two homes: raw process output there, structured events here.
 
 const path = require('path');
+const { WORKSPACE_DIRNAME } = require('../workspace/dirname');
 
 const LOGS_DIRNAME = '.logs';
 const MAIN_LOG_NAME = 'mauto.ndjson';
@@ -21,12 +22,12 @@ const SPOOL_NAME = 'telemetry.spool';
 // in, so creating this tree as a side effect of logging would litter unrelated
 // repos with a directory that has no .gitignore in it.
 function workspaceDir(projectRoot) {
-  return path.join(projectRoot, 'mobile-automator');
+  return path.join(projectRoot, WORKSPACE_DIRNAME);
 }
 
 function logsDir(projectRoot, env = process.env) {
   if (env && env.MAUTO_LOG_DIR) return path.resolve(env.MAUTO_LOG_DIR);
-  return path.join(projectRoot, 'mobile-automator', LOGS_DIRNAME);
+  return path.join(projectRoot, WORKSPACE_DIRNAME, LOGS_DIRNAME);
 }
 
 function mainLogPath(projectRoot, env = process.env) {

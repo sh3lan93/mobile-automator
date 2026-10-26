@@ -81,7 +81,7 @@ describe('result finalize auto-harvest', () => {
     expect(r.envelope.ok).toBe(true);
 
     // (b) the result file was actually written.
-    const resultFile = path.join(root, 'mobile-automator', 'results', 'run_20260706_090001.json');
+    const resultFile = path.join(root, '.mobile-automator', 'results', 'run_20260706_090001.json');
     expect(fs.existsSync(resultFile)).toBe(true);
 
     // (c) the throw was folded into the envelope hint, not swallowed.
@@ -120,7 +120,7 @@ describe('result finalize auto-harvest', () => {
     expect(r.envelope.ok).toBe(true);
 
     // (b) the result file was actually written.
-    const resultFile = path.join(root, 'mobile-automator', 'results', 'run_20260712_101600.json');
+    const resultFile = path.join(root, '.mobile-automator', 'results', 'run_20260712_101600.json');
     expect(fs.existsSync(resultFile)).toBe(true);
 
     // (c) the construction throw was folded into the envelope hint, not left uncaught.

@@ -73,28 +73,28 @@ describe('workspace discovery (integration, #188)', () => {
     test('config set from a subdirectory writes the root config, not a new one in cwd', () => {
       const r = runCli(['config', 'set', 'app_id', 'com.acme.app'], nested);
       expect(r.status).toBe(0);
-      const cfg = JSON.parse(fs.readFileSync(path.join(root, 'mobile-automator', 'config.json'), 'utf8'));
+      const cfg = JSON.parse(fs.readFileSync(path.join(root, '.mobile-automator', 'config.json'), 'utf8'));
       expect(cfg.app_id).toBe('com.acme.app');
-      expect(fs.existsSync(path.join(nested, 'mobile-automator'))).toBe(false);
+      expect(fs.existsSync(path.join(nested, '.mobile-automator'))).toBe(false);
     });
 
     test('memory add from a subdirectory lands in the root store, and memory show there sees it', () => {
       const add = runCli(['memory', 'add', 'login needs a 2s settle', '--kind', 'app-knowledge'], nested);
       expect(add.status).toBe(0);
       expect(envelopeOf(add).ok).toBe(true);
-      expect(fs.existsSync(path.join(nested, 'mobile-automator'))).toBe(false);
+      expect(fs.existsSync(path.join(nested, '.mobile-automator'))).toBe(false);
 
       const show = runCli(['memory', 'show', '--kind', 'app-knowledge'], nested);
       expect(show.status).toBe(0);
       expect(show.stdout).toContain('login needs a 2s settle');
     });
 
-    test('works from inside mobile-automator/scenarios/', () => {
-      const scenarios = path.join(root, 'mobile-automator', 'scenarios');
+    test('works from inside .mobile-automator/scenarios/', () => {
+      const scenarios = path.join(root, '.mobile-automator', 'scenarios');
       fs.mkdirSync(scenarios, { recursive: true });
       const r = runCli(['config', 'get', 'mode'], scenarios);
       expect(envelopeOf(r).data.value).toBe('platform-aware');
-      expect(fs.existsSync(path.join(scenarios, 'mobile-automator'))).toBe(false);
+      expect(fs.existsSync(path.join(scenarios, '.mobile-automator'))).toBe(false);
     });
 
     test('result add-step from a subdirectory writes into the root workspace', () => {
@@ -103,14 +103,14 @@ describe('workspace discovery (integration, #188)', () => {
         nested
       );
       expect(r.status).toBe(0);
-      expect(fs.existsSync(path.join(root, 'mobile-automator', 'results'))).toBe(true);
-      expect(fs.readdirSync(path.join(root, 'mobile-automator', 'results')).length).toBeGreaterThan(0);
-      expect(fs.existsSync(path.join(nested, 'mobile-automator'))).toBe(false);
+      expect(fs.existsSync(path.join(root, '.mobile-automator', 'results'))).toBe(true);
+      expect(fs.readdirSync(path.join(root, '.mobile-automator', 'results')).length).toBeGreaterThan(0);
+      expect(fs.existsSync(path.join(nested, '.mobile-automator'))).toBe(false);
     });
 
     test('the verb.end record lands in the discovered workspace .logs/', () => {
       runCli(['config', 'get', 'mode'], nested);
-      const logFile = path.join(root, 'mobile-automator', '.logs', 'mauto.ndjson');
+      const logFile = path.join(root, '.mobile-automator', '.logs', 'mauto.ndjson');
       expect(fs.existsSync(logFile)).toBe(true);
       const events = fs
         .readFileSync(logFile, 'utf8')
@@ -127,7 +127,7 @@ describe('workspace discovery (integration, #188)', () => {
       const env = envelopeOf(r);
       expect(env.ok).toBe(true);
       expect(env.hint).toContain(root);
-      expect(fs.existsSync(path.join(nested, 'mobile-automator', 'config.json'))).toBe(true);
+      expect(fs.existsSync(path.join(nested, '.mobile-automator', 'config.json'))).toBe(true);
     });
 
     // telemetry status/enable/disable/flush are requireWorkspace-gated on the
@@ -143,9 +143,9 @@ describe('workspace discovery (integration, #188)', () => {
     test('telemetry enable from a subdirectory writes the root config, not a new one in cwd', () => {
       const r = runCli(['telemetry', 'enable'], nested);
       expect(r.status).toBe(0);
-      const cfg = JSON.parse(fs.readFileSync(path.join(root, 'mobile-automator', 'config.json'), 'utf8'));
+      const cfg = JSON.parse(fs.readFileSync(path.join(root, '.mobile-automator', 'config.json'), 'utf8'));
       expect(cfg.telemetry.enabled).toBe(true);
-      expect(fs.existsSync(path.join(nested, 'mobile-automator'))).toBe(false);
+      expect(fs.existsSync(path.join(nested, '.mobile-automator'))).toBe(false);
     });
   });
 
@@ -171,9 +171,9 @@ describe('workspace discovery (integration, #188)', () => {
       expectNoWorkspace(runCli(['config', 'get', 'mode'], sub));
     });
 
-    test('config set fails and creates no mobile-automator/', () => {
+    test('config set fails and creates no .mobile-automator/', () => {
       expectNoWorkspace(runCli(['config', 'set', 'app_id', 'com.acme.app'], sub));
-      expect(fs.existsSync(path.join(sub, 'mobile-automator'))).toBe(false);
+      expect(fs.existsSync(path.join(sub, '.mobile-automator'))).toBe(false);
     });
 
     test('memory show fails instead of reporting an empty store', () => {
@@ -182,14 +182,14 @@ describe('workspace discovery (integration, #188)', () => {
 
     test('memory add fails and writes nothing', () => {
       expectNoWorkspace(runCli(['memory', 'add', 'x', '--kind', 'preferences'], sub));
-      expect(fs.existsSync(path.join(sub, 'mobile-automator'))).toBe(false);
+      expect(fs.existsSync(path.join(sub, '.mobile-automator'))).toBe(false);
     });
 
     test('result add-step fails and writes nothing', () => {
       expectNoWorkspace(
         runCli(['result', 'add-step', '--run-id', 'run_20260928_120000', '--step-id', 's1', '--status', 'pass'], sub)
       );
-      expect(fs.existsSync(path.join(sub, 'mobile-automator'))).toBe(false);
+      expect(fs.existsSync(path.join(sub, '.mobile-automator'))).toBe(false);
     });
 
     test('result finalize fails', () => {
@@ -200,34 +200,34 @@ describe('workspace discovery (integration, #188)', () => {
       expectNoWorkspace(runCli(['telemetry', 'status'], sub));
     });
 
-    test('telemetry enable fails and creates no mobile-automator/', () => {
+    test('telemetry enable fails and creates no .mobile-automator/', () => {
       expectNoWorkspace(runCli(['telemetry', 'enable'], sub));
-      expect(fs.existsSync(path.join(sub, 'mobile-automator'))).toBe(false);
+      expect(fs.existsSync(path.join(sub, '.mobile-automator'))).toBe(false);
     });
 
     // The two device verbs whose whole job is persisting workspace state
     // (the daemon handle, the device selection — both under
-    // mobile-automator/.session/) join the gated set: ok:true plus a phantom
+    // .mobile-automator/.session/) join the gated set: ok:true plus a phantom
     // workspace tree is the exact #188 pathology.
-    test('session start fails and creates no mobile-automator/', () => {
+    test('session start fails and creates no .mobile-automator/', () => {
       expectNoWorkspace(runCli(['session', 'start'], sub));
-      expect(fs.existsSync(path.join(sub, 'mobile-automator'))).toBe(false);
+      expect(fs.existsSync(path.join(sub, '.mobile-automator'))).toBe(false);
     });
 
-    test('devices use fails and creates no mobile-automator/', () => {
+    test('devices use fails and creates no .mobile-automator/', () => {
       expectNoWorkspace(runCli(['devices', 'use', 'emulator-5554'], sub));
-      expect(fs.existsSync(path.join(sub, 'mobile-automator'))).toBe(false);
+      expect(fs.existsSync(path.join(sub, '.mobile-automator'))).toBe(false);
     });
 
     // Read-only device use stays zero-config, but the daemon must not
     // autostart into a workspace-less cwd: the verb connects one-shot and
     // leaves nothing behind.
-    test('devices stays tolerant but spawns no daemon and creates no mobile-automator/', () => {
+    test('devices stays tolerant but spawns no daemon and creates no .mobile-automator/', () => {
       const r = runCli(['devices'], sub);
       expect(r.status).toBe(0);
       expect(envelopeOf(r).ok).toBe(true);
       expect(Array.isArray(envelopeOf(r).data)).toBe(true);
-      expect(fs.existsSync(path.join(sub, 'mobile-automator'))).toBe(false);
+      expect(fs.existsSync(path.join(sub, '.mobile-automator'))).toBe(false);
     });
 
     test('guide stays tolerant: raw content, exit 0', () => {
@@ -240,7 +240,7 @@ describe('workspace discovery (integration, #188)', () => {
       const r = runCli(['setup'], sub);
       expect(r.status).toBe(0);
       expect(envelopeOf(r).hint).toBeUndefined();
-      expect(fs.existsSync(path.join(sub, 'mobile-automator', 'config.json'))).toBe(true);
+      expect(fs.existsSync(path.join(sub, '.mobile-automator', 'config.json'))).toBe(true);
     });
   });
 });

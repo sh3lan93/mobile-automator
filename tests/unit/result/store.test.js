@@ -82,13 +82,13 @@ describe('ResultStore', () => {
     expect(result.observations.filter((o) => o.type === 'flakiness')).toHaveLength(0);
   });
 
-  test('writes the finalized result to <projectRoot>/mobile-automator/results/<runId>.json', () => {
+  test('writes the finalized result to <projectRoot>/.mobile-automator/results/<runId>.json', () => {
     const projectRoot = tmpRoot();
     const store = new ResultStore({ runId: RUN_ID, scenarioId: 's', projectRoot });
     store.addStep({ step_id: 'launch', status: 'pass' });
     store.finalize({ status: 'passed' });
 
-    const file = path.join(projectRoot, 'mobile-automator', 'results', `${RUN_ID}.json`);
+    const file = path.join(projectRoot, '.mobile-automator', 'results', `${RUN_ID}.json`);
     expect(fs.existsSync(file)).toBe(true);
     const onDisk = JSON.parse(fs.readFileSync(file, 'utf8'));
     expect(onDisk.run_id).toBe(RUN_ID);
@@ -111,7 +111,7 @@ describe('ResultStore', () => {
   // --- Atomicity & corruption recovery (#119) ----------------------------
 
   function resultsDir(projectRoot) {
-    return path.join(projectRoot, 'mobile-automator', 'results');
+    return path.join(projectRoot, '.mobile-automator', 'results');
   }
 
   test('a corrupt result file is preserved as a .corrupt sidecar and surfaced as a warning, not silently emptied', () => {
@@ -337,7 +337,7 @@ describe('ResultStore', () => {
         timestamp: '2026-09-05T10:30:00.000Z',
         step_id: 'step_3',
         excerpt: 'FATAL EXCEPTION: main',
-        report_path: 'mobile-automator/results/r1.txt',
+        report_path: '.mobile-automator/results/r1.txt',
       });
       const result = store.finalize({});
       expect(result.crashes).toEqual([
@@ -347,7 +347,7 @@ describe('ResultStore', () => {
           timestamp: '2026-09-05T10:30:00.000Z',
           step_id: 'step_3',
           excerpt: 'FATAL EXCEPTION: main',
-          report_path: 'mobile-automator/results/r1.txt',
+          report_path: '.mobile-automator/results/r1.txt',
           detected_at: expect.any(String),
         },
       ]);

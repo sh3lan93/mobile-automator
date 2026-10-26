@@ -78,8 +78,8 @@ describe('envelope boundary (#120)', () => {
 
   test('(a) corrupt config.json -> one invalid_input envelope (config get)', async () => {
     const root = tmpRoot('mauto-b120-cfg-');
-    fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
-    fs.writeFileSync(path.join(root, 'mobile-automator', 'config.json'), '{ not: valid json');
+    fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.mobile-automator', 'config.json'), '{ not: valid json');
     const { program, calls } = captureProgram(root);
 
     await program.parseAsync(argv('config', 'get', 'mode'));
@@ -92,8 +92,8 @@ describe('envelope boundary (#120)', () => {
 
   test('(a2) corrupt config.json also caught on guide (config.load before the handler try)', async () => {
     const root = tmpRoot('mauto-b120-guide-');
-    fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
-    fs.writeFileSync(path.join(root, 'mobile-automator', 'config.json'), '{{ broken');
+    fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.mobile-automator', 'config.json'), '{{ broken');
     const { program, calls } = captureProgram(root);
 
     await program.parseAsync(argv('guide', 'execute'));

@@ -24,8 +24,8 @@ function tmpProject({ git = 'dir' } = {}) {
 }
 
 function makeWorkspace(dir) {
-  fs.mkdirSync(path.join(dir, 'mobile-automator'), { recursive: true });
-  fs.writeFileSync(path.join(dir, 'mobile-automator', 'config.json'), '{"mode":"platform-aware"}\n');
+  fs.mkdirSync(path.join(dir, '.mobile-automator'), { recursive: true });
+  fs.writeFileSync(path.join(dir, '.mobile-automator', 'config.json'), '{"mode":"platform-aware"}\n');
 }
 
 function mkdirp(...parts) {
@@ -50,10 +50,10 @@ describe('findWorkspaceRoot', () => {
     expect(r.searched).toEqual([deep, path.join(root, 'src', 'deep'), path.join(root, 'src'), root]);
   });
 
-  test('finds the workspace when started inside mobile-automator/scenarios/', () => {
+  test('finds the workspace when started inside .mobile-automator/scenarios/', () => {
     const root = tmpProject();
     makeWorkspace(root);
-    const scenarios = mkdirp(root, 'mobile-automator', 'scenarios');
+    const scenarios = mkdirp(root, '.mobile-automator', 'scenarios');
     expect(findWorkspaceRoot(scenarios).root).toBe(root);
   });
 
@@ -86,11 +86,11 @@ describe('findWorkspaceRoot', () => {
     expect(findWorkspaceRoot(sub).root).toBe(root);
   });
 
-  test('a bare mobile-automator/ directory without config.json is ignored', () => {
+  test('a bare .mobile-automator/ directory without config.json is ignored', () => {
     // The false positive the marker exists to prevent: this repo is itself
     // usually cloned into a folder named `mobile-automator`.
     const root = tmpProject();
-    fs.mkdirSync(path.join(root, 'mobile-automator'));
+    fs.mkdirSync(path.join(root, '.mobile-automator'));
     const sub = mkdirp(root, 'src');
     const r = findWorkspaceRoot(sub);
     expect(r.root).toBeNull();
@@ -141,7 +141,7 @@ describe('noWorkspaceFailure', () => {
     expect(r.exitKind).toBe('environment');
     expect(r.envelope.ok).toBe(false);
     expect(r.envelope.error.kind).toBe('environment');
-    expect(r.envelope.error.message).toMatch(/mobile-automator/);
+    expect(r.envelope.error.message).toMatch(/.mobile-automator/);
     for (const p of ['/p/a/b', '/p/a', '/p']) expect(r.envelope.hint).toContain(p);
     expect(r.envelope.hint).toMatch(/mauto setup/);
   });

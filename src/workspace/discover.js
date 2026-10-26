@@ -16,13 +16,14 @@ const path = require('path');
 
 const { fail } = require('../output/envelope');
 
-const WORKSPACE_DIRNAME = 'mobile-automator';
+const { WORKSPACE_DIRNAME } = require('./dirname');
 
-// The MARKER is `mobile-automator/config.json`, not a bare `mobile-automator/`
-// directory. This repository is itself usually cloned into a folder named
-// `mobile-automator`, so a bare-directory check would make every checkout's
-// parent look like a workspace. `mauto setup` always writes config.json, so a
-// real workspace always carries it.
+// The MARKER is `.mobile-automator/config.json`, not a bare `.mobile-automator/`
+// directory: `mauto setup` always writes config.json, so a real workspace
+// always carries it, and an unrelated directory that merely shares the name
+// does not count. (The marker used to also guard against this repository's own
+// clone folder, `mobile-automator`; that collision cannot happen with a dotted
+// name.)
 function markerPath(dir) {
   return path.join(dir, WORKSPACE_DIRNAME, 'config.json');
 }

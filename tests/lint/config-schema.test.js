@@ -81,7 +81,7 @@ describe('config schema — structural agreement', () => {
       const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-lint-'));
       scaffold(root, { mode });
       const cfg = JSON.parse(
-        fs.readFileSync(path.join(root, 'mobile-automator', 'config.json'), 'utf8')
+        fs.readFileSync(path.join(root, '.mobile-automator', 'config.json'), 'utf8')
       );
       for (const key of Object.keys(cfg)) {
         const { valid, errors } = validateAt(key, cfg[key]);

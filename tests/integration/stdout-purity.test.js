@@ -28,7 +28,7 @@ function runCli(args, env = {}) {
 
 // A workspace-provisioned variant, for a verb wrapped in requireWorkspace
 // (#188) — config get/set and, since this session, all four telemetry verbs.
-// Without a real mobile-automator/config.json in cwd, those now fail
+// Without a real .mobile-automator/config.json in cwd, those now fail
 // `environment` (exit 5) before reaching the code path this suite means to
 // exercise; the failure envelope still satisfies a loose "one JSON object"
 // assertion, which is exactly how this gap stayed invisible. Reuses the same

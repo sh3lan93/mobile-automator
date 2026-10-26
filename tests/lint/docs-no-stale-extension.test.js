@@ -36,7 +36,7 @@ const STALE_PATTERNS = [
     regex: /gemini extensions/,
   },
   {
-    name: '`setup_state.json` (removed — workspace config is `mobile-automator/config.json`)',
+    name: '`setup_state.json` (removed — workspace config is `.mobile-automator/config.json`)',
     regex: /setup_state\.json/,
   },
   {

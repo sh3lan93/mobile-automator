@@ -10,6 +10,7 @@ const fs = require('fs');
 const path = require('path');
 
 const manager = require('../config/manager');
+const { WORKSPACE_DIRNAME } = require('../workspace/dirname');
 
 const SUBDIRS = ['scenarios', 'screenshots', 'results', 'memory'];
 
@@ -31,7 +32,7 @@ const GITIGNORE_BODY = [
 function scaffold(projectRoot, { mode } = {}) {
   const created = [];
 
-  const baseDir = path.join(projectRoot, 'mobile-automator');
+  const baseDir = path.join(projectRoot, WORKSPACE_DIRNAME);
   ensureDir(baseDir, created);
   for (const sub of SUBDIRS) {
     ensureDir(path.join(baseDir, sub), created);

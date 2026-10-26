@@ -9,7 +9,7 @@ const { emitGuide } = require('../../../src/guide/emitter');
 function tmpProject(config) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-exec-'));
   if (config) {
-    const dir = path.join(root, 'mobile-automator');
+    const dir = path.join(root, '.mobile-automator');
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify(config, null, 2));
   }

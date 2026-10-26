@@ -7,10 +7,10 @@ const path = require('path');
 const { record, defaultSinks, boundRecorder, safeObserve } = require('../../../src/observe/recorder');
 
 // A project that HAS run `mauto setup` — the file sink refuses to log into a
-// directory with no mobile-automator/ in it, so a real-fs test needs one.
+// directory with no .mobile-automator/ in it, so a real-fs test needs one.
 function workspace() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-bound-rec-'));
-  fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
   return root;
 }
 
@@ -170,7 +170,7 @@ describe('boundRecorder', () => {
 
     observe({ level: 'info', event: 'daemon.start' });
 
-    const events = readLines(path.join(root, 'mobile-automator', '.logs', 'mauto.ndjson'));
+    const events = readLines(path.join(root, '.mobile-automator', '.logs', 'mauto.ndjson'));
     expect(events).toHaveLength(1);
     expect(events[0].src).toBe('daemon');
     expect(events[0].session_id).toBe('8f2c1a3b4d5e6f70');
@@ -188,7 +188,7 @@ describe('boundRecorder', () => {
 
     observe({ level: 'info', event: 'daemon.start', src: 'cli', session_id: 'forged', pid: 1 });
 
-    const [event] = readLines(path.join(root, 'mobile-automator', '.logs', 'mauto.ndjson'));
+    const [event] = readLines(path.join(root, '.mobile-automator', '.logs', 'mauto.ndjson'));
     expect(event.src).toBe('daemon');
     expect(event.session_id).toBe('real');
     expect(event.pid).toBe(4242);
@@ -196,7 +196,7 @@ describe('boundRecorder', () => {
 
   it('honours an explicit logPath, writing there and never to the CLI log', () => {
     const root = workspace();
-    const daemonLog = path.join(root, 'mobile-automator', '.logs', 'daemon.ndjson');
+    const daemonLog = path.join(root, '.mobile-automator', '.logs', 'daemon.ndjson');
     const observe = boundRecorder({
       projectRoot: root,
       env: {},
@@ -209,7 +209,7 @@ describe('boundRecorder', () => {
     const events = readLines(daemonLog);
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({ src: 'daemon', event: 'call.end', tool: 'mobile_press_button' });
-    expect(fs.existsSync(path.join(root, 'mobile-automator', '.logs', 'mauto.ndjson'))).toBe(false);
+    expect(fs.existsSync(path.join(root, '.mobile-automator', '.logs', 'mauto.ndjson'))).toBe(false);
   });
 
   it('degrades to an inert observe when construction itself throws', () => {
@@ -245,7 +245,7 @@ describe('boundRecorder', () => {
     env.MAUTO_LOG_LEVEL = 'silent';
     observe({ level: 'debug', event: 'call.start' });
 
-    expect(readLines(path.join(root, 'mobile-automator', '.logs', 'mauto.ndjson'))).toHaveLength(1);
+    expect(readLines(path.join(root, '.mobile-automator', '.logs', 'mauto.ndjson'))).toHaveLength(1);
     stderrSpy.mockRestore();
   });
 });
@@ -261,8 +261,8 @@ describe('run trace sink', () => {
   // invocations a maintainer reading a bug report cares about.
   it('writes the event to BOTH the main log and the trace', () => {
     const root = workspace();
-    const main = path.join(root, 'mobile-automator', '.logs', 'mauto.ndjson');
-    const trace = path.join(root, 'mobile-automator', '.logs', 'run-smoke.ndjson');
+    const main = path.join(root, '.mobile-automator', '.logs', 'mauto.ndjson');
+    const trace = path.join(root, '.mobile-automator', '.logs', 'run-smoke.ndjson');
 
     record(
       { level: 'info', src: 'cli', event: 'verb.end', verb: 'tap', ok: true, run_id: 'smoke' },
@@ -276,7 +276,7 @@ describe('run trace sink', () => {
 
   it('silences the trace along with everything else at MAUTO_LOG_LEVEL=silent', () => {
     const root = workspace();
-    const trace = path.join(root, 'mobile-automator', '.logs', 'run-smoke.ndjson');
+    const trace = path.join(root, '.mobile-automator', '.logs', 'run-smoke.ndjson');
 
     record(
       { level: 'info', src: 'cli', event: 'verb.end' },
@@ -298,7 +298,7 @@ describe('run trace sink', () => {
   it('never lets a failing trace sink cost stderr or the main log their event', () => {
     const root = workspace();
     const seen = { stderr: [], file: [] };
-    const tracePath = path.join(root, 'mobile-automator', '.logs', 'run-smoke.ndjson');
+    const tracePath = path.join(root, '.mobile-automator', '.logs', 'run-smoke.ndjson');
     const sinks = defaultSinks(root, { MAUTO_LOG_LEVEL: 'info' }, { tracePath }).map((sink, i) => ({
       ...sink,
       write:
@@ -328,14 +328,14 @@ describe('run trace sink', () => {
     const observe = boundRecorder({
       projectRoot: root,
       env: { MAUTO_LOG_LEVEL: 'info', MAUTO_RUN_ID: 'smoke' },
-      logPath: path.join(root, 'mobile-automator', '.logs', 'daemon.ndjson'),
+      logPath: path.join(root, '.mobile-automator', '.logs', 'daemon.ndjson'),
       fields: { src: 'daemon' },
     });
 
     observe({ level: 'info', event: 'call.end', ok: true });
 
-    expect(readLines(path.join(root, 'mobile-automator', '.logs', 'run-smoke.ndjson'))).toHaveLength(0);
-    expect(readLines(path.join(root, 'mobile-automator', '.logs', 'daemon.ndjson'))).toHaveLength(1);
+    expect(readLines(path.join(root, '.mobile-automator', '.logs', 'run-smoke.ndjson'))).toHaveLength(0);
+    expect(readLines(path.join(root, '.mobile-automator', '.logs', 'daemon.ndjson'))).toHaveLength(1);
   });
 });
 
@@ -347,9 +347,9 @@ describe('the spool sink is constructed only when telemetry is enabled', () => {
 
   function configuredWorkspace(config) {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-sinks-'));
-    fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
     fs.writeFileSync(
-      path.join(root, 'mobile-automator', 'config.json'),
+      path.join(root, '.mobile-automator', 'config.json'),
       JSON.stringify(config, null, 2)
     );
     return root;
