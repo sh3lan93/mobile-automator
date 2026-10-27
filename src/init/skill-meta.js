@@ -22,7 +22,7 @@ const SKILL_META = {
   setup: {
     name: 'mobile-automator-setup',
     description:
-      'Initialise and configure a mobile-automator workspace by analysing the ' +
+      'Initialise and configure a .mobile-automator/ workspace by analysing the ' +
       'project. Use when the user wants to set up, configure, or initialise ' +
       'mobile QA automation for this project.',
   },

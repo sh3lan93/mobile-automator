@@ -101,7 +101,7 @@ For each step the user provided:
 1. **Find the target:** Run `mauto elements` to list the UI elements on screen and locate the target.
 2. **Execute the action:** Run the appropriate `mauto` verb. Resolve coordinates for taps from the `mauto elements` output and pass them with `mauto tap --at <x,y>`.
 3. **Wait for stability:** Poll `mauto elements` until loading indicators ({{loading_indicators}}) have disappeared.
-4. **Capture screenshot:** Run `mauto screenshot mobile-automator/screenshots/<scenario_id>/step_<step_id>.png` (where `step_id` is the step's named string ID, e.g., `step_tap_login.png`).
+4. **Capture screenshot:** Run `mauto screenshot .mobile-automator/screenshots/<scenario_id>/step_<step_id>.png` (where `step_id` is the step's named string ID, e.g., `step_tap_login.png`).
 5. **Report back:** Describe what you see on screen after the action.
    > "Step tap_login done: Tapped 'Login' — now showing the login form with email and password fields."
 6. **Record the step** with: action type, semantic target description, value used, and a rich `expected_state` description of the resulting screen.
@@ -215,14 +215,14 @@ After all steps are executed and recorded:
 5. **Assertions reference steps by name** (`"after_step": "tap_login"`) — never by number.
 6. Auto-populate metadata from the current session:
    - `app_version` — from the installed app
-   - `environment` — ask the user or use `default_environment` from `mobile-automator/config.json`
+   - `environment` — ask the user or use `default_environment` from `.mobile-automator/config.json`
    - Do NOT include `device_model`, `api_level`, or `timestamp` in metadata — these belong in the result schema, not the scenario.
 7. Validate the assembled scenario with `mauto validate <path>` against `mauto schema scenario`. If it returns `data.warnings`, revise the scenario to drop each `unsupported_action` step, or tell the user the step needs manual handling; for a `launch_cold_implicit` entry, set the step's `cold` explicitly (`false` when it means returning to the already-open app, `true` when it means a restart).
-8. Save to `mobile-automator/scenarios/<scenario_id>.json`.
+8. Save to `.mobile-automator/scenarios/<scenario_id>.json`.
 9. Present summary:
-   > "Scenario saved: `mobile-automator/scenarios/<scenario_id>.json`
+   > "Scenario saved: `.mobile-automator/scenarios/<scenario_id>.json`
    > - Steps: [N] | Checkpoints: [N] screenshots | Assertions: [N] | Tags: [tag1, tag2]
-   > - Screenshots: `mobile-automator/screenshots/<scenario_id>/`"
+   > - Screenshots: `.mobile-automator/screenshots/<scenario_id>/`"
 
 ## Step Translation Guide
 
@@ -323,6 +323,6 @@ Translate user language to `mauto` verbs and schema actions:
 - Ignore errors — report failures immediately and ask the user how to proceed.
 
 ## Resources
-- **mobile-automator/config.json**: Project configuration. Read it for any placeholder that was not filled in this guide.
+- **.mobile-automator/config.json**: Project configuration. Read it for any placeholder that was not filled in this guide.
 - **`mauto schema scenario`**: JSON schema for test scenarios. Use this when generating new scenarios and validating them with `mauto validate <path>`.
 {{additional_resources}}

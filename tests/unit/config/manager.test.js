@@ -11,7 +11,7 @@ function tmpRoot() {
 }
 
 function configPath(root) {
-  return path.join(root, 'mobile-automator', 'config.json');
+  return path.join(root, '.mobile-automator', 'config.json');
 }
 
 describe('config/manager', () => {
@@ -23,14 +23,14 @@ describe('config/manager', () => {
 
     it('returns the parsed config object when present', () => {
       const root = tmpRoot();
-      fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+      fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
       fs.writeFileSync(configPath(root), JSON.stringify({ mode: 'platform-agnostic', app_package: 'com.x' }));
       expect(load(root)).toEqual({ mode: 'platform-agnostic', app_package: 'com.x' });
     });
 
     it('heals a legacy comma-joined list key on read (#136)', () => {
       const root = tmpRoot();
-      fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+      fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
       fs.writeFileSync(
         configPath(root),
         JSON.stringify({ mode: 'platform-aware', environments: 'stagingDebug,productionRelease' })
@@ -40,7 +40,7 @@ describe('config/manager', () => {
 
     it('heals a nested legacy list key on read', () => {
       const root = tmpRoot();
-      fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+      fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
       fs.writeFileSync(
         configPath(root),
         JSON.stringify({ knowledge: { business_critical_paths: 'login, checkout' } })
@@ -129,7 +129,7 @@ describe('config/manager', () => {
   describe('self-repair', () => {
     it('rewrites a legacy string list as an array on the next set', () => {
       const root = tmpRoot();
-      fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+      fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
       fs.writeFileSync(configPath(root), JSON.stringify({ environments: 'a,b' }));
       set(root, 'project_name', 'Demo'); // touching an unrelated key is enough
       const raw = JSON.parse(fs.readFileSync(configPath(root), 'utf8'));

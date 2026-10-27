@@ -12,7 +12,7 @@ function tmpRoot() {
 }
 
 function resultsDir(projectRoot) {
-  return path.join(projectRoot, 'mobile-automator', 'results');
+  return path.join(projectRoot, '.mobile-automator', 'results');
 }
 
 function readResult(projectRoot, runId) {
@@ -122,7 +122,7 @@ describe('selection.json atomic write', () => {
     });
 
     // atomicWrite's tmp+rename contract: no .tmp residue survives a write.
-    const sessionDir = path.join(projectRoot, 'mobile-automator', '.session');
+    const sessionDir = path.join(projectRoot, '.mobile-automator', '.session');
     const entries = fs.readdirSync(sessionDir);
     expect(entries.filter((f) => f.includes('.tmp'))).toEqual([]);
     expect(entries).toEqual(['selection.json']);

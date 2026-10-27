@@ -37,7 +37,7 @@ const TOPICS = {
   execute:
     'Run a scenario. The agent replays each step through `mauto` action verbs, evaluates checks with `mauto assert`, and records progress with `mauto result add-step` / `mauto result finalize`.',
   setup:
-    'Initialise the workspace. `mauto setup` scaffolds the mobile-automator tree and a config; `mauto config get/set` reads and updates it.',
+    'Initialise the workspace. `mauto setup` scaffolds the .mobile-automator/ workspace and a config; `mauto config get/set` reads and updates it.',
 };
 
 const SEMANTIC_ACTIONS = ['press_back', 'dismiss_keyboard', 'grant_permission', 'deny_permission'];

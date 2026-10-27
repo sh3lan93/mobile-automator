@@ -29,7 +29,7 @@ describe('connection', () => {
 
     // cli.js's connectBridge passes autostart:false when no workspace was
     // discovered (#188) so device verbs connect one-shot and create no
-    // mobile-automator/.session/ tree; the default stays true so a workspace
+    // .mobile-automator/.session/ tree; the default stays true so a workspace
     // keeps transparent daemon reuse.
     test('forwards autostart to the resolver, defaulting it to true', async () => {
       const seen = [];

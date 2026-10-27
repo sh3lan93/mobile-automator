@@ -29,8 +29,8 @@ const CLI = path.join(REPO_ROOT, 'bin', 'mauto.js');
 // drives (config, result) fail environment without one (#188), and what is
 // under test here is the instrumentation around a SUCCESSFUL verb.
 function seedWorkspace(cwd) {
-  fs.mkdirSync(path.join(cwd, 'mobile-automator'), { recursive: true });
-  fs.writeFileSync(path.join(cwd, 'mobile-automator', 'config.json'), '{"mode":"platform-aware"}\n');
+  fs.mkdirSync(path.join(cwd, '.mobile-automator'), { recursive: true });
+  fs.writeFileSync(path.join(cwd, '.mobile-automator', 'config.json'), '{"mode":"platform-aware"}\n');
 }
 
 function runCli(args, env = {}) {
@@ -253,7 +253,7 @@ describe('run traces (integration)', () => {
   it('measures a real run end to end', () => {
     const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-e2e-measure-'));
     seedWorkspace(cwd);
-    fs.mkdirSync(path.join(cwd, 'mobile-automator', 'results'), { recursive: true });
+    fs.mkdirSync(path.join(cwd, '.mobile-automator', 'results'), { recursive: true });
     const runId = 'run_20260905_141500';
     const env = { ...process.env, MAUTO_LOG_LEVEL: 'info', MAUTO_RUN_ID: runId };
     const call = (args) => spawnSync(process.execPath, [CLI, ...args], { cwd, encoding: 'utf8', env });

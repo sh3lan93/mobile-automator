@@ -2,7 +2,7 @@
 
 // Pure path helpers for the per-workspace device session daemon.
 //
-// Everything lives under <projectRoot>/mobile-automator/.session/:
+// Everything lives under <projectRoot>/.mobile-automator/.session/:
 //   mauto.sock    — Unix domain socket the daemon listens on
 //   daemon.pid    — pidfile written once the daemon is listening
 //   session.json  — handle describing the live session (device pin, socket, pid)
@@ -19,6 +19,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
+const { workspaceDir } = require('../workspace/layout');
 
 const SESSION_DIRNAME = '.session';
 const SOCKET_NAME = 'mauto.sock';
@@ -37,7 +38,7 @@ const SALT_NAME = 'marker.salt';
 const SOCKET_PATH_LIMIT = 100;
 
 function sessionDir(projectRoot) {
-  return path.join(projectRoot, 'mobile-automator', SESSION_DIRNAME);
+  return path.join(workspaceDir(projectRoot), SESSION_DIRNAME);
 }
 
 // The canonical in-workspace socket path. Used when short enough.

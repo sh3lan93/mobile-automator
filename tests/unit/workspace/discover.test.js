@@ -14,7 +14,7 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 
-const { findWorkspaceRoot, noWorkspaceFailure } = require('../../../src/workspace/discover');
+const { findWorkspaceRoot, noWorkspaceFailure, workspaceFailure } = require('../../../src/workspace/discover');
 
 function tmpProject({ git = 'dir' } = {}) {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-discover-')));
@@ -24,6 +24,11 @@ function tmpProject({ git = 'dir' } = {}) {
 }
 
 function makeWorkspace(dir) {
+  fs.mkdirSync(path.join(dir, '.mobile-automator'), { recursive: true });
+  fs.writeFileSync(path.join(dir, '.mobile-automator', 'config.json'), '{"mode":"platform-aware"}\n');
+}
+
+function makeLegacy(dir) {
   fs.mkdirSync(path.join(dir, 'mobile-automator'), { recursive: true });
   fs.writeFileSync(path.join(dir, 'mobile-automator', 'config.json'), '{"mode":"platform-aware"}\n');
 }
@@ -38,7 +43,7 @@ describe('findWorkspaceRoot', () => {
   test('finds a workspace in the start directory itself', () => {
     const root = tmpProject();
     makeWorkspace(root);
-    expect(findWorkspaceRoot(root)).toEqual({ root, searched: [root] });
+    expect(findWorkspaceRoot(root)).toEqual({ root, searched: [root], legacy: null });
   });
 
   test('finds a workspace three levels up', () => {
@@ -50,10 +55,10 @@ describe('findWorkspaceRoot', () => {
     expect(r.searched).toEqual([deep, path.join(root, 'src', 'deep'), path.join(root, 'src'), root]);
   });
 
-  test('finds the workspace when started inside mobile-automator/scenarios/', () => {
+  test('finds the workspace when started inside .mobile-automator/scenarios/', () => {
     const root = tmpProject();
     makeWorkspace(root);
-    const scenarios = mkdirp(root, 'mobile-automator', 'scenarios');
+    const scenarios = mkdirp(root, '.mobile-automator', 'scenarios');
     expect(findWorkspaceRoot(scenarios).root).toBe(root);
   });
 
@@ -86,11 +91,11 @@ describe('findWorkspaceRoot', () => {
     expect(findWorkspaceRoot(sub).root).toBe(root);
   });
 
-  test('a bare mobile-automator/ directory without config.json is ignored', () => {
-    // The false positive the marker exists to prevent: this repo is itself
-    // usually cloned into a folder named `mobile-automator`.
+  test('a bare .mobile-automator/ directory without config.json is ignored', () => {
+    // The false positive the marker exists to prevent: an unrelated directory
+    // that merely shares the workspace's name.
     const root = tmpProject();
-    fs.mkdirSync(path.join(root, 'mobile-automator'));
+    fs.mkdirSync(path.join(root, '.mobile-automator'));
     const sub = mkdirp(root, 'src');
     const r = findWorkspaceRoot(sub);
     expect(r.root).toBeNull();
@@ -111,6 +116,7 @@ describe('findWorkspaceRoot', () => {
     expect(findWorkspaceRoot(deep)).toEqual({
       root: null,
       searched: [deep, path.join(root, 'a'), root],
+      legacy: null,
     });
   });
 
@@ -135,13 +141,100 @@ describe('findWorkspaceRoot', () => {
   });
 });
 
+describe('findWorkspaceRoot legacy detection', () => {
+  test('reports a legacy workspace in the start directory', () => {
+    const root = tmpProject();
+    makeLegacy(root);
+    expect(findWorkspaceRoot(root)).toEqual({ root: null, searched: [root], legacy: root });
+  });
+
+  test('reports a legacy workspace two levels up', () => {
+    const root = tmpProject();
+    makeLegacy(root);
+    const deep = mkdirp(root, 'src', 'x');
+    const r = findWorkspaceRoot(deep);
+    expect(r.root).toBeNull();
+    expect(r.legacy).toBe(root);
+  });
+
+  test('the new workspace wins when both exist', () => {
+    const root = tmpProject();
+    makeLegacy(root);
+    makeWorkspace(root);
+    const r = findWorkspaceRoot(root);
+    expect(r.root).toBe(root);
+    expect(r.legacy).toBeNull();
+  });
+
+  test('a nearer legacy workspace shadows a new one in an ancestor', () => {
+    const root = tmpProject();
+    makeWorkspace(root);
+    const app = mkdirp(root, 'app');
+    makeLegacy(app);
+    expect(findWorkspaceRoot(app)).toEqual({ root: null, searched: [app], legacy: app });
+  });
+
+  test('a nearer new workspace still wins over a legacy one above it', () => {
+    const root = tmpProject();
+    makeLegacy(root);
+    const app = mkdirp(root, 'app');
+    makeWorkspace(app);
+    expect(findWorkspaceRoot(app).root).toBe(app);
+  });
+
+  test('a legacy folder without config.json is not legacy', () => {
+    const root = tmpProject();
+    fs.mkdirSync(path.join(root, 'mobile-automator'));
+    expect(findWorkspaceRoot(root).legacy).toBeNull();
+  });
+
+  test('does not report a legacy folder above the .git boundary', () => {
+    const outer = tmpProject({ git: 'none' });
+    makeLegacy(outer);
+    const repo = mkdirp(outer, 'repo');
+    fs.mkdirSync(path.join(repo, '.git'));
+    const r = findWorkspaceRoot(mkdirp(repo, 'a'));
+    expect(r.root).toBeNull();
+    expect(r.legacy).toBeNull();
+  });
+});
+
+describe('workspaceFailure', () => {
+  test('with a legacy dir names it and gives the mv fix', () => {
+    const r = workspaceFailure({ root: null, searched: ['/p'], legacy: '/p' });
+    expect(r.exitKind).toBe('environment');
+    expect(r.envelope.error.message).toContain('/p/mobile-automator/');
+    expect(r.envelope.error.message).toContain('.mobile-automator/');
+    expect(r.envelope.hint).toContain('pkill -f mauto-session-daemon');
+    expect(r.envelope.hint).toContain('mv mobile-automator .mobile-automator');
+    expect(r.envelope.hint).not.toMatch(/session end/);
+  });
+
+  test('without a legacy dir is the plain no-workspace failure', () => {
+    const r = workspaceFailure({ root: null, searched: ['/p/a', '/p'], legacy: null });
+    expect(r.envelope.error.message).toMatch(/\.mobile-automator/);
+    expect(r.envelope.error.message).not.toContain('legacy');
+    for (const p of ['/p/a', '/p']) expect(r.envelope.hint).toContain(p);
+  });
+
+  test('treats an absent legacy field as none', () => {
+    const r = workspaceFailure({ root: null, searched: ['/p'] });
+    expect(r.envelope.error.message).not.toContain('legacy');
+  });
+});
+
 describe('noWorkspaceFailure', () => {
+  test('has no legacy mode: a second argument changes nothing', () => {
+    const r = noWorkspaceFailure(['/p'], '/p');
+    expect(r.envelope.error.message).not.toContain('legacy');
+  });
+
   test('is an environment failure whose hint names every searched path and `mauto setup`', () => {
     const r = noWorkspaceFailure(['/p/a/b', '/p/a', '/p']);
     expect(r.exitKind).toBe('environment');
     expect(r.envelope.ok).toBe(false);
     expect(r.envelope.error.kind).toBe('environment');
-    expect(r.envelope.error.message).toMatch(/mobile-automator/);
+    expect(r.envelope.error.message).toMatch(/\.mobile-automator/);
     for (const p of ['/p/a/b', '/p/a', '/p']) expect(r.envelope.hint).toContain(p);
     expect(r.envelope.hint).toMatch(/mauto setup/);
   });

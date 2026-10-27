@@ -1,7 +1,7 @@
 'use strict';
 
 // `buildProgram({ projectRoot })` is the CLI's dependency injection seam: every
-// handler resolves `mobile-automator/` through it. The observability seam has
+// handler resolves `.mobile-automator/` through it. The observability seam has
 // to resolve through the SAME root, or a program executes its verbs against one
 // tree and writes its record of them into another.
 //
@@ -20,14 +20,14 @@ const { buildProgram } = require('../../src/cli');
 // A workspace `mauto setup` would have created, plus a subdirectory to stand in.
 function makeWorkspace() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-observe-root-'));
-  fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
   const sub = path.join(root, 'sub', 'deeper');
   fs.mkdirSync(sub, { recursive: true });
   return { root, sub };
 }
 
 function readEvents(root) {
-  const logFile = path.join(root, 'mobile-automator', '.logs', 'mauto.ndjson');
+  const logFile = path.join(root, '.mobile-automator', '.logs', 'mauto.ndjson');
   if (!fs.existsSync(logFile)) return [];
   return fs
     .readFileSync(logFile, 'utf8')
@@ -83,7 +83,7 @@ describe('the observability seam honours the injected projectRoot', () => {
 
     await runProgram(['config', 'get', 'mode'], { projectRoot: root, cwd: sub });
 
-    expect(fs.existsSync(path.join(sub, 'mobile-automator'))).toBe(false);
+    expect(fs.existsSync(path.join(sub, '.mobile-automator'))).toBe(false);
   });
 
   // The trace path is built from the SAME injected projectRoot finish() already
@@ -100,8 +100,8 @@ describe('the observability seam honours the injected projectRoot', () => {
       else process.env.MAUTO_RUN_ID = originalRunId;
     }
 
-    const tracePath = path.join(root, 'mobile-automator', '.logs', 'run-run_20260905_141500.ndjson');
+    const tracePath = path.join(root, '.mobile-automator', '.logs', 'run-run_20260905_141500.ndjson');
     expect(fs.existsSync(tracePath)).toBe(true);
-    expect(fs.existsSync(path.join(sub, 'mobile-automator'))).toBe(false);
+    expect(fs.existsSync(path.join(sub, '.mobile-automator'))).toBe(false);
   });
 });

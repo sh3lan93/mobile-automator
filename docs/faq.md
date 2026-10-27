@@ -92,7 +92,7 @@ mauto setup                 # platform-aware (default)
 mauto setup --mode agnostic # platform-agnostic
 ```
 
-The chosen mode is stored as `mode` in `mobile-automator/config.json` (read it back with `mauto config get mode`). In agnostic mode, OS-shaped gestures become four semantic actions — `press_back`, `dismiss_keyboard`, `grant_permission`, `deny_permission` — resolved to the right native primitive at runtime, so one scenario covers both platforms.
+The chosen mode is stored as `mode` in `.mobile-automator/config.json` (read it back with `mauto config get mode`). In agnostic mode, OS-shaped gestures become four semantic actions — `press_back`, `dismiss_keyboard`, `grant_permission`, `deny_permission` — resolved to the right native primitive at runtime, so one scenario covers both platforms.
 
 ### What is the `$schema_version` field?
 
@@ -100,7 +100,7 @@ The chosen mode is stored as `mode` in `mobile-automator/config.json` (read it b
 
 ### Does the agent remember anything between sessions?
 
-**Answer:** Yes. mobile-automator keeps a small **cross-session memory** under `mobile-automator/memory/`, so the agent gets smarter about *your* app over time instead of re-discovering the same quirks on every run. There are three kinds:
+**Answer:** Yes. mobile-automator keeps a small **cross-session memory** under `.mobile-automator/memory/`, so the agent gets smarter about *your* app over time instead of re-discovering the same quirks on every run. There are three kinds:
 
 - **`run-history`** (`run-history.md`) — **machine-owned**. Auto-harvested on `mauto result finalize`: typed observations (regression / flakiness / state context) are folded into a bounded rolling per-scenario summary. You don't edit this by hand.
 - **`app-knowledge`** (`app-knowledge.md`) — **agent-authored** durable facts about the app (selectors, conventions, gotchas).
@@ -163,9 +163,9 @@ See the [installation guide](getting-started/installation.md) for full details.
 1. **Check the error message** — Note what went wrong (e.g., a missing package ID, no detectable platform)
 2. **Fix the issue** — Provide the value when prompted, or pass it explicitly
 3. **Re-run `mauto setup`** — It rescaffolds the workspace
-4. **Verify completion** — Check that `mobile-automator/config.json` was created (`mauto config get mode`)
+4. **Verify completion** — Check that `.mobile-automator/config.json` was created (`mauto config get mode`)
 
-The workspace state lives entirely in `mobile-automator/config.json`; there is no separate resume file to clean up.
+The workspace state lives entirely in `.mobile-automator/config.json`; there is no separate resume file to clean up.
 
 ### "Platform detection failed" — What should I do?
 
@@ -235,14 +235,14 @@ When setup prompts, enter the full package ID (e.g., `com.example.app` for Andro
 ### How do I generate a test scenario?
 
 **Answer:**
-1. Ensure setup is complete: `mobile-automator/config.json` exists
+1. Ensure setup is complete: `.mobile-automator/config.json` exists
 2. Confirm a device is visible: `mauto devices` (pin one with `mauto devices use <id>` if needed)
 3. From inside your agent, launch the generate workflow:
    - **Claude Code:** `/mobile-automator-generate`
    - **Cursor:** ask in plain language (e.g. *"generate a login test"*)
    - **Any other agent:** `mauto mcp` (MCP prompts) or `mauto guide generate` + call verbs directly
 4. Describe your test in natural language when prompted
-5. Review the generated JSON in `mobile-automator/scenarios/`
+5. Review the generated JSON in `.mobile-automator/scenarios/`
 
 **Example prompt:**
 ```text
@@ -250,7 +250,7 @@ Describe the test scenario:
 > User logs in with email and password, verifies dashboard loads
 ```
 
-Generated: `mobile-automator/scenarios/login_happy_path.json`
+Generated: `.mobile-automator/scenarios/login_happy_path.json`
 
 ### "Element not found when generating" — What does this mean?
 
@@ -267,7 +267,7 @@ Generated: `mobile-automator/scenarios/login_happy_path.json`
 
 **Answer:** You can edit the generated JSON directly:
 
-1. **Review generated scenario** — Check `mobile-automator/scenarios/`
+1. **Review generated scenario** — Check `.mobile-automator/scenarios/`
 2. **Edit JSON manually** — Fix targets, actions, assertions
 3. **Validate schema** — Run `mauto validate <file>` (see the [schema reference](reference/schema.md))
 4. **Re-execute** — Run the execute workflow with the corrected scenario
@@ -329,12 +329,12 @@ For running with different values, manually edit the JSON or wire the values in 
 - **Any other agent:** `mauto mcp` (MCP prompts) or `mauto guide execute` + call verbs directly
 
 The agent then:
-1. **Selects a scenario** — from `mobile-automator/scenarios/`
+1. **Selects a scenario** — from `.mobile-automator/scenarios/`
 2. **Confirms the device** — uses the pinned/visible device (`mauto devices`)
 3. **Confirms app installation** — installs a named artifact if you gave one; otherwise builds it in platform-aware projects, or asks you to install it yourself in platform-agnostic projects
 4. **Runs the test** — executes all steps and assertions
 
-Results saved to: `mobile-automator/results/<run_id>.json`
+Results saved to: `.mobile-automator/results/<run_id>.json`
 
 ### "Step failed: Element not found" during execution
 
@@ -442,7 +442,7 @@ Results saved to: `mobile-automator/results/<run_id>.json`
 **Answer:** Check the result JSON for detailed info:
 
 ```bash
-cat mobile-automator/results/run_20260301_143022.json
+cat .mobile-automator/results/run_20260301_143022.json
 ```
 
 Look for:
@@ -507,12 +507,12 @@ mauto setup
 mauto devices
 
 # Validate a scenario before running it
-mauto validate mobile-automator/scenarios/login_flow.json
+mauto validate .mobile-automator/scenarios/login_flow.json
 
 # (Your agent replays the scenario via mauto guide execute + verbs.)
 
 # Check results
-cat mobile-automator/results/latest.json | jq '.status'
+cat .mobile-automator/results/latest.json | jq '.status'
 ```
 
 **CI/CD tips:**
@@ -550,13 +550,13 @@ jobs:
         run: mauto devices
 
       - name: Validate scenarios
-        run: mauto validate mobile-automator/scenarios/login_flow.json
+        run: mauto validate .mobile-automator/scenarios/login_flow.json
 
       - name: Upload Results
         uses: actions/upload-artifact@v3
         with:
           name: test-results
-          path: mobile-automator/results/
+          path: .mobile-automator/results/
 ```
 
 ---
@@ -646,7 +646,7 @@ mauto devices use <id>     # mauto devices clear to unpin
 ```bash
 # Check whether the daemon is alive, and where its output was captured
 mauto session status        # -> { running, reason, in_flight, device, log_path }
-tail -50 mobile-automator/.session/daemon.log   # stack traces live here
+tail -50 .mobile-automator/.session/daemon.log   # stack traces live here
 
 # Stop it (removes the socket/pidfile); it auto-restarts on the next device verb
 mauto session end
@@ -716,16 +716,16 @@ If you need a newer engine, bump the `@mobilenext/mobile-mcp` pin in the repo's 
 mauto setup
 
 # Check the workspace exists
-ls -la mobile-automator/
+ls -la .mobile-automator/
 ```
 
 **"Permission denied":**
 ```bash
 # Fix directory permissions
-chmod -R 755 mobile-automator/
+chmod -R 755 .mobile-automator/
 
 # Fix file permissions
-chmod 644 mobile-automator/scenarios/*.json
+chmod 644 .mobile-automator/scenarios/*.json
 ```
 
 ---
@@ -752,7 +752,7 @@ Still stuck? We're here to help:
 | **Verb** | A `mauto` command (`tap`, `type`, `swipe`, `assert`, …) that performs a deterministic action and emits the `{ok,data,error,hint,schema_version}` envelope |
 | **MCP** | Model Context Protocol — standard for tool integration; `mauto mcp` exposes the workflows as prompts |
 | **Agent Skill** | A native skill `mauto init` installs into a host's skills directory so the agent knows the generate/execute/setup workflows |
-| **Mode** | `platform-aware` (default) or `platform-agnostic`, chosen at `mauto setup` and stored in `mobile-automator/config.json` |
+| **Mode** | `platform-aware` (default) or `platform-agnostic`, chosen at `mauto setup` and stored in `.mobile-automator/config.json` |
 | **Semantic action** | One of `press_back`, `dismiss_keyboard`, `grant_permission`, `deny_permission` — resolved to a native primitive at replay time (agnostic mode) |
 | **Placeholder** | Template variable replaced when guide content is emitted (e.g., `{{app_package}}`) |
 | **Precondition** | Setup actions required before a test runs |

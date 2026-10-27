@@ -15,7 +15,7 @@ A test result is a comprehensive record of a single scenario execution, capturin
 - **Intelligent observations** — regression detection, flakiness flags, and device/environment context
 - **Variable captures** — dynamic values extracted during execution
 
-Results are stored as JSON files in `mobile-automator/results/` with the naming pattern `run_YYYYMMDD_HHMMSS.json`.
+Results are stored as JSON files in `.mobile-automator/results/` with the naming pattern `run_YYYYMMDD_HHMMSS.json`.
 
 !!! note "Result files version differently from scenario files"
     Result files carry `schema_version` (no leading `$`), and its only valid value is `"2.0"`. This is deliberate and **not** a mistake: *scenario* files use `$schema_version` (with the `$`), which accepts `"2.0"` **or** `"2.1"`, while *result* files stay at `schema_version: "2.0"`. A result produced from a `$schema_version: "2.1"` scenario still reports `schema_version: "2.0"`.
@@ -398,29 +398,29 @@ An execution that encountered an unexpected error:
 
 ## Result File Locations & Naming
 
-Result files are stored in the `mobile-automator/results/` directory with the following naming convention:
+Result files are stored in the `.mobile-automator/results/` directory with the following naming convention:
 
 ```
-mobile-automator/results/run_YYYYMMDD_HHMMSS.json
+.mobile-automator/results/run_YYYYMMDD_HHMMSS.json
 ```
 
 **Examples:**
-- `mobile-automator/results/run_20260227_145230.json`
-- `mobile-automator/results/run_20260227_150000.json`
+- `.mobile-automator/results/run_20260227_145230.json`
+- `.mobile-automator/results/run_20260227_150000.json`
 
 Related screenshot files are stored in:
-- `mobile-automator/results/steps/<step_id>.png`
+- `.mobile-automator/results/steps/<step_id>.png`
 
 ## Connecting Results to Scenarios
 
 Each result references its source scenario via the `scenario_id` field. The corresponding scenario JSON is stored in:
 
 ```
-mobile-automator/scenarios/<scenario_id>.json
+.mobile-automator/scenarios/<scenario_id>.json
 ```
 
 **Relationship:**
-- `scenario_id` in result → Find scenario at `mobile-automator/scenarios/<scenario_id>.json`
+- `scenario_id` in result → Find scenario at `.mobile-automator/scenarios/<scenario_id>.json`
 - The scenario defines: steps, assertions, variables, and preconditions
 - The result captures: how those steps executed and whether assertions passed
 
@@ -432,7 +432,7 @@ mobile-automator/scenarios/<scenario_id>.json
 import json
 
 # Load a result
-with open("mobile-automator/results/run_20260227_145230.json") as f:
+with open(".mobile-automator/results/run_20260227_145230.json") as f:
     result = json.load(f)
 
 # Access key information
@@ -462,9 +462,9 @@ import os
 import json
 
 failed_runs = []
-for filename in os.listdir("mobile-automator/results/"):
+for filename in os.listdir(".mobile-automator/results/"):
     if filename.endswith(".json"):
-        with open(f"mobile-automator/results/{filename}") as f:
+        with open(f".mobile-automator/results/{filename}") as f:
             result = json.load(f)
             if result['status'] == 'failed':
                 failed_runs.append(result)

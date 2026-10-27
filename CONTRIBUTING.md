@@ -23,7 +23,7 @@ Before creating bug reports, please check existing issues to avoid duplicates. W
   - Platform (Android/iOS/Flutter/React Native/etc.)
   - OS (macOS/Linux/Windows)
 - **Screenshots/logs** - If applicable
-- **Setup state** - Contents of `mobile-automator/config.json` (remove sensitive data)
+- **Setup state** - Contents of `.mobile-automator/config.json` (remove sensitive data)
 
 **Example:**
 ```markdown
@@ -112,7 +112,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
    ```bash
    cd ~/path/to/test-mobile-app
    mauto init --agent claude   # wire your agent (or: cursor | gemini | copilot | agents | all)
-   mauto setup                 # scaffold the mobile-automator/ workspace
+   mauto setup                 # scaffold the .mobile-automator/ workspace
    mauto devices               # confirm a device/emulator is visible
    ```
 

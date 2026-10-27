@@ -13,10 +13,10 @@ const TOKEN = { MAUTO_TELEMETRY_TOKEN: 'phc_real' };
 
 function workspace(config) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-tel-'));
-  fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
   if (config !== undefined) {
     fs.writeFileSync(
-      path.join(root, 'mobile-automator', 'config.json'),
+      path.join(root, '.mobile-automator', 'config.json'),
       JSON.stringify(config, null, 2)
     );
   }
@@ -106,7 +106,7 @@ describe('telemetry control surface', () => {
 
   it('degrades to disabled when the config is unreadable or corrupt', () => {
     const root = workspace();
-    fs.writeFileSync(path.join(root, 'mobile-automator', 'config.json'), '{ not json');
+    fs.writeFileSync(path.join(root, '.mobile-automator', 'config.json'), '{ not json');
     expect(telemetry.decideForProject(root, TOKEN))
       .toEqual({ enabled: false, reason: 'not_configured' });
   });

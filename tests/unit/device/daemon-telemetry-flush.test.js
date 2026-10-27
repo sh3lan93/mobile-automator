@@ -8,7 +8,7 @@ const { startDaemon } = require('../../../src/device/session-daemon');
 
 function workspace() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-dflush-'));
-  fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
   return root;
 }
 

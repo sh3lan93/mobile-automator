@@ -22,7 +22,8 @@ const realFs = require('fs');
 const crypto = require('crypto');
 const path = require('path');
 
-const { spoolPath, workspaceDir } = require('./paths');
+const { spoolPath } = require('./paths');
+const { workspaceDir } = require('../workspace/layout');
 const { telemetryPayload } = require('./event');
 
 // ~1000 lines at ~250 bytes. Not rotateIfLarge: that policy is for LOGS, and
@@ -58,7 +59,7 @@ function isSelfReferential(event) {
   return typeof event.event === 'string' && event.event.startsWith('telemetry.');
 }
 
-// Same gate as the file sink: no mobile-automator/ workspace, no artifacts.
+// Same gate as the file sink: no .mobile-automator/ workspace, no artifacts.
 // mauto runs from wherever a user is standing, so creating this tree as a
 // side effect of logging would litter unrelated repos with a directory that
 // has no .gitignore in it.

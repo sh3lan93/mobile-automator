@@ -20,7 +20,7 @@ const PROMPT_TOPICS = ['generate', 'execute', 'setup'];
 const DESCRIPTIONS = {
   generate: 'Author a mobile test scenario by exploring the app with mauto verbs.',
   execute: 'Replay a scenario step-by-step and record the run results.',
-  setup: 'Initialise the mobile-automator workspace and config.',
+  setup: 'Initialise the .mobile-automator/ workspace and config.',
 };
 
 // Build the { listPrompts, getPrompt } pair. emitGuide + config are injectable

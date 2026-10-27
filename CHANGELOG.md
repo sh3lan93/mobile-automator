@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.37.0]
+
+### 🔧 Changed
+
+- **Breaking: the workspace directory is now `.mobile-automator/`.** The
+  per-project workspace (config, scenarios, screenshots, results, memory and
+  the session state) moves from the visible `mobile-automator/` to a hidden
+  dot-directory, following the convention of `.claude/` and `.github/`: tool
+  state stays out of the project root listing and out of recursive search
+  results. Scenario schema, result schema and the file layout inside the
+  directory are unchanged. To upgrade an existing project:
+
+  ```bash
+  mauto session end                  # with the OLD version, before upgrading
+  npm i -g mobile-automator@0.37.0
+  mv mobile-automator .mobile-automator
+  grep -rl 'mobile-automator/' .mobile-automator/scenarios   # stale stored paths
+  ```
+
+  If the session was not ended first, stop the old daemon with
+  `pkill -f mauto-session-daemon`. Run the `mv` before any other 0.37.0 verb:
+  if one runs first it creates a fresh `.mobile-automator/`, which must be
+  deleted before the `mv`, otherwise `mv` nests the old folder inside it.
+  Screenshot paths stored inside existing
+  scenarios and results are not rewritten; the `grep` above lists the files
+  that still carry the old path.
+
+  Agent skills and rules installed by an earlier version mention the old path,
+  so `mauto doctor` (and the notice `mauto guide` prepends) will report them
+  out of date after upgrading. Re-run `mauto init --agent <host>` to refresh
+  them.
+- **`mauto` now detects a leftover `mobile-automator/` workspace instead of
+  ignoring it.** When no `.mobile-automator/config.json` is found but a
+  `mobile-automator/config.json` is, workspace verbs fail `environment`
+  (exit 5), name the legacy folder and print a hint: stop any daemon the old
+  version left running (`pkill -f mauto-session-daemon`), delete `.mobile-automator/` if it
+  already exists, then `mv mobile-automator .mobile-automator` before any other
+  `mauto` verb. `mauto setup`
+  refuses to scaffold a new workspace inside a project that still has one,
+  including when run from a subdirectory. The `execute` guide
+  also tells agents to list `.mobile-automator/scenarios/` directly, because
+  recursive search tools skip hidden directories.
+
+---
+
 ## [0.36.1]
 
 ### 🐛 Fixed

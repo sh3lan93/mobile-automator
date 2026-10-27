@@ -3,8 +3,8 @@
 // The codebase's ONE log rotation policy, in one place.
 //
 // mauto keeps two log artifacts with different consumers — the daemon's raw
-// stdio at mobile-automator/.session/daemon.log (#176) and the structured
-// NDJSON event stream at mobile-automator/.logs/ — but they want identical
+// stdio at .mobile-automator/.session/daemon.log (#176) and the structured
+// NDJSON event stream at .mobile-automator/.logs/ — but they want identical
 // disk hygiene, and the design says so explicitly. This module is what makes
 // that true rather than asserted: previously each file implemented rotation
 // itself, and the two copies had drifted in their failure semantics.

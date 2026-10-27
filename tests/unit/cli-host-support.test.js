@@ -18,9 +18,9 @@ const FIXTURE = path.join(__dirname, '..', 'integration', 'fixtures', 'scenario-
 
 function workspaceRoot() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-165-'));
-  fs.mkdirSync(path.join(root, 'mobile-automator'));
+  fs.mkdirSync(path.join(root, '.mobile-automator'));
   fs.writeFileSync(
-    path.join(root, 'mobile-automator', 'config.json'),
+    path.join(root, '.mobile-automator', 'config.json'),
     JSON.stringify({ mode: 'platform-aware' })
   );
   return root;

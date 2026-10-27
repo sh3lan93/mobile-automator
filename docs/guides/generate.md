@@ -24,7 +24,7 @@ mauto guide generate
 # and it writes the generated scenario
 ```
 
-Generated scenarios are saved to: `mobile-automator/scenarios/<name>.json`
+Generated scenarios are saved to: `.mobile-automator/scenarios/<name>.json`
 
 ---
 
@@ -33,7 +33,7 @@ Generated scenarios are saved to: `mobile-automator/scenarios/<name>.json`
 Before generating, ensure:
 
 1. **Setup is complete**
-   - `mobile-automator/config.json` exists (created by `mauto setup`)
+   - `.mobile-automator/config.json` exists (created by `mauto setup`)
    - Your agent is wired up via `mauto init --agent <host>` (installs the native Agent Skill / slash-commands for your host)
 
 2. **Device is connected**
@@ -50,7 +50,7 @@ When you start generation, the agent performs these checks:
 
 ```
 ✓ Checking setup state...
-✓ Found: mobile-automator/config.json
+✓ Found: .mobile-automator/config.json
 
 ✓ Detecting devices (mauto devices)...
   Available devices:
@@ -188,7 +188,7 @@ Generator captures screenshots at key points:
 - **Before each action** — Shows app state before interaction
 - **After each assertion** — Captures result of verification
 - **On error** — Captures screen when action fails
-- **Reference screenshots** — Saved to `mobile-automator/screenshots/`
+- **Reference screenshots** — Saved to `.mobile-automator/screenshots/`
 
 Screenshots help you:
 - Verify the test matches your intent
@@ -555,7 +555,7 @@ See [Assertion Reference](../reference/assertions.md) for full list.
 After generation, check the created files:
 
 ```
-mobile-automator/
+.mobile-automator/
 ├── scenarios/
 │   └── login_happy_path.json          ← Your scenario
 ├── screenshots/
@@ -573,11 +573,11 @@ mobile-automator/
 
 ## Next Steps
 
-1. **Review scenario:** Open `mobile-automator/scenarios/<name>.json` in editor
+1. **Review scenario:** Open `.mobile-automator/scenarios/<name>.json` in editor
 2. **Validate it:** Run `mauto validate <file>` to check it against the scenario schema
 3. **Refine if needed:** Edit JSON or regenerate with different description
 4. **Execute the test:** `/mobile-automator-execute` (or `mauto guide execute`)
-5. **Review results:** Check `mobile-automator/results/run_*.json`
+5. **Review results:** Check `.mobile-automator/results/run_*.json`
 
 See [Execute Command Guide](execute.md) for running tests.
 

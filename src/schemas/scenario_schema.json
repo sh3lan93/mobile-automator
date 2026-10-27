@@ -271,7 +271,7 @@
         "checkpoint": {
           "type": "boolean",
           "default": false,
-          "description": "Whether to capture a reference screenshot after this step. Screenshots are saved as mobile-automator/screenshots/<scenario_id>/step_<id>.png"
+          "description": "Whether to capture a reference screenshot after this step. Screenshots are saved as .mobile-automator/screenshots/<scenario_id>/step_<id>.png"
         },
         "expected_state": {
           "type": "string",

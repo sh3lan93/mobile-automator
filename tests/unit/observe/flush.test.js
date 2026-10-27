@@ -13,9 +13,9 @@ const TOKEN = { MAUTO_TELEMETRY_TOKEN: 'phc_real' };
 
 function workspace({ enabled = true } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-flush-'));
-  fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
   fs.writeFileSync(
-    path.join(root, 'mobile-automator', 'config.json'),
+    path.join(root, '.mobile-automator', 'config.json'),
     JSON.stringify({ telemetry: { enabled } }, null, 2)
   );
   return root;

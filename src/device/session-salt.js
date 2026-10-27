@@ -5,7 +5,7 @@
 // `ps` shows every process's argv to every user on the host, so the daemon's
 // command line carries HMAC(salt, root) (session-paths.daemonMarkerKey) rather
 // than a digest anyone could recompute from a guessed project path. The salt is
-// 32 random bytes as hex in <root>/mobile-automator/.session/marker.salt, mode
+// 32 random bytes as hex in <root>/.mobile-automator/.session/marker.salt, mode
 // 0600 so only the workspace's owner can read it. It is created once and never
 // rotated: rotating it would orphan a running daemon's marker, and no teardown
 // deletes it (cleanStale, daemon stop and the bin's exit cleanup all unlink

@@ -69,7 +69,7 @@ describe('buildProgram workspace wiring (#188)', () => {
       expect(calls[0].envelope.ok).toBe(false);
       expect(calls[0].envelope.error.kind).toBe('environment');
       expect(calls[0].envelope.hint).toContain(cwd);
-      expect(fs.existsSync(path.join(cwd, 'mobile-automator'))).toBe(false);
+      expect(fs.existsSync(path.join(cwd, '.mobile-automator'))).toBe(false);
     });
 
     test('guide is tolerant: raw content, no failure', async () => {
@@ -97,14 +97,14 @@ describe('buildProgram workspace wiring (#188)', () => {
       }).parseAsync(['node', 'mauto', 'devices']);
       expect(factoryArgs).toEqual([{ device: null, projectRoot: cwd, autostart: false }]);
       expect(calls[0].envelope.ok).toBe(true);
-      expect(fs.existsSync(path.join(cwd, 'mobile-automator'))).toBe(false);
+      expect(fs.existsSync(path.join(cwd, '.mobile-automator'))).toBe(false);
     });
 
     test('setup scaffolds in cwd with no ancestor hint', async () => {
       const calls = await runIn({ workspace, cwd }, 'setup');
       expect(calls[0].envelope.ok).toBe(true);
       expect(calls[0].envelope.hint).toBeUndefined();
-      expect(fs.existsSync(path.join(cwd, 'mobile-automator', 'config.json'))).toBe(true);
+      expect(fs.existsSync(path.join(cwd, '.mobile-automator', 'config.json'))).toBe(true);
     });
   });
 
@@ -115,8 +115,8 @@ describe('buildProgram workspace wiring (#188)', () => {
 
     beforeEach(() => {
       root = tmpDir();
-      fs.mkdirSync(path.join(root, 'mobile-automator'));
-      fs.writeFileSync(path.join(root, 'mobile-automator', 'config.json'), '{"mode":"platform-agnostic"}\n');
+      fs.mkdirSync(path.join(root, '.mobile-automator'));
+      fs.writeFileSync(path.join(root, '.mobile-automator', 'config.json'), '{"mode":"platform-agnostic"}\n');
       sub = path.join(root, 'pkg');
       fs.mkdirSync(sub);
       workspace = { root, searched: [sub, root] };
@@ -147,7 +147,7 @@ describe('buildProgram workspace wiring (#188)', () => {
       expect(calls[0].exitKind).toBe('ok');
       expect(calls[0].envelope.ok).toBe(true);
       expect(calls[0].envelope.hint).toContain(root);
-      expect(fs.existsSync(path.join(sub, 'mobile-automator', 'config.json'))).toBe(true);
+      expect(fs.existsSync(path.join(sub, '.mobile-automator', 'config.json'))).toBe(true);
     });
 
     test('setup in the workspace root itself carries no ancestor hint', async () => {

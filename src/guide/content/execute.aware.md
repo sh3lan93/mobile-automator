@@ -61,7 +61,7 @@ Record each observation with `mauto result add-step --observation <type>:<messag
 
 ### 2. Load Scenario
 
-- Read the JSON scenario file from `mobile-automator/scenarios/`.
+- Read the JSON scenario file from `.mobile-automator/scenarios/`.
 - **Validate schema version:** Read the `$schema_version` field. It must be `"2.1"`. If absent or unrecognized, report an error and halt.
 - Validate the scenario with `mauto validate <path>` against `mauto schema scenario`. If the result lists `data.warnings`, branch on each entry's `code` (its `path` names the step or precondition): `unsupported_action` means it uses an action that is unsupported on this run: report it as unsupported in the result, as described under "Not mechanically executable" below, and do not substitute a gesture for it. `launch_cold_implicit` is advisory: replay that step exactly as written (a step that does not set `"cold": false` is a cold start, per the step table below) and do not substitute your own reading of what the author meant; record the warning's `message` as a `state_context` observation on that step (`mauto result add-step ... --observation state_context:<message>`).
 - Read the `metadata` to compare the recording environment against the current execution environment. Note any differences (different device, API level, environment).
@@ -95,7 +95,7 @@ For each step in the scenario:
 1. **Find the target:** Run `mauto elements` to locate the element described in `target`.
    - If `target_pattern` is set: use it as a regex to filter elements by their text content.
 2. **Execute the action** using the appropriate `mauto` verb (see the action mapping table below). Resolve coordinates for taps from the `mauto elements` output and pass them with `mauto tap --at <x,y>`.
-3. **Capture screenshot:** Run `mauto screenshot mobile-automator/results/<run_id>/screenshots/step_<step_id>.png` (where `step_id` is the step's named string ID, e.g., `step_tap_login.png`).
+3. **Capture screenshot:** Run `mauto screenshot .mobile-automator/results/<run_id>/screenshots/step_<step_id>.png` (where `step_id` is the step's named string ID, e.g., `step_tap_login.png`).
 4. **Verify state:** Compare what you see against the step's `expected_state` description.
 5. **Record progress:** Append the step result with `mauto result add-step --step-id <id> --status <s> --screenshot <path> [--attempts <n>] [--error-message <text>] [--observation <type>:<message>] [--capture <name>=<value>]`, then record each assertion verdict with `mauto result add-assertion --step-id <id> --type <t> --pass <true|false> --message <text> [--expected <v> --actual <v>]`. `--message` carries the justification you already formed comparing `expected_state` against what you observed — for Tier-2 verdicts it IS the evidence, so never omit it; add `--expected`/`--actual` whenever the assertion compares a specific value. Report:
    > "Step tap_login (4/12): Tapped 'Login' — login form displayed (passed)"
@@ -276,7 +276,7 @@ For all Tier 2 assertions: take a screenshot, visually analyze it, and report pa
 
 ### 6. Generate the Result Report
 
-Obtain the result schema by running `mauto schema result`, then finalize the run with `mauto result finalize` (writing to `mobile-automator/results/<run_id>.json`), passing the run metadata you already know (`--device-model`, `--api-level`, `--app-version`, `--environment`) — the timestamp is filled in for you, and omitted fields are recorded as `unknown`. You may supply your own narrative with `--summary <text>`; omitting it keeps the generated default summary line. The result carries typed `observations` (`regression`, `flakiness`, `state_context`) gathered by the Observer traits above. `--duration` is now a cross-check rather than the recorded value: when a run trace exists the duration is measured from it, your figure is kept as `measurements.reported_duration_seconds`, and a disagreement beyond the tolerance is recorded as a `state_context` observation. Report the duration you believe is right and let the two be compared; do not reverse-engineer a number to match.
+Obtain the result schema by running `mauto schema result`, then finalize the run with `mauto result finalize` (writing to `.mobile-automator/results/<run_id>.json`), passing the run metadata you already know (`--device-model`, `--api-level`, `--app-version`, `--environment`) — the timestamp is filled in for you, and omitted fields are recorded as `unknown`. You may supply your own narrative with `--summary <text>`; omitting it keeps the generated default summary line. The result carries typed `observations` (`regression`, `flakiness`, `state_context`) gathered by the Observer traits above. `--duration` is now a cross-check rather than the recorded value: when a run trace exists the duration is measured from it, your figure is kept as `measurements.reported_duration_seconds`, and a disagreement beyond the tolerance is recorded as a `state_context` observation. Report the duration you believe is right and let the two be compared; do not reverse-engineer a number to match.
 
 ### 7. Present the Summary
 
@@ -305,7 +305,7 @@ When asked to run multiple scenarios:
 - Execute them sequentially.
 - Each scenario's leading `launch_app` restarts the app (`mauto launch <appId>`), so a scenario never inherits the previous one's screen and needs no separate reset. Use `app_state: "fresh_install"` only when app data must be wiped too.
 - If the user says "run all smoke tests", filter scenarios by the `smoke` tag.
-- If the user says "run all", execute every scenario in `mobile-automator/scenarios/`.
+- If the user says "run all", execute every scenario in `.mobile-automator/scenarios/`. List `.mobile-automator/scenarios/` directly: the workspace folder is hidden, and recursive search tools (glob or grep style) skip hidden directories, so they will report it empty.
 - Present a combined summary at the end with a per-scenario breakdown.
 
 ## Operational Boundaries
@@ -330,9 +330,9 @@ When asked to run multiple scenarios:
 
 ## Resources
 
-- **mobile-automator/config.json**: Project configuration. Read it for any placeholder that was not filled in this guide.
+- **.mobile-automator/config.json**: Project configuration. Read it for any placeholder that was not filled in this guide.
 - **`mauto schema scenario`**: JSON schema for test scenarios. Use it to validate scenarios with `mauto validate <path>`.
 - **`mauto schema result`**: JSON schema for execution results.
-- **mobile-automator/scenarios/**: Source scenario files.
-- **mobile-automator/screenshots/**: Reference screenshot baselines.
+- **.mobile-automator/scenarios/**: Source scenario files.
+- **.mobile-automator/screenshots/**: Reference screenshot baselines.
 {{additional_resources}}
