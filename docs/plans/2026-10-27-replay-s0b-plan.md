@@ -13,13 +13,20 @@ tell a red run from a green one without parsing JSON. After this slice:
 | `assert` → `pass:true` | true | — | 0 | verdict |
 | `assert` → `needs_agent` (Tier 2) | true | — | 0 | verdict (`pass:null`) |
 | `assert` → `pass:false` | **false** | **`test_failed`** | **6** | verdict (same shape) |
-| `result finalize` → result `status: passed` / `error` | true | — | 0 | full result |
-| `result finalize` → result `status: failed` | **false** | **`test_failed`** | **6** | full result |
+| `result finalize` → result `status: passed` | true | — | 0 | full result |
+| `result finalize` → result `status: failed` or `error` | **false** | **`test_failed`** | **6** | full result (`data.status` tells them apart) |
 
 `EXIT.INCOMPLETE = 7` / kind `incomplete` is reserved now (envelope + docs), and
 produced first by R2 (`finalize` computing `incomplete`) and R1 (`run`).
 
-## Deviations from the PRD — need a decision
+## Coordinator rulings (2026-10-27)
+
+Approved with: version **0.38.0**; exit 6 keyed on the finalized
+`result.status`; status `error` takes the same `test_failed` / exit 6 path with
+`data.status === 'error'`; `incomplete` stays R2. Merge order S0a (0.37.1) →
+S0b (0.38.0) → S0c (0.38.1).
+
+## Deviations from the PRD — as raised
 
 1. **Version.** The ladder says `0.37.0`, but `0.37.0` is already tagged and
    published (the `.mobile-automator/` rename, PR #270; `npm view` → latest
@@ -57,7 +64,7 @@ produced first by R2 (`finalize` computing `incomplete`) and R1 (`run`).
   exit 6 with the verdict in data).
 - `handleResultFinalize`: after `store.finalize`, retention and the memory
   harvest run exactly as today (a failed run must still be recorded and
-  harvested); then `result.status === 'failed'` →
+  harvested); then `result.status` is `failed` or `error` →
   `fail('test_failed', \`run ${runId} failed\`, joinedHints || <default hint>, result)`,
   else `ok(result, hint)`. Default hint: points at `steps_executed` /
   `assertion_results` in `data` and at `.mobile-automator/results/<run_id>.json`.
