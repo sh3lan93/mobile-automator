@@ -22,9 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   green. The envelope is `{format, path, suites, tests, failures, skipped}`,
   with the XML in `data.xml` when `--out` is omitted. The export is read-only,
   refuses anything that is not a finalized result for the requested run, and
-  exits 0 whatever the runs'
-  outcome. The FAQ's CI recipe now ends with it, replacing a
-  `results/latest.json` file that never existed.
+  exits 0 whatever the runs' outcome. The FAQ's CI recipe now ends with it,
+  replacing a `results/latest.json` file that never existed.
 
 ## [0.37.0]
 
