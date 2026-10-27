@@ -218,6 +218,28 @@ describe('dangling_condition_step', () => {
     expect(w[0].message).toContain(ref);
   });
 
+  test('earlier vs later is document order across nesting levels', () => {
+    const w = only({
+      steps: [
+        { id: 'a', action: 'press_back', condition: skipped('later_kid') },
+        { id: 'p', action: 'launch_app', sub_steps: [{ id: 'later_kid', action: 'press_back' }] },
+        { id: 'z', action: 'press_back', condition: skipped('later_kid') },
+      ],
+    }, 'dangling_condition_step');
+    expect(w.map((f) => f.path)).toEqual(['steps[0]']);
+  });
+
+  test('a repeated id resolves to its first declaration', () => {
+    const w = only({
+      steps: [
+        { id: 'b', action: 'press_back', condition: skipped('x') },
+        { id: 'x', action: 'launch_app' },
+        { id: 'x', action: 'press_back', condition: skipped('x') },
+      ],
+    }, 'dangling_condition_step');
+    expect(w.map((f) => f.path)).toEqual(['steps[0]']);
+  });
+
   test('a missing step_id is reported', () => {
     expect(only({ steps: [{ id: 'a', action: 'press_back', condition: { type: 'previous_step_skipped' } }] },
       'dangling_condition_step')).toHaveLength(1);

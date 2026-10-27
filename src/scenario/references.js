@@ -75,36 +75,27 @@ function makeFinding(code, fields, path, ids) {
 
 const isNonEmptyString = (v) => typeof v === 'string' && v.length > 0;
 
-// One pre-pass over the whole step tree, in the same depth-first document
-// order `scanSteps` uses: `after_step` and duplicate detection need every
-// step, and a condition's step must come earlier in that order.
-function referenceIndex(scenario) {
+// Indexes the flattened step list (see `steps.js`): `after_step` and duplicate
+// detection need every step, and a condition's step must come earlier, i.e.
+// at a lower position in `entries`.
+function referenceIndex(scenario, entries) {
   const firstPathById = new Map();
   const orderById = new Map();
-  let n = 0;
-  const walk = (steps, basePath) => {
-    if (!Array.isArray(steps)) return;
-    steps.forEach((step, i) => {
-      if (!step) return;
-      const path = `${basePath}[${i}]`;
-      if (typeof step.id === 'string' && !firstPathById.has(step.id)) {
-        firstPathById.set(step.id, path);
-        orderById.set(step.id, n);
-      }
-      n += 1;
-      walk(step.sub_steps, `${path}.sub_steps`);
-    });
-  };
-  walk(scenario && scenario.steps, 'steps');
+  entries.forEach(({ step, path }, position) => {
+    if (typeof step.id === 'string' && !firstPathById.has(step.id)) {
+      firstPathById.set(step.id, path);
+      orderById.set(step.id, position);
+    }
+  });
 
   const vars = scenario && scenario.variables;
   const variables = new Set(vars && typeof vars === 'object' && !Array.isArray(vars) ? Object.keys(vars) : []);
   return { firstPathById, orderById, variables };
 }
 
-// Findings for one step. `visit` is the step's position in the document-order
-// walk, so it matches `orderById` for the first step with each id.
-function stepReferenceFindings(step, path, visit, index) {
+// Findings for one step. `position` is its index in the flattened step list,
+// the same numbering `orderById` uses.
+function stepReferenceFindings(step, path, position, index) {
   const findings = [];
   const ids = step.id !== undefined ? { step_id: step.id } : {};
   const add = (code, fields) => findings.push(makeFinding(code, { action: step.action, ...fields }, path, ids));
@@ -133,7 +124,7 @@ function stepReferenceFindings(step, path, visit, index) {
     }
     if (cond.type === 'previous_step_skipped') {
       const order = index.orderById.get(cond.step_id);
-      if (order === undefined || order >= visit) {
+      if (order === undefined || order >= position) {
         add('dangling_condition_step', { ref: cond.step_id });
       }
     }
