@@ -2576,12 +2576,12 @@ npm<span class="w"> </span>link<span class="w">      </span><span class="c1"># e
 <span class="c1"># In a test mobile project</span>
 <span class="nb">cd</span><span class="w"> </span>/path/to/test-mobile-app
 mauto<span class="w"> </span>init<span class="w"> </span>--agent<span class="w"> </span>claude<span class="w">   </span><span class="c1"># wire your agent (or: cursor | gemini | copilot | agents | all)</span>
-mauto<span class="w"> </span>setup<span class="w">                 </span><span class="c1"># scaffold the mobile-automator/ workspace</span>
+mauto<span class="w"> </span>setup<span class="w">                 </span><span class="c1"># scaffold the .mobile-automator/ workspace</span>
 mauto<span class="w"> </span>devices<span class="w">               </span><span class="c1"># confirm a device/emulator is visible</span>
 </code></pre></div>
 <p>When you are done, run <code>npm unlink -g mobile-automator</code> to remove the global link.</p>
 <h3 id="directory-structure">Directory Structure<a class="headerlink" href="#directory-structure" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>mobile-automator/
+<div class="highlight"><pre><span></span><code>.mobile-automator/
 ├── bin/
 │   ├── mauto.js                 # entry point for `mauto` / `mobile-automator`
 │   └── mauto-session-daemon.js  # entry point for the device session daemon
@@ -2624,7 +2624,7 @@ mauto<span class="w"> </span>devices<span class="w">               </span><span 
 <li>
 <p><strong>Cross-session memory</strong> (<code>src/memory/</code>)</p>
 </li>
-<li>Persists what the agent learns about an app across runs in <code>mobile-automator/memory/</code>.</li>
+<li>Persists what the agent learns about an app across runs in <code>.mobile-automator/memory/</code>.</li>
 <li><code>run-history.md</code> is machine-owned (auto-harvested on <code>result finalize</code>); <code>app-knowledge.md</code>
      and <code>preferences.md</code> are agent-authored via <code>mauto memory add</code>/<code>memory forget</code>.</li>
 <li>Read-modify-writes go through an advisory lock plus atomic writes. See the
@@ -2682,9 +2682,9 @@ vim<span class="w"> </span>src/cli.js
 <span class="c1"># - Different modes (platform-aware, platform-agnostic)</span>
 </code></pre></div>
 <p><strong>Guidelines:</strong>
-- Changes must not break existing projects (preserve the <code>mobile-automator/</code> workspace layout)
+- Changes must not break existing projects (preserve the <code>.mobile-automator/</code> workspace layout)
 - Every verb must emit the <code>{ok,data,error,hint,schema_version}</code> envelope
-- Workspace state lives in <code>mobile-automator/config.json</code>
+- Workspace state lives in <code>.mobile-automator/config.json</code>
 - Never use <code>resource-id</code> / OS-specific element IDs</p>
 <h4 id="4-documentation-changes">4. Documentation Changes<a class="headerlink" href="#4-documentation-changes" title="Permanent link">&para;</a></h4>
 <p>Updating guides, examples, or reference:</p>
@@ -2733,7 +2733,7 @@ mauto<span class="w"> </span>guide<span class="w"> </span>generate
 mauto<span class="w"> </span>guide<span class="w"> </span>execute
 
 <span class="c1"># 6. Check results</span>
-cat<span class="w"> </span>mobile-automator/results/run_*.json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">'.'</span>
+cat<span class="w"> </span>.mobile-automator/results/run_*.json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">'.'</span>
 </code></pre></div>
 <p><strong>Test different platforms:</strong></p>
 <div class="highlight"><pre><span></span><code><span class="c1"># Test on Android</span>
@@ -2940,7 +2940,7 @@ mkdocs<span class="w"> </span>build
 - Reproduction steps
 - Expected vs actual behavior
 - Device/simulator details
-- <code>mauto</code> version and the contents of <code>mobile-automator/config.json</code> (remove sensitive data)</p>
+- <code>mauto</code> version and the contents of <code>.mobile-automator/config.json</code> (remove sensitive data)</p>
 <h3 id="feature-requests">Feature Requests<a class="headerlink" href="#feature-requests" title="Permanent link">&para;</a></h3>
 <p>Have an idea? Share it:</p>
 <div class="highlight"><pre><span></span><code>gh<span class="w"> </span>issue<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">"Feature: add support for video recording"</span><span class="w"> </span><span class="se">\</span>

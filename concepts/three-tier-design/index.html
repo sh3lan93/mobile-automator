@@ -2062,7 +2062,7 @@ Layer 1: Agent pulls `mauto guide generate`, `mauto bootstrap`
     * welcome_text matches "Welcome, {username}"
   - `mauto validate` the scenario, then save it
         ↓
-Saved to mobile-automator/scenarios/login_flow.json
+Saved to .mobile-automator/scenarios/login_flow.json
         ↓
 User: "Execute login test"
         ↓
@@ -2085,7 +2085,7 @@ Layer 1: Agent judges assertions
   - welcome_text matches? `mauto assert` mechanical check ✓
   - Records steps via `mauto result add-step`
         ↓
-mauto result finalize → mobile-automator/results/&lt;run_id&gt;.json
+mauto result finalize → .mobile-automator/results/&lt;run_id&gt;.json
 </code></pre></div>
 <h2 id="communication-patterns">Communication Patterns<a class="headerlink" href="#communication-patterns" title="Permanent link">&para;</a></h2>
 <h3 id="agent-mauto">Agent ↔ mauto<a class="headerlink" href="#agent-mauto" title="Permanent link">&para;</a></h3>
@@ -2105,13 +2105,13 @@ mauto result finalize → mobile-automator/results/&lt;run_id&gt;.json
 <li>The verb wraps that result in the JSON envelope for the agent</li>
 </ul>
 <h3 id="state-management">State Management<a class="headerlink" href="#state-management" title="Permanent link">&para;</a></h3>
-<p><strong>Config</strong>: stored in <code>mobile-automator/config.json</code> during setup
+<p><strong>Config</strong>: stored in <code>.mobile-automator/config.json</code> during setup
 - Read by <code>mauto</code> verbs and used to interpolate guide content at emit time
 - Includes project knowledge, platform, environments, and the selected <code>mode</code></p>
-<p><strong>Scenarios</strong>: stored as JSON files in <code>mobile-automator/scenarios/</code>
+<p><strong>Scenarios</strong>: stored as JSON files in <code>.mobile-automator/scenarios/</code>
 - Assembled by the agent (validated with <code>mauto validate</code>)
 - Replayed step-by-step by the agent during execution</p>
-<p><strong>Results</strong>: stored as JSON files in <code>mobile-automator/results/</code>
+<p><strong>Results</strong>: stored as JSON files in <code>.mobile-automator/results/</code>
 - Authored via <code>mauto result add-step</code> / <code>mauto result finalize</code></p>
 <h2 id="extensibility">Extensibility<a class="headerlink" href="#extensibility" title="Permanent link">&para;</a></h2>
 <h3 id="adding-a-verb-or-guide-topic">Adding a Verb or Guide Topic<a class="headerlink" href="#adding-a-verb-or-guide-topic" title="Permanent link">&para;</a></h3>
@@ -2126,7 +2126,7 @@ mauto result finalize → mobile-automator/results/&lt;run_id&gt;.json
 <h3 id="adding-a-new-engine-primitive">Adding a New Engine Primitive<a class="headerlink" href="#adding-a-new-engine-primitive" title="Permanent link">&para;</a></h3>
 <p>mobile-mcp is pinned outside this project. To pick up a newer engine, bump the <code>@mobilenext/mobile-mcp</code> pin in <code>package.json</code>; <code>mauto</code> verbs resolve it from <code>node_modules</code> at runtime.</p>
 <h3 id="the-memory-subsystem">The Memory Subsystem<a class="headerlink" href="#the-memory-subsystem" title="Permanent link">&para;</a></h3>
-<p>Cross-session learning lives in <code>src/memory/</code>, backed by the <code>mobile-automator/memory/</code> store. It is <strong>auto-harvested on <code>mauto result finalize</code></strong> — typed observations fold into a bounded per-scenario <code>run-history</code> — and <strong>agent-authored</strong> via <code>mauto memory add</code> / <code>mauto memory forget</code> for durable app-knowledge and preferences. This lets the agent get smarter about <em>this</em> app over time. See <a href="../memory/">Memory</a>.</p>
+<p>Cross-session learning lives in <code>src/memory/</code>, backed by the <code>.mobile-automator/memory/</code> store. It is <strong>auto-harvested on <code>mauto result finalize</code></strong> — typed observations fold into a bounded per-scenario <code>run-history</code> — and <strong>agent-authored</strong> via <code>mauto memory add</code> / <code>mauto memory forget</code> for durable app-knowledge and preferences. This lets the agent get smarter about <em>this</em> app over time. See <a href="../memory/">Memory</a>.</p>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../skills/">How Skills Work</a> — Native Agent Skills and guide content</li>

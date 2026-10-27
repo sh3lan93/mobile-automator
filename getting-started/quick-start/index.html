@@ -1770,10 +1770,10 @@ mauto<span class="w"> </span>init<span class="w"> </span>--agent<span class="w">
 <h2 id="step-2-run-setup">Step 2: Run Setup<a class="headerlink" href="#step-2-run-setup" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>setup<span class="w">                    </span><span class="c1"># add --mode agnostic for cross-platform apps</span>
 </code></pre></div>
-<p><code>setup</code> scaffolds the <code>mobile-automator/</code> workspace and writes its config. Add <code>--mode agnostic</code> for cross-platform apps (Flutter/RN/KMP/CMP) so one scenario runs on Android and iOS.</p>
+<p><code>setup</code> scaffolds the <code>.mobile-automator/</code> workspace and writes its config. Add <code>--mode agnostic</code> for cross-platform apps (Flutter/RN/KMP/CMP) so one scenario runs on Android and iOS.</p>
 <h3 id="what-gets-created">What Gets Created<a class="headerlink" href="#what-gets-created" title="Permanent link">&para;</a></h3>
 <p>After setup completes:</p>
-<div class="highlight"><pre><span></span><code>mobile-automator/
+<div class="highlight"><pre><span></span><code>.mobile-automator/
 ├── config.json              # mode, environments, project config
 ├── scenarios/               # test scenario files (JSON, schema 2.1)
 ├── screenshots/             # reference screenshots
@@ -1803,7 +1803,7 @@ mauto<span class="w"> </span>init<span class="w"> </span>--agent<span class="w">
 <li>Capture values for later verification</li>
 <li>Retry logic for flaky operations</li>
 </ul>
-<p>A new scenario file is created in <code>mobile-automator/scenarios/</code>.</p>
+<p>A new scenario file is created in <code>.mobile-automator/scenarios/</code>.</p>
 <p>In <strong>Cursor</strong>, <code>init</code> installs a project rule instead — just ask the agent in plain language (e.g. <em>"generate a login test"</em>). <strong>Any other agent:</strong> run <code>mauto mcp</code> (MCP prompts server) or read <code>mauto bootstrap</code> + <code>mauto guide generate</code>, then call the verbs directly.</p>
 <h2 id="step-5-execute-the-test">Step 5: Execute the Test<a class="headerlink" href="#step-5-execute-the-test" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>/mobile-automator-execute
@@ -1817,10 +1817,10 @@ mauto<span class="w"> </span>init<span class="w"> </span>--agent<span class="w">
 <li>Captures observations (flakiness, regressions, state context)</li>
 <li>Generates a detailed result report</li>
 </ol>
-<p>Results are saved to <code>mobile-automator/results/&lt;run_id&gt;.json</code>.</p>
+<p>Results are saved to <code>.mobile-automator/results/&lt;run_id&gt;.json</code>.</p>
 <h2 id="step-6-review-results">Step 6: Review Results<a class="headerlink" href="#step-6-review-results" title="Permanent link">&para;</a></h2>
 <p>Open the result file in your editor:</p>
-<div class="highlight"><pre><span></span><code>cat<span class="w"> </span>mobile-automator/results/&lt;run_id&gt;.json
+<div class="highlight"><pre><span></span><code>cat<span class="w"> </span>.mobile-automator/results/&lt;run_id&gt;.json
 </code></pre></div>
 <p>The result includes:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>

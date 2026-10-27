@@ -1827,7 +1827,7 @@
 - <strong>Assertion verdicts</strong> — whether each assertion passed or failed, with expected vs. actual values
 - <strong>Intelligent observations</strong> — regression detection, flakiness flags, and device/environment context
 - <strong>Variable captures</strong> — dynamic values extracted during execution</p>
-<p>Results are stored as JSON files in <code>mobile-automator/results/</code> with the naming pattern <code>run_YYYYMMDD_HHMMSS.json</code>.</p>
+<p>Results are stored as JSON files in <code>.mobile-automator/results/</code> with the naming pattern <code>run_YYYYMMDD_HHMMSS.json</code>.</p>
 <div class="admonition note">
 <p class="admonition-title">Result files version differently from scenario files</p>
 <p>Result files carry <code>schema_version</code> (no leading <code>$</code>), and its only valid value is <code>"2.0"</code>. This is deliberate and <strong>not</strong> a mistake: <em>scenario</em> files use <code>$schema_version</code> (with the <code>$</code>), which accepts <code>"2.0"</code> <strong>or</strong> <code>"2.1"</code>, while <em>result</em> files stay at <code>schema_version: "2.0"</code>. A result produced from a <code>$schema_version: "2.1"</code> scenario still reports <code>schema_version: "2.0"</code>.</p>
@@ -2426,20 +2426,20 @@
 <span class="p">}</span>
 </code></pre></div>
 <h2 id="result-file-locations-naming">Result File Locations &amp; Naming<a class="headerlink" href="#result-file-locations-naming" title="Permanent link">&para;</a></h2>
-<p>Result files are stored in the <code>mobile-automator/results/</code> directory with the following naming convention:</p>
-<div class="highlight"><pre><span></span><code>mobile-automator/results/run_YYYYMMDD_HHMMSS.json
+<p>Result files are stored in the <code>.mobile-automator/results/</code> directory with the following naming convention:</p>
+<div class="highlight"><pre><span></span><code>.mobile-automator/results/run_YYYYMMDD_HHMMSS.json
 </code></pre></div>
 <p><strong>Examples:</strong>
-- <code>mobile-automator/results/run_20260227_145230.json</code>
-- <code>mobile-automator/results/run_20260227_150000.json</code></p>
+- <code>.mobile-automator/results/run_20260227_145230.json</code>
+- <code>.mobile-automator/results/run_20260227_150000.json</code></p>
 <p>Related screenshot files are stored in:
-- <code>mobile-automator/results/steps/&lt;step_id&gt;.png</code></p>
+- <code>.mobile-automator/results/steps/&lt;step_id&gt;.png</code></p>
 <h2 id="connecting-results-to-scenarios">Connecting Results to Scenarios<a class="headerlink" href="#connecting-results-to-scenarios" title="Permanent link">&para;</a></h2>
 <p>Each result references its source scenario via the <code>scenario_id</code> field. The corresponding scenario JSON is stored in:</p>
-<div class="highlight"><pre><span></span><code>mobile-automator/scenarios/&lt;scenario_id&gt;.json
+<div class="highlight"><pre><span></span><code>.mobile-automator/scenarios/&lt;scenario_id&gt;.json
 </code></pre></div>
 <p><strong>Relationship:</strong>
-- <code>scenario_id</code> in result → Find scenario at <code>mobile-automator/scenarios/&lt;scenario_id&gt;.json</code>
+- <code>scenario_id</code> in result → Find scenario at <code>.mobile-automator/scenarios/&lt;scenario_id&gt;.json</code>
 - The scenario defines: steps, assertions, variables, and preconditions
 - The result captures: how those steps executed and whether assertions passed</p>
 <h2 id="working-with-results-programmatically">Working with Results Programmatically<a class="headerlink" href="#working-with-results-programmatically" title="Permanent link">&para;</a></h2>
@@ -2447,7 +2447,7 @@
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 
 <span class="c1"># Load a result</span>
-<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"mobile-automator/results/run_20260227_145230.json"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">".mobile-automator/results/run_20260227_145230.json"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
 
 <span class="c1"># Access key information</span>
@@ -2474,9 +2474,9 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 
 <span class="n">failed_runs</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="s2">"mobile-automator/results/"</span><span class="p">):</span>
+<span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="s2">".mobile-automator/results/"</span><span class="p">):</span>
     <span class="k">if</span> <span class="n">filename</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">".json"</span><span class="p">):</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="sa">f</span><span class="s2">"mobile-automator/results/</span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="sa">f</span><span class="s2">".mobile-automator/results/</span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">result</span><span class="p">[</span><span class="s1">'status'</span><span class="p">]</span> <span class="o">==</span> <span class="s1">'failed'</span><span class="p">:</span>
                 <span class="n">failed_runs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>

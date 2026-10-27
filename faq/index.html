@@ -2628,11 +2628,11 @@ Executed Automatically: Tap fields, type text, verify dashboard
 <div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>setup<span class="w">                 </span><span class="c1"># platform-aware (default)</span>
 mauto<span class="w"> </span>setup<span class="w"> </span>--mode<span class="w"> </span>agnostic<span class="w"> </span><span class="c1"># platform-agnostic</span>
 </code></pre></div>
-<p>The chosen mode is stored as <code>mode</code> in <code>mobile-automator/config.json</code> (read it back with <code>mauto config get mode</code>). In agnostic mode, OS-shaped gestures become four semantic actions — <code>press_back</code>, <code>dismiss_keyboard</code>, <code>grant_permission</code>, <code>deny_permission</code> — resolved to the right native primitive at runtime, so one scenario covers both platforms.</p>
+<p>The chosen mode is stored as <code>mode</code> in <code>.mobile-automator/config.json</code> (read it back with <code>mauto config get mode</code>). In agnostic mode, OS-shaped gestures become four semantic actions — <code>press_back</code>, <code>dismiss_keyboard</code>, <code>grant_permission</code>, <code>deny_permission</code> — resolved to the right native primitive at runtime, so one scenario covers both platforms.</p>
 <h3 id="what-is-the-schema_version-field">What is the <code>$schema_version</code> field?<a class="headerlink" href="#what-is-the-schema_version-field" title="Permanent link">&para;</a></h3>
 <p><strong>Answer:</strong> Every test scenario JSON file includes a <code>$schema_version</code> field (currently <code>"2.1"</code>) as its first field. This enables version detection for schema evolution. All scenarios must include this field.</p>
 <h3 id="does-the-agent-remember-anything-between-sessions">Does the agent remember anything between sessions?<a class="headerlink" href="#does-the-agent-remember-anything-between-sessions" title="Permanent link">&para;</a></h3>
-<p><strong>Answer:</strong> Yes. mobile-automator keeps a small <strong>cross-session memory</strong> under <code>mobile-automator/memory/</code>, so the agent gets smarter about <em>your</em> app over time instead of re-discovering the same quirks on every run. There are three kinds:</p>
+<p><strong>Answer:</strong> Yes. mobile-automator keeps a small <strong>cross-session memory</strong> under <code>.mobile-automator/memory/</code>, so the agent gets smarter about <em>your</em> app over time instead of re-discovering the same quirks on every run. There are three kinds:</p>
 <ul>
 <li><strong><code>run-history</code></strong> (<code>run-history.md</code>) — <strong>machine-owned</strong>. Auto-harvested on <code>mauto result finalize</code>: typed observations (regression / flakiness / state context) are folded into a bounded rolling per-scenario summary. You don't edit this by hand.</li>
 <li><strong><code>app-knowledge</code></strong> (<code>app-knowledge.md</code>) — <strong>agent-authored</strong> durable facts about the app (selectors, conventions, gotchas).</li>
@@ -2673,9 +2673,9 @@ mauto<span class="w"> </span>devices<span class="w">                  </span><sp
 <li><strong>Check the error message</strong> — Note what went wrong (e.g., a missing package ID, no detectable platform)</li>
 <li><strong>Fix the issue</strong> — Provide the value when prompted, or pass it explicitly</li>
 <li><strong>Re-run <code>mauto setup</code></strong> — It rescaffolds the workspace</li>
-<li><strong>Verify completion</strong> — Check that <code>mobile-automator/config.json</code> was created (<code>mauto config get mode</code>)</li>
+<li><strong>Verify completion</strong> — Check that <code>.mobile-automator/config.json</code> was created (<code>mauto config get mode</code>)</li>
 </ol>
-<p>The workspace state lives entirely in <code>mobile-automator/config.json</code>; there is no separate resume file to clean up.</p>
+<p>The workspace state lives entirely in <code>.mobile-automator/config.json</code>; there is no separate resume file to clean up.</p>
 <h3 id="platform-detection-failed-what-should-i-do">"Platform detection failed" — What should I do?<a class="headerlink" href="#platform-detection-failed-what-should-i-do" title="Permanent link">&para;</a></h3>
 <p><strong>Cause:</strong> Your project structure doesn't match recognized patterns.</p>
 <p><strong>Solutions:</strong>
@@ -2724,19 +2724,19 @@ ls<span class="w"> </span>-la<span class="w"> </span>.gemini/skills/
 <h2 id="test-generation">Test Generation<a class="headerlink" href="#test-generation" title="Permanent link">&para;</a></h2>
 <h3 id="how-do-i-generate-a-test-scenario">How do I generate a test scenario?<a class="headerlink" href="#how-do-i-generate-a-test-scenario" title="Permanent link">&para;</a></h3>
 <p><strong>Answer:</strong>
-1. Ensure setup is complete: <code>mobile-automator/config.json</code> exists
+1. Ensure setup is complete: <code>.mobile-automator/config.json</code> exists
 2. Confirm a device is visible: <code>mauto devices</code> (pin one with <code>mauto devices use &lt;id&gt;</code> if needed)
 3. From inside your agent, launch the generate workflow:
    - <strong>Claude Code:</strong> <code>/mobile-automator-generate</code>
    - <strong>Cursor:</strong> ask in plain language (e.g. <em>"generate a login test"</em>)
    - <strong>Any other agent:</strong> <code>mauto mcp</code> (MCP prompts) or <code>mauto guide generate</code> + call verbs directly
 4. Describe your test in natural language when prompted
-5. Review the generated JSON in <code>mobile-automator/scenarios/</code></p>
+5. Review the generated JSON in <code>.mobile-automator/scenarios/</code></p>
 <p><strong>Example prompt:</strong>
 <div class="highlight"><pre><span></span><code>Describe the test scenario:
 &gt; User logs in with email and password, verifies dashboard loads
 </code></pre></div></p>
-<p>Generated: <code>mobile-automator/scenarios/login_happy_path.json</code></p>
+<p>Generated: <code>.mobile-automator/scenarios/login_happy_path.json</code></p>
 <h3 id="element-not-found-when-generating-what-does-this-mean">"Element not found when generating" — What does this mean?<a class="headerlink" href="#element-not-found-when-generating-what-does-this-mean" title="Permanent link">&para;</a></h3>
 <p><strong>Cause:</strong> The agent couldn't find an element you described on the current screen.</p>
 <p><strong>Solutions:</strong>
@@ -2748,7 +2748,7 @@ ls<span class="w"> </span>-la<span class="w"> </span>.gemini/skills/
 <h3 id="generator-misinterpreted-my-intent-how-do-i-fix-it">"Generator misinterpreted my intent" — How do I fix it?<a class="headerlink" href="#generator-misinterpreted-my-intent-how-do-i-fix-it" title="Permanent link">&para;</a></h3>
 <p><strong>Answer:</strong> You can edit the generated JSON directly:</p>
 <ol>
-<li><strong>Review generated scenario</strong> — Check <code>mobile-automator/scenarios/</code></li>
+<li><strong>Review generated scenario</strong> — Check <code>.mobile-automator/scenarios/</code></li>
 <li><strong>Edit JSON manually</strong> — Fix targets, actions, assertions</li>
 <li><strong>Validate schema</strong> — Run <code>mauto validate &lt;file&gt;</code> (see the <a href="../reference/schema/">schema reference</a>)</li>
 <li><strong>Re-execute</strong> — Run the execute workflow with the corrected scenario</li>
@@ -2798,11 +2798,11 @@ ls<span class="w"> </span>-la<span class="w"> </span>.gemini/skills/
 <li><strong>Any other agent:</strong> <code>mauto mcp</code> (MCP prompts) or <code>mauto guide execute</code> + call verbs directly</li>
 </ul>
 <p>The agent then:
-1. <strong>Selects a scenario</strong> — from <code>mobile-automator/scenarios/</code>
+1. <strong>Selects a scenario</strong> — from <code>.mobile-automator/scenarios/</code>
 2. <strong>Confirms the device</strong> — uses the pinned/visible device (<code>mauto devices</code>)
 3. <strong>Confirms app installation</strong> — installs a named artifact if you gave one; otherwise builds it in platform-aware projects, or asks you to install it yourself in platform-agnostic projects
 4. <strong>Runs the test</strong> — executes all steps and assertions</p>
-<p>Results saved to: <code>mobile-automator/results/&lt;run_id&gt;.json</code></p>
+<p>Results saved to: <code>.mobile-automator/results/&lt;run_id&gt;.json</code></p>
 <h3 id="step-failed-element-not-found-during-execution">"Step failed: Element not found" during execution<a class="headerlink" href="#step-failed-element-not-found-during-execution" title="Permanent link">&para;</a></h3>
 <p><strong>Cause:</strong> Element isn't on screen when the step tries to use it.</p>
 <p><strong>Solutions:</strong>
@@ -2899,7 +2899,7 @@ xcrun<span class="w"> </span>simctl<span class="w"> </span>list<span class="w"> 
 </ol>
 <h3 id="how-do-i-debug-a-failed-test">How do I debug a failed test?<a class="headerlink" href="#how-do-i-debug-a-failed-test" title="Permanent link">&para;</a></h3>
 <p><strong>Answer:</strong> Check the result JSON for detailed info:</p>
-<div class="highlight"><pre><span></span><code>cat<span class="w"> </span>mobile-automator/results/run_20260301_143022.json
+<div class="highlight"><pre><span></span><code>cat<span class="w"> </span>.mobile-automator/results/run_20260301_143022.json
 </code></pre></div>
 <p>Look for:
 - <strong><code>observations</code></strong> — AI insights about failure (flakiness, regression, state context)
@@ -2952,12 +2952,12 @@ mauto<span class="w"> </span>setup
 mauto<span class="w"> </span>devices
 
 <span class="c1"># Validate a scenario before running it</span>
-mauto<span class="w"> </span>validate<span class="w"> </span>mobile-automator/scenarios/login_flow.json
+mauto<span class="w"> </span>validate<span class="w"> </span>.mobile-automator/scenarios/login_flow.json
 
 <span class="c1"># (Your agent replays the scenario via mauto guide execute + verbs.)</span>
 
 <span class="c1"># Check results</span>
-cat<span class="w"> </span>mobile-automator/results/latest.json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">'.status'</span>
+cat<span class="w"> </span>.mobile-automator/results/latest.json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">'.status'</span>
 </code></pre></div>
 <p><strong>CI/CD tips:</strong>
 - Cache <code>node_modules</code> so <code>npm install</code> is fast on subsequent runs
@@ -2990,13 +2990,13 @@ cat<span class="w"> </span>mobile-automator/results/latest.json<span class="w"> 
 <span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mauto devices</span>
 
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Validate scenarios</span>
-<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mauto validate mobile-automator/scenarios/login_flow.json</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mauto validate .mobile-automator/scenarios/login_flow.json</span>
 
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Upload Results</span>
 <span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/upload-artifact@v3</span>
 <span class="w">        </span><span class="nt">with</span><span class="p">:</span>
 <span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">test-results</span>
-<span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mobile-automator/results/</span>
+<span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.mobile-automator/results/</span>
 </code></pre></div>
 <hr />
 <h2 id="performance-optimization">Performance &amp; Optimization<a class="headerlink" href="#performance-optimization" title="Permanent link">&para;</a></h2>
@@ -3063,7 +3063,7 @@ xcrun<span class="w"> </span>simctl<span class="w"> </span>list<span class="w"> 
 <p><strong>Solutions:</strong>
 <div class="highlight"><pre><span></span><code><span class="c1"># Check whether the daemon is alive, and where its output was captured</span>
 mauto<span class="w"> </span>session<span class="w"> </span>status<span class="w">        </span><span class="c1"># -&gt; { running, reason, in_flight, device, log_path }</span>
-tail<span class="w"> </span>-50<span class="w"> </span>mobile-automator/.session/daemon.log<span class="w">   </span><span class="c1"># stack traces live here</span>
+tail<span class="w"> </span>-50<span class="w"> </span>.mobile-automator/.session/daemon.log<span class="w">   </span><span class="c1"># stack traces live here</span>
 
 <span class="c1"># Stop it (removes the socket/pidfile); it auto-restarts on the next device verb</span>
 mauto<span class="w"> </span>session<span class="w"> </span>end
@@ -3117,14 +3117,14 @@ mauto<span class="w"> </span>devices
 mauto<span class="w"> </span>setup
 
 <span class="c1"># Check the workspace exists</span>
-ls<span class="w"> </span>-la<span class="w"> </span>mobile-automator/
+ls<span class="w"> </span>-la<span class="w"> </span>.mobile-automator/
 </code></pre></div></p>
 <p><strong>"Permission denied":</strong>
 <div class="highlight"><pre><span></span><code><span class="c1"># Fix directory permissions</span>
-chmod<span class="w"> </span>-R<span class="w"> </span><span class="m">755</span><span class="w"> </span>mobile-automator/
+chmod<span class="w"> </span>-R<span class="w"> </span><span class="m">755</span><span class="w"> </span>.mobile-automator/
 
 <span class="c1"># Fix file permissions</span>
-chmod<span class="w"> </span><span class="m">644</span><span class="w"> </span>mobile-automator/scenarios/*.json
+chmod<span class="w"> </span><span class="m">644</span><span class="w"> </span>.mobile-automator/scenarios/*.json
 </code></pre></div></p>
 <hr />
 <h2 id="getting-help">Getting Help<a class="headerlink" href="#getting-help" title="Permanent link">&para;</a></h2>
@@ -3175,7 +3175,7 @@ chmod<span class="w"> </span><span class="m">644</span><span class="w"> </span>m
 </tr>
 <tr>
 <td><strong>Mode</strong></td>
-<td><code>platform-aware</code> (default) or <code>platform-agnostic</code>, chosen at <code>mauto setup</code> and stored in <code>mobile-automator/config.json</code></td>
+<td><code>platform-aware</code> (default) or <code>platform-agnostic</code>, chosen at <code>mauto setup</code> and stored in <code>.mobile-automator/config.json</code></td>
 </tr>
 <tr>
 <td><strong>Semantic action</strong></td>

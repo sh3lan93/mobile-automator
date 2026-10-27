@@ -2184,13 +2184,13 @@
 <span class="c1"># the agent then selects a device, you describe your test steps,</span>
 <span class="c1"># and it writes the generated scenario</span>
 </code></pre></div>
-<p>Generated scenarios are saved to: <code>mobile-automator/scenarios/&lt;name&gt;.json</code></p>
+<p>Generated scenarios are saved to: <code>.mobile-automator/scenarios/&lt;name&gt;.json</code></p>
 <hr />
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <p>Before generating, ensure:</p>
 <ol>
 <li><strong>Setup is complete</strong></li>
-<li><code>mobile-automator/config.json</code> exists (created by <code>mauto setup</code>)</li>
+<li><code>.mobile-automator/config.json</code> exists (created by <code>mauto setup</code>)</li>
 <li>
 <p>Your agent is wired up via <code>mauto init --agent &lt;host&gt;</code> (installs the native Agent Skill / slash-commands for your host)</p>
 </li>
@@ -2209,7 +2209,7 @@
 <h2 id="pre-flight-checks">Pre-Flight Checks<a class="headerlink" href="#pre-flight-checks" title="Permanent link">&para;</a></h2>
 <p>When you start generation, the agent performs these checks:</p>
 <div class="highlight"><pre><span></span><code>✓ Checking setup state...
-✓ Found: mobile-automator/config.json
+✓ Found: .mobile-automator/config.json
 
 ✓ Detecting devices (mauto devices)...
   Available devices:
@@ -2394,7 +2394,7 @@ Verify dark mode is persisted
 <li><strong>Before each action</strong> — Shows app state before interaction</li>
 <li><strong>After each assertion</strong> — Captures result of verification</li>
 <li><strong>On error</strong> — Captures screen when action fails</li>
-<li><strong>Reference screenshots</strong> — Saved to <code>mobile-automator/screenshots/</code></li>
+<li><strong>Reference screenshots</strong> — Saved to <code>.mobile-automator/screenshots/</code></li>
 </ul>
 <p>Screenshots help you:
 - Verify the test matches your intent
@@ -2710,7 +2710,7 @@ Bad:  "Wait 3 seconds"
 <hr />
 <h2 id="generated-files">Generated Files<a class="headerlink" href="#generated-files" title="Permanent link">&para;</a></h2>
 <p>After generation, check the created files:</p>
-<div class="highlight"><pre><span></span><code>mobile-automator/
+<div class="highlight"><pre><span></span><code>.mobile-automator/
 ├── scenarios/
 │   └── login_happy_path.json          ← Your scenario
 ├── screenshots/
@@ -2724,11 +2724,11 @@ Bad:  "Wait 3 seconds"
 <hr />
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ol>
-<li><strong>Review scenario:</strong> Open <code>mobile-automator/scenarios/&lt;name&gt;.json</code> in editor</li>
+<li><strong>Review scenario:</strong> Open <code>.mobile-automator/scenarios/&lt;name&gt;.json</code> in editor</li>
 <li><strong>Validate it:</strong> Run <code>mauto validate &lt;file&gt;</code> to check it against the scenario schema</li>
 <li><strong>Refine if needed:</strong> Edit JSON or regenerate with different description</li>
 <li><strong>Execute the test:</strong> <code>/mobile-automator-execute</code> (or <code>mauto guide execute</code>)</li>
-<li><strong>Review results:</strong> Check <code>mobile-automator/results/run_*.json</code></li>
+<li><strong>Review results:</strong> Check <code>.mobile-automator/results/run_*.json</code></li>
 </ol>
 <p>See <a href="../execute/">Execute Command Guide</a> for running tests.</p>
 <hr />

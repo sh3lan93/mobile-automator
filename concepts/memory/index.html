@@ -1607,8 +1607,8 @@
 </ul>
 <p>The <code>generate</code> and <code>execute</code> guides now instruct the agent to <strong>consult memory before doing work</strong> and to <strong>record durable knowledge</strong> it learns along the way.</p>
 <h2 id="where-data-lives">Where Data Lives<a class="headerlink" href="#where-data-lives" title="Permanent link">&para;</a></h2>
-<p>Memory lives in the <code>mobile-automator/memory/</code> directory, scaffolded by <code>mauto setup</code> alongside <code>scenarios/</code>, <code>screenshots/</code>, and <code>results/</code>. The files are plain, human-readable markdown — project data you can read, review, and (if you want the whole team to share what the agent has learned) commit to version control. The machine-local session state (sockets, pidfiles, the memory lock) lives separately under <code>mobile-automator/.session/</code>.</p>
-<div class="highlight"><pre><span></span><code>mobile-automator/
+<p>Memory lives in the <code>.mobile-automator/memory/</code> directory, scaffolded by <code>mauto setup</code> alongside <code>scenarios/</code>, <code>screenshots/</code>, and <code>results/</code>. The files are plain, human-readable markdown — project data you can read, review, and (if you want the whole team to share what the agent has learned) commit to version control. The machine-local session state (sockets, pidfiles, the memory lock) lives separately under <code>.mobile-automator/.session/</code>.</p>
+<div class="highlight"><pre><span></span><code>.mobile-automator/
 ├── config.json
 ├── scenarios/
 ├── screenshots/
@@ -1698,7 +1698,7 @@
 <h2 id="durability">Durability<a class="headerlink" href="#durability" title="Permanent link">&para;</a></h2>
 <p>Memory files are read-modify-written safely so concurrent sessions and interrupted writes never corrupt them:</p>
 <ul>
-<li><strong>Advisory lock</strong> — every read-modify-write goes through a lock at <code>mobile-automator/.session/memory.lock</code>.</li>
+<li><strong>Advisory lock</strong> — every read-modify-write goes through a lock at <code>.mobile-automator/.session/memory.lock</code>.</li>
 <li><strong>Atomic writes</strong> — updates are written atomically, so a file is never left half-written.</li>
 <li><strong><code>.corrupt.&lt;ts&gt;</code> sidecars</strong> — if a memory file is found unreadable, it is preserved as a <code>.corrupt.&lt;timestamp&gt;</code> sidecar rather than discarded, so nothing is silently lost.</li>
 </ul>

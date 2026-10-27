@@ -1803,7 +1803,7 @@ agent drives mauto verbs (elements, tap, type, …)
         ↓   each verb → mobile-mcp engine → device
 agent assembles + validates JSON scenario
         ↓
-Saved to mobile-automator/scenarios/
+Saved to .mobile-automator/scenarios/
         ↓
 agent pulls reasoning: mauto guide execute
         ↓
@@ -1812,11 +1812,11 @@ For each step:
   - agent judges the assertion (mauto assert for mechanical checks)
   - agent records the step via mauto result add-step
         ↓
-mauto result finalize → mobile-automator/results/
+mauto result finalize → .mobile-automator/results/
 </code></pre></div>
-<p>On <code>mauto result finalize</code>, the <strong>memory subsystem</strong> (<code>src/memory/</code>) auto-harvests typed observations into a cross-session <code>mobile-automator/memory/</code> store, so the agent gets smarter about <em>this</em> app over time. The agent can also author durable app-knowledge and preferences directly via <code>mauto memory add</code> / <code>mauto memory forget</code>. See <a href="../memory/">Memory</a>.</p>
+<p>On <code>mauto result finalize</code>, the <strong>memory subsystem</strong> (<code>src/memory/</code>) auto-harvests typed observations into a cross-session <code>.mobile-automator/memory/</code> store, so the agent gets smarter about <em>this</em> app over time. The agent can also author durable app-knowledge and preferences directly via <code>mauto memory add</code> / <code>mauto memory forget</code>. See <a href="../memory/">Memory</a>.</p>
 <h2 id="file-structure">File Structure<a class="headerlink" href="#file-structure" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>mobile-automator/                          # created in the user's project by mauto setup
+<div class="highlight"><pre><span></span><code>.mobile-automator/                          # created in the user's project by mauto setup
 ├── config.json                            # project knowledge + mode
 ├── scenarios/                             # test scenario JSON files
 │   ├── login_flow.json
@@ -1868,7 +1868,7 @@ mauto result finalize → mobile-automator/results/
 <li><strong>String step IDs</strong> — readable names (<code>tap_login</code> instead of <code>1</code>)</li>
 </ul>
 <h3 id="why-not-modify-your-source-code">Why Not Modify Your Source Code?<a class="headerlink" href="#why-not-modify-your-source-code" title="Permanent link">&para;</a></h3>
-<p>All tests live in the <code>mobile-automator/</code> directory, completely separate from your source code. This means:</p>
+<p>All tests live in the <code>.mobile-automator/</code> directory, completely separate from your source code. This means:</p>
 <ul>
 <li>Source code remains untouched and pristine</li>
 <li>Tests don't interfere with builds or deployments</li>

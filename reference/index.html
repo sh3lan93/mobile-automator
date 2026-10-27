@@ -2147,7 +2147,7 @@
 <p><strong><a href="cli-verbs/">CLI Verbs Reference →</a></strong></p>
 <hr />
 <h3 id="memory">Memory<a class="headerlink" href="#memory" title="Permanent link">&para;</a></h3>
-<p>How mobile-automator learns across sessions: the auto-harvested <code>run-history</code> plus agent-authored <code>app-knowledge</code> and <code>preferences</code>, stored under <code>mobile-automator/memory/</code>.</p>
+<p>How mobile-automator learns across sessions: the auto-harvested <code>run-history</code> plus agent-authored <code>app-knowledge</code> and <code>preferences</code>, stored under <code>.mobile-automator/memory/</code>.</p>
 <p><strong><a href="../concepts/memory/">Memory Concept →</a></strong></p>
 <hr />
 <h2 id="learning-path">Learning Path<a class="headerlink" href="#learning-path" title="Permanent link">&para;</a></h2>
@@ -2248,8 +2248,8 @@
 </ul>
 <hr />
 <h2 id="file-locations">File Locations<a class="headerlink" href="#file-locations" title="Permanent link">&para;</a></h2>
-<p>All test artifacts are stored under the <code>mobile-automator/</code> directory in the project root. <code>mauto</code> finds it from any subdirectory by walking up to the nearest <code>mobile-automator/config.json</code>, stopping at the repository root (<code>.git</code>):</p>
-<div class="highlight"><pre><span></span><code>mobile-automator/
+<p>All test artifacts are stored under the <code>.mobile-automator/</code> directory in the project root. <code>mauto</code> finds it from any subdirectory by walking up to the nearest <code>.mobile-automator/config.json</code>, stopping at the repository root (<code>.git</code>):</p>
+<div class="highlight"><pre><span></span><code>.mobile-automator/
 ├── config.json                 # Project configuration
 ├── index.md                    # Scenario index
 ├── scenarios/                  # Test scenario JSON files

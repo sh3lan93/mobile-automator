@@ -1535,7 +1535,7 @@ mobile-mcp, has separate telemetry of its own. Upstream it is on by default;
 <li>No per-machine identifier. There is no install id, no device fingerprint and
   no user id. Events are anonymous and uncorrelated.</li>
 <li>Everything is spooled to a local file first. You can read it before it goes:
-  <code>cat mobile-automator/.logs/telemetry.spool</code>.</li>
+  <code>cat .mobile-automator/.logs/telemetry.spool</code>.</li>
 </ul>
 <h2 id="turning-it-on-and-off">Turning it on and off<a class="headerlink" href="#turning-it-on-and-off" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>telemetry<span class="w"> </span>status<span class="w">     </span><span class="c1"># what is on, what would be sent, what is queued</span>
@@ -1544,7 +1544,7 @@ mauto<span class="w"> </span>telemetry<span class="w"> </span>disable<span class
 mauto<span class="w"> </span>telemetry<span class="w"> </span>flush<span class="w">      </span><span class="c1"># upload what is queued now</span>
 </code></pre></div>
 <p><code>mauto telemetry enable</code> writes <code>telemetry.enabled: true</code> into
-<code>mobile-automator/config.json</code>. <code>mauto config set telemetry.enabled true</code> does
+<code>.mobile-automator/config.json</code>. <code>mauto config set telemetry.enabled true</code> does
 the same thing.</p>
 <p>Two environment variables override the config and always win:</p>
 <table>
@@ -1680,7 +1680,7 @@ this table and that catalog disagree.</p>
 </tbody>
 </table>
 <h2 id="what-is-never-sent">What is never sent<a class="headerlink" href="#what-is-never-sent" title="Permanent link">&para;</a></h2>
-<p>These fields exist in your <strong>local</strong> logs (<code>mobile-automator/.logs/</code>) and are
+<p>These fields exist in your <strong>local</strong> logs (<code>.mobile-automator/.logs/</code>) and are
 permanently barred from the network path. <code>tests/lint/telemetry-redaction.test.js</code>
 fails the build if any of them is reclassified.</p>
 <table>
@@ -1738,7 +1738,7 @@ fails the build if any of them is reclassified.</p>
 down a pending socket, so a verb that tried to POST would drop the event a large
 fraction of the time and a verb that waited for one would add a network round
 trip to every tap.</p>
-<p>Instead a verb appends one line to <code>mobile-automator/.logs/telemetry.spool</code> —
+<p>Instead a verb appends one line to <code>.mobile-automator/.logs/telemetry.spool</code> —
 that line is the exact payload that would be uploaded, nothing more — and the
 device session daemon uploads it during its idle window. <code>mauto telemetry flush</code>
 does it on demand. Nothing is retried forever: the spool is capped at 256 KiB,
@@ -1755,7 +1755,7 @@ plain HTTP capture API and a write-only public project token. No PostHog SDK is
 installed; <code>mauto</code> has no analytics dependency.</p>
 <h2 id="reading-the-queue-yourself">Reading the queue yourself<a class="headerlink" href="#reading-the-queue-yourself" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>telemetry<span class="w"> </span>status
-cat<span class="w"> </span>mobile-automator/.logs/telemetry.spool
+cat<span class="w"> </span>.mobile-automator/.logs/telemetry.spool
 </code></pre></div>
 <p>The spool is plain NDJSON — one upload payload per line. If you disagree with
 anything in it, <code>mauto telemetry disable</code> and delete the file.</p>

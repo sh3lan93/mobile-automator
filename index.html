@@ -1713,7 +1713,7 @@
 <div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>init<span class="w"> </span>--agent<span class="w"> </span>claude<span class="w">      </span><span class="c1"># or: cursor | gemini | copilot | agents | all</span>
 mauto<span class="w"> </span>setup<span class="w">                    </span><span class="c1"># add --mode agnostic for cross-platform apps</span>
 </code></pre></div>
-<p><code>init</code> installs native Agent Skills (and, for Claude Code/Cursor, slash-commands/rules + the <code>mauto</code> MCP entry). <code>setup</code> scaffolds the <code>mobile-automator/</code> workspace and writes its config.</p>
+<p><code>init</code> installs native Agent Skills (and, for Claude Code/Cursor, slash-commands/rules + the <code>mauto</code> MCP entry). <code>setup</code> scaffolds the <code>.mobile-automator/</code> workspace and writes its config.</p>
 <h3 id="3-check-your-device">3. Check your device<a class="headerlink" href="#3-check-your-device" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>devices<span class="w">                  </span><span class="c1"># lists devices; mauto devices use &lt;id&gt; to pin one</span>
 </code></pre></div>
@@ -1730,7 +1730,7 @@ mauto<span class="w"> </span>setup<span class="w">                    </span><sp
 <p>Tests execute with AI vision and capture observations (flakiness, regressions, etc.).</p>
 <h3 id="6-view-results">6. View Results<a class="headerlink" href="#6-view-results" title="Permanent link">&para;</a></h3>
 <p>Check execution results:</p>
-<div class="highlight"><pre><span></span><code>mobile-automator/results/&lt;run_id&gt;.json
+<div class="highlight"><pre><span></span><code>.mobile-automator/results/&lt;run_id&gt;.json
 </code></pre></div>
 <p>Results include step details, assertion outcomes, captured variables, and observations for debugging.</p>
 <h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>

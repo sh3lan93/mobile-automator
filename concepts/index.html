@@ -1782,7 +1782,7 @@ Device/App
 <li><strong>mobile-mcp</strong> owns platform mechanics — translating a tap into the right device command</li>
 </ul>
 <h3 id="project-specific-customization">Project-Specific Customization<a class="headerlink" href="#project-specific-customization" title="Permanent link">&para;</a></h3>
-<p>During setup, project knowledge is captured into <code>mobile-automator/config.json</code>:
+<p>During setup, project knowledge is captured into <code>.mobile-automator/config.json</code>:
 - Architecture pattern (MVVM, Clean Architecture, BLoC, etc.)
 - Business domain (what your app does)
 - Loading indicators (how to detect async operations)
@@ -1793,7 +1793,7 @@ Device/App
 - <strong>platform-aware</strong> (default) — single-OS or OS-specific UI tests
 - <strong>platform-agnostic</strong> (<code>--mode agnostic</code>) — cross-platform tests that map OS gestures to four semantic actions (<code>press_back</code>, <code>dismiss_keyboard</code>, <code>grant_permission</code>, <code>deny_permission</code>) resolved per platform at replay time</p>
 <h3 id="no-source-code-modification">No Source Code Modification<a class="headerlink" href="#no-source-code-modification" title="Permanent link">&para;</a></h3>
-<p>Tests live in the <code>mobile-automator/</code> directory, never in your source code. Scenarios and results are version-controlled separately.</p>
+<p>Tests live in the <code>.mobile-automator/</code> directory, never in your source code. Scenarios and results are version-controlled separately.</p>
 <h3 id="semantic-testing">Semantic Testing<a class="headerlink" href="#semantic-testing" title="Permanent link">&para;</a></h3>
 <p>Instead of brittle selectors and pixel-by-pixel comparisons, the agent uses AI vision to understand:
 - Does this screen fulfill its purpose?
@@ -1802,7 +1802,7 @@ Device/App
 - Tolerates minor rendering differences</p>
 <h2 id="key-ideas">Key Ideas<a class="headerlink" href="#key-ideas" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>No source modification</strong> — Tests live in <code>mobile-automator/</code>, never in your source code</li>
+<li><strong>No source modification</strong> — Tests live in <code>.mobile-automator/</code>, never in your source code</li>
 <li><strong>Project learning</strong> — Setup captures your codebase context into <code>config.json</code></li>
 <li><strong>Pull-on-demand reasoning</strong> — The agent reads guidance via <code>mauto guide &lt;topic&gt;</code>, never an ambient always-loaded skill</li>
 <li><strong>Semantic testing</strong> — AI vision understands your app, not just pixel values</li>

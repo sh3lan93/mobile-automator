@@ -2239,7 +2239,7 @@
 <h3 id="mauto-init-installs-per-host"><code>mauto init</code> installs per host<a class="headerlink" href="#mauto-init-installs-per-host" title="Permanent link">&para;</a></h3>
 <p>Skills are installed by <code>mauto init --agent &lt;claude|cursor|gemini|copilot|agents|all&gt;</code>. This writes the native Agent Skill for each host into that host's conventions (for example <code>.gemini/skills/</code> for Gemini CLI), plus slash-commands/rules and an MCP entry for hosts that support it.</p>
 <p>In <strong>Claude Code</strong>, init installs the hyphen slash-commands <code>/mobile-automator-generate</code> and <code>/mobile-automator-execute</code>. Each command simply runs the matching <code>mauto guide &lt;topic&gt;</code> and follows it, driving the device through <code>mauto</code> verbs.</p>
-<p>There is <strong>no template-interpolation-at-setup step</strong> that writes skill bodies, and <strong>no resume-state file</strong>. Setup records project knowledge into <code>mobile-automator/config.json</code>; skills are installed by <code>init</code> independently.</p>
+<p>There is <strong>no template-interpolation-at-setup step</strong> that writes skill bodies, and <strong>no resume-state file</strong>. Setup records project knowledge into <code>.mobile-automator/config.json</code>; skills are installed by <code>init</code> independently.</p>
 <h3 id="guide-content-lives-in-the-package">Guide content lives in the package<a class="headerlink" href="#guide-content-lives-in-the-package" title="Permanent link">&para;</a></h3>
 <p>The reasoning prose lives in the installed package under <code>src/guide/content/</code>:</p>
 <div class="highlight"><pre><span></span><code>src/guide/content/
@@ -2249,7 +2249,7 @@
 </code></pre></div>
 <p>Each topic has an <code>.aware.md</code> (platform-aware) and an <code>.agnostic.md</code> (platform-agnostic) variant. A topic exposed as a skill also has a placeholder-free, OS-free <code>&lt;topic&gt;.invariants.md</code>.</p>
 <h2 id="customization-via-placeholders">Customization via Placeholders<a class="headerlink" href="#customization-via-placeholders" title="Permanent link">&para;</a></h2>
-<p>Guide content carries <code>{{placeholder}}</code> tokens. These are <strong>filled at emit time</strong> — when the agent runs <code>mauto guide &lt;topic&gt;</code>, <code>src/guide/placeholders.js</code> interpolates the tokens from <code>mobile-automator/config.json</code>. A fallback guarantees no <code>{{</code> survives in emitted output, and lint guards enforce that no <code>mobile_*</code> tool names leak and that agnostic content names no OS.</p>
+<p>Guide content carries <code>{{placeholder}}</code> tokens. These are <strong>filled at emit time</strong> — when the agent runs <code>mauto guide &lt;topic&gt;</code>, <code>src/guide/placeholders.js</code> interpolates the tokens from <code>.mobile-automator/config.json</code>. A fallback guarantees no <code>{{</code> survives in emitted output, and lint guards enforce that no <code>mobile_*</code> tool names leak and that agnostic content names no OS.</p>
 <h3 id="example-generate-guide-content">Example: Generate guide content<a class="headerlink" href="#example-generate-guide-content" title="Permanent link">&para;</a></h3>
 <p>In the source content:
 <div class="highlight"><pre><span></span><code><span class="gh"># Generating tests for {{project_name}}</span>
@@ -2375,7 +2375,7 @@ CircularProgressIndicator, Shimmer
 <ul>
 <li>Scenario JSON file</li>
 <li>A connected device</li>
-<li>Project configuration (<code>mobile-automator/config.json</code>)</li>
+<li>Project configuration (<code>.mobile-automator/config.json</code>)</li>
 <li>Reference screenshots (optional)</li>
 </ul>
 <h3 id="process_1">Process<a class="headerlink" href="#process_1" title="Permanent link">&para;</a></h3>
@@ -2459,7 +2459,7 @@ Skill ready: it knows when to pull a guide
 <h3 id="2-setup-mauto-setup">2. Setup (<code>mauto setup</code>)<a class="headerlink" href="#2-setup-mauto-setup" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code>User runs mauto setup [--mode agnostic]
     ↓
-Project knowledge recorded into mobile-automator/config.json
+Project knowledge recorded into .mobile-automator/config.json
     ↓
 Mode stored (platform-aware default, or platform-agnostic)
 </code></pre></div>
@@ -2476,9 +2476,9 @@ Scenario validated / result finalized into the workspace
 <p><strong>CLI updates</strong>: run <code>npm i -g mobile-automator@latest</code>. The verbs and bundled guide content update together; mobile-mcp updates with its pin in <code>package.json</code>.</p>
 <p><strong>Re-install skills</strong>: upgrading the CLI does not touch the files <code>mauto init</code> wrote into your project, so re-run <code>mauto init --agent &lt;host&gt;</code> after every upgrade to refresh the host's native Agent Skills, rules and commands. The init envelope's <code>data.changes</code> lists each file as <code>created</code>, <code>updated</code> or <code>unchanged</code>.</p>
 <p><strong>Stale-integration detection</strong>: <code>mauto guide &lt;topic&gt;</code> and <code>mauto doctor</code> compare each installed host's files byte-for-byte against what the installed <code>mauto</code> would write, and compare the <code>mauto</code> MCP entry by meaning. The content itself is the version check: no stamp file is written, and the check works whether or not <code>mauto setup</code> has run. When a host is stale, <code>guide</code> starts its output with a "host integration out of date" notice telling the agent to ask you to run <code>mauto init --agent &lt;host&gt;</code>, and <code>doctor</code> lists the host in <code>data.stale[]</code>.</p>
-<p><strong>Refresh project knowledge</strong>: re-run <code>mauto setup</code>, or edit <code>mobile-automator/config.json</code> directly — the next <code>mauto guide</code> emit picks up the new values.</p>
+<p><strong>Refresh project knowledge</strong>: re-run <code>mauto setup</code>, or edit <code>.mobile-automator/config.json</code> directly — the next <code>mauto guide</code> emit picks up the new values.</p>
 <h2 id="accessing-project-knowledge">Accessing Project Knowledge<a class="headerlink" href="#accessing-project-knowledge" title="Permanent link">&para;</a></h2>
-<p>The full project configuration lives in <code>mobile-automator/config.json</code>:</p>
+<p>The full project configuration lives in <code>.mobile-automator/config.json</code>:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">"project_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"My Shopping App"</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">"platform"</span><span class="p">:</span><span class="w"> </span><span class="s2">"android"</span><span class="p">,</span>
@@ -2687,7 +2687,7 @@ mauto<span class="w"> </span>guide<span class="w"> </span>generate
 mauto<span class="w"> </span>bootstrap
 
 <span class="c1"># Check what project knowledge was recorded</span>
-cat<span class="w"> </span>mobile-automator/config.json
+cat<span class="w"> </span>.mobile-automator/config.json
 
 <span class="c1"># Print a schema</span>
 mauto<span class="w"> </span>schema<span class="w"> </span>scenario
