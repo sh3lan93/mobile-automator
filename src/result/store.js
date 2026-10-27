@@ -7,6 +7,7 @@ const { atomicWrite } = require('../util/atomic');
 const { withLock } = require('../util/lock');
 const { OBSERVATION_TYPES } = require('./flags');
 const { workspaceDir } = require('../workspace/layout');
+const RESULT_SCHEMA = require('../schemas/result_schema.json');
 
 // Incremental result accumulator that persists to
 //   <projectRoot>/.mobile-automator/results/<runId>.json
@@ -17,6 +18,19 @@ const { workspaceDir } = require('../workspace/layout');
 // invocations until finalize writes the schema-conformant result.
 
 const SCHEMA_VERSION = '2.0';
+
+// Derived from the result schema, never retyped. Checking it before building a
+// path also keeps a `../` id from reaching outside the results directory.
+const RUN_ID_PATTERN = new RegExp(RESULT_SCHEMA.properties.run_id.pattern);
+
+// The one place that knows where a run's result file lives.
+function resultsDir(projectRoot) {
+  return path.join(workspaceDir(projectRoot), 'results');
+}
+
+function resultFile(projectRoot, runId) {
+  return path.join(resultsDir(projectRoot), `${runId}.json`);
+}
 
 // A crash report is read into an agent's context and routinely committed to a
 // repo. A native tombstone is tens of kilobytes, so the excerpt is bounded HERE
@@ -55,8 +69,8 @@ class ResultStore {
     this.projectRoot = projectRoot;
     this._metadataOverrides = metadata || {};
 
-    this._dir = path.join(workspaceDir(projectRoot), 'results');
-    this._file = path.join(this._dir, `${runId}.json`);
+    this._dir = resultsDir(projectRoot);
+    this._file = resultFile(projectRoot, runId);
     // Per-runId advisory lock guarding every read-modify-write mutator. Lives
     // in the same directory as the result file, so the lock is scoped to this
     // run only — different runs never contend on it.
@@ -149,6 +163,8 @@ class ResultStore {
     atomicWrite(this._file, contents);
   }
 
+  // The in-progress marker below is private to this module; readers ask
+  // isInProgress() instead of keying on the field themselves.
   _persistInProgress() {
     const snapshot = {
       run_id: this.runId,
@@ -368,4 +384,46 @@ class ResultStore {
   }
 }
 
-module.exports = { ResultStore };
+function isInProgress(parsed) {
+  return Boolean(parsed && parsed._in_progress);
+}
+
+// Read a finalized result file for a report, WITHOUT going through the
+// ResultStore constructor: that constructor renames a corrupt file aside as a
+// `.corrupt.<ts>` sidecar, and a reader must never mutate the workspace it
+// reads. This function performs no writes, renames or locks.
+//
+// Returns `{ result }`, or `{ error: { kind, message, hint } }` where kind is
+// `invalid_input` (bad id, no file, not JSON, not finalized) or `environment`
+// (the file exists but could not be read).
+function readFinalizedResult(projectRoot, runId) {
+  const invalid = (message, hint) => ({ error: { kind: 'invalid_input', message, hint } });
+  if (!RUN_ID_PATTERN.test(runId)) {
+    return invalid(`invalid run id "${runId}"`, 'A run id has the form run_YYYYMMDD_HHMMSS.');
+  }
+  const file = resultFile(projectRoot, runId);
+  let raw;
+  try {
+    raw = fs.readFileSync(file, 'utf8');
+  } catch (err) {
+    if (err && err.code === 'ENOENT') {
+      return invalid(
+        `no result file for ${runId}`,
+        `Expected ${file}; list the run ids with \`ls ${resultsDir(projectRoot)}\`.`
+      );
+    }
+    return { error: { kind: 'environment', message: `could not read ${file}: ${err.message}`, hint: null } };
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    return invalid(`result file for ${runId} is not valid JSON (${err.message})`, `Inspect ${file}.`);
+  }
+  if (isInProgress(parsed)) {
+    return invalid(`run ${runId} is not finalized`, `Run \`mauto result finalize --run-id ${runId}\` first.`);
+  }
+  return { result: parsed };
+}
+
+module.exports = { ResultStore, readFinalizedResult, resultFile };

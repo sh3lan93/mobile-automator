@@ -123,6 +123,14 @@ describe('handleResultExport', () => {
     });
   });
 
+  test('an unreadable result file fails environment', () => {
+    const root = tmpRoot();
+    fs.mkdirSync(path.join(resultsDir(root), `${PASSED.run_id}.json`));
+    const r = exportWith(root, { runIds: [PASSED.run_id], format: 'junit' });
+    expect(r.exitKind).toBe('environment');
+    expect(r.envelope.error).toEqual({ kind: 'environment', message: expect.stringMatching(/^could not read /) });
+  });
+
   test('an unwritable --out fails environment', () => {
     const root = tmpRoot();
     writeResult(root, PASSED);
