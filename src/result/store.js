@@ -8,6 +8,8 @@ const { withLock } = require('../util/lock');
 const { OBSERVATION_TYPES } = require('./flags');
 const { workspaceDir } = require('../workspace/layout');
 const RESULT_SCHEMA = require('../schemas/result_schema.json');
+const { createCliAjv } = require('../schemas/cli-ajv');
+const { formatError } = require('../schemas/format-error');
 
 // Incremental result accumulator that persists to
 //   <projectRoot>/.mobile-automator/results/<runId>.json
@@ -23,21 +25,20 @@ const SCHEMA_VERSION = '2.0';
 // path also keeps a `../` id from reaching outside the results directory.
 const RUN_ID_PATTERN = new RegExp(RESULT_SCHEMA.properties.run_id.pattern);
 
-// The root keys finalize always writes, also derived from the schema. Their
-// presence with the schema's JSON type (not full schema validation, which would
-// reject forward-compatible fields) is what makes a parsed file a finalized
-// result.
-const REQUIRED_KEYS = RESULT_SCHEMA.required;
-
-function jsonType(value) {
-  if (value === null) return 'null';
-  if (Array.isArray(value)) return 'array';
-  if (Number.isInteger(value)) return 'integer';
-  return typeof value;
+// "Finalized" means valid against the shipped result schema, compiled once (on
+// first read) with the CLI's own Ajv. Formats are not checked anywhere in the
+// CLI (see src/schemas/cli-ajv.js); `date-time` is registered as unchecked so
+// that this, the first runtime compile of the result schema, does not print
+// Ajv's unknown-format warning on a verb's stderr.
+let validateResult;
+function compiledResultValidator() {
+  if (!validateResult) {
+    const ajv = createCliAjv();
+    ajv.addFormat('date-time', true);
+    validateResult = ajv.compile(RESULT_SCHEMA);
+  }
+  return validateResult;
 }
-
-// JSON Schema's `number` admits integers too.
-const hasSchemaType = (value, type) => jsonType(value) === type || (type === 'number' && jsonType(value) === 'integer');
 
 // The one place that knows where a run's result file lives.
 function resultsDir(projectRoot) {
@@ -409,9 +410,9 @@ function isInProgress(parsed) {
 // `.corrupt.<ts>` sidecar, and a reader must never mutate the workspace it
 // reads. This function performs no writes, renames or locks.
 //
-// Returns `{ result }` only for a finalized result: a plain object whose run_id
-// is the requested id and which carries every schema-required root key, so a
-// consumer can rely on that shape without fallbacks. Otherwise returns
+// Returns `{ result }` only for a finalized result: valid against the result
+// schema (every level, not just the root) and carrying the requested run_id, so
+// a consumer can rely on that shape without fallbacks. Otherwise returns
 // `{ error: { kind, message, hint } }` where kind is `invalid_input` (bad id, no
 // file, not JSON, in progress, not a finalized result) or `environment` (the
 // file exists but could not be read).
@@ -444,17 +445,13 @@ function readFinalizedResult(projectRoot, runId) {
       `result file for ${runId} is not a finalized result: ${reason}`,
       `Inspect ${file}; result files are written by \`mauto result finalize\`.`
     );
-  if (jsonType(parsed) !== 'object') {
-    return notAResult('not a JSON object');
-  }
   if (isInProgress(parsed)) {
     return invalid(`run ${runId} is not finalized`, `Run \`mauto result finalize --run-id ${runId}\` first.`);
   }
-  const missing = REQUIRED_KEYS.filter((key) => !Object.prototype.hasOwnProperty.call(parsed, key));
-  if (missing.length > 0) return notAResult(`missing required keys: ${missing.join(', ')}`);
-  for (const key of REQUIRED_KEYS) {
-    const { type } = RESULT_SCHEMA.properties[key];
-    if (!hasSchemaType(parsed[key], type)) return notAResult(`${key} is ${jsonType(parsed[key])}, expected ${type}`);
+  const validate = compiledResultValidator();
+  if (!validate(parsed)) {
+    const [first, ...rest] = validate.errors;
+    return notAResult(`${formatError(first)}${rest.length > 0 ? ` (and ${rest.length} more)` : ''}`);
   }
   if (parsed.run_id !== runId) return notAResult(`its run_id is ${JSON.stringify(parsed.run_id)}`);
   return { result: parsed };

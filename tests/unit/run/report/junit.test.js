@@ -1,16 +1,36 @@
 'use strict';
 
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const { toJUnit } = require('../../../../src/run/report/junit');
+const { readFinalizedResult, resultFile } = require('../../../../src/result/store');
+const { workspaceDir } = require('../../../../src/workspace/layout');
 const { parseXml, findAll } = require('../../../helpers/parse-xml');
 
 const fixture = (name) => require(path.join(__dirname, 'fixtures', `${name}.json`));
 const PASSED = fixture('passed');
 const FAILED = fixture('failed');
-const INCOMPLETE = fixture('incomplete-needs-agent');
+const NEEDS_AGENT_STEP = fixture('needs-agent-step');
 const HOSTILE = fixture('hostile-strings');
 const NOTHING_RECORDED = fixture('failed-nothing-recorded');
+const FIXTURES = { PASSED, FAILED, NEEDS_AGENT_STEP, HOSTILE, NOTHING_RECORDED };
+
+// What R2 (#271) adds to the result schema: an `incomplete` run status and a
+// `needs_agent` assertion status. The reader rejects both until R2 extends the
+// schema, but `mauto run --junit` will hand the renderer in-memory results of
+// this shape, so they are exercised here, against the pure renderer only.
+const R2_INCOMPLETE = {
+  ...NEEDS_AGENT_STEP,
+  status: 'incomplete',
+  passed_assertions: 1,
+  assertion_results: [
+    NEEDS_AGENT_STEP.assertion_results[0],
+    { ...NEEDS_AGENT_STEP.assertion_results[1], status: 'needs_agent', message: 'visual_check needs an agent verdict' },
+  ],
+  summary: 'incomplete: 1 assertion needs an agent verdict.',
+};
 
 const suitesOf = (xml) => findAll(parseXml(xml), 'testsuite');
 const casesOf = (suite) => suite.children.filter((c) => c.name === 'testcase');
@@ -38,9 +58,18 @@ describe('parse-xml helper rejects what it should', () => {
   });
 });
 
+// Every fixture is something the reader actually hands a renderer: a result
+// valid against the shipped schema.
+test.each(Object.entries(FIXTURES))('fixture %s is a finalized result readFinalizedResult accepts', (_name, result) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-junit-fixture-'));
+  fs.mkdirSync(path.join(workspaceDir(root), 'results'), { recursive: true });
+  fs.writeFileSync(resultFile(root, result.run_id), JSON.stringify(result));
+  expect(readFinalizedResult(root, result.run_id)).toEqual({ result });
+});
+
 describe('toJUnit', () => {
   test('emits a well-formed document with an XML declaration', () => {
-    const { xml } = toJUnit([PASSED, FAILED, INCOMPLETE, HOSTILE, NOTHING_RECORDED]);
+    const { xml } = toJUnit([PASSED, FAILED, R2_INCOMPLETE, HOSTILE, NOTHING_RECORDED]);
     expect(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>\n')).toBe(true);
     const root = parseXml(xml);
     expect(root.name).toBe('testsuites');
@@ -84,8 +113,17 @@ describe('toJUnit', () => {
     expect(suite.attrs).toMatchObject({ tests: '4', failures: '3', skipped: '0' });
   });
 
-  test('needs_agent assertions and steps are <skipped>, counted as skipped not failed', () => {
-    const report = toJUnit([INCOMPLETE]);
+  test('a needs_agent step is <skipped>, counted as skipped not failed', () => {
+    const report = toJUnit([NEEDS_AGENT_STEP]);
+    const [suite] = suitesOf(report.xml);
+    expect(child(caseNamed(suite, 'step: toggle_wifi'), 'skipped').attrs.message).toBe(
+      'needs_agent: step toggle_wifi must be performed by an agent'
+    );
+    expect(report).toMatchObject({ suites: 1, tests: 3, failures: 0, skipped: 1 });
+  });
+
+  test('R2 needs_agent assertions and steps are <skipped>, counted as skipped not failed', () => {
+    const report = toJUnit([R2_INCOMPLETE]);
     const [suite] = suitesOf(report.xml);
     const skipped = child(caseNamed(suite, 'assert_layout_looks_right'), 'skipped');
     expect(skipped.attrs.message).toBe('needs_agent: visual_check needs an agent verdict');
@@ -94,8 +132,8 @@ describe('toJUnit', () => {
     expect(report).toMatchObject({ suites: 1, tests: 3, failures: 0, skipped: 2 });
   });
 
-  test('an incomplete result is not given a synthetic failure', () => {
-    const [suite] = suitesOf(toJUnit([INCOMPLETE]).xml);
+  test('an R2 incomplete result is not given a synthetic failure', () => {
+    const [suite] = suitesOf(toJUnit([R2_INCOMPLETE]).xml);
     expect(caseNamed(suite, 'run status')).toBeUndefined();
     expect(propertiesOf(suite).status).toBe('incomplete');
   });
@@ -114,7 +152,7 @@ describe('toJUnit', () => {
   });
 
   test("executor provenance comes from the result's own executor", () => {
-    const props = propertiesOf(suitesOf(toJUnit([INCOMPLETE]).xml)[0]);
+    const props = propertiesOf(suitesOf(toJUnit([NEEDS_AGENT_STEP]).xml)[0]);
     expect(props).toMatchObject({
       'executor.kind': 'mauto-run',
       'executor.engine': 'mobilecli',
@@ -128,7 +166,7 @@ describe('toJUnit', () => {
   });
 
   test("a result's own executor wins over opts.executor", () => {
-    const props = propertiesOf(suitesOf(toJUnit([INCOMPLETE], { executor: { engine: 'legacy' } }).xml)[0]);
+    const props = propertiesOf(suitesOf(toJUnit([NEEDS_AGENT_STEP], { executor: { engine: 'legacy' } }).xml)[0]);
     expect(props['executor.engine']).toBe('mobilecli');
   });
 
@@ -162,10 +200,10 @@ describe('toJUnit', () => {
   });
 
   test('root totals add up across suites', () => {
-    const report = toJUnit([PASSED, FAILED, INCOMPLETE]);
-    expect(report).toMatchObject({ suites: 3, tests: 9, failures: 3, skipped: 2 });
+    const report = toJUnit([PASSED, FAILED, NEEDS_AGENT_STEP]);
+    expect(report).toMatchObject({ suites: 3, tests: 9, failures: 3, skipped: 1 });
     const root = parseXml(report.xml);
-    expect(root.attrs).toMatchObject({ name: 'mauto', tests: '9', failures: '3', errors: '0', skipped: '2', time: '50.5' });
+    expect(root.attrs).toMatchObject({ name: 'mauto', tests: '9', failures: '3', errors: '0', skipped: '1', time: '50.5' });
   });
 
   test('an empty result list is still a valid, empty report', () => {

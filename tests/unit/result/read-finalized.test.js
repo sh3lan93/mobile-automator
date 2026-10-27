@@ -82,9 +82,9 @@ describe('readFinalizedResult', () => {
     expect(listResults(root)).toEqual([`${RUN_ID}.json`]);
   });
 
-  // "Finalized" is positive: a plain object for THIS run carrying every root
-  // key finalize writes (the schema's `required`). Anything else must never
-  // reach a renderer, where it would export as a green, empty suite (#274).
+  // "Finalized" is positive: valid against the shipped result schema at every
+  // level, for THIS run. Anything else must never reach a renderer, where it
+  // would crash or export as a green suite (#274).
   describe('a parsed value that is not a finalized result is invalid_input', () => {
     const finalized = () => {
       const root = tmpRoot();
@@ -96,19 +96,38 @@ describe('readFinalizedResult', () => {
       delete r[key];
       return r;
     };
+    const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const [firstRequired, ...otherRequired] = RESULT_SCHEMA.required;
 
     test.each([
-      ['null', null, /not a JSON object/],
-      ['an array', [], /not a JSON object/],
-      ['a scalar', 42, /not a JSON object/],
-      ['an empty object', {}, new RegExp(`missing required keys: ${RESULT_SCHEMA.required.join(', ')}`)],
+      ['null', null, /\(root\) must be object$/],
+      ['an array', [], /\(root\) must be object$/],
+      ['a scalar', 42, /\(root\) must be object$/],
+      [
+        'an empty object',
+        {},
+        new RegExp(escape(`(root) is missing required property '${firstRequired}' (and ${otherRequired.length} more)`)),
+      ],
       ['a mismatched run_id', { ...finalized(), run_id: 'run_20990101_000000' }, /run_id is "run_20990101_000000"/],
       ...RESULT_SCHEMA.required
         .filter((k) => k !== 'run_id')
-        .map((k) => [`a result missing ${k}`, withoutKey(k), new RegExp(`missing required keys: ${k}$`)]),
-      ['a null metadata', { ...finalized(), metadata: null }, /metadata is null, expected object/],
-      ['an object steps_executed', { ...finalized(), steps_executed: {} }, /steps_executed is object, expected array/],
-      ['a fractional total_assertions', { ...finalized(), total_assertions: 1.5 }, /total_assertions is number, expected integer/],
+        .map((k) => [`a result missing ${k}`, withoutKey(k), new RegExp(escape(`(root) is missing required property '${k}'`) + '$')]),
+      ['a null metadata', { ...finalized(), metadata: null }, /\/metadata must be object$/],
+      ['an object steps_executed', { ...finalized(), steps_executed: {} }, /\/steps_executed must be array$/],
+      ['a fractional total_assertions', { ...finalized(), total_assertions: 1.5 }, /\/total_assertions must be integer$/],
+      ['an off-enum status', { ...finalized(), status: 'garbage' }, /\/status must be equal to one of the allowed values/],
+      ['a null assertion', { ...finalized(), assertion_results: [null] }, /\/assertion_results\/0 must be object$/],
+      ['a null step', { ...finalized(), steps_executed: [null] }, /\/steps_executed\/0 must be object$/],
+      [
+        'an assertion without assertion_id',
+        { ...finalized(), assertion_results: [{ status: 'failed', message: 'x' }] },
+        /\/assertion_results\/0 is missing required property 'assertion_id'$/,
+      ],
+      [
+        'a step without step_id',
+        { ...finalized(), steps_executed: [{ status: 'failed' }] },
+        /\/steps_executed\/0 is missing required property 'step_id'$/,
+      ],
     ])('%s', (_label, value, message) => {
       const root = tmpRoot();
       fs.writeFileSync(resultFile(root, RUN_ID), JSON.stringify(value));

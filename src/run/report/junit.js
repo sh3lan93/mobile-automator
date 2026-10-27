@@ -1,11 +1,10 @@
 'use strict';
 
 // JUnit XML rendering of finalized result files (#274). Its input is what
-// readFinalizedResult (src/result/store.js) guarantees: every schema-required
-// root key present with its schema type, so there are no fallbacks here.
+// readFinalizedResult (src/result/store.js) guarantees: a result valid against
+// the result schema, so there are no fallbacks for schema-required fields here.
 // Pure: no fs, no clock, no input mutation, so the same results always render
-// to the same bytes. It
-// is consumed by `mauto result export` today and by `mauto run --junit` later,
+// to the same bytes. It is consumed by `mauto result export` today and by `mauto run --junit` later,
 // which is why it lives under src/run/ rather than beside the CLI handler.
 //
 // Mapping, one result at a time:
@@ -137,7 +136,7 @@ function suiteFor(result, executor) {
       failure: {
         type: 'run_status',
         message: `result status is ${result.status} but no failed step or assertion was recorded`,
-        body: result.summary || '',
+        body: result.summary,
       },
     });
   }
@@ -188,7 +187,7 @@ function suiteFor(result, executor) {
 // `executor` is provenance for results that carry none of their own (a result
 // file's root `executor` always wins).
 function toJUnit(results, { executor } = {}) {
-  const suites = (results || []).map((r) => suiteFor(r, executor));
+  const suites = results.map((r) => suiteFor(r, executor));
   const total = (key) => suites.reduce((sum, s) => sum + s[key], 0);
   const tests = total('tests');
   const failures = total('failures');

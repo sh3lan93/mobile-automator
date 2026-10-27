@@ -247,6 +247,7 @@ describe('cli smoke (integration)', () => {
       writeWorkspaceResult();
       const r = runCli(['result', 'export', '--run-id', FAILED_RESULT.run_id, '--format', 'junit'], { cwd: workspace });
       expect(r.status).toBe(0);
+      expect(r.stderr).toBe('');
       const env = JSON.parse(r.stdout);
       expect(env.ok).toBe(true);
       expect(env.data).toMatchObject({ format: 'junit', path: null, suites: 1, tests: 4, failures: 3, skipped: 0 });
@@ -268,7 +269,8 @@ describe('cli smoke (integration)', () => {
     });
 
     // A file that is not a finalized result must never export as a green
-    // suite, nor crash with a stack trace (#274 review, round 2).
+    // suite, nor crash with a stack trace — at the root or one level down
+    // (#274 review, rounds 2 and 3).
     test.each([
       ['null', null],
       ['an array', []],
@@ -280,6 +282,11 @@ describe('cli smoke (integration)', () => {
         const { assertion_results, steps_executed, ...rest } = FAILED_RESULT; // eslint-disable-line no-unused-vars
         return rest;
       }],
+      ['an off-enum status', () => ({ ...FAILED_RESULT, status: 'garbage', steps_executed: [], assertion_results: [] })],
+      ['a null assertion', () => ({ ...FAILED_RESULT, assertion_results: [null] })],
+      ['a null step', () => ({ ...FAILED_RESULT, steps_executed: [null] })],
+      ['an assertion without assertion_id', () => ({ ...FAILED_RESULT, assertion_results: [{ status: 'failed', message: 'x' }] })],
+      ['a step without step_id', () => ({ ...FAILED_RESULT, steps_executed: [{ status: 'failed' }] })],
     ])('a result file holding %s is invalid_input, exit 3', (_label, value) => {
       writeWorkspaceResult();
       fs.writeFileSync(
@@ -288,7 +295,7 @@ describe('cli smoke (integration)', () => {
       );
       const r = runCli(['result', 'export', '--run-id', FAILED_RESULT.run_id, '--format', 'junit'], { cwd: workspace });
       expect(r.status).toBe(3); // EXIT.INVALID_INPUT
-      expect(r.stderr).not.toMatch(/TypeError|\n\s+at /);
+      expect(r.stderr).toBe('');
       const env = JSON.parse(r.stdout);
       expect(env.ok).toBe(false);
       expect(env.error.kind).toBe('invalid_input');
