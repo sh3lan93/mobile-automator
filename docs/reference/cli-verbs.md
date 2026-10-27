@@ -116,7 +116,7 @@ Used to author scenario JSON, evaluate assertions, and assemble result files.
 !!! note "`result export` and JUnit"
     `result export` reads the [result files](result-schema.md) of the given runs and renders one JUnit document: a `<testsuite>` per run (named by `scenario_id`), a `<testcase>` per assertion, plus one per failed or errored step (`step: <step_id>`). A failed assertion or step carries a `<failure>`; an assertion or step marked `needs_agent` is `<skipped>`. A run whose status is `failed` or `error` with nothing failing recorded gets one `run status` failure, so a red run never reads green. The run id, status, `metadata` and any `executor` provenance appear as `<properties>`.
 
-    Only finalized runs export: an unknown run id, a malformed run id, a file that is not JSON, or a run that was never finalized fails the whole export with `invalid_input` and writes nothing. The export exits 0 whatever the runs' outcome — it is a report, not a gate. It never modifies the result files.
+    Only finalized runs export: an unknown run id, a malformed run id, a file that is not JSON, a run that was never finalized, or a file that is not a result for that run (a JSON value other than an object, a different `run_id`, or a missing or mistyped required root key) fails the whole export with `invalid_input` and writes nothing. The export exits 0 whatever the runs' outcome — it is a report, not a gate. It never modifies the result files.
 
 !!! note "`result finalize` and memory"
     On finalize, `mauto` auto-harvests typed observations into cross-session memory. This is best-effort: a memory failure never fails an otherwise-successful finalize — it folds into the envelope `hint` instead. See [Cross-Session Memory](../concepts/memory.md).

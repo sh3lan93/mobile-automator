@@ -82,6 +82,46 @@ describe('readFinalizedResult', () => {
     expect(listResults(root)).toEqual([`${RUN_ID}.json`]);
   });
 
+  // "Finalized" is positive: a plain object for THIS run carrying every root
+  // key finalize writes (the schema's `required`). Anything else must never
+  // reach a renderer, where it would export as a green, empty suite (#274).
+  describe('a parsed value that is not a finalized result is invalid_input', () => {
+    const finalized = () => {
+      const root = tmpRoot();
+      const store = new ResultStore({ runId: RUN_ID, scenarioId: 'login', projectRoot: root });
+      return store.finalize({ status: 'passed', durationSeconds: 1 });
+    };
+    const withoutKey = (key) => {
+      const r = finalized();
+      delete r[key];
+      return r;
+    };
+
+    test.each([
+      ['null', null, /not a JSON object/],
+      ['an array', [], /not a JSON object/],
+      ['a scalar', 42, /not a JSON object/],
+      ['an empty object', {}, new RegExp(`missing required keys: ${RESULT_SCHEMA.required.join(', ')}`)],
+      ['a mismatched run_id', { ...finalized(), run_id: 'run_20990101_000000' }, /run_id is "run_20990101_000000"/],
+      ...RESULT_SCHEMA.required
+        .filter((k) => k !== 'run_id')
+        .map((k) => [`a result missing ${k}`, withoutKey(k), new RegExp(`missing required keys: ${k}$`)]),
+      ['a null metadata', { ...finalized(), metadata: null }, /metadata is null, expected object/],
+      ['an object steps_executed', { ...finalized(), steps_executed: {} }, /steps_executed is object, expected array/],
+      ['a fractional total_assertions', { ...finalized(), total_assertions: 1.5 }, /total_assertions is number, expected integer/],
+    ])('%s', (_label, value, message) => {
+      const root = tmpRoot();
+      fs.writeFileSync(resultFile(root, RUN_ID), JSON.stringify(value));
+      const { result, error } = readFinalizedResult(root, RUN_ID);
+      expect(result).toBeUndefined();
+      expect(error.kind).toBe('invalid_input');
+      expect(error.message).toMatch(new RegExp(`^result file for ${RUN_ID} is not a finalized result`));
+      expect(error.message).toMatch(message);
+      expect(error.hint).toContain(resultFile(root, RUN_ID));
+      expect(listResults(root)).toEqual([`${RUN_ID}.json`]);
+    });
+  });
+
   test('an unreadable file (not ENOENT) is environment', () => {
     const root = tmpRoot();
     // A directory at the result path makes the read fail with EISDIR.

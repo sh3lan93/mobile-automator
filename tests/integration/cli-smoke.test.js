@@ -267,6 +267,35 @@ describe('cli smoke (integration)', () => {
       expect(parseXml(fs.readFileSync(env.data.path, 'utf8')).name).toBe('testsuites');
     });
 
+    // A file that is not a finalized result must never export as a green
+    // suite, nor crash with a stack trace (#274 review, round 2).
+    test.each([
+      ['null', null],
+      ['an array', []],
+      ['a scalar', 'passed'],
+      ['an empty object', {}],
+      ['a mismatched run_id', () => ({ ...FAILED_RESULT, run_id: 'run_20990101_000000' })],
+      ['a null metadata', () => ({ ...FAILED_RESULT, metadata: null })],
+      ['a result missing required keys', () => {
+        const { assertion_results, steps_executed, ...rest } = FAILED_RESULT; // eslint-disable-line no-unused-vars
+        return rest;
+      }],
+    ])('a result file holding %s is invalid_input, exit 3', (_label, value) => {
+      writeWorkspaceResult();
+      fs.writeFileSync(
+        path.join(workspace, '.mobile-automator', 'results', `${FAILED_RESULT.run_id}.json`),
+        JSON.stringify(typeof value === 'function' ? value() : value)
+      );
+      const r = runCli(['result', 'export', '--run-id', FAILED_RESULT.run_id, '--format', 'junit'], { cwd: workspace });
+      expect(r.status).toBe(3); // EXIT.INVALID_INPUT
+      expect(r.stderr).not.toMatch(/TypeError|\n\s+at /);
+      const env = JSON.parse(r.stdout);
+      expect(env.ok).toBe(false);
+      expect(env.error.kind).toBe('invalid_input');
+      expect(env.error.message).toMatch(/is not a finalized result/);
+      expect(env.hint).toBeTruthy();
+    });
+
     test('an unknown format is an invalid_input envelope', () => {
       writeWorkspaceResult();
       const r = runCli(['result', 'export', '--run-id', FAILED_RESULT.run_id, '--format', 'sarif'], { cwd: workspace });
