@@ -46,7 +46,6 @@ const {
   workspaceFailure,
   legacyWorkspaceFailure,
 } = require('./workspace/discover');
-const { workspaceDir } = require('./workspace/layout');
 
 // Commander throws (via exitOverride) for two very different reasons, and the
 // split below is the ONLY thing that tells them apart.
@@ -871,16 +870,10 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
   // already run: exit 6 is a verdict about the app, not a reason to lose the
   // record of it.
   if (result.status === 'failed' || result.status === 'error') {
-    // Project-relative, and derived from workspaceDir like the store's own
-    // path, so the hint can never name a directory the file is not in.
-    const resultFile = path.relative(
-      projectRoot,
-      path.join(workspaceDir(projectRoot), 'results', `${runId}.json`)
-    );
     const hint = hints.length
       ? hints.join(' ')
       : 'See data.steps_executed and data.assertion_results for what failed; ' +
-        `the result is saved to ${resultFile}.`;
+        `the result is saved to ${path.relative(projectRoot, store.file)}.`;
     return {
       envelope: fail('test_failed', `run ${runId} ${result.status}`, hint, result),
       exitKind: 'test_failed',

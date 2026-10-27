@@ -1057,6 +1057,24 @@ describe('cli handlers', () => {
       expect(fs.existsSync(resultFile(deps, runId))).toBe(true);
     });
 
+    test('the failure hint names the file the store reports, not a rebuilt path', () => {
+      const deps = tmpDeps();
+      const runId = 'run_20261027_100003';
+      handleResultAddStep(deps, { runId, scenarioId: 's', stepId: 'verify', status: 'fail' });
+      // Relocate the store's file: the hint must follow the store, so a future
+      // layout move cannot leave the hint pointing at a stale directory.
+      const relocated = path.join(deps.projectRoot, 'elsewhere', `${runId}.json`);
+      const realFactory = deps.resultStoreFactory;
+      deps.resultStoreFactory = (args) => {
+        const store = realFactory(args);
+        Object.defineProperty(store, 'file', { get: () => relocated });
+        return store;
+      };
+      const f = handleResultFinalize(deps, { runId, status: 'failed' });
+      expect(f.exitKind).toBe('test_failed');
+      expect(f.envelope.hint).toContain(`the result is saved to ${path.join('elsewhere', `${runId}.json`)}.`);
+    });
+
     test('a failed run is still harvested into memory, and memory warnings stay the hint', () => {
       const deps = tmpDeps();
       const runId = 'run_20261027_100003';
