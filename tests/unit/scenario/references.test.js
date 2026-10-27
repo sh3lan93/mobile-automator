@@ -294,3 +294,38 @@ describe('ordering', () => {
     })).toEqual([]);
   });
 });
+
+describe('module seam', () => {
+  const { flattenSteps } = require('../../../src/scenario/steps');
+  const references = require('../../../src/scenario/references');
+
+  test('returns finding descriptors, never built warnings: replayability owns the one constructor', () => {
+    expect(references).not.toHaveProperty('makeFinding');
+    const scenario = {
+      steps: [{ id: 'a', action: 'tap' }, { id: 'a', action: 'wait_for_element', target: 'X' }],
+      assertions: [{ id: 'x', after_step: 'zzz', type: 'visual_state' }],
+    };
+    const entries = flattenSteps(scenario);
+    const index = references.referenceIndex(scenario, entries);
+    expect(references.stepReferences(entries[1].step, 1, index)).toEqual([
+      { code: 'duplicate_step_id', fields: { ref: 'a', firstPath: 'steps[0]' } },
+      { code: 'missing_wait_config', fields: {} },
+    ]);
+    expect(references.assertionReferences(scenario, index)).toEqual([
+      { code: 'dangling_after_step', fields: { ref: 'zzz' }, path: 'assertions[0]', ids: { assertion_id: 'x' } },
+    ]);
+  });
+
+  test('step and assertion warnings share one shape', () => {
+    const w = findReplayWarnings({
+      steps: [{ id: 's', action: 'clear_app_data' }, { action: 'tap' }],
+      assertions: [{ after_step: 'nope', type: 'visual_state' }],
+    });
+    expect(w).toEqual([
+      { code: 'unsupported_action', action: 'clear_app_data', path: 'steps[0]', message: expect.any(String), step_id: 's' },
+      { code: 'missing_target', action: 'tap', path: 'steps[1]', message: expect.any(String) },
+      { code: 'dangling_after_step', path: 'assertions[0]', message: expect.any(String) },
+    ]);
+    for (const f of w) expect(f.message).toBe(CODES[f.code].message({ action: f.action, ref: 'nope' }));
+  });
+});

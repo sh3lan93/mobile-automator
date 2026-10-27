@@ -24,12 +24,14 @@ const { actionsByResolution, implicitStepFlags } = require('../device/action-cat
 const {
   REFERENCE_CODES,
   referenceIndex,
-  stepReferenceFindings,
-  assertionReferenceFindings,
+  stepReferences,
+  assertionReferences,
 } = require('./references');
 const { flattenSteps } = require('./steps');
 
-// Severity and wording for every finding code live here and nowhere else.
+// Severity and wording for every finding code: the replay codes are defined
+// here, the referential ones in `references.js`, and `CODES` assembles both, so
+// it is the one table every consumer reads.
 // `blocking` is the `--strict` policy: only a step that cannot run at all fails
 // validation. `clause(n)` is the hint fragment for n findings of the code;
 // `message(f)` is the per-finding text. Advisory codes other than
@@ -50,21 +52,18 @@ const CODES = {
   ...REFERENCE_CODES,
 };
 
-function makeFinding(code, fields, path, stepId) {
-  const f = { code, action: fields.action, path, message: CODES[code].message(fields) };
-  if (stepId !== undefined) f.step_id = stepId;
-  return f;
+// The one constructor for a `data.warnings` entry: `{ code, action, path,
+// message }` plus `step_id` or `assertion_id` from `ids`. `action` is omitted
+// when the finding has none (an assertion).
+function makeFinding(code, fields, path, ids = {}) {
+  const f = { code };
+  if (fields.action !== undefined) f.action = fields.action;
+  f.path = path;
+  f.message = CODES[code].message(fields);
+  return Object.assign(f, ids);
 }
 
-function unsupportedFinding(action, path, stepId) {
-  return makeFinding('unsupported_action', { action }, path, stepId);
-}
-
-// One advisory per catalog marker: the step leaves `sf.field` unset, so the
-// field's default decides. The catalog owns action/field/value.
-function implicitFinding(action, sf, path, stepId) {
-  return makeFinding(sf.warnWhenUnset, { action, field: sf.field, value: sf.value }, path, stepId);
-}
+const stepIds = (step) => (step.id !== undefined ? { step_id: step.id } : {});
 
 // Returns every finding in document order: steps first (including nested
 // sub_steps, depth-first), then precondition device actions, then assertions.
@@ -75,28 +74,29 @@ function findReplayWarnings(scenario) {
   const findings = [];
 
   entries.forEach(({ step, path, isFirstTopLevel }, position) => {
-    if (unsupported.has(step.action)) {
-      findings.push(unsupportedFinding(step.action, path, step.id));
-    }
+    const ids = stepIds(step);
+    const add = (code, fields) => findings.push(makeFinding(code, { action: step.action, ...fields }, path, ids));
+    if (unsupported.has(step.action)) add('unsupported_action', {});
     // Only the scenario's first top-level step is unambiguously a fresh
     // start; any other step that leaves a marked field unset is worth a look.
+    // The catalog owns the marker's code, field and default value.
     if (!isFirstTopLevel) {
       for (const sf of implicitStepFlags(step.action, step)) {
-        findings.push(implicitFinding(step.action, sf, path, step.id));
+        add(sf.warnWhenUnset, { field: sf.field, value: sf.value });
       }
     }
-    findings.push(...stepReferenceFindings(step, path, position, index));
+    for (const r of stepReferences(step, position, index)) add(r.code, r.fields);
   });
 
   const pre = scenario && scenario.preconditions;
   const deviceActions = pre && Array.isArray(pre.device_actions) ? pre.device_actions : [];
   deviceActions.forEach((da, i) => {
     if (da && unsupported.has(da.action)) {
-      findings.push(unsupportedFinding(da.action, `preconditions.device_actions[${i}]`));
+      findings.push(makeFinding('unsupported_action', { action: da.action }, `preconditions.device_actions[${i}]`));
     }
   });
 
-  findings.push(...assertionReferenceFindings(scenario, index));
+  for (const r of assertionReferences(scenario, index)) findings.push(makeFinding(r.code, r.fields, r.path, r.ids));
 
   return findings;
 }

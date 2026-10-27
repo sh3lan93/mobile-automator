@@ -3,8 +3,10 @@
 // Referential checks for scenarios (#272). The schema types every reference as
 // a bare string, so a scenario whose ids, targets and variables do not line up
 // still validates -- and the gap surfaces mid-run, on a device. This module
-// reports those gaps as replay findings; `replayability.js` merges its codes
-// and walks the steps, so `validate` sees one finding list.
+// reports those gaps as finding descriptors -- `{ code, fields }`, plus `path`
+// and `ids` for assertions -- and `replayability.js` turns them into warnings
+// with its one constructor, during its one walk over the steps, so `validate`
+// sees one finding list in one shape.
 //
 // Every code but `missing_wait_config` is blocking: the step or assertion has
 // nothing to resolve against, so it cannot replay unattended. A wait without
@@ -64,15 +66,6 @@ const REFERENCE_CODES = {
   },
 };
 
-function makeFinding(code, fields, path, ids) {
-  const f = { code };
-  if (fields.action !== undefined) f.action = fields.action;
-  f.path = path;
-  f.message = REFERENCE_CODES[code].message(fields);
-  Object.assign(f, ids);
-  return f;
-}
-
 const isNonEmptyString = (v) => typeof v === 'string' && v.length > 0;
 
 // Indexes the flattened step list (see `steps.js`): `after_step` and duplicate
@@ -93,15 +86,15 @@ function referenceIndex(scenario, entries) {
   return { firstPathById, orderById, variables };
 }
 
-// Findings for one step. `position` is its index in the flattened step list,
-// the same numbering `orderById` uses.
-function stepReferenceFindings(step, path, position, index) {
+// Descriptors for one step; the caller supplies its path, action and id.
+// `position` is its index in the flattened step list, the same numbering
+// `orderById` uses.
+function stepReferences(step, position, index) {
   const findings = [];
-  const ids = step.id !== undefined ? { step_id: step.id } : {};
-  const add = (code, fields) => findings.push(makeFinding(code, { action: step.action, ...fields }, path, ids));
+  const add = (code, fields) => findings.push({ code, fields });
 
   const firstPath = index.firstPathById.get(step.id);
-  if (firstPath !== undefined && firstPath !== path) {
+  if (firstPath !== undefined && index.orderById.get(step.id) !== position) {
     add('duplicate_step_id', { ref: step.id, firstPath });
   }
 
@@ -133,8 +126,9 @@ function stepReferenceFindings(step, path, position, index) {
   return findings;
 }
 
-// Findings for the root `assertions` array, in order.
-function assertionReferenceFindings(scenario, index) {
+// Descriptors for the root `assertions` array, in order, each with its path
+// and `assertion_id`.
+function assertionReferences(scenario, index) {
   const assertions = scenario && scenario.assertions;
   if (!Array.isArray(assertions)) return [];
   const findings = [];
@@ -143,11 +137,12 @@ function assertionReferenceFindings(scenario, index) {
     const path = `assertions[${i}]`;
     const ids = a.id !== undefined ? { assertion_id: a.id } : {};
     if (!index.firstPathById.has(a.after_step)) {
-      findings.push(makeFinding('dangling_after_step', { ref: a.after_step }, path, ids));
+      findings.push({ code: 'dangling_after_step', fields: { ref: a.after_step }, path, ids });
     }
     if (a.variable_name !== undefined && !index.variables.has(a.variable_name)) {
-      findings.push(makeFinding('undeclared_capture_variable',
-        { field: 'variable_name', ref: a.variable_name }, path, ids));
+      findings.push({
+        code: 'undeclared_capture_variable', fields: { field: 'variable_name', ref: a.variable_name }, path, ids,
+      });
     }
   });
   return findings;
@@ -156,6 +151,6 @@ function assertionReferenceFindings(scenario, index) {
 module.exports = {
   REFERENCE_CODES,
   referenceIndex,
-  stepReferenceFindings,
-  assertionReferenceFindings,
+  stepReferences,
+  assertionReferences,
 };
