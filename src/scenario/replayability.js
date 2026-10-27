@@ -11,11 +11,21 @@
 //   `warnWhenUnset`. A step after the first that leaves the marked field to its
 //   schema default is ambiguous about the author's intent. Advisory: it never
 //   fails `--strict`.
+// - Referential gaps (#272): duplicate step ids, dangling references, steps
+//   with no target, undeclared variables, waits with no `wait_config`. The
+//   `references` module owns those codes; this one walks the steps and merges
+//   its findings, so `CODES` stays the one table every consumer reads.
 //
 // The unsupported set is derived from the catalog, never restated here, so it
 // moves when an action gains (or loses) a device primitive.
 
 const { actionsByResolution, implicitStepFlags } = require('../device/action-catalog');
+const {
+  REFERENCE_CODES,
+  referenceIndex,
+  stepReferenceFindings,
+  assertionReferenceFindings,
+} = require('./references');
 
 // Severity and wording for every finding code live here and nowhere else.
 // `blocking` is the `--strict` policy: only a step that cannot run at all fails
@@ -35,6 +45,7 @@ const CODES = {
       + `set "${f.field}" explicitly (${JSON.stringify(f.value)} to return to the running app, `
       + `${JSON.stringify(!f.value)} to confirm the restart)`,
   },
+  ...REFERENCE_CODES,
 };
 
 function makeFinding(code, fields, path, stepId) {
@@ -55,11 +66,16 @@ function implicitFinding(action, sf, path, stepId) {
 
 // Walks a step list depth-first in document order, descending into each
 // step's `sub_steps` (the schema types them as steps, so they nest freely).
-function scanSteps(steps, basePath, unsupported, findings, topLevel) {
+// `ctx.visit` counts steps in that order, which is how the reference checks
+// tell an earlier step from a later one.
+function scanSteps(steps, basePath, ctx, findings, topLevel) {
   if (!Array.isArray(steps)) return;
   steps.forEach((step, i) => {
     if (!step) return;
     const path = `${basePath}[${i}]`;
+    const visit = ctx.visit;
+    ctx.visit += 1;
+    const { unsupported } = ctx;
     if (unsupported.has(step.action)) {
       findings.push(unsupportedFinding(step.action, path, step.id));
     }
@@ -70,17 +86,19 @@ function scanSteps(steps, basePath, unsupported, findings, topLevel) {
         findings.push(implicitFinding(step.action, sf, path, step.id));
       }
     }
-    scanSteps(step.sub_steps, `${path}.sub_steps`, unsupported, findings, false);
+    findings.push(...stepReferenceFindings(step, path, visit, ctx.index));
+    scanSteps(step.sub_steps, `${path}.sub_steps`, ctx, findings, false);
   });
 }
 
 // Returns every finding in document order: steps first (including nested
-// sub_steps, depth-first), then precondition device actions.
+// sub_steps, depth-first), then precondition device actions, then assertions.
 function findReplayWarnings(scenario) {
   const unsupported = new Set(actionsByResolution('unsupported'));
+  const index = referenceIndex(scenario);
   const findings = [];
 
-  scanSteps(scenario && scenario.steps, 'steps', unsupported, findings, true);
+  scanSteps(scenario && scenario.steps, 'steps', { unsupported, index, visit: 0 }, findings, true);
 
   const pre = scenario && scenario.preconditions;
   const deviceActions = pre && Array.isArray(pre.device_actions) ? pre.device_actions : [];
@@ -89,6 +107,8 @@ function findReplayWarnings(scenario) {
       findings.push(unsupportedFinding(da.action, `preconditions.device_actions[${i}]`));
     }
   });
+
+  findings.push(...assertionReferenceFindings(scenario, index));
 
   return findings;
 }

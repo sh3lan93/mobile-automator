@@ -1,0 +1,170 @@
+'use strict';
+
+// Referential checks for scenarios (#272). The schema types every reference as
+// a bare string, so a scenario whose ids, targets and variables do not line up
+// still validates -- and the gap surfaces mid-run, on a device. This module
+// reports those gaps as replay findings; `replayability.js` merges its codes
+// and walks the steps, so `validate` sees one finding list.
+//
+// Every code but `missing_wait_config` is blocking: the step or assertion has
+// nothing to resolve against, so it cannot replay unattended. A wait without
+// `wait_config` still runs on the default timeout, so that one is advisory.
+
+// Step actions that locate an element on screen, so need a `target` (or a
+// `target_pattern`) to resolve it.
+const TARGET_ACTIONS = new Set([
+  'tap',
+  'long_press',
+  'double_tap',
+  'wait_for_element',
+  'wait_for_element_gone',
+  'scroll_to_element',
+  'capture_value',
+]);
+
+// Step actions the schema's `wait_config` configures.
+const WAIT_ACTIONS = new Set(['wait_for_element', 'wait_for_element_gone', 'wait_for_loading_complete']);
+
+const REFERENCE_CODES = {
+  duplicate_step_id: {
+    blocking: true,
+    clause: (n) => `${n} step id(s) are declared more than once`,
+    message: (f) => `step id "${f.ref}" is already used by ${f.firstPath}; `
+      + 'step ids must be unique so assertions and conditions can name one step',
+  },
+  dangling_after_step: {
+    blocking: true,
+    clause: (n) => `${n} assertion(s) run after a step that does not exist`,
+    message: (f) => (f.ref === undefined
+      ? 'assertion has no "after_step"; name the step it runs after'
+      : `assertion runs after step "${f.ref}", which no step declares`),
+  },
+  missing_target: {
+    blocking: true,
+    clause: (n) => `${n} step(s) have no target to resolve`,
+    message: (f) => `${f.action} has no "target" (or "target_pattern"), so there is no element to resolve`,
+  },
+  undeclared_capture_variable: {
+    blocking: true,
+    clause: (n) => `${n} variable reference(s) are not declared in "variables"`,
+    message: (f) => `"${f.field}" names variable "${f.ref}", which the root "variables" block does not declare`,
+  },
+  dangling_condition_step: {
+    blocking: true,
+    clause: (n) => `${n} condition(s) refer to a step that has not run`,
+    message: (f) => (f.ref === undefined
+      ? 'previous_step_skipped condition has no "step_id"; name an earlier step'
+      : `previous_step_skipped condition names step "${f.ref}", which is not an earlier step`),
+  },
+  missing_wait_config: {
+    blocking: false,
+    clause: (n) => `${n} wait step(s) have no wait_config; the default timeout applies`,
+    message: (f) => `${f.action} has no "wait_config", so it waits for the default timeout; `
+      + 'set "wait_config" to make the wait explicit',
+  },
+};
+
+function makeFinding(code, fields, path, ids) {
+  const f = { code };
+  if (fields.action !== undefined) f.action = fields.action;
+  f.path = path;
+  f.message = REFERENCE_CODES[code].message(fields);
+  Object.assign(f, ids);
+  return f;
+}
+
+const isNonEmptyString = (v) => typeof v === 'string' && v.length > 0;
+
+// One pre-pass over the whole step tree, in the same depth-first document
+// order `scanSteps` uses: `after_step` and duplicate detection need every
+// step, and a condition's step must come earlier in that order.
+function referenceIndex(scenario) {
+  const firstPathById = new Map();
+  const orderById = new Map();
+  let n = 0;
+  const walk = (steps, basePath) => {
+    if (!Array.isArray(steps)) return;
+    steps.forEach((step, i) => {
+      if (!step) return;
+      const path = `${basePath}[${i}]`;
+      if (typeof step.id === 'string' && !firstPathById.has(step.id)) {
+        firstPathById.set(step.id, path);
+        orderById.set(step.id, n);
+      }
+      n += 1;
+      walk(step.sub_steps, `${path}.sub_steps`);
+    });
+  };
+  walk(scenario && scenario.steps, 'steps');
+
+  const vars = scenario && scenario.variables;
+  const variables = new Set(vars && typeof vars === 'object' && !Array.isArray(vars) ? Object.keys(vars) : []);
+  return { firstPathById, orderById, variables };
+}
+
+// Findings for one step. `visit` is the step's position in the document-order
+// walk, so it matches `orderById` for the first step with each id.
+function stepReferenceFindings(step, path, visit, index) {
+  const findings = [];
+  const ids = step.id !== undefined ? { step_id: step.id } : {};
+  const add = (code, fields) => findings.push(makeFinding(code, { action: step.action, ...fields }, path, ids));
+
+  const firstPath = index.firstPathById.get(step.id);
+  if (firstPath !== undefined && firstPath !== path) {
+    add('duplicate_step_id', { ref: step.id, firstPath });
+  }
+
+  if (TARGET_ACTIONS.has(step.action) && !isNonEmptyString(step.target) && !isNonEmptyString(step.target_pattern)) {
+    add('missing_target', {});
+  }
+
+  if (WAIT_ACTIONS.has(step.action) && !step.wait_config) {
+    add('missing_wait_config', {});
+  }
+
+  if (step.capture_to !== undefined && !index.variables.has(step.capture_to)) {
+    add('undeclared_capture_variable', { field: 'capture_to', ref: step.capture_to });
+  }
+
+  const cond = step.condition;
+  if (cond && typeof cond === 'object') {
+    if (cond.variable_name !== undefined && !index.variables.has(cond.variable_name)) {
+      add('undeclared_capture_variable', { field: 'condition.variable_name', ref: cond.variable_name });
+    }
+    if (cond.type === 'previous_step_skipped') {
+      const order = index.orderById.get(cond.step_id);
+      if (order === undefined || order >= visit) {
+        add('dangling_condition_step', { ref: cond.step_id });
+      }
+    }
+  }
+
+  return findings;
+}
+
+// Findings for the root `assertions` array, in order.
+function assertionReferenceFindings(scenario, index) {
+  const assertions = scenario && scenario.assertions;
+  if (!Array.isArray(assertions)) return [];
+  const findings = [];
+  assertions.forEach((a, i) => {
+    if (!a) return;
+    const path = `assertions[${i}]`;
+    const ids = a.id !== undefined ? { assertion_id: a.id } : {};
+    if (!index.firstPathById.has(a.after_step)) {
+      findings.push(makeFinding('dangling_after_step', { ref: a.after_step }, path, ids));
+    }
+    if (a.variable_name !== undefined && !index.variables.has(a.variable_name)) {
+      findings.push(makeFinding('undeclared_capture_variable',
+        { field: 'variable_name', ref: a.variable_name }, path, ids));
+    }
+  });
+  return findings;
+}
+
+module.exports = {
+  REFERENCE_CODES,
+  referenceIndex,
+  stepReferenceFindings,
+  assertionReferenceFindings,
+};

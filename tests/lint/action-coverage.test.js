@@ -18,6 +18,7 @@ const { ACTION_METHOD } = require('../../src/device/semantic-press');
 const { buildProgram } = require('../../src/cli');
 const { emitBootstrap } = require('../../src/guide/emitter');
 const { CODES } = require('../../src/scenario/replayability');
+const { REFERENCE_CODES } = require('../../src/scenario/references');
 const { shippingDocs } = require('./docs-corpus');
 
 const REPO = path.join(__dirname, '..', '..');
@@ -126,10 +127,12 @@ describe('action coverage — schema ↔ catalog ↔ verbs ↔ guide', () => {
       expect(implicitStepFlags(action, { action, [sf.field]: !sf.value })).toEqual([]);
     });
 
-    test('every CODES key other than unsupported_action is a catalog marker', () => {
+    // Reference codes (#272) are about scenario shape, not a catalog field, so
+    // the references module owns them; every other code must be a marker.
+    test('every CODES key other than unsupported_action and the reference codes is a catalog marker', () => {
       const markers = markerRows.map(([, sf]) => sf.warnWhenUnset);
       for (const code of Object.keys(CODES)) {
-        if (code === 'unsupported_action') continue;
+        if (code === 'unsupported_action' || code in REFERENCE_CODES) continue;
         expect(markers).toContain(code);
       }
     });

@@ -258,7 +258,7 @@ function handleValidate({ validator }, file, opts = {}) {
     }
     const { blocking, hint } = summarize(warnings);
     if (opts.strict && blocking.length > 0) {
-      const env = fail('invalid_input', 'scenario uses actions with no execution path', hint);
+      const env = fail('invalid_input', 'scenario cannot replay unattended; see data.warnings', hint);
       env.data = { valid: false, errors: [], warnings };
       return { envelope: env, exitKind: 'invalid_input' };
     }
