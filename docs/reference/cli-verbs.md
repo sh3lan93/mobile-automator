@@ -101,6 +101,7 @@ Used to author scenario JSON, evaluate assertions, and assemble result files.
 | `mauto result add-step --run-id --step-id --status [--scenario-id --attempts --screenshot --error-message --observation <type>:<message> --capture <name>=<value>]` | Append a step result to a run; `--observation` and `--capture` are repeatable |
 | `mauto result add-assertion --run-id --step-id --type --pass [--scenario-id --assertion-id --message --expected --actual]` | Record an assertion verdict against a step |
 | `mauto result finalize --run-id [--scenario-id --status --duration --app-version --device-model --api-level --environment --summary]` | Assemble the final [result file](result-schema.md) and auto-harvest memory |
+| `mauto result export --run-id <id> [--run-id <id>…] --format junit [--out <path>]` | Render finalized result files as JUnit XML for a CI test reporter; read-only. Returns `{format, path, suites, tests, failures, skipped}`, with the XML in `data.xml` when `--out` is omitted |
 
 !!! note "`validate` and replay warnings"
     Schema-valid is not the same as replayable, so `validate` also reports replay warnings in `data.warnings`, with a summarising `hint`. A scenario with nothing to report gets the bare `{"valid": true}`.
@@ -111,6 +112,11 @@ Used to author scenario JSON, evaluate assertions, and assemble result files.
     |---|---|---|---|
     | `unsupported_action` | blocking | The step or precondition uses an action the action catalog marks `unsupported`: the engine exposes no primitive for it, so no `mauto` verb can run it and it cannot replay unattended. | Fails with `invalid_input` and `data.valid: false` |
     | `launch_cold_implicit` | advisory | A `launch_app` step leaves `cold` unset and is not the scenario's first top-level step (any launch inside `sub_steps` counts). It restarts the app; set `"cold": false` to resume or `"cold": true` to confirm the restart, and the warning goes away. | Never fails |
+
+!!! note "`result export` and JUnit"
+    `result export` reads the [result files](result-schema.md) of the given runs and renders one JUnit document: a `<testsuite>` per run (named by `scenario_id`), a `<testcase>` per assertion, plus one per failed or errored step (`step: <step_id>`). A failed assertion or step carries a `<failure>`; an assertion or step marked `needs_agent` is `<skipped>`. A run whose status is `failed` or `error` with nothing failing recorded gets one `run status` failure, so a red run never reads green. The run id, status, `metadata` and any `executor` provenance appear as `<properties>`.
+
+    Only finalized runs export: an unknown run id, a malformed run id, a file that is not JSON, or a run that was never finalized fails the whole export with `invalid_input` and writes nothing. The export exits 0 whatever the runs' outcome — it is a report, not a gate. It never modifies the result files.
 
 !!! note "`result finalize` and memory"
     On finalize, `mauto` auto-harvests typed observations into cross-session memory. This is best-effort: a memory failure never fails an otherwise-successful finalize — it folds into the envelope `hint` instead. See [Cross-Session Memory](../concepts/memory.md).

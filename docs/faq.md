@@ -509,16 +509,21 @@ mauto devices
 # Validate a scenario before running it
 mauto validate .mobile-automator/scenarios/login_flow.json
 
-# (Your agent replays the scenario via mauto guide execute + verbs.)
+# One run id for this job; result files are named after it
+RUN_ID="run_$(date -u +%Y%m%d_%H%M%S)"
 
-# Check results
-cat .mobile-automator/results/latest.json | jq '.status'
+# (Your agent replays the scenario via mauto guide execute + verbs,
+#  recording the run under $RUN_ID.)
+
+# Export the run as JUnit XML for the CI test reporter
+mauto result export --run-id "$RUN_ID" --format junit --out reports/mauto-junit.xml
 ```
 
 **CI/CD tips:**
 - Cache `node_modules` so `npm install` is fast on subsequent runs
 - Connect a device or boot an emulator/simulator in the CI environment
 - Run `mauto` verbs with `--human` off (the default JSON envelope is machine-readable)
+- Point your CI's JUnit reporter at the exported XML; `result export` exits 0 whatever the run's outcome, so the reporter (or the run's own verbs) decides whether the job fails
 - Archive result files as CI artifacts
 
 ### Can I use mobile-automator with GitHub Actions?
