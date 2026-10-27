@@ -65,9 +65,9 @@ describe('buildPromptHandlers', () => {
     test('resolves mode from the workspace config', () => {
       const calls = [];
       const projectRoot = tmpRoot();
-      fs.mkdirSync(path.join(projectRoot, 'mobile-automator'), { recursive: true });
+      fs.mkdirSync(path.join(projectRoot, '.mobile-automator'), { recursive: true });
       fs.writeFileSync(
-        path.join(projectRoot, 'mobile-automator', 'config.json'),
+        path.join(projectRoot, '.mobile-automator', 'config.json'),
         JSON.stringify({ mode: 'platform-agnostic' })
       );
       const { getPrompt } = buildPromptHandlers({ projectRoot, emitGuide: fakeEmitGuide(calls) });

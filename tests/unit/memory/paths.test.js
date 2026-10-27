@@ -10,12 +10,12 @@ describe('memory/paths', () => {
   const root = '/tmp/proj';
 
   test('memoryDir is under the workspace', () => {
-    expect(memoryDir(root)).toBe(path.join(root, 'mobile-automator', 'memory'));
+    expect(memoryDir(root)).toBe(path.join(root, '.mobile-automator', 'memory'));
   });
 
   test('memoryFile resolves each known file', () => {
     expect(memoryFile(root, 'run-history')).toBe(
-      path.join(root, 'mobile-automator', 'memory', 'run-history.md')
+      path.join(root, '.mobile-automator', 'memory', 'run-history.md')
     );
     expect(FILES['app-knowledge']).toBe('app-knowledge.md');
     expect(FILES['preferences']).toBe('preferences.md');
@@ -23,14 +23,14 @@ describe('memory/paths', () => {
 
   test('lockPath lives in the gitignored .session dir', () => {
     expect(lockPath(root)).toBe(
-      path.join(root, 'mobile-automator', '.session', 'memory.lock')
+      path.join(root, '.mobile-automator', '.session', 'memory.lock')
     );
-    expect(sessionDir(root)).toBe(path.join(root, 'mobile-automator', '.session'));
+    expect(sessionDir(root)).toBe(path.join(root, '.mobile-automator', '.session'));
   });
 
-  test('scaffold creates mobile-automator/memory/', () => {
+  test('scaffold creates .mobile-automator/memory/', () => {
     const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scaffold-'));
     scaffold(tmpRoot, { mode: 'platform-aware' });
-    expect(fs.existsSync(path.join(tmpRoot, 'mobile-automator', 'memory'))).toBe(true);
+    expect(fs.existsSync(path.join(tmpRoot, '.mobile-automator', 'memory'))).toBe(true);
   });
 });

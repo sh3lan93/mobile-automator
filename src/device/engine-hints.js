@@ -74,7 +74,7 @@ function deviceNotFoundHint(id) {
 // directory". The engine runs from the project root (the daemon is spawned
 // there), which is not necessarily the directory the user ran the verb from.
 const OUTSIDE_ALLOWED_DIRS_HINT =
-  'Screenshots must be saved under the project root (the directory containing mobile-automator/) ' +
+  'Screenshots must be saved under the project root (the directory containing .mobile-automator/) ' +
   'or the system temp directory. Choose a path inside one of them and retry.';
 
 function engineHint(message, { mobilecliVersion = resolveMobilecliVersion } = {}) {

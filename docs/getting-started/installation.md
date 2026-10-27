@@ -77,7 +77,7 @@ mauto setup                    # add --mode agnostic for cross-platform apps
 ```
 
 - `init` installs native Agent Skills into the host's skills directory (`.claude/skills/`, `.cursor/skills/`, `.gemini/skills/`, `.github/skills/`, `.agents/skills/`) and, for Claude Code and Cursor, also writes slash-commands/rules and the `mauto` MCP entry (`.mcp.json`).
-- `setup` scaffolds the `mobile-automator/` workspace and writes `mobile-automator/config.json`. Add `--mode agnostic` for cross-platform apps (Flutter/RN/KMP/CMP).
+- `setup` scaffolds the `.mobile-automator/` workspace and writes `.mobile-automator/config.json`. Add `--mode agnostic` for cross-platform apps (Flutter/RN/KMP/CMP).
 
 ### 4. Verify Your Device Is Visible
 

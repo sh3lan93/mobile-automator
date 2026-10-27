@@ -859,7 +859,7 @@ describe('cli handlers', () => {
     test('threads a corruption warning into the success envelope hint', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cli-'));
       const runId = 'run_20260614_130000';
-      const dir = path.join(projectRoot, 'mobile-automator', 'results');
+      const dir = path.join(projectRoot, '.mobile-automator', 'results');
       fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(path.join(dir, `${runId}.json`), '{ truncated <<<');
 
@@ -884,13 +884,13 @@ describe('cli handlers', () => {
         scenarioId: 'login_smoke',
         stepId: 'verify_home',
         status: 'fail',
-        screenshot: 'mobile-automator/screenshots/verify_home.png',
+        screenshot: '.mobile-automator/screenshots/verify_home.png',
         errorMessage: 'Login button not found',
         observation: ['regression:logo is gone', 'state_context:dark mode was active'],
         capture: ['order_id=A-1729'],
       });
       expect(a.exitKind).toBe('ok');
-      expect(a.envelope.data.step.screenshot).toBe('mobile-automator/screenshots/verify_home.png');
+      expect(a.envelope.data.step.screenshot).toBe('.mobile-automator/screenshots/verify_home.png');
       expect(a.envelope.data.step.error_message).toBe('Login button not found');
 
       const f = handleResultFinalize(deps, { runId, status: 'failed', duration: 3 });
@@ -923,7 +923,7 @@ describe('cli handlers', () => {
         observation: ['typo:something'],
       });
       // The rejected invocation must not have half-recorded the step.
-      const file = path.join(deps.projectRoot, 'mobile-automator', 'results', `${runId}.json`);
+      const file = path.join(deps.projectRoot, '.mobile-automator', 'results', `${runId}.json`);
       expect(fs.existsSync(file)).toBe(false);
     });
 
@@ -986,13 +986,13 @@ describe('cli handlers', () => {
   describe('measured duration', () => {
     function project() {
       const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-finalize-'));
-      fs.mkdirSync(path.join(root, 'mobile-automator', '.logs'), { recursive: true });
+      fs.mkdirSync(path.join(root, '.mobile-automator', '.logs'), { recursive: true });
       return root;
     }
 
     function trace(root, runId, stamps) {
       fs.writeFileSync(
-        path.join(root, 'mobile-automator', '.logs', `run-${runId}.ndjson`),
+        path.join(root, '.mobile-automator', '.logs', `run-${runId}.ndjson`),
         stamps
           .map((s) => JSON.stringify({ ts: s.ts, v: 1, src: 'cli', event: s.event || 'verb.end', ...s }))
           .join('\n') + '\n'
@@ -1078,7 +1078,7 @@ describe('cli handlers', () => {
     test('never lets an unreadable trace fail the finalize', () => {
       const root = project();
       // A directory where the trace file should be: readFileSync throws EISDIR.
-      fs.mkdirSync(path.join(root, 'mobile-automator', '.logs', 'run-run_20260905_141506.ndjson'));
+      fs.mkdirSync(path.join(root, '.mobile-automator', '.logs', 'run-run_20260905_141506.ndjson'));
       const r = handleResultFinalize(deps(root), { runId: 'run_20260905_141506', duration: '9' });
       expect(r.exitKind).toBe('ok');
       expect(r.envelope.data.duration_seconds).toBe(9);
@@ -1086,7 +1086,7 @@ describe('cli handlers', () => {
 
     test('prunes stale traces but never the one it just measured', () => {
       const root = project();
-      const dir = path.join(root, 'mobile-automator', '.logs');
+      const dir = path.join(root, '.mobile-automator', '.logs');
       for (let i = 0; i < 25; i += 1) {
         const f = path.join(dir, `run-old${i}.ndjson`);
         fs.writeFileSync(f, '{}\n');
@@ -1168,15 +1168,29 @@ describe('cli handlers', () => {
       expect(envelope.ok).toBe(true);
       expect(envelope.data.mode).toBe('platform-aware');
       expect(envelope.data.next).toContain('mauto guide setup');
-      expect(fs.existsSync(path.join(projectRoot, 'mobile-automator', 'scenarios'))).toBe(true);
+      expect(fs.existsSync(path.join(projectRoot, '.mobile-automator', 'scenarios'))).toBe(true);
     });
 
     test('maps agnostic->platform-agnostic and writes config mode', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-'));
       const { envelope } = handleSetup({ projectRoot }, { mode: 'agnostic' });
       expect(envelope.data.mode).toBe('platform-agnostic');
-      const cfg = JSON.parse(fs.readFileSync(path.join(projectRoot, 'mobile-automator', 'config.json'), 'utf8'));
+      const cfg = JSON.parse(fs.readFileSync(path.join(projectRoot, '.mobile-automator', 'config.json'), 'utf8'));
       expect(cfg.mode).toBe('platform-agnostic');
+    });
+
+    test('refuses when discovery reports a legacy workspace (legacyRoot)', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-legacy-'));
+      const { exitKind, envelope } = handleSetup({ projectRoot, legacyRoot: projectRoot }, { mode: 'aware' });
+      expect(exitKind).toBe('environment');
+      expect(envelope.error.message).toContain('legacy');
+      expect(fs.existsSync(path.join(projectRoot, '.mobile-automator'))).toBe(false);
+    });
+
+    test('scaffolds normally when no legacy workspace is reported', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-both-'));
+      const { envelope } = handleSetup({ projectRoot, legacyRoot: null }, { mode: 'aware' });
+      expect(envelope.ok).toBe(true);
     });
 
     test('defaults to platform-aware when no --mode given', () => {
@@ -1232,7 +1246,7 @@ describe('cli handlers', () => {
       expect(setR.envelope.data.value).toEqual(['stagingDebug', 'productionRelease']);
       // And it is a real JSON array on disk.
       const onDisk = JSON.parse(
-        fs.readFileSync(path.join(projectRoot, 'mobile-automator', 'config.json'), 'utf8')
+        fs.readFileSync(path.join(projectRoot, '.mobile-automator', 'config.json'), 'utf8')
       );
       expect(onDisk.environments).toEqual(['stagingDebug', 'productionRelease']);
     });
@@ -1267,7 +1281,7 @@ describe('cli handlers', () => {
       expect(r.envelope.hint).toMatch(/mauto schema config/);
       // Nothing was written.
       expect(
-        fs.existsSync(path.join(projectRoot, 'mobile-automator', 'config.json'))
+        fs.existsSync(path.join(projectRoot, '.mobile-automator', 'config.json'))
       ).toBe(false);
     });
 
@@ -1279,7 +1293,7 @@ describe('cli handlers', () => {
       expect(r.envelope.error.kind).toBe('invalid_input');
       // Nothing was written.
       expect(
-        fs.existsSync(path.join(projectRoot, 'mobile-automator', 'config.json'))
+        fs.existsSync(path.join(projectRoot, '.mobile-automator', 'config.json'))
       ).toBe(false);
     });
 
@@ -1301,8 +1315,8 @@ describe('cli handlers', () => {
 
     test('a rejected set against an EXISTING config leaves the file byte-identical (Minor 7)', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-'));
-      fs.mkdirSync(path.join(projectRoot, 'mobile-automator'), { recursive: true });
-      const configPath = path.join(projectRoot, 'mobile-automator', 'config.json');
+      fs.mkdirSync(path.join(projectRoot, '.mobile-automator'), { recursive: true });
+      const configPath = path.join(projectRoot, '.mobile-automator', 'config.json');
       const before = JSON.stringify({ project_name: 'Demo', mode: 'platform-aware' });
       fs.writeFileSync(configPath, before);
       const r = handleConfigSet({ projectRoot }, 'mode', 'windows');
@@ -1315,9 +1329,9 @@ describe('cli handlers', () => {
 
     test('an unrelated pre-existing bad value does not block a valid write', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-'));
-      fs.mkdirSync(path.join(projectRoot, 'mobile-automator'), { recursive: true });
+      fs.mkdirSync(path.join(projectRoot, '.mobile-automator'), { recursive: true });
       fs.writeFileSync(
-        path.join(projectRoot, 'mobile-automator', 'config.json'),
+        path.join(projectRoot, '.mobile-automator', 'config.json'),
         JSON.stringify({ platform_details: 42 })
       );
       const r = handleConfigSet({ projectRoot }, 'project_name', 'Demo');
@@ -2197,10 +2211,10 @@ describe('cli handlers', () => {
     function tmpRoot() {
       const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-failcap-cli-'));
       // A real workspace: the capture and the trace sink both treat an
-      // existing mobile-automator/ as the permission to write (#188). A bare
+      // existing .mobile-automator/ as the permission to write (#188). A bare
       // root leaves both silent — which is the no-workspace behavior, not
       // the one under test here.
-      fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+      fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
       return root;
     }
 
@@ -2216,7 +2230,7 @@ describe('cli handlers', () => {
     }
 
     function traceEvents(root, runId) {
-      const file = path.join(root, 'mobile-automator', '.logs', `run-${runId}.ndjson`);
+      const file = path.join(root, '.mobile-automator', '.logs', `run-${runId}.ndjson`);
       return fs.existsSync(file)
         ? fs.readFileSync(file, 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l))
         : [];
@@ -2333,7 +2347,7 @@ describe('cli handlers', () => {
     // run correlation, matching the plan's own probeCrashes signature/tests,
     // neither of which take a runId.
     function mainLogEvents(root) {
-      const file = path.join(root, 'mobile-automator', '.logs', 'mauto.ndjson');
+      const file = path.join(root, '.mobile-automator', '.logs', 'mauto.ndjson');
       return fs.existsSync(file)
         ? fs.readFileSync(file, 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l))
         : [];
@@ -2809,7 +2823,7 @@ describe('cli handlers', () => {
           '--step-id', 'step_1',
           '--status', 'fail',
           '--attempts', '3',
-          '--screenshot', 'mobile-automator/screenshots/step_1.png',
+          '--screenshot', '.mobile-automator/screenshots/step_1.png',
           '--error-message', 'button not found',
           '--observation', 'regression:logo is gone',
           '--observation', 'state_context:dark mode was active',
@@ -2828,7 +2842,7 @@ describe('cli handlers', () => {
           step_id: 'step_1',
           status: 'fail',
           attempts: 3,
-          screenshot: 'mobile-automator/screenshots/step_1.png',
+          screenshot: '.mobile-automator/screenshots/step_1.png',
           error_message: 'button not found',
         },
       ]);
@@ -2940,8 +2954,8 @@ describe('mauto telemetry', () => {
 
   function workspace(config = {}) {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-tv-'));
-    fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
-    fs.writeFileSync(path.join(root, 'mobile-automator', 'config.json'), JSON.stringify(config, null, 2));
+    fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.mobile-automator', 'config.json'), JSON.stringify(config, null, 2));
     return root;
   }
 
@@ -2997,7 +3011,7 @@ describe('mauto telemetry', () => {
     const { envelope } = handleTelemetryEnable({ projectRoot: root, env: { MAUTO_TELEMETRY_TOKEN: 'phc_real' } });
     expect(envelope.ok).toBe(true);
     expect(envelope.data.enabled).toBe(true);
-    const cfg = JSON.parse(fs.readFileSync(path.join(root, 'mobile-automator', 'config.json'), 'utf8'));
+    const cfg = JSON.parse(fs.readFileSync(path.join(root, '.mobile-automator', 'config.json'), 'utf8'));
     expect(cfg.telemetry.enabled).toBe(true);
   });
 
@@ -3013,7 +3027,7 @@ describe('mauto telemetry', () => {
     expect(envelope.hint).toMatch(/MAUTO_TELEMETRY/);
     // The durable intent is still recorded — the env var is this shell's
     // override, not a rewrite of what the project owner asked for.
-    const cfg = JSON.parse(fs.readFileSync(path.join(root, 'mobile-automator', 'config.json'), 'utf8'));
+    const cfg = JSON.parse(fs.readFileSync(path.join(root, '.mobile-automator', 'config.json'), 'utf8'));
     expect(cfg.telemetry.enabled).toBe(true);
   });
 
@@ -3021,7 +3035,7 @@ describe('mauto telemetry', () => {
     const root = workspace({ telemetry: { enabled: true } });
     const { envelope } = handleTelemetryDisable({ projectRoot: root, env: {} });
     expect(envelope.data.enabled).toBe(false);
-    const cfg = JSON.parse(fs.readFileSync(path.join(root, 'mobile-automator', 'config.json'), 'utf8'));
+    const cfg = JSON.parse(fs.readFileSync(path.join(root, '.mobile-automator', 'config.json'), 'utf8'));
     expect(cfg.telemetry.enabled).toBe(false);
   });
 

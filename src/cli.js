@@ -41,7 +41,11 @@ const observeTelemetry = require('./observe/telemetry');
 const observeSpool = require('./observe/spool');
 const observeTransport = require('./observe/transport');
 const { makeFlusher } = require('./observe/flush');
-const { findWorkspaceRoot, noWorkspaceFailure } = require('./workspace/discover');
+const {
+  findWorkspaceRoot,
+  workspaceFailure,
+  legacyWorkspaceFailure,
+} = require('./workspace/discover');
 
 // Commander throws (via exitOverride) for two very different reasons, and the
 // split below is the ONLY thing that tells them apart.
@@ -873,7 +877,13 @@ function storeHint(store) {
 // still scaffolds in cwd — it is the one verb whose job is to create a
 // workspace where the user stands — but a nested workspace silently shadows
 // the ancestor for every later verb run below it, so say so.
-function handleSetup({ projectRoot, ancestorRoot = null }, opts = {}) {
+//
+// `legacyRoot` is the pre-rename workspace discovery found at or above cwd, if
+// any (and no new workspace beside or above it). Discovery owns that walk, so
+// setup honours the same answer every other verb does: checking only cwd let
+// `mauto setup` from a subdirectory scaffold a nested workspace under a legacy
+// project, the split state this refusal exists to prevent.
+function handleSetup({ projectRoot, ancestorRoot = null, legacyRoot = null }, opts = {}) {
   const raw = opts.mode === undefined ? 'aware' : String(opts.mode);
   const mode = MODE_ALIASES[raw];
   if (!mode) {
@@ -882,6 +892,10 @@ function handleSetup({ projectRoot, ancestorRoot = null }, opts = {}) {
       exitKind: 'invalid_input',
     };
   }
+  // Scaffolding beside an un-migrated legacy workspace would fork the user's
+  // state into two directories. Discovery reports no legacy root once a new
+  // workspace exists, so a user mid-recovery gets through.
+  if (legacyRoot) return legacyWorkspaceFailure(legacyRoot);
   const r = scaffold(projectRoot, { mode });
   const hint = ancestorRoot
     ? `An existing workspace was found in an ancestor directory (${ancestorRoot}). This new workspace in ${projectRoot} shadows it for every mauto verb run from here or below; remove it if you meant to use the ancestor's.`
@@ -1725,8 +1739,8 @@ function buildProgram(deps = {}) {
     workspace = deps.projectRoot !== undefined
       ? { root: deps.projectRoot, searched: [deps.projectRoot] }
       : findWorkspaceRoot(cwd),
-    // Project root used to resolve mobile-automator/results/ — and, through the
-    // emitters below, mobile-automator/.logs/. One root, one tree. The
+    // Project root used to resolve .mobile-automator/results/ — and, through the
+    // emitters below, .mobile-automator/.logs/. One root, one tree. The
     // discovered workspace when there is one; cwd otherwise, which is what the
     // tolerant verbs (guide, mcp, read-only device/session) have always used.
     projectRoot = workspace.root || cwd,
@@ -1827,7 +1841,7 @@ function buildProgram(deps = {}) {
   // (exit 5) naming where we looked, so the agent can recover.
   const requireWorkspace = (action) => (...args) => {
     if (!workspace.root) {
-      emit(noWorkspaceFailure(workspace.searched), humanFlag());
+      emit(workspaceFailure(workspace), humanFlag());
       return undefined;
     }
     return action(...args);
@@ -1867,7 +1881,7 @@ function buildProgram(deps = {}) {
     let close;
     try {
       // autostart: the daemon is a per-workspace artifact — its .session/ tree
-      // and logs live under mobile-automator/. With no discovered workspace
+      // and logs live under .mobile-automator/. With no discovered workspace
       // there is nowhere legitimate to put one, so never autostart: the verb
       // connects one-shot and creates nothing. `ok:true` plus a phantom
       // workspace is the exact #188 pathology.
@@ -2198,13 +2212,16 @@ function buildProgram(deps = {}) {
 
   program
     .command('setup')
-    .description('Scaffold the workspace (mobile-automator/) and write a config')
+    .description('Scaffold the workspace (.mobile-automator/) and write a config')
     .option('--mode <mode>', 'aware (platform-aware, default) | agnostic (platform-agnostic)')
     .action(withEnvelope((opts) => {
       // cwd, not the discovered root: setup creates a workspace where the user
       // stands. A discovered root that is not cwd is an ancestor worth naming.
       const ancestorRoot = workspace.root && workspace.root !== cwd ? workspace.root : null;
-      const r = handleSetup({ projectRoot: cwd, ancestorRoot }, { mode: opts.mode });
+      const r = handleSetup(
+        { projectRoot: cwd, ancestorRoot, legacyRoot: workspace.legacy || null },
+        { mode: opts.mode }
+      );
       emit(r, humanFlag());
     }));
 
@@ -2388,12 +2405,12 @@ function buildProgram(deps = {}) {
     .description('Inspect and control anonymous usage telemetry (off by default)');
 
   // requireWorkspace, same as config get/set: telemetry status/enable/disable
-  // all read or write mobile-automator/config.json, and flush reads/claims
-  // mobile-automator/.logs/telemetry.spool, so all four have #188's exact
+  // all read or write .mobile-automator/config.json, and flush reads/claims
+  // .mobile-automator/.logs/telemetry.spool, so all four have #188's exact
   // failure mode without the gate — status would report the SAME
   // not_configured/no_token answer for "no workspace here" as for "a real,
   // just-unconfigured workspace", and enable/disable would create a stray
-  // mobile-automator/ wherever the caller happened to be standing.
+  // .mobile-automator/ wherever the caller happened to be standing.
   telemetryCmd
     .command('status')
     .description('Report whether telemetry is on, what would be sent, and what is queued')

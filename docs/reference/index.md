@@ -156,7 +156,7 @@ The full `mauto` verb surface — device actions, authoring, workspace, reasonin
 
 ### Memory
 
-How mobile-automator learns across sessions: the auto-harvested `run-history` plus agent-authored `app-knowledge` and `preferences`, stored under `mobile-automator/memory/`.
+How mobile-automator learns across sessions: the auto-harvested `run-history` plus agent-authored `app-knowledge` and `preferences`, stored under `.mobile-automator/memory/`.
 
 **[Memory Concept →](../concepts/memory.md)**
 
@@ -280,10 +280,10 @@ Scenario files and result files version themselves independently, with **differe
 
 ## File Locations
 
-All test artifacts are stored under the `mobile-automator/` directory in the project root. `mauto` finds it from any subdirectory by walking up to the nearest `mobile-automator/config.json`, stopping at the repository root (`.git`):
+All test artifacts are stored under the `.mobile-automator/` directory in the project root. `mauto` finds it from any subdirectory by walking up to the nearest `.mobile-automator/config.json`, stopping at the repository root (`.git`):
 
 ```
-mobile-automator/
+.mobile-automator/
 ├── config.json                 # Project configuration
 ├── index.md                    # Scenario index
 ├── scenarios/                  # Test scenario JSON files

@@ -9,7 +9,7 @@ const { emitGuide } = require('../../../src/guide/emitter');
 function tmpProject(config) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-exec-'));
   if (config) {
-    const dir = path.join(root, 'mobile-automator');
+    const dir = path.join(root, '.mobile-automator');
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify(config, null, 2));
   }
@@ -180,4 +180,21 @@ describe('guide emitter — real execute content', () => {
       expect(out).not.toMatch(/\.gemini\//);
     });
   });
+});
+
+describe('execute guide — hidden workspace', () => {
+  const BARE = /(^|[^.\w])mobile-automator\//m;
+  for (const mode of ['platform-aware', 'platform-agnostic']) {
+    describe(mode, () => {
+      const out = emitGuide('execute', { mode });
+      it('names the workspace as .mobile-automator/ and never the bare name', () => {
+        expect(out).toContain('.mobile-automator/scenarios/');
+        expect(out).not.toMatch(BARE);
+      });
+      it('tells the agent to list the scenarios directory directly', () => {
+        expect(out).toMatch(/list `?\.mobile-automator\/scenarios\/`? directly/i);
+        expect(out).toMatch(/hidden/i);
+      });
+    });
+  }
 });

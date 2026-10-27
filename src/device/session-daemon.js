@@ -332,7 +332,7 @@ async function startDaemon({
       : (info) =>
           // Was a bespoke process.stderr.write with its own try/catch. It is
           // the same destination — the stderr sink writes to fd 2, which since
-          // #176 IS mobile-automator/.session/daemon.log — but now structured,
+          // #176 IS .mobile-automator/.session/daemon.log — but now structured,
           // and safeObserve (plus record()'s own never-throw guarantee)
           // subsumes the hand-rolled guard. That guard mattered: this runs
           // inside reply(), on the socket's async data handler, so a throw here

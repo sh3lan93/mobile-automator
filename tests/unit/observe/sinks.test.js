@@ -8,11 +8,11 @@ const stderrSink = require('../../../src/observe/sinks/stderr');
 const fileSink = require('../../../src/observe/sinks/file');
 const { MAX_LOG_BYTES } = require('../../../src/device/session-log');
 
-// A project that HAS run `mauto setup`: mobile-automator/ exists, so the file
+// A project that HAS run `mauto setup`: .mobile-automator/ exists, so the file
 // sink is allowed to log into it.
 function workspace() {
   const root = bareDir();
-  fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
   return root;
 }
 
@@ -46,7 +46,7 @@ describe('file sink', () => {
     fileSink.write({ level: 'info', event: 'verb.end', verb: 'tap' }, { projectRoot: root, env: {} });
     fileSink.write({ level: 'info', event: 'verb.end', verb: 'swipe' }, { projectRoot: root, env: {} });
 
-    const logPath = path.join(root, 'mobile-automator', '.logs', 'mauto.ndjson');
+    const logPath = path.join(root, '.mobile-automator', '.logs', 'mauto.ndjson');
     const lines = fs.readFileSync(logPath, 'utf8').trim().split('\n');
     expect(lines).toHaveLength(2);
     expect(JSON.parse(lines[0]).verb).toBe('tap');
@@ -56,12 +56,12 @@ describe('file sink', () => {
   it('creates the log directory on demand', () => {
     const root = workspace();
     fileSink.write({ level: 'info', event: 'e' }, { projectRoot: root, env: {} });
-    expect(fs.existsSync(path.join(root, 'mobile-automator', '.logs'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.mobile-automator', '.logs'))).toBe(true);
   });
 
   it('rotates to .1 at the shared 1 MiB cap, keeping one generation', () => {
     const root = workspace();
-    const dir = path.join(root, 'mobile-automator', '.logs');
+    const dir = path.join(root, '.mobile-automator', '.logs');
     const logPath = path.join(dir, 'mauto.ndjson');
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(logPath, 'x'.repeat(MAX_LOG_BYTES));
@@ -73,12 +73,12 @@ describe('file sink', () => {
   });
 
   // "No workspace, no file log." mauto is a CLI a user runs from any directory;
-  // creating mobile-automator/ as a side effect of logging would litter every
+  // creating .mobile-automator/ as a side effect of logging would litter every
   // repo it is invoked in. Worse, it would create the directory WITHOUT the
   // .gitignore that `mauto setup` writes, so a project that never ran setup
   // ends up with an untracked, un-ignored directory holding device serials.
   describe('the workspace gates file logging', () => {
-    it('writes nothing when mobile-automator/ does not exist', () => {
+    it('writes nothing when .mobile-automator/ does not exist', () => {
       const root = bareDir();
       fileSink.write({ level: 'info', event: 'e' }, { projectRoot: root, env: {} });
       expect(fs.readdirSync(root)).toEqual([]);
@@ -87,13 +87,13 @@ describe('file sink', () => {
     it('does not create the workspace directory itself', () => {
       const root = bareDir();
       fileSink.write({ level: 'info', event: 'e' }, { projectRoot: root, env: {} });
-      expect(fs.existsSync(path.join(root, 'mobile-automator'))).toBe(false);
+      expect(fs.existsSync(path.join(root, '.mobile-automator'))).toBe(false);
     });
 
     it('checks the base dir, not .logs/ — a set-up workspace logs on first run', () => {
-      const root = workspace(); // mobile-automator/ exists; .logs/ does not yet
+      const root = workspace(); // .mobile-automator/ exists; .logs/ does not yet
       fileSink.write({ level: 'info', event: 'first' }, { projectRoot: root, env: {} });
-      const logPath = path.join(root, 'mobile-automator', '.logs', 'mauto.ndjson');
+      const logPath = path.join(root, '.mobile-automator', '.logs', 'mauto.ndjson');
       expect(fs.readFileSync(logPath, 'utf8')).toContain('first');
     });
 
@@ -131,8 +131,8 @@ describe('file sink', () => {
 
   it('writes to an explicit logPath when one is given', () => {
     const root = workspace();
-    fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
-    const target = path.join(root, 'mobile-automator', '.logs', 'daemon.ndjson');
+    fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
+    const target = path.join(root, '.mobile-automator', '.logs', 'daemon.ndjson');
 
     fileSink.write(
       { level: 'info', event: 'call.end', tool: 'mobile_press_button' },
@@ -140,7 +140,7 @@ describe('file sink', () => {
     );
 
     expect(JSON.parse(fs.readFileSync(target, 'utf8').trim()).tool).toBe('mobile_press_button');
-    expect(fs.existsSync(path.join(root, 'mobile-automator', '.logs', 'mauto.ndjson'))).toBe(false);
+    expect(fs.existsSync(path.join(root, '.mobile-automator', '.logs', 'mauto.ndjson'))).toBe(false);
   });
 
   it('holds no file descriptor between events', () => {
@@ -150,7 +150,7 @@ describe('file sink', () => {
     // event. Proven by rotating BETWEEN two writes and checking the second
     // landed in the fresh file.
     const root = workspace();
-    const logPath = path.join(root, 'mobile-automator', '.logs', 'daemon.ndjson');
+    const logPath = path.join(root, '.mobile-automator', '.logs', 'daemon.ndjson');
 
     fileSink.write({ level: 'info', event: 'daemon.start' }, { projectRoot: root, env: {}, logPath });
     fs.renameSync(logPath, `${logPath}.1`);
@@ -165,8 +165,8 @@ describe('file sink', () => {
   });
 
   it('still refuses to log into a directory that has no workspace, logPath or not', () => {
-    const root = bareDir(); // mkdtemp'd, so no mobile-automator/ inside it
-    const target = path.join(root, 'mobile-automator', '.logs', 'daemon.ndjson');
+    const root = bareDir(); // mkdtemp'd, so no .mobile-automator/ inside it
+    const target = path.join(root, '.mobile-automator', '.logs', 'daemon.ndjson');
 
     fileSink.write({ level: 'info', event: 'e' }, { projectRoot: root, env: {}, logPath: target });
 
@@ -179,7 +179,7 @@ describe('file sink bounding modes', () => {
 
   function boundedWorkspace() {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-sink-bound-'));
-    fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
     return root;
   }
 
@@ -187,7 +187,7 @@ describe('file sink bounding modes', () => {
 
   it("defaults to 'rotate' — unchanged behaviour for mauto.ndjson", () => {
     const root = boundedWorkspace();
-    const target = path.join(root, 'mobile-automator', '.logs', 'mauto.ndjson');
+    const target = path.join(root, '.mobile-automator', '.logs', 'mauto.ndjson');
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, 'x'.repeat(MAX_LOG_BYTES_CANONICAL));
 
@@ -203,7 +203,7 @@ describe('file sink bounding modes', () => {
   // three-minute run as forty seconds — measured-looking fiction.
   it("'cap' stops appending instead of rotating the run's beginning away", () => {
     const root = boundedWorkspace();
-    const target = path.join(root, 'mobile-automator', '.logs', 'run-smoke.ndjson');
+    const target = path.join(root, '.mobile-automator', '.logs', 'run-smoke.ndjson');
     fs.mkdirSync(path.dirname(target), { recursive: true });
     const original = 'x'.repeat(MAX_LOG_BYTES_CANONICAL);
     fs.writeFileSync(target, original);
@@ -216,7 +216,7 @@ describe('file sink bounding modes', () => {
 
   it("'cap' appends normally below the cap", () => {
     const root = boundedWorkspace();
-    const target = path.join(root, 'mobile-automator', '.logs', 'run-smoke.ndjson');
+    const target = path.join(root, '.mobile-automator', '.logs', 'run-smoke.ndjson');
 
     fileSink.write(event, { projectRoot: root, env: {}, logPath: target, bound: 'cap' });
     fileSink.write(event, { projectRoot: root, env: {}, logPath: target, bound: 'cap' });
@@ -228,7 +228,7 @@ describe('file sink bounding modes', () => {
 
   it('atCap answers the same question finalize needs to ask', () => {
     const root = boundedWorkspace();
-    const target = path.join(root, 'mobile-automator', '.logs', 'run-smoke.ndjson');
+    const target = path.join(root, '.mobile-automator', '.logs', 'run-smoke.ndjson');
     fs.mkdirSync(path.dirname(target), { recursive: true });
 
     expect(fileSink.atCap(target)).toBe(false); // no file yet
@@ -240,7 +240,7 @@ describe('file sink bounding modes', () => {
 
   it("'cap' still respects the no-workspace rule", () => {
     const bare = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-sink-bare-'));
-    const target = path.join(bare, 'mobile-automator', '.logs', 'run-smoke.ndjson');
+    const target = path.join(bare, '.mobile-automator', '.logs', 'run-smoke.ndjson');
 
     fileSink.write(event, { projectRoot: bare, env: {}, logPath: target, bound: 'cap' });
 

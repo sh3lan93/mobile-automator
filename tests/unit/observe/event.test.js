@@ -159,7 +159,7 @@ describe('crash field classifications', () => {
       crash_count: 2,
       app_id: 'com.acme.unreleased-thing',
       message: 'FATAL EXCEPTION: main\n\tat com.acme.Login.onClick(Login.java:42)',
-      path: '/Users/someone/proj/mobile-automator/results/crash-1.txt',
+      path: '/Users/someone/proj/.mobile-automator/results/crash-1.txt',
     });
     expect(e.crash_count).toBe(2);
     expect(e.app_id).toBe('com.acme.unreleased-thing');

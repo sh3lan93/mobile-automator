@@ -9,8 +9,8 @@ const paths = require('../../../src/device/session-paths');
 describe('session-paths', () => {
   const root = '/tmp/proj';
 
-  test('all paths live under <root>/mobile-automator/.session/', () => {
-    const base = path.join(root, 'mobile-automator', '.session');
+  test('all paths live under <root>/.mobile-automator/.session/', () => {
+    const base = path.join(root, '.mobile-automator', '.session');
     expect(paths.sessionDir(root)).toBe(base);
     expect(paths.socketPath(root).startsWith(base + path.sep)).toBe(true);
     expect(paths.pidFilePath(root).startsWith(base + path.sep)).toBe(true);
@@ -30,9 +30,9 @@ describe('session-paths', () => {
     expect(paths.sessionDir('/a')).not.toBe(paths.sessionDir('/b'));
   });
 
-  test('logFilePath resolves to <root>/mobile-automator/.session/daemon.log', () => {
+  test('logFilePath resolves to <root>/.mobile-automator/.session/daemon.log', () => {
     expect(paths.logFilePath(root)).toBe(
-      path.join(root, 'mobile-automator', '.session', 'daemon.log')
+      path.join(root, '.mobile-automator', '.session', 'daemon.log')
     );
     expect(paths.LOG_NAME).toBe('daemon.log');
   });

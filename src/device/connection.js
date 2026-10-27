@@ -31,7 +31,7 @@ const sessionSpawn = require('./session-spawn');
 // `autostart` (default true: the daemon is the normal connection path) is the
 // daemon-vs-oneshot policy. cli.js's connectBridge passes false when no
 // workspace was discovered (#188), so a workspace-less cwd gets a one-shot
-// bridge and no mobile-automator/.session/ tree. `resolve` is an internal test
+// bridge and no .mobile-automator/.session/ tree. `resolve` is an internal test
 // seam only; verbs call acquireConnection with just
 // { device, projectRoot, autostart }.
 async function acquireConnection({

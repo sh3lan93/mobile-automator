@@ -16,7 +16,7 @@ describe('setup/scaffold', () => {
     const root = tmpRoot();
     scaffold(root, { mode: 'platform-aware' });
     for (const d of ['scenarios', 'screenshots', 'results']) {
-      expect(fs.existsSync(path.join(root, 'mobile-automator', d))).toBe(true);
+      expect(fs.existsSync(path.join(root, '.mobile-automator', d))).toBe(true);
     }
   });
 
@@ -44,9 +44,9 @@ describe('setup/scaffold', () => {
 
   it('does not clobber an existing config but sets the mode', () => {
     const root = tmpRoot();
-    fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
     fs.writeFileSync(
-      path.join(root, 'mobile-automator', 'config.json'),
+      path.join(root, '.mobile-automator', 'config.json'),
       JSON.stringify({ mode: 'platform-aware', project_name: 'Existing', app_package: 'com.x' })
     );
     const r = scaffold(root, { mode: 'platform-agnostic' });
@@ -75,11 +75,11 @@ function set_app_package(root) {
 }
 
 describe('workspace .gitignore', () => {
-  it('writes mobile-automator/.gitignore covering the runtime dirs', () => {
+  it('writes .mobile-automator/.gitignore covering the runtime dirs', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scaffold-'));
     scaffold(root, { mode: 'platform-aware' });
 
-    const gi = path.join(root, 'mobile-automator', '.gitignore');
+    const gi = path.join(root, '.mobile-automator', '.gitignore');
     const body = fs.readFileSync(gi, 'utf8');
     expect(body).toContain('.session/');
     expect(body).toContain('.logs/');
@@ -89,13 +89,13 @@ describe('workspace .gitignore', () => {
   it('reports the .gitignore in created[] on first write', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scaffold-'));
     const { created } = scaffold(root, { mode: 'platform-aware' });
-    expect(created.some((p) => p.endsWith(path.join('mobile-automator', '.gitignore')))).toBe(true);
+    expect(created.some((p) => p.endsWith(path.join('.mobile-automator', '.gitignore')))).toBe(true);
   });
 
   it('never clobbers a .gitignore the user has edited', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scaffold-'));
-    fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
-    const gi = path.join(root, 'mobile-automator', '.gitignore');
+    fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
+    const gi = path.join(root, '.mobile-automator', '.gitignore');
     fs.writeFileSync(gi, '# mine\n');
 
     scaffold(root, { mode: 'platform-aware' });
@@ -108,19 +108,19 @@ describe('telemetry default', () => {
   it('writes a visible false rather than relying on an absent key', () => {
     const root = tmpRoot();
     scaffold(root, { mode: 'platform-aware' });
-    const cfg = JSON.parse(fs.readFileSync(path.join(root, 'mobile-automator', 'config.json'), 'utf8'));
+    const cfg = JSON.parse(fs.readFileSync(path.join(root, '.mobile-automator', 'config.json'), 'utf8'));
     expect(cfg.telemetry).toEqual({ enabled: false });
   });
 
   it('never rewrites an existing config\'s telemetry choice', () => {
     const root = tmpRoot();
-    fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
     fs.writeFileSync(
-      path.join(root, 'mobile-automator', 'config.json'),
+      path.join(root, '.mobile-automator', 'config.json'),
       JSON.stringify({ mode: 'platform-aware', telemetry: { enabled: true } }, null, 2)
     );
     scaffold(root, { mode: 'platform-agnostic' });
-    const cfg = JSON.parse(fs.readFileSync(path.join(root, 'mobile-automator', 'config.json'), 'utf8'));
+    const cfg = JSON.parse(fs.readFileSync(path.join(root, '.mobile-automator', 'config.json'), 'utf8'));
     // Re-running setup must not silently revoke — or silently grant — consent.
     expect(cfg.telemetry.enabled).toBe(true);
     expect(cfg.mode).toBe('platform-agnostic');

@@ -4,8 +4,8 @@ const path = require('path');
 const paths = require('../../../src/observe/paths');
 
 describe('observe paths', () => {
-  it('defaults to mobile-automator/.logs inside the workspace', () => {
-    expect(paths.logsDir('/proj', {})).toBe(path.join('/proj', 'mobile-automator', '.logs'));
+  it('defaults to .mobile-automator/.logs inside the workspace', () => {
+    expect(paths.logsDir('/proj', {})).toBe(path.join('/proj', '.mobile-automator', '.logs'));
   });
 
   it('honours MAUTO_LOG_DIR and resolves it to an absolute path', () => {
@@ -13,13 +13,9 @@ describe('observe paths', () => {
     expect(got).toBe(path.resolve('/tmp/elsewhere'));
   });
 
-  it('names the workspace base dir, which gates whether file logging happens at all', () => {
-    expect(paths.workspaceDir('/proj')).toBe(path.join('/proj', 'mobile-automator'));
-  });
-
   it('names the main log mauto.ndjson', () => {
     expect(paths.mainLogPath('/proj', {})).toBe(
-      path.join('/proj', 'mobile-automator', '.logs', 'mauto.ndjson')
+      path.join('/proj', '.mobile-automator', '.logs', 'mauto.ndjson')
     );
   });
 
@@ -33,7 +29,7 @@ describe('observe paths', () => {
 describe('daemon event log', () => {
   it('is a separate file from the CLI log, in the same .logs dir', () => {
     expect(paths.daemonEventLogPath('/proj', {})).toBe(
-      path.join('/proj', 'mobile-automator', '.logs', 'daemon.ndjson')
+      path.join('/proj', '.mobile-automator', '.logs', 'daemon.ndjson')
     );
     expect(paths.daemonEventLogPath('/proj', {})).not.toBe(paths.mainLogPath('/proj', {}));
   });
@@ -55,7 +51,7 @@ describe('run trace paths', () => {
 
   it('names the trace after the run, inside the logs dir', () => {
     const p = runTracePath('/proj', 'run_20260905_141500', {});
-    expect(p).toBe(path.join('/proj', 'mobile-automator', '.logs', 'run-run_20260905_141500.ndjson'));
+    expect(p).toBe(path.join('/proj', '.mobile-automator', '.logs', 'run-run_20260905_141500.ndjson'));
     expect(path.basename(p).startsWith(RUN_TRACE_PREFIX)).toBe(true);
   });
 
@@ -104,7 +100,7 @@ describe('telemetry spool path', () => {
   const { SPOOL_NAME, spoolPath, MAIN_LOG_NAME, DAEMON_LOG_NAME } = require('../../../src/observe/paths');
 
   it('lives beside the event logs', () => {
-    expect(spoolPath('/p', {})).toBe(path.join('/p', 'mobile-automator', '.logs', 'telemetry.spool'));
+    expect(spoolPath('/p', {})).toBe(path.join('/p', '.mobile-automator', '.logs', 'telemetry.spool'));
   });
 
   it('follows MAUTO_LOG_DIR like every other artifact in .logs/', () => {
@@ -113,7 +109,7 @@ describe('telemetry spool path', () => {
   });
 
   it('is deliberately NOT a .ndjson file', () => {
-    // TROUBLESHOOTING.md documents `cat mobile-automator/.logs/*.ndjson` as the
+    // TROUBLESHOOTING.md documents `cat .mobile-automator/.logs/*.ndjson` as the
     // merged CLI+daemon timeline. The spool is a mutating queue that gets
     // renamed out from under a reader, not part of that timeline, so it must
     // not match that glob. The extension is the interface.

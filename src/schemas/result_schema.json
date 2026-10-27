@@ -205,7 +205,7 @@
     },
     "measurements": {
       "type": "object",
-      "description": "Facts MEASURED from the run's event trace (mobile-automator/.logs/run-<run_id>.ndjson) rather than self-reported by the executing agent. Absent when no trace was available — MAUTO_RUN_ID unset, logging silenced, no workspace, or a run id that could not name a file.",
+      "description": "Facts MEASURED from the run's event trace (.mobile-automator/.logs/run-<run_id>.ndjson) rather than self-reported by the executing agent. Absent when no trace was available — MAUTO_RUN_ID unset, logging silenced, no workspace, or a run id that could not name a file.",
       "properties": {
         "source": {
           "type": "string",

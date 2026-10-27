@@ -178,7 +178,7 @@ async function runScenario({ scenario, mauto, evaluator, catalog, workspaceDir, 
   // Screenshot path relative to the workspace (what the result file records),
   // and absolute (what the verb writes). The CLI does not create directories.
   async function screenshot(name) {
-    const rel = path.join('mobile-automator', 'screenshots', scenarioId, runId, `${name}.png`);
+    const rel = path.join('.mobile-automator', 'screenshots', scenarioId, runId, `${name}.png`);
     const abs = path.join(workspaceDir, rel);
     fs.mkdirSync(path.dirname(abs), { recursive: true });
     try {
@@ -264,7 +264,7 @@ async function runScenario({ scenario, mauto, evaluator, catalog, workspaceDir, 
 
   return {
     status,
-    resultPath: path.join(workspaceDir, 'mobile-automator', 'results', `${runId}.json`),
+    resultPath: path.join(workspaceDir, '.mobile-automator', 'results', `${runId}.json`),
     failures,
     failedStep,
   };

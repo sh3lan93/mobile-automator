@@ -4,7 +4,7 @@
 //
 // A chosen device id is remembered across separate one-shot verb invocations so
 // the agent does not have to re-pass --device every call. The selection lives in
-// #91's session layout (mobile-automator/.session/) as a small sidecar file,
+// #91's session layout (.mobile-automator/.session/) as a small sidecar file,
 // SEPARATE from config.json (which is user-authored project config) and from the
 // live session handle (session.json, owned by the daemon lifecycle).
 //
@@ -36,7 +36,7 @@ function read(projectRoot) {
   }
 }
 
-// Persist a device id. Creates mobile-automator/.session/ if needed. Written
+// Persist a device id. Creates .mobile-automator/.session/ if needed. Written
 // via atomicWrite (tmp + fsync + rename) so a concurrent reader or a crash
 // sees the old-complete or new-complete selection, never a torn one.
 function write(projectRoot, id) {

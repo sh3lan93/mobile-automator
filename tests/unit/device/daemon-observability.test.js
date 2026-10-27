@@ -251,7 +251,7 @@ describe('daemon failure events', () => {
     // A regular FILE where the directory belongs reproduces that deterministically
     // — the same trick the listen_failure test above uses, and unlike a chmod it
     // still fails when the suite runs as root in CI.
-    fs.mkdirSync(path.join(root, 'mobile-automator'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
     fs.writeFileSync(paths.sessionDir(root), 'not a directory\n');
 
     await expect(

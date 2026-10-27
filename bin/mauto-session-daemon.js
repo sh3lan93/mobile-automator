@@ -79,7 +79,7 @@ async function main() {
   // degrades rather than throwing.
   //
   // The stderr sink is deliberately left in place: the daemon's stderr IS
-  // mobile-automator/.session/daemon.log (PR #176), not a terminal, which
+  // .mobile-automator/.session/daemon.log (PR #176), not a terminal, which
   // inverts cli.js finish()'s calculus — a warn line here costs a human no
   // terminal noise and lands next to the adb/simctl output that explains it.
   //

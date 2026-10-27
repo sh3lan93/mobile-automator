@@ -64,7 +64,7 @@ npm link      # exposes `mauto` / `mobile-automator` globally
 # In a test mobile project
 cd /path/to/test-mobile-app
 mauto init --agent claude   # wire your agent (or: cursor | gemini | copilot | agents | all)
-mauto setup                 # scaffold the mobile-automator/ workspace
+mauto setup                 # scaffold the .mobile-automator/ workspace
 mauto devices               # confirm a device/emulator is visible
 ```
 
@@ -73,7 +73,7 @@ When you are done, run `npm unlink -g mobile-automator` to remove the global lin
 ### Directory Structure
 
 ```
-mobile-automator/
+.mobile-automator/
 ├── bin/
 │   ├── mauto.js                 # entry point for `mauto` / `mobile-automator`
 │   └── mauto-session-daemon.js  # entry point for the device session daemon
@@ -109,7 +109,7 @@ The contract is: **agent (the brain) → `mauto` verbs → mobile-mcp engine →
    - Enforced by `mauto validate <file>`.
 
 4. **Cross-session memory** (`src/memory/`)
-   - Persists what the agent learns about an app across runs in `mobile-automator/memory/`.
+   - Persists what the agent learns about an app across runs in `.mobile-automator/memory/`.
    - `run-history.md` is machine-owned (auto-harvested on `result finalize`); `app-knowledge.md`
      and `preferences.md` are agent-authored via `mauto memory add`/`memory forget`.
    - Read-modify-writes go through an advisory lock plus atomic writes. See the
@@ -184,9 +184,9 @@ vim src/cli.js
 ```
 
 **Guidelines:**
-- Changes must not break existing projects (preserve the `mobile-automator/` workspace layout)
+- Changes must not break existing projects (preserve the `.mobile-automator/` workspace layout)
 - Every verb must emit the `{ok,data,error,hint,schema_version}` envelope
-- Workspace state lives in `mobile-automator/config.json`
+- Workspace state lives in `.mobile-automator/config.json`
 - Never use `resource-id` / OS-specific element IDs
 
 #### 4. Documentation Changes
@@ -250,7 +250,7 @@ mauto guide generate
 mauto guide execute
 
 # 6. Check results
-cat mobile-automator/results/run_*.json | jq '.'
+cat .mobile-automator/results/run_*.json | jq '.'
 ```
 
 **Test different platforms:**
@@ -508,7 +508,7 @@ gh issue create --title "Bug: tests fail on Android 14" \
 - Reproduction steps
 - Expected vs actual behavior
 - Device/simulator details
-- `mauto` version and the contents of `mobile-automator/config.json` (remove sensitive data)
+- `mauto` version and the contents of `.mobile-automator/config.json` (remove sensitive data)
 
 ### Feature Requests
 

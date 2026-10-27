@@ -18,10 +18,10 @@ The `generate` and `execute` guides now instruct the agent to **consult memory b
 
 ## Where Data Lives
 
-Memory lives in the `mobile-automator/memory/` directory, scaffolded by `mauto setup` alongside `scenarios/`, `screenshots/`, and `results/`. The files are plain, human-readable markdown — project data you can read, review, and (if you want the whole team to share what the agent has learned) commit to version control. The machine-local session state (sockets, pidfiles, the memory lock) lives separately under `mobile-automator/.session/`.
+Memory lives in the `.mobile-automator/memory/` directory, scaffolded by `mauto setup` alongside `scenarios/`, `screenshots/`, and `results/`. The files are plain, human-readable markdown — project data you can read, review, and (if you want the whole team to share what the agent has learned) commit to version control. The machine-local session state (sockets, pidfiles, the memory lock) lives separately under `.mobile-automator/.session/`.
 
 ```
-mobile-automator/
+.mobile-automator/
 ├── config.json
 ├── scenarios/
 ├── screenshots/
@@ -80,7 +80,7 @@ Three verbs manage memory. See the [CLI Verbs reference](../reference/cli-verbs.
 
 Memory files are read-modify-written safely so concurrent sessions and interrupted writes never corrupt them:
 
-- **Advisory lock** — every read-modify-write goes through a lock at `mobile-automator/.session/memory.lock`.
+- **Advisory lock** — every read-modify-write goes through a lock at `.mobile-automator/.session/memory.lock`.
 - **Atomic writes** — updates are written atomically, so a file is never left half-written.
 - **`.corrupt.<ts>` sidecars** — if a memory file is found unreadable, it is preserved as a `.corrupt.<timestamp>` sidecar rather than discarded, so nothing is silently lost.
 

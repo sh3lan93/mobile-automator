@@ -31,7 +31,7 @@ function runCli(args, opts = {}) {
   return { status: res.status, stdout: res.stdout || '', stderr: res.stderr || '' };
 }
 
-// Create a fresh temp workspace (a directory that will hold mobile-automator/).
+// Create a fresh temp workspace (a directory that will hold .mobile-automator/).
 function makeWorkspace() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-smoke-'));
 }
@@ -70,7 +70,7 @@ describe('cli smoke (integration)', () => {
   //
   // Asserted via `config set` rather than `type` so the test needs no device.
   test('the POSIX `--` separator protects a leading-dash value from the version flag', () => {
-    const configDir = path.join(workspace, 'mobile-automator');
+    const configDir = path.join(workspace, '.mobile-automator');
     fs.mkdirSync(configDir, { recursive: true });
     fs.copyFileSync(CONFIG_FIXTURE, path.join(configDir, 'config.json'));
 
@@ -189,7 +189,7 @@ describe('cli smoke (integration)', () => {
 
   test('config get mode reads the workspace config value', () => {
     // Hand-write a workspace config (mirrors what `mauto setup` produces).
-    const configDir = path.join(workspace, 'mobile-automator');
+    const configDir = path.join(workspace, '.mobile-automator');
     fs.mkdirSync(configDir, { recursive: true });
     fs.copyFileSync(CONFIG_FIXTURE, path.join(configDir, 'config.json'));
 
@@ -204,7 +204,7 @@ describe('cli smoke (integration)', () => {
   // #251: an engine switch clears the persisted device selection (ids differ
   // between engines) and says so in the envelope. Device-free.
   test('config set engine legacy clears the device selection and explains why', () => {
-    const configDir = path.join(workspace, 'mobile-automator');
+    const configDir = path.join(workspace, '.mobile-automator');
     fs.mkdirSync(path.join(configDir, '.session'), { recursive: true });
     fs.copyFileSync(CONFIG_FIXTURE, path.join(configDir, 'config.json'));
     const selection = path.join(configDir, '.session', 'selection.json');

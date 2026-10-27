@@ -58,8 +58,8 @@ Record each observation with `mauto result add-step --observation <type>:<messag
 4. **App under test.**
    - If the user pointed you at a prebuilt app artifact, install it with `mauto install <path>`.
    - Otherwise verify the app is already installed; if it is not, halt and ask the user to install it. This guide never builds.
-   - **Fresh install.** If the scenario's `preconditions.app_state` is `fresh_install` and the user pointed you at a prebuilt app artifact, uninstall the app first with `mauto uninstall <appId>` (the app identifier from `mobile-automator/config.json` — `android_package` / `ios_bundle_id`) and only then install that artifact, so the run starts with no app data. Without an artifact, do not uninstall — you could not reinstall the app. Leave it in place and report that the app state was not reset, so a failure that depends on existing app data is not mistaken for a regression.
-   - If the install fails because a different build is already on the device, uninstall it with `mauto uninstall <appId>` (the app identifier from `mobile-automator/config.json` — `android_package` / `ios_bundle_id`), install again, and report that app data was wiped — a scenario whose preconditions assume existing app state may now fail for that reason.
+   - **Fresh install.** If the scenario's `preconditions.app_state` is `fresh_install` and the user pointed you at a prebuilt app artifact, uninstall the app first with `mauto uninstall <appId>` (the app identifier from `.mobile-automator/config.json` — `android_package` / `ios_bundle_id`) and only then install that artifact, so the run starts with no app data. Without an artifact, do not uninstall — you could not reinstall the app. Leave it in place and report that the app state was not reset, so a failure that depends on existing app data is not mistaken for a regression.
+   - If the install fails because a different build is already on the device, uninstall it with `mauto uninstall <appId>` (the app identifier from `.mobile-automator/config.json` — `android_package` / `ios_bundle_id`), install again, and report that app data was wiped — a scenario whose preconditions assume existing app state may now fail for that reason.
    - State which path you took before continuing.
 5. **Validate schema version:** read the `$schema_version` field; it must be `"2.1"`. If absent or unrecognized, report an error and halt.
 6. Validate the scenario with `mauto validate <path>` against `mauto schema scenario`. If the result lists `data.warnings`, branch on each entry's `code` (its `path` names the step or precondition): `unsupported_action` means it uses an action that is unsupported on this run: report it as unsupported in the result (see "Not mechanically executable" under step execution) and do not substitute a gesture for it. `launch_cold_implicit` is advisory: replay that step exactly as written (a step that does not set `"cold": false` is a cold start, per the step table below) and do not substitute your own reading of what the author meant; record the warning's `message` as a `state_context` observation on that step (`mauto result add-step ... --observation state_context:<message>`).
@@ -69,7 +69,7 @@ Record each observation with `mauto result add-step --observation <type>:<messag
 | Device action | `mauto` verb | Notes |
 |---|---|---|
 | `install_app` | `mauto install <path>` | `path` = the device action's `value` if set and the file exists, else the build artifact used in pre-flight. If neither is available, report this precondition as not executed |
-| `uninstall_app` | `mauto uninstall <appId>` | `appId` = the device action's `target_package` if set, else the app identifier from `mobile-automator/config.json` (`android_package` / `ios_bundle_id`) for the connected device's platform. If a later `install_app` in the same block has no resolvable path, skip this uninstall too and report both as not executed — never leave the device without the app under test |
+| `uninstall_app` | `mauto uninstall <appId>` | `appId` = the device action's `target_package` if set, else the app identifier from `.mobile-automator/config.json` (`android_package` / `ios_bundle_id`) for the connected device's platform. If a later `install_app` in the same block has no resolvable path, skip this uninstall too and report both as not executed — never leave the device without the app under test |
 | `set_orientation` | `mauto orientation <portrait\|landscape>` | |
 
 The remaining precondition actions are not mechanically executable (see step execution): report them honestly or perform them out of band.
@@ -104,7 +104,7 @@ For each step in the scenario:
    - `launch_app` restarts the app so the step starts on its initial screen; `--resume` instead brings a running app to the front in its current state. A plain launch resets the screen, not app data: `app_state: "fresh_install"` is still the data reset. It returns `{launched, cold}`; an app that is not running is simply started. If the app cannot be stopped, the launch fails with a device error and a hint to use `--resume` — record the step as failed rather than retrying blindly.
    - Semantic actions → run `mauto press <action>` and let the CLI resolve them for the connected device.
    - Not mechanically executable → `clear_app_data` (and the precondition device actions `enable_wifi` / `disable_wifi`) have no verb and no underlying primitive. Do NOT substitute a gesture: report them honestly as unsupported on this run, or perform them manually out of band if the run depends on them.
-4. **Capture screenshot:** Run `mauto screenshot mobile-automator/screenshots/<scenario_id>/<run_id>/step_<step_id>.png`.
+4. **Capture screenshot:** Run `mauto screenshot .mobile-automator/screenshots/<scenario_id>/<run_id>/step_<step_id>.png`.
 5. **Evaluate assertions** attached to the step (see section 4).
 6. **Record** the step result with `mauto result add-step --step-id <id> --status <s> --screenshot <path> [--attempts <n>] [--error-message <text>] [--observation <type>:<message>] [--capture <name>=<value>]`, then record each assertion verdict with `mauto result add-assertion --step-id <id> --type <t> --pass <true|false> --message <text> [--expected <v> --actual <v>]`. `--message` carries the justification you already formed — for Tier-2 verdicts it IS the evidence, so never omit it; add `--expected`/`--actual` whenever the assertion compares a specific value.
 
@@ -210,7 +210,7 @@ For each: take a screenshot, visually analyze it, and report pass/fail with a cl
 
 ### 5. Generate the Result Report
 
-Obtain the result schema by running `mauto schema result`, then finalize the run with `mauto result finalize` (writing to `mobile-automator/results/<run_id>.json`), passing the run metadata you already know (`--device-model`, `--api-level`, `--app-version`, `--environment`) — the timestamp is filled in for you, and omitted fields are recorded as `unknown`. You may supply your own narrative with `--summary <text>`; omitting it keeps the generated default summary line. The finalized result assembles what the earlier `add-step`/`add-assertion` calls already recorded:
+Obtain the result schema by running `mauto schema result`, then finalize the run with `mauto result finalize` (writing to `.mobile-automator/results/<run_id>.json`), passing the run metadata you already know (`--device-model`, `--api-level`, `--app-version`, `--environment`) — the timestamp is filled in for you, and omitted fields are recorded as `unknown`. You may supply your own narrative with `--summary <text>`; omitting it keeps the generated default summary line. The finalized result assembles what the earlier `add-step`/`add-assertion` calls already recorded:
 
 - `run_id`, `scenario_id`, `status`, `duration_seconds`.
 - `steps_executed[]`: per-step status, retry_count, screenshot, error_message.
@@ -231,7 +231,7 @@ When neither attempt succeeds, fail the step and add a detailed observation desc
 ## Multi-Scenario Execution
 
 - Execute scenarios sequentially. Each scenario's leading `launch_app` restarts the app (`mauto launch <appId>`), so a scenario never inherits the previous one's screen and needs no separate reset; use `app_state: "fresh_install"` only when app data must be wiped too.
-- "run all smoke tests" → filter by the `smoke` tag. "run all" → every scenario in `mobile-automator/scenarios/`.
+- "run all smoke tests" → filter by the `smoke` tag. "run all" → every scenario in `.mobile-automator/scenarios/`. List `.mobile-automator/scenarios/` directly: the workspace folder is hidden, and recursive search tools (glob or grep style) skip hidden directories, so they will report it empty.
 - Present a combined summary with a per-scenario breakdown.
 
 ## Operational Boundaries
@@ -257,8 +257,8 @@ When neither attempt succeeds, fail the step and add a detailed observation desc
 
 ## Resources
 
-- **mobile-automator/config.json**: Project configuration. Read it for any placeholder that was not filled in this guide.
+- **.mobile-automator/config.json**: Project configuration. Read it for any placeholder that was not filled in this guide.
 - **`mauto schema scenario`**: JSON schema for test scenarios. Use it to validate scenarios with `mauto validate <path>`.
 - **`mauto schema result`**: JSON schema for execution results.
-- **mobile-automator/scenarios/**: Source scenario files.
+- **.mobile-automator/scenarios/**: Source scenario files.
 {{additional_resources}}

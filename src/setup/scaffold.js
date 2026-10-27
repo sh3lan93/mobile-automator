@@ -2,7 +2,7 @@
 
 // Workspace scaffolding for `mauto setup`.
 //
-// Creates the mobile-automator/{scenarios,screenshots,results} tree and a
+// Creates the .mobile-automator/{scenarios,screenshots,results} tree and a
 // skeleton config.json. Idempotent: re-running never clobbers an existing
 // config's other fields — it only ensures the requested `mode` is set.
 
@@ -10,6 +10,7 @@ const fs = require('fs');
 const path = require('path');
 
 const manager = require('../config/manager');
+const { workspaceDir } = require('../workspace/layout');
 
 const SUBDIRS = ['scenarios', 'screenshots', 'results', 'memory'];
 
@@ -31,7 +32,7 @@ const GITIGNORE_BODY = [
 function scaffold(projectRoot, { mode } = {}) {
   const created = [];
 
-  const baseDir = path.join(projectRoot, 'mobile-automator');
+  const baseDir = workspaceDir(projectRoot);
   ensureDir(baseDir, created);
   for (const sub of SUBDIRS) {
     ensureDir(path.join(baseDir, sub), created);

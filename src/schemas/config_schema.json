@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Mobile Automator Workspace Config",
-  "description": "Schema for mobile-automator/config.json. Declares the type of every key `mauto config set` knows about. Unknown keys are permitted (additionalProperties: true) so agents can persist project knowledge this schema does not anticipate — the schema types keys, it does not gate them.",
+  "description": "Schema for .mobile-automator/config.json. Declares the type of every key `mauto config set` knows about. Unknown keys are permitted (additionalProperties: true) so agents can persist project knowledge this schema does not anticipate — the schema types keys, it does not gate them.",
   "type": "object",
   "additionalProperties": true,
   "definitions": {

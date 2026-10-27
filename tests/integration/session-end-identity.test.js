@@ -75,7 +75,7 @@ test("a cp -R'd workspace (salt and pidfile copied) never signals the original's
   const mine = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-end-copy-'));
   try {
     fs.writeFileSync(paths.pidFilePath(theirs), `${daemon.pid}\n`);
-    fs.cpSync(path.join(theirs, 'mobile-automator'), path.join(mine, 'mobile-automator'), { recursive: true });
+    fs.cpSync(path.join(theirs, '.mobile-automator'), path.join(mine, '.mobile-automator'), { recursive: true });
     expect(readSalt(mine)).toBe(readSalt(theirs));
     expect(await endSession(mine)).toEqual({ outcome: 'already_stopped', pid: daemon.pid });
     expect(pidAlive(daemon.pid)).toBe(true);

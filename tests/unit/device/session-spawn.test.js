@@ -2,7 +2,7 @@
 
 const { EventEmitter } = require('events');
 
-// The real ensureSalt writes <root>/mobile-automator/.session/marker.salt, and
+// The real ensureSalt writes <root>/.mobile-automator/.session/marker.salt, and
 // these tests spawn for a fake '/proj'. Its own behaviour is session-salt.test.js's.
 jest.mock('../../../src/device/session-salt', () => ({
   ensureSalt: () => 'a'.repeat(64),

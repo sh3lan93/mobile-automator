@@ -15,7 +15,7 @@ function result(overrides = {}) {
     duration_seconds: 41.2,
     steps_executed: [
       { step_id: 'launch', status: 'passed', screenshot: null, error_message: null, retried: false, retry_count: 0, step_duration_ms: 900, observations: null },
-      { step_id: 'tap_more', status: 'passed', screenshot: 'mobile-automator/screenshots/x/run_20261021_120000/step_tap_more.png', error_message: null, retried: false, retry_count: 0, observations: null },
+      { step_id: 'tap_more', status: 'passed', screenshot: '.mobile-automator/screenshots/x/run_20261021_120000/step_tap_more.png', error_message: null, retried: false, retry_count: 0, observations: null },
     ],
     assertion_results: [
       { assertion_id: 'no_results', status: 'passed', expected: 'No products match', actual: null, message: 'Found text.' },

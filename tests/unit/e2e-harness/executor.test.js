@@ -228,7 +228,7 @@ describe('runScenario', () => {
     const m = fakeMauto({ elements: [[el('Home')]] });
     await exec(scenario([{ id: 'tap_home', action: 'tap', description: 'd', target: 'Home', checkpoint: true }]), m);
     const shot = m.calls.find((c) => c.verb === 'screenshot');
-    const rel = path.join('mobile-automator', 'screenshots', 'demo', RUN_ID, 'step_tap_home.png');
+    const rel = path.join('.mobile-automator', 'screenshots', 'demo', RUN_ID, 'step_tap_home.png');
     expect(shot.args[1]).toBe(path.join(workspaceDir, rel));
     expect(fs.existsSync(path.dirname(shot.args[1]))).toBe(true);
     const step = m.calls.find((c) => c.verb === 'result add-step');
@@ -316,6 +316,6 @@ describe('runScenario', () => {
 
   test('returns the result file path under the workspace', async () => {
     const r = await exec(scenario([{ id: 'hide', action: 'dismiss_keyboard', description: 'd' }]), fakeMauto());
-    expect(r.resultPath).toBe(path.join(workspaceDir, 'mobile-automator', 'results', `${RUN_ID}.json`));
+    expect(r.resultPath).toBe(path.join(workspaceDir, '.mobile-automator', 'results', `${RUN_ID}.json`));
   });
 });

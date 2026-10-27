@@ -119,11 +119,11 @@ Used to author scenario JSON, evaluate assertions, and assemble result files.
 
 ## Workspace verbs
 
-Scaffold and configure the `mobile-automator/` workspace.
+Scaffold and configure the `.mobile-automator/` workspace.
 
 | Verb | Description |
 |------|-------------|
-| `mauto setup [--mode aware\|agnostic]` | Scaffold `mobile-automator/` (subdirs `scenarios/`, `screenshots/`, `results/`, `memory/`) and write `config.json` |
+| `mauto setup [--mode aware\|agnostic]` | Scaffold `.mobile-automator/` (subdirs `scenarios/`, `screenshots/`, `results/`, `memory/`) and write `config.json` |
 | `mauto config get <key>` | Read a config value by dotted path |
 | `mauto config set <key> <value>` | Write a config value by dotted path. `config set engine <mobilecli\|legacy>` also clears the pinned device when the engine changes, since device ids differ between engines |
 
@@ -191,7 +191,7 @@ mechanics.
 
 ## Memory verbs
 
-Cross-session memory lives in `mobile-automator/memory/`. There are three kinds across three files; only `app-knowledge` and `preferences` are agent-authored. See [Cross-Session Memory](../concepts/memory.md) for the full model.
+Cross-session memory lives in `.mobile-automator/memory/`. There are three kinds across three files; only `app-knowledge` and `preferences` are agent-authored. See [Cross-Session Memory](../concepts/memory.md) for the full model.
 
 | Verb | Description |
 |------|-------------|

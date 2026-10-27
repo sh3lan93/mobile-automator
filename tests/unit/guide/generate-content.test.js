@@ -9,7 +9,7 @@ const { emitGuide } = require('../../../src/guide/emitter');
 function tmpProject(config) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-gen-'));
   if (config) {
-    const dir = path.join(root, 'mobile-automator');
+    const dir = path.join(root, '.mobile-automator');
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify(config, null, 2));
   }
@@ -130,4 +130,14 @@ describe('guide emitter — real generate content', () => {
       expect(out).not.toMatch(/\.gemini\//);
     });
   });
+});
+
+describe('generate guide — hidden workspace', () => {
+  for (const mode of ['platform-aware', 'platform-agnostic']) {
+    it(`${mode} names .mobile-automator/ and never the bare name`, () => {
+      const out = emitGuide('generate', { mode });
+      expect(out).toContain('.mobile-automator/scenarios/');
+      expect(out).not.toMatch(/(^|[^.\w])mobile-automator\//m);
+    });
+  }
 });

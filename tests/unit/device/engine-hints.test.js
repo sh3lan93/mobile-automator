@@ -114,7 +114,7 @@ describe('engineHint — screenshot path outside the allowed directories (#214)'
   it('names the project root and the temp directory instead of "the current directory"', () => {
     const hint = engineHint(B3_MESSAGE);
     expect(hint).toContain('project root');
-    expect(hint).toContain('mobile-automator/');
+    expect(hint).toContain('.mobile-automator/');
     expect(hint).toContain('temp directory');
   });
 });
