@@ -1,7 +1,10 @@
 'use strict';
 
-// JUnit XML rendering of finalized result files (#274). Pure: no fs, no clock,
-// no input mutation, so the same results always render to the same bytes. It
+// JUnit XML rendering of finalized result files (#274). Its input is what
+// readFinalizedResult (src/result/store.js) guarantees: every schema-required
+// root key present with its schema type, so there are no fallbacks here.
+// Pure: no fs, no clock, no input mutation, so the same results always render
+// to the same bytes. It
 // is consumed by `mauto result export` today and by `mauto run --junit` later,
 // which is why it lives under src/run/ rather than beside the CLI handler.
 //
@@ -67,9 +70,8 @@ function properties(result, executor) {
     ['run_id', result.run_id],
     ['status', result.status],
   ];
-  const metadata = result.metadata || {};
   for (const key of METADATA_KEYS) {
-    if (present(metadata[key])) props.push([`metadata.${key}`, metadata[key]]);
+    if (present(result.metadata[key])) props.push([`metadata.${key}`, result.metadata[key]]);
   }
   const provenance = result.executor || executor;
   if (provenance && typeof provenance === 'object') {
@@ -119,10 +121,10 @@ function stepCase(step) {
 }
 
 function suiteFor(result, executor) {
-  const scenario = result.scenario_id || result.run_id || 'unknown';
+  const scenario = result.scenario_id;
   const cases = [
-    ...(result.assertion_results || []).map(assertionCase),
-    ...(result.steps_executed || []).map(stepCase).filter(Boolean),
+    ...result.assertion_results.map(assertionCase),
+    ...result.steps_executed.map(stepCase).filter(Boolean),
   ];
 
   // A red result must never render as a green report. When the run says
@@ -152,7 +154,7 @@ function suiteFor(result, executor) {
       ['errors', 0],
       ['skipped', skipped],
       ['time', seconds(result.duration_seconds)],
-      ['timestamp', result.metadata && present(result.metadata.timestamp) ? result.metadata.timestamp : null],
+      ['timestamp', present(result.metadata.timestamp) ? result.metadata.timestamp : null],
     ])}>`
   );
   const props = properties(result, executor);
