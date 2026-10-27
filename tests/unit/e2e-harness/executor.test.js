@@ -19,7 +19,7 @@ function fakeMauto(handlers = {}) {
   const calls = [];
   const run = (args, opts = {}) => {
     const verb = args[0] === 'result' ? `result ${args[1]}` : args[0];
-    calls.push({ verb, args, env: opts.env || {} });
+    calls.push({ verb, args, env: opts.env || {}, opts });
     const h = handlers[verb];
     if (Array.isArray(h)) return Promise.resolve(h.length > 1 ? h.shift() : h[0]);
     if (typeof h === 'function') {
@@ -312,6 +312,53 @@ describe('runScenario', () => {
     await exec(scenario([{ id: 'hide', action: 'dismiss_keyboard', description: 'd' }]), m);
     expect(m.calls.length).toBeGreaterThan(0);
     for (const c of m.calls) expect(c.env.MAUTO_RUN_ID).toBe(RUN_ID);
+  });
+
+  // #273: a failed assert and the finalize of a failed run exit 6 with
+  // test_failed; only those two verbs may treat that as an answer.
+  test('assert and finalize accept test_failed; every other verb accepts nothing', async () => {
+    const m = fakeMauto({
+      elements: [[el('More')]],
+      assert: () => ({ type: 'element_text', mechanical: true, pass: true, needs_agent: false, message: 'ok' }),
+    });
+    await exec(
+      scenario(
+        [{ id: 'tap_more', action: 'tap', description: 'd', target: 'More' }],
+        [{ id: 'hdr', after_step: 'tap_more', type: 'element_text', description: 'd', element_description: 'More', expected_value: 'More' }]
+      ),
+      m
+    );
+    const byVerb = (v) => m.calls.filter((c) => c.verb === v);
+    for (const v of ['assert', 'result finalize']) {
+      expect(byVerb(v).length).toBeGreaterThan(0);
+      for (const c of byVerb(v)) expect(c.opts.acceptKinds).toEqual(['test_failed']);
+    }
+    for (const v of ['elements', 'tap', 'result add-step', 'result add-assertion']) {
+      expect(byVerb(v).length).toBeGreaterThan(0);
+      for (const c of byVerb(v)) expect(c.opts.acceptKinds).toBeUndefined();
+    }
+  });
+
+  test('a failed-assert verdict returned through the accepted path is recorded as --pass false', async () => {
+    const verdict = { type: 'element_text', mechanical: true, pass: false, needs_agent: false, message: 'text is X' };
+    const m = fakeMauto({
+      elements: [[el('More')]],
+      // What lib/mauto.js returns for an accepted exit-6 test_failed envelope: its data.
+      assert: (_args) => verdict,
+    });
+    const r = await exec(
+      scenario(
+        [{ id: 'tap_more', action: 'tap', description: 'd', target: 'More' }],
+        [{ id: 'hdr', after_step: 'tap_more', type: 'element_text', description: 'd', element_description: 'More', expected_value: 'More' }]
+      ),
+      m
+    );
+    expect(m.calls.find((c) => c.verb === 'assert').opts.acceptKinds).toEqual(['test_failed']);
+    const rec = m.calls.find((c) => c.verb === 'result add-assertion').args;
+    expect(argAfter(rec, '--pass')).toBe('false');
+    expect(argAfter(rec, '--message')).toBe('text is X');
+    expect(r.status).toBe('failed');
+    expect(argAfter(m.calls.find((c) => c.verb === 'result finalize').args, '--status')).toBe('failed');
   });
 
   test('returns the result file path under the workspace', async () => {
