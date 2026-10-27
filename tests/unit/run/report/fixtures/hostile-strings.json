@@ -1,0 +1,24 @@
+{
+  "run_id": "run_20261027_100300",
+  "scenario_id": "search_<&>\"'",
+  "schema_version": "2.0",
+  "status": "failed",
+  "metadata": {
+    "app_version": "1.0",
+    "device_model": "iPhone \"16\"",
+    "api_level": "18.0",
+    "environment": "a&b",
+    "timestamp": "2026-10-27T10:03:00.000Z"
+  },
+  "total_assertions": 1,
+  "passed_assertions": 0,
+  "failed_assertions": 1,
+  "duration_seconds": 1,
+  "steps_executed": [],
+  "assertion_results": [
+    { "assertion_id": "assert_<b>", "status": "failed", "expected": "<x> & \"y\"", "actual": "bell\u0007 and tab\there", "message": "Expected 'a' < 'b' && \"c\" > d\u0001" }
+  ],
+  "observations": [],
+  "captured_variables": {},
+  "summary": "failed"
+}
