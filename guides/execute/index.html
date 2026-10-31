@@ -2382,6 +2382,9 @@
 <div class="highlight"><pre><span></span><code>✓ Checking setup state...
 ✓ Found: .mobile-automator/config.json
 
+✓ Validating the scenario (mauto validate)...
+  No blocking findings
+
 ✓ Detecting devices (mauto devices)...
   Available devices:
     1. Pixel 6 (Android 34)
@@ -2882,7 +2885,9 @@ data was wiped.</p>
 2. <strong>Check for whitespace</strong> — "Welcome back!" vs " Welcome back! "
 3. <strong>Use text_contains instead of element_text</strong> — More forgiving
 4. <strong>Capture and compare variables</strong> — For dynamic values:
-   <div class="highlight"><pre><span></span><code><span class="c1">// step: capture the dynamic value</span>
+   <div class="highlight"><pre><span></span><code><span class="c1">// root variables: declare the captured variable first</span>
+<span class="nt">"variables"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"actual_value"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"string"</span><span class="p">,</span><span class="w"> </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Captured value"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+<span class="c1">// step: capture the dynamic value</span>
 <span class="p">{</span>
 <span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"capture_dynamic_field"</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"capture_value"</span><span class="p">,</span>
@@ -3048,7 +3053,9 @@ data was wiped.</p>
 <span class="p">}</span>
 </code></pre></div>
 <h3 id="do-capture-dynamic-values">✅ DO: Capture Dynamic Values<a class="headerlink" href="#do-capture-dynamic-values" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="c1">// step: capture the order ID</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// root variables: declare the captured variable first</span>
+<span class="nt">"variables"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"generated_order_id"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"string"</span><span class="p">,</span><span class="w"> </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Generated order ID"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+<span class="c1">// step: capture the order ID</span>
 <span class="p">{</span>
 <span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"capture_order_id"</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"capture_value"</span><span class="p">,</span>

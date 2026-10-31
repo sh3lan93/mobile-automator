@@ -1836,7 +1836,7 @@
 <tbody>
 <tr>
 <td><code>mauto validate &lt;file&gt; [--strict]</code></td>
-<td>Validate a scenario JSON file against the <a href="../schema/">scenario schema</a>; warns (or, with <code>--strict</code>, fails) on actions that cannot replay unattended, and warns on <code>launch_app</code> steps that leave <code>cold</code> unset</td>
+<td>Validate a scenario JSON file against the <a href="../schema/">scenario schema</a>; warns (or, with <code>--strict</code>, fails) on actions that cannot replay unattended and on broken references (duplicate step ids, dangling <code>after_step</code> or condition <code>step_id</code>, steps with no <code>target</code>, undeclared variables), and warns on <code>launch_app</code> steps that leave <code>cold</code> unset and on waits with no <code>wait_config</code></td>
 </tr>
 <tr>
 <td><code>mauto assert &lt;type&gt; [--target --expected --operator --count --pattern --variable --device]</code></td>
@@ -1859,7 +1859,7 @@
 <div class="admonition note">
 <p class="admonition-title"><code>validate</code> and replay warnings</p>
 <p>Schema-valid is not the same as replayable, so <code>validate</code> also reports replay warnings in <code>data.warnings</code>, with a summarising <code>hint</code>. A scenario with nothing to report gets the bare <code>{"valid": true}</code>.</p>
-<p>Every warning has the shape <code>{code, action, path, message}</code>, plus <code>step_id</code> for steps. <code>path</code> is <code>steps[N]</code> (nested steps read <code>steps[N].sub_steps[M]</code>) or <code>preconditions.device_actions[N]</code>. Warnings are listed in document order, and the <code>hint</code> counts them per code, for example <code>N step(s) leave an optional field unset; set it explicitly — see data.warnings</code>.</p>
+<p>Every warning has the shape <code>{code, action, path, message}</code>, plus <code>step_id</code> for steps. <code>path</code> is <code>steps[N]</code> (nested steps read <code>steps[N].sub_steps[M]</code>), <code>preconditions.device_actions[N]</code>, or <code>assertions[N]</code>; an assertion warning carries <code>assertion_id</code> instead of <code>step_id</code> and has no <code>action</code>. Warnings are listed in document order (steps, then preconditions, then assertions), and the <code>hint</code> counts them per code, for example <code>N step(s) leave an optional field unset; set it explicitly — see data.warnings</code>.</p>
 <table>
 <thead>
 <tr>
@@ -1882,8 +1882,45 @@
 <td>A <code>launch_app</code> step leaves <code>cold</code> unset and is not the scenario's first top-level step (any launch inside <code>sub_steps</code> counts). It restarts the app; set <code>"cold": false</code> to resume or <code>"cold": true</code> to confirm the restart, and the warning goes away.</td>
 <td>Never fails</td>
 </tr>
+<tr>
+<td><code>duplicate_step_id</code></td>
+<td>blocking</td>
+<td>A step reuses an <code>id</code> already declared by an earlier step, anywhere in the tree (<code>sub_steps</code> included). Each repeat after the first is reported; the message names the first one's <code>path</code>.</td>
+<td>Fails with <code>invalid_input</code> and <code>data.valid: false</code></td>
+</tr>
+<tr>
+<td><code>dangling_after_step</code></td>
+<td>blocking</td>
+<td>An assertion's <code>after_step</code> is missing or names no step in the scenario (<code>sub_steps</code> included).</td>
+<td>Fails with <code>invalid_input</code> and <code>data.valid: false</code></td>
+</tr>
+<tr>
+<td><code>missing_target</code></td>
+<td>blocking</td>
+<td>A <code>tap</code>, <code>long_press</code>, <code>double_tap</code>, <code>wait_for_element</code>, <code>wait_for_element_gone</code>, <code>scroll_to_element</code> or <code>capture_value</code> step has neither <code>target</code> nor <code>target_pattern</code>, so there is no element to resolve.</td>
+<td>Fails with <code>invalid_input</code> and <code>data.valid: false</code></td>
+</tr>
+<tr>
+<td><code>undeclared_capture_variable</code></td>
+<td>blocking</td>
+<td>A step's <code>capture_to</code> or <code>condition.variable_name</code>, or an assertion's <code>variable_name</code>, is not a key of the root <code>variables</code> block, or a <code>variable_value</code> condition or <code>value_matches_variable</code> assertion has no <code>variable_name</code>.</td>
+<td>Fails with <code>invalid_input</code> and <code>data.valid: false</code></td>
+</tr>
+<tr>
+<td><code>dangling_condition_step</code></td>
+<td>blocking</td>
+<td>A <code>previous_step_skipped</code> condition has no <code>step_id</code>, or its <code>step_id</code> is not a step that comes before it in document order (an unknown id, the step itself, or a later step).</td>
+<td>Fails with <code>invalid_input</code> and <code>data.valid: false</code></td>
+</tr>
+<tr>
+<td><code>missing_wait_config</code></td>
+<td>advisory</td>
+<td>A <code>wait_for_element</code>, <code>wait_for_element_gone</code> or <code>wait_for_loading_complete</code> step has no <code>wait_config</code>, so it waits for the default timeout. Add a <code>wait_config</code> to make the wait explicit.</td>
+<td>Never fails</td>
+</tr>
 </tbody>
 </table>
+<p>Under <code>--strict</code>, a blocking warning fails <code>validate</code> with exit code 3 and the error message <code>scenario cannot replay unattended; see data.warnings</code>.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title"><code>result finalize</code> and memory</p>

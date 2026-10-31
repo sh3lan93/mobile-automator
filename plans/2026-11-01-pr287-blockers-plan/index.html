@@ -1,0 +1,1664 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Intelligent mobile QA automation for any AI coding agent via the mauto CLI - auto-generate test scenarios and execute them with AI-powered assertions on real devices and emulators">
+      
+      
+      
+        <link rel="canonical" href="https://sh3lan93.github.io/mobile-automator/plans/2026-11-01-pr287-blockers-plan/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>PR #287 Review Blockers Implementation Plan - mobile-automator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="PR #287 Review Blockers Implementation Plan - mobile-automator" />
+  <meta property="og:description" content="Intelligent mobile QA automation for any AI coding agent via the mauto CLI - auto-generate test scenarios and execute them with AI-powered assertions on real devices and emulators" />
+  <meta property="og:url" content="https://sh3lan93.github.io/mobile-automator/plans/2026-11-01-pr287-blockers-plan/" />
+  <meta property="og:site_name" content="mobile-automator" />
+  <meta property="og:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="PR #287 Review Blockers Implementation Plan - mobile-automator" />
+  <meta name="twitter:description" content="Intelligent mobile QA automation for any AI coding agent via the mauto CLI - auto-generate test scenarios and execute them with AI-powered assertions on real devices and emulators" />
+  <meta name="twitter:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
+  
+
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#pr-287-review-blockers-implementation-plan" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="mobile-automator" class="md-header__button md-logo" aria-label="mobile-automator" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="mobile-automator logo" width="32" height="32">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            mobile-automator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              PR #287 Review Blockers Implementation Plan
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/sh3lan93/mobile-automator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sh3lan93/mobile-automator
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="mobile-automator" class="md-nav__button md-logo" aria-label="mobile-automator" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="mobile-automator logo" width="32" height="32">
+
+    </a>
+    mobile-automator
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/sh3lan93/mobile-automator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sh3lan93/mobile-automator
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Core Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/three-tier-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Layered Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How Skills Work
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cross-Session Memory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command Guides
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup Command
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/generate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Generate Command
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/execute/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execute Command
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli-verbs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Verbs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/assertions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Assertion Types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test Scenario Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/result-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test Result Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/mcp-tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internal Engine (mobile-mcp)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/telemetry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Telemetry & Privacy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Example Scenarios
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/android/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Android Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/ios/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    iOS Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ & Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of Contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of Contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#global-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Global Constraints
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#review-focus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Review Focus
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Review Focus">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#task-1-catalog-owns-target-and-wait-classification-blocker-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 1: Catalog owns target and wait classification (blocker 4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-2-report-a-required-variable-name-that-is-missing-blocker-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 2: Report a required variable name that is missing (blocker 2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-3-both-execute-guides-validate-before-any-device-verb-blocker-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 3: Both execute guides validate before any device verb (blocker 1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-4-make-the-severity-contract-true-again-blocker-5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 4: Make the severity contract true again (blocker 5)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-5-state-the-compatibility-impact-verify-ship-blocker-3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 5: State the compatibility impact, verify, ship (blocker 3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="pr-287-review-blockers-implementation-plan">PR #287 Review Blockers Implementation Plan<a class="headerlink" href="#pr-287-review-blockers-implementation-plan" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (<code>- [ ]</code>) syntax for tracking.</p>
+</blockquote>
+<p><strong>Goal:</strong> Clear the five blockers recorded in pr-radar round 1 for PR #287 so <code>validate</code>'s referential checks are safe to merge.</p>
+<p><strong>Architecture:</strong> Action classification moves into <code>action-catalog.js</code>, and <code>references.js</code> derives its sets from it. Variable checks gain type-required cases. Both execute guides validate before any device verb. Docs then state the real compatibility impact.</p>
+<p><strong>Tech Stack:</strong> Node, Jest, Markdown guide content.</p>
+<p><strong>Spec:</strong> The blocker list in pr-radar (PR #287, round 1), summarised per task below. Scope contract: <code>gh issue view 272</code>, <code>docs/plans/2026-10-27-replay-s0a-plan.md</code>.</p>
+<h2 id="global-constraints">Global Constraints<a class="headerlink" href="#global-constraints" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Work in <code>.claude/worktrees/pr287-validate-references</code> on <code>replay/272-validate-references</code>. Subagents must <code>cd</code> there and verify before any commit.</li>
+<li>Version stays <code>0.38.2</code> unless the user chooses otherwise (see Task 5). <code>src/</code> changes need no further bump while that tag does not exist.</li>
+<li><code>src/cli.js</code> must not name a finding code (<code>replay-warnings-boundary</code> guard).</li>
+<li>Agnostic guides name no OS and leak no <code>mobile_*</code> tool names.</li>
+<li>Scenario schema files do not change: everything stays a <code>validate</code> finding, so existing files remain schema-valid.</li>
+<li>Every new guard must be seen red by mutating the code it protects, then restored (<code>CLAUDE.md</code> workflow step 8). State the result in the PR.</li>
+<li>Commits end with <code>Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;</code>. The pre-commit hook runs <code>npm test</code>.</li>
+</ul>
+<h2 id="review-focus">Review Focus<a class="headerlink" href="#review-focus" title="Permanent link">&para;</a></h2>
+<ul>
+<li>A new step action added to the schema: the build must force a <code>requiresTarget</code> decision rather than silently skipping <code>missing_target</code>.</li>
+<li><code>variable_name</code> on an assertion type that does not require it: still checked if present, never required (the execute guides' "Variable substitution" paragraph uses it this way).</li>
+<li>Empty-string <code>variable_name</code> on a required type: reported, not treated as present.</li>
+<li>A scenario with <code>fresh_install</code> and a blocking finding: the emitted guide must reach <code>mauto validate</code> before any <code>mauto uninstall</code>.</li>
+<li>A code moved from <code>CODES</code> into <code>REFERENCE_CODES</code> to dodge the marker rule: the coverage guard must fail.</li>
+</ul>
+<hr />
+<h3 id="task-1-catalog-owns-target-and-wait-classification-blocker-4">Task 1: Catalog owns target and wait classification (blocker 4)<a class="headerlink" href="#task-1-catalog-owns-target-and-wait-classification-blocker-4" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Modify: <code>src/device/action-catalog.js</code>, <code>src/scenario/references.js:15-28</code>
+- Test: <code>tests/lint/action-coverage.test.js</code>, <code>tests/unit/scenario/references.test.js:97,255</code></p>
+<p><strong>Interfaces:</strong>
+- Produces: catalog entry fields <code>requiresTarget: boolean</code> (on every step-enum action) and <code>waitAction: true</code> (on the three wait actions). New exports <code>targetActions(): string[]</code> and <code>waitActions(): string[]</code>.</p>
+<ul>
+<li>
+<p>[ ] <strong>Step 1: Write failing guards in <code>action-coverage.test.js</code></strong></p>
+</li>
+<li>
+<p><code>every step action declares requiresTarget</code>: for each <code>definitions.step</code> action enum value, <code>typeof ACTION_CATALOG[action].requiresTarget === 'boolean'</code>.</p>
+</li>
+<li><code>targetActions() is the pinned set</code>: sorted equals <code>capture_value, double_tap, long_press, scroll_to_element, tap, wait_for_element, wait_for_element_gone</code>.</li>
+<li>
+<p><code>waitActions() matches the schema</code>: equals the step enum filtered by inclusion in the <code>wait_config.description</code> string.</p>
+</li>
+<li>
+<p>[ ] <strong>Step 2: Run</strong> <code>npx jest tests/lint/action-coverage.test.js</code>. Expected: FAIL, <code>requiresTarget</code> undefined and <code>targetActions</code> not a function.</p>
+</li>
+<li>
+<p>[ ] <strong>Step 3: Implement.</strong> Add the fields and the two exports, filtering <code>ACTION_CATALOG</code>. In <code>references.js</code>, replace both literals with <code>new Set(targetActions())</code> and <code>new Set(waitActions())</code>. Add both fields to the catalog's header comment. Parametrize the two <code>references.test.js</code> tables from the exports.</p>
+</li>
+<li>
+<p>[ ] <strong>Step 4: Run</strong> <code>npm test</code>. Expected: PASS.</p>
+</li>
+<li>
+<p>[ ] <strong>Step 5: Mutation check.</strong> Remove <code>requiresTarget</code> from <code>swipe</code>: guard red. Remove <code>waitAction</code> from <code>wait_for_loading_complete</code>: guard red. Restore both.</p>
+</li>
+<li>
+<p>[ ] <strong>Step 6: Commit</strong> <code>refactor(validate): action catalog owns target and wait classification (#272)</code>.</p>
+</li>
+</ul>
+<h3 id="task-2-report-a-required-variable-name-that-is-missing-blocker-2">Task 2: Report a required variable name that is missing (blocker 2)<a class="headerlink" href="#task-2-report-a-required-variable-name-that-is-missing-blocker-2" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Modify: <code>src/scenario/references.js:49-53,113-117,142-146</code>, <code>docs/reference/cli-verbs.md</code> (the <code>undeclared_capture_variable</code> row)
+- Test: <code>tests/unit/scenario/references.test.js</code></p>
+<p><strong>Interfaces:</strong>
+- Produces: <code>undeclared_capture_variable</code> fields <code>{ field, ref }</code> where <code>ref</code> may be <code>undefined</code>, matching <code>dangling_after_step</code>.</p>
+<ul>
+<li>
+<p>[ ] <strong>Step 1: Write failing tests</strong></p>
+</li>
+<li>
+<p>A <code>{ type: 'variable_value' }</code> condition yields one <code>undeclared_capture_variable</code> with field <code>condition.variable_name</code>, and its message contains <code>has no</code>.</p>
+</li>
+<li>A <code>value_matches_variable</code> assertion with no <code>variable_name</code> yields one, path <code>assertions[0]</code>, carrying <code>assertion_id</code>.</li>
+<li>The same two with <code>variable_name: ''</code> also yield one.</li>
+<li>An <code>element_exists</code> assertion with no <code>variable_name</code> yields none.</li>
+<li>
+<p>An <code>element_exists</code> assertion naming an undeclared variable still yields one.</p>
+</li>
+<li>
+<p>[ ] <strong>Step 2: Run</strong> <code>npx jest tests/unit/scenario/references.test.js</code>. Expected: the first three FAIL, the last two PASS.</p>
+</li>
+<li>
+<p>[ ] <strong>Step 3: Implement.</strong> A name is checked when its type requires it or when it is present; <code>index.variables.has(undefined)</code> is already false, so only the guard changes. Requiring types: condition <code>variable_value</code>, assertion <code>value_matches_variable</code>. For <code>''</code>, normalise so <code>ref</code> is <code>undefined</code> in the message path. Message for no ref: <code>"${f.field}" is required here but has no variable name</code>. The clause stays unchanged. Update the docs row to say a required name that is missing is reported too.</p>
+</li>
+<li>
+<p>[ ] <strong>Step 4: Run</strong> <code>npm test</code>. Expected: PASS, including the 12-scenario corpus.</p>
+</li>
+<li>
+<p>[ ] <strong>Step 5: Commit</strong> <code>fix(validate): report a required variable name that is missing (#272)</code>.</p>
+</li>
+</ul>
+<h3 id="task-3-both-execute-guides-validate-before-any-device-verb-blocker-1">Task 3: Both execute guides validate before any device verb (blocker 1)<a class="headerlink" href="#task-3-both-execute-guides-validate-before-any-device-verb-blocker-1" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Modify: <code>src/guide/content/execute.agnostic.md:55-65</code>, <code>src/guide/content/execute.aware.md:52-67</code>
+- Test: <code>tests/lint/guide-artifact-reuse.test.js</code></p>
+<p><strong>Interfaces:</strong>
+- Consumes: that test file's existing Pre-flight slice helper and its way of emitting each guide. Reuse them; add no second emitter.</p>
+<ul>
+<li>[ ] <strong>Step 1: Write a failing guard</strong></li>
+</ul>
+<p><code>validate precedes every device verb</code>, for both emitted guides: inside the Pre-flight section, the index of <code>mauto validate</code> is lower than the first index of each of <code>mauto devices</code>, <code>mauto install</code> and <code>mauto uninstall</code>.</p>
+<ul>
+<li>
+<p>[ ] <strong>Step 2: Run</strong> <code>npx jest tests/lint/guide-artifact-reuse.test.js</code>. Expected: FAIL on both guides.</p>
+</li>
+<li>
+<p>[ ] <strong>Step 3: Reorder.</strong></p>
+</li>
+<li>
+<p>Agnostic order: name the run → read the scenario → schema version → <code>mauto validate</code> → devices → app under test. Renumber the list.</p>
+</li>
+<li>Aware: move the read, schema-version and validate bullets from <code>### 2. Load Scenario</code> into Pre-flight, directly after "Name the run first". <code>### 2</code> keeps the <code>metadata</code> comparison and is renamed <code>### 2. Compare Environment</code>. Check for references to the old title.</li>
+<li>Both: change "(read it from the scenario file now)" in Fresh install to "(from the scenario you read above)" where present. Change "do not touch the device" to "run no further verbs against the device", since nothing has run yet.</li>
+<li>
+<p>Keep <code>MAUTO_RUN_ID</code> first: <code>validate</code> is itself a verb.</p>
+</li>
+<li>
+<p>[ ] <strong>Step 4: Run</strong> <code>npm test &amp;&amp; npm run lint:guides</code>. Expected: PASS.</p>
+</li>
+<li>
+<p>[ ] <strong>Step 5: Mutation check.</strong> Move the agnostic validate step back below app under test: guard red. Restore it.</p>
+</li>
+<li>
+<p>[ ] <strong>Step 6: Commit</strong> <code>fix(guide): validate the scenario before any device verb (#272)</code>.</p>
+</li>
+</ul>
+<h3 id="task-4-make-the-severity-contract-true-again-blocker-5">Task 4: Make the severity contract true again (blocker 5)<a class="headerlink" href="#task-4-make-the-severity-contract-true-again-blocker-5" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Modify: <code>src/scenario/replayability.js:3-4,35-38</code>, <code>src/cli.js:2022</code> (the <code>--strict</code> option text)
+- Test: <code>tests/lint/action-coverage.test.js:130-138</code></p>
+<ul>
+<li>[ ] <strong>Step 1: Replace the exemption test with the real rule</strong></li>
+</ul>
+<p><code>CODES is exactly unsupported_action, the catalog markers and the reference codes</code>: sorted <code>Object.keys(CODES)</code> equals that sorted union, and no marker is a key of <code>REFERENCE_CODES</code>.</p>
+<ul>
+<li>
+<p>[ ] <strong>Step 2: Run</strong> <code>npx jest tests/lint/action-coverage.test.js</code>. Expected: PASS, as it describes current state. The mutation in Step 4 is the proof.</p>
+</li>
+<li>
+<p>[ ] <strong>Step 3: Rewrite the comments and option text.</strong></p>
+</li>
+<li>
+<p>Header: "reports three kinds of gap".</p>
+</li>
+<li><code>blocking</code>: "a blocking finding means the scenario cannot replay unattended as written: a step that cannot run or a broken reference".</li>
+<li>Remove the sentence claiming advisory codes are catalog markers. The test now states the rule.</li>
+<li>
+<p><code>--strict</code> option: <code>fail (instead of warn) when the scenario cannot replay unattended</code>.</p>
+</li>
+<li>
+<p>[ ] <strong>Step 4: Mutation check.</strong> Move <code>launch_cold_implicit</code> into <code>REFERENCE_CODES</code>: guard red. Restore it.</p>
+</li>
+<li>
+<p>[ ] <strong>Step 5: Run</strong> <code>npm test</code>. Expected: PASS.</p>
+</li>
+<li>
+<p>[ ] <strong>Step 6: Commit</strong> <code>docs(validate): state the real severity contract and pin it (#272)</code>.</p>
+</li>
+</ul>
+<h3 id="task-5-state-the-compatibility-impact-verify-ship-blocker-3">Task 5: State the compatibility impact, verify, ship (blocker 3)<a class="headerlink" href="#task-5-state-the-compatibility-impact-verify-ship-blocker-3" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Modify: <code>CHANGELOG.md</code> (<code>[0.38.2]</code>), <code>docs/reference/cli-verbs.md</code> (only if Task 3 changed what it says about execution)</p>
+<p><strong>Default decision, confirmed with the user before this task:</strong> agents keep refusing scenarios with blocking findings and the release stays <code>0.38.2</code>, because the locked ladder made S0a a patch. If the user chooses otherwise, change this task before starting it.</p>
+<ul>
+<li>
+<p>[ ] <strong>Step 1: Rewrite the changelog claim.</strong> Delete "existing scenarios and pipelines keep working". State:</p>
+</li>
+<li>
+<p><code>mauto validate</code> without <code>--strict</code> still exits 0.</p>
+</li>
+<li><strong><code>validate --strict</code> now exits 3 on scenarios that used to pass</strong>, if they have a blocking finding.</li>
+<li><strong>The execute guides now stop on a blocking finding even without <code>--strict</code></strong>, including a schema-valid <code>tap</code> with no <code>target</code>.</li>
+<li>
+<p>How to upgrade: run <code>mauto validate</code> on existing scenarios and fix what it reports.</p>
+</li>
+<li>
+<p>[ ] <strong>Step 2: Run all gates.</strong> <code>npm test</code>, <code>npm run lint</code>, <code>npm run lint:guides</code>, <code>npm run lint:schema-additive</code>, <code>./scripts/pack-smoke.sh</code>. Expected: all pass. Keep the output.</p>
+</li>
+<li>
+<p>[ ] <strong>Step 3: Real-binary check.</strong> A scenario with a <code>value_matches_variable</code> assertion and no <code>variable_name</code> exits 3 under <code>validate --strict</code>. Both <code>sample-app/scenarios/*.json</code> exit 0.</p>
+</li>
+<li>
+<p>[ ] <strong>Step 4: Commit</strong> <code>docs(changelog): state what the new blocking findings change (#272)</code>.</p>
+</li>
+<li>
+<p>[ ] <strong>Step 5: Publish.</strong> <code>git push</code>. In the PR body: replace the "non-breaking" sentence, refresh the test output, and add the self-check result (reused helpers, guards seen red). Mark b-ids fixed with <code>mcp__pr-radar__update_blocker</code>. Wait for all checks, including both Android E2E jobs.</p>
+</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/sh3lan93/mobile-automator" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  </body>
+</html>

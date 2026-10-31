@@ -3113,7 +3113,7 @@
 - <code>after_step</code> must reference a valid step <code>id</code>
 - All assertion IDs must be unique
 - <code>type</code> must be one of 27 supported types</p>
-<p>Validate a scenario file at any time with <code>mauto validate &lt;file&gt;</code>, which returns the uniform envelope with <code>data.valid</code>.</p>
+<p>Validate a scenario file at any time with <code>mauto validate &lt;file&gt;</code>, which returns the uniform envelope with <code>data.valid</code> and, for broken references or actions that cannot replay, <code>data.warnings</code> (<code>--strict</code> fails on them).</p>
 <hr />
 <h2 id="related-references">Related References<a class="headerlink" href="#related-references" title="Permanent link">&para;</a></h2>
 <ul>

@@ -2846,6 +2846,9 @@ ls<span class="w"> </span>-la<span class="w"> </span>.gemini/skills/
 3. <strong>Handle dynamic content</strong> — If value changes, use <code>text_contains</code> instead of <code>text_matches</code>
 4. <strong>Add debug screenshot</strong> — Insert a capture step to see actual state:
    <div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">"variables"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"actual_title"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"string"</span><span class="p">,</span><span class="w"> </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Captured title"</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">},</span>
 <span class="w">  </span><span class="nt">"steps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
 <span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"capture_state"</span><span class="p">,</span>
@@ -2952,7 +2955,7 @@ mauto<span class="w"> </span>setup
 mauto<span class="w"> </span>devices
 
 <span class="c1"># Validate a scenario before running it</span>
-mauto<span class="w"> </span>validate<span class="w"> </span>.mobile-automator/scenarios/login_flow.json
+mauto<span class="w"> </span>validate<span class="w"> </span>--strict<span class="w"> </span>.mobile-automator/scenarios/login_flow.json
 
 <span class="c1"># (Your agent replays the scenario via mauto guide execute + verbs.)</span>
 
@@ -2990,7 +2993,7 @@ cat<span class="w"> </span>.mobile-automator/results/latest.json<span class="w">
 <span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mauto devices</span>
 
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Validate scenarios</span>
-<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mauto validate .mobile-automator/scenarios/login_flow.json</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mauto validate --strict .mobile-automator/scenarios/login_flow.json</span>
 
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Upload Results</span>
 <span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/upload-artifact@v3</span>
