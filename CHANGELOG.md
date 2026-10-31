@@ -28,10 +28,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `step_id` is missing or not an earlier step;
   - `missing_wait_config` — a wait step with no `wait_config` (advisory).
 
-  The first five are blocking: `validate --strict` fails with `invalid_input`
-  (exit 3). Without `--strict`, `validate` still exits 0 and only warns, so
-  existing scenarios and pipelines keep working. Every example scenario in the
-  docs and the sample app is clean under all six.
+  `undeclared_capture_variable` also covers a `variable_value` condition or a
+  `value_matches_variable` assertion that has no `variable_name` at all.
+
+  The first five are blocking. Every example scenario in the docs and the
+  sample app is clean under all six.
+
+  **This changes behaviour for existing scenarios:**
+  - `mauto validate` without `--strict` still exits 0 and only warns.
+  - `validate --strict` now exits 3 (`invalid_input`) on scenarios that used to
+    pass, if they have a blocking finding.
+  - The execute guides now stop on a blocking finding even without
+    `--strict`, including a schema-valid `tap` with no `target`. An agent that
+    ran such a scenario before now refuses it.
+  - To upgrade, run `mauto validate` on your existing scenarios and fix what it
+    reports.
 
 ### 🔧 Changed
 
