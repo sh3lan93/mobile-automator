@@ -97,7 +97,7 @@ Two catalogs are the single source of truth for "does this capability actually r
 | `verb` | 11 | dedicated one-shot `mauto` verb → DeviceBridge → one or more mobile-mcp primitives (`launch` is terminate + launch, #255) |
 | `semantic` | 4 | invoked as `mauto press <action>`, resolved per-platform by `src/device/semantic-press/` |
 | `composed` | 5 | no verb; the agent composes it from existing verbs (the execute guide documents how) |
-| `unsupported` | 3 | mobile-mcp 1.0.13 exposes no primitive (`clear_app_data`, `enable_wifi`, `disable_wifi`) — guides must **not** promise a verb |
+| `unsupported` | 3 | no `mauto` verb reaches it (`clear_app_data`: mobile-mcp 1.0.15 added the primitive, mauto has not wired it; `enable_wifi`, `disable_wifi`: mobile-mcp has no primitive) — guides must **not** promise a verb |
 
 **`tests/integration/mobile-mcp-contract.test.js`** (#199) is the engine-side counterpart of `tests/lint/mobile-mcp-tool-coverage.test.js`. That lint guard pins our tool-name list to what `bridge.js` calls — both sides are our code, so it cannot see the engine move. The contract test spawns the pinned mobile-mcp, sends only `listTools` (no device needed), and fails when a tool we call disappears, a key we send is no longer accepted, or a newly required key appears that we do not send. The keys are derived by driving every `DeviceBridge` method through production's `makeCall`, not hand-restated. It exists because mobile-mcp's argument schemas are non-strict: an unknown key is dropped and the call still reports success — `bridge.screenshot` once sent `path` instead of `saveTo`, and every screenshot was a silent no-op.
 
@@ -190,7 +190,7 @@ This workflow lives here (not in per-issue bodies) so it applies uniformly and s
 
 ## Releasing & version handling
 
-The package is **published on npm**; installs come from the registry. mobile-mcp is pinned as a dependency (`@mobilenext/mobile-mcp@1.0.13`, bundling mobilecli 1.0.21) and spawned from `node_modules` — never fetched at runtime. Since 1.0 it drives every device through `mobilecli`, a native binary shipped as per-platform optional dependencies (`@mobilenext/mobilecli-<os>-<arch>`, no postinstall); the workspace `engine: legacy` key (or an exported `MOBILEMCP_LEGACY_ROBOT=1`, which wins) restores the previous adb / WDA+go-ios robots for Android and real iOS devices (#199, #251). `package.json` `files` ships only `bin/` and `src/`.
+The package is **published on npm**; installs come from the registry. mobile-mcp is pinned as a dependency (`@mobilenext/mobile-mcp@1.0.15`, bundling mobilecli 1.0.21) and spawned from `node_modules` — never fetched at runtime. Since 1.0 it drives every device through `mobilecli`, a native binary shipped as per-platform optional dependencies (`@mobilenext/mobilecli-<os>-<arch>`, no postinstall); the workspace `engine: legacy` key (or an exported `MOBILEMCP_LEGACY_ROBOT=1`, which wins) restores the previous adb / WDA+go-ios robots for Android and real iOS devices (#199, #251). `package.json` `files` ships only `bin/` and `src/`.
 
 **The pipeline, as it actually behaves:**
 
@@ -234,7 +234,7 @@ node scripts/sync-branch.js   # merge origin/main locally and settle changelog/v
 MAUTO_BIN=$(command -v mauto) node sample-app/scripts/run-e2e.mjs   # real-device E2E against an emulator with the sample app installed (see sample-app/README.md)
 ```
 
-The mobile-mcp version is pinned in `package.json` (`@mobilenext/mobile-mcp`, 1.0.13) and resolved from `node_modules` at runtime (see `src/device/mobile-mcp-client.js`). Bump the pin there if you need a newer engine, then run `npm run test:integration` — `mobile-mcp-contract.test.js` fails if the new engine's tool schemas no longer match what `DeviceBridge` sends. The session daemon keeps one mobile-mcp process alive and mobile-mcp caches its robot per device for that process's life, so after changing any `MOBILEMCP_*` env var run `mauto session end` before the next verb. The `engine` config key needs no such step: the daemon handle records its engine, and the next device verb restarts a daemon running a stale one (`session status` reports `engine` vs `resolved_engine`).
+The mobile-mcp version is pinned in `package.json` (`@mobilenext/mobile-mcp`, 1.0.15) and resolved from `node_modules` at runtime (see `src/device/mobile-mcp-client.js`). Bump the pin there if you need a newer engine, then run `npm run test:integration` — `mobile-mcp-contract.test.js` fails if the new engine's tool schemas no longer match what `DeviceBridge` sends. The session daemon keeps one mobile-mcp process alive and mobile-mcp caches its robot per device for that process's life, so after changing any `MOBILEMCP_*` env var run `mauto session end` before the next verb. The `engine` config key needs no such step: the daemon handle records its engine, and the next device verb restarts a daemon running a stale one (`session status` reports `engine` vs `resolved_engine`).
 
 Note: `jest.config` `testPathIgnorePatterns` must stay `<rootDir>`-anchored — an unanchored pattern makes `npm test` silently match zero tests inside a worktree checkout.
 

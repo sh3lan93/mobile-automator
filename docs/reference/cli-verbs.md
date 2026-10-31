@@ -114,7 +114,7 @@ Used to author scenario JSON, evaluate assertions, and assemble result files.
 
     | Code | Severity | Trigger | Under `--strict` |
     |---|---|---|---|
-    | `unsupported_action` | blocking | The step or precondition uses an action the action catalog marks `unsupported`: the engine exposes no primitive for it, so no `mauto` verb can run it and it cannot replay unattended. | Fails with `invalid_input` and `data.valid: false` |
+    | `unsupported_action` | blocking | The step or precondition uses an action the action catalog marks `unsupported`: no `mauto` verb can run it, so it cannot replay unattended. | Fails with `invalid_input` and `data.valid: false` |
     | `launch_cold_implicit` | advisory | A `launch_app` step leaves `cold` unset and is not the scenario's first top-level step (any launch inside `sub_steps` counts). It restarts the app; set `"cold": false` to resume or `"cold": true` to confirm the restart, and the warning goes away. | Never fails |
 
 !!! note "`result finalize` and memory"

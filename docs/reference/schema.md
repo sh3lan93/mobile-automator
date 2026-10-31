@@ -116,7 +116,7 @@ The `steps` field is an **ordered array** of step objects. Each object requires 
 
 Each step's `action` field is one of these values: the **14 core actions** documented below, plus **4 semantic actions** available in platform-agnostic (`mode: "platform-agnostic"`) scenarios — `press_back`, `dismiss_keyboard`, `grant_permission`, and `deny_permission` — which resolve to the right per-platform mechanics at replay time.
 
-Note that `clear_app_data` is accepted by the schema but is **not mechanically executable** — the underlying automation engine exposes no primitive for it, so a scenario using it cannot replay unattended. The same applies to the `enable_wifi` and `disable_wifi` precondition device actions.
+Note that `clear_app_data` is accepted by the schema but is **not mechanically executable** — no `mauto` verb runs it yet, so a scenario using it cannot replay unattended. The same applies to the `enable_wifi` and `disable_wifi` precondition device actions, which the engine has no primitive for.
 
 #### 1. launch_app
 Launch the app under test on the device. By default the app is restarted first, so the step starts on its initial screen even if the app was already running. This resets the screen, not app data (use `app_state: "fresh_install"` for that).
@@ -375,7 +375,7 @@ Extract text/value from an element and store it in a variable.
 ---
 
 #### 14. clear_app_data (unsupported)
-Not executable: `clear_app_data` is accepted by the schema, but the engine exposes no primitive for it, so no `mauto` verb runs it and a scenario using it cannot replay unattended. `mauto validate` warns about it (`--strict` fails). To reset app state, use `app_state: "fresh_install"` with `uninstall_app` then `install_app` precondition device actions.
+Not executable: `clear_app_data` is accepted by the schema, but no `mauto` verb runs it yet, so a scenario using it cannot replay unattended. `mauto validate` warns about it (`--strict` fails). To reset app state, use `app_state: "fresh_install"` with `uninstall_app` then `install_app` precondition device actions.
 
 **Fields:**
 - `action` — `"clear_app_data"` (unsupported, not executable)

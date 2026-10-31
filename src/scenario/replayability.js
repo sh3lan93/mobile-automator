@@ -4,8 +4,8 @@
 // scenario will do on replay; this module reports two kinds of gap:
 //
 // - `unsupported_action` (#166): the schema accepts every action in its enum,
-//   but the action catalog marks some `unsupported`. mobile-mcp exposes no
-//   primitive for them, so no `mauto` verb can run them and the step can never
+//   but the action catalog marks some `unsupported`. no `mauto` verb reaches
+//   them, whether or not the engine has a primitive, so the step can never
 //   replay unattended. Blocking: `mauto validate --strict` fails on it.
 // - `launch_cold_implicit` (#255): a catalog `stepFlags` entry marked
 //   `warnWhenUnset`. A step after the first that leaves the marked field to its
