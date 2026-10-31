@@ -11,6 +11,7 @@ const path = require('path');
 
 const {
   ACTION_CATALOG, RESOLUTIONS, primitivesOf, stepFlagsFor, implicitStepFlags,
+  targetActions, waitActions,
 } = require('../../src/device/action-catalog');
 const { MOBILE_MCP_TOOL_NAMES } = require('../../src/device/mobile-mcp-tools');
 const { DeviceBridge } = require('../../src/device/bridge');
@@ -241,4 +242,26 @@ describe('shipping docs never teach an unsupported action as working', () => {
       expect(offenders).toEqual([]);
     });
   }
+});
+
+describe('target and wait classification (#272)', () => {
+  test('every step action declares requiresTarget', () => {
+    for (const action of stepActions) {
+      expect(typeof ACTION_CATALOG[action].requiresTarget).toBe('boolean');
+    }
+  });
+
+  test('targetActions() is the pinned set', () => {
+    expect([...targetActions()].sort()).toEqual([
+      'capture_value', 'double_tap', 'long_press', 'scroll_to_element',
+      'tap', 'wait_for_element', 'wait_for_element_gone',
+    ]);
+  });
+
+  test('waitActions() matches the schema', () => {
+    const description = schema.definitions.step.properties.wait_config.description;
+    const listed = description.match(/\(([^)]*)\)/)[1].split(', ');
+    const expected = stepActions.filter((a) => listed.includes(a));
+    expect([...waitActions()].sort()).toEqual([...expected].sort());
+  });
 });

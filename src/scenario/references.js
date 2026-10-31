@@ -1,5 +1,7 @@
 'use strict';
 
+const { targetActions, waitActions } = require('../device/action-catalog');
+
 // Referential checks for scenarios (#272). The schema types every reference as
 // a bare string, so a scenario whose ids, targets and variables do not line up
 // still validates -- and the gap surfaces mid-run, on a device. This module
@@ -12,20 +14,10 @@
 // nothing to resolve against, so it cannot replay unattended. A wait without
 // `wait_config` still runs on the default timeout, so that one is advisory.
 
-// Step actions that locate an element on screen, so need a `target` (or a
-// `target_pattern`) to resolve it.
-const TARGET_ACTIONS = new Set([
-  'tap',
-  'long_press',
-  'double_tap',
-  'wait_for_element',
-  'wait_for_element_gone',
-  'scroll_to_element',
-  'capture_value',
-]);
-
-// Step actions the schema's `wait_config` configures.
-const WAIT_ACTIONS = new Set(['wait_for_element', 'wait_for_element_gone', 'wait_for_loading_complete']);
+// Which step actions need a target, and which take `wait_config`, are catalog
+// facts (src/device/action-catalog.js), not restated here.
+const TARGET_ACTIONS = new Set(targetActions());
+const WAIT_ACTIONS = new Set(waitActions());
 
 const REFERENCE_CODES = {
   duplicate_step_id: {

@@ -27,6 +27,11 @@
 // method must pass — deliberately explicit because the keys are inconsistent
 // across the engine (launch=packageName, uninstall=packageName, install=path).
 //
+// `requiresTarget` (every step-enum action; precondition-only actions omit it)
+// says whether the step locates an element, so needs a `target` or
+// `target_pattern`. `waitAction: true` marks the actions the schema's
+// `wait_config` configures. targetActions()/waitActions() derive both sets.
+//
 // `stepFlags` records a scenario step field that changes how the verb runs:
 // `{ field, value, flag }` means "when step[field] === value, pass flag". This
 // is the one place the mapping lives; the E2E harness derives the flags via
@@ -42,31 +47,38 @@
 const ACTION_CATALOG = {
   // --- direct verbs (engine-backed) --------------------------------------
   tap: {
+    requiresTarget: true,
     resolution: 'verb', verb: 'tap', bridge: 'tap',
     primitive: 'mobile_click_on_screen_at_coordinates', args: ['x', 'y'],
   },
   long_press: {
+    requiresTarget: true,
     resolution: 'verb', verb: 'long-press', bridge: 'longPress',
     primitive: 'mobile_long_press_on_screen_at_coordinates', args: ['x', 'y', 'duration?'],
   },
   double_tap: {
+    requiresTarget: true,
     resolution: 'verb', verb: 'double-tap', bridge: 'doubleTap',
     primitive: 'mobile_double_tap_on_screen', args: ['x', 'y'],
   },
   type: {
+    requiresTarget: false,
     resolution: 'verb', verb: 'type', bridge: 'type',
     primitive: 'mobile_type_keys', args: ['text', 'submit'],
   },
   swipe: {
+    requiresTarget: false,
     resolution: 'verb', verb: 'swipe', bridge: 'swipe',
     primitive: 'mobile_swipe_on_screen', args: ['direction'],
   },
   press_button: {
+    requiresTarget: false,
     resolution: 'verb', verb: 'press', bridge: 'pressButton',
     primitive: 'mobile_press_button', args: ['button'],
   },
   launch_app: {
     // Cold start (#255): restartApp terminates, then launches.
+    requiresTarget: false,
     resolution: 'verb', verb: 'launch', bridge: 'restartApp',
     primitives: ['mobile_terminate_app', 'mobile_launch_app'], args: ['packageName'],
     // `cold: false` opts out of the restart (#255).
@@ -81,6 +93,7 @@ const ACTION_CATALOG = {
     primitive: 'mobile_uninstall_app', args: ['packageName'],
   },
   open_url: {
+    requiresTarget: false,
     resolution: 'verb', verb: 'open-url', bridge: 'openUrl',
     primitive: 'mobile_open_url', args: ['url'],
   },
@@ -90,23 +103,34 @@ const ACTION_CATALOG = {
   },
 
   // --- semantic (mauto press <action>, platform-resolved) ----------------
-  press_back: { resolution: 'semantic', verb: 'press' },
-  dismiss_keyboard: { resolution: 'semantic', verb: 'press' },
-  grant_permission: { resolution: 'semantic', verb: 'press' },
-  deny_permission: { resolution: 'semantic', verb: 'press' },
+  press_back: { requiresTarget: false, resolution: 'semantic', verb: 'press' },
+  dismiss_keyboard: { requiresTarget: false, resolution: 'semantic', verb: 'press' },
+  grant_permission: { requiresTarget: false, resolution: 'semantic', verb: 'press' },
+  deny_permission: { requiresTarget: false, resolution: 'semantic', verb: 'press' },
 
   // --- composed (agent builds from existing verbs; no dedicated verb) -----
-  scroll_to_element: { resolution: 'composed' },
-  wait_for_element: { resolution: 'composed' },
-  wait_for_element_gone: { resolution: 'composed' },
-  wait_for_loading_complete: { resolution: 'composed' },
-  capture_value: { resolution: 'composed' },
+  scroll_to_element: { requiresTarget: true, resolution: 'composed' },
+  wait_for_element: { requiresTarget: true, waitAction: true, resolution: 'composed' },
+  wait_for_element_gone: { requiresTarget: true, waitAction: true, resolution: 'composed' },
+  wait_for_loading_complete: { requiresTarget: false, waitAction: true, resolution: 'composed' },
+  capture_value: { requiresTarget: true, resolution: 'composed' },
 
   // --- unsupported (no mobile-mcp 1.0.5 primitive) -----------------------
-  clear_app_data: { resolution: 'unsupported' },
+  clear_app_data: { requiresTarget: false, resolution: 'unsupported' },
   enable_wifi: { resolution: 'unsupported' },
   disable_wifi: { resolution: 'unsupported' },
 };
+
+// Steps that locate an element on screen (tap, waits, scroll, capture) need a
+// `target` or `target_pattern`; the scenario referential checks read this set.
+function targetActions() {
+  return Object.keys(ACTION_CATALOG).filter((a) => ACTION_CATALOG[a].requiresTarget === true);
+}
+
+// Steps the schema's `wait_config` configures.
+function waitActions() {
+  return Object.keys(ACTION_CATALOG).filter((a) => ACTION_CATALOG[a].waitAction === true);
+}
 
 const RESOLUTIONS = ['verb', 'semantic', 'composed', 'unsupported'];
 
@@ -141,4 +165,5 @@ function implicitStepFlags(action, step) {
 
 module.exports = {
   ACTION_CATALOG, RESOLUTIONS, actionsByResolution, primitivesOf, stepFlagsFor, implicitStepFlags,
+  targetActions, waitActions,
 };

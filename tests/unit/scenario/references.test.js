@@ -2,6 +2,7 @@
 
 const { findReplayWarnings, isBlocking, CODES } = require('../../../src/scenario/replayability');
 const { REFERENCE_CODES } = require('../../../src/scenario/references');
+const { targetActions, waitActions } = require('../../../src/device/action-catalog');
 
 const codesOf = (scenario) => findReplayWarnings(scenario).map((f) => f.code);
 const only = (scenario, code) => findReplayWarnings(scenario).filter((f) => f.code === code);
@@ -93,10 +94,7 @@ describe('dangling_after_step', () => {
 });
 
 describe('missing_target', () => {
-  const TARGET_ACTIONS = [
-    'tap', 'long_press', 'double_tap', 'wait_for_element',
-    'wait_for_element_gone', 'scroll_to_element', 'capture_value',
-  ];
+  const TARGET_ACTIONS = targetActions();
   const waitConfig = { type: 'element_visible', timeout_ms: 5000 };
 
   test.each(TARGET_ACTIONS)('%s without a target is reported', (action) => {
@@ -252,7 +250,7 @@ describe('dangling_condition_step', () => {
 });
 
 describe('missing_wait_config', () => {
-  test.each(['wait_for_element', 'wait_for_element_gone', 'wait_for_loading_complete'])(
+  test.each(waitActions())(
     '%s without wait_config is reported as advisory',
     (action) => {
       const w = only({ steps: [{ id: 'w', action, target: 'Spinner' }] }, 'missing_wait_config');
