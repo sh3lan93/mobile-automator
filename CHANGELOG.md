@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   exit `6` as "the test failed" rather than "mauto failed", or read
   `error.kind`; scripts that ran `mauto result finalize ... || exit 1` now fail
   the job on a failed run, which is the intent (#273).
+- **`result finalize --status` is validated against its enum.** A value outside
+  `passed | failed | error` (a case variant of a documented word, a typo) used
+  to be persisted verbatim — a schema-invalid result file — with `ok: true` and
+  exit `0`, so a run the caller declared failed could still look green to CI.
+  It now answers `invalid_input` (exit `3`) before anything is written.
 - **Exit code `7` (`incomplete`) is reserved** for a run that still needs the
   agent's verdict on an assertion. No verb emits it yet; it is documented now so
   the exit table stays stable when deterministic replay lands (#271).

@@ -70,4 +70,18 @@ describe('result finalize exit codes (integration, #273)', () => {
     expect(env.ok).toBe(true);
     expect(env.data.status).toBe('passed');
   });
+
+  // #286 review: the enum must be enforced or the exit-6 contract leaks — a
+  // case variant of a DOCUMENTED value used to persist verbatim (a
+  // schema-invalid file) with a green exit. Rejected before anything is
+  // written, through the real bin.
+  test('--status FAILED (a case variant) exits 3 with invalid_input and writes no file', () => {
+    const r = runCli(['result', 'finalize', '--run-id', RUN_ID, '--scenario-id', 'y', '--status', 'FAILED'], root);
+    expect(r.status).toBe(3);
+    const env = onlyEnvelope(r);
+    expect(env.ok).toBe(false);
+    expect(env.error.kind).toBe('invalid_input');
+    expect(env.hint).toContain('passed | failed | error');
+    expect(fs.existsSync(path.join(root, '.mobile-automator', 'results', `${RUN_ID}.json`))).toBe(false);
+  });
 });

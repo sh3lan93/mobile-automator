@@ -13,7 +13,7 @@ const { ScenarioValidator } = require('./scenario/validator');
 const { findReplayWarnings, summarize } = require('./scenario/replayability');
 const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
 const { ResultStore } = require('./result/store');
-const { OBSERVATION_TYPES, parseObservation, parseCapture, parseBool } = require('./result/flags');
+const { OBSERVATION_TYPES, parseObservation, parseCapture, parseBool, parseRunStatus } = require('./result/flags');
 const { MemoryStore } = require('./memory/store');
 const { FILES: MEMORY_FILES, AGENT_KINDS } = require('./memory/paths');
 const { validateEntryText, MAX_ENTRY_LEN } = require('./memory/entries');
@@ -807,6 +807,26 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
       envelope: fail('invalid_input', '--run-id is required', null),
       exitKind: 'invalid_input',
     };
+  }
+
+  // The status flag is a schema enum, not free text: an unlisted value (a case
+  // variant of a documented word, a typo) used to be persisted verbatim — a
+  // schema-invalid result file with ok:true and exit 0 — directly under the
+  // exit-6 contract keyed on that status (#286 review). Reject before anything
+  // is written. A provided-but-empty value is NOT an omitted one: only absence
+  // derives the status from the recorded assertions.
+  if (status !== undefined) {
+    const parsed = parseRunStatus(status);
+    if (parsed.error) {
+      return {
+        envelope: fail(
+          'invalid_input',
+          parsed.error,
+          'Valid values: passed | failed | error, or omit --status to derive it from the recorded assertions.'
+        ),
+        exitKind: 'invalid_input',
+      };
+    }
   }
 
   // Only provided keys: `defaultMetadata` fills the rest with 'unknown', and

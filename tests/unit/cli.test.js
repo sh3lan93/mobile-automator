@@ -1093,6 +1093,33 @@ describe('cli handlers', () => {
     });
   });
 
+  // #286 review: --status is a documented enum ('passed | failed | error') but
+  // was never enforced, so a case variant or typo was persisted verbatim — a
+  // schema-invalid result file — with ok:true and exit 0, directly under the
+  // exit-6 contract that keys on that status. The boundary is explicit now:
+  // anything outside the enum is rejected before anything is written. A
+  // PROVIDED-but-empty value is not an omitted one; only absence derives.
+  describe('handleResultFinalize rejects a --status outside the schema enum', () => {
+    const resultFile = (deps, runId) =>
+      path.join(deps.projectRoot, '.mobile-automator', 'results', `${runId}.json`);
+
+    test.each(['FAILED', 'bogus', ''])('--status %j -> invalid_input, exit 3, nothing written', (status) => {
+      const deps = tmpDeps();
+      const runId = 'run_20261027_100004';
+      const f = handleResultFinalize(deps, { runId, status });
+
+      expect(f.exitKind).toBe('invalid_input');
+      expect(f.envelope.ok).toBe(false);
+      expect(f.envelope.error.kind).toBe('invalid_input');
+      expect(f.envelope.error.message).toContain(status === '' ? '""' : status);
+      // The hint names the enum AND the derivation, so an agent's next command
+      // is one edit away instead of one schema lookup away.
+      expect(f.envelope.hint).toContain('passed | failed | error');
+      expect(f.envelope.hint).toMatch(/omit --status/i);
+      expect(fs.existsSync(resultFile(deps, runId))).toBe(false);
+    });
+  });
+
   describe('measured duration', () => {
     function project() {
       const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-finalize-'));

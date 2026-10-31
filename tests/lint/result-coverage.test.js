@@ -14,7 +14,7 @@ const {
   NO_FLAG_ALLOWLIST,
 } = require('../../src/result/capability-catalog');
 const { ResultStore } = require('../../src/result/store');
-const { OBSERVATION_TYPES } = require('../../src/result/flags');
+const { OBSERVATION_TYPES, RUN_STATUSES } = require('../../src/result/flags');
 const { buildProgram } = require('../../src/cli');
 
 const REPO = path.join(__dirname, '..', '..');
@@ -93,6 +93,13 @@ describe('result coverage — schema ↔ store ↔ verbs', () => {
   test('OBSERVATION_TYPES matches the schema enum exactly', () => {
     const enumValues = resolvePointer('/properties/observations/items/properties/type/enum');
     expect([...OBSERVATION_TYPES].sort()).toEqual([...enumValues].sort());
+  });
+
+  // `result finalize --status` validates against this list, so it must be the
+  // schema's enum — not a near copy of it (#286 review).
+  test('RUN_STATUSES matches the schema run-status enum exactly', () => {
+    const enumValues = resolvePointer('/properties/status/enum');
+    expect([...RUN_STATUSES].sort()).toEqual([...enumValues].sort());
   });
 
   // The schema-level analogue of the no-orphan-flags check above: every

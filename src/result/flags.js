@@ -49,4 +49,19 @@ function parseBool(raw, flagName) {
   return { error: `${flagName} must be "true" or "false" (got "${raw}")` };
 }
 
-module.exports = { OBSERVATION_TYPES, parseObservation, parseCapture, parseBool };
+// Mirrors the enum at /properties/status in src/schemas/result_schema.json;
+// tests/lint/result-coverage.test.js asserts the two never drift. `result
+// finalize --status` must be one of these or omitted (omission derives the
+// status from the recorded assertions): an unlisted value used to be persisted
+// verbatim — a schema-invalid result file with a green exit — directly under
+// the exit-6 contract keyed on that status (#286 review).
+const RUN_STATUSES = ['passed', 'failed', 'error'];
+
+function parseRunStatus(raw) {
+  if (!RUN_STATUSES.includes(raw)) {
+    return { error: `unknown --status "${raw}" (expected ${RUN_STATUSES.join(' | ')})` };
+  }
+  return { value: raw };
+}
+
+module.exports = { OBSERVATION_TYPES, parseObservation, parseCapture, parseBool, RUN_STATUSES, parseRunStatus };
