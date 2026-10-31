@@ -31,18 +31,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `undeclared_capture_variable` also covers a `variable_value` condition or a
   `value_matches_variable` assertion that has no `variable_name` at all.
 
-  The first five are blocking. Every example scenario in the docs and the
-  sample app is clean under all six.
+  The first five are blocking. The scenarios in `docs/examples/` and
+  `sample-app/scenarios/` have no blocking findings.
 
   **This changes behaviour for existing scenarios:**
   - `mauto validate` without `--strict` still exits 0 and only warns.
   - `validate --strict` now exits 3 (`invalid_input`) on scenarios that used to
     pass, if they have a blocking finding.
-  - The execute guides now stop on a blocking finding even without
+  - The execute guides now stop on a blocking reference finding (the five codes
+    above, not `unsupported_action`) even without
     `--strict`, including a schema-valid `tap` with no `target`. An agent that
     ran such a scenario before now refuses it.
   - To upgrade, run `mauto validate` on your existing scenarios and fix what it
-    reports.
+    reports. Plain `validate` exits 0, so read `data.warnings` or use
+    `--strict` to get a non-zero exit.
 
 ### 🔧 Changed
 

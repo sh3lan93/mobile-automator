@@ -866,7 +866,7 @@ Categorization tags for filtering and organizing scenarios.
 - All assertion IDs must be unique
 - `type` must be one of 27 supported types
 
-Validate a scenario file at any time with `mauto validate <file>`, which returns the uniform envelope with `data.valid`.
+Validate a scenario file at any time with `mauto validate <file>`, which returns the uniform envelope with `data.valid` and, for broken references or actions that cannot replay, `data.warnings` (`--strict` fails on them).
 
 ---
 

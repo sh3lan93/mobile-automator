@@ -54,6 +54,9 @@ When you start execution, the agent verifies:
 ✓ Checking setup state...
 ✓ Found: .mobile-automator/config.json
 
+✓ Validating the scenario (mauto validate)...
+  No blocking findings
+
 ✓ Detecting devices (mauto devices)...
   Available devices:
     1. Pixel 6 (Android 34)
@@ -546,6 +549,8 @@ Executor captures screenshots at strategic points:
 3. **Use text_contains instead of element_text** — More forgiving
 4. **Capture and compare variables** — For dynamic values:
    ```json
+   // root variables: declare the captured variable first
+   "variables": { "actual_value": { "type": "string", "description": "Captured value" } }
    // step: capture the dynamic value
    {
      "id": "capture_dynamic_field",
@@ -748,6 +753,8 @@ Executor captures screenshots at strategic points:
 ### ✅ DO: Capture Dynamic Values
 
 ```json
+// root variables: declare the captured variable first
+"variables": { "generated_order_id": { "type": "string", "description": "Generated order ID" } }
 // step: capture the order ID
 {
   "id": "capture_order_id",

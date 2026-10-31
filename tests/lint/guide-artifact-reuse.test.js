@@ -71,6 +71,17 @@ describe('guide emitter — pre-flight reuses a prebuilt artifact', () => {
         });
       }
 
+      if (topic === 'execute') {
+        // The refusal must leave a record: the stop path names the exact
+        // finalize command, not just "finalize with --status error".
+        it(`${topic} (${mode}) stop path spells out the finalize command`, () => {
+          const preflight = preflightSection(emitGuide(topic, { mode }));
+          expect(preflight).toContain('--status error');
+          expect(preflight).toContain('--scenario-id');
+          expect(preflight).toContain('--summary');
+        });
+      }
+
       it(`${topic} (${mode}) does not instruct an unconditional build`, () => {
         const out = emitGuide(topic, { mode });
         expect(out).not.toContain('Build and install the app using');
