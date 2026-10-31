@@ -41,7 +41,9 @@ const { runTracePath } = require('./paths');
 // `invalid_input` is excluded: nothing reached the device, so the picture would
 // show the state BEFORE the verb and be evidence of nothing. `internal` is
 // excluded for the same reason, and because a crashed CLI has a stack trace,
-// which is the artifact that actually helps.
+// which is the artifact that actually helps. `test_failed` / `incomplete` are
+// excluded too: the device answered and the app failed, and the evidence is the
+// step's own screenshot — a second capture would only duplicate it.
 const CAPTURED_KINDS = new Set(['device', 'timeout']);
 
 function isCapturable(result) {

@@ -14,7 +14,7 @@ const {
   NO_FLAG_ALLOWLIST,
 } = require('../../src/result/capability-catalog');
 const { ResultStore } = require('../../src/result/store');
-const { OBSERVATION_TYPES } = require('../../src/result/flags');
+const { OBSERVATION_TYPES, RUN_STATUSES, STEP_STATUS_ALIASES } = require('../../src/result/flags');
 const { buildProgram } = require('../../src/cli');
 
 const REPO = path.join(__dirname, '..', '..');
@@ -93,6 +93,22 @@ describe('result coverage — schema ↔ store ↔ verbs', () => {
   test('OBSERVATION_TYPES matches the schema enum exactly', () => {
     const enumValues = resolvePointer('/properties/observations/items/properties/type/enum');
     expect([...OBSERVATION_TYPES].sort()).toEqual([...enumValues].sort());
+  });
+
+  // `result finalize --status` validates against this list, so it must be the
+  // schema's enum — not a near copy of it (#286 review).
+  test('RUN_STATUSES matches the schema run-status enum exactly', () => {
+    const enumValues = resolvePointer('/properties/status/enum');
+    expect([...RUN_STATUSES].sort()).toEqual([...enumValues].sort());
+  });
+
+  // The alias map's OUTPUTS are the schema's step-status enum: every accepted
+  // spelling lands on a schema value, and every schema value is reachable — so
+  // an alias can never record a value the schema forbids, and the enum can
+  // never hide an unreachable value (#286 review).
+  test('STEP_STATUS_ALIASES normalizes onto the schema step-status enum exactly', () => {
+    const enumValues = resolvePointer('/properties/steps_executed/items/properties/status/enum');
+    expect([...new Set(Object.values(STEP_STATUS_ALIASES))].sort()).toEqual([...enumValues].sort());
   });
 
   // The schema-level analogue of the no-orphan-flags check above: every
