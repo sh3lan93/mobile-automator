@@ -1120,6 +1120,48 @@ describe('cli handlers', () => {
     });
   });
 
+  // #286 review: an unknown step status was silently recorded as 'error' — a
+  // mislabelled step with a green exit. Rejected at the boundary instead,
+  // before anything is written, under the same all-or-nothing rule as the
+  // composite flags.
+  describe('handleResultAddStep rejects an unknown --status', () => {
+    const resultFile = (deps, runId) =>
+      path.join(deps.projectRoot, '.mobile-automator', 'results', `${runId}.json`);
+
+    test.each(['FAILED', 'bogus'])('--status %j -> invalid_input, exit 3, no file', (status) => {
+      const deps = tmpDeps();
+      const runId = 'run_20261027_100006';
+      const a = handleResultAddStep(deps, { runId, scenarioId: 's', stepId: 'launch', status });
+
+      expect(a.exitKind).toBe('invalid_input');
+      expect(a.envelope.ok).toBe(false);
+      expect(a.envelope.error.kind).toBe('invalid_input');
+      expect(a.envelope.hint).toContain('pass | fail | skipped | error');
+      expect(fs.existsSync(resultFile(deps, runId))).toBe(false);
+    });
+
+    // Every accepted spelling — the friendly forms the usage string documents
+    // and the schema's own values — records its schema value, so the E2E
+    // harness's 'pass'/'fail' and an agent's 'passed'/'failed' both keep working.
+    test('every accepted spelling records its schema value', () => {
+      const deps = tmpDeps();
+      const runId = 'run_20261027_100007';
+      const spellings = {
+        pass: 'passed', passed: 'passed',
+        fail: 'failed', failed: 'failed',
+        skipped: 'skipped', skip: 'skipped',
+        error: 'error',
+      };
+      let i = 0;
+      for (const [input, recorded] of Object.entries(spellings)) {
+        const a = handleResultAddStep(deps, { runId, scenarioId: 's', stepId: `s${i}`, status: input });
+        expect(a.exitKind).toBe('ok');
+        expect(a.envelope.data.step.status).toBe(recorded);
+        i += 1;
+      }
+    });
+  });
+
   describe('measured duration', () => {
     function project() {
       const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-finalize-'));
@@ -2978,11 +3020,13 @@ describe('cli handlers', () => {
       // The store factory itself received run-id/scenario-id.
       expect(factoryArgs[0]).toMatchObject({ runId: 'run_argv_1', scenarioId: 'scn_argv' });
 
-      // Every scalar add-step flag landed on the store.addStep call.
+      // Every scalar add-step flag landed on the store.addStep call. The
+      // status arrives VALIDATED and normalized: the boundary hands the store
+      // a schema value, not the raw flag (#286 review).
       expect(calls.addStep).toEqual([
         {
           step_id: 'step_1',
-          status: 'fail',
+          status: 'failed',
           attempts: 3,
           screenshot: '.mobile-automator/screenshots/step_1.png',
           error_message: 'button not found',

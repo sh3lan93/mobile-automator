@@ -84,4 +84,16 @@ describe('result finalize exit codes (integration, #273)', () => {
     expect(env.hint).toContain('passed | failed | error');
     expect(fs.existsSync(path.join(root, '.mobile-automator', 'results', `${RUN_ID}.json`))).toBe(false);
   });
+
+  // #286 review: same boundary for add-step — an unknown status used to be
+  // silently recorded as 'error' with a green exit.
+  test('add-step --status bogus exits 3 with invalid_input and writes no file', () => {
+    const r = runCli(['result', 'add-step', '--run-id', RUN_ID, '--step-id', 'launch', '--status', 'bogus'], root);
+    expect(r.status).toBe(3);
+    const env = onlyEnvelope(r);
+    expect(env.ok).toBe(false);
+    expect(env.error.kind).toBe('invalid_input');
+    expect(env.hint).toContain('pass | fail | skipped | error');
+    expect(fs.existsSync(path.join(root, '.mobile-automator', 'results', `${RUN_ID}.json`))).toBe(false);
+  });
 });

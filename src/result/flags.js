@@ -43,6 +43,41 @@ function parseCapture(spec) {
   return { value: { name, value } };
 }
 
+// Mirrors the enum at /properties/steps_executed/items/properties/status in
+// src/schemas/result_schema.json; tests/lint/result-coverage.test.js asserts
+// the mapping's outputs never drift from that enum (every accepted spelling
+// lands on a schema value, every schema value is reachable). The CLI accepts
+// the friendly spellings an agent types (pass/fail/skip) alongside the
+// schema's own values; anything else is rejected instead of being silently
+// recorded as 'error' (#286 review).
+const STEP_STATUS_ALIASES = {
+  pass: 'passed',
+  passed: 'passed',
+  fail: 'failed',
+  failed: 'failed',
+  skipped: 'skipped',
+  skip: 'skipped',
+  error: 'error',
+};
+
+// The throwing form, for the store: addStep's input is already validated at
+// the CLI boundary (parseStepStatus), so reaching this with an unknown value
+// means a CLI bug — it escapes as `internal` (exit 1), never as a
+// mislabelled-but-green step.
+function stepStatus(raw) {
+  const normalized = STEP_STATUS_ALIASES[raw];
+  if (!normalized) throw new Error(`unknown step status "${raw}"`);
+  return normalized;
+}
+
+function parseStepStatus(raw) {
+  const normalized = STEP_STATUS_ALIASES[raw];
+  if (!normalized) {
+    return { error: `unknown --status "${raw}" (expected pass | fail | skipped | error)` };
+  }
+  return { value: normalized };
+}
+
 function parseBool(raw, flagName) {
   if (raw === 'true') return { value: true };
   if (raw === 'false') return { value: false };
@@ -64,4 +99,14 @@ function parseRunStatus(raw) {
   return { value: raw };
 }
 
-module.exports = { OBSERVATION_TYPES, parseObservation, parseCapture, parseBool, RUN_STATUSES, parseRunStatus };
+module.exports = {
+  OBSERVATION_TYPES,
+  parseObservation,
+  parseCapture,
+  parseBool,
+  RUN_STATUSES,
+  parseRunStatus,
+  STEP_STATUS_ALIASES,
+  stepStatus,
+  parseStepStatus,
+};

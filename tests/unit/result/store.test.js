@@ -110,6 +110,17 @@ describe('ResultStore', () => {
     expect(() => { store.file = '/elsewhere.json'; }).toThrow(TypeError);
   });
 
+  // Unknown step statuses are rejected, not silently recorded as 'error': the
+  // CLI validates first (invalid_input, below); a value reaching the store
+  // means a CLI bug, so this throw escapes as internal, not invalid_input
+  // (#286 review).
+  test('addStep throws on an unknown status and writes nothing', () => {
+    const projectRoot = tmpRoot();
+    const store = new ResultStore({ runId: RUN_ID, scenarioId: 's', projectRoot });
+    expect(() => store.addStep({ step_id: 'x', status: 'bogus' })).toThrow(/unknown step status "bogus"/);
+    expect(fs.existsSync(store.file)).toBe(false);
+  });
+
   test('reloads an in-progress file across separate instances (incremental updates)', () => {
     const projectRoot = tmpRoot();
 

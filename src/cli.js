@@ -13,7 +13,7 @@ const { ScenarioValidator } = require('./scenario/validator');
 const { findReplayWarnings, summarize } = require('./scenario/replayability');
 const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
 const { ResultStore } = require('./result/store');
-const { OBSERVATION_TYPES, parseObservation, parseCapture, parseBool, parseRunStatus } = require('./result/flags');
+const { OBSERVATION_TYPES, parseObservation, parseCapture, parseBool, parseRunStatus, parseStepStatus } = require('./result/flags');
 const { MemoryStore } = require('./memory/store');
 const { FILES: MEMORY_FILES, AGENT_KINDS } = require('./memory/paths');
 const { validateEntryText, MAX_ENTRY_LEN } = require('./memory/entries');
@@ -635,6 +635,19 @@ function handleResultAddStep({ resultStoreFactory, projectRoot }, opts) {
     };
   }
 
+  // The status flag is a schema enum, not free text: an unknown value used to
+  // be silently recorded as 'error' — a mislabelled step with a green exit —
+  // because 'error' was the catch-all of the normalizer rather than an explicit
+  // acceptance (#286 review). Same all-or-nothing rule as the composite flags
+  // below: reject BEFORE the store is touched, so nothing is half-recorded.
+  const parsedStatus = parseStepStatus(status);
+  if (parsedStatus.error) {
+    return {
+      envelope: fail('invalid_input', parsedStatus.error, 'Valid values: pass | fail | skipped | error.'),
+      exitKind: 'invalid_input',
+    };
+  }
+
   // Parse every composite flag BEFORE touching the store: a half-recorded step
   // (screenshot persisted, observation rejected) leaves the agent unable to
   // tell which half landed, so validation is all-or-nothing.
@@ -665,7 +678,9 @@ function handleResultAddStep({ resultStoreFactory, projectRoot }, opts) {
   const store = resultStoreFactory({ runId, scenarioId, projectRoot });
   const step = store.addStep({
     step_id: stepId,
-    status,
+    // The VALIDATED status: validated AND normalized at the boundary, so the
+    // store only ever records schema values.
+    status: parsedStatus.value,
     attempts: attempts === undefined ? 1 : Number(attempts),
     screenshot: screenshot === undefined ? null : screenshot,
     error_message: errorMessage === undefined ? null : errorMessage,

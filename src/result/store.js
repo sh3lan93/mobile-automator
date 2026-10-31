@@ -5,7 +5,7 @@ const path = require('path');
 
 const { atomicWrite } = require('../util/atomic');
 const { withLock } = require('../util/lock');
-const { OBSERVATION_TYPES } = require('./flags');
+const { OBSERVATION_TYPES, stepStatus } = require('./flags');
 const { workspaceDir } = require('../workspace/layout');
 
 // Incremental result accumulator that persists to
@@ -31,14 +31,6 @@ function defaultMetadata(overrides = {}) {
     environment: overrides.environment || 'unknown',
     timestamp: overrides.timestamp || new Date().toISOString(),
   };
-}
-
-// Normalize the caller-friendly status ('pass'/'fail') to the schema enums.
-function stepStatus(status) {
-  if (status === 'pass' || status === 'passed') return 'passed';
-  if (status === 'fail' || status === 'failed') return 'failed';
-  if (status === 'skipped' || status === 'skip') return 'skipped';
-  return 'error';
 }
 
 function assertionStatus(pass) {
