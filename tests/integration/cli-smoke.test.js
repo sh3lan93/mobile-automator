@@ -122,6 +122,26 @@ describe('cli smoke (integration)', () => {
     expect(s.data.warnings).toHaveLength(1);
   });
 
+  test('validate warns on a dangling after_step; --strict exits 3 (#272)', () => {
+    const file = path.join(__dirname, 'fixtures', 'scenario-dangling-after-step.json');
+
+    const warn = runCli(['validate', file]);
+    expect(warn.status).toBe(0);
+    const w = JSON.parse(warn.stdout);
+    expect(w.ok).toBe(true);
+    expect(w.data.warnings).toEqual([
+      expect.objectContaining({ code: 'dangling_after_step', path: 'assertions[0]', assertion_id: 'home_shown' }),
+    ]);
+
+    const strict = runCli(['validate', file, '--strict']);
+    expect(strict.status).toBe(3); // EXIT.INVALID_INPUT
+    const s = JSON.parse(strict.stdout);
+    expect(s.ok).toBe(false);
+    expect(s.data.valid).toBe(false);
+    expect(s.error.message).toBe('scenario cannot replay unattended; see data.warnings');
+    expect(s.hint).toBe('1 assertion(s) run after a step that does not exist — see data.warnings');
+  });
+
   test('schema scenario prints parseable JSON', () => {
     const r = runCli(['schema', 'scenario']);
     expect(r.status).toBe(0);
