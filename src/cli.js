@@ -566,8 +566,11 @@ async function handlePress({ deviceBridge }, button) {
 }
 
 // Build an assertion object from CLI flags, fetch the current element list,
-// and run the pure evaluator. A failed assertion is a valid RESULT (exit 0);
-// only an unknown assertion type is a structural (invalid_input) error.
+// and run the pure evaluator. A decided failure is a test outcome, not a tool
+// fault: it exits 6 (`test_failed`, #273) so CI sees red without parsing JSON,
+// with the verdict still in `data`. A pass and an undecided Tier-2 verdict
+// (`needs_agent`) stay ok / exit 0. Only an unknown assertion type is a
+// structural (invalid_input) error.
 async function handleAssert({ deviceBridge }, type, flags = {}) {
   if (!KNOWN_ASSERTION_TYPES.has(type)) {
     return {
@@ -600,19 +603,24 @@ async function handleAssert({ deviceBridge }, type, flags = {}) {
     `Record it: mauto result add-assertion --run-id <run_id> --step-id <step_id> ` +
     `--type ${r.type} --pass ${verdict} --message "<why>"`;
 
-  return {
-    envelope: ok(
-      {
-        type: r.type,
-        mechanical: r.mechanical,
-        pass: r.pass,
-        needs_agent: r.needs_agent,
-        message: r.message,
-      },
-      hint
-    ),
-    exitKind: 'ok',
+  const verdictData = {
+    type: r.type,
+    mechanical: r.mechanical,
+    pass: r.pass,
+    needs_agent: r.needs_agent,
+    message: r.message,
   };
+
+  // Same data, same hint on both paths: an agent that reads `data` and copies
+  // the hint keeps working; only the exit code and `ok` change on a failure.
+  if (!r.needs_agent && r.pass === false) {
+    return {
+      envelope: fail('test_failed', `assertion failed: ${r.message}`, hint, verdictData),
+      exitKind: 'test_failed',
+    };
+  }
+
+  return { envelope: ok(verdictData, hint), exitKind: 'ok' };
 }
 
 // Collect a repeatable flag's values into an array (commander's collector).
@@ -852,6 +860,24 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
     // Fold any warnings the store accumulated (even if recordRun later threw).
     const memHint = storeHint(mem);
     if (memHint) hints.push(memHint);
+  }
+
+  // The exit code is keyed on the FINALIZED status, not the --status flag:
+  // with the flag omitted, the store derives 'failed' from a failed assertion,
+  // and the exit code must agree with the file either way (#273). 'error' takes
+  // the same path — a run that errored is not a pass for CI either; data.status
+  // tells the two apart. Everything above (write, retention, harvest) has
+  // already run: exit 6 is a verdict about the app, not a reason to lose the
+  // record of it.
+  if (result.status === 'failed' || result.status === 'error') {
+    const hint = hints.length
+      ? hints.join(' ')
+      : 'See data.steps_executed and data.assertion_results for what failed; ' +
+        `the result is saved to ${path.relative(projectRoot, store.file)}.`;
+    return {
+      envelope: fail('test_failed', `run ${runId} ${result.status}`, hint, result),
+      exitKind: 'test_failed',
+    };
   }
 
   return { envelope: ok(result, hints.length ? hints.join(' ') : null), exitKind: 'ok' };

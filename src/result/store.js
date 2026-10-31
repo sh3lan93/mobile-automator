@@ -70,6 +70,12 @@ class ResultStore {
     this._refreshFromDisk();
   }
 
+  // The result file this store reads and writes. Read-only: the store owns the
+  // location, so callers name the file through it rather than rebuilding it.
+  get file() {
+    return this._file;
+  }
+
   // Re-load the on-disk accumulator and refresh the in-memory fields. The
   // constructor eager-loads once (read-only paths and back-compat), but every
   // persisting mutator re-runs this UNDER the per-runId lock so it operates on

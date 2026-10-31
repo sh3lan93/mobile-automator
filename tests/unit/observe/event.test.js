@@ -57,6 +57,14 @@ describe('telemetryPayload', () => {
     expect(p).not.toHaveProperty('message');
   });
 
+  // ERROR_KINDS is derived from the envelope, so the test-outcome kinds reach
+  // the wire with no edit here; this pins that derivation for them.
+  it.each(['test_failed', 'incomplete'])('accepts error_kind %s', (kind) => {
+    const p = telemetryPayload(makeEvent({ event: 'verb.end', verb: 'assert', ok: false, error_kind: kind }));
+    expect(EVENT_FIELDS.error_kind.accepts(kind)).toBe(true);
+    expect(p.error_kind).toBe(kind);
+  });
+
   it('never emits a key absent from the catalog even if present on the event', () => {
     const p = telemetryPayload({ event: 'verb.end', rogue: 'x' });
     expect(p).not.toHaveProperty('rogue');

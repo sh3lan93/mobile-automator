@@ -87,6 +87,60 @@ describe('createMauto().run', () => {
     await expect(mauto.run(['elements'])).rejects.toThrow(/exited 1/);
   });
 
+  // #273: a failed `mauto assert` and the finalize of a failed run exit 6 with
+  // `test_failed` and the verdict / result in data. That is the answer the
+  // caller asked for, so a caller that opts in gets the data back.
+  describe('acceptKinds', () => {
+    const failedVerdict = { type: 'element_text', mechanical: true, pass: false, needs_agent: false, message: 'text is X' };
+    const testFailed = (extra = {}) =>
+      envelope({ ok: false, error: { kind: 'test_failed', message: 'assertion failed: text is X' }, hint: 'h', ...extra });
+
+    test('an accepted kind with a non-zero exit and data returns the data', async () => {
+      const { exec } = fakeExec({ stdout: testFailed({ data: failedVerdict }), stderr: '', code: 6 });
+      const mauto = createMauto({ bin: 'mauto', cwd: '/p', exec });
+      await expect(mauto.run(['assert', 'element_text'], { acceptKinds: ['test_failed'] })).resolves.toEqual(failedVerdict);
+    });
+
+    test('a kind not in acceptKinds still throws', async () => {
+      const { exec } = fakeExec({
+        stdout: envelope({ ok: false, error: { kind: 'device', message: 'no device' }, data: null }),
+        stderr: '',
+        code: 2,
+      });
+      const mauto = createMauto({ bin: 'mauto', cwd: '/p', exec });
+      const err = await mauto.run(['assert', 'element_text'], { acceptKinds: ['test_failed'] }).catch((e) => e);
+      expect(err).toBeInstanceOf(MautoError);
+      expect(err.message).toContain('no device');
+    });
+
+    test('an accepted kind that exited 0 is a contract bug and throws', async () => {
+      const { exec } = fakeExec({ stdout: testFailed({ data: failedVerdict }), stderr: '', code: 0 });
+      const mauto = createMauto({ bin: 'mauto', cwd: '/p', exec });
+      const err = await mauto.run(['assert', 'element_text'], { acceptKinds: ['test_failed'] }).catch((e) => e);
+      expect(err).toBeInstanceOf(MautoError);
+      expect(err.message).toMatch(/test_failed/);
+      expect(err.message).toMatch(/exited 0/);
+    });
+
+    test('an accepted kind with no data key is a contract bug and throws', async () => {
+      const { exec } = fakeExec({ stdout: testFailed(), stderr: '', code: 6 });
+      const mauto = createMauto({ bin: 'mauto', cwd: '/p', exec });
+      const err = await mauto.run(['result', 'finalize'], { acceptKinds: ['test_failed'] }).catch((e) => e);
+      expect(err).toBeInstanceOf(MautoError);
+      expect(err.verb).toBe('result finalize');
+      expect(err.message).toMatch(/no data/);
+    });
+
+    test('without acceptKinds a test_failed envelope throws as before', async () => {
+      const { exec } = fakeExec({ stdout: testFailed({ data: failedVerdict }), stderr: '', code: 6 });
+      const mauto = createMauto({ bin: 'mauto', cwd: '/p', exec });
+      const err = await mauto.run(['assert', 'element_text']).catch((e) => e);
+      expect(err).toBeInstanceOf(MautoError);
+      expect(err.message).toContain('mauto assert failed');
+      expect(err.message).toContain('test_failed');
+    });
+  });
+
   test('logs each invocation', async () => {
     const lines = [];
     const { exec } = fakeExec({ stdout: envelope({ ok: true, data: 1 }), stderr: '', code: 0 });

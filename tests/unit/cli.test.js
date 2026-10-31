@@ -768,30 +768,50 @@ describe('cli handlers', () => {
         'element_exists',
         { target: 'Login' }
       );
-      expect(exitKind).toBe('ok'); // failed assertion is still exit 0
+      expect(exitKind).toBe('ok');
       expect(envelope.ok).toBe(true);
       expect(envelope.data.mechanical).toBe(true);
       expect(envelope.data.pass).toBe(true);
       expect(envelope.data.needs_agent).toBe(false);
     });
 
-    test('mechanical fail still returns ok envelope, exit 0', async () => {
+    // #273: a decided failure fails the process (exit 6) so CI sees red
+    // without parsing JSON — but the verdict still rides in `data`, unchanged,
+    // and the hint is still the exact recording command, so an agent's next
+    // step is the same as before.
+    test('mechanical fail -> ok:false, test_failed (exit 6), verdict in data', async () => {
       const { envelope, exitKind } = await handleAssert(
         { deviceBridge: fakeBridge([]) },
         'element_exists',
         { target: 'Login' }
       );
-      expect(exitKind).toBe('ok');
-      expect(envelope.data.pass).toBe(false);
+      expect(exitKind).toBe('test_failed');
+      expect(envelope.ok).toBe(false);
+      expect(envelope.error.kind).toBe('test_failed');
+      expect(envelope.error.message).toMatch(/^assertion failed: /);
+      expect(envelope.data).toEqual({
+        type: 'element_exists',
+        mechanical: true,
+        pass: false,
+        needs_agent: false,
+        message: expect.any(String),
+      });
+      expect(envelope.error.message).toBe(`assertion failed: ${envelope.data.message}`);
+      expect(envelope.hint).toContain('mauto result add-assertion');
+      expect(envelope.hint).toContain('--type element_exists');
+      expect(envelope.hint).toContain('--pass false');
+      expect(envelope.hint).toContain('--message');
     });
 
-    test('non-mechanical passes through as needs_agent', async () => {
+    // Undecided is not failed: Tier 2 is the agent's call, so it stays exit 0.
+    test('non-mechanical passes through as needs_agent, still ok / exit 0', async () => {
       const { envelope, exitKind } = await handleAssert(
         { deviceBridge: fakeBridge([]) },
         'screenshot_match',
         {}
       );
       expect(exitKind).toBe('ok');
+      expect(envelope.ok).toBe(true);
       expect(envelope.data.needs_agent).toBe(true);
       expect(envelope.data.pass).toBeNull();
     });
@@ -894,6 +914,8 @@ describe('cli handlers', () => {
       expect(a.envelope.data.step.error_message).toBe('Login button not found');
 
       const f = handleResultFinalize(deps, { runId, status: 'failed', duration: 3 });
+      // A failed run exits 6 (#273), but the full result still rides in data.
+      expect(f.exitKind).toBe('test_failed');
       const types = f.envelope.data.observations.map((o) => o.type);
       expect(types).toEqual(['regression', 'state_context']);
       expect(f.envelope.data.observations[0].step_id).toBe('verify_home');
@@ -980,6 +1002,94 @@ describe('cli handlers', () => {
       handleResultAddStep(deps, { runId, scenarioId: 's', stepId: 'launch', status: 'pass' });
       const f = handleResultFinalize(deps, { runId, status: 'passed', duration: 2 });
       expect(f.envelope.data.summary).toBe('passed: 0/0 assertion(s) passed across 1 step(s).');
+    });
+  });
+
+  // #273: the exit code tells CI whether the run passed. The result is still
+  // written, retained and harvested on the failed path — exit 6 is a verdict
+  // about the app, not a reason to lose the record of it.
+  describe('handleResultFinalize exit code follows the finalized status', () => {
+    const resultFile = (deps, runId) =>
+      path.join(deps.projectRoot, '.mobile-automator', 'results', `${runId}.json`);
+
+    test('status passed -> ok, exit 0', () => {
+      const deps = tmpDeps();
+      const runId = 'run_20261027_100000';
+      handleResultAddStep(deps, { runId, scenarioId: 's', stepId: 'launch', status: 'pass' });
+      const f = handleResultFinalize(deps, { runId, status: 'passed' });
+      expect(f.exitKind).toBe('ok');
+      expect(f.envelope.ok).toBe(true);
+      expect(f.envelope.data.status).toBe('passed');
+    });
+
+    test('status failed -> ok:false, test_failed, full result in data, file written', () => {
+      const deps = tmpDeps();
+      const runId = 'run_20261027_100001';
+      handleResultAddStep(deps, { runId, scenarioId: 's', stepId: 'verify', status: 'fail' });
+      const f = handleResultFinalize(deps, { runId, status: 'failed' });
+
+      expect(f.exitKind).toBe('test_failed');
+      expect(f.envelope.ok).toBe(false);
+      expect(f.envelope.error).toEqual({ kind: 'test_failed', message: `run ${runId} failed` });
+      expect(f.envelope.data.run_id).toBe(runId);
+      expect(f.envelope.data.status).toBe('failed');
+      expect(f.envelope.data.steps_executed).toHaveLength(1);
+      // Default hint: where to look, since there is no store/memory warning.
+      expect(f.envelope.hint).toContain('steps_executed');
+      expect(f.envelope.hint).toContain(`.mobile-automator/results/${runId}.json`);
+
+      // The data IS the persisted result — not a summary of it.
+      const onDisk = JSON.parse(fs.readFileSync(resultFile(deps, runId), 'utf8'));
+      expect(f.envelope.data).toEqual(onDisk);
+      const schema = JSON.parse(fs.readFileSync(RESULT_SCHEMA_PATH, 'utf8'));
+      expect(createCliAjv().compile(schema)(f.envelope.data)).toBe(true);
+    });
+
+    test('status error -> the same test_failed path, data.status tells them apart', () => {
+      const deps = tmpDeps();
+      const runId = 'run_20261027_100002';
+      handleResultAddStep(deps, { runId, scenarioId: 's', stepId: 'launch', status: 'fail' });
+      const f = handleResultFinalize(deps, { runId, status: 'error' });
+      expect(f.exitKind).toBe('test_failed');
+      expect(f.envelope.ok).toBe(false);
+      expect(f.envelope.error).toEqual({ kind: 'test_failed', message: `run ${runId} error` });
+      expect(f.envelope.data.status).toBe('error');
+      expect(fs.existsSync(resultFile(deps, runId))).toBe(true);
+    });
+
+    test('the failure hint names the file the store reports, not a rebuilt path', () => {
+      const deps = tmpDeps();
+      const runId = 'run_20261027_100003';
+      handleResultAddStep(deps, { runId, scenarioId: 's', stepId: 'verify', status: 'fail' });
+      // Relocate the store's file: the hint must follow the store, so a future
+      // layout move cannot leave the hint pointing at a stale directory.
+      const relocated = path.join(deps.projectRoot, 'elsewhere', `${runId}.json`);
+      const realFactory = deps.resultStoreFactory;
+      deps.resultStoreFactory = (args) => {
+        const store = realFactory(args);
+        Object.defineProperty(store, 'file', { get: () => relocated });
+        return store;
+      };
+      const f = handleResultFinalize(deps, { runId, status: 'failed' });
+      expect(f.exitKind).toBe('test_failed');
+      expect(f.envelope.hint).toContain(`the result is saved to ${path.join('elsewhere', `${runId}.json`)}.`);
+    });
+
+    test('a failed run is still harvested into memory, and memory warnings stay the hint', () => {
+      const deps = tmpDeps();
+      const runId = 'run_20261027_100003';
+      const recorded = [];
+      const memoryStoreFactory = () => ({
+        warnings: ['run-history file was unreadable; preserved as sidecar'],
+        recordRun(r) { recorded.push(r); },
+      });
+      handleResultAddStep(deps, { runId, scenarioId: 's', stepId: 'verify', status: 'fail' });
+      const f = handleResultFinalize({ ...deps, memoryStoreFactory }, { runId, status: 'failed' });
+
+      expect(f.exitKind).toBe('test_failed');
+      expect(recorded).toHaveLength(1);
+      expect(recorded[0].status).toBe('failed');
+      expect(f.envelope.hint).toContain('preserved as sidecar');
     });
   });
 
@@ -1123,6 +1233,11 @@ describe('cli handlers', () => {
       expect(b.exitKind).toBe('ok');
 
       const f = handleResultFinalize(deps, { runId, duration: 4 });
+      // Keyed on the FINALIZED status, not the flag: no --status was given,
+      // the store derived 'failed', and the exit code agrees with the file.
+      expect(f.exitKind).toBe('test_failed');
+      expect(f.envelope.ok).toBe(false);
+      expect(f.envelope.error.kind).toBe('test_failed');
       expect(f.envelope.data.total_assertions).toBe(2);
       expect(f.envelope.data.passed_assertions).toBe(1);
       expect(f.envelope.data.failed_assertions).toBe(1);

@@ -75,7 +75,12 @@ async function runScenario({ scenario, mauto, evaluator, catalog, workspaceDir, 
   const scenarioId = scenario.scenario_id;
   // Every verb carries the run id, so the CLI writes a trace for this run and
   // `result finalize` measures the duration instead of taking our word for it.
-  const verb = (args) => mauto.run(args, { env: { MAUTO_RUN_ID: runId } });
+  const verb = (args, opts = {}) => mauto.run(args, { ...opts, env: { MAUTO_RUN_ID: runId } });
+  // A failed assert and the finalize of a failed run exit 6 with `test_failed`
+  // and the verdict / result in data (#273): an outcome to record, not a tool
+  // error. `incomplete` (exit 7) is not accepted: this harness decides only
+  // mechanical assertions and never produces it; a later replay slice adds it.
+  const TEST_OUTCOME = { acceptKinds: ['test_failed'] };
   const failures = [];
 
   const elements = async () => {
@@ -194,7 +199,7 @@ async function runScenario({ scenario, mauto, evaluator, catalog, workspaceDir, 
     let pass = false;
     let message;
     try {
-      const verdict = await verb(['assert', assertion.type, ...assertFlags(assertion)]);
+      const verdict = await verb(['assert', assertion.type, ...assertFlags(assertion)], TEST_OUTCOME);
       if (verdict && verdict.needs_agent) {
         message = `needs agent judgment; the E2E harness only decides mechanical assertions (${verdict.message})`;
       } else {
@@ -260,7 +265,7 @@ async function runScenario({ scenario, mauto, evaluator, catalog, workspaceDir, 
   }
 
   const status = failedStep || failures.length > 0 ? 'failed' : 'passed';
-  await verb(['result', 'finalize', '--run-id', runId, '--scenario-id', scenarioId, '--status', status]);
+  await verb(['result', 'finalize', '--run-id', runId, '--scenario-id', scenarioId, '--status', status], TEST_OUTCOME);
 
   return {
     status,
