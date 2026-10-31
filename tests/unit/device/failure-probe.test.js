@@ -30,6 +30,15 @@ describe('shouldProbe', () => {
     }
   });
 
+  // A failed test is the app answering wrongly, not the app dying: the device
+  // responded. Pinned so a future "probe every non-ok" edit fails here.
+  it('does not fire on test outcomes (test_failed, incomplete)', () => {
+    for (const kind of ['test_failed', 'incomplete']) {
+      expect(shouldProbe({ envelope: failEnv(kind), verb: 'assert' })).toBe(false);
+      expect(shouldProbe({ envelope: failEnv(kind), verb: 'result' })).toBe(false);
+    }
+  });
+
   it('does not fire on a successful action — the hot path stays untouched', () => {
     expect(shouldProbe({ envelope: { ok: true, data: { tapped: [1, 2] } }, verb: 'tap' })).toBe(false);
   });

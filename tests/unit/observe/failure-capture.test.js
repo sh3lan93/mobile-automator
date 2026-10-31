@@ -4,7 +4,7 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 
-const { captureOnFailure } = require('../../../src/observe/failure-capture');
+const { captureOnFailure, isCapturable } = require('../../../src/observe/failure-capture');
 
 function workspace() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-failcap-'));
@@ -79,6 +79,23 @@ describe('screenshot on device failure', () => {
       const bridge = fakeBridge();
       const shot = await captureOnFailure({
         bridge, result, projectRoot: root, runId: 'smoke', verb: 'tap', env: ENV,
+      });
+      expect(shot).toBeNull();
+      expect(bridge.calls).toEqual([]);
+    }
+    expect(traceEvents(root, 'smoke')).toEqual([]);
+  });
+
+  // test_failed / incomplete are outcomes, not faults: the device answered and
+  // the app failed, and the evidence is the step's own screenshot. A second
+  // capture would duplicate it. Pinned so "capture every non-ok" fails here.
+  it('captures nothing on a test outcome (test_failed, incomplete)', async () => {
+    const root = workspace();
+    for (const kind of ['test_failed', 'incomplete']) {
+      expect(isCapturable(failing(kind))).toBe(false);
+      const bridge = fakeBridge();
+      const shot = await captureOnFailure({
+        bridge, result: failing(kind), projectRoot: root, runId: 'smoke', verb: 'assert', env: ENV,
       });
       expect(shot).toBeNull();
       expect(bridge.calls).toEqual([]);

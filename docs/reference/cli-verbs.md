@@ -34,10 +34,15 @@ The `error.kind` on a failure envelope maps to a process exit code:
 | Internal error | `internal` | `1` |
 | Partial success | `partial` | `1` |
 | Device / engine failure | `device` | `2` |
+| Device call timed out (may have partially executed) | `timeout` | `2` |
 | Invalid input | `invalid_input` | `3` |
 | Target not found | `target_not_found` | `4` |
 | Environment problem | `environment` | `5` |
+| Test failed: a failed `assert`, or `result finalize` of a failed or errored run | `test_failed` | `6` |
+| Run incomplete: an assertion still needs the agent's verdict (reserved for replay; no verb emits it yet) | `incomplete` | `7` |
 | Cancelled | `cancel` | `130` |
+
+Exit `6` means the tooling worked and the app under test did not: the failure envelope still carries the verdict or the full result in `data`, so read it the same way you would a success. Exits `1`–`5` mean `mauto` itself, the device, or your input is the problem.
 
 ---
 
@@ -97,10 +102,10 @@ Used to author scenario JSON, evaluate assertions, and assemble result files.
 | Verb | Description |
 |------|-------------|
 | `mauto validate <file> [--strict]` | Validate a scenario JSON file against the [scenario schema](schema.md); warns (or, with `--strict`, fails) on actions that cannot replay unattended, and warns on `launch_app` steps that leave `cold` unset |
-| `mauto assert <type> [--target --expected --operator --count --pattern --variable --device]` | Evaluate an assertion; mechanical types are decided by the CLI, visual types are deferred to the agent |
-| `mauto result add-step --run-id --step-id --status [--scenario-id --attempts --screenshot --error-message --observation <type>:<message> --capture <name>=<value>]` | Append a step result to a run; `--observation` and `--capture` are repeatable |
+| `mauto assert <type> [--target --expected --operator --count --pattern --variable --device]` | Evaluate an assertion; mechanical types are decided by the CLI, visual types are deferred to the agent. A failed verdict exits `6` (`test_failed`) with the verdict in `data` |
+| `mauto result add-step --run-id --step-id --status [--scenario-id --attempts --screenshot --error-message --observation <type>:<message> --capture <name>=<value>]` | Append a step result to a run; `--observation` and `--capture` are repeatable. `--status` accepts `pass | fail | skipped | error` (and `passed`, `failed`, `skip`) and rejects anything else with `invalid_input` (exit `3`) |
 | `mauto result add-assertion --run-id --step-id --type --pass [--scenario-id --assertion-id --message --expected --actual]` | Record an assertion verdict against a step |
-| `mauto result finalize --run-id [--scenario-id --status --duration --app-version --device-model --api-level --environment --summary]` | Assemble the final [result file](result-schema.md) and auto-harvest memory |
+| `mauto result finalize --run-id [--scenario-id --status --duration --app-version --device-model --api-level --environment --summary]` | Assemble the final [result file](result-schema.md) and auto-harvest memory. `--status` accepts `passed | failed | error` and rejects anything else with `invalid_input` (exit `3`); omitting it derives the status from the recorded assertions. A run that finalizes as `failed` or `error` exits `6` (`test_failed`) with the full result in `data` |
 
 !!! note "`validate` and replay warnings"
     Schema-valid is not the same as replayable, so `validate` also reports replay warnings in `data.warnings`, with a summarising `hint`. A scenario with nothing to report gets the bare `{"valid": true}`.
@@ -114,6 +119,9 @@ Used to author scenario JSON, evaluate assertions, and assemble result files.
 
 !!! note "`result finalize` and memory"
     On finalize, `mauto` auto-harvests typed observations into cross-session memory. This is best-effort: a memory failure never fails an otherwise-successful finalize — it folds into the envelope `hint` instead. See [Cross-Session Memory](../concepts/memory.md).
+
+!!! note "A failed test exits non-zero"
+    `mauto assert` with a `pass: false` verdict, and `mauto result finalize` of a run whose status is `failed` or `error`, return `ok: false` with `error.kind: "test_failed"` and exit `6`. The result is still recorded: `assert` puts its verdict (`type`, `mechanical`, `pass`, `needs_agent`, `message`) in `data`, and `finalize` writes the result file, harvests memory and puts the full result in `data`. `finalize` keys on the status it actually recorded, so a run finalized without `--status` that has a failed assertion also exits `6`; `data.status` tells `failed` from `error`. A `needs_agent` verdict is not a failure and still exits `0`.
 
 ---
 
