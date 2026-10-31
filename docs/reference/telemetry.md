@@ -72,7 +72,7 @@ this table and that catalog disagree.
 | `event` | The event name, e.g. `verb.end`, `call.end`, `daemon.start`. |
 | `verb` | The `mauto` verb, taken from commander's resolved command — never from your command line. |
 | `ok` | Whether the operation succeeded. |
-| `error_kind` | The envelope's error taxonomy: `device`, `timeout`, `invalid_input`, … |
+| `error_kind` | The envelope's error taxonomy: `device`, `timeout`, `invalid_input`, `test_failed`, … |
 | `exit_code` | The process exit code. |
 | `dur_ms` | How long it took. |
 | `session_id` | A random id regenerated every time the device daemon starts. Not persisted, not derived from your machine. |
@@ -142,7 +142,7 @@ anything in it, `mauto telemetry disable` and delete the file.
 ## The device engine's own telemetry
 
 Everything above is about `mauto`. To drive devices, `mauto` runs mobile-mcp
-(`@mobilenext/mobile-mcp`, pinned at 1.0.13), and mobile-mcp — not `mauto` —
+(`@mobilenext/mobile-mcp`, pinned at 1.0.15), and mobile-mcp — not `mauto` —
 can report usage to its own maintainers:
 
 - a PostHog event per device call (`tool_invoked` or `tool_failed`, carrying

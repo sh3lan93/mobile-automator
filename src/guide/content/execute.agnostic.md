@@ -176,7 +176,7 @@ switch the engine mid-run yourself.
 
 For each assertion, pick the type recorded in the scenario and evaluate it. The 27 types split into two tiers by **who decides pass/fail**:
 
-- **Tier 1 — mechanical (the CLI decides).** Deterministic checks over the on-screen element list (plus captured variables / a previous snapshot). Run `mauto elements`, then evaluate with `mauto assert <type> ...`; the CLI returns a JSON verdict (`{ mechanical: true, pass: true|false, message }`). You record that verdict — you do not re-judge it.
+- **Tier 1 — mechanical (the CLI decides).** Deterministic checks over the on-screen element list (plus captured variables / a previous snapshot). Run `mauto elements`, then evaluate with `mauto assert <type> ...`; the CLI returns a JSON verdict (`{ mechanical: true, pass: true|false, message }`). A passing verdict arrives as a normal `ok: true` envelope. A failing one arrives as `ok: false` with `error.kind: "test_failed"` and exit code `6`, and the verdict (`pass: false`) is still in `data`. That is the test result, not a tool error: do not retry the verb or treat the run as broken. You record that verdict — you do not re-judge it.
 - **Tier 2 — visual / semantic (the agent decides).** These require judging pixels. `mauto assert <type> ...` reports them as `needs_agent` (with `pass: null`). For these you take a screenshot with `mauto screenshot <path>`, visually analyze it, and report pass/fail yourself with a clear justification.
 
 > One assertion type, `element_state`, names a Tier-1 intent but its per-attribute state inspection is not represented in the element model the CLI reads, so `mauto assert` returns it as `needs_agent` — judge it from the element list / screenshot like a Tier-2 check.
@@ -210,7 +210,7 @@ For each: take a screenshot, visually analyze it, and report pass/fail with a cl
 
 ### 5. Generate the Result Report
 
-Obtain the result schema by running `mauto schema result`, then finalize the run with `mauto result finalize` (writing to `.mobile-automator/results/<run_id>.json`), passing the run metadata you already know (`--device-model`, `--api-level`, `--app-version`, `--environment`) — the timestamp is filled in for you, and omitted fields are recorded as `unknown`. You may supply your own narrative with `--summary <text>`; omitting it keeps the generated default summary line. The finalized result assembles what the earlier `add-step`/`add-assertion` calls already recorded:
+Obtain the result schema by running `mauto schema result`, then finalize the run with `mauto result finalize` (writing to `.mobile-automator/results/<run_id>.json`), passing the run metadata you already know (`--device-model`, `--api-level`, `--app-version`, `--environment`) — the timestamp is filled in for you, and omitted fields are recorded as `unknown`. You may supply your own narrative with `--summary <text>`; omitting it keeps the generated default summary line. A run that finalizes as `failed` or `error` returns `ok: false` with `error.kind: "test_failed"` and exit code `6`. The result file is still written and the full result is in `data`, so present it as usual; the non-zero exit is what lets CI see a red run. The finalized result assembles what the earlier `add-step`/`add-assertion` calls already recorded:
 
 - `run_id`, `scenario_id`, `status`, `duration_seconds`.
 - `steps_executed[]`: per-step status, retry_count, screenshot, error_message.

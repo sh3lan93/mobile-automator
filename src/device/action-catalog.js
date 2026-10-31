@@ -18,7 +18,8 @@
 //   'composed'    — no dedicated verb; the agent composes it from existing verbs
 //                   (e.g. poll `mauto elements`, repeat `mauto swipe`). The
 //                   execute guide documents the composition.
-//   'unsupported' — mobile-mcp 1.0.5 exposes no primitive for it. Not
+//   'unsupported' — no `mauto` verb reaches it: the engine has no primitive, or
+//                   (clear_app_data, since 1.0.15) mauto has not wired it. Not
 //                   mechanically executable; the guide must NOT promise a verb,
 //                   and the agent reports it honestly / handles it manually.
 //

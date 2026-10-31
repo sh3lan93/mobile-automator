@@ -14,6 +14,14 @@ const EXIT = {
   // disk) — an environment fault the caller can fix, distinct from exit 1
   // ("the CLI itself broke"). Kept separate so agents/CI can branch on it.
   ENVIRONMENT: 5,
+  // Test outcomes, not faults: the device and the tooling worked, and the app
+  // under test failed. Distinct from 1-5 so CI can tell "the app is broken"
+  // from "the tooling is broken" by exit code alone, without parsing JSON.
+  TEST_FAILED: 6,
+  // Reserved for replay (`mauto run`, and `result finalize` once it computes
+  // it): the run is not decided yet because something still needs agent
+  // judgment. Nothing produces it yet.
+  INCOMPLETE: 7,
   CANCEL: 130,
 };
 
@@ -29,6 +37,8 @@ const KIND_TO_CODE = {
   invalid_input: EXIT.INVALID_INPUT,
   target_not_found: EXIT.TARGET_NOT_FOUND,
   environment: EXIT.ENVIRONMENT,
+  test_failed: EXIT.TEST_FAILED,
+  incomplete: EXIT.INCOMPLETE,
   cancel: EXIT.CANCEL,
   internal: 1,
   // `init --agent all` partial failure: some hosts wired, some failed. Non-zero

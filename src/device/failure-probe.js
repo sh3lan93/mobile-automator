@@ -86,6 +86,8 @@ const PROBE_EXEMPT_VERBS = new Set(['devices', 'crash']);
 // Failure kinds that can plausibly mean "the app died". invalid_input is a bad
 // flag, target_not_found/environment/internal never reached (or never
 // involved) the device — none of them are worth a device round trip.
+// test_failed/incomplete are outcomes: the device answered and the app failed;
+// the evidence is the step screenshot, not a crash list.
 const PROBE_KINDS = new Set(['device', 'timeout']);
 
 function shouldProbe({ envelope, verb } = {}) {

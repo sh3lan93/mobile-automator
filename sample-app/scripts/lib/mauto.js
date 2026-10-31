@@ -12,6 +12,15 @@
 // envelope's error and hint, and the tail of stderr (where the CLI's own
 // diagnostics go), so a red CI log says WHICH verb broke and why without
 // re-running anything.
+//
+// One exception, opted into per call: `opts.acceptKinds`. Since #273 a failed
+// `mauto assert` and the `result finalize` of a failed run answer `ok:false`
+// with `error.kind: 'test_failed'`, exit 6, and the verdict / full result in
+// `data` — so CI can tell "the app is broken" from "the tool is broken". For
+// those calls the test outcome IS the answer, not a tool error, so an accepted
+// kind returns `envelope.data`. It must still look like the contract says: a
+// non-zero exit and a `data` key. An accepted kind that exited 0, or that
+// carries no data, throws — the same spirit as "reported ok but exited N".
 
 const { execFile } = require('child_process');
 
@@ -106,6 +115,17 @@ function createMauto({ bin, cwd, env = {}, log = () => {}, exec = defaultExec } 
         withStderr(`mauto ${verb}: stdout is not a JSON envelope (exit ${code}): ${tail(stdout, 5) || '<empty>'}`),
         context
       );
+    }
+    const kind = envelope.error && typeof envelope.error === 'object' ? envelope.error.kind : undefined;
+    const acceptKinds = Array.isArray(opts.acceptKinds) ? opts.acceptKinds : [];
+    if (!envelope.ok && kind && acceptKinds.includes(kind)) {
+      if (code === 0) {
+        throw new MautoError(withStderr(`mauto ${verb} reported ${kind} but exited 0`), context);
+      }
+      if (!Object.prototype.hasOwnProperty.call(envelope, 'data')) {
+        throw new MautoError(withStderr(`mauto ${verb} reported ${kind} (exit ${code}) with no data`), context);
+      }
+      return envelope.data;
     }
     if (!envelope.ok) {
       const hint = envelope.hint ? `\n  hint: ${envelope.hint}` : '';

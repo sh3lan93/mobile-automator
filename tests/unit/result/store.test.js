@@ -94,6 +94,33 @@ describe('ResultStore', () => {
     expect(onDisk.run_id).toBe(RUN_ID);
   });
 
+  // The store owns the result-file location; callers that need to name the
+  // file (e.g. the finalize hint) read it here instead of rebuilding the path.
+  test('exposes the file it writes as a read-only `file`', () => {
+    const projectRoot = tmpRoot();
+    const store = new ResultStore({ runId: RUN_ID, scenarioId: 's', projectRoot });
+    expect(store.file).toBe(
+      path.join(projectRoot, '.mobile-automator', 'results', `${RUN_ID}.json`)
+    );
+
+    store.addStep({ step_id: 'launch', status: 'pass' });
+    store.finalize({ status: 'passed' });
+    expect(JSON.parse(fs.readFileSync(store.file, 'utf8')).run_id).toBe(RUN_ID);
+
+    expect(() => { store.file = '/elsewhere.json'; }).toThrow(TypeError);
+  });
+
+  // Unknown step statuses are rejected, not silently recorded as 'error': the
+  // CLI validates first (invalid_input, below); a value reaching the store
+  // means a CLI bug, so this throw escapes as internal, not invalid_input
+  // (#286 review).
+  test('addStep throws on an unknown status and writes nothing', () => {
+    const projectRoot = tmpRoot();
+    const store = new ResultStore({ runId: RUN_ID, scenarioId: 's', projectRoot });
+    expect(() => store.addStep({ step_id: 'x', status: 'bogus' })).toThrow(/unknown step status "bogus"/);
+    expect(fs.existsSync(store.file)).toBe(false);
+  });
+
   test('reloads an in-progress file across separate instances (incremental updates)', () => {
     const projectRoot = tmpRoot();
 

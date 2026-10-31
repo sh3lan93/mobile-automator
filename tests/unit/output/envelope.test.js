@@ -3,6 +3,7 @@
 const {
   SCHEMA_VERSION,
   EXIT,
+  ERROR_KINDS,
   ok,
   fail,
   exitCodeFor,
@@ -21,6 +22,8 @@ describe('envelope', () => {
       INVALID_INPUT: 3,
       TARGET_NOT_FOUND: 4,
       ENVIRONMENT: 5,
+      TEST_FAILED: 6,
+      INCOMPLETE: 7,
       CANCEL: 130,
     });
   });
@@ -67,14 +70,31 @@ describe('envelope', () => {
       ['invalid_input', 3],
       ['target_not_found', 4],
       ['environment', 5],
+      ['test_failed', 6],
+      ['incomplete', 7],
       ['cancel', 130],
       ['internal', 1],
     ])('maps %s -> %i', (kind, code) => {
       expect(exitCodeFor(kind)).toBe(code);
     });
 
+    // The test-outcome codes must stay apart from every tooling code (1-5),
+    // or CI loses the ability to tell "the app is broken" from "mauto is".
+    test('test_failed and incomplete do not collide with any tooling exit code', () => {
+      const tooling = [1, EXIT.DEVICE, EXIT.INVALID_INPUT, EXIT.TARGET_NOT_FOUND, EXIT.ENVIRONMENT];
+      expect(tooling).not.toContain(exitCodeFor('test_failed'));
+      expect(tooling).not.toContain(exitCodeFor('incomplete'));
+    });
+
     test('unknown kind falls back to internal (1)', () => {
       expect(exitCodeFor('something_else')).toBe(1);
+    });
+  });
+
+  describe('ERROR_KINDS', () => {
+    test('includes the test-outcome kinds', () => {
+      expect(ERROR_KINDS).toContain('test_failed');
+      expect(ERROR_KINDS).toContain('incomplete');
     });
   });
 

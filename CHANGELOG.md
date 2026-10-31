@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.37.1]
+## [0.38.2]
 
 ### ✨ Added
 
@@ -39,6 +39,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unattended; see data.warnings` instead of `scenario uses actions with no
   execution path`, since a blocker can now be a broken reference. Match on
   `error.code` (`invalid_input`) and `data.warnings[].code`, not the message.
+
+---
+
+## [0.38.1]
+
+**0.38.0 was never published to npm, so upgrading from 0.37.0 also brings in
+its breaking changes below: a failed test now exits `6`, and the `result` verbs
+reject an unknown `--status`.**
+
+### 🛡️ Security
+
+- **`@mobilenext/mobile-mcp` bumped from 1.0.13 to 1.0.15.** This moves
+  `@modelcontextprotocol/node` from 2.0.0 to 2.1.2, outside the range of
+  [GHSA-f897-62hf-6gxq](https://github.com/advisories/GHSA-f897-62hf-6gxq)
+  (no request body or JSON-RPC batch limit on HTTP server transports). `mauto`
+  was not exposed: it runs the engine over stdio and never starts its HTTP
+  server. The advisory stopped the audit gate from publishing 0.38.0.
+
+### 🔧 Changed
+
+- `clear_app_data` stays unsupported, but the reason changed: mobile-mcp 1.0.15
+  adds the primitive and no `mauto` verb reaches it yet. The docs and schema
+  descriptions now say that instead of "the engine exposes no primitive".
+
+---
+
+## [0.38.0]
+
+### 🔧 Changed
+
+- **Breaking: a failed test now exits non-zero.** `mauto assert` with a
+  `pass: false` verdict, and `mauto result finalize` of a run whose recorded
+  status is `failed` or `error`, used to return `ok: true` and exit `0`, so a
+  CI step could not tell a red run from a green one without parsing JSON. They
+  now return `ok: false` with the new `error.kind` `test_failed` and exit `6`.
+  Nothing is lost: `assert` keeps its verdict in `data` and its
+  `result add-assertion` hint, and `finalize` still writes the result file,
+  harvests memory and puts the full result in `data` (`data.status` tells
+  `failed` from `error`). `finalize` keys on the status it recorded, so a run
+  finalized without `--status` that has a failed assertion also exits `6`. A
+  `needs_agent` verdict is not a failure and still exits `0`. To upgrade, treat
+  exit `6` as "the test failed" rather than "mauto failed", or read
+  `error.kind`; scripts that ran `mauto result finalize ... || exit 1` now fail
+  the job on a failed run, which is the intent (#273).
+- **The `result` verbs' `--status` flags are validated against their enums.** A
+  value outside `passed | failed | error` for `result finalize` (a case variant
+  of a documented word, a typo) used to be persisted verbatim — a
+  schema-invalid result file — with `ok: true` and exit `0`, so a run the
+  caller declared failed could still look green to CI. An unknown value for
+  `result add-step` used to be silently recorded as step status `error` — a
+  mislabelled step with a green exit. Both now answer `invalid_input` (exit
+  `3`) before anything is written; `add-step` keeps accepting
+  `pass | fail | skipped | error` and their spellings
+  (`passed`, `failed`, `skip`).
+- **Exit code `7` (`incomplete`) is reserved** for a run that still needs the
+  agent's verdict on an assertion. No verb emits it yet; it is documented now so
+  the exit table stays stable when deterministic replay lands (#271).
+- The documented exit table in `docs/reference/cli-verbs.md` gains the
+  `timeout` row (exit `2`), which the CLI has emitted since the session daemon
+  but the table never listed.
+- The real-device E2E harness (`sample-app/scripts/lib/mauto.js`) accepts an
+  `ok: false` envelope whose kind the caller expects (`acceptKinds`), so it
+  reads a failed assertion's or run's `data` instead of throwing.
+
+---
 
 ## [0.37.0]
 
