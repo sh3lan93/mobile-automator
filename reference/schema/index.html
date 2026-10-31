@@ -2415,7 +2415,7 @@
 </ul>
 <h3 id="action-types-18-total">Action Types (18 total)<a class="headerlink" href="#action-types-18-total" title="Permanent link">&para;</a></h3>
 <p>Each step's <code>action</code> field is one of these values: the <strong>14 core actions</strong> documented below, plus <strong>4 semantic actions</strong> available in platform-agnostic (<code>mode: "platform-agnostic"</code>) scenarios — <code>press_back</code>, <code>dismiss_keyboard</code>, <code>grant_permission</code>, and <code>deny_permission</code> — which resolve to the right per-platform mechanics at replay time.</p>
-<p>Note that <code>clear_app_data</code> is accepted by the schema but is <strong>not mechanically executable</strong> — the underlying automation engine exposes no primitive for it, so a scenario using it cannot replay unattended. The same applies to the <code>enable_wifi</code> and <code>disable_wifi</code> precondition device actions.</p>
+<p>Note that <code>clear_app_data</code> is accepted by the schema but is <strong>not mechanically executable</strong> — no <code>mauto</code> verb runs it yet, so a scenario using it cannot replay unattended. The same applies to the <code>enable_wifi</code> and <code>disable_wifi</code> precondition device actions, which the engine has no primitive for.</p>
 <h4 id="1-launch_app">1. launch_app<a class="headerlink" href="#1-launch_app" title="Permanent link">&para;</a></h4>
 <p>Launch the app under test on the device. By default the app is restarted first, so the step starts on its initial screen even if the app was already running. This resets the screen, not app data (use <code>app_state: "fresh_install"</code> for that).</p>
 <p><strong>Fields:</strong>
@@ -2607,7 +2607,7 @@
 </code></pre></div></p>
 <hr />
 <h4 id="14-clear_app_data-unsupported">14. clear_app_data (unsupported)<a class="headerlink" href="#14-clear_app_data-unsupported" title="Permanent link">&para;</a></h4>
-<p>Not executable: <code>clear_app_data</code> is accepted by the schema, but the engine exposes no primitive for it, so no <code>mauto</code> verb runs it and a scenario using it cannot replay unattended. <code>mauto validate</code> warns about it (<code>--strict</code> fails). To reset app state, use <code>app_state: "fresh_install"</code> with <code>uninstall_app</code> then <code>install_app</code> precondition device actions.</p>
+<p>Not executable: <code>clear_app_data</code> is accepted by the schema, but no <code>mauto</code> verb runs it yet, so a scenario using it cannot replay unattended. <code>mauto validate</code> warns about it (<code>--strict</code> fails). To reset app state, use <code>app_state: "fresh_install"</code> with <code>uninstall_app</code> then <code>install_app</code> precondition device actions.</p>
 <p><strong>Fields:</strong>
 - <code>action</code> — <code>"clear_app_data"</code> (unsupported, not executable)</p>
 <hr />
