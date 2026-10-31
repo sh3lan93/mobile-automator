@@ -128,13 +128,15 @@ describe('action coverage — schema ↔ catalog ↔ verbs ↔ guide', () => {
       expect(implicitStepFlags(action, { action, [sf.field]: !sf.value })).toEqual([]);
     });
 
-    // Reference codes (#272) are about scenario shape, not a catalog field, so
-    // the references module owns them; every other code must be a marker.
-    test('every CODES key other than unsupported_action and the reference codes is a catalog marker', () => {
+    // The severity contract: CODES is exactly three sources. Reference codes
+    // (#272) are about scenario shape, not a catalog field, so the references
+    // module owns them and they are never catalog markers.
+    test('CODES is exactly unsupported_action, the catalog markers and the reference codes', () => {
       const markers = markerRows.map(([, sf]) => sf.warnWhenUnset);
-      for (const code of Object.keys(CODES)) {
-        if (code === 'unsupported_action' || code in REFERENCE_CODES) continue;
-        expect(markers).toContain(code);
+      const union = new Set(['unsupported_action', ...markers, ...Object.keys(REFERENCE_CODES)]);
+      expect(Object.keys(CODES).sort()).toEqual([...union].sort());
+      for (const marker of markers) {
+        expect(marker in REFERENCE_CODES).toBe(false);
       }
     });
 

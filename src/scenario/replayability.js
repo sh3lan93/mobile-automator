@@ -1,7 +1,7 @@
 'use strict';
 
 // Replayability check for scenarios. Schema validity alone overstates what a
-// scenario will do on replay; this module reports two kinds of gap:
+// scenario will do on replay; this module reports three kinds of gap:
 //
 // - `unsupported_action` (#166): the schema accepts every action in its enum,
 //   but the action catalog marks some `unsupported`. no `mauto` verb reaches
@@ -32,10 +32,10 @@ const { flattenSteps } = require('./steps');
 // Severity and wording for every finding code: the replay codes are defined
 // here, the referential ones in `references.js`, and `CODES` assembles both, so
 // it is the one table every consumer reads.
-// `blocking` is the `--strict` policy: only a step that cannot run at all fails
-// validation. `clause(n)` is the hint fragment for n findings of the code;
-// `message(f)` is the per-finding text. Advisory codes other than
-// `unsupported_action` are the catalog's `warnWhenUnset` markers.
+// `blocking` is the `--strict` policy: a blocking finding means the scenario
+// cannot replay unattended as written: a step that cannot run or a broken
+// reference. `clause(n)` is the hint fragment for n findings of the code;
+// `message(f)` is the per-finding text.
 const CODES = {
   unsupported_action: {
     blocking: true,

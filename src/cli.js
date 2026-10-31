@@ -2019,7 +2019,7 @@ function buildProgram(deps = {}) {
   program
     .command('validate <file>')
     .description('Validate a scenario JSON file against the scenario schema')
-    .option('--strict', 'fail (instead of warn) when the scenario uses actions that cannot replay unattended')
+    .option('--strict', 'fail (instead of warn) when the scenario cannot replay unattended')
     .action(withEnvelope((file, opts) => {
       const r = handleValidate({ validator }, file, { strict: Boolean(opts && opts.strict) });
       emit(r, humanFlag());
