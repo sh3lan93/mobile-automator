@@ -97,7 +97,7 @@ Then re-run `mauto devices` to confirm it now appears.
 ### ❌ "mobilecli is not available or not working properly"
 
 Every device verb fails with this message. The device engine (mobile-mcp
-1.0.13) drives devices through `mobilecli`, a native binary installed as a
+1.0.15) drives devices through `mobilecli`, a native binary installed as a
 per-platform optional dependency (`@mobilenext/mobilecli-<os>-<arch>`). If
 that package is missing — an install with `--omit=optional`, or some pnpm
 layouts — the engine has nothing to run.

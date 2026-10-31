@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.38.1]
+
+**0.38.0 was never published to npm, so upgrading from 0.37.0 also brings in
+its breaking changes below: a failed test now exits `6`, and the `result` verbs
+reject an unknown `--status`.**
+
+### 🛡️ Security
+
+- **`@mobilenext/mobile-mcp` bumped from 1.0.13 to 1.0.15.** This moves
+  `@modelcontextprotocol/node` from 2.0.0 to 2.1.2, outside the range of
+  [GHSA-f897-62hf-6gxq](https://github.com/advisories/GHSA-f897-62hf-6gxq)
+  (no request body or JSON-RPC batch limit on HTTP server transports). `mauto`
+  was not exposed: it runs the engine over stdio and never starts its HTTP
+  server. The advisory stopped the audit gate from publishing 0.38.0.
+
+### 🔧 Changed
+
+- `clear_app_data` stays unsupported, but the reason changed: mobile-mcp 1.0.15
+  adds the primitive and no `mauto` verb reaches it yet. The docs and schema
+  descriptions now say that instead of "the engine exposes no primitive".
+
+---
+
 ## [0.38.0]
 
 ### 🔧 Changed
