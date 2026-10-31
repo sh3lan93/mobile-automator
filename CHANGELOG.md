@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.38.2]
+
+### ✨ Added
+
+- **`mauto validate` checks references, not just shape** (#272). A scenario
+  whose ids, targets and variables do not line up used to validate as
+  `{"valid": true}`, and the agent found out mid-run on a device. `validate`
+  now reports six more codes in `data.warnings`, each with the `path` of the
+  step (`sub_steps` included) or assertion (`assertions[N]`, with
+  `assertion_id`):
+  - `duplicate_step_id` — a step id declared twice;
+  - `dangling_after_step` — an assertion runs after a step that does not exist;
+  - `missing_target` — a `tap`, `long_press`, `double_tap`, `wait_for_element`,
+    `wait_for_element_gone`, `scroll_to_element` or `capture_value` step with
+    neither `target` nor `target_pattern`;
+  - `undeclared_capture_variable` — `capture_to`, `condition.variable_name` or
+    an assertion's `variable_name` missing from root `variables`;
+  - `dangling_condition_step` — a `previous_step_skipped` condition whose
+    `step_id` is missing or not an earlier step;
+  - `missing_wait_config` — a wait step with no `wait_config` (advisory).
+
+  `undeclared_capture_variable` also covers a `variable_value` condition or a
+  `value_matches_variable` assertion that has no `variable_name` at all.
+
+  The first five are blocking. The scenarios in `docs/examples/` and
+  `sample-app/scenarios/` have no blocking findings.
+
+  **This changes behaviour for existing scenarios:**
+  - `mauto validate` without `--strict` still exits 0 and only warns.
+  - `validate --strict` now exits 3 (`invalid_input`) on scenarios that used to
+    pass, if they have a blocking finding.
+  - The execute guides now stop on a blocking reference finding (the five codes
+    above, not `unsupported_action`) even without
+    `--strict`, including a schema-valid `tap` with no `target`. An agent that
+    ran such a scenario before now refuses it.
+  - To upgrade, run `mauto validate` on your existing scenarios and fix what it
+    reports. Plain `validate` exits 0, so read `data.warnings` or use
+    `--strict` to get a non-zero exit.
+
+### 🔧 Changed
+
+- `validate --strict` now fails with the message `scenario cannot replay
+  unattended; see data.warnings` instead of `scenario uses actions with no
+  execution path`, since a blocker can now be a broken reference. Match on
+  `error.code` (`invalid_input`) and `data.warnings[].code`, not the message.
+
+---
+
 ## [0.38.1]
 
 **0.38.0 was never published to npm, so upgrading from 0.37.0 also brings in

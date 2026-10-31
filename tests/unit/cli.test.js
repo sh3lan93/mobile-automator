@@ -242,6 +242,7 @@ describe('cli handlers', () => {
         s.steps.push({
           id: 'branch',
           action: 'tap',
+          target: 'Branch',
           description: 'Branch',
           sub_steps: [{ id: 'nested_wipe', action: 'clear_app_data', target_package: 'com.example.app', description: 'Clear' }],
         });

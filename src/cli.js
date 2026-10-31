@@ -258,7 +258,7 @@ function handleValidate({ validator }, file, opts = {}) {
     }
     const { blocking, hint } = summarize(warnings);
     if (opts.strict && blocking.length > 0) {
-      const env = fail('invalid_input', 'scenario uses actions with no execution path', hint);
+      const env = fail('invalid_input', 'scenario cannot replay unattended; see data.warnings', hint);
       env.data = { valid: false, errors: [], warnings };
       return { envelope: env, exitKind: 'invalid_input' };
     }
@@ -2019,7 +2019,7 @@ function buildProgram(deps = {}) {
   program
     .command('validate <file>')
     .description('Validate a scenario JSON file against the scenario schema')
-    .option('--strict', 'fail (instead of warn) when the scenario uses actions that cannot replay unattended')
+    .option('--strict', 'fail (instead of warn) when the scenario cannot replay unattended')
     .action(withEnvelope((file, opts) => {
       const r = handleValidate({ validator }, file, { strict: Boolean(opts && opts.strict) });
       emit(r, humanFlag());

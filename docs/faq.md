@@ -386,6 +386,9 @@ Results saved to: `.mobile-automator/results/<run_id>.json`
 4. **Add debug screenshot** — Insert a capture step to see actual state:
    ```json
    {
+     "variables": {
+       "actual_title": { "type": "string", "description": "Captured title" }
+     },
      "steps": [
        {
          "id": "capture_state",
@@ -507,7 +510,7 @@ mauto setup
 mauto devices
 
 # Validate a scenario before running it
-mauto validate .mobile-automator/scenarios/login_flow.json
+mauto validate --strict .mobile-automator/scenarios/login_flow.json
 
 # (Your agent replays the scenario via mauto guide execute + verbs.)
 
@@ -550,7 +553,7 @@ jobs:
         run: mauto devices
 
       - name: Validate scenarios
-        run: mauto validate .mobile-automator/scenarios/login_flow.json
+        run: mauto validate --strict .mobile-automator/scenarios/login_flow.json
 
       - name: Upload Results
         uses: actions/upload-artifact@v3

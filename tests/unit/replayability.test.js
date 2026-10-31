@@ -8,7 +8,7 @@ const UNSUPPORTED = actionsByResolution('unsupported');
 describe('findReplayWarnings', () => {
   test('clean scenario -> no findings', () => {
     const scenario = {
-      steps: [{ id: 'a', action: 'launch_app' }, { id: 'b', action: 'long_press' }],
+      steps: [{ id: 'a', action: 'launch_app' }, { id: 'b', action: 'long_press', target: 'Go' }],
       preconditions: { device_actions: [{ action: 'uninstall_app' }] },
     };
     expect(findReplayWarnings(scenario)).toEqual([]);
@@ -48,7 +48,7 @@ describe('findReplayWarnings', () => {
   test('multiple hits are reported steps first, then preconditions, in order', () => {
     const [a, b] = UNSUPPORTED;
     const w = findReplayWarnings({
-      steps: [{ id: 's0', action: a }, { id: 's1', action: 'tap' }, { id: 's2', action: b }],
+      steps: [{ id: 's0', action: a }, { id: 's1', action: 'tap', target: 'Go' }, { id: 's2', action: b }],
       preconditions: { device_actions: [{ action: a }] },
     });
     expect(w.map((x) => x.path)).toEqual([
@@ -63,8 +63,8 @@ describe('findReplayWarnings', () => {
     const w = findReplayWarnings({
       steps: [{
         id: 'parent',
-        action: 'tap',
-        sub_steps: [{ id: 'ok', action: 'tap' }, { id: 'nested', action }],
+        action: 'tap', target: 'Go',
+        sub_steps: [{ id: 'ok', action: 'tap', target: 'Go' }, { id: 'nested', action }],
       }],
     });
     expect(w).toHaveLength(1);
@@ -76,10 +76,10 @@ describe('findReplayWarnings', () => {
     const w = findReplayWarnings({
       steps: [{
         id: 'p',
-        action: 'tap',
+        action: 'tap', target: 'Go',
         sub_steps: [
-          { id: 'c0', action: 'tap' },
-          { id: 'c1', action: 'tap', sub_steps: [{ id: 'gc', action }] },
+          { id: 'c0', action: 'tap', target: 'Go' },
+          { id: 'c1', action: 'tap', target: 'Go', sub_steps: [{ id: 'gc', action }] },
         ],
       }],
     });
@@ -92,7 +92,7 @@ describe('findReplayWarnings', () => {
     const w = findReplayWarnings({
       steps: [
         { id: 's0', action: a, sub_steps: [{ id: 's0a', action: b }] },
-        { id: 's1', action: 'tap', sub_steps: [{ id: 's1a', action: a }] },
+        { id: 's1', action: 'tap', target: 'Go', sub_steps: [{ id: 's1a', action: a }] },
         { id: 's2', action: b },
       ],
       preconditions: { device_actions: [{ action: a }] },
@@ -119,11 +119,11 @@ describe('findReplayWarnings — launch_cold_implicit (#255)', () => {
   const launch = (id, extra = {}) => ({ id, action: 'launch_app', ...extra });
 
   test('a launch as the first top-level step is silent', () => {
-    expect(findReplayWarnings({ steps: [launch('l0'), { id: 't', action: 'tap' }] })).toEqual([]);
+    expect(findReplayWarnings({ steps: [launch('l0'), { id: 't', action: 'tap', target: 'Go' }] })).toEqual([]);
   });
 
   test('a later launch with no cold warns with its path and step_id', () => {
-    const w = findReplayWarnings({ steps: [launch('l0'), { id: 't', action: 'tap' }, launch('back')] });
+    const w = findReplayWarnings({ steps: [launch('l0'), { id: 't', action: 'tap', target: 'Go' }, launch('back')] });
     expect(w).toHaveLength(1);
     expect(w[0]).toMatchObject({
       code: 'launch_cold_implicit',
@@ -157,7 +157,7 @@ describe('findReplayWarnings — launch_cold_implicit (#255)', () => {
       steps: [
         launch('l0'),
         { id: 'u1', action: a },
-        { id: 't', action: 'tap', sub_steps: [launch('l2')] },
+        { id: 't', action: 'tap', target: 'Go', sub_steps: [launch('l2')] },
         launch('l3'),
       ],
       preconditions: { device_actions: [{ action: a }] },

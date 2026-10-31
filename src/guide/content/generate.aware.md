@@ -217,7 +217,7 @@ After all steps are executed and recorded:
    - `app_version` — from the installed app
    - `environment` — ask the user or use `default_environment` from `.mobile-automator/config.json`
    - Do NOT include `device_model`, `api_level`, or `timestamp` in metadata — these belong in the result schema, not the scenario.
-7. Validate the assembled scenario with `mauto validate <path>` against `mauto schema scenario`. If it returns `data.warnings`, revise the scenario to drop each `unsupported_action` step, or tell the user the step needs manual handling; for a `launch_cold_implicit` entry, set the step's `cold` explicitly (`false` when it means returning to the already-open app, `true` when it means a restart).
+7. Validate the assembled scenario with `mauto validate <path>` against `mauto schema scenario`. If it returns `data.warnings`, revise the scenario to drop each `unsupported_action` step, or tell the user the step needs manual handling; for a `launch_cold_implicit` entry, set the step's `cold` explicitly (`false` when it means returning to the already-open app, `true` when it means a restart). Fix every reference finding before you save, using its `path`: `duplicate_step_id` — rename the step so every id is unique; `dangling_after_step` — point the assertion's `after_step` at a step that exists; `missing_target` — give the step the `target` it acts on; `undeclared_capture_variable` — declare the variable in the root `variables` block; `dangling_condition_step` — point the `previous_step_skipped` condition's `step_id` at an earlier step; `missing_wait_config` — add a `wait_config` with an explicit `timeout_ms`.
 8. Save to `.mobile-automator/scenarios/<scenario_id>.json`.
 9. Present summary:
    > "Scenario saved: `.mobile-automator/scenarios/<scenario_id>.json`
@@ -269,7 +269,7 @@ Translate user language to `mauto` verbs and schema actions:
    - Create assertion step using mapped type from Pass 2b
    - Evaluate via `mauto assert <type> ...` and record with appropriate fields
 6. Combine steps and assertions into ordered scenario
-7. Generate scenario JSON, then `mauto validate <path>` (if it returns `data.warnings`, revise the scenario to drop each `unsupported_action` step, or tell the user the step needs manual handling; for a `launch_cold_implicit` entry, set the step's `cold` explicitly)
+7. Generate scenario JSON, then `mauto validate <path>` (if it returns `data.warnings`, revise the scenario to drop each `unsupported_action` step, or tell the user the step needs manual handling; for a `launch_cold_implicit` entry, set the step's `cold` explicitly; fix each `duplicate_step_id`, `dangling_after_step`, `missing_target`, `undeclared_capture_variable`, `dangling_condition_step` and `missing_wait_config` entry as "Save Scenario" describes)
 ```
 
 ### Detecting and Encoding Patterns

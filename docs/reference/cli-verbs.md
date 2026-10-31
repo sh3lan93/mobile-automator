@@ -101,7 +101,7 @@ Used to author scenario JSON, evaluate assertions, and assemble result files.
 
 | Verb | Description |
 |------|-------------|
-| `mauto validate <file> [--strict]` | Validate a scenario JSON file against the [scenario schema](schema.md); warns (or, with `--strict`, fails) on actions that cannot replay unattended, and warns on `launch_app` steps that leave `cold` unset |
+| `mauto validate <file> [--strict]` | Validate a scenario JSON file against the [scenario schema](schema.md); warns (or, with `--strict`, fails) on actions that cannot replay unattended and on broken references (duplicate step ids, dangling `after_step` or condition `step_id`, steps with no `target`, undeclared variables), and warns on `launch_app` steps that leave `cold` unset and on waits with no `wait_config` |
 | `mauto assert <type> [--target --expected --operator --count --pattern --variable --device]` | Evaluate an assertion; mechanical types are decided by the CLI, visual types are deferred to the agent. A failed verdict exits `6` (`test_failed`) with the verdict in `data` |
 | `mauto result add-step --run-id --step-id --status [--scenario-id --attempts --screenshot --error-message --observation <type>:<message> --capture <name>=<value>]` | Append a step result to a run; `--observation` and `--capture` are repeatable. `--status` accepts `pass | fail | skipped | error` (and `passed`, `failed`, `skip`) and rejects anything else with `invalid_input` (exit `3`) |
 | `mauto result add-assertion --run-id --step-id --type --pass [--scenario-id --assertion-id --message --expected --actual]` | Record an assertion verdict against a step |
@@ -110,12 +110,20 @@ Used to author scenario JSON, evaluate assertions, and assemble result files.
 !!! note "`validate` and replay warnings"
     Schema-valid is not the same as replayable, so `validate` also reports replay warnings in `data.warnings`, with a summarising `hint`. A scenario with nothing to report gets the bare `{"valid": true}`.
 
-    Every warning has the shape `{code, action, path, message}`, plus `step_id` for steps. `path` is `steps[N]` (nested steps read `steps[N].sub_steps[M]`) or `preconditions.device_actions[N]`. Warnings are listed in document order, and the `hint` counts them per code, for example `N step(s) leave an optional field unset; set it explicitly — see data.warnings`.
+    Every warning has the shape `{code, action, path, message}`, plus `step_id` for steps. `path` is `steps[N]` (nested steps read `steps[N].sub_steps[M]`), `preconditions.device_actions[N]`, or `assertions[N]`; an assertion warning carries `assertion_id` instead of `step_id` and has no `action`. Warnings are listed in document order (steps, then preconditions, then assertions), and the `hint` counts them per code, for example `N step(s) leave an optional field unset; set it explicitly — see data.warnings`.
 
     | Code | Severity | Trigger | Under `--strict` |
     |---|---|---|---|
     | `unsupported_action` | blocking | The step or precondition uses an action the action catalog marks `unsupported`: no `mauto` verb can run it, so it cannot replay unattended. | Fails with `invalid_input` and `data.valid: false` |
     | `launch_cold_implicit` | advisory | A `launch_app` step leaves `cold` unset and is not the scenario's first top-level step (any launch inside `sub_steps` counts). It restarts the app; set `"cold": false` to resume or `"cold": true` to confirm the restart, and the warning goes away. | Never fails |
+    | `duplicate_step_id` | blocking | A step reuses an `id` already declared by an earlier step, anywhere in the tree (`sub_steps` included). Each repeat after the first is reported; the message names the first one's `path`. | Fails with `invalid_input` and `data.valid: false` |
+    | `dangling_after_step` | blocking | An assertion's `after_step` is missing or names no step in the scenario (`sub_steps` included). | Fails with `invalid_input` and `data.valid: false` |
+    | `missing_target` | blocking | A `tap`, `long_press`, `double_tap`, `wait_for_element`, `wait_for_element_gone`, `scroll_to_element` or `capture_value` step has neither `target` nor `target_pattern`, so there is no element to resolve. | Fails with `invalid_input` and `data.valid: false` |
+    | `undeclared_capture_variable` | blocking | A step's `capture_to` or `condition.variable_name`, or an assertion's `variable_name`, is not a key of the root `variables` block, or a `variable_value` condition or `value_matches_variable` assertion has no `variable_name`. | Fails with `invalid_input` and `data.valid: false` |
+    | `dangling_condition_step` | blocking | A `previous_step_skipped` condition has no `step_id`, or its `step_id` is not a step that comes before it in document order (an unknown id, the step itself, or a later step). | Fails with `invalid_input` and `data.valid: false` |
+    | `missing_wait_config` | advisory | A `wait_for_element`, `wait_for_element_gone` or `wait_for_loading_complete` step has no `wait_config`, so it waits for the default timeout. Add a `wait_config` to make the wait explicit. | Never fails |
+
+    Under `--strict`, a blocking warning fails `validate` with exit code 3 and the error message `scenario cannot replay unattended; see data.warnings`.
 
 !!! note "`result finalize` and memory"
     On finalize, `mauto` auto-harvests typed observations into cross-session memory. This is best-effort: a memory failure never fails an otherwise-successful finalize — it folds into the envelope `hint` instead. See [Cross-Session Memory](../concepts/memory.md).
