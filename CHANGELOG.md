@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.38.1]
+
+### ✨ Added
+
+- **`mauto result export --format junit`** turns finalized result files into
+  JUnit XML for a CI test reporter (#274):
+  `mauto result export --run-id <id> [--run-id <id>…] --format junit [--out <path>]`.
+  Each run becomes a `<testsuite>`, each assertion a `<testcase>`, and each
+  failed or errored step a `step: <step_id>` testcase with a `<failure>`;
+  `needs_agent` entries are `<skipped>`, and run id, status, metadata and
+  executor provenance are `<properties>`. A run whose status is red with
+  nothing failing recorded gets a `run status` failure, so it never reads
+  green. The envelope is `{format, path, suites, tests, failures, skipped}`,
+  with the XML in `data.xml` when `--out` is omitted. The export is read-only,
+  refuses anything that is not a finalized result for the requested run
+  (one that validates against the result schema), and exits 0 whatever the
+  runs' outcome. The FAQ's CI recipe now ends with it,
+  replacing a `results/latest.json` file that never existed.
+
 ## [0.37.0]
 
 ### 🔧 Changed

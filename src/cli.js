@@ -12,8 +12,10 @@ const { engineHint } = require('./device/engine-hints');
 const { ScenarioValidator } = require('./scenario/validator');
 const { findReplayWarnings, summarize } = require('./scenario/replayability');
 const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
-const { ResultStore } = require('./result/store');
+const { ResultStore, readFinalizedResult } = require('./result/store');
 const { OBSERVATION_TYPES, parseObservation, parseCapture, parseBool } = require('./result/flags');
+const { REPORT_FORMATS, renderReport } = require('./run/report');
+const { atomicWrite } = require('./util/atomic');
 const { MemoryStore } = require('./memory/store');
 const { FILES: MEMORY_FILES, AGENT_KINDS } = require('./memory/paths');
 const { validateEntryText, MAX_ENTRY_LEN } = require('./memory/entries');
@@ -855,6 +857,60 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
   }
 
   return { envelope: ok(result, hints.length ? hints.join(' ') : null), exitKind: 'ok' };
+}
+
+// `mauto result export` (#274): render finalized result files as a CI report.
+// Read-only by contract — tests/lint/result-coverage.test.js exempts it from
+// the capability catalog on that basis and checks the results directory is
+// unchanged afterwards. Reading (and that read-only guarantee) is
+// readFinalizedResult's job in src/result/store.js.
+//
+// The export succeeds (exit 0) whatever the runs' outcome: it is a report, not
+// a gate. A single unusable run id fails the whole export, so a CI job never
+// uploads a report silently missing a run.
+function handleResultExport({ projectRoot, cwd = process.cwd() }, opts = {}) {
+  const invalid = (message, hint) => ({ envelope: fail('invalid_input', message, hint), exitKind: 'invalid_input' });
+  const formatsHint = `Formats: ${REPORT_FORMATS.join(', ')}.`;
+
+  if (!opts.format) return invalid('--format is required', formatsHint);
+  if (!REPORT_FORMATS.includes(opts.format)) return invalid(`unknown report format "${opts.format}"`, formatsHint);
+
+  const runIds = opts.runIds || [];
+  if (runIds.length === 0) return invalid('at least one --run-id is required', 'Pass --run-id <id>; repeat it to export several runs.');
+
+  const results = [];
+  for (const runId of runIds) {
+    const { result, error } = readFinalizedResult(projectRoot, runId);
+    if (error) return { envelope: fail(error.kind, error.message, error.hint), exitKind: error.kind };
+    results.push(result);
+  }
+
+  const report = renderReport(opts.format, results);
+  const counts = {
+    suites: report.suites,
+    tests: report.tests,
+    failures: report.failures,
+    skipped: report.skipped,
+  };
+
+  if (!opts.out) {
+    return { envelope: ok({ format: report.format, path: null, ...counts, xml: report.content }), exitKind: 'ok' };
+  }
+
+  const outPath = path.resolve(cwd, opts.out);
+  try {
+    atomicWrite(outPath, report.content);
+  } catch (err) {
+    return {
+      envelope: fail(
+        'environment',
+        `could not write the report to ${outPath}: ${err.message}`,
+        'Check the directory exists and is writable.'
+      ),
+      exitKind: 'environment',
+    };
+  }
+  return { envelope: ok({ format: report.format, path: outPath, ...counts }), exitKind: 'ok' };
 }
 
 // Collapse any recovery warnings a ResultStore accumulated (e.g. a corrupt
@@ -2197,6 +2253,20 @@ function buildProgram(deps = {}) {
       emit(r, humanFlag());
     })));
 
+  result
+    .command('export')
+    .description('Render finalized result files as a CI report (read-only)')
+    .requiredOption('--run-id <id>', 'run to export; repeatable', collect, [])
+    .requiredOption('--format <f>', REPORT_FORMATS.join(' | '))
+    .option('--out <path>', 'write the report here instead of returning it in data.xml')
+    .action(withEnvelope(requireWorkspace((opts) => {
+      const r = handleResultExport(
+        { projectRoot, cwd },
+        { runIds: opts.runId, format: opts.format, out: opts.out }
+      );
+      emit(r, humanFlag());
+    })));
+
   // --- Slice 3 verbs --------------------------------------------------------
 
   // Emit a handler result that may be either an envelope (success/error) OR
@@ -2665,6 +2735,7 @@ module.exports = {
   handleResultAddAssertion,
   handleResultAddCrash,
   handleResultFinalize,
+  handleResultExport,
   handleSetup,
   handleConfigGet,
   handleConfigSet,

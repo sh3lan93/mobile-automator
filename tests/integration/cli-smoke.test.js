@@ -20,6 +20,8 @@ const CLI = path.join(REPO_ROOT, 'bin', 'mauto.js');
 
 const VALID_SCENARIO = path.join(__dirname, 'fixtures', 'scenario-valid.json');
 const CONFIG_FIXTURE = path.join(REPO_ROOT, 'tests', 'fixtures', 'config.platform-aware.json');
+const FAILED_RESULT = require('../unit/run/report/fixtures/failed.json');
+const { parseXml, findAll } = require('../helpers/parse-xml');
 
 // Run the CLI as a child process. Returns { status, stdout, stderr }.
 function runCli(args, opts = {}) {
@@ -227,5 +229,88 @@ describe('cli smoke (integration)', () => {
 
     const again = JSON.parse(runCli(['config', 'set', 'engine', 'legacy'], { cwd: workspace, env }).stdout);
     expect(again).toEqual({ ok: true, data: { key: 'engine', value: 'legacy' }, schema_version: parsed.schema_version });
+  });
+
+  // #274: JUnit export of a pre-written result file, through the real binary.
+  describe('result export --format junit', () => {
+    function writeWorkspaceResult() {
+      const configDir = path.join(workspace, '.mobile-automator');
+      fs.mkdirSync(path.join(configDir, 'results'), { recursive: true });
+      fs.copyFileSync(CONFIG_FIXTURE, path.join(configDir, 'config.json'));
+      fs.writeFileSync(
+        path.join(configDir, 'results', `${FAILED_RESULT.run_id}.json`),
+        JSON.stringify(FAILED_RESULT, null, 2)
+      );
+    }
+
+    test('returns well-formed XML in data.xml and exits 0 even though the run failed', () => {
+      writeWorkspaceResult();
+      const r = runCli(['result', 'export', '--run-id', FAILED_RESULT.run_id, '--format', 'junit'], { cwd: workspace });
+      expect(r.status).toBe(0);
+      expect(r.stderr).toBe('');
+      const env = JSON.parse(r.stdout);
+      expect(env.ok).toBe(true);
+      expect(env.data).toMatchObject({ format: 'junit', path: null, suites: 1, tests: 4, failures: 3, skipped: 0 });
+      const [suite] = findAll(parseXml(env.data.xml), 'testsuite');
+      expect(suite.attrs.name).toBe(FAILED_RESULT.scenario_id);
+    });
+
+    test('--out writes a parseable report file', () => {
+      writeWorkspaceResult();
+      const r = runCli(
+        ['result', 'export', '--run-id', FAILED_RESULT.run_id, '--format', 'junit', '--out', 'reports/junit.xml'],
+        { cwd: workspace }
+      );
+      expect(r.status).toBe(0);
+      const env = JSON.parse(r.stdout);
+      expect(env.data.xml).toBeUndefined();
+      expect(fs.realpathSync(env.data.path)).toBe(fs.realpathSync(path.join(workspace, 'reports', 'junit.xml')));
+      expect(parseXml(fs.readFileSync(env.data.path, 'utf8')).name).toBe('testsuites');
+    });
+
+    // A file that is not a finalized result must never export as a green
+    // suite, nor crash with a stack trace — at the root or one level down
+    // (#274 review, rounds 2 and 3).
+    test.each([
+      ['null', null],
+      ['an array', []],
+      ['a scalar', 'passed'],
+      ['an empty object', {}],
+      ['a mismatched run_id', () => ({ ...FAILED_RESULT, run_id: 'run_20990101_000000' })],
+      ['a null metadata', () => ({ ...FAILED_RESULT, metadata: null })],
+      ['a result missing required keys', () => {
+        const { assertion_results, steps_executed, ...rest } = FAILED_RESULT; // eslint-disable-line no-unused-vars
+        return rest;
+      }],
+      ['an off-enum status', () => ({ ...FAILED_RESULT, status: 'garbage', steps_executed: [], assertion_results: [] })],
+      ['a null assertion', () => ({ ...FAILED_RESULT, assertion_results: [null] })],
+      ['a null step', () => ({ ...FAILED_RESULT, steps_executed: [null] })],
+      ['an assertion without assertion_id', () => ({ ...FAILED_RESULT, assertion_results: [{ status: 'failed', message: 'x' }] })],
+      ['a step without step_id', () => ({ ...FAILED_RESULT, steps_executed: [{ status: 'failed' }] })],
+    ])('a result file holding %s is invalid_input, exit 3', (_label, value) => {
+      writeWorkspaceResult();
+      fs.writeFileSync(
+        path.join(workspace, '.mobile-automator', 'results', `${FAILED_RESULT.run_id}.json`),
+        JSON.stringify(typeof value === 'function' ? value() : value)
+      );
+      const r = runCli(['result', 'export', '--run-id', FAILED_RESULT.run_id, '--format', 'junit'], { cwd: workspace });
+      expect(r.status).toBe(3); // EXIT.INVALID_INPUT
+      expect(r.stderr).toBe('');
+      const env = JSON.parse(r.stdout);
+      expect(env.ok).toBe(false);
+      expect(env.error.kind).toBe('invalid_input');
+      expect(env.error.message).toMatch(/is not a finalized result/);
+      expect(env.hint).toBeTruthy();
+    });
+
+    test('an unknown format is an invalid_input envelope', () => {
+      writeWorkspaceResult();
+      const r = runCli(['result', 'export', '--run-id', FAILED_RESULT.run_id, '--format', 'sarif'], { cwd: workspace });
+      expect(r.status).toBe(3); // EXIT.INVALID_INPUT
+      const env = JSON.parse(r.stdout);
+      expect(env.ok).toBe(false);
+      expect(env.error.kind).toBe('invalid_input');
+      expect(env.hint).toMatch(/junit/);
+    });
   });
 });
