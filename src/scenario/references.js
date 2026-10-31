@@ -19,6 +19,18 @@ const { targetActions, waitActions } = require('../device/action-catalog');
 const TARGET_ACTIONS = new Set(targetActions());
 const WAIT_ACTIONS = new Set(waitActions());
 
+// A condition or assertion of these types reads a variable, so it must name one.
+const CONDITION_TYPES_NEEDING_VARIABLE = new Set(['variable_value']);
+const ASSERTION_TYPES_NEEDING_VARIABLE = new Set(['value_matches_variable']);
+
+// Finding fields for a variable name that is undeclared, or absent where its
+// type requires one (an empty name counts as absent there); null when fine.
+function variableFields(field, name, required, index) {
+  const ref = required && name === '' ? undefined : name;
+  if (ref === undefined ? !required : index.variables.has(ref)) return null;
+  return { field, ref };
+}
+
 const REFERENCE_CODES = {
   duplicate_step_id: {
     blocking: true,
@@ -41,7 +53,9 @@ const REFERENCE_CODES = {
   undeclared_capture_variable: {
     blocking: true,
     clause: (n) => `${n} variable reference(s) are not declared in "variables"`,
-    message: (f) => `"${f.field}" names variable "${f.ref}", which the root "variables" block does not declare`,
+    message: (f) => (f.ref === undefined
+      ? `"${f.field}" is required here but has no variable name`
+      : `"${f.field}" names variable "${f.ref}", which the root "variables" block does not declare`),
   },
   dangling_condition_step: {
     blocking: true,
@@ -104,9 +118,9 @@ function stepReferences(step, position, index) {
 
   const cond = step.condition;
   if (cond && typeof cond === 'object') {
-    if (cond.variable_name !== undefined && !index.variables.has(cond.variable_name)) {
-      add('undeclared_capture_variable', { field: 'condition.variable_name', ref: cond.variable_name });
-    }
+    const fields = variableFields('condition.variable_name', cond.variable_name,
+      CONDITION_TYPES_NEEDING_VARIABLE.has(cond.type), index);
+    if (fields) add('undeclared_capture_variable', fields);
     if (cond.type === 'previous_step_skipped') {
       const order = index.orderById.get(cond.step_id);
       if (order === undefined || order >= position) {
@@ -131,11 +145,9 @@ function assertionReferences(scenario, index) {
     if (!index.firstPathById.has(a.after_step)) {
       findings.push({ code: 'dangling_after_step', fields: { ref: a.after_step }, path, ids });
     }
-    if (a.variable_name !== undefined && !index.variables.has(a.variable_name)) {
-      findings.push({
-        code: 'undeclared_capture_variable', fields: { field: 'variable_name', ref: a.variable_name }, path, ids,
-      });
-    }
+    const fields = variableFields('variable_name', a.variable_name,
+      ASSERTION_TYPES_NEEDING_VARIABLE.has(a.type), index);
+    if (fields) findings.push({ code: 'undeclared_capture_variable', fields, path, ids });
   });
   return findings;
 }

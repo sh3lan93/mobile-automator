@@ -164,6 +164,39 @@ describe('undeclared_capture_variable', () => {
     expect(w[0]).toMatchObject({ path: 'assertions[0]', assertion_id: 'a' });
   });
 
+  describe('a required variable name that is missing', () => {
+    const cond = (variable_name) => ({
+      steps: [{ id: 'k', action: 'press_back', condition: { type: 'variable_value', ...variable_name } }],
+    });
+    const assertion = (extra) => ({
+      steps: [{ id: 's', action: 'launch_app' }],
+      assertions: [{ id: 'a', after_step: 's', ...extra }],
+    });
+
+    test.each([['absent', {}], ['empty', { variable_name: '' }]])('variable_value condition, name %s', (_n, name) => {
+      const w = only(cond(name), 'undeclared_capture_variable');
+      expect(w).toHaveLength(1);
+      expect(w[0].message).toContain('"condition.variable_name"');
+      expect(w[0].message).toContain('has no');
+    });
+
+    test.each([['absent', {}], ['empty', { variable_name: '' }]])('value_matches_variable assertion, name %s', (_n, name) => {
+      const w = only(assertion({ type: 'value_matches_variable', ...name }), 'undeclared_capture_variable');
+      expect(w).toHaveLength(1);
+      expect(w[0]).toMatchObject({ path: 'assertions[0]', assertion_id: 'a' });
+      expect(w[0].message).toContain('has no');
+    });
+
+    test('an assertion type that does not need a variable and names none -> none', () => {
+      expect(only(assertion({ type: 'element_exists' }), 'undeclared_capture_variable')).toEqual([]);
+    });
+
+    test('an assertion type that does not need a variable but names an undeclared one -> one', () => {
+      expect(only(assertion({ type: 'element_exists', variable_name: 'ghost' }), 'undeclared_capture_variable'))
+        .toHaveLength(1);
+    });
+  });
+
   test('declared variables are not reported', () => {
     expect(only({
       variables: { v: { type: 'string', description: 'd' } },
