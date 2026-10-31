@@ -1690,6 +1690,11 @@
 <td><code>2</code></td>
 </tr>
 <tr>
+<td>Device call timed out (may have partially executed)</td>
+<td><code>timeout</code></td>
+<td><code>2</code></td>
+</tr>
+<tr>
 <td>Invalid input</td>
 <td><code>invalid_input</code></td>
 <td><code>3</code></td>
@@ -1705,12 +1710,23 @@
 <td><code>5</code></td>
 </tr>
 <tr>
+<td>Test failed: a failed <code>assert</code>, or <code>result finalize</code> of a failed or errored run</td>
+<td><code>test_failed</code></td>
+<td><code>6</code></td>
+</tr>
+<tr>
+<td>Run incomplete: an assertion still needs the agent's verdict (reserved for replay; no verb emits it yet)</td>
+<td><code>incomplete</code></td>
+<td><code>7</code></td>
+</tr>
+<tr>
 <td>Cancelled</td>
 <td><code>cancel</code></td>
 <td><code>130</code></td>
 </tr>
 </tbody>
 </table>
+<p>Exit <code>6</code> means the tooling worked and the app under test did not: the failure envelope still carries the verdict or the full result in <code>data</code>, so read it the same way you would a success. Exits <code>1</code>–<code>5</code> mean <code>mauto</code> itself, the device, or your input is the problem.</p>
 <hr />
 <h2 id="device-action-verbs">Device action verbs<a class="headerlink" href="#device-action-verbs" title="Permanent link">&para;</a></h2>
 <p>These verbs drive the screen. Each accepts <code>--device &lt;id&gt;</code> to target a specific device.</p>
@@ -1824,11 +1840,11 @@
 </tr>
 <tr>
 <td><code>mauto assert &lt;type&gt; [--target --expected --operator --count --pattern --variable --device]</code></td>
-<td>Evaluate an assertion; mechanical types are decided by the CLI, visual types are deferred to the agent</td>
+<td>Evaluate an assertion; mechanical types are decided by the CLI, visual types are deferred to the agent. A failed verdict exits <code>6</code> (<code>test_failed</code>) with the verdict in <code>data</code></td>
 </tr>
 <tr>
 <td><code>mauto result add-step --run-id --step-id --status [--scenario-id --attempts --screenshot --error-message --observation &lt;type&gt;:&lt;message&gt; --capture &lt;name&gt;=&lt;value&gt;]</code></td>
-<td>Append a step result to a run; <code>--observation</code> and <code>--capture</code> are repeatable</td>
+<td>Append a step result to a run; <code>--observation</code> and <code>--capture</code> are repeatable. <code>--status</code> accepts <code>pass | fail | skipped | error</code> (and <code>passed</code>, <code>failed</code>, <code>skip</code>) and rejects anything else with <code>invalid_input</code> (exit <code>3</code>)</td>
 </tr>
 <tr>
 <td><code>mauto result add-assertion --run-id --step-id --type --pass [--scenario-id --assertion-id --message --expected --actual]</code></td>
@@ -1836,7 +1852,7 @@
 </tr>
 <tr>
 <td><code>mauto result finalize --run-id [--scenario-id --status --duration --app-version --device-model --api-level --environment --summary]</code></td>
-<td>Assemble the final <a href="../result-schema/">result file</a> and auto-harvest memory</td>
+<td>Assemble the final <a href="../result-schema/">result file</a> and auto-harvest memory. <code>--status</code> accepts <code>passed | failed | error</code> and rejects anything else with <code>invalid_input</code> (exit <code>3</code>); omitting it derives the status from the recorded assertions. A run that finalizes as <code>failed</code> or <code>error</code> exits <code>6</code> (<code>test_failed</code>) with the full result in <code>data</code></td>
 </tr>
 </tbody>
 </table>
@@ -1872,6 +1888,10 @@
 <div class="admonition note">
 <p class="admonition-title"><code>result finalize</code> and memory</p>
 <p>On finalize, <code>mauto</code> auto-harvests typed observations into cross-session memory. This is best-effort: a memory failure never fails an otherwise-successful finalize — it folds into the envelope <code>hint</code> instead. See <a href="../../concepts/memory/">Cross-Session Memory</a>.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">A failed test exits non-zero</p>
+<p><code>mauto assert</code> with a <code>pass: false</code> verdict, and <code>mauto result finalize</code> of a run whose status is <code>failed</code> or <code>error</code>, return <code>ok: false</code> with <code>error.kind: "test_failed"</code> and exit <code>6</code>. The result is still recorded: <code>assert</code> puts its verdict (<code>type</code>, <code>mechanical</code>, <code>pass</code>, <code>needs_agent</code>, <code>message</code>) in <code>data</code>, and <code>finalize</code> writes the result file, harvests memory and puts the full result in <code>data</code>. <code>finalize</code> keys on the status it actually recorded, so a run finalized without <code>--status</code> that has a failed assertion also exits <code>6</code>; <code>data.status</code> tells <code>failed</code> from <code>error</code>. A <code>needs_agent</code> verdict is not a failure and still exits <code>0</code>.</p>
 </div>
 <hr />
 <h2 id="workspace-verbs">Workspace verbs<a class="headerlink" href="#workspace-verbs" title="Permanent link">&para;</a></h2>
