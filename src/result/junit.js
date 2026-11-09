@@ -9,8 +9,7 @@
 // `incomplete`) reads red,
 // a missing metadata/container is empty, and non-object entries are dropped.
 // Pure: no fs, no clock, no input mutation, so the same results always render
-// to the same bytes. It is consumed by `mauto result export` today and by `mauto run --junit` later,
-// which is why it lives under src/run/ rather than beside the CLI handler.
+// to the same bytes. It is consumed by `mauto result export`.
 //
 // Mapping, one result at a time:
 //   result                 -> <testsuite name=scenario_id, else run_id>

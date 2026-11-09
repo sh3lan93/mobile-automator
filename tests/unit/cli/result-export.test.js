@@ -8,8 +8,8 @@ const { handleResultExport, buildProgram } = require('../../../src/cli');
 const { workspaceDir } = require('../../../src/workspace/layout');
 const { parseXml, findAll } = require('../../helpers/parse-xml');
 
-const PASSED = require('../run/report/fixtures/passed.json');
-const FAILED = require('../run/report/fixtures/failed.json');
+const PASSED = require('../result/fixtures/passed.json');
+const FAILED = require('../result/fixtures/failed.json');
 
 function tmpRoot() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-result-export-'));

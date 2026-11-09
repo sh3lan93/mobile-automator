@@ -20,7 +20,7 @@ const CLI = path.join(REPO_ROOT, 'bin', 'mauto.js');
 
 const VALID_SCENARIO = path.join(__dirname, 'fixtures', 'scenario-valid.json');
 const CONFIG_FIXTURE = path.join(REPO_ROOT, 'tests', 'fixtures', 'config.platform-aware.json');
-const FAILED_RESULT = require('../unit/run/report/fixtures/failed.json');
+const FAILED_RESULT = require('../unit/result/fixtures/failed.json');
 const { parseXml, findAll } = require('../helpers/parse-xml');
 
 // Run the CLI as a child process. Returns { status, stdout, stderr }.

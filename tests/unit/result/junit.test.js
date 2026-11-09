@@ -4,10 +4,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { toJUnit } = require('../../../../src/run/report/junit');
-const { readFinalizedResult, resultFile } = require('../../../../src/result/store');
-const { workspaceDir } = require('../../../../src/workspace/layout');
-const { parseXml, findAll } = require('../../../helpers/parse-xml');
+const { toJUnit } = require('../../../src/result/junit');
+const { readFinalizedResult, resultFile } = require('../../../src/result/store');
+const { workspaceDir } = require('../../../src/workspace/layout');
+const { parseXml, findAll } = require('../../helpers/parse-xml');
 
 const fixture = (name) => require(path.join(__dirname, 'fixtures', `${name}.json`));
 const PASSED = fixture('passed');

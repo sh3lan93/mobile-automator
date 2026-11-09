@@ -14,7 +14,7 @@ const { findReplayWarnings, summarize } = require('./scenario/replayability');
 const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
 const { ResultStore, readFinalizedResult } = require('./result/store');
 const { OBSERVATION_TYPES, parseObservation, parseCapture, parseBool, parseRunStatus, parseStepStatus } = require('./result/flags');
-const { REPORT_FORMATS, renderReport } = require('./run/report');
+const { toJUnit } = require('./result/junit');
 const { atomicWrite } = require('./util/atomic');
 const { MemoryStore } = require('./memory/store');
 const { FILES: MEMORY_FILES, AGENT_KINDS } = require('./memory/paths');
@@ -920,6 +920,10 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
   return { envelope: ok(result, hints.length ? hints.join(' ') : null), exitKind: 'ok' };
 }
 
+// Formats `mauto result export --format` accepts. The only one, junit, is
+// rendered by toJUnit (src/result/junit.js).
+const REPORT_FORMATS = Object.freeze(['junit']);
+
 // `mauto result export` (#274): render finalized result files as a CI report.
 // Read-only by contract — tests/lint/result-coverage.test.js exempts it from
 // the capability catalog on that basis and checks the results directory is
@@ -946,21 +950,15 @@ function handleResultExport({ projectRoot, cwd = process.cwd() }, opts = {}) {
     results.push(result);
   }
 
-  const report = renderReport(opts.format, results);
-  const counts = {
-    suites: report.suites,
-    tests: report.tests,
-    failures: report.failures,
-    skipped: report.skipped,
-  };
+  const { xml, ...counts } = toJUnit(results);
 
   if (!opts.out) {
-    return { envelope: ok({ format: report.format, path: null, ...counts, xml: report.content }), exitKind: 'ok' };
+    return { envelope: ok({ format: opts.format, path: null, ...counts, xml }), exitKind: 'ok' };
   }
 
   const outPath = path.resolve(cwd, opts.out);
   try {
-    atomicWrite(outPath, report.content);
+    atomicWrite(outPath, xml);
   } catch (err) {
     return {
       envelope: fail(
@@ -971,7 +969,7 @@ function handleResultExport({ projectRoot, cwd = process.cwd() }, opts = {}) {
       exitKind: 'environment',
     };
   }
-  return { envelope: ok({ format: report.format, path: outPath, ...counts }), exitKind: 'ok' };
+  return { envelope: ok({ format: opts.format, path: outPath, ...counts }), exitKind: 'ok' };
 }
 
 // Collapse any recovery warnings a ResultStore accumulated (e.g. a corrupt
