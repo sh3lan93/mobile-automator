@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
     
     
       
@@ -1854,6 +1854,10 @@
 <td><code>mauto result finalize --run-id [--scenario-id --status --duration --app-version --device-model --api-level --environment --summary]</code></td>
 <td>Assemble the final <a href="../result-schema/">result file</a> and auto-harvest memory. <code>--status</code> accepts <code>passed | failed | error</code> and rejects anything else with <code>invalid_input</code> (exit <code>3</code>); omitting it derives the status from the recorded assertions. A run that finalizes as <code>failed</code> or <code>error</code> exits <code>6</code> (<code>test_failed</code>) with the full result in <code>data</code></td>
 </tr>
+<tr>
+<td><code>mauto result export --run-id &lt;id&gt; [--run-id &lt;id&gt;…] --format junit [--out &lt;path&gt;]</code></td>
+<td>Render finalized result files as JUnit XML for a CI test reporter; read-only. Returns <code>{format, path, suites, tests, failures}</code>, with the XML in <code>data.xml</code> when <code>--out</code> is omitted</td>
+</tr>
 </tbody>
 </table>
 <div class="admonition note">
@@ -1921,6 +1925,11 @@
 </tbody>
 </table>
 <p>Under <code>--strict</code>, a blocking warning fails <code>validate</code> with exit code 3 and the error message <code>scenario cannot replay unattended; see data.warnings</code>.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title"><code>result export</code> and JUnit</p>
+<p><code>result export</code> reads the <a href="../result-schema/">result files</a> of the given runs and renders one JUnit document: a <code>&lt;testsuite&gt;</code> per run (named by <code>scenario_id</code>, or the run id when it has none), a <code>&lt;testcase&gt;</code> per assertion, plus one per failed or errored step (<code>step: &lt;step_id&gt;</code>). A failed assertion or step carries a <code>&lt;failure&gt;</code>. Any status other than <code>passed</code> reads red: a run with such a status and nothing failing recorded gets one <code>run status</code> failure, so a red run never reads green. The run id, status and <code>metadata</code> appear as <code>&lt;properties&gt;</code>.</p>
+<p>Only finalized runs export: an unknown run id, a run id containing a path separator, a file that is not JSON, a run that was never finalized, or a file that is not a result <code>result finalize</code> wrote for that run (a JSON value other than an object, or a different <code>run_id</code>) fails the whole export with <code>invalid_input</code> and writes nothing. The export exits 0 whatever the runs' outcome — it is a report, not a gate. It never modifies the result files.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title"><code>result finalize</code> and memory</p>
@@ -2231,7 +2240,7 @@ mechanics.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      <script src="../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
       
     
   </body>

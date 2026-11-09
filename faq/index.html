@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
     
     
       
@@ -2957,15 +2957,20 @@ mauto<span class="w"> </span>devices
 <span class="c1"># Validate a scenario before running it</span>
 mauto<span class="w"> </span>validate<span class="w"> </span>--strict<span class="w"> </span>.mobile-automator/scenarios/login_flow.json
 
-<span class="c1"># (Your agent replays the scenario via mauto guide execute + verbs.)</span>
+<span class="c1"># One run id for this job; result files are named after it</span>
+<span class="nv">RUN_ID</span><span class="o">=</span><span class="s2">"run_</span><span class="k">$(</span>date<span class="w"> </span>-u<span class="w"> </span>+%Y%m%d_%H%M%S<span class="k">)</span><span class="s2">"</span>
 
-<span class="c1"># Check results</span>
-cat<span class="w"> </span>.mobile-automator/results/latest.json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">'.status'</span>
+<span class="c1"># (Your agent replays the scenario via mauto guide execute + verbs,</span>
+<span class="c1">#  recording the run under $RUN_ID.)</span>
+
+<span class="c1"># Export the run as JUnit XML for the CI test reporter</span>
+mauto<span class="w"> </span>result<span class="w"> </span><span class="nb">export</span><span class="w"> </span>--run-id<span class="w"> </span><span class="s2">"</span><span class="nv">$RUN_ID</span><span class="s2">"</span><span class="w"> </span>--format<span class="w"> </span>junit<span class="w"> </span>--out<span class="w"> </span>reports/mauto-junit.xml
 </code></pre></div>
 <p><strong>CI/CD tips:</strong>
 - Cache <code>node_modules</code> so <code>npm install</code> is fast on subsequent runs
 - Connect a device or boot an emulator/simulator in the CI environment
 - Run <code>mauto</code> verbs with <code>--human</code> off (the default JSON envelope is machine-readable)
+- Point your CI's JUnit reporter at the exported XML; <code>result export</code> exits 0 whatever the run's outcome, so the reporter (or the run's own verbs) decides whether the job fails
 - Archive result files as CI artifacts</p>
 <h3 id="can-i-use-mobile-automator-with-github-actions">Can I use mobile-automator with GitHub Actions?<a class="headerlink" href="#can-i-use-mobile-automator-with-github-actions" title="Permanent link">&para;</a></h3>
 <p><strong>Answer:</strong> Yes! Example workflow:</p>
@@ -3316,7 +3321,7 @@ chmod<span class="w"> </span><span class="m">644</span><span class="w"> </span>.
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
+      <script src="../assets/javascripts/bundle.a5f9d56c.min.js"></script>
       
     
   </body>

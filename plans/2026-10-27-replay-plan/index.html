@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
     
     
       
@@ -1642,8 +1642,8 @@
 <td><code>bridge.screenshot</code>, <code>bridge.getScreenSize</code></td>
 </tr>
 <tr>
-<td><code>src/run/report/junit.js</code>, <code>index.js</code></td>
-<td>pure <code>toJUnit(results, {executor})</code>; one testsuite per result, testcase per assertion (+ failed steps), <code>&lt;skipped&gt;</code> for <code>needs_agent</code>, <code>&lt;properties&gt;</code> for provenance</td>
+<td><code>src/result/junit.js</code> (shipped in S0c)</td>
+<td>pure <code>toJUnit(results)</code>; one testsuite per result, testcase per assertion (+ failed steps), <code>&lt;properties&gt;</code> for run id, status, metadata. <code>&lt;skipped&gt;</code> for <code>needs_agent</code> and <code>executor</code> <code>&lt;properties&gt;</code>: added in R2 (#275)</td>
 <td>—</td>
 </tr>
 </tbody>
@@ -1705,9 +1705,9 @@
 <tr>
 <td><strong>S0c</strong> JUnit export</td>
 <td>0.38.1</td>
-<td><code>mauto result export --run-id … --format junit [--out]</code> from existing result files; <code>src/run/report/*</code> created here so <code>run --junit</code> reuses it</td>
-<td><code>cli.js</code>, <code>src/run/report/</code>, <code>result-coverage.test.js</code> (declared read-only exemption with reason)</td>
-<td>pure XML tests on fixtures incl. an <code>incomplete</code> result; cli-smoke spawn</td>
+<td><code>mauto result export --run-id … --format junit [--out]</code> from existing result files; renderer at <code>src/result/junit.js</code>, which <code>run --junit</code> reuses</td>
+<td><code>cli.js</code>, <code>src/result/junit.js</code>, <code>result-coverage.test.js</code> (declared read-only exemption with reason)</td>
+<td>pure XML tests on fixtures; cli-smoke spawn</td>
 <td><code>cli-verbs.md</code>, <code>docs/faq.md</code> (replace the <code>latest.json</code> line)</td>
 <td>XML parses; CI example in FAQ is real</td>
 <td>pure revert</td>
@@ -2021,7 +2021,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      <script src="../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
       
     
   </body>
