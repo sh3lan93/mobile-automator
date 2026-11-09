@@ -93,10 +93,14 @@ describe('session-salt (#236)', () => {
         let out = '';
         child.stdout.on('data', (d) => (out += d));
         child.on('error', reject);
-        child.on('exit', (code) => (code === 0 ? resolve(out) : reject(new Error(`exit ${code}`))));
+        // Resolve on 'close', not 'exit': at 'exit' the child's stdout may still be
+        // unread (Node docs), so `out` can be '' under load (#297).
+        child.on('close', (code, signal) =>
+          code === 0 ? resolve(out) : reject(new Error(`exit ${code} signal ${signal}`)),
+        );
       });
     const salts = await Promise.all(Array.from({ length: 8 }, run));
-    expect(new Set(salts).size).toBe(1);
+    expect(salts).toEqual(Array(8).fill(salts[0]));
     expect(salts[0]).toMatch(SALT_RE);
     expect(readSalt(root)).toBe(salts[0]);
     expect(fs.readdirSync(paths.sessionDir(root))).toEqual([paths.SALT_NAME]);
