@@ -17,13 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Each run becomes a `<testsuite>`, each assertion a `<testcase>`, and each
   failed or errored step a `step: <step_id>` testcase with a `<failure>`;
   `needs_agent` entries are `<skipped>`, and run id, status, metadata and
-  executor provenance are `<properties>`. A run whose status is red with
-  nothing failing recorded gets a `run status` failure, so it never reads
-  green. The envelope is `{format, path, suites, tests, failures, skipped}`,
-  with the XML in `data.xml` when `--out` is omitted. The export is read-only,
-  refuses anything that is not a finalized result for the requested run
-  (one that validates against the result schema), and exits 0 whatever the
-  runs' outcome. The FAQ's CI recipe now ends with it,
+  executor provenance are `<properties>`. A run finalized without
+  `--scenario-id` gets a suite named by its run id. Any status other than
+  `passed` reads red: a run with such a status and nothing failing recorded
+  gets a `run status` failure, so it never reads green. The envelope is
+  `{format, path, suites, tests, failures, skipped}`, with the XML in
+  `data.xml` when `--out` is omitted. The export is read-only, refuses
+  anything that is not a file `result finalize` wrote for that run id, and
+  exits 0 whatever the runs' outcome. The FAQ's CI recipe now ends with it,
   replacing a `results/latest.json` file that never existed.
 
 ---
