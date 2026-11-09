@@ -4,9 +4,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { ResultStore, readFinalizedResult, resultFile } = require('../../../src/result/store');
+const { ResultStore, readFinalizedResult, resultFile, isResultRunId } = require('../../../src/result/store');
 const { workspaceDir } = require('../../../src/workspace/layout');
-const RESULT_SCHEMA = require('../../../src/schemas/result_schema.json');
 
 const RUN_ID = 'run_20261027_101500';
 
@@ -46,21 +45,49 @@ describe('readFinalizedResult', () => {
     expect(error.hint).toBe(`Run \`mauto result finalize --run-id ${RUN_ID}\` first.`);
   });
 
-  test('the run-id check is the result schema run_id pattern', () => {
-    // Both directions: an id the schema accepts reads (here: no file), an id it
-    // rejects never touches the disk.
-    const pattern = new RegExp(RESULT_SCHEMA.properties.run_id.pattern);
-    for (const id of ['run_20261027_101500', '../../etc/passwd', 'run_2026', 'run_20261027_100000.json']) {
-      const { error } = readFinalizedResult(tmpRoot(), id);
-      if (pattern.test(id)) {
-        expect(error.message).toMatch(/no result file/);
-      } else {
-        expect(error).toEqual({
-          kind: 'invalid_input',
-          message: `invalid run id "${id}"`,
-          hint: 'A run id has the form run_YYYYMMDD_HHMMSS.',
-        });
-      }
+  // "Finalized" is owned by the writer: whatever `ResultStore#finalize` writes
+  // must read back, whatever flags the run was recorded with (#274 review: a
+  // run finalized without --scenario-id, or with a non run_YYYYMMDD_HHMMSS id,
+  // was refused by export).
+  describe('accepts whatever ResultStore#finalize writes', () => {
+    test.each([
+      ['with a scenario id', RUN_ID, 'login'],
+      ['without a scenario id', RUN_ID, undefined],
+      ['with a run id outside the run_YYYYMMDD_HHMMSS form', 'ci-build-42', undefined],
+      ['with a dotted run id', 'nightly.2026-11-09', 'login'],
+    ])('%s', (_label, runId, scenarioId) => {
+      const root = tmpRoot();
+      const store = new ResultStore({ runId, scenarioId, projectRoot: root });
+      store.addStep({ step_id: 'a', status: 'fail' });
+      const finalized = store.finalize({ durationSeconds: 1 });
+      expect(readFinalizedResult(root, runId)).toEqual({ result: finalized });
+    });
+  });
+
+  test('isResultRunId accepts any id naming a file inside results/', () => {
+    for (const id of ['run_20261027_101500', 'run_2026', 'ci-build-42', 'run_20261027_100000.json', '.', '..', '...']) {
+      expect(isResultRunId(id)).toBe(true);
+    }
+    for (const id of ['', '../escape', 'a/b', '/abs', '../../etc/passwd', 'a\u0000b', null, undefined, 42]) {
+      expect(isResultRunId(id)).toBe(false);
+    }
+  });
+
+  test('an id containing a path separator is refused without touching the disk', () => {
+    for (const id of ['../escape', 'a/b', '../../etc/passwd']) {
+      const root = tmpRoot();
+      const { error } = readFinalizedResult(root, id);
+      expect(error).toEqual({
+        kind: 'invalid_input',
+        message: `invalid run id "${id}"`,
+        hint: `A run id names a file in ${path.join(workspaceDir(root), 'results')}; it cannot contain a path separator.`,
+      });
+    }
+  });
+
+  test('an id outside the run_YYYYMMDD_HHMMSS form is looked up, not refused', () => {
+    for (const id of ['run_2026', 'ci-build-42', 'run_20261027_100000.json']) {
+      expect(readFinalizedResult(tmpRoot(), id).error.message).toBe(`no result file for ${id}`);
     }
   });
 
@@ -82,52 +109,27 @@ describe('readFinalizedResult', () => {
     expect(listResults(root)).toEqual([`${RUN_ID}.json`]);
   });
 
-  // "Finalized" is positive: valid against the shipped result schema at every
-  // level, for THIS run. Anything else must never reach a renderer, where it
-  // would crash or export as a green suite (#274).
+  // What readFinalizedResult refuses: anything that is not an object finalize
+  // wrote for THIS run. Shape beyond that is the renderer's to tolerate.
   describe('a parsed value that is not a finalized result is invalid_input', () => {
     const finalized = () => {
       const root = tmpRoot();
       const store = new ResultStore({ runId: RUN_ID, scenarioId: 'login', projectRoot: root });
       return store.finalize({ status: 'passed', durationSeconds: 1 });
     };
-    const withoutKey = (key) => {
+    const withoutRunId = () => {
       const r = finalized();
-      delete r[key];
+      delete r.run_id;
       return r;
     };
-    const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const [firstRequired, ...otherRequired] = RESULT_SCHEMA.required;
 
     test.each([
       ['null', null, /\(root\) must be object$/],
       ['an array', [], /\(root\) must be object$/],
       ['a scalar', 42, /\(root\) must be object$/],
-      [
-        'an empty object',
-        {},
-        new RegExp(escape(`(root) is missing required property '${firstRequired}' (and ${otherRequired.length} more)`)),
-      ],
+      ['an empty object', {}, /its run_id is undefined$/],
+      ['a result missing run_id', withoutRunId(), /its run_id is undefined$/],
       ['a mismatched run_id', { ...finalized(), run_id: 'run_20990101_000000' }, /run_id is "run_20990101_000000"/],
-      ...RESULT_SCHEMA.required
-        .filter((k) => k !== 'run_id')
-        .map((k) => [`a result missing ${k}`, withoutKey(k), new RegExp(escape(`(root) is missing required property '${k}'`) + '$')]),
-      ['a null metadata', { ...finalized(), metadata: null }, /\/metadata must be object$/],
-      ['an object steps_executed', { ...finalized(), steps_executed: {} }, /\/steps_executed must be array$/],
-      ['a fractional total_assertions', { ...finalized(), total_assertions: 1.5 }, /\/total_assertions must be integer$/],
-      ['an off-enum status', { ...finalized(), status: 'garbage' }, /\/status must be equal to one of the allowed values/],
-      ['a null assertion', { ...finalized(), assertion_results: [null] }, /\/assertion_results\/0 must be object$/],
-      ['a null step', { ...finalized(), steps_executed: [null] }, /\/steps_executed\/0 must be object$/],
-      [
-        'an assertion without assertion_id',
-        { ...finalized(), assertion_results: [{ status: 'failed', message: 'x' }] },
-        /\/assertion_results\/0 is missing required property 'assertion_id'$/,
-      ],
-      [
-        'a step without step_id',
-        { ...finalized(), steps_executed: [{ status: 'failed' }] },
-        /\/steps_executed\/0 is missing required property 'step_id'$/,
-      ],
     ])('%s', (_label, value, message) => {
       const root = tmpRoot();
       fs.writeFileSync(resultFile(root, RUN_ID), JSON.stringify(value));
@@ -139,6 +141,27 @@ describe('readFinalizedResult', () => {
       expect(error.hint).toContain(resultFile(root, RUN_ID));
       expect(listResults(root)).toEqual([`${RUN_ID}.json`]);
     });
+
+    test('an in-progress marker wins over everything else', () => {
+      const root = tmpRoot();
+      fs.writeFileSync(resultFile(root, RUN_ID), JSON.stringify({ _in_progress: true }));
+      expect(readFinalizedResult(root, RUN_ID).error.message).toBe(`run ${RUN_ID} is not finalized`);
+    });
+  });
+
+  // Keys finalize always writes but an older or hand-edited file may lack are
+  // not the reader's to police: they read, and the renderer tolerates them.
+  test.each([
+    ['a null scenario_id', (r) => ({ ...r, scenario_id: null })],
+    ['an off-enum status', (r) => ({ ...r, status: 'FAILED' })],
+    ['a null metadata', (r) => ({ ...r, metadata: null })],
+    ['a null step', (r) => ({ ...r, steps_executed: [null] })],
+  ])('a run-id-matching object with %s is accepted as written', (_label, mutate) => {
+    const root = tmpRoot();
+    const store = new ResultStore({ runId: RUN_ID, scenarioId: 'login', projectRoot: root });
+    const value = mutate(store.finalize({ status: 'passed', durationSeconds: 1 }));
+    fs.writeFileSync(resultFile(root, RUN_ID), JSON.stringify(value));
+    expect(readFinalizedResult(root, RUN_ID)).toEqual({ result: value });
   });
 
   test('an unreadable file (not ENOENT) is environment', () => {

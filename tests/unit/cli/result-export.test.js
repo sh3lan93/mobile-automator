@@ -66,6 +66,28 @@ describe('handleResultExport', () => {
     expect(r.envelope.data.failures).toBe(3);
   });
 
+  // A file a pre-0.38.0 finalize wrote: no scenario id, an off-enum
+  // upper-case status, and nothing failing recorded. It must export red.
+  test('a pre-0.38.0 result (null scenario_id, status "FAILED", nothing failing) exports red', () => {
+    const root = tmpRoot();
+    const legacy = {
+      ...PASSED,
+      scenario_id: null,
+      status: 'FAILED',
+      steps_executed: [{ step_id: 's1', status: 'passed' }],
+      assertion_results: [],
+    };
+    writeResult(root, legacy);
+    const r = exportWith(root, { runIds: [legacy.run_id], format: 'junit' });
+    expect(r.exitKind).toBe('ok');
+    expect(r.envelope.data.failures).toBe(1);
+    const [suite] = findAll(parseXml(r.envelope.data.xml), 'testsuite');
+    expect(suite.attrs.name).toBe(legacy.run_id);
+    const runStatus = findAll(suite, 'testcase').find((c) => c.attrs.name === 'run status');
+    expect(runStatus).toBeDefined();
+    expect(runStatus.attrs.classname).toBe(legacy.run_id);
+  });
+
   describe('invalid_input', () => {
     const expectInvalid = (r, pattern) => {
       expect(r.exitKind).toBe('invalid_input');
@@ -86,10 +108,21 @@ describe('handleResultExport', () => {
       expectInvalid(exportWith(tmpRoot(), { runIds: [], format: 'junit' }), /--run-id/);
     });
 
-    test.each(['../../etc/passwd', 'run_2026', 'run_20261027_100000.json'])(
-      'a run id that is not run_YYYYMMDD_HHMMSS (%s)',
+    test.each(['../../etc/passwd', '../escape', 'a/b'])('a run id containing a path separator (%s)', (id) => {
+      expectInvalid(exportWith(tmpRoot(), { runIds: [id], format: 'junit' }), /invalid run id[\s\S]*path separator/);
+    });
+
+    test('a ../ id is refused even when the file it would name exists', () => {
+      const root = tmpRoot();
+      // results/../escape.json is .mobile-automator/escape.json.
+      fs.writeFileSync(path.join(workspaceDir(root), 'escape.json'), JSON.stringify({ ...PASSED, run_id: '../escape' }));
+      expectInvalid(exportWith(root, { runIds: ['../escape'], format: 'junit' }), /invalid run id "\.\.\/escape"/);
+    });
+
+    test.each(['run_2026', 'run_20261027_100000.json', 'ci-build-42'])(
+      'a run id outside the run_YYYYMMDD_HHMMSS form is looked up (%s)',
       (id) => {
-        expectInvalid(exportWith(tmpRoot(), { runIds: [id], format: 'junit' }), /run_YYYYMMDD_HHMMSS/);
+        expectInvalid(exportWith(tmpRoot(), { runIds: [id], format: 'junit' }), /no result file/);
       }
     );
 

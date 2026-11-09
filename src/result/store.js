@@ -7,9 +7,6 @@ const { atomicWrite } = require('../util/atomic');
 const { withLock } = require('../util/lock');
 const { OBSERVATION_TYPES, stepStatus } = require('./flags');
 const { workspaceDir } = require('../workspace/layout');
-const RESULT_SCHEMA = require('../schemas/result_schema.json');
-const { createCliAjv } = require('../schemas/cli-ajv');
-const { formatError } = require('../schemas/format-error');
 
 // Incremental result accumulator that persists to
 //   <projectRoot>/.mobile-automator/results/<runId>.json
@@ -20,25 +17,6 @@ const { formatError } = require('../schemas/format-error');
 // invocations until finalize writes the schema-conformant result.
 
 const SCHEMA_VERSION = '2.0';
-
-// Derived from the result schema, never retyped. Checking it before building a
-// path also keeps a `../` id from reaching outside the results directory.
-const RUN_ID_PATTERN = new RegExp(RESULT_SCHEMA.properties.run_id.pattern);
-
-// "Finalized" means valid against the shipped result schema, compiled once (on
-// first read) with the CLI's own Ajv. Formats are not checked anywhere in the
-// CLI (see src/schemas/cli-ajv.js); `date-time` is registered as unchecked so
-// that this, the first runtime compile of the result schema, does not print
-// Ajv's unknown-format warning on a verb's stderr.
-let validateResult;
-function compiledResultValidator() {
-  if (!validateResult) {
-    const ajv = createCliAjv();
-    ajv.addFormat('date-time', true);
-    validateResult = ajv.compile(RESULT_SCHEMA);
-  }
-  return validateResult;
-}
 
 // The one place that knows where a run's result file lives.
 function resultsDir(projectRoot) {
@@ -403,21 +381,43 @@ function isInProgress(parsed) {
   return Boolean(parsed && parsed._in_progress);
 }
 
+// A run id names a file in results/ — `<runId>.json` — so it must be a single
+// path segment: a non-empty string with no separator and no NUL. `.` and `..`
+// pass, harmlessly: the appended `.json` keeps them inside results/. This is
+// deliberately NOT the result schema's run_id pattern nor observe/paths.js's
+// isValidRunId: the writer (add-step / finalize) accepts any id, so a stricter
+// reader would refuse runs finalize wrote successfully.
+function isResultRunId(runId) {
+  return (
+    typeof runId === 'string' &&
+    runId.length > 0 &&
+    !runId.includes('\0') &&
+    path.basename(runId) === runId
+  );
+}
+
 // Read a finalized result file for a report, WITHOUT going through the
 // ResultStore constructor: that constructor renames a corrupt file aside as a
 // `.corrupt.<ts>` sidecar, and a reader must never mutate the workspace it
 // reads. This function performs no writes, renames or locks.
 //
-// Returns `{ result }` only for a finalized result: valid against the result
-// schema (every level, not just the root) and carrying the requested run_id, so
-// a consumer can rely on that shape without fallbacks. Otherwise returns
-// `{ error: { kind, message, hint } }` where kind is `invalid_input` (bad id, no
-// file, not JSON, in progress, not a finalized result) or `environment` (the
-// file exists but could not be read).
+// "Finalized" is defined by its writer, `ResultStore#finalize` above: a JSON
+// object with no `_in_progress` marker whose run_id is the requested id. The
+// reader checks exactly that and nothing more — it does not hold files to the
+// result schema, because finalize itself does not (a run recorded without
+// --scenario-id is written with scenario_id null, and pre-0.38.0 files carry
+// an upper-case status). Consumers tolerate shape beyond that object.
+//
+// Returns `{ result }` or `{ error: { kind, message, hint } }` where kind is
+// `invalid_input` (bad id, no file, not JSON, in progress, not a finalized
+// result) or `environment` (the file exists but could not be read).
 function readFinalizedResult(projectRoot, runId) {
   const invalid = (message, hint) => ({ error: { kind: 'invalid_input', message, hint } });
-  if (!RUN_ID_PATTERN.test(runId)) {
-    return invalid(`invalid run id "${runId}"`, 'A run id has the form run_YYYYMMDD_HHMMSS.');
+  if (!isResultRunId(runId)) {
+    return invalid(
+      `invalid run id "${runId}"`,
+      `A run id names a file in ${resultsDir(projectRoot)}; it cannot contain a path separator.`
+    );
   }
   const file = resultFile(projectRoot, runId);
   let raw;
@@ -443,16 +443,14 @@ function readFinalizedResult(projectRoot, runId) {
       `result file for ${runId} is not a finalized result: ${reason}`,
       `Inspect ${file}; result files are written by \`mauto result finalize\`.`
     );
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return notAResult('(root) must be object');
+  }
   if (isInProgress(parsed)) {
     return invalid(`run ${runId} is not finalized`, `Run \`mauto result finalize --run-id ${runId}\` first.`);
-  }
-  const validate = compiledResultValidator();
-  if (!validate(parsed)) {
-    const [first, ...rest] = validate.errors;
-    return notAResult(`${formatError(first)}${rest.length > 0 ? ` (and ${rest.length} more)` : ''}`);
   }
   if (parsed.run_id !== runId) return notAResult(`its run_id is ${JSON.stringify(parsed.run_id)}`);
   return { result: parsed };
 }
 
-module.exports = { ResultStore, readFinalizedResult, resultFile };
+module.exports = { ResultStore, readFinalizedResult, resultFile, isResultRunId };
