@@ -188,6 +188,55 @@ describe('toJUnit', () => {
     expect(caseNamed(suite, 'run status')).toBeUndefined();
   });
 
+  // The reader no longer guarantees schema shape (a finalized result is any
+  // object finalize wrote for the run id), so the renderer tolerates what older
+  // or hand-edited files carry (#274 review).
+  describe('tolerates results outside the current schema', () => {
+    test('a null scenario_id names the suite and its testcases by run id', () => {
+      const result = { ...FAILED, scenario_id: null };
+      const [suite] = suitesOf(toJUnit([result]).xml);
+      expect(suite.attrs.name).toBe(FAILED.run_id);
+      expect(casesOf(suite).length).toBeGreaterThan(0);
+      for (const c of casesOf(suite)) expect(c.attrs.classname).toBe(FAILED.run_id);
+    });
+
+    test.each(['FAILED', 'garbage', undefined])('a status of %s with nothing failing recorded reads red', (status) => {
+      const result = { ...PASSED, status, assertion_results: [], steps_executed: [] };
+      const report = toJUnit([result]);
+      const [suite] = suitesOf(report.xml);
+      expect(child(caseNamed(suite, 'run status'), 'failure').attrs.type).toBe('run_status');
+      expect(report.failures).toBe(1);
+    });
+
+    test('missing containers and metadata render without throwing', () => {
+      const { run_id, status } = PASSED;
+      const report = toJUnit([{ run_id, status }]);
+      const [suite] = suitesOf(report.xml);
+      expect(suite.attrs).toMatchObject({ name: run_id, tests: '0', failures: '0', time: '0' });
+      expect(suite.attrs.timestamp).toBeUndefined();
+      expect(propertiesOf(suite)).toEqual({ run_id, status });
+    });
+
+    test('null metadata and non-object entries render without throwing', () => {
+      const result = {
+        ...FAILED,
+        metadata: null,
+        assertion_results: [null, 'x', 7, ...FAILED.assertion_results],
+        steps_executed: [null, [], ...FAILED.steps_executed],
+      };
+      const report = toJUnit([result]);
+      expect(report).toMatchObject({ tests: 4, failures: 3 });
+      expect(Object.keys(propertiesOf(suitesOf(report.xml)[0])).some((k) => k.startsWith('metadata.'))).toBe(false);
+    });
+
+    test('non-array containers render as empty', () => {
+      const result = { ...FAILED, assertion_results: {}, steps_executed: 'nope' };
+      const report = toJUnit([result]);
+      expect(report).toMatchObject({ tests: 1, failures: 1 });
+      expect(caseNamed(suitesOf(report.xml)[0], 'run status')).toBeDefined();
+    });
+  });
+
   test('escapes markup characters and strips characters illegal in XML 1.0', () => {
     const { xml } = toJUnit([HOSTILE]);
     const [suite] = suitesOf(xml);

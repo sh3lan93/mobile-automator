@@ -1,14 +1,19 @@
 'use strict';
 
 // JUnit XML rendering of finalized result files (#274). Its input is what
-// readFinalizedResult (src/result/store.js) guarantees: a result valid against
-// the result schema, so there are no fallbacks for schema-required fields here.
+// readFinalizedResult (src/result/store.js) guarantees: an object finalize wrote
+// for the run id — NOT one valid against the result schema (a run recorded
+// without --scenario-id has scenario_id null; a pre-0.38.0 file has an
+// upper-case status). So the renderer tolerates: the suite is named by the run
+// id when there is no scenario_id, any status other than `passed` (or R2's
+// `incomplete`) reads red,
+// a missing metadata/container is empty, and non-object entries are dropped.
 // Pure: no fs, no clock, no input mutation, so the same results always render
 // to the same bytes. It is consumed by `mauto result export` today and by `mauto run --junit` later,
 // which is why it lives under src/run/ rather than beside the CLI handler.
 //
 // Mapping, one result at a time:
-//   result                 -> <testsuite name=scenario_id>
+//   result                 -> <testsuite name=scenario_id, else run_id>
 //   assertion_results[]    -> <testcase name=assertion_id>; failed -> <failure>,
 //                             needs_agent -> <skipped>
 //   failed / error step    -> <testcase name="step: <id>"> with <failure>
@@ -57,6 +62,10 @@ function attrs(pairs) {
 
 const present = (v) => v !== undefined && v !== null && v !== '';
 
+// A container as an array of its object entries; anything else is empty.
+const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+const asArray = (value) => (Array.isArray(value) ? value.filter(isObject) : []);
+
 // Seconds as a plain decimal, rounded to the millisecond so summed floats do
 // not render as 50.50000000001.
 function seconds(value) {
@@ -64,13 +73,13 @@ function seconds(value) {
   return String(Number.isFinite(n) && n > 0 ? Math.round(n * 1000) / 1000 : 0);
 }
 
-function properties(result, executor) {
+function properties(result, metadata, executor) {
   const props = [
     ['run_id', result.run_id],
     ['status', result.status],
   ];
   for (const key of METADATA_KEYS) {
-    if (present(result.metadata[key])) props.push([`metadata.${key}`, result.metadata[key]]);
+    if (present(metadata[key])) props.push([`metadata.${key}`, metadata[key]]);
   }
   const provenance = result.executor || executor;
   if (provenance && typeof provenance === 'object') {
@@ -120,16 +129,19 @@ function stepCase(step) {
 }
 
 function suiteFor(result, executor) {
-  const scenario = result.scenario_id;
+  const scenario = result.scenario_id ?? result.run_id;
+  const metadata = isObject(result.metadata) ? result.metadata : {};
   const cases = [
-    ...result.assertion_results.map(assertionCase),
-    ...result.steps_executed.map(stepCase).filter(Boolean),
+    ...asArray(result.assertion_results).map(assertionCase),
+    ...asArray(result.steps_executed).map(stepCase).filter(Boolean),
   ];
 
   // A red result must never render as a green report. When the run says
-  // failed/error but recorded nothing that fails (e.g. an agent finalized with
-  // --status failed after an abort), the status itself becomes the failure.
-  const isRed = result.status === 'failed' || result.status === 'error';
+  // anything but passed yet recorded nothing that fails (e.g. an agent
+  // finalized with --status failed after an abort, or a pre-0.38.0 "FAILED"),
+  // the status itself becomes the failure. R2's `incomplete` is the one
+  // non-passed status that is not red: its open work renders as <skipped>.
+  const isRed = result.status !== 'passed' && result.status !== 'incomplete';
   if (isRed && !cases.some((c) => c.failure)) {
     cases.push({
       name: 'run status',
@@ -153,10 +165,10 @@ function suiteFor(result, executor) {
       ['errors', 0],
       ['skipped', skipped],
       ['time', seconds(result.duration_seconds)],
-      ['timestamp', present(result.metadata.timestamp) ? result.metadata.timestamp : null],
+      ['timestamp', present(metadata.timestamp) ? metadata.timestamp : null],
     ])}>`
   );
-  const props = properties(result, executor);
+  const props = properties(result, metadata, executor);
   if (props.length) {
     lines.push('    <properties>');
     for (const [name, value] of props) lines.push(`      <property${attrs([['name', name], ['value', value]])}/>`);
