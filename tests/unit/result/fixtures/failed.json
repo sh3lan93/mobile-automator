@@ -1,0 +1,30 @@
+{
+  "run_id": "run_20261027_100100",
+  "scenario_id": "checkout_flow",
+  "schema_version": "2.0",
+  "status": "failed",
+  "metadata": {
+    "app_version": "1.4.0",
+    "device_model": "Pixel 8",
+    "api_level": "36",
+    "environment": "staging",
+    "timestamp": "2026-10-27T10:01:00.000Z"
+  },
+  "total_assertions": 2,
+  "passed_assertions": 1,
+  "failed_assertions": 1,
+  "duration_seconds": 30,
+  "steps_executed": [
+    { "step_id": "open_cart", "status": "passed", "screenshot": null, "error_message": null, "retried": false, "retry_count": 0 },
+    { "step_id": "tap_pay", "status": "failed", "screenshot": "shots/tap_pay.png", "error_message": "Pay button not found", "retried": true, "retry_count": 2 },
+    { "step_id": "read_receipt", "status": "error", "screenshot": null, "error_message": "device disconnected", "retried": false, "retry_count": 0 },
+    { "step_id": "rate_app", "status": "skipped", "screenshot": null, "error_message": null, "retried": false, "retry_count": 0 }
+  ],
+  "assertion_results": [
+    { "assertion_id": "assert_cart_count", "status": "passed", "expected": "2", "actual": "2", "message": "" },
+    { "assertion_id": "assert_total", "status": "failed", "expected": "$20.00", "actual": "$25.00", "message": "Total mismatch" }
+  ],
+  "observations": [],
+  "captured_variables": {},
+  "summary": "failed: 1/2 assertion(s) passed across 4 step(s)."
+}
