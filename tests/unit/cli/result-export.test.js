@@ -34,7 +34,7 @@ describe('handleResultExport', () => {
     const r = exportWith(root, { runIds: [PASSED.run_id], format: 'junit' });
     expect(r.exitKind).toBe('ok');
     expect(r.envelope.ok).toBe(true);
-    expect(r.envelope.data).toMatchObject({ format: 'junit', path: null, suites: 1, tests: 2, failures: 0, skipped: 0 });
+    expect(r.envelope.data).toMatchObject({ format: 'junit', path: null, suites: 1, tests: 2, failures: 0 });
     const [suite] = findAll(parseXml(r.envelope.data.xml), 'testsuite');
     expect(suite.attrs.name).toBe('login_flow');
   });
@@ -44,7 +44,7 @@ describe('handleResultExport', () => {
     writeResult(root, PASSED);
     const r = exportWith(root, { runIds: [PASSED.run_id], format: 'junit', out: 'reports/nested/junit.xml' });
     const expected = path.join(root, 'reports', 'nested', 'junit.xml');
-    expect(r.envelope.data).toEqual({ format: 'junit', path: expected, suites: 1, tests: 2, failures: 0, skipped: 0 });
+    expect(r.envelope.data).toEqual({ format: 'junit', path: expected, suites: 1, tests: 2, failures: 0 });
     expect(parseXml(fs.readFileSync(expected, 'utf8')).name).toBe('testsuites');
   });
 

@@ -270,7 +270,7 @@ describe('cli smoke (integration)', () => {
       expect(r.stderr).toBe('');
       const env = JSON.parse(r.stdout);
       expect(env.ok).toBe(true);
-      expect(env.data).toMatchObject({ format: 'junit', path: null, suites: 1, tests: 4, failures: 3, skipped: 0 });
+      expect(env.data).toMatchObject({ format: 'junit', path: null, suites: 1, tests: 4, failures: 3 });
       const [suite] = findAll(parseXml(env.data.xml), 'testsuite');
       expect(suite.attrs.name).toBe(FAILED_RESULT.scenario_id);
     });

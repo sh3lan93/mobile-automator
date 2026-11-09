@@ -12,25 +12,9 @@ const { parseXml, findAll } = require('../../helpers/parse-xml');
 const fixture = (name) => require(path.join(__dirname, 'fixtures', `${name}.json`));
 const PASSED = fixture('passed');
 const FAILED = fixture('failed');
-const NEEDS_AGENT_STEP = fixture('needs-agent-step');
 const HOSTILE = fixture('hostile-strings');
 const NOTHING_RECORDED = fixture('failed-nothing-recorded');
-const FIXTURES = { PASSED, FAILED, NEEDS_AGENT_STEP, HOSTILE, NOTHING_RECORDED };
-
-// What R2 (#271) adds to the result schema: an `incomplete` run status and a
-// `needs_agent` assertion status. The reader rejects both until R2 extends the
-// schema, but `mauto run --junit` will hand the renderer in-memory results of
-// this shape, so they are exercised here, against the pure renderer only.
-const R2_INCOMPLETE = {
-  ...NEEDS_AGENT_STEP,
-  status: 'incomplete',
-  passed_assertions: 1,
-  assertion_results: [
-    NEEDS_AGENT_STEP.assertion_results[0],
-    { ...NEEDS_AGENT_STEP.assertion_results[1], status: 'needs_agent', message: 'visual_check needs an agent verdict' },
-  ],
-  summary: 'incomplete: 1 assertion needs an agent verdict.',
-};
+const FIXTURES = { PASSED, FAILED, HOSTILE, NOTHING_RECORDED };
 
 const suitesOf = (xml) => findAll(parseXml(xml), 'testsuite');
 const casesOf = (suite) => suite.children.filter((c) => c.name === 'testcase');
@@ -69,7 +53,7 @@ test.each(Object.entries(FIXTURES))('fixture %s is a finalized result readFinali
 
 describe('toJUnit', () => {
   test('emits a well-formed document with an XML declaration', () => {
-    const { xml } = toJUnit([PASSED, FAILED, R2_INCOMPLETE, HOSTILE, NOTHING_RECORDED]);
+    const { xml } = toJUnit([PASSED, FAILED, HOSTILE, NOTHING_RECORDED]);
     expect(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>\n')).toBe(true);
     const root = parseXml(xml);
     expect(root.name).toBe('testsuites');
@@ -89,7 +73,8 @@ describe('toJUnit', () => {
       expect(c.attrs.classname).toBe('login_flow');
       expect(c.children).toEqual([]);
     }
-    expect(suite.attrs).toMatchObject({ tests: '2', failures: '0', errors: '0', skipped: '0' });
+    expect(suite.attrs).toMatchObject({ tests: '2', failures: '0', errors: '0' });
+    expect(suite.attrs.skipped).toBeUndefined();
   });
 
   test('a failed assertion carries a <failure> with message, expected and actual', () => {
@@ -110,32 +95,8 @@ describe('toJUnit', () => {
     expect(child(caseNamed(suite, 'step: read_receipt'), 'failure').attrs.type).toBe('step_error');
     expect(caseNamed(suite, 'step: open_cart')).toBeUndefined();
     expect(caseNamed(suite, 'step: rate_app')).toBeUndefined();
-    expect(suite.attrs).toMatchObject({ tests: '4', failures: '3', skipped: '0' });
-  });
-
-  test('a needs_agent step is <skipped>, counted as skipped not failed', () => {
-    const report = toJUnit([NEEDS_AGENT_STEP]);
-    const [suite] = suitesOf(report.xml);
-    expect(child(caseNamed(suite, 'step: toggle_wifi'), 'skipped').attrs.message).toBe(
-      'needs_agent: step toggle_wifi must be performed by an agent'
-    );
-    expect(report).toMatchObject({ suites: 1, tests: 3, failures: 0, skipped: 1 });
-  });
-
-  test('R2 needs_agent assertions and steps are <skipped>, counted as skipped not failed', () => {
-    const report = toJUnit([R2_INCOMPLETE]);
-    const [suite] = suitesOf(report.xml);
-    const skipped = child(caseNamed(suite, 'assert_layout_looks_right'), 'skipped');
-    expect(skipped.attrs.message).toBe('needs_agent: visual_check needs an agent verdict');
-    expect(child(caseNamed(suite, 'step: toggle_wifi'), 'skipped')).toBeDefined();
-    expect(suite.attrs).toMatchObject({ tests: '3', failures: '0', skipped: '2' });
-    expect(report).toMatchObject({ suites: 1, tests: 3, failures: 0, skipped: 2 });
-  });
-
-  test('an R2 incomplete result is not given a synthetic failure', () => {
-    const [suite] = suitesOf(toJUnit([R2_INCOMPLETE]).xml);
-    expect(caseNamed(suite, 'run status')).toBeUndefined();
-    expect(propertiesOf(suite).status).toBe('incomplete');
+    expect(suite.attrs).toMatchObject({ tests: '4', failures: '3' });
+    expect(suite.attrs.skipped).toBeUndefined();
   });
 
   test('properties carry run id, status and metadata', () => {
@@ -149,30 +110,6 @@ describe('toJUnit', () => {
       'metadata.environment': 'staging',
       'metadata.timestamp': '2026-10-27T10:00:00.000Z',
     });
-  });
-
-  test("executor provenance comes from the result's own executor", () => {
-    const props = propertiesOf(suitesOf(toJUnit([NEEDS_AGENT_STEP]).xml)[0]);
-    expect(props).toMatchObject({
-      'executor.kind': 'mauto-run',
-      'executor.engine': 'mobilecli',
-      'executor.scenario_sha256': 'abc123',
-    });
-  });
-
-  test('opts.executor supplies provenance for results that carry none', () => {
-    const props = propertiesOf(suitesOf(toJUnit([PASSED], { executor: { kind: 'mauto-run', engine: 'legacy' } }).xml)[0]);
-    expect(props).toMatchObject({ 'executor.kind': 'mauto-run', 'executor.engine': 'legacy' });
-  });
-
-  test("a result's own executor wins over opts.executor", () => {
-    const props = propertiesOf(suitesOf(toJUnit([NEEDS_AGENT_STEP], { executor: { engine: 'legacy' } }).xml)[0]);
-    expect(props['executor.engine']).toBe('mobilecli');
-  });
-
-  test('no executor properties when there is no provenance', () => {
-    const props = propertiesOf(suitesOf(toJUnit([PASSED]).xml)[0]);
-    expect(Object.keys(props).some((k) => k.startsWith('executor.'))).toBe(false);
   });
 
   test('a failed/error result with nothing failing recorded gets a synthetic "run status" failure', () => {
@@ -249,15 +186,16 @@ describe('toJUnit', () => {
   });
 
   test('root totals add up across suites', () => {
-    const report = toJUnit([PASSED, FAILED, NEEDS_AGENT_STEP]);
-    expect(report).toMatchObject({ suites: 3, tests: 9, failures: 3, skipped: 1 });
+    const report = toJUnit([PASSED, FAILED, NOTHING_RECORDED]);
+    expect(report).toEqual({ xml: report.xml, suites: 3, tests: 7, failures: 4 });
     const root = parseXml(report.xml);
-    expect(root.attrs).toMatchObject({ name: 'mauto', tests: '9', failures: '3', errors: '0', skipped: '1', time: '50.5' });
+    expect(root.attrs).toMatchObject({ name: 'mauto', tests: '7', failures: '4', errors: '0', time: '42.5' });
+    expect(root.attrs.skipped).toBeUndefined();
   });
 
   test('an empty result list is still a valid, empty report', () => {
     const report = toJUnit([]);
-    expect(report).toMatchObject({ suites: 0, tests: 0, failures: 0, skipped: 0 });
+    expect(report).toEqual({ xml: report.xml, suites: 0, tests: 0, failures: 0 });
     expect(findAll(parseXml(report.xml), 'testsuite')).toEqual([]);
   });
 

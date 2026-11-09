@@ -5,23 +5,22 @@
 // for the run id — NOT one valid against the result schema (a run recorded
 // without --scenario-id has scenario_id null; a pre-0.38.0 file has an
 // upper-case status). So the renderer tolerates: the suite is named by the run
-// id when there is no scenario_id, any status other than `passed` (or R2's
-// `incomplete`) reads red,
-// a missing metadata/container is empty, and non-object entries are dropped.
+// id when there is no scenario_id, any status other than `passed` reads red, a
+// missing metadata/container is empty, and non-object entries are dropped.
 // Pure: no fs, no clock, no input mutation, so the same results always render
 // to the same bytes. It is consumed by `mauto result export`.
 //
 // Mapping, one result at a time:
 //   result                 -> <testsuite name=scenario_id, else run_id>
-//   assertion_results[]    -> <testcase name=assertion_id>; failed -> <failure>,
-//                             needs_agent -> <skipped>
+//   assertion_results[]    -> <testcase name=assertion_id>; failed -> <failure>
 //   failed / error step    -> <testcase name="step: <id>"> with <failure>
-//   step needs_agent       -> <testcase name="step: <id>"> with <skipped>
-//   run id, status, metadata, executor -> <properties>
+//   run id, status, metadata -> <properties>
 //
-// A step's `error` status is reported as a <failure> of type step_error rather
-// than a JUnit <error>, so the report's counts stay {tests, failures, skipped}
-// and `errors` is always 0.
+// It renders only what current writers produce: assertions are passed or
+// failed, and only failed or errored steps get a testcase, so there is no
+// JUnit skip element and no skip count. A step's `error` status is reported as
+// a <failure> of type step_error rather than a JUnit <error>, so the report's
+// counts stay {tests, failures} and `errors` is always 0.
 
 // Characters XML 1.0 forbids anywhere in a document: C0 controls other than
 // tab/LF/CR, lone surrogates, U+FFFE and U+FFFF. A crash excerpt or an OCR'd
@@ -72,19 +71,13 @@ function seconds(value) {
   return String(Number.isFinite(n) && n > 0 ? Math.round(n * 1000) / 1000 : 0);
 }
 
-function properties(result, metadata, executor) {
+function properties(result, metadata) {
   const props = [
     ['run_id', result.run_id],
     ['status', result.status],
   ];
   for (const key of METADATA_KEYS) {
     if (present(metadata[key])) props.push([`metadata.${key}`, metadata[key]]);
-  }
-  const provenance = result.executor || executor;
-  if (provenance && typeof provenance === 'object') {
-    for (const [key, value] of Object.entries(provenance)) {
-      if (present(value) && typeof value !== 'object') props.push([`executor.${key}`, value]);
-    }
   }
   return props.filter(([, v]) => present(v));
 }
@@ -100,8 +93,6 @@ function assertionCase(assertion) {
       message: assertion.message || `${assertion.assertion_id} failed`,
       body: body.join('\n'),
     };
-  } else if (assertion.status === 'needs_agent') {
-    testcase.skipped = { message: `needs_agent: ${assertion.message || 'awaiting an agent verdict'}` };
   }
   return testcase;
 }
@@ -121,13 +112,10 @@ function stepCase(step) {
       },
     };
   }
-  if (step.needs_agent === true) {
-    return { name, skipped: { message: `needs_agent: step ${step.step_id} must be performed by an agent` } };
-  }
   return null;
 }
 
-function suiteFor(result, executor) {
+function suiteFor(result) {
   const scenario = result.scenario_id ?? result.run_id;
   const metadata = isObject(result.metadata) ? result.metadata : {};
   const cases = [
@@ -138,9 +126,8 @@ function suiteFor(result, executor) {
   // A red result must never render as a green report. When the run says
   // anything but passed yet recorded nothing that fails (e.g. an agent
   // finalized with --status failed after an abort, or a pre-0.38.0 "FAILED"),
-  // the status itself becomes the failure. R2's `incomplete` is the one
-  // non-passed status that is not red: its open work renders as <skipped>.
-  const isRed = result.status !== 'passed' && result.status !== 'incomplete';
+  // the status itself becomes the failure.
+  const isRed = result.status !== 'passed';
   if (isRed && !cases.some((c) => c.failure)) {
     cases.push({
       name: 'run status',
@@ -153,7 +140,6 @@ function suiteFor(result, executor) {
   }
 
   const failures = cases.filter((c) => c.failure).length;
-  const skipped = cases.filter((c) => c.skipped).length;
 
   const lines = [];
   lines.push(
@@ -162,12 +148,11 @@ function suiteFor(result, executor) {
       ['tests', cases.length],
       ['failures', failures],
       ['errors', 0],
-      ['skipped', skipped],
       ['time', seconds(result.duration_seconds)],
       ['timestamp', present(metadata.timestamp) ? metadata.timestamp : null],
     ])}>`
   );
-  const props = properties(result, metadata, executor);
+  const props = properties(result, metadata);
   if (props.length) {
     lines.push('    <properties>');
     for (const [name, value] of props) lines.push(`      <property${attrs([['name', name], ['value', value]])}/>`);
@@ -180,29 +165,21 @@ function suiteFor(result, executor) {
       lines.push(`${open}>`);
       lines.push(`      <failure${attrs([['message', message], ['type', type]])}>${escapeText(body)}</failure>`);
       lines.push('    </testcase>');
-    } else if (c.skipped) {
-      lines.push(`${open}>`);
-      lines.push(`      <skipped${attrs([['message', c.skipped.message]])}/>`);
-      lines.push('    </testcase>');
     } else {
       lines.push(`${open}/>`);
     }
   }
   lines.push('  </testsuite>');
 
-  return { lines, tests: cases.length, failures, skipped, time: Number(seconds(result.duration_seconds)) };
+  return { lines, tests: cases.length, failures, time: Number(seconds(result.duration_seconds)) };
 }
 
-// toJUnit(results, { executor }) -> { xml, suites, tests, failures, skipped }
-//
-// `executor` is provenance for results that carry none of their own (a result
-// file's root `executor` always wins).
-function toJUnit(results, { executor } = {}) {
-  const suites = results.map((r) => suiteFor(r, executor));
+// toJUnit(results) -> { xml, suites, tests, failures }
+function toJUnit(results) {
+  const suites = results.map(suiteFor);
   const total = (key) => suites.reduce((sum, s) => sum + s[key], 0);
   const tests = total('tests');
   const failures = total('failures');
-  const skipped = total('skipped');
 
   const xml = [
     '<?xml version="1.0" encoding="UTF-8"?>',
@@ -211,7 +188,6 @@ function toJUnit(results, { executor } = {}) {
       ['tests', tests],
       ['failures', failures],
       ['errors', 0],
-      ['skipped', skipped],
       ['time', seconds(total('time'))],
     ])}>`,
     ...suites.flatMap((s) => s.lines),
@@ -219,7 +195,7 @@ function toJUnit(results, { executor } = {}) {
     '',
   ].join('\n');
 
-  return { xml, suites: suites.length, tests, failures, skipped };
+  return { xml, suites: suites.length, tests, failures };
 }
 
 module.exports = { toJUnit };
