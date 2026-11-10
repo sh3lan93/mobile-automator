@@ -19,8 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `--run-id nightly/42` silently created `results/nightly/`. They now apply
   the rule `result export` already used: a non-empty id with no path separator
   and no NUL, or `invalid_input` (exit 3) with the same hint, before anything
-  is read or written. The `ResultStore` constructor enforces the same rule as a
-  backstop, so writers and the reader can't disagree about which ids are valid.
+  is read or written. The check lives in one place, the `ResultStore`
+  constructor, which every writer goes through, and it shares the reader's
+  rule, so writers and the reader can't disagree about which ids are valid.
   Ids outside the `run_YYYYMMDD_HHMMSS` pattern that contain no separator
   (`ci-build-42`) are still accepted. **Migration:** a CI script that nests
   runs with `/` in the id should use another character (`nightly-42`).
