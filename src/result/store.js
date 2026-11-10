@@ -18,6 +18,15 @@ const { workspaceDir } = require('../workspace/layout');
 
 const SCHEMA_VERSION = '2.0';
 
+// The one place that knows where a run's result file lives.
+function resultsDir(projectRoot) {
+  return path.join(workspaceDir(projectRoot), 'results');
+}
+
+function resultFile(projectRoot, runId) {
+  return path.join(resultsDir(projectRoot), `${runId}.json`);
+}
+
 // A crash report is read into an agent's context and routinely committed to a
 // repo. A native tombstone is tens of kilobytes, so the excerpt is bounded HERE
 // rather than trusted from the caller — the full report's home is report_path.
@@ -47,8 +56,8 @@ class ResultStore {
     this.projectRoot = projectRoot;
     this._metadataOverrides = metadata || {};
 
-    this._dir = path.join(workspaceDir(projectRoot), 'results');
-    this._file = path.join(this._dir, `${runId}.json`);
+    this._dir = resultsDir(projectRoot);
+    this._file = resultFile(projectRoot, runId);
     // Per-runId advisory lock guarding every read-modify-write mutator. Lives
     // in the same directory as the result file, so the lock is scoped to this
     // run only — different runs never contend on it.
@@ -147,6 +156,8 @@ class ResultStore {
     atomicWrite(this._file, contents);
   }
 
+  // The in-progress marker below is private to this module; readers ask
+  // isInProgress() instead of keying on the field themselves.
   _persistInProgress() {
     const snapshot = {
       run_id: this.runId,
@@ -366,4 +377,80 @@ class ResultStore {
   }
 }
 
-module.exports = { ResultStore };
+function isInProgress(parsed) {
+  return Boolean(parsed && parsed._in_progress);
+}
+
+// A run id names a file in results/ — `<runId>.json` — so it must be a single
+// path segment: a non-empty string with no separator and no NUL. `.` and `..`
+// pass, harmlessly: the appended `.json` keeps them inside results/. This is
+// deliberately NOT the result schema's run_id pattern nor observe/paths.js's
+// isValidRunId: the writer (add-step / finalize) accepts any id, so a stricter
+// reader would refuse runs finalize wrote successfully.
+function isResultRunId(runId) {
+  return (
+    typeof runId === 'string' &&
+    runId.length > 0 &&
+    !runId.includes('\0') &&
+    path.basename(runId) === runId
+  );
+}
+
+// Read a finalized result file for a report, WITHOUT going through the
+// ResultStore constructor: that constructor renames a corrupt file aside as a
+// `.corrupt.<ts>` sidecar, and a reader must never mutate the workspace it
+// reads. This function performs no writes, renames or locks.
+//
+// "Finalized" is defined by its writer, `ResultStore#finalize` above: a JSON
+// object with no `_in_progress` marker whose run_id is the requested id. The
+// reader checks exactly that and nothing more — it does not hold files to the
+// result schema, because finalize itself does not (a run recorded without
+// --scenario-id is written with scenario_id null, and pre-0.38.0 files carry
+// an upper-case status). Consumers tolerate shape beyond that object.
+//
+// Returns `{ result }` or `{ error: { kind, message, hint } }` where kind is
+// `invalid_input` (bad id, no file, not JSON, in progress, not a finalized
+// result) or `environment` (the file exists but could not be read).
+function readFinalizedResult(projectRoot, runId) {
+  const invalid = (message, hint) => ({ error: { kind: 'invalid_input', message, hint } });
+  if (!isResultRunId(runId)) {
+    return invalid(
+      `invalid run id "${runId}"`,
+      `A run id names a file in ${resultsDir(projectRoot)}; it cannot contain a path separator.`
+    );
+  }
+  const file = resultFile(projectRoot, runId);
+  let raw;
+  try {
+    raw = fs.readFileSync(file, 'utf8');
+  } catch (err) {
+    if (err && err.code === 'ENOENT') {
+      return invalid(
+        `no result file for ${runId}`,
+        `Expected ${file}; list the run ids with \`ls ${resultsDir(projectRoot)}\`.`
+      );
+    }
+    return { error: { kind: 'environment', message: `could not read ${file}: ${err.message}`, hint: null } };
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    return invalid(`result file for ${runId} is not valid JSON (${err.message})`, `Inspect ${file}.`);
+  }
+  const notAResult = (reason) =>
+    invalid(
+      `result file for ${runId} is not a finalized result: ${reason}`,
+      `Inspect ${file}; result files are written by \`mauto result finalize\`.`
+    );
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return notAResult('(root) must be object');
+  }
+  if (isInProgress(parsed)) {
+    return invalid(`run ${runId} is not finalized`, `Run \`mauto result finalize --run-id ${runId}\` first.`);
+  }
+  if (parsed.run_id !== runId) return notAResult(`its run_id is ${JSON.stringify(parsed.run_id)}`);
+  return { result: parsed };
+}
+
+module.exports = { ResultStore, readFinalizedResult, resultFile, isResultRunId };
