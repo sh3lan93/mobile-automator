@@ -22,6 +22,8 @@
 // a <failure> of type step_error rather than a JUnit <error>, so the report's
 // counts stay {tests, failures} and `errors` is always 0.
 
+const { isErroredStep, isFailingAssertion, isFailingStep } = require('./outcome');
+
 // Characters XML 1.0 forbids anywhere in a document: C0 controls other than
 // tab/LF/CR, lone surrogates, U+FFFE and U+FFFF. A crash excerpt or an OCR'd
 // label can carry any of them, and one is enough to make the whole report
@@ -84,7 +86,7 @@ function properties(result, metadata) {
 
 function assertionCase(assertion) {
   const testcase = { name: assertion.assertion_id };
-  if (assertion.status === 'failed') {
+  if (isFailingAssertion(assertion)) {
     const body = [];
     if (present(assertion.expected)) body.push(`expected: ${assertion.expected}`);
     if (present(assertion.actual)) body.push(`actual: ${assertion.actual}`);
@@ -99,14 +101,14 @@ function assertionCase(assertion) {
 
 function stepCase(step) {
   const name = `step: ${step.step_id}`;
-  if (step.status === 'failed' || step.status === 'error') {
+  if (isFailingStep(step)) {
     const body = [];
     if (present(step.error_message)) body.push(step.error_message);
     if (present(step.screenshot)) body.push(`screenshot: ${step.screenshot}`);
     return {
       name,
       failure: {
-        type: step.status === 'error' ? 'step_error' : 'step_failed',
+        type: isErroredStep(step) ? 'step_error' : 'step_failed',
         message: step.error_message || `step ${step.step_id} ${step.status}`,
         body: body.join('\n'),
       },

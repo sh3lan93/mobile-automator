@@ -6,6 +6,7 @@ const path = require('path');
 const { atomicWrite } = require('../util/atomic');
 const { withLock } = require('../util/lock');
 const { OBSERVATION_TYPES, stepStatus } = require('./flags');
+const { deriveRunStatus, isErroredStep, isFailedStep, isFailingAssertion } = require('./outcome');
 const { workspaceDir } = require('../workspace/layout');
 
 // Incremental result accumulator that persists to
@@ -40,6 +41,15 @@ function defaultMetadata(overrides = {}) {
     environment: overrides.environment || 'unknown',
     timestamp: overrides.timestamp || new Date().toISOString(),
   };
+}
+
+// The default summary's tail naming the failing steps, so a run a step turned
+// red does not read `failed: 0/0 assertion(s) passed` with no reason (#296).
+// Empty when no step failed, which keeps the pre-#296 text for those runs.
+function stepFailureSuffix(steps) {
+  const failed = steps.filter(isFailedStep).length;
+  const errored = steps.filter(isErroredStep).length;
+  return `${failed ? `, ${failed} failed` : ''}${errored ? `, ${errored} errored` : ''}`;
 }
 
 function assertionStatus(pass) {
@@ -337,10 +347,10 @@ class ResultStore {
       }
 
       const passed = this._assertions.filter((a) => a.status === 'passed').length;
-      const failed = this._assertions.filter((a) => a.status === 'failed').length;
+      const failed = this._assertions.filter(isFailingAssertion).length;
       const total = this._assertions.length;
 
-      const resolvedStatus = status || (failed > 0 ? 'failed' : 'passed');
+      const resolvedStatus = status || deriveRunStatus(this._steps, this._assertions);
 
       const result = {
         run_id: this.runId,
@@ -358,7 +368,8 @@ class ResultStore {
         captured_variables: this._capturedVariables,
         summary:
           summary ||
-          `${resolvedStatus}: ${passed}/${total} assertion(s) passed across ${this._steps.length} step(s).`,
+          `${resolvedStatus}: ${passed}/${total} assertion(s) passed across ${this._steps.length} step(s)` +
+            `${stepFailureSuffix(this._steps)}.`,
       };
 
       // Additive and OMITTED when absent: a result file from a run with no

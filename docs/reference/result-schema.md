@@ -48,7 +48,7 @@ Run Result
 | `run_id` | string | Yes | Unique run identifier in format `run_YYYYMMDD_HHMMSS`. Example: `run_20260227_145230` |
 | `scenario_id` | string | Yes | ID of the scenario that was executed |
 | `schema_version` | string | No | Result-file schema version. Always `"2.0"` (the only valid value). Distinct from a scenario's `$schema_version`, which may be `"2.0"` or `"2.1"`. |
-| `status` | string | Yes | Overall result status: `"passed"`, `"failed"`, or `"error"` |
+| `status` | string | Yes | Overall result status: `"passed"`, `"failed"`, or `"error"`. `mauto result finalize --status` sets it; when omitted it is derived: `"error"` if any step errored, else `"failed"` if any step or assertion failed, else `"passed"` (skipped steps do not count) |
 | `metadata` | object | Yes | Execution context including device, app version, environment, timestamp |
 | `total_assertions` | integer | Yes | Total count of assertions in the execution |
 | `passed_assertions` | integer | Yes | Count of assertions that passed |
