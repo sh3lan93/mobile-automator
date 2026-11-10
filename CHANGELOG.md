@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.38.4]
+
+### 🐛 Fixed
+
+- **Breaking: `mauto result finalize` without `--status` now counts failed steps** (#296).
+  It derived the run status from assertions only, so a run whose step failed (or errored)
+  with no failed assertion finalized as `passed`, exited `0` and was harvested into
+  run-history as a pass, while `result export --format junit` reported the same run red.
+  The derived status is now `error` if any step errored, else `failed` if any step or
+  assertion failed, else `passed`; skipped steps do not count. An explicit `--status`
+  still wins. **This changes behaviour:** such runs now return `ok: false`,
+  `test_failed`, exit `6`, and are recorded as failures in run-history. A run with no
+  steps and no assertions still finalizes `passed` (tracked by #275). To keep the old
+  verdict, pass `--status passed` explicitly.
+- **`mauto result finalize`'s default summary names failing steps** (#296). A run that a
+  step turned red now reads e.g. `failed: 0/0 assertion(s) passed across 1 step(s), 1 failed.`
+  (or `, 1 errored`) instead of a bare assertion count; runs with no failed or errored step
+  keep the previous text. An explicit `--summary` still wins.
+
+---
+
+## [0.38.3]
+
+### ✨ Added
+
+- **`mauto result export --format junit`** turns finalized result files into
+  JUnit XML for a CI test reporter (#274):
+  `mauto result export --run-id <id> [--run-id <id>…] --format junit [--out <path>]`.
+  Each run becomes a `<testsuite>`, each assertion a `<testcase>`, and each
+  failed or errored step a `step: <step_id>` testcase with a `<failure>`;
+  run id, status and metadata are `<properties>`. A run finalized without
+  `--scenario-id` gets a suite named by its run id. Any status other than
+  `passed` reads red: a run with such a status and nothing failing recorded
+  gets a `run status` failure, so it never reads green. The envelope is
+  `{format, path, suites, tests, failures}`, with the XML in
+  `data.xml` when `--out` is omitted. The export is read-only, refuses
+  anything that is not a file `result finalize` wrote for that run id, and
+  exits 0 whatever the runs' outcome. The FAQ's CI recipe now ends with it,
+  replacing a `results/latest.json` file that never existed.
+
+---
+
 ## [0.38.2]
 
 ### ✨ Added
