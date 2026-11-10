@@ -4,7 +4,7 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 
-const { ResultStore, deriveRunStatus } = require('../../../src/result/store');
+const { ResultStore } = require('../../../src/result/store');
 const { createCliAjv } = require('../../../src/schemas/cli-ajv');
 
 const RESULT_SCHEMA_PATH = path.resolve(
@@ -421,25 +421,6 @@ describe('ResultStore', () => {
       expect(crash.excerpt).toBeNull();
       expect(crash.report_path).toBeNull();
     });
-  });
-});
-
-describe('deriveRunStatus (#296)', () => {
-  const step = (status) => ({ step_id: 's', status });
-  const assertion = (status) => ({ step_id: 's', status });
-
-  test.each([
-    ['no steps, no assertions', 'passed', [], []],
-    ['a failed step', 'failed', [step('failed')], []],
-    ['an errored step', 'error', [step('error')], []],
-    ['an errored step beats a failed assertion', 'error', [step('error')], [assertion('failed')]],
-    ['an errored step beats a failed step', 'error', [step('failed'), step('error')], []],
-    ['a failed assertion with passed steps', 'failed', [step('passed')], [assertion('failed')]],
-    ['all passed', 'passed', [step('passed')], [assertion('passed')]],
-    ['skipped steps do not count', 'passed', [step('skipped'), step('passed')], []],
-    ['all skipped', 'passed', [step('skipped')], []],
-  ])('%s -> %s', (_name, expected, steps, assertions) => {
-    expect(deriveRunStatus(steps, assertions)).toBe(expected);
   });
 });
 

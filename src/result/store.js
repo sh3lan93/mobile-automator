@@ -6,6 +6,7 @@ const path = require('path');
 const { atomicWrite } = require('../util/atomic');
 const { withLock } = require('../util/lock');
 const { OBSERVATION_TYPES, stepStatus } = require('./flags');
+const { deriveRunStatus, isFailingAssertion } = require('./outcome');
 const { workspaceDir } = require('../workspace/layout');
 
 // Incremental result accumulator that persists to
@@ -40,19 +41,6 @@ function defaultMetadata(overrides = {}) {
     environment: overrides.environment || 'unknown',
     timestamp: overrides.timestamp || new Date().toISOString(),
   };
-}
-
-// The run status `result finalize` derives when `--status` is omitted (#296).
-// It used to read assertions only, so a run whose step failed finalized
-// `passed` while its JUnit export was red. Every entry counts — a step
-// recorded twice (fail, then pass) still failed once, matching the export.
-// Skipped steps count for nothing; a run with no steps and no assertions
-// stays `passed` (#275 owns that case).
-function deriveRunStatus(steps = [], assertions = []) {
-  if (steps.some((s) => s.status === 'error')) return 'error';
-  if (steps.some((s) => s.status === 'failed')) return 'failed';
-  if (assertions.some((a) => a.status === 'failed')) return 'failed';
-  return 'passed';
 }
 
 function assertionStatus(pass) {
@@ -350,7 +338,7 @@ class ResultStore {
       }
 
       const passed = this._assertions.filter((a) => a.status === 'passed').length;
-      const failed = this._assertions.filter((a) => a.status === 'failed').length;
+      const failed = this._assertions.filter(isFailingAssertion).length;
       const total = this._assertions.length;
 
       const resolvedStatus = status || deriveRunStatus(this._steps, this._assertions);
@@ -466,4 +454,4 @@ function readFinalizedResult(projectRoot, runId) {
   return { result: parsed };
 }
 
-module.exports = { ResultStore, deriveRunStatus, readFinalizedResult, resultFile, isResultRunId };
+module.exports = { ResultStore, readFinalizedResult, resultFile, isResultRunId };
