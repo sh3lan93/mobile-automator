@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.39.0]
+
+### ⚠️ Breaking
+
+- **The `mauto result` write verbs refuse a `--run-id` that is not a single
+  path segment** (#295). `add-step`, `add-assertion`, `add-crash` and
+  `finalize` built `results/<run-id>.json` (and its `.lock`) straight from the
+  flag, and the atomic write creates parent directories, so
+  `--run-id ../../x` wrote outside `.mobile-automator/results/` and
+  `--run-id nightly/42` silently created `results/nightly/`. They now apply
+  the rule `result export` already used: a non-empty id with no path separator
+  and no NUL, or `invalid_input` (exit 3) with the same hint, before anything
+  is read or written. The `ResultStore` constructor enforces the same rule as a
+  backstop, so writers and the reader can't disagree about which ids are valid.
+  Ids outside the `run_YYYYMMDD_HHMMSS` pattern that contain no separator
+  (`ci-build-42`) are still accepted. **Migration:** a CI script that nests
+  runs with `/` in the id should use another character (`nightly-42`).
+
+---
+
 ## [0.38.3]
 
 ### ✨ Added
