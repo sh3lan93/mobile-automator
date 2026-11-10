@@ -8,10 +8,13 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { spawn } = require('child_process');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
 
 const { ensureSalt, readSalt } = require('../../../src/device/session-salt');
 const paths = require('../../../src/device/session-paths');
+
+const execFileP = promisify(execFile);
 
 const SALT_RE = /^[0-9a-f]{64}$/;
 
@@ -87,19 +90,10 @@ describe('session-salt (#236)', () => {
     const root = tmpRoot();
     const mod = path.join(__dirname, '..', '..', '..', 'src', 'device', 'session-salt.js');
     const script = `process.stdout.write(require(${JSON.stringify(mod)}).ensureSalt(${JSON.stringify(root)}))`;
-    const run = () =>
-      new Promise((resolve, reject) => {
-        const child = spawn(process.execPath, ['-e', script], { stdio: ['ignore', 'pipe', 'inherit'] });
-        let out = '';
-        child.stdout.on('data', (d) => (out += d));
-        child.on('error', reject);
-        // Resolve on 'close', not 'exit': at 'exit' the child's stdout may still be
-        // unread (Node docs), so `out` can be '' under load (#297).
-        child.on('close', (code, signal) =>
-          code === 0 ? resolve(out) : reject(new Error(`exit ${code} signal ${signal}`)),
-        );
-      });
-    const salts = await Promise.all(Array.from({ length: 8 }, run));
+    // execFile resolves only after the child's stdio has closed (#297).
+    const salts = await Promise.all(
+      Array.from({ length: 8 }, () => execFileP(process.execPath, ['-e', script]).then((r) => r.stdout)),
+    );
     expect(salts).toEqual(Array(8).fill(salts[0]));
     expect(salts[0]).toMatch(SALT_RE);
     expect(readSalt(root)).toBe(salts[0]);
