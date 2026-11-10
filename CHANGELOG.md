@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.38.4]
+
+### 🐛 Fixed
+
+- **Breaking: `mauto result finalize` without `--status` now counts failed steps** (#296).
+  It derived the run status from assertions only, so a run whose step failed (or errored)
+  with no failed assertion finalized as `passed`, exited `0` and was harvested into
+  run-history as a pass, while `result export --format junit` reported the same run red.
+  The derived status is now `error` if any step errored, else `failed` if any step or
+  assertion failed, else `passed`; skipped steps do not count. An explicit `--status`
+  still wins. **This changes behaviour:** such runs now return `ok: false`,
+  `test_failed`, exit `6`, and are recorded as failures in run-history. A run with no
+  steps and no assertions still finalizes `passed` (tracked by #275). To keep the old
+  verdict, pass `--status passed` explicitly.
+
+---
+
 ## [0.38.3]
 
 ### ✨ Added
