@@ -252,6 +252,33 @@ describe('cli smoke (integration)', () => {
   });
 
   // #274: JUnit export of a pre-written result file, through the real binary.
+  // #295: the ResultStore constructor refuses the id and withEnvelope's
+  // toEnvelope reports it — this proves that wiring through the real binary.
+  describe('result write verbs refuse a --run-id with a path separator', () => {
+    test.each([
+      ['add-step', ['--step-id', 's1', '--status', 'pass']],
+      ['add-assertion', ['--step-id', 's1', '--type', 'element_visible', '--pass', 'true']],
+      ['add-crash', ['--crash-id', 'c1']],
+      ['finalize', ['--status', 'passed']],
+    ])('result %s --run-id ../escape is invalid_input, exit 3, and writes nothing', (verb, rest) => {
+      const configDir = path.join(workspace, '.mobile-automator');
+      fs.mkdirSync(configDir, { recursive: true });
+      fs.copyFileSync(CONFIG_FIXTURE, path.join(configDir, 'config.json'));
+      const before = fs.readdirSync(workspace).sort();
+
+      const r = runCli(['result', verb, '--run-id', '../escape', ...rest], { cwd: workspace });
+
+      expect(r.status).toBe(3); // EXIT.INVALID_INPUT
+      expect(r.stderr).toBe('');
+      const env = JSON.parse(r.stdout);
+      expect(env.ok).toBe(false);
+      expect(env.error).toEqual({ kind: 'invalid_input', message: 'invalid run id "../escape"' });
+      expect(env.hint).toMatch(/cannot contain a path separator/);
+      expect(fs.readdirSync(workspace).sort()).toEqual(before);
+      expect(fs.existsSync(path.join(configDir, 'results'))).toBe(false);
+    });
+  });
+
   describe('result export --format junit', () => {
     function writeWorkspaceResult() {
       const configDir = path.join(workspace, '.mobile-automator');

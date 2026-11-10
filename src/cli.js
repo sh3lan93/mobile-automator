@@ -12,7 +12,7 @@ const { engineHint } = require('./device/engine-hints');
 const { ScenarioValidator } = require('./scenario/validator');
 const { findReplayWarnings, summarize } = require('./scenario/replayability');
 const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
-const { ResultStore, readFinalizedResult } = require('./result/store');
+const { ResultStore, readFinalizedResult, InvalidRunIdError } = require('./result/store');
 const { OBSERVATION_TYPES, parseObservation, parseCapture, parseBool, parseRunStatus, parseStepStatus } = require('./result/flags');
 const { toJUnit } = require('./result/junit');
 const { atomicWrite } = require('./util/atomic');
@@ -130,6 +130,7 @@ function usageLine(cmd) {
 // is the single boundary that guarantees a calling agent always receives one
 // JSON line + a meaningful exit code instead of a raw stack trace on stderr.
 //   CommanderError (parse failure) -> invalid_input, with the usage line as hint
+//   InvalidRunIdError            -> invalid_input, with the store's hint
 //   SyntaxError                  -> invalid_input (a malformed JSON file)
 //   fs EACCES/ENOENT/EROFS/...    -> environment, with a filesystem hint
 //   anything else                -> internal
@@ -143,6 +144,11 @@ function toEnvelope(err) {
       ),
       exitKind: 'invalid_input',
     };
+  }
+  // A --run-id the ResultStore refuses (#295): the store owns the rule and
+  // the wording, so every result verb reports it identically.
+  if (err instanceof InvalidRunIdError) {
+    return { envelope: fail(err.kind, err.message, err.hint), exitKind: err.kind };
   }
   if (err instanceof SyntaxError) {
     return {

@@ -131,6 +131,9 @@ Used to author scenario JSON, evaluate assertions, and assemble result files.
 
     Only finalized runs export: an unknown run id, a run id containing a path separator, a file that is not JSON, a run that was never finalized, or a file that is not a result `result finalize` wrote for that run (a JSON value other than an object, or a different `run_id`) fails the whole export with `invalid_input` and writes nothing. The export exits 0 whatever the runs' outcome — it is a report, not a gate. It never modifies the result files.
 
+!!! note "Run ids"
+    `--run-id` names the run's file, `.mobile-automator/results/<run-id>.json`, so every `result` verb (`add-step`, `add-assertion`, `add-crash`, `finalize`, `export`) applies the same rule: the id must be a non-empty single path segment with no path separator and no NUL character. Anything else fails with `invalid_input` (exit `3`) before anything is read or written. The id doesn't have to match `run_YYYYMMDD_HHMMSS`: `ci-build-42` is accepted, `nightly/42` and `../x` are not.
+
 !!! note "`result finalize` and memory"
     On finalize, `mauto` auto-harvests typed observations into cross-session memory. This is best-effort: a memory failure never fails an otherwise-successful finalize — it folds into the envelope `hint` instead. See [Cross-Session Memory](../concepts/memory.md).
 
