@@ -12,7 +12,7 @@ const { engineHint } = require('./device/engine-hints');
 const { ScenarioValidator } = require('./scenario/validator');
 const { findReplayWarnings, summarize } = require('./scenario/replayability');
 const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
-const { ResultStore, readFinalizedResult } = require('./result/store');
+const { ResultStore, readFinalizedResult, runIdError } = require('./result/store');
 const { OBSERVATION_TYPES, parseObservation, parseCapture, parseBool, parseRunStatus, parseStepStatus } = require('./result/flags');
 const { toJUnit } = require('./result/junit');
 const { atomicWrite } = require('./util/atomic');
@@ -628,6 +628,16 @@ async function handleAssert({ deviceBridge }, type, flags = {}) {
 // Collect a repeatable flag's values into an array (commander's collector).
 const collect = (value, previous) => previous.concat([value]);
 
+// The --run-id gate every `result` write verb runs FIRST (#295), before any
+// read or write keyed on the id: the id names results/<runId>.json, so one
+// with a path separator would write outside results/. The rule and wording
+// are the store's (runIdError) — shared with `result export` — and the
+// ResultStore constructor enforces the same rule as a backstop.
+function runIdGate(projectRoot, runId) {
+  const err = runIdError(projectRoot, runId);
+  return err ? { envelope: fail(err.kind, err.message, err.hint), exitKind: err.kind } : null;
+}
+
 function handleResultAddStep({ resultStoreFactory, projectRoot }, opts) {
   const { runId, scenarioId, stepId, status, attempts, screenshot, errorMessage } = opts;
   if (!runId || !stepId || !status) {
@@ -636,6 +646,8 @@ function handleResultAddStep({ resultStoreFactory, projectRoot }, opts) {
       exitKind: 'invalid_input',
     };
   }
+  const badRunId = runIdGate(projectRoot, runId);
+  if (badRunId) return badRunId;
 
   // The status flag is a schema enum, not free text: an unknown value used to
   // be silently recorded as 'error' — a mislabelled step with a green exit —
@@ -720,6 +732,8 @@ function handleResultAddAssertion({ resultStoreFactory, projectRoot }, opts) {
       exitKind: 'invalid_input',
     };
   }
+  const badRunId = runIdGate(projectRoot, runId);
+  if (badRunId) return badRunId;
   if (!KNOWN_ASSERTION_TYPES.has(type)) {
     return {
       envelope: fail(
@@ -750,6 +764,8 @@ function handleResultAddAssertion({ resultStoreFactory, projectRoot }, opts) {
 
 // Record an observed app crash.
 function handleResultAddCrash({ resultStoreFactory, projectRoot }, opts = {}) {
+  const badRunId = runIdGate(projectRoot, opts.runId);
+  if (badRunId) return badRunId;
   const store = resultStoreFactory({
     runId: opts.runId,
     scenarioId: opts.scenarioId,
@@ -825,6 +841,9 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
       exitKind: 'invalid_input',
     };
   }
+  // Before measureRun too: it reads the run's trace by the same id.
+  const badRunId = runIdGate(projectRoot, runId);
+  if (badRunId) return badRunId;
 
   // The status flag is a schema enum, not free text: an unlisted value (a case
   // variant of a documented word, a typo) used to be persisted verbatim — a
