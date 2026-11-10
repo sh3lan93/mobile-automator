@@ -1507,7 +1507,8 @@
 
 <h1 id="strategy-plan-deterministic-agent-free-replay-for-mauto">Strategy plan: deterministic, agent-free replay for <code>mauto</code><a class="headerlink" href="#strategy-plan-deterministic-agent-free-replay-for-mauto" title="Permanent link">&para;</a></h1>
 <blockquote>
-<p><strong>Versions renumbered 2026-10-27:</strong> v0.37.0 shipped the same morning (PR #270, which also moved the workspace directory to <code>.mobile-automator/</code>). Ladder now: S0a 0.37.1 · S0b 0.38.0 (BREAKING) · S0c 0.38.1 · R1–R7 0.39.0-rc.0…rc.7 · G 0.39.0. Wherever this file says <code>mobile-automator/&lt;x&gt;</code> for the workspace, read <code>.mobile-automator/&lt;x&gt;</code>.</p>
+<p><strong>Versions renumbered again 2026-11-10:</strong> #295 (BREAKING <code>--run-id</code> gate on the <code>result</code> write verbs, PR #301) takes 0.39.0, so the replay ladder moves up one minor: R1–R7 <strong>0.40.0-rc.0…rc.7</strong> · G <strong>0.40.0</strong>. Every 0.40.0 below was 0.39.0 before this note.</p>
+<p><strong>Versions renumbered 2026-10-27:</strong> v0.37.0 shipped the same morning (PR #270, which also moved the workspace directory to <code>.mobile-automator/</code>). Ladder now: S0a 0.37.1 · S0b 0.38.0 (BREAKING) · S0c 0.38.1 · R1–R7 0.40.0-rc.0…rc.7 · G 0.40.0. Wherever this file says <code>mobile-automator/&lt;x&gt;</code> for the workspace, read <code>.mobile-automator/&lt;x&gt;</code>.</p>
 </blockquote>
 <p><strong>Already delivered:</strong> the self-contained Tailwind HTML rendering of this plan is at <code>~/Downloads/mauto-replay-strategy-2026-10-27.html</code> (open with <code>open ~/Downloads/mauto-replay-strategy-2026-10-27.html</code>; styling loads Tailwind from its CDN).</p>
 <p><strong>On approval (the only action; nothing else touches the repo):</strong> create the tracking structure on GitHub per decision 4: one PRD issue, one sub-issue per slice (converting the matching Project #4 drafts), milestone <code>replay</code>, CLAUDE.md milestone row proposed in the PRD body. Each slice then follows the CLAUDE.md milestone workflow (worktree, written plan, TDD via subagents, draft PR) when started.</p>
@@ -1714,7 +1715,7 @@
 </tr>
 <tr>
 <td><strong>R1</strong> tracer bullet: hidden <code>mauto run</code></td>
-<td>0.39.0-rc.0</td>
+<td>0.40.0-rc.0</td>
 <td>gate, runner, resolve, poll, step (retry + <code>on_failure: fail</code>), launch/tap/type/semantic/wait_for_element, mechanical assertions only (Tier-2 recorded as failed, exactly like the harness today), <code>fields.js</code> (handleAssert switched to it), <code>'run'</code> in <code>VERB_NAMES</code>, <code>--device</code>/<code>--run-id</code></td>
 <td><code>src/run/*</code>, <code>src/assertion/fields.js</code>, <code>cli.js</code>, <code>vocab.js</code></td>
 <td>port the 19 executor cases to <code>tests/unit/run/runner.test.js</code> on <code>tests/helpers/fake-bridge.js</code> (scripted <code>listElements</code> queue + fake clock, the <code>fakeMauto</code> idiom one layer down); <code>resolve.test.js</code> copy; <code>run-verb.test.js</code> via <code>buildProgram</code> (gate unset → 5 and factory never called; invalid → 3; pass → ok + trace-correlated; fail → 6); cli-smoke gate/workspace refusals; temporary lint: <code>lib/resolve.js</code> ≡ <code>src/run/resolve.js</code> until R7</td>
@@ -1794,12 +1795,12 @@
 </tr>
 <tr>
 <td><strong>G</strong> graduation</td>
-<td><strong>0.39.0</strong></td>
+<td><strong>0.40.0</strong></td>
 <td>delete <code>gate.js</code> + refusal + <code>hidden</code>; strip <code>MAUTO_REPLAY</code> from harness env; add <code>tests/lint/no-replay-gate.test.js</code>; invariant amendment; execute-guide rewrite; user docs; <code>src/init</code> skill/slash text ("start with <code>mauto run</code>", layer-2 only); README/FAQ/quick-start; CLAUDE.md verbs, drift guards, file layout, milestone row</td>
 <td>guides, docs, CLAUDE.md, <code>package.json</code>, CHANGELOG collapse</td>
 <td><code>execute-content.test.js</code> gains <code>/mauto run/</code> and <code>/needs_agent/</code>; all guide guards</td>
 <td>every guard listed in Appendix</td>
-<td><code>npm run test:all</code>, lint, <code>pack-smoke</code>, both E2E legs green; release pipeline publishes 0.39.0</td>
+<td><code>npm run test:all</code>, lint, <code>pack-smoke</code>, both E2E legs green; release pipeline publishes 0.40.0</td>
 <td>—</td>
 </tr>
 </tbody>

@@ -1932,6 +1932,10 @@
 <p>Only finalized runs export: an unknown run id, a run id containing a path separator, a file that is not JSON, a run that was never finalized, or a file that is not a result <code>result finalize</code> wrote for that run (a JSON value other than an object, or a different <code>run_id</code>) fails the whole export with <code>invalid_input</code> and writes nothing. The export exits 0 whatever the runs' outcome — it is a report, not a gate. It never modifies the result files.</p>
 </div>
 <div class="admonition note">
+<p class="admonition-title">Run ids</p>
+<p><code>--run-id</code> names the run's file, <code>.mobile-automator/results/&lt;run-id&gt;.json</code>, so every <code>result</code> verb (<code>add-step</code>, <code>add-assertion</code>, <code>add-crash</code>, <code>finalize</code>, <code>export</code>) applies the same rule: the id must be a non-empty single path segment with no path separator and no NUL character. Anything else fails with <code>invalid_input</code> (exit <code>3</code>) before anything is read or written. The id doesn't have to match <code>run_YYYYMMDD_HHMMSS</code>: <code>ci-build-42</code> is accepted, <code>nightly/42</code> and <code>../x</code> are not.</p>
+</div>
+<div class="admonition note">
 <p class="admonition-title"><code>result finalize</code> and memory</p>
 <p>On finalize, <code>mauto</code> auto-harvests typed observations into cross-session memory. This is best-effort: a memory failure never fails an otherwise-successful finalize — it folds into the envelope <code>hint</code> instead. See <a href="../../concepts/memory/">Cross-Session Memory</a>.</p>
 </div>
