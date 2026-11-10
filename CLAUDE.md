@@ -156,6 +156,9 @@ There is also a **three-layer model** worth keeping straight: (1) the CLI contra
 | `sample-app` | PRD [#44](https://github.com/sh3lan93/mobile-automator/issues/44), slices #45–#49 | `sample-app/<issue-number>-<short-slug>` | active — slices 4–5 open |
 | `cli` | PRD [#69](https://github.com/sh3lan93/mobile-automator/issues/69), slices #70–#78 | — | **complete** (all 23 closed) |
 | `interactive-recording` | — | — | **dead** — recorder excised in v0.20.0 (PR #110) |
+| `replay` | PRD [#271](https://github.com/sh3lan93/mobile-automator/issues/271), slices #272–#284 + follow-ups; plan `docs/plans/2026-10-27-replay-plan.md` | `replay/<issue-number>-<short-slug>` | active — S0a/S0b done, S0c in review, R1–G open |
+
+**Picking the next issue in a milestone.** Milestones with a pick order (today: `replay`) track it in [Project #4](https://github.com/users/sh3lan93/projects/4). Take the milestone issue with Status `Ready`, no open "blocked by" issue (GitHub's native issue dependencies), and the lowest `Order`, and set it to `In progress` before step 1 below. When it merges, move to `Ready` every issue whose blockers are now all closed. Priority (`P0`/`P1`/`P2`) follows `Order`; never pick an `In progress` or `In review` item. The rule is also in the milestone's description.
 
 **Any agent picking up a milestone issue MUST follow this workflow in order — it is not optional:**
 
