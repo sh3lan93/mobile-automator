@@ -42,6 +42,19 @@ function defaultMetadata(overrides = {}) {
   };
 }
 
+// The run status `result finalize` derives when `--status` is omitted (#296).
+// It used to read assertions only, so a run whose step failed finalized
+// `passed` while its JUnit export was red. Every entry counts — a step
+// recorded twice (fail, then pass) still failed once, matching the export.
+// Skipped steps count for nothing; a run with no steps and no assertions
+// stays `passed` (#275 owns that case).
+function deriveRunStatus(steps = [], assertions = []) {
+  if (steps.some((s) => s.status === 'error')) return 'error';
+  if (steps.some((s) => s.status === 'failed')) return 'failed';
+  if (assertions.some((a) => a.status === 'failed')) return 'failed';
+  return 'passed';
+}
+
 function assertionStatus(pass) {
   return pass ? 'passed' : 'failed';
 }
@@ -340,7 +353,7 @@ class ResultStore {
       const failed = this._assertions.filter((a) => a.status === 'failed').length;
       const total = this._assertions.length;
 
-      const resolvedStatus = status || (failed > 0 ? 'failed' : 'passed');
+      const resolvedStatus = status || deriveRunStatus(this._steps, this._assertions);
 
       const result = {
         run_id: this.runId,
@@ -453,4 +466,4 @@ function readFinalizedResult(projectRoot, runId) {
   return { result: parsed };
 }
 
-module.exports = { ResultStore, readFinalizedResult, resultFile, isResultRunId };
+module.exports = { ResultStore, deriveRunStatus, readFinalizedResult, resultFile, isResultRunId };

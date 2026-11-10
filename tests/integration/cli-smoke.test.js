@@ -352,11 +352,11 @@ describe('cli smoke (integration)', () => {
         const add = runCli(['result', 'add-step', '--run-id', runId, '--step-id', 's1', '--status', 'fail'], { cwd: workspace });
         expect(JSON.parse(add.stdout).ok).toBe(true);
 
-        // Not pinned: finalize's verdict (it derives status from assertions
-        // only, so this run finalizes as passed). What matters is that it
-        // wrote a finalized file for this run id with no scenario id.
+        // The step failed, so finalize derives `failed` and exits 6 (#296);
+        // it still wrote a finalized file for this run id with no scenario id.
         const fin = runCli(['result', 'finalize', '--run-id', runId], { cwd: workspace });
-        expect(JSON.parse(fin.stdout).data).toMatchObject({ run_id: runId, scenario_id: null });
+        expect(fin.status).toBe(6);
+        expect(JSON.parse(fin.stdout).data).toMatchObject({ run_id: runId, scenario_id: null, status: 'failed' });
 
         const r = runCli(['result', 'export', '--run-id', runId, '--format', 'junit'], { cwd: workspace });
         expect(r.stderr).toBe('');

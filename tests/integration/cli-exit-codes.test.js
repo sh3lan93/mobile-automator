@@ -97,3 +97,74 @@ describe('result finalize exit codes (integration, #273)', () => {
     expect(fs.existsSync(path.join(root, '.mobile-automator', 'results', `${RUN_ID}.json`))).toBe(false);
   });
 });
+
+// #296: omitting --status derived the verdict from assertions only, so a run
+// whose step failed exited 0 and was harvested into run-history as a pass,
+// while the JUnit export of the same run was red.
+describe('derived status (#296)', () => {
+  let root;
+
+  beforeEach(() => {
+    root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-derived-')));
+    fs.mkdirSync(path.join(root, '.git'));
+    const setup = runCli(['setup', '--mode', 'platform-aware'], root);
+    expect(setup.status).toBe(0);
+  });
+
+  afterEach(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  function addStep(...extra) {
+    const r = runCli(['result', 'add-step', '--run-id', RUN_ID, '--scenario-id', 'demo', ...extra], root);
+    expect(r.status).toBe(0);
+  }
+
+  test('a failed step with no --status exits 6 as failed, and the result is written', () => {
+    addStep('--step-id', 's1', '--status', 'fail', '--error-message', 'boom');
+    const r = runCli(['result', 'finalize', '--run-id', RUN_ID], root);
+    expect(r.status).toBe(6);
+    const env = onlyEnvelope(r);
+    expect(env.ok).toBe(false);
+    expect(env.error.kind).toBe('test_failed');
+    expect(env.data.status).toBe('failed');
+    expect(fs.existsSync(path.join(root, '.mobile-automator', 'results', `${RUN_ID}.json`))).toBe(true);
+  });
+
+  test('an errored step with no --status exits 6 as error', () => {
+    addStep('--step-id', 's1', '--status', 'error');
+    const r = runCli(['result', 'finalize', '--run-id', RUN_ID], root);
+    expect(r.status).toBe(6);
+    expect(onlyEnvelope(r).data.status).toBe('error');
+  });
+
+  test('all steps passed with no --status exits 0', () => {
+    addStep('--step-id', 's1', '--status', 'pass');
+    addStep('--step-id', 's2', '--status', 'pass');
+    const r = runCli(['result', 'finalize', '--run-id', RUN_ID], root);
+    expect(r.status).toBe(0);
+    expect(onlyEnvelope(r).data.status).toBe('passed');
+  });
+
+  test('an explicit --status passed wins over a recorded failed step', () => {
+    addStep('--step-id', 's1', '--status', 'fail');
+    const r = runCli(['result', 'finalize', '--run-id', RUN_ID, '--status', 'passed'], root);
+    expect(r.status).toBe(0);
+    expect(onlyEnvelope(r).data.status).toBe('passed');
+  });
+
+  test('a step that passed after retries still exits 0', () => {
+    addStep('--step-id', 's1', '--status', 'pass', '--attempts', '3');
+    const r = runCli(['result', 'finalize', '--run-id', RUN_ID], root);
+    expect(r.status).toBe(0);
+    expect(onlyEnvelope(r).data.status).toBe('passed');
+  });
+
+  test('run-history records the derived failure as F', () => {
+    addStep('--step-id', 's1', '--status', 'fail');
+    expect(runCli(['result', 'finalize', '--run-id', RUN_ID], root).status).toBe(6);
+    const show = runCli(['memory', 'show'], root);
+    expect(show.status).toBe(0);
+    expect(show.stdout).toMatch(/## demo {2}\(last 5 runs: F\)/);
+  });
+});

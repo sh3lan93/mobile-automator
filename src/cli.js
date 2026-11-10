@@ -831,7 +831,7 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
   // schema-invalid result file with ok:true and exit 0 — directly under the
   // exit-6 contract keyed on that status (#286 review). Reject before anything
   // is written. A provided-but-empty value is NOT an omitted one: only absence
-  // derives the status from the recorded assertions.
+  // derives the status from the recorded steps and assertions.
   if (status !== undefined) {
     const parsed = parseRunStatus(status);
     if (parsed.error) {
@@ -839,7 +839,7 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
         envelope: fail(
           'invalid_input',
           parsed.error,
-          'Valid values: passed | failed | error, or omit --status to derive it from the recorded assertions.'
+          'Valid values: passed | failed | error, or omit --status to derive it from the recorded steps and assertions.'
         ),
         exitKind: 'invalid_input',
       };

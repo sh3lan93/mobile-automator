@@ -4,7 +4,7 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 
-const { ResultStore } = require('../../../src/result/store');
+const { ResultStore, deriveRunStatus } = require('../../../src/result/store');
 const { createCliAjv } = require('../../../src/schemas/cli-ajv');
 
 const RESULT_SCHEMA_PATH = path.resolve(
@@ -421,5 +421,111 @@ describe('ResultStore', () => {
       expect(crash.excerpt).toBeNull();
       expect(crash.report_path).toBeNull();
     });
+  });
+});
+
+describe('deriveRunStatus (#296)', () => {
+  const step = (status) => ({ step_id: 's', status });
+  const assertion = (status) => ({ step_id: 's', status });
+
+  test.each([
+    ['no steps, no assertions', 'passed', [], []],
+    ['a failed step', 'failed', [step('failed')], []],
+    ['an errored step', 'error', [step('error')], []],
+    ['an errored step beats a failed assertion', 'error', [step('error')], [assertion('failed')]],
+    ['an errored step beats a failed step', 'error', [step('failed'), step('error')], []],
+    ['a failed assertion with passed steps', 'failed', [step('passed')], [assertion('failed')]],
+    ['all passed', 'passed', [step('passed')], [assertion('passed')]],
+    ['skipped steps do not count', 'passed', [step('skipped'), step('passed')], []],
+    ['all skipped', 'passed', [step('skipped')], []],
+  ])('%s -> %s', (_name, expected, steps, assertions) => {
+    expect(deriveRunStatus(steps, assertions)).toBe(expected);
+  });
+});
+
+describe('finalize derives status (#296)', () => {
+  let n = 0;
+  const newStore = () => {
+    n += 1;
+    return new ResultStore({
+      runId: `run_20261109_1200${String(n).padStart(2, '0')}`,
+      scenarioId: 'derive',
+      projectRoot: tmpRoot(),
+    });
+  };
+  const validate = ajvValidator();
+
+  const cases = [
+    ['a fail step with no assertions', (s) => s.addStep({ step_id: 's1', status: 'fail' }), 'failed'],
+    ['an error step', (s) => s.addStep({ step_id: 's1', status: 'error' }), 'error'],
+    [
+      'an error step plus a failed assertion',
+      (s) => {
+        s.addStep({ step_id: 's1', status: 'error' });
+        s.addAssertion({ step_id: 's1', type: 'element_exists', pass: false, message: 'no' });
+      },
+      'error',
+    ],
+    [
+      'a failed assertion with passed steps',
+      (s) => {
+        s.addStep({ step_id: 's1', status: 'pass' });
+        s.addAssertion({ step_id: 's1', type: 'element_exists', pass: false, message: 'no' });
+      },
+      'failed',
+    ],
+    [
+      'all passed',
+      (s) => {
+        s.addStep({ step_id: 's1', status: 'pass' });
+        s.addAssertion({ step_id: 's1', type: 'element_exists', pass: true, message: 'ok' });
+      },
+      'passed',
+    ],
+    [
+      'skipped plus passed steps',
+      (s) => {
+        s.addStep({ step_id: 's1', status: 'skipped' });
+        s.addStep({ step_id: 's2', status: 'pass' });
+      },
+      'passed',
+    ],
+    ['all skipped steps', (s) => s.addStep({ step_id: 's1', status: 'skipped' }), 'passed'],
+    [
+      'duplicate entries for one step (fail, then pass)',
+      (s) => {
+        s.addStep({ step_id: 's1', status: 'fail' });
+        s.addStep({ step_id: 's1', status: 'pass' });
+      },
+      'failed',
+    ],
+    ['no steps and no assertions', () => {}, 'passed'],
+  ];
+
+  test.each(cases.map(([name, record, expected]) => [name, expected, record]))(
+    '%s finalizes %s',
+    (_name, expected, record) => {
+      const store = newStore();
+      record(store);
+      const result = store.finalize();
+      expect(result.status).toBe(expected);
+      expect(validate(result)).toBe(true);
+    }
+  );
+
+  test('a step that passed after retries finalizes passed and keeps its flakiness note', () => {
+    const store = newStore();
+    store.addStep({ step_id: 's1', status: 'pass', attempts: 3 });
+    const result = store.finalize();
+    expect(result.status).toBe('passed');
+    expect(result.observations).toEqual([
+      expect.objectContaining({ type: 'flakiness', step_id: 's1' }),
+    ]);
+  });
+
+  test('an explicit status wins over a recorded failed step', () => {
+    const store = newStore();
+    store.addStep({ step_id: 's1', status: 'fail' });
+    expect(store.finalize({ status: 'passed' }).status).toBe('passed');
   });
 });
