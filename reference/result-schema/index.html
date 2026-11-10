@@ -1880,7 +1880,7 @@
 <td><code>status</code></td>
 <td>string</td>
 <td>Yes</td>
-<td>Overall result status: <code>"passed"</code>, <code>"failed"</code>, or <code>"error"</code></td>
+<td>Overall result status: <code>"passed"</code>, <code>"failed"</code>, or <code>"error"</code>. <code>mauto result finalize --status</code> sets it; when omitted it is derived: <code>"error"</code> if any step errored, else <code>"failed"</code> if any step or assertion failed, else <code>"passed"</code> (skipped steps do not count)</td>
 </tr>
 <tr>
 <td><code>metadata</code></td>
