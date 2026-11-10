@@ -494,6 +494,44 @@ describe('finalize derives status (#296)', () => {
     }
   );
 
+  // The default summary names the failing steps that drove a red verdict, so
+  // `failed: 0/0 assertion(s) passed` does not read as a contradiction. A run
+  // with no failing step keeps the old text (pinned by existing tests).
+  test.each([
+    [
+      'a failed step',
+      (s) => s.addStep({ step_id: 's1', status: 'fail' }),
+      'failed: 0/0 assertion(s) passed across 1 step(s), 1 failed.',
+    ],
+    [
+      'an errored step',
+      (s) => s.addStep({ step_id: 's1', status: 'error' }),
+      'error: 0/0 assertion(s) passed across 1 step(s), 1 errored.',
+    ],
+    [
+      'failed and errored steps plus a failed assertion',
+      (s) => {
+        s.addStep({ step_id: 's1', status: 'fail' });
+        s.addStep({ step_id: 's2', status: 'error' });
+        s.addStep({ step_id: 's3', status: 'pass' });
+        s.addAssertion({ step_id: 's3', type: 'element_exists', pass: false, message: 'no' });
+      },
+      'error: 0/1 assertion(s) passed across 3 step(s), 1 failed, 1 errored.',
+    ],
+    [
+      'only a failed assertion',
+      (s) => {
+        s.addStep({ step_id: 's1', status: 'pass' });
+        s.addAssertion({ step_id: 's1', type: 'element_exists', pass: false, message: 'no' });
+      },
+      'failed: 0/1 assertion(s) passed across 1 step(s).',
+    ],
+  ])('the default summary for %s says why', (_name, record, expected) => {
+    const store = newStore();
+    record(store);
+    expect(store.finalize().summary).toBe(expected);
+  });
+
   test('a step that passed after retries finalizes passed and keeps its flakiness note', () => {
     const store = newStore();
     store.addStep({ step_id: 's1', status: 'pass', attempts: 3 });

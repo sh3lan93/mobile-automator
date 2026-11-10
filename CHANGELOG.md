@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `test_failed`, exit `6`, and are recorded as failures in run-history. A run with no
   steps and no assertions still finalizes `passed` (tracked by #275). To keep the old
   verdict, pass `--status passed` explicitly.
+- **`mauto result finalize`'s default summary names failing steps** (#296). A run that a
+  step turned red now reads e.g. `failed: 0/0 assertion(s) passed across 1 step(s), 1 failed.`
+  (or `, 1 errored`) instead of a bare assertion count; runs with no failed or errored step
+  keep the previous text. An explicit `--summary` still wins.
 
 ---
 
