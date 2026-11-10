@@ -49,12 +49,13 @@ function assertionStatus(pass) {
 class ResultStore {
   constructor({ runId, scenarioId, projectRoot, metadata } = {}) {
     if (!projectRoot) throw new Error('ResultStore requires a projectRoot');
-    // The one gate for writers (#295): the id becomes `<runId>.json` and
+    // The one gate for every writer (#295): the id becomes `<runId>.json` and
     // `<runId>.lock` below, and atomicWrite creates parent directories, so an
     // id with a separator would write outside results/. Same rule as the
     // reader, readFinalizedResult, so the two cannot disagree on valid ids.
-    const invalidId = runIdError(projectRoot, runId);
-    if (invalidId) throw Object.assign(new Error(invalidId.message), invalidId);
+    // Thrown before anything is read or written; the CLI's toEnvelope maps it
+    // to invalid_input (exit 3).
+    if (!isResultRunId(runId)) throw new InvalidRunIdError(projectRoot, runId);
 
     this.runId = runId;
     this.scenarioId = scenarioId || null;
@@ -402,16 +403,16 @@ function isResultRunId(runId) {
   );
 }
 
-// The failure for a run id isResultRunId refuses, or null for a valid one:
-// `{ kind: 'invalid_input', message, hint }`, ready for an envelope. Every
-// gate reports through this, so writers and the reader word it identically.
-function runIdError(projectRoot, runId) {
-  if (isResultRunId(runId)) return null;
-  return {
-    kind: 'invalid_input',
-    message: `invalid run id "${runId}"`,
-    hint: `A run id names a file in ${resultsDir(projectRoot)}; it cannot contain a path separator.`,
-  };
+// Typed error for a run id isResultRunId refuses, carrying the envelope's kind
+// and hint (the DeviceResolutionError pattern). Thrown by the ResultStore
+// constructor, returned as data by readFinalizedResult — one wording for both.
+class InvalidRunIdError extends Error {
+  constructor(projectRoot, runId) {
+    super(`invalid run id "${runId}"`);
+    this.name = 'InvalidRunIdError';
+    this.kind = 'invalid_input';
+    this.hint = `A run id names a file in ${resultsDir(projectRoot)}; it cannot contain a path separator.`;
+  }
 }
 
 // Read a finalized result file for a report, WITHOUT going through the
@@ -431,8 +432,10 @@ function runIdError(projectRoot, runId) {
 // result) or `environment` (the file exists but could not be read).
 function readFinalizedResult(projectRoot, runId) {
   const invalid = (message, hint) => ({ error: { kind: 'invalid_input', message, hint } });
-  const invalidId = runIdError(projectRoot, runId);
-  if (invalidId) return { error: invalidId };
+  if (!isResultRunId(runId)) {
+    const { kind, message, hint } = new InvalidRunIdError(projectRoot, runId);
+    return { error: { kind, message, hint } };
+  }
   const file = resultFile(projectRoot, runId);
   let raw;
   try {
@@ -467,4 +470,4 @@ function readFinalizedResult(projectRoot, runId) {
   return { result: parsed };
 }
 
-module.exports = { ResultStore, readFinalizedResult, resultFile, isResultRunId, runIdError };
+module.exports = { ResultStore, readFinalizedResult, resultFile, isResultRunId, InvalidRunIdError };

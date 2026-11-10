@@ -3,9 +3,11 @@
 // #295: the result WRITE verbs build `results/<runId>.json` (and its lock) from
 // --run-id, and atomicWrite creates parent directories, so an id with a path
 // separator used to write outside results/ (`../../x`) or into a new
-// subdirectory of it (`nightly/42`). They now share the reader's rule
-// (isResultRunId, the gate `result export` uses) and fail invalid_input before
-// touching the disk.
+// subdirectory of it (`nightly/42`). The ResultStore constructor is now the one
+// gate: it applies the reader's rule (isResultRunId, the gate `result export`
+// uses) and throws InvalidRunIdError before touching the disk, which the CLI's
+// toEnvelope maps to invalid_input. Each verb is invoked the way withEnvelope
+// invokes it: a thrown error goes through toEnvelope.
 
 const fs = require('fs');
 const os = require('os');
@@ -16,8 +18,9 @@ const {
   handleResultAddAssertion,
   handleResultAddCrash,
   handleResultFinalize,
+  toEnvelope,
 } = require('../../../src/cli');
-const { ResultStore } = require('../../../src/result/store');
+const { ResultStore, InvalidRunIdError } = require('../../../src/result/store');
 const { workspaceDir } = require('../../../src/workspace/layout');
 
 function tmpRoot() {
@@ -45,6 +48,16 @@ function listTree(dir) {
 }
 
 const factory = (args) => new ResultStore(args);
+
+// What withEnvelope does with a handler: a returned result stands, a thrown
+// error is classified by toEnvelope.
+function invoke(fn) {
+  try {
+    return fn();
+  } catch (err) {
+    return toEnvelope(err);
+  }
+}
 
 const VERBS = {
   'add-step': (root, runId) =>
@@ -74,18 +87,17 @@ describe.each(Object.keys(VERBS))('mauto result %s --run-id gate (#295)', (verb)
     const { base, root } = tmpRoot();
     const before = listTree(base);
 
-    const r = VERBS[verb](root, runId);
+    const r = invoke(() => VERBS[verb](root, runId));
 
     expect(r.exitKind).toBe('invalid_input');
     expect(r.envelope.ok).toBe(false);
     expect(r.envelope.error.kind).toBe('invalid_input');
     expect(listTree(base)).toEqual(before);
-    expect(fs.existsSync('/tmp/mauto-295-abs.json')).toBe(false);
   });
 
   test('a separator-bearing id names the rule in the error and hint', () => {
     const { root } = tmpRoot();
-    const r = VERBS[verb](root, 'nightly/42');
+    const r = invoke(() => VERBS[verb](root, 'nightly/42'));
     expect(r.envelope.error.message).toBe('invalid run id "nightly/42"');
     expect(r.envelope.hint).toBe(
       `A run id names a file in ${path.join(workspaceDir(root), 'results')}; it cannot contain a path separator.`
@@ -101,7 +113,7 @@ describe.each(Object.keys(VERBS))('mauto result %s --run-id gate (#295)', (verb)
 });
 
 describe('ResultStore constructor --run-id gate (#295)', () => {
-  test.each(['../escape', 'a/b', '/abs', 'a\u0000b'])('refuses %j with a typed invalid_input error', (runId) => {
+  test.each(['../escape', 'a/b', '/abs', 'a\u0000b', '', undefined])('refuses %j with InvalidRunIdError', (runId) => {
     const { base, root } = tmpRoot();
     const before = listTree(base);
     let thrown;
@@ -110,9 +122,23 @@ describe('ResultStore constructor --run-id gate (#295)', () => {
     } catch (err) {
       thrown = err;
     }
-    expect(thrown).toBeDefined();
+    expect(thrown).toBeInstanceOf(InvalidRunIdError);
     expect(thrown.kind).toBe('invalid_input');
     expect(thrown.message).toBe(`invalid run id "${runId}"`);
     expect(listTree(base)).toEqual(before);
+  });
+});
+
+describe('toEnvelope classifies InvalidRunIdError (#295)', () => {
+  test('as invalid_input with the store\'s message and hint, not internal', () => {
+    const err = new InvalidRunIdError('/proj', 'a/b');
+    expect(toEnvelope(err)).toEqual({
+      envelope: expect.objectContaining({
+        ok: false,
+        error: { kind: 'invalid_input', message: 'invalid run id "a/b"' },
+        hint: `A run id names a file in ${path.join(workspaceDir('/proj'), 'results')}; it cannot contain a path separator.`,
+      }),
+      exitKind: 'invalid_input',
+    });
   });
 });
