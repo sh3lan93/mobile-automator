@@ -837,7 +837,7 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
   // schema-invalid result file with ok:true and exit 0 — directly under the
   // exit-6 contract keyed on that status (#286 review). Reject before anything
   // is written. A provided-but-empty value is NOT an omitted one: only absence
-  // derives the status from the recorded assertions.
+  // derives the status from the recorded steps and assertions.
   if (status !== undefined) {
     const parsed = parseRunStatus(status);
     if (parsed.error) {
@@ -845,7 +845,7 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
         envelope: fail(
           'invalid_input',
           parsed.error,
-          'Valid values: passed | failed | error, or omit --status to derive it from the recorded assertions.'
+          'Valid values: passed | failed | error, or omit --status to derive it from the recorded steps and assertions.'
         ),
         exitKind: 'invalid_input',
       };
@@ -906,10 +906,11 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
   }
 
   // The exit code is keyed on the FINALIZED status, not the --status flag:
-  // with the flag omitted, the store derives 'failed' from a failed assertion,
-  // and the exit code must agree with the file either way (#273). 'error' takes
-  // the same path — a run that errored is not a pass for CI either; data.status
-  // tells the two apart. Everything above (write, retention, harvest) has
+  // with the flag omitted, the store derives it from the recorded steps and
+  // assertions ('error' for an errored step, else 'failed' for a failed step or
+  // assertion, #296), and the exit code must agree with the file either way
+  // (#273). 'error' takes the same path — a run that errored is not a pass for
+  // CI either; data.status tells the two apart. Everything above (write, retention, harvest) has
   // already run: exit 6 is a verdict about the app, not a reason to lose the
   // record of it.
   if (result.status === 'failed' || result.status === 'error') {
