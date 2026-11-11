@@ -48,6 +48,10 @@ const EVENT_NAMES = Object.freeze([
   'daemon.lock_conflict',
   'daemon.undeliverable',
   'daemon.handler_error',
+  // `mauto run`'s own stamps (src/cli.js RUN_TRACE_EVENTS), so a single
+  // in-process run's trace spans its steps before finalize measures it.
+  'run.start',
+  'run.step',
   // Emitted by the flush path, which lands in a later slice-5 task; declared
   // now because its event shape is already exercised by unit tests.
   'telemetry.flush',
@@ -88,6 +92,8 @@ const VERB_NAMES = Object.freeze([
   'crash',
   'mcp',
   'telemetry',
+  // Hidden and gated behind MAUTO_REPLAY=1 until replay graduates (#278).
+  'run',
 ]);
 
 // Why the daemon stopped. 'crash' is documented but not yet produced.

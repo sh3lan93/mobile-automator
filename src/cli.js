@@ -13,7 +13,7 @@ const { ScenarioValidator } = require('./scenario/validator');
 const { findReplayWarnings, summarize } = require('./scenario/replayability');
 const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
 const { fromCliFlags } = require('./assertion/fields');
-const { ResultStore, readFinalizedResult, InvalidRunIdError } = require('./result/store');
+const { ResultStore, readFinalizedResult, InvalidRunIdError, isResultRunId } = require('./result/store');
 const { OBSERVATION_TYPES, parseObservation, parseCapture, parseBool, parseRunStatus, parseStepStatus } = require('./result/flags');
 const { toJUnit } = require('./result/junit');
 const { atomicWrite } = require('./util/atomic');
@@ -44,6 +44,9 @@ const observeTelemetry = require('./observe/telemetry');
 const observeSpool = require('./observe/spool');
 const observeTransport = require('./observe/transport');
 const { makeFlusher } = require('./observe/flush');
+const { replayEnabled } = require('./run/gate');
+const { makeRunId } = require('./run/run-id');
+const { runScenario } = require('./run/runner');
 const {
   findWorkspaceRoot,
   workspaceFailure,
@@ -950,6 +953,66 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
 
   return { envelope: ok(result, hints.length ? hints.join(' ') : null), exitKind: 'ok' };
 }
+
+// `mauto run` (replay PRD #271, slice R1 #278): replay a scenario in-process
+// against the one bridge connectBridge holds open, then finalize through the
+// same finalizeRun `mauto result finalize` uses. No --status: the store
+// derives it from the recorded steps and assertions, and the exit code is
+// keyed on that derived status, as finalize's is. `prepared` is what the
+// action resolved before any device work: the loaded scenario and the run id.
+// `log` defaults to a no-op: stdout is the envelope channel, and no verb
+// writes progress to stderr.
+async function handleRun(
+  { bridge, resultStoreFactory, memoryStoreFactory, projectRoot, trace, clock, log = () => {} },
+  { scenario, runId }
+) {
+  const scenarioId = scenario.scenario_id;
+  const store = resultStoreFactory({ runId, scenarioId, projectRoot });
+  const outcome = await runScenario({
+    scenario,
+    bridge,
+    store,
+    evaluator: require('./assertion/evaluator'),
+    catalog: require('./device/action-catalog'),
+    projectRoot,
+    runId,
+    clock,
+    log,
+    trace,
+  });
+
+  const { result, store: finalized, hints } = finalizeRun(
+    { resultStoreFactory, memoryStoreFactory, projectRoot },
+    { runId, scenarioId }
+  );
+  const resultPath = path.relative(projectRoot, finalized.file);
+  const data = {
+    run_id: runId,
+    scenario_id: scenarioId,
+    status: result.status,
+    result_path: resultPath,
+    failed_step: outcome.failedStep,
+    failures: outcome.failures,
+    measurements: result.measurements,
+  };
+
+  if (result.status === 'passed') {
+    return { envelope: ok(data, hints.length ? hints.join(' ') : null), exitKind: 'ok' };
+  }
+  const hint = [...hints, `See data.failures; the result is saved to ${resultPath}.`].join(' ');
+  return {
+    envelope: fail('test_failed', `run ${runId} ${result.status}`, hint, data),
+    exitKind: 'test_failed',
+  };
+}
+
+// The one place a scenario run names its trace events. Literal names on the
+// `event:` line are what tests/lint/telemetry-vocab-drift.test.js reads as
+// the producers of 'run.start' and 'run.step'; the runner may name no other.
+const RUN_TRACE_EVENTS = Object.freeze({
+  'run.start': { event: 'run.start' },
+  'run.step': { event: 'run.step' },
+});
 
 // Formats `mauto result export --format` accepts. The only one, junit, is
 // rendered by toJUnit (src/result/junit.js).
@@ -1861,6 +1924,11 @@ function realDeviceBridge(args) {
   return require('./device/connection').acquireConnection(args);
 }
 
+const REAL_CLOCK = Object.freeze({
+  now: () => Date.now(),
+  sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+});
+
 function buildProgram(deps = {}) {
   const {
     // Factory returning { bridge, close }. Overridable in tests.
@@ -1897,6 +1965,9 @@ function buildProgram(deps = {}) {
     emit = emitters.emit,
     // Host OS, for the unsupported-host gate (#165). Overridable in tests.
     platform = process.platform,
+    // `{ now, sleep }` for `mauto run`'s polls and retry backoff. Overridable
+    // in tests, which run on a fake clock.
+    clock = REAL_CLOCK,
   } = deps;
 
   const program = new Command();
@@ -2114,6 +2185,67 @@ function buildProgram(deps = {}) {
 
   const withBridge = (explicitDevice, fn) =>
     connectBridge(resolveVerbDevice(explicitDevice), fn);
+
+  // `mauto run <scenario>` (replay R1, #278). Registered unconditionally but
+  // hidden, and refused unless MAUTO_REPLAY=1, until the graduation slice.
+  // Every refusal below happens before connectBridge, so none touches a device.
+  program
+    .command('run <scenario>', { hidden: true })
+    .description('Replay a scenario unattended and finalize its result (in progress; needs MAUTO_REPLAY=1)')
+    .option('--device <id>', 'target device id')
+    .option('--run-id <id>', 'run identifier (run_YYYYMMDD_HHMMSS); minted when omitted')
+    .action(withEnvelope(requireWorkspace(async (file, opts) => {
+      if (!replayEnabled(process.env)) {
+        emit({
+          envelope: fail(
+            'environment',
+            'mauto run is not enabled yet',
+            'export MAUTO_REPLAY=1 to try the in-progress replay runner'
+          ),
+          exitKind: 'environment',
+        }, humanFlag());
+        return;
+      }
+
+      const loaded = loadScenario(validator, file, { strict: true });
+      if (loaded.failure) {
+        emit(loaded.failure, humanFlag());
+        return;
+      }
+
+      const runId = opts.runId || resolveRunId(process.env) || makeRunId(new Date());
+      if (!isResultRunId(runId)) {
+        emit({
+          envelope: fail(
+            'invalid_input',
+            `invalid run id "${runId}"`,
+            'Pass --run-id run_YYYYMMDD_HHMMSS (or omit it to mint one); a run id names a result file and cannot contain a path separator.'
+          ),
+          exitKind: 'invalid_input',
+        }, humanFlag());
+        return;
+      }
+      // The preAction hook saw only the flag and the environment; this covers
+      // a minted id, so verb.end lands in the same trace as the run's stamps.
+      emitters.setRunId(runId);
+
+      const tracePath = runTracePath(projectRoot, runId) || undefined;
+      const trace = (name, fields = {}) => {
+        const named = RUN_TRACE_EVENTS[name];
+        if (!named) return;
+        record(
+          { level: 'info', src: 'cli', verb: 'run', run_id: runId, ...fields, event: named.event },
+          { projectRoot, tracePath }
+        );
+      };
+
+      await withBridge(opts.device, (bridge) =>
+        handleRun(
+          { bridge, resultStoreFactory, memoryStoreFactory, projectRoot, trace, clock },
+          { scenario: loaded.scenario, runId }
+        )
+      );
+    })));
 
   program
     .command('tap')
@@ -2827,6 +2959,7 @@ module.exports = {
   handleResultAddCrash,
   handleResultFinalize,
   finalizeRun,
+  handleRun,
   handleResultExport,
   handleSetup,
   handleConfigGet,
