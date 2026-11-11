@@ -13,6 +13,7 @@
 const { runStep } = require('./step');
 const { runAssertion } = require('./assertions');
 const { NO_TRACE } = require('./trace');
+const { noJudge } = require('./judge');
 
 // Best-effort: a store that cannot take this write must not replace the
 // error that is about to propagate.
@@ -27,10 +28,10 @@ function recordAbort(store, step, err) {
 
 async function runScenario({
   scenario, bridge, store, evaluator, catalog, projectRoot, runId, clock,
-  trace = NO_TRACE,
+  trace = NO_TRACE, judge = noJudge,
 }) {
   const failures = [];
-  const ctx = { scenario, bridge, store, evaluator, catalog, projectRoot, runId, clock, trace, failures };
+  const ctx = { scenario, bridge, store, evaluator, catalog, projectRoot, runId, clock, trace, failures, judge };
   const assertions = Array.isArray(scenario.assertions) ? scenario.assertions : [];
   // The first step that failed, if any.
   let failedStep = null;

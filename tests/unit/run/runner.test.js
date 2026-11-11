@@ -375,19 +375,85 @@ describe('runScenario', () => {
     expect(r.failures.join('\n')).toContain('hdr');
   });
 
-  // executor: "a Tier-2 assertion the CLI cannot decide is recorded as a failure"
-  test('a Tier-2 assertion the evaluator cannot decide is recorded as a failure', async () => {
-    const b = makeFakeBridge();
-    const r = await exec(
-      scenario(
-        [{ id: 'hide', action: 'dismiss_keyboard', description: 'd' }],
-        [{ id: 'looks', after_step: 'hide', type: 'visual_state', description: 'd', expected_visual_state: 'x' }]
-      ),
-      b
+  // Replay R2 (#275): a Tier-2 assertion with no judge is pending, never a
+  // failure and never a silent pass.
+  describe('assertion provenance (#275)', () => {
+    const tier2 = scenario(
+      [{ id: 'hide', action: 'dismiss_keyboard', description: 'd' }],
+      [{ id: 'looks', after_step: 'hide', type: 'visual_state', description: 'd', expected_visual_state: 'x' }]
     );
-    expect(r.finalized.status).toBe('failed');
-    expect(r.file.assertion_results[0].status).toBe('failed');
-    expect(r.file.assertion_results[0].message).toMatch(/^needs agent judgment; mauto run decides only mechanical assertions/);
+
+    test('a Tier-2 assertion with no judge is recorded needs_agent, judge.by none, and is not a failure', async () => {
+      const r = await exec(tier2, makeFakeBridge());
+      expect(r.file.assertion_results).toEqual([
+        expect.objectContaining({
+          assertion_id: 'looks',
+          step_id: 'hide',
+          type: 'visual_state',
+          status: 'needs_agent',
+          mechanical: false,
+          judge: { by: 'none' },
+        }),
+      ]);
+      expect(r.file.assertion_results[0].message).toMatch(/^needs agent judgment \(.+\)$/);
+      expect(r.failures).toEqual([]);
+      expect(r.finalized.status).toBe('incomplete');
+    });
+
+    test('a plugged-in judge\'s verdict is recorded with its provenance', async () => {
+      const calls = [];
+      const judge = {
+        name: 'stub-model',
+        version: '7',
+        judge: async (assertion, ctx) => {
+          calls.push({ assertion, ctx });
+          return { pass: false, message: 'looked wrong', actual: 'a red screen' };
+        },
+      };
+      const b = makeFakeBridge({ elements: [[el('Home')]] });
+      const r = await exec(tier2, b, { judge });
+      expect(calls).toHaveLength(1);
+      expect(calls[0].assertion.id).toBe('looks');
+      expect(calls[0].ctx.elements).toEqual([el('Home')]);
+      expect(r.file.assertion_results[0]).toMatchObject({
+        status: 'failed',
+        mechanical: false,
+        message: 'looked wrong',
+        actual: 'a red screen',
+        judge: { by: 'agent', name: 'stub-model', version: '7' },
+      });
+      expect(r.failures.join('\n')).toContain('looks');
+      expect(r.finalized.status).toBe('failed');
+    });
+
+    test('a judge without a version records no version', async () => {
+      const judge = { name: 'stub', judge: async () => ({ pass: true, message: 'fine' }) };
+      const r = await exec(tier2, makeFakeBridge(), { judge });
+      expect(r.file.assertion_results[0].judge).toEqual({ by: 'agent', name: 'stub' });
+      expect(r.file.assertion_results[0].status).toBe('passed');
+      expect(r.finalized.status).toBe('passed');
+    });
+
+    test('a judge that answers something other than a boolean pass fails the assertion, never passes it', async () => {
+      const judge = { name: 'stub', judge: async () => ({ pass: 'yes', message: 'fine' }) };
+      const r = await exec(tier2, makeFakeBridge(), { judge });
+      expect(r.file.assertion_results[0].status).toBe('failed');
+      expect(r.file.assertion_results[0].message).toMatch(/^assertion errored: /);
+    });
+
+    test('a mechanical verdict is recorded mechanical, judge.by mauto, and the judge is never asked', async () => {
+      const judge = { name: 'stub', judge: jest.fn(async () => ({ pass: false, message: 'no' })) };
+      const r = await exec(
+        scenario(
+          [{ id: 'hide', action: 'dismiss_keyboard', description: 'd' }],
+          [{ id: 'there', after_step: 'hide', type: 'element_exists', description: 'd', element_description: 'Home' }]
+        ),
+        makeFakeBridge({ elements: [[el('Home')]] }),
+        { judge }
+      );
+      expect(judge.judge).not.toHaveBeenCalled();
+      expect(r.file.assertion_results[0]).toMatchObject({ status: 'passed', mechanical: true, judge: { by: 'mauto' } });
+    });
   });
 
   // executor: "every verb carries MAUTO_RUN_ID so the run has a trace"
