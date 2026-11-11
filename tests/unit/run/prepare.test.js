@@ -91,6 +91,13 @@ describe('the scenario', () => {
     expect(p.failure).toBeUndefined();
     expect(p.scenario).toEqual(scenario());
   });
+
+  test('carries the file and the sha256 loadScenario hashed (#275)', () => {
+    const file = write(scenario());
+    const p = prepare({ file, runId: RUN_ID, env: ON });
+    expect(p.file).toBe(file);
+    expect(p.sha256).toBe(require('crypto').createHash('sha256').update(fs.readFileSync(file)).digest('hex'));
+  });
 });
 
 describe('the run id', () => {

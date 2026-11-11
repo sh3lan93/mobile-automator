@@ -3,9 +3,30 @@
 const path = require('path');
 
 const { ok, fail } = require('../output/envelope');
+const { buildExecutor, pendingAssertions, pendingHint, incompleteMessage } = require('../result/provenance');
 const { realClock } = require('./clock');
 const { runScenario } = require('./runner');
 const { NO_TRACE } = require('./trace');
+
+// The scenario path an executor records: relative to the project root when
+// the file is inside it (so the result stays meaningful on another checkout),
+// else absolute.
+function scenarioPathFor(projectRoot, file) {
+  const absolute = path.resolve(file);
+  const relative = path.relative(projectRoot, absolute);
+  return relative && !relative.startsWith('..') && !path.isAbsolute(relative) ? relative : absolute;
+}
+
+// The device's platform for the executor. Best-effort by design (the one
+// fallback here): a bridge that cannot say must not stop the run — the steps
+// will fail on their own if the device is truly gone — so it is recorded null.
+async function platformOf(bridge) {
+  try {
+    return await bridge.getPlatform();
+  } catch {
+    return null;
+  }
+}
 
 // `mauto run` (replay PRD #271, slice R1 #278): replay a scenario in-process
 // against the one bridge connectBridge holds open, then finalize through the
@@ -13,8 +34,9 @@ const { NO_TRACE } = require('./trace');
 // which owns it, so this module never requires the CLI. No --status: the
 // store derives it from the recorded steps and assertions, and the exit code
 // is keyed on that derived status, as finalize's is. `prepared` is what
-// prepareRun resolved before any device work: the loaded scenario and the
-// run id.
+// prepareRun resolved before any device work — the loaded scenario, its file
+// and sha256, and the run id — plus the device id the CLI resolved (null when
+// mobile-mcp auto-selects). The result records them as its executor (#275).
 async function handleRun(
   {
     bridge, resultStoreFactory, memoryStoreFactory, projectRoot, finalizeRun,
@@ -22,13 +44,21 @@ async function handleRun(
     evaluator = require('../assertion/evaluator'),
     catalog = require('../device/action-catalog'),
   },
-  { scenario, runId }
+  { scenario, runId, file, sha256, deviceId = null }
 ) {
   const scenarioId = scenario.scenario_id;
   const store = resultStoreFactory({ runId, scenarioId, projectRoot });
+  const executor = buildExecutor({
+    kind: 'runner',
+    projectRoot,
+    platform: await platformOf(bridge),
+    deviceId,
+    scenarioPath: scenarioPathFor(projectRoot, file),
+    scenarioSha256: sha256,
+  });
   const finalize = () => finalizeRun(
     { resultStoreFactory, memoryStoreFactory, projectRoot },
-    { runId, scenarioId }
+    { runId, scenarioId, executor }
   );
 
   let outcome;
@@ -65,11 +95,23 @@ async function handleRun(
     result_path: resultPath,
     failed_step: outcome.failedStep,
     failures: outcome.failures,
+    // What an agent still has to judge; empty unless the run is incomplete
+    // or failed beside a pending assertion.
+    pending: pendingAssertions(result),
+    executor: result.executor,
     measurements: result.measurements,
   };
 
   if (result.status === 'passed') {
     return { envelope: ok(data, hints.length ? hints.join(' ') : null), exitKind: 'ok' };
+  }
+  // Exit 7: nothing failed, but an agent still has to judge something. The
+  // hint is the exact commands that complete the run, as finalize's is.
+  if (result.status === 'incomplete') {
+    return {
+      envelope: fail('incomplete', incompleteMessage(result), [...hints, pendingHint(result)].join('\n'), data),
+      exitKind: 'incomplete',
+    };
   }
   const hint = [...hints, `See data.failures; the result is saved to ${resultPath}.`].join(' ');
   return {

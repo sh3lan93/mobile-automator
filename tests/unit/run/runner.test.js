@@ -380,7 +380,7 @@ describe('runScenario', () => {
   describe('assertion provenance (#275)', () => {
     const tier2 = scenario(
       [{ id: 'hide', action: 'dismiss_keyboard', description: 'd' }],
-      [{ id: 'looks', after_step: 'hide', type: 'visual_state', description: 'd', expected_visual_state: 'x' }]
+      [{ id: 'looks', after_step: 'hide', type: 'visual_state', description: 'd', expected_visual_state: 'loaded' }]
     );
 
     test('a Tier-2 assertion with no judge is recorded needs_agent, judge.by none, and is not a failure', async () => {

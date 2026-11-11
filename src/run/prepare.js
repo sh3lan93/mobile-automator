@@ -11,7 +11,8 @@ const { makeRunId } = require('./run-id');
 // MAUTO_REPLAY gate, the scenario (strict: a blocking replayability finding
 // refuses), then the run id — the --run-id flag, else MAUTO_RUN_ID, else
 // minted from `now()` — which must name a result file. Returns
-// `{ scenario, runId }` or `{ failure: { envelope, exitKind } }`.
+// `{ scenario, runId, file, sha256 }` (`sha256` is loadScenario's hash of the
+// file, for the run's executor) or `{ failure: { envelope, exitKind } }`.
 function prepareRun({ validator, file, runId: flag, env = process.env, now = () => new Date() }) {
   if (!replayEnabled(env)) {
     return {
@@ -43,7 +44,7 @@ function prepareRun({ validator, file, runId: flag, env = process.env, now = () 
     };
   }
 
-  return { scenario: loaded.scenario, runId };
+  return { scenario: loaded.scenario, runId, file, sha256: loaded.sha256 };
 }
 
 module.exports = { prepareRun };

@@ -178,6 +178,12 @@ describe('pendingHint (#275)', () => {
     );
   });
 
+  test('incompleteMessage counts the pending assertions, and names none when only a step is pending', () => {
+    const { incompleteMessage } = require('../../../src/result/provenance');
+    expect(incompleteMessage(result)).toBe('run run_20261111_120000 incomplete: 2 assertion(s) need agent judgment');
+    expect(incompleteMessage({ run_id: 'run_20261111_120000', assertion_results: [] })).toBe('run run_20261111_120000 incomplete');
+  });
+
   test('pendingAssertions lists id, step and type', () => {
     const { pendingAssertions } = require('../../../src/result/provenance');
     expect(pendingAssertions(result)).toEqual([

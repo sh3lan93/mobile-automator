@@ -92,6 +92,14 @@ function pendingAssertions(result) {
     .map(({ assertion_id, step_id = null, type = null }) => ({ assertion_id, step_id, type }));
 }
 
+// The error message of an `incomplete` run, shared by `result finalize` and
+// `mauto run`. Counts the pending assertions; a run pending only on a step
+// names no count.
+function incompleteMessage(result) {
+  const pending = pendingAssertions(result).length;
+  return `run ${result.run_id} incomplete${pending ? `: ${pending} assertion(s) need agent judgment` : ''}`;
+}
+
 // A flag value as it must be typed into a shell: bare when that is safe, else
 // JSON-quoted.
 const arg = (value) => (/^[\w./@:+-]+$/.test(String(value)) ? String(value) : JSON.stringify(String(value)));
@@ -118,4 +126,4 @@ function pendingHint(result) {
   ].join('\n');
 }
 
-module.exports = { crossCheck, scenarioMismatch, buildExecutor, pendingAssertions, pendingHint };
+module.exports = { crossCheck, scenarioMismatch, buildExecutor, pendingAssertions, pendingHint, incompleteMessage };

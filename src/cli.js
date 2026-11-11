@@ -17,7 +17,7 @@ const { ResultStore, readFinalizedResult, InvalidRunIdError, AlreadyDecidedError
 const {
   OBSERVATION_TYPES, parseObservation, parseCapture, parseVerdict, parseJudge, RUN_STATUSES, parseRunStatus, parseStepStatus,
 } = require('./result/flags');
-const { scenarioMismatch, buildExecutor, pendingAssertions, pendingHint } = require('./result/provenance');
+const { scenarioMismatch, buildExecutor, pendingHint, incompleteMessage } = require('./result/provenance');
 const { toJUnit } = require('./result/junit');
 const { atomicWrite } = require('./util/atomic');
 const { MemoryStore } = require('./memory/store');
@@ -906,10 +906,8 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
   // Exit 7: nothing failed, but an agent still has to judge something. The
   // file is written; the hint is the exact commands that complete it.
   if (result.status === 'incomplete') {
-    const pending = pendingAssertions(result).length;
-    const message = `run ${runId} incomplete${pending ? `: ${pending} assertion(s) need agent judgment` : ''}`;
     return {
-      envelope: fail('incomplete', message, [...hints, pendingHint(result)].join('\n'), result),
+      envelope: fail('incomplete', incompleteMessage(result), [...hints, pendingHint(result)].join('\n'), result),
       exitKind: 'incomplete',
     };
   }
@@ -2118,13 +2116,16 @@ function buildProgram(deps = {}) {
       // The preAction hook saw only the flag and the environment; this covers
       // a minted id, so verb.end lands in the same trace as the run's stamps.
       emitters.setRunId(prepared.runId);
-      return withBridge(opts.device, (bridge) =>
+      // Resolved here, not inside withBridge, so the executor records the
+      // device the run connected to (null: mobile-mcp auto-selected one).
+      const deviceId = resolveVerbDevice(opts.device);
+      return connectBridge(deviceId, (bridge) =>
         handleRun(
           {
             bridge, resultStoreFactory, memoryStoreFactory, projectRoot, finalizeRun, clock,
             trace: makeRunTrace({ projectRoot, runId: prepared.runId }),
           },
-          prepared
+          { ...prepared, deviceId }
         )
       );
     })));

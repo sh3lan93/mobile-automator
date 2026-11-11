@@ -4,6 +4,7 @@
 // the pre-device refusals, and a whole run on a scripted fake bridge, asserting
 // on the envelope and on the result file the verb finalizes.
 
+const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -198,6 +199,36 @@ describe('mauto run — a run', () => {
     // test_failed is not a captured kind: connectBridge adds no second shot.
     const shots = bridge.of('screenshot').map((c) => path.basename(c.args[0]));
     expect(shots).toEqual(['step_tap_x_failure.png']);
+  });
+
+  test('records the runner as the executor: the --device id, the platform, and the scenario\'s path and sha256 (#275)', async () => {
+    const file = writeScenario(scenario());
+    const { r, factory } = await runCli([file, '--run-id', RUN_ID, '--device', 'emulator-5554']);
+    expect(r.exitKind).toBe('ok');
+    expect(factory.mock.calls[0][0].device).toBe('emulator-5554');
+    const sha256 = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+    expect(r.envelope.data.executor).toMatchObject({
+      kind: 'runner',
+      device_id: 'emulator-5554',
+      platform: 'android',
+      scenario_path: 'demo.json',
+      scenario_sha256: sha256,
+    });
+    expect(r.envelope.data.pending).toEqual([]);
+    const written = JSON.parse(fs.readFileSync(path.join(root, r.envelope.data.result_path), 'utf8'));
+    expect(written.executor).toEqual(r.envelope.data.executor);
+  });
+
+  test('a Tier-2 assertion nobody judged is incomplete (exit kind), with data.pending and the commands that complete it (#275)', async () => {
+    const sc = scenario({
+      assertions: [{ id: 'looks', after_step: 'tap_more', type: 'visual_state', description: 'd', expected_visual_state: 'loaded' }],
+    });
+    const { r } = await runCli([writeScenario(sc), '--run-id', RUN_ID]);
+    expect(r.exitKind).toBe('incomplete');
+    expect(r.envelope.data.status).toBe('incomplete');
+    expect(r.envelope.data.pending).toEqual([{ assertion_id: 'looks', step_id: 'tap_more', type: 'visual_state' }]);
+    expect(r.envelope.hint).toContain('--judge agent');
+    expect(r.envelope.hint).toContain(`finalize --run-id ${RUN_ID}`);
   });
 
   test('mints a run id when neither --run-id nor MAUTO_RUN_ID is given', async () => {
