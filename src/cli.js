@@ -227,18 +227,25 @@ async function handleScreenshot({ deviceBridge, cwd = process.cwd() }, destPath)
   }
 }
 
-function handleValidate({ validator }, file, opts = {}) {
+// Read, parse, schema-validate and replay-check a scenario file. Returns
+// `{ scenario, warnings, hint }` (hint null when there are no warnings) or
+// `{ failure: { envelope, exitKind } }`. Shared by `validate` (which wraps it
+// in an envelope) and `mauto run` (which refuses before any device work).
+// `strict` fails on blocking replayability findings instead of warning.
+function loadScenario(validator, file, opts = {}) {
   let raw;
   try {
     raw = fs.readFileSync(file, 'utf8');
   } catch (err) {
     return {
-      envelope: fail(
-        'invalid_input',
-        `cannot read file: ${err.message}`,
-        'Check that the path exists and is readable.'
-      ),
-      exitKind: 'invalid_input',
+      failure: {
+        envelope: fail(
+          'invalid_input',
+          `cannot read file: ${err.message}`,
+          'Check that the path exists and is readable.'
+        ),
+        exitKind: 'invalid_input',
+      },
     };
   }
 
@@ -247,40 +254,49 @@ function handleValidate({ validator }, file, opts = {}) {
     scenario = JSON.parse(raw);
   } catch (err) {
     return {
-      envelope: fail(
-        'invalid_input',
-        `file is not valid JSON: ${err.message}`,
-        'Fix the JSON syntax and try again.'
-      ),
-      exitKind: 'invalid_input',
+      failure: {
+        envelope: fail(
+          'invalid_input',
+          `file is not valid JSON: ${err.message}`,
+          'Fix the JSON syntax and try again.'
+        ),
+        exitKind: 'invalid_input',
+      },
     };
   }
 
   const result = validator.validate(scenario);
-  if (result.valid) {
-    // Schema-valid is not the same as replayable: surface findings by default
-    // so existing scenarios keep validating; `--strict` fails only on the
-    // blocking ones. Codes, severity and wording live in the replayability module.
-    const warnings = findReplayWarnings(scenario);
-    if (warnings.length === 0) {
-      return { envelope: ok({ valid: true }), exitKind: 'ok' };
-    }
-    const { blocking, hint } = summarize(warnings);
-    if (opts.strict && blocking.length > 0) {
-      const env = fail('invalid_input', 'scenario cannot replay unattended; see data.warnings', hint);
-      env.data = { valid: false, errors: [], warnings };
-      return { envelope: env, exitKind: 'invalid_input' };
-    }
-    return { envelope: ok({ valid: true, warnings }, hint), exitKind: 'ok' };
+  if (!result.valid) {
+    const env = fail(
+      'invalid_input',
+      'scenario failed schema validation',
+      'See data.errors for the specific schema violations.'
+    );
+    env.data = { valid: false, errors: result.errors };
+    return { failure: { envelope: env, exitKind: 'invalid_input' } };
   }
 
-  const env = fail(
-    'invalid_input',
-    'scenario failed schema validation',
-    'See data.errors for the specific schema violations.'
-  );
-  env.data = { valid: false, errors: result.errors };
-  return { envelope: env, exitKind: 'invalid_input' };
+  // Schema-valid is not the same as replayable: surface findings by default
+  // so existing scenarios keep validating; `--strict` fails only on the
+  // blocking ones. Codes, severity and wording live in the replayability module.
+  const warnings = findReplayWarnings(scenario);
+  if (warnings.length === 0) return { scenario, warnings, hint: null };
+  const { blocking, hint } = summarize(warnings);
+  if (opts.strict && blocking.length > 0) {
+    const env = fail('invalid_input', 'scenario cannot replay unattended; see data.warnings', hint);
+    env.data = { valid: false, errors: [], warnings };
+    return { failure: { envelope: env, exitKind: 'invalid_input' } };
+  }
+  return { scenario, warnings, hint };
+}
+
+function handleValidate({ validator }, file, opts = {}) {
+  const loaded = loadScenario(validator, file, opts);
+  if (loaded.failure) return loaded.failure;
+  if (loaded.warnings.length === 0) {
+    return { envelope: ok({ valid: true }), exitKind: 'ok' };
+  }
+  return { envelope: ok({ valid: true, warnings: loaded.warnings }, loaded.hint), exitKind: 'ok' };
 }
 
 // The unsupported-host gate (#165), shared by every site that reaches the
@@ -816,6 +832,60 @@ function measureRun({ projectRoot, runId, reported }) {
   };
 }
 
+// Finalize a run: measure its duration from the run trace, write the result
+// file (status derived when omitted), prune other runs' traces, and harvest
+// it into cross-session memory. Returns `{ result, store, hints }`; hints
+// collects the store's and memory's best-effort warnings. Shared by
+// `result finalize` and `mauto run`; flag validation and the envelope stay
+// with the callers.
+function finalizeRun({ resultStoreFactory, memoryStoreFactory, projectRoot }, { runId, scenarioId, status, duration, metadata, summary }) {
+  // Measure BEFORE constructing the store: the trace is read-only here, and
+  // deriving first keeps the store's lock window as small as it already is.
+  const measured = measureRun({ projectRoot, runId, reported: duration });
+
+  const store = resultStoreFactory({ runId, scenarioId, projectRoot });
+  const result = store.finalize({
+    status,
+    // Derived, not trusted. `--duration` survives in
+    // measurements.reported_duration_seconds and, when it disagrees with the
+    // clock, in a typed state_context observation — the disagreement is a
+    // signal about the agent, so it is recorded rather than resolved.
+    durationSeconds: measured.durationSeconds,
+    metadata,
+    measurements: measured.measurements,
+    // Undefined when --summary is omitted; ResultStore.finalize's own
+    // `summary || <generated default>` already treats that as "no override",
+    // so no provided-keys-only guard is needed here (unlike metadata, whose
+    // sub-fields default independently to 'unknown').
+    summary,
+  });
+
+  // Retention, at the only moment a run is known to be over and the only place
+  // off the hot path. Never this run's own trace — it is the evidence behind
+  // every number just written. Best-effort by construction; pruneRunTraces
+  // swallows everything and returns a count.
+  pruneRunTraces(projectRoot, { except: runId });
+
+  // Auto-harvest into cross-session memory. This is best-effort: a memory
+  // failure must never fail an otherwise-successful finalize, so its warnings
+  // fold into the envelope hint instead of throwing.
+  const hints = [storeHint(store)].filter(Boolean);
+  if (memoryStoreFactory) {
+    let mem;
+    try {
+      mem = memoryStoreFactory({ projectRoot });
+      mem.recordRun(result);
+    } catch (e) {
+      hints.push(`run-history not updated: ${e.message}`);
+    }
+    // Fold any warnings the store accumulated (even if recordRun later threw).
+    const memHint = storeHint(mem);
+    if (memHint) hints.push(memHint);
+  }
+
+  return { result, store, hints };
+}
+
 function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectRoot }, opts) {
   const { runId, scenarioId, status, duration } = opts;
   if (!runId) {
@@ -854,49 +924,10 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
   if (opts.apiLevel !== undefined) metadata.api_level = opts.apiLevel;
   if (opts.environment !== undefined) metadata.environment = opts.environment;
 
-  // Measure BEFORE constructing the store: the trace is read-only here, and
-  // deriving first keeps the store's lock window as small as it already is.
-  const measured = measureRun({ projectRoot, runId, reported: duration });
-
-  const store = resultStoreFactory({ runId, scenarioId, projectRoot });
-  const result = store.finalize({
-    status,
-    // Derived, not trusted. `--duration` survives in
-    // measurements.reported_duration_seconds and, when it disagrees with the
-    // clock, in a typed state_context observation — the disagreement is a
-    // signal about the agent, so it is recorded rather than resolved.
-    durationSeconds: measured.durationSeconds,
-    metadata,
-    measurements: measured.measurements,
-    // Undefined when --summary is omitted; ResultStore.finalize's own
-    // `summary || <generated default>` already treats that as "no override",
-    // so no provided-keys-only guard is needed here (unlike metadata, whose
-    // sub-fields default independently to 'unknown').
-    summary: opts.summary,
-  });
-
-  // Retention, at the only moment a run is known to be over and the only place
-  // off the hot path. Never this run's own trace — it is the evidence behind
-  // every number just written. Best-effort by construction; pruneRunTraces
-  // swallows everything and returns a count.
-  pruneRunTraces(projectRoot, { except: runId });
-
-  // Auto-harvest into cross-session memory. This is best-effort: a memory
-  // failure must never fail an otherwise-successful finalize, so its warnings
-  // fold into the envelope hint instead of throwing.
-  const hints = [storeHint(store)].filter(Boolean);
-  if (memoryStoreFactory) {
-    let mem;
-    try {
-      mem = memoryStoreFactory({ projectRoot });
-      mem.recordRun(result);
-    } catch (e) {
-      hints.push(`run-history not updated: ${e.message}`);
-    }
-    // Fold any warnings the store accumulated (even if recordRun later threw).
-    const memHint = storeHint(mem);
-    if (memHint) hints.push(memHint);
-  }
+  const { result, store, hints } = finalizeRun(
+    { resultStoreFactory, memoryStoreFactory, projectRoot },
+    { runId, scenarioId, status, duration, metadata, summary: opts.summary }
+  );
 
   // The exit code is keyed on the FINALIZED status, not the --status flag:
   // with the flag omitted, the store derives it from the recorded steps and
@@ -2777,6 +2808,7 @@ module.exports = {
   handleElements,
   handleScreenshot,
   handleValidate,
+  loadScenario,
   handleTap,
   handleLongPress,
   handleDoubleTap,
@@ -2794,6 +2826,7 @@ module.exports = {
   handleResultAddAssertion,
   handleResultAddCrash,
   handleResultFinalize,
+  finalizeRun,
   handleResultExport,
   handleSetup,
   handleConfigGet,
