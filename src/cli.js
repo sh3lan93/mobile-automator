@@ -29,7 +29,7 @@ const { ADAPTERS } = require('./init/adapters');
 const { inspectHosts, ADVISORY_FS_CODES } = require('./init/host-plan');
 const { renderStaleNotice, installedBefore, refreshHint } = require('./init/stale-notice');
 const { doctorReport } = require('./init/doctor');
-const { isSemanticAction, ACTION_METHOD, selectResolver } = require('./device/semantic-press');
+const { isSemanticAction, pressSemantic } = require('./device/semantic-press');
 const connection = require('./device/connection');
 const { isSupportedHost, unsupportedHostError } = require('./device/host-support');
 const { record } = require('./observe/recorder');
@@ -553,9 +553,7 @@ async function handlePress({ deviceBridge }, button) {
   // resolution is a hard error, never a bogus token forwarded to mobile-mcp.
   if (isSemanticAction(b)) {
     try {
-      const platform = await deviceBridge.getPlatform();
-      const resolver = selectResolver(platform, deviceBridge);
-      const { mechanism } = await resolver[ACTION_METHOD[b]]();
+      const { platform, mechanism } = await pressSemantic(deviceBridge, b);
       return {
         envelope: ok({ pressed: b, resolved: { platform, mechanism } }),
         exitKind: 'ok',

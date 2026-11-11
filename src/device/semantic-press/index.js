@@ -29,10 +29,29 @@ function selectResolver(platform, bridge) {
   return new Strategy(bridge);
 }
 
+// Perform one semantic action on the bridge's device: ask the device its
+// platform, pick that platform's resolver, run the action's method. Returns
+// what was done, `{ platform, mechanism }`. The one implementation behind
+// `mauto press <action>` and `mauto run`; a non-semantic token or an
+// unsupported platform throws SemanticResolutionError before any device input.
+async function pressSemantic(bridge, action) {
+  if (!isSemanticAction(action)) {
+    throw new SemanticResolutionError(
+      `"${action}" is not a semantic action.`,
+      `Semantic actions: ${SEMANTIC_ACTIONS.join(', ')}.`
+    );
+  }
+  const platform = await bridge.getPlatform();
+  const resolver = selectResolver(platform, bridge);
+  const { mechanism } = await resolver[ACTION_METHOD[action]]();
+  return { platform, mechanism };
+}
+
 module.exports = {
   SEMANTIC_ACTIONS,
   ACTION_METHOD,
   isSemanticAction,
   selectResolver,
+  pressSemantic,
   SemanticResolutionError,
 };
