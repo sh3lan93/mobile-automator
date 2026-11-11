@@ -5,7 +5,7 @@ const { expectedOf, toEvaluatorInput } = require('../assertion/fields');
 // Decide one scenario assertion against the current screen with the CLI's
 // own evaluator, record the verdict, and push a failure line when it did not
 // pass. Returns whether it passed.
-async function runAssertion(assertion, { bridge, store, evaluator, failures, log }) {
+async function runAssertion(assertion, { bridge, store, evaluator, failures }) {
   let pass = false;
   let message;
   try {
@@ -30,7 +30,6 @@ async function runAssertion(assertion, { bridge, store, evaluator, failures, log
     message,
     expected: expectedOf(assertion),
   });
-  log(`  assertion ${assertion.id} (${assertion.type}): ${pass ? 'PASS' : 'FAIL'} — ${message}`);
   if (!pass) failures.push(`assertion ${assertion.id} (${assertion.type}): ${message}`);
   return pass;
 }

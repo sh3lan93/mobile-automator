@@ -7,8 +7,7 @@
 // decides the run's status: the CLI's finalizeRun does that, shared with
 // `mauto result finalize`.
 //
-// Everything with a side effect is injected (bridge, store, clock, log,
-// trace), which is what lets tests/unit/run drive it on a fake bridge and a
+// Everything with a side effect is injected (bridge, store, clock, trace), which is what lets tests/unit/run drive it on a fake bridge and a
 // fake clock.
 
 const { runStep } = require('./step');
@@ -28,10 +27,10 @@ function recordAbort(store, step, err) {
 
 async function runScenario({
   scenario, bridge, store, evaluator, catalog, projectRoot, runId, clock,
-  log = () => {}, trace = NO_TRACE,
+  trace = NO_TRACE,
 }) {
   const failures = [];
-  const ctx = { scenario, bridge, store, evaluator, catalog, projectRoot, runId, clock, log, trace, failures };
+  const ctx = { scenario, bridge, store, evaluator, catalog, projectRoot, runId, clock, trace, failures };
   const assertions = Array.isArray(scenario.assertions) ? scenario.assertions : [];
   // The first step that failed, if any.
   let failedStep = null;
@@ -44,7 +43,6 @@ async function runScenario({
     trace.start();
     for (const step of scenario.steps || []) {
       current = step;
-      log(`[${scenario.scenario_id}] step ${step.id} (${step.action})`);
       const outcome = await runStep(step, ctx);
       if (!outcome.ok) {
         failures.push(`step ${step.id} (${step.action}): ${outcome.error.message}`);

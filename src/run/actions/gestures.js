@@ -4,11 +4,12 @@ const { FatalStepError } = require('../fatal');
 const { resolveTarget } = require('../resolve');
 
 // Resolve a scenario target against the current screen with the CLI's own
-// matcher (ctx.evaluator), warning when the first-match rule had a choice.
-async function resolveOnScreen(target, { bridge, evaluator, log }) {
+// matcher (ctx.evaluator). When the first-match rule had a choice to make, it
+// says so through ctx.observe, which runStep records on the step.
+async function resolveOnScreen(target, { bridge, evaluator, observe }) {
   const r = resolveTarget(await bridge.listElements(), target, evaluator);
   if (r.matches.length > 1) {
-    log(`  warning: target ${JSON.stringify(target)} matched ${r.matches.length} elements; using the first`);
+    observe(`target ${JSON.stringify(target)} matched ${r.matches.length} elements; used the first`);
   }
   return r;
 }

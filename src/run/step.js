@@ -22,7 +22,6 @@ async function attempt(step, ctx) {
       return { ok: true, attempts: n, error: null };
     } catch (err) {
       lastError = err;
-      ctx.log(`  attempt ${n}/${maxAttempts} failed: ${err.message}`);
       if (err && err.fatal) return { ok: false, attempts: n, error: err };
       if (n < maxAttempts) await ctx.clock.sleep(backoff);
     }
@@ -32,8 +31,9 @@ async function attempt(step, ctx) {
 
 // Capture `<workspace>/screenshots/<scenario_id>/<run_id>/<name>.png`. Returns
 // the path relative to the project root (what the result file records), or
-// null when the capture failed: evidence is best-effort, never a step failure.
-async function screenshot(name, { bridge, projectRoot, scenario, runId, log }) {
+// null when the capture failed: evidence is best-effort, never a step failure,
+// so a failure is only noted on the step.
+async function screenshot(name, { bridge, projectRoot, scenario, runId, observe }) {
   const abs = path.join(workspaceDir(projectRoot), 'screenshots', scenario.scenario_id, runId, `${name}.png`);
   const rel = path.relative(projectRoot, abs);
   try {
@@ -41,15 +41,18 @@ async function screenshot(name, { bridge, projectRoot, scenario, runId, log }) {
     await bridge.screenshot(abs);
     return rel;
   } catch (err) {
-    log(`  screenshot ${rel} failed: ${err.message}`);
+    observe(`screenshot ${rel} failed: ${err.message}`);
     return null;
   }
 }
 
 // Run a step, capture its evidence (on a checkpoint when it passed, always
-// when it failed), record it in the store and stamp the run trace.
-// Returns { ok, attempts, error }.
-async function runStep(step, ctx) {
+// when it failed), record it in the store with what was noted on the way
+// (ctx.observe, each distinct note once, as a state_context observation) and
+// stamp the run trace. Returns { ok, attempts, error }.
+async function runStep(step, parent) {
+  const notes = new Set();
+  const ctx = { ...parent, observe: (message) => notes.add(message) };
   const outcome = await attempt(step, ctx);
 
   let shot = null;
@@ -63,6 +66,7 @@ async function runStep(step, ctx) {
     screenshot: shot,
     error_message: outcome.ok ? null : outcome.error.message,
   });
+  for (const message of notes) ctx.store.addObservation({ type: 'state_context', step_id: step.id, message });
   ctx.trace.step(outcome.ok);
   return outcome;
 }

@@ -242,18 +242,44 @@ describe('runScenario', () => {
     expect(r.steps_executed[0].screenshot).toBe(path.relative(projectRoot, abs));
   });
 
-  test('a failed screenshot is logged, not fatal', async () => {
-    const lines = [];
+  test('a failed screenshot is noted on the step as a state_context observation, not fatal', async () => {
     const b = makeFakeBridge({
       elements: [[el('Home')]],
       methods: { screenshot: () => { throw new Error('no disk'); } },
     });
-    const r = await exec(scenario([{ id: 'tap_home', action: 'tap', description: 'd', target: 'Home', checkpoint: true }]), b, {
-      log: (l) => lines.push(l),
-    });
+    const r = await exec(scenario([{ id: 'tap_home', action: 'tap', description: 'd', target: 'Home', checkpoint: true }]), b);
     expect(r.finalized.status).toBe('passed');
     expect(r.file.steps_executed[0].screenshot).toBeNull();
-    expect(lines.join('\n')).toContain('no disk');
+    const rel = path.join('.mobile-automator', 'screenshots', 'demo', RUN_ID, 'step_tap_home.png');
+    expect(r.file.observations).toEqual([
+      { type: 'state_context', step_id: 'tap_home', message: `screenshot ${rel} failed: no disk` },
+    ]);
+  });
+
+  test('an ambiguous tap target is recorded as exactly one state_context observation on its step', async () => {
+    const b = makeFakeBridge({ elements: [[el('Home', { center: [1, 2] }), el('Home again', { center: [3, 4] })]] });
+    const r = await exec(scenario([{ id: 'tap_home', action: 'tap', description: 'd', target: 'Home' }]), b);
+    expect(r.file.observations).toEqual([
+      { type: 'state_context', step_id: 'tap_home', message: 'target "Home" matched 2 elements; used the first' },
+    ]);
+  });
+
+  test('an ambiguous target resolved on every retry is still noted once', async () => {
+    const b = makeFakeBridge({
+      elements: [[el('Home'), el('Home again')]],
+      methods: { tap: (_args, n) => { if (n < 2) throw new Error('flaky'); return null; } },
+    });
+    const r = await exec(
+      scenario([{ id: 'tap_home', action: 'tap', description: 'd', target: 'Home', retry_policy: { max_attempts: 2, backoff_ms: 0 } }]),
+      b
+    );
+    expect(r.file.observations.filter((o) => o.type === 'state_context')).toHaveLength(1);
+  });
+
+  test('an unambiguous tap target records no observation', async () => {
+    const b = makeFakeBridge({ elements: [[el('Home'), el('More')]] });
+    const r = await exec(scenario([{ id: 'tap_home', action: 'tap', description: 'd', target: 'Home' }]), b);
+    expect(r.file.observations).toEqual([]);
   });
 
   test('a screenshot directory that cannot be created is not fatal: the step is still recorded', async () => {

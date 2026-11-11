@@ -21,7 +21,7 @@ function ctxFor(bridge, extra = {}) {
     evaluator,
     catalog,
     clock: makeFakeClock(),
-    log: () => {},
+    observe: () => {},
     ...extra,
   };
 }
@@ -85,12 +85,12 @@ describe('launch_app', () => {
 });
 
 describe('tap', () => {
-  test('taps the first match and warns when the target is ambiguous', async () => {
+  test('taps the first match and observes that the target is ambiguous', async () => {
     const lines = [];
     const b = makeFakeBridge({ elements: [[el('Home', { center: [1, 2] }), el('Home again', { center: [3, 4] })]] });
-    await tap({ id: 't', action: 'tap', target: 'Home' }, ctxFor(b, { log: (l) => lines.push(l) }));
+    await tap({ id: 't', action: 'tap', target: 'Home' }, ctxFor(b, { observe: (l) => lines.push(l) }));
     expect(b.of('tap')[0].args).toEqual([{ x: 1, y: 2 }]);
-    expect(lines.join('\n')).toContain('matched 2 elements; using the first');
+    expect(lines).toEqual(['target "Home" matched 2 elements; used the first']);
   });
 
   test('a missing target throws TargetNotFoundError (retryable)', async () => {

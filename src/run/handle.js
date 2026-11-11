@@ -14,12 +14,11 @@ const { NO_TRACE } = require('./trace');
 // store derives it from the recorded steps and assertions, and the exit code
 // is keyed on that derived status, as finalize's is. `prepared` is what
 // prepareRun resolved before any device work: the loaded scenario and the
-// run id. `log` defaults to a no-op: stdout is the envelope channel, and no
-// verb writes progress to stderr.
+// run id.
 async function handleRun(
   {
     bridge, resultStoreFactory, memoryStoreFactory, projectRoot, finalizeRun,
-    trace = NO_TRACE, clock = realClock, log = () => {},
+    trace = NO_TRACE, clock = realClock,
     evaluator = require('../assertion/evaluator'),
     catalog = require('../device/action-catalog'),
   },
@@ -43,7 +42,6 @@ async function handleRun(
       projectRoot,
       runId,
       clock,
-      log,
       trace,
     });
   } catch (err) {
