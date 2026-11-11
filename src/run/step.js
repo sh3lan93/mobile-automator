@@ -63,7 +63,7 @@ async function runStep(step, ctx) {
     screenshot: shot,
     error_message: outcome.ok ? null : outcome.error.message,
   });
-  ctx.trace('run.step', { ok: outcome.ok });
+  ctx.trace.step(outcome.ok);
   return outcome;
 }
 

@@ -47,6 +47,7 @@ const { makeFlusher } = require('./observe/flush');
 const { replayEnabled } = require('./run/gate');
 const { makeRunId } = require('./run/run-id');
 const { runScenario } = require('./run/runner');
+const { makeRunTrace } = require('./run/trace');
 const {
   findWorkspaceRoot,
   workspaceFailure,
@@ -1005,14 +1006,6 @@ async function handleRun(
     exitKind: 'test_failed',
   };
 }
-
-// The one place a scenario run names its trace events. Literal names on the
-// `event:` line are what tests/lint/telemetry-vocab-drift.test.js reads as
-// the producers of 'run.start' and 'run.step'; the runner may name no other.
-const RUN_TRACE_EVENTS = Object.freeze({
-  'run.start': { event: 'run.start' },
-  'run.step': { event: 'run.step' },
-});
 
 // Formats `mauto result export --format` accepts. The only one, junit, is
 // rendered by toJUnit (src/result/junit.js).
@@ -2229,19 +2222,9 @@ function buildProgram(deps = {}) {
       // a minted id, so verb.end lands in the same trace as the run's stamps.
       emitters.setRunId(runId);
 
-      const tracePath = runTracePath(projectRoot, runId) || undefined;
-      const trace = (name, fields = {}) => {
-        const named = RUN_TRACE_EVENTS[name];
-        if (!named) return;
-        record(
-          { level: 'info', src: 'cli', verb: 'run', run_id: runId, ...fields, event: named.event },
-          { projectRoot, tracePath }
-        );
-      };
-
       await withBridge(opts.device, (bridge) =>
         handleRun(
-          { bridge, resultStoreFactory, memoryStoreFactory, projectRoot, trace, clock },
+          { bridge, resultStoreFactory, memoryStoreFactory, projectRoot, trace: makeRunTrace({ projectRoot, runId }), clock },
           { scenario: loaded.scenario, runId }
         )
       );

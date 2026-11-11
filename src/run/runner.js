@@ -13,10 +13,11 @@
 
 const { runStep } = require('./step');
 const { runAssertion } = require('./assertions');
+const { NO_TRACE } = require('./trace');
 
 async function runScenario({
   scenario, bridge, store, evaluator, catalog, projectRoot, runId, clock,
-  log = () => {}, trace = () => {},
+  log = () => {}, trace = NO_TRACE,
 }) {
   const failures = [];
   const ctx = { scenario, bridge, store, evaluator, catalog, projectRoot, runId, clock, log, trace, failures };
@@ -24,7 +25,7 @@ async function runScenario({
   // The first step that failed, if any.
   let failedStep = null;
 
-  trace('run.start');
+  trace.start();
   for (const step of scenario.steps || []) {
     log(`[${scenario.scenario_id}] step ${step.id} (${step.action})`);
     const outcome = await runStep(step, ctx);

@@ -49,7 +49,7 @@ async function exec(sc, bridge, extra = {}) {
     projectRoot,
     runId: RUN_ID,
     clock: makeFakeClock(),
-    trace: (event, fields) => traced.push({ event, fields }),
+    trace: { start: () => traced.push('start'), step: (ok) => traced.push({ step: ok }) },
     ...extra,
   });
   // What the runner recorded, before anything finalizes it.
@@ -325,11 +325,7 @@ describe('runScenario', () => {
       ]),
       b
     );
-    expect(r.traced).toEqual([
-      { event: 'run.start', fields: undefined },
-      { event: 'run.step', fields: { ok: true } },
-      { event: 'run.step', fields: { ok: false } },
-    ]);
+    expect(r.traced).toEqual(['start', { step: true }, { step: false }]);
   });
 
   // executor: "assert and finalize accept test_failed; every other verb accepts nothing"
