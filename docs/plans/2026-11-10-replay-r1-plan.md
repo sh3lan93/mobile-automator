@@ -79,6 +79,17 @@ program.command('run <scenario>', { hidden: true })
 - `test_failed` is not in `CAPTURED_KINDS` / `PROBE_KINDS`, so `withBridge` adds no second failure
   screenshot and no crash probe; the runner already captured `step_<id>_failure.png`.
 
+## Changes after review (PR #302, round 1) — these supersede the interfaces above
+
+| Blocker | Change |
+|---|---|
+| B1 | The `run` action only orchestrates: `prepareRun({validator, file, runId, env})` (`src/run/prepare.js`: gate → `loadScenario` → run-id resolution/validation) → `setRunId` → `withBridge(handleRun)`. `handleRun` lives in `src/run/handle.js` with `finalizeRun` injected; `loadScenario` moved to `src/scenario/load.js`; the real clock is `src/run/clock.js`. |
+| B2 | No event-name map. `makeRunTrace({projectRoot, runId})` (`src/run/trace.js`) returns `{start(), step(ok)}`, each with its own literal `record({event: …})`; `NO_TRACE` is the default. |
+| B3 | `runScenario` returns `{failures, failedStep}` only. Run status has one definition, `deriveRunStatus` (`src/result/outcome.js`), applied by finalize. |
+| B4 | `src/assertion/fields.js` derives `toCliFlags`, `fromCliFlags`, `toEvaluatorInput` and `expectedOf` from one `FIELDS` table, without an argv round trip. |
+| B5 | A run always ends finalized: the runner records the step that was running as `error` (`mauto run aborted: …`), and `handleRun` finalizes, then rethrows the original error. A screenshot or `mkdir` failure is never fatal. |
+| B6 | No `log` parameter. Step notes (an ambiguous target, a failed screenshot) are written as de-duplicated `state_context` observations on the step. |
+
 ## Decisions taken in this plan (flag any you disagree with)
 
 1. **No separate `docs/plans/2026-10-27-replay-design.md`.** The issue asks for one, but
