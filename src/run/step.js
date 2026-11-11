@@ -36,8 +36,8 @@ async function attempt(step, ctx) {
 async function screenshot(name, { bridge, projectRoot, scenario, runId, log }) {
   const abs = path.join(workspaceDir(projectRoot), 'screenshots', scenario.scenario_id, runId, `${name}.png`);
   const rel = path.relative(projectRoot, abs);
-  fs.mkdirSync(path.dirname(abs), { recursive: true });
   try {
+    fs.mkdirSync(path.dirname(abs), { recursive: true });
     await bridge.screenshot(abs);
     return rel;
   } catch (err) {

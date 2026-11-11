@@ -27,23 +27,38 @@ async function handleRun(
 ) {
   const scenarioId = scenario.scenario_id;
   const store = resultStoreFactory({ runId, scenarioId, projectRoot });
-  const outcome = await runScenario({
-    scenario,
-    bridge,
-    store,
-    evaluator,
-    catalog,
-    projectRoot,
-    runId,
-    clock,
-    log,
-    trace,
-  });
-
-  const { result, store: finalized, hints } = finalizeRun(
+  const finalize = () => finalizeRun(
     { resultStoreFactory, memoryStoreFactory, projectRoot },
     { runId, scenarioId }
   );
+
+  let outcome;
+  try {
+    outcome = await runScenario({
+      scenario,
+      bridge,
+      store,
+      evaluator,
+      catalog,
+      projectRoot,
+      runId,
+      clock,
+      log,
+      trace,
+    });
+  } catch (err) {
+    // An unexpected error (a store write, a bug) still ends the run
+    // finalized — never left `_in_progress` — and then reaches withEnvelope
+    // as the error it was. A finalize that fails too must not replace it.
+    try {
+      finalize();
+    } catch {
+      // The original error is the one worth reporting.
+    }
+    throw err;
+  }
+
+  const { result, store: finalized, hints } = finalize();
   const resultPath = path.relative(projectRoot, finalized.file);
   const data = {
     run_id: runId,

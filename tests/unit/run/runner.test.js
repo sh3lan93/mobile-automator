@@ -256,6 +256,56 @@ describe('runScenario', () => {
     expect(lines.join('\n')).toContain('no disk');
   });
 
+  test('a screenshot directory that cannot be created is not fatal: the step is still recorded', async () => {
+    // A file where the screenshots directory should be makes mkdir throw.
+    fs.mkdirSync(workspaceDir(projectRoot), { recursive: true });
+    fs.writeFileSync(path.join(workspaceDir(projectRoot), 'screenshots'), 'not a directory');
+    const b = makeFakeBridge({ elements: [[el('Home')]] });
+    const r = await exec(
+      scenario([
+        { id: 'tap_home', action: 'tap', description: 'd', target: 'Home', checkpoint: true },
+        { id: 'back', action: 'press_back', description: 'd' },
+      ]),
+      b
+    );
+    expect(r.file.steps_executed.map((s) => [s.step_id, s.status, s.screenshot])).toEqual([
+      ['tap_home', 'passed', null],
+      ['back', 'passed', null],
+    ]);
+    expect(r.finalized.status).toBe('passed');
+  });
+
+  test('an unexpected error records the running step as error, then propagates', async () => {
+    const b = makeFakeBridge({ elements: [[el('More')]] });
+    const store = new ResultStore({ runId: RUN_ID, scenarioId: 'demo', projectRoot });
+    store.addAssertion = () => { throw new Error('disk full'); };
+    await expect(
+      runScenario({
+        scenario: scenario(
+          [{ id: 'tap_more', action: 'tap', description: 'd', target: 'More' }],
+          [{ id: 'a', after_step: 'tap_more', type: 'element_exists', description: 'd', element_description: 'More' }]
+        ),
+        bridge: b, store, evaluator, catalog, projectRoot, runId: RUN_ID, clock: makeFakeClock(),
+      })
+    ).rejects.toThrow('disk full');
+    const file = JSON.parse(fs.readFileSync(store.file, 'utf8'));
+    expect(file.steps_executed.map((s) => [s.step_id, s.status, s.error_message])).toEqual([
+      ['tap_more', 'passed', null],
+      ['tap_more', 'error', 'mauto run aborted: disk full'],
+    ]);
+  });
+
+  test('a store that cannot record the abort does not mask the original error', async () => {
+    const store = new ResultStore({ runId: RUN_ID, scenarioId: 'demo', projectRoot });
+    store.addStep = () => { throw new Error('read-only'); };
+    await expect(
+      runScenario({
+        scenario: scenario([{ id: 'back', action: 'press_back', description: 'd' }]),
+        bridge: makeFakeBridge(), store, evaluator, catalog, projectRoot, runId: RUN_ID, clock: makeFakeClock(),
+      })
+    ).rejects.toThrow('read-only');
+  });
+
   // executor: "assertions run after their step via assert, then add-assertion records the verdict"
   test('assertions run after their step through the evaluator, and the verdict is recorded', async () => {
     const b = makeFakeBridge({ elements: [[el('More'), el('No products match your search')]] });
