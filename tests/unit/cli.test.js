@@ -841,12 +841,18 @@ describe('cli handlers', () => {
       // The hint is copied verbatim, so it must never omit --message: for
       // Tier-2 verdicts the message IS the evidence (#140 fix-wave FIX 3).
       expect(r.envelope.hint).toContain('--message');
+      // Unchanged by #275: the CLI decided it, so no --judge is claimed.
+      expect(r.envelope.hint).toBe(
+        'Record it: mauto result add-assertion --run-id <run_id> --step-id <step_id> ' +
+          '--type element_exists --pass true --message "<why>"'
+      );
     });
 
-    test('an agent-judged verdict hints a placeholder instead of a decided value, and still includes --message', async () => {
+    test('an agent-judged verdict hints a true|false placeholder recorded --judge agent, and still includes --message (#275)', async () => {
       const r = await handleAssert({ deviceBridge: bridge }, 'screenshot_match', { target: 'ref.png' });
       expect(r.envelope.data.needs_agent).toBe(true);
-      expect(r.envelope.hint).toContain('--pass <your verdict>');
+      expect(r.envelope.hint).toContain('--pass <true|false> --judge agent');
+      expect(r.envelope.hint).not.toContain('<your verdict>');
       expect(r.envelope.hint).toContain('--message');
     });
   });

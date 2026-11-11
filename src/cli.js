@@ -560,7 +560,9 @@ async function handleAssert({ deviceBridge }, type, flags = {}) {
   // The verdict has to be transcribed into `result add-assertion` by the agent
   // (assert has no run context, and Tier-2 types are not decided here at all).
   // Emitting the exact command turns transcription into copying (#140 D1).
-  const verdict = r.needs_agent ? '<your verdict>' : String(r.pass);
+  // A Tier-2 verdict is the agent's, so it is recorded `--judge agent` (#275);
+  // a mechanical one is the CLI's and claims no judge.
+  const verdict = r.needs_agent ? '<true|false> --judge agent' : String(r.pass);
   const hint =
     `Record it: mauto result add-assertion --run-id <run_id> --step-id <step_id> ` +
     `--type ${r.type} --pass ${verdict} --message "<why>"`;
