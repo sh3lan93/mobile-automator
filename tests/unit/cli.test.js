@@ -1367,7 +1367,7 @@ describe('cli handlers', () => {
         runId: 'run_20260804_161000', stepId: 'verify', type: 'element_exists', pass: 'yes',
       });
       expect(r.exitKind).toBe('invalid_input');
-      expect(r.envelope.error.message).toMatch(/--pass must be "true" or "false"/);
+      expect(r.envelope.error.message).toMatch(/--pass must be true \| false \| pending/);
     });
 
     test('rejects an unknown assertion type with invalid_input', () => {
@@ -3103,6 +3103,7 @@ describe('cli handlers', () => {
           '--step-id', 'step_verify',
           '--type', 'element_exists',
           '--pass', 'false',
+          '--judge', 'agent',
           '--assertion-id', 'assert_custom_id',
           '--message', 'Login button missing',
           '--expected', 'visible',
@@ -3118,6 +3119,7 @@ describe('cli handlers', () => {
           assertion_id: 'assert_custom_id',
           type: 'element_exists',
           pass: false,
+          judge: { by: 'agent' },
           message: 'Login button missing',
           expected: 'visible',
           actual: 'absent',
@@ -3171,6 +3173,10 @@ describe('cli handlers', () => {
             failure_screenshots: [],
           },
           summary: 'Custom narrative summary.',
+          // No --scenario and no device: an agent executor claiming neither.
+          executor: expect.objectContaining({
+            kind: 'agent', platform: null, device_id: null, scenario_path: null, scenario_sha256: null,
+          }),
         },
       ]);
     });

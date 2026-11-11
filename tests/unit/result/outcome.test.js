@@ -5,6 +5,8 @@ const {
   isErroredStep,
   isFailingStep,
   isFailingAssertion,
+  isPendingAssertion,
+  isPendingStep,
   deriveRunStatus,
 } = require('../../../src/result/outcome');
 const { toJUnit } = require('../../../src/result/junit');
@@ -59,6 +61,66 @@ const CASES = [
 describe('deriveRunStatus (#296)', () => {
   test.each(CASES)('%s -> %s', (_name, expected, steps, assertions) => {
     expect(deriveRunStatus(steps, assertions)).toBe(expected);
+  });
+});
+
+const pendingStep = () => ({ step_id: 's', status: 'passed', needs_agent: true });
+
+// The #275 matrix: error step > failed step > failed assertion > pending > passed.
+const PENDING_CASES = [
+  ['a pending assertion alone', 'incomplete', [step('passed')], [assertion('needs_agent')]],
+  ['a pending step alone', 'incomplete', [pendingStep()], []],
+  ['a pending assertion beside a passed one', 'incomplete', [], [assertion('passed'), assertion('needs_agent')]],
+  ['a failed assertion beats a pending one', 'failed', [], [assertion('needs_agent'), assertion('failed')]],
+  ['a failed step beats a pending assertion', 'failed', [step('failed')], [assertion('needs_agent')]],
+  ['an errored step beats a pending step', 'error', [pendingStep(), step('error')], []],
+  ['a failed assertion beats a pending step', 'failed', [pendingStep()], [assertion('failed')]],
+  ['needs_agent: false is not pending', 'passed', [{ ...pendingStep(), needs_agent: false }], []],
+];
+
+// An incomplete run exports no failure and at least one skipped case; a red
+// one still exports its real failures (plan decision 6).
+describe('pending statuses agree with the JUnit export (#275)', () => {
+  test.each(PENDING_CASES)('%s', (_name, _expected, steps, assertions) => {
+    const status = deriveRunStatus(steps, assertions);
+    const report = toJUnit([{ run_id: 'run_20261111_120000', scenario_id: 'x', status, steps_executed: steps, assertion_results: assertions, summary: 'x' }]);
+    if (status === 'incomplete') {
+      expect(report.failures).toBe(0);
+      expect(report.skipped).toBeGreaterThan(0);
+    } else if (status === 'passed') {
+      expect(report.failures).toBe(0);
+      expect(report.skipped).toBe(0);
+    } else {
+      const [suite] = findAll(parseXml(report.xml), 'testsuite');
+      expect(suite.children.some((c) => c.attrs.name === 'run status')).toBe(false);
+      expect(report.failures).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('deriveRunStatus with pending entries (#275)', () => {
+  test.each(PENDING_CASES)('%s -> %s', (_name, expected, steps, assertions) => {
+    expect(deriveRunStatus(steps, assertions)).toBe(expected);
+  });
+
+  test.each([
+    [assertion('needs_agent'), true],
+    [assertion('passed'), false],
+    [assertion('failed'), false],
+    [null, false],
+    ['x', false],
+  ])('isPendingAssertion(%p) is %s', (entry, expected) => {
+    expect(isPendingAssertion(entry)).toBe(expected);
+  });
+
+  test.each([
+    [pendingStep(), true],
+    [{ ...pendingStep(), needs_agent: 'true' }, false],
+    [step('passed'), false],
+    [null, false],
+    [7, false],
+  ])('isPendingStep(%p) is %s', (entry, expected) => {
+    expect(isPendingStep(entry)).toBe(expected);
   });
 });
 

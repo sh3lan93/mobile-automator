@@ -78,10 +78,38 @@ function parseStepStatus(raw) {
   return { value: normalized };
 }
 
-function parseBool(raw, flagName) {
-  if (raw === 'true') return { value: true };
-  if (raw === 'false') return { value: false };
-  return { error: `${flagName} must be "true" or "false" (got "${raw}")` };
+// `result add-assertion --pass` (#275): a decided verdict, or `pending` — the
+// assertion is recorded `needs_agent`, to be decided later by an agent.
+const VERDICTS = { true: true, false: false, pending: 'pending' };
+
+function parseVerdict(raw) {
+  if (Object.prototype.hasOwnProperty.call(VERDICTS, raw)) return { value: VERDICTS[raw] };
+  return { error: `--pass must be true | false | pending (got "${raw}")` };
+}
+
+// Who an agent may say decided a verdict (`result add-assertion --judge`). The
+// schema's judge.by enum also has `mauto`, which only the in-process runner
+// writes: an agent claiming mauto decided would be the self-attestation the
+// field exists to expose.
+const JUDGES = ['agent', 'none'];
+
+// The `judge` to record for a `--judge` value (undefined when omitted) and the
+// parsed `--pass` verdict, or { error }. A pending verdict was decided by
+// nobody, so it records `{by: 'none'}` and refuses `agent`; a decided verdict
+// refuses `none`, and records no judge unless `agent` was said — so callers
+// that predate the flag write exactly what they always wrote.
+function parseJudge(raw, verdict) {
+  if (raw !== undefined && !JUDGES.includes(raw)) {
+    return { error: `--judge must be ${JUDGES.join(' | ')} (got "${raw}")` };
+  }
+  if (verdict === 'pending') {
+    if (raw === 'agent') return { error: '--judge agent needs a verdict: use --pass true or --pass false' };
+    return { value: { by: 'none' } };
+  }
+  if (raw === 'none') {
+    return { error: `--judge none means nobody decided, but --pass is ${verdict}: use --pass pending or --judge agent` };
+  }
+  return { value: raw === 'agent' ? { by: 'agent' } : null };
 }
 
 // Mirrors the enum at /properties/status in src/schemas/result_schema.json;
@@ -90,7 +118,7 @@ function parseBool(raw, flagName) {
 // status from the recorded steps and assertions): an unlisted value used to be persisted
 // verbatim — a schema-invalid result file with a green exit — directly under
 // the exit-6 contract keyed on that status (#286 review).
-const RUN_STATUSES = ['passed', 'failed', 'error'];
+const RUN_STATUSES = ['passed', 'failed', 'error', 'incomplete'];
 
 function parseRunStatus(raw) {
   if (!RUN_STATUSES.includes(raw)) {
@@ -103,7 +131,9 @@ module.exports = {
   OBSERVATION_TYPES,
   parseObservation,
   parseCapture,
-  parseBool,
+  parseVerdict,
+  JUDGES,
+  parseJudge,
   RUN_STATUSES,
   parseRunStatus,
   STEP_STATUS_ALIASES,

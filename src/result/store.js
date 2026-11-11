@@ -6,7 +6,15 @@ const path = require('path');
 const { atomicWrite } = require('../util/atomic');
 const { withLock } = require('../util/lock');
 const { OBSERVATION_TYPES, stepStatus } = require('./flags');
-const { deriveRunStatus, isErroredStep, isFailedStep, isFailingAssertion } = require('./outcome');
+const {
+  deriveRunStatus,
+  isErroredStep,
+  isFailedStep,
+  isFailingAssertion,
+  isPendingAssertion,
+  isPendingStep,
+} = require('./outcome');
+const { MECHANICAL_TYPES } = require('../assertion/evaluator');
 const { workspaceDir } = require('../workspace/layout');
 
 // Incremental result accumulator that persists to
@@ -52,8 +60,30 @@ function stepFailureSuffix(steps) {
   return `${failed ? `, ${failed} failed` : ''}${errored ? `, ${errored} errored` : ''}`;
 }
 
+// The summary tail counting entries still waiting for an agent (#275); empty
+// when there are none, which keeps the text every earlier run had.
+function pendingSuffix(steps, assertions) {
+  const pending = steps.filter(isPendingStep).length + assertions.filter(isPendingAssertion).length;
+  return pending ? `, ${pending} pending agent judgment` : '';
+}
+
+// `pending` (#275) records an assertion nobody has decided yet.
 function assertionStatus(pass) {
+  if (pass === 'pending') return 'needs_agent';
   return pass ? 'passed' : 'failed';
+}
+
+// The executor a finalize writes (#275, plan decision 4): the first one is
+// kept, so an agent completing a runner's run never rewrites it as its own.
+// The one thing a later finalize may add is the scenario, when the first was
+// written without one; the CLI refuses a scenario that differs from a
+// recorded hash before it gets here.
+function mergeExecutor(existing, incoming) {
+  if (!existing) return incoming || null;
+  if (incoming && existing.scenario_sha256 == null && incoming.scenario_sha256 != null) {
+    return { ...existing, scenario_path: incoming.scenario_path, scenario_sha256: incoming.scenario_sha256 };
+  }
+  return existing;
 }
 
 class ResultStore {
@@ -107,6 +137,7 @@ class ResultStore {
     this._observations = loaded.observations || [];
     this._capturedVariables = loaded.captured_variables || {};
     this._crashes = loaded.crashes || [];
+    this._executor = loaded.executor || null;
     if (!this.scenarioId && loaded.scenario_id) this.scenarioId = loaded.scenario_id;
   }
 
@@ -186,7 +217,22 @@ class ResultStore {
       crashes: this._crashes,
       _in_progress: true,
     };
+    // A re-opened finalized run (an agent deciding its pending assertions)
+    // must not lose who produced it.
+    if (this._executor) snapshot.executor = this._executor;
     this._atomicWrite(JSON.stringify(snapshot, null, 2));
+  }
+
+  // What the run has recorded so far, for checking it against a scenario
+  // (src/result/provenance.js crossCheck). A deep copy: the caller reads it,
+  // it never writes through it.
+  recorded() {
+    return structuredClone({
+      scenario_id: this.scenarioId,
+      steps: this._steps,
+      assertions: this._assertions,
+      executor: this._executor,
+    });
   }
 
   addStep({ step_id, status, attempts = 1, screenshot = null, error_message = null, observations = null } = {}) {
@@ -245,9 +291,25 @@ class ResultStore {
     });
   }
 
-  addAssertion({ step_id, assertion_id, type, pass, message, expected = null, actual = null } = {}) {
+  // Record an assertion verdict. `pass` is true, false or 'pending' (#275):
+  // pending records `needs_agent`. Provenance is persisted beside it: `type`,
+  // `step_id`, `mechanical` (derived from the type unless given) and `judge`
+  // (omitted unless given — a caller that does not say who decided records
+  // no claim).
+  //
+  // With an explicit assertion_id, a verdict REPLACES a `needs_agent` entry of
+  // that id in place, keeping its position, and a pending verdict for an id
+  // already decided throws AlreadyDecidedError: a run never goes from decided
+  // back to undecided. A derived id (none given) always appends, as do two
+  // decided verdicts for one id.
+  addAssertion({
+    step_id, assertion_id, type, pass, message, expected = null, actual = null, mechanical, judge,
+  } = {}) {
     return withLock(this._lock, () => {
       this._refreshFromDisk();
+      if (mechanical !== undefined && typeof mechanical !== 'boolean') {
+        throw new Error(`mechanical must be a boolean (got ${JSON.stringify(mechanical)})`);
+      }
       const entry = {
         assertion_id: assertion_id || `${step_id || 'assert'}_${type || 'unknown'}_${this._assertions.length + 1}`,
         status: assertionStatus(pass),
@@ -255,7 +317,20 @@ class ResultStore {
         actual: actual == null ? null : String(actual),
         message: message || '',
       };
-      this._assertions.push(entry);
+      if (typeof type === 'string') entry.type = type;
+      if (step_id != null) entry.step_id = String(step_id);
+      const isMechanical = mechanical !== undefined ? mechanical : typeof type === 'string' ? MECHANICAL_TYPES.has(type) : undefined;
+      if (isMechanical !== undefined) entry.mechanical = isMechanical;
+      if (judge != null) entry.judge = judge;
+
+      const sameId = (a) => Boolean(assertion_id) && a !== null && typeof a === 'object' && a.assertion_id === assertion_id;
+      if (isPendingAssertion(entry)) {
+        const decided = this._assertions.find((a) => sameId(a) && !isPendingAssertion(a));
+        if (decided) throw new AlreadyDecidedError(assertion_id, decided.status);
+      }
+      const pendingIndex = this._assertions.findIndex((a) => sameId(a) && isPendingAssertion(a));
+      if (pendingIndex === -1) this._assertions.push(entry);
+      else this._assertions[pendingIndex] = entry;
       this._persistInProgress();
       return entry;
     });
@@ -338,7 +413,7 @@ class ResultStore {
     return notes;
   }
 
-  finalize({ status, durationSeconds = 0, summary, metadata, measurements } = {}) {
+  finalize({ status, durationSeconds = 0, summary, metadata, measurements, executor } = {}) {
     return withLock(this._lock, () => {
       this._refreshFromDisk();
 
@@ -375,8 +450,14 @@ class ResultStore {
         summary:
           summary ||
           `${resolvedStatus}: ${passed}/${total} assertion(s) passed across ${this._steps.length} step(s)` +
-            `${stepFailureSuffix(this._steps)}.`,
+            `${stepFailureSuffix(this._steps)}${pendingSuffix(this._steps, this._assertions)}.`,
       };
+
+      // Who produced the result and from what (#275). Absent only when no
+      // finalize has ever been told, so a store driven without one writes the
+      // file it always wrote.
+      this._executor = mergeExecutor(this._executor, executor);
+      if (this._executor) result.executor = this._executor;
 
       // Additive and OMITTED when absent: a result file from a run with no
       // trace must stay shaped exactly as 0.24.0 wrote it, so finalize never
@@ -423,6 +504,20 @@ class InvalidRunIdError extends Error {
     this.name = 'InvalidRunIdError';
     this.kind = 'invalid_input';
     this.hint = `A run id names a file in ${resultsDir(projectRoot)}; it cannot contain a path separator.`;
+  }
+}
+
+// Typed error for `pending` recorded over an assertion already decided (#275):
+// a decided verdict is never turned back into an undecided one. Carries the
+// envelope's kind and hint, like InvalidRunIdError.
+class AlreadyDecidedError extends Error {
+  constructor(assertionId, status) {
+    super(`assertion "${assertionId}" is already decided (${status}); it cannot go back to pending`);
+    this.name = 'AlreadyDecidedError';
+    this.kind = 'invalid_input';
+    this.hint =
+      `Record a verdict for "${assertionId}" with --pass true|false, or use a different --assertion-id ` +
+      'for a new pending assertion.';
   }
 }
 
@@ -481,4 +576,11 @@ function readFinalizedResult(projectRoot, runId) {
   return { result: parsed };
 }
 
-module.exports = { ResultStore, readFinalizedResult, resultFile, isResultRunId, InvalidRunIdError };
+module.exports = {
+  ResultStore,
+  readFinalizedResult,
+  resultFile,
+  isResultRunId,
+  InvalidRunIdError,
+  AlreadyDecidedError,
+};

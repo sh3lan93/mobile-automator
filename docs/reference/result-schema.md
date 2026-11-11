@@ -36,6 +36,7 @@ Run Result
 ├─ Assertions Array (assertion verdicts with expected/actual values)
 ├─ Observations Array (regression/flakiness/state context insights)
 ├─ Captured Variables (values extracted via capture_value steps)
+├─ Executor (who produced the result, from which scenario file)
 └─ Summary (human-readable overall result)
 ```
 
@@ -48,9 +49,9 @@ Run Result
 | `run_id` | string | Yes | Unique run identifier in format `run_YYYYMMDD_HHMMSS`. Example: `run_20260227_145230` |
 | `scenario_id` | string | Yes | ID of the scenario that was executed |
 | `schema_version` | string | No | Result-file schema version. Always `"2.0"` (the only valid value). Distinct from a scenario's `$schema_version`, which may be `"2.0"` or `"2.1"`. |
-| `status` | string | Yes | Overall result status: `"passed"`, `"failed"`, or `"error"`. `mauto result finalize --status` sets it; when omitted it is derived: `"error"` if any step errored, else `"failed"` if any step or assertion failed, else `"passed"` (skipped steps do not count) |
+| `status` | string | Yes | Overall result status: `"passed"`, `"failed"`, `"error"`, or `"incomplete"`. `mauto result finalize --status` sets it; when omitted it is derived (see [Run status](#run-status)) |
 | `metadata` | object | Yes | Execution context including device, app version, environment, timestamp |
-| `total_assertions` | integer | Yes | Total count of assertions in the execution |
+| `total_assertions` | integer | Yes | Total count of assertions in the execution, including `needs_agent` ones |
 | `passed_assertions` | integer | Yes | Count of assertions that passed |
 | `failed_assertions` | integer | Yes | Count of assertions that failed |
 | `duration_seconds` | number | Yes | Total execution time in seconds (minimum 0) |
@@ -58,7 +59,39 @@ Run Result
 | `steps_executed` | array | Yes | Array of executed steps with outcomes and details |
 | `assertion_results` | array | Yes | Array of assertion verdicts with expected vs. actual values |
 | `observations` | array | Yes | Array of intelligent observations (regression, flakiness, state context) |
+| `executor` | object | No | Who produced the result and from what scenario file (see [executor Object](#executor-object)) |
 | `summary` | string | Yes | Human-readable overall summary of the result |
+
+### Run status
+
+When `mauto result finalize` is run without `--status`, the status is derived from the recorded steps and assertions. The first matching row wins:
+
+| Recorded | Status |
+|----------|--------|
+| A step with status `error` | `error` |
+| A step with status `failed` | `failed` |
+| An assertion with status `failed` | `failed` |
+| An assertion with status `needs_agent`, or a step with `needs_agent: true` | `incomplete` |
+| Anything else, including no steps and no assertions | `passed` |
+
+Skipped steps count for nothing. A run that is already red stays red whatever an agent later decides about its pending assertions. `finalize` exits `6` for `failed` and `error`, and `7` for `incomplete`.
+
+### executor Object
+
+`mauto result finalize` writes `executor` the first time it finalizes a run, and every later finalize keeps it, so an agent completing a run that `mauto run` started never rewrites it as its own. The only change a later finalize makes is to fill in the scenario fields when the first one recorded none.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `kind` | string | Yes | `"runner"` for `mauto run`, `"agent"` for an agent recording through the `mauto result` verbs |
+| `mauto_version` | string | Yes | Version of `mauto` that wrote the result |
+| `engine` | string \| null | No | Device engine resolved for the workspace (`mobilecli` or `legacy`) |
+| `platform` | string \| null | No | Device platform. `null` from `result finalize`, which has no device connected |
+| `device_id` | string \| null | No | Device id. `null` from `result finalize`, for the same reason |
+| `scenario_path` | string \| null | No | The scenario file passed to `--scenario` (or replayed by `mauto run`) |
+| `scenario_sha256` | string \| null | No | Hex SHA-256 of that file's bytes |
+| `mode` | string \| null | No | Workspace mode: `platform-aware` or `platform-agnostic` |
+
+`result finalize --scenario <path>` checks the result against that file before writing anything: the recorded `scenario_id` (when there is one) must match, and every recorded step id (including nested `sub_steps`) and assertion id must exist in the scenario. If the run already recorded a `scenario_sha256`, the file must hash to the same value. Any mismatch fails with `invalid_input` and leaves the result file unchanged.
 
 ### metadata Object
 
@@ -84,6 +117,7 @@ Each step execution object captures what happened during that test step:
 | `error_message` | string \| null | No | Error details if step failed |
 | `retried` | boolean | No | Whether this step was retried due to suspected flakiness (default: false) |
 | `retry_count` | integer | No | Number of retry attempts made for this step (0 = no retries) |
+| `needs_agent` | boolean | No | `true` when the step could not be decided without an agent; the run finalizes `incomplete` unless something failed |
 | `step_duration_ms` | integer | No | Actual time taken to execute this step in milliseconds |
 | `condition_evaluated` | boolean \| null | No | Result of the step's condition evaluation. Null if no condition was set. |
 | `sub_steps_executed` | array | No | Execution results for nested sub-steps if this step had `sub_steps` |
@@ -96,7 +130,11 @@ Each assertion result object captures whether an assertion passed or failed:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `assertion_id` | string | Yes | Assertion identifier. Snake_case string (e.g., "assert_login_success"). |
-| `status` | string | Yes | Assertion status: `"passed"` or `"failed"` |
+| `status` | string | Yes | Assertion status: `"passed"`, `"failed"`, or `"needs_agent"` (recorded with `--pass pending`; no verdict yet) |
+| `type` | string | No | Assertion type, from `--type` |
+| `step_id` | string | No | Step the assertion belongs to, from `--step-id` |
+| `mechanical` | boolean | No | `true` when `mauto` decides the type mechanically, `false` when it needs judgment (see [Assertion Types](assertions.md)) |
+| `judge` | object | No | Who decided the verdict: `{"by": "mauto" \| "agent" \| "none"}`, with optional `name` and `version`. `agent` comes from `--judge agent`, `none` from `--pass pending`, and `mauto` only from `mauto run`. Absent when the recorder did not say |
 | `expected` | string \| null | No | What was expected (e.g., "Login button visible") |
 | `actual` | string \| null | No | What was actually found (e.g., "Button not found after 5 seconds") |
 | `message` | string | Yes | Human-readable result description |
@@ -124,9 +162,11 @@ Intelligent observations detected during execution using observer traits:
 
 - **run_id** — Must match pattern `^run_\d{8}_\d{6}$` (format: run_YYYYMMDD_HHMMSS)
 - **schema_version** — Must be "2.0"
-- **status** (root level) — One of: "passed", "failed", "error"
+- **status** (root level) — One of: "passed", "failed", "error", "incomplete"
 - **status** (steps) — One of: "passed", "failed", "skipped", "error"
-- **status** (assertions) — One of: "passed", "failed"
+- **status** (assertions) — One of: "passed", "failed", "needs_agent"
+- **judge.by** — One of: "mauto", "agent", "none"
+- **executor.kind** — One of: "runner", "agent"; `kind` and `mauto_version` are required inside `executor`
 - **total/passed/failed_assertions** — Non-negative integers
 - **duration_seconds** — Non-negative number (can be 0 for very fast executions)
 - **step_duration_ms** — Non-negative integer (0 is valid for instant operations)
@@ -395,6 +435,24 @@ An execution that encountered an unexpected error:
   "summary": "Test encountered an error during execution. MCP server disconnected during wait_for_results step. Completed 2 of 5 assertions before failure. Execution completed in 8.32 seconds."
 }
 ```
+
+## Completing an incomplete run
+
+A run is `incomplete` when nothing failed but at least one assertion is `needs_agent`. `mauto result finalize` writes it, exits `7`, and its `hint` lists the commands that complete it. For each pending assertion, record the verdict with `--judge agent`; the verdict replaces the pending entry in place:
+
+```bash
+mauto result add-assertion --run-id run_20261111_101500 --step-id open_profile \
+  --assertion-id assert_avatar_looks_right --type visual_state \
+  --pass true --judge agent --message "Avatar renders with the expected border"
+```
+
+Then finalize again against the scenario the run executed:
+
+```bash
+mauto result finalize --run-id run_20261111_101500 --scenario .mobile-automator/scenarios/profile_flow.json
+```
+
+With every pending assertion decided, the status is derived again (`passed`, or `failed` if a verdict was `false`) and the original `executor` is kept. Recording `--pass pending` for an assertion that is already decided fails with `invalid_input`: a decided verdict never goes back to pending.
 
 ## Result File Locations & Naming
 
