@@ -74,8 +74,8 @@ if (typeof catalog.stepFlagsFor !== 'function') {
   die(`${pkgDir} does not export stepFlagsFor from its action catalog; it predates cold-start launch (#255).`);
 }
 const fields = require(path.join(pkgDir, 'src/assertion/fields.js'));
-if (typeof fields.toCliFlags !== 'function' || !fields.EXPECTED_FIELD) {
-  die(`${pkgDir} does not export the assertion field mapping (toCliFlags/EXPECTED_FIELD); it predates mauto run (#278).`);
+if (typeof fields.toCliFlags !== 'function' || typeof fields.expectedOf !== 'function') {
+  die(`${pkgDir} does not export the assertion field mapping (toCliFlags/expectedOf); it predates mauto run (#278).`);
 }
 const { makeRunId } = require(path.join(pkgDir, 'src/run/run-id.js'));
 log(`mauto under test: ${fs.realpathSync(bin)} (package ${pkgDir})`);

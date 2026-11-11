@@ -1,6 +1,6 @@
 'use strict';
 
-const { EXPECTED_FIELD, toEvaluatorInput } = require('../assertion/fields');
+const { expectedOf, toEvaluatorInput } = require('../assertion/fields');
 
 // Decide one scenario assertion against the current screen with the CLI's
 // own evaluator, record the verdict, and push a failure line when it did not
@@ -22,15 +22,13 @@ async function runAssertion(assertion, { bridge, store, evaluator, failures, log
     message = `assertion errored: ${err.message}`;
   }
 
-  const field = EXPECTED_FIELD[assertion.type];
-  const expected = field && assertion[field] !== undefined ? String(assertion[field]) : null;
   store.addAssertion({
     step_id: assertion.after_step,
     assertion_id: assertion.id,
     type: assertion.type,
     pass,
     message,
-    expected,
+    expected: expectedOf(assertion),
   });
   log(`  assertion ${assertion.id} (${assertion.type}): ${pass ? 'PASS' : 'FAIL'} — ${message}`);
   if (!pass) failures.push(`assertion ${assertion.id} (${assertion.type}): ${message}`);

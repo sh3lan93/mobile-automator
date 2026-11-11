@@ -186,8 +186,8 @@ async function runScenario({ scenario, mauto, evaluator, catalog, fields, worksp
       '--pass', String(pass),
       '--message', message,
     ];
-    const field = fields.EXPECTED_FIELD[assertion.type];
-    if (field && assertion[field] !== undefined) args.push('--expected', String(assertion[field]));
+    const expected = fields.expectedOf(assertion);
+    if (expected !== null) args.push('--expected', expected);
     await verb(args);
     log(`  assertion ${assertion.id} (${assertion.type}): ${pass ? 'PASS' : 'FAIL'} — ${message}`);
     if (!pass) failures.push(`assertion ${assertion.id} (${assertion.type}): ${message}`);

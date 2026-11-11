@@ -6,9 +6,10 @@
 // scenario assertion straight to the evaluator. They must build the same
 // evaluator input, or the same scenario would verdict differently by path.
 
-const { EXPECTED_FIELD, toEvaluatorInput, fromCliFlags, toCliFlags } = require('../../../src/assertion/fields');
+const { EXPECTED_FIELD, FIELDS, toEvaluatorInput, fromCliFlags, toCliFlags, expectedOf } = require('../../../src/assertion/fields');
 
 // The flag -> option-key parse commander performs for `mauto assert`.
+// Stated by hand, not derived from FIELDS, so a renamed flag fails here.
 const FLAG_KEY = {
   '--target': 'target',
   '--expected': 'expected',
@@ -17,6 +18,13 @@ const FLAG_KEY = {
   '--pattern': 'pattern',
   '--variable': 'variable',
 };
+
+describe('FIELDS', () => {
+  test('is the one table, in `mauto assert` argv order', () => {
+    expect(FIELDS.map((f) => `--${f.flag}`)).toEqual(Object.keys(FLAG_KEY));
+    expect(FIELDS.map((f) => f.input)).toEqual(['target', 'expected', 'operator', 'count', 'pattern', 'variable_name']);
+  });
+});
 function parsedFlagsOf(argv) {
   const flags = {};
   for (let i = 0; i < argv.length; i += 2) {
@@ -103,6 +111,13 @@ describe.each(CASES)('$a.type ($a.id)', ({ a, argv }) => {
 
   test('scenario -> evaluator equals scenario -> CLI flags -> evaluator', () => {
     expect(toEvaluatorInput(a)).toEqual(fromCliFlags(a.type, parsedFlagsOf(toCliFlags(a))));
+  });
+});
+
+describe('expectedOf', () => {
+  test.each(CASES)('is the --expected value of toCliFlags ($a.id)', ({ a, argv }) => {
+    const i = argv.indexOf('--expected');
+    expect(expectedOf(a)).toBe(i === -1 ? null : argv[i + 1]);
   });
 });
 
