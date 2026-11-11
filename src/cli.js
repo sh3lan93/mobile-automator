@@ -10,10 +10,10 @@ const { ok, fail, render, exitCodeFor } = require('./output/envelope');
 const selectionStore = require('./device/selection');
 const { engineHint } = require('./device/engine-hints');
 const { ScenarioValidator } = require('./scenario/validator');
-const { findReplayWarnings, summarize } = require('./scenario/replayability');
+const { loadScenario } = require('./scenario/load');
 const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
 const { fromCliFlags } = require('./assertion/fields');
-const { ResultStore, readFinalizedResult, InvalidRunIdError, isResultRunId } = require('./result/store');
+const { ResultStore, readFinalizedResult, InvalidRunIdError } = require('./result/store');
 const { OBSERVATION_TYPES, parseObservation, parseCapture, parseBool, parseRunStatus, parseStepStatus } = require('./result/flags');
 const { toJUnit } = require('./result/junit');
 const { atomicWrite } = require('./util/atomic');
@@ -44,9 +44,9 @@ const observeTelemetry = require('./observe/telemetry');
 const observeSpool = require('./observe/spool');
 const observeTransport = require('./observe/transport');
 const { makeFlusher } = require('./observe/flush');
-const { replayEnabled } = require('./run/gate');
-const { makeRunId } = require('./run/run-id');
-const { runScenario } = require('./run/runner');
+const { prepareRun } = require('./run/prepare');
+const { handleRun } = require('./run/handle');
+const { realClock } = require('./run/clock');
 const { makeRunTrace } = require('./run/trace');
 const {
   findWorkspaceRoot,
@@ -229,69 +229,6 @@ async function handleScreenshot({ deviceBridge, cwd = process.cwd() }, destPath)
       exitKind: 'device',
     };
   }
-}
-
-// Read, parse, schema-validate and replay-check a scenario file. Returns
-// `{ scenario, warnings, hint }` (hint null when there are no warnings) or
-// `{ failure: { envelope, exitKind } }`. Shared by `validate` (which wraps it
-// in an envelope) and `mauto run` (which refuses before any device work).
-// `strict` fails on blocking replayability findings instead of warning.
-function loadScenario(validator, file, opts = {}) {
-  let raw;
-  try {
-    raw = fs.readFileSync(file, 'utf8');
-  } catch (err) {
-    return {
-      failure: {
-        envelope: fail(
-          'invalid_input',
-          `cannot read file: ${err.message}`,
-          'Check that the path exists and is readable.'
-        ),
-        exitKind: 'invalid_input',
-      },
-    };
-  }
-
-  let scenario;
-  try {
-    scenario = JSON.parse(raw);
-  } catch (err) {
-    return {
-      failure: {
-        envelope: fail(
-          'invalid_input',
-          `file is not valid JSON: ${err.message}`,
-          'Fix the JSON syntax and try again.'
-        ),
-        exitKind: 'invalid_input',
-      },
-    };
-  }
-
-  const result = validator.validate(scenario);
-  if (!result.valid) {
-    const env = fail(
-      'invalid_input',
-      'scenario failed schema validation',
-      'See data.errors for the specific schema violations.'
-    );
-    env.data = { valid: false, errors: result.errors };
-    return { failure: { envelope: env, exitKind: 'invalid_input' } };
-  }
-
-  // Schema-valid is not the same as replayable: surface findings by default
-  // so existing scenarios keep validating; `--strict` fails only on the
-  // blocking ones. Codes, severity and wording live in the replayability module.
-  const warnings = findReplayWarnings(scenario);
-  if (warnings.length === 0) return { scenario, warnings, hint: null };
-  const { blocking, hint } = summarize(warnings);
-  if (opts.strict && blocking.length > 0) {
-    const env = fail('invalid_input', 'scenario cannot replay unattended; see data.warnings', hint);
-    env.data = { valid: false, errors: [], warnings };
-    return { failure: { envelope: env, exitKind: 'invalid_input' } };
-  }
-  return { scenario, warnings, hint };
 }
 
 function handleValidate({ validator }, file, opts = {}) {
@@ -953,58 +890,6 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
   }
 
   return { envelope: ok(result, hints.length ? hints.join(' ') : null), exitKind: 'ok' };
-}
-
-// `mauto run` (replay PRD #271, slice R1 #278): replay a scenario in-process
-// against the one bridge connectBridge holds open, then finalize through the
-// same finalizeRun `mauto result finalize` uses. No --status: the store
-// derives it from the recorded steps and assertions, and the exit code is
-// keyed on that derived status, as finalize's is. `prepared` is what the
-// action resolved before any device work: the loaded scenario and the run id.
-// `log` defaults to a no-op: stdout is the envelope channel, and no verb
-// writes progress to stderr.
-async function handleRun(
-  { bridge, resultStoreFactory, memoryStoreFactory, projectRoot, trace, clock, log = () => {} },
-  { scenario, runId }
-) {
-  const scenarioId = scenario.scenario_id;
-  const store = resultStoreFactory({ runId, scenarioId, projectRoot });
-  const outcome = await runScenario({
-    scenario,
-    bridge,
-    store,
-    evaluator: require('./assertion/evaluator'),
-    catalog: require('./device/action-catalog'),
-    projectRoot,
-    runId,
-    clock,
-    log,
-    trace,
-  });
-
-  const { result, store: finalized, hints } = finalizeRun(
-    { resultStoreFactory, memoryStoreFactory, projectRoot },
-    { runId, scenarioId }
-  );
-  const resultPath = path.relative(projectRoot, finalized.file);
-  const data = {
-    run_id: runId,
-    scenario_id: scenarioId,
-    status: result.status,
-    result_path: resultPath,
-    failed_step: outcome.failedStep,
-    failures: outcome.failures,
-    measurements: result.measurements,
-  };
-
-  if (result.status === 'passed') {
-    return { envelope: ok(data, hints.length ? hints.join(' ') : null), exitKind: 'ok' };
-  }
-  const hint = [...hints, `See data.failures; the result is saved to ${resultPath}.`].join(' ');
-  return {
-    envelope: fail('test_failed', `run ${runId} ${result.status}`, hint, data),
-    exitKind: 'test_failed',
-  };
 }
 
 // Formats `mauto result export --format` accepts. The only one, junit, is
@@ -1917,11 +1802,6 @@ function realDeviceBridge(args) {
   return require('./device/connection').acquireConnection(args);
 }
 
-const REAL_CLOCK = Object.freeze({
-  now: () => Date.now(),
-  sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
-});
-
 function buildProgram(deps = {}) {
   const {
     // Factory returning { bridge, close }. Overridable in tests.
@@ -1960,7 +1840,7 @@ function buildProgram(deps = {}) {
     platform = process.platform,
     // `{ now, sleep }` for `mauto run`'s polls and retry backoff. Overridable
     // in tests, which run on a fake clock.
-    clock = REAL_CLOCK,
+    clock = realClock,
   } = deps;
 
   const program = new Command();
@@ -2181,51 +2061,26 @@ function buildProgram(deps = {}) {
 
   // `mauto run <scenario>` (replay R1, #278). Registered unconditionally but
   // hidden, and refused unless MAUTO_REPLAY=1, until the graduation slice.
-  // Every refusal below happens before connectBridge, so none touches a device.
+  // prepareRun (src/run/prepare.js) makes every refusal before connectBridge,
+  // so none touches a device.
   program
     .command('run <scenario>', { hidden: true })
     .description('Replay a scenario unattended and finalize its result (in progress; needs MAUTO_REPLAY=1)')
     .option('--device <id>', 'target device id')
     .option('--run-id <id>', 'run identifier (run_YYYYMMDD_HHMMSS); minted when omitted')
     .action(withEnvelope(requireWorkspace(async (file, opts) => {
-      if (!replayEnabled(process.env)) {
-        emit({
-          envelope: fail(
-            'environment',
-            'mauto run is not enabled yet',
-            'export MAUTO_REPLAY=1 to try the in-progress replay runner'
-          ),
-          exitKind: 'environment',
-        }, humanFlag());
-        return;
-      }
-
-      const loaded = loadScenario(validator, file, { strict: true });
-      if (loaded.failure) {
-        emit(loaded.failure, humanFlag());
-        return;
-      }
-
-      const runId = opts.runId || resolveRunId(process.env) || makeRunId(new Date());
-      if (!isResultRunId(runId)) {
-        emit({
-          envelope: fail(
-            'invalid_input',
-            `invalid run id "${runId}"`,
-            'Pass --run-id run_YYYYMMDD_HHMMSS (or omit it to mint one); a run id names a result file and cannot contain a path separator.'
-          ),
-          exitKind: 'invalid_input',
-        }, humanFlag());
-        return;
-      }
+      const prepared = prepareRun({ validator, file, runId: opts.runId, env: process.env });
+      if (prepared.failure) return emit(prepared.failure, humanFlag());
       // The preAction hook saw only the flag and the environment; this covers
       // a minted id, so verb.end lands in the same trace as the run's stamps.
-      emitters.setRunId(runId);
-
-      await withBridge(opts.device, (bridge) =>
+      emitters.setRunId(prepared.runId);
+      return withBridge(opts.device, (bridge) =>
         handleRun(
-          { bridge, resultStoreFactory, memoryStoreFactory, projectRoot, trace: makeRunTrace({ projectRoot, runId }), clock },
-          { scenario: loaded.scenario, runId }
+          {
+            bridge, resultStoreFactory, memoryStoreFactory, projectRoot, finalizeRun, clock,
+            trace: makeRunTrace({ projectRoot, runId: prepared.runId }),
+          },
+          prepared
         )
       );
     })));
@@ -2923,7 +2778,6 @@ module.exports = {
   handleElements,
   handleScreenshot,
   handleValidate,
-  loadScenario,
   handleTap,
   handleLongPress,
   handleDoubleTap,

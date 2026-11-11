@@ -8,7 +8,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { loadScenario, finalizeRun } = require('../../../src/cli');
+const { finalizeRun } = require('../../../src/cli');
+const { loadScenario } = require('../../../src/scenario/load');
 const { ScenarioValidator } = require('../../../src/scenario/validator');
 const { ResultStore } = require('../../../src/result/store');
 
