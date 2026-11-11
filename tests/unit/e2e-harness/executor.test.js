@@ -6,7 +6,9 @@ const path = require('path');
 
 const evaluator = require('../../../src/assertion/evaluator');
 const catalog = require('../../../src/device/action-catalog');
-const { runScenario, makeRunId } = require('../../../sample-app/scripts/lib/executor');
+const fields = require('../../../src/assertion/fields');
+const executor = require('../../../sample-app/scripts/lib/executor');
+const { runScenario } = executor;
 const { homeElements, el } = require('./fixtures');
 
 const RUN_ID = 'run_20261021_120000';
@@ -65,6 +67,7 @@ function exec(sc, mauto, extra = {}) {
     mauto,
     evaluator,
     catalog,
+    fields,
     workspaceDir,
     runId: RUN_ID,
     sleep: clock.sleep,
@@ -76,9 +79,29 @@ function exec(sc, mauto, extra = {}) {
 
 const argAfter = (args, flag) => args[args.indexOf(flag) + 1];
 
-describe('makeRunId', () => {
-  test('formats run_YYYYMMDD_HHMMSS in UTC', () => {
-    expect(makeRunId(new Date(Date.UTC(2026, 9, 21, 7, 5, 9)))).toBe('run_20261021_070509');
+// The run-id format and the assertion field mapping are the install's
+// (src/run/run-id.js, src/assertion/fields.js), injected by run-e2e.mjs; the
+// harness keeps no private copy of either.
+describe('shared with the install under test', () => {
+  test('exports no private makeRunId, assertFlags or EXPECTED_FIELD', () => {
+    expect(executor.makeRunId).toBeUndefined();
+    expect(executor.assertFlags).toBeUndefined();
+    expect(executor.EXPECTED_FIELD).toBeUndefined();
+  });
+
+  test('builds assert flags from the injected fields module', async () => {
+    const seen = [];
+    const spy = { ...fields, toCliFlags: (a) => { seen.push(a.id); return fields.toCliFlags(a); } };
+    const m = fakeMauto({ elements: [homeElements()], assert: { pass: true, message: 'ok' } });
+    await exec(
+      scenario(
+        [{ id: 'launch', action: 'launch_app', description: 'd' }],
+        [{ id: 'hdr', after_step: 'launch', type: 'element_text', description: 'd', element_description: 'More', expected_value: 'More' }]
+      ),
+      m,
+      { fields: spy }
+    );
+    expect(seen).toEqual(['hdr']);
   });
 });
 

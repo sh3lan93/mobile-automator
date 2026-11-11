@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
 const { createMauto } = require('./lib/mauto.js');
-const { runScenario, makeRunId } = require('./lib/executor.js');
+const { runScenario } = require('./lib/executor.js');
 const { goldenProblems } = require('./lib/golden.js');
 const { classify, isJobFailure, outcomeMessage } = require('./lib/known-failures.js');
 const { e2eEngine, assertSessionEngine } = require('./lib/engine.js');
@@ -73,6 +73,11 @@ const catalog = require(path.join(pkgDir, 'src/device/action-catalog.js'));
 if (typeof catalog.stepFlagsFor !== 'function') {
   die(`${pkgDir} does not export stepFlagsFor from its action catalog; it predates cold-start launch (#255).`);
 }
+const fields = require(path.join(pkgDir, 'src/assertion/fields.js'));
+if (typeof fields.toCliFlags !== 'function' || !fields.EXPECTED_FIELD) {
+  die(`${pkgDir} does not export the assertion field mapping (toCliFlags/EXPECTED_FIELD); it predates mauto run (#278).`);
+}
+const { makeRunId } = require(path.join(pkgDir, 'src/run/run-id.js'));
 log(`mauto under test: ${fs.realpathSync(bin)} (package ${pkgDir})`);
 
 // --- The engine, validated against the install under test's config schema ---
@@ -188,6 +193,7 @@ async function main() {
         mauto,
         evaluator,
         catalog,
+        fields,
         workspaceDir: projectDir,
         runId,
         sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
