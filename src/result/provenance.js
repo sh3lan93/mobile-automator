@@ -6,6 +6,8 @@
 // workspace config (for `engine` and `mode`) and package.json; shared by
 // `result finalize` and `mauto run`.
 
+const path = require('path');
+
 const { version: MAUTO_VERSION } = require('../../package.json');
 const manager = require('../config/manager');
 const { readEngine } = require('../device/engine');
@@ -62,23 +64,42 @@ function scenarioMismatch(recorded, { scenario, sha256 }) {
   };
 }
 
+// What executor.scenario_path means, the one place it is decided: relative
+// to the project root when the file is inside it (so the result stays
+// meaningful on another checkout), else absolute. `absolute` must already be
+// resolved — against the caller's cwd — since a relative path here could mean
+// either directory.
+function recordedScenarioPath(projectRoot, absolute) {
+  if (!path.isAbsolute(absolute)) {
+    throw new Error(`scenario path must be absolute, got "${absolute}" (resolve it against the cwd first)`);
+  }
+  const relative = path.relative(projectRoot, absolute);
+  return relative && !relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative)
+    ? relative
+    : absolute;
+}
+
 // The `executor` block a finalize records. `engine` resolves as the device
 // layer resolves it (an exported MOBILEMCP_LEGACY_ROBOT wins over config), and
 // `mode` as the guides resolve it (unset is platform-aware). The device fields
 // are whatever the caller connected to — null when it connected to none.
+// `scenarioPath` is absolute (or null); it is recorded per
+// recordedScenarioPath, so `mauto run` and `result finalize --scenario` record
+// the same value for the same file.
 function buildExecutor({
   kind, projectRoot, platform = null, deviceId = null, scenarioPath = null, scenarioSha256 = null, env = process.env,
 }) {
   if (!EXECUTOR_KINDS.includes(kind)) {
     throw new Error(`unknown executor kind "${kind}" (expected ${EXECUTOR_KINDS.join(' | ')})`);
   }
+  const recordedPath = scenarioPath == null ? null : recordedScenarioPath(projectRoot, scenarioPath);
   return {
     kind,
     mauto_version: MAUTO_VERSION,
     engine: readEngine(projectRoot, { env }).engine,
     platform,
     device_id: deviceId,
-    scenario_path: scenarioPath,
+    scenario_path: recordedPath,
     scenario_sha256: scenarioSha256,
     mode: manager.resolveMode(manager.load(projectRoot)),
   };
@@ -107,11 +128,15 @@ const arg = (value) => (/^[\w./@:+-]+$/.test(String(value)) ? String(value) : JS
 // The hint for an `incomplete` run: the pending ids, the exact
 // `result add-assertion` line per pending assertion (only the verdict and the
 // reason left to fill), then the re-finalize. The scenario path is the one
-// the executor recorded, so the re-finalize is checked against the same file.
-function pendingHint(result) {
+// the executor recorded, so the re-finalize is checked against the same file,
+// printed absolute (resolved against `projectRoot`): --scenario resolves
+// against the cwd while the workspace is discovered by walking up from it, so
+// a project-relative path would be wrong from any subdirectory.
+function pendingHint(result, { projectRoot }) {
   const pending = pendingAssertions(result);
   const runId = arg(result.run_id);
-  const scenarioPath = result.executor && result.executor.scenario_path;
+  const recorded = result.executor && result.executor.scenario_path;
+  const scenarioPath = recorded ? path.resolve(projectRoot, recorded) : null;
   return [
     pending.length
       ? `Pending agent judgment: ${pending.map((p) => p.assertion_id).join(', ')}. Decide each, then re-finalize:`

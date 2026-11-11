@@ -127,6 +127,14 @@ describe('provenance and the incomplete run (#275)', () => {
     }
   });
 
+  test('a relative scenario file resolves against the cwd dep, recorded relative to the root', async () => {
+    const sub = path.join(root, 'sub');
+    fs.mkdirSync(sub);
+    const p = prepared(scenario);
+    const r = await handleRun({ ...deps((args) => new ResultStore(args)), cwd: sub }, { ...p, file: path.join('..', 'demo.json') });
+    expect(r.envelope.data.executor.scenario_path).toBe('demo.json');
+  });
+
   test('a platform the bridge cannot report is recorded null, and the run goes on', async () => {
     const d = deps((args) => new ResultStore(args));
     d.bridge = makeFakeBridge({ elements: [[el('More')]], methods: { getPlatform: () => { throw new Error('no device'); } } });
@@ -147,7 +155,7 @@ describe('provenance and the incomplete run (#275)', () => {
       pending: [{ assertion_id: 'looks', step_id: 'tap_more', type: 'visual_state' }],
     });
     expect(r.envelope.hint).toContain(`--assertion-id looks --type visual_state --pass <true|false> --judge agent`);
-    expect(r.envelope.hint).toContain(`mauto result finalize --run-id ${RUN_ID} --scenario demo.json`);
+    expect(r.envelope.hint).toContain(`mauto result finalize --run-id ${RUN_ID} --scenario ${path.join(root, 'demo.json')}`);
     expect(resultFile().status).toBe('incomplete');
   });
 

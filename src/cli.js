@@ -843,7 +843,7 @@ function finalizeRun(
   return { result, store, hints };
 }
 
-function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectRoot, validator }, opts) {
+function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectRoot, validator, cwd = process.cwd() }, opts) {
   const { runId, scenarioId, status, duration } = opts;
   if (!runId) {
     return {
@@ -874,16 +874,19 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
 
   // --scenario (#275): the result is checked against the file it claims and
   // the file is hashed into `executor`. Refused before anything is written.
+  // Resolved against the caller's cwd, as handleScreenshot resolves its path;
+  // buildExecutor decides how it is recorded.
   let scenarioPath = null;
   let scenarioSha256 = null;
   if (opts.scenario !== undefined) {
-    const loaded = loadScenario(validator, opts.scenario, { strict: false });
+    const scenarioFile = path.resolve(cwd, opts.scenario);
+    const loaded = loadScenario(validator, scenarioFile, { strict: false });
     if (loaded.failure) return loaded.failure;
     const mismatch = scenarioMismatch(resultStoreFactory({ runId, scenarioId, projectRoot }).recorded(), loaded);
     if (mismatch) {
       return { envelope: fail('invalid_input', mismatch.message, mismatch.hint, mismatch.data), exitKind: 'invalid_input' };
     }
-    scenarioPath = opts.scenario;
+    scenarioPath = scenarioFile;
     scenarioSha256 = loaded.sha256;
   }
 
@@ -909,7 +912,7 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
   // file is written; the hint is the exact commands that complete it.
   if (result.status === 'incomplete') {
     return {
-      envelope: fail('incomplete', incompleteMessage(result), [...hints, pendingHint(result)].join('\n'), result),
+      envelope: fail('incomplete', incompleteMessage(result), [...hints, pendingHint(result, { projectRoot })].join('\n'), result),
       exitKind: 'incomplete',
     };
   }
@@ -2113,7 +2116,7 @@ function buildProgram(deps = {}) {
     .option('--device <id>', 'target device id')
     .option('--run-id <id>', 'run identifier (run_YYYYMMDD_HHMMSS); minted when omitted')
     .action(withEnvelope(requireWorkspace(async (file, opts) => {
-      const prepared = prepareRun({ validator, file, runId: opts.runId, env: process.env });
+      const prepared = prepareRun({ validator, file: path.resolve(cwd, file), runId: opts.runId, env: process.env });
       if (prepared.failure) return emit(prepared.failure, humanFlag());
       // The preAction hook saw only the flag and the environment; this covers
       // a minted id, so verb.end lands in the same trace as the run's stamps.
@@ -2124,7 +2127,7 @@ function buildProgram(deps = {}) {
       return connectBridge(deviceId, (bridge) =>
         handleRun(
           {
-            bridge, resultStoreFactory, memoryStoreFactory, projectRoot, finalizeRun, clock,
+            bridge, resultStoreFactory, memoryStoreFactory, projectRoot, finalizeRun, clock, cwd,
             trace: makeRunTrace({ projectRoot, runId: prepared.runId }),
           },
           { ...prepared, deviceId }
@@ -2347,7 +2350,7 @@ function buildProgram(deps = {}) {
     .option('--summary <text>', 'override the generated one-line result summary')
     .action(withEnvelope(requireWorkspace((opts) => {
       const r = handleResultFinalize(
-        { resultStoreFactory, memoryStoreFactory, projectRoot, validator },
+        { resultStoreFactory, memoryStoreFactory, projectRoot, validator, cwd },
         {
           runId: opts.runId,
           scenarioId: opts.scenarioId,

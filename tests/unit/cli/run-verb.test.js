@@ -62,6 +62,7 @@ function scenario({ steps, assertions = [] } = {}) {
 
 function writeScenario(sc, name = 'demo.json') {
   const file = path.join(root, name);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, typeof sc === 'string' ? sc : JSON.stringify(sc));
   return file;
 }
@@ -305,7 +306,12 @@ describe('an incomplete run can be completed with one-shot verbs and re-finalize
       expect(added.exitKind).toBe('ok');
     }
 
-    const finalized = await mauto(['result', 'finalize', '--run-id', RUN_ID, '--scenario', file]);
+    // Re-finalize with exactly the --scenario the hint printed: absolute, so
+    // it works from any directory, and it names the file the run executed.
+    const hinted = ran.envelope.hint.split('\n').at(-1).match(/^mauto result finalize --run-id \S+ --scenario (\S+)$/)[1];
+    expect(path.isAbsolute(hinted)).toBe(true);
+    expect(hinted).toBe(file);
+    const finalized = await mauto(['result', 'finalize', '--run-id', RUN_ID, '--scenario', hinted]);
     const onDisk = JSON.parse(fs.readFileSync(path.join(root, '.mobile-automator', 'results', `${RUN_ID}.json`), 'utf8'));
     return { ran, finalized, onDisk };
   }
@@ -323,6 +329,21 @@ describe('an incomplete run can be completed with one-shot verbs and re-finalize
     expect(onDisk.assertion_results.map((a) => a.assertion_id)).toEqual(['more_there', 'looks']);
     expect(onDisk.assertion_results[0]).toMatchObject({ status: 'passed', mechanical: true, judge: { by: 'mauto' } });
     expect(onDisk.assertion_results[1]).toMatchObject({ status: 'passed', message: 'ok', judge: { by: 'agent' } });
+  });
+
+  test('run and finalize --scenario record the same scenario_path for the same file', async () => {
+    const file = writeScenario(sc(), path.join('scenarios', 'demo.json'));
+    const ran = await mauto(['run', file, '--run-id', RUN_ID]);
+    const agentRun = 'run_20261111_093001';
+    const added = await mauto([
+      'result', 'add-assertion', '--run-id', agentRun, '--scenario-id', 'demo', '--step-id', 'tap_more',
+      '--assertion-id', 'more_there', '--type', 'element_exists', '--pass', 'true',
+    ]);
+    expect(added.exitKind).toBe('ok');
+    const finalized = await mauto(['result', 'finalize', '--run-id', agentRun, '--scenario', file]);
+    expect(finalized.exitKind).toBe('ok');
+    expect(ran.envelope.data.executor.scenario_path).toBe(path.join('scenarios', 'demo.json'));
+    expect(finalized.envelope.data.executor.scenario_path).toBe(ran.envelope.data.executor.scenario_path);
   });
 
   test('--pass false: finalize is test_failed (exit 6), failed', async () => {

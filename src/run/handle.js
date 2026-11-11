@@ -8,15 +8,6 @@ const { realClock } = require('./clock');
 const { runScenario } = require('./runner');
 const { NO_TRACE } = require('./trace');
 
-// The scenario path an executor records: relative to the project root when
-// the file is inside it (so the result stays meaningful on another checkout),
-// else absolute.
-function scenarioPathFor(projectRoot, file) {
-  const absolute = path.resolve(file);
-  const relative = path.relative(projectRoot, absolute);
-  return relative && !relative.startsWith('..') && !path.isAbsolute(relative) ? relative : absolute;
-}
-
 // The device's platform for the executor. Best-effort by design (the one
 // fallback here): a bridge that cannot say must not stop the run — the steps
 // will fail on their own if the device is truly gone — so it is recorded null.
@@ -37,10 +28,11 @@ async function platformOf(bridge) {
 // prepareRun resolved before any device work — the loaded scenario, its file
 // and sha256, and the run id — plus the device id the CLI resolved (null when
 // mobile-mcp auto-selects). The result records them as its executor (#275).
+// `cwd` is the directory a relative scenario path is resolved against.
 async function handleRun(
   {
     bridge, resultStoreFactory, memoryStoreFactory, projectRoot, finalizeRun,
-    trace = NO_TRACE, clock = realClock,
+    cwd = process.cwd(), trace = NO_TRACE, clock = realClock,
     evaluator = require('../assertion/evaluator'),
     catalog = require('../device/action-catalog'),
   },
@@ -53,7 +45,9 @@ async function handleRun(
     projectRoot,
     platform: await platformOf(bridge),
     deviceId,
-    scenarioPath: scenarioPathFor(projectRoot, file),
+    // Resolved against the cwd the verb ran in, as the file was read;
+    // buildExecutor decides how it is recorded.
+    scenarioPath: path.resolve(cwd, file),
     scenarioSha256: sha256,
   });
   const finalize = () => finalizeRun(
@@ -109,7 +103,7 @@ async function handleRun(
   // hint is the exact commands that complete the run, as finalize's is.
   if (result.status === 'incomplete') {
     return {
-      envelope: fail('incomplete', incompleteMessage(result), [...hints, pendingHint(result)].join('\n'), data),
+      envelope: fail('incomplete', incompleteMessage(result), [...hints, pendingHint(result, { projectRoot })].join('\n'), data),
       exitKind: 'incomplete',
     };
   }

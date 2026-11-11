@@ -87,7 +87,7 @@ Skipped steps count for nothing. A run that is already red stays red whatever an
 | `engine` | string \| null | No | Device engine resolved for the workspace (`mobilecli` or `legacy`) |
 | `platform` | string \| null | No | Device platform. `null` from `result finalize`, which has no device connected |
 | `device_id` | string \| null | No | Device id. `null` from `result finalize`, for the same reason |
-| `scenario_path` | string \| null | No | The scenario file passed to `--scenario` (or replayed by `mauto run`) |
+| `scenario_path` | string \| null | No | The scenario file passed to `--scenario` (or replayed by `mauto run`): relative to the project root when the file is inside it, else absolute. `mauto run` and `result finalize` record the same value for the same file |
 | `scenario_sha256` | string \| null | No | Hex SHA-256 of that file's bytes |
 | `mode` | string \| null | No | Workspace mode: `platform-aware` or `platform-agnostic` |
 
@@ -446,10 +446,10 @@ mauto result add-assertion --run-id run_20261111_101500 --step-id open_profile \
   --pass true --judge agent --message "Avatar renders with the expected border"
 ```
 
-Then finalize again against the scenario the run executed:
+Then finalize again against the scenario the run executed. The hint names it by its absolute path, so the command works from any directory inside the project:
 
 ```bash
-mauto result finalize --run-id run_20261111_101500 --scenario .mobile-automator/scenarios/profile_flow.json
+mauto result finalize --run-id run_20261111_101500 --scenario /home/me/app/.mobile-automator/scenarios/profile_flow.json
 ```
 
 With every pending assertion decided, the status is derived again (`passed`, or `failed` if a verdict was `false`) and the original `executor` is kept. Recording `--pass pending` for an assertion that is already decided fails with `invalid_input`: a decided verdict never goes back to pending.

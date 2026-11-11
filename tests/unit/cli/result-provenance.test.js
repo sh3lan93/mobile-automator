@@ -144,7 +144,46 @@ describe('result finalize --scenario and incomplete (#275)', () => {
     const f = invoke(() => handleResultFinalize(deps, { runId, scenario: scenarioPath }));
     expect(f.exitKind).toBe('ok');
     const sha = require('crypto').createHash('sha256').update(fs.readFileSync(scenarioPath)).digest('hex');
-    expect(f.envelope.data.executor).toMatchObject({ kind: 'agent', scenario_path: scenarioPath, scenario_sha256: sha });
+    expect(f.envelope.data.executor).toMatchObject({ kind: 'agent', scenario_path: 'login.json', scenario_sha256: sha });
+  });
+
+  // --scenario resolves against the cwd the verb ran in, which is not the
+  // project root when the user stands in a subdirectory (the workspace is
+  // discovered by walking up). Recorded relative to the root regardless.
+  test('a relative --scenario from a subdirectory resolves against the cwd, recorded relative to the root', () => {
+    const { deps, runId, projectRoot } = setup();
+    const scenarioPath = writeScenario(projectRoot);
+    const cwd = path.join(projectRoot, 'sub');
+    fs.mkdirSync(cwd);
+    add(deps, runId, { type: 'element_exists', assertionId: 'login_visible', pass: 'true' });
+    const f = invoke(() => handleResultFinalize({ ...deps, cwd }, { runId, scenario: path.join('..', 'sub', '..', 'login.json') }));
+    expect(f.exitKind).toBe('ok');
+    const sha = require('crypto').createHash('sha256').update(fs.readFileSync(scenarioPath)).digest('hex');
+    expect(f.envelope.data.executor).toMatchObject({ scenario_path: 'login.json', scenario_sha256: sha });
+  });
+
+  test('the incomplete hint names the scenario absolutely; re-finalizing with it from a subdirectory passes', () => {
+    const { deps, runId, projectRoot } = setup();
+    const scenarioPath = writeScenario(projectRoot);
+    const cwd = path.join(projectRoot, 'sub');
+    fs.mkdirSync(cwd);
+    const inSub = { ...deps, cwd };
+    handleResultAddStep(deps, { runId, scenarioId: 'login_smoke', stepId: 'launch', status: 'pass' });
+    add(deps, runId, { type: 'element_exists', assertionId: 'login_visible', pass: 'true' });
+    add(deps, runId, { type: 'visual_state', assertionId: 'looks_right', pass: 'pending' });
+    const first = invoke(() => handleResultFinalize(inSub, { runId, scenario: path.join('..', 'login.json') }));
+    expect(first.exitKind).toBe('incomplete');
+    const hinted = first.envelope.hint.split('\n').at(-1).match(/--scenario (\S+)$/)[1];
+    expect(path.isAbsolute(hinted)).toBe(true);
+    expect(hinted).toBe(scenarioPath);
+    expect(fs.existsSync(hinted)).toBe(true);
+
+    add(deps, runId, { type: 'visual_state', assertionId: 'looks_right', pass: 'true', judge: 'agent', message: 'ok' });
+    // The sha check passes: the relative path from the subdirectory loads the
+    // same file the first finalize hashed.
+    const again = invoke(() => handleResultFinalize(inSub, { runId, scenario: path.join('..', 'login.json') }));
+    expect(again.exitKind).toBe('ok');
+    expect(again.envelope.data).toMatchObject({ status: 'passed', executor: { scenario_path: 'login.json' } });
   });
 
   test('the full loop: pending -> 7 -> decide with --judge agent -> finalize --scenario -> passed', () => {

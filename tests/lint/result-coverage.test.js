@@ -301,7 +301,7 @@ describe('result coverage — schema ↔ store ↔ verbs', () => {
       );
       expect(r.exitKind).toBe('ok');
       const saved = JSON.parse(fs.readFileSync(path.join(workspaceDir(root), 'results', `${runId}.json`), 'utf8'));
-      expect(saved.executor).toMatchObject({ kind: 'agent', scenario_path: scenarioPath });
+      expect(saved.executor).toMatchObject({ kind: 'agent', scenario_path: path.relative(root, scenarioPath) });
       expect(saved.executor.scenario_sha256).toMatch(/^[0-9a-f]{64}$/);
     });
 
