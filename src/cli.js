@@ -12,6 +12,7 @@ const { engineHint } = require('./device/engine-hints');
 const { ScenarioValidator } = require('./scenario/validator');
 const { findReplayWarnings, summarize } = require('./scenario/replayability');
 const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
+const { fromCliFlags } = require('./assertion/fields');
 const { ResultStore, readFinalizedResult, InvalidRunIdError } = require('./result/store');
 const { OBSERVATION_TYPES, parseObservation, parseCapture, parseBool, parseRunStatus, parseStepStatus } = require('./result/flags');
 const { toJUnit } = require('./result/junit');
@@ -594,13 +595,7 @@ async function handleAssert({ deviceBridge }, type, flags = {}) {
     return deviceFail(err);
   }
 
-  const assertion = { type };
-  if (flags.target !== undefined) assertion.target = flags.target;
-  if (flags.expected !== undefined) assertion.expected = flags.expected;
-  if (flags.operator !== undefined) assertion.operator = flags.operator;
-  if (flags.count !== undefined) assertion.count = Number(flags.count);
-  if (flags.pattern !== undefined) assertion.pattern = flags.pattern;
-  if (flags.variable !== undefined) assertion.variable_name = flags.variable;
+  const assertion = fromCliFlags(type, flags);
 
   const r = evaluate(assertion, { elements });
   // The verdict has to be transcribed into `result add-assertion` by the agent
