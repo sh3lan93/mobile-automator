@@ -52,8 +52,12 @@ async function exec(sc, bridge, extra = {}) {
     trace: (event, fields) => traced.push({ event, fields }),
     ...extra,
   });
+  // What the runner recorded, before anything finalizes it.
   const file = JSON.parse(fs.readFileSync(store.file, 'utf8'));
-  return { ...r, file, traced, store };
+  // The run status is not the runner's to decide: finalize derives it from
+  // the records (deriveRunStatus), exactly as finalizeRun does for `mauto run`.
+  const finalized = store.finalize();
+  return { outcome: r, ...r, file, finalized, traced, store };
 }
 
 describe('runScenario', () => {
@@ -61,7 +65,7 @@ describe('runScenario', () => {
   test('launch_app cold-starts the app package, then gates on a non-empty element list', async () => {
     const b = makeFakeBridge({ elements: [[], [], homeElements()] });
     const r = await exec(scenario([{ id: 'launch', action: 'launch_app', description: 'd' }]), b);
-    expect(r.status).toBe('passed');
+    expect(r.finalized.status).toBe('passed');
     expect(b.calls[0]).toEqual({ method: 'restartApp', args: ['com.example.app'] });
     expect(b.of('listElements')).toHaveLength(3);
   });
@@ -74,7 +78,7 @@ describe('runScenario', () => {
   ])('launch_app with cold %s resumes only when cold === false', async (_label, extra, method) => {
     const b = makeFakeBridge({ elements: [homeElements()] });
     const r = await exec(scenario([{ id: 'launch', action: 'launch_app', description: 'd', ...extra }]), b);
-    expect(r.status).toBe('passed');
+    expect(r.finalized.status).toBe('passed');
     expect(b.calls[0]).toEqual({ method, args: ['com.example.app'] });
     expect(b.methods()).not.toContain(method === 'launchApp' ? 'restartApp' : 'launchApp');
   });
@@ -83,7 +87,7 @@ describe('runScenario', () => {
   test('drift gate: zero elements after a successful launch fails with the drift message, never "not found"', async () => {
     const b = makeFakeBridge({ elements: [[]] });
     const r = await exec(scenario([{ id: 'launch', action: 'launch_app', description: 'd' }]), b);
-    expect(r.status).toBe('failed');
+    expect(r.finalized.status).toBe('failed');
     expect(r.failures.join('\n')).toContain('engine returned zero elements after a successful launch of com.example.app');
     expect(r.failures.join('\n')).not.toMatch(/not found/i);
     expect(r.file.steps_executed).toHaveLength(1);
@@ -108,7 +112,7 @@ describe('runScenario', () => {
     const more = elements.find((e) => evaluator.matches(e, 'More'));
     const b = makeFakeBridge({ elements: [elements] });
     const r = await exec(scenario([{ id: 'tap_more', action: 'tap', description: 'd', target: 'More' }]), b);
-    expect(r.status).toBe('passed');
+    expect(r.finalized.status).toBe('passed');
     expect(b.of('tap')).toEqual([{ method: 'tap', args: [{ x: more.center[0], y: more.center[1] }] }]);
   });
 
@@ -116,7 +120,7 @@ describe('runScenario', () => {
   test('tap on a missing target fails the step and lists what was on screen', async () => {
     const b = makeFakeBridge({ elements: [[el('Sample Shop')]] });
     const r = await exec(scenario([{ id: 'tap_x', action: 'tap', description: 'd', target: 'Checkout' }]), b);
-    expect(r.status).toBe('failed');
+    expect(r.finalized.status).toBe('failed');
     expect(r.failures.join('\n')).toContain('Sample Shop');
     expect(b.methods()).not.toContain('tap');
   });
@@ -128,7 +132,7 @@ describe('runScenario', () => {
       scenario([{ id: 'wait_home', action: 'wait_for_element', description: 'd', target: 'Sample Shop', wait_config: { type: 'element_visible', timeout_ms: 30000 } }]),
       b
     );
-    expect(r.status).toBe('passed');
+    expect(r.finalized.status).toBe('passed');
     expect(b.of('listElements')).toHaveLength(3);
   });
 
@@ -139,7 +143,7 @@ describe('runScenario', () => {
       scenario([{ id: 'wait_home', action: 'wait_for_element', description: 'd', target: 'Sample Shop', wait_config: { type: 'element_visible', timeout_ms: 3000 } }]),
       b
     );
-    expect(r.status).toBe('failed');
+    expect(r.finalized.status).toBe('failed');
     expect(r.failures.join('\n')).toMatch(/timed out after 3000ms: no element matches target "Sample Shop"/);
     // 3000ms at a 1500ms poll: t=0, 1500, 3000.
     expect(b.of('listElements')).toHaveLength(3);
@@ -156,7 +160,7 @@ describe('runScenario', () => {
       ]),
       b
     );
-    expect(r.status).toBe('passed');
+    expect(r.finalized.status).toBe('passed');
     const input = b.calls.filter((c) => c.method !== 'getPlatform');
     expect(input).toEqual([
       { method: 'type', args: ['zzzz'] },
@@ -172,7 +176,7 @@ describe('runScenario', () => {
       scenario([{ id: 'swipe_up', action: 'swipe', description: 'd', value: 'up', on_failure: 'retry', retry_policy: { max_attempts: 3 } }]),
       b
     );
-    expect(r.status).toBe('failed');
+    expect(r.finalized.status).toBe('failed');
     expect(r.failures.join('\n')).toContain('action "swipe" is not supported by mauto run yet');
     expect(r.file.steps_executed[0].retry_count).toBe(0);
     // Nothing reached the device except the failure evidence.
@@ -196,7 +200,7 @@ describe('runScenario', () => {
       b,
       { clock }
     );
-    expect(r.status).toBe('passed');
+    expect(r.finalized.status).toBe('passed');
     expect(r.file.steps_executed[0]).toMatchObject({ status: 'passed', retried: true, retry_count: 2 });
     // Two backoffs of 500ms between three attempts.
     expect(clock.now()).toBe(1000);
@@ -215,7 +219,7 @@ describe('runScenario', () => {
       ]),
       b
     );
-    expect(r.status).toBe('failed');
+    expect(r.finalized.status).toBe('failed');
     expect(r.failedStep).toBe('tap_home');
     expect(r.failures.join('\n')).toContain('tap broke');
     expect(b.methods()).not.toContain('type');
@@ -247,7 +251,7 @@ describe('runScenario', () => {
     const r = await exec(scenario([{ id: 'tap_home', action: 'tap', description: 'd', target: 'Home', checkpoint: true }]), b, {
       log: (l) => lines.push(l),
     });
-    expect(r.status).toBe('passed');
+    expect(r.finalized.status).toBe('passed');
     expect(r.file.steps_executed[0].screenshot).toBeNull();
     expect(lines.join('\n')).toContain('no disk');
   });
@@ -265,7 +269,7 @@ describe('runScenario', () => {
       ),
       b
     );
-    expect(r.status).toBe('passed');
+    expect(r.finalized.status).toBe('passed');
     expect(r.file.assertion_results).toEqual([
       expect.objectContaining({ assertion_id: 'more_header', status: 'passed', expected: 'More', message: "Element 'More' text equals 'More'." }),
       expect.objectContaining({ assertion_id: 'no_results', status: 'passed', expected: 'No products match' }),
@@ -287,7 +291,7 @@ describe('runScenario', () => {
       ),
       b
     );
-    expect(r.status).toBe('failed');
+    expect(r.finalized.status).toBe('failed');
     // Failed on an assertion, not a step.
     expect(r.failedStep).toBeNull();
     expect(b.methods()).toContain('pressButton');
@@ -305,7 +309,7 @@ describe('runScenario', () => {
       ),
       b
     );
-    expect(r.status).toBe('failed');
+    expect(r.finalized.status).toBe('failed');
     expect(r.file.assertion_results[0].status).toBe('failed');
     expect(r.file.assertion_results[0].message).toMatch(/^needs agent judgment; mauto run decides only mechanical assertions/);
   });
@@ -353,7 +357,7 @@ describe('runScenario', () => {
       ),
       b
     );
-    expect(r.status).toBe('failed');
+    expect(r.finalized.status).toBe('failed');
     expect(r.file.assertion_results[0]).toMatchObject({ status: 'failed', message: "Element 'More' text is 'X', expected 'More'." });
   });
 
@@ -368,7 +372,7 @@ describe('runScenario', () => {
       b,
       { evaluator: broken }
     );
-    expect(r.status).toBe('failed');
+    expect(r.finalized.status).toBe('failed');
     expect(r.file.assertion_results[0]).toMatchObject({ status: 'failed', message: 'assertion errored: boom' });
   });
 
@@ -377,7 +381,8 @@ describe('runScenario', () => {
     const r = await exec(scenario([{ id: 'hide', action: 'dismiss_keyboard', description: 'd' }]), makeFakeBridge());
     expect(r.store.file).toBe(path.join(workspaceDir(projectRoot), 'results', `${RUN_ID}.json`));
     expect(r.file.run_id).toBe(RUN_ID);
-    expect(r).toMatchObject({ status: 'passed', failures: [], failedStep: null });
+    expect(r.outcome).toEqual({ failures: [], failedStep: null });
+    expect(r.finalized.status).toBe('passed');
   });
 });
 

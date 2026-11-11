@@ -3,8 +3,9 @@
 // The in-process scenario runner behind `mauto run`: an in-process port of
 // the real-device harness executor (sample-app/scripts/lib/executor.js). It
 // drives one held-open DeviceBridge and records through one ResultStore. It
-// never spawns a process, never emits an envelope and never finalizes: the
-// CLI's finalizeRun does that, shared with `mauto result finalize`.
+// never spawns a process, never emits an envelope and never finalizes or
+// decides the run's status: the CLI's finalizeRun does that, shared with
+// `mauto result finalize`.
 //
 // Everything with a side effect is injected (bridge, store, clock, log,
 // trace), which is what lets tests/unit/run drive it on a fake bridge and a
@@ -39,8 +40,10 @@ async function runScenario({
     }
   }
 
-  const status = failedStep || failures.length > 0 ? 'failed' : 'passed';
-  return { status, failures, failedStep };
+  // No status: what a run's records add up to is defined once, by
+  // deriveRunStatus (src/result/outcome.js), applied when finalizeRun
+  // finalizes the store.
+  return { failures, failedStep };
 }
 
 module.exports = { runScenario };
