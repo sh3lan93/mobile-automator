@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### ✨ Added
+
+- **A hidden `mauto run <scenario>` replays a scenario unattended, behind
+  `MAUTO_REPLAY=1`** (replay PRD #271, slice R1). Without the variable set to
+  exactly `1` it refuses with `environment` (exit 5) before touching a device,
+  and it is absent from `--help` until replay graduates. With it, the scenario
+  is loaded strictly (`invalid_input`, exit 3, on a read, schema or blocking
+  replayability failure, or a `--run-id` that cannot name a result file), then
+  replayed in-process on one held-open device connection: `launch_app` (cold
+  start, or `cold: false` to resume, with the zero-elements drift gate),
+  `tap`, `type`, the four semantic presses and `wait_for_element`, each under
+  its `retry_policy`, stopping at the first failed step and capturing
+  `step_<id>_failure.png`. Mechanical assertions are evaluated after their
+  step. Every step and verdict goes through the same result store as the
+  `mauto result` verbs, and the run is finalized through the same path as
+  `mauto result finalize`, with the status derived and the duration measured
+  from the run's trace. The envelope carries `run_id`, `scenario_id`,
+  `status`, `result_path`, `failed_step`, `failures` and `measurements`; a
+  failed run is `test_failed` (exit 6). The run id comes from `--run-id`,
+  then `MAUTO_RUN_ID`, else a minted `run_YYYYMMDD_HHMMSS`. Assertions that
+  need agent judgment (Tier 2) are recorded as **failed** in this slice; R2
+  changes them to `needs_agent`. Other actions fail the step loudly. The
+  real-device E2E harness now shares the assertion field mapping and the
+  run-id format with the install under test.
+  Refs #278
+
+---
+
 ## [0.39.0]
 
 ### ⚠️ Breaking

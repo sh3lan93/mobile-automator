@@ -406,4 +406,46 @@ describe('cli smoke (integration)', () => {
       expect(env.hint).toMatch(/junit/);
     });
   });
+
+  // `mauto run` (replay R1, #278): hidden and gated. Neither refusal needs a
+  // device: both happen before anything connects.
+  describe('run (gated)', () => {
+    const envWith = (extra) => {
+      const env = { ...process.env, ...extra };
+      if (extra.MAUTO_REPLAY === undefined) delete env.MAUTO_REPLAY;
+      return env;
+    };
+
+    test('refuses with environment (exit 5) in a workspace when MAUTO_REPLAY is unset', () => {
+      const configDir = path.join(workspace, '.mobile-automator');
+      fs.mkdirSync(configDir, { recursive: true });
+      fs.copyFileSync(CONFIG_FIXTURE, path.join(configDir, 'config.json'));
+
+      const r = runCli(['run', VALID_SCENARIO], { cwd: workspace, env: envWith({ MAUTO_REPLAY: undefined }) });
+      expect(r.status).toBe(5);
+      const env = JSON.parse(r.stdout);
+      expect(env.ok).toBe(false);
+      expect(env.error.kind).toBe('environment');
+      expect(env.error.message).toBe('mauto run is not enabled yet');
+      expect(env.hint).toMatch(/MAUTO_REPLAY=1/);
+    });
+
+    test('refuses with the workspace failure (exit 5) outside a workspace even with the gate set', () => {
+      // A .git boundary stops discovery here, so no ancestor workspace is found.
+      fs.mkdirSync(path.join(workspace, '.git'));
+      const r = runCli(['run', VALID_SCENARIO], { cwd: workspace, env: envWith({ MAUTO_REPLAY: '1' }) });
+      expect(r.status).toBe(5);
+      const env = JSON.parse(r.stdout);
+      expect(env.error.kind).toBe('environment');
+      expect(env.hint).toMatch(/mauto setup/);
+      expect(fs.existsSync(path.join(workspace, '.mobile-automator'))).toBe(false);
+    });
+
+    test('is absent from --help', () => {
+      const r = runCli(['--help']);
+      expect(r.status).toBe(0);
+      expect(r.stdout).not.toMatch(/^\s+run\b/m);
+      expect(r.stdout).toMatch(/^\s+validate\b/m);
+    });
+  });
 });

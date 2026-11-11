@@ -10,8 +10,9 @@ const { ok, fail, render, exitCodeFor } = require('./output/envelope');
 const selectionStore = require('./device/selection');
 const { engineHint } = require('./device/engine-hints');
 const { ScenarioValidator } = require('./scenario/validator');
-const { findReplayWarnings, summarize } = require('./scenario/replayability');
+const { loadScenario } = require('./scenario/load');
 const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
+const { fromCliFlags } = require('./assertion/fields');
 const { ResultStore, readFinalizedResult, InvalidRunIdError } = require('./result/store');
 const { OBSERVATION_TYPES, parseObservation, parseCapture, parseBool, parseRunStatus, parseStepStatus } = require('./result/flags');
 const { toJUnit } = require('./result/junit');
@@ -28,7 +29,7 @@ const { ADAPTERS } = require('./init/adapters');
 const { inspectHosts, ADVISORY_FS_CODES } = require('./init/host-plan');
 const { renderStaleNotice, installedBefore, refreshHint } = require('./init/stale-notice');
 const { doctorReport } = require('./init/doctor');
-const { isSemanticAction, ACTION_METHOD, selectResolver } = require('./device/semantic-press');
+const { isSemanticAction, pressSemantic } = require('./device/semantic-press');
 const connection = require('./device/connection');
 const { isSupportedHost, unsupportedHostError } = require('./device/host-support');
 const { record } = require('./observe/recorder');
@@ -43,6 +44,10 @@ const observeTelemetry = require('./observe/telemetry');
 const observeSpool = require('./observe/spool');
 const observeTransport = require('./observe/transport');
 const { makeFlusher } = require('./observe/flush');
+const { prepareRun } = require('./run/prepare');
+const { handleRun } = require('./run/handle');
+const { realClock } = require('./run/clock');
+const { makeRunTrace } = require('./run/trace');
 const {
   findWorkspaceRoot,
   workspaceFailure,
@@ -227,59 +232,12 @@ async function handleScreenshot({ deviceBridge, cwd = process.cwd() }, destPath)
 }
 
 function handleValidate({ validator }, file, opts = {}) {
-  let raw;
-  try {
-    raw = fs.readFileSync(file, 'utf8');
-  } catch (err) {
-    return {
-      envelope: fail(
-        'invalid_input',
-        `cannot read file: ${err.message}`,
-        'Check that the path exists and is readable.'
-      ),
-      exitKind: 'invalid_input',
-    };
+  const loaded = loadScenario(validator, file, opts);
+  if (loaded.failure) return loaded.failure;
+  if (loaded.warnings.length === 0) {
+    return { envelope: ok({ valid: true }), exitKind: 'ok' };
   }
-
-  let scenario;
-  try {
-    scenario = JSON.parse(raw);
-  } catch (err) {
-    return {
-      envelope: fail(
-        'invalid_input',
-        `file is not valid JSON: ${err.message}`,
-        'Fix the JSON syntax and try again.'
-      ),
-      exitKind: 'invalid_input',
-    };
-  }
-
-  const result = validator.validate(scenario);
-  if (result.valid) {
-    // Schema-valid is not the same as replayable: surface findings by default
-    // so existing scenarios keep validating; `--strict` fails only on the
-    // blocking ones. Codes, severity and wording live in the replayability module.
-    const warnings = findReplayWarnings(scenario);
-    if (warnings.length === 0) {
-      return { envelope: ok({ valid: true }), exitKind: 'ok' };
-    }
-    const { blocking, hint } = summarize(warnings);
-    if (opts.strict && blocking.length > 0) {
-      const env = fail('invalid_input', 'scenario cannot replay unattended; see data.warnings', hint);
-      env.data = { valid: false, errors: [], warnings };
-      return { envelope: env, exitKind: 'invalid_input' };
-    }
-    return { envelope: ok({ valid: true, warnings }, hint), exitKind: 'ok' };
-  }
-
-  const env = fail(
-    'invalid_input',
-    'scenario failed schema validation',
-    'See data.errors for the specific schema violations.'
-  );
-  env.data = { valid: false, errors: result.errors };
-  return { envelope: env, exitKind: 'invalid_input' };
+  return { envelope: ok({ valid: true, warnings: loaded.warnings }, loaded.hint), exitKind: 'ok' };
 }
 
 // The unsupported-host gate (#165), shared by every site that reaches the
@@ -552,9 +510,7 @@ async function handlePress({ deviceBridge }, button) {
   // resolution is a hard error, never a bogus token forwarded to mobile-mcp.
   if (isSemanticAction(b)) {
     try {
-      const platform = await deviceBridge.getPlatform();
-      const resolver = selectResolver(platform, deviceBridge);
-      const { mechanism } = await resolver[ACTION_METHOD[b]]();
+      const { platform, mechanism } = await pressSemantic(deviceBridge, b);
       return {
         envelope: ok({ pressed: b, resolved: { platform, mechanism } }),
         exitKind: 'ok',
@@ -594,13 +550,7 @@ async function handleAssert({ deviceBridge }, type, flags = {}) {
     return deviceFail(err);
   }
 
-  const assertion = { type };
-  if (flags.target !== undefined) assertion.target = flags.target;
-  if (flags.expected !== undefined) assertion.expected = flags.expected;
-  if (flags.operator !== undefined) assertion.operator = flags.operator;
-  if (flags.count !== undefined) assertion.count = Number(flags.count);
-  if (flags.pattern !== undefined) assertion.pattern = flags.pattern;
-  if (flags.variable !== undefined) assertion.variable_name = flags.variable;
+  const assertion = fromCliFlags(type, flags);
 
   const r = evaluate(assertion, { elements });
   // The verdict has to be transcribed into `result add-assertion` by the agent
@@ -823,6 +773,60 @@ function measureRun({ projectRoot, runId, reported }) {
   };
 }
 
+// Finalize a run: measure its duration from the run trace, write the result
+// file (status derived when omitted), prune other runs' traces, and harvest
+// it into cross-session memory. Returns `{ result, store, hints }`; hints
+// collects the store's and memory's best-effort warnings. Shared by
+// `result finalize` and `mauto run`; flag validation and the envelope stay
+// with the callers.
+function finalizeRun({ resultStoreFactory, memoryStoreFactory, projectRoot }, { runId, scenarioId, status, duration, metadata, summary }) {
+  // Measure BEFORE constructing the store: the trace is read-only here, and
+  // deriving first keeps the store's lock window as small as it already is.
+  const measured = measureRun({ projectRoot, runId, reported: duration });
+
+  const store = resultStoreFactory({ runId, scenarioId, projectRoot });
+  const result = store.finalize({
+    status,
+    // Derived, not trusted. `--duration` survives in
+    // measurements.reported_duration_seconds and, when it disagrees with the
+    // clock, in a typed state_context observation — the disagreement is a
+    // signal about the agent, so it is recorded rather than resolved.
+    durationSeconds: measured.durationSeconds,
+    metadata,
+    measurements: measured.measurements,
+    // Undefined when --summary is omitted; ResultStore.finalize's own
+    // `summary || <generated default>` already treats that as "no override",
+    // so no provided-keys-only guard is needed here (unlike metadata, whose
+    // sub-fields default independently to 'unknown').
+    summary,
+  });
+
+  // Retention, at the only moment a run is known to be over and the only place
+  // off the hot path. Never this run's own trace — it is the evidence behind
+  // every number just written. Best-effort by construction; pruneRunTraces
+  // swallows everything and returns a count.
+  pruneRunTraces(projectRoot, { except: runId });
+
+  // Auto-harvest into cross-session memory. This is best-effort: a memory
+  // failure must never fail an otherwise-successful finalize, so its warnings
+  // fold into the envelope hint instead of throwing.
+  const hints = [storeHint(store)].filter(Boolean);
+  if (memoryStoreFactory) {
+    let mem;
+    try {
+      mem = memoryStoreFactory({ projectRoot });
+      mem.recordRun(result);
+    } catch (e) {
+      hints.push(`run-history not updated: ${e.message}`);
+    }
+    // Fold any warnings the store accumulated (even if recordRun later threw).
+    const memHint = storeHint(mem);
+    if (memHint) hints.push(memHint);
+  }
+
+  return { result, store, hints };
+}
+
 function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectRoot }, opts) {
   const { runId, scenarioId, status, duration } = opts;
   if (!runId) {
@@ -861,49 +865,10 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
   if (opts.apiLevel !== undefined) metadata.api_level = opts.apiLevel;
   if (opts.environment !== undefined) metadata.environment = opts.environment;
 
-  // Measure BEFORE constructing the store: the trace is read-only here, and
-  // deriving first keeps the store's lock window as small as it already is.
-  const measured = measureRun({ projectRoot, runId, reported: duration });
-
-  const store = resultStoreFactory({ runId, scenarioId, projectRoot });
-  const result = store.finalize({
-    status,
-    // Derived, not trusted. `--duration` survives in
-    // measurements.reported_duration_seconds and, when it disagrees with the
-    // clock, in a typed state_context observation — the disagreement is a
-    // signal about the agent, so it is recorded rather than resolved.
-    durationSeconds: measured.durationSeconds,
-    metadata,
-    measurements: measured.measurements,
-    // Undefined when --summary is omitted; ResultStore.finalize's own
-    // `summary || <generated default>` already treats that as "no override",
-    // so no provided-keys-only guard is needed here (unlike metadata, whose
-    // sub-fields default independently to 'unknown').
-    summary: opts.summary,
-  });
-
-  // Retention, at the only moment a run is known to be over and the only place
-  // off the hot path. Never this run's own trace — it is the evidence behind
-  // every number just written. Best-effort by construction; pruneRunTraces
-  // swallows everything and returns a count.
-  pruneRunTraces(projectRoot, { except: runId });
-
-  // Auto-harvest into cross-session memory. This is best-effort: a memory
-  // failure must never fail an otherwise-successful finalize, so its warnings
-  // fold into the envelope hint instead of throwing.
-  const hints = [storeHint(store)].filter(Boolean);
-  if (memoryStoreFactory) {
-    let mem;
-    try {
-      mem = memoryStoreFactory({ projectRoot });
-      mem.recordRun(result);
-    } catch (e) {
-      hints.push(`run-history not updated: ${e.message}`);
-    }
-    // Fold any warnings the store accumulated (even if recordRun later threw).
-    const memHint = storeHint(mem);
-    if (memHint) hints.push(memHint);
-  }
+  const { result, store, hints } = finalizeRun(
+    { resultStoreFactory, memoryStoreFactory, projectRoot },
+    { runId, scenarioId, status, duration, metadata, summary: opts.summary }
+  );
 
   // The exit code is keyed on the FINALIZED status, not the --status flag:
   // with the flag omitted, the store derives it from the recorded steps and
@@ -1873,6 +1838,9 @@ function buildProgram(deps = {}) {
     emit = emitters.emit,
     // Host OS, for the unsupported-host gate (#165). Overridable in tests.
     platform = process.platform,
+    // `{ now, sleep }` for `mauto run`'s polls and retry backoff. Overridable
+    // in tests, which run on a fake clock.
+    clock = realClock,
   } = deps;
 
   const program = new Command();
@@ -2090,6 +2058,32 @@ function buildProgram(deps = {}) {
 
   const withBridge = (explicitDevice, fn) =>
     connectBridge(resolveVerbDevice(explicitDevice), fn);
+
+  // `mauto run <scenario>` (replay R1, #278). Registered unconditionally but
+  // hidden, and refused unless MAUTO_REPLAY=1, until the graduation slice.
+  // prepareRun (src/run/prepare.js) makes every refusal before connectBridge,
+  // so none touches a device.
+  program
+    .command('run <scenario>', { hidden: true })
+    .description('Replay a scenario unattended and finalize its result (in progress; needs MAUTO_REPLAY=1)')
+    .option('--device <id>', 'target device id')
+    .option('--run-id <id>', 'run identifier (run_YYYYMMDD_HHMMSS); minted when omitted')
+    .action(withEnvelope(requireWorkspace(async (file, opts) => {
+      const prepared = prepareRun({ validator, file, runId: opts.runId, env: process.env });
+      if (prepared.failure) return emit(prepared.failure, humanFlag());
+      // The preAction hook saw only the flag and the environment; this covers
+      // a minted id, so verb.end lands in the same trace as the run's stamps.
+      emitters.setRunId(prepared.runId);
+      return withBridge(opts.device, (bridge) =>
+        handleRun(
+          {
+            bridge, resultStoreFactory, memoryStoreFactory, projectRoot, finalizeRun, clock,
+            trace: makeRunTrace({ projectRoot, runId: prepared.runId }),
+          },
+          prepared
+        )
+      );
+    })));
 
   program
     .command('tap')
@@ -2801,6 +2795,8 @@ module.exports = {
   handleResultAddAssertion,
   handleResultAddCrash,
   handleResultFinalize,
+  finalizeRun,
+  handleRun,
   handleResultExport,
   handleSetup,
   handleConfigGet,

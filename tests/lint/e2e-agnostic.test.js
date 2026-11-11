@@ -108,6 +108,18 @@ describe('E2E harness — targets resolve through the CLI evaluator', () => {
     expect(runnerSrc).toMatch(/require\(\s*path\.join\(\s*pkgDir\s*,\s*['"]src\/device\/action-catalog\.js['"]\s*\)\s*\)/);
   });
 
+  // #278: the assertion field mapping and the run-id format are the
+  // install's, shared with `mauto run`; the harness restates neither.
+  test('run-e2e.mjs loads src/assertion/fields.js and src/run/run-id.js from the install under test', () => {
+    expect(runnerSrc).toMatch(/require\(\s*path\.join\(\s*pkgDir\s*,\s*['"]src\/assertion\/fields\.js['"]\s*\)\s*\)/);
+    expect(runnerSrc).toMatch(/require\(\s*path\.join\(\s*pkgDir\s*,\s*['"]src\/run\/run-id\.js['"]\s*\)\s*\)/);
+  });
+
+  test('the executor keeps no private EXPECTED_FIELD, assertFlags or makeRunId', () => {
+    expect(executorSrc).not.toMatch(/\b(const|let|var|function)\s+(EXPECTED_FIELD|assertFlags|makeRunId)\b/);
+    expect(executorSrc).toMatch(/fields\.toCliFlags\(/);
+  });
+
   test('the executor derives launch flags from the catalog, with no literal --resume', () => {
     expect(executorSrc).toMatch(/catalog\.stepFlagsFor\(\s*['"]launch_app['"]/);
     expect(executorSrc).not.toMatch(/--resume/);
