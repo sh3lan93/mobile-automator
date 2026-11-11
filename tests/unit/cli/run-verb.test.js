@@ -10,6 +10,7 @@ const os = require('os');
 const path = require('path');
 
 const { buildProgram, handleRun } = require('../../../src/cli');
+const { exitCodeFor } = require('../../../src/output/envelope');
 const { runTracePath } = require('../../../src/observe/paths');
 const { readTrace } = require('../../../src/observe/trace');
 const { makeFakeBridge, makeFakeClock, homeElements } = require('../../helpers/fake-bridge');
@@ -254,5 +255,82 @@ describe('mauto run — registration', () => {
 
   test('handleRun is exported', () => {
     expect(typeof handleRun).toBe('function');
+  });
+});
+
+describe('an incomplete run can be completed with one-shot verbs and re-finalized (#275 exit criterion)', () => {
+  beforeEach(() => {
+    process.env.MAUTO_REPLAY = '1';
+  });
+
+  // Any verb through the same program and emit seam as runCli.
+  async function mauto(args, { bridge = makeFakeBridge({ elements: [homeElements()] }) } = {}) {
+    const emitted = [];
+    await buildProgram({
+      projectRoot: root,
+      deviceBridgeFactory: jest.fn(async () => ({ bridge, close: async () => {} })),
+      emit: (r) => emitted.push(r),
+      clock: makeFakeClock(),
+      platform: 'darwin',
+    }).parseAsync(['node', 'mauto', ...args]);
+    expect(emitted).toHaveLength(1);
+    return emitted[0];
+  }
+
+  // One mechanical assertion (decided by the CLI) and one Tier-2 one
+  // (visual_state: the evaluator answers needs_agent).
+  const sc = () => scenario({
+    assertions: [
+      { id: 'more_there', after_step: 'tap_more', type: 'element_exists', description: 'd', element_description: 'More' },
+      { id: 'looks', after_step: 'tap_more', type: 'visual_state', description: 'd', expected_visual_state: 'loaded' },
+    ],
+  });
+
+  // `mauto run` → exit 7, then one `result add-assertion --judge agent` per
+  // pending id with `verdict`, then `result finalize --scenario`.
+  async function runThenComplete(verdict) {
+    const file = writeScenario(sc());
+    const ran = await mauto(['run', file, '--run-id', RUN_ID]);
+    expect(ran.exitKind).toBe('incomplete');
+    expect(exitCodeFor(ran.exitKind)).toBe(7);
+    // Pending is not a failure.
+    expect(ran.envelope.data.failures).toEqual([]);
+    expect(ran.envelope.data.pending).toEqual([{ assertion_id: 'looks', step_id: 'tap_more', type: 'visual_state' }]);
+
+    for (const p of ran.envelope.data.pending) {
+      const added = await mauto([
+        'result', 'add-assertion', '--run-id', RUN_ID, '--step-id', p.step_id, '--assertion-id', p.assertion_id,
+        '--type', p.type, '--pass', verdict, '--judge', 'agent', '--message', 'ok',
+      ]);
+      expect(added.exitKind).toBe('ok');
+    }
+
+    const finalized = await mauto(['result', 'finalize', '--run-id', RUN_ID, '--scenario', file]);
+    const onDisk = JSON.parse(fs.readFileSync(path.join(root, '.mobile-automator', 'results', `${RUN_ID}.json`), 'utf8'));
+    return { ran, finalized, onDisk };
+  }
+
+  test('--pass true: run exits 7, then finalize is ok (exit 0), passed, still the runner\'s executor', async () => {
+    const { ran, finalized, onDisk } = await runThenComplete('true');
+    expect(finalized.exitKind).toBe('ok');
+    expect(exitCodeFor(finalized.exitKind)).toBe(0);
+    expect(finalized.envelope.ok).toBe(true);
+    expect(onDisk.status).toBe('passed');
+    expect(onDisk.executor).toEqual(ran.envelope.data.executor);
+    expect(onDisk.executor.kind).toBe('runner');
+
+    // The pending entry was replaced in place: same position, now the agent's.
+    expect(onDisk.assertion_results.map((a) => a.assertion_id)).toEqual(['more_there', 'looks']);
+    expect(onDisk.assertion_results[0]).toMatchObject({ status: 'passed', mechanical: true, judge: { by: 'mauto' } });
+    expect(onDisk.assertion_results[1]).toMatchObject({ status: 'passed', message: 'ok', judge: { by: 'agent' } });
+  });
+
+  test('--pass false: finalize is test_failed (exit 6), failed', async () => {
+    const { finalized, onDisk } = await runThenComplete('false');
+    expect(finalized.exitKind).toBe('test_failed');
+    expect(exitCodeFor(finalized.exitKind)).toBe(6);
+    expect(onDisk.status).toBe('failed');
+    expect(onDisk.assertion_results[1]).toMatchObject({ assertion_id: 'looks', status: 'failed', judge: { by: 'agent' } });
+    expect(onDisk.executor.kind).toBe('runner');
   });
 });
