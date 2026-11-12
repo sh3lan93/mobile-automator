@@ -1656,6 +1656,7 @@
 </table>
 <h3 id="run-history-machine-owned"><code>run-history</code> — machine-owned<a class="headerlink" href="#run-history-machine-owned" title="Permanent link">&para;</a></h3>
 <p><code>run-history.md</code> is written by the CLI, not the agent. When you call <code>mauto result finalize</code>, the typed <strong>observations</strong> in the result file — <code>regression</code>, <code>flakiness</code>, and <code>state_context</code> — are folded into a <strong>bounded, rolling per-scenario aggregate</strong>. Old entries age out so the file stays small and useful rather than growing without limit.</p>
+<p>Each finalized run also adds a status letter to its scenario's recent-runs line: <code>P</code> for a run that finalized <code>passed</code>, <code>F</code> for anything else. That includes an <code>incomplete</code> run, one still waiting for an agent's verdict: it is recorded <code>F</code>, not <code>P</code>. Completing it and finalizing again records a second letter for the re-finalize.</p>
 <p>Because it is machine-owned, <code>run-history</code> is <strong>not a valid target</strong> for <code>memory add</code> or <code>memory forget</code>. Trying to author it by hand would fight the harvester; let <code>result finalize</code> maintain it.</p>
 <div class="admonition note">
 <p class="admonition-title">Harvesting never fails a finalize</p>

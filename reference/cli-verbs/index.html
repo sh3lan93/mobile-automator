@@ -1715,7 +1715,7 @@
 <td><code>6</code></td>
 </tr>
 <tr>
-<td>Run incomplete: an assertion still needs the agent's verdict (reserved for replay; no verb emits it yet)</td>
+<td>Run incomplete: <code>result finalize</code> of a run where nothing failed but an assertion still needs the agent's verdict</td>
 <td><code>incomplete</code></td>
 <td><code>7</code></td>
 </tr>
@@ -1847,16 +1847,16 @@
 <td>Append a step result to a run; <code>--observation</code> and <code>--capture</code> are repeatable. <code>--status</code> accepts <code>pass | fail | skipped | error</code> (and <code>passed</code>, <code>failed</code>, <code>skip</code>) and rejects anything else with <code>invalid_input</code> (exit <code>3</code>)</td>
 </tr>
 <tr>
-<td><code>mauto result add-assertion --run-id --step-id --type --pass [--scenario-id --assertion-id --message --expected --actual]</code></td>
-<td>Record an assertion verdict against a step</td>
+<td><code>mauto result add-assertion --run-id --step-id --type --pass &lt;true\|false\|pending&gt; [--judge &lt;agent\|none&gt; --scenario-id --assertion-id --message --expected --actual]</code></td>
+<td>Record an assertion verdict against a step. <code>--pass pending</code> records the assertion as <code>needs_agent</code> (no verdict yet). <code>--judge</code> records who decided: <code>agent</code> with a <code>true</code>/<code>false</code> verdict, <code>none</code> with <code>pending</code> (implied when omitted). <code>--judge agent</code> with <code>pending</code> and <code>--judge none</code> with a verdict fail with <code>invalid_input</code> (exit <code>3</code>). A verdict for an <code>--assertion-id</code> that is <code>needs_agent</code> replaces it in place; <code>pending</code> for an id already decided fails with <code>invalid_input</code></td>
 </tr>
 <tr>
-<td><code>mauto result finalize --run-id [--scenario-id --status --duration --app-version --device-model --api-level --environment --summary]</code></td>
-<td>Assemble the final <a href="../result-schema/">result file</a> and auto-harvest memory. <code>--status</code> accepts <code>passed | failed | error</code> and rejects anything else with <code>invalid_input</code> (exit <code>3</code>); omitting it derives the status from the recorded steps and assertions: <code>error</code> if any step errored, else <code>failed</code> if any step or assertion failed, else <code>passed</code>; skipped steps do not count. An explicit <code>--status</code> wins, even over recorded failures (the JUnit export still shows those failures). A run that finalizes as <code>failed</code> or <code>error</code> exits <code>6</code> (<code>test_failed</code>) with the full result in <code>data</code></td>
+<td><code>mauto result finalize --run-id [--scenario &lt;path&gt; --scenario-id --status --duration --app-version --device-model --api-level --environment --summary]</code></td>
+<td>Assemble the final <a href="../result-schema/">result file</a> and auto-harvest memory. <code>--status</code> accepts <code>passed | failed | error | incomplete</code> and rejects anything else with <code>invalid_input</code> (exit <code>3</code>); omitting it derives the status from the recorded steps and assertions: <code>error</code> if any step errored, else <code>failed</code> if any step or assertion failed, else <code>incomplete</code> if any is <code>needs_agent</code>, else <code>passed</code>; skipped steps do not count. An explicit <code>--status</code> may equal the derived status or make the run worse (<code>failed</code>, <code>error</code>), never better: <code>passed</code> over a derived <code>incomplete</code>, <code>failed</code> or <code>error</code>, <code>passed</code> over a run with nothing recorded (unless <code>--scenario</code> names a scenario that declares no assertions), and <code>incomplete</code> with nothing pending are refused with <code>invalid_input</code> and nothing written. A run that finalizes as <code>failed</code> or <code>error</code> exits <code>6</code> (<code>test_failed</code>), and one that finalizes as <code>incomplete</code> exits <code>7</code> (<code>incomplete</code>), with the full result in <code>data</code>. <code>--scenario</code> checks every recorded step and assertion id, and the <code>scenario_id</code>, against that scenario file and records its SHA-256 in <code>executor</code>; a mismatch, or a file that differs from the one the run recorded, fails with <code>invalid_input</code> and writes nothing</td>
 </tr>
 <tr>
 <td><code>mauto result export --run-id &lt;id&gt; [--run-id &lt;id&gt;…] --format junit [--out &lt;path&gt;]</code></td>
-<td>Render finalized result files as JUnit XML for a CI test reporter; read-only. Returns <code>{format, path, suites, tests, failures}</code>, with the XML in <code>data.xml</code> when <code>--out</code> is omitted</td>
+<td>Render finalized result files as JUnit XML for a CI test reporter; read-only. Returns <code>{format, path, suites, tests, failures, skipped}</code>, with the XML in <code>data.xml</code> when <code>--out</code> is omitted. A <code>needs_agent</code> assertion or step is a <code>&lt;skipped&gt;</code> test case, not a failure</td>
 </tr>
 </tbody>
 </table>
@@ -1941,7 +1941,11 @@
 </div>
 <div class="admonition note">
 <p class="admonition-title">A failed test exits non-zero</p>
-<p><code>mauto assert</code> with a <code>pass: false</code> verdict, and <code>mauto result finalize</code> of a run whose status is <code>failed</code> or <code>error</code>, return <code>ok: false</code> with <code>error.kind: "test_failed"</code> and exit <code>6</code>. The result is still recorded: <code>assert</code> puts its verdict (<code>type</code>, <code>mechanical</code>, <code>pass</code>, <code>needs_agent</code>, <code>message</code>) in <code>data</code>, and <code>finalize</code> writes the result file, harvests memory and puts the full result in <code>data</code>. <code>finalize</code> keys on the status it actually recorded, so a run finalized without <code>--status</code> that has a failed or errored step, or a failed assertion, also exits <code>6</code>; <code>data.status</code> tells <code>failed</code> from <code>error</code>. A <code>needs_agent</code> verdict is not a failure and still exits <code>0</code>.</p>
+<p><code>mauto assert</code> with a <code>pass: false</code> verdict, and <code>mauto result finalize</code> of a run whose status is <code>failed</code> or <code>error</code>, return <code>ok: false</code> with <code>error.kind: "test_failed"</code> and exit <code>6</code>. The result is still recorded: <code>assert</code> puts its verdict (<code>type</code>, <code>mechanical</code>, <code>pass</code>, <code>needs_agent</code>, <code>message</code>) in <code>data</code>, and <code>finalize</code> writes the result file, harvests memory and puts the full result in <code>data</code>. <code>finalize</code> keys on the status it actually recorded, so a run finalized without <code>--status</code> that has a failed or errored step, or a failed assertion, also exits <code>6</code>; <code>data.status</code> tells <code>failed</code> from <code>error</code>. A <code>needs_agent</code> verdict from <code>assert</code> is not a failure and still exits <code>0</code>.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">An incomplete run exits 7</p>
+<p>When nothing failed but an assertion was recorded with <code>--pass pending</code>, <code>mauto result finalize</code> writes the result with <code>status: "incomplete"</code> and exits <code>7</code> (<code>incomplete</code>). The <code>hint</code> lists the pending assertion ids and the exact <code>mauto result add-assertion … --judge agent</code> command for each, followed by the <code>mauto result finalize --run-id &lt;id&gt; --scenario &lt;path&gt;</code> that completes the run, with the scenario's absolute path so it works from any directory. See <a href="../result-schema/#completing-an-incomplete-run">completing an incomplete run</a>.</p>
 </div>
 <hr />
 <h2 id="workspace-verbs">Workspace verbs<a class="headerlink" href="#workspace-verbs" title="Permanent link">&para;</a></h2>

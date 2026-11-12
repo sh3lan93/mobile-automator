@@ -1071,6 +1071,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#run-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run status
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#executor-object" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        executor Object
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#metadata-object" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1177,6 +1199,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#completing-an-incomplete-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Completing an incomplete run
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1617,6 +1650,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#run-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run status
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#executor-object" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        executor Object
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#metadata-object" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1723,6 +1778,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#completing-an-incomplete-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Completing an incomplete run
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1844,6 +1910,7 @@
 ├─ Assertions Array (assertion verdicts with expected/actual values)
 ├─ Observations Array (regression/flakiness/state context insights)
 ├─ Captured Variables (values extracted via capture_value steps)
+├─ Executor (who produced the result, from which scenario file)
 └─ Summary (human-readable overall result)
 </code></pre></div>
 <h2 id="key-fields">Key Fields<a class="headerlink" href="#key-fields" title="Permanent link">&para;</a></h2>
@@ -1880,7 +1947,7 @@
 <td><code>status</code></td>
 <td>string</td>
 <td>Yes</td>
-<td>Overall result status: <code>"passed"</code>, <code>"failed"</code>, or <code>"error"</code>. <code>mauto result finalize --status</code> sets it; when omitted it is derived: <code>"error"</code> if any step errored, else <code>"failed"</code> if any step or assertion failed, else <code>"passed"</code> (skipped steps do not count)</td>
+<td>Overall result status: <code>"passed"</code>, <code>"failed"</code>, <code>"error"</code>, or <code>"incomplete"</code>. <code>mauto result finalize --status</code> sets it; when omitted it is derived (see <a href="#run-status">Run status</a>)</td>
 </tr>
 <tr>
 <td><code>metadata</code></td>
@@ -1892,7 +1959,7 @@
 <td><code>total_assertions</code></td>
 <td>integer</td>
 <td>Yes</td>
-<td>Total count of assertions in the execution</td>
+<td>Total count of assertions in the execution, including <code>needs_agent</code> ones</td>
 </tr>
 <tr>
 <td><code>passed_assertions</code></td>
@@ -1937,6 +2004,12 @@
 <td>Array of intelligent observations (regression, flakiness, state context)</td>
 </tr>
 <tr>
+<td><code>executor</code></td>
+<td>object</td>
+<td>No</td>
+<td>Who produced the result and from what scenario file (see <a href="#executor-object">executor Object</a>)</td>
+</tr>
+<tr>
 <td><code>summary</code></td>
 <td>string</td>
 <td>Yes</td>
@@ -1944,6 +2017,102 @@
 </tr>
 </tbody>
 </table>
+<h3 id="run-status">Run status<a class="headerlink" href="#run-status" title="Permanent link">&para;</a></h3>
+<p>When <code>mauto result finalize</code> is run without <code>--status</code>, the status is derived from the recorded steps and assertions. The first matching row wins:</p>
+<table>
+<thead>
+<tr>
+<th>Recorded</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A step with status <code>error</code></td>
+<td><code>error</code></td>
+</tr>
+<tr>
+<td>A step with status <code>failed</code></td>
+<td><code>failed</code></td>
+</tr>
+<tr>
+<td>An assertion with status <code>failed</code></td>
+<td><code>failed</code></td>
+</tr>
+<tr>
+<td>An assertion with status <code>needs_agent</code>, or a step with <code>needs_agent: true</code></td>
+<td><code>incomplete</code></td>
+</tr>
+<tr>
+<td>Anything else, including no steps and no assertions</td>
+<td><code>passed</code></td>
+</tr>
+</tbody>
+</table>
+<p>Skipped steps count for nothing. A run that is already red stays red whatever an agent later decides about its pending assertions. <code>finalize</code> exits <code>6</code> for <code>failed</code> and <code>error</code>, and <code>7</code> for <code>incomplete</code>.</p>
+<h3 id="executor-object">executor Object<a class="headerlink" href="#executor-object" title="Permanent link">&para;</a></h3>
+<p><code>mauto result finalize</code> writes <code>executor</code> the first time it finalizes a run, and every later finalize keeps it, so an agent completing a run that <code>mauto run</code> started never rewrites it as its own. The only change a later finalize makes is to fill in the scenario fields when the first one recorded none.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>kind</code></td>
+<td>string</td>
+<td>Yes</td>
+<td><code>"runner"</code> for <code>mauto run</code>, <code>"agent"</code> for an agent recording through the <code>mauto result</code> verbs</td>
+</tr>
+<tr>
+<td><code>mauto_version</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>Version of <code>mauto</code> that wrote the result</td>
+</tr>
+<tr>
+<td><code>engine</code></td>
+<td>string | null</td>
+<td>No</td>
+<td>Device engine resolved for the workspace (<code>mobilecli</code> or <code>legacy</code>)</td>
+</tr>
+<tr>
+<td><code>platform</code></td>
+<td>string | null</td>
+<td>No</td>
+<td>Device platform. <code>null</code> from <code>result finalize</code>, which has no device connected</td>
+</tr>
+<tr>
+<td><code>device_id</code></td>
+<td>string | null</td>
+<td>No</td>
+<td>Device id. <code>null</code> from <code>result finalize</code>, for the same reason</td>
+</tr>
+<tr>
+<td><code>scenario_path</code></td>
+<td>string | null</td>
+<td>No</td>
+<td>The scenario file passed to <code>--scenario</code> (or replayed by <code>mauto run</code>): relative to the project root when the file is inside it, else absolute. <code>mauto run</code> and <code>result finalize</code> record the same value for the same file</td>
+</tr>
+<tr>
+<td><code>scenario_sha256</code></td>
+<td>string | null</td>
+<td>No</td>
+<td>Hex SHA-256 of that file's bytes</td>
+</tr>
+<tr>
+<td><code>mode</code></td>
+<td>string | null</td>
+<td>No</td>
+<td>Workspace mode: <code>platform-aware</code> or <code>platform-agnostic</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>result finalize --scenario &lt;path&gt;</code> checks the result against that file before writing anything: the recorded <code>scenario_id</code> (when there is one) must match, and every recorded step id (including nested <code>sub_steps</code>) and assertion id must exist in the scenario. If the run already recorded a <code>scenario_sha256</code>, the file must hash to the same value. Any mismatch fails with <code>invalid_input</code> and leaves the result file unchanged.</p>
 <h3 id="metadata-object">metadata Object<a class="headerlink" href="#metadata-object" title="Permanent link">&para;</a></h3>
 <p>Contains contextual information about the execution environment:</p>
 <table>
@@ -2037,6 +2206,12 @@
 <td>Number of retry attempts made for this step (0 = no retries)</td>
 </tr>
 <tr>
+<td><code>needs_agent</code></td>
+<td>boolean</td>
+<td>No</td>
+<td><code>true</code> when the step could not be decided without an agent; the run finalizes <code>incomplete</code> unless something failed</td>
+</tr>
+<tr>
 <td><code>step_duration_ms</code></td>
 <td>integer</td>
 <td>No</td>
@@ -2084,7 +2259,31 @@
 <td><code>status</code></td>
 <td>string</td>
 <td>Yes</td>
-<td>Assertion status: <code>"passed"</code> or <code>"failed"</code></td>
+<td>Assertion status: <code>"passed"</code>, <code>"failed"</code>, or <code>"needs_agent"</code> (recorded with <code>--pass pending</code>; no verdict yet)</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td>string</td>
+<td>No</td>
+<td>Assertion type, from <code>--type</code></td>
+</tr>
+<tr>
+<td><code>step_id</code></td>
+<td>string</td>
+<td>No</td>
+<td>Step the assertion belongs to, from <code>--step-id</code></td>
+</tr>
+<tr>
+<td><code>mechanical</code></td>
+<td>boolean</td>
+<td>No</td>
+<td><code>true</code> when <code>mauto</code> decides the type mechanically, <code>false</code> when it needs judgment (see <a href="../assertions/">Assertion Types</a>)</td>
+</tr>
+<tr>
+<td><code>judge</code></td>
+<td>object</td>
+<td>No</td>
+<td>Who decided the verdict: <code>{"by": "mauto" \| "agent" \| "none"}</code>, with optional <code>name</code> and <code>version</code>. <code>agent</code> comes from <code>--judge agent</code>, <code>none</code> from <code>--pass pending</code>, and <code>mauto</code> only from <code>mauto run</code>. Absent when the recorder did not say</td>
 </tr>
 <tr>
 <td><code>expected</code></td>
@@ -2166,9 +2365,11 @@
 <ul>
 <li><strong>run_id</strong> — Must match pattern <code>^run_\d{8}_\d{6}$</code> (format: run_YYYYMMDD_HHMMSS)</li>
 <li><strong>schema_version</strong> — Must be "2.0"</li>
-<li><strong>status</strong> (root level) — One of: "passed", "failed", "error"</li>
+<li><strong>status</strong> (root level) — One of: "passed", "failed", "error", "incomplete"</li>
 <li><strong>status</strong> (steps) — One of: "passed", "failed", "skipped", "error"</li>
-<li><strong>status</strong> (assertions) — One of: "passed", "failed"</li>
+<li><strong>status</strong> (assertions) — One of: "passed", "failed", "needs_agent"</li>
+<li><strong>judge.by</strong> — One of: "mauto", "agent", "none"</li>
+<li><strong>executor.kind</strong> — One of: "runner", "agent"; <code>kind</code> and <code>mauto_version</code> are required inside <code>executor</code></li>
 <li><strong>total/passed/failed_assertions</strong> — Non-negative integers</li>
 <li><strong>duration_seconds</strong> — Non-negative number (can be 0 for very fast executions)</li>
 <li><strong>step_duration_ms</strong> — Non-negative integer (0 is valid for instant operations)</li>
@@ -2425,6 +2626,16 @@
 <span class="w">  </span><span class="nt">"summary"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Test encountered an error during execution. MCP server disconnected during wait_for_results step. Completed 2 of 5 assertions before failure. Execution completed in 8.32 seconds."</span>
 <span class="p">}</span>
 </code></pre></div>
+<h2 id="completing-an-incomplete-run">Completing an incomplete run<a class="headerlink" href="#completing-an-incomplete-run" title="Permanent link">&para;</a></h2>
+<p>A run is <code>incomplete</code> when nothing failed but at least one assertion is <code>needs_agent</code>. <code>mauto result finalize</code> writes it, exits <code>7</code>, and its <code>hint</code> lists the commands that complete it. For each pending assertion, record the verdict with <code>--judge agent</code>; the verdict replaces the pending entry in place:</p>
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>result<span class="w"> </span>add-assertion<span class="w"> </span>--run-id<span class="w"> </span>run_20261111_101500<span class="w"> </span>--step-id<span class="w"> </span>open_profile<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--assertion-id<span class="w"> </span>assert_avatar_looks_right<span class="w"> </span>--type<span class="w"> </span>visual_state<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--pass<span class="w"> </span><span class="nb">true</span><span class="w"> </span>--judge<span class="w"> </span>agent<span class="w"> </span>--message<span class="w"> </span><span class="s2">"Avatar renders with the expected border"</span>
+</code></pre></div>
+<p>Then finalize again against the scenario the run executed. The hint names it by its absolute path, so the command works from any directory inside the project:</p>
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>result<span class="w"> </span>finalize<span class="w"> </span>--run-id<span class="w"> </span>run_20261111_101500<span class="w"> </span>--scenario<span class="w"> </span>/home/me/app/.mobile-automator/scenarios/profile_flow.json
+</code></pre></div>
+<p>With every pending assertion decided, the status is derived again (<code>passed</code>, or <code>failed</code> if a verdict was <code>false</code>) and the original <code>executor</code> is kept. Recording <code>--pass pending</code> for an assertion that is already decided fails with <code>invalid_input</code>: a decided verdict never goes back to pending.</p>
 <h2 id="result-file-locations-naming">Result File Locations &amp; Naming<a class="headerlink" href="#result-file-locations-naming" title="Permanent link">&para;</a></h2>
 <p>Result files are stored in the <code>.mobile-automator/results/</code> directory with the following naming convention:</p>
 <div class="highlight"><pre><span></span><code>.mobile-automator/results/run_YYYYMMDD_HHMMSS.json
