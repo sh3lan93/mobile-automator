@@ -16,6 +16,7 @@ const { tap, type, longPress, doubleTap, swipe, pressButton, openUrl } = require
 const { scrollToElement } = require('./scroll');
 const { captureValue } = require('./capture');
 const { SEMANTIC_HANDLERS } = require('./semantic');
+const { NEEDS_AGENT_HANDLERS } = require('../needs-agent');
 const { waitForElement, waitForElementGone, waitForLoadingComplete } = require('./wait');
 
 const ACTION_HANDLERS = Object.freeze({
@@ -33,6 +34,7 @@ const ACTION_HANDLERS = Object.freeze({
   wait_for_loading_complete: waitForLoadingComplete,
   capture_value: captureValue,
   ...SEMANTIC_HANDLERS,
+  ...NEEDS_AGENT_HANDLERS,
 });
 
 function unsupported(step) {

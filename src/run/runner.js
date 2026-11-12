@@ -13,6 +13,7 @@
 const { runStep } = require('./step');
 const { runAssertion } = require('./assertions');
 const { NO_TRACE } = require('./trace');
+const { runSettings } = require('./settings');
 
 // Best-effort: a store that cannot take this write must not replace the
 // error that is about to propagate.
@@ -27,10 +28,13 @@ function recordAbort(store, step, err) {
 
 async function runScenario({
   scenario, bridge, store, evaluator, catalog, projectRoot, runId, clock,
-  trace = NO_TRACE,
+  trace = NO_TRACE, settings = runSettings(null),
 }) {
   const failures = [];
-  const ctx = { scenario, bridge, store, evaluator, catalog, projectRoot, runId, clock, trace, failures };
+  // `variables` is the run's captured values, which the assertions' evaluator
+  // reads (value_matches_variable); `settings` the run's timings and limits.
+  const variables = {};
+  const ctx = { scenario, bridge, store, evaluator, catalog, projectRoot, runId, clock, trace, failures, settings, variables };
   const assertions = Array.isArray(scenario.assertions) ? scenario.assertions : [];
   // The first step that failed, if any.
   let failedStep = null;
@@ -41,9 +45,21 @@ async function runScenario({
   let current = null;
   try {
     trace.start();
-    for (const step of scenario.steps || []) {
+    // Preconditions first, each a synthetic step `precondition_<n>` (1-based
+    // position in device_actions), through the same runStep.
+    const setup = [];
+    const deviceActions = scenario.preconditions && scenario.preconditions.device_actions;
+    (Array.isArray(deviceActions) ? deviceActions : []).forEach((a, i) => {
+      setup.push({ step: { ...a, id: `precondition_${i + 1}` }, precondition: true });
+    });
+    const queue = [...setup, ...(scenario.steps || []).map((step) => ({ step, precondition: false }))];
+    for (const { step, precondition } of queue) {
       current = step;
-      const outcome = await runStep(step, ctx);
+      const outcome = await runStep(step, ctx, { precondition });
+      // A step only an agent can do is recorded, not failed; whatever follows
+      // would run on a state nobody established, so the run ends here and
+      // finalizes incomplete.
+      if (outcome.pending) break;
       if (!outcome.ok) {
         failures.push(`step ${step.id} (${step.action}): ${outcome.error.message}`);
         failedStep = step.id;

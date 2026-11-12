@@ -167,6 +167,18 @@ describe('provenance and the incomplete run (#275)', () => {
     expect(resultFile().status).toBe('incomplete');
   });
 
+  test('a step that needs an agent: incomplete (exit kind), and the hint says what to do by hand', async () => {
+    const d = deps((args) => new ResultStore(args));
+    const needsHand = { ...scenario, steps: [{ id: 'wifi_off', action: 'disable_wifi', description: 'd' }], assertions: [] };
+    const r = await handleRun(d, prepared(needsHand));
+    expect(r.exitKind).toBe('incomplete');
+    expect(r.envelope.error).toMatchObject({ kind: 'incomplete', message: `run ${RUN_ID} incomplete` });
+    expect(r.envelope.data).toMatchObject({ status: 'incomplete', failed_step: null, failures: [], pending: [] });
+    expect(r.envelope.hint).toContain('Pending step wifi_off: disable_wifi cannot be run by mauto');
+    expect(r.envelope.hint).toContain(`mauto result finalize --run-id ${RUN_ID} --scenario ${path.join(root, 'demo.json')}`);
+    expect(resultFile().steps_executed[0]).toMatchObject({ step_id: 'wifi_off', status: 'skipped', needs_agent: true });
+  });
+
   test('a failure beside a pending assertion is test_failed, still listing what is pending', async () => {
     const d = deps((args) => new ResultStore(args));
     d.bridge = makeFakeBridge({ elements: [[el('More')]] });

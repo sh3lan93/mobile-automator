@@ -5,13 +5,15 @@ const path = require('path');
 
 const { workspaceDir } = require('../workspace/layout');
 const { handlerFor } = require('./actions');
+const { preconditionHandlerFor } = require('./actions/preconditions');
 
 const DEFAULT_BACKOFF_MS = 1000;
 
 // Run one step's action under its retry_policy. Fatal errors stop at once.
-// Returns { ok, attempts, error }.
-async function attempt(step, ctx) {
-  const perform = handlerFor(step.action);
+// A NeedsAgentError is neither retried nor a failure: it is returned flagged.
+// Returns { ok, attempts, error, needsAgent? }.
+async function attempt(step, ctx, handlers) {
+  const perform = handlers(step.action);
   const policy = step.retry_policy || {};
   const maxAttempts = Math.max(1, Number(policy.max_attempts) || 1);
   const backoff = policy.backoff_ms === undefined ? DEFAULT_BACKOFF_MS : Number(policy.backoff_ms);
@@ -22,6 +24,7 @@ async function attempt(step, ctx) {
       return { ok: true, attempts: n, error: null };
     } catch (err) {
       lastError = err;
+      if (err && err.needsAgent) return { ok: false, needsAgent: true, attempts: n, error: err };
       if (err && err.fatal) return { ok: false, attempts: n, error: err };
       if (n < maxAttempts) await ctx.clock.sleep(backoff);
     }
@@ -49,26 +52,31 @@ async function screenshot(name, { bridge, projectRoot, scenario, runId, observe 
 // Run a step, capture its evidence (on a checkpoint when it passed, always
 // when it failed), record it in the store with what was noted on the way
 // (ctx.observe, each distinct note once, as a state_context observation) and
-// stamp the run trace. Returns { ok, attempts, error }.
-async function runStep(step, parent) {
+// stamp the run trace. A step that needs an agent (NeedsAgentError) is
+// recorded `skipped` with `needs_agent: true`, takes no failure screenshot and
+// returns `pending: true` beside `ok: false`: it is not a failure, but nothing
+// after it may run. `precondition: true` looks the action up among the
+// precondition handlers. Returns { ok, attempts, error, pending? }.
+async function runStep(step, parent, { precondition = false } = {}) {
   const notes = new Set();
   const ctx = { ...parent, observe: (message) => notes.add(message) };
-  const outcome = await attempt(step, ctx);
+  const outcome = await attempt(step, ctx, precondition ? preconditionHandlerFor : handlerFor);
 
   let shot = null;
   if (outcome.ok && step.checkpoint) shot = await screenshot(`step_${step.id}`, ctx);
-  if (!outcome.ok) shot = await screenshot(`step_${step.id}_failure`, ctx);
+  if (!outcome.ok && !outcome.needsAgent) shot = await screenshot(`step_${step.id}_failure`, ctx);
 
   ctx.store.addStep({
     step_id: step.id,
-    status: outcome.ok ? 'passed' : 'failed',
+    status: outcome.ok ? 'passed' : outcome.needsAgent ? 'skipped' : 'failed',
     attempts: outcome.attempts,
     screenshot: shot,
     error_message: outcome.ok ? null : outcome.error.message,
+    ...(outcome.needsAgent ? { needs_agent: true } : {}),
   });
   for (const message of notes) ctx.store.addObservation({ type: 'state_context', step_id: step.id, message });
   ctx.trace.step(outcome.ok);
-  return outcome;
+  return outcome.needsAgent ? { ...outcome, pending: true } : outcome;
 }
 
 module.exports = { runStep, DEFAULT_BACKOFF_MS };

@@ -247,7 +247,7 @@ class ResultStore {
     });
   }
 
-  addStep({ step_id, status, attempts = 1, screenshot = null, error_message = null, observations = null } = {}) {
+  addStep({ step_id, status, attempts = 1, screenshot = null, error_message = null, observations = null, needs_agent = false } = {}) {
     return withLock(this._lock, () => {
       this._refreshFromDisk();
       const normalized = stepStatus(status);
@@ -260,6 +260,8 @@ class ResultStore {
         retried: retryCount > 0,
         retry_count: retryCount,
         observations,
+        // Only a step an agent must do carries the flag (see isPendingStep).
+        ...(needs_agent === true ? { needs_agent: true } : {}),
       };
       this._steps.push(step);
 
