@@ -4,22 +4,34 @@
 // `async (step, ctx)`: resolves on success, throws on failure (a throw with
 // `fatal: true` is not retried). `ctx.observe(message)` notes something worth
 // knowing about a step that did not fail it; runStep records each note as a
-// state_context observation. Deliberately narrow — the actions the harness
-// executor ran — and anything else is a loud fatal step error rather than a
-// skip, so a scenario can never pass by exercising less than it claims. Later
-// replay slices fill in the rest of the action catalog.
+// state_context observation. Every action the action catalog does not mark
+// `unsupported` has a handler here, and every `unsupported` one maps to the
+// needs-agent handler (the guard is tests/lint/run-action-coverage.test.js).
+// An action with no entry is a loud fatal step error rather than a skip, so a
+// scenario can never pass by exercising less than it claims.
 
 const { FatalStepError } = require('../fatal');
 const { launchApp } = require('./launch');
-const { tap, type } = require('./gestures');
+const { tap, type, longPress, doubleTap, swipe, pressButton, openUrl } = require('./gestures');
+const { scrollToElement } = require('./scroll');
+const { captureValue } = require('./capture');
 const { SEMANTIC_HANDLERS } = require('./semantic');
-const { waitForElement } = require('./wait');
+const { waitForElement, waitForElementGone, waitForLoadingComplete } = require('./wait');
 
 const ACTION_HANDLERS = Object.freeze({
   launch_app: launchApp,
   tap,
   type,
+  long_press: longPress,
+  double_tap: doubleTap,
+  swipe,
+  press_button: pressButton,
+  open_url: openUrl,
+  scroll_to_element: scrollToElement,
   wait_for_element: waitForElement,
+  wait_for_element_gone: waitForElementGone,
+  wait_for_loading_complete: waitForLoadingComplete,
+  capture_value: captureValue,
   ...SEMANTIC_HANDLERS,
 });
 

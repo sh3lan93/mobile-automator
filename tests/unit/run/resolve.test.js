@@ -76,4 +76,39 @@ describe('resolveTarget', () => {
     expect(r.element.text).toBe('b');
     expect(calls[0]).toEqual(['findFirst', 'anything']);
   });
+
+  describe('target_pattern', () => {
+    test('resolves a label by regex when there is no target', () => {
+      const r = resolveTarget([el('Home'), el('12 points', { center: [9, 9] })], undefined, evaluator, { pattern: '\\d+ points' });
+      expect(r.center).toEqual([9, 9]);
+    });
+
+    test('a target narrows first, the pattern filters the matches', () => {
+      const els = [el('Tab 1', { center: [1, 1] }), el('Tab 22', { center: [2, 2] })];
+      const r = resolveTarget(els, 'Tab', evaluator, { pattern: '\\d{2}$' });
+      expect(r.center).toEqual([2, 2]);
+      expect(r.matches).toHaveLength(1);
+    });
+
+    test('the label fallback is matched too', () => {
+      const r = resolveTarget([el(null, { accessibility_label: '7 points', center: [3, 3] })], undefined, evaluator, { pattern: '^\\d+ points$' });
+      expect(r.center).toEqual([3, 3]);
+    });
+
+    test('a miss is a TargetNotFoundError naming the pattern', () => {
+      const err = (() => { try { resolveTarget([el('Home')], undefined, evaluator, { pattern: '^zzz' }); } catch (e) { return e; } return null; })();
+      expect(err).toBeInstanceOf(TargetNotFoundError);
+      expect(err.message).toBe('no element matches target pattern /^zzz/; on screen: "Home"');
+    });
+
+    test('an invalid regex is fatal', () => {
+      const err = (() => { try { resolveTarget([el('Home')], undefined, evaluator, { pattern: '(' }); } catch (e) { return e; } return null; })();
+      expect(err.fatal).toBe(true);
+      expect(err.message).toMatch(/invalid target_pattern "\("/);
+    });
+
+    test('neither target nor pattern is rejected', () => {
+      expect(() => resolveTarget([el('a')], undefined, evaluator, {})).toThrow(/target/);
+    });
+  });
 });

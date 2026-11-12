@@ -173,11 +173,11 @@ describe('runScenario', () => {
   test('an action the runner does not implement is a step error, not a silent pass', async () => {
     const b = makeFakeBridge();
     const r = await exec(
-      scenario([{ id: 'swipe_up', action: 'swipe', description: 'd', value: 'up', on_failure: 'retry', retry_policy: { max_attempts: 3 } }]),
+      scenario([{ id: 'mystery', action: 'teleport', description: 'd', on_failure: 'retry', retry_policy: { max_attempts: 3 } }]),
       b
     );
     expect(r.finalized.status).toBe('failed');
-    expect(r.failures.join('\n')).toContain('action "swipe" is not supported by mauto run yet');
+    expect(r.failures.join('\n')).toContain('action "teleport" is not supported by mauto run yet');
     expect(r.file.steps_executed[0].retry_count).toBe(0);
     // Nothing reached the device except the failure evidence.
     expect(b.methods()).toEqual(['screenshot']);
