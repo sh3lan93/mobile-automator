@@ -3,7 +3,7 @@
 const path = require('path');
 
 const { ok, fail } = require('../output/envelope');
-const { buildExecutor, pendingAssertions, pendingHint, incompleteMessage } = require('../result/provenance');
+const { buildExecutor, pendingAssertions, incompleteEnvelope } = require('../result/provenance');
 const { realClock } = require('./clock');
 const { runScenario } = require('./runner');
 const { NO_TRACE } = require('./trace');
@@ -103,7 +103,7 @@ async function handleRun(
   // hint is the exact commands that complete the run, as finalize's is.
   if (result.status === 'incomplete') {
     return {
-      envelope: fail('incomplete', incompleteMessage(result), [...hints, pendingHint(result, { projectRoot })].join('\n'), data),
+      envelope: incompleteEnvelope(result, { hints, projectRoot, data }),
       exitKind: 'incomplete',
     };
   }

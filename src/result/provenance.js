@@ -11,6 +11,7 @@ const path = require('path');
 const { version: MAUTO_VERSION } = require('../../package.json');
 const manager = require('../config/manager');
 const { readEngine } = require('../device/engine');
+const { fail } = require('../output/envelope');
 const { isPendingAssertion } = require('./outcome');
 const { flattenSteps } = require('../scenario/steps');
 const resultSchema = require('../schemas/result_schema.json');
@@ -151,4 +152,11 @@ function pendingHint(result, { projectRoot }) {
   ].join('\n');
 }
 
-module.exports = { crossCheck, scenarioMismatch, buildExecutor, pendingAssertions, pendingHint, incompleteMessage };
+// The `incomplete` (exit 7) envelope, shared by `result finalize` and
+// `mauto run`: the message, the store's hints, then the commands that complete
+// the run. `data` is what the envelope carries.
+function incompleteEnvelope(result, { hints, projectRoot, data }) {
+  return fail('incomplete', incompleteMessage(result), [...hints, pendingHint(result, { projectRoot })].join('\n'), data);
+}
+
+module.exports = { incompleteEnvelope, crossCheck, scenarioMismatch, buildExecutor, pendingAssertions, pendingHint, incompleteMessage };
