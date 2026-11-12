@@ -11,6 +11,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ Added
 
+- **`mauto run` performs every action the action catalog can execute, and
+  hands back the rest** (replay PRD #271, slice R3). Added handlers:
+  `long_press` (a numeric `value` is the duration), `double_tap`, `swipe`
+  (`value` is the direction), `press_button`, `open_url`, `scroll_to_element`
+  (swipes between looks, up to `run.scroll_max_swipes`), `wait_for_element_gone`,
+  `wait_for_loading_complete` (done after two consecutive looks without a
+  configured loading label), and `capture_value` (into the run's variables, so
+  `value_matches_variable` is now decided mechanically). `target_pattern`
+  resolves a label by regex. Preconditions run before step 1, each recorded as
+  step `precondition_<n>`: `install_app` (needs a build path in `value`),
+  `uninstall_app` and `set_orientation`. `clear_app_data`, `enable_wifi`,
+  `disable_wifi` (and `install_app` with no `value`) no longer abort the run as
+  unsupported: the step is recorded `skipped` with `needs_agent: true`, the run
+  stops there and finalizes `incomplete` (exit 7), and the hint says what to do
+  by hand. `result finalize --scenario` accepts the `precondition_<n>` ids.
+  New optional config block `run { poll_ms, default_timeout_ms,
+  scroll_max_swipes, loading_indicator_labels }` (absent keys keep their
+  defaults; the scaffold does not write it) and `mauto run --timeout-ms <ms>`,
+  a cap on every per-step wait (never a lengthening); a non-positive or
+  non-integer value is `invalid_input` before any device work. A new guard,
+  `tests/lint/run-action-coverage.test.js`, derives from the action catalog
+  and the scenario schema that nothing is left without a handler.
+  Refs #279
 - **A hidden `mauto run <scenario>` replays a scenario unattended, behind
   `MAUTO_REPLAY=1`** (replay PRD #271, slice R1). Without the variable set to
   exactly `1` it refuses with `environment` (exit 5) before touching a device,

@@ -181,6 +181,23 @@ mauto config set engine legacy
 
 Switching clears the pinned device (the engines name Android emulators differently — re-select with `mauto devices use <id>`), and the next device verb restarts the session on the new engine. An exported `MOBILEMCP_LEGACY_ROBOT` overrides the key. See [TROUBLESHOOTING.md](https://github.com/sh3lan93/mobile-automator/blob/main/TROUBLESHOOTING.md) for the Android `DeviceServer` cleanup the hint mentions.
 
+### Replay timings (optional)
+
+The in-progress `mauto run` replayer reads an optional `run` block from `config.json`. Every key is optional, none is written by `mauto setup`, and an absent key keeps its default:
+
+| Key | Default | What it sets |
+|---|---|---|
+| `run.poll_ms` | `1500` | Milliseconds between looks at the screen while a step waits |
+| `run.default_timeout_ms` | `30000` | How long a wait step waits when its `wait_config` names no timeout |
+| `run.scroll_max_swipes` | `10` | Most swipes a `scroll_to_element` step makes before it fails |
+| `run.loading_indicator_labels` | none | On-screen labels that mean something is still loading; `wait_for_loading_complete` waits for them to disappear |
+
+```json
+{ "run": { "default_timeout_ms": 15000, "loading_indicator_labels": ["Loading", "Please wait"] } }
+```
+
+`mauto run --timeout-ms <ms>` caps how long any one step waits, whatever the config or the step says.
+
 ### Project knowledge
 
 The agent infers and persists the deeper context that makes generated tests project-aware:
