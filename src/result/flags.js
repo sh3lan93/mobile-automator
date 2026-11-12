@@ -78,38 +78,39 @@ function parseStepStatus(raw) {
   return { value: normalized };
 }
 
-// `result add-assertion --pass` (#275): a decided verdict, or `pending` — the
-// assertion is recorded `needs_agent`, to be decided later by an agent.
-const VERDICTS = { true: true, false: false, pending: 'pending' };
+// `result add-assertion --pass` / `--judge` (#275, B3), parsed as one unit
+// because the two flags constrain each other: `--pass` is a decided verdict or
+// `pending` (recorded `needs_agent`, to be decided later by an agent).
+//
+// Returns `{ value: { status, judge } }` or `{ error }`. `status` is the
+// assertion status to record; `judge` is undefined (no claim made — a caller
+// that predates the flag writes exactly what it always wrote) or `{by}`. A
+// pending verdict was decided by nobody, so it records `{by: 'none'}` and
+// refuses `agent`; a decided verdict refuses `none`.
+const VERDICT_STATUSES = { true: 'passed', false: 'failed', pending: 'needs_agent' };
 
-function parseVerdict(raw) {
-  if (Object.prototype.hasOwnProperty.call(VERDICTS, raw)) return { value: VERDICTS[raw] };
-  return { error: `--pass must be true | false | pending (got "${raw}")` };
-}
-
-// Who an agent may say decided a verdict (`result add-assertion --judge`). The
-// schema's judge.by enum also has `mauto`, which only the in-process runner
-// writes: an agent claiming mauto decided would be the self-attestation the
-// field exists to expose.
+// Who an agent may say decided a verdict (`--judge`). The schema's judge.by
+// enum also has `mauto`, which only the in-process runner writes: an agent
+// claiming mauto decided would be the self-attestation the field exists to
+// expose.
 const JUDGES = ['agent', 'none'];
 
-// The `judge` to record for a `--judge` value (undefined when omitted) and the
-// parsed `--pass` verdict, or { error }. A pending verdict was decided by
-// nobody, so it records `{by: 'none'}` and refuses `agent`; a decided verdict
-// refuses `none`, and records no judge unless `agent` was said — so callers
-// that predate the flag write exactly what they always wrote.
-function parseJudge(raw, verdict) {
-  if (raw !== undefined && !JUDGES.includes(raw)) {
-    return { error: `--judge must be ${JUDGES.join(' | ')} (got "${raw}")` };
+function parseAssertionVerdict(passRaw, judgeRaw) {
+  if (!Object.prototype.hasOwnProperty.call(VERDICT_STATUSES, passRaw)) {
+    return { error: `--pass must be true | false | pending (got "${passRaw}")` };
   }
-  if (verdict === 'pending') {
-    if (raw === 'agent') return { error: '--judge agent needs a verdict: use --pass true or --pass false' };
-    return { value: { by: 'none' } };
+  if (judgeRaw !== undefined && !JUDGES.includes(judgeRaw)) {
+    return { error: `--judge must be ${JUDGES.join(' | ')} (got "${judgeRaw}")` };
   }
-  if (raw === 'none') {
-    return { error: `--judge none means nobody decided, but --pass is ${verdict}: use --pass pending or --judge agent` };
+  const status = VERDICT_STATUSES[passRaw];
+  if (status === 'needs_agent') {
+    if (judgeRaw === 'agent') return { error: '--judge agent needs a verdict: use --pass true or --pass false' };
+    return { value: { status, judge: { by: 'none' } } };
   }
-  return { value: raw === 'agent' ? { by: 'agent' } : null };
+  if (judgeRaw === 'none') {
+    return { error: `--judge none means nobody decided, but --pass is ${passRaw}: use --pass pending or --judge agent` };
+  }
+  return { value: { status, judge: judgeRaw === 'agent' ? { by: 'agent' } : undefined } };
 }
 
 // Mirrors the enum at /properties/status in src/schemas/result_schema.json;
@@ -131,9 +132,8 @@ module.exports = {
   OBSERVATION_TYPES,
   parseObservation,
   parseCapture,
-  parseVerdict,
   JUDGES,
-  parseJudge,
+  parseAssertionVerdict,
   RUN_STATUSES,
   parseRunStatus,
   STEP_STATUS_ALIASES,

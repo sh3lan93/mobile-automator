@@ -269,7 +269,7 @@ describe('result coverage — schema ↔ store ↔ verbs', () => {
 
     test('a pending verdict is replaced in place by the decided one, and the run passes', () => {
       const store = new ResultStore({ runId: 'run_20260101_000009', scenarioId: 's', projectRoot: tmpProjectRoot() });
-      store.addAssertion({ step_id: 'step_1', assertion_id: 'a1', type: 'visual_state', pass: 'pending', judge: { by: 'none' } });
+      store.addAssertion({ step_id: 'step_1', assertion_id: 'a1', type: 'visual_state', status: 'needs_agent', judge: { by: 'none' } });
       store.addAssertion({ step_id: 'step_1', assertion_id: 'a2', type: 'element_exists', pass: true });
       store.addAssertion({ step_id: 'step_1', assertion_id: 'a1', type: 'visual_state', pass: true, judge: { by: 'agent' } });
       const result = store.finalize({});
@@ -279,7 +279,7 @@ describe('result coverage — schema ↔ store ↔ verbs', () => {
 
     test('a pending verdict finalizes the run incomplete', () => {
       const store = new ResultStore({ runId: 'run_20260101_000010', scenarioId: 's', projectRoot: tmpProjectRoot() });
-      store.addAssertion({ step_id: 'step_1', assertion_id: 'a1', type: 'visual_state', pass: 'pending' });
+      store.addAssertion({ step_id: 'step_1', assertion_id: 'a1', type: 'visual_state', status: 'needs_agent' });
       const result = store.finalize({});
       expect(result.status).toBe('incomplete');
       expect(result.assertion_results[0].status).toBe('needs_agent');

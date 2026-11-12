@@ -15,7 +15,7 @@ const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
 const { fromCliFlags } = require('./assertion/fields');
 const { ResultStore, readFinalizedResult, InvalidRunIdError, AlreadyDecidedError } = require('./result/store');
 const {
-  OBSERVATION_TYPES, parseObservation, parseCapture, parseVerdict, parseJudge, RUN_STATUSES, parseRunStatus, parseStepStatus,
+  OBSERVATION_TYPES, parseObservation, parseCapture, parseAssertionVerdict, RUN_STATUSES, parseRunStatus, parseStepStatus,
 } = require('./result/flags');
 const { checkExplicitStatus } = require('./result/status-guard');
 const { scenarioMismatch, buildExecutor, pendingHint, incompleteMessage } = require('./result/provenance');
@@ -693,13 +693,9 @@ function handleResultAddAssertion({ resultStoreFactory, projectRoot }, opts) {
       exitKind: 'invalid_input',
     };
   }
-  const verdict = parseVerdict(pass);
+  const verdict = parseAssertionVerdict(pass, opts.judge);
   if (verdict.error) {
     return { envelope: fail('invalid_input', verdict.error, null), exitKind: 'invalid_input' };
-  }
-  const judge = parseJudge(opts.judge, verdict.value);
-  if (judge.error) {
-    return { envelope: fail('invalid_input', judge.error, null), exitKind: 'invalid_input' };
   }
 
   const store = resultStoreFactory({ runId, scenarioId, projectRoot });
@@ -707,8 +703,8 @@ function handleResultAddAssertion({ resultStoreFactory, projectRoot }, opts) {
     step_id: stepId,
     assertion_id: assertionId,
     type,
-    pass: verdict.value,
-    judge: judge.value,
+    status: verdict.value.status,
+    judge: verdict.value.judge,
     message,
     expected: expected === undefined ? null : expected,
     actual: actual === undefined ? null : actual,

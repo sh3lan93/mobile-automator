@@ -78,11 +78,45 @@ describe('addAssertion persists provenance fields (#275)', () => {
     expect(store.addAssertion({ assertion_id: 'b', type: 'element_exists', pass: true })).not.toHaveProperty('judge');
   });
 
-  test('pass: pending records needs_agent', () => {
+  test('status: needs_agent records needs_agent', () => {
     const store = newStore();
-    const entry = store.addAssertion({ step_id: 's1', assertion_id: 'a', type: 'visual_state', pass: 'pending', judge: { by: 'none' } });
+    const entry = store.addAssertion({ step_id: 's1', assertion_id: 'a', type: 'visual_state', status: 'needs_agent', judge: { by: 'none' } });
     expect(entry.status).toBe('needs_agent');
     expect(entry.judge).toEqual({ by: 'none' });
+  });
+});
+
+describe('explicit assertion status (B3)', () => {
+  test.each([['passed'], ['failed'], ['needs_agent']])('status %s is recorded as given', (status) => {
+    expect(newStore().addAssertion({ assertion_id: 'a', status }).status).toBe(status);
+  });
+
+  test('an unknown status throws and writes nothing', () => {
+    const store = newStore();
+    expect(() => store.addAssertion({ assertion_id: 'a', status: 'pending' })).toThrow(/assertion status/);
+    expect(() => store.addAssertion({ assertion_id: 'a', status: 'pass' })).toThrow(/assertion status/);
+  });
+
+  test('the legacy boolean pass is still accepted', () => {
+    const store = newStore();
+    expect(store.addAssertion({ assertion_id: 'a', pass: true }).status).toBe('passed');
+    expect(store.addAssertion({ assertion_id: 'b', pass: false }).status).toBe('failed');
+  });
+
+  test("the retired tri-state pass: 'pending' is refused, not guessed at", () => {
+    expect(() => newStore().addAssertion({ assertion_id: 'a', pass: 'pending' })).toThrow(/pass must be a boolean/);
+  });
+
+  test('neither status nor pass is refused', () => {
+    expect(() => newStore().addAssertion({ assertion_id: 'a' })).toThrow(/status/);
+  });
+
+  test('a legacy caller (boolean pass, no provenance) writes a byte-identical assertion_results', () => {
+    const store = newStore();
+    store.addAssertion({ step_id: 's1', assertion_id: 'a1', pass: true, message: 'ok', expected: 'x', actual: 'x' });
+    store.addAssertion({ step_id: 's1', assertion_id: 'a2', pass: false, message: 'bad' });
+    const fixture = fs.readFileSync(path.join(__dirname, 'bytes', 'legacy-assertions.json'), 'utf8');
+    expect(JSON.stringify(readFile(store).assertion_results, null, 2) + '\n').toBe(fixture);
   });
 });
 
@@ -90,7 +124,7 @@ describe('needs_agent upsert and never-downgrade (#275)', () => {
   test('a decided verdict replaces the needs_agent entry in place', () => {
     const store = newStore();
     store.addAssertion({ assertion_id: 'first', type: 'element_exists', pass: true });
-    store.addAssertion({ assertion_id: 'judged', type: 'visual_state', pass: 'pending', judge: { by: 'none' } });
+    store.addAssertion({ assertion_id: 'judged', type: 'visual_state', status: 'needs_agent', judge: { by: 'none' } });
     store.addAssertion({ assertion_id: 'last', type: 'element_exists', pass: true });
 
     const later = reopen(store);
@@ -110,7 +144,7 @@ describe('needs_agent upsert and never-downgrade (#275)', () => {
     const before = fs.readFileSync(store.file, 'utf8');
     let err;
     try {
-      store.addAssertion({ assertion_id: 'a', type: 'element_exists', pass: 'pending' });
+      store.addAssertion({ assertion_id: 'a', type: 'element_exists', status: 'needs_agent' });
     } catch (e) {
       err = e;
     }
@@ -122,8 +156,8 @@ describe('needs_agent upsert and never-downgrade (#275)', () => {
 
   test('pending over pending replaces in place rather than duplicating', () => {
     const store = newStore();
-    store.addAssertion({ assertion_id: 'a', type: 'visual_state', pass: 'pending', message: 'one' });
-    store.addAssertion({ assertion_id: 'a', type: 'visual_state', pass: 'pending', message: 'two' });
+    store.addAssertion({ assertion_id: 'a', type: 'visual_state', status: 'needs_agent', message: 'one' });
+    store.addAssertion({ assertion_id: 'a', type: 'visual_state', status: 'needs_agent', message: 'two' });
     const all = readFile(store).assertion_results;
     expect(all).toHaveLength(1);
     expect(all[0].message).toBe('two');
@@ -138,7 +172,7 @@ describe('needs_agent upsert and never-downgrade (#275)', () => {
 
   test('a derived id never upserts: two id-less entries both append', () => {
     const store = newStore();
-    store.addAssertion({ step_id: 's1', type: 'visual_state', pass: 'pending' });
+    store.addAssertion({ step_id: 's1', type: 'visual_state', status: 'needs_agent' });
     store.addAssertion({ step_id: 's1', type: 'visual_state', pass: true });
     const all = readFile(store).assertion_results;
     expect(all.map((a) => a.status)).toEqual(['needs_agent', 'passed']);
@@ -151,8 +185,8 @@ describe('finalize with pending entries (#275)', () => {
     const store = newStore();
     store.addStep({ step_id: 's1', status: 'pass' });
     store.addAssertion({ step_id: 's1', assertion_id: 'a', type: 'element_exists', pass: true });
-    store.addAssertion({ step_id: 's1', assertion_id: 'b', type: 'visual_state', pass: 'pending' });
-    store.addAssertion({ step_id: 's1', assertion_id: 'c', type: 'visual_state', pass: 'pending' });
+    store.addAssertion({ step_id: 's1', assertion_id: 'b', type: 'visual_state', status: 'needs_agent' });
+    store.addAssertion({ step_id: 's1', assertion_id: 'c', type: 'visual_state', status: 'needs_agent' });
     const result = store.finalize({});
     expect(result.status).toBe('incomplete');
     expect(result).toMatchObject({ total_assertions: 3, passed_assertions: 1, failed_assertions: 0 });
@@ -168,7 +202,7 @@ describe('finalize with pending entries (#275)', () => {
 
   test('deciding the pending ones and re-finalizing passes', () => {
     const store = newStore();
-    store.addAssertion({ step_id: 's1', assertion_id: 'b', type: 'visual_state', pass: 'pending' });
+    store.addAssertion({ step_id: 's1', assertion_id: 'b', type: 'visual_state', status: 'needs_agent' });
     expect(store.finalize({}).status).toBe('incomplete');
     const later = reopen(store);
     later.addAssertion({ step_id: 's1', assertion_id: 'b', type: 'visual_state', pass: true, judge: { by: 'agent' } });
@@ -181,7 +215,7 @@ describe('finalize with pending entries (#275)', () => {
 describe('executor (#275)', () => {
   test('finalize writes it; it survives add-assertion and re-finalize unchanged', () => {
     const store = newStore();
-    store.addAssertion({ step_id: 's1', assertion_id: 'b', type: 'visual_state', pass: 'pending' });
+    store.addAssertion({ step_id: 's1', assertion_id: 'b', type: 'visual_state', status: 'needs_agent' });
     expect(store.finalize({ executor: EXECUTOR }).executor).toEqual(EXECUTOR);
 
     const later = reopen(store);

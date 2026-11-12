@@ -4,9 +4,8 @@ const {
   OBSERVATION_TYPES,
   parseObservation,
   parseCapture,
-  parseVerdict,
+  parseAssertionVerdict,
   JUDGES,
-  parseJudge,
   RUN_STATUSES,
   parseRunStatus,
 } = require('../../../src/result/flags');
@@ -61,47 +60,40 @@ describe('parseCapture', () => {
   });
 });
 
-describe('parseVerdict (#275)', () => {
-  test.each([
-    ['true', true],
-    ['false', false],
-    ['pending', 'pending'],
-  ])('accepts %s', (raw, value) => {
-    expect(parseVerdict(raw)).toEqual({ value });
-  });
-
-  test.each(['yes', 'TRUE', '', 'needs_agent', undefined])('rejects %p, naming the flag and the choices', (raw) => {
-    expect(parseVerdict(raw).error).toMatch(/--pass must be true \| false \| pending/);
-  });
-});
-
-describe('parseJudge (#275)', () => {
+describe('parseAssertionVerdict (#275, B3)', () => {
   test('JUDGES is what an agent may claim: never mauto', () => {
     expect(JUDGES).toEqual(['agent', 'none']);
   });
 
-  // [--judge, verdict] -> the judge recorded, or an error (plan decision 2).
+  // [--pass, --judge] -> { status, judge } as a unit (plan decision 2). `judge`
+  // is undefined for "no claim", never null.
   test.each([
-    [undefined, 'pending', { by: 'none' }],
-    ['none', 'pending', { by: 'none' }],
-    [undefined, true, null],
-    [undefined, false, null],
-    ['agent', true, { by: 'agent' }],
-    ['agent', false, { by: 'agent' }],
-  ])('--judge %p with --pass %p records %p', (raw, verdict, judge) => {
-    expect(parseJudge(raw, verdict)).toEqual({ value: judge });
+    ['true', undefined, { status: 'passed', judge: undefined }],
+    ['false', undefined, { status: 'failed', judge: undefined }],
+    ['true', 'agent', { status: 'passed', judge: { by: 'agent' } }],
+    ['false', 'agent', { status: 'failed', judge: { by: 'agent' } }],
+    ['pending', undefined, { status: 'needs_agent', judge: { by: 'none' } }],
+    ['pending', 'none', { status: 'needs_agent', judge: { by: 'none' } }],
+  ])('--pass %p --judge %p records %p', (pass, judge, value) => {
+    const r = parseAssertionVerdict(pass, judge);
+    expect(r).toEqual({ value });
+    if (value.judge === undefined) expect(r.value.judge).toBeUndefined();
+  });
+
+  test.each(['yes', 'TRUE', '', 'needs_agent', undefined])('rejects --pass %p, naming the flag and the choices', (raw) => {
+    expect(parseAssertionVerdict(raw).error).toMatch(/--pass must be true \| false \| pending/);
   });
 
   test('--judge agent with pending is refused: an agent that judged has a verdict', () => {
-    expect(parseJudge('agent', 'pending').error).toMatch(/--judge agent needs a verdict/);
+    expect(parseAssertionVerdict('pending', 'agent').error).toMatch(/--judge agent needs a verdict/);
   });
 
-  test.each([true, false])('--judge none with a decided verdict (%p) is refused', (verdict) => {
-    expect(parseJudge('none', verdict).error).toMatch(/--judge none means nobody decided/);
+  test.each(['true', 'false'])('--judge none with a decided verdict (%p) is refused', (pass) => {
+    expect(parseAssertionVerdict(pass, 'none').error).toMatch(/--judge none means nobody decided/);
   });
 
-  test.each(['mauto', 'Agent', ''])('rejects %p', (raw) => {
-    expect(parseJudge(raw, true).error).toMatch(/--judge must be agent \| none/);
+  test.each(['mauto', 'Agent', ''])('rejects --judge %p', (raw) => {
+    expect(parseAssertionVerdict('true', raw).error).toMatch(/--judge must be agent \| none/);
   });
 });
 

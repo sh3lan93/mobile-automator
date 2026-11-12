@@ -67,9 +67,22 @@ function pendingSuffix(steps, assertions) {
   return pending ? `, ${pending} pending agent judgment` : '';
 }
 
-// `pending` (#275) records an assertion nobody has decided yet.
-function assertionStatus(pass) {
-  if (pass === 'pending') return 'needs_agent';
+const ASSERTION_STATUSES = ['passed', 'failed', 'needs_agent'];
+
+// The status to record. `status` is the explicit form (#275, B3). The legacy
+// boolean `pass` of callers that predate it is still accepted, so they write
+// byte-identical result files; anything else (including the retired
+// `pass: 'pending'`) is a caller bug and throws rather than guessing.
+function assertionStatus({ status, pass }) {
+  if (status !== undefined) {
+    if (!ASSERTION_STATUSES.includes(status)) {
+      throw new Error(`unknown assertion status "${status}" (expected ${ASSERTION_STATUSES.join(' | ')})`);
+    }
+    return status;
+  }
+  if (typeof pass !== 'boolean') {
+    throw new Error(`addAssertion needs a status (${ASSERTION_STATUSES.join(' | ')}) or a boolean legacy pass (pass must be a boolean)`);
+  }
   return pass ? 'passed' : 'failed';
 }
 
@@ -291,8 +304,8 @@ class ResultStore {
     });
   }
 
-  // Record an assertion verdict. `pass` is true, false or 'pending' (#275):
-  // pending records `needs_agent`. Provenance is persisted beside it: `type`,
+  // Record an assertion verdict. `status` is passed | failed | needs_agent
+  // (#275); the legacy boolean `pass` is still accepted in its place. Provenance is persisted beside it: `type`,
   // `step_id`, `mechanical` (derived from the type unless given) and `judge`
   // (omitted unless given — a caller that does not say who decided records
   // no claim).
@@ -303,7 +316,7 @@ class ResultStore {
   // back to undecided. A derived id (none given) always appends, as do two
   // decided verdicts for one id.
   addAssertion({
-    step_id, assertion_id, type, pass, message, expected = null, actual = null, mechanical, judge,
+    step_id, assertion_id, type, status, pass, message, expected = null, actual = null, mechanical, judge,
   } = {}) {
     return withLock(this._lock, () => {
       this._refreshFromDisk();
@@ -312,7 +325,7 @@ class ResultStore {
       }
       const entry = {
         assertion_id: assertion_id || `${step_id || 'assert'}_${type || 'unknown'}_${this._assertions.length + 1}`,
-        status: assertionStatus(pass),
+        status: assertionStatus({ status, pass }),
         expected: expected == null ? null : String(expected),
         actual: actual == null ? null : String(actual),
         message: message || '',

@@ -13,39 +13,38 @@ const { expectedOf, toEvaluatorInput } = require('../assertion/fields');
 // - an evaluator error is a failed assertion.
 // Pushes a failure line only for a decided failure.
 async function runAssertion(assertion, { bridge, store, evaluator, failures }) {
-  const record = {
+  const base = {
     step_id: assertion.after_step,
     assertion_id: assertion.id,
     type: assertion.type,
     expected: expectedOf(assertion),
   };
+  let verdict;
   try {
     const elements = await bridge.listElements();
-    const verdict = evaluator.evaluate(toEvaluatorInput(assertion), { elements });
-    if (!verdict.needs_agent) {
-      Object.assign(record, {
-        pass: verdict.pass === true,
-        message: verdict.message || 'no message',
-        mechanical: true,
-        judge: { by: 'mauto' },
-      });
-    } else {
-      Object.assign(record, {
-        mechanical: false,
-        pass: 'pending',
-        message: `needs agent judgment (${verdict.message})`,
-        judge: { by: 'none' },
-      });
-    }
+    const answer = evaluator.evaluate(toEvaluatorInput(assertion), { elements });
+    verdict = answer.needs_agent
+      ? {
+          status: 'needs_agent',
+          message: `needs agent judgment (${answer.message})`,
+          mechanical: false,
+          judge: { by: 'none' },
+        }
+      : {
+          status: answer.pass === true ? 'passed' : 'failed',
+          message: answer.message || 'no message',
+          mechanical: true,
+          judge: { by: 'mauto' },
+        };
   } catch (err) {
     // An evaluator error is a failed assertion, attributed to no one.
-    Object.assign(record, { pass: false, message: `assertion errored: ${err.message}` });
-    delete record.judge;
+    verdict = { status: 'failed', message: `assertion errored: ${err.message}` };
   }
 
+  const record = { ...base, ...verdict };
   store.addAssertion(record);
-  if (record.pass === false) failures.push(`assertion ${assertion.id} (${assertion.type}): ${record.message}`);
-  return record.pass === true;
+  if (record.status === 'failed') failures.push(`assertion ${assertion.id} (${assertion.type}): ${record.message}`);
+  return record.status === 'passed';
 }
 
 module.exports = { runAssertion };
