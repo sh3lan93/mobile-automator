@@ -33,6 +33,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   non-integer value is `invalid_input` before any device work. A new guard,
   `tests/lint/run-action-coverage.test.js`, derives from the action catalog
   and the scenario schema that nothing is left without a handler.
+  Review fixes (rc.4): one positive-integer parser shared with
+  `long-press --duration` (which now rejects forms like `1e3`), a single
+  candidate pipeline for target resolution, one outcome kind per step (a step
+  that needs an agent is no longer stamped as a failure in the run trace), one
+  poll entry point for the waiting handlers, and `wait_for_loading_complete`
+  looks only at `run.loading_indicator_labels`.
   Refs #279
 - **A hidden `mauto run <scenario>` replays a scenario unattended, behind
   `MAUTO_REPLAY=1`** (replay PRD #271, slice R1). Without the variable set to

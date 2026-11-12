@@ -1,6 +1,6 @@
 # Replay R3 — full action coverage and `run.*` config keys (plan)
 
-Issue #279 · PRD #271 (slice R3, gated rc) · branch `replay/279-full-action-coverage` · version **0.40.0-rc.3**
+Issue #279 · PRD #271 (slice R3, gated rc) · branch `replay/279-full-action-coverage` · version **0.40.0-rc.4**
 (`main` is at rc.2; R2's review fixes took it.)
 
 ## Goal
@@ -81,7 +81,7 @@ uses **every** supported action end to end on the fake bridge: all steps execute
 ## Docs / housekeeping
 
 `docs/reference/cli-verbs.md` is untouched (the verb is hidden until G); `CHANGELOG.md` `[Unreleased]` gets the R3 entry;
-`package.json` + lockfile → `0.40.0-rc.3`. The setup/config docs mention the optional `run.*` keys (`docs/` config reference),
+`package.json` + lockfile → `0.40.0-rc.4`. The setup/config docs mention the optional `run.*` keys (`docs/` config reference),
 without any count of actions.
 
 ## Decisions to confirm
@@ -93,6 +93,18 @@ without any count of actions.
 4. **`install_app` without `value` → `needs_agent`**, not a failure (the run has no pre-flight build to fall back on).
 5. **`wait_for_loading_complete` with no `loading_indicator_labels` configured passes after two stable polls with a note**
    rather than refusing; the legacy prose key `loading_indicators` is not parsed.
+
+## Review fixes (PR #315)
+
+1. One `parsePositiveInt` (`src/util/parse-positive-int.js`) for `--timeout-ms` and `long-press --duration`; the latter no longer
+   accepts exponent or hex forms such as `1e3`.
+2. `resolveTarget` is one candidate pipeline (target narrows, pattern filters); `TargetNotFoundError` is always built from
+   `describeTarget`; `FatalPatternError` is gone and `resolveOnScreen` raises a real `FatalStepError` for a bad `target_pattern`.
+3. A step outcome has one `kind` (`passed | failed | needs_agent`); the runner resolves each step's handler when it builds the
+   queue; the run trace stamps a `needs_agent` step ok, since it is not a failure.
+4. `ctx.pollUntil(step, probe)` is the one wait entry point, built once in `runScenario` from its required settings; no handler
+   falls back to default settings.
+5. `wait_for_loading_complete` no longer aliases `wait_config.indicator`; only `run.loading_indicator_labels` counts.
 
 ## Verification before PR
 
