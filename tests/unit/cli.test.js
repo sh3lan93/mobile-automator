@@ -3009,6 +3009,9 @@ describe('cli handlers', () => {
       const calls = { addStep: [], addObservation: [], captureVariable: [], addAssertion: [], finalize: [] };
       const store = {
         warnings: [],
+        // A non-empty, clean run, so an explicit `--status passed` is not
+        // refused by the status guard (src/result/status-guard.js).
+        recorded: () => ({ steps: [{ step_id: 's', status: 'passed' }], assertions: [] }),
         addStep(arg) {
           calls.addStep.push(arg);
           return { step_id: arg.step_id, status: arg.status };

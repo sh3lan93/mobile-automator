@@ -65,6 +65,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   SHA-256, and an agent's later finalize keeps that executor. `mauto run`
   still requires `MAUTO_REPLAY=1`.
   Refs #275
+- **`result finalize --status` can no longer make a run greener than what was
+  recorded.** An explicit `passed` over a derived `incomplete`, `failed` or
+  `error`, or over a run with no steps and no assertions (unless `--scenario`
+  names a scenario that declares none), and an explicit `incomplete` with
+  nothing pending, are refused with `invalid_input` and nothing written.
+  `failed` and `error` stay allowed. Previously an explicit status always won.
+  Refs #275
 
 ---
 

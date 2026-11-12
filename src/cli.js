@@ -17,6 +17,7 @@ const { ResultStore, readFinalizedResult, InvalidRunIdError, AlreadyDecidedError
 const {
   OBSERVATION_TYPES, parseObservation, parseCapture, parseVerdict, parseJudge, RUN_STATUSES, parseRunStatus, parseStepStatus,
 } = require('./result/flags');
+const { checkExplicitStatus } = require('./result/status-guard');
 const { scenarioMismatch, buildExecutor, pendingHint, incompleteMessage } = require('./result/provenance');
 const { toJUnit } = require('./result/junit');
 const { atomicWrite } = require('./util/atomic');
@@ -878,6 +879,7 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
   // buildExecutor decides how it is recorded.
   let scenarioPath = null;
   let scenarioSha256 = null;
+  let scenarioAssertionCount;
   if (opts.scenario !== undefined) {
     const scenarioFile = path.resolve(cwd, opts.scenario);
     const loaded = loadScenario(validator, scenarioFile, { strict: false });
@@ -888,6 +890,20 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
     }
     scenarioPath = scenarioFile;
     scenarioSha256 = loaded.sha256;
+    scenarioAssertionCount = Array.isArray(loaded.scenario.assertions) ? loaded.scenario.assertions.length : 0;
+  }
+
+  // An explicit --status may equal the derived one or make the run worse,
+  // never greener (src/result/status-guard.js). Refused before anything is
+  // written.
+  if (status !== undefined) {
+    const recorded = resultStoreFactory({ runId, scenarioId, projectRoot }).recorded();
+    const refusal = checkExplicitStatus({
+      status, steps: recorded.steps, assertions: recorded.assertions, scenarioAssertionCount,
+    });
+    if (refusal) {
+      return { envelope: fail('invalid_input', refusal.message, refusal.hint), exitKind: 'invalid_input' };
+    }
   }
 
   // Only provided keys: `defaultMetadata` fills the rest with 'unknown', and

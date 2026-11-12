@@ -237,11 +237,19 @@ describe('result finalize --scenario and incomplete (#275)', () => {
     expect(fs.readFileSync(file, 'utf8')).toBe(before);
   });
 
-  test('--status incomplete is accepted and exits 7', () => {
+  test('--status incomplete over nothing pending is refused, nothing written (B1)', () => {
+    const { deps, runId, file } = setup();
+    const f = invoke(() => handleResultFinalize(deps, { runId, status: 'incomplete' }));
+    expect(f.exitKind).toBe('invalid_input');
+    expect(fs.existsSync(file)).toBe(false);
+  });
+
+  test('--status incomplete is accepted and exits 7 when an assertion is pending', () => {
     const { deps, runId } = setup();
+    add(deps, runId, { type: 'visual_state', assertionId: 'looks_right', pass: 'pending' });
     const f = invoke(() => handleResultFinalize(deps, { runId, status: 'incomplete' }));
     expect(f.exitKind).toBe('incomplete');
-    expect(f.envelope.error.message).toBe(`run ${runId} incomplete`);
+    expect(f.envelope.error.message).toMatch(`run ${runId} incomplete`);
   });
 
   test('re-finalize keeps the first executor', () => {
@@ -253,5 +261,45 @@ describe('result finalize --scenario and incomplete (#275)', () => {
     add(deps, runId, { type: 'visual_state', assertionId: 'looks_right', pass: 'true', judge: 'agent' });
     invoke(() => handleResultFinalize(deps, { runId }));
     expect(JSON.parse(fs.readFileSync(file, 'utf8')).executor).toEqual(runner);
+  });
+});
+
+// B1 (#275 review): an explicit --status may equal the derived one or make the
+// run worse, never greener; refusals write nothing.
+describe('result finalize --status never makes a run greener', () => {
+  const finalize = (ctx, opts) => invoke(() => handleResultFinalize(ctx.deps, { runId: ctx.runId, ...opts }));
+
+  test('passed over a needs_agent assertion is refused, nothing written', () => {
+    const ctx = setup();
+    add(ctx.deps, ctx.runId, { type: 'visual_state', assertionId: 'looks', pass: 'pending' });
+    const before = fs.readFileSync(ctx.file, 'utf8');
+    const f = finalize(ctx, { status: 'passed' });
+    expect(f.exitKind).toBe('invalid_input');
+    expect(f.envelope.error.message).toMatch(/incomplete/);
+    expect(fs.readFileSync(ctx.file, 'utf8')).toBe(before);
+  });
+
+  test('passed over a failed step is refused', () => {
+    const ctx = setup();
+    new ResultStore({ runId: ctx.runId, projectRoot: ctx.projectRoot }).addStep({ step_id: 's1', status: 'fail' });
+    expect(finalize(ctx, { status: 'passed' }).exitKind).toBe('invalid_input');
+  });
+
+  test('passed over an empty run is refused and nothing is written', () => {
+    const ctx = setup();
+    const f = finalize(ctx, { status: 'passed' });
+    expect(f.exitKind).toBe('invalid_input');
+    expect(f.envelope.error.message).toMatch(/nothing recorded/);
+    expect(fs.existsSync(ctx.file)).toBe(false);
+  });
+
+  test('failed and error overrides stay allowed over a clean run', () => {
+    for (const status of ['failed', 'error']) {
+      const ctx = setup();
+      new ResultStore({ runId: ctx.runId, projectRoot: ctx.projectRoot }).addStep({ step_id: 's1', status: 'pass' });
+      const f = finalize(ctx, { status });
+      expect(f.exitKind).toBe('test_failed');
+      expect(JSON.parse(fs.readFileSync(ctx.file, 'utf8')).status).toBe(status);
+    }
   });
 });
