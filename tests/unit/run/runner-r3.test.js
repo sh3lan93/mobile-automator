@@ -111,6 +111,20 @@ describe('needs_agent', () => {
     expect(r.finalized.status).toBe('incomplete');
   });
 
+  test('the run trace stamps a needs_agent step ok: it is not a failure', async () => {
+    const stamps = [];
+    const trace = { start() {}, step: (ok) => stamps.push(ok) };
+    await exec(scenarioOf([{ id: 'wifi', action: 'enable_wifi', description: 'd' }]), makeFakeBridge(), { trace });
+    expect(stamps).toEqual([true]);
+  });
+
+  test('the run trace stamps a failed step not ok', async () => {
+    const stamps = [];
+    const trace = { start() {}, step: (ok) => stamps.push(ok) };
+    await exec(scenarioOf([{ id: 'go', action: 'tap', target: 'Nope', description: 'd' }]), makeFakeBridge({ elements: [[el('Home')]] }), { trace });
+    expect(stamps).toEqual([false]);
+  });
+
   test('is not retried', async () => {
     const r = await exec(scenarioOf([
       { id: 'wifi', action: 'enable_wifi', description: 'd', retry_policy: { max_attempts: 3, backoff_ms: 10 } },

@@ -11,6 +11,8 @@
 // fake clock.
 
 const { runStep } = require('./step');
+const { handlerFor } = require('./actions');
+const { preconditionHandlerFor } = require('./actions/preconditions');
 const { runAssertion } = require('./assertions');
 const { NO_TRACE } = require('./trace');
 const { runSettings } = require('./settings');
@@ -47,20 +49,20 @@ async function runScenario({
     trace.start();
     // Preconditions first, each a synthetic step `precondition_<n>` (1-based
     // position in device_actions), through the same runStep.
-    const setup = [];
     const deviceActions = scenario.preconditions && scenario.preconditions.device_actions;
-    (Array.isArray(deviceActions) ? deviceActions : []).forEach((a, i) => {
-      setup.push({ step: { ...a, id: `precondition_${i + 1}` }, precondition: true });
+    const setup = (Array.isArray(deviceActions) ? deviceActions : []).map((a, i) => {
+      const step = { ...a, id: `precondition_${i + 1}` };
+      return { step, perform: preconditionHandlerFor(step.action) };
     });
-    const queue = [...setup, ...(scenario.steps || []).map((step) => ({ step, precondition: false }))];
-    for (const { step, precondition } of queue) {
+    const queue = [...setup, ...(scenario.steps || []).map((step) => ({ step, perform: handlerFor(step.action) }))];
+    for (const { step, perform } of queue) {
       current = step;
-      const outcome = await runStep(step, ctx, { precondition });
+      const outcome = await runStep(step, ctx, perform);
       // A step only an agent can do is recorded, not failed; whatever follows
       // would run on a state nobody established, so the run ends here and
       // finalizes incomplete.
-      if (outcome.pending) break;
-      if (!outcome.ok) {
+      if (outcome.kind === 'needs_agent') break;
+      if (outcome.kind === 'failed') {
         failures.push(`step ${step.id} (${step.action}): ${outcome.error.message}`);
         failedStep = step.id;
         // Later steps would run against a screen nobody predicted; their
