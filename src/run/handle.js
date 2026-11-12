@@ -5,18 +5,21 @@ const path = require('path');
 const { ok, fail } = require('../output/envelope');
 const { buildExecutor } = require('../result/executor');
 const { pendingAssertions, incompleteEnvelope } = require('../result/pending-hint');
+const { PLATFORM_UNKNOWN } = require('../device/bridge');
 const { realClock } = require('./clock');
 const { runScenario } = require('./runner');
 const { NO_TRACE } = require('./trace');
 
-// The device's platform for the executor. Best-effort by design (the one
-// fallback here): a bridge that cannot say must not stop the run — the steps
-// will fail on their own if the device is truly gone — so it is recorded null.
+// The device's platform for the executor. Null only when the bridge itself
+// says it cannot report one (its PLATFORM_UNKNOWN failure) — the steps will
+// fail on their own if the device is truly gone — and then `unknown` is set so
+// the run's hints say so. Any other error propagates.
 async function platformOf(bridge) {
   try {
-    return await bridge.getPlatform();
-  } catch {
-    return null;
+    return { platform: await bridge.getPlatform(), unknown: false };
+  } catch (err) {
+    if (err && err.code === PLATFORM_UNKNOWN) return { platform: null, unknown: true };
+    throw err;
   }
 }
 
@@ -41,10 +44,11 @@ async function handleRun(
 ) {
   const scenarioId = scenario.scenario_id;
   const store = resultStoreFactory({ runId, scenarioId, projectRoot });
+  const { platform, unknown: platformUnknown } = await platformOf(bridge);
   const executor = buildExecutor({
     kind: 'runner',
     projectRoot,
-    platform: await platformOf(bridge),
+    platform,
     deviceId,
     // Resolved against the cwd the verb ran in, as the file was read;
     // buildExecutor decides how it is recorded.
@@ -82,6 +86,7 @@ async function handleRun(
   }
 
   const { result, store: finalized, hints } = finalize();
+  if (platformUnknown) hints.push('platform unknown: the bridge could not report it');
   const resultPath = path.relative(projectRoot, finalized.file);
   const data = {
     run_id: runId,

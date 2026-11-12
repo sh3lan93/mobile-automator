@@ -135,12 +135,20 @@ describe('provenance and the incomplete run (#275)', () => {
     expect(r.envelope.data.executor.scenario_path).toBe('demo.json');
   });
 
-  test('a platform the bridge cannot report is recorded null, and the run goes on', async () => {
+  test('a platform the bridge cannot report is recorded null, hinted, and the run goes on', async () => {
     const d = deps((args) => new ResultStore(args));
-    d.bridge = makeFakeBridge({ elements: [[el('More')]], methods: { getPlatform: () => { throw new Error('no device'); } } });
+    const unknown = Object.assign(new Error('Cannot determine the platform of device "x".'), { code: 'platform_unknown' });
+    d.bridge = makeFakeBridge({ elements: [[el('More')]], methods: { getPlatform: () => { throw unknown; } } });
     const r = await handleRun(d, prepared(scenario));
     expect(r.exitKind).toBe('ok');
     expect(r.envelope.data.executor.platform).toBeNull();
+    expect(r.envelope.hint).toContain('platform unknown: the bridge could not report it');
+  });
+
+  test('any other getPlatform failure propagates instead of becoming a null platform', async () => {
+    const d = deps((args) => new ResultStore(args));
+    d.bridge = makeFakeBridge({ elements: [[el('More')]], methods: { getPlatform: () => { throw new Error('no device'); } } });
+    await expect(handleRun(d, prepared(scenario))).rejects.toThrow('no device');
   });
 
   test('a Tier-2 assertion nobody judged: incomplete (exit kind), data.pending, and the commands that complete it', async () => {
