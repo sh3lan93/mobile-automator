@@ -262,7 +262,7 @@ describe('result coverage — schema ↔ store ↔ verbs', () => {
     // bare keys that also appear as parameter names in store.js.
     test('judge, type, step_id and mechanical supplied to addAssertion reach the finalized result', () => {
       const store = new ResultStore({ runId: 'run_20260101_000008', scenarioId: 's', projectRoot: tmpProjectRoot() });
-      store.addAssertion({ step_id: 'step_1', assertion_id: 'a1', type: 'element_exists', pass: true, judge: { by: 'agent' } });
+      store.addAssertion({ step_id: 'step_1', assertion_id: 'a1', type: 'element_exists', pass: true, mechanical: true, judge: { by: 'agent' } });
       const [entry] = store.finalize({}).assertion_results;
       expect(entry).toMatchObject({ type: 'element_exists', step_id: 'step_1', mechanical: true, judge: { by: 'agent' } });
     });

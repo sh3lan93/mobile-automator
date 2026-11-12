@@ -703,6 +703,7 @@ function handleResultAddAssertion({ resultStoreFactory, projectRoot }, opts) {
     step_id: stepId,
     assertion_id: assertionId,
     type,
+    mechanical: MECHANICAL_TYPES.has(type),
     status: verdict.value.status,
     judge: verdict.value.judge,
     message,

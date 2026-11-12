@@ -14,7 +14,6 @@ const {
   isPendingAssertion,
   isPendingStep,
 } = require('./outcome');
-const { MECHANICAL_TYPES } = require('../assertion/evaluator');
 const { workspaceDir } = require('../workspace/layout');
 
 // Incremental result accumulator that persists to
@@ -306,7 +305,7 @@ class ResultStore {
 
   // Record an assertion verdict. `status` is passed | failed | needs_agent
   // (#275); the legacy boolean `pass` is still accepted in its place. Provenance is persisted beside it: `type`,
-  // `step_id`, `mechanical` (derived from the type unless given) and `judge`
+  // `step_id`, `mechanical` (as given by the caller) and `judge`
   // (omitted unless given — a caller that does not say who decided records
   // no claim).
   //
@@ -320,9 +319,6 @@ class ResultStore {
   } = {}) {
     return withLock(this._lock, () => {
       this._refreshFromDisk();
-      if (mechanical !== undefined && typeof mechanical !== 'boolean') {
-        throw new Error(`mechanical must be a boolean (got ${JSON.stringify(mechanical)})`);
-      }
       const entry = {
         assertion_id: assertion_id || `${step_id || 'assert'}_${type || 'unknown'}_${this._assertions.length + 1}`,
         status: assertionStatus({ status, pass }),
@@ -332,8 +328,9 @@ class ResultStore {
       };
       if (typeof type === 'string') entry.type = type;
       if (step_id != null) entry.step_id = String(step_id);
-      const isMechanical = mechanical !== undefined ? mechanical : typeof type === 'string' ? MECHANICAL_TYPES.has(type) : undefined;
-      if (isMechanical !== undefined) entry.mechanical = isMechanical;
+      // Supplied by the caller, which knows whether its verdict came from the
+      // CLI's evaluator; the store only records it.
+      if (mechanical !== undefined) entry.mechanical = mechanical;
       if (judge != null) entry.judge = judge;
 
       const sameId = (a) => Boolean(assertion_id) && a !== null && typeof a === 'object' && a.assertion_id === assertion_id;

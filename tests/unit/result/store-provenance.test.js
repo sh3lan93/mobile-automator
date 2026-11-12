@@ -44,24 +44,24 @@ const EXECUTOR = Object.freeze({
 });
 
 describe('addAssertion persists provenance fields (#275)', () => {
-  test('type, step_id and a derived mechanical land in the entry', () => {
+  test('type, step_id and the caller-supplied mechanical land in the entry', () => {
     const store = newStore();
-    const tier1 = store.addAssertion({ step_id: 's1', assertion_id: 'a1', type: 'element_exists', pass: true });
-    const tier2 = store.addAssertion({ step_id: 's1', assertion_id: 'a2', type: 'visual_state', pass: false });
+    const tier1 = store.addAssertion({ step_id: 's1', assertion_id: 'a1', type: 'element_exists', pass: true, mechanical: true });
+    const tier2 = store.addAssertion({ step_id: 's1', assertion_id: 'a2', type: 'visual_state', pass: false, mechanical: false });
     expect(tier1).toMatchObject({ type: 'element_exists', step_id: 's1', mechanical: true });
     expect(tier2).toMatchObject({ type: 'visual_state', step_id: 's1', mechanical: false });
     expect(readFile(store).assertion_results).toEqual([tier1, tier2]);
   });
 
-  test('an explicit mechanical wins over the derived one', () => {
-    const store = newStore();
-    expect(store.addAssertion({ assertion_id: 'a', type: 'element_exists', pass: true, mechanical: false }).mechanical).toBe(false);
+  test('the store does not derive mechanical from the type: the caller owns that fact (B4)', () => {
+    const entry = newStore().addAssertion({ assertion_id: 'a', type: 'element_exists', pass: true });
+    expect(entry).toHaveProperty('type', 'element_exists');
+    expect(entry).not.toHaveProperty('mechanical');
   });
 
-  test('a non-boolean mechanical throws instead of being coerced', () => {
-    const store = newStore();
-    expect(() => store.addAssertion({ assertion_id: 'a', type: 'element_exists', pass: true, mechanical: 'yes' }))
-      .toThrow(/mechanical must be a boolean/);
+  test('the store module does not depend on the assertion evaluator (B4)', () => {
+    const src = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'src', 'result', 'store.js'), 'utf8');
+    expect(src).not.toMatch(/assertion\/evaluator/);
   });
 
   test('no type: neither type nor mechanical is written', () => {

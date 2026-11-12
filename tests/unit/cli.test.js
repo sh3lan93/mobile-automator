@@ -3127,6 +3127,7 @@ describe('cli handlers', () => {
           step_id: 'step_verify',
           assertion_id: 'assert_custom_id',
           type: 'element_exists',
+          mechanical: true,
           status: 'failed',
           judge: { by: 'agent' },
           message: 'Login button missing',
