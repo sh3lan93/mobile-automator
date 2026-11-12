@@ -39,8 +39,8 @@ beside the existing ones.
 | `src/result/provenance.js` | **new**, pure: `crossCheck(recorded {scenario_id, steps, assertions}, scenario)` → problems[] (scenario_id mismatch, unknown step id incl. `sub_steps`, unknown assertion id); `buildExecutor({kind, projectRoot, platform, deviceId, scenario})` (version from package.json, engine via `readEngine`, mode from config) |
 | `src/scenario/load.js` | `loadScenario` also returns `sha256` of the raw bytes (one hash site) |
 | `src/cli.js` | `add-assertion --pass true\|false\|pending`, `--judge <agent\|none>`; `finalize --scenario <path>` (load non-strict → cross-check → `invalid_input` before anything is written); `finalizeRun` accepts `executor`; `incomplete` → `fail('incomplete', …, data)` with a hint naming the pending ids |
-| `src/run/judge.js` | **new** — interface `{name, judge(assertion, ctx) → {pass, message, expected?, actual?} \| null}`; `noJudge` (`name: 'none'`, always null) |
-| `src/run/assertions.js` | mechanical → `judge {by:'mauto'}`, `mechanical: true`; Tier-2 → `judge.judge()`; `null` → `pass: 'pending'`, `judge {by:'none'}`; a judge verdict → `judge {by: judge.name …}` |
+| `src/run/judge.js` | **dropped in review (B5)** — no judge seam; a Tier-2 assertion in `mauto run` is always recorded pending, `judge {by:'none'}` |
+| `src/run/assertions.js` | mechanical → `judge {by:'mauto'}`, `mechanical: true`; Tier-2 → always `pass: 'pending'`, `judge {by:'none'}` (no judge seam) |
 | `src/run/handle.js` | `executor` (`kind: 'runner'`, platform from `bridge.getPlatform()`, the resolved device id, scenario path + sha); `incomplete` → `fail('incomplete', …)`, `data.pending[]` = `{assertion_id, step_id, type}`, hint = the exact `mauto result add-assertion … --judge agent` lines + `mauto result finalize --run-id … --scenario <path>` |
 | `src/run/prepare.js` | carries `file` + `sha256` through |
 | `src/result/junit.js` | `needs_agent` assertion/step → `<skipped message>`; `skipped` count on suite/suites; an `incomplete` run is not given the synthetic "run status" failure (its pending cases are visible as skipped) |
@@ -81,7 +81,7 @@ beside the existing ones.
 - **CLI:** `add-assertion --pass pending` / `--judge` matrix; `finalize --scenario` (good → executor written;
   mismatch → `invalid_input` and the file unchanged; changed scenario on re-finalize → `invalid_input`);
   `incomplete` → exit 7.
-- **Runner:** Tier-2 → `needs_agent` + `judge.by: none`; a stub judge's verdict is recorded with its name;
+- **Runner:** Tier-2 → `needs_agent` + `judge.by: none`; 
   run → `incomplete` exit 7 with `pending[]` and the hint commands.
 - **Exit criterion, end to end on `buildProgram`:** `run` → 7 → `add-assertion --pass true --judge agent`
   per pending id → `finalize --scenario` → `passed`, exit 0, `executor.kind === 'runner'` preserved.
