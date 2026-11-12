@@ -6,6 +6,7 @@ const { isResultRunId } = require('../result/store');
 const { resolveRunId } = require('../observe/settings');
 const { replayEnabled } = require('./gate');
 const { makeRunId } = require('./run-id');
+const { parsePositiveInt } = require('../util/parse-positive-int');
 
 // Everything `mauto run` decides before it touches a device, in order: the
 // MAUTO_REPLAY gate, the scenario (strict: a blocking replayability finding
@@ -31,8 +32,8 @@ function prepareRun({ validator, file, runId: flag, timeoutMs: timeoutFlag, env 
   // decimal string, or a number): checked before the scenario is even read.
   let timeoutMs = null;
   if (timeoutFlag !== undefined && timeoutFlag !== null) {
-    const parsed = typeof timeoutFlag === 'number' ? timeoutFlag : /^[0-9]+$/.test(String(timeoutFlag)) ? Number(timeoutFlag) : NaN;
-    if (!Number.isInteger(parsed) || parsed <= 0) {
+    const parsed = parsePositiveInt(timeoutFlag);
+    if (parsed === null) {
       return {
         failure: {
           envelope: fail(

@@ -51,6 +51,7 @@ const { prepareRun } = require('./run/prepare');
 const { handleRun } = require('./run/handle');
 const { realClock } = require('./run/clock');
 const { makeRunTrace } = require('./run/trace');
+const { parsePositiveInt } = require('./util/parse-positive-int');
 const {
   findWorkspaceRoot,
   workspaceFailure,
@@ -336,8 +337,8 @@ async function handleLongPress({ deviceBridge }, raw, { duration } = {}) {
   const { x, y } = coords;
   let ms;
   if (duration !== undefined) {
-    ms = Number(duration);
-    if (!Number.isInteger(ms) || ms <= 0) {
+    ms = parsePositiveInt(duration);
+    if (ms === null) {
       return {
         envelope: fail('invalid_input', `duration must be a positive integer in ms, got "${duration}"`, 'Pass --duration <ms>, e.g. --duration 800.'),
         exitKind: 'invalid_input',
