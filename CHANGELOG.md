@@ -34,6 +34,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   real-device E2E harness now shares the assertion field mapping and the
   run-id format with the install under test.
   Refs #278
+- **Result files record who decided what, and a run still waiting on an
+  agent finalizes `incomplete` (exit 7)** (replay PRD #271, slice R2). All
+  schema additions are optional, so existing result files stay valid and
+  `schema_version` stays `2.0`. The run `status` gains `incomplete` and an
+  assertion's `status` gains `needs_agent`. Assertions may carry `type`,
+  `step_id`, `mechanical` and `judge {by: mauto | agent | none, name?,
+  version?}`, and a root `executor` records `kind` (`runner` or `agent`),
+  `mauto_version`, `engine`, `mode`, `platform`, `device_id`, and the
+  scenario's path and SHA-256. The derived status is `error`, then `failed`,
+  then `incomplete` when an assertion is still `needs_agent`, then `passed`.
+  `mauto result add-assertion --pass` accepts `pending` (recorded
+  `needs_agent`), and `--judge agent|none` records the provenance. A verdict
+  for a pending id replaces it in place, and a `pending` for an id already
+  decided is refused. `mauto result finalize --scenario <path>` checks
+  every recorded id against that scenario and hashes the file into
+  `executor`. A mismatch, or a scenario changed since the run, is
+  `invalid_input` and writes nothing. A re-finalize keeps the first executor.
+  An `incomplete` finalize exits `7`, and its hint gives the exact
+  `add-assertion … --judge agent` command for each pending assertion,
+  followed by the re-finalize. The JUnit export reports `needs_agent` as
+  `<skipped>`. `mauto assert` now hints `--pass <true|false> --judge agent`
+  for a verdict it cannot decide.
+- **`mauto run` records a Tier-2 assertion as pending instead of failed**
+  (slice R2). A mechanical verdict is recorded `judge {by: mauto}`. A Tier-2
+  one is left `needs_agent` (`judge {by: none}`), which is not a failure.
+  A run with nothing failed then exits `7` (`incomplete`), with
+  `data.pending` and the commands that complete it in the hint. The result
+  records `executor.kind: runner` with the device, platform and scenario
+  SHA-256, and an agent's later finalize keeps that executor. `mauto run`
+  still requires `MAUTO_REPLAY=1`.
+  Refs #275
+- **`result finalize --status` can no longer make a run greener than what was
+  recorded.** An explicit `passed` over a derived `incomplete`, `failed` or
+  `error`, or over a run with no steps and no assertions (unless `--scenario`
+  names a scenario that declares none), and an explicit `incomplete` with
+  nothing pending, are refused with `invalid_input` and nothing written.
+  `failed` and `error` stay allowed. Previously an explicit status always won.
+  Refs #275
 
 ---
 

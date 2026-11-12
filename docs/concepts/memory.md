@@ -46,6 +46,8 @@ Memory is split into three **kinds**, each backed by its own file. The key disti
 
 `run-history.md` is written by the CLI, not the agent. When you call `mauto result finalize`, the typed **observations** in the result file — `regression`, `flakiness`, and `state_context` — are folded into a **bounded, rolling per-scenario aggregate**. Old entries age out so the file stays small and useful rather than growing without limit.
 
+Each finalized run also adds a status letter to its scenario's recent-runs line: `P` for a run that finalized `passed`, `F` for anything else. That includes an `incomplete` run, one still waiting for an agent's verdict: it is recorded `F`, not `P`. Completing it and finalizing again records a second letter for the re-finalize.
+
 Because it is machine-owned, `run-history` is **not a valid target** for `memory add` or `memory forget`. Trying to author it by hand would fight the harvester; let `result finalize` maintain it.
 
 !!! note "Harvesting never fails a finalize"

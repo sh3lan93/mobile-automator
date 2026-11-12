@@ -74,7 +74,7 @@ describe('result finalize auto-harvest', () => {
 
     const r = handleResultFinalize(
       { resultStoreFactory, memoryStoreFactory, projectRoot: root },
-      { runId: 'run_20260706_090001', scenarioId: 'login', status: 'passed' }
+      { runId: 'run_20260706_090001', scenarioId: 'login' }
     );
 
     // (a) finalize still succeeded despite the memory-layer throw.
@@ -97,7 +97,7 @@ describe('result finalize auto-harvest', () => {
     });
     const r = handleResultFinalize(
       { resultStoreFactory, memoryStoreFactory, projectRoot: root },
-      { runId: 'run_20260712_101500', scenarioId: 'x', status: 'passed' }
+      { runId: 'run_20260712_101500', scenarioId: 'x' }
     );
     expect(r.envelope.ok).toBe(true);
     expect(r.envelope.hint).toContain('run-history not updated: disk full');
@@ -113,7 +113,7 @@ describe('result finalize auto-harvest', () => {
 
     const r = handleResultFinalize(
       { resultStoreFactory, memoryStoreFactory, projectRoot: root },
-      { runId: 'run_20260712_101600', scenarioId: 'login', status: 'passed' }
+      { runId: 'run_20260712_101600', scenarioId: 'login' }
     );
 
     // (a) finalize still succeeded despite the memory-store construction throw.

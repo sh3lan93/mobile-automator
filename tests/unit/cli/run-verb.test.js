@@ -4,11 +4,13 @@
 // the pre-device refusals, and a whole run on a scripted fake bridge, asserting
 // on the envelope and on the result file the verb finalizes.
 
+const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
 const { buildProgram, handleRun } = require('../../../src/cli');
+const { exitCodeFor } = require('../../../src/output/envelope');
 const { runTracePath } = require('../../../src/observe/paths');
 const { readTrace } = require('../../../src/observe/trace');
 const { makeFakeBridge, makeFakeClock, homeElements } = require('../../helpers/fake-bridge');
@@ -60,6 +62,7 @@ function scenario({ steps, assertions = [] } = {}) {
 
 function writeScenario(sc, name = 'demo.json') {
   const file = path.join(root, name);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, typeof sc === 'string' ? sc : JSON.stringify(sc));
   return file;
 }
@@ -200,6 +203,36 @@ describe('mauto run — a run', () => {
     expect(shots).toEqual(['step_tap_x_failure.png']);
   });
 
+  test('records the runner as the executor: the --device id, the platform, and the scenario\'s path and sha256 (#275)', async () => {
+    const file = writeScenario(scenario());
+    const { r, factory } = await runCli([file, '--run-id', RUN_ID, '--device', 'emulator-5554']);
+    expect(r.exitKind).toBe('ok');
+    expect(factory.mock.calls[0][0].device).toBe('emulator-5554');
+    const sha256 = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+    expect(r.envelope.data.executor).toMatchObject({
+      kind: 'runner',
+      device_id: 'emulator-5554',
+      platform: 'android',
+      scenario_path: 'demo.json',
+      scenario_sha256: sha256,
+    });
+    expect(r.envelope.data.pending).toEqual([]);
+    const written = JSON.parse(fs.readFileSync(path.join(root, r.envelope.data.result_path), 'utf8'));
+    expect(written.executor).toEqual(r.envelope.data.executor);
+  });
+
+  test('a Tier-2 assertion nobody judged is incomplete (exit kind), with data.pending and the commands that complete it (#275)', async () => {
+    const sc = scenario({
+      assertions: [{ id: 'looks', after_step: 'tap_more', type: 'visual_state', description: 'd', expected_visual_state: 'loaded' }],
+    });
+    const { r } = await runCli([writeScenario(sc), '--run-id', RUN_ID]);
+    expect(r.exitKind).toBe('incomplete');
+    expect(r.envelope.data.status).toBe('incomplete');
+    expect(r.envelope.data.pending).toEqual([{ assertion_id: 'looks', step_id: 'tap_more', type: 'visual_state' }]);
+    expect(r.envelope.hint).toContain('--judge agent');
+    expect(r.envelope.hint).toContain(`finalize --run-id ${RUN_ID}`);
+  });
+
   test('mints a run id when neither --run-id nor MAUTO_RUN_ID is given', async () => {
     const { r } = await runCli([writeScenario(scenario())]);
     expect(r.exitKind).toBe('ok');
@@ -223,5 +256,102 @@ describe('mauto run — registration', () => {
 
   test('handleRun is exported', () => {
     expect(typeof handleRun).toBe('function');
+  });
+});
+
+describe('an incomplete run can be completed with one-shot verbs and re-finalized (#275 exit criterion)', () => {
+  beforeEach(() => {
+    process.env.MAUTO_REPLAY = '1';
+  });
+
+  // Any verb through the same program and emit seam as runCli.
+  async function mauto(args, { bridge = makeFakeBridge({ elements: [homeElements()] }) } = {}) {
+    const emitted = [];
+    await buildProgram({
+      projectRoot: root,
+      deviceBridgeFactory: jest.fn(async () => ({ bridge, close: async () => {} })),
+      emit: (r) => emitted.push(r),
+      clock: makeFakeClock(),
+      platform: 'darwin',
+    }).parseAsync(['node', 'mauto', ...args]);
+    expect(emitted).toHaveLength(1);
+    return emitted[0];
+  }
+
+  // One mechanical assertion (decided by the CLI) and one Tier-2 one
+  // (visual_state: the evaluator answers needs_agent).
+  const sc = () => scenario({
+    assertions: [
+      { id: 'more_there', after_step: 'tap_more', type: 'element_exists', description: 'd', element_description: 'More' },
+      { id: 'looks', after_step: 'tap_more', type: 'visual_state', description: 'd', expected_visual_state: 'loaded' },
+    ],
+  });
+
+  // `mauto run` → exit 7, then one `result add-assertion --judge agent` per
+  // pending id with `verdict`, then `result finalize --scenario`.
+  async function runThenComplete(verdict) {
+    const file = writeScenario(sc());
+    const ran = await mauto(['run', file, '--run-id', RUN_ID]);
+    expect(ran.exitKind).toBe('incomplete');
+    expect(exitCodeFor(ran.exitKind)).toBe(7);
+    // Pending is not a failure.
+    expect(ran.envelope.data.failures).toEqual([]);
+    expect(ran.envelope.data.pending).toEqual([{ assertion_id: 'looks', step_id: 'tap_more', type: 'visual_state' }]);
+
+    for (const p of ran.envelope.data.pending) {
+      const added = await mauto([
+        'result', 'add-assertion', '--run-id', RUN_ID, '--step-id', p.step_id, '--assertion-id', p.assertion_id,
+        '--type', p.type, '--pass', verdict, '--judge', 'agent', '--message', 'ok',
+      ]);
+      expect(added.exitKind).toBe('ok');
+    }
+
+    // Re-finalize with exactly the --scenario the hint printed: absolute, so
+    // it works from any directory, and it names the file the run executed.
+    const hinted = ran.envelope.hint.split('\n').at(-1).match(/^mauto result finalize --run-id \S+ --scenario (\S+)$/)[1];
+    expect(path.isAbsolute(hinted)).toBe(true);
+    expect(hinted).toBe(file);
+    const finalized = await mauto(['result', 'finalize', '--run-id', RUN_ID, '--scenario', hinted]);
+    const onDisk = JSON.parse(fs.readFileSync(path.join(root, '.mobile-automator', 'results', `${RUN_ID}.json`), 'utf8'));
+    return { ran, finalized, onDisk };
+  }
+
+  test('--pass true: run exits 7, then finalize is ok (exit 0), passed, still the runner\'s executor', async () => {
+    const { ran, finalized, onDisk } = await runThenComplete('true');
+    expect(finalized.exitKind).toBe('ok');
+    expect(exitCodeFor(finalized.exitKind)).toBe(0);
+    expect(finalized.envelope.ok).toBe(true);
+    expect(onDisk.status).toBe('passed');
+    expect(onDisk.executor).toEqual(ran.envelope.data.executor);
+    expect(onDisk.executor.kind).toBe('runner');
+
+    // The pending entry was replaced in place: same position, now the agent's.
+    expect(onDisk.assertion_results.map((a) => a.assertion_id)).toEqual(['more_there', 'looks']);
+    expect(onDisk.assertion_results[0]).toMatchObject({ status: 'passed', mechanical: true, judge: { by: 'mauto' } });
+    expect(onDisk.assertion_results[1]).toMatchObject({ status: 'passed', message: 'ok', judge: { by: 'agent' } });
+  });
+
+  test('run and finalize --scenario record the same scenario_path for the same file', async () => {
+    const file = writeScenario(sc(), path.join('scenarios', 'demo.json'));
+    const ran = await mauto(['run', file, '--run-id', RUN_ID]);
+    const agentRun = 'run_20261111_093001';
+    const added = await mauto([
+      'result', 'add-assertion', '--run-id', agentRun, '--scenario-id', 'demo', '--step-id', 'tap_more',
+      '--assertion-id', 'more_there', '--type', 'element_exists', '--pass', 'true',
+    ]);
+    expect(added.exitKind).toBe('ok');
+    const finalized = await mauto(['result', 'finalize', '--run-id', agentRun, '--scenario', file]);
+    expect(finalized.exitKind).toBe('ok');
+    expect(ran.envelope.data.executor.scenario_path).toBe(path.join('scenarios', 'demo.json'));
+    expect(finalized.envelope.data.executor.scenario_path).toBe(ran.envelope.data.executor.scenario_path);
+  });
+
+  test('--pass false: finalize is test_failed (exit 6), failed', async () => {
+    const { finalized, onDisk } = await runThenComplete('false');
+    expect(finalized.exitKind).toBe('test_failed');
+    expect(exitCodeFor(finalized.exitKind)).toBe(6);
+    expect(onDisk.status).toBe('failed');
+    expect(onDisk.assertion_results[1]).toMatchObject({ assertion_id: 'looks', status: 'failed', judge: { by: 'agent' } });
+    expect(onDisk.executor.kind).toBe('runner');
   });
 });

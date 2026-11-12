@@ -48,8 +48,8 @@
     },
     "status": {
       "type": "string",
-      "enum": ["passed", "failed", "error"],
-      "description": "Overall result status"
+      "enum": ["passed", "failed", "error", "incomplete"],
+      "description": "Overall result status. `incomplete`: nothing failed, but at least one assertion or step still needs agent judgment (`needs_agent`)."
     },
     "total_assertions": {
       "type": "integer",
@@ -130,6 +130,10 @@
               }
             }
           },
+          "needs_agent": {
+            "type": "boolean",
+            "description": "True when the step could not be decided without an agent; the run finalizes `incomplete` unless something failed."
+          },
           "observations": {
             "type": ["string", "null"],
             "description": "DEPRECATED — use the run-level `observations` array, which is typed. Retained for result files written before typed observations; no writer populates it."
@@ -149,7 +153,30 @@
           },
           "status": {
             "type": "string",
-            "enum": ["passed", "failed"]
+            "enum": ["passed", "failed", "needs_agent"],
+            "description": "`needs_agent`: recorded without a verdict; an agent decides it with `mauto result add-assertion --pass true|false --judge agent`."
+          },
+          "type": {
+            "type": "string",
+            "description": "Assertion type (see the scenario schema)."
+          },
+          "step_id": {
+            "type": "string",
+            "description": "Step the assertion belongs to."
+          },
+          "mechanical": {
+            "type": "boolean",
+            "description": "True when mauto decides the type mechanically (Tier 1); false when it needs judgment (Tier 2)."
+          },
+          "judge": {
+            "type": "object",
+            "required": ["by"],
+            "description": "Who decided the verdict: `mauto` (in-process), `agent` (recorded with --judge agent), or `none` (no verdict yet). Absent when the recorder did not say.",
+            "properties": {
+              "by": { "type": "string", "enum": ["mauto", "agent", "none"] },
+              "name": { "type": ["string", "null"], "description": "Name of the judge that decided it, when known." },
+              "version": { "type": ["string", "null"], "description": "Version of that judge, when known." }
+            }
           },
           "expected": {
             "type": ["string", "null"],
@@ -256,6 +283,21 @@
           "report_path": { "type": ["string", "null"], "description": "Path to the full report written by `mauto crash get --out`" }
         },
         "required": ["crash_id", "detected_at"]
+      }
+    },
+    "executor": {
+      "type": "object",
+      "description": "Who produced this result and from what. The first finalize writes it and every later one keeps it. `scenario_sha256` is the hex SHA-256 of the scenario file's bytes; `result finalize --scenario` cross-checks every recorded id against that file.",
+      "required": ["kind", "mauto_version"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["runner", "agent"], "description": "`runner`: `mauto run`; `agent`: an agent recording through the `mauto result` verbs." },
+        "mauto_version": { "type": "string", "description": "mauto package version that wrote the result" },
+        "engine": { "type": ["string", "null"], "description": "Device engine resolved for the workspace" },
+        "platform": { "type": ["string", "null"], "description": "Device platform, when a device was connected" },
+        "device_id": { "type": ["string", "null"], "description": "Device id, when a device was connected" },
+        "scenario_path": { "type": ["string", "null"], "description": "Scenario file the run was checked against" },
+        "scenario_sha256": { "type": ["string", "null"], "description": "Hex SHA-256 of that scenario file's bytes" },
+        "mode": { "type": ["string", "null"], "description": "Workspace mode (platform-aware | platform-agnostic)" }
       }
     },
     "summary": {

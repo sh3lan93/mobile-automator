@@ -13,8 +13,11 @@ const { ScenarioValidator } = require('./scenario/validator');
 const { loadScenario } = require('./scenario/load');
 const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
 const { fromCliFlags } = require('./assertion/fields');
-const { ResultStore, readFinalizedResult, InvalidRunIdError } = require('./result/store');
-const { OBSERVATION_TYPES, parseObservation, parseCapture, parseBool, parseRunStatus, parseStepStatus } = require('./result/flags');
+const { ResultStore, readFinalizedResult, InvalidRunIdError, AlreadyDecidedError } = require('./result/store');
+const {
+  OBSERVATION_TYPES, parseObservation, parseCapture, parseAssertionVerdict, RUN_STATUSES, parseRunStatus, parseStepStatus,
+} = require('./result/flags');
+const { finalizeAgainstScenario } = require('./result/finalize-against-scenario');
 const { toJUnit } = require('./result/junit');
 const { atomicWrite } = require('./util/atomic');
 const { MemoryStore } = require('./memory/store');
@@ -150,9 +153,10 @@ function toEnvelope(err) {
       exitKind: 'invalid_input',
     };
   }
-  // A --run-id the ResultStore refuses (#295): the store owns the rule and
-  // the wording, so every result verb reports it identically.
-  if (err instanceof InvalidRunIdError) {
+  // A --run-id the ResultStore refuses (#295), or a pending verdict over a
+  // decided one (#275): the store owns the rule and the wording, so every
+  // result verb reports it identically.
+  if (err instanceof InvalidRunIdError || err instanceof AlreadyDecidedError) {
     return { envelope: fail(err.kind, err.message, err.hint), exitKind: err.kind };
   }
   if (err instanceof SyntaxError) {
@@ -556,7 +560,9 @@ async function handleAssert({ deviceBridge }, type, flags = {}) {
   // The verdict has to be transcribed into `result add-assertion` by the agent
   // (assert has no run context, and Tier-2 types are not decided here at all).
   // Emitting the exact command turns transcription into copying (#140 D1).
-  const verdict = r.needs_agent ? '<your verdict>' : String(r.pass);
+  // A Tier-2 verdict is the agent's, so it is recorded `--judge agent` (#275);
+  // a mechanical one is the CLI's and claims no judge.
+  const verdict = r.needs_agent ? '<true|false> --judge agent' : String(r.pass);
   const hint =
     `Record it: mauto result add-assertion --run-id <run_id> --step-id <step_id> ` +
     `--type ${r.type} --pass ${verdict} --message "<why>"`;
@@ -686,7 +692,7 @@ function handleResultAddAssertion({ resultStoreFactory, projectRoot }, opts) {
       exitKind: 'invalid_input',
     };
   }
-  const verdict = parseBool(pass, '--pass');
+  const verdict = parseAssertionVerdict(pass, opts.judge);
   if (verdict.error) {
     return { envelope: fail('invalid_input', verdict.error, null), exitKind: 'invalid_input' };
   }
@@ -696,7 +702,9 @@ function handleResultAddAssertion({ resultStoreFactory, projectRoot }, opts) {
     step_id: stepId,
     assertion_id: assertionId,
     type,
-    pass: verdict.value,
+    mechanical: MECHANICAL_TYPES.has(type),
+    status: verdict.value.status,
+    judge: verdict.value.judge,
     message,
     expected: expected === undefined ? null : expected,
     actual: actual === undefined ? null : actual,
@@ -779,7 +787,10 @@ function measureRun({ projectRoot, runId, reported }) {
 // collects the store's and memory's best-effort warnings. Shared by
 // `result finalize` and `mauto run`; flag validation and the envelope stay
 // with the callers.
-function finalizeRun({ resultStoreFactory, memoryStoreFactory, projectRoot }, { runId, scenarioId, status, duration, metadata, summary }) {
+function finalizeRun(
+  { resultStoreFactory, memoryStoreFactory, projectRoot },
+  { runId, scenarioId, status, duration, metadata, summary, executor }
+) {
   // Measure BEFORE constructing the store: the trace is read-only here, and
   // deriving first keeps the store's lock window as small as it already is.
   const measured = measureRun({ projectRoot, runId, reported: duration });
@@ -799,6 +810,8 @@ function finalizeRun({ resultStoreFactory, memoryStoreFactory, projectRoot }, { 
     // so no provided-keys-only guard is needed here (unlike metadata, whose
     // sub-fields default independently to 'unknown').
     summary,
+    // Who produced the result (#275); the store keeps the first one it saw.
+    executor,
   });
 
   // Retention, at the only moment a run is known to be over and the only place
@@ -827,8 +840,8 @@ function finalizeRun({ resultStoreFactory, memoryStoreFactory, projectRoot }, { 
   return { result, store, hints };
 }
 
-function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectRoot }, opts) {
-  const { runId, scenarioId, status, duration } = opts;
+function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectRoot, validator, cwd = process.cwd() }, opts) {
+  const { runId, status } = opts;
   if (!runId) {
     return {
       envelope: fail('invalid_input', '--run-id is required', null),
@@ -849,47 +862,17 @@ function handleResultFinalize({ resultStoreFactory, memoryStoreFactory, projectR
         envelope: fail(
           'invalid_input',
           parsed.error,
-          'Valid values: passed | failed | error, or omit --status to derive it from the recorded steps and assertions.'
+          `Valid values: ${RUN_STATUSES.join(' | ')}, or omit --status to derive it from the recorded steps and assertions.`
         ),
         exitKind: 'invalid_input',
       };
     }
   }
 
-  // Only provided keys: `defaultMetadata` fills the rest with 'unknown', and
-  // the result schema requires all five fields to be strings, so threading
-  // `undefined` through would break conformance.
-  const metadata = {};
-  if (opts.appVersion !== undefined) metadata.app_version = opts.appVersion;
-  if (opts.deviceModel !== undefined) metadata.device_model = opts.deviceModel;
-  if (opts.apiLevel !== undefined) metadata.api_level = opts.apiLevel;
-  if (opts.environment !== undefined) metadata.environment = opts.environment;
-
-  const { result, store, hints } = finalizeRun(
-    { resultStoreFactory, memoryStoreFactory, projectRoot },
-    { runId, scenarioId, status, duration, metadata, summary: opts.summary }
+  return finalizeAgainstScenario(
+    { validator, resultStoreFactory, memoryStoreFactory, projectRoot, cwd, finalizeRun },
+    opts
   );
-
-  // The exit code is keyed on the FINALIZED status, not the --status flag:
-  // with the flag omitted, the store derives it from the recorded steps and
-  // assertions ('error' for an errored step, else 'failed' for a failed step or
-  // assertion, #296), and the exit code must agree with the file either way
-  // (#273). 'error' takes the same path — a run that errored is not a pass for
-  // CI either; data.status tells the two apart. Everything above (write, retention, harvest) has
-  // already run: exit 6 is a verdict about the app, not a reason to lose the
-  // record of it.
-  if (result.status === 'failed' || result.status === 'error') {
-    const hint = hints.length
-      ? hints.join(' ')
-      : 'See data.steps_executed and data.assertion_results for what failed; ' +
-        `the result is saved to ${path.relative(projectRoot, store.file)}.`;
-    return {
-      envelope: fail('test_failed', `run ${runId} ${result.status}`, hint, result),
-      exitKind: 'test_failed',
-    };
-  }
-
-  return { envelope: ok(result, hints.length ? hints.join(' ') : null), exitKind: 'ok' };
 }
 
 // Formats `mauto result export --format` accepts. The only one, junit, is
@@ -2069,18 +2052,21 @@ function buildProgram(deps = {}) {
     .option('--device <id>', 'target device id')
     .option('--run-id <id>', 'run identifier (run_YYYYMMDD_HHMMSS); minted when omitted')
     .action(withEnvelope(requireWorkspace(async (file, opts) => {
-      const prepared = prepareRun({ validator, file, runId: opts.runId, env: process.env });
+      const prepared = prepareRun({ validator, file: path.resolve(cwd, file), runId: opts.runId, env: process.env });
       if (prepared.failure) return emit(prepared.failure, humanFlag());
       // The preAction hook saw only the flag and the environment; this covers
       // a minted id, so verb.end lands in the same trace as the run's stamps.
       emitters.setRunId(prepared.runId);
-      return withBridge(opts.device, (bridge) =>
+      // Resolved here, not inside withBridge, so the executor records the
+      // device the run connected to (null: mobile-mcp auto-selected one).
+      const deviceId = resolveVerbDevice(opts.device);
+      return connectBridge(deviceId, (bridge) =>
         handleRun(
           {
-            bridge, resultStoreFactory, memoryStoreFactory, projectRoot, finalizeRun, clock,
+            bridge, resultStoreFactory, memoryStoreFactory, projectRoot, finalizeRun, clock, cwd,
             trace: makeRunTrace({ projectRoot, runId: prepared.runId }),
           },
-          prepared
+          { ...prepared, deviceId }
         )
       );
     })));
@@ -2232,7 +2218,8 @@ function buildProgram(deps = {}) {
     .option('--scenario-id <id>', 'scenario identifier')
     .requiredOption('--step-id <id>', 'step this assertion belongs to')
     .requiredOption('--type <t>', 'assertion type (see `mauto schema scenario`)')
-    .requiredOption('--pass <bool>', 'true | false — the verdict being recorded')
+    .requiredOption('--pass <verdict>', 'true | false | pending — the verdict, or pending for an agent to decide later')
+    .option('--judge <who>', 'agent | none — who decided (pending implies none)')
     .option('--assertion-id <id>', 'stable assertion identifier (derived when omitted)')
     .option('--message <text>', 'human-readable justification for the verdict')
     .option('--expected <v>', 'expected value')
@@ -2246,6 +2233,7 @@ function buildProgram(deps = {}) {
           stepId: opts.stepId,
           type: opts.type,
           pass: opts.pass,
+          judge: opts.judge,
           assertionId: opts.assertionId,
           message: opts.message,
           expected: opts.expected,
@@ -2288,7 +2276,8 @@ function buildProgram(deps = {}) {
     .description('Assemble and write the final result file')
     .requiredOption('--run-id <id>', 'run identifier')
     .option('--scenario-id <id>', 'scenario identifier')
-    .option('--status <s>', 'passed | failed | error')
+    .option('--status <s>', RUN_STATUSES.join(' | '))
+    .option('--scenario <path>', 'scenario file to check the recorded ids against and hash into executor')
     .option('--duration <secs>', 'total duration in seconds')
     .option('--app-version <v>', 'app version under test')
     .option('--device-model <v>', 'device the run executed on')
@@ -2297,11 +2286,12 @@ function buildProgram(deps = {}) {
     .option('--summary <text>', 'override the generated one-line result summary')
     .action(withEnvelope(requireWorkspace((opts) => {
       const r = handleResultFinalize(
-        { resultStoreFactory, memoryStoreFactory, projectRoot },
+        { resultStoreFactory, memoryStoreFactory, projectRoot, validator, cwd },
         {
           runId: opts.runId,
           scenarioId: opts.scenarioId,
           status: opts.status,
+          scenario: opts.scenario,
           duration: opts.duration,
           appVersion: opts.appVersion,
           deviceModel: opts.deviceModel,

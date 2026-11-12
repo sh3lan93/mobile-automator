@@ -18,9 +18,9 @@ const EXIT = {
   // under test failed. Distinct from 1-5 so CI can tell "the app is broken"
   // from "the tooling is broken" by exit code alone, without parsing JSON.
   TEST_FAILED: 6,
-  // Reserved for replay (`mauto run`, and `result finalize` once it computes
-  // it): the run is not decided yet because something still needs agent
-  // judgment. Nothing produces it yet.
+  // The run is not decided yet because something still needs agent judgment:
+  // `result finalize` (and `mauto run`) when the finalized status is
+  // `incomplete` (#275).
   INCOMPLETE: 7,
   CANCEL: 130,
 };

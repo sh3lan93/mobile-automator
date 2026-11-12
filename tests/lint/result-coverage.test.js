@@ -15,7 +15,8 @@ const {
 } = require('../../src/result/capability-catalog');
 const { ResultStore } = require('../../src/result/store');
 const { OBSERVATION_TYPES, RUN_STATUSES, STEP_STATUS_ALIASES } = require('../../src/result/flags');
-const { buildProgram, handleResultExport } = require('../../src/cli');
+const { buildProgram, handleResultExport, handleResultFinalize } = require('../../src/cli');
+const { ScenarioValidator } = require('../../src/scenario/validator');
 const { workspaceDir } = require('../../src/workspace/layout');
 
 const REPO = path.join(__dirname, '..', '..');
@@ -255,6 +256,53 @@ describe('result coverage — schema ↔ store ↔ verbs', () => {
       });
       expect(result.measurements.source).toBe('trace');
       expect(result.duration_seconds).toBe(12.5);
+    });
+
+    // #275: assertion provenance. type, step_id, mechanical and judge are
+    // bare keys that also appear as parameter names in store.js.
+    test('judge, type, step_id and mechanical supplied to addAssertion reach the finalized result', () => {
+      const store = new ResultStore({ runId: 'run_20260101_000008', scenarioId: 's', projectRoot: tmpProjectRoot() });
+      store.addAssertion({ step_id: 'step_1', assertion_id: 'a1', type: 'element_exists', pass: true, mechanical: true, judge: { by: 'agent' } });
+      const [entry] = store.finalize({}).assertion_results;
+      expect(entry).toMatchObject({ type: 'element_exists', step_id: 'step_1', mechanical: true, judge: { by: 'agent' } });
+    });
+
+    test('a pending verdict is replaced in place by the decided one, and the run passes', () => {
+      const store = new ResultStore({ runId: 'run_20260101_000009', scenarioId: 's', projectRoot: tmpProjectRoot() });
+      store.addAssertion({ step_id: 'step_1', assertion_id: 'a1', type: 'visual_state', status: 'needs_agent', judge: { by: 'none' } });
+      store.addAssertion({ step_id: 'step_1', assertion_id: 'a2', type: 'element_exists', pass: true });
+      store.addAssertion({ step_id: 'step_1', assertion_id: 'a1', type: 'visual_state', pass: true, judge: { by: 'agent' } });
+      const result = store.finalize({});
+      expect(result.assertion_results.map((a) => [a.assertion_id, a.status])).toEqual([['a1', 'passed'], ['a2', 'passed']]);
+      expect(result.status).toBe('passed');
+    });
+
+    test('a pending verdict finalizes the run incomplete', () => {
+      const store = new ResultStore({ runId: 'run_20260101_000010', scenarioId: 's', projectRoot: tmpProjectRoot() });
+      store.addAssertion({ step_id: 'step_1', assertion_id: 'a1', type: 'visual_state', status: 'needs_agent' });
+      const result = store.finalize({});
+      expect(result.status).toBe('incomplete');
+      expect(result.assertion_results[0].status).toBe('needs_agent');
+    });
+
+    test('--scenario on finalize reaches the executor in the result file', () => {
+      const root = tmpProjectRoot();
+      const runId = 'run_20260101_000011';
+      const scenarioPath = path.join(root, 's.json');
+      fs.writeFileSync(scenarioPath, JSON.stringify({
+        $schema_version: '2.1', scenario_id: 's', name: 'n', description: 'd', platform: 'cross-platform',
+        app_package: 'com.example.app', metadata: { app_version: '1', environment: 'staging' },
+        steps: [{ id: 'step_1', action: 'launch_app', description: 'Launch' }], assertions: [],
+      }));
+      new ResultStore({ runId, scenarioId: 's', projectRoot: root }).addStep({ step_id: 'step_1', status: 'pass' });
+      const r = handleResultFinalize(
+        { resultStoreFactory: (o) => new ResultStore(o), projectRoot: root, validator: new ScenarioValidator() },
+        { runId, scenario: scenarioPath }
+      );
+      expect(r.exitKind).toBe('ok');
+      const saved = JSON.parse(fs.readFileSync(path.join(workspaceDir(root), 'results', `${runId}.json`), 'utf8'));
+      expect(saved.executor).toMatchObject({ kind: 'agent', scenario_path: path.relative(root, scenarioPath) });
+      expect(saved.executor.scenario_sha256).toMatch(/^[0-9a-f]{64}$/);
     });
 
     test('a crash supplied to addCrash reaches the finalized result', () => {

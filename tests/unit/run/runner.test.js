@@ -375,19 +375,41 @@ describe('runScenario', () => {
     expect(r.failures.join('\n')).toContain('hdr');
   });
 
-  // executor: "a Tier-2 assertion the CLI cannot decide is recorded as a failure"
-  test('a Tier-2 assertion the evaluator cannot decide is recorded as a failure', async () => {
-    const b = makeFakeBridge();
-    const r = await exec(
-      scenario(
-        [{ id: 'hide', action: 'dismiss_keyboard', description: 'd' }],
-        [{ id: 'looks', after_step: 'hide', type: 'visual_state', description: 'd', expected_visual_state: 'x' }]
-      ),
-      b
+  // Replay R2 (#275): a Tier-2 assertion is pending, never a
+  // failure and never a silent pass.
+  describe('assertion provenance (#275)', () => {
+    const tier2 = scenario(
+      [{ id: 'hide', action: 'dismiss_keyboard', description: 'd' }],
+      [{ id: 'looks', after_step: 'hide', type: 'visual_state', description: 'd', expected_visual_state: 'loaded' }]
     );
-    expect(r.finalized.status).toBe('failed');
-    expect(r.file.assertion_results[0].status).toBe('failed');
-    expect(r.file.assertion_results[0].message).toMatch(/^needs agent judgment; mauto run decides only mechanical assertions/);
+
+    test('a Tier-2 assertion is always recorded needs_agent, judge.by none, and is not a failure', async () => {
+      const r = await exec(tier2, makeFakeBridge());
+      expect(r.file.assertion_results).toEqual([
+        expect.objectContaining({
+          assertion_id: 'looks',
+          step_id: 'hide',
+          type: 'visual_state',
+          status: 'needs_agent',
+          mechanical: false,
+          judge: { by: 'none' },
+        }),
+      ]);
+      expect(r.file.assertion_results[0].message).toMatch(/^needs agent judgment \(.+\)$/);
+      expect(r.failures).toEqual([]);
+      expect(r.finalized.status).toBe('incomplete');
+    });
+
+    test('a mechanical verdict is recorded mechanical, judge.by mauto', async () => {
+      const r = await exec(
+        scenario(
+          [{ id: 'hide', action: 'dismiss_keyboard', description: 'd' }],
+          [{ id: 'there', after_step: 'hide', type: 'element_exists', description: 'd', element_description: 'Home' }]
+        ),
+        makeFakeBridge({ elements: [[el('Home')]] })
+      );
+      expect(r.file.assertion_results[0]).toMatchObject({ status: 'passed', mechanical: true, judge: { by: 'mauto' } });
+    });
   });
 
   // executor: "every verb carries MAUTO_RUN_ID so the run has a trace"

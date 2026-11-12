@@ -37,6 +37,14 @@ describe('MemoryStore.recordRun', () => {
     expect(readHistory(root)).toContain('(last 5 runs: P F)');
   });
 
+  // #275: an incomplete run is not a pass. Recorded F until an agent
+  // completes it; the re-finalize then harvests its own letter.
+  test('an incomplete run is recorded F', () => {
+    const root = tmpRoot();
+    new MemoryStore({ projectRoot: root }).recordRun({ scenario_id: 's', status: 'incomplete', observations: [] });
+    expect(readHistory(root)).toContain('## s  (last 5 runs: F)');
+  });
+
   test('missing scenario_id falls back to "unknown"', () => {
     const root = tmpRoot();
     new MemoryStore({ projectRoot: root }).recordRun({ status: 'passed', observations: [] });

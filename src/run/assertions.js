@@ -2,36 +2,49 @@
 
 const { expectedOf, toEvaluatorInput } = require('../assertion/fields');
 
-// Decide one scenario assertion against the current screen with the CLI's
-// own evaluator, record the verdict, and push a failure line when it did not
-// pass. Returns whether it passed.
+// Decide one scenario assertion against the current screen and record the
+// verdict with its provenance (#275):
+// - a mechanical type is decided by the CLI's own evaluator (`judge.by: mauto`);
+// - a Tier-2 type (`needs_agent`) is always left pending (`judge.by: none`),
+//   which is not a failure — the finalized run reads `incomplete` and an
+//   agent completes it. There is deliberately no judge here: any future
+//   judge must not be recorded as `by: 'agent'` unless an agent actually
+//   decided;
+// - an evaluator error is a failed assertion.
+// Pushes a failure line only for a decided failure.
 async function runAssertion(assertion, { bridge, store, evaluator, failures }) {
-  let pass = false;
-  let message;
-  try {
-    const verdict = evaluator.evaluate(toEvaluatorInput(assertion), { elements: await bridge.listElements() });
-    if (verdict.needs_agent) {
-      // This release decides only mechanical assertions; a Tier-2 one is a
-      // failure, never a silent pass. (Replay R2 records it as needs_agent.)
-      message = `needs agent judgment; mauto run decides only mechanical assertions in this release (${verdict.message})`;
-    } else {
-      pass = verdict.pass === true;
-      message = verdict.message || 'no message';
-    }
-  } catch (err) {
-    message = `assertion errored: ${err.message}`;
-  }
-
-  store.addAssertion({
+  const base = {
     step_id: assertion.after_step,
     assertion_id: assertion.id,
     type: assertion.type,
-    pass,
-    message,
     expected: expectedOf(assertion),
-  });
-  if (!pass) failures.push(`assertion ${assertion.id} (${assertion.type}): ${message}`);
-  return pass;
+  };
+  let verdict;
+  try {
+    const elements = await bridge.listElements();
+    const answer = evaluator.evaluate(toEvaluatorInput(assertion), { elements });
+    verdict = answer.needs_agent
+      ? {
+          status: 'needs_agent',
+          message: `needs agent judgment (${answer.message})`,
+          mechanical: false,
+          judge: { by: 'none' },
+        }
+      : {
+          status: answer.pass === true ? 'passed' : 'failed',
+          message: answer.message || 'no message',
+          mechanical: true,
+          judge: { by: 'mauto' },
+        };
+  } catch (err) {
+    // An evaluator error is a failed assertion, attributed to no one.
+    verdict = { status: 'failed', message: `assertion errored: ${err.message}` };
+  }
+
+  const record = { ...base, ...verdict };
+  store.addAssertion(record);
+  if (record.status === 'failed') failures.push(`assertion ${assertion.id} (${assertion.type}): ${record.message}`);
+  return record.status === 'passed';
 }
 
 module.exports = { runAssertion };
