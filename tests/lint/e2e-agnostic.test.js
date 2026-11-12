@@ -89,7 +89,7 @@ describe('E2E harness — targets resolve through the CLI evaluator', () => {
   const executorSrc = read(path.join(SCRIPTS, 'lib', 'executor.js'));
 
   test('resolve.js takes findFirst/matches as an injected parameter and requires no matcher module', () => {
-    expect(resolveSrc).toMatch(/function resolveTarget\(\s*elements\s*,\s*target\s*,\s*\{\s*findFirst\s*,\s*matches\s*(,\s*textOf\s*)?\}\s*(,\s*\{\s*pattern\s*\}\s*=\s*\{\}\s*)?\)/);
+    expect(resolveSrc).toMatch(/function resolveTarget\(\s*elements\s*,\s*target\s*,\s*\{\s*matches\s*(,\s*textOf\s*)?\}\s*(,\s*\{\s*pattern\s*\}\s*=\s*\{\}\s*)?\)/);
     expect(resolveSrc).not.toMatch(/\brequire\(/);
   });
 

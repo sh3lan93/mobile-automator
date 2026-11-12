@@ -19,29 +19,18 @@
 const MAX_SEEN = 20;
 
 class TargetNotFoundError extends Error {
-  // `described` is true when `target` is already a rendered description
-  // (describeTarget) rather than the raw scenario string.
-  constructor(target, seen, described = false) {
+  // `described` is what was looked for, already rendered by describeTarget.
+  constructor(described, seen) {
     const listed = seen.length ? seen.map((s) => JSON.stringify(s)).join(', ') : '<nothing perceivable>';
-    super(`no element matches target ${described ? target : JSON.stringify(target)}; on screen: ${listed}`);
+    super(`no element matches target ${described}; on screen: ${listed}`);
     this.name = 'TargetNotFoundError';
-    this.target = target;
+    this.target = described;
     this.seen = seen;
   }
 }
 
 // The distinct non-blank text / accessibility-label strings on screen, in
 // list order, capped at MAX_SEEN.
-// An invalid target_pattern: retrying cannot fix it, so it carries
-// `fatal: true` (runStep stops its retry loop on that).
-class FatalPatternError extends Error {
-  constructor(message) {
-    super(message);
-    this.name = 'FatalStepError';
-    this.fatal = true;
-  }
-}
-
 function perceivable(elements) {
   const seen = [];
   for (const e of elements) {
@@ -71,12 +60,12 @@ function describeTarget(target, pattern) {
 /**
  * @param {object[]} elements  the `data` of `mauto elements`
  * @param {string} target      on-screen string from the scenario (may be absent when a pattern is given)
- * @param {{findFirst: Function, matches: Function, textOf?: Function}} matcher  the CLI's evaluator
+ * @param {{matches: Function, textOf?: Function}} matcher  the CLI's evaluator
  * @param {{pattern?: string}} [options]  `pattern`: a regex the element's text must match, for a
  *   label that cannot be a static string; with a target, the target narrows first and the pattern filters
  * @returns {{element: object, center: number[], matches: object[]}}
  */
-function resolveTarget(elements, target, { findFirst, matches, textOf }, { pattern } = {}) {
+function resolveTarget(elements, target, { matches, textOf }, { pattern } = {}) {
   const hasTarget = typeof target === 'string' && target.trim() !== '';
   const hasPattern = typeof pattern === 'string' && pattern !== '';
   // The CLI matcher treats an empty target as "matches everything", which is
@@ -85,26 +74,16 @@ function resolveTarget(elements, target, { findFirst, matches, textOf }, { patte
     throw new Error('step has no target to resolve');
   }
   const list = Array.isArray(elements) ? elements : [];
-  let element;
-  let candidates;
+  // One pipeline: the target narrows, then the pattern filters; the first
+  // survivor is the element and every survivor a candidate.
+  let candidates = hasTarget ? list.filter((e) => matches(e, target)) : list;
   if (hasPattern) {
-    let re;
-    try {
-      re = new RegExp(pattern);
-    } catch (err) {
-      throw new FatalPatternError(`invalid target_pattern ${JSON.stringify(pattern)}: ${err.message}`);
-    }
-    const narrowed = hasTarget ? list.filter((e) => matches(e, target)) : list;
-    candidates = narrowed.filter((e) => re.test(textOf(e)));
-    element = candidates[0];
-  } else {
-    element = findFirst(list, target);
-    candidates = list.filter((e) => matches(e, target));
+    const re = new RegExp(pattern);
+    candidates = candidates.filter((e) => re.test(textOf(e)));
   }
+  const element = candidates[0];
   if (!element) {
-    throw hasPattern
-      ? new TargetNotFoundError(describeTarget(target, pattern), perceivable(list), true)
-      : new TargetNotFoundError(target, perceivable(list));
+    throw new TargetNotFoundError(describeTarget(target, pattern), perceivable(list));
   }
   return {
     element,
@@ -115,4 +94,4 @@ function resolveTarget(elements, target, { findFirst, matches, textOf }, { patte
   };
 }
 
-module.exports = { resolveTarget, describeTarget, TargetNotFoundError, FatalPatternError, MAX_SEEN };
+module.exports = { resolveTarget, describeTarget, TargetNotFoundError, MAX_SEEN };

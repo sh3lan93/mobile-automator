@@ -10,6 +10,14 @@ const DIRECTIONS = ['up', 'down', 'left', 'right'];
 // choice to make, it says so through ctx.observe, which runStep records on
 // the step.
 async function resolveOnScreen(target, { bridge, evaluator, observe }, pattern) {
+  // An invalid target_pattern cannot be fixed by retrying.
+  if (typeof pattern === 'string' && pattern !== '') {
+    try {
+      new RegExp(pattern);
+    } catch (err) {
+      throw new FatalStepError(`invalid target_pattern ${JSON.stringify(pattern)}: ${err.message}`);
+    }
+  }
   const r = resolveTarget(await bridge.listElements(), target, evaluator, { pattern });
   if (r.matches.length > 1) {
     const what = typeof target === 'string' && target.trim() !== '' ? JSON.stringify(target) : `pattern /${pattern}/`;

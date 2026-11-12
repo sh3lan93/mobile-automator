@@ -7,6 +7,7 @@
 
 const evaluator = require('../../../src/assertion/evaluator');
 const catalog = require('../../../src/device/action-catalog');
+const { FatalStepError } = require('../../../src/run/fatal');
 const { ACTION_HANDLERS, handlerFor } = require('../../../src/run/actions');
 const { launchApp } = require('../../../src/run/actions/launch');
 const { tap, type, longPress, doubleTap, swipe, pressButton, openUrl } = require('../../../src/run/actions/gestures');
@@ -102,6 +103,16 @@ describe('tap', () => {
     const err = await tap({ id: 't', action: 'tap', target: 'Home' }, ctxFor(b)).catch((e) => e);
     expect(err.name).toBe('TargetNotFoundError');
     expect(err.fatal).toBeUndefined();
+  });
+});
+
+describe('an invalid target_pattern', () => {
+  test('is a real FatalStepError, not retryable', async () => {
+    const b = makeFakeBridge({ elements: [[el('Home')]] });
+    const err = await tap({ id: 't', action: 'tap', target_pattern: '(' }, ctxFor(b)).catch((e) => e);
+    expect(err).toBeInstanceOf(FatalStepError);
+    expect(err.fatal).toBe(true);
+    expect(err.message).toMatch(/^invalid target_pattern "\(": /);
   });
 });
 
