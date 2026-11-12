@@ -4,7 +4,9 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { crossCheck, buildExecutor, pendingHint } = require('../../../src/result/provenance');
+const { crossCheck } = require('../../../src/result/scenario-check');
+const { buildExecutor } = require('../../../src/result/executor');
+const { pendingHint } = require('../../../src/result/pending-hint');
 const { version } = require('../../../package.json');
 const { workspaceDir } = require('../../../src/workspace/layout');
 
@@ -67,7 +69,7 @@ describe('crossCheck (#275)', () => {
 });
 
 describe('scenarioMismatch (#275)', () => {
-  const { scenarioMismatch } = require('../../../src/result/provenance');
+  const { scenarioMismatch } = require('../../../src/result/scenario-check');
   const sha = 'd'.repeat(64);
 
   test('a consistent run with no recorded hash -> null', () => {
@@ -219,13 +221,13 @@ describe('pendingHint (#275)', () => {
   });
 
   test('incompleteMessage counts the pending assertions, and names none when only a step is pending', () => {
-    const { incompleteMessage } = require('../../../src/result/provenance');
+    const { incompleteMessage } = require('../../../src/result/pending-hint');
     expect(incompleteMessage(result)).toBe('run run_20261111_120000 incomplete: 2 assertion(s) need agent judgment');
     expect(incompleteMessage({ run_id: 'run_20261111_120000', assertion_results: [] })).toBe('run run_20261111_120000 incomplete');
   });
 
   test('pendingAssertions lists id, step and type', () => {
-    const { pendingAssertions } = require('../../../src/result/provenance');
+    const { pendingAssertions } = require('../../../src/result/pending-hint');
     expect(pendingAssertions(result)).toEqual([
       { assertion_id: 'looks_right', step_id: 's1', type: 'visual_state' },
       { assertion_id: 'copy_ok', step_id: 's2', type: 'screen_title' },

@@ -236,7 +236,7 @@ class ResultStore {
   }
 
   // What the run has recorded so far, for checking it against a scenario
-  // (src/result/provenance.js crossCheck). A deep copy: the caller reads it,
+  // (src/result/scenario-check.js crossCheck). A deep copy: the caller reads it,
   // it never writes through it.
   recorded() {
     return structuredClone({

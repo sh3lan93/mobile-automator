@@ -10,7 +10,9 @@ const path = require('path');
 
 const { ok, fail } = require('../output/envelope');
 const { loadScenario } = require('../scenario/load');
-const { scenarioMismatch, buildExecutor, incompleteEnvelope } = require('./provenance');
+const { scenarioMismatch } = require('./scenario-check');
+const { buildExecutor } = require('./executor');
+const { incompleteEnvelope } = require('./pending-hint');
 const { checkExplicitStatus } = require('./status-guard');
 
 function finalizeAgainstScenario(

@@ -3,7 +3,8 @@
 const path = require('path');
 
 const { ok, fail } = require('../output/envelope');
-const { buildExecutor, pendingAssertions, incompleteEnvelope } = require('../result/provenance');
+const { buildExecutor } = require('../result/executor');
+const { pendingAssertions, incompleteEnvelope } = require('../result/pending-hint');
 const { realClock } = require('./clock');
 const { runScenario } = require('./runner');
 const { NO_TRACE } = require('./trace');
