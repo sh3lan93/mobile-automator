@@ -1,6 +1,6 @@
 'use strict';
 
-const { runSettings, settingsOf, DEFAULTS } = require('../../../src/run/settings');
+const { runSettings, DEFAULTS } = require('../../../src/run/settings');
 const { timeoutFor, poll } = require('../../../src/run/poll');
 
 describe('runSettings', () => {
@@ -30,11 +30,6 @@ describe('runSettings', () => {
 
   test('timeoutMs becomes the cap', () => {
     expect(runSettings(null, { timeoutMs: 2000 }).timeoutCapMs).toBe(2000);
-  });
-
-  test('settingsOf falls back to the defaults for a ctx without settings', () => {
-    expect(settingsOf({}).pollMs).toBe(1500);
-    expect(settingsOf({ settings: { pollMs: 5 } }).pollMs).toBe(5);
   });
 });
 

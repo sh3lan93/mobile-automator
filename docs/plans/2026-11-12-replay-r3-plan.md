@@ -22,7 +22,7 @@ step with `needs_agent: true`, so the run finalizes `incomplete` (exit 7) and sa
 | `open_url` | `gestures.js` | `step.value` required → `bridge.openUrl` |
 | `scroll_to_element` | `scroll.js` | resolve; on `TargetNotFoundError` swipe `step.value` (default `up`) and re-resolve, up to `run.scroll_max_swipes` swipes; then fail with the count |
 | `wait_for_element_gone` | `wait.js` | poll until the target no longer resolves; timeout → fail naming what is still on screen |
-| `wait_for_loading_complete` | `wait.js` | poll until **two consecutive** looks show no element matching any `run.loading_indicator_labels` entry (also matches `step.wait_config.indicator` aliases when set: spinner / progress_bar / shimmer / skeleton are label words). No labels configured → a recorded `state_context` note and the step passes after the two stable polls (we cannot know what to look for; never a silent pass) |
+| `wait_for_loading_complete` | `wait.js` | poll until **two consecutive** looks show no element matching any `run.loading_indicator_labels` entry. No labels configured → a recorded `state_context` note and the step passes after the two stable polls (we cannot know what to look for; never a silent pass) |
 | `capture_value` | `capture.js` | resolve target → `textOf(element)` → `ctx.variables[capture_to]` and `store.captureVariable`; missing `capture_to` or an undeclared variable → Fatal |
 | precondition `install_app` | `preconditions.js` | `bridge.installApp(value)`; no `value` → `needs_agent` (a run has no pre-flight build) |
 | precondition `uninstall_app` | `preconditions.js` | `bridge.uninstallApp(target_package ‖ scenario.app_package)` |

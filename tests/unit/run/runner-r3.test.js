@@ -27,7 +27,7 @@ afterEach(() => {
 async function exec(sc, bridge, extra = {}) {
   const store = new ResultStore({ runId: RUN_ID, scenarioId: sc.scenario_id, projectRoot });
   const outcome = await runScenario({
-    scenario: sc, bridge, store, evaluator, catalog, projectRoot, runId: RUN_ID, clock: makeFakeClock(), ...extra,
+    scenario: sc, bridge, store, evaluator, catalog, projectRoot, runId: RUN_ID, clock: makeFakeClock(), settings: runSettings(null), ...extra,
   });
   const file = JSON.parse(fs.readFileSync(store.file, 'utf8'));
   const finalized = store.finalize();
@@ -176,8 +176,7 @@ describe('every supported action', () => {
           { action: 'uninstall_app' }, { action: 'install_app', value: '/tmp/a.apk' }, { action: 'set_orientation', value: 'portrait' },
         ] },
       }),
-      b,
-      { settings: runSettings(null) }
+      b
     );
     expect(r.failures).toEqual([]);
     expect(r.file.steps_executed.every((s) => s.status === 'passed' && !s.needs_agent)).toBe(true);

@@ -15,7 +15,7 @@ const { handlerFor } = require('./actions');
 const { preconditionHandlerFor } = require('./actions/preconditions');
 const { runAssertion } = require('./assertions');
 const { NO_TRACE } = require('./trace');
-const { runSettings } = require('./settings');
+const { makePollUntil } = require('./poll');
 
 // Best-effort: a store that cannot take this write must not replace the
 // error that is about to propagate.
@@ -30,13 +30,15 @@ function recordAbort(store, step, err) {
 
 async function runScenario({
   scenario, bridge, store, evaluator, catalog, projectRoot, runId, clock,
-  trace = NO_TRACE, settings = runSettings(null),
+  trace = NO_TRACE, settings,
 }) {
   const failures = [];
   // `variables` is the run's captured values, which the assertions' evaluator
   // reads (value_matches_variable); `settings` the run's timings and limits.
   const variables = {};
-  const ctx = { scenario, bridge, store, evaluator, catalog, projectRoot, runId, clock, trace, failures, settings, variables };
+  // `pollUntil` is how every waiting handler looks at the screen.
+  const pollUntil = makePollUntil(settings, clock);
+  const ctx = { scenario, bridge, store, evaluator, catalog, projectRoot, runId, clock, trace, failures, settings, variables, pollUntil };
   const assertions = Array.isArray(scenario.assertions) ? scenario.assertions : [];
   // The first step that failed, if any.
   let failedStep = null;

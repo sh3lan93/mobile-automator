@@ -1,6 +1,5 @@
 'use strict';
 
-const { settingsOf } = require('../settings');
 const { resolveStep, directionOf } = require('./gestures');
 
 // scroll_to_element: look for the target, swiping `step.value` (default up)
@@ -8,7 +7,7 @@ const { resolveStep, directionOf } = require('./gestures');
 // a device fault propagates at once.
 async function scrollToElement(step, ctx) {
   const direction = directionOf(step, 'up');
-  const max = settingsOf(ctx).scrollMaxSwipes;
+  const max = ctx.settings.scrollMaxSwipes;
   for (let swipes = 0; ; swipes++) {
     try {
       return await resolveStep(step, ctx);

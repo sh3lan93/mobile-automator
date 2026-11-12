@@ -15,6 +15,7 @@ const catalog = require('../../../src/device/action-catalog');
 const { ResultStore } = require('../../../src/result/store');
 const { workspaceDir } = require('../../../src/workspace/layout');
 const { runScenario } = require('../../../src/run/runner');
+const { runSettings } = require('../../../src/run/settings');
 const { makeFakeBridge, makeFakeClock, homeElements, el } = require('../../helpers/fake-bridge');
 
 const RUN_ID = 'run_20261021_120000';
@@ -49,6 +50,7 @@ async function exec(sc, bridge, extra = {}) {
     projectRoot,
     runId: RUN_ID,
     clock: makeFakeClock(),
+    settings: runSettings(null),
     trace: { start: () => traced.push('start'), step: (ok) => traced.push({ step: ok }) },
     ...extra,
   });
@@ -311,7 +313,7 @@ describe('runScenario', () => {
           [{ id: 'tap_more', action: 'tap', description: 'd', target: 'More' }],
           [{ id: 'a', after_step: 'tap_more', type: 'element_exists', description: 'd', element_description: 'More' }]
         ),
-        bridge: b, store, evaluator, catalog, projectRoot, runId: RUN_ID, clock: makeFakeClock(),
+        bridge: b, store, evaluator, catalog, projectRoot, runId: RUN_ID, clock: makeFakeClock(), settings: runSettings(null),
       })
     ).rejects.toThrow('disk full');
     const file = JSON.parse(fs.readFileSync(store.file, 'utf8'));
@@ -327,7 +329,7 @@ describe('runScenario', () => {
     await expect(
       runScenario({
         scenario: scenario([{ id: 'back', action: 'press_back', description: 'd' }]),
-        bridge: makeFakeBridge(), store, evaluator, catalog, projectRoot, runId: RUN_ID, clock: makeFakeClock(),
+        bridge: makeFakeBridge(), store, evaluator, catalog, projectRoot, runId: RUN_ID, clock: makeFakeClock(), settings: runSettings(null),
       })
     ).rejects.toThrow('read-only');
   });

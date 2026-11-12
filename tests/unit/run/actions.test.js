@@ -5,7 +5,6 @@
 // resolves on success, throws on failure; a throw carrying `fatal: true` is
 // never retried by runStep.
 
-const evaluator = require('../../../src/assertion/evaluator');
 const catalog = require('../../../src/device/action-catalog');
 const { FatalStepError } = require('../../../src/run/fatal');
 const { ACTION_HANDLERS, handlerFor } = require('../../../src/run/actions');
@@ -16,22 +15,10 @@ const { scrollToElement } = require('../../../src/run/actions/scroll');
 const { captureValue } = require('../../../src/run/actions/capture');
 const { runSettings } = require('../../../src/run/settings');
 const { SEMANTIC_ACTIONS } = require('../../../src/device/semantic-press');
+const { makeRunCtx } = require('../../helpers/run-ctx');
 const { makeFakeBridge, makeFakeClock, el } = require('../../helpers/fake-bridge');
 
-function ctxFor(bridge, extra = {}) {
-  return {
-    scenario: { scenario_id: 'demo', app_package: 'com.example.app' },
-    settings: runSettings(null),
-    variables: {},
-    store: { captureVariable: jest.fn() },
-    bridge,
-    evaluator,
-    catalog,
-    clock: makeFakeClock(),
-    observe: () => {},
-    ...extra,
-  };
-}
+const ctxFor = makeRunCtx;
 
 describe('ACTION_HANDLERS', () => {
   test('every key is a scenario-schema action in the action catalog', () => {
@@ -330,6 +317,17 @@ describe('wait_for_loading_complete', () => {
     const b = makeFakeBridge({ elements: [[el('Ready')], [el('Please wait')], [el('Ready')], [el('Ready')]] });
     await waitForLoadingComplete(step, ctxFor(b, { settings }));
     expect(b.of('listElements')).toHaveLength(4);
+  });
+
+  test('a wait_config.indicator word is not a label: only run.loading_indicator_labels count', async () => {
+    const b = makeFakeBridge({ elements: [[el('spinner')], [el('spinner')]] });
+    const lines = [];
+    await waitForLoadingComplete(
+      { ...step, wait_config: { type: 'loading_complete', indicator: 'spinner', timeout_ms: 10000 } },
+      ctxFor(b, { observe: (l) => lines.push(l) })
+    );
+    expect(b.of('listElements')).toHaveLength(2);
+    expect(lines).toHaveLength(1);
   });
 
   test('times out while an indicator persists', async () => {

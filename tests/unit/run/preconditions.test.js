@@ -3,27 +3,13 @@
 // Precondition device_actions and the needs-agent actions: handlers driven
 // against the scripted fake bridge, plus the runner's treatment of both.
 
-const evaluator = require('../../../src/assertion/evaluator');
-const catalog = require('../../../src/device/action-catalog');
 const { PRECONDITION_HANDLERS, preconditionHandlerFor } = require('../../../src/run/actions/preconditions');
 const { NeedsAgentError, NEEDS_AGENT_HANDLERS } = require('../../../src/run/needs-agent');
 const { ACTION_HANDLERS } = require('../../../src/run/actions');
-const { runSettings } = require('../../../src/run/settings');
-const { makeFakeBridge, makeFakeClock } = require('../../helpers/fake-bridge');
+const { makeRunCtx } = require('../../helpers/run-ctx');
+const { makeFakeBridge } = require('../../helpers/fake-bridge');
 
-function ctxFor(bridge, extra = {}) {
-  return {
-    scenario: { scenario_id: 'demo', app_package: 'com.example.app' },
-    settings: runSettings(null),
-    variables: {},
-    bridge,
-    evaluator,
-    catalog,
-    clock: makeFakeClock(),
-    observe: () => {},
-    ...extra,
-  };
-}
+const ctxFor = makeRunCtx;
 
 describe('install_app precondition', () => {
   test('installs the build at value', async () => {

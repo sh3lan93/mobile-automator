@@ -32,10 +32,4 @@ function runSettings(config, { timeoutMs = null } = {}) {
   };
 }
 
-// The settings on a handler's ctx, or the defaults for a ctx built without
-// any (a unit test driving one handler).
-function settingsOf(ctx) {
-  return (ctx && ctx.settings) || runSettings(null);
-}
-
-module.exports = { runSettings, settingsOf, DEFAULTS };
+module.exports = { runSettings, DEFAULTS };
