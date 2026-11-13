@@ -41,7 +41,7 @@ describe('resolveTarget', () => {
       return null;
     })();
     expect(err).toBeInstanceOf(TargetNotFoundError);
-    expect(err.target).toBe('Checkout');
+    expect(err.target).toBe('"Checkout"');
     expect(err.seen).toEqual(['Sample Shop', 'Home\nTab 1 of 3']);
     expect(err.message).toContain('Checkout');
     expect(err.message).toContain('Sample Shop');
@@ -69,11 +69,10 @@ describe('resolveTarget', () => {
   test('uses the injected matcher, not a private copy', () => {
     const calls = [];
     const fake = {
-      findFirst: (els, t) => { calls.push(['findFirst', t]); return els[1]; },
       matches: (e, t) => { calls.push(['matches', t]); return e === undefined ? false : e.text === 'b'; },
     };
     const r = resolveTarget([el('a'), el('b')], 'anything', fake);
     expect(r.element.text).toBe('b');
-    expect(calls[0]).toEqual(['findFirst', 'anything']);
+    expect(calls[0]).toEqual(['matches', 'anything']);
   });
 });

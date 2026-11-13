@@ -12,7 +12,7 @@ const { expectedOf, toEvaluatorInput } = require('../assertion/fields');
 //   decided;
 // - an evaluator error is a failed assertion.
 // Pushes a failure line only for a decided failure.
-async function runAssertion(assertion, { bridge, store, evaluator, failures }) {
+async function runAssertion(assertion, { bridge, store, evaluator, failures, variables = {} }) {
   const base = {
     step_id: assertion.after_step,
     assertion_id: assertion.id,
@@ -22,7 +22,7 @@ async function runAssertion(assertion, { bridge, store, evaluator, failures }) {
   let verdict;
   try {
     const elements = await bridge.listElements();
-    const answer = evaluator.evaluate(toEvaluatorInput(assertion), { elements });
+    const answer = evaluator.evaluate(toEvaluatorInput(assertion), { elements, variables });
     verdict = answer.needs_agent
       ? {
           status: 'needs_agent',

@@ -15,6 +15,7 @@ const catalog = require('../../../src/device/action-catalog');
 const { ResultStore } = require('../../../src/result/store');
 const { workspaceDir } = require('../../../src/workspace/layout');
 const { runScenario } = require('../../../src/run/runner');
+const { runSettings } = require('../../../src/run/settings');
 const { makeFakeBridge, makeFakeClock, homeElements, el } = require('../../helpers/fake-bridge');
 
 const RUN_ID = 'run_20261021_120000';
@@ -49,6 +50,7 @@ async function exec(sc, bridge, extra = {}) {
     projectRoot,
     runId: RUN_ID,
     clock: makeFakeClock(),
+    settings: runSettings(null),
     trace: { start: () => traced.push('start'), step: (ok) => traced.push({ step: ok }) },
     ...extra,
   });
@@ -173,11 +175,11 @@ describe('runScenario', () => {
   test('an action the runner does not implement is a step error, not a silent pass', async () => {
     const b = makeFakeBridge();
     const r = await exec(
-      scenario([{ id: 'swipe_up', action: 'swipe', description: 'd', value: 'up', on_failure: 'retry', retry_policy: { max_attempts: 3 } }]),
+      scenario([{ id: 'mystery', action: 'teleport', description: 'd', on_failure: 'retry', retry_policy: { max_attempts: 3 } }]),
       b
     );
     expect(r.finalized.status).toBe('failed');
-    expect(r.failures.join('\n')).toContain('action "swipe" is not supported by mauto run yet');
+    expect(r.failures.join('\n')).toContain('action "teleport" is not supported by mauto run yet');
     expect(r.file.steps_executed[0].retry_count).toBe(0);
     // Nothing reached the device except the failure evidence.
     expect(b.methods()).toEqual(['screenshot']);
@@ -311,7 +313,7 @@ describe('runScenario', () => {
           [{ id: 'tap_more', action: 'tap', description: 'd', target: 'More' }],
           [{ id: 'a', after_step: 'tap_more', type: 'element_exists', description: 'd', element_description: 'More' }]
         ),
-        bridge: b, store, evaluator, catalog, projectRoot, runId: RUN_ID, clock: makeFakeClock(),
+        bridge: b, store, evaluator, catalog, projectRoot, runId: RUN_ID, clock: makeFakeClock(), settings: runSettings(null),
       })
     ).rejects.toThrow('disk full');
     const file = JSON.parse(fs.readFileSync(store.file, 'utf8'));
@@ -327,7 +329,7 @@ describe('runScenario', () => {
     await expect(
       runScenario({
         scenario: scenario([{ id: 'back', action: 'press_back', description: 'd' }]),
-        bridge: makeFakeBridge(), store, evaluator, catalog, projectRoot, runId: RUN_ID, clock: makeFakeClock(),
+        bridge: makeFakeBridge(), store, evaluator, catalog, projectRoot, runId: RUN_ID, clock: makeFakeClock(), settings: runSettings(null),
       })
     ).rejects.toThrow('read-only');
   });

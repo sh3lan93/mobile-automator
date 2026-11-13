@@ -51,6 +51,7 @@ const { prepareRun } = require('./run/prepare');
 const { handleRun } = require('./run/handle');
 const { realClock } = require('./run/clock');
 const { makeRunTrace } = require('./run/trace');
+const { parsePositiveInt } = require('./util/parse-positive-int');
 const {
   findWorkspaceRoot,
   workspaceFailure,
@@ -336,8 +337,8 @@ async function handleLongPress({ deviceBridge }, raw, { duration } = {}) {
   const { x, y } = coords;
   let ms;
   if (duration !== undefined) {
-    ms = Number(duration);
-    if (!Number.isInteger(ms) || ms <= 0) {
+    ms = parsePositiveInt(duration);
+    if (ms === null) {
       return {
         envelope: fail('invalid_input', `duration must be a positive integer in ms, got "${duration}"`, 'Pass --duration <ms>, e.g. --duration 800.'),
         exitKind: 'invalid_input',
@@ -2051,8 +2052,9 @@ function buildProgram(deps = {}) {
     .description('Replay a scenario unattended and finalize its result (in progress; needs MAUTO_REPLAY=1)')
     .option('--device <id>', 'target device id')
     .option('--run-id <id>', 'run identifier (run_YYYYMMDD_HHMMSS); minted when omitted')
+    .option('--timeout-ms <ms>', 'cap, in milliseconds, on how long any one step waits (a positive integer)')
     .action(withEnvelope(requireWorkspace(async (file, opts) => {
-      const prepared = prepareRun({ validator, file: path.resolve(cwd, file), runId: opts.runId, env: process.env });
+      const prepared = prepareRun({ validator, file: path.resolve(cwd, file), runId: opts.runId, timeoutMs: opts.timeoutMs, env: process.env });
       if (prepared.failure) return emit(prepared.failure, humanFlag());
       // The preAction hook saw only the flag and the environment; this covers
       // a minted id, so verb.end lands in the same trace as the run's stamps.

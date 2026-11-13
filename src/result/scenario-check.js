@@ -17,6 +17,10 @@ function crossCheck(recorded, scenario) {
     problems.push(`the run recorded scenario_id "${recorded.scenario_id}" but the scenario is "${scenario.scenario_id}"`);
   }
   const stepIds = new Set(flattenSteps(scenario).map(({ step }) => step.id));
+  // `mauto run` records each precondition device_action as `precondition_<n>`
+  // (1-based position in preconditions.device_actions).
+  const setup = scenario.preconditions && scenario.preconditions.device_actions;
+  if (Array.isArray(setup)) setup.forEach((_, i) => stepIds.add(`precondition_${i + 1}`));
   for (const id of unique(recorded.steps.map((s) => s.step_id))) {
     if (!stepIds.has(id)) problems.push(`step "${id}" is not in the scenario`);
   }

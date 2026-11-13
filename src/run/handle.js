@@ -9,6 +9,8 @@ const { PLATFORM_UNKNOWN } = require('../device/bridge');
 const { realClock } = require('./clock');
 const { runScenario } = require('./runner');
 const { NO_TRACE } = require('./trace');
+const { runSettings } = require('./settings');
+const configManager = require('../config/manager');
 
 // The device's platform for the executor. Null only when the bridge itself
 // says it cannot report one (its PLATFORM_UNKNOWN failure) — the steps will
@@ -39,10 +41,14 @@ async function handleRun(
     cwd = process.cwd(), trace = NO_TRACE, clock = realClock,
     evaluator = require('../assertion/evaluator'),
     catalog = require('../device/action-catalog'),
+    loadConfig = configManager.load,
   },
-  { scenario, runId, file, sha256, deviceId = null }
+  { scenario, runId, file, sha256, deviceId = null, timeoutMs = null }
 ) {
   const scenarioId = scenario.scenario_id;
+  // The run's timings: the optional `run` block of the workspace config, with
+  // --timeout-ms as a cap on every per-step wait.
+  const settings = runSettings(loadConfig(projectRoot), { timeoutMs });
   const store = resultStoreFactory({ runId, scenarioId, projectRoot });
   const { platform, unknown: platformUnknown } = await platformOf(bridge);
   const executor = buildExecutor({
@@ -72,6 +78,7 @@ async function handleRun(
       runId,
       clock,
       trace,
+      settings,
     });
   } catch (err) {
     // An unexpected error (a store write, a bug) still ends the run

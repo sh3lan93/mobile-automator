@@ -19,11 +19,12 @@
 const MAX_SEEN = 20;
 
 class TargetNotFoundError extends Error {
-  constructor(target, seen) {
+  // `described` is what was looked for, already rendered by describeTarget.
+  constructor(described, seen) {
     const listed = seen.length ? seen.map((s) => JSON.stringify(s)).join(', ') : '<nothing perceivable>';
-    super(`no element matches target ${JSON.stringify(target)}; on screen: ${listed}`);
+    super(`no element matches target ${described}; on screen: ${listed}`);
     this.name = 'TargetNotFoundError';
-    this.target = target;
+    this.target = described;
     this.seen = seen;
   }
 }
@@ -48,28 +49,49 @@ function centerOf(element) {
   return [Math.round((x1 + x2) / 2), Math.round((y1 + y2) / 2)];
 }
 
+// How a miss names what it looked for: the target string, the pattern, or both.
+function describeTarget(target, pattern) {
+  const parts = [];
+  if (typeof target === 'string' && target.trim() !== '') parts.push(JSON.stringify(target));
+  if (typeof pattern === 'string' && pattern !== '') parts.push(`pattern /${pattern}/`);
+  return parts.join(' ');
+}
+
 /**
  * @param {object[]} elements  the `data` of `mauto elements`
- * @param {string} target      on-screen string from the scenario
- * @param {{findFirst: Function, matches: Function}} matcher  the CLI's evaluator
+ * @param {string} target      on-screen string from the scenario (may be absent when a pattern is given)
+ * @param {{matches: Function, textOf?: Function}} matcher  the CLI's evaluator
+ * @param {{pattern?: string}} [options]  `pattern`: a regex the element's text must match, for a
+ *   label that cannot be a static string; with a target, the target narrows first and the pattern filters
  * @returns {{element: object, center: number[], matches: object[]}}
  */
-function resolveTarget(elements, target, { findFirst, matches }) {
+function resolveTarget(elements, target, { matches, textOf }, { pattern } = {}) {
+  const hasTarget = typeof target === 'string' && target.trim() !== '';
+  const hasPattern = typeof pattern === 'string' && pattern !== '';
   // The CLI matcher treats an empty target as "matches everything", which is
   // right for an assertion scope and wrong for a tap.
-  if (typeof target !== 'string' || target.trim() === '') {
+  if (!hasTarget && !hasPattern) {
     throw new Error('step has no target to resolve');
   }
   const list = Array.isArray(elements) ? elements : [];
-  const element = findFirst(list, target);
-  if (!element) throw new TargetNotFoundError(target, perceivable(list));
+  // One pipeline: the target narrows, then the pattern filters; the first
+  // survivor is the element and every survivor a candidate.
+  let candidates = hasTarget ? list.filter((e) => matches(e, target)) : list;
+  if (hasPattern) {
+    const re = new RegExp(pattern);
+    candidates = candidates.filter((e) => re.test(textOf(e)));
+  }
+  const element = candidates[0];
+  if (!element) {
+    throw new TargetNotFoundError(describeTarget(target, pattern), perceivable(list));
+  }
   return {
     element,
     center: centerOf(element),
     // Every candidate, so a caller can warn when the first-match rule had a
     // choice to make (a header and a nav item sharing a label, say).
-    matches: list.filter((e) => matches(e, target)),
+    matches: candidates,
   };
 }
 
-module.exports = { resolveTarget, TargetNotFoundError, MAX_SEEN };
+module.exports = { resolveTarget, describeTarget, TargetNotFoundError, MAX_SEEN };

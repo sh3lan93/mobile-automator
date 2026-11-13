@@ -7,7 +7,7 @@
 const path = require('path');
 
 const { fail } = require('../output/envelope');
-const { isPendingAssertion } = require('./outcome');
+const { isPendingAssertion, isPendingStep } = require('./outcome');
 
 // The assertions a finalized result is still waiting on, as `{assertion_id,
 // step_id, type}` — what `mauto run` puts in data.pending.
@@ -38,10 +38,12 @@ const arg = (value) => (/^[\w./@:+-]+$/.test(String(value)) ? String(value) : JS
 // a project-relative path would be wrong from any subdirectory.
 function pendingHint(result, { projectRoot }) {
   const pending = pendingAssertions(result);
+  const pendingSteps = (result.steps_executed || []).filter(isPendingStep);
   const runId = arg(result.run_id);
   const recorded = result.executor && result.executor.scenario_path;
   const scenarioPath = recorded ? path.resolve(projectRoot, recorded) : null;
   return [
+    ...pendingSteps.map((s) => `Pending step ${s.step_id}: ${s.error_message || 'needs an agent'}`),
     pending.length
       ? `Pending agent judgment: ${pending.map((p) => p.assertion_id).join(', ')}. Decide each, then re-finalize:`
       : 'No assertion is pending; re-finalize once the run is decided:',

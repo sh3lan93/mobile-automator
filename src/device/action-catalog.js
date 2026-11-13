@@ -16,8 +16,10 @@
 //   'semantic'    — invoked via `mauto press <action>`; resolved to per-platform
 //                   mechanics by src/device/semantic-press (see ACTION_METHOD).
 //   'composed'    — no dedicated verb; the agent composes it from existing verbs
-//                   (e.g. poll `mauto elements`, repeat `mauto swipe`). The
-//                   execute guide documents the composition.
+//                   (e.g. poll `mauto elements`, repeat `mauto swipe`), or
+//                   `mauto run` composes it in-process from the same bridge
+//                   calls (src/run/actions/). The execute guide documents the
+//                   agent's composition.
 //   'unsupported' — no `mauto` verb reaches it: the engine has no primitive, or
 //                   (clear_app_data, since 1.0.15) mauto has not wired it. Not
 //                   mechanically executable; the guide must NOT promise a verb,

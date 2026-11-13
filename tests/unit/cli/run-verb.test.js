@@ -103,6 +103,40 @@ describe('mauto run — refusals before any device work', () => {
       process.env.MAUTO_REPLAY = '1';
     });
 
+    test.each(['0', '-5', '1.5', 'abc', '', '1e3'])('--timeout-ms=%j is invalid_input before any device work', async (value) => {
+      const { r, factory } = await runCli([writeScenario(scenario()), '--run-id', RUN_ID, `--timeout-ms=${value}`]);
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.error.message).toBe(`invalid --timeout-ms "${value}"`);
+      expect(r.envelope.hint).toMatch(/positive integer/);
+      expect(factory).not.toHaveBeenCalled();
+    });
+
+    test('--timeout-ms caps a longer per-step wait', async () => {
+      const waiting = scenario({
+        steps: [{ id: 'w', action: 'wait_for_element', description: 'd', target: 'Nowhere', wait_config: { type: 'element_visible', timeout_ms: 20000 } }],
+      });
+      const { r } = await runCli([writeScenario(waiting), '--run-id', RUN_ID, '--timeout-ms', '3000']);
+      expect(r.exitKind).toBe('test_failed');
+      expect(r.envelope.data.failures[0]).toMatch(/timed out after 3000ms/);
+    });
+
+    test('--timeout-ms never lengthens a shorter wait', async () => {
+      const waiting = scenario({
+        steps: [{ id: 'w', action: 'wait_for_element', description: 'd', target: 'Nowhere', wait_config: { type: 'element_visible', timeout_ms: 2000 } }],
+      });
+      const { r } = await runCli([writeScenario(waiting), '--run-id', RUN_ID, '--timeout-ms', '9000']);
+      expect(r.envelope.data.failures[0]).toMatch(/timed out after 2000ms/);
+    });
+
+    test('the config run.default_timeout_ms sets the wait of a step that names none', async () => {
+      fs.writeFileSync(path.join(root, '.mobile-automator', 'config.json'), JSON.stringify({ run: { default_timeout_ms: 4000 } }));
+      const waiting = scenario({
+        steps: [{ id: 'w', action: 'wait_for_element', description: 'd', target: 'Nowhere' }],
+      });
+      const { r } = await runCli([writeScenario(waiting), '--run-id', RUN_ID]);
+      expect(r.envelope.data.failures[0]).toMatch(/timed out after 4000ms/);
+    });
+
     test('an unreadable scenario is invalid_input', async () => {
       const { r, factory } = await runCli([path.join(root, 'missing.json'), '--run-id', RUN_ID]);
       expect(r.exitKind).toBe('invalid_input');
