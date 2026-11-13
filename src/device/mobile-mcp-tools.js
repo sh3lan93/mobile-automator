@@ -45,6 +45,7 @@ const MOBILE_MCP_TOOL_NAMES = Object.freeze([
   'mobile_uninstall_app',
   'mobile_open_url',
   'mobile_set_orientation',
+  'mobile_get_orientation',
   // Diagnostic, not a scenario action — see DeviceBridge#listCrashes.
   'mobile_list_crashes',
   'mobile_get_crash',

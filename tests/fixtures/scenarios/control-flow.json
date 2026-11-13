@@ -1,0 +1,59 @@
+{
+  "$schema_version": "2.1",
+  "scenario_id": "control_flow",
+  "name": "Control flow and variables",
+  "description": "Exercises every control-flow field mauto run understands: conditions of all four types, optional, on_failure skip and retry, sub_steps with nested assertions, ${name} substitution and text_changed.",
+  "platform": "cross-platform",
+  "app_package": "com.example.app",
+  "metadata": { "app_version": "test", "environment": "test" },
+  "variables": {
+    "count": { "type": "string", "description": "The counter as first read" }
+  },
+  "steps": [
+    { "id": "cap", "action": "capture_value", "description": "Read the counter", "target": "Counter", "capture_to": "count" },
+    {
+      "id": "on_android", "action": "tap", "description": "Runs on android only", "target": "Accept",
+      "condition": { "type": "device_property", "property": "platform", "operator": "==", "value": "android" }
+    },
+    {
+      "id": "ios_only", "action": "tap", "description": "Skipped on android", "target": "Accept",
+      "condition": { "type": "device_property", "property": "platform", "operator": "==", "value": "ios" }
+    },
+    {
+      "id": "after_ios", "action": "tap", "description": "Runs because ios_only was skipped", "target": "Home",
+      "condition": { "type": "previous_step_skipped", "step_id": "ios_only" }
+    },
+    {
+      "id": "big_count", "action": "tap", "description": "Runs because the counter is above five", "target": "Home",
+      "condition": { "type": "variable_value", "variable_name": "count", "operator": ">", "value": 5 }
+    },
+    { "id": "promo", "action": "tap", "description": "A promo that is not there", "target": "Promo", "optional": true },
+    { "id": "soft", "action": "tap", "description": "A tap allowed to miss", "target": "Nowhere", "on_failure": "skip" },
+    {
+      "id": "flaky", "action": "tap", "description": "A tap that fails once", "target": "Home",
+      "on_failure": "retry", "retry_policy": { "max_attempts": 3, "backoff_ms": 200 }
+    },
+    {
+      "id": "branch", "action": "tap", "description": "Open the branch when Accept is visible", "target": "Accept",
+      "condition": { "type": "element_visible", "element_description": "Accept" },
+      "sub_steps": [
+        { "id": "branch_tap", "action": "tap", "description": "First nested step", "target": "Home" },
+        { "id": "branch_type", "action": "type", "description": "Type the captured count", "value": "n=${count}" }
+      ]
+    }
+  ],
+  "assertions": [
+    {
+      "id": "count_kept", "after_step": "cap", "type": "element_text", "description": "The counter reads what was captured",
+      "element_description": "Counter", "expected_value": "${count}"
+    },
+    {
+      "id": "count_changed", "after_step": "flaky", "type": "text_changed", "description": "The counter moved during the step",
+      "element_description": "Counter"
+    },
+    {
+      "id": "nested", "after_step": "branch_tap", "type": "element_exists", "description": "Still on the home screen",
+      "element_description": "Home"
+    }
+  ]
+}

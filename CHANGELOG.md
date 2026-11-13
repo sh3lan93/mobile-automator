@@ -11,6 +11,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ Added
 
+- **`mauto run` follows a scenario's control flow, and reads captured
+  variables** (replay PRD #271, slice R4; gated by `MAUTO_REPLAY=1`).
+  A step's `condition` is evaluated before it runs: `device_property`
+  (`platform` and `orientation`; any other property is `needs_agent` and the run
+  ends `incomplete`), `previous_step_skipped`, `variable_value` (numeric when
+  `value` is a number) and `element_visible`. A false condition records the step
+  `skipped` with `condition_evaluated: false` and skips its `sub_steps`. `optional`
+  and `on_failure: skip` turn a step's failure into `skipped` and the run
+  continues (an error in the scenario itself still fails). `on_failure: retry`
+  retries per `retry_policy`, two attempts one second apart when none is given.
+  `sub_steps` run after their parent passes, are listed in its
+  `sub_steps_executed`, and may carry `after_step` assertions; a failing
+  sub-step fails the parent. Every step records `step_duration_ms`. `${name}` in
+  a step's `value` / `target` and in an assertion's string fields is replaced by
+  a captured variable; one nothing captured fails the step (or assertion) rather
+  than passing as text. `text_changed` compares against the screen before the
+  step. New `DeviceBridge#getOrientation` (the existing `mobile_get_orientation`
+  primitive). `docs/reference/schema.md` documents `${name}` and these
+  behaviors, and no longer says the scenario has a `mode` field (the mode is the
+  workspace's).
+
 - **`mauto run` performs every action the action catalog can execute, and
   hands back the rest** (replay PRD #271, slice R3). Added handlers:
   `long_press` (a numeric `value` is the duration), `double_tap`, `swipe`
