@@ -205,6 +205,16 @@ class DeviceBridge {
     return await this._call('mobile_set_orientation', { orientation });
   }
 
+  // The device's current orientation, 'portrait' or 'landscape'. mobile-mcp
+  // answers in prose ("Current device orientation is portrait"), so the word
+  // is parsed out; anything else is a hard error rather than a guess.
+  async getOrientation() {
+    const r = await this._call('mobile_get_orientation', {});
+    const m = /\b(portrait|landscape)\b/i.exec(r && typeof r === 'object' ? JSON.stringify(r) : String(r));
+    if (!m) throw new Error(`Could not read the device orientation from "${String(r)}".`);
+    return m[1].toLowerCase();
+  }
+
   // Crash reports currently readable on the device, as the agnostic crash
   // model. DIAGNOSTIC only — never invoked by a scenario action, which is why
   // `crash` has no src/device/action-catalog.js entry (that catalog holds
