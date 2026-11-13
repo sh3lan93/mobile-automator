@@ -904,6 +904,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#replay-timings-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Replay timings (optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#project-knowledge" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1744,6 +1755,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#replay-timings-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Replay timings (optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#project-knowledge" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2053,6 +2075,42 @@ mauto<span class="w"> </span>config<span class="w"> </span><span class="nb">set<
 <div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>engine<span class="w"> </span>legacy
 </code></pre></div>
 <p>Switching clears the pinned device (the engines name Android emulators differently — re-select with <code>mauto devices use &lt;id&gt;</code>), and the next device verb restarts the session on the new engine. An exported <code>MOBILEMCP_LEGACY_ROBOT</code> overrides the key. See <a href="https://github.com/sh3lan93/mobile-automator/blob/main/TROUBLESHOOTING.md">TROUBLESHOOTING.md</a> for the Android <code>DeviceServer</code> cleanup the hint mentions.</p>
+<h3 id="replay-timings-optional">Replay timings (optional)<a class="headerlink" href="#replay-timings-optional" title="Permanent link">&para;</a></h3>
+<p>The in-progress <code>mauto run</code> replayer reads an optional <code>run</code> block from <code>config.json</code>. Every key is optional, none is written by <code>mauto setup</code>, and an absent key keeps its default:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Default</th>
+<th>What it sets</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>run.poll_ms</code></td>
+<td><code>1500</code></td>
+<td>Milliseconds between looks at the screen while a step waits</td>
+</tr>
+<tr>
+<td><code>run.default_timeout_ms</code></td>
+<td><code>30000</code></td>
+<td>How long a wait step waits when its <code>wait_config</code> names no timeout</td>
+</tr>
+<tr>
+<td><code>run.scroll_max_swipes</code></td>
+<td><code>10</code></td>
+<td>Most swipes a <code>scroll_to_element</code> step makes before it fails</td>
+</tr>
+<tr>
+<td><code>run.loading_indicator_labels</code></td>
+<td>none</td>
+<td>On-screen labels that mean something is still loading; <code>wait_for_loading_complete</code> waits for them to disappear</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">"run"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"default_timeout_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">15000</span><span class="p">,</span><span class="w"> </span><span class="nt">"loading_indicator_labels"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"Loading"</span><span class="p">,</span><span class="w"> </span><span class="s2">"Please wait"</span><span class="p">]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p><code>mauto run --timeout-ms &lt;ms&gt;</code> caps how long any one step waits, whatever the config or the step says.</p>
 <h3 id="project-knowledge">Project knowledge<a class="headerlink" href="#project-knowledge" title="Permanent link">&para;</a></h3>
 <p>The agent infers and persists the deeper context that makes generated tests project-aware:</p>
 <table>
