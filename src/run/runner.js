@@ -38,8 +38,24 @@ async function runScenario({
   const variables = {};
   // `pollUntil` is how every waiting handler looks at the screen.
   const pollUntil = makePollUntil(settings, clock);
-  const ctx = { scenario, bridge, store, evaluator, catalog, projectRoot, runId, clock, trace, failures, settings, variables, pollUntil };
+  // `statuses` is each step's recorded status so far (a `previous_step_skipped`
+  // condition reads it); `previous` the screen before a step, kept only for the
+  // steps a text_changed assertion follows (`wantsPrevious`), so every other
+  // scenario pays no extra device call.
+  const statuses = new Map();
+  const previous = new Map();
   const assertions = Array.isArray(scenario.assertions) ? scenario.assertions : [];
+  const wantsPrevious = new Set(assertions.filter((a) => a.type === 'text_changed').map((a) => a.after_step));
+  const ctx = {
+    scenario, bridge, store, evaluator, catalog, projectRoot, runId, clock, trace, failures, settings, variables, pollUntil,
+    statuses, previous, wantsPrevious,
+  };
+  // The assertions that follow a step, once it (and its sub_steps) is done.
+  ctx.afterStep = async (stepId) => {
+    for (const assertion of assertions.filter((a) => a.after_step === stepId)) {
+      await runAssertion(assertion, ctx, previous.get(stepId) || null);
+    }
+  };
   // The first step that failed, if any.
   let failedStep = null;
 
@@ -71,9 +87,9 @@ async function runScenario({
         // failures would only bury this one.
         break;
       }
-      for (const assertion of assertions.filter((a) => a.after_step === step.id)) {
-        await runAssertion(assertion, ctx);
-      }
+      // A skipped step (a false condition, an optional miss) still has its
+      // assertions run: they describe the screen the scenario expects either way.
+      await ctx.afterStep(step.id);
     }
   } catch (err) {
     recordAbort(store, current, err);
