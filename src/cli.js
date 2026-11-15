@@ -11,7 +11,7 @@ const selectionStore = require('./device/selection');
 const { FS_ERROR_CODES, deviceHint, deviceFail } = require('./output/device-fail');
 const { ScenarioValidator } = require('./scenario/validator');
 const { loadScenario } = require('./scenario/load');
-const { evaluate, MECHANICAL_TYPES, REFERENCE_SCREENSHOT_TYPES } = require('./assertion/evaluator');
+const { evaluate, MECHANICAL_TYPES, REFERENCE_SCREENSHOT_TYPES, SCREEN_SIZE_TYPES } = require('./assertion/evaluator');
 const { fromCliFlags } = require('./assertion/fields');
 const { ResultStore, readFinalizedResult, InvalidRunIdError, AlreadyDecidedError } = require('./result/store');
 const {
@@ -520,16 +520,19 @@ async function handleAssert(deps, type, flags = {}) {
   }
   if (REFERENCE_SCREENSHOT_TYPES.has(type)) return handleAssertReference(deps, type, flags);
 
+  // The screen size is read only for the types whose rule needs it (#276).
   let elements;
+  let screenSize = null;
   try {
     elements = await deviceBridge.listElements();
+    if (SCREEN_SIZE_TYPES.has(type)) screenSize = await deviceBridge.getScreenSize();
   } catch (err) {
     return deviceFail(err);
   }
 
   const assertion = fromCliFlags(type, flags);
 
-  const r = evaluate(assertion, { elements });
+  const r = evaluate(assertion, { elements, screenSize });
   // The verdict has to be transcribed into `result add-assertion` by the agent
   // (assert has no run context, and Tier-2 types are not decided here at all).
   // Emitting the exact command turns transcription into copying (#140 D1).
@@ -2147,6 +2150,7 @@ function buildProgram(deps = {}) {
     .option('--count <n>', 'expected count')
     .option('--pattern <re>', 'regex pattern')
     .option('--variable <name>', 'captured variable name')
+    .option('--permission <name>', 'permission_dialog_shown: the permission the dialog must name (e.g. camera)')
     .option('--reference <path>', 'screenshot_match: reference image, relative to the workspace directory')
     .option('--tolerance <n>', 'screenshot_match: similarity it must reach, 0..1 (default 0.9)')
     .option('--mask <spec>', 'screenshot_match: region to ignore, "x,y,width,height" or an element description; repeatable', collect, [])
@@ -2161,6 +2165,7 @@ function buildProgram(deps = {}) {
           count: opts.count,
           pattern: opts.pattern,
           variable: opts.variable,
+          permission: opts.permission,
           reference: opts.reference,
           tolerance: opts.tolerance,
           mask: opts.mask,

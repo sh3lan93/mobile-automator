@@ -412,6 +412,44 @@ describe('runScenario', () => {
       );
       expect(r.file.assertion_results[0]).toMatchObject({ status: 'passed', mechanical: true, judge: { by: 'mauto' } });
     });
+
+    // R5a (#276): screen_title is decided by mauto against the screen size,
+    // which is fetched only for the types that need it.
+    test('screen_title is decided mechanically against the screen size', async () => {
+      const title = (expected_text) => scenario(
+        [{ id: 'hide', action: 'dismiss_keyboard', description: 'd' }],
+        [{ id: 'titled', after_step: 'hide', type: 'screen_title', description: 'd', expected_text }]
+      );
+      const b = makeFakeBridge({ elements: [homeElements()], screenSize: { width: 1280, height: 2856 } });
+      const r = await exec(title('Sample Shop'), b);
+      expect(r.file.assertion_results[0]).toMatchObject({
+        type: 'screen_title', status: 'passed', mechanical: true, judge: { by: 'mauto' }, expected: 'Sample Shop',
+      });
+      expect(b.of('getScreenSize')).toHaveLength(1);
+
+      // A second run in the same workspace: its verdict is the last recorded.
+      const miss = await exec(title('Checkout'), makeFakeBridge({ elements: [homeElements()] }));
+      expect(miss.file.assertion_results.at(-1)).toMatchObject({ status: 'failed', mechanical: true, judge: { by: 'mauto' } });
+    });
+
+    test('types that need no screen size never fetch it', async () => {
+      const b = makeFakeBridge({ elements: [[el('Allow'), el('Deny'), el('Allow camera access?')]] });
+      const r = await exec(
+        scenario(
+          [{ id: 'hide', action: 'dismiss_keyboard', description: 'd' }],
+          [
+            { id: 'there', after_step: 'hide', type: 'element_exists', description: 'd', element_description: 'Allow' },
+            { id: 'asked', after_step: 'hide', type: 'permission_dialog_shown', description: 'd', permission_name: 'camera' },
+          ]
+        ),
+        b
+      );
+      expect(r.file.assertion_results.map((a) => [a.assertion_id, a.status, a.judge])).toEqual([
+        ['there', 'passed', { by: 'mauto' }],
+        ['asked', 'passed', { by: 'mauto' }],
+      ]);
+      expect(b.of('getScreenSize')).toHaveLength(0);
+    });
   });
 
   // executor: "every verb carries MAUTO_RUN_ID so the run has a trace"

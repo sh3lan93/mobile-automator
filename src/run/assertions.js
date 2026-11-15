@@ -1,7 +1,7 @@
 'use strict';
 
 const { expectedOf, toEvaluatorInput } = require('../assertion/fields');
-const { REFERENCE_SCREENSHOT_TYPES } = require('../assertion/evaluator');
+const { REFERENCE_SCREENSHOT_TYPES, SCREEN_SIZE_TYPES } = require('../assertion/evaluator');
 const { substituteAssertion } = require('./variables');
 const { decideReferenceScreenshot } = require('./reference-assertion');
 const { runArtifacts } = require('./screenshots');
@@ -31,11 +31,14 @@ async function referenceVerdict(resolved, ctx) {
   return { expected: null, ...verdict };
 }
 
-// The evaluator's answer for every other type, as the verdict to record.
+// The evaluator's answer for every other type, as the verdict to record. The
+// screen size is read only for the types whose rule needs it (#276); a device
+// that cannot report it errors the assertion (a failure, see runAssertion).
 async function evaluatorVerdict(resolved, ctx, previous) {
   const { bridge, evaluator, variables = {} } = ctx;
   const elements = await bridge.listElements();
-  const answer = evaluator.evaluate(toEvaluatorInput(resolved), { elements, variables, previous });
+  const screenSize = SCREEN_SIZE_TYPES.has(resolved.type) ? await bridge.getScreenSize() : null;
+  const answer = evaluator.evaluate(toEvaluatorInput(resolved), { elements, variables, previous, screenSize });
   const expected = expectedOf(resolved);
   return answer.needs_agent
     ? {
