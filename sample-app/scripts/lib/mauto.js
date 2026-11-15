@@ -18,7 +18,9 @@
 // with `error.kind: 'test_failed'`, exit 6, and the verdict / full result in
 // `data` — so CI can tell "the app is broken" from "the tool is broken". For
 // those calls the test outcome IS the answer, not a tool error, so an accepted
-// kind returns `envelope.data`. It must still look like the contract says: a
+// kind returns `envelope.data`. `mauto run` (#278) uses the same shape for a
+// failed run (`test_failed`, exit 6) and for an `incomplete` one (exit 7: a
+// step or assertion needed an agent), both with the run summary in `data`. It must still look like the contract says: a
 // non-zero exit and a `data` key. An accepted kind that exited 0, or that
 // carries no data, throws — the same spirit as "reported ok but exited N".
 
