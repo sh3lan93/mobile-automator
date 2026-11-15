@@ -63,6 +63,116 @@ describe('normalizeResult', () => {
     expect(diffNormalized(normalizeResult(result()), normalizeResult(b))).toEqual([]);
   });
 
+  // `mauto run` (#278) results carry assertion provenance and an executor
+  // block. The deterministic part (type, mechanical, who judged) is a fact a
+  // run must reproduce; the executor, judge version, screenshot paths and
+  // similarity score are not.
+  function runnerResult(overrides = {}) {
+    return result({
+      status: 'incomplete',
+      executor: {
+        kind: 'runner',
+        mauto_version: '0.40.0-rc.8',
+        device_id: 'emulator-5554',
+        scenario_path: '/tmp/mauto-e2e-abc/.mobile-automator/scenarios/golden_search_empty.json',
+      },
+      steps_executed: [
+        { step_id: 'launch', status: 'passed', screenshot: null, error_message: null, step_duration_ms: 900 },
+        { step_id: 'judge_me', status: 'passed', needs_agent: true, screenshot: 'x.png', error_message: null },
+      ],
+      assertion_results: [
+        {
+          step_id: 'launch',
+          assertion_id: 'no_results',
+          type: 'element_text',
+          status: 'passed',
+          message: 'Found text.',
+          expected: 'No products match',
+          actual: 'No products match',
+          mechanical: true,
+          judge: { by: 'mechanical', name: 'evaluator', version: '0.40.0-rc.8' },
+        },
+        {
+          step_id: 'judge_me',
+          assertion_id: 'looks',
+          type: 'screen_matches_reference',
+          status: 'needs_agent',
+          message: 'similarity 0.91',
+          expected: null,
+          actual: null,
+          mechanical: false,
+          judge: { by: 'agent', version: '1' },
+          reference_screenshot: 'ref.png',
+          actual_screenshot: '.mobile-automator/screenshots/a.png',
+          similarity_score: 0.91,
+        },
+      ],
+      ...overrides,
+    });
+  }
+
+  test('keeps deterministic assertion provenance and drops executor, judge.version, screenshots and similarity', () => {
+    const n = normalizeResult(runnerResult());
+    expect(n.status).toBe('incomplete');
+    expect(n).not.toHaveProperty('executor');
+    expect(n.steps_executed).toEqual([
+      { step_id: 'launch', status: 'passed' },
+      { step_id: 'judge_me', status: 'passed', needs_agent: true },
+    ]);
+    expect(n.assertion_results).toEqual([
+      {
+        assertion_id: 'no_results',
+        status: 'passed',
+        step_id: 'launch',
+        type: 'element_text',
+        mechanical: true,
+        judge: { by: 'mechanical', name: 'evaluator' },
+      },
+      {
+        assertion_id: 'looks',
+        status: 'needs_agent',
+        step_id: 'judge_me',
+        type: 'screen_matches_reference',
+        mechanical: false,
+        judge: { by: 'agent' },
+      },
+    ]);
+    const text = JSON.stringify(n);
+    for (const banned of ['executor', 'version', 'reference_screenshot', 'actual_screenshot', 'similarity_score', 'screenshot', 'message', 'duration']) {
+      expect(text).not.toContain(banned);
+    }
+  });
+
+  test('two runner results differing only in executor, judge.version, screenshots and similarity normalize equal', () => {
+    const b = runnerResult({
+      executor: { kind: 'runner', mauto_version: '0.41.0', device_id: 'R5CT', scenario_path: '/elsewhere/s.json' },
+    });
+    b.assertion_results = b.assertion_results.map((a) => ({
+      ...a,
+      message: 'other words',
+      actual: 'other',
+      judge: { ...a.judge, version: '9.9.9' },
+      ...(a.reference_screenshot ? { reference_screenshot: 'r2.png', actual_screenshot: 'a2.png', similarity_score: 0.5 } : {}),
+    }));
+    b.steps_executed = b.steps_executed.map((s) => ({ ...s, screenshot: 'elsewhere.png', step_duration_ms: 3 }));
+    expect(normalizeResult(b)).toEqual(normalizeResult(runnerResult()));
+    expect(diffNormalized(normalizeResult(runnerResult()), normalizeResult(b))).toEqual([]);
+  });
+
+  test('a change in the deterministic provenance is a difference', () => {
+    const b = runnerResult();
+    b.assertion_results[0] = { ...b.assertion_results[0], judge: { by: 'agent' }, mechanical: false };
+    const lines = diffNormalized(normalizeResult(runnerResult()), normalizeResult(b));
+    expect(lines.some((l) => l.startsWith('assertion_results[0].mechanical'))).toBe(true);
+    expect(lines.some((l) => l.startsWith('assertion_results[0].judge.by'))).toBe(true);
+  });
+
+  test('older results without provenance normalize to the old shape (optional keys omitted, not null)', () => {
+    const n = normalizeResult(result());
+    for (const a of n.assertion_results) expect(Object.keys(a).sort()).toEqual(['assertion_id', 'status']);
+    for (const s of n.steps_executed) expect(Object.keys(s).sort()).toEqual(['status', 'step_id']);
+  });
+
   test('tolerates a result missing the optional arrays', () => {
     const n = normalizeResult({ scenario_id: 's', status: 'failed' });
     expect(n.steps_executed).toEqual([]);
