@@ -224,9 +224,10 @@ setting. Do not switch the engine mid-run yourself.
 
 ### 5. Validate Assertions (27 types)
 
-For each assertion in the scenario (evaluated after the referenced step), pick the type recorded in the scenario and evaluate it. The 27 types split into two tiers by **who decides pass/fail**:
+For each assertion in the scenario (evaluated after the referenced step), pick the type recorded in the scenario and evaluate it. The 27 types split into two tiers by **who decides pass/fail**, plus one reference-screenshot type the CLI also decides:
 
 - **Tier 1 — mechanical (the CLI decides).** These are deterministic checks over the on-screen element list (plus captured variables / a previous snapshot). Run `mauto elements` to get the current screen, then evaluate the assertion with `mauto assert <type> ...`; the CLI returns a JSON verdict (`{ mechanical: true, pass: true|false, message }`). A passing verdict arrives as a normal `ok: true` envelope. A failing one arrives as `ok: false` with `error.kind: "test_failed"` and exit code `6`, and the verdict (`pass: false`) is still in `data`. That is the test result, not a tool error: do not retry the verb or treat the run as broken. You record that verdict — you do not re-judge it.
+- **Reference screenshot — `screenshot_match` (the CLI decides).** A deterministic pixel comparison against a stored reference screenshot (a baseline); see the reference-screenshot block below. You record its verdict — you do not judge it by eye.
 - **Tier 2 — visual / semantic (the agent decides).** These require judging pixels. `mauto assert <type> ...` reports them as `needs_agent` (with `pass: null`) because the CLI cannot decide them. For these you take a screenshot with `mauto screenshot <path>`, visually analyze it, and report pass/fail yourself with a clear justification of what you observed.
 
 > One assertion type, `element_state`, names a Tier-1 intent but its per-attribute state inspection is not represented in the element model the CLI reads, so `mauto assert` returns it as `needs_agent` — judge it from the element list / screenshot like a Tier-2 check.
@@ -254,11 +255,19 @@ For each assertion in the scenario (evaluated after the referenced step), pick t
 
 ---
 
+**Reference screenshot — `screenshot_match`, decided by `mauto assert` against a baseline**
+
+- Run `mauto assert screenshot_match --reference <reference_screenshot> --tolerance <tolerance>`, adding one `--mask <x,y,w,h>` or `--mask "<element description>"` per entry in the assertion's `masks`. Omit `--tolerance` when the scenario sets none (default `0.9`). The CLI captures a stable screenshot, compares it pixel by pixel, and decides: a pass is `ok: true`; a mismatch is `ok: false` with `error.kind: "test_failed"`, exit `6`, the similarity score and a diff image path in `data`. Record that verdict as-is — do not override it by looking at the screenshot.
+- A dimension mismatch (a different device or orientation than the baseline was recorded on) is a failure too; report it as such and tell the user the baseline needs re-recording for this device.
+- If the reference screenshot does not exist yet, the verdict is `needs_agent` (exit `0`), not a failure. Do not judge it by eye instead. Ask the user whether the current screen is correct; if they confirm, record the baseline with the same command plus `--update-references`, otherwise record the assertion as pending.
+- Record the verdict with the `mauto result add-assertion` command in the envelope's `hint`; it carries the reference screenshot, the actual screenshot and the similarity score.
+
+---
+
 **Tier 2 — visual / semantic, judged by the agent from `mauto screenshot <path>`**
 
 For all Tier 2 assertions: take a screenshot, visually analyze it, and report pass/fail with a clear justification of what you observed.
 
-- **`screenshot_match`:** compare the captured screenshot against the reference baseline. Use **semantic visual comparison** — screen identity, presence/absence of key elements, text content, layout structure. Minor rendering differences (anti-aliasing, font smoothing) are acceptable within the `tolerance` threshold.
 - **`visual_state`:** assess whether the screen is in the `expected_visual_state`: `loaded` (content visible, no spinners), `loading` (loading indicator present), `empty` (empty-state UI), or `error` (error message/state visible).
 - **`element_fully_visible`:** the element described in `element_description` is fully visible in the viewport — not clipped, not scrolled off, nothing overlapping it.
 - **`color_style`:** locate the element and assess its dominant color. If `color_hex` is set, verify it matches approximately. If `expected_theme` is set (`dark`/`light`), verify the colors are consistent with that theme.
@@ -270,7 +279,7 @@ For all Tier 2 assertions: take a screenshot, visually analyze it, and report pa
 - **`dark_mode_active`:** assess the overall screen appearance. Pass if the background is dark (dark mode) or light (light mode) as specified by `expected_theme`.
 - **`permission_dialog_shown`:** an OS-level permission request dialog is visible. If `permission_name` is set (e.g., `"camera"`, `"location"`), verify the dialog requests that specific permission.
 
-**Dynamic content:** if the reference `expected_state` marks content as `[dynamic:...]`, ignore those regions during comparison.
+**Dynamic content:** if the reference `expected_state` marks content as `[dynamic:...]`, ignore those regions when you judge a Tier-2 check. For `screenshot_match`, dynamic regions are excluded only through the assertion's `masks`.
 
 **Variable substitution in assertions:** before evaluating any assertion, replace `variable_name` references in string fields with values from the session variable map.
 

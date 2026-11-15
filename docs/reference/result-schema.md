@@ -134,13 +134,13 @@ Each assertion result object captures whether an assertion passed or failed:
 | `type` | string | No | Assertion type, from `--type` |
 | `step_id` | string | No | Step the assertion belongs to, from `--step-id` |
 | `mechanical` | boolean | No | `true` when `mauto` decides the type mechanically, `false` when it needs judgment (see [Assertion Types](assertions.md)) |
-| `judge` | object | No | Who decided the verdict: `{"by": "mauto" \| "agent" \| "none"}`, with optional `name` and `version`. `agent` comes from `--judge agent`, `none` from `--pass pending`, and `mauto` only from `mauto run`. Absent when the recorder did not say |
+| `judge` | object | No | Who decided the verdict: `{"by": "mauto" \| "agent" \| "reference_screenshot" \| "none"}`, with optional `name` and `version`. `agent` comes from `--judge agent`, `none` from `--pass pending`, `reference_screenshot` from a `screenshot_match` verdict decided by the pixel comparison against a reference screenshot, and `mauto` only from `mauto run`. Absent when the recorder did not say |
 | `expected` | string \| null | No | What was expected (e.g., "Login button visible") |
 | `actual` | string \| null | No | What was actually found (e.g., "Button not found after 5 seconds") |
 | `message` | string | Yes | Human-readable result description |
-| `reference_screenshot` | string \| null | No | Path to reference baseline screenshot (for screenshot_match assertions) |
-| `actual_screenshot` | string \| null | No | Path to screenshot captured during execution (for screenshot_match assertions) |
-| `similarity_score` | number \| null | No | Similarity score for screenshot_match assertions (0.0 to 1.0, where 1.0 is identical) |
+| `reference_screenshot` | string \| null | No | Path to the reference screenshot (the baseline) a `screenshot_match` assertion compared against, from `--reference-screenshot` |
+| `actual_screenshot` | string \| null | No | Path to the stable screenshot captured for a `screenshot_match` assertion, from `--actual-screenshot` |
+| `similarity_score` | number \| null | No | `screenshot_match` similarity, `1 − differing pixels / compared pixels` (0.0 to 1.0, where 1.0 is identical). Written by the pixel comparator, never estimated by an agent: `mauto assert screenshot_match` reports it and its hint passes it as `--similarity-score` |
 
 ### observations[] Array Items
 

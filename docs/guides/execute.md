@@ -802,8 +802,9 @@ Executor captures screenshots at strategic points:
   "id": "assert_pixel_perfect",
   "after_step": "load_screen",
   "type": "screenshot_match",
-  "reference_screenshot": "pixel_perfect_baseline.png",  // Too strict
-  "description": "Screen matches a pixel-perfect baseline"
+  "reference_screenshot": "screenshots/reference/login/whole_screen.png",
+  "tolerance": 1.0,  // Too strict: the clock and any dynamic content fail it
+  "description": "Screen matches the baseline exactly"
 }
 
 // Good
@@ -815,6 +816,8 @@ Executor captures screenshots at strategic points:
   "description": "Success message is present"
 }
 ```
+
+`screenshot_match` is a pixel diff against a reference screenshot. Use it to pin a screen's appearance, with `masks` over regions that change between runs, not as a stand-in for a functional assertion.
 
 ---
 

@@ -121,7 +121,7 @@ When the user provides a validation step, or when a declarative statement about 
 
 #### Assertion Type Decision Table (27 types)
 
-Use the most specific type that matches the user's intent. Tier 1 checks read structure from `mauto elements`; Tier 2 checks read pixels from `mauto screenshot <path>`. Evaluate each with `mauto assert <type> ...`.
+Use the most specific type that matches the user's intent. Tier 1 checks read structure from `mauto elements`; Tier 2 checks read pixels from `mauto screenshot <path>`. Evaluate each with `mauto assert <type> ...`. `screenshot_match` is neither: `mauto assert` decides it with a pixel comparison against a reference screenshot. When you add one, the screen in front of you is the baseline: once the user confirms it looks right, record it with `mauto assert screenshot_match --reference <reference_screenshot> --update-references`, and add `masks` for regions that change between runs (clocks, timestamps, animations).
 
 **Category 1 — Element State (Tier 1: `mauto elements`)**
 
@@ -163,7 +163,7 @@ Use the most specific type that matches the user's intent. Tier 1 checks read st
 | User intent / natural language | Type | Key fields |
 |---|---|---|
 | "the full element is visible, not clipped" | `element_fully_visible` | — |
-| "the element/screen looks the same as before" | `screenshot_match` | `reference_screenshot: "..."` |
+| "the element/screen looks the same as before" | `screenshot_match` (pixel comparison by `mauto assert`, not Tier 2) | `reference_screenshot: "..."`, `tolerance`, `masks: [{ "element_description": "clock" }]` |
 | "the screen is loaded / in error / empty state" | `visual_state` | `expected_visual_state: "loaded"` |
 | "the button color is blue / #0057FF" | `color_style` | `color_hex: "#0057FF"` |
 

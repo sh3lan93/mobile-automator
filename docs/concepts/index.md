@@ -80,11 +80,13 @@ A mode is chosen at `mauto setup` and stored in `config.json`:
 Tests live in the `.mobile-automator/` directory, never in your source code. Scenarios and results are version-controlled separately.
 
 ### Semantic Testing
-Instead of brittle selectors and pixel-by-pixel comparisons, the agent uses AI vision to understand:
+Instead of brittle selectors, the agent uses AI vision to understand:
 - Does this screen fulfill its purpose?
 - Are key elements visible and interactive?
 - Does content match expectations?
 - Tolerates minor rendering differences
+
+When you do want to pin a screen's exact look, `screenshot_match` compares it pixel by pixel against a reference screenshot, decided by `mauto assert` rather than by the agent.
 
 ## Key Ideas
 

@@ -10,7 +10,7 @@ Every assertion object requires `id`, `after_step` (the step `id` it runs after)
 
 ## Mechanical vs agent-judged assertions
 
-Not every assertion is decided by the CLI. 15 of the 27 assertion types are evaluated deterministically by `mauto assert` over the element list. The other 12 return `needs_agent` with `pass: null`: the host agent judges them (often from a screenshot) and records the verdict with `mauto result add-assertion`. An agent-judged pass is only as reliable as the agent that judged it.
+Not every assertion is decided by the CLI. 15 of the 27 assertion types are evaluated deterministically by `mauto assert` over the element list. 1 is compared against a reference screenshot: `mauto assert` decides `screenshot_match` with a pixel diff against a stored baseline image (see [screenshot_match](#screenshot_match)). The other 11 return `needs_agent` with `pass: null`: the host agent judges them (often from a screenshot) and records the verdict with `mauto result add-assertion`. An agent-judged pass is only as reliable as the agent that judged it.
 
 `element_state` is agent-judged because the element model drops enabled, focused and checked state, so the CLI cannot decide it mechanically.
 
@@ -32,7 +32,7 @@ Not every assertion is decided by the CLI. 15 of the 27 assertion types are eval
 | element_count | Count & Collections | `mauto assert` (mechanical) |
 | list_item_count | Count & Collections | `mauto assert` (mechanical) |
 | list_is_empty | Count & Collections | `mauto assert` (mechanical) |
-| screenshot_match | Visual & Layout | agent |
+| screenshot_match | Visual & Layout | `mauto assert` (reference screenshot) |
 | visual_state | Visual & Layout | agent |
 | element_fully_visible | Visual & Layout | agent |
 | color_style | Visual & Layout | agent |
@@ -379,27 +379,42 @@ Check that the cart is empty when no items added
 ## Visual & Layout Assertions (4 types)
 
 ### screenshot_match
-Semantic visual comparison against a reference screenshot.
+Deterministic pixel comparison of the current screen against a reference screenshot (a baseline image you recorded earlier).
 
-**When to use:** Verify that the overall screen appearance matches expectations. Uses AI vision for semantic comparison, not pixel-perfect matching.
+**When to use:** Verify that the overall screen appearance has not changed since the baseline was recorded. This is a pixel diff, not a judgment: anything that renders differently (a moved element, a changed color, different text) lowers the score, so mask regions that legitimately change between runs.
 
 **Syntax:**
 ```json
 {
   "type": "screenshot_match",
-  "reference_screenshot": "screenshots/login_flow/reference.png",
-  "tolerance": 0.9
+  "reference_screenshot": "screenshots/reference/login_flow/login_screen_matches.png",
+  "tolerance": 0.9,
+  "masks": [
+    { "element_description": "Current time label" },
+    { "x": 0, "y": 0, "width": 1080, "height": 80 }
+  ]
 }
 ```
 
-`tolerance` ranges from `0.0` (any match) to `1.0` (pixel-perfect); default `0.9`.
+**How it is decided:**
 
-**Why AI-based comparison:** Tests are resilient to cosmetic changes (fonts, anti-aliasing, small positioning adjustments) while catching functional regressions (colors, layout, missing elements).
+- `mauto assert` captures a *stable* screenshot (it waits until two consecutive frames are identical) and compares it pixel by pixel with the reference screenshot.
+- `similarity = 1 − differing pixels / compared pixels`. Masked pixels are not compared. The assertion passes when `similarity >= tolerance`.
+- `tolerance` ranges from `0.0` (anything passes) to `1.0` (every compared pixel identical); default `0.9`.
+- On any pixel mismatch a diff image is written next to the captured screenshot, so you can see which pixels differed.
+
+**Masks:** `masks` is optional. Each entry is either `{ "element_description": "…" }`, resolved to that element's bounds in the current element list, or a rectangle `{ "x", "y", "width", "height" }` in the element-list coordinate space (the same space `mauto elements` reports bounds in). Use masks for clocks, timestamps, ads, animated content, or anything else that legitimately changes between runs.
+
+**Reference screenshot location:** `reference_screenshot` is a path relative to the `.mobile-automator/` workspace directory. When it is omitted, the default is `.mobile-automator/screenshots/reference/<scenario_id>/<assertion_id>.png`.
+
+**Recording a baseline:** when the reference screenshot does not exist yet, the assertion returns `needs_agent` (not a failure), with a hint to re-run with `--update-references`. `mauto assert screenshot_match --reference <path> --update-references` records the current screen as the baseline. Record it only when the screen is known to be correct, and commit it with your scenarios.
+
+**Image sizes:** images are never resampled. If the captured screenshot and the reference screenshot have different dimensions (a different device, resolution, or orientation), the assertion fails with a message naming both sizes; record a baseline per device instead. Element-list coordinates are converted to screenshot pixels with a scale factor (PNG width ÷ screen width), so masks line up on devices whose element list is reported in points rather than pixels.
 
 **Example scenario usage:**
 ```
-Verify the login screen looks correct
-Check that the dashboard appears as expected
+Verify the login screen looks the same as the recorded baseline
+Check that the dashboard has not changed visually
 ```
 
 ---
@@ -756,7 +771,7 @@ The generator automatically converts these to appropriate assertion types.
 1. **Name assertions clearly** — Use snake_case IDs that describe what's being verified
 2. **Use specific assertion types** — `element_text` for exact match, `text_contains` for substring
 3. **Include one assertion per concept** — Multiple assertions per step is allowed but can make failures harder to debug
-4. **Screenshot on key checkpoints** — Combine `screenshot_match` with other assertions at important milestones
+4. **Screenshot on key checkpoints** — Combine `screenshot_match` with element assertions at important milestones, and mask regions that change between runs
 5. **Consider dynamic content** — Use `pattern_match` for codes/IDs, `text_contains` for content that varies
 
 ---
@@ -786,11 +801,9 @@ Text was: "Operation failed: Connection timeout"
 
 ### Failed: screenshot_match
 ```
-Semantic visual difference detected
-Expected: Login screen with email input, password input, and login button
-Actual: Login screen with email input only (password input missing)
+similarity 0.712 below tolerance 0.900 (74,880 of 259,200 compared pixels differ); diff: .mobile-automator/screenshots/run_20261115_101500/assert_login_screen_matches.diff.png
 ```
-**Troubleshoot:** Visual layout changed, may indicate a bug
+**Troubleshoot:** Open the diff image to see which pixels changed. If the change is a bug, fix the app. If it is intended, re-record the baseline with `--update-references`. If it is content that changes on every run (a clock, a timestamp), add a mask instead of lowering `tolerance`.
 
 ---
 
