@@ -808,7 +808,7 @@ describe('cli handlers', () => {
     test('non-mechanical passes through as needs_agent, still ok / exit 0', async () => {
       const { envelope, exitKind } = await handleAssert(
         { deviceBridge: fakeBridge([]) },
-        'screenshot_match',
+        'visual_state',
         {}
       );
       expect(exitKind).toBe('ok');
@@ -849,7 +849,7 @@ describe('cli handlers', () => {
     });
 
     test('an agent-judged verdict hints a true|false placeholder recorded --judge agent, and still includes --message (#275)', async () => {
-      const r = await handleAssert({ deviceBridge: bridge }, 'screenshot_match', { target: 'ref.png' });
+      const r = await handleAssert({ deviceBridge: bridge }, 'visual_state', { target: 'Login' });
       expect(r.envelope.data.needs_agent).toBe(true);
       expect(r.envelope.hint).toContain('--pass <true|false> --judge agent');
       expect(r.envelope.hint).not.toContain('<your verdict>');
@@ -3135,6 +3135,53 @@ describe('cli handlers', () => {
           actual: 'absent',
         },
       ]);
+    });
+
+    // #281: what `mauto assert screenshot_match` hints an agent to copy.
+    test('add-assertion: the screenshot_match comparison flags reach the store', async () => {
+      const { store, calls } = fakeStore();
+      await runVerb(
+        [
+          'result', 'add-assertion',
+          '--run-id', 'run_argv_3',
+          '--step-id', 'step_verify',
+          '--type', 'screenshot_match',
+          '--pass', 'false',
+          '--message', 'differs',
+          '--reference-screenshot', 'ref/home.png',
+          '--actual-screenshot', 'shots/actual.png',
+          '--similarity-score', '0.75',
+        ],
+        { resultStoreFactory: () => store }
+      );
+      expect(calls.addAssertion).toEqual([
+        expect.objectContaining({
+          type: 'screenshot_match',
+          status: 'failed',
+          reference_screenshot: 'ref/home.png',
+          actual_screenshot: 'shots/actual.png',
+          similarity_score: 0.75,
+        }),
+      ]);
+    });
+
+    test.each([['1.5'], ['-0.1'], ['abc'], ['']])('add-assertion: --similarity-score %p is invalid_input and records nothing', (score) => {
+      const recorded = [];
+      const r = handleResultAddAssertion(
+        { resultStoreFactory: () => ({ addAssertion: (a) => recorded.push(a) }), projectRoot: '/tmp/x' },
+        { runId: 'run_20260101_000000', stepId: 's', type: 'screenshot_match', pass: 'true', similarityScore: score }
+      );
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.error.message).toMatch(/--similarity-score/);
+      expect(recorded).toEqual([]);
+    });
+
+    test('add-assertion: --judge refuses reference_screenshot (only the CLI comparator may claim it)', () => {
+      const r = handleResultAddAssertion(
+        { resultStoreFactory: () => { throw new Error('must not open the store'); }, projectRoot: '/tmp/x' },
+        { runId: 'run_20260101_000000', stepId: 's', type: 'screenshot_match', pass: 'true', judge: 'reference_screenshot' }
+      );
+      expect(r.exitKind).toBe('invalid_input');
     });
 
     test('finalize: every flag reaches the store', async () => {

@@ -1,5 +1,6 @@
 'use strict';
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { Command } = require('commander');
@@ -11,7 +12,7 @@ const selectionStore = require('./device/selection');
 const { engineHint } = require('./device/engine-hints');
 const { ScenarioValidator } = require('./scenario/validator');
 const { loadScenario } = require('./scenario/load');
-const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
+const { evaluate, findFirst, MECHANICAL_TYPES, REFERENCE_SCREENSHOT_TYPES } = require('./assertion/evaluator');
 const { fromCliFlags } = require('./assertion/fields');
 const { ResultStore, readFinalizedResult, InvalidRunIdError, AlreadyDecidedError } = require('./result/store');
 const {
@@ -50,6 +51,11 @@ const { makeFlusher } = require('./observe/flush');
 const { prepareRun } = require('./run/prepare');
 const { handleRun } = require('./run/handle');
 const { realClock } = require('./run/clock');
+const { decideReferenceScreenshot, toleranceOf, parseMaskSpec } = require('./run/reference-assertion');
+const { resolveReference } = require('./run/screenshots');
+const { runSettings } = require('./run/settings');
+const { timeoutFor } = require('./run/poll');
+const { workspaceDir } = require('./workspace/layout');
 const { makeRunTrace } = require('./run/trace');
 const { parsePositiveInt } = require('./util/parse-positive-int');
 const {
@@ -101,8 +107,9 @@ const MODE_ALIASES = {
 
 const KNOWN_ASSERTION_TYPES = new Set([
   ...MECHANICAL_TYPES,
+  // Decided by comparing a stable screenshot against a reference image (#281).
+  ...REFERENCE_SCREENSHOT_TYPES,
   // Tier-2 visual types the agent must judge.
-  'screenshot_match',
   'visual_state',
   'element_fully_visible',
   'color_style',
@@ -540,13 +547,15 @@ async function handlePress({ deviceBridge }, button) {
 // with the verdict still in `data`. A pass and an undecided Tier-2 verdict
 // (`needs_agent`) stay ok / exit 0. Only an unknown assertion type is a
 // structural (invalid_input) error.
-async function handleAssert({ deviceBridge }, type, flags = {}) {
+async function handleAssert(deps, type, flags = {}) {
+  const { deviceBridge } = deps;
   if (!KNOWN_ASSERTION_TYPES.has(type)) {
     return {
       envelope: fail('invalid_input', `unknown assertion type "${type}"`, 'Run `mauto schema scenario` for the supported assertion types.'),
       exitKind: 'invalid_input',
     };
   }
+  if (REFERENCE_SCREENSHOT_TYPES.has(type)) return handleAssertReference(deps, type, flags);
 
   let elements;
   try {
@@ -586,6 +595,116 @@ async function handleAssert({ deviceBridge }, type, flags = {}) {
   }
 
   return { envelope: ok(verdictData, hint), exitKind: 'ok' };
+}
+
+// Quote a path for a copy-pasteable command line.
+const shellQuote = (s) => JSON.stringify(String(s));
+
+// A fresh `assert_<YYYYMMDD_HHMMSS>_<hex>` directory name for one `mauto assert`
+// screenshot_match's artifacts.
+function assertArtifactId(now) {
+  const stamp = now.toISOString().replace(/[-:T]/g, '').replace(/\..*$/, '');
+  return `assert_${stamp.slice(0, 8)}_${stamp.slice(8, 14)}_${crypto.randomBytes(3).toString('hex')}`;
+}
+
+// `mauto assert screenshot_match` (#281): capture a stable screenshot and
+// compare it against `--reference`, through the same decision `mauto run`
+// uses (src/run/reference-assertion.js). The capture and its diff land under
+// <workspace>/screenshots/assert/<id>/. Every flag is checked before the
+// device is touched. A mismatch is test_failed (exit 6); a missing baseline is
+// ok with needs_agent (exit 0), and --update-references records it instead.
+async function handleAssertReference(
+  { deviceBridge, projectRoot = null, clock = realClock, loadConfig = configManager.load, now = () => new Date() },
+  type,
+  flags
+) {
+  const invalid = (message, hint = null) => ({ envelope: fail('invalid_input', message, hint), exitKind: 'invalid_input' });
+  if (typeof flags.reference !== 'string' || flags.reference.trim() === '') {
+    return invalid(
+      `${type} needs --reference <path>: the baseline image to compare against`,
+      'Pass --reference <path> (relative to the workspace directory); add --update-references to record it from this screen.'
+    );
+  }
+  let tolerance;
+  let masks;
+  try {
+    tolerance = toleranceOf(flags.tolerance);
+    masks = (flags.mask || []).map(parseMaskSpec);
+  } catch (err) {
+    return invalid(err.message, 'Use --tolerance <0..1> and --mask <x,y,width,height | element description>.');
+  }
+  if (!projectRoot) {
+    return {
+      envelope: fail(
+        'environment',
+        `${type} needs a workspace: its screenshots are written under the workspace directory`,
+        'Run `mauto setup` in the project root first, or run this from inside an existing workspace.'
+      ),
+      exitKind: 'environment',
+    };
+  }
+  let referencePath;
+  try {
+    referencePath = resolveReference(projectRoot, { reference_screenshot: flags.reference });
+  } catch (err) {
+    return invalid(err.message, 'Keep --reference inside the project.');
+  }
+
+  const settings = runSettings(loadConfig(projectRoot));
+  const dir = path.join(workspaceDir(projectRoot), 'screenshots', 'assert', assertArtifactId(now()));
+  let v;
+  try {
+    v = await decideReferenceScreenshot({
+      bridge: deviceBridge,
+      clock,
+      projectRoot,
+      referencePath,
+      actualPath: path.join(dir, 'actual.png'),
+      diffPath: path.join(dir, 'diff.png'),
+      tolerance,
+      masks,
+      updateReferences: flags.updateReferences === true,
+      timeoutMs: timeoutFor({}, settings),
+      pollMs: settings.pollMs,
+      findFirst,
+    });
+  } catch (err) {
+    // A filesystem fault is the environment's (withEnvelope classifies it);
+    // anything else came from capturing the screen.
+    if (err && FS_ERROR_CODES.has(err.code)) throw err;
+    return deviceFail(err);
+  }
+
+  const needsAgent = v.status === 'needs_agent';
+  const data = {
+    type,
+    mechanical: v.mechanical,
+    pass: needsAgent ? null : v.status === 'passed',
+    needs_agent: needsAgent,
+    message: v.message,
+    reference_screenshot: v.reference_screenshot,
+    actual_screenshot: v.actual_screenshot,
+    similarity_score: v.similarity_score,
+    diff_screenshot: v.diff_screenshot,
+  };
+  const verdict = needsAgent ? '<true|false> --judge agent' : String(data.pass);
+  const recordCommand =
+    `mauto result add-assertion --run-id <run_id> --step-id <step_id> ` +
+    `--type ${type} --pass ${verdict} --message "<why>" ` +
+    `--reference-screenshot ${shellQuote(v.reference_screenshot)} --actual-screenshot ${shellQuote(v.actual_screenshot)}` +
+    (v.similarity_score === null ? '' : ` --similarity-score ${v.similarity_score}`);
+
+  if (needsAgent) {
+    const hint =
+      `No reference screenshot at ${v.reference_screenshot}: re-run with --update-references to record this screen as ` +
+      `the baseline, or judge ${v.actual_screenshot} yourself and record it: ${recordCommand}`;
+    return { envelope: ok(data, hint), exitKind: 'ok' };
+  }
+  const hint = `Record it: ${recordCommand}`;
+  if (!data.pass) {
+    return { envelope: fail('test_failed', `assertion failed: ${v.message}`, hint, data), exitKind: 'test_failed' };
+  }
+  return { envelope: ok(data, hint), exitKind: 'ok' };
 }
 
 // Collect a repeatable flag's values into an array (commander's collector).
@@ -697,6 +816,17 @@ function handleResultAddAssertion({ resultStoreFactory, projectRoot }, opts) {
   if (verdict.error) {
     return { envelope: fail('invalid_input', verdict.error, null), exitKind: 'invalid_input' };
   }
+  // A screenshot_match's comparison (#281), as `mauto assert` reports it.
+  let similarity = null;
+  if (opts.similarityScore !== undefined) {
+    similarity = String(opts.similarityScore).trim() === '' ? NaN : Number(opts.similarityScore);
+    if (!Number.isFinite(similarity) || similarity < 0 || similarity > 1) {
+      return {
+        envelope: fail('invalid_input', `--similarity-score must be a number from 0 to 1 (got "${opts.similarityScore}")`, null),
+        exitKind: 'invalid_input',
+      };
+    }
+  }
 
   const store = resultStoreFactory({ runId, scenarioId, projectRoot });
   const entry = store.addAssertion({
@@ -709,6 +839,10 @@ function handleResultAddAssertion({ resultStoreFactory, projectRoot }, opts) {
     message,
     expected: expected === undefined ? null : expected,
     actual: actual === undefined ? null : actual,
+    // Only when supplied, so every other assertion is recorded as before.
+    ...(opts.referenceScreenshot === undefined ? {} : { reference_screenshot: opts.referenceScreenshot }),
+    ...(opts.actualScreenshot === undefined ? {} : { actual_screenshot: opts.actualScreenshot }),
+    ...(similarity === null ? {} : { similarity_score: similarity }),
   });
   return { envelope: ok({ run_id: runId, assertion: entry }, storeHint(store)), exitKind: 'ok' };
 }
@@ -2053,6 +2187,7 @@ function buildProgram(deps = {}) {
     .option('--device <id>', 'target device id')
     .option('--run-id <id>', 'run identifier (run_YYYYMMDD_HHMMSS); minted when omitted')
     .option('--timeout-ms <ms>', 'cap, in milliseconds, on how long any one step waits (a positive integer)')
+    .option('--update-references', 'record each screenshot_match capture as its reference image instead of comparing')
     .action(withEnvelope(requireWorkspace(async (file, opts) => {
       const prepared = prepareRun({ validator, file: path.resolve(cwd, file), runId: opts.runId, timeoutMs: opts.timeoutMs, env: process.env });
       if (prepared.failure) return emit(prepared.failure, humanFlag());
@@ -2068,7 +2203,7 @@ function buildProgram(deps = {}) {
             bridge, resultStoreFactory, memoryStoreFactory, projectRoot, finalizeRun, clock, cwd,
             trace: makeRunTrace({ projectRoot, runId: prepared.runId }),
           },
-          { ...prepared, deviceId }
+          { ...prepared, deviceId, updateReferences: opts.updateReferences === true }
         )
       );
     })));
@@ -2153,23 +2288,31 @@ function buildProgram(deps = {}) {
 
   program
     .command('assert <type>')
-    .description('Evaluate an assertion against the current screen (mechanical types decided by the CLI; visual types deferred to the agent)')
+    .description('Evaluate an assertion against the current screen (mechanical types decided by the CLI; screenshot_match compared against --reference; other visual types deferred to the agent)')
     .option('--target <s>', 'element/target description')
     .option('--expected <s>', 'expected value')
     .option('--operator <op>', 'comparison operator for count assertions')
     .option('--count <n>', 'expected count')
     .option('--pattern <re>', 'regex pattern')
     .option('--variable <name>', 'captured variable name')
+    .option('--reference <path>', 'screenshot_match: reference image, relative to the workspace directory')
+    .option('--tolerance <n>', 'screenshot_match: similarity it must reach, 0..1 (default 0.9)')
+    .option('--mask <spec>', 'screenshot_match: region to ignore, "x,y,width,height" or an element description; repeatable', collect, [])
+    .option('--update-references', 'screenshot_match: record this screen as the reference instead of comparing')
     .option('--device <id>', 'target device id')
     .action(withEnvelope((type, opts) =>
       withBridge(opts.device, (bridge) =>
-        handleAssert({ deviceBridge: bridge }, type, {
+        handleAssert({ deviceBridge: bridge, projectRoot: workspace.root || null, clock }, type, {
           target: opts.target,
           expected: opts.expected,
           operator: opts.operator,
           count: opts.count,
           pattern: opts.pattern,
           variable: opts.variable,
+          reference: opts.reference,
+          tolerance: opts.tolerance,
+          mask: opts.mask,
+          updateReferences: opts.updateReferences === true,
         })
       )
     ));
@@ -2226,6 +2369,9 @@ function buildProgram(deps = {}) {
     .option('--message <text>', 'human-readable justification for the verdict')
     .option('--expected <v>', 'expected value')
     .option('--actual <v>', 'observed value')
+    .option('--reference-screenshot <path>', 'screenshot_match: the reference image compared against')
+    .option('--actual-screenshot <path>', 'screenshot_match: the screenshot captured for it')
+    .option('--similarity-score <n>', 'screenshot_match: the similarity measured (0..1)')
     .action(withEnvelope(requireWorkspace((opts) => {
       const r = handleResultAddAssertion(
         { resultStoreFactory, projectRoot },
@@ -2240,6 +2386,9 @@ function buildProgram(deps = {}) {
           message: opts.message,
           expected: opts.expected,
           actual: opts.actual,
+          referenceScreenshot: opts.referenceScreenshot,
+          actualScreenshot: opts.actualScreenshot,
+          similarityScore: opts.similarityScore,
         }
       );
       emit(r, humanFlag());

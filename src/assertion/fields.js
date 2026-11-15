@@ -35,13 +35,19 @@ const FIELDS = Object.freeze([
   Object.freeze({ scenario: 'expected_count', flag: 'count', input: 'count', coerce: Number }),
   Object.freeze({ scenario: 'pattern', flag: 'pattern', input: 'pattern' }),
   Object.freeze({ scenario: 'variable_name', flag: 'variable', input: 'variable_name' }),
+  // screenshot_match (#281): the baseline and the similarity it must reach.
+  // The pure evaluator never reads them; the shared reference-screenshot
+  // decision (src/run/reference-assertion.js) does, on both paths.
+  Object.freeze({ scenario: 'reference_screenshot', flag: 'reference', input: 'reference_screenshot' }),
+  Object.freeze({ scenario: 'tolerance', flag: 'tolerance', input: 'tolerance', coerce: Number }),
 ]);
 
 // A row's value in a scenario assertion, stringified as it would reach the
-// verb on a command line; undefined when the assertion does not carry it.
+// verb on a command line; undefined when the assertion does not carry it (a
+// null, which the schema allows for `reference_screenshot`, carries nothing).
 function scenarioValue(row, assertion) {
   const key = typeof row.scenario === 'function' ? row.scenario(assertion) : row.scenario;
-  return key && assertion[key] !== undefined ? String(assertion[key]) : undefined;
+  return key && assertion[key] !== undefined && assertion[key] !== null ? String(assertion[key]) : undefined;
 }
 
 // Scenario assertion -> the option object commander would parse from its

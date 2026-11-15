@@ -17,12 +17,16 @@ const FLAG_KEY = {
   '--count': 'count',
   '--pattern': 'pattern',
   '--variable': 'variable',
+  '--reference': 'reference',
+  '--tolerance': 'tolerance',
 };
 
 describe('FIELDS', () => {
   test('is the one table, in `mauto assert` argv order', () => {
     expect(FIELDS.map((f) => `--${f.flag}`)).toEqual(Object.keys(FLAG_KEY));
-    expect(FIELDS.map((f) => f.input)).toEqual(['target', 'expected', 'operator', 'count', 'pattern', 'variable_name']);
+    expect(FIELDS.map((f) => f.input)).toEqual([
+      'target', 'expected', 'operator', 'count', 'pattern', 'variable_name', 'reference_screenshot', 'tolerance',
+    ]);
   });
 });
 function parsedFlagsOf(argv) {
@@ -80,6 +84,15 @@ const CASES = [
     argv: ['--target', 'Home'],
   },
   {
+    a: { id: 'a12', type: 'screenshot_match', after_step: 's1', reference_screenshot: 'ref/home.png', tolerance: 0.95 },
+    argv: ['--reference', 'ref/home.png', '--tolerance', '0.95'],
+  },
+  {
+    // The schema allows a null reference_screenshot: it carries nothing.
+    a: { id: 'a13', type: 'screenshot_match', after_step: 's1', reference_screenshot: null },
+    argv: [],
+  },
+  {
     // A type with no expected field ignores a stray expected-shaped key.
     a: { id: 'a11', type: 'element_exists', after_step: 's1', element_description: 'Home', expected_value: 'x' },
     argv: ['--target', 'Home'],
@@ -124,6 +137,10 @@ describe('expectedOf', () => {
 describe('toEvaluatorInput', () => {
   test('maps scenario names and coerces count to a number', () => {
     expect(toEvaluatorInput(CASES[6].a)).toEqual({ type: 'element_count', target: 'Product', operator: '>=', count: 3 });
+  });
+
+  test('carries the screenshot_match reference and a numeric tolerance', () => {
+    expect(toEvaluatorInput(CASES[10].a)).toEqual({ type: 'screenshot_match', reference_screenshot: 'ref/home.png', tolerance: 0.95 });
   });
 
   test('includes only provided keys', () => {

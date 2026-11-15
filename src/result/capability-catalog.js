@@ -93,6 +93,33 @@ const RESULT_CAPABILITIES = {
     writeCheck: 'behavioral',
     schemaPointer: '/properties/assertion_results/items/properties/judge',
   },
+  // A screenshot_match's comparison (#281): the images compared and the
+  // similarity measured. `mauto run` writes them in-process; an agent copies
+  // them from `mauto assert screenshot_match`'s hint.
+  assertion_reference_screenshot: {
+    verb: 'add-assertion',
+    flags: ['--reference-screenshot'],
+    store: 'addAssertion',
+    writes: 'entry.reference_screenshot = String(reference_screenshot)',
+    writeCheck: 'substring',
+    schemaPointer: '/properties/assertion_results/items/properties/reference_screenshot',
+  },
+  assertion_actual_screenshot: {
+    verb: 'add-assertion',
+    flags: ['--actual-screenshot'],
+    store: 'addAssertion',
+    writes: 'entry.actual_screenshot = String(actual_screenshot)',
+    writeCheck: 'substring',
+    schemaPointer: '/properties/assertion_results/items/properties/actual_screenshot',
+  },
+  assertion_similarity_score: {
+    verb: 'add-assertion',
+    flags: ['--similarity-score'],
+    store: 'addAssertion',
+    writes: 'entry.similarity_score = Number(similarity_score)',
+    writeCheck: 'substring',
+    schemaPointer: '/properties/assertion_results/items/properties/similarity_score',
+  },
   run_status: {
     verb: 'finalize',
     flags: ['--status'],

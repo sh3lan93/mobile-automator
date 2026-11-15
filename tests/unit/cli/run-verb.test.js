@@ -389,3 +389,29 @@ describe('an incomplete run can be completed with one-shot verbs and re-finalize
     expect(onDisk.executor.kind).toBe('runner');
   });
 });
+
+// #281: --update-references reaches the runner, which records the baseline.
+describe('mauto run --update-references', () => {
+  const { solidPng } = require('../../helpers/png');
+  const shotScenario = () => scenario({
+    assertions: [{ id: 'home_shot', after_step: 'tap_more', type: 'screenshot_match', description: 'd' }],
+  });
+  const refPath = () => path.join(root, '.mobile-automator', 'screenshots', 'reference', 'demo', 'home_shot.png');
+  const shotBridge = () => makeFakeBridge({ elements: [homeElements()], screenshots: [solidPng(12, 12)] });
+
+  test('records the reference and passes', async () => {
+    process.env.MAUTO_REPLAY = '1';
+    const file = writeScenario(shotScenario());
+    const { r } = await runCli([file, '--run-id', RUN_ID, '--update-references'], { bridge: shotBridge() });
+    expect(r.exitKind).toBe('ok');
+    expect(fs.readFileSync(refPath())).toEqual(solidPng(12, 12));
+  });
+
+  test('without it, a missing reference leaves the run incomplete', async () => {
+    process.env.MAUTO_REPLAY = '1';
+    const file = writeScenario(shotScenario());
+    const { r } = await runCli([file, '--run-id', RUN_ID], { bridge: shotBridge() });
+    expect(r.exitKind).toBe('incomplete');
+    expect(fs.existsSync(refPath())).toBe(false);
+  });
+});
