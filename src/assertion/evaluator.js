@@ -36,6 +36,14 @@ const MECHANICAL_TYPES = new Set([
   'text_changed',
 ]);
 
+// The types the CLI decides by comparing a stable screenshot against a stored
+// reference image (src/run/reference-assertion.js, #281) rather than over the
+// element list. Disjoint from MECHANICAL_TYPES: `evaluate()` below stays pure
+// and keeps answering needs_agent for them — the comparison needs files and a
+// device, so it lives in the runner and `mauto assert`, which branch on this
+// set before they reach `evaluate()`.
+const REFERENCE_SCREENSHOT_TYPES = new Set(['screenshot_match']);
+
 function labelOf(e) {
   return (e && typeof e.accessibility_label === 'string') ? e.accessibility_label : '';
 }
@@ -286,4 +294,4 @@ function evaluate(assertion = {}, ctx = {}) {
 // (sample-app/scripts/lib/resolve.js), which resolves tap targets with THIS
 // matcher so the harness and `mauto assert` can never disagree about what a
 // target string means (#94).
-module.exports = { MECHANICAL_TYPES, evaluate, matches, findFirst, textOf, compare };
+module.exports = { MECHANICAL_TYPES, REFERENCE_SCREENSHOT_TYPES, evaluate, matches, findFirst, textOf, compare };
