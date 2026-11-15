@@ -163,8 +163,7 @@ function validScreenSize(s) {
 const sizeOf = (s) => `${s.width}x${s.height}`;
 
 // Evaluate a single assertion.
-//   assertion: { type, target?, expected?, operator?, count?, pattern?, variable_name? }
-//   assertion: { ..., permission_name? }
+//   assertion: { type, target?, expected?, operator?, count?, pattern?, variable_name?, permission_name? }
 //   ctx:       { elements, variables = {}, previous = null, screenSize = null }
 function evaluate(assertion = {}, ctx = {}) {
   const type = assertion.type;
