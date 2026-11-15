@@ -200,9 +200,12 @@ describe('mauto run — a run', () => {
     expect(events.filter((e) => e.event === 'run.start')).toHaveLength(1);
     expect(events.filter((e) => e.event === 'run.step')).toHaveLength(2);
     expect(events.every((e) => e.verb === 'run' && e.run_id === RUN_ID)).toBe(true);
-    expect(data.measurements.source).toBe('trace');
-    expect(data.measurements.trace_events).toBeGreaterThanOrEqual(3);
+    // The measurements stay in the result file; the envelope carries the duration.
+    expect(data).not.toHaveProperty('measurements');
+    expect(file.measurements.source).toBe('trace');
+    expect(file.measurements.trace_events).toBeGreaterThanOrEqual(3);
     expect(file.duration_seconds).toBeGreaterThan(0);
+    expect(data.duration_seconds).toBe(file.duration_seconds);
   });
 
   test('a failing assertion is test_failed with data.status failed', async () => {

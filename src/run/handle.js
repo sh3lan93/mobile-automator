@@ -4,12 +4,13 @@ const path = require('path');
 
 const { ok, fail } = require('../output/envelope');
 const { buildExecutor } = require('../result/executor');
-const { pendingAssertions, incompleteEnvelope } = require('../result/pending-hint');
+const { incompleteEnvelope } = require('../result/pending-hint');
 const { PLATFORM_UNKNOWN } = require('../device/bridge');
 const { realClock } = require('./clock');
 const { runScenario } = require('./runner');
 const { NO_TRACE } = require('./trace');
 const { runSettings } = require('./settings');
+const { runData } = require('./summary');
 const configManager = require('../config/manager');
 
 // The device's platform for the executor. Null only when the bridge itself
@@ -95,20 +96,13 @@ async function handleRun(
 
   const { result, store: finalized, hints } = finalize();
   if (platformUnknown) hints.push('platform unknown: the bridge could not report it');
-  const resultPath = path.relative(projectRoot, finalized.file);
-  const data = {
-    run_id: runId,
-    scenario_id: scenarioId,
-    status: result.status,
-    result_path: resultPath,
-    failed_step: outcome.failedStep,
+  const data = runData(result, {
+    projectRoot,
+    resultFile: finalized.file,
+    failedStep: outcome.failedStep,
     failures: outcome.failures,
-    // What an agent still has to judge; empty unless the run is incomplete
-    // or failed beside a pending assertion.
-    pending: pendingAssertions(result),
-    executor: result.executor,
-    measurements: result.measurements,
-  };
+  });
+  const resultPath = data.result_path;
 
   if (result.status === 'passed') {
     return { envelope: ok(data, hints.length ? hints.join(' ') : null), exitKind: 'ok' };
