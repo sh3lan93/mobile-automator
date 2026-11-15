@@ -2667,8 +2667,11 @@ function makeEmitters({ projectRoot = process.cwd() } = {}) {
     process.exit(exitCode);
   }
 
-  const fromEnvelope = (envelope, exitKind, human) => ({
-    text: render(envelope, { human }),
+  // `renderHuman` is a handler's own --human rendering of its envelope (only
+  // `mauto run` has one, src/output/run-human.js); without --human, or
+  // without one, the generic render. JSON output is the same either way.
+  const fromEnvelope = (envelope, exitKind, human, renderHuman) => ({
+    text: human && typeof renderHuman === 'function' ? renderHuman(envelope) : render(envelope, { human }),
     exitKind,
     ok: Boolean(envelope && envelope.ok),
     errorKind: envelope && envelope.error ? envelope.error.kind : undefined,
@@ -2693,7 +2696,7 @@ function makeEmitters({ projectRoot = process.cwd() } = {}) {
     getRunId: () => resolvedRunId,
     getVerb: () => resolvedVerb,
 
-    emit: ({ envelope, exitKind }, human) => finish(fromEnvelope(envelope, exitKind, human)),
+    emit: ({ envelope, exitKind, renderHuman }, human) => finish(fromEnvelope(envelope, exitKind, human, renderHuman)),
 
     // Raw content (markdown / JSON schema / text) verbatim, no envelope
     // wrapping. Used by the guide/schema/bootstrap success paths.
@@ -2768,6 +2771,7 @@ async function run(argv) {
 module.exports = {
   run,
   buildProgram,
+  makeEmitters,
   toEnvelope,
   diagnose,
   emitFatal,

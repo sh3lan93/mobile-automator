@@ -13,6 +13,7 @@ const { runSettings } = require('./settings');
 const { runData } = require('./summary');
 const { toJUnit } = require('../result/junit');
 const { atomicWrite } = require('../util/atomic');
+const { renderRunHuman } = require('../output/run-human');
 const configManager = require('../config/manager');
 
 // The device's platform for the executor. Null only when the bridge itself
@@ -38,7 +39,7 @@ async function platformOf(bridge) {
 // and sha256, and the run id — plus the device id the CLI resolved (null when
 // mobile-mcp auto-selects). The result records them as its executor (#275).
 // `cwd` is the directory a relative scenario path is resolved against.
-async function handleRun(
+async function runAndReport(
   {
     bridge, resultStoreFactory, memoryStoreFactory, projectRoot, finalizeRun,
     cwd = process.cwd(), trace = NO_TRACE, clock = realClock,
@@ -144,6 +145,12 @@ async function handleRun(
     envelope: fail('test_failed', `run ${runId} ${result.status}`, hint, data),
     exitKind: 'test_failed',
   };
+}
+
+// Every envelope a run produces carries the run's frozen data, so every one
+// renders with renderRunHuman under --human.
+async function handleRun(deps, prepared) {
+  return { ...(await runAndReport(deps, prepared)), renderHuman: renderRunHuman };
 }
 
 module.exports = { handleRun };

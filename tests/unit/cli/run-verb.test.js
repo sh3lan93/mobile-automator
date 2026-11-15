@@ -314,6 +314,54 @@ describe('mauto run — a run', () => {
   });
 });
 
+describe('mauto run --human (#282)', () => {
+  const { makeEmitters } = require('../../../src/cli');
+
+  // Through the real emitters: what reaches stdout, and the exit code.
+  async function printed(args) {
+    const writes = [];
+    const exits = [];
+    const write = jest.spyOn(process.stdout, 'write').mockImplementation((t) => { writes.push(String(t)); return true; });
+    const exit = jest.spyOn(process, 'exit').mockImplementation((code) => { exits.push(code); });
+    try {
+      await buildProgram({
+        projectRoot: root,
+        deviceBridgeFactory: async () => ({ bridge: makeFakeBridge({ elements: [homeElements()] }), close: async () => {} }),
+        emitters: makeEmitters({ projectRoot: root }),
+        clock: makeFakeClock(),
+        platform: 'darwin',
+      }).parseAsync(['node', 'mauto', ...args]);
+    } finally {
+      write.mockRestore();
+      exit.mockRestore();
+    }
+    return { text: writes.join(''), exits };
+  }
+
+  test('a run renders as its summary', async () => {
+    process.env.MAUTO_REPLAY = '1';
+    const { text, exits } = await printed(['--human', 'run', writeScenario(scenario()), '--run-id', RUN_ID]);
+    expect(exits).toEqual([0]);
+    expect(text).toMatch(new RegExp(`^run ${RUN_ID} \\(demo\\): passed in [\\d.]+s\\n`));
+    expect(text).toContain('steps: 2 total, 2 passed, 0 failed, 0 error, 0 skipped, 0 needs agent\n');
+  });
+
+  test('without --human the output stays the JSON envelope', async () => {
+    process.env.MAUTO_REPLAY = '1';
+    const { text } = await printed(['run', writeScenario(scenario()), '--run-id', RUN_ID]);
+    const envelope = JSON.parse(text);
+    expect(envelope.ok).toBe(true);
+    expect(envelope).not.toHaveProperty('renderHuman');
+    expect(Object.keys(envelope.data)).toContain('steps');
+  });
+
+  test('a refusal falls back to the generic render', async () => {
+    const { text, exits } = await printed(['--human', 'run', writeScenario(scenario()), '--run-id', RUN_ID]);
+    expect(exits).toEqual([5]);
+    expect(text).toBe('error [environment]: mauto run is not enabled yet\nhint: export MAUTO_REPLAY=1 to try the in-progress replay runner\n');
+  });
+});
+
 describe('mauto run — registration', () => {
   test('is hidden from --help', () => {
     const help = buildProgram({ projectRoot: root, emit: () => {} }).helpInformation();
