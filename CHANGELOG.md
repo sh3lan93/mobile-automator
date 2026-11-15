@@ -11,6 +11,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ Added
 
+- **`screenshot_match` is decided deterministically against a reference
+  screenshot** (replay PRD #271, slice R5b). `mauto assert screenshot_match`
+  and `mauto run` (gated by `MAUTO_REPLAY=1`) capture a stable screenshot (two
+  identical consecutive frames) and pixel-diff it against the assertion's
+  reference screenshot: `similarity = 1 − differing pixels / compared pixels`,
+  passing when `similarity >= tolerance` (default `0.9`). The baseline is
+  `reference_screenshot` (relative to `.mobile-automator/`) or, when unset,
+  `.mobile-automator/screenshots/reference/<scenario_id>/<assertion_id>.png`.
+  A missing baseline is `needs_agent`, not a failure, with a hint to re-run
+  with `--update-references`, which records the current screen as the
+  baseline (on `mauto assert` and on `mauto run`). Images are never
+  resampled: a dimension mismatch fails naming both sizes, and element-list
+  coordinates are scaled to screenshot pixels (PNG width ÷ screen width) so
+  points-based devices line up. A diff image is written on every pixel
+  mismatch. Scenario assertions accept an optional `masks` array of
+  `{ "element_description" }` or `{ "x", "y", "width", "height" }` regions to
+  ignore (additive; no schema-version bump). New flags:
+  `mauto assert --reference --tolerance --mask --update-references` (`data`
+  adds `reference_screenshot`, `actual_screenshot`, `similarity_score`,
+  `diff_screenshot`; outside a workspace it fails `environment`) and
+  `mauto result add-assertion --reference-screenshot --actual-screenshot
+  --similarity-score`. Result `assertion_results[].judge.by` gains
+  `reference_screenshot`. New dependencies `pixelmatch@5.3.0` (the last
+  CommonJS release) and `pngjs@^6`, both pure JavaScript. The docs and the
+  execute/generate guides no longer promise AI-vision comparison for
+  `screenshot_match`; `docs/reference/assertions.md` splits the types three
+  ways (mechanical, reference screenshot, agent), pinned to
+  `REFERENCE_SCREENSHOT_TYPES` by `tests/lint/assertion-split-docs.test.js`.
+  A new `tests/unit/run/corpus-floor.test.js` pins the corpus's measured
+  agent-free share (59 of 68 assertions, 5 of 12 scenarios); the PRD's 96%
+  floor is unreachable on this corpus, which has no `screenshot_match`.
+  Refs #281
 - **`mauto run` follows a scenario's control flow, and reads captured
   variables** (replay PRD #271, slice R4; gated by `MAUTO_REPLAY=1`).
   A step's `condition` is evaluated before it runs: `device_property`
