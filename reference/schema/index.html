@@ -1331,6 +1331,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#how-mauto-run-treats-control-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How mauto run treats control flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#wait_config" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1359,6 +1370,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Variables Object">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-a-captured-variable-name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using a captured variable: ${name}
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2120,6 +2148,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#how-mauto-run-treats-control-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How mauto run treats control flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#wait_config" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2148,6 +2187,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Variables Object">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-a-captured-variable-name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using a captured variable: ${name}
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2260,7 +2316,7 @@
 <li><strong>Conditional execution</strong> — Optional steps, conditional branching, retry policies</li>
 <li><strong>Structured preconditions</strong> — Setup actions and device state requirements</li>
 </ul>
-<p><strong>Schema version identifier:</strong> Every scenario carries a <code>$schema_version</code> field (note the leading <code>$</code>). It accepts <code>"2.0"</code> or <code>"2.1"</code> and defaults to <code>"2.0"</code>. <strong>2.1 is the current version</strong> and is purely additive over 2.0 — it adds the <code>mode</code> metadata field and four platform-agnostic semantic actions (<code>press_back</code>, <code>dismiss_keyboard</code>, <code>grant_permission</code>, <code>deny_permission</code>). Existing <code>"2.0"</code> scenarios remain valid; new scenarios should use <code>"2.1"</code>.</p>
+<p><strong>Schema version identifier:</strong> Every scenario carries a <code>$schema_version</code> field (note the leading <code>$</code>). It accepts <code>"2.0"</code> or <code>"2.1"</code> and defaults to <code>"2.0"</code>. <strong>2.1 is the current version</strong> and is purely additive over 2.0 — it adds four platform-agnostic semantic actions (<code>press_back</code>, <code>dismiss_keyboard</code>, <code>grant_permission</code>, <code>deny_permission</code>). Existing <code>"2.0"</code> scenarios remain valid; new scenarios should use <code>"2.1"</code>.</p>
 <h2 id="schema-structure-overview">Schema Structure Overview<a class="headerlink" href="#schema-structure-overview" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>Test Scenario
 ├─ Metadata
@@ -2414,7 +2470,7 @@
 <li>Unique within the scenario; used for screenshot naming and <code>after_step</code> references</li>
 </ul>
 <h3 id="action-types-18-total">Action Types (18 total)<a class="headerlink" href="#action-types-18-total" title="Permanent link">&para;</a></h3>
-<p>Each step's <code>action</code> field is one of these values: the <strong>14 core actions</strong> documented below, plus <strong>4 semantic actions</strong> available in platform-agnostic (<code>mode: "platform-agnostic"</code>) scenarios — <code>press_back</code>, <code>dismiss_keyboard</code>, <code>grant_permission</code>, and <code>deny_permission</code> — which resolve to the right per-platform mechanics at replay time.</p>
+<p>Each step's <code>action</code> field is one of these values: the <strong>14 core actions</strong> documented below, plus <strong>4 semantic actions</strong> available when the workspace <code>mode</code> (<code>.mobile-automator/config.json</code>, set by <code>mauto setup</code>; a scenario has no <code>mode</code> field) is <code>platform-agnostic</code> — <code>press_back</code>, <code>dismiss_keyboard</code>, <code>grant_permission</code>, and <code>deny_permission</code> — which resolve to the right per-platform mechanics at replay time.</p>
 <p>Note that <code>clear_app_data</code> is accepted by the schema but is <strong>not mechanically executable</strong> — no <code>mauto</code> verb runs it yet, so a scenario using it cannot replay unattended. The same applies to the <code>enable_wifi</code> and <code>disable_wifi</code> precondition device actions, which the engine has no primitive for.</p>
 <h4 id="1-launch_app">1. launch_app<a class="headerlink" href="#1-launch_app" title="Permanent link">&para;</a></h4>
 <p>Launch the app under test on the device. By default the app is restarted first, so the step starts on its initial screen even if the app was already running. This resets the screen, not app data (use <code>app_state: "fresh_install"</code> for that).</p>
@@ -2690,6 +2746,50 @@
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
 </code></pre></div>
+<h4 id="how-mauto-run-treats-control-flow">How <code>mauto run</code> treats control flow<a class="headerlink" href="#how-mauto-run-treats-control-flow" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>condition</code></td>
+<td>Evaluated before the step. False records the step <code>skipped</code> with <code>condition_evaluated: false</code> (true, or <code>null</code> when there is no condition) and skips its <code>sub_steps</code> too.</td>
+</tr>
+<tr>
+<td><code>device_property</code></td>
+<td><code>platform</code> and <code>orientation</code> are decided by the runner. Any other property (<code>api_level</code>, ...) is <code>needs_agent</code>: the run ends <code>incomplete</code> and an agent decides.</td>
+</tr>
+<tr>
+<td><code>variable_value</code></td>
+<td>Reads a captured variable. A numeric <code>value</code> compares numerically. A variable nothing captured fails the step.</td>
+</tr>
+<tr>
+<td><code>element_visible</code></td>
+<td>True when the element is on screen. <code>"value": false</code> means expected absent.</td>
+</tr>
+<tr>
+<td><code>previous_step_skipped</code></td>
+<td>True when the named step (or sub-step) was recorded <code>skipped</code>.</td>
+</tr>
+<tr>
+<td><code>optional</code>, <code>on_failure: "skip"</code></td>
+<td>A step that fails is recorded <code>skipped</code> and the run goes on. An error in the scenario itself (an invalid <code>target_pattern</code>, an uncaptured <code>${name}</code>) still fails.</td>
+</tr>
+<tr>
+<td><code>on_failure: "retry"</code></td>
+<td>Retries per <code>retry_policy</code>; with none, two attempts one second apart. A <code>retry_policy</code> on its own also retries.</td>
+</tr>
+<tr>
+<td><code>sub_steps</code></td>
+<td>Run after the parent step passes, each with its own condition and retries, and listed in the parent's <code>sub_steps_executed</code>. A failing sub-step fails the parent and stops the run. <code>after_step</code> assertions may name a sub-step.</td>
+</tr>
+</tbody>
+</table>
+<p>A step skipped by any of these still has its <code>after_step</code> assertions evaluated. Each recorded step carries <code>step_duration_ms</code>. A <code>text_changed</code> assertion compares against the screen as it was before the step it follows.</p>
 <h4 id="wait_config">wait_config<a class="headerlink" href="#wait_config" title="Permanent link">&para;</a></h4>
 <p>Configuration for wait-type actions (<code>wait_for_element</code>, <code>wait_for_element_gone</code>, <code>wait_for_loading_complete</code>).</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
@@ -2739,6 +2839,36 @@
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></p>
+<h3 id="using-a-captured-variable-name">Using a captured variable: <code>${name}</code><a class="headerlink" href="#using-a-captured-variable-name" title="Permanent link">&para;</a></h3>
+<p>A value captured by a <code>capture_value</code> step can be read by any later step or assertion with <code>${name}</code>, where <code>name</code> is a variable declared in the root <code>variables</code> block (<code>^[a-z][a-z0-9_]*$</code>).</p>
+<table>
+<thead>
+<tr>
+<th>Where</th>
+<th>Fields substituted</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Step</td>
+<td><code>value</code>, <code>target</code></td>
+</tr>
+<tr>
+<td>Assertion</td>
+<td>every string field except <code>id</code>, <code>type</code>, <code>after_step</code>, <code>description</code> and <code>variable_name</code></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"type_code"</span><span class="p">,</span><span class="w"> </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"type"</span><span class="p">,</span><span class="w"> </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Enter the captured code"</span><span class="p">,</span><span class="w"> </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"${otp_code}"</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p>Rules <code>mauto run</code> follows:</p>
+<ul>
+<li>Every <code>${name}</code> in a field is replaced; text around it is kept (<code>"Order ${order_id}"</code>).</li>
+<li>A name that has no value yet (never captured) is an error, not a literal: the step fails without touching the device and is not retried, and an assertion is recorded as failed. Capture the variable in an earlier step.</li>
+<li>There is no escape syntax; a field cannot contain a literal <code>${name}</code> for a declared variable.</li>
+<li>The syntax is <code>${name}</code>, never <code>{{name}}</code>.</li>
+</ul>
+<p>The agent-driven path (<code>mauto guide execute</code>) uses <code>variable_name</code> and <code>capture_to</code> instead and substitutes by hand; <code>${name}</code> is what the runner understands.</p>
 <hr />
 <h2 id="preconditions-object">Preconditions Object<a class="headerlink" href="#preconditions-object" title="Permanent link">&para;</a></h2>
 <p>Define setup requirements and device state before test execution.</p>
