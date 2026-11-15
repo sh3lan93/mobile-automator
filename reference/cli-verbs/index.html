@@ -1839,7 +1839,7 @@
 <td>Validate a scenario JSON file against the <a href="../schema/">scenario schema</a>; warns (or, with <code>--strict</code>, fails) on actions that cannot replay unattended and on broken references (duplicate step ids, dangling <code>after_step</code> or condition <code>step_id</code>, steps with no <code>target</code>, undeclared variables), and warns on <code>launch_app</code> steps that leave <code>cold</code> unset and on waits with no <code>wait_config</code></td>
 </tr>
 <tr>
-<td><code>mauto assert &lt;type&gt; [--target --expected --operator --count --pattern --variable --device --reference &lt;path&gt; --tolerance &lt;n&gt; --mask &lt;x,y,w,h \| element description&gt;… --update-references]</code></td>
+<td><code>mauto assert &lt;type&gt; [--target --expected --operator --count --pattern --variable --permission --device --reference &lt;path&gt; --tolerance &lt;n&gt; --mask &lt;x,y,w,h \| element description&gt;… --update-references]</code></td>
 <td>Evaluate an assertion; mechanical types are decided by the CLI over the element list, <code>screenshot_match</code> is decided by the CLI against a <a href="../assertions/#screenshot_match">reference screenshot</a>, and the remaining visual types are deferred to the agent. A failed verdict exits <code>6</code> (<code>test_failed</code>) with the verdict in <code>data</code></td>
 </tr>
 <tr>

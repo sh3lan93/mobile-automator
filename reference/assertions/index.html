@@ -2522,8 +2522,9 @@
 <p>mobile-automator supports 27 assertion types organized in 8 categories for comprehensive test verification.</p>
 <p>Every assertion object requires <code>id</code>, <code>after_step</code> (the step <code>id</code> it runs after), <code>type</code>, and <code>description</code>. Element-based assertions locate their target with <code>element_description</code> — a <em>semantic</em> description of the element, never a <code>resource-id</code> or OS-specific locator. The syntax snippets below show only the type-specific fields for brevity.</p>
 <h2 id="mechanical-vs-agent-judged-assertions">Mechanical vs agent-judged assertions<a class="headerlink" href="#mechanical-vs-agent-judged-assertions" title="Permanent link">&para;</a></h2>
-<p>Not every assertion is decided by the CLI. 15 of the 27 assertion types are evaluated deterministically by <code>mauto assert</code> over the element list. 1 is compared against a reference screenshot: <code>mauto assert</code> decides <code>screenshot_match</code> with a pixel diff against a stored baseline image (see <a href="#screenshot_match">screenshot_match</a>). The other 11 return <code>needs_agent</code> with <code>pass: null</code>: the host agent judges them (often from a screenshot) and records the verdict with <code>mauto result add-assertion</code>. An agent-judged pass is only as reliable as the agent that judged it.</p>
-<p><code>element_state</code> is agent-judged because the element model drops enabled, focused and checked state, so the CLI cannot decide it mechanically.</p>
+<p>Not every assertion is decided by the CLI. 18 of the 27 assertion types are evaluated deterministically by <code>mauto assert</code> over the element list. 1 is compared against a reference screenshot: <code>mauto assert</code> decides <code>screenshot_match</code> with a pixel diff against a stored baseline image (see <a href="#screenshot_match">screenshot_match</a>). The other 8 return <code>needs_agent</code> with <code>pass: null</code>: the host agent judges them (often from a screenshot) and records the verdict with <code>mauto result add-assertion</code>. An agent-judged pass is only as reliable as the agent that judged it.</p>
+<p><code>element_state</code> is agent-judged because the element model drops enabled, focused and checked state, so the CLI cannot decide it mechanically. <code>alert_present</code> and <code>alert_text</code> are agent-judged because the element list carries no platform-agnostic sign that a dialog is up.</p>
+<p>Three mechanical types read the element list more narrowly than a screenshot judgment would: <code>element_fully_visible</code> checks the screen edges only, <code>screen_title</code> checks the top quarter of the screen, and <code>permission_dialog_shown</code> looks for the system dialog's buttons. Their sections below give the exact rule.</p>
 <h2 id="quick-reference-table">Quick Reference Table<a class="headerlink" href="#quick-reference-table" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2617,7 +2618,7 @@
 <tr>
 <td>element_fully_visible</td>
 <td>Visual &amp; Layout</td>
-<td>agent</td>
+<td><code>mauto assert</code> (mechanical)</td>
 </tr>
 <tr>
 <td>color_style</td>
@@ -2627,7 +2628,7 @@
 <tr>
 <td>screen_title</td>
 <td>Navigation &amp; Screen</td>
-<td>agent</td>
+<td><code>mauto assert</code> (mechanical)</td>
 </tr>
 <tr>
 <td>alert_present</td>
@@ -2662,7 +2663,7 @@
 <tr>
 <td>permission_dialog_shown</td>
 <td>Platform-Specific</td>
-<td>agent</td>
+<td><code>mauto assert</code> (mechanical)</td>
 </tr>
 <tr>
 <td>dark_mode_active</td>
@@ -2948,8 +2949,9 @@ Check that the feed shows the empty state
 </code></pre></div></p>
 <hr />
 <h3 id="element_fully_visible">element_fully_visible<a class="headerlink" href="#element_fully_visible" title="Permanent link">&para;</a></h3>
-<p>Verify element is completely visible (not clipped).</p>
-<p><strong>When to use:</strong> Ensure element is not cut off by parent container or screen bounds.</p>
+<p>Verify element is completely on screen (not clipped by the screen edges).</p>
+<p><strong>When to use:</strong> Ensure an element is not cut off by the screen edges or scrolled partly off screen.</p>
+<p><strong>How <code>mauto assert</code> decides it:</strong> it finds the element described by <code>element_description</code> and passes when the element's bounds lie fully inside the screen (<code>mauto</code> reads the screen size from the device). It fails when no element matches or when any edge of the element runs past the screen. It cannot see overlap: an element covered by another element, or clipped by a parent container inside the screen, still passes.</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"element_fully_visible"</span><span class="p">,</span>
@@ -2979,8 +2981,9 @@ Check that the success message is green
 <hr />
 <h2 id="navigation-screen-assertions-5-types">Navigation &amp; Screen Assertions (5 types)<a class="headerlink" href="#navigation-screen-assertions-5-types" title="Permanent link">&para;</a></h2>
 <h3 id="screen_title">screen_title<a class="headerlink" href="#screen_title" title="Permanent link">&para;</a></h3>
-<p>Verify screen/activity name.</p>
+<p>Verify the screen's title.</p>
 <p><strong>When to use:</strong> Confirm navigation to the correct screen.</p>
+<p><strong>How <code>mauto assert</code> decides it:</strong> it passes when some element's text or accessibility label equals <code>expected_text</code> exactly (ignoring case and surrounding whitespace) and that element's top edge is in the top quarter of the screen. The same text lower on the screen, or a title that only contains <code>expected_text</code>, fails.</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"screen_title"</span><span class="p">,</span>
@@ -3086,8 +3089,9 @@ Check that the order ID is the same as when we created it
 <hr />
 <h2 id="platform-specific-assertions-2-types">Platform-Specific Assertions (2 types)<a class="headerlink" href="#platform-specific-assertions-2-types" title="Permanent link">&para;</a></h2>
 <h3 id="permission_dialog_shown">permission_dialog_shown<a class="headerlink" href="#permission_dialog_shown" title="Permanent link">&para;</a></h3>
-<p>Check permission prompt (iOS/Android).</p>
+<p>Check that a system permission prompt is showing.</p>
 <p><strong>When to use:</strong> Verify system permission dialog appeared (camera, location, contacts, etc.).</p>
+<p><strong>How <code>mauto assert</code> decides it:</strong> it passes when an allow button (such as "Allow", "While using the app", "Allow Once") and a deny button ("Deny", "Don't Allow") are both on screen, the same button labels <code>mauto press grant_permission</code> / <code>deny_permission</code> look for. When <code>permission_name</code> is set (<code>--permission</code> on <code>mauto assert</code>), some element's text or label must also contain it, ignoring case.</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"permission_dialog_shown"</span><span class="p">,</span>
