@@ -94,6 +94,20 @@ test('--update-references writes the baseline and passes', async () => {
   expect(a.message).toBe(`reference updated (--update-references): ${refRel}`);
 });
 
+test('--update-references on a screen that never settles fails the run and writes no baseline', async () => {
+  const bridge = makeFakeBridge({
+    elements: [[el('More')]],
+    screenshots: (n) => (n % 2 ? solidPng(20, 20, WHITE) : solidPng(20, 20, BLACK)),
+  });
+  const r = await run(bridge, scenarioWith({}), { updateReferences: true });
+  expect(r.exitKind).toBe('test_failed');
+  expect(fs.existsSync(defaultRef())).toBe(false);
+  const [a] = resultFile().assertion_results;
+  expect(a).toMatchObject({ status: 'failed', mechanical: true, judge: { by: 'reference_screenshot' } });
+  expect(a.message).toMatch(/^screen did not settle within \d+ms; no reference recorded \(\d+ frames captured\)$/);
+  expect(a).not.toHaveProperty('similarity_score');
+});
+
 test('a matching screen passes against the recorded baseline', async () => {
   writePng(defaultRef(), solidPng(20, 20, WHITE));
   const r = await run(bridgeShowing(solidPng(20, 20, WHITE)), scenarioWith({}));

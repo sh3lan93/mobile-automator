@@ -407,7 +407,7 @@ Deterministic pixel comparison of the current screen against a reference screens
 
 **Reference screenshot location:** `reference_screenshot` is a path relative to the `.mobile-automator/` workspace directory. When it is omitted, the default is `.mobile-automator/screenshots/reference/<scenario_id>/<assertion_id>.png`.
 
-**Recording a baseline:** when the reference screenshot does not exist yet, the assertion returns `needs_agent` (not a failure), with a hint to re-run with `--update-references`. `mauto assert screenshot_match --reference <path> --update-references` records the current screen as the baseline. Record it only when the screen is known to be correct, and commit it with your scenarios.
+**Recording a baseline:** when the reference screenshot does not exist yet, the assertion returns `needs_agent` (not a failure), with a hint to re-run with `--update-references`. `mauto assert screenshot_match --reference <path> --update-references` records the current screen as the baseline. If the screen does not settle (two identical consecutive frames) within the wait budget, nothing is recorded and the assertion fails, so a baseline is never a frame of a screen still moving. Record it only when the screen is known to be correct, and commit it with your scenarios.
 
 **Image sizes:** images are never resampled. If the captured screenshot and the reference screenshot have different dimensions (a different device, resolution, or orientation), the assertion fails with a message naming both sizes; record a baseline per device instead. Element-list coordinates are converted to screenshot pixels with a scale factor (PNG width ÷ screen width), so masks line up on devices whose element list is reported in points rather than pixels.
 

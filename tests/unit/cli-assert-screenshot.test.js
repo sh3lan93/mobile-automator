@@ -104,6 +104,18 @@ test('--update-references records the baseline and passes', async () => {
   expect(fs.readFileSync(refFile())).toEqual(shot);
 });
 
+test('--update-references on an unsettled screen is test_failed and records no baseline', async () => {
+  const bridge = makeFakeBridge({
+    screenshots: (n) => (n % 2 ? solidPng(20, 20, WHITE) : solidPng(20, 20, BLACK)),
+  });
+  const r = await assertShot(bridge, { reference: 'ref/home.png', updateReferences: true });
+  expect(r.exitKind).toBe('test_failed');
+  expect(r.envelope.error.kind).toBe('test_failed');
+  expect(r.envelope.data).toMatchObject({ pass: false, needs_agent: false, mechanical: true, similarity_score: null });
+  expect(r.envelope.data.message).toMatch(/^screen did not settle within \d+ms; no reference recorded/);
+  expect(fs.existsSync(refFile())).toBe(false);
+});
+
 describe('refusals, before the device is touched', () => {
   const untouched = () => makeFakeBridge({ screenshots: [solidPng(4, 4)] });
 

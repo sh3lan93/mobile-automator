@@ -150,6 +150,19 @@ describe('decideReferenceScreenshot', () => {
     expect(v.message).toMatch(/did not settle within 300ms/);
   });
 
+  test('--update-references on an unsettled screen fails and records no baseline', async () => {
+    const bridge = makeFakeBridge({
+      screenshots: (n) => (n % 2 ? solidPng(20, 20, WHITE) : solidPng(20, 20, BLACK)),
+    });
+    const v = await decide(bridge, { updateReferences: true, timeoutMs: 300, pollMs: 100 });
+    expect(v).toMatchObject({
+      status: 'failed', mechanical: true, judge: { by: 'reference_screenshot' }, similarity_score: null,
+    });
+    expect(v.message).toBe('screen did not settle within 300ms; no reference recorded (4 frames captured)');
+    expect(v).not.toHaveProperty('stable');
+    expect(fs.existsSync(referencePath)).toBe(false);
+  });
+
   test('the verdict is exactly the record body, and the diff rides beside it', async () => {
     writePng(referencePath, solidPng(20, 20, WHITE));
     const bridge = makeFakeBridge({ screenshots: [solidPng(20, 20, WHITE)] });

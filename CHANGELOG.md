@@ -42,6 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   A new `tests/unit/run/corpus-floor.test.js` pins the corpus's measured
   agent-free share (59 of 68 assertions, 5 of 12 scenarios); the PRD's 96%
   floor is unreachable on this corpus, which has no `screenshot_match`.
+  `--update-references` refuses a screen that never settles: the assertion
+  fails and no baseline is written.
   Refs #281
 - **`mauto run` follows a scenario's control flow, and reads captured
   variables** (replay PRD #271, slice R4; gated by `MAUTO_REPLAY=1`).

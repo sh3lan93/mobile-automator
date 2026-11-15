@@ -121,8 +121,17 @@ async function decideReferenceScreenshot({
   const decided = (status, message, similarity = null) => ({ verdict: record(status, message, { similarity }), diff: null });
 
   if (updateReferences) {
+    // A baseline is what every later run is held to: a frame of a screen
+    // still moving would make them all fail (or pass) for the wrong reason,
+    // so an unsettled screen records nothing.
+    if (!capture.stable) {
+      return decided(
+        'failed',
+        `screen did not settle within ${timeoutMs}ms; no reference recorded (${capture.frames} frames captured)`
+      );
+    }
     writeReference(paths.actual, paths.reference);
-    return decided('passed', `reference updated (--update-references): ${referenceRel}${unsettled}`, 1);
+    return decided('passed', `reference updated (--update-references): ${referenceRel}`, 1);
   }
   if (!fs.existsSync(paths.reference)) {
     return {
