@@ -156,14 +156,12 @@ describe('the run id', () => {
 });
 
 describe('--judge (#282)', () => {
-  test('absent: judge is none', () => {
-    expect(prepare({ file: write(scenario()), runId: RUN_ID, env: ON }).judge).toBe('none');
-  });
-
-  test('none is accepted', () => {
-    const p = prepare({ file: write(scenario()), runId: RUN_ID, env: ON, judge: 'none' });
-    expect(p.failure).toBeUndefined();
-    expect(p.judge).toBe('none');
+  test('absent or none: accepted, and not part of what prepareRun returns', () => {
+    for (const judge of [undefined, 'none']) {
+      const p = prepare({ file: write(scenario()), runId: RUN_ID, env: ON, judge });
+      expect(p.failure).toBeUndefined();
+      expect(p).not.toHaveProperty('judge');
+    }
   });
 
   test.each(['agent', 'llm', 'NONE', ''])('%j is invalid_input naming the accepted values', (value) => {
