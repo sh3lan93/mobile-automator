@@ -290,7 +290,7 @@ describe('resolve-connection', () => {
   // Transparent autostart is the COMMON path (most users never type
   // `mauto session start`), and until now a dead daemon fell through to the
   // one-shot silently. The signal rides err.hint because that is the channel
-  // deviceFail() in cli.js already surfaces on every device verb.
+  // deviceFail() (src/output/device-fail.js) already surfaces on every device verb.
   test('(d) spawn failed + one-shot throws -> the error carries a hint naming the daemon log', async () => {
     const root = tmpRoot();
     const client = fakeClient({ alive: false, conn: null });

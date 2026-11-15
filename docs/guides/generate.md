@@ -494,7 +494,7 @@ Generator supports 27 different assertions. Common types:
 | `element_text` | Verify text says exactly "Welcome" |
 | `text_contains` | Verify message includes "success" |
 | `element_visible` | Verify element is in viewport |
-| `screenshot_match` | Verify screen matches reference |
+| `screenshot_match` | Verify screen matches a reference screenshot (pixel comparison) |
 | `element_count` | Verify list has 5 items |
 | `list_is_empty` | Verify no results shown |
 | `value_matches_variable` | Verify value matches captured variable |

@@ -196,7 +196,7 @@ The agent, following `mauto guide execute`:
    - Drives a `mauto` verb (`tap`, `type`, `swipe`, `screenshot`, …) which wraps mobile-mcp → device
    - Reads the `{ok,data,error,hint,schema_version}` envelope
 4. For each assertion:
-   - Runs `mauto assert` for mechanical checks, or judges visually for vision assertions
+   - Runs `mauto assert` for mechanical checks and `screenshot_match` (a pixel comparison against a reference screenshot), or judges visually for the remaining vision assertions
    - Records the result via `mauto result add-step`
 5. Calls `mauto result finalize` to write the report — this **auto-harvests** the run's typed observations (regression / flakiness / state_context) into `run-history` memory
 6. **Records durable knowledge** it learned during the run with `mauto memory add --kind <app-knowledge|preferences>`
@@ -360,9 +360,9 @@ Traditional test frameworks require you to write tests in code or DSLs. Pulled-o
 
 ### Semantic Visual Testing
 
-The agent doesn't use pixel-by-pixel comparison. Instead, it uses AI vision to answer:
+For the agent-judged visual assertions (`visual_state`, `color_style`, `element_fully_visible` and the other types `mauto assert` returns as `needs_agent`), the agent doesn't use pixel-by-pixel comparison. Instead, it uses AI vision to answer:
 
-> Does this screen fulfill the same purpose as the reference?
+> Does this screen show what the assertion expects?
 
 This is done by evaluating:
 - **Screen Identity** — Is this the intended screen?
@@ -374,8 +374,9 @@ This is done by evaluating:
 **Benefits:**
 - Tolerates cosmetic changes (fonts, colors, spacing)
 - Catches functional regressions (missing buttons, wrong text)
-- More stable than screenshot matching
-- Requires fewer reference images
+- Needs no reference images
+
+`screenshot_match` is the exception: it is not judged by the agent. `mauto assert` compares the screen pixel by pixel against a stored reference screenshot, with a `tolerance` and optional masks for regions that change between runs (see [screenshot_match](../reference/assertions.md#screenshot_match)).
 
 ### Flakiness Detection
 

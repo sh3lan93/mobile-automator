@@ -360,7 +360,7 @@ Results saved to: `.mobile-automator/results/<run_id>.json`
 3. **Check the target** — Verify you're using the element's visible text/role
 4. **Increase timeout** — Slow devices may need longer waits
 5. **Check the device engine** — If `mauto elements` misses a text field's label or lists content from a tab that is not showing (common with Flutter on Android), run `mauto config set engine legacy`. It hides inactive-tab content on every Android version tested, but recovers text-field labels only on recent Android versions (verified on Android 16 / API 36; not on API 33) ([#251](https://github.com/sh3lan93/mobile-automator/issues/251))
-6. **Add screenshot assertion** — Debug what's actually on screen:
+6. **Look at the screen** — Run `mauto screenshot <path>` to see what's actually on screen. To catch the screen changing later, pin it with a `screenshot_match` assertion against a reference screenshot (record the baseline once with `mauto assert screenshot_match --reference <path> --update-references`):
    ```json
    {
      "assertions": [
@@ -368,7 +368,7 @@ Results saved to: `.mobile-automator/results/<run_id>.json`
          "id": "verify_screen",
          "after_step": "wait_for_button",
          "type": "screenshot_match",
-         "reference_screenshot": "expected_screen.png",
+         "reference_screenshot": "screenshots/reference/login/verify_screen.png",
          "description": "Screen matches the expected baseline"
        }
      ]
@@ -587,7 +587,7 @@ jobs:
 ### Are tests slower than manual testing?
 
 **Answer:** Yes, typically 2-5x slower. Why?
-- Screenshot analysis and AI vision
+- Screenshot analysis for agent-judged visual assertions
 - Safe waits to avoid flakiness
 - Detailed logging and assertions
 - Result collection and reporting

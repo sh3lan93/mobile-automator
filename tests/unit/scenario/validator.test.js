@@ -47,6 +47,33 @@ describe('ScenarioValidator', () => {
     expect(res.errors).toEqual([]);
   });
 
+  // #281: a screenshot_match may mask regions, as elements or rectangles.
+  test('screenshot_match masks of either shape are valid', () => {
+    const v = new ScenarioValidator({ schemaPath: SCHEMA_PATH });
+    const s = validScenario();
+    s.assertions[0] = {
+      ...s.assertions[0],
+      type: 'screenshot_match',
+      tolerance: 0.95,
+      masks: [{ element_description: 'Clock' }, { x: 0, y: 0, width: 390, height: 44 }],
+    };
+    const res = v.validate(s);
+    expect(res.errors).toEqual([]);
+    expect(res.valid).toBe(true);
+  });
+
+  test.each([
+    ['a negative rect', { x: -1, y: 0, width: 1, height: 1 }],
+    ['a partial rect', { x: 0, y: 0, width: 1 }],
+    ['both shapes at once', { element_description: 'Clock', x: 0, y: 0, width: 1, height: 1 }],
+    ['an empty description', { element_description: '' }],
+  ])('a mask that is %s is invalid', (_name, mask) => {
+    const v = new ScenarioValidator({ schemaPath: SCHEMA_PATH });
+    const s = validScenario();
+    s.assertions[0] = { ...s.assertions[0], type: 'screenshot_match', masks: [mask] };
+    expect(v.validate(s).valid).toBe(false);
+  });
+
   // #255: launch_app cold-starts by default; `cold: false` opts out.
   test('a launch_app step with cold: false is valid', () => {
     const v = new ScenarioValidator({ schemaPath: SCHEMA_PATH });

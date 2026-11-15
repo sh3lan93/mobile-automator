@@ -35,13 +35,26 @@ const FIELDS = Object.freeze([
   Object.freeze({ scenario: 'expected_count', flag: 'count', input: 'count', coerce: Number }),
   Object.freeze({ scenario: 'pattern', flag: 'pattern', input: 'pattern' }),
   Object.freeze({ scenario: 'variable_name', flag: 'variable', input: 'variable_name' }),
+  // screenshot_match (#281): the baseline and the similarity it must reach.
+  // The pure evaluator never reads them; the shared reference-screenshot
+  // decision (src/run/reference-assertion.js) reads them from this input on
+  // both paths (`mauto run` via toEvaluatorInput, `mauto assert` via
+  // fromCliFlags). `tolerance` stays the string a command line carries: the
+  // decision's toleranceOf parses and range-checks it, so both paths refuse
+  // the same values with the same message.
+  // `masks` is deliberately not a row: it is an array of objects in a
+  // scenario but a repeatable `--mask <spec>` flag, so each path passes it to
+  // the decision on its own (scenario `masks` / parseMaskSpec per flag).
+  Object.freeze({ scenario: 'reference_screenshot', flag: 'reference', input: 'reference_screenshot' }),
+  Object.freeze({ scenario: 'tolerance', flag: 'tolerance', input: 'tolerance' }),
 ]);
 
 // A row's value in a scenario assertion, stringified as it would reach the
-// verb on a command line; undefined when the assertion does not carry it.
+// verb on a command line; undefined when the assertion does not carry it (a
+// null, which the schema allows for `reference_screenshot`, carries nothing).
 function scenarioValue(row, assertion) {
   const key = typeof row.scenario === 'function' ? row.scenario(assertion) : row.scenario;
-  return key && assertion[key] !== undefined ? String(assertion[key]) : undefined;
+  return key && assertion[key] !== undefined && assertion[key] !== null ? String(assertion[key]) : undefined;
 }
 
 // Scenario assertion -> the option object commander would parse from its

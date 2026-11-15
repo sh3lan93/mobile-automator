@@ -2,19 +2,25 @@
 
 // Guard: the assertions reference must say which assertion types `mauto assert`
 // decides and which it hands back to the agent. The split is real behavior, not
-// prose: MECHANICAL_TYPES in the evaluator is the source of truth, and every
-// other schema type returns `needs_agent` with `pass: null`. A table that
-// quietly claims all 27 are verified by the CLI would overstate what a green
-// run proves (#166), so the table is derived-checked against the code.
+// prose: MECHANICAL_TYPES (decided over the element list) and
+// REFERENCE_SCREENSHOT_TYPES (decided by a pixel diff against a reference
+// screenshot) in the evaluator are the source of truth, and every other schema
+// type returns `needs_agent` with `pass: null`. A table that quietly claims all
+// 27 are verified by the CLI would overstate what a green run proves (#166), so
+// the table is derived-checked against the code.
 
 const fs = require('fs');
 const path = require('path');
 
-const { MECHANICAL_TYPES } = require('../../src/assertion/evaluator');
+const { MECHANICAL_TYPES, REFERENCE_SCREENSHOT_TYPES } = require('../../src/assertion/evaluator');
 const schema = require('../../src/schemas/scenario_schema.json');
 
 const REPO = path.join(__dirname, '..', '..');
 const SCHEMA_TYPES = schema.definitions.assertion.properties.type.enum;
+
+const MECHANICAL_CELL = '`mauto assert` (mechanical)';
+const REFERENCE_CELL = '`mauto assert` (reference screenshot)';
+const AGENT_CELL = 'agent';
 
 // Rows of the Quick Reference table: | type | category | evaluated by |
 function parseQuickReference() {
@@ -34,14 +40,23 @@ function parseQuickReference() {
   return rows;
 }
 
-describe('assertions reference documents the mechanical / agent-judged split', () => {
+describe('assertions reference documents the mechanical / reference-screenshot / agent-judged split', () => {
   const rows = parseQuickReference();
-  const mechanicalDoc = rows.filter((r) => /^`mauto assert`/.test(r.evaluatedBy)).map((r) => r.type);
-  const agentDoc = rows.filter((r) => r.evaluatedBy === 'agent').map((r) => r.type);
+  const ofClass = (cell) => rows.filter((r) => r.evaluatedBy === cell).map((r) => r.type);
+  const mechanicalDoc = ofClass(MECHANICAL_CELL);
+  const referenceDoc = ofClass(REFERENCE_CELL);
+  const agentDoc = ofClass(AGENT_CELL);
 
-  test('every row is classified as `mauto assert` or agent', () => {
+  test('the evaluator exports both CLI-decided sets, and they are disjoint', () => {
+    expect(MECHANICAL_TYPES).toBeInstanceOf(Set);
+    expect(REFERENCE_SCREENSHOT_TYPES).toBeInstanceOf(Set);
+    const overlap = [...MECHANICAL_TYPES].filter((t) => REFERENCE_SCREENSHOT_TYPES.has(t));
+    expect(overlap).toEqual([]);
+  });
+
+  test('every row is classified as mechanical, reference screenshot, or agent', () => {
     const unclassified = rows
-      .filter((r) => !mechanicalDoc.includes(r.type) && !agentDoc.includes(r.type))
+      .filter((r) => ![MECHANICAL_CELL, REFERENCE_CELL, AGENT_CELL].includes(r.evaluatedBy))
       .map((r) => `${r.type}: "${r.evaluatedBy}"`);
     expect(unclassified).toEqual([]);
   });
@@ -58,8 +73,14 @@ describe('assertions reference documents the mechanical / agent-judged split', (
     expect([...mechanicalDoc].sort()).toEqual([...MECHANICAL_TYPES].sort());
   });
 
-  test('the agent-judged set equals the schema types minus MECHANICAL_TYPES', () => {
-    const want = SCHEMA_TYPES.filter((t) => !MECHANICAL_TYPES.has(t));
+  test('the reference-screenshot set equals REFERENCE_SCREENSHOT_TYPES', () => {
+    expect([...referenceDoc].sort()).toEqual([...REFERENCE_SCREENSHOT_TYPES].sort());
+  });
+
+  test('the agent-judged set equals the schema types minus both CLI-decided sets', () => {
+    const want = SCHEMA_TYPES.filter(
+      (t) => !MECHANICAL_TYPES.has(t) && !REFERENCE_SCREENSHOT_TYPES.has(t)
+    );
     expect([...agentDoc].sort()).toEqual([...want].sort());
   });
 });

@@ -13,8 +13,14 @@
 // - `methods`: per-method overrides `(args, n) => value`; a throw becomes a
 //   rejection, which is how a test scripts a flaky or broken device.
 //
+// - `screenshots`: the image bytes screenshot(dest) writes, one Buffer per
+//   call (the last one repeats), or a function `(n) => Buffer` given the
+//   1-based call count — how a reference-screenshot test feeds real PNGs
+//   (tests/helpers/png.js). Default: a tiny 8-byte stub (a PNG signature with
+//   no image), which is all the evidence-screenshot tests need.
+//
 // Every call is logged in `calls` as `{ method, args }`. screenshot(dest)
-// writes a tiny stub file at `dest`, like the real engine would.
+// writes its bytes at `dest`, like the real engine would.
 //
 // makeFakeClock() is `{ now, sleep }` where sleep advances time instantly.
 
@@ -47,7 +53,9 @@ function el(text, extra = {}) {
 
 const STUB_PNG = Buffer.from('89504e470d0a1a0a', 'hex');
 
-function makeFakeBridge({ elements = [[]], platform = 'android', screenSize = { width: 1080, height: 2400 }, methods = {} } = {}) {
+function makeFakeBridge({
+  elements = [[]], platform = 'android', screenSize = { width: 1080, height: 2400 }, screenshots = null, methods = {},
+} = {}) {
   const calls = [];
   const counts = {};
   const queue = Array.isArray(elements) ? elements.slice() : null;
@@ -59,8 +67,11 @@ function makeFakeBridge({ elements = [[]], platform = 'android', screenSize = { 
     },
     getPlatform: () => platform,
     getScreenSize: () => screenSize,
-    screenshot: ([dest]) => {
-      fs.writeFileSync(dest, STUB_PNG);
+    screenshot: ([dest], n) => {
+      let bytes = STUB_PNG;
+      if (typeof screenshots === 'function') bytes = screenshots(n);
+      else if (Array.isArray(screenshots) && screenshots.length) bytes = screenshots[Math.min(n, screenshots.length) - 1];
+      fs.writeFileSync(dest, bytes);
       return dest;
     },
     tap: () => null,

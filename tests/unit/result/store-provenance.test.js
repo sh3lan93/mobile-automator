@@ -86,6 +86,30 @@ describe('addAssertion persists provenance fields (#275)', () => {
   });
 });
 
+describe('addAssertion persists a screenshot_match comparison (#281)', () => {
+  test('reference/actual paths and the similarity land in the entry and validate', () => {
+    const store = newStore();
+    const entry = store.addAssertion({
+      step_id: 's1', assertion_id: 'a', type: 'screenshot_match', status: 'failed', message: 'differs',
+      mechanical: true, judge: { by: 'reference_screenshot' },
+      reference_screenshot: 'ref/a.png', actual_screenshot: 'shots/a.png', similarity_score: 0.75,
+    });
+    expect(entry).toMatchObject({ reference_screenshot: 'ref/a.png', actual_screenshot: 'shots/a.png', similarity_score: 0.75 });
+    expect(readFile(store).assertion_results).toEqual([entry]);
+    const result = reopen(store).finalize({});
+    expect(validate(result)).toBe(true);
+  });
+
+  test('absent or null comparison fields are not written', () => {
+    const entry = newStore().addAssertion({
+      assertion_id: 'a', type: 'element_exists', pass: true, reference_screenshot: null, similarity_score: null,
+    });
+    expect(entry).not.toHaveProperty('reference_screenshot');
+    expect(entry).not.toHaveProperty('actual_screenshot');
+    expect(entry).not.toHaveProperty('similarity_score');
+  });
+});
+
 describe('explicit assertion status (B3)', () => {
   test.each([['passed'], ['failed'], ['needs_agent']])('status %s is recorded as given', (status) => {
     expect(newStore().addAssertion({ assertion_id: 'a', status }).status).toBe(status);

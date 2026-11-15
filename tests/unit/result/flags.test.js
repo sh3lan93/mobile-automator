@@ -5,6 +5,7 @@ const {
   parseObservation,
   parseCapture,
   parseAssertionVerdict,
+  parseSimilarityScore,
   JUDGES,
   RUN_STATUSES,
   parseRunStatus,
@@ -101,5 +102,17 @@ describe('parseRunStatus', () => {
   test('accepts incomplete (#275)', () => {
     expect(parseRunStatus('incomplete')).toEqual({ value: 'incomplete' });
     expect(RUN_STATUSES).toContain('incomplete');
+  });
+});
+
+describe('parseSimilarityScore (#281)', () => {
+  test('absent records nothing', () => {
+    expect(parseSimilarityScore(undefined)).toEqual({ value: null });
+  });
+  test.each([['0', 0], ['1', 1], ['0.75', 0.75]])('%p -> %p', (raw, value) => {
+    expect(parseSimilarityScore(raw)).toEqual({ value });
+  });
+  test.each([['1.5'], ['-0.1'], ['abc'], ['']])('%p is refused with the flag named', (raw) => {
+    expect(parseSimilarityScore(raw)).toEqual({ error: `--similarity-score must be a number from 0 to 1 (got "${raw}")` });
   });
 });

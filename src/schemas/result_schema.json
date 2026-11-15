@@ -171,9 +171,9 @@
           "judge": {
             "type": "object",
             "required": ["by"],
-            "description": "Who decided the verdict: `mauto` (in-process), `agent` (recorded with --judge agent), or `none` (no verdict yet). Absent when the recorder did not say.",
+            "description": "Who decided the verdict: `mauto` (in-process, over the element list), `reference_screenshot` (in-process, a pixel comparison of a stable screenshot against its reference image — screenshot_match), `agent` (recorded with --judge agent), or `none` (no verdict yet). Absent when the recorder did not say.",
             "properties": {
-              "by": { "type": "string", "enum": ["mauto", "agent", "none"] },
+              "by": { "type": "string", "enum": ["mauto", "agent", "none", "reference_screenshot"] },
               "name": { "type": ["string", "null"], "description": "Name of the judge that decided it, when known." },
               "version": { "type": ["string", "null"], "description": "Version of that judge, when known." }
             }

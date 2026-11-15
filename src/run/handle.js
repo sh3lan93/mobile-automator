@@ -43,7 +43,7 @@ async function handleRun(
     catalog = require('../device/action-catalog'),
     loadConfig = configManager.load,
   },
-  { scenario, runId, file, sha256, deviceId = null, timeoutMs = null }
+  { scenario, runId, file, sha256, deviceId = null, timeoutMs = null, updateReferences = false }
 ) {
   const scenarioId = scenario.scenario_id;
   // The run's timings: the optional `run` block of the workspace config, with
@@ -79,6 +79,7 @@ async function handleRun(
       clock,
       trace,
       settings,
+      updateReferences,
     });
   } catch (err) {
     // An unexpected error (a store write, a bug) still ends the run

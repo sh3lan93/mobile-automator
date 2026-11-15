@@ -31,7 +31,7 @@ function recordAbort(store, step, err) {
 
 async function runScenario({
   scenario, bridge, store, evaluator, catalog, projectRoot, runId, clock,
-  trace = NO_TRACE, settings,
+  trace = NO_TRACE, settings, updateReferences = false,
 }) {
   const failures = [];
   // `variables` is the run's captured values, which the assertions' evaluator
@@ -44,6 +44,9 @@ async function runScenario({
   const state = createRunState(assertions);
   const ctx = {
     scenario, bridge, store, evaluator, catalog, projectRoot, runId, clock, trace, failures, settings, variables, pollUntil, state,
+    // `mauto run --update-references` (#281): every screenshot_match records
+    // its capture as the baseline instead of comparing against one.
+    updateReferences,
   };
   // The assertions that follow a step, once it (and its sub_steps) is done.
   const afterStep = async (stepId) => {

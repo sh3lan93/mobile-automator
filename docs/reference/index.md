@@ -234,7 +234,7 @@ How mobile-automator learns across sessions: the auto-harvested `run-history` pl
 - `text_changed` — Text updated
 
 **How does it look?**
-- `screenshot_match` — Semantic visual comparison
+- `screenshot_match` — Pixel comparison against a reference screenshot (decided by `mauto assert`)
 - `visual_state` — Element styling (highlighted, faded, etc.)
 - `color_style` — Text or element color
 

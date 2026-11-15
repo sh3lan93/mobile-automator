@@ -15,7 +15,7 @@ const path = require('path');
 const { atCap } = require('./sinks/file');
 const { logsDir, runTracePath, RUN_TRACE_PREFIX } = require('./paths');
 
-// A device failure in the envelope's own taxonomy. `deviceFail` (src/cli.js) is
+// A device failure in the envelope's own taxonomy. `deviceFail` (src/output/device-fail.js) is
 // the ONLY producer of these two kinds, so counting them needs no list of which
 // verbs are device verbs — a list that would have to be maintained by hand
 // alongside connectBridge and would be wrong the first time someone forgot.

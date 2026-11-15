@@ -8,14 +8,15 @@ const { version: PKG_VERSION } = require('../package.json');
 
 const { ok, fail, render, exitCodeFor } = require('./output/envelope');
 const selectionStore = require('./device/selection');
-const { engineHint } = require('./device/engine-hints');
+const { FS_ERROR_CODES, deviceHint, deviceFail } = require('./output/device-fail');
 const { ScenarioValidator } = require('./scenario/validator');
 const { loadScenario } = require('./scenario/load');
-const { evaluate, MECHANICAL_TYPES } = require('./assertion/evaluator');
+const { evaluate, MECHANICAL_TYPES, REFERENCE_SCREENSHOT_TYPES } = require('./assertion/evaluator');
 const { fromCliFlags } = require('./assertion/fields');
 const { ResultStore, readFinalizedResult, InvalidRunIdError, AlreadyDecidedError } = require('./result/store');
 const {
-  OBSERVATION_TYPES, parseObservation, parseCapture, parseAssertionVerdict, RUN_STATUSES, parseRunStatus, parseStepStatus,
+  OBSERVATION_TYPES, parseObservation, parseCapture, parseAssertionVerdict, parseSimilarityScore, RUN_STATUSES,
+  parseRunStatus, parseStepStatus,
 } = require('./result/flags');
 const { finalizeAgainstScenario } = require('./result/finalize-against-scenario');
 const { toJUnit } = require('./result/junit');
@@ -50,6 +51,7 @@ const { makeFlusher } = require('./observe/flush');
 const { prepareRun } = require('./run/prepare');
 const { handleRun } = require('./run/handle');
 const { realClock } = require('./run/clock');
+const { handleAssertReference } = require('./run/assert-reference');
 const { makeRunTrace } = require('./run/trace');
 const { parsePositiveInt } = require('./util/parse-positive-int');
 const {
@@ -101,8 +103,9 @@ const MODE_ALIASES = {
 
 const KNOWN_ASSERTION_TYPES = new Set([
   ...MECHANICAL_TYPES,
+  // Decided by comparing a stable screenshot against a reference image (#281).
+  ...REFERENCE_SCREENSHOT_TYPES,
   // Tier-2 visual types the agent must judge.
-  'screenshot_match',
   'visual_state',
   'element_fully_visible',
   'color_style',
@@ -118,11 +121,6 @@ const KNOWN_ASSERTION_TYPES = new Set([
 
 const SWIPE_DIRECTIONS = new Set(['up', 'down', 'left', 'right']);
 const ORIENTATIONS = new Set(['portrait', 'landscape']);
-
-// fs error codes that signal an environment/filesystem problem (perms, missing
-// path, read-only FS, disk full) rather than a logic bug — surfaced as
-// `environment` with a filesystem-specific hint.
-const FS_ERROR_CODES = new Set(['EACCES', 'ENOENT', 'EROFS', 'ENOSPC', 'EPERM']);
 
 // Build a human-readable usage line for a commander command, e.g.
 // "Usage: mauto result add-step [options]". Walks the parent chain so a
@@ -186,16 +184,6 @@ function toEnvelope(err) {
   };
 }
 
-// The hint for any device-kind failure. Precedence: an explicit err.hint wins
-// (our own code attached it knowing the exact cause — a DeviceResolutionError,
-// the daemon-log pointer, a timeout); then engineHint, which recognises engine
-// messages that are useless on their own (the 1.0.5 engine's missing iOS agent
-// and changed Android device ids, #199); then the handler's generic fallback.
-// Every device fail() below goes through here so no handler can miss it.
-function deviceHint(err, fallback) {
-  return (err && err.hint) || engineHint(err && err.message) || fallback;
-}
-
 // ---------------------------------------------------------------------------
 // Handlers — pure-ish: accept injected deps, return { envelope, exitKind }.
 // No process.exit / printing here so they are trivially unit-testable.
@@ -256,21 +244,6 @@ function hostGate(platform) {
   if (isSupportedHost(platform)) return null;
   const err = unsupportedHostError(platform);
   return { envelope: fail(err.kind, err.message, err.hint), exitKind: err.kind };
-}
-
-function deviceFail(err) {
-  // Respect a typed error's kind (e.g. the daemon's 'timeout') so the envelope
-  // and exit code reflect the real failure class; anything else defaults to
-  // 'device' (exit 2) as before.
-  const kind = err.kind || 'device';
-  return {
-    envelope: fail(
-      kind,
-      err.message || String(err),
-      deviceHint(err, 'Ensure a device or simulator is connected and the app is running.')
-    ),
-    exitKind: kind,
-  };
 }
 
 // Parse a "x,y" coordinate string shared by tap / long-press / double-tap.
@@ -540,13 +513,15 @@ async function handlePress({ deviceBridge }, button) {
 // with the verdict still in `data`. A pass and an undecided Tier-2 verdict
 // (`needs_agent`) stay ok / exit 0. Only an unknown assertion type is a
 // structural (invalid_input) error.
-async function handleAssert({ deviceBridge }, type, flags = {}) {
+async function handleAssert(deps, type, flags = {}) {
+  const { deviceBridge } = deps;
   if (!KNOWN_ASSERTION_TYPES.has(type)) {
     return {
       envelope: fail('invalid_input', `unknown assertion type "${type}"`, 'Run `mauto schema scenario` for the supported assertion types.'),
       exitKind: 'invalid_input',
     };
   }
+  if (REFERENCE_SCREENSHOT_TYPES.has(type)) return handleAssertReference(deps, type, flags);
 
   let elements;
   try {
@@ -697,6 +672,11 @@ function handleResultAddAssertion({ resultStoreFactory, projectRoot }, opts) {
   if (verdict.error) {
     return { envelope: fail('invalid_input', verdict.error, null), exitKind: 'invalid_input' };
   }
+  // A screenshot_match's comparison (#281), as `mauto assert` reports it.
+  const similarity = parseSimilarityScore(opts.similarityScore);
+  if (similarity.error) {
+    return { envelope: fail('invalid_input', similarity.error, null), exitKind: 'invalid_input' };
+  }
 
   const store = resultStoreFactory({ runId, scenarioId, projectRoot });
   const entry = store.addAssertion({
@@ -709,6 +689,10 @@ function handleResultAddAssertion({ resultStoreFactory, projectRoot }, opts) {
     message,
     expected: expected === undefined ? null : expected,
     actual: actual === undefined ? null : actual,
+    // The store records these only when supplied (it skips null/undefined).
+    reference_screenshot: opts.referenceScreenshot,
+    actual_screenshot: opts.actualScreenshot,
+    similarity_score: similarity.value,
   });
   return { envelope: ok({ run_id: runId, assertion: entry }, storeHint(store)), exitKind: 'ok' };
 }
@@ -2053,6 +2037,7 @@ function buildProgram(deps = {}) {
     .option('--device <id>', 'target device id')
     .option('--run-id <id>', 'run identifier (run_YYYYMMDD_HHMMSS); minted when omitted')
     .option('--timeout-ms <ms>', 'cap, in milliseconds, on how long any one step waits (a positive integer)')
+    .option('--update-references', 'record each screenshot_match capture as its reference image instead of comparing')
     .action(withEnvelope(requireWorkspace(async (file, opts) => {
       const prepared = prepareRun({ validator, file: path.resolve(cwd, file), runId: opts.runId, timeoutMs: opts.timeoutMs, env: process.env });
       if (prepared.failure) return emit(prepared.failure, humanFlag());
@@ -2068,7 +2053,7 @@ function buildProgram(deps = {}) {
             bridge, resultStoreFactory, memoryStoreFactory, projectRoot, finalizeRun, clock, cwd,
             trace: makeRunTrace({ projectRoot, runId: prepared.runId }),
           },
-          { ...prepared, deviceId }
+          { ...prepared, deviceId, updateReferences: opts.updateReferences === true }
         )
       );
     })));
@@ -2153,23 +2138,31 @@ function buildProgram(deps = {}) {
 
   program
     .command('assert <type>')
-    .description('Evaluate an assertion against the current screen (mechanical types decided by the CLI; visual types deferred to the agent)')
+    .description('Evaluate an assertion against the current screen (mechanical types decided by the CLI; screenshot_match compared against --reference; other visual types deferred to the agent)')
     .option('--target <s>', 'element/target description')
     .option('--expected <s>', 'expected value')
     .option('--operator <op>', 'comparison operator for count assertions')
     .option('--count <n>', 'expected count')
     .option('--pattern <re>', 'regex pattern')
     .option('--variable <name>', 'captured variable name')
+    .option('--reference <path>', 'screenshot_match: reference image, relative to the workspace directory')
+    .option('--tolerance <n>', 'screenshot_match: similarity it must reach, 0..1 (default 0.9)')
+    .option('--mask <spec>', 'screenshot_match: region to ignore, "x,y,width,height" or an element description; repeatable', collect, [])
+    .option('--update-references', 'screenshot_match: record this screen as the reference instead of comparing')
     .option('--device <id>', 'target device id')
     .action(withEnvelope((type, opts) =>
       withBridge(opts.device, (bridge) =>
-        handleAssert({ deviceBridge: bridge }, type, {
+        handleAssert({ deviceBridge: bridge, projectRoot: workspace.root || null, clock }, type, {
           target: opts.target,
           expected: opts.expected,
           operator: opts.operator,
           count: opts.count,
           pattern: opts.pattern,
           variable: opts.variable,
+          reference: opts.reference,
+          tolerance: opts.tolerance,
+          mask: opts.mask,
+          updateReferences: opts.updateReferences === true,
         })
       )
     ));
@@ -2226,6 +2219,9 @@ function buildProgram(deps = {}) {
     .option('--message <text>', 'human-readable justification for the verdict')
     .option('--expected <v>', 'expected value')
     .option('--actual <v>', 'observed value')
+    .option('--reference-screenshot <path>', 'screenshot_match: the reference image compared against')
+    .option('--actual-screenshot <path>', 'screenshot_match: the screenshot captured for it')
+    .option('--similarity-score <n>', 'screenshot_match: the similarity measured (0..1)')
     .action(withEnvelope(requireWorkspace((opts) => {
       const r = handleResultAddAssertion(
         { resultStoreFactory, projectRoot },
@@ -2240,6 +2236,9 @@ function buildProgram(deps = {}) {
           message: opts.message,
           expected: opts.expected,
           actual: opts.actual,
+          referenceScreenshot: opts.referenceScreenshot,
+          actualScreenshot: opts.actualScreenshot,
+          similarityScore: opts.similarityScore,
         }
       );
       emit(r, humanFlag());
