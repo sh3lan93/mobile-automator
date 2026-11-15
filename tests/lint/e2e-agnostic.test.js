@@ -105,10 +105,8 @@ describe('E2E harness — scenarios run through the shipped `mauto run`', () => 
     const kinds = (call.match(/acceptKinds\s*:\s*\[([^\]]*)\]/) || ['', ''])[1];
     expect(kinds).toMatch(/'test_failed'/);
     expect(kinds).toMatch(/'incomplete'/);
-    // The env is either inline or a named const declared with MAUTO_REPLAY.
-    const envName = (call.match(/env\s*:\s*([A-Za-z_$][\w$]*)/) || [])[1];
-    const envSrc = envName ? (runnerSrc.match(new RegExp(`const\\s+${envName}\\s*=\\s*\\{[^}]*\\}`)) || [''])[0] : call;
-    expect(envSrc).toMatch(/MAUTO_REPLAY/);
+    // Inline, so the graduation slice (G) strips exactly one line.
+    expect(call).toMatch(/env\s*:\s*\{\s*MAUTO_REPLAY\s*:\s*'1'\s*\}/);
   });
 
   // #278: the run-id format is the install's, shared with `mauto run`.

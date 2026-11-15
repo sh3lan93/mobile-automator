@@ -14,8 +14,9 @@
 //                 report is written to <E2E_ARTIFACTS_DIR>/junit.
 //
 // A thin caller of the shipped `mauto run` verb (#283): every scenario is one
-// `mauto run <file> --run-id <id> --junit <path>`, and the outcome is read off
-// the result file that run wrote. The harness executes no step and resolves no
+// `mauto run <file> --run-id <id> --junit <path>`, classified off the run data
+// in its envelope; the result file it wrote feeds the golden comparison. The
+// harness executes no step and resolves no
 // target itself, so a green job proves the SHIPPED runner on whichever engine
 // this leg selected — CI runs both. The remaining logic (classification,
 // golden comparison, envelope handling) lives in ./lib (CommonJS, unit-tested
@@ -29,7 +30,6 @@ import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
 const { createMauto } = require('./lib/mauto.js');
-const { outcomeOf } = require('./lib/run-outcome.js');
 const { goldenProblems } = require('./lib/golden.js');
 const { classify, isJobFailure, outcomeMessage } = require('./lib/known-failures.js');
 const { e2eEngine, assertSessionEngine } = require('./lib/engine.js');
@@ -69,11 +69,10 @@ try {
 if (pkgName !== 'mobile-automator') {
   die(`MAUTO_BIN resolves to ${fs.realpathSync(bin)}, which is not inside a mobile-automator package (found ${pkgDir}).`);
 }
-// `mauto run` arrived with replay R1 (#278), behind src/run/gate.js. An
-// install without the gate cannot run a scenario at all. The graduation slice
-// (G) deletes the gate, and must retarget this check when it does.
-if (!fs.existsSync(path.join(pkgDir, 'src/run/gate.js'))) {
-  die(`${pkgDir} has no src/run/gate.js; it predates mauto run (#278).`);
+// The run-id format is the install's own, and it shipped with `mauto run`
+// itself (replay R1, #278): an install without it cannot run a scenario.
+if (!fs.existsSync(path.join(pkgDir, 'src/run/run-id.js'))) {
+  die(`${pkgDir} has no src/run/run-id.js; it predates mauto run (#278).`);
 }
 const { makeRunId } = require(path.join(pkgDir, 'src/run/run-id.js'));
 log(`mauto under test: ${fs.realpathSync(bin)} (package ${pkgDir})`);
@@ -105,10 +104,6 @@ log(`engine: ${engine}`);
 const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-e2e-'));
 const workspace = path.join(projectDir, '.mobile-automator');
 const mauto = createMauto({ bin, cwd: projectDir, log });
-
-// `mauto run` refuses unless MAUTO_REPLAY is exactly '1' (src/run/gate.js).
-// The graduation slice (G) removes the gate and strips this.
-const REPLAY_ENV = { MAUTO_REPLAY: '1' };
 
 // One JUnit report per scenario, beside the other artifacts when there are
 // any. `mauto run --junit` does not create the directory.
@@ -203,19 +198,31 @@ async function main() {
       const junitPath = path.join(junitDir, `${runId}.xml`);
       // A failed run (test_failed, exit 6) and an incomplete one (exit 7: a
       // step needed an agent) are answers, not tool errors; anything else —
-      // including a JUnit write failure (environment) — throws.
+      // including a JUnit write failure (environment) — throws. MAUTO_REPLAY
+      // opens the replay gate; the graduation slice (G) strips it.
       const data = await mauto.run(['run', scenarioPaths.get(id), '--run-id', runId, '--junit', junitPath], {
         acceptKinds: ['test_failed', 'incomplete'],
-        env: REPLAY_ENV,
+        env: { MAUTO_REPLAY: '1' },
       });
-      junit = data.junit_path || junitPath;
+      // The report is the job's deliverable: a run that answered without
+      // writing it is a contract violation, never papered over.
+      if (!data.junit_path || !fs.existsSync(data.junit_path)) {
+        throw new Error(`mauto run answered junit_path ${JSON.stringify(data.junit_path)}, but no report exists at ${junitPath}`);
+      }
+      junit = data.junit_path;
       log(`junit: ${junit}`);
+      // Classified off the envelope's frozen run data (src/run/summary.js) —
+      // the contract a CI job reads — so this job proves it on a device. An
+      // `incomplete` run is not a pass: CI has no agent.
+      passed = data.status === 'passed';
+      failedStep = data.failed_step;
+      details = [
+        ...data.failures,
+        ...data.pending.map((p) => `${p.assertion_id}: needs an agent (not judged)`),
+      ];
+      if (!passed && details.length === 0) details.push(`run ${data.status}`);
       // result_path is relative to the project root.
       const resultPath = path.join(projectDir, data.result_path);
-      const r = outcomeOf(JSON.parse(fs.readFileSync(resultPath, 'utf8')));
-      details = [...r.details];
-      passed = r.passed;
-      failedStep = r.failedStep;
       // Golden problems are kept apart from the run's outcome so a known
       // failure can never absorb them: the gate is the scenario's `golden`
       // tag (lib/golden.js — loud in both directions), a missing fixture is

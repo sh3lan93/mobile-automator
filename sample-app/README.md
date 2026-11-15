@@ -25,7 +25,7 @@ For each run the harness:
 
 1. creates a scratch project, runs `mauto setup --mode agnostic`, selects the device engine with `mauto config set engine <E2E_ENGINE>` (and checks `mauto session status` resolves it from config), copies the scenarios in and checks each with `mauto validate --strict`;
 2. runs each scenario with one `mauto run <file> --run-id <id> --junit <path>` — the shipped runner executes every step, resolves every target and decides every assertion, so a green job proves `mauto run` itself on that engine (until the replay graduation the harness sets `MAUTO_REPLAY=1` for that call, the verb's opt-in gate);
-3. treats a failed run (`test_failed`, exit 6) and an incomplete one (`incomplete`, exit 7: something needed an agent) as answers rather than tool errors, and reads the outcome — passed, first failed step, failure lines — from the result file the run wrote. An incomplete run is not a pass; any other error is a harness error;
+3. treats a failed run (`test_failed`, exit 6) and an incomplete one (`incomplete`, exit 7: something needed an agent) as answers rather than tool errors, and classifies from the run data in that envelope — `status`, `failed_step`, `failures`, `pending`, the contract a CI job reads. An incomplete run is not a pass; a run that answers without its JUnit report, and any other error, is a harness error;
 4. writes each scenario's JUnit report to `<E2E_ARTIFACTS_DIR>/junit/<run id>.xml`.
 
 The harness executes no step and resolves no target itself. A launch that succeeds but leaves the element list empty fails with *engine returned zero elements after a successful launch* — that is engine drift or an app that did not render, never a missing target. See `TROUBLESHOOTING.md`.
