@@ -195,3 +195,78 @@ describe('provenance and the incomplete run (#275)', () => {
     expect(r.envelope.data.pending).toEqual([{ assertion_id: 'looks', step_id: 'tap_more', type: 'visual_state' }]);
   });
 });
+
+describe('the frozen data shape (#282)', () => {
+  const KEYS = [
+    'run_id', 'scenario_id', 'status', 'result_path', 'duration_seconds', 'steps', 'assertions',
+    'failed_step', 'failures', 'pending', 'junit_path', 'executor',
+  ];
+
+  test('a passed run carries exactly the frozen keys, with counts from the result file', async () => {
+    const r = await handleRun(deps((args) => new ResultStore(args)), prepared(scenario));
+    expect(r.exitKind).toBe('ok');
+    expect(Object.keys(r.envelope.data)).toEqual(KEYS);
+    expect(r.envelope.data).not.toHaveProperty('measurements');
+    expect(r.envelope.data.steps).toEqual({ total: 1, passed: 1, failed: 0, error: 0, skipped: 0, needs_agent: 0 });
+    expect(r.envelope.data.assertions).toEqual({ total: 1, passed: 1, failed: 0, needs_agent: 0 });
+    expect(r.envelope.data.junit_path).toBeNull();
+    expect(r.envelope.data.duration_seconds).toBe(resultFile().duration_seconds);
+  });
+
+  test('a failed run carries exactly the frozen keys', async () => {
+    const failing = { ...scenario, steps: [{ id: 'tap_x', action: 'tap', description: 'd', target: 'Nope' }], assertions: [] };
+    const r = await handleRun(deps((args) => new ResultStore(args)), prepared(failing));
+    expect(r.exitKind).toBe('test_failed');
+    expect(Object.keys(r.envelope.data)).toEqual(KEYS);
+    expect(r.envelope.data.steps).toMatchObject({ total: 1, failed: 1 });
+    expect(r.envelope.data.failed_step).toBe('tap_x');
+  });
+
+  test('an incomplete run carries exactly the frozen keys; a needs_agent step counts once', async () => {
+    const needsHand = { ...scenario, steps: [{ id: 'wifi_off', action: 'disable_wifi', description: 'd' }], assertions: [] };
+    const r = await handleRun(deps((args) => new ResultStore(args)), prepared(needsHand));
+    expect(r.exitKind).toBe('incomplete');
+    expect(Object.keys(r.envelope.data)).toEqual(KEYS);
+    expect(r.envelope.data.steps).toEqual({ total: 1, passed: 0, failed: 0, error: 0, skipped: 0, needs_agent: 1 });
+  });
+});
+
+describe('--junit (#282)', () => {
+  const { toJUnit } = require('../../../src/result/junit');
+  const failing = { ...scenario, steps: [{ id: 'tap_x', action: 'tap', description: 'd', target: 'Nope' }], assertions: [] };
+
+  test.each([
+    ['passed', scenario, 'ok'],
+    ['failed', failing, 'test_failed'],
+  ])('a %s run writes the report mauto result export would render, and names it', async (_label, sc, exitKind) => {
+    const junitPath = path.join(root, 'report.xml');
+    const r = await handleRun(deps((args) => new ResultStore(args)), { ...prepared(sc), junitPath });
+    expect(r.exitKind).toBe(exitKind);
+    expect(r.envelope.data.junit_path).toBe(junitPath);
+    expect(fs.readFileSync(junitPath, 'utf8')).toBe(toJUnit([resultFile()]).xml);
+  });
+
+  test('a write that fails is environment, after finalize, with the full data and junit_path null', async () => {
+    const junitPath = path.join(root, 'gone', 'report.xml');
+    // The parent turns into a file after prepareRun checked it.
+    fs.writeFileSync(path.join(root, 'gone'), 'x');
+    const d = deps((args) => new ResultStore(args));
+    const r = await handleRun(d, { ...prepared(scenario), junitPath });
+    expect(r.exitKind).toBe('environment');
+    expect(r.envelope.ok).toBe(false);
+    expect(r.envelope.error.message).toMatch(new RegExp(`^could not write the JUnit report to ${junitPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}: `));
+    const resultPath = path.join('.mobile-automator', 'results', `${RUN_ID}.json`);
+    expect(r.envelope.hint).toContain(resultPath);
+    expect(r.envelope.data).toMatchObject({ status: 'passed', junit_path: null, result_path: resultPath });
+    expect(d.finalizeRun).toHaveBeenCalledTimes(1);
+    expect(resultFile().status).toBe('passed');
+  });
+
+  test('the writer is injectable; its failure overrides a test_failed exit too', async () => {
+    const d = { ...deps((args) => new ResultStore(args)), writeFile: () => { throw new Error('EACCES'); } };
+    const r = await handleRun(d, { ...prepared(failing), junitPath: path.join(root, 'r.xml') });
+    expect(r.exitKind).toBe('environment');
+    expect(r.envelope.error.message).toBe(`could not write the JUnit report to ${path.join(root, 'r.xml')}: EACCES`);
+    expect(r.envelope.data.status).toBe('failed');
+  });
+});

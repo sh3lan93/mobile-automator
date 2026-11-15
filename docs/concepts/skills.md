@@ -360,7 +360,7 @@ Traditional test frameworks require you to write tests in code or DSLs. Pulled-o
 
 ### Semantic Visual Testing
 
-For the agent-judged visual assertions (`visual_state`, `color_style`, `element_fully_visible` and the other types `mauto assert` returns as `needs_agent`), the agent doesn't use pixel-by-pixel comparison. Instead, it uses AI vision to answer:
+For the agent-judged visual assertions (`visual_state`, `color_style`, `toast_visible` and the other types `mauto assert` returns as `needs_agent`), the agent doesn't use pixel-by-pixel comparison. Instead, it uses AI vision to answer:
 
 > Does this screen show what the assertion expects?
 

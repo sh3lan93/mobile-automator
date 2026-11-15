@@ -12,6 +12,7 @@ const { FS_ERROR_CODES, deviceHint, deviceFail } = require('./output/device-fail
 const { ScenarioValidator } = require('./scenario/validator');
 const { loadScenario } = require('./scenario/load');
 const { evaluate, MECHANICAL_TYPES, REFERENCE_SCREENSHOT_TYPES } = require('./assertion/evaluator');
+const { observe } = require('./assertion/observe');
 const { fromCliFlags } = require('./assertion/fields');
 const { ResultStore, readFinalizedResult, InvalidRunIdError, AlreadyDecidedError } = require('./result/store');
 const {
@@ -50,6 +51,7 @@ const observeTransport = require('./observe/transport');
 const { makeFlusher } = require('./observe/flush');
 const { prepareRun } = require('./run/prepare');
 const { handleRun } = require('./run/handle');
+const { renderRunHuman } = require('./output/run-human');
 const { realClock } = require('./run/clock');
 const { handleAssertReference } = require('./run/assert-reference');
 const { makeRunTrace } = require('./run/trace');
@@ -107,15 +109,12 @@ const KNOWN_ASSERTION_TYPES = new Set([
   ...REFERENCE_SCREENSHOT_TYPES,
   // Tier-2 visual types the agent must judge.
   'visual_state',
-  'element_fully_visible',
   'color_style',
-  'screen_title',
   'alert_present',
   'alert_text',
   'toast_visible',
   'keyboard_visible',
   'dark_mode_active',
-  'permission_dialog_shown',
   'element_state',
 ]);
 
@@ -523,16 +522,17 @@ async function handleAssert(deps, type, flags = {}) {
   }
   if (REFERENCE_SCREENSHOT_TYPES.has(type)) return handleAssertReference(deps, type, flags);
 
-  let elements;
+  let observed;
   try {
-    elements = await deviceBridge.listElements();
+    observed = await observe(deviceBridge, type);
   } catch (err) {
     return deviceFail(err);
   }
+  const { elements, screenSize } = observed;
 
   const assertion = fromCliFlags(type, flags);
 
-  const r = evaluate(assertion, { elements });
+  const r = evaluate(assertion, { elements, screenSize });
   // The verdict has to be transcribed into `result add-assertion` by the agent
   // (assert has no run context, and Tier-2 types are not decided here at all).
   // Emitting the exact command turns transcription into copying (#140 D1).
@@ -2038,8 +2038,13 @@ function buildProgram(deps = {}) {
     .option('--run-id <id>', 'run identifier (run_YYYYMMDD_HHMMSS); minted when omitted')
     .option('--timeout-ms <ms>', 'cap, in milliseconds, on how long any one step waits (a positive integer)')
     .option('--update-references', 'record each screenshot_match capture as its reference image instead of comparing')
+    .option('--judge <who>', 'who decides the assertions only an agent can judge (accepted: none)', 'none')
+    .option('--junit <path>', 'also write the run as a JUnit XML report to this file (its directory must exist)')
     .action(withEnvelope(requireWorkspace(async (file, opts) => {
-      const prepared = prepareRun({ validator, file: path.resolve(cwd, file), runId: opts.runId, timeoutMs: opts.timeoutMs, env: process.env });
+      const prepared = prepareRun({
+        validator, file: path.resolve(cwd, file), runId: opts.runId, timeoutMs: opts.timeoutMs, judge: opts.judge,
+        junit: opts.junit, cwd, env: process.env,
+      });
       if (prepared.failure) return emit(prepared.failure, humanFlag());
       // The preAction hook saw only the flag and the environment; this covers
       // a minted id, so verb.end lands in the same trace as the run's stamps.
@@ -2047,15 +2052,19 @@ function buildProgram(deps = {}) {
       // Resolved here, not inside withBridge, so the executor records the
       // device the run connected to (null: mobile-mcp auto-selected one).
       const deviceId = resolveVerbDevice(opts.device);
-      return connectBridge(deviceId, (bridge) =>
-        handleRun(
+      // Every envelope handleRun returns carries the run's frozen data, so
+      // each one renders as the run summary under --human. A refusal above, a
+      // connect failure or a thrown error take the generic render.
+      return connectBridge(deviceId, async (bridge) => ({
+        ...(await handleRun(
           {
             bridge, resultStoreFactory, memoryStoreFactory, projectRoot, finalizeRun, clock, cwd,
             trace: makeRunTrace({ projectRoot, runId: prepared.runId }),
           },
           { ...prepared, deviceId, updateReferences: opts.updateReferences === true }
-        )
-      );
+        )),
+        renderHuman: renderRunHuman,
+      }));
     })));
 
   program
@@ -2145,6 +2154,7 @@ function buildProgram(deps = {}) {
     .option('--count <n>', 'expected count')
     .option('--pattern <re>', 'regex pattern')
     .option('--variable <name>', 'captured variable name')
+    .option('--permission <name>', 'permission_dialog_shown: the permission the dialog must name (e.g. camera)')
     .option('--reference <path>', 'screenshot_match: reference image, relative to the workspace directory')
     .option('--tolerance <n>', 'screenshot_match: similarity it must reach, 0..1 (default 0.9)')
     .option('--mask <spec>', 'screenshot_match: region to ignore, "x,y,width,height" or an element description; repeatable', collect, [])
@@ -2159,6 +2169,7 @@ function buildProgram(deps = {}) {
           count: opts.count,
           pattern: opts.pattern,
           variable: opts.variable,
+          permission: opts.permission,
           reference: opts.reference,
           tolerance: opts.tolerance,
           mask: opts.mask,
@@ -2662,8 +2673,11 @@ function makeEmitters({ projectRoot = process.cwd() } = {}) {
     process.exit(exitCode);
   }
 
-  const fromEnvelope = (envelope, exitKind, human) => ({
-    text: render(envelope, { human }),
+  // `renderHuman` is a handler's own --human rendering of its envelope (only
+  // `mauto run` has one, src/output/run-human.js); without --human, or
+  // without one, the generic render. JSON output is the same either way.
+  const fromEnvelope = (envelope, exitKind, human, renderHuman) => ({
+    text: human && typeof renderHuman === 'function' ? renderHuman(envelope) : render(envelope, { human }),
     exitKind,
     ok: Boolean(envelope && envelope.ok),
     errorKind: envelope && envelope.error ? envelope.error.kind : undefined,
@@ -2688,7 +2702,7 @@ function makeEmitters({ projectRoot = process.cwd() } = {}) {
     getRunId: () => resolvedRunId,
     getVerb: () => resolvedVerb,
 
-    emit: ({ envelope, exitKind }, human) => finish(fromEnvelope(envelope, exitKind, human)),
+    emit: ({ envelope, exitKind, renderHuman }, human) => finish(fromEnvelope(envelope, exitKind, human, renderHuman)),
 
     // Raw content (markdown / JSON schema / text) verbatim, no envelope
     // wrapping. Used by the guide/schema/bootstrap success paths.

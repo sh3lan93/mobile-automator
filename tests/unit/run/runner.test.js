@@ -412,6 +412,53 @@ describe('runScenario', () => {
       );
       expect(r.file.assertion_results[0]).toMatchObject({ status: 'passed', mechanical: true, judge: { by: 'mauto' } });
     });
+
+    // R5a (#276): screen_title is decided by mauto against the screen size,
+    // which is fetched only for the types that need it. Each case runs in its
+    // own workspace (beforeEach), so its verdict is assertion_results[0].
+    const titled = (expected_text) => scenario(
+      [{ id: 'hide', action: 'dismiss_keyboard', description: 'd' }],
+      [{ id: 'titled', after_step: 'hide', type: 'screen_title', description: 'd', expected_text }]
+    );
+
+    test('screen_title passes mechanically when the title sits in the top band', async () => {
+      const b = makeFakeBridge({ elements: [homeElements()], screenSize: { width: 1280, height: 2856 } });
+      const r = await exec(titled('Sample Shop'), b);
+      expect(r.file.assertion_results).toHaveLength(1);
+      expect(r.file.assertion_results[0]).toMatchObject({
+        type: 'screen_title', status: 'passed', mechanical: true, judge: { by: 'mauto' }, expected: 'Sample Shop',
+      });
+      expect(b.of('getScreenSize')).toHaveLength(1);
+    });
+
+    test('screen_title fails mechanically when no element carries the title', async () => {
+      const b = makeFakeBridge({ elements: [homeElements()] });
+      const r = await exec(titled('Checkout'), b);
+      expect(r.file.assertion_results).toHaveLength(1);
+      expect(r.file.assertion_results[0]).toMatchObject({
+        type: 'screen_title', status: 'failed', mechanical: true, judge: { by: 'mauto' }, expected: 'Checkout',
+      });
+      expect(b.of('getScreenSize')).toHaveLength(1);
+    });
+
+    test('types that need no screen size never fetch it', async () => {
+      const b = makeFakeBridge({ elements: [[el('Allow'), el('Deny'), el('Allow camera access?')]] });
+      const r = await exec(
+        scenario(
+          [{ id: 'hide', action: 'dismiss_keyboard', description: 'd' }],
+          [
+            { id: 'there', after_step: 'hide', type: 'element_exists', description: 'd', element_description: 'Allow' },
+            { id: 'asked', after_step: 'hide', type: 'permission_dialog_shown', description: 'd', permission_name: 'camera' },
+          ]
+        ),
+        b
+      );
+      expect(r.file.assertion_results.map((a) => [a.assertion_id, a.status, a.judge])).toEqual([
+        ['there', 'passed', { by: 'mauto' }],
+        ['asked', 'passed', { by: 'mauto' }],
+      ]);
+      expect(b.of('getScreenSize')).toHaveLength(0);
+    });
   });
 
   // executor: "every verb carries MAUTO_RUN_ID so the run has a trace"

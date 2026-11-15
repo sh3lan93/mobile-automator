@@ -19,13 +19,14 @@ const FLAG_KEY = {
   '--variable': 'variable',
   '--reference': 'reference',
   '--tolerance': 'tolerance',
+  '--permission': 'permission',
 };
 
 describe('FIELDS', () => {
   test('is the one table, in `mauto assert` argv order', () => {
     expect(FIELDS.map((f) => `--${f.flag}`)).toEqual(Object.keys(FLAG_KEY));
     expect(FIELDS.map((f) => f.input)).toEqual([
-      'target', 'expected', 'operator', 'count', 'pattern', 'variable_name', 'reference_screenshot', 'tolerance',
+      'target', 'expected', 'operator', 'count', 'pattern', 'variable_name', 'reference_screenshot', 'tolerance', 'permission_name',
     ]);
   });
 });
@@ -93,6 +94,18 @@ const CASES = [
     argv: [],
   },
   {
+    a: { id: 'a14', type: 'screen_title', after_step: 's1', expected_text: 'Settings' },
+    argv: ['--expected', 'Settings'],
+  },
+  {
+    a: { id: 'a15', type: 'permission_dialog_shown', after_step: 's1', permission_name: 'camera' },
+    argv: ['--permission', 'camera'],
+  },
+  {
+    a: { id: 'a16', type: 'element_fully_visible', after_step: 's1', element_description: 'Buy button' },
+    argv: ['--target', 'Buy button'],
+  },
+  {
     // A type with no expected field ignores a stray expected-shaped key.
     a: { id: 'a11', type: 'element_exists', after_step: 's1', element_description: 'Home', expected_value: 'x' },
     argv: ['--target', 'Home'],
@@ -108,6 +121,7 @@ describe('EXPECTED_FIELD', () => {
       content_description: 'label_value',
       has_accessibility_label: 'label_value',
       element_visible: 'expected_visible',
+      screen_title: 'expected_text',
     });
   });
 

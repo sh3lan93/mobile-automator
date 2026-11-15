@@ -3,21 +3,35 @@
 // Pure assertion evaluator.
 //
 // The `mauto guide execute` reasoning floor splits the 27 assertion types into
-// two tiers:
+// tiers:
 //
 //   Tier 1 — element-list-powered. These are purely MECHANICAL: a deterministic
 //            check over the agnostic element list (+ captured variables / a
-//            previous snapshot). The CLI owns them.
+//            previous snapshot / the screen size). The CLI owns them.
 //
 //   Tier 2 — screenshot + AI visual analysis. These require an agent to judge a
 //            screenshot, so the CLI cannot decide pass/fail. We surface them as
 //            needs_agent with pass = null.
 //
-// MECHANICAL_TYPES is the verbatim Tier-1 list from that guide section,
-// minus `element_state` whose per-attribute state
-// inspection is not represented in the agnostic element model (no enabled/
-// focused/checked fields survive normalization), so it cannot be decided
-// mechanically here and falls through to needs_agent.
+// (screenshot_match is a third class, REFERENCE_SCREENSHOT_TYPES below.)
+//
+// MECHANICAL_TYPES is the Tier-1 list from that guide section. It leaves out
+// `element_state`, whose per-attribute state inspection is not represented in
+// the agnostic element model (no enabled/focused/checked fields survive
+// normalization), and `alert_present` / `alert_text`, for which the element
+// list carries no platform-agnostic signal that a dialog is up. Three types
+// were promoted from Tier 2 by #276, each decided over what the element list
+// does carry, and each narrower than a screenshot judgment would be:
+//   element_fully_visible   — the bounds lie inside the screen (not clipped by
+//                             its edges; overlap by another element is NOT
+//                             detected);
+//   screen_title            — an element whose text/label equals the title
+//                             starts in the top quarter of the screen;
+//   permission_dialog_shown — a system allow button and a deny button are both
+//                             on screen (+ the permission named, if given).
+
+const { ALLOW_LABELS, DENY_LABELS, findByLabels } = require('../dialog/permission-labels');
+
 const MECHANICAL_TYPES = new Set([
   'element_exists',
   'element_not_exists',
@@ -34,7 +48,18 @@ const MECHANICAL_TYPES = new Set([
   'has_accessibility_label',
   'value_matches_variable',
   'text_changed',
+  'element_fully_visible',
+  'screen_title',
+  'permission_dialog_shown',
 ]);
+
+// The mechanical types that need `ctx.screenSize` ({width, height}, in the
+// element bounds' coordinate space). Callers fetch the screen size only for
+// these, so every other assertion costs no extra device call.
+const SCREEN_SIZE_TYPES = new Set(['element_fully_visible', 'screen_title']);
+
+// A title sits in the top quarter of the screen.
+const TITLE_BAND = 0.25;
 
 // The types the CLI decides by comparing a stable screenshot against a stored
 // reference image (src/run/reference-assertion.js, #281) rather than over the
@@ -43,6 +68,11 @@ const MECHANICAL_TYPES = new Set([
 // device, so it lives in the runner and `mauto assert`, which branch on this
 // set before they reach `evaluate()`.
 const REFERENCE_SCREENSHOT_TYPES = new Set(['screenshot_match']);
+
+// Both platforms' system-dialog button labels: the assertion is agnostic, so a
+// dialog counts whichever platform drew it.
+const ANY_ALLOW = [...new Set(Object.values(ALLOW_LABELS).flat())];
+const ANY_DENY = [...new Set(Object.values(DENY_LABELS).flat())];
 
 function labelOf(e) {
   return (e && typeof e.accessibility_label === 'string') ? e.accessibility_label : '';
@@ -123,17 +153,31 @@ function needsAgent(type) {
   );
 }
 
+// A usable {width, height} or null.
+function validScreenSize(s) {
+  if (!s || typeof s !== 'object') return null;
+  const width = Number(s.width);
+  const height = Number(s.height);
+  return width > 0 && height > 0 ? { width, height } : null;
+}
+
+const sizeOf = (s) => `${s.width}x${s.height}`;
+
 // Evaluate a single assertion.
-//   assertion: { type, target?, expected?, operator?, count?, pattern?, variable_name? }
-//   ctx:       { elements, variables = {}, previous = null }
+//   assertion: { type, target?, expected?, operator?, count?, pattern?, variable_name?, permission_name? }
+//   ctx:       { elements, variables = {}, previous = null, screenSize = null }
 function evaluate(assertion = {}, ctx = {}) {
   const type = assertion.type;
   const elements = Array.isArray(ctx.elements) ? ctx.elements : [];
   const variables = ctx.variables || {};
   const previous = Array.isArray(ctx.previous) ? ctx.previous : null;
+  const screenSize = validScreenSize(ctx.screenSize);
 
   if (!MECHANICAL_TYPES.has(type)) {
     return needsAgent(type);
+  }
+  if (SCREEN_SIZE_TYPES.has(type) && !screenSize) {
+    return result(type, true, false, `No screen size to check '${type}' against.`);
   }
 
   const target = assertion.target;
@@ -282,6 +326,55 @@ function evaluate(assertion = {}, ctx = {}) {
         : `Element '${target}' text unchanged ('${currText}').`;
       break;
     }
+    case 'element_fully_visible': {
+      const found = findFirst(elements, target);
+      if (!found) {
+        return result(type, true, false, `No element matching '${target}' found on screen.`);
+      }
+      const [x1, y1, x2, y2] = found.bounds;
+      const inside = [x1, y1, x2, y2].every(Number.isFinite) &&
+        x1 >= 0 && y1 >= 0 && x2 <= screenSize.width && y2 <= screenSize.height;
+      pass = inside;
+      message = pass
+        ? `Element '${target}' at [${found.bounds}] lies inside the ${sizeOf(screenSize)} screen.`
+        : `Element '${target}' at [${found.bounds}] is clipped by the edges of the ${sizeOf(screenSize)} screen.`;
+      break;
+    }
+    case 'screen_title': {
+      const expected = String(assertion.expected == null ? '' : assertion.expected).trim().toLowerCase();
+      const band = TITLE_BAND * screenSize.height;
+      const carriers = elements.filter((e) =>
+        [e.text, e.accessibility_label].some((v) => typeof v === 'string' && v.trim().toLowerCase() === expected));
+      const title = carriers.find((e) => Array.isArray(e.bounds) && e.bounds[1] < band);
+      pass = expected !== '' && Boolean(title);
+      if (pass) {
+        message = `Screen title '${assertion.expected}' found at top edge y=${title.bounds[1]} (title band y < ${band}).`;
+      } else if (carriers.length) {
+        const tops = carriers.map((e) => (Array.isArray(e.bounds) ? e.bounds[1] : '?')).join(', ');
+        message = `'${assertion.expected}' is on screen but below the title band (top edge y=${tops}, band y < ${band}).`;
+      } else {
+        message = `No element carries the screen title '${assertion.expected}'.`;
+      }
+      break;
+    }
+    case 'permission_dialog_shown': {
+      const allow = findByLabels(elements, ANY_ALLOW);
+      const deny = findByLabels(elements, ANY_DENY);
+      const name = assertion.permission_name;
+      const named = name === undefined || name === null || name === ''
+        ? true
+        : elements.some((e) => matches(e, name));
+      pass = Boolean(allow && deny) && named;
+      if (pass) {
+        message = `Permission dialog shown ('${allow.label}' / '${deny.label}')${name ? ` for '${name}'` : ''}.`;
+      } else if (!allow || !deny) {
+        const missing = [!allow && 'an allow button', !deny && 'a deny button'].filter(Boolean).join(' and ');
+        message = `No permission dialog: ${missing} not found on screen.`;
+      } else {
+        message = `A permission dialog is shown, but no element names '${name}'.`;
+      }
+      break;
+    }
     default:
       // Should be unreachable given the MECHANICAL_TYPES guard above.
       return needsAgent(type);
@@ -294,4 +387,4 @@ function evaluate(assertion = {}, ctx = {}) {
 // (sample-app/scripts/lib/resolve.js), which resolves tap targets with THIS
 // matcher so the harness and `mauto assert` can never disagree about what a
 // target string means (#94).
-module.exports = { MECHANICAL_TYPES, REFERENCE_SCREENSHOT_TYPES, evaluate, matches, findFirst, textOf, compare };
+module.exports = { MECHANICAL_TYPES, REFERENCE_SCREENSHOT_TYPES, SCREEN_SIZE_TYPES, evaluate, matches, findFirst, textOf, compare };

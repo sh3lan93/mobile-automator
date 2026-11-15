@@ -226,7 +226,7 @@ setting. Do not switch the engine mid-run yourself.
 
 For each assertion in the scenario (evaluated after the referenced step), pick the type recorded in the scenario and evaluate it. The 27 types split into two tiers by **who decides pass/fail**, plus one reference-screenshot type the CLI also decides:
 
-- **Tier 1 — mechanical (the CLI decides).** These are deterministic checks over the on-screen element list (plus captured variables / a previous snapshot). Run `mauto elements` to get the current screen, then evaluate the assertion with `mauto assert <type> ...`; the CLI returns a JSON verdict (`{ mechanical: true, pass: true|false, message }`). A passing verdict arrives as a normal `ok: true` envelope. A failing one arrives as `ok: false` with `error.kind: "test_failed"` and exit code `6`, and the verdict (`pass: false`) is still in `data`. That is the test result, not a tool error: do not retry the verb or treat the run as broken. You record that verdict — you do not re-judge it.
+- **Tier 1 — mechanical (the CLI decides).** These are deterministic checks over the on-screen element list (plus captured variables / a previous snapshot / the screen size). Run `mauto elements` to get the current screen, then evaluate the assertion with `mauto assert <type> ...`; the CLI returns a JSON verdict (`{ mechanical: true, pass: true|false, message }`). A passing verdict arrives as a normal `ok: true` envelope. A failing one arrives as `ok: false` with `error.kind: "test_failed"` and exit code `6`, and the verdict (`pass: false`) is still in `data`. That is the test result, not a tool error: do not retry the verb or treat the run as broken. You record that verdict — you do not re-judge it.
 - **Reference screenshot — `screenshot_match` (the CLI decides).** A deterministic pixel comparison against a stored reference screenshot (a baseline); see the reference-screenshot block below. You record its verdict — you do not judge it by eye.
 - **Tier 2 — visual / semantic (the agent decides).** These require judging pixels. `mauto assert <type> ...` reports them as `needs_agent` (with `pass: null`) because the CLI cannot decide them. For these you take a screenshot with `mauto screenshot <path>`, visually analyze it, and report pass/fail yourself with a clear justification of what you observed.
 
@@ -238,7 +238,7 @@ For each assertion in the scenario (evaluated after the referenced step), pick t
 
 - **`element_exists`:** the element described in `element_description` is present in the on-screen element list.
 - **`element_not_exists`:** the element is NOT present in the on-screen element list.
-- **`element_visible`:** pass if the element appears in the result. `expected_visible: true` = must be present, `false` = must be absent. Intended for elements that may be scrolled off or conditionally hidden, as distinct from fully absent elements (`element_exists` / `element_not_exists`). If you need to confirm the element is actually within the viewport (not clipped or scrolled off), use `element_fully_visible` (Tier 2) instead.
+- **`element_visible`:** pass if the element appears in the result. `expected_visible: true` = must be present, `false` = must be absent. Intended for elements that may be scrolled off or conditionally hidden, as distinct from fully absent elements (`element_exists` / `element_not_exists`). If you need to confirm the element is actually within the viewport (not clipped or scrolled off), use `element_fully_visible` instead.
 - **`element_text`:** the element's text exactly matches `expected_value`.
 - **`text_contains`:** the element's text includes `expected_substring` as a substring.
 - **`text_not_empty`:** the target element's text has length > 0.
@@ -252,6 +252,9 @@ For each assertion in the scenario (evaluated after the referenced step), pick t
 - **`has_accessibility_label`:** the element's accessibility label is non-empty. If `label_value` is set, verify it matches exactly.
 - **`value_matches_variable`:** look up `variable_name` in the session variable map; verify the element described by `element_description` contains text that matches the captured value. If `pattern` is also set, use it as a format hint to locate the relevant portion.
 - **`text_changed`:** compare the element's current text with its text at the previous assertion checkpoint. Pass if the text differs.
+- **`element_fully_visible`:** the element described in `element_description` lies fully inside the screen — not clipped by the screen edges or scrolled partly off. The CLI checks the element's bounds against the screen size; it cannot see overlap, so an element covered by another one still passes.
+- **`screen_title`:** some element whose text or accessibility label equals `expected_text` (ignoring case and surrounding whitespace) starts in the top quarter of the screen. The same text lower on the screen fails.
+- **`permission_dialog_shown`:** an OS-level permission dialog is up: an allow button and a deny button are both on screen. If `permission_name` is set (e.g., `"camera"`, `"location"`), pass it as `--permission <name>`; some element on screen must also mention it.
 
 ---
 
@@ -269,15 +272,12 @@ For each assertion in the scenario (evaluated after the referenced step), pick t
 For all Tier 2 assertions: take a screenshot, visually analyze it, and report pass/fail with a clear justification of what you observed.
 
 - **`visual_state`:** assess whether the screen is in the `expected_visual_state`: `loaded` (content visible, no spinners), `loading` (loading indicator present), `empty` (empty-state UI), or `error` (error message/state visible).
-- **`element_fully_visible`:** the element described in `element_description` is fully visible in the viewport — not clipped, not scrolled off, nothing overlapping it.
 - **`color_style`:** locate the element and assess its dominant color. If `color_hex` is set, verify it matches approximately. If `expected_theme` is set (`dark`/`light`), verify the colors are consistent with that theme.
-- **`screen_title`:** read the navigation bar / screen title from the screenshot. Verify it matches `expected_text`.
 - **`alert_present`:** a system alert or modal dialog is visually present.
 - **`alert_text`:** an alert/dialog is on screen and its primary text matches `expected_text`.
 - **`toast_visible`:** the toast may be transient. Take a screenshot at the moment of the step and look for a floating notification overlay. If visible, verify its text matches `expected_text`. If it has already disappeared, mark `failed` and note it was transient.
 - **`keyboard_visible`:** whether the soft keyboard is visible at the bottom of the screen. `expected_visible: true` = must be shown, `false` = must be hidden.
 - **`dark_mode_active`:** assess the overall screen appearance. Pass if the background is dark (dark mode) or light (light mode) as specified by `expected_theme`.
-- **`permission_dialog_shown`:** an OS-level permission request dialog is visible. If `permission_name` is set (e.g., `"camera"`, `"location"`), verify the dialog requests that specific permission.
 
 **Dynamic content:** if the reference `expected_state` marks content as `[dynamic:...]`, ignore those regions when you judge a Tier-2 check. For `screenshot_match`, dynamic regions are excluded only through the assertion's `masks`.
 

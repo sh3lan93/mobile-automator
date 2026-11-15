@@ -10,9 +10,11 @@ Every assertion object requires `id`, `after_step` (the step `id` it runs after)
 
 ## Mechanical vs agent-judged assertions
 
-Not every assertion is decided by the CLI. 15 of the 27 assertion types are evaluated deterministically by `mauto assert` over the element list. 1 is compared against a reference screenshot: `mauto assert` decides `screenshot_match` with a pixel diff against a stored baseline image (see [screenshot_match](#screenshot_match)). The other 11 return `needs_agent` with `pass: null`: the host agent judges them (often from a screenshot) and records the verdict with `mauto result add-assertion`. An agent-judged pass is only as reliable as the agent that judged it.
+Not every assertion is decided by the CLI. 18 of the 27 assertion types are evaluated deterministically by `mauto assert` over the element list. 1 is compared against a reference screenshot: `mauto assert` decides `screenshot_match` with a pixel diff against a stored baseline image (see [screenshot_match](#screenshot_match)). The other 8 return `needs_agent` with `pass: null`: the host agent judges them (often from a screenshot) and records the verdict with `mauto result add-assertion`. An agent-judged pass is only as reliable as the agent that judged it.
 
-`element_state` is agent-judged because the element model drops enabled, focused and checked state, so the CLI cannot decide it mechanically.
+`element_state` is agent-judged because the element model drops enabled, focused and checked state, so the CLI cannot decide it mechanically. `alert_present` and `alert_text` are agent-judged because the element list carries no platform-agnostic sign that a dialog is up.
+
+Three mechanical types read the element list more narrowly than a screenshot judgment would: `element_fully_visible` checks the screen edges only, `screen_title` checks the top quarter of the screen, and `permission_dialog_shown` looks for the system dialog's buttons. Their sections below give the exact rule.
 
 ## Quick Reference Table
 
@@ -34,16 +36,16 @@ Not every assertion is decided by the CLI. 15 of the 27 assertion types are eval
 | list_is_empty | Count & Collections | `mauto assert` (mechanical) |
 | screenshot_match | Visual & Layout | `mauto assert` (reference screenshot) |
 | visual_state | Visual & Layout | agent |
-| element_fully_visible | Visual & Layout | agent |
+| element_fully_visible | Visual & Layout | `mauto assert` (mechanical) |
 | color_style | Visual & Layout | agent |
-| screen_title | Navigation & Screen | agent |
+| screen_title | Navigation & Screen | `mauto assert` (mechanical) |
 | alert_present | Navigation & Screen | agent |
 | alert_text | Navigation & Screen | agent |
 | toast_visible | Navigation & Screen | agent |
 | keyboard_visible | Navigation & Screen | agent |
 | has_accessibility_label | Accessibility | `mauto assert` (mechanical) |
 | value_matches_variable | Data & Variables | `mauto assert` (mechanical) |
-| permission_dialog_shown | Platform-Specific | agent |
+| permission_dialog_shown | Platform-Specific | `mauto assert` (mechanical) |
 | dark_mode_active | Platform-Specific | agent |
 
 ## Element State Assertions (4 types)
@@ -448,9 +450,11 @@ Check that the feed shows the empty state
 ---
 
 ### element_fully_visible
-Verify element is completely visible (not clipped).
+Verify element is completely on screen (not clipped by the screen edges).
 
-**When to use:** Ensure element is not cut off by parent container or screen bounds.
+**When to use:** Ensure an element is not cut off by the screen edges or scrolled partly off screen.
+
+**How `mauto assert` decides it:** it finds the element described by `element_description` and passes when the element's bounds lie fully inside the screen (`mauto` reads the screen size from the device). It fails when no element matches or when any edge of the element runs past the screen. It cannot see overlap: an element covered by another element, or clipped by a parent container inside the screen, still passes.
 
 **Syntax:**
 ```json
@@ -495,9 +499,11 @@ Check that the success message is green
 ## Navigation & Screen Assertions (5 types)
 
 ### screen_title
-Verify screen/activity name.
+Verify the screen's title.
 
 **When to use:** Confirm navigation to the correct screen.
+
+**How `mauto assert` decides it:** it passes when some element's text or accessibility label equals `expected_text` exactly (ignoring case and surrounding whitespace) and that element's top edge is in the top quarter of the screen. The same text lower on the screen, or a title that only contains `expected_text`, fails.
 
 **Syntax:**
 ```json
@@ -656,9 +662,11 @@ Check that the order ID is the same as when we created it
 ## Platform-Specific Assertions (2 types)
 
 ### permission_dialog_shown
-Check permission prompt (iOS/Android).
+Check that a system permission prompt is showing.
 
 **When to use:** Verify system permission dialog appeared (camera, location, contacts, etc.).
+
+**How `mauto assert` decides it:** it passes when an allow button (such as "Allow", "While using the app", "Allow Once") and a deny button ("Deny", "Don't Allow") are both on screen, the same button labels `mauto press grant_permission` / `deny_permission` look for. When `permission_name` is set (`--permission` on `mauto assert`), some element's text or label must also contain it, ignoring case.
 
 **Syntax:**
 ```json

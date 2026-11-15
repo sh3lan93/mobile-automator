@@ -2,6 +2,7 @@
 
 const { expectedOf, toEvaluatorInput } = require('../assertion/fields');
 const { REFERENCE_SCREENSHOT_TYPES } = require('../assertion/evaluator');
+const { observe } = require('../assertion/observe');
 const { substituteAssertion } = require('./variables');
 const { decideReferenceScreenshot } = require('./reference-assertion');
 const { runArtifacts } = require('./screenshots');
@@ -31,11 +32,13 @@ async function referenceVerdict(resolved, ctx) {
   return { expected: null, ...verdict };
 }
 
-// The evaluator's answer for every other type, as the verdict to record.
+// The evaluator's answer for every other type, as the verdict to record, over
+// what observe() reads off the device; a device that cannot report it errors
+// the assertion (a failure, see runAssertion).
 async function evaluatorVerdict(resolved, ctx, previous) {
   const { bridge, evaluator, variables = {} } = ctx;
-  const elements = await bridge.listElements();
-  const answer = evaluator.evaluate(toEvaluatorInput(resolved), { elements, variables, previous });
+  const { elements, screenSize } = await observe(bridge, resolved.type);
+  const answer = evaluator.evaluate(toEvaluatorInput(resolved), { elements, variables, previous, screenSize });
   const expected = expectedOf(resolved);
   return answer.needs_agent
     ? {

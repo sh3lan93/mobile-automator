@@ -1,4 +1,4 @@
-const { findByLabels, ALLOW_LABELS, DENY_LABELS } = require('../../../../src/device/semantic-press/labels');
+const { findByLabels, ALLOW_LABELS, DENY_LABELS } = require('../../../src/dialog/permission-labels');
 
 describe('findByLabels', () => {
   const els = [

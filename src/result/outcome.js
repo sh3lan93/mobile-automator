@@ -12,9 +12,12 @@
 
 const statusOf = (entry) => (entry !== null && typeof entry === 'object' ? entry.status : undefined);
 
+const isPassedStep = (step) => statusOf(step) === 'passed';
+const isSkippedStep = (step) => statusOf(step) === 'skipped';
 const isFailedStep = (step) => statusOf(step) === 'failed';
 const isErroredStep = (step) => statusOf(step) === 'error';
 const isFailingStep = (step) => isFailedStep(step) || isErroredStep(step);
+const isPassedAssertion = (assertion) => statusOf(assertion) === 'passed';
 const isFailingAssertion = (assertion) => statusOf(assertion) === 'failed';
 
 // Pending (#275): recorded, but not decided, because only an agent can judge
@@ -39,9 +42,12 @@ function deriveRunStatus(steps = [], assertions = []) {
 }
 
 module.exports = {
+  isPassedStep,
+  isSkippedStep,
   isFailedStep,
   isErroredStep,
   isFailingStep,
+  isPassedAssertion,
   isFailingAssertion,
   isPendingAssertion,
   isPendingStep,

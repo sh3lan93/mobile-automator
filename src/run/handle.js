@@ -4,12 +4,15 @@ const path = require('path');
 
 const { ok, fail } = require('../output/envelope');
 const { buildExecutor } = require('../result/executor');
-const { pendingAssertions, incompleteEnvelope } = require('../result/pending-hint');
+const { incompleteEnvelope } = require('../result/pending-hint');
 const { PLATFORM_UNKNOWN } = require('../device/bridge');
 const { realClock } = require('./clock');
 const { runScenario } = require('./runner');
 const { NO_TRACE } = require('./trace');
 const { runSettings } = require('./settings');
+const { runData } = require('./summary');
+const { toJUnit } = require('../result/junit');
+const { atomicWrite } = require('../util/atomic');
 const configManager = require('../config/manager');
 
 // The device's platform for the executor. Null only when the bridge itself
@@ -42,8 +45,9 @@ async function handleRun(
     evaluator = require('../assertion/evaluator'),
     catalog = require('../device/action-catalog'),
     loadConfig = configManager.load,
+    writeFile = atomicWrite,
   },
-  { scenario, runId, file, sha256, deviceId = null, timeoutMs = null, updateReferences = false }
+  { scenario, runId, file, sha256, deviceId = null, timeoutMs = null, updateReferences = false, junitPath = null }
 ) {
   const scenarioId = scenario.scenario_id;
   // The run's timings: the optional `run` block of the workspace config, with
@@ -95,20 +99,36 @@ async function handleRun(
 
   const { result, store: finalized, hints } = finalize();
   if (platformUnknown) hints.push('platform unknown: the bridge could not report it');
-  const resultPath = path.relative(projectRoot, finalized.file);
-  const data = {
-    run_id: runId,
-    scenario_id: scenarioId,
-    status: result.status,
-    result_path: resultPath,
-    failed_step: outcome.failedStep,
+  const facts = {
+    projectRoot,
+    resultFile: finalized.file,
+    failedStep: outcome.failedStep,
     failures: outcome.failures,
-    // What an agent still has to judge; empty unless the run is incomplete
-    // or failed beside a pending assertion.
-    pending: pendingAssertions(result),
-    executor: result.executor,
-    measurements: result.measurements,
   };
+
+  // --junit: the report `mauto result export --format junit` would render for
+  // this run, written once the run is finalized. A failed write overrides any
+  // outcome — a CI job must never upload a report that is silently missing —
+  // and still names the saved result, with junit_path null.
+  if (junitPath) {
+    try {
+      writeFile(junitPath, toJUnit([result]).xml);
+    } catch (err) {
+      const data = runData(result, facts);
+      return {
+        envelope: fail(
+          'environment',
+          `could not write the JUnit report to ${junitPath}: ${err.message}`,
+          [...hints, `Check the directory exists and is writable; the run is ${result.status} and its result is saved to ${data.result_path}.`].join(' '),
+          data
+        ),
+        exitKind: 'environment',
+      };
+    }
+  }
+
+  const data = runData(result, { ...facts, junitPath });
+  const resultPath = data.result_path;
 
   if (result.status === 'passed') {
     return { envelope: ok(data, hints.length ? hints.join(' ') : null), exitKind: 'ok' };

@@ -817,6 +817,41 @@ describe('cli handlers', () => {
       expect(envelope.data.pass).toBeNull();
     });
 
+    // R5a (#276), the issue's exit criterion: screen_title is the CLI's call.
+    test('screen_title --expected X is decided mechanically against the screen size', async () => {
+      const els = [{ text: 'Settings', accessibility_label: null, bounds: [40, 100, 400, 180], center: [220, 140], type: null }];
+      let sized = 0;
+      const bridge = { listElements: async () => els, getScreenSize: async () => { sized += 1; return { width: 1000, height: 2000 }; } };
+      const pass = await handleAssert({ deviceBridge: bridge }, 'screen_title', { expected: 'Settings' });
+      expect(pass.exitKind).toBe('ok');
+      expect(pass.envelope.data).toMatchObject({ type: 'screen_title', mechanical: true, needs_agent: false, pass: true });
+      expect(sized).toBe(1);
+
+      const fail = await handleAssert({ deviceBridge: bridge }, 'screen_title', { expected: 'Checkout' });
+      expect(fail.exitKind).toBe('test_failed');
+      expect(fail.envelope.data).toMatchObject({ mechanical: true, pass: false });
+    });
+
+    test('a screen size the device cannot report is a device error', async () => {
+      const bridge = {
+        listElements: async () => [],
+        getScreenSize: async () => { throw new Error('Could not read the device screen size'); },
+      };
+      const { envelope, exitKind } = await handleAssert({ deviceBridge: bridge }, 'element_fully_visible', { target: 'Buy' });
+      expect(exitKind).toBe('device');
+      expect(envelope.error.kind).toBe('device');
+      expect(envelope.error.message).toMatch(/Could not read the device screen size/);
+    });
+
+    test('permission_dialog_shown reads --permission and needs no screen size', async () => {
+      const els = ['Allow Sample Shop to use the camera?', 'Allow', "Don't Allow"]
+        .map((text) => ({ text, accessibility_label: null, bounds: [0, 0, 1, 1], center: [0, 0], type: null }));
+      const ok = await handleAssert({ deviceBridge: fakeBridge(els) }, 'permission_dialog_shown', { permission: 'camera' });
+      expect(ok.envelope.data).toMatchObject({ mechanical: true, pass: true });
+      const wrong = await handleAssert({ deviceBridge: fakeBridge(els) }, 'permission_dialog_shown', { permission: 'location' });
+      expect(wrong.exitKind).toBe('test_failed');
+    });
+
     test('unknown type is a structural error -> invalid_input exit 3', async () => {
       const { envelope, exitKind } = await handleAssert(
         { deviceBridge: fakeBridge([]) },

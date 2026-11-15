@@ -10,7 +10,7 @@ const os = require('os');
 const path = require('path');
 
 const { buildProgram, handleRun } = require('../../../src/cli');
-const { exitCodeFor } = require('../../../src/output/envelope');
+const { exitCodeFor, render } = require('../../../src/output/envelope');
 const { runTracePath } = require('../../../src/observe/paths');
 const { readTrace } = require('../../../src/observe/trace');
 const { makeFakeBridge, makeFakeClock, homeElements } = require('../../helpers/fake-bridge');
@@ -137,6 +137,27 @@ describe('mauto run — refusals before any device work', () => {
       expect(r.envelope.data.failures[0]).toMatch(/timed out after 4000ms/);
     });
 
+    test('--judge other than none is invalid_input before any device work (#282)', async () => {
+      const { r, factory } = await runCli([writeScenario(scenario()), '--run-id', RUN_ID, '--judge', 'agent']);
+      expect(r.exitKind).toBe('invalid_input');
+      expect(exitCodeFor(r.exitKind)).toBe(3);
+      expect(r.envelope.error.message).toBe('unknown --judge "agent"');
+      expect(r.envelope.hint).toMatch(/Accepted: none/);
+      expect(factory).not.toHaveBeenCalled();
+    });
+
+    test('--judge none runs as the default does (#282)', async () => {
+      const { r } = await runCli([writeScenario(scenario()), '--run-id', RUN_ID, '--judge', 'none']);
+      expect(r.exitKind).toBe('ok');
+    });
+
+    test('--junit into a missing directory is invalid_input before any device work (#282)', async () => {
+      const { r, factory } = await runCli([writeScenario(scenario()), '--run-id', RUN_ID, '--junit', path.join(root, 'nope', 'r.xml')]);
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.error.message).toBe(`--junit directory does not exist: ${path.join(root, 'nope')}`);
+      expect(factory).not.toHaveBeenCalled();
+    });
+
     test('an unreadable scenario is invalid_input', async () => {
       const { r, factory } = await runCli([path.join(root, 'missing.json'), '--run-id', RUN_ID]);
       expect(r.exitKind).toBe('invalid_input');
@@ -200,9 +221,12 @@ describe('mauto run — a run', () => {
     expect(events.filter((e) => e.event === 'run.start')).toHaveLength(1);
     expect(events.filter((e) => e.event === 'run.step')).toHaveLength(2);
     expect(events.every((e) => e.verb === 'run' && e.run_id === RUN_ID)).toBe(true);
-    expect(data.measurements.source).toBe('trace');
-    expect(data.measurements.trace_events).toBeGreaterThanOrEqual(3);
+    // The measurements stay in the result file; the envelope carries the duration.
+    expect(data).not.toHaveProperty('measurements');
+    expect(file.measurements.source).toBe('trace');
+    expect(file.measurements.trace_events).toBeGreaterThanOrEqual(3);
     expect(file.duration_seconds).toBeGreaterThan(0);
+    expect(data.duration_seconds).toBe(file.duration_seconds);
   });
 
   test('a failing assertion is test_failed with data.status failed', async () => {
@@ -267,6 +291,15 @@ describe('mauto run — a run', () => {
     expect(r.envelope.hint).toContain(`finalize --run-id ${RUN_ID}`);
   });
 
+  test('--junit writes the same report mauto result export renders, and names it (#282)', async () => {
+    const out = path.join(root, 'report.xml');
+    const { r } = await runCli([writeScenario(scenario()), '--run-id', RUN_ID, '--junit', out]);
+    expect(r.exitKind).toBe('ok');
+    expect(r.envelope.data.junit_path).toBe(out);
+    const file = JSON.parse(fs.readFileSync(path.join(root, r.envelope.data.result_path), 'utf8'));
+    expect(fs.readFileSync(out, 'utf8')).toBe(require('../../../src/result/junit').toJUnit([file]).xml);
+  });
+
   test('mints a run id when neither --run-id nor MAUTO_RUN_ID is given', async () => {
     const { r } = await runCli([writeScenario(scenario())]);
     expect(r.exitKind).toBe('ok');
@@ -278,6 +311,49 @@ describe('mauto run — a run', () => {
     process.env.MAUTO_RUN_ID = RUN_ID;
     const { r } = await runCli([writeScenario(scenario())]);
     expect(r.envelope.data.run_id).toBe(RUN_ID);
+  });
+});
+
+describe('mauto run --human (#282)', () => {
+  // What `emit(r, human)` receives, rendered the way the CLI's emitters
+  // render it: a handler's own renderHuman under --human, else the generic
+  // render. Exit codes come from the exit kind, as finish() maps them.
+  async function printed(args) {
+    const emitted = [];
+    await buildProgram({
+      projectRoot: root,
+      deviceBridgeFactory: async () => ({ bridge: makeFakeBridge({ elements: [homeElements()] }), close: async () => {} }),
+      emit: (r, human) => emitted.push({ r, human }),
+      clock: makeFakeClock(),
+      platform: 'darwin',
+    }).parseAsync(['node', 'mauto', ...args]);
+    expect(emitted).toHaveLength(1);
+    const [{ r, human }] = emitted;
+    const text = human && typeof r.renderHuman === 'function' ? r.renderHuman(r.envelope) : render(r.envelope, { human });
+    return { text: `${text}\n`, exits: [exitCodeFor(r.exitKind)] };
+  }
+
+  test('a run renders as its summary', async () => {
+    process.env.MAUTO_REPLAY = '1';
+    const { text, exits } = await printed(['--human', 'run', writeScenario(scenario()), '--run-id', RUN_ID]);
+    expect(exits).toEqual([0]);
+    expect(text).toMatch(new RegExp(`^run ${RUN_ID} \\(demo\\): passed in [\\d.]+s\\n`));
+    expect(text).toContain('steps: 2 total, 2 passed, 0 failed, 0 error, 0 skipped, 0 needs agent\n');
+  });
+
+  test('without --human the output stays the JSON envelope', async () => {
+    process.env.MAUTO_REPLAY = '1';
+    const { text } = await printed(['run', writeScenario(scenario()), '--run-id', RUN_ID]);
+    const envelope = JSON.parse(text);
+    expect(envelope.ok).toBe(true);
+    expect(envelope).not.toHaveProperty('renderHuman');
+    expect(Object.keys(envelope.data)).toContain('steps');
+  });
+
+  test('a refusal falls back to the generic render', async () => {
+    const { text, exits } = await printed(['--human', 'run', writeScenario(scenario()), '--run-id', RUN_ID]);
+    expect(exits).toEqual([5]);
+    expect(text).toBe('error [environment]: mauto run is not enabled yet\nhint: export MAUTO_REPLAY=1 to try the in-progress replay runner\n');
   });
 });
 

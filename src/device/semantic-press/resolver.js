@@ -1,6 +1,6 @@
 'use strict';
 
-const { ALLOW_LABELS, DENY_LABELS, findByLabels } = require('./labels');
+const { ALLOW_LABELS, DENY_LABELS, findByLabels } = require('../../dialog/permission-labels');
 
 // Raised when a semantic action cannot be performed on the current screen/
 // platform. `.kind`/`.hint` let the CLI map it onto the `device` envelope.

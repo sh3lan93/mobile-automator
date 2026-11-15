@@ -1,6 +1,9 @@
 'use strict';
 
 const {
+  isPassedStep,
+  isSkippedStep,
+  isPassedAssertion,
   isFailedStep,
   isErroredStep,
   isFailingStep,
@@ -36,8 +39,32 @@ describe('outcome predicates (#296)', () => {
     expect(isFailingAssertion(assertion(status))).toBe(failing);
   });
 
+  test.each([
+    ['passed', true, false],
+    ['skipped', false, true],
+    ['failed', false, false],
+    ['weird', false, false],
+    [undefined, false, false],
+  ])('a %s step: passed=%s skipped=%s (only the exact status)', (status, passed, skipped) => {
+    expect(isPassedStep(step(status))).toBe(passed);
+    expect(isSkippedStep(step(status))).toBe(skipped);
+  });
+
+  test.each([
+    ['passed', true],
+    ['failed', false],
+    ['needs_agent', false],
+    ['weird', false],
+    [undefined, false],
+  ])('a %s assertion: passed=%s (only the exact status)', (status, passed) => {
+    expect(isPassedAssertion(assertion(status))).toBe(passed);
+  });
+
   // junit tolerates malformed result files; the predicates it shares must too.
   test.each([null, undefined, 'x', 7, []])('%p is never failing and never throws', (odd) => {
+    expect(isPassedStep(odd)).toBe(false);
+    expect(isSkippedStep(odd)).toBe(false);
+    expect(isPassedAssertion(odd)).toBe(false);
     expect(isFailedStep(odd)).toBe(false);
     expect(isErroredStep(odd)).toBe(false);
     expect(isFailingStep(odd)).toBe(false);

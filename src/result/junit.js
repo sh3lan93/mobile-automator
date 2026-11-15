@@ -25,6 +25,7 @@
 // the counts are {tests, failures, skipped} and `errors` is always 0.
 
 const { isErroredStep, isFailingAssertion, isFailingStep, isPendingAssertion, isPendingStep } = require('./outcome');
+const { asArray } = require('../util/as-array');
 
 // Characters XML 1.0 forbids anywhere in a document: C0 controls other than
 // tab/LF/CR, lone surrogates, U+FFFE and U+FFFF. A crash excerpt or an OCR'd
@@ -66,7 +67,7 @@ const present = (v) => v !== undefined && v !== null && v !== '';
 
 // A container as an array of its object entries; anything else is empty.
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
-const asArray = (value) => (Array.isArray(value) ? value.filter(isObject) : []);
+const objectsOf = (value) => asArray(value).filter(isObject);
 
 // Seconds as a plain decimal, rounded to the millisecond so summed floats do
 // not render as 50.50000000001.
@@ -127,8 +128,8 @@ function suiteFor(result) {
   const scenario = result.scenario_id ?? result.run_id;
   const metadata = isObject(result.metadata) ? result.metadata : {};
   const cases = [
-    ...asArray(result.assertion_results).map(assertionCase),
-    ...asArray(result.steps_executed).map(stepCase).filter(Boolean),
+    ...objectsOf(result.assertion_results).map(assertionCase),
+    ...objectsOf(result.steps_executed).map(stepCase).filter(Boolean),
   ];
 
   // A red result must never render as a green report. When the run says
