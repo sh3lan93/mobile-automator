@@ -206,7 +206,10 @@ describe('diffNormalized', () => {
     expect(diffNormalized(a, b)).toEqual(['steps_executed[0]._extra: unexpected 1']);
   });
 
-  test('the checked-in golden matches a passing run of its own steps', () => {
+  // Each assertion is recorded the way `mauto run` records a mechanical one
+  // (src/run/assertions.js): its after_step as step_id, its type, decided by
+  // the CLI's own evaluator.
+  test('the checked-in golden matches a passing `mauto run` of its own steps', () => {
     const golden = require('../../../sample-app/scenarios/golden/golden_search_empty.result.json');
     const scenario = require('../../../sample-app/scenarios/golden_search_empty.json');
     expect(typeof golden._provenance).toBe('string');
@@ -217,7 +220,14 @@ describe('diffNormalized', () => {
       passed_assertions: scenario.assertions.length,
       failed_assertions: 0,
       steps_executed: scenario.steps.map((s) => ({ step_id: s.id, status: 'passed' })),
-      assertion_results: scenario.assertions.map((a) => ({ assertion_id: a.id, status: 'passed' })),
+      assertion_results: scenario.assertions.map((a) => ({
+        step_id: a.after_step,
+        assertion_id: a.id,
+        type: a.type,
+        status: 'passed',
+        mechanical: true,
+        judge: { by: 'mauto' },
+      })),
     };
     expect(diffNormalized(golden, normalizeResult(run))).toEqual([]);
   });
