@@ -368,9 +368,9 @@ own output.
 
 ### ❌ "engine returned zero elements after a successful launch"
 
-Reported by the sample-app E2E (`sample-app/scripts/run-e2e.mjs`) when
-`mauto launch` succeeded but `mauto elements` kept answering `ok: true` with
-an empty list for the whole wait. That is never "the target is missing" — no
+Reported by `mauto run` (and so by the sample-app E2E,
+`sample-app/scripts/run-e2e.mjs`, which calls it) when a launch step
+succeeded but the element list stayed empty for the whole wait. That is never "the target is missing" — no
 target was looked for. It means one of:
 
 - **The engine's element response changed shape.** A new mobile-mcp or

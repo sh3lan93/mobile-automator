@@ -24,16 +24,16 @@ Every interactive widget also carries a stable `Semantics` id in the form `{scre
 For each run the harness:
 
 1. creates a scratch project, runs `mauto setup --mode agnostic`, selects the device engine with `mauto config set engine <E2E_ENGINE>` (and checks `mauto session status` resolves it from config), copies the scenarios in and checks each with `mauto validate --strict`;
-2. executes every step with one-shot verbs — `launch`, `elements`, `tap --at`, `type`, `press <semantic action>`, `screenshot` — following the `mauto guide execute` recipe;
-3. resolves every target with the CLI's own matcher (`findFirst` from `src/assertion/evaluator.js` of the install under test), so a target means exactly what it means to `mauto assert`;
-4. checks assertions with `mauto assert` and records everything through `mauto result add-step` / `add-assertion` / `finalize`, so the result file is the CLI's own.
+2. runs each scenario with one `mauto run <file> --run-id <id> --junit <path>` — the shipped runner executes every step, resolves every target and decides every assertion, so a green job proves `mauto run` itself on that engine (until the replay graduation the harness sets `MAUTO_REPLAY=1` for that call, the verb's opt-in gate);
+3. treats a failed run (`test_failed`, exit 6) and an incomplete one (`incomplete`, exit 7: something needed an agent) as answers rather than tool errors, and reads the outcome — passed, first failed step, failure lines — from the result file the run wrote. An incomplete run is not a pass; any other error is a harness error;
+4. writes each scenario's JUnit report to `<E2E_ARTIFACTS_DIR>/junit/<run id>.xml`.
 
-A launch that succeeds but leaves the element list empty fails with *engine returned zero elements after a successful launch* — that is engine drift or an app that did not render, never a missing target. See `TROUBLESHOOTING.md`.
+The harness executes no step and resolves no target itself. A launch that succeeds but leaves the element list empty fails with *engine returned zero elements after a successful launch* — that is engine drift or an app that did not render, never a missing target. See `TROUBLESHOOTING.md`.
 
 Scenarios:
 
 - `smoke_nav` — switches between the three bottom-nav tabs and checks each tab's app-bar header. The Home tab is targeted by its tab label `Tab 1 of 3`, because on the default engine `Home` first matches the leaked "Home & Kitchen" tile ([#251](https://github.com/sh3lan93/mobile-automator/issues/251)).
-- `golden_search_empty` — searches for a query with no matches on More. Its result is normalized (only steps, assertions and their statuses; no run ids, timings, device data or messages) and compared with `scenarios/golden/golden_search_empty.result.json`. Which scenarios get a golden is declared by the scenario's `golden` tag, not a naming convention: a tagged scenario without its fixture fails the job, and so does a fixture for an untagged one.
+- `golden_search_empty` — searches for a query with no matches on More. Its result is normalized (steps and their statuses, plus `needs_agent`; assertions with their status, step, type, `mechanical` and who judged them; no run ids, timings, device data, executor block, screenshot paths, similarity scores or messages) and compared with `scenarios/golden/golden_search_empty.result.json`. Which scenarios get a golden is declared by the scenario's `golden` tag, not a naming convention: a tagged scenario without its fixture fails the job, and so does a fixture for an untagged one.
 
 ### Known failures (xfail / xpass)
 
@@ -65,7 +65,7 @@ or test whatever `mauto` is on your `PATH` (for example an `npm link`ed checkout
 MAUTO_BIN=$(command -v mauto) node sample-app/scripts/run-e2e.mjs
 ```
 
-Optional environment: `E2E_SCENARIOS=smoke_nav` runs a subset; `E2E_ENGINE=legacy` runs on the legacy engine (default `mobilecli`; any other value is rejected); `E2E_ARTIFACTS_DIR=<dir>` receives the screenshots, results, session log and a `summary.json` naming the engine at the end, pass or fail.
+Optional environment: `E2E_SCENARIOS=smoke_nav` runs a subset; `E2E_ENGINE=legacy` runs on the legacy engine (default `mobilecli`; any other value is rejected); `E2E_ARTIFACTS_DIR=<dir>` receives the screenshots, results, session log, the per-scenario JUnit reports under `junit/` and a `summary.json` naming the engine at the end, pass or fail.
 
 The harness applies `E2E_ENGINE` through the workspace config, exactly as a user would, and removes any exported `MOBILEMCP_LEGACY_ROBOT` from the environment of every `mauto` it runs, so the config key is what is tested. To run on the legacy engine after the default one has used the device, first release the default engine's device server, which outlives every session and holds the device's UiAutomation connection (each harness run gets a fresh scratch project, so there is no old session to end):
 
