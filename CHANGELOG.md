@@ -34,6 +34,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   step proving the hidden verb ships in the tarball: a schema-invalid
   scenario exits 3 with `invalid_input`, no device needed.
   Refs #282
+- **`element_fully_visible`, `screen_title` and `permission_dialog_shown` are
+  decided mechanically** (replay PRD #271, slice R5a). `mauto assert` and
+  `mauto run` now decide them over the element list instead of returning
+  `needs_agent`, so 18 of the 27 assertion types are mechanical, 1
+  (`screenshot_match`) is compared against a reference screenshot, and 8 stay
+  agent-judged. `element_fully_visible` passes when the element's bounds lie
+  inside the screen (the device's screen size is read for it); it checks the
+  screen edges only and cannot see one element overlapping another.
+  `screen_title` passes when an element whose text or accessibility label
+  equals `expected_text` (ignoring case and surrounding whitespace) starts in
+  the top quarter of the screen. `permission_dialog_shown` passes when an
+  allow button and a deny button are both on screen (the same labels
+  `grant_permission` / `deny_permission` look for, either platform), and, when
+  `permission_name` is set, some element mentions it; `mauto assert` takes it
+  as the new `--permission <name>` flag. The screen size is read only for the
+  two types that need it; a device that cannot report it is a `device` error
+  on `mauto assert` and a failed assertion in a run. `alert_present` and
+  `alert_text` stay agent-judged: the element list carries no
+  platform-agnostic sign that a dialog is up, and there is no dialog fixture
+  to verify a rule against yet. The shipped corpus's agent-free floor rises
+  to 63 of 68 assertions and 8 of 12 scenarios.
+  Refs #276
 - **`screenshot_match` is decided deterministically against a reference
   screenshot** (replay PRD #271, slice R5b). `mauto assert screenshot_match`
   and `mauto run` (gated by `MAUTO_REPLAY=1`) capture a stable screenshot (two

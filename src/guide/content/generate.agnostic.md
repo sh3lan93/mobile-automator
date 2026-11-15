@@ -122,7 +122,7 @@ Translate user language to action types and `mauto` verbs:
 
 ### 5. Assertion Type Decision Table
 
-Use the most specific type that matches the user's intent. Tier 1 checks read structure from `mauto elements`; Tier 2 checks read pixels from `mauto screenshot <path>`. Evaluate each with `mauto assert <type> ...`. `screenshot_match` is neither: `mauto assert` decides it with a pixel comparison against a reference screenshot. When you add one, the screen in front of you is the baseline: once the user confirms it looks right, record it with `mauto assert screenshot_match --reference <reference_screenshot> --update-references`, and add `masks` for regions that change between runs (clocks, timestamps, animations).
+Use the most specific type that matches the user's intent. Tier 1 checks read structure from `mauto elements`; Tier 2 checks read pixels from `mauto screenshot <path>`. Evaluate each with `mauto assert <type> ...`. Three types in the visual, navigation and system categories are Tier 1 too, decided by `mauto assert` over the element list: `element_fully_visible` (the element is not clipped by the screen edges; overlap is not checked), `screen_title` (an element equal to `expected_text` near the top of the screen) and `permission_dialog_shown` (an allow and a deny button on screen). `screenshot_match` is neither: `mauto assert` decides it with a pixel comparison against a reference screenshot. When you add one, the screen in front of you is the baseline: once the user confirms it looks right, record it with `mauto assert screenshot_match --reference <reference_screenshot> --update-references`, and add `masks` for regions that change between runs (clocks, timestamps, animations).
 
 **Element State**
 
@@ -157,7 +157,7 @@ Use the most specific type that matches the user's intent. Tier 1 checks read st
 
 | User intent | Type | Key fields |
 |---|---|---|
-| "the full element is visible, not clipped" | `element_fully_visible` | — |
+| "the full element is visible, not clipped by the screen edges" | `element_fully_visible` | — |
 | "the screen looks the same as before" | `screenshot_match` | `reference_screenshot`, `tolerance`, `masks` (regions that change between runs) |
 | "the screen is loaded / in error / empty state" | `visual_state` | `expected_visual_state` |
 | "the button color is X" | `color_style` | `color_hex` |

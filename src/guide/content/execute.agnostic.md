@@ -176,17 +176,19 @@ switch the engine mid-run yourself.
 
 For each assertion, pick the type recorded in the scenario and evaluate it. The 27 types split into two tiers by **who decides pass/fail**, plus one reference-screenshot type the CLI also decides:
 
-- **Tier 1 — mechanical (the CLI decides).** Deterministic checks over the on-screen element list (plus captured variables / a previous snapshot). Run `mauto elements`, then evaluate with `mauto assert <type> ...`; the CLI returns a JSON verdict (`{ mechanical: true, pass: true|false, message }`). A passing verdict arrives as a normal `ok: true` envelope. A failing one arrives as `ok: false` with `error.kind: "test_failed"` and exit code `6`, and the verdict (`pass: false`) is still in `data`. That is the test result, not a tool error: do not retry the verb or treat the run as broken. You record that verdict — you do not re-judge it.
+- **Tier 1 — mechanical (the CLI decides).** Deterministic checks over the on-screen element list (plus captured variables / a previous snapshot / the screen size). Run `mauto elements`, then evaluate with `mauto assert <type> ...`; the CLI returns a JSON verdict (`{ mechanical: true, pass: true|false, message }`). A passing verdict arrives as a normal `ok: true` envelope. A failing one arrives as `ok: false` with `error.kind: "test_failed"` and exit code `6`, and the verdict (`pass: false`) is still in `data`. That is the test result, not a tool error: do not retry the verb or treat the run as broken. You record that verdict — you do not re-judge it.
 - **Reference screenshot — `screenshot_match` (the CLI decides).** A deterministic pixel comparison against a stored reference screenshot (a baseline); see the reference-screenshot block below. You record its verdict — you do not judge it by eye.
 - **Tier 2 — visual / semantic (the agent decides).** These require judging pixels. `mauto assert <type> ...` reports them as `needs_agent` (with `pass: null`). For these you take a screenshot with `mauto screenshot <path>`, visually analyze it, and report pass/fail yourself with a clear justification.
 
 > One assertion type, `element_state`, names a Tier-1 intent but its per-attribute state inspection is not represented in the element model the CLI reads, so `mauto assert` returns it as `needs_agent` — judge it from the element list / screenshot like a Tier-2 check.
+>
+> Three Tier-1 types read the element list more narrowly than a screenshot would, so an agent never needs to re-judge them: `element_fully_visible` checks only that the element is not clipped by the screen edges (it cannot see overlap); `screen_title` passes when an element whose text or label equals `expected_text` starts in the top quarter of the screen; `permission_dialog_shown` passes when an allow button and a deny button are both on screen.
 
 ---
 
 **Tier 1 — mechanical, evaluated with `mauto assert <type>` over `mauto elements`**
 
-`element_exists`, `element_not_exists`, `element_visible` (`expected_visible: true/false`), `element_text` (`expected_value`), `text_contains` (`expected_substring`), `text_not_empty`, `element_hint` (`expected_text`), `pattern_match` (`pattern`), `element_state` (`state_property` — see note above; resolved by the agent), `element_count` / `list_item_count` (`operator` + `expected_count`), `list_is_empty`, `content_description` (`label_value`), `has_accessibility_label` (`label_value` optional), `value_matches_variable` (`variable_name`), `text_changed`.
+`element_exists`, `element_not_exists`, `element_visible` (`expected_visible: true/false`), `element_text` (`expected_value`), `text_contains` (`expected_substring`), `text_not_empty`, `element_hint` (`expected_text`), `pattern_match` (`pattern`), `element_state` (`state_property` — see note above; resolved by the agent), `element_count` / `list_item_count` (`operator` + `expected_count`), `list_is_empty`, `content_description` (`label_value`), `has_accessibility_label` (`label_value` optional), `value_matches_variable` (`variable_name`), `text_changed`, `element_fully_visible` (`element_description`), `screen_title` (`expected_text`), `permission_dialog_shown` (`permission_name` optional, passed as `--permission`).
 
 ---
 
@@ -204,14 +206,11 @@ For each assertion, pick the type recorded in the scenario and evaluate it. The 
 For each: take a screenshot, visually analyze it, and report pass/fail with a clear justification.
 
 - **`visual_state`:** assess `loaded` / `loading` / `empty` / `error` against `expected_visual_state`.
-- **`element_fully_visible`:** the element is fully in the viewport — not clipped, scrolled off, or overlapped.
 - **`color_style`:** assess the element's dominant color against `color_hex` or `expected_theme`.
-- **`screen_title`:** read the screen title and compare to `expected_text`.
 - **`alert_present` / `alert_text`:** a dialog is present (and its text matches `expected_text`).
 - **`toast_visible`:** look for a transient notification overlay; match `expected_text`, or mark `failed` if it already disappeared.
 - **`keyboard_visible`:** whether the soft keyboard is shown (`expected_visible`).
 - **`dark_mode_active`:** the screen appearance matches `expected_theme`.
-- **`permission_dialog_shown`:** a permission request dialog is visible (matching `permission_name` if set).
 
 **Dynamic content:** if the reference `expected_state` marks content as `[dynamic:...]`, ignore those regions when you judge a Tier-2 check. For `screenshot_match`, dynamic regions are excluded only through the assertion's `masks`.
 
