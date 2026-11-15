@@ -29,6 +29,9 @@
 //                             starts in the top quarter of the screen;
 //   permission_dialog_shown — a system allow button and a deny button are both
 //                             on screen (+ the permission named, if given).
+
+const { ALLOW_LABELS, DENY_LABELS, findByLabels } = require('../dialog/permission-labels');
+
 const MECHANICAL_TYPES = new Set([
   'element_exists',
   'element_not_exists',
@@ -65,8 +68,6 @@ const TITLE_BAND = 0.25;
 // device, so it lives in the runner and `mauto assert`, which branch on this
 // set before they reach `evaluate()`.
 const REFERENCE_SCREENSHOT_TYPES = new Set(['screenshot_match']);
-
-const { ALLOW_LABELS, DENY_LABELS, findByLabels } = require('../device/semantic-press/labels');
 
 // Both platforms' system-dialog button labels: the assertion is agnostic, so a
 // dialog counts whichever platform drew it.
@@ -330,7 +331,7 @@ function evaluate(assertion = {}, ctx = {}) {
       if (!found) {
         return result(type, true, false, `No element matching '${target}' found on screen.`);
       }
-      const [x1, y1, x2, y2] = found.bounds || [];
+      const [x1, y1, x2, y2] = found.bounds;
       const inside = [x1, y1, x2, y2].every(Number.isFinite) &&
         x1 >= 0 && y1 >= 0 && x2 <= screenSize.width && y2 <= screenSize.height;
       pass = inside;
