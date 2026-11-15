@@ -10,14 +10,17 @@ const path = require('path');
 
 const evaluator = require('../../../src/assertion/evaluator');
 const { ScenarioValidator } = require('../../../src/scenario/validator');
-const { resolveTarget } = require('../../../sample-app/scripts/lib/resolve');
-const { SEMANTIC_ACTIONS } = require('../../../sample-app/scripts/lib/executor');
+const { resolveTarget } = require('../../../src/run/resolve');
+const { ACTION_CATALOG } = require('../../../src/device/action-catalog');
 const { homeElements, moreElements } = require('./fixtures');
 
 const SCENARIOS = path.join(__dirname, '..', '..', '..', 'sample-app', 'scenarios');
 const GOLDEN_DIR = path.join(SCENARIOS, 'golden');
 const load = (name) => JSON.parse(fs.readFileSync(path.join(SCENARIOS, name), 'utf8'));
-const HARNESS_ACTIONS = new Set(['launch_app', 'wait_for_element', 'tap', 'type', ...SEMANTIC_ACTIONS]);
+// The harness runs each scenario through `mauto run` (#283), which executes
+// every catalog action except the ones no verb reaches.
+const runnable = (action) =>
+  Object.prototype.hasOwnProperty.call(ACTION_CATALOG, action) && ACTION_CATALOG[action].resolution !== 'unsupported';
 const OS_ID_SHAPE = /^[a-z0-9]+(_[a-z0-9]+)+$/; // e.g. bottom_nav_home
 
 // Every scenario in scenarios/ is pre-flighted here, discovered the same way
@@ -45,8 +48,8 @@ describe.each(scenarioFiles)('%s', (file) => {
     expect(sc.mode).toBe('platform-agnostic');
   });
 
-  test('uses only actions the harness executes', () => {
-    for (const step of sc.steps) expect(HARNESS_ACTIONS.has(step.action)).toBe(true);
+  test('uses only actions `mauto run` executes', () => {
+    for (const step of sc.steps) expect([step.action, runnable(step.action)]).toEqual([step.action, true]);
   });
 
   test('targets are on-screen strings, not OS element ids', () => {

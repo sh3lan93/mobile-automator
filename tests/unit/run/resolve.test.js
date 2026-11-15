@@ -1,7 +1,7 @@
 'use strict';
 
 // The resolver is tested with the REAL evaluator injected: the point of the
-// harness is that it resolves targets exactly as `mauto assert` does.
+// runner is that it resolves targets exactly as `mauto assert` does.
 const evaluator = require('../../../src/assertion/evaluator');
 const { resolveTarget, TargetNotFoundError } = require('../../../src/run/resolve');
 const { homeElements, moreElements, moreLegacyElements, el } = require('../e2e-harness/fixtures');
