@@ -10,12 +10,16 @@
 //                 workspace — never MOBILEMCP_LEGACY_ROBOT, which the harness
 //                 scrubs — and it selects which known failures apply.
 // E2E_ARTIFACTS_DIR  optional. Screenshots, results and the session log are
-//                 copied here at the end, pass or fail.
+//                 copied here at the end, pass or fail; each scenario's JUnit
+//                 report is written to <E2E_ARTIFACTS_DIR>/junit.
 //
-// Thin on purpose: the logic lives in ./lib (CommonJS, unit-tested under
-// tests/unit/e2e-harness). The target matcher is loaded from the SAME install
-// as MAUTO_BIN, so the harness resolves targets exactly as that build's
-// `mauto assert` does.
+// A thin caller of the shipped `mauto run` verb (#283): every scenario is one
+// `mauto run <file> --run-id <id> --junit <path>`, and the outcome is read off
+// the result file that run wrote. The harness executes no step and resolves no
+// target itself, so a green job proves the SHIPPED runner on whichever engine
+// this leg selected — CI runs both. The remaining logic (classification,
+// golden comparison, envelope handling) lives in ./lib (CommonJS, unit-tested
+// under tests/unit/e2e-harness).
 
 import fs from 'node:fs';
 import os from 'node:os';
@@ -25,7 +29,7 @@ import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
 const { createMauto } = require('./lib/mauto.js');
-const { runScenario } = require('./lib/executor.js');
+const { outcomeOf } = require('./lib/run-outcome.js');
 const { goldenProblems } = require('./lib/golden.js');
 const { classify, isJobFailure, outcomeMessage } = require('./lib/known-failures.js');
 const { e2eEngine, assertSessionEngine } = require('./lib/engine.js');
@@ -42,7 +46,7 @@ const die = (msg) => {
   process.exit(2);
 };
 
-// --- The binary under test, and the matcher from the same install ----------
+// --- The binary under test ------------------------------------------------
 
 const bin = process.env.MAUTO_BIN;
 if (!bin) die('MAUTO_BIN is not set. Point it at the mauto binary under test (e.g. <prefix>/node_modules/.bin/mauto).');
@@ -65,17 +69,11 @@ try {
 if (pkgName !== 'mobile-automator') {
   die(`MAUTO_BIN resolves to ${fs.realpathSync(bin)}, which is not inside a mobile-automator package (found ${pkgDir}).`);
 }
-const evaluator = require(path.join(pkgDir, 'src/assertion/evaluator.js'));
-if (typeof evaluator.findFirst !== 'function' || typeof evaluator.matches !== 'function') {
-  die(`${pkgDir} does not export the target matcher (findFirst/matches); it predates the CLI-driven E2E.`);
-}
-const catalog = require(path.join(pkgDir, 'src/device/action-catalog.js'));
-if (typeof catalog.stepFlagsFor !== 'function') {
-  die(`${pkgDir} does not export stepFlagsFor from its action catalog; it predates cold-start launch (#255).`);
-}
-const fields = require(path.join(pkgDir, 'src/assertion/fields.js'));
-if (typeof fields.toCliFlags !== 'function' || typeof fields.expectedOf !== 'function') {
-  die(`${pkgDir} does not export the assertion field mapping (toCliFlags/expectedOf); it predates mauto run (#278).`);
+// `mauto run` arrived with replay R1 (#278), behind src/run/gate.js. An
+// install without the gate cannot run a scenario at all. The graduation slice
+// (G) deletes the gate, and must retarget this check when it does.
+if (!fs.existsSync(path.join(pkgDir, 'src/run/gate.js'))) {
+  die(`${pkgDir} has no src/run/gate.js; it predates mauto run (#278).`);
 }
 const { makeRunId } = require(path.join(pkgDir, 'src/run/run-id.js'));
 log(`mauto under test: ${fs.realpathSync(bin)} (package ${pkgDir})`);
@@ -108,6 +106,16 @@ const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-e2e-'));
 const workspace = path.join(projectDir, '.mobile-automator');
 const mauto = createMauto({ bin, cwd: projectDir, log });
 
+// `mauto run` refuses unless MAUTO_REPLAY is exactly '1' (src/run/gate.js).
+// The graduation slice (G) removes the gate and strips this.
+const REPLAY_ENV = { MAUTO_REPLAY: '1' };
+
+// One JUnit report per scenario, beside the other artifacts when there are
+// any. `mauto run --junit` does not create the directory.
+const junitDir = process.env.E2E_ARTIFACTS_DIR
+  ? path.join(process.env.E2E_ARTIFACTS_DIR, 'junit')
+  : path.join(projectDir, 'junit');
+
 function copyArtifacts() {
   const dest = process.env.E2E_ARTIFACTS_DIR;
   if (!dest) return;
@@ -131,7 +139,7 @@ function writeSummary(summary) {
   const dest = process.env.E2E_ARTIFACTS_DIR;
   if (!dest) return;
   fs.mkdirSync(dest, { recursive: true });
-  const scenarios = summary.map(({ id, outcome, failedStep, details, golden }) => ({ id, outcome, failedStep, details, golden }));
+  const scenarios = summary.map(({ id, outcome, failedStep, details, golden, junit }) => ({ id, outcome, failedStep, details, golden, junit }));
   fs.writeFileSync(path.join(dest, 'summary.json'), `${JSON.stringify({ engine, scenarios }, null, 2)}\n`);
 }
 
@@ -159,6 +167,7 @@ async function main() {
 
   const files = fs.readdirSync(SCENARIOS_DIR).filter((f) => f.endsWith('.json'));
   const scenarios = new Map();
+  const scenarioPaths = new Map();
   for (const f of files) {
     const dest = path.join(workspace, 'scenarios', f);
     fs.copyFileSync(path.join(SCENARIOS_DIR, f), dest);
@@ -167,6 +176,7 @@ async function main() {
     await mauto.run(['validate', '--strict', dest]);
     const sc = JSON.parse(fs.readFileSync(dest, 'utf8'));
     scenarios.set(sc.scenario_id, sc);
+    scenarioPaths.set(sc.scenario_id, dest);
   }
 
   const knownFailures = fs.existsSync(KNOWN_FAILURES) ? JSON.parse(fs.readFileSync(KNOWN_FAILURES, 'utf8')) : {};
@@ -178,7 +188,7 @@ async function main() {
   for (const id of requested) {
     const scenario = scenarios.get(id);
     if (!scenario) {
-      summary.push({ id, outcome: 'fail', failedStep: null, details: [`no scenario with id "${id}" in ${SCENARIOS_DIR}`], golden: [] });
+      summary.push({ id, outcome: 'fail', failedStep: null, details: [`no scenario with id "${id}" in ${SCENARIOS_DIR}`], golden: [], junit: null });
       continue;
     }
     const runId = nextRunId();
@@ -187,21 +197,24 @@ async function main() {
     let golden = [];
     let passed = false;
     let failedStep = null;
+    let junit = null;
     try {
-      const r = await runScenario({
-        scenario,
-        mauto,
-        evaluator,
-        catalog,
-        fields,
-        workspaceDir: projectDir,
-        runId,
-        sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
-        now: Date.now,
-        log,
+      fs.mkdirSync(junitDir, { recursive: true });
+      const junitPath = path.join(junitDir, `${runId}.xml`);
+      // A failed run (test_failed, exit 6) and an incomplete one (exit 7: a
+      // step needed an agent) are answers, not tool errors; anything else —
+      // including a JUnit write failure (environment) — throws.
+      const data = await mauto.run(['run', scenarioPaths.get(id), '--run-id', runId, '--junit', junitPath], {
+        acceptKinds: ['test_failed', 'incomplete'],
+        env: REPLAY_ENV,
       });
-      details = [...r.failures];
-      passed = r.status === 'passed';
+      junit = data.junit_path || junitPath;
+      log(`junit: ${junit}`);
+      // result_path is relative to the project root.
+      const resultPath = path.join(projectDir, data.result_path);
+      const r = outcomeOf(JSON.parse(fs.readFileSync(resultPath, 'utf8')));
+      details = [...r.details];
+      passed = r.passed;
       failedStep = r.failedStep;
       // Golden problems are kept apart from the run's outcome so a known
       // failure can never absorb them: the gate is the scenario's `golden`
@@ -212,16 +225,17 @@ async function main() {
         scenarioId: id,
         tags: scenario.tags,
         goldenDir: GOLDEN_DIR,
-        resultPath: r.resultPath,
+        resultPath,
         passed,
         log,
       });
     } catch (err) {
-      // A recording verb (`result ...`) failing is a harness-level fault.
+      // `mauto run` failing outright (device, environment, a contract
+      // violation) or an unreadable result is a harness-level fault.
       details = [`harness error: ${err.message}`];
     }
     const outcome = classify({ scenarioId: id, passed, failedStep, knownFailures, engine });
-    summary.push({ id, outcome, failedStep, details, golden });
+    summary.push({ id, outcome, failedStep, details, golden, junit });
   }
 
   // The live daemon must have run the requested engine, not just resolved it.
