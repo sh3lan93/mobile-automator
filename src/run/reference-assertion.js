@@ -1,10 +1,12 @@
 'use strict';
 
 // The one decision behind a `screenshot_match` verdict (#281), shared by
-// `mauto run` (src/run/assertions.js) and `mauto assert` (src/cli.js) the way
-// src/assertion/fields.js is their one field mapping: both paths capture,
-// mask and compare the same way, so the same screen cannot verdict
-// differently by path.
+// `mauto run` (src/run/assertions.js) and `mauto assert`
+// (src/run/assert-reference.js). Both build its `input` through the one field
+// mapping (src/assertion/fields.js: toEvaluatorInput / fromCliFlags) and its
+// paths through ./screenshots.js (runArtifacts / assertArtifacts), then
+// capture, mask and compare here the same way, so the same screen cannot
+// verdict differently by path.
 //
 //   capture a stable frame -> (update: record it as the baseline)
 //   -> (no baseline: needs_agent) -> resolve masks -> compare -> verdict
@@ -18,6 +20,8 @@ const path = require('path');
 const { compareScreenshots, DEFAULT_TOLERANCE } = require('./reference-screenshot');
 const { captureStable, writeReference } = require('./screenshots');
 const { scaleFactor, pointsToPixels, boundsToRect, pngSize } = require('./scale');
+const { timeoutFor } = require('./poll');
+const { parseUnitInterval } = require('../util/parse-unit-interval');
 
 const RECT_KEYS = ['x', 'y', 'width', 'height'];
 
@@ -25,10 +29,8 @@ const RECT_KEYS = ['x', 'y', 'width', 'height'];
 // default when absent, else a number in [0, 1].
 function toleranceOf(value) {
   if (value === undefined || value === null) return DEFAULT_TOLERANCE;
-  const n = typeof value === 'number' ? value : (String(value).trim() === '' ? NaN : Number(value));
-  if (!Number.isFinite(n) || n < 0 || n > 1) {
-    throw new Error(`tolerance must be a number from 0 to 1 (got ${JSON.stringify(value)})`);
-  }
+  const n = parseUnitInterval(value);
+  if (n === null) throw new Error(`tolerance must be a number from 0 to 1 (got ${JSON.stringify(value)})`);
   return n;
 }
 
@@ -85,68 +87,77 @@ async function pixelMasks(masks, { bridge, actualPath, findFirst }) {
   return { rects };
 }
 
-// Decide one screenshot_match. Every path is absolute; the verdict records
-// them relative to `projectRoot`. Returns:
+// Decide one screenshot_match.
+//   input   the evaluator input ({ type, reference_screenshot?, tolerance? })
+//   masks   the assertion's masks (scenario objects, or parsed --mask specs)
+//   paths   { reference, actual, diff }, absolute (./screenshots.js)
+// The capture's poll budget is the run settings' (timeoutFor / pollMs).
+// Returns { verdict, diff }: `verdict` is the record body
 //   { status: 'passed' | 'failed' | 'needs_agent', message, mechanical, judge,
-//     reference_screenshot, actual_screenshot, similarity_score,
-//     diff_screenshot, stable }
-// Throws only on a device or file error (and on a bad tolerance or mask).
+//     reference_screenshot, actual_screenshot, similarity_score }
+// with paths relative to `projectRoot` (similarity_score null when nothing was
+// compared), and `diff` the project-relative diff image, or null when none was
+// written. Throws only on a device or file error (and on a bad tolerance or
+// mask, before the device is touched).
 async function decideReferenceScreenshot({
-  bridge, clock, projectRoot, referencePath, actualPath, diffPath = null,
-  tolerance, masks, updateReferences = false, timeoutMs, pollMs, findFirst,
+  bridge, clock, settings, projectRoot, input, masks, paths, updateReferences = false, findFirst,
 }) {
-  const tol = toleranceOf(tolerance);
+  const tol = toleranceOf(input.tolerance);
   const checkedMasks = masksOf(masks);
+  const timeoutMs = timeoutFor({}, settings);
   const rel = (p) => (p ? path.relative(projectRoot, p) : null);
-  const capture = await captureStable({ bridge, dest: actualPath, clock, timeoutMs, pollMs });
+  const capture = await captureStable({ bridge, dest: paths.actual, clock, timeoutMs, pollMs: settings.pollMs });
   const unsettled = capture.stable ? '' : ` (the screen did not settle within ${timeoutMs}ms; the last of ${capture.frames} frames was used)`;
-  const base = {
-    reference_screenshot: rel(referencePath),
-    actual_screenshot: rel(actualPath),
-    diff_screenshot: null,
-    stable: capture.stable,
-  };
-  const decided = (status, message, similarity) => ({
-    ...base, status, message, mechanical: true, judge: { by: 'reference_screenshot' }, similarity_score: similarity,
+  const referenceRel = rel(paths.reference);
+  const record = (status, message, { mechanical = true, judge = { by: 'reference_screenshot' }, similarity = null } = {}) => ({
+    status,
+    message,
+    mechanical,
+    judge,
+    reference_screenshot: referenceRel,
+    actual_screenshot: rel(paths.actual),
+    similarity_score: similarity,
   });
+  const decided = (status, message, similarity = null) => ({ verdict: record(status, message, { similarity }), diff: null });
 
   if (updateReferences) {
-    writeReference(actualPath, referencePath);
-    return decided('passed', `reference updated (--update-references): ${base.reference_screenshot}${unsettled}`, 1);
+    writeReference(paths.actual, paths.reference);
+    return decided('passed', `reference updated (--update-references): ${referenceRel}${unsettled}`, 1);
   }
-  if (!fs.existsSync(referencePath)) {
+  if (!fs.existsSync(paths.reference)) {
     return {
-      ...base,
-      status: 'needs_agent',
-      message: `no reference screenshot at ${base.reference_screenshot}; re-run with --update-references to record it from this screen`,
-      mechanical: false,
-      judge: { by: 'none' },
-      similarity_score: null,
+      verdict: record(
+        'needs_agent',
+        `no reference screenshot at ${referenceRel}; re-run with --update-references to record it from this screen`,
+        { mechanical: false, judge: { by: 'none' } }
+      ),
+      diff: null,
     };
   }
 
-  const { rects, missing } = await pixelMasks(checkedMasks, { bridge, actualPath, findFirst });
+  const { rects, missing } = await pixelMasks(checkedMasks, { bridge, actualPath: paths.actual, findFirst });
   if (missing !== undefined) {
-    return decided('failed', `mask element "${missing}" was not found on screen, so the comparison cannot ignore it`, null);
+    return decided('failed', `mask element "${missing}" was not found on screen, so the comparison cannot ignore it`);
   }
 
-  const r = compareScreenshots({ referencePath, actualPath, tolerance: tol, masks: rects, diffPath });
+  const r = compareScreenshots({
+    referencePath: paths.reference, actualPath: paths.actual, tolerance: tol, masks: rects, diffPath: paths.diff,
+  });
   if (r.dimensionsMismatch) {
     const { reference: a, actual: b } = r.dimensionsMismatch;
     return decided(
       'failed',
-      `screenshot size does not match reference ${base.reference_screenshot}: reference is ${a.width}x${a.height}, ` +
-      `actual is ${b.width}x${b.height}; never resampled (record a reference for this device with --update-references)`,
-      null
+      `screenshot size does not match reference ${referenceRel}: reference is ${a.width}x${a.height}, ` +
+      `actual is ${b.width}x${b.height}; never resampled (record a reference for this device with --update-references)`
     );
   }
-  const verdict = { ...decided(r.pass ? 'passed' : 'failed', '', r.similarity), diff_screenshot: rel(r.diffPath) };
-  verdict.message = r.pass
-    ? `screenshot matches reference ${base.reference_screenshot}: similarity ${fmt(r.similarity)} >= tolerance ${fmt(tol)}${unsettled}`
-    : `screenshot differs from reference ${base.reference_screenshot}: similarity ${fmt(r.similarity)} < tolerance ${fmt(tol)} ` +
+  const diff = rel(r.diffPath);
+  const message = r.pass
+    ? `screenshot matches reference ${referenceRel}: similarity ${fmt(r.similarity)} >= tolerance ${fmt(tol)}${unsettled}`
+    : `screenshot differs from reference ${referenceRel}: similarity ${fmt(r.similarity)} < tolerance ${fmt(tol)} ` +
       `(${r.diffPixels} of ${r.comparedPixels} pixels differ)` +
-      `${verdict.diff_screenshot ? `; diff image: ${verdict.diff_screenshot}` : ''}${unsettled}`;
-  return verdict;
+      `${diff ? `; diff image: ${diff}` : ''}${unsettled}`;
+  return { verdict: record(r.pass ? 'passed' : 'failed', message, { similarity: r.similarity }), diff };
 }
 
 module.exports = { decideReferenceScreenshot, toleranceOf, masksOf, parseMaskSpec };

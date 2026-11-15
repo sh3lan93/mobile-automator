@@ -1,6 +1,5 @@
 'use strict';
 
-const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { Command } = require('commander');
@@ -9,14 +8,15 @@ const { version: PKG_VERSION } = require('../package.json');
 
 const { ok, fail, render, exitCodeFor } = require('./output/envelope');
 const selectionStore = require('./device/selection');
-const { engineHint } = require('./device/engine-hints');
+const { FS_ERROR_CODES, deviceHint, deviceFail } = require('./output/device-fail');
 const { ScenarioValidator } = require('./scenario/validator');
 const { loadScenario } = require('./scenario/load');
-const { evaluate, findFirst, MECHANICAL_TYPES, REFERENCE_SCREENSHOT_TYPES } = require('./assertion/evaluator');
+const { evaluate, MECHANICAL_TYPES, REFERENCE_SCREENSHOT_TYPES } = require('./assertion/evaluator');
 const { fromCliFlags } = require('./assertion/fields');
 const { ResultStore, readFinalizedResult, InvalidRunIdError, AlreadyDecidedError } = require('./result/store');
 const {
-  OBSERVATION_TYPES, parseObservation, parseCapture, parseAssertionVerdict, RUN_STATUSES, parseRunStatus, parseStepStatus,
+  OBSERVATION_TYPES, parseObservation, parseCapture, parseAssertionVerdict, parseSimilarityScore, RUN_STATUSES,
+  parseRunStatus, parseStepStatus,
 } = require('./result/flags');
 const { finalizeAgainstScenario } = require('./result/finalize-against-scenario');
 const { toJUnit } = require('./result/junit');
@@ -51,11 +51,7 @@ const { makeFlusher } = require('./observe/flush');
 const { prepareRun } = require('./run/prepare');
 const { handleRun } = require('./run/handle');
 const { realClock } = require('./run/clock');
-const { decideReferenceScreenshot, toleranceOf, parseMaskSpec } = require('./run/reference-assertion');
-const { resolveReference } = require('./run/screenshots');
-const { runSettings } = require('./run/settings');
-const { timeoutFor } = require('./run/poll');
-const { workspaceDir } = require('./workspace/layout');
+const { handleAssertReference } = require('./run/assert-reference');
 const { makeRunTrace } = require('./run/trace');
 const { parsePositiveInt } = require('./util/parse-positive-int');
 const {
@@ -126,11 +122,6 @@ const KNOWN_ASSERTION_TYPES = new Set([
 const SWIPE_DIRECTIONS = new Set(['up', 'down', 'left', 'right']);
 const ORIENTATIONS = new Set(['portrait', 'landscape']);
 
-// fs error codes that signal an environment/filesystem problem (perms, missing
-// path, read-only FS, disk full) rather than a logic bug — surfaced as
-// `environment` with a filesystem-specific hint.
-const FS_ERROR_CODES = new Set(['EACCES', 'ENOENT', 'EROFS', 'ENOSPC', 'EPERM']);
-
 // Build a human-readable usage line for a commander command, e.g.
 // "Usage: mauto result add-step [options]". Walks the parent chain so a
 // subcommand's hint names the full invocation path.
@@ -193,16 +184,6 @@ function toEnvelope(err) {
   };
 }
 
-// The hint for any device-kind failure. Precedence: an explicit err.hint wins
-// (our own code attached it knowing the exact cause — a DeviceResolutionError,
-// the daemon-log pointer, a timeout); then engineHint, which recognises engine
-// messages that are useless on their own (the 1.0.5 engine's missing iOS agent
-// and changed Android device ids, #199); then the handler's generic fallback.
-// Every device fail() below goes through here so no handler can miss it.
-function deviceHint(err, fallback) {
-  return (err && err.hint) || engineHint(err && err.message) || fallback;
-}
-
 // ---------------------------------------------------------------------------
 // Handlers — pure-ish: accept injected deps, return { envelope, exitKind }.
 // No process.exit / printing here so they are trivially unit-testable.
@@ -263,21 +244,6 @@ function hostGate(platform) {
   if (isSupportedHost(platform)) return null;
   const err = unsupportedHostError(platform);
   return { envelope: fail(err.kind, err.message, err.hint), exitKind: err.kind };
-}
-
-function deviceFail(err) {
-  // Respect a typed error's kind (e.g. the daemon's 'timeout') so the envelope
-  // and exit code reflect the real failure class; anything else defaults to
-  // 'device' (exit 2) as before.
-  const kind = err.kind || 'device';
-  return {
-    envelope: fail(
-      kind,
-      err.message || String(err),
-      deviceHint(err, 'Ensure a device or simulator is connected and the app is running.')
-    ),
-    exitKind: kind,
-  };
 }
 
 // Parse a "x,y" coordinate string shared by tap / long-press / double-tap.
@@ -597,116 +563,6 @@ async function handleAssert(deps, type, flags = {}) {
   return { envelope: ok(verdictData, hint), exitKind: 'ok' };
 }
 
-// Quote a path for a copy-pasteable command line.
-const shellQuote = (s) => JSON.stringify(String(s));
-
-// A fresh `assert_<YYYYMMDD_HHMMSS>_<hex>` directory name for one `mauto assert`
-// screenshot_match's artifacts.
-function assertArtifactId(now) {
-  const stamp = now.toISOString().replace(/[-:T]/g, '').replace(/\..*$/, '');
-  return `assert_${stamp.slice(0, 8)}_${stamp.slice(8, 14)}_${crypto.randomBytes(3).toString('hex')}`;
-}
-
-// `mauto assert screenshot_match` (#281): capture a stable screenshot and
-// compare it against `--reference`, through the same decision `mauto run`
-// uses (src/run/reference-assertion.js). The capture and its diff land under
-// <workspace>/screenshots/assert/<id>/. Every flag is checked before the
-// device is touched. A mismatch is test_failed (exit 6); a missing baseline is
-// ok with needs_agent (exit 0), and --update-references records it instead.
-async function handleAssertReference(
-  { deviceBridge, projectRoot = null, clock = realClock, loadConfig = configManager.load, now = () => new Date() },
-  type,
-  flags
-) {
-  const invalid = (message, hint = null) => ({ envelope: fail('invalid_input', message, hint), exitKind: 'invalid_input' });
-  if (typeof flags.reference !== 'string' || flags.reference.trim() === '') {
-    return invalid(
-      `${type} needs --reference <path>: the baseline image to compare against`,
-      'Pass --reference <path> (relative to the workspace directory); add --update-references to record it from this screen.'
-    );
-  }
-  let tolerance;
-  let masks;
-  try {
-    tolerance = toleranceOf(flags.tolerance);
-    masks = (flags.mask || []).map(parseMaskSpec);
-  } catch (err) {
-    return invalid(err.message, 'Use --tolerance <0..1> and --mask <x,y,width,height | element description>.');
-  }
-  if (!projectRoot) {
-    return {
-      envelope: fail(
-        'environment',
-        `${type} needs a workspace: its screenshots are written under the workspace directory`,
-        'Run `mauto setup` in the project root first, or run this from inside an existing workspace.'
-      ),
-      exitKind: 'environment',
-    };
-  }
-  let referencePath;
-  try {
-    referencePath = resolveReference(projectRoot, { reference_screenshot: flags.reference });
-  } catch (err) {
-    return invalid(err.message, 'Keep --reference inside the project.');
-  }
-
-  const settings = runSettings(loadConfig(projectRoot));
-  const dir = path.join(workspaceDir(projectRoot), 'screenshots', 'assert', assertArtifactId(now()));
-  let v;
-  try {
-    v = await decideReferenceScreenshot({
-      bridge: deviceBridge,
-      clock,
-      projectRoot,
-      referencePath,
-      actualPath: path.join(dir, 'actual.png'),
-      diffPath: path.join(dir, 'diff.png'),
-      tolerance,
-      masks,
-      updateReferences: flags.updateReferences === true,
-      timeoutMs: timeoutFor({}, settings),
-      pollMs: settings.pollMs,
-      findFirst,
-    });
-  } catch (err) {
-    // A filesystem fault is the environment's (withEnvelope classifies it);
-    // anything else came from capturing the screen.
-    if (err && FS_ERROR_CODES.has(err.code)) throw err;
-    return deviceFail(err);
-  }
-
-  const needsAgent = v.status === 'needs_agent';
-  const data = {
-    type,
-    mechanical: v.mechanical,
-    pass: needsAgent ? null : v.status === 'passed',
-    needs_agent: needsAgent,
-    message: v.message,
-    reference_screenshot: v.reference_screenshot,
-    actual_screenshot: v.actual_screenshot,
-    similarity_score: v.similarity_score,
-    diff_screenshot: v.diff_screenshot,
-  };
-  const verdict = needsAgent ? '<true|false> --judge agent' : String(data.pass);
-  const recordCommand =
-    `mauto result add-assertion --run-id <run_id> --step-id <step_id> ` +
-    `--type ${type} --pass ${verdict} --message "<why>" ` +
-    `--reference-screenshot ${shellQuote(v.reference_screenshot)} --actual-screenshot ${shellQuote(v.actual_screenshot)}` +
-    (v.similarity_score === null ? '' : ` --similarity-score ${v.similarity_score}`);
-
-  if (needsAgent) {
-    const hint =
-      `No reference screenshot at ${v.reference_screenshot}: re-run with --update-references to record this screen as ` +
-      `the baseline, or judge ${v.actual_screenshot} yourself and record it: ${recordCommand}`;
-    return { envelope: ok(data, hint), exitKind: 'ok' };
-  }
-  const hint = `Record it: ${recordCommand}`;
-  if (!data.pass) {
-    return { envelope: fail('test_failed', `assertion failed: ${v.message}`, hint, data), exitKind: 'test_failed' };
-  }
-  return { envelope: ok(data, hint), exitKind: 'ok' };
-}
-
 // Collect a repeatable flag's values into an array (commander's collector).
 const collect = (value, previous) => previous.concat([value]);
 
@@ -817,15 +673,9 @@ function handleResultAddAssertion({ resultStoreFactory, projectRoot }, opts) {
     return { envelope: fail('invalid_input', verdict.error, null), exitKind: 'invalid_input' };
   }
   // A screenshot_match's comparison (#281), as `mauto assert` reports it.
-  let similarity = null;
-  if (opts.similarityScore !== undefined) {
-    similarity = String(opts.similarityScore).trim() === '' ? NaN : Number(opts.similarityScore);
-    if (!Number.isFinite(similarity) || similarity < 0 || similarity > 1) {
-      return {
-        envelope: fail('invalid_input', `--similarity-score must be a number from 0 to 1 (got "${opts.similarityScore}")`, null),
-        exitKind: 'invalid_input',
-      };
-    }
+  const similarity = parseSimilarityScore(opts.similarityScore);
+  if (similarity.error) {
+    return { envelope: fail('invalid_input', similarity.error, null), exitKind: 'invalid_input' };
   }
 
   const store = resultStoreFactory({ runId, scenarioId, projectRoot });
@@ -839,10 +689,10 @@ function handleResultAddAssertion({ resultStoreFactory, projectRoot }, opts) {
     message,
     expected: expected === undefined ? null : expected,
     actual: actual === undefined ? null : actual,
-    // Only when supplied, so every other assertion is recorded as before.
-    ...(opts.referenceScreenshot === undefined ? {} : { reference_screenshot: opts.referenceScreenshot }),
-    ...(opts.actualScreenshot === undefined ? {} : { actual_screenshot: opts.actualScreenshot }),
-    ...(similarity === null ? {} : { similarity_score: similarity }),
+    // The store records these only when supplied (it skips null/undefined).
+    reference_screenshot: opts.referenceScreenshot,
+    actual_screenshot: opts.actualScreenshot,
+    similarity_score: similarity.value,
   });
   return { envelope: ok({ run_id: runId, assertion: entry }, storeHint(store)), exitKind: 'ok' };
 }

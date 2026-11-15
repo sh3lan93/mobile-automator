@@ -8,6 +8,7 @@ const {
   decideReferenceScreenshot, toleranceOf, masksOf, parseMaskSpec,
 } = require('../../../src/run/reference-assertion');
 const { findFirst } = require('../../../src/assertion/evaluator');
+const { toEvaluatorInput, fromCliFlags, toCliFlags } = require('../../../src/assertion/fields');
 const { makeFakeBridge, makeFakeClock, el } = require('../../helpers/fake-bridge');
 const { solidPng, quadrantPng, writePng } = require('../../helpers/png');
 
@@ -25,10 +26,22 @@ beforeEach(() => {
   diffPath = path.join(root, 'shots', 'assert_a.diff.png');
 });
 
-const decide = (bridge, extra = {}) => decideReferenceScreenshot({
-  bridge, clock: makeFakeClock(), projectRoot: root, referencePath, actualPath, diffPath,
-  timeoutMs: 1000, pollMs: 100, findFirst, ...extra,
-});
+// The verdict body plus the diff, flattened so each test reads one object.
+// `tolerance` and `timeoutMs`/`pollMs` are spelled as the callers' inputs: an
+// evaluator input field and the run settings.
+const decide = async (bridge, { tolerance, timeoutMs = 1000, pollMs = 100, ...extra } = {}) => {
+  const { verdict, diff } = await decideReferenceScreenshot({
+    bridge,
+    clock: makeFakeClock(),
+    settings: { defaultTimeoutMs: timeoutMs, pollMs },
+    projectRoot: root,
+    input: { type: 'screenshot_match', ...(tolerance === undefined ? {} : { tolerance }) },
+    paths: { reference: referencePath, actual: actualPath, diff: diffPath },
+    findFirst,
+    ...extra,
+  });
+  return { ...verdict, diff_screenshot: diff };
+};
 const rel = (p) => path.relative(root, p);
 
 describe('decideReferenceScreenshot', () => {
@@ -37,7 +50,7 @@ describe('decideReferenceScreenshot', () => {
     const v = await decide(bridge, { updateReferences: true });
     expect(v).toMatchObject({
       status: 'passed', mechanical: true, judge: { by: 'reference_screenshot' }, similarity_score: 1,
-      reference_screenshot: rel(referencePath), actual_screenshot: rel(actualPath), stable: true,
+      reference_screenshot: rel(referencePath), actual_screenshot: rel(actualPath),
     });
     expect(v.message).toBe(`reference updated (--update-references): ${rel(referencePath)}`);
     expect(fs.readFileSync(referencePath)).toEqual(solidPng(20, 20, WHITE));
@@ -133,8 +146,27 @@ describe('decideReferenceScreenshot', () => {
       screenshots: (n) => (n % 2 ? solidPng(20, 20, WHITE) : solidPng(20, 20, BLACK)),
     });
     const v = await decide(bridge, { timeoutMs: 300, pollMs: 100 });
-    expect(v.stable).toBe(false);
+    expect(v).not.toHaveProperty('stable');
     expect(v.message).toMatch(/did not settle within 300ms/);
+  });
+
+  test('the verdict is exactly the record body, and the diff rides beside it', async () => {
+    writePng(referencePath, solidPng(20, 20, WHITE));
+    const bridge = makeFakeBridge({ screenshots: [solidPng(20, 20, WHITE)] });
+    const r = await decideReferenceScreenshot({
+      bridge,
+      clock: makeFakeClock(),
+      settings: { defaultTimeoutMs: 1000, pollMs: 100 },
+      projectRoot: root,
+      input: { type: 'screenshot_match' },
+      paths: { reference: referencePath, actual: actualPath, diff: diffPath },
+      findFirst,
+    });
+    expect(Object.keys(r).sort()).toEqual(['diff', 'verdict']);
+    expect(Object.keys(r.verdict).sort()).toEqual([
+      'actual_screenshot', 'judge', 'mechanical', 'message', 'reference_screenshot', 'similarity_score', 'status',
+    ]);
+    expect(r.diff).toBeNull();
   });
 });
 
@@ -162,5 +194,37 @@ describe('masksOf / parseMaskSpec', () => {
   });
   test('a negative rect is refused', () => {
     expect(() => parseMaskSpec('-1,2,3,4')).toThrow(/mask/);
+  });
+});
+
+describe('one input for both paths (src/assertion/fields.js)', () => {
+  // `mauto run` builds the decision's input with toEvaluatorInput(a);
+  // `mauto assert` with fromCliFlags over the flags an agent copies from
+  // toCliFlags(a). Commander keys these flags by their own name.
+  const a = {
+    id: 'home', type: 'screenshot_match', after_step: 's1', reference_screenshot: 'ref/a.png', tolerance: 0.7,
+  };
+  const parsed = (argv) => Object.fromEntries(
+    argv.flatMap((v, i) => (i % 2 ? [] : [[v.replace(/^--/, ''), argv[i + 1]]]))
+  );
+
+  test('toEvaluatorInput(a) is fromCliFlags(type, flags of toCliFlags(a))', () => {
+    const runInput = toEvaluatorInput(a);
+    const assertInput = fromCliFlags('screenshot_match', parsed(toCliFlags(a)));
+    expect(assertInput).toEqual(runInput);
+    expect(runInput).toEqual({ type: 'screenshot_match', reference_screenshot: 'ref/a.png', tolerance: '0.7' });
+  });
+
+  test('so the same screen gets the same verdict from either input', async () => {
+    writePng(referencePath, solidPng(20, 20, WHITE));
+    const shot = quadrantPng(20, 20, WHITE, { quadrant: 'tl', rgba: BLACK });
+    const run = await decide(makeFakeBridge({ screenshots: [shot] }), { input: toEvaluatorInput(a) });
+    const cli = await decide(makeFakeBridge({ screenshots: [shot] }), {
+      input: fromCliFlags('screenshot_match', parsed(toCliFlags(a))),
+    });
+    expect(cli).toEqual(run);
+    // 0.75 similarity: passes only because the scenario's 0.7 reached the
+    // decision (the default 0.9 would fail it).
+    expect(run.status).toBe('passed');
   });
 });

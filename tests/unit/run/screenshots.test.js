@@ -5,7 +5,7 @@ const os = require('os');
 const path = require('path');
 
 const {
-  referencePathFor, resolveReference, captureStable, writeReference,
+  referencePathFor, resolveReference, runArtifacts, assertArtifacts, ensureParent, captureStable, writeReference,
 } = require('../../../src/run/screenshots');
 const { workspaceDir } = require('../../../src/workspace/layout');
 const { makeFakeBridge, makeFakeClock } = require('../../helpers/fake-bridge');
@@ -113,5 +113,65 @@ describe('captureStable', () => {
     const bridge = makeFakeBridge({ methods: { screenshot: () => null } });
     await expect(captureStable({ bridge, dest: path.join(root, 's.png'), clock: makeFakeClock(), timeoutMs: 100, pollMs: 10 }))
       .rejects.toThrow(/not a readable PNG/);
+  });
+});
+
+describe('runArtifacts', () => {
+  const shots = (...p) => path.join(workspaceDir(root), 'screenshots', ...p);
+
+  test('the default baseline, and the actual and diff beside the run evidence', () => {
+    expect(runArtifacts({
+      projectRoot: root, scenarioId: 'login', runId: 'run_20261115_120000', assertionId: 'a1', input: { type: 'screenshot_match' },
+    })).toEqual({
+      reference: shots('reference', 'login', 'a1.png'),
+      actual: shots('login', 'run_20261115_120000', 'assert_a1.png'),
+      diff: shots('login', 'run_20261115_120000', 'assert_a1.diff.png'),
+    });
+  });
+
+  test('an explicit reference_screenshot in the input wins, and is kept inside the project', () => {
+    const args = { projectRoot: root, scenarioId: 'login', runId: 'run_1', assertionId: 'a1' };
+    expect(runArtifacts({ ...args, input: { reference_screenshot: 'baselines/x.png' } }).reference)
+      .toBe(path.join(workspaceDir(root), 'baselines', 'x.png'));
+    expect(() => runArtifacts({ ...args, input: { reference_screenshot: '../../etc/x.png' } })).toThrow(/outside the project/);
+  });
+});
+
+describe('assertArtifacts', () => {
+  const now = new Date('2026-11-15T12:34:56.789Z');
+
+  test('the named baseline, and a fresh stamped directory for the actual and diff', () => {
+    const p = assertArtifacts({ projectRoot: root, input: { reference_screenshot: 'ref/home.png' }, now });
+    expect(p.reference).toBe(path.join(workspaceDir(root), 'ref', 'home.png'));
+    const dir = path.dirname(p.actual);
+    expect(path.dirname(dir)).toBe(path.join(workspaceDir(root), 'screenshots', 'assert'));
+    expect(path.basename(dir)).toMatch(/^assert_20261115_123456_[0-9a-f]{6}$/);
+    expect(p.actual).toBe(path.join(dir, 'actual.png'));
+    expect(p.diff).toBe(path.join(dir, 'diff.png'));
+  });
+
+  test('two calls in the same second get different directories', () => {
+    const input = { reference_screenshot: 'ref/home.png' };
+    expect(assertArtifacts({ projectRoot: root, input, now }).actual)
+      .not.toBe(assertArtifacts({ projectRoot: root, input, now }).actual);
+  });
+
+  test('refuses a missing reference and one outside the project', () => {
+    expect(() => assertArtifacts({ projectRoot: root, input: {}, now })).toThrow(/reference/);
+    expect(() => assertArtifacts({ projectRoot: root, input: { reference_screenshot: '../../x.png' }, now }))
+      .toThrow(/outside the project/);
+  });
+
+  test('makes no directory: the capture and writeReference do (ensureParent)', () => {
+    assertArtifacts({ projectRoot: root, input: { reference_screenshot: 'ref/home.png' }, now });
+    expect(fs.readdirSync(root)).toEqual([]);
+  });
+});
+
+describe('ensureParent', () => {
+  test('creates the directory a file will land in, and returns the file', () => {
+    const file = path.join(root, 'a', 'b', 'c.png');
+    expect(ensureParent(file)).toBe(file);
+    expect(fs.statSync(path.dirname(file)).isDirectory()).toBe(true);
   });
 });

@@ -30,7 +30,8 @@ describe('compareScreenshots', () => {
   test('one changed quadrant is similarity 0.75 and writes the diff image', () => {
     const referencePath = file('ref.png', solidPng(40, 40, WHITE));
     const actualPath = file('act.png', quadrantPng(40, 40, WHITE, { quadrant: 'br', rgba: BLACK }));
-    const diffPath = path.join(dir, 'out', 'nested', 'diff.png');
+    // The diff lands beside the actual, whose directory the capture created.
+    const diffPath = path.join(dir, 'diff.png');
     const r = compareScreenshots({ referencePath, actualPath, diffPath });
     expect(r.similarity).toBeCloseTo(0.75, 5);
     expect(r.diffPixels).toBe(400);

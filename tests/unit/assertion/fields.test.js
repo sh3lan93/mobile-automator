@@ -139,8 +139,8 @@ describe('toEvaluatorInput', () => {
     expect(toEvaluatorInput(CASES[6].a)).toEqual({ type: 'element_count', target: 'Product', operator: '>=', count: 3 });
   });
 
-  test('carries the screenshot_match reference and a numeric tolerance', () => {
-    expect(toEvaluatorInput(CASES[10].a)).toEqual({ type: 'screenshot_match', reference_screenshot: 'ref/home.png', tolerance: 0.95 });
+  test('carries the screenshot_match reference and the tolerance as a command line would (parsed by the decision)', () => {
+    expect(toEvaluatorInput(CASES[10].a)).toEqual({ type: 'screenshot_match', reference_screenshot: 'ref/home.png', tolerance: '0.95' });
   });
 
   test('includes only provided keys', () => {

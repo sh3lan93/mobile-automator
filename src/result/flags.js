@@ -7,6 +7,8 @@
 // `error` into a fail('invalid_input', …) envelope so an unknown observation
 // type is rejected loudly instead of being silently dropped.
 
+const { parseUnitInterval } = require('../util/parse-unit-interval');
+
 // Mirrors the enum at /properties/observations/items/properties/type in
 // src/schemas/result_schema.json. tests/lint/result-coverage.test.js asserts
 // the two never drift.
@@ -113,6 +115,16 @@ function parseAssertionVerdict(passRaw, judgeRaw) {
   return { value: { status, judge: judgeRaw === 'agent' ? { by: 'agent' } : undefined } };
 }
 
+// `result add-assertion --similarity-score` (#281): a screenshot_match's
+// measured similarity, as `mauto assert` reports it. Absent is `{ value: null }`
+// (nothing to record); otherwise a number in [0, 1].
+function parseSimilarityScore(raw) {
+  if (raw === undefined) return { value: null };
+  const value = parseUnitInterval(raw);
+  if (value === null) return { error: `--similarity-score must be a number from 0 to 1 (got "${raw}")` };
+  return { value };
+}
+
 // Mirrors the enum at /properties/status in src/schemas/result_schema.json;
 // tests/lint/result-coverage.test.js asserts the two never drift. `result
 // finalize --status` must be one of these or omitted (omission derives the
@@ -134,6 +146,7 @@ module.exports = {
   parseCapture,
   JUDGES,
   parseAssertionVerdict,
+  parseSimilarityScore,
   RUN_STATUSES,
   parseRunStatus,
   STEP_STATUS_ALIASES,

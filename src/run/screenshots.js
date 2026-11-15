@@ -1,13 +1,21 @@
 'use strict';
 
 // Where reference-screenshot artifacts live and how they are captured (#281).
-// This module is the one place that creates directories for them.
+// This module owns every path the comparison reads or writes, and ensureParent
+// is the one place that creates their directories.
 //
 //   <workspace>/screenshots/reference/<scenario_id>/<assertion_id>.png   the baseline
+//   <workspace>/screenshots/<scenario_id>/<run_id>/assert_<id>.png        `mauto run`'s actual
+//   <workspace>/screenshots/<scenario_id>/<run_id>/assert_<id>.diff.png   ... and its diff
+//   <workspace>/screenshots/assert/<assert_YYYYMMDD_HHMMSS_hex>/actual.png `mauto assert`'s actual
+//   <workspace>/screenshots/assert/<assert_YYYYMMDD_HHMMSS_hex>/diff.png   ... and its diff
 //
 // A scenario may name its own baseline (`reference_screenshot`), relative to
-// the workspace; whatever it names must stay inside the project root.
+// the workspace; whatever it names must stay inside the project root. The diff
+// always lands beside its actual, so creating the actual's directory (the
+// capture does) is enough for it.
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { PNG } = require('pngjs');
@@ -52,6 +60,47 @@ function resolveReference(projectRoot, assertion, scenarioId) {
   return referencePathFor(projectRoot, scenarioId, assertion && assertion.id);
 }
 
+// The artifacts of one `mauto run` screenshot_match: the baseline its
+// evaluator `input` names (or the default for scenarioId/assertionId), and the
+// actual and diff beside the run's other evidence. Absolute paths.
+function runArtifacts({ projectRoot, scenarioId, runId, assertionId, input }) {
+  const dir = path.join(workspaceDir(projectRoot), 'screenshots', scenarioId, runId);
+  return {
+    reference: resolveReference(projectRoot, { id: assertionId, reference_screenshot: input.reference_screenshot }, scenarioId),
+    actual: path.join(dir, `assert_${assertionId}.png`),
+    diff: path.join(dir, `assert_${assertionId}.diff.png`),
+  };
+}
+
+// A fresh `assert_<YYYYMMDD_HHMMSS>_<hex>` directory name for one `mauto
+// assert` screenshot_match's artifacts.
+function assertArtifactId(now) {
+  const stamp = now.toISOString().replace(/[-:T]/g, '').replace(/\..*$/, '');
+  return `assert_${stamp.slice(0, 8)}_${stamp.slice(8, 14)}_${crypto.randomBytes(3).toString('hex')}`;
+}
+
+// The artifacts of one `mauto assert` screenshot_match: the baseline its
+// `input` names (required: assert has no scenario to default it from), and a
+// fresh directory, stamped with `now` (a Date), for the actual and diff.
+function assertArtifacts({ projectRoot, input, now }) {
+  const explicit = input.reference_screenshot;
+  if (typeof explicit !== 'string' || explicit.trim() === '') {
+    throw new Error('a reference screenshot path is required');
+  }
+  const dir = path.join(workspaceDir(projectRoot), 'screenshots', 'assert', assertArtifactId(now));
+  return {
+    reference: resolveReference(projectRoot, { reference_screenshot: explicit }),
+    actual: path.join(dir, 'actual.png'),
+    diff: path.join(dir, 'diff.png'),
+  };
+}
+
+// Create `file`'s directory (and its parents) if it does not exist yet.
+function ensureParent(file) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  return file;
+}
+
 function decodeFrame(file) {
   try {
     return PNG.sync.read(fs.readFileSync(file));
@@ -69,7 +118,7 @@ const removeQuietly = (file) => fs.rmSync(file, { force: true });
 // left at `dest`; the temporary frames (siblings of `dest`) are removed either
 // way. Returns { path: dest, stable, frames }.
 async function captureStable({ bridge, dest, clock, timeoutMs, pollMs }) {
-  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  ensureParent(dest);
   const temps = [0, 1].map((i) => path.join(path.dirname(dest), `.${path.basename(dest)}.frame${i}.tmp.png`));
   const capture = async (file) => {
     removeQuietly(file);
@@ -104,9 +153,11 @@ async function captureStable({ bridge, dest, clock, timeoutMs, pollMs }) {
 
 // Record `actualPath` as the baseline at `referencePath`.
 function writeReference(actualPath, referencePath) {
-  fs.mkdirSync(path.dirname(referencePath), { recursive: true });
+  ensureParent(referencePath);
   fs.copyFileSync(actualPath, referencePath);
   return referencePath;
 }
 
-module.exports = { referencePathFor, resolveReference, captureStable, writeReference };
+module.exports = {
+  referencePathFor, resolveReference, runArtifacts, assertArtifacts, assertArtifactId, ensureParent, captureStable, writeReference,
+};

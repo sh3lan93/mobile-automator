@@ -12,7 +12,6 @@
 // - similarity = 1 - diffPixels / comparedPixels (1 when everything is masked).
 
 const fs = require('fs');
-const path = require('path');
 const { PNG } = require('pngjs');
 const pixelmatch = require('pixelmatch');
 
@@ -78,9 +77,10 @@ function compareScreenshots({
   const comparedPixels = width * height - maskedPixels;
   const similarity = comparedPixels === 0 ? 1 : 1 - diffPixels / comparedPixels;
 
+  // No mkdir: the diff lands in the actual's directory (./screenshots.js
+  // runArtifacts / assertArtifacts), which the capture already created.
   let written = null;
   if (diffPixels > 0 && diffPath) {
-    fs.mkdirSync(path.dirname(diffPath), { recursive: true });
     fs.writeFileSync(diffPath, PNG.sync.write(diff));
     written = diffPath;
   }

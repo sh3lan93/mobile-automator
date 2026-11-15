@@ -135,7 +135,7 @@ async function resolveDeviceConnection({
   // what failed, the daemon's log is the only record of why, and transparent
   // autostart is the common path — most users never type `mauto session start`,
   // so without this the log stays invisible to almost everyone. The signal
-  // rides err.hint because deviceFail() in cli.js already surfaces it on every
+  // rides err.hint because deviceFail() (src/output/device-fail.js) already surfaces it on every
   // device verb, so acquireConnection's deliberately narrow contract is
   // untouched (#163).
   const oneShotWithLogHint = async (afterFailedSpawn) => {

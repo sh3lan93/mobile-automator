@@ -3133,6 +3133,10 @@ describe('cli handlers', () => {
           message: 'Login button missing',
           expected: 'visible',
           actual: 'absent',
+          // Not supplied: passed through as absent, and the store skips them.
+          reference_screenshot: undefined,
+          actual_screenshot: undefined,
+          similarity_score: null,
         },
       ]);
     });
