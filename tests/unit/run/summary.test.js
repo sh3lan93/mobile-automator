@@ -99,3 +99,30 @@ test('an empty run counts zero everywhere, and defaults the absent fields', () =
   expect(d.failed_step).toBeNull();
   expect(d.failures).toEqual([]);
 });
+
+// Fail closed: a CI job reads these counts, so a status this code does not
+// recognise must never be counted as passed.
+test('an unrecognised step status counts as error, and the partition still sums', () => {
+  const { steps } = build(result({
+    steps_executed: [
+      { step_id: 's1', status: 'passed' },
+      { step_id: 's2', status: 'weird' },
+      { step_id: 's3' },
+      null,
+    ],
+  }));
+  expect(steps).toEqual({ total: 4, passed: 1, failed: 0, error: 3, skipped: 0, needs_agent: 0 });
+  expect(steps.passed + steps.failed + steps.error + steps.skipped + steps.needs_agent).toBe(steps.total);
+});
+
+test('an unrecognised assertion status counts as failed, and the partition still sums', () => {
+  const { assertions } = build(result({
+    assertion_results: [
+      { assertion_id: 'a1', status: 'passed' },
+      { assertion_id: 'a2', status: 'weird' },
+      { assertion_id: 'a3' },
+    ],
+  }));
+  expect(assertions).toEqual({ total: 3, passed: 1, failed: 2, needs_agent: 0 });
+  expect(assertions.passed + assertions.failed + assertions.needs_agent).toBe(assertions.total);
+});

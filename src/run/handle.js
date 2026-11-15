@@ -99,34 +99,36 @@ async function handleRun(
 
   const { result, store: finalized, hints } = finalize();
   if (platformUnknown) hints.push('platform unknown: the bridge could not report it');
-  const data = runData(result, {
+  const facts = {
     projectRoot,
     resultFile: finalized.file,
     failedStep: outcome.failedStep,
     failures: outcome.failures,
-  });
-  const resultPath = data.result_path;
+  };
 
   // --junit: the report `mauto result export --format junit` would render for
   // this run, written once the run is finalized. A failed write overrides any
   // outcome — a CI job must never upload a report that is silently missing —
-  // and still names the saved result.
+  // and still names the saved result, with junit_path null.
   if (junitPath) {
     try {
       writeFile(junitPath, toJUnit([result]).xml);
     } catch (err) {
+      const data = runData(result, facts);
       return {
         envelope: fail(
           'environment',
           `could not write the JUnit report to ${junitPath}: ${err.message}`,
-          [...hints, `Check the directory exists and is writable; the run is ${result.status} and its result is saved to ${resultPath}.`].join(' '),
+          [...hints, `Check the directory exists and is writable; the run is ${result.status} and its result is saved to ${data.result_path}.`].join(' '),
           data
         ),
         exitKind: 'environment',
       };
     }
-    data.junit_path = junitPath;
   }
+
+  const data = runData(result, { ...facts, junitPath });
+  const resultPath = data.result_path;
 
   if (result.status === 'passed') {
     return { envelope: ok(data, hints.length ? hints.join(' ') : null), exitKind: 'ok' };
