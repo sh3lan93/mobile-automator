@@ -11,6 +11,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ Added
 
+- **`mauto run` reports for CI: `--junit`, `--judge none`, `--human`, and a
+  frozen `data` shape** (replay PRD #271, slice R6; still gated by
+  `MAUTO_REPLAY=1`). `--junit <path>` writes the run's JUnit XML report — the
+  same bytes `mauto result export --format junit` renders — once the run is
+  finalized, and names it in `data.junit_path`; a path whose directory does
+  not exist is `invalid_input` (exit 3) before any device work, and a write
+  that fails afterwards is `environment` (exit 5) with the full `data`,
+  overriding the run's own exit so a CI job never uploads a missing report.
+  `--judge <who>` accepts only `none` (the default): the runner has no judge,
+  so an assertion only an agent can judge stays `needs_agent`; any other value
+  is `invalid_input`. `--human` renders the run as a summary (status and
+  duration, step and assertion counts, failed step, failures, pending
+  assertions, result and JUnit paths, hint). `data` is now exactly `run_id`,
+  `scenario_id`, `status`, `result_path`, `duration_seconds`, `steps`
+  (`total`, `passed`, `failed`, `error`, `skipped`, `needs_agent`),
+  `assertions` (`total`, `passed`, `failed`, `needs_agent`), `failed_step`,
+  `failures`, `pending`, `junit_path`, `executor`, on every exit; the counts
+  partition the result file's entries, and a `needs_agent` step counts only
+  as `needs_agent`. `data.measurements` is removed from `mauto run`'s
+  envelope (it is still in the result file). `scripts/pack-smoke.sh` gains a
+  step proving the hidden verb ships in the tarball: a schema-invalid
+  scenario exits 3 with `invalid_input`, no device needed.
+  Refs #282
 - **`screenshot_match` is decided deterministically against a reference
   screenshot** (replay PRD #271, slice R5b). `mauto assert screenshot_match`
   and `mauto run` (gated by `MAUTO_REPLAY=1`) capture a stable screenshot (two
