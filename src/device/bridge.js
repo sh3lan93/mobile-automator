@@ -9,6 +9,9 @@ const { isAppNotRunning } = require('./app-not-running');
 
 // Thin wrapper over an injected mobile-mcp `call(toolName, args)` function.
 // Returns the agnostic element model and exposes only the primitives the CLI needs.
+// The error code of the bridge's own "cannot report the platform" failure.
+const PLATFORM_UNKNOWN = 'platform_unknown';
+
 class DeviceBridge {
   constructor({ call, device = null }) {
     if (typeof call !== 'function') {
@@ -108,6 +111,9 @@ class DeviceBridge {
   _unknownPlatform(id) {
     const err = new Error(`Cannot determine the platform of device "${id}".`);
     err.hint = 'Ensure the device is listed by `mauto devices`.';
+    // Callers that can live without a platform (mauto run's executor record)
+    // match on this, so every other failure still propagates.
+    err.code = PLATFORM_UNKNOWN;
     return err;
   }
 
@@ -247,4 +253,4 @@ class DeviceBridge {
   }
 }
 
-module.exports = { DeviceBridge };
+module.exports = { DeviceBridge, PLATFORM_UNKNOWN };

@@ -54,6 +54,35 @@
         }
       }
     },
+    "run": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Optional timings and limits for `mauto run`. Every key is optional and absent by default (the scaffold does not write this block); an absent key keeps the default named below.",
+      "properties": {
+        "poll_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1500,
+          "description": "Milliseconds between looks at the screen while a step waits."
+        },
+        "default_timeout_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 30000,
+          "description": "How long a wait step waits when its own wait_config names no timeout."
+        },
+        "scroll_max_swipes": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 10,
+          "description": "Most swipes a scroll_to_element step makes before it fails."
+        },
+        "loading_indicator_labels": {
+          "$ref": "#/definitions/stringList",
+          "description": "On-screen labels (text or accessibility label, matched like a target) that mean something is still loading; wait_for_loading_complete waits for all of them to be gone. Empty by default, in which case the step cannot know what to look for and says so."
+        }
+      }
+    },
     "app": {
       "type": "object",
       "additionalProperties": true,

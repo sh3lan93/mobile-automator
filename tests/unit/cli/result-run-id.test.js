@@ -70,7 +70,7 @@ const VERBS = {
   'add-crash': (root, runId) =>
     handleResultAddCrash({ resultStoreFactory: factory, projectRoot: root }, { runId, crashId: 'c1' }),
   finalize: (root, runId) =>
-    handleResultFinalize({ resultStoreFactory: factory, memoryStoreFactory: null, projectRoot: root }, { runId, status: 'passed' }),
+    handleResultFinalize({ resultStoreFactory: factory, memoryStoreFactory: null, projectRoot: root }, { runId }),
 };
 
 const BAD_IDS = [

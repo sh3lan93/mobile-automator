@@ -78,10 +78,39 @@ function parseStepStatus(raw) {
   return { value: normalized };
 }
 
-function parseBool(raw, flagName) {
-  if (raw === 'true') return { value: true };
-  if (raw === 'false') return { value: false };
-  return { error: `${flagName} must be "true" or "false" (got "${raw}")` };
+// `result add-assertion --pass` / `--judge` (#275, B3), parsed as one unit
+// because the two flags constrain each other: `--pass` is a decided verdict or
+// `pending` (recorded `needs_agent`, to be decided later by an agent).
+//
+// Returns `{ value: { status, judge } }` or `{ error }`. `status` is the
+// assertion status to record; `judge` is undefined (no claim made — a caller
+// that predates the flag writes exactly what it always wrote) or `{by}`. A
+// pending verdict was decided by nobody, so it records `{by: 'none'}` and
+// refuses `agent`; a decided verdict refuses `none`.
+const VERDICT_STATUSES = { true: 'passed', false: 'failed', pending: 'needs_agent' };
+
+// Who an agent may say decided a verdict (`--judge`). The schema's judge.by
+// enum also has `mauto`, which only the in-process runner writes: an agent
+// claiming mauto decided would be the self-attestation the field exists to
+// expose.
+const JUDGES = ['agent', 'none'];
+
+function parseAssertionVerdict(passRaw, judgeRaw) {
+  if (!Object.prototype.hasOwnProperty.call(VERDICT_STATUSES, passRaw)) {
+    return { error: `--pass must be true | false | pending (got "${passRaw}")` };
+  }
+  if (judgeRaw !== undefined && !JUDGES.includes(judgeRaw)) {
+    return { error: `--judge must be ${JUDGES.join(' | ')} (got "${judgeRaw}")` };
+  }
+  const status = VERDICT_STATUSES[passRaw];
+  if (status === 'needs_agent') {
+    if (judgeRaw === 'agent') return { error: '--judge agent needs a verdict: use --pass true or --pass false' };
+    return { value: { status, judge: { by: 'none' } } };
+  }
+  if (judgeRaw === 'none') {
+    return { error: `--judge none means nobody decided, but --pass is ${passRaw}: use --pass pending or --judge agent` };
+  }
+  return { value: { status, judge: judgeRaw === 'agent' ? { by: 'agent' } : undefined } };
 }
 
 // Mirrors the enum at /properties/status in src/schemas/result_schema.json;
@@ -90,7 +119,7 @@ function parseBool(raw, flagName) {
 // status from the recorded steps and assertions): an unlisted value used to be persisted
 // verbatim — a schema-invalid result file with a green exit — directly under
 // the exit-6 contract keyed on that status (#286 review).
-const RUN_STATUSES = ['passed', 'failed', 'error'];
+const RUN_STATUSES = ['passed', 'failed', 'error', 'incomplete'];
 
 function parseRunStatus(raw) {
   if (!RUN_STATUSES.includes(raw)) {
@@ -103,7 +132,8 @@ module.exports = {
   OBSERVATION_TYPES,
   parseObservation,
   parseCapture,
-  parseBool,
+  JUDGES,
+  parseAssertionVerdict,
   RUN_STATUSES,
   parseRunStatus,
   STEP_STATUS_ALIASES,

@@ -11,6 +11,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ Added
 
+- **`mauto run` performs every action the action catalog can execute, and
+  hands back the rest** (replay PRD #271, slice R3). Added handlers:
+  `long_press` (a numeric `value` is the duration), `double_tap`, `swipe`
+  (`value` is the direction), `press_button`, `open_url`, `scroll_to_element`
+  (swipes between looks, up to `run.scroll_max_swipes`), `wait_for_element_gone`,
+  `wait_for_loading_complete` (done after two consecutive looks without a
+  configured loading label), and `capture_value` (into the run's variables, so
+  `value_matches_variable` is now decided mechanically). `target_pattern`
+  resolves a label by regex. Preconditions run before step 1, each recorded as
+  step `precondition_<n>`: `install_app` (needs a build path in `value`),
+  `uninstall_app` and `set_orientation`. `clear_app_data`, `enable_wifi`,
+  `disable_wifi` (and `install_app` with no `value`) no longer abort the run as
+  unsupported: the step is recorded `skipped` with `needs_agent: true`, the run
+  stops there and finalizes `incomplete` (exit 7), and the hint says what to do
+  by hand. `result finalize --scenario` accepts the `precondition_<n>` ids.
+  New optional config block `run { poll_ms, default_timeout_ms,
+  scroll_max_swipes, loading_indicator_labels }` (absent keys keep their
+  defaults; the scaffold does not write it) and `mauto run --timeout-ms <ms>`,
+  a cap on every per-step wait (never a lengthening); a non-positive or
+  non-integer value is `invalid_input` before any device work. A new guard,
+  `tests/lint/run-action-coverage.test.js`, derives from the action catalog
+  and the scenario schema that nothing is left without a handler.
+  Review fixes (rc.4): one positive-integer parser shared with
+  `long-press --duration` (which now rejects forms like `1e3`), a single
+  candidate pipeline for target resolution, one outcome kind per step (a step
+  that needs an agent is no longer stamped as a failure in the run trace), one
+  poll entry point for the waiting handlers, and `wait_for_loading_complete`
+  looks only at `run.loading_indicator_labels`.
+  Refs #279
 - **A hidden `mauto run <scenario>` replays a scenario unattended, behind
   `MAUTO_REPLAY=1`** (replay PRD #271, slice R1). Without the variable set to
   exactly `1` it refuses with `environment` (exit 5) before touching a device,
@@ -34,6 +63,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   real-device E2E harness now shares the assertion field mapping and the
   run-id format with the install under test.
   Refs #278
+- **Result files record who decided what, and a run still waiting on an
+  agent finalizes `incomplete` (exit 7)** (replay PRD #271, slice R2). All
+  schema additions are optional, so existing result files stay valid and
+  `schema_version` stays `2.0`. The run `status` gains `incomplete` and an
+  assertion's `status` gains `needs_agent`. Assertions may carry `type`,
+  `step_id`, `mechanical` and `judge {by: mauto | agent | none, name?,
+  version?}`, and a root `executor` records `kind` (`runner` or `agent`),
+  `mauto_version`, `engine`, `mode`, `platform`, `device_id`, and the
+  scenario's path and SHA-256. The derived status is `error`, then `failed`,
+  then `incomplete` when an assertion is still `needs_agent`, then `passed`.
+  `mauto result add-assertion --pass` accepts `pending` (recorded
+  `needs_agent`), and `--judge agent|none` records the provenance. A verdict
+  for a pending id replaces it in place, and a `pending` for an id already
+  decided is refused. `mauto result finalize --scenario <path>` checks
+  every recorded id against that scenario and hashes the file into
+  `executor`. A mismatch, or a scenario changed since the run, is
+  `invalid_input` and writes nothing. A re-finalize keeps the first executor.
+  An `incomplete` finalize exits `7`, and its hint gives the exact
+  `add-assertion … --judge agent` command for each pending assertion,
+  followed by the re-finalize. The JUnit export reports `needs_agent` as
+  `<skipped>`. `mauto assert` now hints `--pass <true|false> --judge agent`
+  for a verdict it cannot decide.
+- **`mauto run` records a Tier-2 assertion as pending instead of failed**
+  (slice R2). A mechanical verdict is recorded `judge {by: mauto}`. A Tier-2
+  one is left `needs_agent` (`judge {by: none}`), which is not a failure.
+  A run with nothing failed then exits `7` (`incomplete`), with
+  `data.pending` and the commands that complete it in the hint. The result
+  records `executor.kind: runner` with the device, platform and scenario
+  SHA-256, and an agent's later finalize keeps that executor. `mauto run`
+  still requires `MAUTO_REPLAY=1`.
+  Refs #275
+- **`result finalize --status` can no longer make a run greener than what was
+  recorded.** An explicit `passed` over a derived `incomplete`, `failed` or
+  `error`, or over a run with no steps and no assertions (unless `--scenario`
+  names a scenario that declares none), and an explicit `incomplete` with
+  nothing pending, are refused with `invalid_input` and nothing written.
+  `failed` and `error` stay allowed. Previously an explicit status always won.
+  Refs #275
 
 ---
 

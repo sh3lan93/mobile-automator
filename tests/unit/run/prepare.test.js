@@ -91,6 +91,36 @@ describe('the scenario', () => {
     expect(p.failure).toBeUndefined();
     expect(p.scenario).toEqual(scenario());
   });
+
+  test('carries the file and the sha256 loadScenario hashed (#275)', () => {
+    const file = write(scenario());
+    const p = prepare({ file, runId: RUN_ID, env: ON });
+    expect(p.file).toBe(file);
+    expect(p.sha256).toBe(require('crypto').createHash('sha256').update(fs.readFileSync(file)).digest('hex'));
+  });
+});
+
+describe('--timeout-ms', () => {
+  test('absent: timeoutMs is null', () => {
+    expect(prepare({ file: write(scenario()), runId: RUN_ID, env: ON }).timeoutMs).toBeNull();
+  });
+
+  test.each([['3000', 3000], [3000, 3000], ['1', 1]])('%j is a positive integer', (raw, expected) => {
+    expect(prepare({ file: write(scenario()), runId: RUN_ID, env: ON, timeoutMs: raw }).timeoutMs).toBe(expected);
+  });
+
+  test.each(['0', '-5', '1.5', 'abc', '', ' ', '1e3', 0, -1, 1.5, NaN])('%j is invalid_input', (raw) => {
+    const p = prepare({ file: write(scenario()), runId: RUN_ID, env: ON, timeoutMs: raw });
+    expect(p.failure.exitKind).toBe('invalid_input');
+    expect(p.failure.envelope.error.message).toBe(`invalid --timeout-ms "${raw}"`);
+  });
+
+  test('is checked after the gate, before the scenario is read', () => {
+    const gated = prepare({ file: path.join(root, 'missing.json'), runId: RUN_ID, env: {}, timeoutMs: '0' });
+    expect(gated.failure.exitKind).toBe('environment');
+    const bad = prepare({ file: path.join(root, 'missing.json'), runId: RUN_ID, env: ON, timeoutMs: '0' });
+    expect(bad.failure.envelope.error.message).toBe('invalid --timeout-ms "0"');
+  });
 });
 
 describe('the run id', () => {

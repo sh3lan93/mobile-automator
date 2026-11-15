@@ -64,6 +64,8 @@ describe('result finalize exit codes (integration, #273)', () => {
   });
 
   test('--status passed exits 0 with an ok envelope', () => {
+    const add = runCli(['result', 'add-step', '--run-id', RUN_ID, '--scenario-id', 'y', '--step-id', 's1', '--status', 'pass'], root);
+    expect(add.status).toBe(0);
     const r = runCli(['result', 'finalize', '--run-id', RUN_ID, '--scenario-id', 'y', '--status', 'passed'], root);
     expect(r.status).toBe(0);
     const env = onlyEnvelope(r);
@@ -146,11 +148,19 @@ describe('derived status (#296)', () => {
     expect(onlyEnvelope(r).data.status).toBe('passed');
   });
 
-  test('an explicit --status passed wins over a recorded failed step', () => {
+  // B1 (#275 review): this used to assert the opposite, that an explicit
+  // `--status passed` overrode a recorded failed step. An agent may make a run
+  // worse than derived, never greener.
+  test('an explicit --status passed over a recorded failed step is refused, nothing written', () => {
     addStep('--step-id', 's1', '--status', 'fail');
     const r = runCli(['result', 'finalize', '--run-id', RUN_ID, '--status', 'passed'], root);
-    expect(r.status).toBe(0);
-    expect(onlyEnvelope(r).data.status).toBe('passed');
+    expect(r.status).toBe(3);
+    const env = onlyEnvelope(r);
+    expect(env.error.kind).toBe('invalid_input');
+    expect(env.hint).toContain('failed');
+    // Only the in-progress file add-step wrote; no finalized status.
+    const written = JSON.parse(fs.readFileSync(path.join(root, '.mobile-automator', 'results', `${RUN_ID}.json`), 'utf8'));
+    expect(written._in_progress).toBe(true);
   });
 
   test('a step that passed after retries still exits 0', () => {

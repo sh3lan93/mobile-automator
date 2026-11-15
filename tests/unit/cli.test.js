@@ -841,12 +841,18 @@ describe('cli handlers', () => {
       // The hint is copied verbatim, so it must never omit --message: for
       // Tier-2 verdicts the message IS the evidence (#140 fix-wave FIX 3).
       expect(r.envelope.hint).toContain('--message');
+      // Unchanged by #275: the CLI decided it, so no --judge is claimed.
+      expect(r.envelope.hint).toBe(
+        'Record it: mauto result add-assertion --run-id <run_id> --step-id <step_id> ' +
+          '--type element_exists --pass true --message "<why>"'
+      );
     });
 
-    test('an agent-judged verdict hints a placeholder instead of a decided value, and still includes --message', async () => {
+    test('an agent-judged verdict hints a true|false placeholder recorded --judge agent, and still includes --message (#275)', async () => {
       const r = await handleAssert({ deviceBridge: bridge }, 'screenshot_match', { target: 'ref.png' });
       expect(r.envelope.data.needs_agent).toBe(true);
-      expect(r.envelope.hint).toContain('--pass <your verdict>');
+      expect(r.envelope.hint).toContain('--pass <true|false> --judge agent');
+      expect(r.envelope.hint).not.toContain('<your verdict>');
       expect(r.envelope.hint).toContain('--message');
     });
   });
@@ -1367,7 +1373,7 @@ describe('cli handlers', () => {
         runId: 'run_20260804_161000', stepId: 'verify', type: 'element_exists', pass: 'yes',
       });
       expect(r.exitKind).toBe('invalid_input');
-      expect(r.envelope.error.message).toMatch(/--pass must be "true" or "false"/);
+      expect(r.envelope.error.message).toMatch(/--pass must be true \| false \| pending/);
     });
 
     test('rejects an unknown assertion type with invalid_input', () => {
@@ -3003,6 +3009,9 @@ describe('cli handlers', () => {
       const calls = { addStep: [], addObservation: [], captureVariable: [], addAssertion: [], finalize: [] };
       const store = {
         warnings: [],
+        // A non-empty, clean run, so an explicit `--status passed` is not
+        // refused by the status guard (src/result/status-guard.js).
+        recorded: () => ({ steps: [{ step_id: 's', status: 'passed' }], assertions: [] }),
         addStep(arg) {
           calls.addStep.push(arg);
           return { step_id: arg.step_id, status: arg.status };
@@ -3103,6 +3112,7 @@ describe('cli handlers', () => {
           '--step-id', 'step_verify',
           '--type', 'element_exists',
           '--pass', 'false',
+          '--judge', 'agent',
           '--assertion-id', 'assert_custom_id',
           '--message', 'Login button missing',
           '--expected', 'visible',
@@ -3117,7 +3127,9 @@ describe('cli handlers', () => {
           step_id: 'step_verify',
           assertion_id: 'assert_custom_id',
           type: 'element_exists',
-          pass: false,
+          mechanical: true,
+          status: 'failed',
+          judge: { by: 'agent' },
           message: 'Login button missing',
           expected: 'visible',
           actual: 'absent',
@@ -3171,6 +3183,10 @@ describe('cli handlers', () => {
             failure_screenshots: [],
           },
           summary: 'Custom narrative summary.',
+          // No --scenario and no device: an agent executor claiming neither.
+          executor: expect.objectContaining({
+            kind: 'agent', platform: null, device_id: null, scenario_path: null, scenario_sha256: null,
+          }),
         },
       ]);
     });

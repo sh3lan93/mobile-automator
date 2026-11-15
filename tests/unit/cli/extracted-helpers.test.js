@@ -61,6 +61,20 @@ describe('loadScenario', () => {
     expect(r.failure.envelope.data.valid).toBe(false);
   });
 
+  // One hash site (#275): the sha is over the bytes read, so a file with a
+  // trailing newline and non-ASCII text hashes as `sha256sum` would.
+  test.each([
+    ['clean', scenario()],
+    ['with warnings', scenario([WIPE])],
+  ])('returns the SHA-256 of the raw bytes (%s)', (_name, doc) => {
+    const text = `${JSON.stringify({ ...doc, description: 'Café ✓' }, null, 2)}\n`;
+    const file = writeTmp(text);
+    const r = loadScenario(validator, file);
+    const expected = require('crypto').createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+    expect(r.sha256).toBe(expected);
+    expect(r.sha256).toMatch(/^[0-9a-f]{64}$/);
+  });
+
   test('unreadable file, bad JSON and schema-invalid are invalid_input failures', () => {
     for (const file of [
       path.join(os.tmpdir(), 'mauto-definitely-missing', 'x.json'),

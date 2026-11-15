@@ -14,7 +14,8 @@ const PASSED = fixture('passed');
 const FAILED = fixture('failed');
 const HOSTILE = fixture('hostile-strings');
 const NOTHING_RECORDED = fixture('failed-nothing-recorded');
-const FIXTURES = { PASSED, FAILED, HOSTILE, NOTHING_RECORDED };
+const INCOMPLETE = fixture('incomplete');
+const FIXTURES = { PASSED, FAILED, HOSTILE, NOTHING_RECORDED, INCOMPLETE };
 
 const suitesOf = (xml) => findAll(parseXml(xml), 'testsuite');
 const casesOf = (suite) => suite.children.filter((c) => c.name === 'testcase');
@@ -73,8 +74,7 @@ describe('toJUnit', () => {
       expect(c.attrs.classname).toBe('login_flow');
       expect(c.children).toEqual([]);
     }
-    expect(suite.attrs).toMatchObject({ tests: '2', failures: '0', errors: '0' });
-    expect(suite.attrs.skipped).toBeUndefined();
+    expect(suite.attrs).toMatchObject({ tests: '2', failures: '0', errors: '0', skipped: '0' });
   });
 
   test('a failed assertion carries a <failure> with message, expected and actual', () => {
@@ -95,8 +95,7 @@ describe('toJUnit', () => {
     expect(child(caseNamed(suite, 'step: read_receipt'), 'failure').attrs.type).toBe('step_error');
     expect(caseNamed(suite, 'step: open_cart')).toBeUndefined();
     expect(caseNamed(suite, 'step: rate_app')).toBeUndefined();
-    expect(suite.attrs).toMatchObject({ tests: '4', failures: '3' });
-    expect(suite.attrs.skipped).toBeUndefined();
+    expect(suite.attrs).toMatchObject({ tests: '4', failures: '3', skipped: '0' });
   });
 
   test('properties carry run id, status and metadata', () => {
@@ -118,6 +117,43 @@ describe('toJUnit', () => {
     expect(failure.attrs.type).toBe('run_status');
     expect(failure.attrs.message).toMatch(/status is error/);
     expect(suite.attrs).toMatchObject({ tests: '1', failures: '1' });
+  });
+
+  // #275, plan decision 6: pending is skipped, not failed. CI gates on the
+  // exit code (7); the report shows what is pending.
+  describe('needs_agent (#275)', () => {
+    test('pending assertions and pending steps render as <skipped>', () => {
+      const [suite] = suitesOf(toJUnit([INCOMPLETE]).xml);
+      const avatar = child(caseNamed(suite, 'assert_avatar_looks_right'), 'skipped');
+      expect(avatar.attrs.message).toBe('assert_avatar_looks_right needs agent judgment (visual_state)');
+      expect(child(caseNamed(suite, 'assert_dark_mode'), 'skipped')).toBeDefined();
+      expect(child(caseNamed(suite, 'step: toggle_theme'), 'skipped').attrs.message).toBe('step toggle_theme needs agent judgment');
+      expect(caseNamed(suite, 'assert_profile_visible').children).toEqual([]);
+      expect(caseNamed(suite, 'step: open_profile')).toBeUndefined();
+      expect(suite.attrs).toMatchObject({ tests: '4', failures: '0', skipped: '3' });
+    });
+
+    test('an incomplete run gets no synthetic run-status failure', () => {
+      const report = toJUnit([INCOMPLETE]);
+      expect(caseNamed(suitesOf(report.xml)[0], 'run status')).toBeUndefined();
+      expect(report).toMatchObject({ tests: 4, failures: 0, skipped: 3 });
+      expect(parseXml(report.xml).attrs).toMatchObject({ tests: '4', failures: '0', skipped: '3' });
+    });
+
+    test('an incomplete run with nothing pending recorded gets a synthetic skipped run status, never a green report', () => {
+      const bare = { ...INCOMPLETE, steps_executed: [], assertion_results: [] };
+      const [suite] = suitesOf(toJUnit([bare]).xml);
+      const skipped = child(caseNamed(suite, 'run status'), 'skipped');
+      expect(skipped.attrs.message).toMatch(/status is incomplete/);
+      expect(suite.attrs).toMatchObject({ tests: '1', failures: '0', skipped: '1' });
+    });
+
+    test('a pending step that also failed is a failure, not skipped', () => {
+      const r = { ...INCOMPLETE, status: 'failed', steps_executed: [{ step_id: 'x', status: 'failed', needs_agent: true }], assertion_results: [] };
+      const [suite] = suitesOf(toJUnit([r]).xml);
+      expect(child(caseNamed(suite, 'step: x'), 'failure')).toBeDefined();
+      expect(child(caseNamed(suite, 'step: x'), 'skipped')).toBeUndefined();
+    });
   });
 
   test('a failed result that already has a failing case gets no synthetic one', () => {
@@ -187,15 +223,14 @@ describe('toJUnit', () => {
 
   test('root totals add up across suites', () => {
     const report = toJUnit([PASSED, FAILED, NOTHING_RECORDED]);
-    expect(report).toEqual({ xml: report.xml, suites: 3, tests: 7, failures: 4 });
+    expect(report).toEqual({ xml: report.xml, suites: 3, tests: 7, failures: 4, skipped: 0 });
     const root = parseXml(report.xml);
-    expect(root.attrs).toMatchObject({ name: 'mauto', tests: '7', failures: '4', errors: '0', time: '42.5' });
-    expect(root.attrs.skipped).toBeUndefined();
+    expect(root.attrs).toMatchObject({ name: 'mauto', tests: '7', failures: '4', skipped: '0', errors: '0', time: '42.5' });
   });
 
   test('an empty result list is still a valid, empty report', () => {
     const report = toJUnit([]);
-    expect(report).toEqual({ xml: report.xml, suites: 0, tests: 0, failures: 0 });
+    expect(report).toEqual({ xml: report.xml, suites: 0, tests: 0, failures: 0, skipped: 0 });
     expect(findAll(parseXml(report.xml), 'testsuite')).toEqual([]);
   });
 

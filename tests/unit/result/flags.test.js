@@ -1,6 +1,14 @@
 'use strict';
 
-const { OBSERVATION_TYPES, parseObservation, parseCapture, parseBool } = require('../../../src/result/flags');
+const {
+  OBSERVATION_TYPES,
+  parseObservation,
+  parseCapture,
+  parseAssertionVerdict,
+  JUDGES,
+  RUN_STATUSES,
+  parseRunStatus,
+} = require('../../../src/result/flags');
 
 describe('parseObservation', () => {
   test('splits <type>:<message>', () => {
@@ -52,13 +60,46 @@ describe('parseCapture', () => {
   });
 });
 
-describe('parseBool', () => {
-  test('accepts the two literals', () => {
-    expect(parseBool('true', '--pass').value).toBe(true);
-    expect(parseBool('false', '--pass').value).toBe(false);
+describe('parseAssertionVerdict (#275, B3)', () => {
+  test('JUDGES is what an agent may claim: never mauto', () => {
+    expect(JUDGES).toEqual(['agent', 'none']);
   });
 
-  test('rejects anything else, naming the flag', () => {
-    expect(parseBool('yes', '--pass').error).toMatch(/--pass must be "true" or "false"/);
+  // [--pass, --judge] -> { status, judge } as a unit (plan decision 2). `judge`
+  // is undefined for "no claim", never null.
+  test.each([
+    ['true', undefined, { status: 'passed', judge: undefined }],
+    ['false', undefined, { status: 'failed', judge: undefined }],
+    ['true', 'agent', { status: 'passed', judge: { by: 'agent' } }],
+    ['false', 'agent', { status: 'failed', judge: { by: 'agent' } }],
+    ['pending', undefined, { status: 'needs_agent', judge: { by: 'none' } }],
+    ['pending', 'none', { status: 'needs_agent', judge: { by: 'none' } }],
+  ])('--pass %p --judge %p records %p', (pass, judge, value) => {
+    const r = parseAssertionVerdict(pass, judge);
+    expect(r).toEqual({ value });
+    if (value.judge === undefined) expect(r.value.judge).toBeUndefined();
+  });
+
+  test.each(['yes', 'TRUE', '', 'needs_agent', undefined])('rejects --pass %p, naming the flag and the choices', (raw) => {
+    expect(parseAssertionVerdict(raw).error).toMatch(/--pass must be true \| false \| pending/);
+  });
+
+  test('--judge agent with pending is refused: an agent that judged has a verdict', () => {
+    expect(parseAssertionVerdict('pending', 'agent').error).toMatch(/--judge agent needs a verdict/);
+  });
+
+  test.each(['true', 'false'])('--judge none with a decided verdict (%p) is refused', (pass) => {
+    expect(parseAssertionVerdict(pass, 'none').error).toMatch(/--judge none means nobody decided/);
+  });
+
+  test.each(['mauto', 'Agent', ''])('rejects --judge %p', (raw) => {
+    expect(parseAssertionVerdict('true', raw).error).toMatch(/--judge must be agent \| none/);
+  });
+});
+
+describe('parseRunStatus', () => {
+  test('accepts incomplete (#275)', () => {
+    expect(parseRunStatus('incomplete')).toEqual({ value: 'incomplete' });
+    expect(RUN_STATUSES).toContain('incomplete');
   });
 });

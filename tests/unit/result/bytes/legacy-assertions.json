@@ -1,0 +1,18 @@
+[
+  {
+    "assertion_id": "a1",
+    "status": "passed",
+    "expected": "x",
+    "actual": "x",
+    "message": "ok",
+    "step_id": "s1"
+  },
+  {
+    "assertion_id": "a2",
+    "status": "failed",
+    "expected": null,
+    "actual": null,
+    "message": "bad",
+    "step_id": "s1"
+  }
+]

@@ -12,17 +12,19 @@
 //
 // Mapping, one result at a time:
 //   result                 -> <testsuite name=scenario_id, else run_id>
-//   assertion_results[]    -> <testcase name=assertion_id>; failed -> <failure>
+//   assertion_results[]    -> <testcase name=assertion_id>; failed -> <failure>,
+//                             needs_agent -> <skipped>
 //   failed / error step    -> <testcase name="step: <id>"> with <failure>
+//   needs_agent step       -> <testcase name="step: <id>"> with <skipped>
 //   run id, status, metadata -> <properties>
 //
-// It renders only what current writers produce: assertions are passed or
-// failed, and only failed or errored steps get a testcase, so there is no
-// JUnit skip element and no skip count. A step's `error` status is reported as
-// a <failure> of type step_error rather than a JUnit <error>, so the report's
-// counts stay {tests, failures} and `errors` is always 0.
+// Only failed, errored or pending steps get a testcase. Pending (#275) is
+// rendered skipped, not failed: CI gates on `incomplete`'s exit code 7, and
+// the report shows what still needs an agent. A step's `error` status is
+// reported as a <failure> of type step_error rather than a JUnit <error>, so
+// the counts are {tests, failures, skipped} and `errors` is always 0.
 
-const { isErroredStep, isFailingAssertion, isFailingStep } = require('./outcome');
+const { isErroredStep, isFailingAssertion, isFailingStep, isPendingAssertion, isPendingStep } = require('./outcome');
 
 // Characters XML 1.0 forbids anywhere in a document: C0 controls other than
 // tab/LF/CR, lone surrogates, U+FFFE and U+FFFF. A crash excerpt or an OCR'd
@@ -95,6 +97,9 @@ function assertionCase(assertion) {
       message: assertion.message || `${assertion.assertion_id} failed`,
       body: body.join('\n'),
     };
+  } else if (isPendingAssertion(assertion)) {
+    const type = assertion.type ? ` (${assertion.type})` : '';
+    testcase.skipped = { message: `${assertion.assertion_id} needs agent judgment${type}` };
   }
   return testcase;
 }
@@ -114,6 +119,7 @@ function stepCase(step) {
       },
     };
   }
+  if (isPendingStep(step)) return { name, skipped: { message: `step ${step.step_id} needs agent judgment` } };
   return null;
 }
 
@@ -128,9 +134,17 @@ function suiteFor(result) {
   // A red result must never render as a green report. When the run says
   // anything but passed yet recorded nothing that fails (e.g. an agent
   // finalized with --status failed after an abort, or a pre-0.38.0 "FAILED"),
-  // the status itself becomes the failure.
-  const isRed = result.status !== 'passed';
-  if (isRed && !cases.some((c) => c.failure)) {
+  // the status itself becomes the failure. `incomplete` is not red: its
+  // pending cases are already skipped, and only when none was recorded does
+  // the status itself become a skipped case, so it never reads green either.
+  if (result.status === 'incomplete') {
+    if (!cases.some((c) => c.failure || c.skipped)) {
+      cases.push({
+        name: 'run status',
+        skipped: { message: 'result status is incomplete but no pending step or assertion was recorded' },
+      });
+    }
+  } else if (result.status !== 'passed' && !cases.some((c) => c.failure)) {
     cases.push({
       name: 'run status',
       failure: {
@@ -142,6 +156,7 @@ function suiteFor(result) {
   }
 
   const failures = cases.filter((c) => c.failure).length;
+  const skipped = cases.filter((c) => c.skipped).length;
 
   const lines = [];
   lines.push(
@@ -149,6 +164,7 @@ function suiteFor(result) {
       ['name', scenario],
       ['tests', cases.length],
       ['failures', failures],
+      ['skipped', skipped],
       ['errors', 0],
       ['time', seconds(result.duration_seconds)],
       ['timestamp', present(metadata.timestamp) ? metadata.timestamp : null],
@@ -167,21 +183,26 @@ function suiteFor(result) {
       lines.push(`${open}>`);
       lines.push(`      <failure${attrs([['message', message], ['type', type]])}>${escapeText(body)}</failure>`);
       lines.push('    </testcase>');
+    } else if (c.skipped) {
+      lines.push(`${open}>`);
+      lines.push(`      <skipped${attrs([['message', c.skipped.message]])}/>`);
+      lines.push('    </testcase>');
     } else {
       lines.push(`${open}/>`);
     }
   }
   lines.push('  </testsuite>');
 
-  return { lines, tests: cases.length, failures, time: Number(seconds(result.duration_seconds)) };
+  return { lines, tests: cases.length, failures, skipped, time: Number(seconds(result.duration_seconds)) };
 }
 
-// toJUnit(results) -> { xml, suites, tests, failures }
+// toJUnit(results) -> { xml, suites, tests, failures, skipped }
 function toJUnit(results) {
   const suites = results.map(suiteFor);
   const total = (key) => suites.reduce((sum, s) => sum + s[key], 0);
   const tests = total('tests');
   const failures = total('failures');
+  const skipped = total('skipped');
 
   const xml = [
     '<?xml version="1.0" encoding="UTF-8"?>',
@@ -189,6 +210,7 @@ function toJUnit(results) {
       ['name', 'mauto'],
       ['tests', tests],
       ['failures', failures],
+      ['skipped', skipped],
       ['errors', 0],
       ['time', seconds(total('time'))],
     ])}>`,
@@ -197,7 +219,7 @@ function toJUnit(results) {
     '',
   ].join('\n');
 
-  return { xml, suites: suites.length, tests, failures };
+  return { xml, suites: suites.length, tests, failures, skipped };
 }
 
 module.exports = { toJUnit };

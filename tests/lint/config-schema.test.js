@@ -90,6 +90,22 @@ describe('config schema — structural agreement', () => {
     });
   });
 
+  test('the optional `run` block (mauto run timings) validates, is not written by the scaffold, and rejects bad values', () => {
+    const block = { poll_ms: 1500, default_timeout_ms: 30000, scroll_max_swipes: 10, loading_indicator_labels: ['Loading'] };
+    expect(validateAt('run', block)).toMatchObject({ valid: true });
+    expect(validateAt('run', {})).toMatchObject({ valid: true });
+    expect(declaredTypesAt('run.loading_indicator_labels')).toContain('array');
+    expect(LIST_KEY_PATHS).toContain('run.loading_indicator_labels');
+    for (const bad of [{ poll_ms: 0 }, { default_timeout_ms: 1.5 }, { scroll_max_swipes: -1 }, { loading_indicator_labels: [1] }]) {
+      expect({ bad, valid: validateAt('run', bad).valid }).toEqual({ bad, valid: false });
+    }
+    // Optional: a fresh scaffold must not carry it, so old workspaces are untouched.
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-lint-run-'));
+    scaffold(root, { mode: 'platform-agnostic' });
+    const cfg = JSON.parse(fs.readFileSync(path.join(root, '.mobile-automator', 'config.json'), 'utf8'));
+    expect(cfg).not.toHaveProperty('run');
+  });
+
   test('telemetry.enabled is declared boolean, so `config set` coerces "true" rather than storing a string', () => {
     expect(declaredTypesAt('telemetry.enabled')).toContain('boolean');
     expect(validateAt('telemetry.enabled', true)).toMatchObject({ valid: true });
