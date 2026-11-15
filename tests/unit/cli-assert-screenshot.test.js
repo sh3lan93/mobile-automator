@@ -9,7 +9,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { handleAssert, buildProgram } = require('../../src/cli');
+const { handleAssert, handleResultAddAssertion, buildProgram } = require('../../src/cli');
+const { ResultStore } = require('../../src/result/store');
 const { workspaceDir } = require('../../src/workspace/layout');
 const { makeFakeBridge, makeFakeClock, el } = require('../helpers/fake-bridge');
 const { solidPng, quadrantPng, writePng } = require('../helpers/png');
@@ -87,13 +88,41 @@ test('a size mismatch is test_failed naming both sizes, with no --similarity-sco
   expect(r.envelope.hint).not.toContain('--similarity-score');
 });
 
-test('a missing baseline is ok with needs_agent, and the hint names --update-references', async () => {
+test('a missing baseline is ok with needs_agent; the hint never invites judging it by eye', async () => {
   const r = await assertShot(makeFakeBridge({ screenshots: [solidPng(20, 20, WHITE)] }), { reference: 'ref/home.png' });
   expect(r.exitKind).toBe('ok');
-  expect(r.envelope.data).toMatchObject({ needs_agent: true, pass: null, mechanical: false, similarity_score: null });
-  expect(r.envelope.hint).toContain('--update-references');
-  expect(r.envelope.hint).toContain('--pass <true|false> --judge agent');
+  const { data, hint } = r.envelope;
+  expect(data).toMatchObject({ needs_agent: true, pass: null, mechanical: false, similarity_score: null });
+  // The execute guide: record a baseline only once the user confirms the
+  // screen, else leave the assertion pending. Never an agent verdict.
+  expect(hint).not.toContain('--judge agent');
+  expect(hint).not.toMatch(/yourself/);
+  expect(hint).toContain('--update-references');
+  expect(hint).toContain('--pass pending');
+  expect(hint).toBe(
+    `No reference screenshot at ${data.reference_screenshot}. If the user confirms this screen is correct, ` +
+      're-run with --update-references to record it; otherwise leave it pending: ' +
+      'mauto result add-assertion --run-id <run_id> --step-id <step_id> --type screenshot_match --pass pending ' +
+      `--message "<why>" --reference-screenshot "${data.reference_screenshot}" --actual-screenshot "${data.actual_screenshot}"`
+  );
   expect(fs.existsSync(refFile())).toBe(false);
+});
+
+test('the pending command the missing-baseline hint prints is accepted by result add-assertion', async () => {
+  const r = await assertShot(makeFakeBridge({ screenshots: [solidPng(20, 20, WHITE)] }), { reference: 'ref/home.png' });
+  const { data } = r.envelope;
+  const recorded = handleResultAddAssertion(
+    { resultStoreFactory: (args) => new ResultStore(args), projectRoot: root },
+    {
+      runId: 'run_20261115_120000', stepId: 's1', type: 'screenshot_match', pass: 'pending', message: 'no baseline yet',
+      referenceScreenshot: data.reference_screenshot, actualScreenshot: data.actual_screenshot,
+    }
+  );
+  expect(recorded.exitKind).toBe('ok');
+  expect(recorded.envelope.data.assertion).toMatchObject({
+    status: 'needs_agent', judge: { by: 'none' },
+    reference_screenshot: data.reference_screenshot, actual_screenshot: data.actual_screenshot,
+  });
 });
 
 test('--update-references records the baseline and passes', async () => {

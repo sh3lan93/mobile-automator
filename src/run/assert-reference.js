@@ -92,7 +92,10 @@ async function handleAssertReference(
     similarity_score: v.similarity_score,
     diff_screenshot: diff,
   };
-  const verdict = needsAgent ? '<true|false> --judge agent' : String(data.pass);
+  // A missing baseline is never judged by eye (the execute guide): the agent
+  // records one only once the user confirms the screen, else leaves the
+  // assertion pending (`--pass pending` records needs_agent, judge none).
+  const verdict = needsAgent ? 'pending' : String(data.pass);
   const recordCommand =
     `mauto result add-assertion --run-id <run_id> --step-id <step_id> ` +
     `--type ${type} --pass ${verdict} --message "<why>" ` +
@@ -101,8 +104,8 @@ async function handleAssertReference(
 
   if (needsAgent) {
     const hint =
-      `No reference screenshot at ${v.reference_screenshot}: re-run with --update-references to record this screen as ` +
-      `the baseline, or judge ${v.actual_screenshot} yourself and record it: ${recordCommand}`;
+      `No reference screenshot at ${v.reference_screenshot}. If the user confirms this screen is correct, ` +
+      `re-run with --update-references to record it; otherwise leave it pending: ${recordCommand}`;
     return { envelope: ok(data, hint), exitKind: 'ok' };
   }
   const hint = `Record it: ${recordCommand}`;
