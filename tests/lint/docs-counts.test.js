@@ -5,7 +5,7 @@ const path = require('path');
 
 const scenarioSchema = require('../../src/schemas/scenario_schema.json');
 const { ACTION_CATALOG } = require('../../src/device/action-catalog');
-const { MECHANICAL_TYPES } = require('../../src/assertion/evaluator');
+const { MECHANICAL_TYPES, REFERENCE_SCREENSHOT_TYPES } = require('../../src/assertion/evaluator');
 
 // Hand-maintained capability counts in prose drift the moment the schema grows.
 // They already did once: #117 wired 7 stranded mobile-mcp primitives into flat
@@ -38,10 +38,14 @@ const COUNTS = {
   // i.e. everything except the platform-agnostic semantic actions.
   coreActions: STEP_ACTIONS.length - SEMANTIC_ACTIONS.length,
   assertionTypes: ASSERTION_TYPES.length,
-  // The assertion split: MECHANICAL_TYPES are decided by `mauto assert`; every
-  // other schema type returns needs_agent and is judged by the host agent.
+  // The assertion split: MECHANICAL_TYPES are decided by `mauto assert` over
+  // the element list, REFERENCE_SCREENSHOT_TYPES by a pixel diff against a
+  // reference screenshot; every other schema type returns needs_agent and is
+  // judged by the host agent.
   mechanicalAssertions: MECHANICAL_TYPES.size,
-  agentAssertions: ASSERTION_TYPES.length - MECHANICAL_TYPES.size,
+  referenceAssertions: REFERENCE_SCREENSHOT_TYPES.size,
+  agentAssertions:
+    ASSERTION_TYPES.length - MECHANICAL_TYPES.size - REFERENCE_SCREENSHOT_TYPES.size,
   // The catalog covers the union of both action enums (clear_app_data is in
   // both), which is why it is not simply the sum.
   catalogEntries: new Set([...STEP_ACTIONS, ...PRECONDITION_ACTIONS]).size,
@@ -79,6 +83,11 @@ const CLAIM_PATTERNS = [
     name: '"N ... evaluated deterministically / decided mechanically" (mechanical assertions)',
     regex: /(\d+)(?: of the \d+ assertion types)? are (?:evaluated deterministically|decided mechanically)/gi,
     expected: () => COUNTS.mechanicalAssertions,
+  },
+  {
+    name: '"N is/are compared against a reference screenshot" (reference-screenshot assertions)',
+    regex: /(\d+)(?: of the \d+ assertion types)? (?:is|are) compared against a reference screenshot/gi,
+    expected: () => COUNTS.referenceAssertions,
   },
   {
     name: '"other N return needs_agent" (agent-judged assertions)',
