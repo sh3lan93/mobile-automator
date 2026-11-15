@@ -1,0 +1,20 @@
+{
+  "$schema_version": "2.1",
+  "scenario_id": "dangling_after_step",
+  "name": "Dangling after_step",
+  "description": "Schema-valid, but its assertion runs after a step no step declares (#272).",
+  "platform": "android",
+  "app_package": "com.example.app",
+  "metadata": {
+    "app_version": "1.0.0",
+    "environment": "staging"
+  },
+  "steps": [
+    { "id": "launch", "action": "launch_app", "description": "Launch the app" },
+    { "id": "tap_login", "action": "tap", "description": "Tap the login button", "target": "Login button" }
+  ],
+  "assertions": [
+    { "id": "home_shown", "after_step": "nope", "type": "element_exists", "description": "Home is shown", "element_description": "Home" }
+  ],
+  "tags": []
+}

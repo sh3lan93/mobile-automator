@@ -7,6 +7,237 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### ✨ Added
+
+- **`mauto run` performs every action the action catalog can execute, and
+  hands back the rest** (replay PRD #271, slice R3). Added handlers:
+  `long_press` (a numeric `value` is the duration), `double_tap`, `swipe`
+  (`value` is the direction), `press_button`, `open_url`, `scroll_to_element`
+  (swipes between looks, up to `run.scroll_max_swipes`), `wait_for_element_gone`,
+  `wait_for_loading_complete` (done after two consecutive looks without a
+  configured loading label), and `capture_value` (into the run's variables, so
+  `value_matches_variable` is now decided mechanically). `target_pattern`
+  resolves a label by regex. Preconditions run before step 1, each recorded as
+  step `precondition_<n>`: `install_app` (needs a build path in `value`),
+  `uninstall_app` and `set_orientation`. `clear_app_data`, `enable_wifi`,
+  `disable_wifi` (and `install_app` with no `value`) no longer abort the run as
+  unsupported: the step is recorded `skipped` with `needs_agent: true`, the run
+  stops there and finalizes `incomplete` (exit 7), and the hint says what to do
+  by hand. `result finalize --scenario` accepts the `precondition_<n>` ids.
+  New optional config block `run { poll_ms, default_timeout_ms,
+  scroll_max_swipes, loading_indicator_labels }` (absent keys keep their
+  defaults; the scaffold does not write it) and `mauto run --timeout-ms <ms>`,
+  a cap on every per-step wait (never a lengthening); a non-positive or
+  non-integer value is `invalid_input` before any device work. A new guard,
+  `tests/lint/run-action-coverage.test.js`, derives from the action catalog
+  and the scenario schema that nothing is left without a handler.
+  Review fixes (rc.4): one positive-integer parser shared with
+  `long-press --duration` (which now rejects forms like `1e3`), a single
+  candidate pipeline for target resolution, one outcome kind per step (a step
+  that needs an agent is no longer stamped as a failure in the run trace), one
+  poll entry point for the waiting handlers, and `wait_for_loading_complete`
+  looks only at `run.loading_indicator_labels`.
+  Refs #279
+- **A hidden `mauto run <scenario>` replays a scenario unattended, behind
+  `MAUTO_REPLAY=1`** (replay PRD #271, slice R1). Without the variable set to
+  exactly `1` it refuses with `environment` (exit 5) before touching a device,
+  and it is absent from `--help` until replay graduates. With it, the scenario
+  is loaded strictly (`invalid_input`, exit 3, on a read, schema or blocking
+  replayability failure, or a `--run-id` that cannot name a result file), then
+  replayed in-process on one held-open device connection: `launch_app` (cold
+  start, or `cold: false` to resume, with the zero-elements drift gate),
+  `tap`, `type`, the four semantic presses and `wait_for_element`, each under
+  its `retry_policy`, stopping at the first failed step and capturing
+  `step_<id>_failure.png`. Mechanical assertions are evaluated after their
+  step. Every step and verdict goes through the same result store as the
+  `mauto result` verbs, and the run is finalized through the same path as
+  `mauto result finalize`, with the status derived and the duration measured
+  from the run's trace. The envelope carries `run_id`, `scenario_id`,
+  `status`, `result_path`, `failed_step`, `failures` and `measurements`; a
+  failed run is `test_failed` (exit 6). The run id comes from `--run-id`,
+  then `MAUTO_RUN_ID`, else a minted `run_YYYYMMDD_HHMMSS`. Assertions that
+  need agent judgment (Tier 2) are recorded as **failed** in this slice; R2
+  changes them to `needs_agent`. Other actions fail the step loudly. The
+  real-device E2E harness now shares the assertion field mapping and the
+  run-id format with the install under test.
+  Refs #278
+- **Result files record who decided what, and a run still waiting on an
+  agent finalizes `incomplete` (exit 7)** (replay PRD #271, slice R2). All
+  schema additions are optional, so existing result files stay valid and
+  `schema_version` stays `2.0`. The run `status` gains `incomplete` and an
+  assertion's `status` gains `needs_agent`. Assertions may carry `type`,
+  `step_id`, `mechanical` and `judge {by: mauto | agent | none, name?,
+  version?}`, and a root `executor` records `kind` (`runner` or `agent`),
+  `mauto_version`, `engine`, `mode`, `platform`, `device_id`, and the
+  scenario's path and SHA-256. The derived status is `error`, then `failed`,
+  then `incomplete` when an assertion is still `needs_agent`, then `passed`.
+  `mauto result add-assertion --pass` accepts `pending` (recorded
+  `needs_agent`), and `--judge agent|none` records the provenance. A verdict
+  for a pending id replaces it in place, and a `pending` for an id already
+  decided is refused. `mauto result finalize --scenario <path>` checks
+  every recorded id against that scenario and hashes the file into
+  `executor`. A mismatch, or a scenario changed since the run, is
+  `invalid_input` and writes nothing. A re-finalize keeps the first executor.
+  An `incomplete` finalize exits `7`, and its hint gives the exact
+  `add-assertion … --judge agent` command for each pending assertion,
+  followed by the re-finalize. The JUnit export reports `needs_agent` as
+  `<skipped>`. `mauto assert` now hints `--pass <true|false> --judge agent`
+  for a verdict it cannot decide.
+- **`mauto run` records a Tier-2 assertion as pending instead of failed**
+  (slice R2). A mechanical verdict is recorded `judge {by: mauto}`. A Tier-2
+  one is left `needs_agent` (`judge {by: none}`), which is not a failure.
+  A run with nothing failed then exits `7` (`incomplete`), with
+  `data.pending` and the commands that complete it in the hint. The result
+  records `executor.kind: runner` with the device, platform and scenario
+  SHA-256, and an agent's later finalize keeps that executor. `mauto run`
+  still requires `MAUTO_REPLAY=1`.
+  Refs #275
+- **`result finalize --status` can no longer make a run greener than what was
+  recorded.** An explicit `passed` over a derived `incomplete`, `failed` or
+  `error`, or over a run with no steps and no assertions (unless `--scenario`
+  names a scenario that declares none), and an explicit `incomplete` with
+  nothing pending, are refused with `invalid_input` and nothing written.
+  `failed` and `error` stay allowed. Previously an explicit status always won.
+  Refs #275
+
+---
+
+## [0.39.0]
+
+### ⚠️ Breaking
+
+- **The `mauto result` write verbs refuse a `--run-id` that is not a single
+  path segment** (#295). `add-step`, `add-assertion`, `add-crash` and
+  `finalize` built `results/<run-id>.json` (and its `.lock`) straight from the
+  flag, and the atomic write creates parent directories, so
+  `--run-id ../../x` wrote outside `.mobile-automator/results/` and
+  `--run-id nightly/42` silently created `results/nightly/`. They now apply
+  the rule `result export` already used: a non-empty id with no path separator
+  and no NUL, or `invalid_input` (exit 3) with the same hint, before anything
+  is read or written. The check lives in one place, the `ResultStore`
+  constructor, which every writer goes through, and it shares the reader's
+  rule, so writers and the reader can't disagree about which ids are valid.
+  Ids outside the `run_YYYYMMDD_HHMMSS` pattern that contain no separator
+  (`ci-build-42`) are still accepted. **Migration:** a CI script that nests
+  runs with `/` in the id should use another character (`nightly-42`).
+
+---
+
+## [0.38.4]
+
+### 🐛 Fixed
+
+- **Breaking: `mauto result finalize` without `--status` now counts failed steps** (#296).
+  It derived the run status from assertions only, so a run whose step failed (or errored)
+  with no failed assertion finalized as `passed`, exited `0` and was harvested into
+  run-history as a pass, while `result export --format junit` reported the same run red.
+  The derived status is now `error` if any step errored, else `failed` if any step or
+  assertion failed, else `passed`; skipped steps do not count. An explicit `--status`
+  still wins. **This changes behaviour:** such runs now return `ok: false`,
+  `test_failed`, exit `6`, and are recorded as failures in run-history. A run with no
+  steps and no assertions still finalizes `passed` (tracked by #275). To keep the old
+  verdict, pass `--status passed` explicitly.
+- **`mauto result finalize`'s default summary names failing steps** (#296). A run that a
+  step turned red now reads e.g. `failed: 0/0 assertion(s) passed across 1 step(s), 1 failed.`
+  (or `, 1 errored`) instead of a bare assertion count; runs with no failed or errored step
+  keep the previous text. An explicit `--summary` still wins.
+
+---
+
+## [0.38.3]
+
+### ✨ Added
+
+- **`mauto result export --format junit`** turns finalized result files into
+  JUnit XML for a CI test reporter (#274):
+  `mauto result export --run-id <id> [--run-id <id>…] --format junit [--out <path>]`.
+  Each run becomes a `<testsuite>`, each assertion a `<testcase>`, and each
+  failed or errored step a `step: <step_id>` testcase with a `<failure>`;
+  run id, status and metadata are `<properties>`. A run finalized without
+  `--scenario-id` gets a suite named by its run id. Any status other than
+  `passed` reads red: a run with such a status and nothing failing recorded
+  gets a `run status` failure, so it never reads green. The envelope is
+  `{format, path, suites, tests, failures}`, with the XML in
+  `data.xml` when `--out` is omitted. The export is read-only, refuses
+  anything that is not a file `result finalize` wrote for that run id, and
+  exits 0 whatever the runs' outcome. The FAQ's CI recipe now ends with it,
+  replacing a `results/latest.json` file that never existed.
+
+---
+
+## [0.38.2]
+
+### ✨ Added
+
+- **`mauto validate` checks references, not just shape** (#272). A scenario
+  whose ids, targets and variables do not line up used to validate as
+  `{"valid": true}`, and the agent found out mid-run on a device. `validate`
+  now reports six more codes in `data.warnings`, each with the `path` of the
+  step (`sub_steps` included) or assertion (`assertions[N]`, with
+  `assertion_id`):
+  - `duplicate_step_id` — a step id declared twice;
+  - `dangling_after_step` — an assertion runs after a step that does not exist;
+  - `missing_target` — a `tap`, `long_press`, `double_tap`, `wait_for_element`,
+    `wait_for_element_gone`, `scroll_to_element` or `capture_value` step with
+    neither `target` nor `target_pattern`;
+  - `undeclared_capture_variable` — `capture_to`, `condition.variable_name` or
+    an assertion's `variable_name` missing from root `variables`;
+  - `dangling_condition_step` — a `previous_step_skipped` condition whose
+    `step_id` is missing or not an earlier step;
+  - `missing_wait_config` — a wait step with no `wait_config` (advisory).
+
+  `undeclared_capture_variable` also covers a `variable_value` condition or a
+  `value_matches_variable` assertion that has no `variable_name` at all.
+
+  The first five are blocking. The scenarios in `docs/examples/` and
+  `sample-app/scenarios/` have no blocking findings.
+
+  **This changes behaviour for existing scenarios:**
+  - `mauto validate` without `--strict` still exits 0 and only warns.
+  - `validate --strict` now exits 3 (`invalid_input`) on scenarios that used to
+    pass, if they have a blocking finding.
+  - The execute guides now stop on a blocking reference finding (the five codes
+    above, not `unsupported_action`) even without
+    `--strict`, including a schema-valid `tap` with no `target`. An agent that
+    ran such a scenario before now refuses it.
+  - To upgrade, run `mauto validate` on your existing scenarios and fix what it
+    reports. Plain `validate` exits 0, so read `data.warnings` or use
+    `--strict` to get a non-zero exit.
+
+### 🔧 Changed
+
+- `validate --strict` now fails with the message `scenario cannot replay
+  unattended; see data.warnings` instead of `scenario uses actions with no
+  execution path`, since a blocker can now be a broken reference. Match on
+  `error.code` (`invalid_input`) and `data.warnings[].code`, not the message.
+
+---
+
+## [0.38.1]
+
+**0.38.0 was never published to npm, so upgrading from 0.37.0 also brings in
+its breaking changes below: a failed test now exits `6`, and the `result` verbs
+reject an unknown `--status`.**
+
+### 🛡️ Security
+
+- **`@mobilenext/mobile-mcp` bumped from 1.0.13 to 1.0.15.** This moves
+  `@modelcontextprotocol/node` from 2.0.0 to 2.1.2, outside the range of
+  [GHSA-f897-62hf-6gxq](https://github.com/advisories/GHSA-f897-62hf-6gxq)
+  (no request body or JSON-RPC batch limit on HTTP server transports). `mauto`
+  was not exposed: it runs the engine over stdio and never starts its HTTP
+  server. The advisory stopped the audit gate from publishing 0.38.0.
+
+### 🔧 Changed
+
+- `clear_app_data` stays unsupported, but the reason changed: mobile-mcp 1.0.15
+  adds the primitive and no `mauto` verb reaches it yet. The docs and schema
+  descriptions now say that instead of "the engine exposes no primitive".
+
+---
+
 ## [0.38.0]
 
 ### 🔧 Changed

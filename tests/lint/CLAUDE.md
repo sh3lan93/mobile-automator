@@ -11,7 +11,7 @@ Two catalogs are the single source of truth for "does this capability actually r
 | `verb` | dedicated one-shot `mauto` verb → DeviceBridge → one or more mobile-mcp primitives (`launch` is terminate + launch, #255) |
 | `semantic` | invoked as `mauto press <action>`, resolved per-platform by `src/device/semantic-press/` |
 | `composed` | no verb; the agent composes it from existing verbs (the execute guide documents how) |
-| `unsupported` | mobile-mcp 1.0.13 exposes no primitive (`clear_app_data`, `enable_wifi`, `disable_wifi`) — guides must **not** promise a verb |
+| `unsupported` | no `mauto` verb reaches it (`clear_app_data`: mobile-mcp 1.0.15 added the primitive, mauto has not wired it; `enable_wifi`, `disable_wifi`: mobile-mcp has no primitive) — guides must **not** promise a verb |
 
 **`tests/integration/mobile-mcp-contract.test.js`** (#199) is the engine-side counterpart of `tests/lint/mobile-mcp-tool-coverage.test.js`. That lint guard pins our tool-name list to what `bridge.js` calls — both sides are our code, so it cannot see the engine move. The contract test spawns the pinned mobile-mcp, sends only `listTools` (no device needed), and fails when a tool we call disappears, a key we send is no longer accepted, or a newly required key appears that we do not send. The keys are derived by driving every `DeviceBridge` method through production's `makeCall`, not hand-restated. It exists because mobile-mcp's argument schemas are non-strict: an unknown key is dropped and the call still reports success — `bridge.screenshot` once sent `path` instead of `saveTo`, and every screenshot was a silent no-op.
 

@@ -423,3 +423,128 @@ describe('ResultStore', () => {
     });
   });
 });
+
+describe('finalize derives status (#296)', () => {
+  let n = 0;
+  const newStore = () => {
+    n += 1;
+    return new ResultStore({
+      runId: `run_20261109_1200${String(n).padStart(2, '0')}`,
+      scenarioId: 'derive',
+      projectRoot: tmpRoot(),
+    });
+  };
+  const validate = ajvValidator();
+
+  const cases = [
+    ['a fail step with no assertions', (s) => s.addStep({ step_id: 's1', status: 'fail' }), 'failed'],
+    ['an error step', (s) => s.addStep({ step_id: 's1', status: 'error' }), 'error'],
+    [
+      'an error step plus a failed assertion',
+      (s) => {
+        s.addStep({ step_id: 's1', status: 'error' });
+        s.addAssertion({ step_id: 's1', type: 'element_exists', pass: false, message: 'no' });
+      },
+      'error',
+    ],
+    [
+      'a failed assertion with passed steps',
+      (s) => {
+        s.addStep({ step_id: 's1', status: 'pass' });
+        s.addAssertion({ step_id: 's1', type: 'element_exists', pass: false, message: 'no' });
+      },
+      'failed',
+    ],
+    [
+      'all passed',
+      (s) => {
+        s.addStep({ step_id: 's1', status: 'pass' });
+        s.addAssertion({ step_id: 's1', type: 'element_exists', pass: true, message: 'ok' });
+      },
+      'passed',
+    ],
+    [
+      'skipped plus passed steps',
+      (s) => {
+        s.addStep({ step_id: 's1', status: 'skipped' });
+        s.addStep({ step_id: 's2', status: 'pass' });
+      },
+      'passed',
+    ],
+    ['all skipped steps', (s) => s.addStep({ step_id: 's1', status: 'skipped' }), 'passed'],
+    [
+      'duplicate entries for one step (fail, then pass)',
+      (s) => {
+        s.addStep({ step_id: 's1', status: 'fail' });
+        s.addStep({ step_id: 's1', status: 'pass' });
+      },
+      'failed',
+    ],
+    ['no steps and no assertions', () => {}, 'passed'],
+  ];
+
+  test.each(cases.map(([name, record, expected]) => [name, expected, record]))(
+    '%s finalizes %s',
+    (_name, expected, record) => {
+      const store = newStore();
+      record(store);
+      const result = store.finalize();
+      expect(result.status).toBe(expected);
+      expect(validate(result)).toBe(true);
+    }
+  );
+
+  // The default summary names the failing steps that drove a red verdict, so
+  // `failed: 0/0 assertion(s) passed` does not read as a contradiction. A run
+  // with no failing step keeps the old text (pinned by existing tests).
+  test.each([
+    [
+      'a failed step',
+      (s) => s.addStep({ step_id: 's1', status: 'fail' }),
+      'failed: 0/0 assertion(s) passed across 1 step(s), 1 failed.',
+    ],
+    [
+      'an errored step',
+      (s) => s.addStep({ step_id: 's1', status: 'error' }),
+      'error: 0/0 assertion(s) passed across 1 step(s), 1 errored.',
+    ],
+    [
+      'failed and errored steps plus a failed assertion',
+      (s) => {
+        s.addStep({ step_id: 's1', status: 'fail' });
+        s.addStep({ step_id: 's2', status: 'error' });
+        s.addStep({ step_id: 's3', status: 'pass' });
+        s.addAssertion({ step_id: 's3', type: 'element_exists', pass: false, message: 'no' });
+      },
+      'error: 0/1 assertion(s) passed across 3 step(s), 1 failed, 1 errored.',
+    ],
+    [
+      'only a failed assertion',
+      (s) => {
+        s.addStep({ step_id: 's1', status: 'pass' });
+        s.addAssertion({ step_id: 's1', type: 'element_exists', pass: false, message: 'no' });
+      },
+      'failed: 0/1 assertion(s) passed across 1 step(s).',
+    ],
+  ])('the default summary for %s says why', (_name, record, expected) => {
+    const store = newStore();
+    record(store);
+    expect(store.finalize().summary).toBe(expected);
+  });
+
+  test('a step that passed after retries finalizes passed and keeps its flakiness note', () => {
+    const store = newStore();
+    store.addStep({ step_id: 's1', status: 'pass', attempts: 3 });
+    const result = store.finalize();
+    expect(result.status).toBe('passed');
+    expect(result.observations).toEqual([
+      expect.objectContaining({ type: 'flakiness', step_id: 's1' }),
+    ]);
+  });
+
+  test('an explicit status wins over a recorded failed step', () => {
+    const store = newStore();
+    store.addStep({ step_id: 's1', status: 'fail' });
+    expect(store.finalize({ status: 'passed' }).status).toBe('passed');
+  });
+});

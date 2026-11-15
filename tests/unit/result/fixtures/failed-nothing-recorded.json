@@ -1,0 +1,24 @@
+{
+  "run_id": "run_20261027_100400",
+  "scenario_id": "settings_flow",
+  "schema_version": "2.0",
+  "status": "error",
+  "metadata": {
+    "app_version": "unknown",
+    "device_model": "unknown",
+    "api_level": "unknown",
+    "environment": "unknown",
+    "timestamp": "2026-10-27T10:04:00.000Z"
+  },
+  "total_assertions": 0,
+  "passed_assertions": 0,
+  "failed_assertions": 0,
+  "duration_seconds": 0,
+  "steps_executed": [
+    { "step_id": "launch", "status": "passed", "screenshot": null, "error_message": null }
+  ],
+  "assertion_results": [],
+  "observations": [],
+  "captured_variables": {},
+  "summary": "error: 0/0 assertion(s) passed across 1 step(s)."
+}

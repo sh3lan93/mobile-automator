@@ -82,6 +82,17 @@ const RESULT_CAPABILITIES = {
     writeCheck: 'substring',
     schemaPointer: '/properties/assertion_results',
   },
+  // Who decided a verdict (#275). `--pass pending` reuses assertion_verdict's
+  // --pass; `type`, `step_id` and the derived `mechanical` ride on its
+  // --type/--step-id. Behavioral: `judge` is also a parameter name.
+  assertion_provenance: {
+    verb: 'add-assertion',
+    flags: ['--judge'],
+    store: 'addAssertion',
+    writes: 'judge',
+    writeCheck: 'behavioral',
+    schemaPointer: '/properties/assertion_results/items/properties/judge',
+  },
   run_status: {
     verb: 'finalize',
     flags: ['--status'],
@@ -118,6 +129,16 @@ const RESULT_CAPABILITIES = {
     writes: 'summary',
     writeCheck: 'behavioral',
     schemaPointer: '/properties/summary',
+  },
+  // Who produced the result and from what (#275). `finalize` always writes
+  // one; --scenario supplies the checked scenario path and its hash.
+  executor: {
+    verb: 'finalize',
+    flags: ['--scenario'],
+    store: 'finalize',
+    writes: 'executor',
+    writeCheck: 'behavioral',
+    schemaPointer: '/properties/executor',
   },
   crash_record: {
     verb: 'add-crash',

@@ -346,6 +346,12 @@ describe('getPlatform', () => {
     const bridge = new DeviceBridge({ call, device: 'sim-iphone' });
     expect(await bridge.getPlatform()).toBe('ios');
   });
+
+  test('a device the engine does not list fails with the platform_unknown code', async () => {
+    const call = async (tool) => (tool === 'mobile_list_available_devices' ? [{ id: 'emu-5554', os: 'android' }] : {});
+    const bridge = new DeviceBridge({ call, device: 'gone' });
+    await expect(bridge.getPlatform()).rejects.toMatchObject({ code: 'platform_unknown' });
+  });
 });
 
 describe('getScreenSize', () => {

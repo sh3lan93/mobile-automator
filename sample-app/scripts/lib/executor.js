@@ -11,7 +11,9 @@
 //
 // Everything with a side effect is injected (`mauto`, `sleep`, `now`, `log`),
 // which is what lets tests/unit/e2e-harness drive it with a fake CLI and a
-// fake clock.
+// fake clock. So is everything the CLI already defines (`evaluator`,
+// `catalog`, `fields`): run-e2e.mjs loads them from the install under test,
+// so the harness and `mauto run` cannot disagree on a mapping.
 
 const fs = require('fs');
 const path = require('path');
@@ -26,18 +28,6 @@ const DEFAULT_BACKOFF_MS = 1000;
 // per-platform mechanics (src/device/semantic-press/).
 const SEMANTIC_ACTIONS = new Set(['press_back', 'dismiss_keyboard', 'grant_permission', 'deny_permission']);
 
-// Which assertion field carries the expected value for each mechanical type,
-// per the execute guide's assertion table. `--expected` is the one flag
-// `mauto assert` reads it from.
-const EXPECTED_FIELD = {
-  element_text: 'expected_value',
-  text_contains: 'expected_substring',
-  element_hint: 'expected_text',
-  content_description: 'label_value',
-  has_accessibility_label: 'label_value',
-  element_visible: 'expected_visible',
-};
-
 // A failure that retrying cannot fix: a scenario the harness cannot run, or
 // an engine that answers a successful launch with an empty screen.
 class FatalStepError extends Error {
@@ -48,30 +38,7 @@ class FatalStepError extends Error {
   }
 }
 
-const pad = (n) => String(n).padStart(2, '0');
-
-// `run_YYYYMMDD_HHMMSS`, the format the execute guide and `result` verbs use.
-// UTC so two CI machines agree on what a given instant is called.
-function makeRunId(date) {
-  return (
-    `run_${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}` +
-    `_${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}`
-  );
-}
-
-function assertFlags(assertion) {
-  const flags = [];
-  if (assertion.element_description !== undefined) flags.push('--target', String(assertion.element_description));
-  const field = EXPECTED_FIELD[assertion.type];
-  if (field && assertion[field] !== undefined) flags.push('--expected', String(assertion[field]));
-  if (assertion.operator !== undefined) flags.push('--operator', String(assertion.operator));
-  if (assertion.expected_count !== undefined) flags.push('--count', String(assertion.expected_count));
-  if (assertion.pattern !== undefined) flags.push('--pattern', String(assertion.pattern));
-  if (assertion.variable_name !== undefined) flags.push('--variable', String(assertion.variable_name));
-  return flags;
-}
-
-async function runScenario({ scenario, mauto, evaluator, catalog, workspaceDir, runId, sleep, now = Date.now, log = () => {} }) {
+async function runScenario({ scenario, mauto, evaluator, catalog, fields, workspaceDir, runId, sleep, now = Date.now, log = () => {} }) {
   const scenarioId = scenario.scenario_id;
   // Every verb carries the run id, so the CLI writes a trace for this run and
   // `result finalize` measures the duration instead of taking our word for it.
@@ -199,7 +166,7 @@ async function runScenario({ scenario, mauto, evaluator, catalog, workspaceDir, 
     let pass = false;
     let message;
     try {
-      const verdict = await verb(['assert', assertion.type, ...assertFlags(assertion)], TEST_OUTCOME);
+      const verdict = await verb(['assert', assertion.type, ...fields.toCliFlags(assertion)], TEST_OUTCOME);
       if (verdict && verdict.needs_agent) {
         message = `needs agent judgment; the E2E harness only decides mechanical assertions (${verdict.message})`;
       } else {
@@ -219,8 +186,8 @@ async function runScenario({ scenario, mauto, evaluator, catalog, workspaceDir, 
       '--pass', String(pass),
       '--message', message,
     ];
-    const field = EXPECTED_FIELD[assertion.type];
-    if (field && assertion[field] !== undefined) args.push('--expected', String(assertion[field]));
+    const expected = fields.expectedOf(assertion);
+    if (expected !== null) args.push('--expected', expected);
     await verb(args);
     log(`  assertion ${assertion.id} (${assertion.type}): ${pass ? 'PASS' : 'FAIL'} — ${message}`);
     if (!pass) failures.push(`assertion ${assertion.id} (${assertion.type}): ${message}`);
@@ -275,4 +242,4 @@ async function runScenario({ scenario, mauto, evaluator, catalog, workspaceDir, 
   };
 }
 
-module.exports = { runScenario, makeRunId, assertFlags, SEMANTIC_ACTIONS, POLL_MS, DEFAULT_TIMEOUT_MS };
+module.exports = { runScenario, SEMANTIC_ACTIONS, POLL_MS, DEFAULT_TIMEOUT_MS };

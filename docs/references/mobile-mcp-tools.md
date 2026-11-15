@@ -15,7 +15,7 @@ verbs that execute them, and the mobile-mcp engine primitives those verbs wrap.
 
 Each scenario action is executed by a `mauto` verb, which internally calls the
 mobile-mcp engine primitive shown below. The engine is pinned at
-`@mobilenext/mobile-mcp` 1.0.13; every tool except `mobile_list_available_devices`
+`@mobilenext/mobile-mcp` 1.0.15; every tool except `mobile_list_available_devices`
 takes a `device` id, which `mauto` injects for you.
 
 | Scenario Action   | `mauto` Verb            | Internal mobile-mcp Engine Tool              | Description |

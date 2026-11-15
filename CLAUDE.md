@@ -50,6 +50,9 @@ There is also a **three-layer model** worth keeping straight: (1) the CLI contra
 | `sample-app` | PRD [#44](https://github.com/sh3lan93/mobile-automator/issues/44), slices #45–#49 | `sample-app/<issue-number>-<short-slug>` | active — slices 4–5 open |
 | `cli` | PRD [#69](https://github.com/sh3lan93/mobile-automator/issues/69), slices #70–#78 | — | **complete** (all 23 closed) |
 | `interactive-recording` | — | — | **dead** — recorder excised in v0.20.0 (PR #110) |
+| `replay` | PRD [#271](https://github.com/sh3lan93/mobile-automator/issues/271), slices #272–#284 + follow-ups; plan `docs/plans/2026-10-27-replay-plan.md` | `replay/<issue-number>-<short-slug>` | active — S0a–S0c, R1 done; R2 in review; R3–G open |
+
+**Picking the next issue in a milestone.** Milestones with a pick order (today: `replay`) track it in [Project #4](https://github.com/users/sh3lan93/projects/4). Take the milestone issue with Status `Ready`, no open "blocked by" issue (GitHub's native issue dependencies), and the lowest `Order`, and set it to `In progress` before step 1 below. When it merges, move to `Ready` every issue whose blockers are now all closed. Priority (`P0`/`P1`/`P2`) follows `Order`; never pick an `In progress` or `In review` item. The rule is also in the milestone's description.
 
 When you pick up a milestone issue, follow these steps in order:
 
@@ -60,7 +63,10 @@ When you pick up a milestone issue, follow these steps in order:
 5. **Honor the locked invariants** above.
 6. **Guide changes must pass the lint guards** (see Placeholder contract). Add or extend the lint tests alongside the change.
 7. **Verify before claiming done.** Run the test suite and the lint guards and **show the output** before any success claim or PR.
-8. **Per-task commits; open a draft PR early** with a full description (what/why, test plan). Put `Closes #<issue>` on its own line with no intervening words; reference a PRD as `Refs #<prd>` — never `Closes` a PRD, which closes only when its last slice merges.
+8. **Self-check for the two recurring blockers before opening the PR, and state the result in it.** Reviews keep stopping PRs for these, so catch them first:
+   - **A second copy.** For each new helper, parser, reader or path builder, search for an existing one and reuse it. Do not leave two implementations that must agree.
+   - **A guard that cannot fail.** Mutate the code each new guard or test protects and watch it go red, then restore it. Green proves nothing until it has been seen red (#264: `if: false` on the `Test` job left its guard passing 61/61).
+9. **Per-task commits; open a draft PR early** with a full description (what/why, test plan). Put `Closes #<issue>` on its own line with no intervening words; reference a PRD as `Refs #<prd>` — never `Closes` a PRD, which closes only when its last slice merges.
 
 This workflow lives here (not in per-issue bodies) so it applies uniformly and survives issue edits.
 
@@ -79,9 +85,9 @@ Merge to `main` with a bumped `package.json` `version` and the pipeline tags, re
 
 ## Local development
 
-Standard scripts are in `package.json` (`npm test`, `npm run lint`, `npm run lint:guides`, `./scripts/pack-smoke.sh`). Real-device E2E: `MAUTO_BIN=$(command -v mauto) node sample-app/scripts/run-e2e.mjs` (see `sample-app/README.md`).
+Standard scripts are in `package.json` (`npm test`, `npm run lint`, `npm run lint:guides`, `./scripts/pack-smoke.sh`); `node scripts/sync-branch.js` merges `origin/main` locally and settles changelog/version/lockfile conflicts without pushing. Real-device E2E: `MAUTO_BIN=$(command -v mauto) node sample-app/scripts/run-e2e.mjs` (see `sample-app/README.md`).
 
-The mobile-mcp version is pinned in `package.json` (`@mobilenext/mobile-mcp`, 1.0.13) and resolved from `node_modules` at runtime (see `src/device/mobile-mcp-client.js`). Bump the pin there if you need a newer engine, then run `npm run test:integration` — `mobile-mcp-contract.test.js` fails if the new engine's tool schemas no longer match what `DeviceBridge` sends. The session daemon keeps one mobile-mcp process alive and mobile-mcp caches its robot per device for that process's life, so after changing any `MOBILEMCP_*` env var run `mauto session end` before the next verb. The `engine` config key needs no such step: the daemon handle records its engine, and the next device verb restarts a daemon running a stale one (`session status` reports `engine` vs `resolved_engine`).
+The mobile-mcp version is pinned in `package.json` (`@mobilenext/mobile-mcp`, 1.0.15) and resolved from `node_modules` at runtime (see `src/device/mobile-mcp-client.js`). Bump the pin there if you need a newer engine, then run `npm run test:integration` — `mobile-mcp-contract.test.js` fails if the new engine's tool schemas no longer match what `DeviceBridge` sends. The session daemon keeps one mobile-mcp process alive and mobile-mcp caches its robot per device for that process's life, so after changing any `MOBILEMCP_*` env var run `mauto session end` before the next verb. The `engine` config key needs no such step: the daemon handle records its engine, and the next device verb restarts a daemon running a stale one (`session status` reports `engine` vs `resolved_engine`).
 
 Note: `jest.config` `testPathIgnorePatterns` must stay `<rootDir>`-anchored — an unanchored pattern makes `npm test` silently match zero tests inside a worktree checkout.
 

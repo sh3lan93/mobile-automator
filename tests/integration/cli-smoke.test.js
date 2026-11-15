@@ -20,6 +20,8 @@ const CLI = path.join(REPO_ROOT, 'bin', 'mauto.js');
 
 const VALID_SCENARIO = path.join(__dirname, 'fixtures', 'scenario-valid.json');
 const CONFIG_FIXTURE = path.join(REPO_ROOT, 'tests', 'fixtures', 'config.platform-aware.json');
+const FAILED_RESULT = require('../unit/result/fixtures/failed.json');
+const { parseXml, findAll } = require('../helpers/parse-xml');
 
 // Run the CLI as a child process. Returns { status, stdout, stderr }.
 function runCli(args, opts = {}) {
@@ -120,6 +122,26 @@ describe('cli smoke (integration)', () => {
     const s = JSON.parse(strict.stdout);
     expect(s.ok).toBe(false);
     expect(s.data.warnings).toHaveLength(1);
+  });
+
+  test('validate warns on a dangling after_step; --strict exits 3 (#272)', () => {
+    const file = path.join(__dirname, 'fixtures', 'scenario-dangling-after-step.json');
+
+    const warn = runCli(['validate', file]);
+    expect(warn.status).toBe(0);
+    const w = JSON.parse(warn.stdout);
+    expect(w.ok).toBe(true);
+    expect(w.data.warnings).toEqual([
+      expect.objectContaining({ code: 'dangling_after_step', path: 'assertions[0]', assertion_id: 'home_shown' }),
+    ]);
+
+    const strict = runCli(['validate', file, '--strict']);
+    expect(strict.status).toBe(3); // EXIT.INVALID_INPUT
+    const s = JSON.parse(strict.stdout);
+    expect(s.ok).toBe(false);
+    expect(s.data.valid).toBe(false);
+    expect(s.error.message).toBe('scenario cannot replay unattended; see data.warnings');
+    expect(s.hint).toBe('1 assertion(s) run after a step that does not exist — see data.warnings');
   });
 
   test('schema scenario prints parseable JSON', () => {
@@ -227,5 +249,203 @@ describe('cli smoke (integration)', () => {
 
     const again = JSON.parse(runCli(['config', 'set', 'engine', 'legacy'], { cwd: workspace, env }).stdout);
     expect(again).toEqual({ ok: true, data: { key: 'engine', value: 'legacy' }, schema_version: parsed.schema_version });
+  });
+
+  // #274: JUnit export of a pre-written result file, through the real binary.
+  // #295: the ResultStore constructor refuses the id and withEnvelope's
+  // toEnvelope reports it — this proves that wiring through the real binary.
+  describe('result write verbs refuse a --run-id with a path separator', () => {
+    test.each([
+      ['add-step', ['--step-id', 's1', '--status', 'pass']],
+      ['add-assertion', ['--step-id', 's1', '--type', 'element_visible', '--pass', 'true']],
+      ['add-crash', ['--crash-id', 'c1']],
+      ['finalize', ['--status', 'passed']],
+    ])('result %s --run-id ../escape is invalid_input, exit 3, and writes nothing', (verb, rest) => {
+      const configDir = path.join(workspace, '.mobile-automator');
+      fs.mkdirSync(configDir, { recursive: true });
+      fs.copyFileSync(CONFIG_FIXTURE, path.join(configDir, 'config.json'));
+      const before = fs.readdirSync(workspace).sort();
+
+      const r = runCli(['result', verb, '--run-id', '../escape', ...rest], { cwd: workspace });
+
+      expect(r.status).toBe(3); // EXIT.INVALID_INPUT
+      expect(r.stderr).toBe('');
+      const env = JSON.parse(r.stdout);
+      expect(env.ok).toBe(false);
+      expect(env.error).toEqual({ kind: 'invalid_input', message: 'invalid run id "../escape"' });
+      expect(env.hint).toMatch(/cannot contain a path separator/);
+      expect(fs.readdirSync(workspace).sort()).toEqual(before);
+      expect(fs.existsSync(path.join(configDir, 'results'))).toBe(false);
+    });
+  });
+
+  describe('result export --format junit', () => {
+    function writeWorkspaceResult() {
+      const configDir = path.join(workspace, '.mobile-automator');
+      fs.mkdirSync(path.join(configDir, 'results'), { recursive: true });
+      fs.copyFileSync(CONFIG_FIXTURE, path.join(configDir, 'config.json'));
+      fs.writeFileSync(
+        path.join(configDir, 'results', `${FAILED_RESULT.run_id}.json`),
+        JSON.stringify(FAILED_RESULT, null, 2)
+      );
+    }
+
+    test('returns well-formed XML in data.xml and exits 0 even though the run failed', () => {
+      writeWorkspaceResult();
+      const r = runCli(['result', 'export', '--run-id', FAILED_RESULT.run_id, '--format', 'junit'], { cwd: workspace });
+      expect(r.status).toBe(0);
+      expect(r.stderr).toBe('');
+      const env = JSON.parse(r.stdout);
+      expect(env.ok).toBe(true);
+      expect(env.data).toMatchObject({ format: 'junit', path: null, suites: 1, tests: 4, failures: 3 });
+      const [suite] = findAll(parseXml(env.data.xml), 'testsuite');
+      expect(suite.attrs.name).toBe(FAILED_RESULT.scenario_id);
+    });
+
+    test('--out writes a parseable report file', () => {
+      writeWorkspaceResult();
+      const r = runCli(
+        ['result', 'export', '--run-id', FAILED_RESULT.run_id, '--format', 'junit', '--out', 'reports/junit.xml'],
+        { cwd: workspace }
+      );
+      expect(r.status).toBe(0);
+      const env = JSON.parse(r.stdout);
+      expect(env.data.xml).toBeUndefined();
+      expect(fs.realpathSync(env.data.path)).toBe(fs.realpathSync(path.join(workspace, 'reports', 'junit.xml')));
+      expect(parseXml(fs.readFileSync(env.data.path, 'utf8')).name).toBe('testsuites');
+    });
+
+    // A file that is not an object finalize wrote for this run id is refused
+    // with an envelope, never a stack trace (#274 review, rounds 2 and 3).
+    test.each([
+      ['null', null],
+      ['an array', []],
+      ['a scalar', 'passed'],
+      ['an empty object', {}],
+      ['a mismatched run_id', () => ({ ...FAILED_RESULT, run_id: 'run_20990101_000000' })],
+    ])('a result file holding %s is invalid_input, exit 3', (_label, value) => {
+      writeWorkspaceResult();
+      fs.writeFileSync(
+        path.join(workspace, '.mobile-automator', 'results', `${FAILED_RESULT.run_id}.json`),
+        JSON.stringify(typeof value === 'function' ? value() : value)
+      );
+      const r = runCli(['result', 'export', '--run-id', FAILED_RESULT.run_id, '--format', 'junit'], { cwd: workspace });
+      expect(r.status).toBe(3); // EXIT.INVALID_INPUT
+      expect(r.stderr).toBe('');
+      const env = JSON.parse(r.stdout);
+      expect(env.ok).toBe(false);
+      expect(env.error.kind).toBe('invalid_input');
+      expect(env.error.message).toMatch(/is not a finalized result/);
+      expect(env.hint).toBeTruthy();
+    });
+
+    // A run-id-matching object off the current schema still exports, and a
+    // run that is not green never renders as a green suite.
+    test.each([
+      ['a null metadata', () => ({ ...FAILED_RESULT, metadata: null })],
+      ['a result missing its containers', () => {
+        const { assertion_results, steps_executed, ...rest } = FAILED_RESULT; // eslint-disable-line no-unused-vars
+        return rest;
+      }],
+      ['an off-enum status', () => ({ ...FAILED_RESULT, status: 'garbage', steps_executed: [], assertion_results: [] })],
+      ['a null assertion', () => ({ ...FAILED_RESULT, assertion_results: [null] })],
+      ['a null step', () => ({ ...FAILED_RESULT, steps_executed: [null] })],
+      ['an assertion without assertion_id', () => ({ ...FAILED_RESULT, assertion_results: [{ status: 'failed', message: 'x' }] })],
+      ['a step without step_id', () => ({ ...FAILED_RESULT, steps_executed: [{ status: 'failed' }] })],
+    ])('a result file holding %s exports red, exit 0', (_label, value) => {
+      writeWorkspaceResult();
+      fs.writeFileSync(
+        path.join(workspace, '.mobile-automator', 'results', `${FAILED_RESULT.run_id}.json`),
+        JSON.stringify(value())
+      );
+      const r = runCli(['result', 'export', '--run-id', FAILED_RESULT.run_id, '--format', 'junit'], { cwd: workspace });
+      expect(r.status).toBe(0);
+      expect(r.stderr).toBe('');
+      const env = JSON.parse(r.stdout);
+      expect(env.ok).toBe(true);
+      expect(env.data.failures).toBeGreaterThanOrEqual(1);
+      expect(parseXml(env.data.xml).name).toBe('testsuites');
+    });
+
+    // The writer owns "finalized": whatever add-step + finalize write, export
+    // reads — including a run recorded without --scenario-id and a run id
+    // outside the run_YYYYMMDD_HHMMSS form (#274 review).
+    test.each(['run_20261109_120000', 'ci-build-42'])(
+      'a run recorded by add-step + finalize without --scenario-id exports (%s)',
+      (runId) => {
+        fs.mkdirSync(path.join(workspace, '.mobile-automator'), { recursive: true });
+        fs.copyFileSync(CONFIG_FIXTURE, path.join(workspace, '.mobile-automator', 'config.json'));
+
+        const add = runCli(['result', 'add-step', '--run-id', runId, '--step-id', 's1', '--status', 'fail'], { cwd: workspace });
+        expect(JSON.parse(add.stdout).ok).toBe(true);
+
+        // The step failed, so finalize derives `failed` and exits 6 (#296);
+        // it still wrote a finalized file for this run id with no scenario id.
+        const fin = runCli(['result', 'finalize', '--run-id', runId], { cwd: workspace });
+        expect(fin.status).toBe(6);
+        expect(JSON.parse(fin.stdout).data).toMatchObject({ run_id: runId, scenario_id: null, status: 'failed' });
+
+        const r = runCli(['result', 'export', '--run-id', runId, '--format', 'junit'], { cwd: workspace });
+        expect(r.stderr).toBe('');
+        const env = JSON.parse(r.stdout);
+        expect(env).toMatchObject({ ok: true });
+        expect(r.status).toBe(0);
+        expect(env.data.failures).toBeGreaterThanOrEqual(1); // the failed step s1
+        const [suite] = findAll(parseXml(env.data.xml), 'testsuite');
+        expect(suite.attrs.name).toBe(runId);
+      }
+    );
+
+    test('an unknown format is an invalid_input envelope', () => {
+      writeWorkspaceResult();
+      const r = runCli(['result', 'export', '--run-id', FAILED_RESULT.run_id, '--format', 'sarif'], { cwd: workspace });
+      expect(r.status).toBe(3); // EXIT.INVALID_INPUT
+      const env = JSON.parse(r.stdout);
+      expect(env.ok).toBe(false);
+      expect(env.error.kind).toBe('invalid_input');
+      expect(env.hint).toMatch(/junit/);
+    });
+  });
+
+  // `mauto run` (replay R1, #278): hidden and gated. Neither refusal needs a
+  // device: both happen before anything connects.
+  describe('run (gated)', () => {
+    const envWith = (extra) => {
+      const env = { ...process.env, ...extra };
+      if (extra.MAUTO_REPLAY === undefined) delete env.MAUTO_REPLAY;
+      return env;
+    };
+
+    test('refuses with environment (exit 5) in a workspace when MAUTO_REPLAY is unset', () => {
+      const configDir = path.join(workspace, '.mobile-automator');
+      fs.mkdirSync(configDir, { recursive: true });
+      fs.copyFileSync(CONFIG_FIXTURE, path.join(configDir, 'config.json'));
+
+      const r = runCli(['run', VALID_SCENARIO], { cwd: workspace, env: envWith({ MAUTO_REPLAY: undefined }) });
+      expect(r.status).toBe(5);
+      const env = JSON.parse(r.stdout);
+      expect(env.ok).toBe(false);
+      expect(env.error.kind).toBe('environment');
+      expect(env.error.message).toBe('mauto run is not enabled yet');
+      expect(env.hint).toMatch(/MAUTO_REPLAY=1/);
+    });
+
+    test('refuses with the workspace failure (exit 5) outside a workspace even with the gate set', () => {
+      // A .git boundary stops discovery here, so no ancestor workspace is found.
+      fs.mkdirSync(path.join(workspace, '.git'));
+      const r = runCli(['run', VALID_SCENARIO], { cwd: workspace, env: envWith({ MAUTO_REPLAY: '1' }) });
+      expect(r.status).toBe(5);
+      const env = JSON.parse(r.stdout);
+      expect(env.error.kind).toBe('environment');
+      expect(env.hint).toMatch(/mauto setup/);
+      expect(fs.existsSync(path.join(workspace, '.mobile-automator'))).toBe(false);
+    });
+
+    test('is absent from --help', () => {
+      const r = runCli(['--help']);
+      expect(r.status).toBe(0);
+      expect(r.stdout).not.toMatch(/^\s+run\b/m);
+      expect(r.stdout).toMatch(/^\s+validate\b/m);
+    });
   });
 });

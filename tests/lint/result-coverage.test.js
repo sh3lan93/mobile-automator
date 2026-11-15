@@ -15,7 +15,9 @@ const {
 } = require('../../src/result/capability-catalog');
 const { ResultStore } = require('../../src/result/store');
 const { OBSERVATION_TYPES, RUN_STATUSES, STEP_STATUS_ALIASES } = require('../../src/result/flags');
-const { buildProgram } = require('../../src/cli');
+const { buildProgram, handleResultExport, handleResultFinalize } = require('../../src/cli');
+const { ScenarioValidator } = require('../../src/scenario/validator');
+const { workspaceDir } = require('../../src/workspace/layout');
 
 const REPO = path.join(__dirname, '..', '..');
 const schema = require('../../src/schemas/result_schema.json');
@@ -43,6 +45,17 @@ const subcommand = (name) => resultCmd.commands.find((c) => c.name() === name);
 const longFlags = (cmd) => new Set(cmd.options.map((o) => o.long));
 
 const capabilities = Object.entries(RESULT_CAPABILITIES);
+
+// `result` subcommands that only READ result files, so they carry no fact into
+// one and have no capability to claim their flags. Each names why. The tests
+// below keep the exemption from becoming an escape hatch: an entry must name a
+// registered subcommand, must not be the write verb of any capability, and
+// must leave the results directory byte-for-byte unchanged when it runs.
+const READ_ONLY_RESULT_VERBS = {
+  export:
+    'renders finalized result files as a CI report (--format, --out); it reads results/ and writes only the report, ' +
+    'so no flag of it reaches a result file',
+};
 
 describe('result coverage — schema ↔ store ↔ verbs', () => {
   test('the `result` command group is registered', () => {
@@ -81,6 +94,7 @@ describe('result coverage — schema ↔ store ↔ verbs', () => {
     const claimed = new Set(capabilities.flatMap(([, def]) => def.flags));
     const orphans = [];
     for (const sub of resultCmd.commands) {
+      if (Object.prototype.hasOwnProperty.call(READ_ONLY_RESULT_VERBS, sub.name())) continue;
       for (const flag of longFlags(sub)) {
         if (!IDENTITY_FLAGS.has(flag) && !claimed.has(flag)) {
           orphans.push(`${sub.name()} ${flag}`);
@@ -88,6 +102,38 @@ describe('result coverage — schema ↔ store ↔ verbs', () => {
       }
     }
     expect(orphans).toEqual([]);
+  });
+
+  describe('read-only exemptions stay honest', () => {
+    const exempt = Object.entries(READ_ONLY_RESULT_VERBS);
+
+    test.each(exempt)('%s carries a reason and names a registered result subcommand', (name, reason) => {
+      expect(typeof reason).toBe('string');
+      expect(reason.trim().length).toBeGreaterThan(0);
+      expect(subcommand(name)).toBeDefined();
+    });
+
+    test('no exempt verb is the write verb of a capability', () => {
+      const writers = new Set(capabilities.map(([, def]) => def.verb));
+      expect(exempt.map(([name]) => name).filter((name) => writers.has(name))).toEqual([]);
+    });
+
+    test('export leaves the results directory byte-for-byte unchanged', () => {
+      const root = tmpProjectRoot();
+      const store = new ResultStore({ runId: 'run_20260101_000007', scenarioId: 's', projectRoot: root });
+      store.addStep({ step_id: 'step_1', status: 'fail', error_message: 'boom' });
+      store.addAssertion({ step_id: 'step_1', type: 'element_exists', pass: false, message: 'missing' });
+      store.finalize({});
+      const resultsDir = path.join(workspaceDir(root), 'results');
+      const snapshot = () =>
+        Object.fromEntries(fs.readdirSync(resultsDir).sort().map((f) => [f, fs.readFileSync(path.join(resultsDir, f), 'utf8')]));
+      const before = snapshot();
+
+      const r = handleResultExport({ projectRoot: root, cwd: root }, { runIds: ['run_20260101_000007'], format: 'junit' });
+      expect(r.envelope.ok).toBe(true);
+      expect(r.envelope.data.failures).toBe(2);
+      expect(snapshot()).toEqual(before);
+    });
   });
 
   test('OBSERVATION_TYPES matches the schema enum exactly', () => {
@@ -210,6 +256,53 @@ describe('result coverage — schema ↔ store ↔ verbs', () => {
       });
       expect(result.measurements.source).toBe('trace');
       expect(result.duration_seconds).toBe(12.5);
+    });
+
+    // #275: assertion provenance. type, step_id, mechanical and judge are
+    // bare keys that also appear as parameter names in store.js.
+    test('judge, type, step_id and mechanical supplied to addAssertion reach the finalized result', () => {
+      const store = new ResultStore({ runId: 'run_20260101_000008', scenarioId: 's', projectRoot: tmpProjectRoot() });
+      store.addAssertion({ step_id: 'step_1', assertion_id: 'a1', type: 'element_exists', pass: true, mechanical: true, judge: { by: 'agent' } });
+      const [entry] = store.finalize({}).assertion_results;
+      expect(entry).toMatchObject({ type: 'element_exists', step_id: 'step_1', mechanical: true, judge: { by: 'agent' } });
+    });
+
+    test('a pending verdict is replaced in place by the decided one, and the run passes', () => {
+      const store = new ResultStore({ runId: 'run_20260101_000009', scenarioId: 's', projectRoot: tmpProjectRoot() });
+      store.addAssertion({ step_id: 'step_1', assertion_id: 'a1', type: 'visual_state', status: 'needs_agent', judge: { by: 'none' } });
+      store.addAssertion({ step_id: 'step_1', assertion_id: 'a2', type: 'element_exists', pass: true });
+      store.addAssertion({ step_id: 'step_1', assertion_id: 'a1', type: 'visual_state', pass: true, judge: { by: 'agent' } });
+      const result = store.finalize({});
+      expect(result.assertion_results.map((a) => [a.assertion_id, a.status])).toEqual([['a1', 'passed'], ['a2', 'passed']]);
+      expect(result.status).toBe('passed');
+    });
+
+    test('a pending verdict finalizes the run incomplete', () => {
+      const store = new ResultStore({ runId: 'run_20260101_000010', scenarioId: 's', projectRoot: tmpProjectRoot() });
+      store.addAssertion({ step_id: 'step_1', assertion_id: 'a1', type: 'visual_state', status: 'needs_agent' });
+      const result = store.finalize({});
+      expect(result.status).toBe('incomplete');
+      expect(result.assertion_results[0].status).toBe('needs_agent');
+    });
+
+    test('--scenario on finalize reaches the executor in the result file', () => {
+      const root = tmpProjectRoot();
+      const runId = 'run_20260101_000011';
+      const scenarioPath = path.join(root, 's.json');
+      fs.writeFileSync(scenarioPath, JSON.stringify({
+        $schema_version: '2.1', scenario_id: 's', name: 'n', description: 'd', platform: 'cross-platform',
+        app_package: 'com.example.app', metadata: { app_version: '1', environment: 'staging' },
+        steps: [{ id: 'step_1', action: 'launch_app', description: 'Launch' }], assertions: [],
+      }));
+      new ResultStore({ runId, scenarioId: 's', projectRoot: root }).addStep({ step_id: 'step_1', status: 'pass' });
+      const r = handleResultFinalize(
+        { resultStoreFactory: (o) => new ResultStore(o), projectRoot: root, validator: new ScenarioValidator() },
+        { runId, scenario: scenarioPath }
+      );
+      expect(r.exitKind).toBe('ok');
+      const saved = JSON.parse(fs.readFileSync(path.join(workspaceDir(root), 'results', `${runId}.json`), 'utf8'));
+      expect(saved.executor).toMatchObject({ kind: 'agent', scenario_path: path.relative(root, scenarioPath) });
+      expect(saved.executor.scenario_sha256).toMatch(/^[0-9a-f]{64}$/);
     });
 
     test('a crash supplied to addCrash reaches the finalized result', () => {
