@@ -20,6 +20,7 @@ const EXPECTED_FIELD = Object.freeze({
   content_description: 'label_value',
   has_accessibility_label: 'label_value',
   element_visible: 'expected_visible',
+  screen_title: 'expected_text',
 });
 
 // One row per evaluator input, in `mauto assert` argv order:
@@ -47,6 +48,8 @@ const FIELDS = Object.freeze([
   // the decision on its own (scenario `masks` / parseMaskSpec per flag).
   Object.freeze({ scenario: 'reference_screenshot', flag: 'reference', input: 'reference_screenshot' }),
   Object.freeze({ scenario: 'tolerance', flag: 'tolerance', input: 'tolerance' }),
+  // permission_dialog_shown (#276): the permission the dialog must name.
+  Object.freeze({ scenario: 'permission_name', flag: 'permission', input: 'permission_name' }),
 ]);
 
 // A row's value in a scenario assertion, stringified as it would reach the

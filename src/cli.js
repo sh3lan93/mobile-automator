@@ -107,15 +107,12 @@ const KNOWN_ASSERTION_TYPES = new Set([
   ...REFERENCE_SCREENSHOT_TYPES,
   // Tier-2 visual types the agent must judge.
   'visual_state',
-  'element_fully_visible',
   'color_style',
-  'screen_title',
   'alert_present',
   'alert_text',
   'toast_visible',
   'keyboard_visible',
   'dark_mode_active',
-  'permission_dialog_shown',
   'element_state',
 ]);
 

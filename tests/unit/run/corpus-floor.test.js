@@ -15,15 +15,17 @@
 // Measured when written: 59 of 68 assertions (86.8%), 5 of 12 scenarios fully
 // agent-free (41.7%). The PRD's R5b floor of >= 96% is not reachable on this
 // corpus: it contains no screenshot_match assertion, so R5b cannot move the
-// number. Even with R5a's five promotions to MECHANICAL_TYPES it would be 65/68
-// (95.6%). Raise these floors when the measured value rises; never lower them
-// to make a change pass.
+// number. Even with R5a's five planned promotions to MECHANICAL_TYPES it would
+// be 65/68 (95.6%). R5a (#276) promoted three (element_fully_visible,
+// screen_title, permission_dialog_shown; alert_present / alert_text stay with
+// the agent): 63 of 68 (92.6%), 8 of 12 scenarios (66.7%). Raise these floors
+// when the measured value rises; never lower them to make a change pass.
 
 const { MECHANICAL_TYPES, REFERENCE_SCREENSHOT_TYPES } = require('../../../src/assertion/evaluator');
 const { loadCorpus, CORPUS_SIZE } = require('../../helpers/scenario-corpus');
 
-const ASSERTION_FLOOR = 0.86;
-const SCENARIO_FLOOR = 0.41;
+const ASSERTION_FLOOR = 0.92;
+const SCENARIO_FLOOR = 0.66;
 
 const decidedWithoutAgent = (a) => MECHANICAL_TYPES.has(a.type) || REFERENCE_SCREENSHOT_TYPES.has(a.type);
 

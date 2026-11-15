@@ -1,9 +1,14 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
+
 const {
   MECHANICAL_TYPES,
+  SCREEN_SIZE_TYPES,
   evaluate,
 } = require('../../../src/assertion/evaluator');
+const { normalize, parseElements } = require('../../../src/device/element-model');
 
 // Agnostic element fixtures (shape produced by ElementModel.normalize).
 function el(text, extra = {}) {
@@ -34,10 +39,20 @@ describe('MECHANICAL_TYPES', () => {
     expect(MECHANICAL_TYPES.has('has_accessibility_label')).toBe(true);
     expect(MECHANICAL_TYPES.has('value_matches_variable')).toBe(true);
     expect(MECHANICAL_TYPES.has('text_changed')).toBe(true);
+    // Promoted from the agent by R5a (#276).
+    expect(MECHANICAL_TYPES.has('element_fully_visible')).toBe(true);
+    expect(MECHANICAL_TYPES.has('screen_title')).toBe(true);
+    expect(MECHANICAL_TYPES.has('permission_dialog_shown')).toBe(true);
     // Tier 2 must NOT be mechanical.
     expect(MECHANICAL_TYPES.has('screenshot_match')).toBe(false);
-    expect(MECHANICAL_TYPES.has('element_fully_visible')).toBe(false);
+    expect(MECHANICAL_TYPES.has('alert_present')).toBe(false);
+    expect(MECHANICAL_TYPES.has('alert_text')).toBe(false);
     expect(MECHANICAL_TYPES.has('color_style')).toBe(false);
+  });
+
+  test('SCREEN_SIZE_TYPES are the mechanical types that need the screen size', () => {
+    expect([...SCREEN_SIZE_TYPES].sort()).toEqual(['element_fully_visible', 'screen_title']);
+    for (const t of SCREEN_SIZE_TYPES) expect(MECHANICAL_TYPES.has(t)).toBe(true);
   });
 });
 
@@ -239,10 +254,12 @@ describe('evaluate — non-mechanical (needs agent)', () => {
     expect(r.message).toMatch(/agent/i);
   });
 
-  test('element_fully_visible needs agent', () => {
-    const r = evaluate({ type: 'element_fully_visible', target: 'x' }, { elements: [el('x')] });
-    expect(r.needs_agent).toBe(true);
-    expect(r.pass).toBeNull();
+  test('alert_present and alert_text still need the agent', () => {
+    for (const type of ['alert_present', 'alert_text']) {
+      const r = evaluate({ type, target: 'x' }, { elements: [el('x')] });
+      expect(r.needs_agent).toBe(true);
+      expect(r.pass).toBeNull();
+    }
   });
 
   test('an unknown/visual type is treated as needs_agent rather than crashing', () => {
@@ -281,5 +298,166 @@ describe('matcher exports (consumed by the real-device E2E harness, #94)', () =>
     expect(evaluator.findFirst([header, nav], 'more')).toBe(header);
     expect(evaluator.findFirst([nav, header], 'more')).toBe(nav);
     expect(evaluator.findFirst([header, nav], 'Settings')).toBeNull();
+  });
+});
+
+// R5a (#276): three types decided over the element list (+ the screen size).
+const FIXTURES = path.join(__dirname, '..', '..', 'fixtures', 'device');
+function engineElements(name) {
+  return normalize(parseElements(fs.readFileSync(path.join(FIXTURES, 'mobile-mcp-1.0.13', name), 'utf8')));
+}
+function probeElements(name) {
+  return normalize(JSON.parse(fs.readFileSync(path.join(FIXTURES, 'sample-app-probe', name), 'utf8')));
+}
+// android-default.screen.txt / ios-sim.screen.txt
+const ANDROID_SCREEN = { width: 1280, height: 2856 };
+const IOS_SCREEN = { width: 393, height: 852 };
+const at = (text, bounds, extra = {}) => el(text, { bounds, ...extra });
+
+describe('evaluate — element_fully_visible', () => {
+  const screenSize = { width: 1000, height: 2000 };
+  const ev = (elements, ss = screenSize) => evaluate({ type: 'element_fully_visible', target: 'Buy' }, { elements, screenSize: ss });
+
+  test('passes when the element lies inside the screen', () => {
+    const r = ev([at('Buy', [100, 100, 900, 200])]);
+    expect(r.mechanical).toBe(true);
+    expect(r.pass).toBe(true);
+  });
+
+  test('passes when the element touches the screen edges exactly', () => {
+    expect(ev([at('Buy', [0, 0, 1000, 2000])]).pass).toBe(true);
+  });
+
+  test('fails when clipped by the right edge, naming bounds and screen size', () => {
+    const r = ev([at('Buy', [800, 100, 1100, 200])]);
+    expect(r.mechanical).toBe(true);
+    expect(r.pass).toBe(false);
+    expect(r.message).toContain('800,100,1100,200');
+    expect(r.message).toContain('1000x2000');
+  });
+
+  test('fails when clipped by the bottom edge', () => {
+    expect(ev([at('Buy', [100, 1900, 900, 2100])]).pass).toBe(false);
+  });
+
+  test('fails on negative coordinates (clipped by the top or left edge)', () => {
+    expect(ev([at('Buy', [100, -40, 900, 60])]).pass).toBe(false);
+    expect(ev([at('Buy', [-10, 100, 900, 200])]).pass).toBe(false);
+  });
+
+  test('fails when no element matches the target', () => {
+    const r = ev([at('Cancel', [0, 0, 10, 10])]);
+    expect(r.pass).toBe(false);
+    expect(r.message).toMatch(/No element matching 'Buy'/);
+  });
+
+  test('fails mechanically when the screen size is unknown', () => {
+    const r = ev([at('Buy', [100, 100, 900, 200])], null);
+    expect(r.mechanical).toBe(true);
+    expect(r.needs_agent).toBe(false);
+    expect(r.pass).toBe(false);
+    expect(r.message).toMatch(/screen size/i);
+  });
+
+  test('real sample-app Home screen: a visible category passes, an offstage page fails', () => {
+    const elements = probeElements('home.mobilecli.raw.json');
+    const visible = evaluate({ type: 'element_fully_visible', target: 'Electronics' }, { elements, screenSize: ANDROID_SCREEN });
+    expect(visible.pass).toBe(true);
+    // The probe's banner carousel page at [1260,324,1680,804] runs off the right edge.
+    const offstage = elements.find((e) => e.bounds[0] === 1260 && e.bounds[2] === 1680);
+    const clipped = evaluate(
+      { type: 'element_fully_visible', target: 'Offstage page' },
+      { elements: [{ ...offstage, accessibility_label: 'Offstage page' }], screenSize: ANDROID_SCREEN }
+    );
+    expect(clipped.pass).toBe(false);
+  });
+});
+
+describe('evaluate — screen_title', () => {
+  const screenSize = { width: 1000, height: 2000 };
+  const ev = (expected, elements, ss = screenSize) => evaluate({ type: 'screen_title', expected }, { elements, screenSize: ss });
+
+  test('passes when an element in the top quarter carries exactly the text', () => {
+    const r = ev('Settings', [at('Settings', [40, 100, 400, 180])]);
+    expect(r.mechanical).toBe(true);
+    expect(r.pass).toBe(true);
+  });
+
+  test('fails when the same text sits lower on screen, saying where it was found', () => {
+    const r = ev('Settings', [at('Settings', [40, 1500, 400, 1580])]);
+    expect(r.pass).toBe(false);
+    expect(r.message).toContain('1500');
+  });
+
+  test('the top edge must be above a quarter of the screen height', () => {
+    expect(ev('Settings', [at('Settings', [0, 499, 10, 560])]).pass).toBe(true);
+    expect(ev('Settings', [at('Settings', [0, 500, 10, 560])]).pass).toBe(false);
+  });
+
+  test('matches trimmed and case-insensitively, but not as a substring', () => {
+    expect(ev('  settings ', [at('SETTINGS', [0, 10, 10, 20])]).pass).toBe(true);
+    expect(ev('Settings', [at('Account Settings', [0, 10, 10, 20])]).pass).toBe(false);
+  });
+
+  test('matches an element that carries only an accessibility label', () => {
+    expect(ev('Cart', [at(null, [0, 10, 10, 20], { accessibility_label: 'Cart' })]).pass).toBe(true);
+  });
+
+  test('fails naming the absence when nothing carries the text', () => {
+    const r = ev('Settings', [at('Home', [0, 10, 10, 20])]);
+    expect(r.pass).toBe(false);
+    expect(r.message).toMatch(/no element/i);
+  });
+
+  test('fails mechanically when the screen size is unknown', () => {
+    const r = ev('Settings', [at('Settings', [0, 10, 10, 20])], null);
+    expect(r.mechanical).toBe(true);
+    expect(r.pass).toBe(false);
+    expect(r.message).toMatch(/screen size/i);
+  });
+
+  test('real engine output: the iOS Settings title (label-only) and the sample-app header pass', () => {
+    expect(evaluate({ type: 'screen_title', expected: 'Settings' },
+      { elements: engineElements('ios-sim.elements.txt'), screenSize: IOS_SCREEN }).pass).toBe(true);
+    const home = probeElements('home.mobilecli.raw.json');
+    expect(evaluate({ type: 'screen_title', expected: 'Sample Shop' }, { elements: home, screenSize: ANDROID_SCREEN }).pass).toBe(true);
+    // Exact match only: a fragment of the title is not the title.
+    expect(evaluate({ type: 'screen_title', expected: 'Sample' }, { elements: home, screenSize: ANDROID_SCREEN }).pass).toBe(false);
+  });
+});
+
+describe('evaluate — permission_dialog_shown', () => {
+  const ev = (elements, permission_name) => evaluate({ type: 'permission_dialog_shown', permission_name }, { elements });
+  const dialog = (allow, deny, body = 'Allow Sample Shop to access your camera?') => [at(body, [0, 0, 1, 1]), at(allow, [0, 0, 1, 1]), at(deny, [0, 0, 1, 1])];
+
+  test('passes when an allow and a deny button are both present', () => {
+    const r = ev(dialog('While using the app', 'Deny'));
+    expect(r.mechanical).toBe(true);
+    expect(r.pass).toBe(true);
+  });
+
+  test('fails when only an allow button is present', () => {
+    const r = ev([at('Allow', [0, 0, 1, 1])]);
+    expect(r.pass).toBe(false);
+    expect(r.message).toMatch(/deny/i);
+  });
+
+  test('matches the curly-apostrophe deny label', () => {
+    expect(ev(dialog('Allow', 'Don’t Allow')).pass).toBe(true);
+  });
+
+  test('a button carrying only an accessibility label counts', () => {
+    expect(ev([at(null, [0, 0, 1, 1], { accessibility_label: 'Allow Once' }), at("Don't Allow", [0, 0, 1, 1])]).pass).toBe(true);
+  });
+
+  test('with permission_name, some element must name the permission', () => {
+    expect(ev(dialog('Allow', 'Deny'), 'Camera').pass).toBe(true);
+    const r = ev(dialog('Allow', 'Deny'), 'location');
+    expect(r.pass).toBe(false);
+    expect(r.message).toContain('location');
+  });
+
+  test('needs no screen size', () => {
+    expect(SCREEN_SIZE_TYPES.has('permission_dialog_shown')).toBe(false);
   });
 });
