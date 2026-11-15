@@ -2522,7 +2522,7 @@
 <p>mobile-automator supports 27 assertion types organized in 8 categories for comprehensive test verification.</p>
 <p>Every assertion object requires <code>id</code>, <code>after_step</code> (the step <code>id</code> it runs after), <code>type</code>, and <code>description</code>. Element-based assertions locate their target with <code>element_description</code> — a <em>semantic</em> description of the element, never a <code>resource-id</code> or OS-specific locator. The syntax snippets below show only the type-specific fields for brevity.</p>
 <h2 id="mechanical-vs-agent-judged-assertions">Mechanical vs agent-judged assertions<a class="headerlink" href="#mechanical-vs-agent-judged-assertions" title="Permanent link">&para;</a></h2>
-<p>Not every assertion is decided by the CLI. 15 of the 27 assertion types are evaluated deterministically by <code>mauto assert</code> over the element list. The other 12 return <code>needs_agent</code> with <code>pass: null</code>: the host agent judges them (often from a screenshot) and records the verdict with <code>mauto result add-assertion</code>. An agent-judged pass is only as reliable as the agent that judged it.</p>
+<p>Not every assertion is decided by the CLI. 15 of the 27 assertion types are evaluated deterministically by <code>mauto assert</code> over the element list. 1 is compared against a reference screenshot: <code>mauto assert</code> decides <code>screenshot_match</code> with a pixel diff against a stored baseline image (see <a href="#screenshot_match">screenshot_match</a>). The other 11 return <code>needs_agent</code> with <code>pass: null</code>: the host agent judges them (often from a screenshot) and records the verdict with <code>mauto result add-assertion</code>. An agent-judged pass is only as reliable as the agent that judged it.</p>
 <p><code>element_state</code> is agent-judged because the element model drops enabled, focused and checked state, so the CLI cannot decide it mechanically.</p>
 <h2 id="quick-reference-table">Quick Reference Table<a class="headerlink" href="#quick-reference-table" title="Permanent link">&para;</a></h2>
 <table>
@@ -2607,7 +2607,7 @@
 <tr>
 <td>screenshot_match</td>
 <td>Visual &amp; Layout</td>
-<td>agent</td>
+<td><code>mauto assert</code> (reference screenshot)</td>
 </tr>
 <tr>
 <td>visual_state</td>
@@ -2898,20 +2898,33 @@ Check that the cart is empty when no items added
 <hr />
 <h2 id="visual-layout-assertions-4-types">Visual &amp; Layout Assertions (4 types)<a class="headerlink" href="#visual-layout-assertions-4-types" title="Permanent link">&para;</a></h2>
 <h3 id="screenshot_match">screenshot_match<a class="headerlink" href="#screenshot_match" title="Permanent link">&para;</a></h3>
-<p>Semantic visual comparison against a reference screenshot.</p>
-<p><strong>When to use:</strong> Verify that the overall screen appearance matches expectations. Uses AI vision for semantic comparison, not pixel-perfect matching.</p>
+<p>Deterministic pixel comparison of the current screen against a reference screenshot (a baseline image you recorded earlier).</p>
+<p><strong>When to use:</strong> Verify that the overall screen appearance has not changed since the baseline was recorded. This is a pixel diff, not a judgment: anything that renders differently (a moved element, a changed color, different text) lowers the score, so mask regions that legitimately change between runs.</p>
 <p><strong>Syntax:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"screenshot_match"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"reference_screenshot"</span><span class="p">:</span><span class="w"> </span><span class="s2">"screenshots/login_flow/reference.png"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"tolerance"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.9</span>
+<span class="w">  </span><span class="nt">"reference_screenshot"</span><span class="p">:</span><span class="w"> </span><span class="s2">"screenshots/reference/login_flow/login_screen_matches.png"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"tolerance"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.9</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"masks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"element_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Current time label"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"x"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"y"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="mi">1080</span><span class="p">,</span><span class="w"> </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
 </code></pre></div></p>
-<p><code>tolerance</code> ranges from <code>0.0</code> (any match) to <code>1.0</code> (pixel-perfect); default <code>0.9</code>.</p>
-<p><strong>Why AI-based comparison:</strong> Tests are resilient to cosmetic changes (fonts, anti-aliasing, small positioning adjustments) while catching functional regressions (colors, layout, missing elements).</p>
+<p><strong>How it is decided:</strong></p>
+<ul>
+<li><code>mauto assert</code> captures a <em>stable</em> screenshot (it waits until two consecutive frames are identical) and compares it pixel by pixel with the reference screenshot.</li>
+<li><code>similarity = 1 − differing pixels / compared pixels</code>. Masked pixels are not compared. The assertion passes when <code>similarity &gt;= tolerance</code>.</li>
+<li><code>tolerance</code> ranges from <code>0.0</code> (anything passes) to <code>1.0</code> (every compared pixel identical); default <code>0.9</code>.</li>
+<li>On any pixel mismatch a diff image is written next to the captured screenshot, so you can see which pixels differed.</li>
+</ul>
+<p><strong>Masks:</strong> <code>masks</code> is optional. Each entry is either <code>{ "element_description": "…" }</code>, resolved to that element's bounds in the current element list, or a rectangle <code>{ "x", "y", "width", "height" }</code> in the element-list coordinate space (the same space <code>mauto elements</code> reports bounds in). Use masks for clocks, timestamps, ads, animated content, or anything else that legitimately changes between runs.</p>
+<p><strong>Reference screenshot location:</strong> <code>reference_screenshot</code> is a path relative to the <code>.mobile-automator/</code> workspace directory. When it is omitted, the default is <code>.mobile-automator/screenshots/reference/&lt;scenario_id&gt;/&lt;assertion_id&gt;.png</code>.</p>
+<p><strong>Recording a baseline:</strong> when the reference screenshot does not exist yet, the assertion returns <code>needs_agent</code> (not a failure). It is never judged by eye: the hint says to re-run with <code>--update-references</code> once the user confirms the screen is correct, and otherwise to record the assertion with <code>--pass pending</code>. <code>mauto assert screenshot_match --reference &lt;path&gt; --update-references</code> records the current screen as the baseline. If the screen does not settle (two identical consecutive frames) within the wait budget, nothing is recorded and the assertion fails, so a baseline is never a frame of a screen still moving. Record it only when the screen is known to be correct, and commit it with your scenarios.</p>
+<p><strong>Image sizes:</strong> images are never resampled. If the captured screenshot and the reference screenshot have different dimensions (a different device, resolution, or orientation), the assertion fails with a message naming both sizes; record a baseline per device instead. Element-list coordinates are converted to screenshot pixels with a scale factor (PNG width ÷ screen width), so masks line up on devices whose element list is reported in points rather than pixels.</p>
 <p><strong>Example scenario usage:</strong>
-<div class="highlight"><pre><span></span><code>Verify the login screen looks correct
-Check that the dashboard appears as expected
+<div class="highlight"><pre><span></span><code>Verify the login screen looks the same as the recorded baseline
+Check that the dashboard has not changed visually
 </code></pre></div></p>
 <hr />
 <h3 id="visual_state">visual_state<a class="headerlink" href="#visual_state" title="Permanent link">&para;</a></h3>
@@ -3163,7 +3176,7 @@ Check that the app switched to dark theme
 <li><strong>Name assertions clearly</strong> — Use snake_case IDs that describe what's being verified</li>
 <li><strong>Use specific assertion types</strong> — <code>element_text</code> for exact match, <code>text_contains</code> for substring</li>
 <li><strong>Include one assertion per concept</strong> — Multiple assertions per step is allowed but can make failures harder to debug</li>
-<li><strong>Screenshot on key checkpoints</strong> — Combine <code>screenshot_match</code> with other assertions at important milestones</li>
+<li><strong>Screenshot on key checkpoints</strong> — Combine <code>screenshot_match</code> with element assertions at important milestones, and mask regions that change between runs</li>
 <li><strong>Consider dynamic content</strong> — Use <code>pattern_match</code> for codes/IDs, <code>text_contains</code> for content that varies</li>
 </ol>
 <hr />
@@ -3184,11 +3197,9 @@ Text was: "Operation failed: Connection timeout"
 </code></pre></div>
 <strong>Troubleshoot:</strong> Operation may have failed, check previous steps</p>
 <h3 id="failed-screenshot_match">Failed: screenshot_match<a class="headerlink" href="#failed-screenshot_match" title="Permanent link">&para;</a></h3>
-<p><div class="highlight"><pre><span></span><code>Semantic visual difference detected
-Expected: Login screen with email input, password input, and login button
-Actual: Login screen with email input only (password input missing)
+<p><div class="highlight"><pre><span></span><code>similarity 0.712 below tolerance 0.900 (74,880 of 259,200 compared pixels differ); diff: .mobile-automator/screenshots/run_20261115_101500/assert_login_screen_matches.diff.png
 </code></pre></div>
-<strong>Troubleshoot:</strong> Visual layout changed, may indicate a bug</p>
+<strong>Troubleshoot:</strong> Open the diff image to see which pixels changed. If the change is a bug, fix the app. If it is intended, re-record the baseline with <code>--update-references</code>. If it is content that changes on every run (a clock, a timestamp), add a mask instead of lowering <code>tolerance</code>.</p>
 <hr />
 <h2 id="related-references">Related References<a class="headerlink" href="#related-references" title="Permanent link">&para;</a></h2>
 <ul>

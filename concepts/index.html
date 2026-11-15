@@ -1795,11 +1795,12 @@ Device/App
 <h3 id="no-source-code-modification">No Source Code Modification<a class="headerlink" href="#no-source-code-modification" title="Permanent link">&para;</a></h3>
 <p>Tests live in the <code>.mobile-automator/</code> directory, never in your source code. Scenarios and results are version-controlled separately.</p>
 <h3 id="semantic-testing">Semantic Testing<a class="headerlink" href="#semantic-testing" title="Permanent link">&para;</a></h3>
-<p>Instead of brittle selectors and pixel-by-pixel comparisons, the agent uses AI vision to understand:
+<p>Instead of brittle selectors, the agent uses AI vision to understand:
 - Does this screen fulfill its purpose?
 - Are key elements visible and interactive?
 - Does content match expectations?
 - Tolerates minor rendering differences</p>
+<p>When you do want to pin a screen's exact look, <code>screenshot_match</code> compares it pixel by pixel against a reference screenshot, decided by <code>mauto assert</code> rather than by the agent.</p>
 <h2 id="key-ideas">Key Ideas<a class="headerlink" href="#key-ideas" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>No source modification</strong> — Tests live in <code>.mobile-automator/</code>, never in your source code</li>

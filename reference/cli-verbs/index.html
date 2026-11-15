@@ -1839,16 +1839,16 @@
 <td>Validate a scenario JSON file against the <a href="../schema/">scenario schema</a>; warns (or, with <code>--strict</code>, fails) on actions that cannot replay unattended and on broken references (duplicate step ids, dangling <code>after_step</code> or condition <code>step_id</code>, steps with no <code>target</code>, undeclared variables), and warns on <code>launch_app</code> steps that leave <code>cold</code> unset and on waits with no <code>wait_config</code></td>
 </tr>
 <tr>
-<td><code>mauto assert &lt;type&gt; [--target --expected --operator --count --pattern --variable --device]</code></td>
-<td>Evaluate an assertion; mechanical types are decided by the CLI, visual types are deferred to the agent. A failed verdict exits <code>6</code> (<code>test_failed</code>) with the verdict in <code>data</code></td>
+<td><code>mauto assert &lt;type&gt; [--target --expected --operator --count --pattern --variable --device --reference &lt;path&gt; --tolerance &lt;n&gt; --mask &lt;x,y,w,h \| element description&gt;… --update-references]</code></td>
+<td>Evaluate an assertion; mechanical types are decided by the CLI over the element list, <code>screenshot_match</code> is decided by the CLI against a <a href="../assertions/#screenshot_match">reference screenshot</a>, and the remaining visual types are deferred to the agent. A failed verdict exits <code>6</code> (<code>test_failed</code>) with the verdict in <code>data</code></td>
 </tr>
 <tr>
 <td><code>mauto result add-step --run-id --step-id --status [--scenario-id --attempts --screenshot --error-message --observation &lt;type&gt;:&lt;message&gt; --capture &lt;name&gt;=&lt;value&gt;]</code></td>
 <td>Append a step result to a run; <code>--observation</code> and <code>--capture</code> are repeatable. <code>--status</code> accepts <code>pass | fail | skipped | error</code> (and <code>passed</code>, <code>failed</code>, <code>skip</code>) and rejects anything else with <code>invalid_input</code> (exit <code>3</code>)</td>
 </tr>
 <tr>
-<td><code>mauto result add-assertion --run-id --step-id --type --pass &lt;true\|false\|pending&gt; [--judge &lt;agent\|none&gt; --scenario-id --assertion-id --message --expected --actual]</code></td>
-<td>Record an assertion verdict against a step. <code>--pass pending</code> records the assertion as <code>needs_agent</code> (no verdict yet). <code>--judge</code> records who decided: <code>agent</code> with a <code>true</code>/<code>false</code> verdict, <code>none</code> with <code>pending</code> (implied when omitted). <code>--judge agent</code> with <code>pending</code> and <code>--judge none</code> with a verdict fail with <code>invalid_input</code> (exit <code>3</code>). A verdict for an <code>--assertion-id</code> that is <code>needs_agent</code> replaces it in place; <code>pending</code> for an id already decided fails with <code>invalid_input</code></td>
+<td><code>mauto result add-assertion --run-id --step-id --type --pass &lt;true\|false\|pending&gt; [--judge &lt;agent\|none&gt; --scenario-id --assertion-id --message --expected --actual --reference-screenshot &lt;path&gt; --actual-screenshot &lt;path&gt; --similarity-score &lt;0..1&gt;]</code></td>
+<td>Record an assertion verdict against a step. <code>--reference-screenshot</code>, <code>--actual-screenshot</code> and <code>--similarity-score</code> record a <code>screenshot_match</code> comparison; <code>mauto assert screenshot_match</code> prints the exact command in its <code>hint</code>. <code>--pass pending</code> records the assertion as <code>needs_agent</code> (no verdict yet). <code>--judge</code> records who decided: <code>agent</code> with a <code>true</code>/<code>false</code> verdict, <code>none</code> with <code>pending</code> (implied when omitted). <code>--judge agent</code> with <code>pending</code> and <code>--judge none</code> with a verdict fail with <code>invalid_input</code> (exit <code>3</code>). A verdict for an <code>--assertion-id</code> that is <code>needs_agent</code> replaces it in place; <code>pending</code> for an id already decided fails with <code>invalid_input</code></td>
 </tr>
 <tr>
 <td><code>mauto result finalize --run-id [--scenario &lt;path&gt; --scenario-id --status --duration --app-version --device-model --api-level --environment --summary]</code></td>
@@ -1925,6 +1925,16 @@
 </tbody>
 </table>
 <p>Under <code>--strict</code>, a blocking warning fails <code>validate</code> with exit code 3 and the error message <code>scenario cannot replay unattended; see data.warnings</code>.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title"><code>assert screenshot_match</code> and reference screenshots</p>
+<p><code>mauto assert screenshot_match --reference &lt;path&gt;</code> captures a stable screenshot (two identical consecutive frames) and compares it pixel by pixel with the reference screenshot at <code>&lt;path&gt;</code>, relative to the <code>.mobile-automator/</code> workspace directory. It needs a workspace, and fails with <code>environment</code> outside one.</p>
+<ul>
+<li><code>--tolerance &lt;n&gt;</code> (default <code>0.9</code>): the verdict passes when <code>similarity &gt;= tolerance</code>, where <code>similarity = 1 − differing pixels / compared pixels</code>.</li>
+<li><code>--mask &lt;x,y,w,h | element description&gt;</code> (repeatable): exclude a region from the comparison, either as a rectangle in element-list coordinates or as an element description resolved to that element's bounds.</li>
+<li><code>--update-references</code>: record the current screen as the reference screenshot instead of comparing.</li>
+</ul>
+<p>A match exits <code>0</code>; a mismatch exits <code>6</code> (<code>test_failed</code>) and writes a diff image; a dimension mismatch fails naming both sizes (images are never resampled). A missing reference screenshot is not a failure: the verdict is <code>needs_agent</code> (exit <code>0</code>) with a hint to re-run with <code>--update-references</code> once the user confirms the screen is correct, or otherwise to record the assertion with <code>--pass pending</code>. <code>data</code> adds <code>reference_screenshot</code>, <code>actual_screenshot</code>, <code>similarity_score</code> and <code>diff_screenshot</code> to the usual verdict fields. See <a href="../assertions/#screenshot_match">screenshot_match</a>.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title"><code>result export</code> and JUnit</p>

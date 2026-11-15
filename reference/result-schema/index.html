@@ -2283,7 +2283,7 @@
 <td><code>judge</code></td>
 <td>object</td>
 <td>No</td>
-<td>Who decided the verdict: <code>{"by": "mauto" \| "agent" \| "none"}</code>, with optional <code>name</code> and <code>version</code>. <code>agent</code> comes from <code>--judge agent</code>, <code>none</code> from <code>--pass pending</code>, and <code>mauto</code> only from <code>mauto run</code>. Absent when the recorder did not say</td>
+<td>Who decided the verdict: <code>{"by": "mauto" \| "agent" \| "reference_screenshot" \| "none"}</code>, with optional <code>name</code> and <code>version</code>. <code>agent</code> comes from <code>--judge agent</code>, <code>none</code> from <code>--pass pending</code>, <code>reference_screenshot</code> from a <code>screenshot_match</code> verdict decided by the pixel comparison against a reference screenshot, and <code>mauto</code> only from <code>mauto run</code>. Absent when the recorder did not say</td>
 </tr>
 <tr>
 <td><code>expected</code></td>
@@ -2307,19 +2307,19 @@
 <td><code>reference_screenshot</code></td>
 <td>string | null</td>
 <td>No</td>
-<td>Path to reference baseline screenshot (for screenshot_match assertions)</td>
+<td>Path to the reference screenshot (the baseline) a <code>screenshot_match</code> assertion compared against, from <code>--reference-screenshot</code></td>
 </tr>
 <tr>
 <td><code>actual_screenshot</code></td>
 <td>string | null</td>
 <td>No</td>
-<td>Path to screenshot captured during execution (for screenshot_match assertions)</td>
+<td>Path to the stable screenshot captured for a <code>screenshot_match</code> assertion, from <code>--actual-screenshot</code></td>
 </tr>
 <tr>
 <td><code>similarity_score</code></td>
 <td>number | null</td>
 <td>No</td>
-<td>Similarity score for screenshot_match assertions (0.0 to 1.0, where 1.0 is identical)</td>
+<td><code>screenshot_match</code> similarity, <code>1 − differing pixels / compared pixels</code> (0.0 to 1.0, where 1.0 is identical). Written by the pixel comparator, never estimated by an agent: <code>mauto assert screenshot_match</code> reports it and its hint passes it as <code>--similarity-score</code></td>
 </tr>
 </tbody>
 </table>

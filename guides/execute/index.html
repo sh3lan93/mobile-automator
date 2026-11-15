@@ -3096,8 +3096,9 @@ data was wiped.</p>
 <span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"assert_pixel_perfect"</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">"after_step"</span><span class="p">:</span><span class="w"> </span><span class="s2">"load_screen"</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"screenshot_match"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"reference_screenshot"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pixel_perfect_baseline.png"</span><span class="p">,</span><span class="w">  </span><span class="c1">// Too strict</span>
-<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Screen matches a pixel-perfect baseline"</span>
+<span class="w">  </span><span class="nt">"reference_screenshot"</span><span class="p">:</span><span class="w"> </span><span class="s2">"screenshots/reference/login/whole_screen.png"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"tolerance"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w">  </span><span class="c1">// Too strict: the clock and any dynamic content fail it</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Screen matches the baseline exactly"</span>
 <span class="p">}</span>
 
 <span class="c1">// Good</span>
@@ -3109,6 +3110,7 @@ data was wiped.</p>
 <span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Success message is present"</span>
 <span class="p">}</span>
 </code></pre></div>
+<p><code>screenshot_match</code> is a pixel diff against a reference screenshot. Use it to pin a screen's appearance, with <code>masks</code> over regions that change between runs, not as a stand-in for a functional assertion.</p>
 <hr />
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <p>After execution:</p>

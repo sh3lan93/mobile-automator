@@ -2824,14 +2824,14 @@ ls<span class="w"> </span>-la<span class="w"> </span>.gemini/skills/
 <li><strong>Check the target</strong> — Verify you're using the element's visible text/role</li>
 <li><strong>Increase timeout</strong> — Slow devices may need longer waits</li>
 <li><strong>Check the device engine</strong> — If <code>mauto elements</code> misses a text field's label or lists content from a tab that is not showing (common with Flutter on Android), run <code>mauto config set engine legacy</code>. It hides inactive-tab content on every Android version tested, but recovers text-field labels only on recent Android versions (verified on Android 16 / API 36; not on API 33) (<a href="https://github.com/sh3lan93/mobile-automator/issues/251">#251</a>)</li>
-<li><strong>Add screenshot assertion</strong> — Debug what's actually on screen:
+<li><strong>Look at the screen</strong> — Run <code>mauto screenshot &lt;path&gt;</code> to see what's actually on screen. To catch the screen changing later, pin it with a <code>screenshot_match</code> assertion against a reference screenshot (record the baseline once with <code>mauto assert screenshot_match --reference &lt;path&gt; --update-references</code>):
    <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">"assertions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
 <span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"verify_screen"</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">"after_step"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wait_for_button"</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"screenshot_match"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"reference_screenshot"</span><span class="p">:</span><span class="w"> </span><span class="s2">"expected_screen.png"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"reference_screenshot"</span><span class="p">:</span><span class="w"> </span><span class="s2">"screenshots/reference/login/verify_screen.png"</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Screen matches the expected baseline"</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
@@ -3021,7 +3021,7 @@ mauto<span class="w"> </span>result<span class="w"> </span><span class="nb">expo
 <p><strong>Benchmark:</strong> Typical test scenario takes 10-60 seconds depending on app complexity.</p>
 <h3 id="are-tests-slower-than-manual-testing">Are tests slower than manual testing?<a class="headerlink" href="#are-tests-slower-than-manual-testing" title="Permanent link">&para;</a></h3>
 <p><strong>Answer:</strong> Yes, typically 2-5x slower. Why?
-- Screenshot analysis and AI vision
+- Screenshot analysis for agent-judged visual assertions
 - Safe waits to avoid flakiness
 - Detailed logging and assertions
 - Result collection and reporting</p>

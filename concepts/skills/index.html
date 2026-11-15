@@ -2387,7 +2387,7 @@ CircularProgressIndicator, Shimmer
 <li>Drives a <code>mauto</code> verb (<code>tap</code>, <code>type</code>, <code>swipe</code>, <code>screenshot</code>, …) which wraps mobile-mcp → device</li>
 <li>Reads the <code>{ok,data,error,hint,schema_version}</code> envelope</li>
 <li>For each assertion:</li>
-<li>Runs <code>mauto assert</code> for mechanical checks, or judges visually for vision assertions</li>
+<li>Runs <code>mauto assert</code> for mechanical checks and <code>screenshot_match</code> (a pixel comparison against a reference screenshot), or judges visually for the remaining vision assertions</li>
 <li>Records the result via <code>mauto result add-step</code></li>
 <li>Calls <code>mauto result finalize</code> to write the report — this <strong>auto-harvests</strong> the run's typed observations (regression / flakiness / state_context) into <code>run-history</code> memory</li>
 <li><strong>Records durable knowledge</strong> it learned during the run with <code>mauto memory add --kind &lt;app-knowledge|preferences&gt;</code></li>
@@ -2557,9 +2557,9 @@ Scenario validated / result finalized into the workspace
 </table>
 <h2 id="advanced-features">Advanced Features<a class="headerlink" href="#advanced-features" title="Permanent link">&para;</a></h2>
 <h3 id="semantic-visual-testing">Semantic Visual Testing<a class="headerlink" href="#semantic-visual-testing" title="Permanent link">&para;</a></h3>
-<p>The agent doesn't use pixel-by-pixel comparison. Instead, it uses AI vision to answer:</p>
+<p>For the agent-judged visual assertions (<code>visual_state</code>, <code>color_style</code>, <code>element_fully_visible</code> and the other types <code>mauto assert</code> returns as <code>needs_agent</code>), the agent doesn't use pixel-by-pixel comparison. Instead, it uses AI vision to answer:</p>
 <blockquote>
-<p>Does this screen fulfill the same purpose as the reference?</p>
+<p>Does this screen show what the assertion expects?</p>
 </blockquote>
 <p>This is done by evaluating:
 - <strong>Screen Identity</strong> — Is this the intended screen?
@@ -2570,8 +2570,8 @@ Scenario validated / result finalized into the workspace
 <p><strong>Benefits:</strong>
 - Tolerates cosmetic changes (fonts, colors, spacing)
 - Catches functional regressions (missing buttons, wrong text)
-- More stable than screenshot matching
-- Requires fewer reference images</p>
+- Needs no reference images</p>
+<p><code>screenshot_match</code> is the exception: it is not judged by the agent. <code>mauto assert</code> compares the screen pixel by pixel against a stored reference screenshot, with a <code>tolerance</code> and optional masks for regions that change between runs (see <a href="../../reference/assertions/#screenshot_match">screenshot_match</a>).</p>
 <h3 id="flakiness-detection">Flakiness Detection<a class="headerlink" href="#flakiness-detection" title="Permanent link">&para;</a></h3>
 <p>The agent detects when tests are flaky:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
