@@ -4,14 +4,14 @@ Nested guide for `tests/lint/`; split out of the root CLAUDE.md so it loads only
 
 Two catalogs are the single source of truth for "does this capability actually reach the device / the result file". Both are consumed by lint tests, so a capability that loses its CLI reach **fails the build** instead of silently degrading.
 
-**`src/device/action-catalog.js`** (#117) binds all **23** scenario-schema actions to *how* they execute, via a `resolution` field. Guard: `tests/lint/action-coverage.test.js`.
+**`src/device/action-catalog.js`** (#117) binds every scenario-schema action to *how* it executes, via a `resolution` field. Guard: `tests/lint/action-coverage.test.js`.
 
-| resolution | count | meaning |
-|---|---|---|
-| `verb` | 11 | dedicated one-shot `mauto` verb → DeviceBridge → one or more mobile-mcp primitives (`launch` is terminate + launch, #255) |
-| `semantic` | 4 | invoked as `mauto press <action>`, resolved per-platform by `src/device/semantic-press/` |
-| `composed` | 5 | no verb; the agent composes it from existing verbs (the execute guide documents how) |
-| `unsupported` | 3 | mobile-mcp 1.0.13 exposes no primitive (`clear_app_data`, `enable_wifi`, `disable_wifi`) — guides must **not** promise a verb |
+| resolution | meaning |
+|---|---|
+| `verb` | dedicated one-shot `mauto` verb → DeviceBridge → one or more mobile-mcp primitives (`launch` is terminate + launch, #255) |
+| `semantic` | invoked as `mauto press <action>`, resolved per-platform by `src/device/semantic-press/` |
+| `composed` | no verb; the agent composes it from existing verbs (the execute guide documents how) |
+| `unsupported` | mobile-mcp 1.0.13 exposes no primitive (`clear_app_data`, `enable_wifi`, `disable_wifi`) — guides must **not** promise a verb |
 
 **`tests/integration/mobile-mcp-contract.test.js`** (#199) is the engine-side counterpart of `tests/lint/mobile-mcp-tool-coverage.test.js`. That lint guard pins our tool-name list to what `bridge.js` calls — both sides are our code, so it cannot see the engine move. The contract test spawns the pinned mobile-mcp, sends only `listTools` (no device needed), and fails when a tool we call disappears, a key we send is no longer accepted, or a newly required key appears that we do not send. The keys are derived by driving every `DeviceBridge` method through production's `makeCall`, not hand-restated. It exists because mobile-mcp's argument schemas are non-strict: an unknown key is dropped and the call still reports success — `bridge.screenshot` once sent `path` instead of `saveTo`, and every screenshot was a silent no-op.
 
@@ -46,4 +46,4 @@ Two catalogs are the single source of truth for "does this capability actually r
 
 ## Schemas and `validate`
 
-- Scenario: `src/schemas/scenario_schema.json` (`$schema_version` `"2.0"` or `"2.1"`; **18** step actions + **6** precondition device actions, **27** assertion types, named string IDs, root-level `variables`/`preconditions`). Print with `mauto schema scenario`; validate a file with `mauto validate <file>`. Note: `validate` still accepts actions the action-catalog marks `unsupported` (schema compatibility) but reports each as a `data.warnings[]` entry with `code: 'unsupported_action'`; `--strict` turns them into `invalid_input`. A lint guard in `tests/lint/action-coverage.test.js` fails the build if a shipping doc presents one as working (#166).
+- Scenario: `src/schemas/scenario_schema.json` (`$schema_version` `"2.0"` or `"2.1"`; enums for step actions, precondition device actions and assertion types, named string IDs, root-level `variables`/`preconditions`). Print with `mauto schema scenario`; validate a file with `mauto validate <file>`. Note: `validate` still accepts actions the action-catalog marks `unsupported` (schema compatibility) but reports each as a `data.warnings[]` entry with `code: 'unsupported_action'`; `--strict` turns them into `invalid_input`. A lint guard in `tests/lint/action-coverage.test.js` fails the build if a shipping doc presents one as working (#166).
