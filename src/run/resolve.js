@@ -1,18 +1,16 @@
 'use strict';
 
-// Target resolution for `mauto run` (src/run/resolve.js) and the real-device
-// E2E harness (sample-app/scripts/lib/resolve.js). The two files are kept
-// byte-identical by tests/lint/run-resolve-copy.test.js until replay R7
-// deletes the harness copy; edit both or neither.
+// Target resolution for `mauto run`. It began as the real-device E2E
+// harness's resolver; the harness copy was retired in replay R7 (#283), and
+// the harness now runs every scenario through `mauto run`, so this is the one
+// resolver.
 //
 // A scenario target is an on-screen string ("More", "Sample Shop"), never an
 // OS element id: that is a locked invariant of agnostic mode, and the old
 // harness broke it. The string is resolved with the CLI's OWN matcher —
 // `findFirst`/`matches` from src/assertion/evaluator.js, INJECTED by the
-// caller (the harness passes the one from the same install as the `mauto`
-// binary under test) — so a run, the harness and `mauto assert` cannot
-// disagree about what a target means. There is deliberately no fallback
-// matcher in this file.
+// caller — so a run and `mauto assert` cannot disagree about what a target
+// means. There is deliberately no fallback matcher in this file.
 
 // How many perceivable strings a miss lists. Enough to see what screen the
 // device is on; not a full dump.

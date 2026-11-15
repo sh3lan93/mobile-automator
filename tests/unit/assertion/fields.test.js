@@ -41,8 +41,8 @@ function parsedFlagsOf(argv) {
 }
 
 // Scenario assertions with the exact argv the E2E harness's assertFlags
-// (sample-app/scripts/lib/executor.js) produced for them when this module
-// was extracted from it.
+// produced for them when this module was extracted from it (the harness
+// executor was retired in replay R7, #283; the harness now calls `mauto run`).
 const CASES = [
   {
     a: { id: 'a1', type: 'element_text', after_step: 's1', element_description: 'Title', expected_value: 'Sample Shop' },

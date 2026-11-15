@@ -269,10 +269,11 @@ describe('evaluate — non-mechanical (needs agent)', () => {
   });
 });
 
-// The real-device E2E harness (sample-app/scripts/lib/resolve.js) resolves tap
-// targets through the CLI's OWN matcher rather than a copy of it, so a change
-// to how `assert` matches is a change to how the harness taps. Pin the export.
-describe('matcher exports (consumed by the real-device E2E harness, #94)', () => {
+// `mauto run`'s resolver (src/run/resolve.js; the E2E harness's copy was
+// retired in replay R7, #283) resolves tap targets through the CLI's OWN
+// matcher rather than a copy of it, so a change to how `assert` matches is a
+// change to how a run taps. Pin the export.
+describe('matcher exports (consumed by the mauto run resolver, #94)', () => {
   const evaluator = require('../../../src/assertion/evaluator');
 
   test('matches and findFirst are exported functions', () => {

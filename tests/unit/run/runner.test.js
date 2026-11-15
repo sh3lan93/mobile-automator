@@ -1,7 +1,8 @@
 'use strict';
 
 // The in-process runner behind `mauto run`, ported case for case from the
-// real-device harness's executor tests (tests/unit/e2e-harness/executor.test.js).
+// real-device harness's executor tests (retired with the executor in replay
+// R7, #283, when the harness became a caller of `mauto run`).
 // The harness drove `mauto` subprocesses; the runner drives a DeviceBridge and
 // a ResultStore directly, so these tests use a scripted fake bridge and a real
 // ResultStore on a temp workspace, and assert on the result file it writes.
