@@ -324,6 +324,7 @@ class ResultStore {
   // decided verdicts for one id.
   addAssertion({
     step_id, assertion_id, type, status, pass, message, expected = null, actual = null, mechanical, judge,
+    reference_screenshot = null, actual_screenshot = null, similarity_score = null,
   } = {}) {
     return withLock(this._lock, () => {
       this._refreshFromDisk();
@@ -340,6 +341,11 @@ class ResultStore {
       // CLI's evaluator; the store only records it.
       if (mechanical !== undefined) entry.mechanical = mechanical;
       if (judge != null) entry.judge = judge;
+      // A screenshot_match's comparison (#281): written only when supplied, so
+      // every other assertion's record is unchanged.
+      if (reference_screenshot != null) entry.reference_screenshot = String(reference_screenshot);
+      if (actual_screenshot != null) entry.actual_screenshot = String(actual_screenshot);
+      if (similarity_score != null) entry.similarity_score = Number(similarity_score);
 
       const sameId = (a) => Boolean(assertion_id) && a !== null && typeof a === 'object' && a.assertion_id === assertion_id;
       if (isPendingAssertion(entry)) {
