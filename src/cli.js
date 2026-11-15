@@ -11,7 +11,8 @@ const selectionStore = require('./device/selection');
 const { FS_ERROR_CODES, deviceHint, deviceFail } = require('./output/device-fail');
 const { ScenarioValidator } = require('./scenario/validator');
 const { loadScenario } = require('./scenario/load');
-const { evaluate, MECHANICAL_TYPES, REFERENCE_SCREENSHOT_TYPES, SCREEN_SIZE_TYPES } = require('./assertion/evaluator');
+const { evaluate, MECHANICAL_TYPES, REFERENCE_SCREENSHOT_TYPES } = require('./assertion/evaluator');
+const { observe } = require('./assertion/observe');
 const { fromCliFlags } = require('./assertion/fields');
 const { ResultStore, readFinalizedResult, InvalidRunIdError, AlreadyDecidedError } = require('./result/store');
 const {
@@ -521,15 +522,13 @@ async function handleAssert(deps, type, flags = {}) {
   }
   if (REFERENCE_SCREENSHOT_TYPES.has(type)) return handleAssertReference(deps, type, flags);
 
-  // The screen size is read only for the types whose rule needs it (#276).
-  let elements;
-  let screenSize = null;
+  let observed;
   try {
-    elements = await deviceBridge.listElements();
-    if (SCREEN_SIZE_TYPES.has(type)) screenSize = await deviceBridge.getScreenSize();
+    observed = await observe(deviceBridge, type);
   } catch (err) {
     return deviceFail(err);
   }
+  const { elements, screenSize } = observed;
 
   const assertion = fromCliFlags(type, flags);
 
