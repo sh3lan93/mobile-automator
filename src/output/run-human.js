@@ -1,16 +1,11 @@
 'use strict';
 
 // `mauto run --human` (replay R6, #282): the run's envelope as a short summary
-// a person reads in a CI log. Only an envelope carrying the run's frozen data
-// (src/run/summary.js) is rendered this way; anything else — a refusal before
-// the run started — falls back to the generic render. JSON output never comes
-// through here.
-
-const { render } = require('./envelope');
-const { RUN_DATA_KEYS } = require('../run/summary');
-
-const isRunData = (data) =>
-  data !== null && typeof data === 'object' && !Array.isArray(data) && RUN_DATA_KEYS.every((k) => k in data);
+// a person reads in a CI log. src/cli.js attaches it only to what handleRun
+// returns, and every such envelope carries the run's frozen data
+// (src/run/summary.js); a refusal, a connect failure or a thrown error never
+// reaches it and takes the generic render. JSON output never comes through
+// here.
 
 const secondsOf = (value) => `${Math.round((Number(value) || 0) * 10) / 10}s`;
 
@@ -20,7 +15,6 @@ function pendingLine({ assertion_id: id, type, step_id: step }) {
 }
 
 function renderRunHuman(envelope) {
-  if (!envelope || !isRunData(envelope.data)) return render(envelope, { human: true });
   const d = envelope.data;
   const s = d.steps;
   const a = d.assertions;

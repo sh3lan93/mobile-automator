@@ -1,10 +1,10 @@
 'use strict';
 
 // renderRunHuman: `mauto run --human` (replay R6, #282). A run envelope reads
-// as a summary; anything else (a refusal before the run) falls back to the
-// generic render.
+// as a summary. Only handleRun's envelopes reach it (src/cli.js attaches it at
+// the run call site); everything else takes the generic render there.
 
-const { ok, fail, render } = require('../../../src/output/envelope');
+const { ok, fail } = require('../../../src/output/envelope');
 const { renderRunHuman } = require('../../../src/output/run-human');
 
 function data(over = {}) {
@@ -71,12 +71,4 @@ test('an incomplete run lists what is pending', () => {
   expect(out).toContain('pending:\n  - a2 (visual_appearance, after step_x)\n  - a3');
   expect(out.endsWith('hint: do this\nthen that')).toBe(true);
   expect(out).not.toContain('failures:');
-});
-
-test.each([
-  ['a refusal', fail('invalid_input', 'scenario failed schema validation', 'fix it')],
-  ['an ok without run data', ok({ x: 1 })],
-  ['an error carrying other data', fail('environment', 'nope', null, { crashes: [] })],
-])('%s falls back to the generic render', (_label, envelope) => {
-  expect(renderRunHuman(envelope)).toBe(render(envelope, { human: true }));
 });

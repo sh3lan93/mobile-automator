@@ -50,6 +50,7 @@ const observeTransport = require('./observe/transport');
 const { makeFlusher } = require('./observe/flush');
 const { prepareRun } = require('./run/prepare');
 const { handleRun } = require('./run/handle');
+const { renderRunHuman } = require('./output/run-human');
 const { realClock } = require('./run/clock');
 const { handleAssertReference } = require('./run/assert-reference');
 const { makeRunTrace } = require('./run/trace');
@@ -2052,15 +2053,19 @@ function buildProgram(deps = {}) {
       // Resolved here, not inside withBridge, so the executor records the
       // device the run connected to (null: mobile-mcp auto-selected one).
       const deviceId = resolveVerbDevice(opts.device);
-      return connectBridge(deviceId, (bridge) =>
-        handleRun(
+      // Every envelope handleRun returns carries the run's frozen data, so
+      // each one renders as the run summary under --human. A refusal above, a
+      // connect failure or a thrown error take the generic render.
+      return connectBridge(deviceId, async (bridge) => ({
+        ...(await handleRun(
           {
             bridge, resultStoreFactory, memoryStoreFactory, projectRoot, finalizeRun, clock, cwd,
             trace: makeRunTrace({ projectRoot, runId: prepared.runId }),
           },
           { ...prepared, deviceId, updateReferences: opts.updateReferences === true }
-        )
-      );
+        )),
+        renderHuman: renderRunHuman,
+      }));
     })));
 
   program
@@ -2773,7 +2778,6 @@ async function run(argv) {
 module.exports = {
   run,
   buildProgram,
-  makeEmitters,
   toEnvelope,
   diagnose,
   emitFatal,

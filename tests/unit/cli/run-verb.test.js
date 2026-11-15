@@ -10,7 +10,7 @@ const os = require('os');
 const path = require('path');
 
 const { buildProgram, handleRun } = require('../../../src/cli');
-const { exitCodeFor } = require('../../../src/output/envelope');
+const { exitCodeFor, render } = require('../../../src/output/envelope');
 const { runTracePath } = require('../../../src/observe/paths');
 const { readTrace } = require('../../../src/observe/trace');
 const { makeFakeBridge, makeFakeClock, homeElements } = require('../../helpers/fake-bridge');
@@ -315,27 +315,22 @@ describe('mauto run — a run', () => {
 });
 
 describe('mauto run --human (#282)', () => {
-  const { makeEmitters } = require('../../../src/cli');
-
-  // Through the real emitters: what reaches stdout, and the exit code.
+  // What `emit(r, human)` receives, rendered the way the CLI's emitters
+  // render it: a handler's own renderHuman under --human, else the generic
+  // render. Exit codes come from the exit kind, as finish() maps them.
   async function printed(args) {
-    const writes = [];
-    const exits = [];
-    const write = jest.spyOn(process.stdout, 'write').mockImplementation((t) => { writes.push(String(t)); return true; });
-    const exit = jest.spyOn(process, 'exit').mockImplementation((code) => { exits.push(code); });
-    try {
-      await buildProgram({
-        projectRoot: root,
-        deviceBridgeFactory: async () => ({ bridge: makeFakeBridge({ elements: [homeElements()] }), close: async () => {} }),
-        emitters: makeEmitters({ projectRoot: root }),
-        clock: makeFakeClock(),
-        platform: 'darwin',
-      }).parseAsync(['node', 'mauto', ...args]);
-    } finally {
-      write.mockRestore();
-      exit.mockRestore();
-    }
-    return { text: writes.join(''), exits };
+    const emitted = [];
+    await buildProgram({
+      projectRoot: root,
+      deviceBridgeFactory: async () => ({ bridge: makeFakeBridge({ elements: [homeElements()] }), close: async () => {} }),
+      emit: (r, human) => emitted.push({ r, human }),
+      clock: makeFakeClock(),
+      platform: 'darwin',
+    }).parseAsync(['node', 'mauto', ...args]);
+    expect(emitted).toHaveLength(1);
+    const [{ r, human }] = emitted;
+    const text = human && typeof r.renderHuman === 'function' ? r.renderHuman(r.envelope) : render(r.envelope, { human });
+    return { text: `${text}\n`, exits: [exitCodeFor(r.exitKind)] };
   }
 
   test('a run renders as its summary', async () => {
