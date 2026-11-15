@@ -2039,9 +2039,11 @@ function buildProgram(deps = {}) {
     .option('--timeout-ms <ms>', 'cap, in milliseconds, on how long any one step waits (a positive integer)')
     .option('--update-references', 'record each screenshot_match capture as its reference image instead of comparing')
     .option('--judge <who>', 'who decides the assertions only an agent can judge (accepted: none)', 'none')
+    .option('--junit <path>', 'also write the run as a JUnit XML report to this file (its directory must exist)')
     .action(withEnvelope(requireWorkspace(async (file, opts) => {
       const prepared = prepareRun({
-        validator, file: path.resolve(cwd, file), runId: opts.runId, timeoutMs: opts.timeoutMs, judge: opts.judge, env: process.env,
+        validator, file: path.resolve(cwd, file), runId: opts.runId, timeoutMs: opts.timeoutMs, judge: opts.judge,
+        junit: opts.junit, cwd, env: process.env,
       });
       if (prepared.failure) return emit(prepared.failure, humanFlag());
       // The preAction hook saw only the flag and the environment; this covers

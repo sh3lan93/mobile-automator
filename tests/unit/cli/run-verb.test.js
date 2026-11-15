@@ -151,6 +151,13 @@ describe('mauto run — refusals before any device work', () => {
       expect(r.exitKind).toBe('ok');
     });
 
+    test('--junit into a missing directory is invalid_input before any device work (#282)', async () => {
+      const { r, factory } = await runCli([writeScenario(scenario()), '--run-id', RUN_ID, '--junit', path.join(root, 'nope', 'r.xml')]);
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.error.message).toBe(`--junit directory does not exist: ${path.join(root, 'nope')}`);
+      expect(factory).not.toHaveBeenCalled();
+    });
+
     test('an unreadable scenario is invalid_input', async () => {
       const { r, factory } = await runCli([path.join(root, 'missing.json'), '--run-id', RUN_ID]);
       expect(r.exitKind).toBe('invalid_input');
@@ -282,6 +289,15 @@ describe('mauto run — a run', () => {
     expect(r.envelope.data.pending).toEqual([{ assertion_id: 'looks', step_id: 'tap_more', type: 'visual_state' }]);
     expect(r.envelope.hint).toContain('--judge agent');
     expect(r.envelope.hint).toContain(`finalize --run-id ${RUN_ID}`);
+  });
+
+  test('--junit writes the same report mauto result export renders, and names it (#282)', async () => {
+    const out = path.join(root, 'report.xml');
+    const { r } = await runCli([writeScenario(scenario()), '--run-id', RUN_ID, '--junit', out]);
+    expect(r.exitKind).toBe('ok');
+    expect(r.envelope.data.junit_path).toBe(out);
+    const file = JSON.parse(fs.readFileSync(path.join(root, r.envelope.data.result_path), 'utf8'));
+    expect(fs.readFileSync(out, 'utf8')).toBe(require('../../../src/result/junit').toJUnit([file]).xml);
   });
 
   test('mints a run id when neither --run-id nor MAUTO_RUN_ID is given', async () => {

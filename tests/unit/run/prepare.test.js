@@ -180,3 +180,36 @@ describe('--judge (#282)', () => {
     expect(bad.failure.envelope.error.message).toBe('unknown --judge "agent"');
   });
 });
+
+describe('--junit (#282)', () => {
+  test('absent: junitPath is null', () => {
+    expect(prepare({ file: write(scenario()), runId: RUN_ID, env: ON }).junitPath).toBeNull();
+  });
+
+  test('resolved against cwd to an absolute path', () => {
+    fs.mkdirSync(path.join(root, 'reports'));
+    const p = prepare({ file: write(scenario()), runId: RUN_ID, env: ON, junit: path.join('reports', 'r.xml'), cwd: root });
+    expect(p.failure).toBeUndefined();
+    expect(p.junitPath).toBe(path.join(root, 'reports', 'r.xml'));
+  });
+
+  test('a missing parent directory is invalid_input, before the scenario is read', () => {
+    const p = prepare({ file: path.join(root, 'missing.json'), runId: RUN_ID, env: ON, junit: 'nope/r.xml', cwd: root });
+    expect(p.failure.exitKind).toBe('invalid_input');
+    expect(p.failure.envelope.error.message).toBe(`--junit directory does not exist: ${path.join(root, 'nope')}`);
+  });
+
+  test('a parent that is a file is invalid_input', () => {
+    fs.writeFileSync(path.join(root, 'afile'), 'x');
+    const p = prepare({ file: write(scenario()), runId: RUN_ID, env: ON, junit: 'afile/r.xml', cwd: root });
+    expect(p.failure.exitKind).toBe('invalid_input');
+    expect(p.failure.envelope.error.message).toBe(`--junit directory is not a directory: ${path.join(root, 'afile')}`);
+  });
+
+  test('a path that is itself a directory is invalid_input', () => {
+    fs.mkdirSync(path.join(root, 'reports'));
+    const p = prepare({ file: write(scenario()), runId: RUN_ID, env: ON, junit: 'reports', cwd: root });
+    expect(p.failure.exitKind).toBe('invalid_input');
+    expect(p.failure.envelope.error.message).toBe(`--junit names a directory: ${path.join(root, 'reports')}`);
+  });
+});

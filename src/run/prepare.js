@@ -1,5 +1,8 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
+
 const { fail } = require('../output/envelope');
 const { loadScenario } = require('../scenario/load');
 const { isResultRunId } = require('../result/store');
@@ -7,6 +10,27 @@ const { resolveRunId } = require('../observe/settings');
 const { replayEnabled } = require('./gate');
 const { makeRunId } = require('./run-id');
 const { parsePositiveInt } = require('../util/parse-positive-int');
+
+// Why the --junit path cannot take the report, or null. Checked before the
+// run, so a CI job learns of a typo'd report directory before the device
+// work rather than after it (atomicWrite would otherwise create the directory).
+function statOf(p) {
+  try {
+    return fs.statSync(p);
+  } catch {
+    return null;
+  }
+}
+
+function junitRefusal(junitPath) {
+  const target = statOf(junitPath);
+  if (target && target.isDirectory()) return `--junit names a directory: ${junitPath}`;
+  const dir = path.dirname(junitPath);
+  const parent = statOf(dir);
+  if (!parent) return `--junit directory does not exist: ${dir}`;
+  if (!parent.isDirectory()) return `--junit directory is not a directory: ${dir}`;
+  return null;
+}
 
 // The values `mauto run --judge` accepts.
 const JUDGES = Object.freeze(['none']);
@@ -17,8 +41,12 @@ const JUDGES = Object.freeze(['none']);
 // minted from `now()` — which must name a result file. Returns
 // `{ scenario, runId, file, sha256, timeoutMs, judge }` (`sha256` is loadScenario's hash of the
 // file, for the run's executor; `timeoutMs` the validated --timeout-ms or null; `judge` the
-// validated --judge) or `{ failure: { envelope, exitKind } }`.
-function prepareRun({ validator, file, runId: flag, timeoutMs: timeoutFlag, judge = 'none', env = process.env, now = () => new Date() }) {
+// validated --judge; `junitPath` the --junit path resolved against `cwd`, or null) or
+// `{ failure: { envelope, exitKind } }`.
+function prepareRun({
+  validator, file, runId: flag, timeoutMs: timeoutFlag, judge = 'none', junit,
+  cwd = process.cwd(), env = process.env, now = () => new Date(),
+}) {
   if (!replayEnabled(env)) {
     return {
       failure: {
@@ -69,6 +97,24 @@ function prepareRun({ validator, file, runId: flag, timeoutMs: timeoutFlag, judg
     timeoutMs = parsed;
   }
 
+  let junitPath = null;
+  if (junit !== undefined && junit !== null) {
+    junitPath = path.resolve(cwd, String(junit));
+    const refusal = junitRefusal(junitPath);
+    if (refusal) {
+      return {
+        failure: {
+          envelope: fail(
+            'invalid_input',
+            refusal,
+            'Pass --junit a file path whose directory already exists; mauto run writes the report there after the run.'
+          ),
+          exitKind: 'invalid_input',
+        },
+      };
+    }
+  }
+
   const loaded = loadScenario(validator, file, { strict: true });
   if (loaded.failure) return { failure: loaded.failure };
 
@@ -86,7 +132,7 @@ function prepareRun({ validator, file, runId: flag, timeoutMs: timeoutFlag, judg
     };
   }
 
-  return { scenario: loaded.scenario, runId, file, sha256: loaded.sha256, timeoutMs, judge };
+  return { scenario: loaded.scenario, runId, file, sha256: loaded.sha256, timeoutMs, judge, junitPath };
 }
 
 module.exports = { prepareRun, JUDGES };

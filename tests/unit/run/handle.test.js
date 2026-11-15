@@ -230,3 +230,43 @@ describe('the frozen data shape (#282)', () => {
     expect(r.envelope.data.steps).toEqual({ total: 1, passed: 0, failed: 0, error: 0, skipped: 0, needs_agent: 1 });
   });
 });
+
+describe('--junit (#282)', () => {
+  const { toJUnit } = require('../../../src/result/junit');
+  const failing = { ...scenario, steps: [{ id: 'tap_x', action: 'tap', description: 'd', target: 'Nope' }], assertions: [] };
+
+  test.each([
+    ['passed', scenario, 'ok'],
+    ['failed', failing, 'test_failed'],
+  ])('a %s run writes the report mauto result export would render, and names it', async (_label, sc, exitKind) => {
+    const junitPath = path.join(root, 'report.xml');
+    const r = await handleRun(deps((args) => new ResultStore(args)), { ...prepared(sc), junitPath });
+    expect(r.exitKind).toBe(exitKind);
+    expect(r.envelope.data.junit_path).toBe(junitPath);
+    expect(fs.readFileSync(junitPath, 'utf8')).toBe(toJUnit([resultFile()]).xml);
+  });
+
+  test('a write that fails is environment, after finalize, with the full data and junit_path null', async () => {
+    const junitPath = path.join(root, 'gone', 'report.xml');
+    // The parent turns into a file after prepareRun checked it.
+    fs.writeFileSync(path.join(root, 'gone'), 'x');
+    const d = deps((args) => new ResultStore(args));
+    const r = await handleRun(d, { ...prepared(scenario), junitPath });
+    expect(r.exitKind).toBe('environment');
+    expect(r.envelope.ok).toBe(false);
+    expect(r.envelope.error.message).toMatch(new RegExp(`^could not write the JUnit report to ${junitPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}: `));
+    const resultPath = path.join('.mobile-automator', 'results', `${RUN_ID}.json`);
+    expect(r.envelope.hint).toContain(resultPath);
+    expect(r.envelope.data).toMatchObject({ status: 'passed', junit_path: null, result_path: resultPath });
+    expect(d.finalizeRun).toHaveBeenCalledTimes(1);
+    expect(resultFile().status).toBe('passed');
+  });
+
+  test('the writer is injectable; its failure overrides a test_failed exit too', async () => {
+    const d = { ...deps((args) => new ResultStore(args)), writeFile: () => { throw new Error('EACCES'); } };
+    const r = await handleRun(d, { ...prepared(failing), junitPath: path.join(root, 'r.xml') });
+    expect(r.exitKind).toBe('environment');
+    expect(r.envelope.error.message).toBe(`could not write the JUnit report to ${path.join(root, 'r.xml')}: EACCES`);
+    expect(r.envelope.data.status).toBe('failed');
+  });
+});
