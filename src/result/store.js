@@ -247,7 +247,8 @@ class ResultStore {
     });
   }
 
-  addStep({ step_id, status, attempts = 1, screenshot = null, error_message = null, observations = null, needs_agent = false } = {}) {
+  addStep({ step_id, status, attempts = 1, screenshot = null, error_message = null, observations = null, needs_agent = false,
+    condition_evaluated, step_duration_ms, sub_steps_executed } = {}) {
     return withLock(this._lock, () => {
       this._refreshFromDisk();
       const normalized = stepStatus(status);
@@ -262,6 +263,11 @@ class ResultStore {
         observations,
         // Only a step an agent must do carries the flag (see isPendingStep).
         ...(needs_agent === true ? { needs_agent: true } : {}),
+        // Control-flow facts (#280): written only by `mauto run`, so a step
+        // recorded through the verbs carries none of them.
+        ...(condition_evaluated !== undefined ? { condition_evaluated } : {}),
+        ...(step_duration_ms !== undefined ? { step_duration_ms } : {}),
+        ...(Array.isArray(sub_steps_executed) ? { sub_steps_executed } : {}),
       };
       this._steps.push(step);
 

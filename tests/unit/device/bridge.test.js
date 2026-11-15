@@ -187,6 +187,22 @@ describe('DeviceBridge', () => {
     });
   });
 
+  describe('getOrientation', () => {
+    test.each([
+      ['Current device orientation is portrait', 'portrait'],
+      ['Current device orientation is LANDSCAPE', 'landscape'],
+    ])('parses %j', async (reply, expected) => {
+      const call = jest.fn().mockResolvedValue(reply);
+      await expect(new DeviceBridge({ call }).getOrientation()).resolves.toBe(expected);
+      expect(call).toHaveBeenCalledWith('mobile_get_orientation', {});
+    });
+
+    test('an unreadable reply is an error, never a guess', async () => {
+      const call = jest.fn().mockResolvedValue('sideways');
+      await expect(new DeviceBridge({ call }).getOrientation()).rejects.toThrow(/orientation/);
+    });
+  });
+
   describe('pressButton', () => {
     test('invokes mobile_press_button with the button name', async () => {
       const calls = [];

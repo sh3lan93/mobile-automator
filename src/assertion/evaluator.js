@@ -286,4 +286,4 @@ function evaluate(assertion = {}, ctx = {}) {
 // (sample-app/scripts/lib/resolve.js), which resolves tap targets with THIS
 // matcher so the harness and `mauto assert` can never disagree about what a
 // target string means (#94).
-module.exports = { MECHANICAL_TYPES, evaluate, matches, findFirst, textOf };
+module.exports = { MECHANICAL_TYPES, evaluate, matches, findFirst, textOf, compare };

@@ -17,7 +17,7 @@ The scenario schema defines the format for mobile test scenarios:
 - **Conditional execution** — Optional steps, conditional branching, retry policies
 - **Structured preconditions** — Setup actions and device state requirements
 
-**Schema version identifier:** Every scenario carries a `$schema_version` field (note the leading `$`). It accepts `"2.0"` or `"2.1"` and defaults to `"2.0"`. **2.1 is the current version** and is purely additive over 2.0 — it adds the `mode` metadata field and four platform-agnostic semantic actions (`press_back`, `dismiss_keyboard`, `grant_permission`, `deny_permission`). Existing `"2.0"` scenarios remain valid; new scenarios should use `"2.1"`.
+**Schema version identifier:** Every scenario carries a `$schema_version` field (note the leading `$`). It accepts `"2.0"` or `"2.1"` and defaults to `"2.0"`. **2.1 is the current version** and is purely additive over 2.0 — it adds four platform-agnostic semantic actions (`press_back`, `dismiss_keyboard`, `grant_permission`, `deny_permission`). Existing `"2.0"` scenarios remain valid; new scenarios should use `"2.1"`.
 
 ## Schema Structure Overview
 
@@ -114,7 +114,7 @@ The `steps` field is an **ordered array** of step objects. Each object requires 
 
 ### Action Types (18 total)
 
-Each step's `action` field is one of these values: the **14 core actions** documented below, plus **4 semantic actions** available in platform-agnostic (`mode: "platform-agnostic"`) scenarios — `press_back`, `dismiss_keyboard`, `grant_permission`, and `deny_permission` — which resolve to the right per-platform mechanics at replay time.
+Each step's `action` field is one of these values: the **14 core actions** documented below, plus **4 semantic actions** available when the workspace `mode` (`.mobile-automator/config.json`, set by `mauto setup`; a scenario has no `mode` field) is `platform-agnostic` — `press_back`, `dismiss_keyboard`, `grant_permission`, and `deny_permission` — which resolve to the right per-platform mechanics at replay time.
 
 Note that `clear_app_data` is accepted by the schema but is **not mechanically executable** — no `mauto` verb runs it yet, so a scenario using it cannot replay unattended. The same applies to the `enable_wifi` and `disable_wifi` precondition device actions, which the engine has no primitive for.
 
@@ -481,6 +481,21 @@ A nested sub-flow (array of step objects) to execute when this step's `condition
 }
 ```
 
+#### How `mauto run` treats control flow
+
+| Field | Behavior |
+|---|---|
+| `condition` | Evaluated before the step. False records the step `skipped` with `condition_evaluated: false` (true, or `null` when there is no condition) and skips its `sub_steps` too. |
+| `device_property` | `platform` and `orientation` are decided by the runner. Any other property (`api_level`, ...) is `needs_agent`: the run ends `incomplete` and an agent decides. |
+| `variable_value` | Reads a captured variable. A numeric `value` compares numerically. A variable nothing captured fails the step. |
+| `element_visible` | True when the element is on screen. `"value": false` means expected absent. |
+| `previous_step_skipped` | True when the named step (or sub-step) was recorded `skipped`. |
+| `optional`, `on_failure: "skip"` | A step that fails is recorded `skipped` and the run goes on. An error in the scenario itself (an invalid `target_pattern`, an uncaptured `${name}`) still fails. |
+| `on_failure: "retry"` | Retries per `retry_policy`; with none, two attempts one second apart. A `retry_policy` on its own also retries. |
+| `sub_steps` | Run after the parent step passes, each with its own condition and retries, and listed in the parent's `sub_steps_executed`. A failing sub-step fails the parent and stops the run. `after_step` assertions may name a sub-step. |
+
+A step skipped by any of these still has its `after_step` assertions evaluated. Each recorded step carries `step_duration_ms`. A `text_changed` assertion compares against the screen as it was before the step it follows.
+
 #### wait_config
 Configuration for wait-type actions (`wait_for_element`, `wait_for_element_gone`, `wait_for_loading_complete`).
 
@@ -538,6 +553,28 @@ Declare variables that will be captured during test execution and used in assert
   }
 }
 ```
+
+### Using a captured variable: `${name}`
+
+A value captured by a `capture_value` step can be read by any later step or assertion with `${name}`, where `name` is a variable declared in the root `variables` block (`^[a-z][a-z0-9_]*$`).
+
+| Where | Fields substituted |
+|---|---|
+| Step | `value`, `target` |
+| Assertion | every string field except `id`, `type`, `after_step`, `description` and `variable_name` |
+
+```json
+{ "id": "type_code", "action": "type", "description": "Enter the captured code", "value": "${otp_code}" }
+```
+
+Rules `mauto run` follows:
+
+- Every `${name}` in a field is replaced; text around it is kept (`"Order ${order_id}"`).
+- A name that has no value yet (never captured) is an error, not a literal: the step fails without touching the device and is not retried, and an assertion is recorded as failed. Capture the variable in an earlier step.
+- There is no escape syntax; a field cannot contain a literal `${name}` for a declared variable.
+- The syntax is `${name}`, never `{{name}}`.
+
+The agent-driven path (`mauto guide execute`) uses `variable_name` and `capture_to` instead and substitutes by hand; `${name}` is what the runner understands.
 
 ---
 
