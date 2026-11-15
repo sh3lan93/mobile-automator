@@ -12,7 +12,45 @@
 // normalizeResult keeps only the first kind, so a checked-in golden can be
 // compared byte-for-byte against a fresh run. Field names are the result
 // schema's own (`mauto schema result`): steps live in `steps_executed`,
-// assertions in `assertion_results` with a `status` of passed|failed.
+// assertions in `assertion_results` with a `status` of
+// passed|failed|needs_agent.
+//
+// It is a WHITELIST, so a field the result schema grows is ignored until it is
+// deliberately added here. Since the harness calls `mauto run` (#283) the
+// whitelist also keeps the runner's deterministic provenance:
+//
+//   step       {step_id, status}, plus `needs_agent: true` when present
+//   assertion  {assertion_id, status}, plus step_id, type, mechanical and
+//              judge `{by, name?}` when present
+//
+// and never the incidental part of it: the root `executor` block (device id,
+// mauto version, scenario path), `judge.version`, `reference_screenshot`,
+// `actual_screenshot`, `similarity_score`, step screenshots, messages or
+// timings. Optional keys are omitted, not nulled, when the input lacks them,
+// so a result from before the runner normalizes to exactly the old shape.
+
+const has = (o, k) => o !== null && typeof o === 'object' && Object.prototype.hasOwnProperty.call(o, k) && o[k] !== undefined;
+
+function normalizeStep(s) {
+  const out = { step_id: s.step_id, status: s.status };
+  if (s.needs_agent === true) out.needs_agent = true;
+  return out;
+}
+
+function normalizeJudge(j) {
+  const out = { by: j.by };
+  if (has(j, 'name')) out.name = j.name;
+  return out;
+}
+
+function normalizeAssertion(a) {
+  const out = { assertion_id: a.assertion_id, status: a.status };
+  if (has(a, 'step_id')) out.step_id = a.step_id;
+  if (has(a, 'type')) out.type = a.type;
+  if (has(a, 'mechanical')) out.mechanical = a.mechanical;
+  if (a.judge !== null && typeof a.judge === 'object') out.judge = normalizeJudge(a.judge);
+  return out;
+}
 
 function normalizeResult(result) {
   const r = result || {};
@@ -25,8 +63,8 @@ function normalizeResult(result) {
     passed_assertions: r.passed_assertions === undefined ? null : r.passed_assertions,
     failed_assertions: r.failed_assertions === undefined ? null : r.failed_assertions,
     step_count: steps.length,
-    steps_executed: steps.map((s) => ({ step_id: s.step_id, status: s.status })),
-    assertion_results: assertions.map((a) => ({ assertion_id: a.assertion_id, status: a.status })),
+    steps_executed: steps.map(normalizeStep),
+    assertion_results: assertions.map(normalizeAssertion),
   };
 }
 

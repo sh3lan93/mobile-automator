@@ -383,8 +383,9 @@ function evaluate(assertion = {}, ctx = {}) {
   return result(type, true, pass, message);
 }
 
-// `matches`/`findFirst` are exported for the real-device E2E harness
-// (sample-app/scripts/lib/resolve.js), which resolves tap targets with THIS
-// matcher so the harness and `mauto assert` can never disagree about what a
-// target string means (#94).
+// `matches`/`findFirst` are exported for `mauto run`'s target resolver
+// (src/run/resolve.js), which resolves tap targets with THIS matcher so a run
+// and `mauto assert` can never disagree about what a target string means
+// (#94). The real-device E2E harness had its own copy of that resolver until
+// replay R7 (#283); it now calls `mauto run`.
 module.exports = { MECHANICAL_TYPES, REFERENCE_SCREENSHOT_TYPES, SCREEN_SIZE_TYPES, evaluate, matches, findFirst, textOf, compare };

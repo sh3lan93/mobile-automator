@@ -131,6 +131,46 @@ describe('createMauto().run', () => {
       expect(err.message).toMatch(/no data/);
     });
 
+    // `mauto run` (#278) answers an incomplete run — a step needed an agent —
+    // with `incomplete`, exit 7, and the run summary in data.
+    const runKinds = ['test_failed', 'incomplete'];
+    const runSummary = { run_id: 'run_20261115_120000', status: 'incomplete', result_path: '.mobile-automator/results/r.json' };
+
+    test('an accepted incomplete (exit 7) with data returns the data', async () => {
+      const { exec } = fakeExec({
+        stdout: envelope({ ok: false, error: { kind: 'incomplete', message: 'needs an agent' }, data: runSummary }),
+        stderr: '',
+        code: 7,
+      });
+      const mauto = createMauto({ bin: 'mauto', cwd: '/p', exec });
+      await expect(mauto.run(['run', 's.json'], { acceptKinds: runKinds })).resolves.toEqual(runSummary);
+    });
+
+    test('an accepted incomplete that exited 0 throws', async () => {
+      const { exec } = fakeExec({
+        stdout: envelope({ ok: false, error: { kind: 'incomplete', message: 'needs an agent' }, data: runSummary }),
+        stderr: '',
+        code: 0,
+      });
+      const mauto = createMauto({ bin: 'mauto', cwd: '/p', exec });
+      const err = await mauto.run(['run', 's.json'], { acceptKinds: runKinds }).catch((e) => e);
+      expect(err).toBeInstanceOf(MautoError);
+      expect(err.message).toMatch(/incomplete/);
+      expect(err.message).toMatch(/exited 0/);
+    });
+
+    test('environment is not accepted even alongside test_failed and incomplete (a JUnit write failure)', async () => {
+      const { exec } = fakeExec({
+        stdout: envelope({ ok: false, error: { kind: 'environment', message: 'cannot write junit' }, data: runSummary }),
+        stderr: '',
+        code: 3,
+      });
+      const mauto = createMauto({ bin: 'mauto', cwd: '/p', exec });
+      const err = await mauto.run(['run', 's.json'], { acceptKinds: runKinds }).catch((e) => e);
+      expect(err).toBeInstanceOf(MautoError);
+      expect(err.message).toContain('cannot write junit');
+    });
+
     test('without acceptKinds a test_failed envelope throws as before', async () => {
       const { exec } = fakeExec({ stdout: testFailed({ data: failedVerdict }), stderr: '', code: 6 });
       const mauto = createMauto({ bin: 'mauto', cwd: '/p', exec });

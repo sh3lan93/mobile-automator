@@ -31,7 +31,7 @@ const { normalizeResult, diffNormalized } = require('./normalize-result');
  * @param {string} run.scenarioId   the scenario's own id
  * @param {string[]} [run.tags]     the scenario's `tags`; `golden` is the gate
  * @param {string} run.goldenDir     sample-app/scenarios/golden
- * @param {string} run.resultPath    the run's result file (`result finalize`'s)
+ * @param {string} run.resultPath    the run's result file (the one `mauto run` wrote)
  * @param {boolean} run.passed       whether the run passed every step and assertion
  * @param {Function} [run.log]       injected logger
  * @returns {string[]}

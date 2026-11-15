@@ -202,6 +202,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `failed` and `error` stay allowed. Previously an explicit status always won.
   Refs #275
 
+### 🔧 Changed
+
+- **The real-device E2E runs every scenario through `mauto run`** (replay PRD
+  #271, slice R7). `sample-app/scripts/run-e2e.mjs` no longer executes steps
+  or resolves targets itself: each scenario is one `mauto run <file> --run-id
+  <id> --junit <path>` against the shipped binary (with `MAUTO_REPLAY=1` until
+  the graduation slice), a failed or incomplete run is read as an answer, and
+  the outcome — pass, first failed step, failure lines — is read off the
+  run data in the envelope, the same frozen contract a CI job parses. A run
+  that is `incomplete` is not a pass. Each scenario's JUnit report lands in
+  the E2E artifacts under `junit/`, and a run that answers without one is a
+  harness error. CI therefore proves the shipped runner, and its CI contract,
+  on both engines. The harness executor,
+  its resolver copy and the temporary guard holding that copy byte-identical
+  to `src/run/resolve.js` are deleted; the golden normalization now also keeps
+  each assertion's `step_id`, `type`, `mechanical` and `judge` (`by`, `name`)
+  and a step's `needs_agent`, never the `executor` block, `judge.version`,
+  screenshot paths or the similarity score. No CLI behaviour changes.
+  Refs #283
+
 ---
 
 ## [0.39.0]

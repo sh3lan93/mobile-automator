@@ -1,7 +1,8 @@
 'use strict';
 
 // The in-process scenario runner behind `mauto run`: an in-process port of
-// the real-device harness executor (sample-app/scripts/lib/executor.js). It
+// the real-device harness's executor, which was retired in replay R7 (#283) —
+// the harness now calls `mauto run` instead. It
 // drives one held-open DeviceBridge and records through one ResultStore. It
 // never spawns a process, never emits an envelope and never finalizes or
 // decides the run's status: the CLI's finalizeRun does that, shared with

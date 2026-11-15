@@ -12,8 +12,10 @@
 // one of those regressions, made a build failure:
 //
 //   1. no OS-id vocabulary anywhere in the harness source;
-//   2. targets resolve through the CLI's own matcher, injected from the
-//      install under test, and the harness defines no matcher of its own;
+//   2. the harness runs each scenario through the shipped `mauto run` verb
+//      (#283) and never resolves a target itself — no findFirst, matches or
+//      resolveTarget, no evaluator / action-catalog / fields require — and
+//      defines no matcher of its own;
 //   3. no scenario names an element by a Semantics id from the app source;
 //   4. the harness has no package.json, so no private dependency pins;
 //   5. every known failure is pinned to an issue, a reason, and the step it
@@ -66,8 +68,13 @@ const OS_ID_TOKEN = /identifier|resource[-_]id/i;
 describe('E2E harness — no OS element ids', () => {
   test('the harness source exists (the rules below are not vacuous)', () => {
     expect(scriptFiles.map(rel)).toEqual(
-      expect.arrayContaining(['sample-app/scripts/run-e2e.mjs', 'sample-app/scripts/lib/resolve.js'])
+      expect.arrayContaining(['sample-app/scripts/run-e2e.mjs', 'sample-app/scripts/lib/mauto.js'])
     );
+  });
+
+  test('the retired executor and resolver copies are gone (#283)', () => {
+    expect(fs.existsSync(path.join(SCRIPTS, 'lib', 'executor.js'))).toBe(false);
+    expect(fs.existsSync(path.join(SCRIPTS, 'lib', 'resolve.js'))).toBe(false);
   });
 
   test('no file under sample-app/scripts names identifier / resource-id / resource_id', () => {
@@ -81,48 +88,48 @@ describe('E2E harness — no OS element ids', () => {
   });
 });
 
-// --- 2. The CLI's matcher, and only the CLI's ---------------------------------
+// --- 2. The shipped runner executes; the harness only calls it ----------------
 
-describe('E2E harness — targets resolve through the CLI evaluator', () => {
-  const resolveSrc = read(path.join(SCRIPTS, 'lib', 'resolve.js'));
+describe('E2E harness — scenarios run through the shipped `mauto run`', () => {
   const runnerSrc = read(path.join(SCRIPTS, 'run-e2e.mjs'));
-  const executorSrc = read(path.join(SCRIPTS, 'lib', 'executor.js'));
 
-  test('resolve.js takes findFirst/matches as an injected parameter and requires no matcher module', () => {
-    expect(resolveSrc).toMatch(/function resolveTarget\(\s*elements\s*,\s*target\s*,\s*\{\s*matches\s*(,\s*textOf\s*)?\}\s*(,\s*\{\s*pattern\s*\}\s*=\s*\{\}\s*)?\)/);
-    expect(resolveSrc).not.toMatch(/\brequire\(/);
+  // The one `mauto run` call, from `.run([ 'run',` to the end of its options.
+  const RUN_CALL = /\.run\(\s*\[\s*'run'\s*,[\s\S]*?\}\s*\)/;
+
+  test('run-e2e.mjs calls `mauto run` through the shim', () => {
+    expect(runnerSrc).toMatch(/\.run\(\s*\[\s*'run'\s*,/);
   });
 
-  test('the executor hands resolveTarget the evaluator it was given', () => {
-    expect(executorSrc).toMatch(/resolveTarget\(.*,\s*evaluator\s*\)/);
+  test('the call accepts test_failed and incomplete, and passes MAUTO_REPLAY in its env', () => {
+    const call = (runnerSrc.match(RUN_CALL) || [''])[0];
+    const kinds = (call.match(/acceptKinds\s*:\s*\[([^\]]*)\]/) || ['', ''])[1];
+    expect(kinds).toMatch(/'test_failed'/);
+    expect(kinds).toMatch(/'incomplete'/);
+    // Inline, so the graduation slice (G) strips exactly one line.
+    expect(call).toMatch(/env\s*:\s*\{\s*MAUTO_REPLAY\s*:\s*'1'\s*\}/);
   });
 
-  test('run-e2e.mjs loads src/assertion/evaluator.js from the install under test', () => {
-    expect(runnerSrc).toMatch(/require\(\s*path\.join\(\s*pkgDir\s*,\s*['"]src\/assertion\/evaluator\.js['"]\s*\)\s*\)/);
-  });
-
-  // #255: the launch_app step-field → flag mapping lives in the action
-  // catalog; the harness derives it from the install under test, never
-  // restating a flag literal of its own.
-  test('run-e2e.mjs loads src/device/action-catalog.js from the install under test', () => {
-    expect(runnerSrc).toMatch(/require\(\s*path\.join\(\s*pkgDir\s*,\s*['"]src\/device\/action-catalog\.js['"]\s*\)\s*\)/);
-  });
-
-  // #278: the assertion field mapping and the run-id format are the
-  // install's, shared with `mauto run`; the harness restates neither.
-  test('run-e2e.mjs loads src/assertion/fields.js and src/run/run-id.js from the install under test', () => {
-    expect(runnerSrc).toMatch(/require\(\s*path\.join\(\s*pkgDir\s*,\s*['"]src\/assertion\/fields\.js['"]\s*\)\s*\)/);
+  // #278: the run-id format is the install's, shared with `mauto run`.
+  test('run-e2e.mjs loads src/run/run-id.js from the install under test', () => {
     expect(runnerSrc).toMatch(/require\(\s*path\.join\(\s*pkgDir\s*,\s*['"]src\/run\/run-id\.js['"]\s*\)\s*\)/);
   });
 
-  test('the executor keeps no private EXPECTED_FIELD, assertFlags or makeRunId', () => {
-    expect(executorSrc).not.toMatch(/\b(const|let|var|function)\s+(EXPECTED_FIELD|assertFlags|makeRunId)\b/);
-    expect(executorSrc).toMatch(/fields\.toCliFlags\(/);
-  });
-
-  test('the executor derives launch flags from the catalog, with no literal --resume', () => {
-    expect(executorSrc).toMatch(/catalog\.stepFlagsFor\(\s*['"]launch_app['"]/);
-    expect(executorSrc).not.toMatch(/--resume/);
+  test('no file under sample-app/scripts resolves targets or loads the matcher, catalog or field mapping', () => {
+    const FORBIDDEN = [
+      /\bfindFirst\b/,
+      /\bmatches\(/,
+      /\bresolveTarget\b/,
+      /src\/assertion\/evaluator(\.js)?['"]/,
+      /src\/device\/action-catalog(\.js)?['"]/,
+      /src\/assertion\/fields(\.js)?['"]/,
+    ];
+    const offenders = [];
+    for (const file of scriptFiles) {
+      read(file).split('\n').forEach((line, i) => {
+        if (FORBIDDEN.some((re) => re.test(line))) offenders.push(`${rel(file)}:${i + 1}: ${line.trim()}`);
+      });
+    }
+    expect(offenders).toEqual([]);
   });
 
   test('no file under sample-app/scripts defines its own matcher', () => {
