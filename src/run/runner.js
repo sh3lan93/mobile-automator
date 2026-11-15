@@ -10,7 +10,8 @@
 // Everything with a side effect is injected (bridge, store, clock, trace), which is what lets tests/unit/run drive it on a fake bridge and a
 // fake clock.
 
-const { runStep } = require('./step');
+const { runStep } = require('./tree');
+const { createRunState } = require('./state');
 const { handlerFor } = require('./actions');
 const { preconditionHandlerFor } = require('./actions/preconditions');
 const { runAssertion } = require('./assertions');
@@ -38,22 +39,16 @@ async function runScenario({
   const variables = {};
   // `pollUntil` is how every waiting handler looks at the screen.
   const pollUntil = makePollUntil(settings, clock);
-  // `statuses` is each step's recorded status so far (a `previous_step_skipped`
-  // condition reads it); `previous` the screen before a step, kept only for the
-  // steps a text_changed assertion follows (`wantsPrevious`), so every other
-  // scenario pays no extra device call.
-  const statuses = new Map();
-  const previous = new Map();
   const assertions = Array.isArray(scenario.assertions) ? scenario.assertions : [];
-  const wantsPrevious = new Set(assertions.filter((a) => a.type === 'text_changed').map((a) => a.after_step));
+  // What the run remembers of the steps already done (statuses, snapshots).
+  const state = createRunState(assertions);
   const ctx = {
-    scenario, bridge, store, evaluator, catalog, projectRoot, runId, clock, trace, failures, settings, variables, pollUntil,
-    statuses, previous, wantsPrevious,
+    scenario, bridge, store, evaluator, catalog, projectRoot, runId, clock, trace, failures, settings, variables, pollUntil, state,
   };
   // The assertions that follow a step, once it (and its sub_steps) is done.
-  ctx.afterStep = async (stepId) => {
+  const afterStep = async (stepId) => {
     for (const assertion of assertions.filter((a) => a.after_step === stepId)) {
-      await runAssertion(assertion, ctx, previous.get(stepId) || null);
+      await runAssertion(assertion, ctx, state.snapshotOf(stepId));
     }
   };
   // The first step that failed, if any.
@@ -66,7 +61,7 @@ async function runScenario({
   try {
     trace.start();
     // Preconditions first, each a synthetic step `precondition_<n>` (1-based
-    // position in device_actions), through the same runStep.
+    // position in device_actions), through the same runStep (src/run/tree.js).
     const deviceActions = scenario.preconditions && scenario.preconditions.device_actions;
     const setup = (Array.isArray(deviceActions) ? deviceActions : []).map((a, i) => {
       const step = { ...a, id: `precondition_${i + 1}` };
@@ -75,13 +70,13 @@ async function runScenario({
     const queue = [...setup, ...(scenario.steps || []).map((step) => ({ step, perform: handlerFor(step.action) }))];
     for (const { step, perform } of queue) {
       current = step;
-      const outcome = await runStep(step, ctx, perform);
+      const { outcome, record } = await runStep(step, perform, ctx, afterStep);
       // A step only an agent can do is recorded, not failed; whatever follows
       // would run on a state nobody established, so the run ends here and
       // finalizes incomplete.
       if (outcome.kind === 'needs_agent') break;
       if (outcome.kind === 'failed') {
-        failures.push(`step ${step.id} (${step.action}): ${outcome.error.message}`);
+        failures.push(`step ${step.id} (${step.action}): ${record.error_message}`);
         failedStep = step.id;
         // Later steps would run against a screen nobody predicted; their
         // failures would only bury this one.
@@ -89,7 +84,7 @@ async function runScenario({
       }
       // A skipped step (a false condition, an optional miss) still has its
       // assertions run: they describe the screen the scenario expects either way.
-      await ctx.afterStep(step.id);
+      await afterStep(step.id);
     }
   } catch (err) {
     recordAbort(store, current, err);

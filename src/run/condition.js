@@ -12,7 +12,7 @@
 //   orientation()      -> 'portrait' | 'landscape'
 //   elements()         -> the current agnostic element list
 //   variables          -> the run's captured values
-//   statuses           -> Map(step id -> recorded status) of the steps so far
+//   statusOf(stepId)   -> the recorded status of a step already done, or undefined
 //   evaluator          -> { findFirst, compare }
 // Each probe is called only by the condition type that needs it.
 
@@ -56,7 +56,7 @@ async function evaluateCondition(condition, env) {
       return compare(actual, operator, String(condition.value).toLowerCase());
     }
     case 'previous_step_skipped':
-      return env.statuses.get(required(condition, 'step_id')) === 'skipped';
+      return env.statusOf(required(condition, 'step_id')) === 'skipped';
     case 'variable_value': {
       const name = required(condition, 'variable_name');
       if (!Object.prototype.hasOwnProperty.call(env.variables, name)) {

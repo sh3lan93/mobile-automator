@@ -6,7 +6,6 @@ const path = require('path');
 const { workspaceDir } = require('../workspace/layout');
 const { evaluateCondition } = require('./condition');
 const { substituteStep } = require('./variables');
-const { handlerFor } = require('./actions');
 
 const DEFAULT_BACKOFF_MS = 1000;
 
@@ -70,28 +69,21 @@ function conditionEnv(ctx) {
     orientation: () => ctx.bridge.getOrientation(),
     elements: () => ctx.bridge.listElements(),
     variables: ctx.variables,
-    statuses: ctx.statuses,
+    statusOf: ctx.state.statusOf,
     evaluator: ctx.evaluator,
   };
 }
 
-// The record kept for a step that never ran because its parent did not: skipped,
-// with the same for any sub_steps of its own.
-function skippedRecord(step, ctx) {
-  ctx.statuses.set(step.id, 'skipped');
-  const record = { step_id: step.id, status: 'skipped', screenshot: null, error_message: null };
-  if (Array.isArray(step.sub_steps) && step.sub_steps.length) {
-    record.sub_steps_executed = step.sub_steps.map((child) => skippedRecord(child, ctx));
-  }
-  return record;
-}
-
-// Execute one step without writing it: the condition, then the action under
-// its retry policy, then the sub_steps. Returns { record, outcome, notes }:
-// the facts to store (the shape addStep takes), the outcome kind
+// Run ONE step's own work, without writing it: the condition, then the action
+// under its retry policy, then the evidence. Its sub_steps are the caller's
+// (the runner walks the tree). Returns { record, outcome, notes }: the facts
+// to store (the shape addStep takes), the outcome kind
 // ('passed' | 'failed' | 'skipped' | 'needs_agent') with its error, and the
-// notes made on the way.
-async function execute(step, parent, perform) {
+// notes made on the way (each distinct note once; the caller records them as
+// state_context observations). A step that needs an agent (NeedsAgentError)
+// is recorded `skipped` with `needs_agent: true` and takes no failure
+// screenshot. `perform` is the step's action handler, resolved by the caller.
+async function runOne(step, parent, perform) {
   const notes = new Set();
   const ctx = { ...parent, observe: (message) => notes.add(message) };
   const startedAt = ctx.clock.now();
@@ -102,7 +94,6 @@ async function execute(step, parent, perform) {
     try {
       conditionEvaluated = await evaluateCondition(step.condition, conditionEnv(ctx));
     } catch (err) {
-      conditionEvaluated = null;
       outcome = { kind: err && err.needsAgent ? 'needs_agent' : 'failed', attempts: 1, error: err };
     }
     if (conditionEvaluated === false) outcome = { kind: 'skipped', attempts: 1, error: null };
@@ -110,9 +101,9 @@ async function execute(step, parent, perform) {
 
   if (!outcome) {
     // The screen before the step, for a text_changed assertion that follows.
-    if (ctx.wantsPrevious.has(step.id)) {
+    if (ctx.state.wantsSnapshot(step.id)) {
       try {
-        ctx.previous.set(step.id, await ctx.bridge.listElements());
+        ctx.state.remember(step.id, await ctx.bridge.listElements());
       } catch {
         // Best effort: without it the assertion says it has nothing to compare.
       }
@@ -131,29 +122,6 @@ async function execute(step, parent, perform) {
   if (outcome.kind === 'passed' && step.checkpoint) shot = await screenshot(`step_${step.id}`, ctx);
   if (outcome.kind === 'failed') shot = await screenshot(`step_${step.id}_failure`, ctx);
 
-  let subSteps;
-  if (Array.isArray(step.sub_steps) && step.sub_steps.length) {
-    if (outcome.kind === 'skipped') {
-      subSteps = step.sub_steps.map((child) => skippedRecord(child, ctx));
-    } else if (outcome.kind === 'passed') {
-      subSteps = [];
-      for (const child of step.sub_steps) {
-        const done = await executeChild(child, ctx);
-        subSteps.push(done.entry);
-        if (done.outcome.kind === 'failed' || done.outcome.kind === 'needs_agent') {
-          const message = done.outcome.error.message;
-          outcome = {
-            kind: done.outcome.kind,
-            attempts: outcome.attempts,
-            error: Object.assign(new Error(`sub-step ${child.id}: ${message}`), { needsAgent: done.outcome.kind === 'needs_agent' }),
-          };
-          break;
-        }
-      }
-    }
-  }
-
-  ctx.statuses.set(step.id, RECORDED_STATUS[outcome.kind]);
   const record = {
     step_id: step.id,
     status: RECORDED_STATUS[outcome.kind],
@@ -163,43 +131,8 @@ async function execute(step, parent, perform) {
     condition_evaluated: conditionEvaluated,
     step_duration_ms: Math.max(0, Math.round(ctx.clock.now() - startedAt)),
     ...(outcome.kind === 'needs_agent' ? { needs_agent: true } : {}),
-    ...(subSteps ? { sub_steps_executed: subSteps } : {}),
   };
   return { record, outcome, notes };
 }
 
-// Run a sub-step: executed like any step (condition, retries, sub_steps of its
-// own), its notes and trace written at once, its assertions evaluated, and
-// summarised as the entry its parent keeps.
-async function executeChild(child, ctx) {
-  const { record, outcome, notes } = await execute(child, ctx, handlerFor(child.action));
-  for (const message of notes) ctx.store.addObservation({ type: 'state_context', step_id: child.id, message });
-  ctx.trace.step(outcome.kind !== 'failed');
-  await ctx.afterStep(child.id);
-  const entry = {
-    step_id: record.step_id,
-    status: record.status,
-    screenshot: record.screenshot,
-    error_message: record.error_message,
-    ...(record.sub_steps_executed ? { sub_steps_executed: record.sub_steps_executed } : {}),
-  };
-  return { entry, outcome };
-}
-
-// Run a step and record it in the store with what was noted on the way
-// (ctx.observe, each distinct note once, as a state_context observation) and
-// stamp the run trace (ok for everything but a failure). A step that needs an
-// agent (NeedsAgentError) is recorded `skipped` with `needs_agent: true` and
-// takes no failure screenshot; nothing after it may run. `perform` is the
-// step's action handler, resolved by the caller (the runner picks the action
-// or precondition table). Returns the outcome { kind, attempts, error } with
-// kind `passed | failed | skipped | needs_agent`.
-async function runStep(step, parent, perform) {
-  const { record, outcome, notes } = await execute(step, parent, perform);
-  parent.store.addStep(record);
-  for (const message of notes) parent.store.addObservation({ type: 'state_context', step_id: step.id, message });
-  parent.trace.step(outcome.kind !== 'failed');
-  return outcome;
-}
-
-module.exports = { runStep, DEFAULT_BACKOFF_MS, DEFAULT_RETRY_ATTEMPTS };
+module.exports = { runOne, RECORDED_STATUS, DEFAULT_BACKOFF_MS, DEFAULT_RETRY_ATTEMPTS };

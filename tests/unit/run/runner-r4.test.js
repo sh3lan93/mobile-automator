@@ -219,6 +219,28 @@ describe('sub_steps', () => {
     expect(r.byId.next).toBeUndefined();
   });
 
+  test('a fatal sub-step error is not retried and fails the parent with the sub-step named', async () => {
+    const r = await exec([
+      step('p', 'tap', {
+        target: 'Accept',
+        sub_steps: [step('c1', 'tap', { target: 'Home', target_pattern: '(', retry_policy: { max_attempts: 3, backoff_ms: 10 } })],
+      }),
+    ]);
+    expect(r.finalized.status).toBe('failed');
+    expect(r.byId.p.status).toBe('failed');
+    expect(r.byId.p.error_message).toMatch(/^sub-step c1: invalid target_pattern/);
+    expect(r.byId.p.sub_steps_executed[0]).toMatchObject({ step_id: 'c1', status: 'failed' });
+    expect(r.failures.join()).toContain('sub-step c1');
+    expect(r.b.of('tap')).toHaveLength(1); // the parent's own tap only
+  });
+
+  test('a sub-step nested two deep names the whole path', async () => {
+    const r = await exec([
+      step('p', 'tap', { target: 'Accept', sub_steps: [step('c1', 'tap', { target: 'Home', sub_steps: [step('g1', 'tap', { target: 'Nowhere' })] })] }),
+    ]);
+    expect(r.byId.p.error_message).toMatch(/^sub-step c1: sub-step g1: no element matches/);
+  });
+
   test('a sub-step that needs an agent ends the run incomplete', async () => {
     const r = await exec([step('p', 'tap', { target: 'Accept', sub_steps: [step('c1', 'enable_wifi')] })]);
     expect(r.byId.p).toMatchObject({ status: 'skipped', needs_agent: true });
@@ -229,6 +251,23 @@ describe('sub_steps', () => {
     const r = await exec([step('p', 'tap', { target: 'Nowhere', optional: true, sub_steps: [step('c1', 'tap', { target: 'Home' })] })]);
     expect(r.b.of('tap')).toHaveLength(0);
     expect(r.byId.p.sub_steps_executed).toEqual([{ step_id: 'c1', status: 'skipped', screenshot: null, error_message: null }]);
+  });
+
+  test('the after_step assertions of a skipped parent\'s sub-steps run too', async () => {
+    const r = await exec(
+      [step('p', 'tap', {
+        target: 'Accept',
+        condition: { type: 'element_visible', element_description: 'Nope' },
+        sub_steps: [step('c1', 'tap', { target: 'Home', sub_steps: [step('g1', 'tap', { target: 'Home' })] })],
+      })],
+      {
+        assertions: [
+          { id: 'on_child', after_step: 'c1', type: 'element_exists', element_description: 'Home', description: 'd' },
+          { id: 'on_grandchild', after_step: 'g1', type: 'element_exists', element_description: 'Home', description: 'd' },
+        ],
+      }
+    );
+    expect(r.file.assertion_results.map((a) => a.assertion_id).sort()).toEqual(['on_child', 'on_grandchild']);
   });
 
   test('a skipped parent\'s assertions still run', async () => {
