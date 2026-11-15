@@ -2038,8 +2038,11 @@ function buildProgram(deps = {}) {
     .option('--run-id <id>', 'run identifier (run_YYYYMMDD_HHMMSS); minted when omitted')
     .option('--timeout-ms <ms>', 'cap, in milliseconds, on how long any one step waits (a positive integer)')
     .option('--update-references', 'record each screenshot_match capture as its reference image instead of comparing')
+    .option('--judge <who>', 'who decides the assertions only an agent can judge (accepted: none)', 'none')
     .action(withEnvelope(requireWorkspace(async (file, opts) => {
-      const prepared = prepareRun({ validator, file: path.resolve(cwd, file), runId: opts.runId, timeoutMs: opts.timeoutMs, env: process.env });
+      const prepared = prepareRun({
+        validator, file: path.resolve(cwd, file), runId: opts.runId, timeoutMs: opts.timeoutMs, judge: opts.judge, env: process.env,
+      });
       if (prepared.failure) return emit(prepared.failure, humanFlag());
       // The preAction hook saw only the flag and the environment; this covers
       // a minted id, so verb.end lands in the same trace as the run's stamps.

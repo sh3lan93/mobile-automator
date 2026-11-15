@@ -137,6 +137,20 @@ describe('mauto run — refusals before any device work', () => {
       expect(r.envelope.data.failures[0]).toMatch(/timed out after 4000ms/);
     });
 
+    test('--judge other than none is invalid_input before any device work (#282)', async () => {
+      const { r, factory } = await runCli([writeScenario(scenario()), '--run-id', RUN_ID, '--judge', 'agent']);
+      expect(r.exitKind).toBe('invalid_input');
+      expect(exitCodeFor(r.exitKind)).toBe(3);
+      expect(r.envelope.error.message).toBe('unknown --judge "agent"');
+      expect(r.envelope.hint).toMatch(/Accepted: none/);
+      expect(factory).not.toHaveBeenCalled();
+    });
+
+    test('--judge none runs as the default does (#282)', async () => {
+      const { r } = await runCli([writeScenario(scenario()), '--run-id', RUN_ID, '--judge', 'none']);
+      expect(r.exitKind).toBe('ok');
+    });
+
     test('an unreadable scenario is invalid_input', async () => {
       const { r, factory } = await runCli([path.join(root, 'missing.json'), '--run-id', RUN_ID]);
       expect(r.exitKind).toBe('invalid_input');

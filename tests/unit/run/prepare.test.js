@@ -154,3 +154,29 @@ describe('the run id', () => {
     expect(p.failure.envelope.hint).toMatch(/run_YYYYMMDD_HHMMSS/);
   });
 });
+
+describe('--judge (#282)', () => {
+  test('absent: judge is none', () => {
+    expect(prepare({ file: write(scenario()), runId: RUN_ID, env: ON }).judge).toBe('none');
+  });
+
+  test('none is accepted', () => {
+    const p = prepare({ file: write(scenario()), runId: RUN_ID, env: ON, judge: 'none' });
+    expect(p.failure).toBeUndefined();
+    expect(p.judge).toBe('none');
+  });
+
+  test.each(['agent', 'llm', 'NONE', ''])('%j is invalid_input naming the accepted values', (value) => {
+    const p = prepare({ file: write(scenario()), runId: RUN_ID, env: ON, judge: value });
+    expect(p.failure.exitKind).toBe('invalid_input');
+    expect(p.failure.envelope.error.message).toBe(`unknown --judge "${value}"`);
+    expect(p.failure.envelope.hint).toMatch(/Accepted: none\b/);
+  });
+
+  test('is checked after the gate, before the scenario is read', () => {
+    const gated = prepare({ file: path.join(root, 'missing.json'), runId: RUN_ID, env: {}, judge: 'agent' });
+    expect(gated.failure.exitKind).toBe('environment');
+    const bad = prepare({ file: path.join(root, 'missing.json'), runId: RUN_ID, env: ON, judge: 'agent' });
+    expect(bad.failure.envelope.error.message).toBe('unknown --judge "agent"');
+  });
+});

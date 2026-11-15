@@ -8,13 +8,17 @@ const { replayEnabled } = require('./gate');
 const { makeRunId } = require('./run-id');
 const { parsePositiveInt } = require('../util/parse-positive-int');
 
+// The values `mauto run --judge` accepts.
+const JUDGES = Object.freeze(['none']);
+
 // Everything `mauto run` decides before it touches a device, in order: the
 // MAUTO_REPLAY gate, the scenario (strict: a blocking replayability finding
 // refuses), then the run id — the --run-id flag, else MAUTO_RUN_ID, else
 // minted from `now()` — which must name a result file. Returns
-// `{ scenario, runId, file, sha256, timeoutMs }` (`sha256` is loadScenario's hash of the
-// file, for the run's executor; `timeoutMs` the validated --timeout-ms or null) or `{ failure: { envelope, exitKind } }`.
-function prepareRun({ validator, file, runId: flag, timeoutMs: timeoutFlag, env = process.env, now = () => new Date() }) {
+// `{ scenario, runId, file, sha256, timeoutMs, judge }` (`sha256` is loadScenario's hash of the
+// file, for the run's executor; `timeoutMs` the validated --timeout-ms or null; `judge` the
+// validated --judge) or `{ failure: { envelope, exitKind } }`.
+function prepareRun({ validator, file, runId: flag, timeoutMs: timeoutFlag, judge = 'none', env = process.env, now = () => new Date() }) {
   if (!replayEnabled(env)) {
     return {
       failure: {
@@ -24,6 +28,23 @@ function prepareRun({ validator, file, runId: flag, timeoutMs: timeoutFlag, env 
           'export MAUTO_REPLAY=1 to try the in-progress replay runner'
         ),
         exitKind: 'environment',
+      },
+    };
+  }
+
+  // --judge names who decides the assertions only an agent can judge. Only
+  // `none` exists: the runner has no judge (R2, see src/run/assertions.js),
+  // so such an assertion is left needs_agent and the run ends incomplete.
+  // Refused before the scenario is read, as --timeout-ms is.
+  if (!JUDGES.includes(judge)) {
+    return {
+      failure: {
+        envelope: fail(
+          'invalid_input',
+          `unknown --judge "${judge}"`,
+          `Accepted: ${JUDGES.join(', ')}. With none, an assertion only an agent can judge is left needs_agent for an agent to decide.`
+        ),
+        exitKind: 'invalid_input',
       },
     };
   }
@@ -65,7 +86,7 @@ function prepareRun({ validator, file, runId: flag, timeoutMs: timeoutFlag, env 
     };
   }
 
-  return { scenario: loaded.scenario, runId, file, sha256: loaded.sha256, timeoutMs };
+  return { scenario: loaded.scenario, runId, file, sha256: loaded.sha256, timeoutMs, judge };
 }
 
-module.exports = { prepareRun };
+module.exports = { prepareRun, JUDGES };
