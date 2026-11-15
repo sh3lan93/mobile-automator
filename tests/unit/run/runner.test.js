@@ -414,22 +414,31 @@ describe('runScenario', () => {
     });
 
     // R5a (#276): screen_title is decided by mauto against the screen size,
-    // which is fetched only for the types that need it.
-    test('screen_title is decided mechanically against the screen size', async () => {
-      const title = (expected_text) => scenario(
-        [{ id: 'hide', action: 'dismiss_keyboard', description: 'd' }],
-        [{ id: 'titled', after_step: 'hide', type: 'screen_title', description: 'd', expected_text }]
-      );
+    // which is fetched only for the types that need it. Each case runs in its
+    // own workspace (beforeEach), so its verdict is assertion_results[0].
+    const titled = (expected_text) => scenario(
+      [{ id: 'hide', action: 'dismiss_keyboard', description: 'd' }],
+      [{ id: 'titled', after_step: 'hide', type: 'screen_title', description: 'd', expected_text }]
+    );
+
+    test('screen_title passes mechanically when the title sits in the top band', async () => {
       const b = makeFakeBridge({ elements: [homeElements()], screenSize: { width: 1280, height: 2856 } });
-      const r = await exec(title('Sample Shop'), b);
+      const r = await exec(titled('Sample Shop'), b);
+      expect(r.file.assertion_results).toHaveLength(1);
       expect(r.file.assertion_results[0]).toMatchObject({
         type: 'screen_title', status: 'passed', mechanical: true, judge: { by: 'mauto' }, expected: 'Sample Shop',
       });
       expect(b.of('getScreenSize')).toHaveLength(1);
+    });
 
-      // A second run in the same workspace: its verdict is the last recorded.
-      const miss = await exec(title('Checkout'), makeFakeBridge({ elements: [homeElements()] }));
-      expect(miss.file.assertion_results.at(-1)).toMatchObject({ status: 'failed', mechanical: true, judge: { by: 'mauto' } });
+    test('screen_title fails mechanically when no element carries the title', async () => {
+      const b = makeFakeBridge({ elements: [homeElements()] });
+      const r = await exec(titled('Checkout'), b);
+      expect(r.file.assertion_results).toHaveLength(1);
+      expect(r.file.assertion_results[0]).toMatchObject({
+        type: 'screen_title', status: 'failed', mechanical: true, judge: { by: 'mauto' }, expected: 'Checkout',
+      });
+      expect(b.of('getScreenSize')).toHaveLength(1);
     });
 
     test('types that need no screen size never fetch it', async () => {
