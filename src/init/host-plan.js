@@ -83,6 +83,7 @@ function cursorRuleBody() {
     '---\n\n' +
     guideEmitter.emitBootstrap() +
     '\nRun `mauto guide <topic>` (generate|execute|setup) before a workflow. ' +
+    'The execute guide starts with `mauto run`. ' +
     'Drive the device only through `mauto` verbs.\n'
   );
 }

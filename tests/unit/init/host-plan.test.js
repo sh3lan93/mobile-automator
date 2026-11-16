@@ -66,6 +66,26 @@ describe('HOSTS / planHost', () => {
     expect(plan.mcp).toBe(path.join('.cursor', 'mcp.json'));
   });
 
+  // #284: every execute surface points at the runner, and none of them carries
+  // its contract (flags, exit codes) — that lives in the guide.
+  test('every execute surface says the guide starts with `mauto run`, with no flags or exit codes', () => {
+    const surfaces = [
+      planHost('cursor').files[0].content.split('\n').find((l) => l.includes('(generate|execute|setup)')),
+      ...HOSTS.flatMap((agent) => planHost(agent).files)
+        .filter((f) => f.rel.includes('mobile-automator-execute'))
+        .map((f) => f.content.split('\n').find((l) => l.includes('mauto run'))),
+    ];
+    expect(surfaces.length).toBeGreaterThan(HOSTS.length);
+    for (const line of surfaces) {
+      expect(line).toContain('`mauto run');
+      expect(line).not.toMatch(/--[a-z]/);
+      expect(line).not.toMatch(/exit code|`\d`/);
+    }
+    for (const f of HOSTS.flatMap((agent) => planHost(agent).files).filter((x) => x.rel.includes('mobile-automator-execute'))) {
+      expect(f.content).toContain('mauto guide execute');
+    }
+  });
+
   test.each(['gemini', 'copilot', 'agents'])('%s plans skills only, no mcp', (agent) => {
     const plan = planHost(agent);
     expect(plan.files).toHaveLength(3);
