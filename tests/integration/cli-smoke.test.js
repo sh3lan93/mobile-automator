@@ -407,33 +407,28 @@ describe('cli smoke (integration)', () => {
     });
   });
 
-  // `mauto run` (replay R1, #278): hidden and gated. Neither refusal needs a
+  // `mauto run` (replay R1, #278; graduated in #284). Neither refusal needs a
   // device: both happen before anything connects.
-  describe('run (gated)', () => {
-    const envWith = (extra) => {
-      const env = { ...process.env, ...extra };
-      if (extra.MAUTO_REPLAY === undefined) delete env.MAUTO_REPLAY;
-      return env;
-    };
-
-    test('refuses with environment (exit 5) in a workspace when MAUTO_REPLAY is unset', () => {
+  describe('run', () => {
+    test('refuses a schema-invalid scenario with invalid_input (exit 3) in a workspace, no device needed', () => {
       const configDir = path.join(workspace, '.mobile-automator');
       fs.mkdirSync(configDir, { recursive: true });
       fs.copyFileSync(CONFIG_FIXTURE, path.join(configDir, 'config.json'));
+      const invalid = path.join(workspace, 'invalid.json');
+      fs.writeFileSync(invalid, JSON.stringify({ $schema_version: '2.1', scenario_id: 'smoke_invalid' }));
 
-      const r = runCli(['run', VALID_SCENARIO], { cwd: workspace, env: envWith({ MAUTO_REPLAY: undefined }) });
-      expect(r.status).toBe(5);
+      const r = runCli(['run', invalid], { cwd: workspace });
+      expect(r.status).toBe(3);
       const env = JSON.parse(r.stdout);
       expect(env.ok).toBe(false);
-      expect(env.error.kind).toBe('environment');
-      expect(env.error.message).toBe('mauto run is not enabled yet');
-      expect(env.hint).toMatch(/MAUTO_REPLAY=1/);
+      expect(env.error.kind).toBe('invalid_input');
+      expect(env.error.message).toBe('scenario failed schema validation');
     });
 
-    test('refuses with the workspace failure (exit 5) outside a workspace even with the gate set', () => {
+    test('refuses with the workspace failure (exit 5) outside a workspace', () => {
       // A .git boundary stops discovery here, so no ancestor workspace is found.
       fs.mkdirSync(path.join(workspace, '.git'));
-      const r = runCli(['run', VALID_SCENARIO], { cwd: workspace, env: envWith({ MAUTO_REPLAY: '1' }) });
+      const r = runCli(['run', VALID_SCENARIO], { cwd: workspace });
       expect(r.status).toBe(5);
       const env = JSON.parse(r.stdout);
       expect(env.error.kind).toBe('environment');
@@ -441,10 +436,10 @@ describe('cli smoke (integration)', () => {
       expect(fs.existsSync(path.join(workspace, '.mobile-automator'))).toBe(false);
     });
 
-    test('is absent from --help', () => {
+    test('is listed in --help', () => {
       const r = runCli(['--help']);
       expect(r.status).toBe(0);
-      expect(r.stdout).not.toMatch(/^\s+run\b/m);
+      expect(r.stdout).toMatch(/^\s+run\b/m);
       expect(r.stdout).toMatch(/^\s+validate\b/m);
     });
   });

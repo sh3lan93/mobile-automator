@@ -92,7 +92,7 @@ const VERB_NAMES = Object.freeze([
   'crash',
   'mcp',
   'telemetry',
-  // Hidden and gated behind MAUTO_REPLAY=1 until replay graduates (#278).
+  // The unattended replay runner (#278).
   'run',
 ]);
 

@@ -7,7 +7,6 @@ const { fail } = require('../output/envelope');
 const { loadScenario } = require('../scenario/load');
 const { isResultRunId } = require('../result/store');
 const { resolveRunId } = require('../observe/settings');
-const { replayEnabled } = require('./gate');
 const { makeRunId } = require('./run-id');
 const { parsePositiveInt } = require('../util/parse-positive-int');
 
@@ -40,7 +39,7 @@ const RUN_JUDGES = Object.freeze(['none']);
 const refuse = (kind, message, hint) => ({ failure: { envelope: fail(kind, message, hint), exitKind: kind } });
 
 // Everything `mauto run` decides before it touches a device, in this order:
-// the MAUTO_REPLAY gate, --judge, --timeout-ms, --junit, the scenario
+// --judge, --timeout-ms, --junit, the scenario
 // (strict: a blocking replayability finding refuses), then the run id (the
 // --run-id flag, else MAUTO_RUN_ID, else minted from `now()`), which must
 // name a result file. Returns `{ scenario, runId, file, sha256, timeoutMs,
@@ -51,10 +50,6 @@ function prepareRun({
   validator, file, runId: flag, timeoutMs: timeoutFlag, judge = 'none', junit,
   cwd = process.cwd(), env = process.env, now = () => new Date(),
 }) {
-  if (!replayEnabled(env)) {
-    return refuse('environment', 'mauto run is not enabled yet', 'export MAUTO_REPLAY=1 to try the in-progress replay runner');
-  }
-
   // --judge names who decides the assertions only an agent can judge. Only
   // `none` exists: the runner has no judge (R2, see src/run/assertions.js),
   // so such an assertion is left needs_agent and the run ends incomplete.

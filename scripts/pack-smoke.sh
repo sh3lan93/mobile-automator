@@ -99,10 +99,9 @@ if [ -n "$(ls -A "$DEVICES_DIR")" ]; then
   devices_fail "wrote into its working directory: $(ls -A "$DEVICES_DIR" | tr '\n' ' ')"
 fi
 
-# 7. The hidden `mauto run` verb ships in the tarball (replay R6, #282).
+# 7. The `mauto run` verb ships in the tarball (replay R6, #282).
 #
-#    `run` is registered hidden behind MAUTO_REPLAY=1 until the graduation
-#    slice, so nothing above reaches it. In a fresh workspace (`setup` is
+#    Nothing above reaches `run`. In a fresh workspace (`setup` is
 #    non-interactive), a scenario that fails schema validation must be refused
 #    with invalid_input, exit 3. That answer is only possible if the verb is
 #    registered and its pre-device checks run from the packed files — and it
@@ -127,7 +126,7 @@ if [ "$RUN_STATUS" -ne 0 ]; then
   run_fail "could not run: 'mauto setup' exited non-zero"
 fi
 printf '%s\n' '{"$schema_version": "2.1", "scenario_id": "pack_smoke"}' >"$RUN_DIR/invalid.json"
-RUN_OUT="$(cd "$RUN_DIR" && MAUTO_REPLAY=1 MAUTO_TELEMETRY=0 MOBILEMCP_DISABLE_TELEMETRY=1 "$MAUTO" run invalid.json 2>"$RUN_STDERR")" || RUN_STATUS=$?
+RUN_OUT="$(cd "$RUN_DIR" && MAUTO_TELEMETRY=0 MOBILEMCP_DISABLE_TELEMETRY=1 "$MAUTO" run invalid.json 2>"$RUN_STDERR")" || RUN_STATUS=$?
 if [ "$RUN_STATUS" -ne 3 ]; then
   run_fail "on a schema-invalid scenario did not exit 3"
 fi
