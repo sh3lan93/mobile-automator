@@ -2,6 +2,8 @@
 
 # Strategy plan: deterministic, agent-free replay for `mauto`
 
+> **R5a outcome 2026-11-16 (#276):** three of the five types were promoted (`screen_title`, `element_fully_visible`, `permission_dialog_shown`, PR #320). `alert_present` and `alert_text` stay agent-judged: dialog captures on Android (Flutter and native, both engines) and iOS (Flutter and a system alert) show a dialog-typed element on native iOS only (`tests/fixtures/device/dialog-probe/`, pinned by `tests/unit/assertion/dialog-probe.test.js`). The split at graduation is therefore 18 mechanical + `screenshot_match` = **19/27** decided without an agent and 8 → `needs_agent`, wherever this file says 21/27 and 6.
+
 > **Versions renumbered again 2026-11-10:** #295 (BREAKING `--run-id` gate on the `result` write verbs, PR #301) takes 0.39.0, so the replay ladder moves up one minor: R1–R7 **0.40.0-rc.0…rc.7** · G **0.40.0**. Every 0.40.0 below was 0.39.0 before this note.
 
 > **Versions renumbered 2026-10-27:** v0.37.0 shipped the same morning (PR #270, which also moved the workspace directory to `.mobile-automator/`). Ladder now: S0a 0.37.1 · S0b 0.38.0 (BREAKING) · S0c 0.38.1 · R1–R7 0.40.0-rc.0…rc.7 · G 0.40.0. Wherever this file says `mobile-automator/<x>` for the workspace, read `.mobile-automator/<x>`.

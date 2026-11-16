@@ -221,6 +221,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a step's `needs_agent`, never the `executor` block, `judge.version`,
   screenshot paths or the similarity score. No CLI behaviour changes.
   Refs #283
+- **`alert_present` and `alert_text` stay agent-judged, now on captured
+  evidence** (replay PRD #271, slice R5a). Element lists captured with a
+  dialog on screen — a Flutter `AlertDialog` on Android (both engines) and
+  iOS, a native Android `AlertDialog` (both engines) and an iOS system alert
+  — are checked in under `tests/fixtures/device/dialog-probe/`. Only the
+  native iOS alert is listed as a dialog (an `Alert` element); a Flutter
+  dialog leaves just its localized "Dismiss" barrier, and a native Android
+  dialog is identified only by resource-ids, which the element model drops by
+  design. A test pins what each capture carries, so a future engine that
+  starts reporting dialogs fails it. The split stays 18 mechanical, 1
+  reference screenshot, 8 agent-judged. No CLI behaviour changes.
+  Refs #276
 
 ---
 

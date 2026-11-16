@@ -19,7 +19,12 @@
 // `element_state`, whose per-attribute state inspection is not represented in
 // the agnostic element model (no enabled/focused/checked fields survive
 // normalization), and `alert_present` / `alert_text`, for which the element
-// list carries no platform-agnostic signal that a dialog is up. Three types
+// list carries no platform-agnostic signal that a dialog is up: only a native
+// iOS alert is typed as one; a Flutter dialog leaves just its localized
+// "Dismiss" barrier, and a native Android dialog is identified only by
+// resource-ids, which normalization drops. The captures behind that are
+// tests/fixtures/device/dialog-probe/, pinned by
+// tests/unit/assertion/dialog-probe.test.js. Three types
 // were promoted from Tier 2 by #276, each decided over what the element list
 // does carry, and each narrower than a screenshot judgment would be:
 //   element_fully_visible   — the bounds lie inside the screen (not clipped by
