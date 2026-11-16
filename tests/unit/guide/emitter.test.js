@@ -81,6 +81,14 @@ describe('guide/emitter', () => {
       }
     });
 
+    // `mauto run` is where execution starts (#284); a verb missing from the
+    // map is undiscoverable by an agent that reads only the bootstrap.
+    it('lists the unattended runner with its three outcome exit codes', () => {
+      const line = emitBootstrap().split('\n').find((l) => l.startsWith('- `mauto run` — '));
+      expect(line).toBeDefined();
+      expect(line).toMatch(/exit 0 passed, 6 test_failed, 7 incomplete/);
+    });
+
     it('states the invariants', () => {
       const out = emitBootstrap().toLowerCase();
       expect(out).toContain('mauto guide');

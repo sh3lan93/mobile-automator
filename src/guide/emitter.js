@@ -111,6 +111,7 @@ function emitBootstrap() {
     ['screenshot', 'save a screenshot to a path'],
     ['assert', 'evaluate an assertion against the current screen'],
     ['validate', 'validate a scenario file against the scenario schema'],
+    ['run', 'replay a scenario unattended and finalize its result (exit 0 passed, 6 test_failed, 7 incomplete)'],
     ['result', 'record step results and finalize a run'],
     ['setup', 'scaffold the workspace and write a config'],
     ['config', 'get/set values in the workspace config'],

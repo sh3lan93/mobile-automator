@@ -12,6 +12,8 @@ Every assertion object requires `id`, `after_step` (the step `id` it runs after)
 
 Not every assertion is decided by the CLI. 18 of the 27 assertion types are evaluated deterministically by `mauto assert` over the element list. 1 is compared against a reference screenshot: `mauto assert` decides `screenshot_match` with a pixel diff against a stored baseline image (see [screenshot_match](#screenshot_match)). The other 8 return `needs_agent` with `pass: null`: the host agent judges them (often from a screenshot) and records the verdict with `mauto result add-assertion`. An agent-judged pass is only as reliable as the agent that judged it.
 
+`mauto run <scenario>` applies the same split to a whole scenario in one invocation: it decides the mechanical types and `screenshot_match` itself and leaves the agent-judged types `needs_agent`, which ends the run `incomplete` (exit code `7`) until an agent records those verdicts. A scenario that uses only mechanical types, and `screenshot_match` with recorded baselines, replays to a verdict with no agent, which is what a [CI job](../faq.md#how-do-i-integrate-with-cicd) needs.
+
 `element_state` is agent-judged because the element model drops enabled, focused and checked state, so the CLI cannot decide it mechanically. `alert_present` and `alert_text` are agent-judged because the element list carries no platform-agnostic sign that a dialog is up.
 
 Three mechanical types read the element list more narrowly than a screenshot judgment would: `element_fully_visible` checks the screen edges only, `screen_title` checks the top quarter of the screen, and `permission_dialog_shown` looks for the system dialog's buttons. Their sections below give the exact rule.

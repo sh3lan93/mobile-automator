@@ -20,11 +20,33 @@ With any other agent, have it read the guide and drive the device through `mauto
 
 ```bash
 mauto guide execute
-# the agent then selects a scenario and device, runs it step-by-step,
-# and writes a detailed result report
+# the agent then selects a scenario and device, replays it with `mauto run`,
+# judges whatever the run left for an agent, and reports the result
 ```
 
 Results are saved to: `.mobile-automator/results/run_YYYYMMDD_HHMMSS.json`
+
+---
+
+## Unattended replay with `mauto run`
+
+Execution starts with one command. The agent runs it first, and you can run it yourself (or from CI) with no agent at all:
+
+```bash
+mauto run .mobile-automator/scenarios/login_flow.json
+```
+
+`mauto run` performs the precondition device actions, every step, and every assertion the CLI can decide, then writes the finalized result file. What happens next depends on the outcome:
+
+| Outcome | Exit code | What it means | What happens next |
+|---------|-----------|---------------|-------------------|
+| `passed` | `0` | Every step ran and every assertion passed | Nothing; the result file is final |
+| `test_failed` | `6` | A step or an assertion failed | The agent reports the failure from the result; it does not retry or re-judge |
+| `incomplete` | `7` | Nothing failed, but something needs an agent: an agent-judged assertion, a `screenshot_match` with no baseline yet, or a step the runner cannot perform | The agent judges what is pending, records each verdict with `mauto result add-assertion`, and finalizes again |
+
+Any other failure is a tool, input or device error, not a verdict about your app. A scenario that contains an unsupported action is refused before any device work; the agent replays that one step by step instead.
+
+The phases described in the rest of this guide are what the agent does when it replays a scenario step by step: for the work an `incomplete` run leaves to it, or for a scenario `mauto run` refuses. For the flags and the returned data see the [CLI verbs reference](../reference/cli-verbs.md); for running in CI see the [FAQ](../faq.md#how-do-i-integrate-with-cicd).
 
 ---
 

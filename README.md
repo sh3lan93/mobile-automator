@@ -83,6 +83,7 @@ That's it. Scenarios land in `.mobile-automator/scenarios/`, results in `.mobile
 
 - **The agent (brain)** resolves targets ("the Login button"), judges visual assertions, and assembles scenarios. It reads workflow guidance on demand with `mauto guide <topic>`.
 - **`mauto` (hands)** performs deterministic, scriptable actions and mechanical assertions, driving the device via mobile-mcp. Every verb emits a uniform JSON envelope (`{ok, data, error, hint}`); add `--human` for readable output.
+- **Unattended replay** needs no agent: `mauto run <scenario>` replays a saved scenario in one command and exits `0` (passed), `6` (test failed) or `7` (incomplete: something still needs an agent's judgment); `--junit <path>` writes a JUnit report for CI. See the [CI recipe](https://sh3lan93.github.io/mobile-automator/faq/#how-do-i-integrate-with-cicd).
 
 Targets are always **visible text + semantic role + coordinates** — never brittle resource-ids — which is what makes scenarios portable across Android and iOS.
 
@@ -149,6 +150,7 @@ Most low-level verbs are called **by the agent**, not by you. The ones you'll ru
 | `mauto memory add <text> --kind <app-knowledge\|preferences>` | Record a durable agent-learned app fact or user preference (`[asserted]`, de-duped) |
 | `mauto memory forget --kind <k> --match <substr>` | Remove agent-authored memory entries matching a substring (the correction path) |
 | `mauto validate <file> [--strict]` | Validate a scenario JSON against the schema; warns on actions that cannot replay and on broken step/variable references (`--strict` fails) |
+| `mauto run <scenario> [--junit <path>] [--update-references]` | Replay a scenario unattended and finalize its result; exits `0` passed, `6` test failed, `7` incomplete |
 | `mauto config get\|set <key> [value]` | Read / update workspace config |
 | **Agent-driven verbs** | `elements`, `tap`, `type`, `swipe`, `press`, `screenshot`, `assert`, `result`, `schema` |
 

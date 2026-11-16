@@ -96,11 +96,13 @@ The agent replays the scenario and:
 1. Lists available scenarios
 2. Confirms device connection
 3. Installs a named artifact if you gave one; otherwise builds and installs (platform-aware) or asks you to install the app yourself (platform-agnostic)
-4. Executes the scenario step by step
+4. Replays the scenario with `mauto run <scenario>`, then judges any assertion the CLI could not decide
 5. Captures observations (flakiness, regressions, state context)
 6. Generates a detailed result report
 
 Results are saved to `.mobile-automator/results/<run_id>.json`.
+
+You can also replay a saved scenario yourself, with no agent: `mauto run .mobile-automator/scenarios/<scenario>.json` exits `0` when it passed, `6` when the test failed, and `7` when an assertion still needs an agent's judgment. See the [Execute guide](../guides/execute.md#unattended-replay-with-mauto-run).
 
 ## Step 6: Review Results
 

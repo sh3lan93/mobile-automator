@@ -13,7 +13,7 @@ agent (brain) → mauto verbs → mobile-mcp engine → device
 ```
 
 - The **agent** decides *what* to do: it resolves "the Login button" to a concrete element, judges visual assertions, assembles scenarios, and reads guidance via `mauto guide <topic>`.
-- **`mauto`** does the deterministic work: each verb performs one mechanical action or assertion and emits the uniform JSON envelope `{ok,data,error,hint,schema_version}`.
+- **`mauto`** does the deterministic work: each verb performs one mechanical action or assertion and emits the uniform JSON envelope `{ok,data,error,hint,schema_version}`. Replaying a saved scenario is deterministic too, so `mauto run <scenario>` does it in one invocation, with no agent: every step and every assertion the CLI can decide. Only what needs judgment is left for the agent.
 - **mobile-mcp** is the internal automation engine that `mauto` wraps. The agent never calls `mobile_*` tools directly — `mauto` is the only surface the agent uses, and it translates verbs into mobile-mcp calls behind a single persistent session daemon.
 
 ## System Components
@@ -33,7 +33,7 @@ Any AI agent (Claude Code, Cursor, Gemini CLI, Copilot, and more) drives the wor
 The deterministic surface the agent drives. Every verb emits `{ok,data,error,hint,schema_version}`; `--human` is an opt-in readable flag.
 
 - **Device actions:** `elements`, `tap`, `type <text>`, `swipe`, `press <button>`, `screenshot <path>`, `long-press`, `double-tap`, `launch <appId>`, `terminate <appId>`, `install <path>`, `uninstall <appId>`, `open-url <url>`, `orientation <portrait|landscape>`
-- **Author & verify:** `validate <file>`, `assert <type>`, `result add-step`, `result finalize`
+- **Author & verify:** `validate <file>`, `run <scenario>` (unattended replay), `assert <type>`, `result add-step`, `result add-assertion`, `result finalize`
 - **Workspace:** `setup`, `config get <key>`, `config set <key> <value>`
 - **Reasoning:** `guide <topic>`, `bootstrap`, `schema <name>`
 - **Agent integration:** `init --agent <host>`, `mcp` (MCP prompts server)
@@ -69,10 +69,12 @@ Saved to .mobile-automator/scenarios/
         ↓
 agent pulls reasoning: mauto guide execute
         ↓
-For each step:
-  - agent drives the action via a mauto verb (→ mobile-mcp → device)
-  - agent judges the assertion (mauto assert for mechanical checks)
-  - agent records the step via mauto result add-step
+mauto run <scenario> (no agent needed for this part):
+  - performs every step (→ mobile-mcp → device)
+  - decides the mechanical and reference-screenshot assertions
+  - finalizes the result → .mobile-automator/results/
+        ↓   only when the run ends incomplete
+agent judges the pending assertions (mauto result add-assertion)
         ↓
 mauto result finalize → .mobile-automator/results/
 ```
@@ -215,13 +217,14 @@ Here's exactly what happens when you generate and execute a login test:
 
 5. Execution Phase:
    - Agent pulls reasoning: mauto guide execute
-   - For each step (agent drives verbs):
-     * mauto elements / screenshot → mobile-mcp → device (read state)
-     * mauto tap / type / swipe → mobile-mcp → device (act)
-     * mauto assert (mechanical, or screenshot_match against a reference screenshot)
-       or agent vision judgment (other visual types)
-     * mauto result add-step (record)
-   - mauto result finalize
+   - mauto run <scenario> replays it unattended:
+     * every step → mobile-mcp → device
+     * every assertion the CLI can decide (mechanical, or screenshot_match
+       against a reference screenshot)
+     * the finalized result file
+   - Only if the run ends incomplete: the agent judges the pending
+     assertions (agent vision judgment), records each with
+     mauto result add-assertion, then mauto result finalize
 
 6. Result JSON:
    {

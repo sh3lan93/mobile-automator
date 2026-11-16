@@ -183,7 +183,7 @@ Switching clears the pinned device (the engines name Android emulators different
 
 ### Replay timings (optional)
 
-The in-progress `mauto run` replayer reads an optional `run` block from `config.json`. Every key is optional, none is written by `mauto setup`, and an absent key keeps its default:
+The `mauto run` replayer reads an optional `run` block from `config.json`. Every key is optional, none is written by `mauto setup`, and an absent key keeps its default:
 
 | Key | Default | What it sets |
 |---|---|---|
