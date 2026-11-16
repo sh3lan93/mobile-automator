@@ -23,6 +23,8 @@ Agnostic mode maps OS gestures to four semantic actions resolved to per-platform
 
 Two catalogs are the source of truth for whether a capability reaches the device / the result file: `src/device/action-catalog.js` and `src/result/capability-catalog.js`; lint tests in `tests/lint/` fail the build when a capability loses its CLI reach. Details of every guard live in `tests/lint/CLAUDE.md` (loads when you work there).
 
+`mauto run` (`src/run/`) replays a scenario in-process through the same `DeviceBridge` and `ResultStore` as the one-shot verbs; `tests/lint/run-action-coverage.test.js` fails when a catalog action that can execute has no runner handler.
+
 When you add an action or a result field, add its catalog entry in the same change. Do not hand-restate these counts in prose; derive them.
 
 ## Placeholder contract
@@ -35,7 +37,7 @@ These were locked by PRD #69 and outlive it. Any change that breaks one is wrong
 
 - **Platform-agnostic selectors.** Never use `resource-id` or OS-specific element IDs.
 - **Uniform envelope.** Every verb emits `{ok,data,error,hint,schema_version}`; `--human` is opt-in only.
-- **One-shot verbs only.** No interactive `run` co-routine.
+- **One-shot verbs only.** Every verb, including batch `mauto run <scenario>`, starts, finishes and exits in a single invocation with one envelope. There is no interactive co-routine: no verb waits for the agent mid-run, and the agent never drives a step *through* `run`; it picks up where `run` stopped (`incomplete`) with the ordinary one-shot verbs.
 - **Reasoning is pulled, never ambient.** Delivered via `mauto guide <topic>` at explicit invocation, never an always-loaded skill.
 - **The device is driven only through `mauto` verbs** (which wrap mobile-mcp). Never call mobile-mcp tools directly.
 - **Backwards compatibility.** Preserve the `.mobile-automator/` workspace layout, scenario schema 2.0/2.1, and the result schema — existing data must keep working.
@@ -50,7 +52,7 @@ There is also a **three-layer model** worth keeping straight: (1) the CLI contra
 | `sample-app` | PRD [#44](https://github.com/sh3lan93/mobile-automator/issues/44), slices #45–#49 | `sample-app/<issue-number>-<short-slug>` | active — slices 4–5 open |
 | `cli` | PRD [#69](https://github.com/sh3lan93/mobile-automator/issues/69), slices #70–#78 | — | **complete** (all 23 closed) |
 | `interactive-recording` | — | — | **dead** — recorder excised in v0.20.0 (PR #110) |
-| `replay` | PRD [#271](https://github.com/sh3lan93/mobile-automator/issues/271), slices #272–#284 + follow-ups; plan `docs/plans/2026-10-27-replay-plan.md` | `replay/<issue-number>-<short-slug>` | active — S0a–S0c, R1 done; R2 in review; R3–G open |
+| `replay` | PRD [#271](https://github.com/sh3lan93/mobile-automator/issues/271), slices #272–#284 + follow-ups; plan `docs/plans/2026-10-27-replay-plan.md` | `replay/<issue-number>-<short-slug>` | **graduated** in v0.40.0 (#284): `mauto run` is ungated; follow-ups stay on Project #4 |
 
 **Picking the next issue in a milestone.** Milestones with a pick order (today: `replay`) track it in [Project #4](https://github.com/users/sh3lan93/projects/4). Take the milestone issue with Status `Ready`, no open "blocked by" issue (GitHub's native issue dependencies), and the lowest `Order`, and set it to `In progress` before step 1 below. When it merges, move to `Ready` every issue whose blockers are now all closed. Priority (`P0`/`P1`/`P2`) follows `Order`; never pick an `In progress` or `In review` item. The rule is also in the milestone's description.
 
