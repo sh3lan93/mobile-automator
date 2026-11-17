@@ -100,18 +100,13 @@ describe('E2E harness — scenarios run through the shipped `mauto run`', () => 
     expect(runnerSrc).toMatch(/\.run\(\s*\[\s*'run'\s*,/);
   });
 
-  test('the call accepts test_failed and incomplete, and does not pass the retired replay gate', () => {
+  // That the call passes no opt-in gate variable is tests/lint/retired-gates
+  // .test.js's rule, which scans the harness with everything else.
+  test('the call accepts test_failed and incomplete', () => {
     const call = (runnerSrc.match(RUN_CALL) || [''])[0];
     const kinds = (call.match(/acceptKinds\s*:\s*\[([^\]]*)\]/) || ['', ''])[1];
     expect(kinds).toMatch(/'test_failed'/);
     expect(kinds).toMatch(/'incomplete'/);
-    // The replay gate graduated (#284): the verb needs no opt-in variable.
-    // The name is assembled so this file does not itself trip
-    // tests/lint/no-replay-gate.test.js, which scans tests/ for the literal.
-    const retiredGate = ['MAUTO', 'REPLAY'].join('_');
-    expect(call).not.toBe('');
-    expect(call).not.toContain(retiredGate);
-    expect(runnerSrc).not.toContain(retiredGate);
   });
 
   // #278: the run-id format is the install's, shared with `mauto run`.

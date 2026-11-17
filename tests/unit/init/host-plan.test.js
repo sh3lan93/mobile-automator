@@ -66,9 +66,11 @@ describe('HOSTS / planHost', () => {
     expect(plan.mcp).toBe(path.join('.cursor', 'mcp.json'));
   });
 
-  // #284: every execute surface points at the runner, and none of them carries
-  // its contract (flags, exit codes) — that lives in the guide.
-  test('every execute surface says the guide starts with `mauto run`, with no flags or exit codes', () => {
+  // #284: every execute surface points at the runner, and the pointer line
+  // init writes restates none of its contract (flags, exit codes) — that lives
+  // in the guide and in `mauto bootstrap`. (The Cursor rule also embeds the
+  // bootstrap verb map, which is CLI output, derived from EXIT in the emitter.)
+  test('every execute pointer line says the guide starts with `mauto run`, with no flags or exit codes', () => {
     const surfaces = [
       planHost('cursor').files[0].content.split('\n').find((l) => l.includes('(generate|execute|setup)')),
       ...HOSTS.flatMap((agent) => planHost(agent).files)

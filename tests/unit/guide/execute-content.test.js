@@ -5,6 +5,8 @@ const os = require('os');
 const path = require('path');
 
 const { emitGuide } = require('../../../src/guide/emitter');
+const { EXIT } = require('../../../src/output/envelope');
+const { RUN_DATA_KEYS } = require('../../../src/run/summary');
 
 function tmpProject(config) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-exec-'));
@@ -238,11 +240,13 @@ describe('execute guide — starts with mauto run', () => {
       it('branches on the three outcomes by their real names and exit codes', () => {
         const start = out.indexOf('### 2. Replay with mauto run');
         const section = out.slice(start, out.indexOf('### 3. Handle needs_agent'));
-        expect(section).toMatch(/exit(?: code)? `0`/);
-        expect(section).toMatch(/`test_failed`[^\n]*`6`/);
-        expect(section).toMatch(/`incomplete`[^\n]*`7`/);
-        expect(section).toContain('failed_step');
-        expect(section).toContain('failures');
+        // The codes and the data keys are the runner's own (EXIT,
+        // RUN_DATA_KEYS), never restated here: a renumbered exit or a new
+        // key turns the guide red instead of leaving it stale.
+        expect(section).toContain(`exit code \`${EXIT.OK}\``);
+        expect(section).toMatch(new RegExp(`\`test_failed\`[^\\n]*\`${EXIT.TEST_FAILED}\``));
+        expect(section).toMatch(new RegExp(`\`incomplete\`[^\\n]*\`${EXIT.INCOMPLETE}\``));
+        expect(section).toContain(RUN_DATA_KEYS.map((k) => `\`${k}\``).join(', '));
       });
 
       it('completes an incomplete run with the hinted commands', () => {

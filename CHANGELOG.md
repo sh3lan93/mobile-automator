@@ -21,7 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The entries below were written slice by slice while the verb was gated;
   wherever one says "hidden" or "gated by `MAUTO_REPLAY=1`", that condition no
   longer applies. The variable is now ignored, and
-  `tests/lint/no-replay-gate.test.js` keeps it out of the code and the docs.
+  `tests/lint/retired-gates.test.js` keeps it out of the code, the workflows
+  and the docs.
   Refs #284
 - **The execute guides start with `mauto run`.** `mauto guide execute` (both
   modes) now tells the agent to replay with `mauto run` first, then to finish
