@@ -438,7 +438,7 @@ An execution that encountered an unexpected error:
 
 ## Completing an incomplete run
 
-A run is `incomplete` when nothing failed but at least one assertion is `needs_agent`. `mauto result finalize` writes it, exits `7`, and its `hint` lists the commands that complete it. For each pending assertion, record the verdict with `--judge agent`; the verdict replaces the pending entry in place:
+A run is `incomplete` when nothing failed but at least one assertion is `needs_agent`, or a step has `needs_agent: true`. `mauto result finalize` writes it, exits `7`, and its `hint` lists the commands that complete it. For each pending assertion, record the verdict with `--judge agent`; the verdict replaces the pending entry in place:
 
 ```bash
 mauto result add-assertion --run-id run_20261111_101500 --step-id open_profile \
@@ -452,7 +452,13 @@ Then finalize again against the scenario the run executed. The hint names it by 
 mauto result finalize --run-id run_20261111_101500 --scenario /home/me/app/.mobile-automator/scenarios/profile_flow.json
 ```
 
-With every pending assertion decided, the status is derived again (`passed`, or `failed` if a verdict was `false`) and the original `executor` is kept. Recording `--pass pending` for an assertion that is already decided fails with `invalid_input`: a decided verdict never goes back to pending.
+A step `mauto run` could not perform (`needs_agent: true`, named on a `Pending step <step_id>` hint line) stopped the run there, so the steps after it did not run. Do what the hint line asks, then record the step; the record replaces the pending one in place. Perform each later step with the one-shot verbs and record it, and its assertions, the same way, then finalize again:
+
+```bash
+mauto result add-step --run-id run_20261111_101500 --step-id install_build --status pass
+```
+
+With every pending step and assertion decided, the status is derived again (`passed`, or `failed` if a verdict was `false`) and the original `executor` is kept. Recording `--pass pending` for an assertion that is already decided fails with `invalid_input`: a decided verdict never goes back to pending.
 
 ## Result File Locations & Naming
 
