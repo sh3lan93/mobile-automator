@@ -2027,13 +2027,12 @@ function buildProgram(deps = {}) {
   const withBridge = (explicitDevice, fn) =>
     connectBridge(resolveVerbDevice(explicitDevice), fn);
 
-  // `mauto run <scenario>` (replay R1, #278). Registered unconditionally but
-  // hidden, and refused unless MAUTO_REPLAY=1, until the graduation slice.
-  // prepareRun (src/run/prepare.js) makes every refusal before connectBridge,
-  // so none touches a device.
+  // `mauto run <scenario>` (replay R1, #278; graduated in #284). prepareRun
+  // (src/run/prepare.js) makes every refusal before connectBridge, so none
+  // touches a device.
   program
-    .command('run <scenario>', { hidden: true })
-    .description('Replay a scenario unattended and finalize its result (in progress; needs MAUTO_REPLAY=1)')
+    .command('run <scenario>')
+    .description('Replay a scenario unattended and finalize its result')
     .option('--device <id>', 'target device id')
     .option('--run-id <id>', 'run identifier (run_YYYYMMDD_HHMMSS); minted when omitted')
     .option('--timeout-ms <ms>', 'cap, in milliseconds, on how long any one step waits (a positive integer)')

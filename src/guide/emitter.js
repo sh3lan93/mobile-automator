@@ -18,6 +18,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { interpolate } = require('./placeholders');
+const { EXIT } = require('../output/envelope');
 
 // Topics with REAL ported prose live as markdown content files (carrying
 // `{{placeholder}}` tokens lifted from the Gemini SKILLs). They are emitted by
@@ -111,6 +112,7 @@ function emitBootstrap() {
     ['screenshot', 'save a screenshot to a path'],
     ['assert', 'evaluate an assertion against the current screen'],
     ['validate', 'validate a scenario file against the scenario schema'],
+    ['run', `replay a scenario unattended and finalize its result (exit ${EXIT.OK} passed, ${EXIT.TEST_FAILED} test_failed, ${EXIT.INCOMPLETE} incomplete)`],
     ['result', 'record step results and finalize a run'],
     ['setup', 'scaffold the workspace and write a config'],
     ['config', 'get/set values in the workspace config'],

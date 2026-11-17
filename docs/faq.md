@@ -332,7 +332,9 @@ The agent then:
 1. **Selects a scenario** — from `.mobile-automator/scenarios/`
 2. **Confirms the device** — uses the pinned/visible device (`mauto devices`)
 3. **Confirms app installation** — installs a named artifact if you gave one; otherwise builds it in platform-aware projects, or asks you to install it yourself in platform-agnostic projects
-4. **Runs the test** — executes all steps and assertions
+4. **Runs the test** — replays the scenario with `mauto run`, then judges any assertion the CLI could not decide
+
+No agent at hand? Run `mauto run .mobile-automator/scenarios/<scenario>.json` yourself; see [How do I integrate with CI/CD?](#how-do-i-integrate-with-cicd) for the exit codes.
 
 Results saved to: `.mobile-automator/results/<run_id>.json`
 
@@ -495,77 +497,117 @@ Parallel execution is on the roadmap.
 
 ### How do I integrate with CI/CD?
 
-**Answer:** mobile-automator works in CI/CD pipelines. The agent drives `mauto` verbs directly via `mauto bootstrap` + `mauto guide <topic>`, or you script the verbs yourself:
+**Answer:** Run the scenario with `mauto run`. It replays a scenario unattended (no agent in the loop), decides every assertion the CLI can decide, writes the result file, and exits with the outcome, so the run's own exit code passes or fails the job:
 
 ```bash
 #!/bin/bash
-# Install mauto (first time only)
+set -euo pipefail
+
+SCENARIO=.mobile-automator/scenarios/login_flow.json
+
+# Install mauto
 npm i -g mobile-automator
 
-# Wire into the project + scaffold the workspace (first time only)
-mauto init --agent agents
-mauto setup
-
-# Confirm a device is visible
+# Confirm a device is visible (boot an emulator/simulator and install your app first)
 mauto devices
 
-# Validate a scenario before running it
-mauto validate --strict .mobile-automator/scenarios/login_flow.json
+# Refuse a scenario that cannot replay unattended, before any device work
+mauto validate --strict "$SCENARIO"
 
-# One run id for this job; result files are named after it
-RUN_ID="run_$(date -u +%Y%m%d_%H%M%S)"
+# --junit does not create the report directory
+mkdir -p reports
 
-# (Your agent replays the scenario via mauto guide execute + verbs,
-#  recording the run under $RUN_ID.)
-
-# Export the run as JUnit XML for the CI test reporter
-mauto result export --run-id "$RUN_ID" --format junit --out reports/mauto-junit.xml
+# Replay the scenario; the exit code is the verdict
+mauto run "$SCENARIO" --junit reports/login_flow.xml
 ```
 
+The recipe assumes the `.mobile-automator/` workspace (`config.json` and `scenarios/`) is committed to your repository, so CI needs neither `mauto init` nor `mauto setup`. `mauto run` fails with an `environment` error when it finds no workspace.
+
+**Exit codes of `mauto run`:**
+
+| Exit code | Meaning | In CI |
+|-----------|---------|-------|
+| `0` | `passed`: every step ran and every assertion passed | Job passes |
+| `6` | `test_failed`: a step or an assertion failed; the app under test is the problem | Job fails |
+| `7` | `incomplete`: nothing failed, but an assertion still needs an agent's verdict, or a `screenshot_match` has no baseline yet | Job fails; there is no agent in CI to finish the run, so `7` is not a pass |
+| anything else | A tool, device, input or environment error, not a verdict about your app (see [error kinds and exit codes](reference/cli-verbs.md#error-kinds-and-exit-codes)) | Job fails |
+
+No separate status parsing is needed: the result file and the JUnit report are written for exit `0`, `6` and `7` alike, and the JSON envelope on stdout carries the same summary (`data.status`, `data.failures`, `data.pending`).
+
+**Keeping a CI scenario deterministic:** a scenario whose assertions are all [mechanical types](reference/assertions.md#mechanical-vs-agent-judged-assertions) never ends `incomplete`. Agent-judged types (for example `visual_state` or `toast_visible`) are left `needs_agent`, which ends the run `incomplete`; keep them out of CI scenarios, or run those scenarios through your agent instead. `screenshot_match` is deterministic once its baseline exists: record it locally with `mauto run <scenario> --update-references` when the screen is known to be correct, and commit the images under `.mobile-automator/screenshots/reference/`. The `.gitignore` that `mauto setup` writes ignores `screenshots/`, so add them with `git add -f`.
+
 **CI/CD tips:**
-- Cache `node_modules` so `npm install` is fast on subsequent runs
-- Connect a device or boot an emulator/simulator in the CI environment
-- Run `mauto` verbs with `--human` off (the default JSON envelope is machine-readable)
-- Point your CI's JUnit reporter at the exported XML; `result export` exits 0 whatever the run's outcome, so the reporter (or the run's own verbs) decides whether the job fails
-- Archive result files as CI artifacts
+- Boot an emulator/simulator (or connect a device) and install your app before `mauto run`
+- Run one `mauto run` per scenario, each with its own `--junit` file
+- Point your CI's JUnit reporter at the report; an assertion left `needs_agent` appears there as a `<skipped>` test case
+- Archive `.mobile-automator/results/` and the reports as CI artifacts, also when the run fails
+- Leave `--human` off: the default JSON envelope is machine-readable
+- To re-render a JUnit report from result files that already exist, use `mauto result export --run-id <id> --format junit --out <path>`
 
 ### Can I use mobile-automator with GitHub Actions?
 
-**Answer:** Yes! Example workflow:
+**Answer:** Yes. This Android job boots an emulator, installs your app, replays one scenario with `mauto run`, and uploads the reports whether the run passed or not. Replace the build step and the APK path with your own:
 
 ```yaml
 name: Mobile Tests
 on: [push]
 
 jobs:
-  test:
-    runs-on: macos-latest  # For iOS simulator
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
 
       - name: Install mauto
         run: npm i -g mobile-automator
 
-      - name: Wire into project & scaffold workspace
+      # PLACEHOLDER: build (or download) your own app here.
+      - name: Build the app
+        run: ./gradlew assembleDebug
+
+      - name: Create the report directory
+        run: mkdir -p reports
+
+      # Hardware acceleration for the emulator on GitHub-hosted Linux runners.
+      - name: Enable KVM
         run: |
-          mauto init --agent agents
-          mauto setup
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
 
-      - name: Check device is visible
-        run: mauto devices
-
-      - name: Validate scenarios
-        run: mauto validate --strict .mobile-automator/scenarios/login_flow.json
-
-      - name: Upload Results
-        uses: actions/upload-artifact@v3
+      - name: Run the scenario on an Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
         with:
-          name: test-results
-          path: .mobile-automator/results/
+          api-level: 36
+          arch: x86_64
+          target: default
+          disable-animations: true
+          # Each line runs as its own shell command; a non-zero exit fails the step.
+          script: |
+            adb install app/build/outputs/apk/debug/app-debug.apk
+            mauto validate --strict .mobile-automator/scenarios/login_flow.json
+            mauto run .mobile-automator/scenarios/login_flow.json --junit reports/login_flow.xml
+
+      - name: Upload reports and results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mauto-results
+          path: |
+            reports/
+            .mobile-automator/results/
+          if-no-files-found: warn
 ```
+
+The job fails when `mauto run` exits non-zero (`6` for a failed test, `7` for an incomplete run; see the exit codes above), and `if: always()` keeps the upload step running in that case, which is when you need the report.
+
+**iOS:** use a `macos-latest` runner instead of the emulator step: build your `.app` for the simulator, boot one with `xcrun simctl boot "<simulator name>"`, install the app with `xcrun simctl install booted <path to .app>`, then run the same `mauto validate --strict` and `mauto run … --junit` commands as plain `run:` steps.
 
 ---
 

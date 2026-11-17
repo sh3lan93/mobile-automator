@@ -62,20 +62,61 @@ Record each observation with `mauto result add-step --observation <type>:<messag
 - **Fresh install.** If the scenario's `preconditions.app_state` is `fresh_install` (from the scenario you read above), uninstall the app first — `mauto uninstall` with the app package ({{app_package}}) — and only then install, so the run starts with no app data.
 - State which path you took — installed a supplied artifact, or built — before continuing.
 
-### 2. Compare Environment
+### Compare Environment
 
 - Read the `metadata` to compare the recording environment against the current execution environment. Note any differences (different device, API level, environment).
 
-### 3. Verify Preconditions
+### Verify Preconditions
 
-- **Note:** an `app_state` of `fresh_install` is handled in pre-flight (uninstall before the install, see above), and precondition `device_actions` run per the table in step 4.
+- **Note:** an `app_state` of `fresh_install` is handled in pre-flight (uninstall before the install, see above), and precondition `device_actions` are run by `mauto run` itself (section 2), or per the table in section 4 on a manual replay.
 - Review the scenario's `preconditions` array to understand the expected starting state.
 - If any preconditions are state-based (e.g., `"user_logged_out"`, `"no_network"`, `"dark_mode_enabled"`), verify or configure them now:
   - For app-state preconditions: launch the app and check/configure the state.
   - For device preconditions: configure device settings (e.g., airplane mode for `"no_network"`).
 - If a precondition cannot be verified or met, report it and ask the user how to proceed.
 
-### 4. Step-by-Step Replay
+### 2. Replay with mauto run
+
+Replay the scenario with the unattended runner before anything else:
+
+```bash
+mauto run <scenario path> --run-id $MAUTO_RUN_ID
+```
+
+Add `--junit <path>` when a CI job needs a JUnit XML report of the run (the file's directory must already exist). It is one invocation and one envelope: the runner performs the precondition `device_actions`, every step, and every assertion the CLI can decide, captures the evidence, and finalizes the result file itself. Nothing waits for you mid-run, and you never drive a step through it.
+
+If pre-flight reported an `unsupported_action` warning, skip this section: `mauto run` refuses such a scenario with `invalid_input` before any device work. Replay it by hand instead (section 4).
+
+`data` carries the same keys whatever the outcome: `run_id`, `scenario_id`, `status`, `result_path`, `duration_seconds`, `steps`, `assertions`, `failed_step`, `failures`, `pending`, `junit_path`, `executor`. Branch on the outcome:
+
+- **Passed** — `ok: true`, exit code `0`, `data.status` is `passed`. Every step ran and the CLI decided every assertion. The result file is already finalized at `data.result_path`, so there is nothing left to record or finalize: present it (section 6 describes what it holds).
+- **`test_failed`** — `ok: false` with `error.kind: "test_failed"` and exit code `6`; `data.status` is `failed` or `error`. That is the test result, not a tool error. Report the failure from `data`: `failed_step` is the first step that failed (`null` when only an assertion failed), and `failures` lists each failed step and assertion with its message. The runner stops at a failed step, so later steps did not run; the failed step's screenshot is recorded on its `steps_executed` entry in the result file at `data.result_path`. Do not re-judge a verdict the CLI decided, and do not retry the run or replay it by hand to get around the failure. The result is already finalized: present it.
+- **`incomplete`** — `ok: false` with `error.kind: "incomplete"` and exit code `7`; `data.status` is `incomplete`. Nothing failed, but something is left for an agent to decide. Continue with section 3.
+- **Anything else** is not a verdict about the app. `invalid_input` is a refusal before any device work (a bad flag, an unreadable file, or a scenario that cannot replay unattended): read `error.message` and the `hint`. `device` means no device could be driven: fix what the `hint` names and run again. An `environment` failure that still carries the run's `data` means only the JUnit report could not be written; the run itself is finalized and `data.status` is its outcome.
+
+### 3. Handle needs_agent
+
+An `incomplete` run is waiting on an agent. Its `hint` says for what, and prints the exact commands that complete it.
+
+**Pending assertions.** `data.pending` lists every assertion the CLI could not decide, each as `{assertion_id, step_id, type}`; the result file records them with status `needs_agent`. For each entry:
+
+1. **Find its screenshot.** Open the result file (`data.result_path`) and read the `screenshot` of the `steps_executed` entry with that `step_id`; the runner captures one for every step the scenario marks `checkpoint`. If none was recorded and `step_id` is the last step the run executed, the device is still showing that screen: capture it with `mauto screenshot <path>`. If neither holds, the screen is gone. Do not guess: leave that assertion pending.
+2. **Judge it** from that screenshot, per the Tier 2 list in section 5.
+3. **Record the verdict** with the `mauto result add-assertion` line the hint prints for that id, filling in only the verdict and the reason:
+   `mauto result add-assertion --run-id <run id> --step-id <step_id> --assertion-id <assertion_id> --type <type> --pass <true|false> --judge agent --message "<why>"`.
+   `--assertion-id` is what makes the verdict replace the pending entry in place, and `--message` IS the evidence, so omit neither.
+
+A pending `screenshot_match` is the exception: it is pending because its reference screenshot does not exist yet, and it is never judged by eye. Ask the user whether the screen is correct; if they confirm, record the baselines by running the scenario again under a new run id with `--update-references` added. Otherwise leave it pending.
+
+Then finalize again with the last line of the hint, `mauto result finalize --run-id <run id> --scenario <path>` (the hint prints the scenario's absolute path, so the command works from any directory). The status is derived again from what is now recorded: `passed` (exit code `0`), `failed` if any verdict was `false` (`test_failed`, exit code `6`), or still `incomplete` (exit code `7`) if you left anything pending. Report a run that is still `incomplete` as incomplete, never as passed.
+
+**A pending step.** A hint line `Pending step <step_id>: <what to do>`, with `data.steps.needs_agent` above zero, means the runner reached a step it cannot perform itself (for example an install with no build path, or a condition it cannot evaluate). It stopped there, so no later step ran, and that recorded step keeps this run `incomplete` whatever is added to it afterwards. Do what the line asks, then replay the whole scenario by hand (section 4) under a new run id: export a new `MAUTO_RUN_ID`, perform that step with the ordinary one-shot verbs, and say in your report that the unattended run ended `incomplete` at that step.
+
+### 4. Manual per-step replay
+
+This is the fallback: the per-step recipe an agent follows with the one-shot verbs. Use it only when the runner cannot be used for this scenario (section 2 refused it, or pre-flight reported an `unsupported_action`), or to perform a step the runner left `needs_agent` (section 3). Otherwise the runner has already done all of this.
+
+#### Step-by-Step Replay
 
 Before executing each step, initialize a **session variable map** (an empty object to store captured values).
 
@@ -169,7 +210,7 @@ When executing a `capture_value` action:
 4. Also record it in the result file with `--capture <capture_to>=<extracted_text>` on that step's `mauto result add-step` call — the in-memory session variable map alone never reaches the result file; only the flag does.
 5. Report: "Captured `capture_to` = '<value>'".
 
-### When a step fails, find out whether the app is still alive
+#### When a step fails, find out whether the app is still alive
 
 An action that fails, or an `elements` call that comes back empty, has two very
 different explanations: the UI changed, or the app died. They lead to opposite
@@ -209,7 +250,7 @@ default — a report from last week is not evidence about this step. And a repor
 whose own timestamp is unreadable is counted in `unattributed` rather than
 included; if that count is non-zero, widen `--since` and look yourself.
 
-### When the element list looks wrong, check the engine
+#### When the element list looks wrong, check the engine
 
 If the app is alive but `mauto elements` misses the label of a text field you
 can see on screen, or lists content from a tab that is not showing (common in
@@ -229,6 +270,8 @@ For each assertion in the scenario (evaluated after the referenced step), pick t
 - **Tier 1 — mechanical (the CLI decides).** These are deterministic checks over the on-screen element list (plus captured variables / a previous snapshot / the screen size). Run `mauto elements` to get the current screen, then evaluate the assertion with `mauto assert <type> ...`; the CLI returns a JSON verdict (`{ mechanical: true, pass: true|false, message }`). A passing verdict arrives as a normal `ok: true` envelope. A failing one arrives as `ok: false` with `error.kind: "test_failed"` and exit code `6`, and the verdict (`pass: false`) is still in `data`. That is the test result, not a tool error: do not retry the verb or treat the run as broken. You record that verdict — you do not re-judge it.
 - **Reference screenshot — `screenshot_match` (the CLI decides).** A deterministic pixel comparison against a stored reference screenshot (a baseline); see the reference-screenshot block below. You record its verdict — you do not judge it by eye.
 - **Tier 2 — visual / semantic (the agent decides).** These require judging pixels. `mauto assert <type> ...` reports them as `needs_agent` (with `pass: null`) because the CLI cannot decide them. For these you take a screenshot with `mauto screenshot <path>`, visually analyze it, and report pass/fail yourself with a clear justification of what you observed.
+
+`mauto run` decides the Tier 1 types and the reference-screenshot type itself and records each verdict; after a run you handle only what it left `needs_agent` (section 3). The `mauto assert` instructions below are for a manual replay (section 4).
 
 > One assertion type, `element_state`, names a Tier-1 intent but its per-attribute state inspection is not represented in the element model the CLI reads, so `mauto assert` returns it as `needs_agent` — judge it from the element list / screenshot like a Tier-2 check.
 
@@ -311,7 +354,7 @@ State context:
 
 When asked to run multiple scenarios:
 
-- Execute them sequentially.
+- Execute them sequentially: one `mauto run` per scenario file, each under its own run id.
 - Each scenario's leading `launch_app` restarts the app (`mauto launch <appId>`), so a scenario never inherits the previous one's screen and needs no separate reset. Use `app_state: "fresh_install"` only when app data must be wiped too.
 - If the user says "run all smoke tests", filter scenarios by the `smoke` tag.
 - If the user says "run all", execute every scenario in `.mobile-automator/scenarios/`. List `.mobile-automator/scenarios/` directly: the workspace folder is hidden, and recursive search tools (glob or grep style) skip hidden directories, so they will report it empty.
@@ -321,6 +364,7 @@ When asked to run multiple scenarios:
 
 ### DO
 
+- Prefer `mauto run` (section 2); replay step by step (section 4) only when the runner cannot be used.
 - Follow scenario steps exactly as written.
 - Run `mauto elements` before every interaction.
 - Retry once on suspected timing failures.
@@ -330,6 +374,7 @@ When asked to run multiple scenarios:
 
 ### DON'T
 
+- Re-judge a verdict the CLI decided (a mechanical or reference-screenshot assertion), or replay by hand to get around a `test_failed` run.
 - Deviate from the scenario steps — if something unexpected happens, report it, don't work around it.
 - Modify app source code in {{protected_directories}}.
 - Hardcode coordinates — derive them from `mauto elements`.

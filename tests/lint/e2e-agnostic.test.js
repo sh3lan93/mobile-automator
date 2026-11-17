@@ -100,13 +100,13 @@ describe('E2E harness — scenarios run through the shipped `mauto run`', () => 
     expect(runnerSrc).toMatch(/\.run\(\s*\[\s*'run'\s*,/);
   });
 
-  test('the call accepts test_failed and incomplete, and passes MAUTO_REPLAY in its env', () => {
+  // That the call passes no opt-in gate variable is tests/lint/retired-gates
+  // .test.js's rule, which scans the harness with everything else.
+  test('the call accepts test_failed and incomplete', () => {
     const call = (runnerSrc.match(RUN_CALL) || [''])[0];
     const kinds = (call.match(/acceptKinds\s*:\s*\[([^\]]*)\]/) || ['', ''])[1];
     expect(kinds).toMatch(/'test_failed'/);
     expect(kinds).toMatch(/'incomplete'/);
-    // Inline, so the graduation slice (G) strips exactly one line.
-    expect(call).toMatch(/env\s*:\s*\{\s*MAUTO_REPLAY\s*:\s*'1'\s*\}/);
   });
 
   // #278: the run-id format is the install's, shared with `mauto run`.

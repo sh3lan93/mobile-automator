@@ -5,6 +5,8 @@ const os = require('os');
 const path = require('path');
 
 const { emitGuide } = require('../../../src/guide/emitter');
+const { EXIT } = require('../../../src/output/envelope');
+const { RUN_DATA_KEYS } = require('../../../src/run/summary');
 
 function tmpProject(config) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-exec-'));
@@ -197,4 +199,88 @@ describe('execute guide — hidden workspace', () => {
       });
     });
   }
+});
+
+// Graduation (#284): the guide starts with the unattended runner and falls
+// back to per-step replay; the old recipe stays, demoted, as section 4.
+describe('execute guide — starts with mauto run', () => {
+  const HEADINGS = [
+    '### 1. Pre-flight',
+    '### 2. Replay with mauto run',
+    '### 3. Handle needs_agent',
+    '### 4. Manual per-step replay',
+    '### 5. Validate Assertions (27 types)',
+    '### 6. Generate the Result Report',
+  ];
+  for (const mode of ['platform-aware', 'platform-agnostic']) {
+    describe(mode, () => {
+      const out = emitGuide('execute', { mode });
+
+      it('names mauto run and needs_agent', () => {
+        expect(out).toMatch(/mauto run/);
+        expect(out).toMatch(/needs_agent/);
+      });
+
+      it('carries the numbered sections, in order', () => {
+        const at = HEADINGS.map((h) => out.indexOf(`\n${h}\n`));
+        expect(at.every((i) => i > -1)).toBe(true);
+        expect([...at].sort((a, b) => a - b)).toEqual(at);
+      });
+
+      it('numbers no other section 1-6', () => {
+        const numbered = out.split('\n').filter((l) => /^### [1-6]\. /.test(l));
+        expect(numbered).toEqual(HEADINGS);
+      });
+
+      it('runs with the exported run id and offers the JUnit report', () => {
+        expect(out).toContain('mauto run <scenario path> --run-id $MAUTO_RUN_ID');
+        expect(out).toContain('--junit <path>');
+      });
+
+      it('branches on the three outcomes by their real names and exit codes', () => {
+        const start = out.indexOf('### 2. Replay with mauto run');
+        const section = out.slice(start, out.indexOf('### 3. Handle needs_agent'));
+        // The codes and the data keys are the runner's own (EXIT,
+        // RUN_DATA_KEYS), never restated here: a renumbered exit or a new
+        // key turns the guide red instead of leaving it stale.
+        expect(section).toContain(`exit code \`${EXIT.OK}\``);
+        expect(section).toMatch(new RegExp(`\`test_failed\`[^\\n]*\`${EXIT.TEST_FAILED}\``));
+        expect(section).toMatch(new RegExp(`\`incomplete\`[^\\n]*\`${EXIT.INCOMPLETE}\``));
+        expect(section).toContain(RUN_DATA_KEYS.map((k) => `\`${k}\``).join(', '));
+      });
+
+      it('completes an incomplete run with the hinted commands', () => {
+        const start = out.indexOf('### 3. Handle needs_agent');
+        const section = out.slice(start, out.indexOf('### 4. Manual per-step replay'));
+        expect(section).toContain('data.pending');
+        expect(section).toContain('--judge agent');
+        expect(section).toMatch(/mauto result finalize[^\n]*--scenario/);
+      });
+
+      it('keeps the per-step recipe as the fallback', () => {
+        const section = out.slice(out.indexOf('### 4. Manual per-step replay'), out.indexOf('### 5. Validate Assertions'));
+        expect(section).toContain('mauto tap --at <x,y>');
+        expect(section).toContain('#### When a step fails, find out whether the app is still alive');
+        expect(section).toContain('#### When the element list looks wrong, check the engine');
+      });
+
+      it('prefers the runner and forbids re-judging its verdicts', () => {
+        const boundaries = out.slice(out.indexOf('## Operational Boundaries'));
+        expect(boundaries).toMatch(/Prefer `mauto run`/);
+        expect(boundaries).toMatch(/re-judge/i);
+        expect(out).toMatch(/one `mauto run` per scenario file/i);
+      });
+    });
+  }
+});
+
+describe('execute invariants — start with mauto run', () => {
+  it('points at the runner without flags or exit codes', () => {
+    const body = fs.readFileSync(path.resolve(__dirname, '../../../src/guide/content/execute.invariants.md'), 'utf8');
+    const line = body.split('\n').find((l) => l.includes('mauto run'));
+    expect(line).toBeDefined();
+    expect(line).toContain('`incomplete`');
+    expect(line).not.toMatch(/--[a-z]/);
+    expect(line).not.toMatch(/\bexit(s)? (code )?`?\d/);
+  });
 });

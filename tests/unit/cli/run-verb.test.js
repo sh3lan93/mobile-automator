@@ -1,6 +1,6 @@
 'use strict';
 
-// `mauto run <scenario>` (replay R1, #278) through the real program: the gate,
+// `mauto run <scenario>` (replay R1, #278) through the real program:
 // the pre-device refusals, and a whole run on a scripted fake bridge, asserting
 // on the envelope and on the result file the verb finalizes.
 
@@ -16,7 +16,7 @@ const { readTrace } = require('../../../src/observe/trace');
 const { makeFakeBridge, makeFakeClock, homeElements } = require('../../helpers/fake-bridge');
 
 const RUN_ID = 'run_20261111_093000';
-const ENV_KEYS = ['MAUTO_REPLAY', 'MAUTO_RUN_ID', 'MAUTO_LOG_DIR', 'MAUTO_LOG_LEVEL'];
+const ENV_KEYS = ['MAUTO_RUN_ID', 'MAUTO_LOG_DIR', 'MAUTO_LOG_LEVEL'];
 
 let saved;
 let root;
@@ -82,125 +82,99 @@ async function runCli(args, { bridge = makeFakeBridge({ elements: [homeElements(
 }
 
 describe('mauto run — refusals before any device work', () => {
-  test('refuses with environment (exit 5) when MAUTO_REPLAY is unset, and never connects', async () => {
-    const file = writeScenario(scenario());
-    const { r, factory } = await runCli([file, '--run-id', RUN_ID]);
-    expect(r.exitKind).toBe('environment');
-    expect(r.envelope.error.message).toBe('mauto run is not enabled yet');
-    expect(r.envelope.hint).toMatch(/MAUTO_REPLAY=1/);
+  test.each(['0', '-5', '1.5', 'abc', '', '1e3'])('--timeout-ms=%j is invalid_input before any device work', async (value) => {
+    const { r, factory } = await runCli([writeScenario(scenario()), '--run-id', RUN_ID, `--timeout-ms=${value}`]);
+    expect(r.exitKind).toBe('invalid_input');
+    expect(r.envelope.error.message).toBe(`invalid --timeout-ms "${value}"`);
+    expect(r.envelope.hint).toMatch(/positive integer/);
     expect(factory).not.toHaveBeenCalled();
   });
 
-  test('refuses when MAUTO_REPLAY is anything but exactly 1', async () => {
-    process.env.MAUTO_REPLAY = 'true';
-    const { r, factory } = await runCli([writeScenario(scenario()), '--run-id', RUN_ID]);
-    expect(r.exitKind).toBe('environment');
+  test('--timeout-ms caps a longer per-step wait', async () => {
+    const waiting = scenario({
+      steps: [{ id: 'w', action: 'wait_for_element', description: 'd', target: 'Nowhere', wait_config: { type: 'element_visible', timeout_ms: 20000 } }],
+    });
+    const { r } = await runCli([writeScenario(waiting), '--run-id', RUN_ID, '--timeout-ms', '3000']);
+    expect(r.exitKind).toBe('test_failed');
+    expect(r.envelope.data.failures[0]).toMatch(/timed out after 3000ms/);
+  });
+
+  test('--timeout-ms never lengthens a shorter wait', async () => {
+    const waiting = scenario({
+      steps: [{ id: 'w', action: 'wait_for_element', description: 'd', target: 'Nowhere', wait_config: { type: 'element_visible', timeout_ms: 2000 } }],
+    });
+    const { r } = await runCli([writeScenario(waiting), '--run-id', RUN_ID, '--timeout-ms', '9000']);
+    expect(r.envelope.data.failures[0]).toMatch(/timed out after 2000ms/);
+  });
+
+  test('the config run.default_timeout_ms sets the wait of a step that names none', async () => {
+    fs.writeFileSync(path.join(root, '.mobile-automator', 'config.json'), JSON.stringify({ run: { default_timeout_ms: 4000 } }));
+    const waiting = scenario({
+      steps: [{ id: 'w', action: 'wait_for_element', description: 'd', target: 'Nowhere' }],
+    });
+    const { r } = await runCli([writeScenario(waiting), '--run-id', RUN_ID]);
+    expect(r.envelope.data.failures[0]).toMatch(/timed out after 4000ms/);
+  });
+
+  test('--judge other than none is invalid_input before any device work (#282)', async () => {
+    const { r, factory } = await runCli([writeScenario(scenario()), '--run-id', RUN_ID, '--judge', 'agent']);
+    expect(r.exitKind).toBe('invalid_input');
+    expect(exitCodeFor(r.exitKind)).toBe(3);
+    expect(r.envelope.error.message).toBe('unknown --judge "agent"');
+    expect(r.envelope.hint).toMatch(/Accepted: none/);
     expect(factory).not.toHaveBeenCalled();
   });
 
-  describe('with the gate set', () => {
-    beforeEach(() => {
-      process.env.MAUTO_REPLAY = '1';
-    });
+  test('--judge none runs as the default does (#282)', async () => {
+    const { r } = await runCli([writeScenario(scenario()), '--run-id', RUN_ID, '--judge', 'none']);
+    expect(r.exitKind).toBe('ok');
+  });
 
-    test.each(['0', '-5', '1.5', 'abc', '', '1e3'])('--timeout-ms=%j is invalid_input before any device work', async (value) => {
-      const { r, factory } = await runCli([writeScenario(scenario()), '--run-id', RUN_ID, `--timeout-ms=${value}`]);
-      expect(r.exitKind).toBe('invalid_input');
-      expect(r.envelope.error.message).toBe(`invalid --timeout-ms "${value}"`);
-      expect(r.envelope.hint).toMatch(/positive integer/);
-      expect(factory).not.toHaveBeenCalled();
-    });
+  test('--junit into a missing directory is invalid_input before any device work (#282)', async () => {
+    const { r, factory } = await runCli([writeScenario(scenario()), '--run-id', RUN_ID, '--junit', path.join(root, 'nope', 'r.xml')]);
+    expect(r.exitKind).toBe('invalid_input');
+    expect(r.envelope.error.message).toBe(`--junit directory does not exist: ${path.join(root, 'nope')}`);
+    expect(factory).not.toHaveBeenCalled();
+  });
 
-    test('--timeout-ms caps a longer per-step wait', async () => {
-      const waiting = scenario({
-        steps: [{ id: 'w', action: 'wait_for_element', description: 'd', target: 'Nowhere', wait_config: { type: 'element_visible', timeout_ms: 20000 } }],
-      });
-      const { r } = await runCli([writeScenario(waiting), '--run-id', RUN_ID, '--timeout-ms', '3000']);
-      expect(r.exitKind).toBe('test_failed');
-      expect(r.envelope.data.failures[0]).toMatch(/timed out after 3000ms/);
-    });
+  test('an unreadable scenario is invalid_input', async () => {
+    const { r, factory } = await runCli([path.join(root, 'missing.json'), '--run-id', RUN_ID]);
+    expect(r.exitKind).toBe('invalid_input');
+    expect(r.envelope.error.message).toMatch(/cannot read file/);
+    expect(factory).not.toHaveBeenCalled();
+  });
 
-    test('--timeout-ms never lengthens a shorter wait', async () => {
-      const waiting = scenario({
-        steps: [{ id: 'w', action: 'wait_for_element', description: 'd', target: 'Nowhere', wait_config: { type: 'element_visible', timeout_ms: 2000 } }],
-      });
-      const { r } = await runCli([writeScenario(waiting), '--run-id', RUN_ID, '--timeout-ms', '9000']);
-      expect(r.envelope.data.failures[0]).toMatch(/timed out after 2000ms/);
-    });
+  test('a schema-invalid scenario is invalid_input', async () => {
+    const bad = scenario();
+    delete bad.app_package;
+    const { r, factory } = await runCli([writeScenario(bad), '--run-id', RUN_ID]);
+    expect(r.exitKind).toBe('invalid_input');
+    expect(r.envelope.error.message).toBe('scenario failed schema validation');
+    expect(factory).not.toHaveBeenCalled();
+  });
 
-    test('the config run.default_timeout_ms sets the wait of a step that names none', async () => {
-      fs.writeFileSync(path.join(root, '.mobile-automator', 'config.json'), JSON.stringify({ run: { default_timeout_ms: 4000 } }));
-      const waiting = scenario({
-        steps: [{ id: 'w', action: 'wait_for_element', description: 'd', target: 'Nowhere' }],
-      });
-      const { r } = await runCli([writeScenario(waiting), '--run-id', RUN_ID]);
-      expect(r.envelope.data.failures[0]).toMatch(/timed out after 4000ms/);
+  test('a strict-blocking replayability finding (duplicate step id) is invalid_input', async () => {
+    const dup = scenario({
+      steps: [
+        { id: 'launch', action: 'launch_app', description: 'Launch' },
+        { id: 'launch', action: 'tap', description: 'Tap More', target: 'More' },
+      ],
     });
+    const { r, factory } = await runCli([writeScenario(dup), '--run-id', RUN_ID]);
+    expect(r.exitKind).toBe('invalid_input');
+    expect(r.envelope.error.message).toMatch(/cannot replay unattended/);
+    expect(factory).not.toHaveBeenCalled();
+  });
 
-    test('--judge other than none is invalid_input before any device work (#282)', async () => {
-      const { r, factory } = await runCli([writeScenario(scenario()), '--run-id', RUN_ID, '--judge', 'agent']);
-      expect(r.exitKind).toBe('invalid_input');
-      expect(exitCodeFor(r.exitKind)).toBe(3);
-      expect(r.envelope.error.message).toBe('unknown --judge "agent"');
-      expect(r.envelope.hint).toMatch(/Accepted: none/);
-      expect(factory).not.toHaveBeenCalled();
-    });
-
-    test('--judge none runs as the default does (#282)', async () => {
-      const { r } = await runCli([writeScenario(scenario()), '--run-id', RUN_ID, '--judge', 'none']);
-      expect(r.exitKind).toBe('ok');
-    });
-
-    test('--junit into a missing directory is invalid_input before any device work (#282)', async () => {
-      const { r, factory } = await runCli([writeScenario(scenario()), '--run-id', RUN_ID, '--junit', path.join(root, 'nope', 'r.xml')]);
-      expect(r.exitKind).toBe('invalid_input');
-      expect(r.envelope.error.message).toBe(`--junit directory does not exist: ${path.join(root, 'nope')}`);
-      expect(factory).not.toHaveBeenCalled();
-    });
-
-    test('an unreadable scenario is invalid_input', async () => {
-      const { r, factory } = await runCli([path.join(root, 'missing.json'), '--run-id', RUN_ID]);
-      expect(r.exitKind).toBe('invalid_input');
-      expect(r.envelope.error.message).toMatch(/cannot read file/);
-      expect(factory).not.toHaveBeenCalled();
-    });
-
-    test('a schema-invalid scenario is invalid_input', async () => {
-      const bad = scenario();
-      delete bad.app_package;
-      const { r, factory } = await runCli([writeScenario(bad), '--run-id', RUN_ID]);
-      expect(r.exitKind).toBe('invalid_input');
-      expect(r.envelope.error.message).toBe('scenario failed schema validation');
-      expect(factory).not.toHaveBeenCalled();
-    });
-
-    test('a strict-blocking replayability finding (duplicate step id) is invalid_input', async () => {
-      const dup = scenario({
-        steps: [
-          { id: 'launch', action: 'launch_app', description: 'Launch' },
-          { id: 'launch', action: 'tap', description: 'Tap More', target: 'More' },
-        ],
-      });
-      const { r, factory } = await runCli([writeScenario(dup), '--run-id', RUN_ID]);
-      expect(r.exitKind).toBe('invalid_input');
-      expect(r.envelope.error.message).toMatch(/cannot replay unattended/);
-      expect(factory).not.toHaveBeenCalled();
-    });
-
-    test('a malformed --run-id is invalid_input naming the expected shape, and never connects', async () => {
-      const { r, factory } = await runCli([writeScenario(scenario()), '--run-id', '../escape']);
-      expect(r.exitKind).toBe('invalid_input');
-      expect(r.envelope.hint).toMatch(/run_YYYYMMDD_HHMMSS/);
-      expect(factory).not.toHaveBeenCalled();
-    });
+  test('a malformed --run-id is invalid_input naming the expected shape, and never connects', async () => {
+    const { r, factory } = await runCli([writeScenario(scenario()), '--run-id', '../escape']);
+    expect(r.exitKind).toBe('invalid_input');
+    expect(r.envelope.hint).toMatch(/run_YYYYMMDD_HHMMSS/);
+    expect(factory).not.toHaveBeenCalled();
   });
 });
 
 describe('mauto run — a run', () => {
-  beforeEach(() => {
-    process.env.MAUTO_REPLAY = '1';
-  });
-
   test('a passing scenario is ok, finalizes a passed result file and measures from the run trace', async () => {
     const bridge = makeFakeBridge({ elements: [homeElements()], methods: { restartApp: slow(), tap: slow() } });
     const { r, factory } = await runCli([writeScenario(scenario()), '--run-id', RUN_ID], { bridge });
@@ -334,7 +308,6 @@ describe('mauto run --human (#282)', () => {
   }
 
   test('a run renders as its summary', async () => {
-    process.env.MAUTO_REPLAY = '1';
     const { text, exits } = await printed(['--human', 'run', writeScenario(scenario()), '--run-id', RUN_ID]);
     expect(exits).toEqual([0]);
     expect(text).toMatch(new RegExp(`^run ${RUN_ID} \\(demo\\): passed in [\\d.]+s\\n`));
@@ -342,7 +315,6 @@ describe('mauto run --human (#282)', () => {
   });
 
   test('without --human the output stays the JSON envelope', async () => {
-    process.env.MAUTO_REPLAY = '1';
     const { text } = await printed(['run', writeScenario(scenario()), '--run-id', RUN_ID]);
     const envelope = JSON.parse(text);
     expect(envelope.ok).toBe(true);
@@ -351,16 +323,17 @@ describe('mauto run --human (#282)', () => {
   });
 
   test('a refusal falls back to the generic render', async () => {
-    const { text, exits } = await printed(['--human', 'run', writeScenario(scenario()), '--run-id', RUN_ID]);
-    expect(exits).toEqual([5]);
-    expect(text).toBe('error [environment]: mauto run is not enabled yet\nhint: export MAUTO_REPLAY=1 to try the in-progress replay runner\n');
+    const { text, exits } = await printed(['--human', 'run', writeScenario(scenario()), '--run-id', RUN_ID, '--judge', 'agent']);
+    expect(exits).toEqual([3]);
+    expect(text).toMatch(/^error \[invalid_input\]: unknown --judge "agent"\nhint: Accepted: none\b.*\n$/);
   });
 });
 
 describe('mauto run — registration', () => {
-  test('is hidden from --help', () => {
+  test('is listed in --help with a plain description', () => {
     const help = buildProgram({ projectRoot: root, emit: () => {} }).helpInformation();
-    expect(help).not.toMatch(/^\s+run\b/m);
+    expect(help).toMatch(/^\s+run \[options\] <scenario>\s+Replay a scenario unattended/m);
+    expect(help).not.toMatch(/in progress/);
     expect(help).toMatch(/^\s+validate\b/m);
   });
 
@@ -370,10 +343,6 @@ describe('mauto run — registration', () => {
 });
 
 describe('an incomplete run can be completed with one-shot verbs and re-finalized (#275 exit criterion)', () => {
-  beforeEach(() => {
-    process.env.MAUTO_REPLAY = '1';
-  });
-
   // Any verb through the same program and emit seam as runCli.
   async function mauto(args, { bridge = makeFakeBridge({ elements: [homeElements()] }) } = {}) {
     const emitted = [];
@@ -476,7 +445,6 @@ describe('mauto run --update-references', () => {
   const shotBridge = () => makeFakeBridge({ elements: [homeElements()], screenshots: [solidPng(12, 12)] });
 
   test('records the reference and passes', async () => {
-    process.env.MAUTO_REPLAY = '1';
     const file = writeScenario(shotScenario());
     const { r } = await runCli([file, '--run-id', RUN_ID, '--update-references'], { bridge: shotBridge() });
     expect(r.exitKind).toBe('ok');
@@ -484,7 +452,6 @@ describe('mauto run --update-references', () => {
   });
 
   test('without it, a missing reference leaves the run incomplete', async () => {
-    process.env.MAUTO_REPLAY = '1';
     const file = writeScenario(shotScenario());
     const { r } = await runCli([file, '--run-id', RUN_ID], { bridge: shotBridge() });
     expect(r.exitKind).toBe('incomplete');

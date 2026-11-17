@@ -1,6 +1,7 @@
 'use strict';
 
 const { emitGuide, emitSchema, emitBootstrap } = require('../../../src/guide/emitter');
+const { EXIT } = require('../../../src/output/envelope');
 
 const TOPICS = ['generate', 'execute', 'setup'];
 const MODES = ['platform-aware', 'platform-agnostic'];
@@ -79,6 +80,14 @@ describe('guide/emitter', () => {
       ]) {
         expect(out).toContain(verb);
       }
+    });
+
+    // `mauto run` is where execution starts (#284); a verb missing from the
+    // map is undiscoverable by an agent that reads only the bootstrap.
+    it('lists the unattended runner with its three outcome exit codes', () => {
+      const line = emitBootstrap().split('\n').find((l) => l.startsWith('- `mauto run` — '));
+      expect(line).toBeDefined();
+      expect(line).toContain(`exit ${EXIT.OK} passed, ${EXIT.TEST_FAILED} test_failed, ${EXIT.INCOMPLETE} incomplete`);
     });
 
     it('states the invariants', () => {

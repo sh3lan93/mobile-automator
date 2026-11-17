@@ -198,11 +198,9 @@ async function main() {
       const junitPath = path.join(junitDir, `${runId}.xml`);
       // A failed run (test_failed, exit 6) and an incomplete one (exit 7: a
       // step needed an agent) are answers, not tool errors; anything else —
-      // including a JUnit write failure (environment) — throws. MAUTO_REPLAY
-      // opens the replay gate; the graduation slice (G) strips it.
+      // including a JUnit write failure (environment) — throws.
       const data = await mauto.run(['run', scenarioPaths.get(id), '--run-id', runId, '--junit', junitPath], {
         acceptKinds: ['test_failed', 'incomplete'],
-        env: { MAUTO_REPLAY: '1' },
       });
       // The report is the job's deliverable: a run that answered without
       // writing it is a contract violation, never papered over.

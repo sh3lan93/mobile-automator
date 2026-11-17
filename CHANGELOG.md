@@ -7,10 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [0.40.0]
 
 ### ✨ Added
 
+- **`mauto run <scenario>` is generally available: unattended, agent-free
+  replay** (replay PRD #271, graduation). The `MAUTO_REPLAY=1` opt-in is gone:
+  the verb is listed in `--help` and in `mauto bootstrap`, and needs no
+  environment variable. One invocation replays the scenario, decides every
+  assertion the CLI can decide, finalizes the result file and exits with the
+  verdict: `0` passed, `6` `test_failed`, `7` `incomplete` (an assertion
+  still needs an agent's verdict, or a `screenshot_match` has no baseline).
+  The entries below were written slice by slice while the verb was gated;
+  wherever one says "hidden" or "gated by `MAUTO_REPLAY=1`", that condition no
+  longer applies. The variable is now ignored, and
+  `tests/lint/retired-gates.test.js` keeps it out of the code, the workflows
+  and the docs.
+  Refs #284
+- **The execute guides start with `mauto run`.** `mauto guide execute` (both
+  modes) now tells the agent to replay with `mauto run` first, then to finish
+  only what the run left `needs_agent`; the per-step recipe is kept as the
+  manual fallback. The execute skill invariants and the Cursor rule point at
+  it, so installed hosts read as out of date in `mauto doctor` until
+  `mauto init` is re-run.
+  Refs #284
 - **`mauto run` reports for CI: `--junit`, `--judge none`, `--human`, and a
   frozen `data` shape** (replay PRD #271, slice R6; still gated by
   `MAUTO_REPLAY=1`). `--junit <path>` writes the run's JUnit XML report — the
@@ -204,6 +224,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 Changed
 
+- **The FAQ's CI recipe and GitHub Actions example run a test** (#277). The
+  recipe used to stop at a comment where the run belonged, and the workflow
+  pinned `@v3` actions, started no device and executed no scenario. Both now
+  run `mauto run <scenario> --junit <path>` and explain the exit codes; the
+  workflow boots an Android emulator and uploads the reports with
+  `if: always()`. `tests/lint/docs-ci-recipe.test.js` fails when a workflow
+  example in the docs pins an action version other than the one this
+  repository's own workflows use. `mauto run` is also documented in the CLI
+  reference, the execute and setup guides, the architecture page, the quick
+  start and the README.
+  Refs #284
 - **The real-device E2E runs every scenario through `mauto run`** (replay PRD
   #271, slice R7). `sample-app/scripts/run-e2e.mjs` no longer executes steps
   or resolves targets itself: each scenario is one `mauto run <file> --run-id
