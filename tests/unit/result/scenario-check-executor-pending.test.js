@@ -220,6 +220,75 @@ describe('pendingHint (#275)', () => {
     );
   });
 
+  // #327: a pending screenshot_match has no reference screenshot yet. It is
+  // never judged by eye (docs/reference/assertions.md): the hint names the
+  // re-run that records the baselines and the capture to show the user, and
+  // prints no add-assertion line for it — every listed assertion is already
+  // pending, so one could only replace the runner's entry and drop its
+  // screenshot paths (ResultStore#addAssertion replaces in place).
+  describe('a pending screenshot_match (#327)', () => {
+    const capture = '.mobile-automator/screenshots/runs/login/run_20261111_120000/home_matches.actual.png';
+    const shot = {
+      assertion_id: 'home_matches', status: 'needs_agent', step_id: 's3', type: 'screenshot_match',
+      reference_screenshot: '.mobile-automator/screenshots/reference/login/home_matches.png', actual_screenshot: capture,
+    };
+    const scenarioPath = path.join(projectRoot, 'scenarios', 'login.json');
+    const runner = { kind: 'runner', scenario_path: 'scenarios/login.json' };
+
+    test('names the capture and --update-references, and no add-assertion line', () => {
+      const r = { run_id: 'run_20261111_120000', assertion_results: [shot], executor: runner };
+      expect(pendingHint(r, { projectRoot })).toBe([
+        'Pending reference screenshot: home_matches. Never judge it by eye: show the user each capture.',
+        `home_matches: ${path.join(projectRoot, capture)}`,
+        'Once the user confirms the screen is correct, record the baselines under a new run id (this re-records every screenshot_match in the scenario):',
+        `mauto run ${scenarioPath} --update-references`,
+        'Otherwise leave it pending; the run stays incomplete. Re-finalize once the run is decided:',
+        `mauto result finalize --run-id run_20261111_120000 --scenario ${scenarioPath}`,
+      ].join('\n'));
+    });
+
+    test('a pending screenshot_match without a recorded capture says so', () => {
+      const r = { run_id: 'run_20261111_120000', assertion_results: [{ ...shot, actual_screenshot: undefined }] };
+      expect(pendingHint(r, { projectRoot }).split('\n')).toContain('home_matches: no capture recorded');
+    });
+
+    test('beside a Tier-2 pending assertion, each gets its own instruction', () => {
+      const r = { ...result, assertion_results: [...result.assertion_results, shot], executor: runner };
+      const hint = pendingHint(r, { projectRoot });
+      expect(hint).toMatch(/^Pending agent judgment: looks_right, copy_ok\. /);
+      expect(hint).toContain('--assertion-id looks_right --type visual_state --pass <true|false> --judge agent');
+      expect(hint).toContain(`mauto run ${scenarioPath} --update-references`);
+      expect(hint).not.toContain('--assertion-id home_matches');
+      expect(hint.split('\n').at(-1)).toMatch(/^mauto result finalize /);
+    });
+
+    test('without a recorded scenario path it names the placeholder', () => {
+      const hint = pendingHint({ run_id: 'run_20261111_120000', assertion_results: [shot] }, { projectRoot });
+      expect(hint).toContain('mauto run <scenario.json> --update-references');
+    });
+
+    // The set is the evaluator's, not a copy: a new reference-screenshot type
+    // must not fall back to the "judge it" line.
+    test('every REFERENCE_SCREENSHOT_TYPES type is handled as a reference', () => {
+      const { REFERENCE_SCREENSHOT_TYPES } = require('../../../src/assertion/evaluator');
+      for (const type of REFERENCE_SCREENSHOT_TYPES) {
+        const hint = pendingHint({ run_id: 'run_20261111_120000', assertion_results: [{ ...shot, type }] }, { projectRoot });
+        expect(hint).toMatch(/^Pending reference screenshot: /);
+        expect(hint).not.toContain('--judge agent');
+      }
+    });
+
+    test('incompleteMessage counts a pending reference screenshot apart from agent judgment', () => {
+      const { incompleteMessage } = require('../../../src/result/pending-hint');
+      expect(incompleteMessage({ run_id: 'run_20261111_120000', assertion_results: [shot] })).toBe(
+        'run run_20261111_120000 incomplete: 1 assertion(s) need a reference screenshot'
+      );
+      expect(incompleteMessage({ ...result, assertion_results: [...result.assertion_results, shot] })).toBe(
+        'run run_20261111_120000 incomplete: 2 assertion(s) need agent judgment, 1 need a reference screenshot'
+      );
+    });
+  });
+
   test('incompleteMessage counts the pending assertions, and names none when only a step is pending', () => {
     const { incompleteMessage } = require('../../../src/result/pending-hint');
     expect(incompleteMessage(result)).toBe('run run_20261111_120000 incomplete: 2 assertion(s) need agent judgment');

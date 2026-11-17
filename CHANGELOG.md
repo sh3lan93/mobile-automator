@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.40.2]
+
+### 🐛 Fixed
+
+- **The `incomplete` hint no longer asks the agent to judge a pending
+  `screenshot_match` by eye** (#327). A `screenshot_match` is pending only
+  when its reference screenshot does not exist yet, and a missing baseline is
+  never judged by eye. But the hint that `mauto run` and `result finalize`
+  print on exit `7` gave it the same
+  `--pass <true|false> --judge agent` line as every agent-judged type. It now
+  lists the capture of each pending `screenshot_match` to show the user. It
+  then names `mauto run <scenario> --update-references`, which records the
+  baselines under a new run id once the user confirms the screen is correct
+  (it re-records every `screenshot_match` in the scenario), and says that
+  otherwise the assertion stays pending. It prints no `result add-assertion`
+  line for it. The assertion is already pending, so the only thing such a
+  line could do is replace the runner's entry and drop its screenshot paths.
+  The error message counts these apart too:
+  `1 assertion(s) need a reference screenshot`, not `need agent judgment`.
+  Other pending types keep their line and their count.
+
 ## [0.40.1]
 
 ### 🐛 Fixed
