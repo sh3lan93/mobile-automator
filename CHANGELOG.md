@@ -19,10 +19,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   simulator after a reboot, `mauto run` recorded `launch_app` as passed and
   then failed the next step against the home screen (exit `6`), and
   `mauto launch` followed by `mauto elements` returned the home screen. This
-  is the usual state of a simulator on a fresh CI runner. `mauto launch` and
-  `launch_app` now make one element-list call before the launch on iOS
-  simulators, so the agent is already running when the app comes up. Android
-  and real iOS devices get no extra element-list call.
+  is the usual state of a simulator on a fresh CI runner. Two changes:
+  - `mauto launch` and `launch_app` first make one cheap call that needs the
+    agent (the screen size) on iOS simulators, so the agent is already
+    running when the app comes up. It adds about 0.1 s to a simulator launch.
+    Android and real iOS devices get no such call.
+  - `launch_app` in `mauto run` now asks the engine which app is in front
+    after the launch and, when it is another one, brings the scenario's app
+    back without restarting it. It does not fail the step on that: a system
+    permission dialog also reports another app in front of a launch that
+    worked. The legacy engine cannot report the foreground app, so the step
+    is unchanged there.
 
 ---
 
