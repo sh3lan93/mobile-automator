@@ -21,8 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ignored. An existing workspace whose `.gitignore` was never edited gets the
   new body by re-running `mauto setup --mode <aware|agnostic>` with the mode
   it already uses; the envelope lists the file under `data.upgraded`. An
-  edited `.gitignore` is left alone, and when it still ignores `screenshots/`
-  setup says so in its hint.
+  edited `.gitignore` is left alone; the FAQ shows the two-line fix.
 
 ## [0.40.2]
 

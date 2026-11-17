@@ -148,28 +148,17 @@ describe('workspace .gitignore', () => {
     expect(created).not.toContain(gi);
   });
 
-  it('keeps an edited .gitignore that still ignores screenshots/ and flags it', () => {
+  it('keeps an edited .gitignore byte-for-byte and does not upgrade it', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scaffold-'));
     fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
     const gi = path.join(root, '.mobile-automator', '.gitignore');
     const edited = '# mine\n.session/\nscreenshots/\n*.tmp\n';
     fs.writeFileSync(gi, edited);
 
-    const { upgraded, gitignoreIgnoresReferences } = scaffold(root, { mode: 'platform-aware' });
+    const { upgraded } = scaffold(root, { mode: 'platform-aware' });
 
     expect(fs.readFileSync(gi, 'utf8')).toBe(edited);
     expect(upgraded).toEqual([]);
-    expect(gitignoreIgnoresReferences).toBe(true);
-  });
-
-  it('does not flag an edited .gitignore that re-includes the baselines', () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scaffold-'));
-    fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
-    const gi = path.join(root, '.mobile-automator', '.gitignore');
-    fs.writeFileSync(gi, 'screenshots/\n!screenshots/reference/\n');
-
-    const { gitignoreIgnoresReferences } = scaffold(root, { mode: 'platform-aware' });
-    expect(gitignoreIgnoresReferences).toBe(false);
   });
 
   it('reports the .gitignore in created[] on first write', () => {
@@ -187,7 +176,6 @@ describe('workspace .gitignore', () => {
     scaffold(root, { mode: 'platform-aware' });
 
     expect(fs.readFileSync(gi, 'utf8')).toBe('# mine\n');
-    expect(scaffold(root, { mode: 'platform-aware' }).gitignoreIgnoresReferences).toBe(false);
   });
 });
 

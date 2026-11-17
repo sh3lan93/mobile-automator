@@ -11,6 +11,7 @@ const path = require('path');
 
 const manager = require('../config/manager');
 const { workspaceDir } = require('../workspace/layout');
+const { atomicWrite } = require('../util/atomic');
 
 const SUBDIRS = ['scenarios', 'screenshots', 'results', 'memory'];
 
@@ -30,7 +31,7 @@ const SUBDIRS = ['scenarios', 'screenshots', 'results', 'memory'];
 //
 // Written when absent. Upgraded in place only when it is byte-identical to a
 // body an earlier mauto shipped (LEGACY_GITIGNORE_BODIES), so it was never
-// edited. Never touched otherwise: a user who edits this file owns it.
+// edited. Left alone otherwise: a user who edits this file owns it.
 const GITIGNORE_BODY = [
   '# Managed by `mauto setup`. Runtime artifacts — not source.',
   '.session/',
@@ -55,25 +56,9 @@ const LEGACY_GITIGNORE_BODIES = [
   ].join('\n'),
 ];
 
-// Does a kept (user-edited) .gitignore still ignore the reference baselines?
-// A HEURISTIC over the file's lines, not a git evaluation (`src/` must not
-// shell out to git): true when a non-comment line is exactly `screenshots/` or
-// `screenshots` and no line re-includes `screenshots/reference`. Patterns such
-// as `**/screenshots/` or a re-include written another way are not recognised.
-function ignoresReferences(body) {
-  const lines = body
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l !== '' && !l.startsWith('#'));
-  const ignoresAll = lines.some((l) => l === 'screenshots/' || l === 'screenshots');
-  const reincludes = lines.some((l) => l === '!screenshots/reference/' || l === '!screenshots/reference');
-  return ignoresAll && !reincludes;
-}
-
 function scaffold(projectRoot, { mode } = {}) {
   const created = [];
   const upgraded = [];
-  let gitignoreIgnoresReferences = false;
 
   const baseDir = workspaceDir(projectRoot);
   ensureDir(baseDir, created);
@@ -83,16 +68,11 @@ function scaffold(projectRoot, { mode } = {}) {
 
   const gitignorePath = path.join(baseDir, '.gitignore');
   if (!fs.existsSync(gitignorePath)) {
-    fs.writeFileSync(gitignorePath, GITIGNORE_BODY);
+    atomicWrite(gitignorePath, GITIGNORE_BODY);
     created.push(gitignorePath);
-  } else {
-    const current = fs.readFileSync(gitignorePath, 'utf8');
-    if (LEGACY_GITIGNORE_BODIES.includes(current)) {
-      fs.writeFileSync(gitignorePath, GITIGNORE_BODY);
-      upgraded.push(gitignorePath);
-    } else {
-      gitignoreIgnoresReferences = ignoresReferences(current);
-    }
+  } else if (LEGACY_GITIGNORE_BODIES.includes(fs.readFileSync(gitignorePath, 'utf8'))) {
+    atomicWrite(gitignorePath, GITIGNORE_BODY);
+    upgraded.push(gitignorePath);
   }
 
   const cfgPath = manager.configPath(projectRoot);
@@ -119,7 +99,7 @@ function scaffold(projectRoot, { mode } = {}) {
     manager.set(projectRoot, 'mode', mode);
   }
 
-  return { created, upgraded, gitignoreIgnoresReferences, mode, configWritten };
+  return { created, upgraded, mode, configWritten };
 }
 
 function ensureDir(dir, created) {
@@ -129,4 +109,4 @@ function ensureDir(dir, created) {
   }
 }
 
-module.exports = { scaffold, GITIGNORE_BODY, LEGACY_GITIGNORE_BODIES };
+module.exports = { scaffold };

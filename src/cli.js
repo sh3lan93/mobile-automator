@@ -61,7 +61,6 @@ const {
   workspaceFailure,
   legacyWorkspaceFailure,
 } = require('./workspace/discover');
-const { workspaceDir } = require('./workspace/layout');
 
 // Commander throws (via exitOverride) for two very different reasons, and the
 // split below is the ONLY thing that tells them apart.
@@ -953,15 +952,9 @@ function handleSetup({ projectRoot, ancestorRoot = null, legacyRoot = null }, op
   // workspace exists, so a user mid-recovery gets through.
   if (legacyRoot) return legacyWorkspaceFailure(legacyRoot);
   const r = scaffold(projectRoot, { mode });
-  const hints = [];
-  if (ancestorRoot) {
-    hints.push(`An existing workspace was found in an ancestor directory (${ancestorRoot}). This new workspace in ${projectRoot} shadows it for every mauto verb run from here or below; remove it if you meant to use the ancestor's.`);
-  }
-  if (r.gitignoreIgnoresReferences) {
-    const gitignorePath = path.join(workspaceDir(projectRoot), '.gitignore');
-    hints.push(`The workspace .gitignore (${gitignorePath}) was edited, so setup left it alone, but it still ignores screenshots/ and reference screenshots won't be committed. Replace \`screenshots/\` with \`screenshots/*\` and \`!screenshots/reference/\`.`);
-  }
-  const hint = hints.length ? hints.join(' ') : null;
+  const hint = ancestorRoot
+    ? `An existing workspace was found in an ancestor directory (${ancestorRoot}). This new workspace in ${projectRoot} shadows it for every mauto verb run from here or below; remove it if you meant to use the ancestor's.`
+    : null;
   return {
     envelope: ok(
       {
