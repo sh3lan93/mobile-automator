@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.40.1]
+
+### 🐛 Fixed
+
+- **A launch on an iOS simulator no longer leaves the app in the background
+  when the engine's device agent is not running** (#326). The engine starts
+  its on-device agent on the first call that needs it, and starting it sends
+  the simulator to the home screen. A launch does not need the agent; the
+  element list right after it does. So on a new simulator, and on any
+  simulator after a reboot, `mauto run` recorded `launch_app` as passed and
+  then failed the next step against the home screen (exit `6`), and
+  `mauto launch` followed by `mauto elements` returned the home screen. This
+  is the usual state of a simulator on a fresh CI runner. `mauto launch` and
+  `launch_app` now make one element-list call before the launch on iOS
+  simulators, so the agent is already running when the app comes up. Android
+  and real iOS devices get no extra element-list call.
+
+---
+
 ## [0.40.0]
 
 ### ✨ Added

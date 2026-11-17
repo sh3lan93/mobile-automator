@@ -157,7 +157,33 @@ class DeviceBridge {
 
   // Launch an installed app by its package/bundle identifier.
   async launchApp(packageName) {
+    await this._startAgentBeforeLaunch();
+    return await this._launch(packageName);
+  }
+
+  async _launch(packageName) {
     return await this._call('mobile_launch_app', { packageName });
+  }
+
+  // #326. On an iOS simulator the engine starts its on-device agent lazily, on
+  // the first call that needs it, and starting it sends the simulator to the
+  // home screen. Launch and terminate do not need the agent; the element list
+  // does. So with the agent stopped (a new simulator, or any simulator after a
+  // reboot), launch-then-elements left the app in the background and the next
+  // step read the home screen. Device-probed on mobile-mcp 1.0.15 / iOS 18.4:
+  // stopping the agent reproduces it every time, and one element-list call
+  // before the launch avoids it.
+  //
+  // Best effort on purpose: a launch needs neither the device lookup nor the
+  // agent, so a failure here must not fail a launch that would have worked.
+  // If the agent really cannot start, the next call that needs it says so.
+  async _startAgentBeforeLaunch() {
+    try {
+      if (!isIosSimulator(await this._currentDevice())) return;
+      await this._call('mobile_list_elements_on_screen', { format: 'json' });
+    } catch {
+      // see above
+    }
   }
 
   // Stop a running app by its package/bundle identifier.
@@ -171,6 +197,7 @@ class DeviceBridge {
   // error; Android does not); anything else is a real fault and propagates,
   // carrying a hint that names the opt-out.
   async restartApp(packageName) {
+    await this._startAgentBeforeLaunch();
     try {
       await this.terminateApp(packageName);
     } catch (err) {
@@ -182,7 +209,7 @@ class DeviceBridge {
         throw err;
       }
     }
-    return await this.launchApp(packageName);
+    return await this._launch(packageName);
   }
 
   // Install an app from a local artifact (apk/ipa) path.

@@ -219,7 +219,90 @@ describe('DeviceBridge', () => {
       const call = async (tool, args) => { calls.push([tool, args]); return {}; };
       const bridge = new DeviceBridge({ call });
       await bridge.launchApp('com.example.app');
-      expect(calls).toEqual([['mobile_launch_app', { packageName: 'com.example.app' }]]);
+      expect(calls).toEqual([
+        ['mobile_list_available_devices', {}],
+        ['mobile_launch_app', { packageName: 'com.example.app' }],
+      ]);
+    });
+  });
+
+  // #326: on an iOS simulator the engine starts its on-device agent lazily, on
+  // the first call that needs it, and starting it sends the simulator to the
+  // home screen. Launch and terminate do not need the agent; the element list
+  // does. So a launch followed by `elements` used to leave the app in the
+  // background. The bridge now makes that element-list call BEFORE the launch.
+  describe('launch on an iOS simulator starts the device agent first (#326)', () => {
+    const SIM = { id: 'sim-1', name: 'iPhone 16 Pro', platform: 'ios', type: 'simulator', state: 'online' };
+    const EMU = { id: 'emu-1', name: 'Pixel 9', platform: 'android', type: 'emulator', state: 'online' };
+    const REAL = { id: 'real-1', name: 'iPhone', platform: 'ios', type: 'real', state: 'online' };
+    const ELEMENTS = ['mobile_list_elements_on_screen', { format: 'json' }];
+    const APP = { packageName: 'com.example.app' };
+
+    function bridgeFor({ devices, device, fail = {} }) {
+      const calls = [];
+      const call = async (tool, args) => {
+        calls.push([tool, args]);
+        if (fail[tool]) throw fail[tool];
+        if (tool === 'mobile_list_available_devices') return { devices };
+        if (tool === 'mobile_list_elements_on_screen') return { elements: [] };
+        return { launched: true };
+      };
+      return { bridge: new DeviceBridge({ call, device }), calls };
+    }
+    const withoutLookup = (calls) => calls.filter(([tool]) => tool !== 'mobile_list_available_devices');
+
+    test('launchApp lists elements before launching', async () => {
+      const { bridge, calls } = bridgeFor({ devices: [SIM, EMU], device: 'sim-1' });
+      await expect(bridge.launchApp('com.example.app')).resolves.toEqual({ launched: true });
+      expect(withoutLookup(calls)).toEqual([ELEMENTS, ['mobile_launch_app', APP]]);
+    });
+
+    test('restartApp lists elements once, before the terminate', async () => {
+      const { bridge, calls } = bridgeFor({ devices: [SIM], device: null });
+      await bridge.restartApp('com.example.app');
+      expect(withoutLookup(calls)).toEqual([
+        ELEMENTS,
+        ['mobile_terminate_app', APP],
+        ['mobile_launch_app', APP],
+      ]);
+    });
+
+    test.each([
+      ['an Android emulator', EMU],
+      ['a real iOS device', REAL],
+    ])('%s gets no extra element-list call', async (_name, target) => {
+      const { bridge, calls } = bridgeFor({ devices: [SIM, EMU, REAL], device: target.id });
+      await bridge.restartApp('com.example.app');
+      expect(withoutLookup(calls)).toEqual([
+        ['mobile_terminate_app', APP],
+        ['mobile_launch_app', APP],
+      ]);
+    });
+
+    test('a failing element list does not stop the launch', async () => {
+      const { bridge, calls } = bridgeFor({
+        devices: [SIM],
+        device: 'sim-1',
+        fail: { mobile_list_elements_on_screen: new Error('agent did not start') },
+      });
+      await expect(bridge.launchApp('com.example.app')).resolves.toEqual({ launched: true });
+      expect(withoutLookup(calls).map(([tool]) => tool)).toEqual([
+        'mobile_list_elements_on_screen',
+        'mobile_launch_app',
+      ]);
+    });
+
+    test('a failing device lookup does not stop the launch', async () => {
+      const { bridge, calls } = bridgeFor({
+        devices: [SIM],
+        device: 'sim-1',
+        fail: { mobile_list_available_devices: new Error('engine busy') },
+      });
+      await expect(bridge.restartApp('com.example.app')).resolves.toEqual({ launched: true });
+      expect(withoutLookup(calls).map(([tool]) => tool)).toEqual([
+        'mobile_terminate_app',
+        'mobile_launch_app',
+      ]);
     });
   });
 
@@ -243,6 +326,7 @@ describe('DeviceBridge', () => {
       const bridge = new DeviceBridge({ call });
       await bridge.restartApp('com.example.app');
       expect(calls).toEqual([
+        ['mobile_list_available_devices', {}],
         ['mobile_terminate_app', { packageName: 'com.example.app' }],
         ['mobile_launch_app', { packageName: 'com.example.app' }],
       ]);
@@ -257,7 +341,7 @@ describe('DeviceBridge', () => {
       };
       const bridge = new DeviceBridge({ call });
       await expect(bridge.restartApp('com.example.app')).resolves.toEqual({ launched: true });
-      expect(calls).toEqual(['mobile_terminate_app', 'mobile_launch_app']);
+      expect(calls).toEqual(['mobile_list_available_devices', 'mobile_terminate_app', 'mobile_launch_app']);
     });
 
     test('any other terminate failure rejects with a --resume hint and never launches', async () => {
@@ -272,7 +356,7 @@ describe('DeviceBridge', () => {
       expect(err).toBeInstanceOf(Error);
       expect(err.message).toBe('device offline');
       expect(err.hint).toMatch(/--resume/);
-      expect(calls).toEqual(['mobile_terminate_app']);
+      expect(calls).toEqual(['mobile_list_available_devices', 'mobile_terminate_app']);
     });
 
     test('an existing hint on the terminate error is kept', async () => {
