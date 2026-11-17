@@ -269,7 +269,13 @@ class ResultStore {
         ...(step_duration_ms !== undefined ? { step_duration_ms } : {}),
         ...(Array.isArray(sub_steps_executed) ? { sub_steps_executed } : {}),
       };
-      this._steps.push(step);
+      // A step `mauto run` left to the agent (needs_agent) is REPLACED in place
+      // by the next record for its id, so the agent can finish the run with
+      // one-shot verbs (#329) — the mirror of addAssertion's pending upsert.
+      // Any other record appends: two records of a decided step stay two.
+      const pendingIndex = this._steps.findIndex((s) => isPendingStep(s) && s.step_id === step_id);
+      if (pendingIndex === -1) this._steps.push(step);
+      else this._steps[pendingIndex] = step;
 
       // Flakiness bookkeeping: a step that ultimately PASSED but needed more than
       // one attempt is flaky.

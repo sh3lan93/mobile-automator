@@ -79,6 +79,20 @@ function referenceBlock(references, { projectRoot, scenario }) {
   ];
 }
 
+// The hint lines for the steps the runner left to the agent: what each needs,
+// then the `result add-step` line that replaces its pending record
+// (ResultStore#addStep, #329). The runner stopped at the first one, so the
+// steps after it are the agent's too.
+function stepBlock(steps, { runId }) {
+  if (!steps.length) return [];
+  return [
+    ...steps.map((s) => `Pending step ${s.step_id}: ${s.error_message || 'needs an agent'}`),
+    'The runner stopped there, so the steps after it did not run. Do what it asks, record it, then perform ' +
+      'each later step (and its assertions) with one-shot verbs and record it the same way:',
+    ...steps.map((s) => `mauto result add-step --run-id ${runId} --step-id ${arg(s.step_id)} --status <pass|fail>`),
+  ];
+}
+
 // The hint for an `incomplete` run: the pending steps, a block per pending
 // class, then the re-finalize. The scenario path is the one the executor
 // recorded, so the re-run and the re-finalize use the same file, printed
@@ -93,7 +107,7 @@ function pendingHint(result, { projectRoot }) {
   const scenario = recorded ? arg(path.resolve(projectRoot, recorded)) : '<scenario.json>';
   const nothingPending = judged.length + references.length === 0;
   return [
-    ...pendingSteps.map((s) => `Pending step ${s.step_id}: ${s.error_message || 'needs an agent'}`),
+    ...stepBlock(pendingSteps, { runId }),
     ...judgedBlock(judged, { runId }),
     ...referenceBlock(references, { projectRoot, scenario }),
     ...(nothingPending ? ['No assertion is pending; re-finalize once the run is decided:'] : []),
