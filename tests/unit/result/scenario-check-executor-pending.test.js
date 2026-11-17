@@ -220,6 +220,50 @@ describe('pendingHint (#275)', () => {
     );
   });
 
+  // #327: a pending screenshot_match has no reference screenshot yet. It is
+  // never judged by eye (docs/reference/assertions.md): the hint names the
+  // re-run that records the baseline, and leaving it pending, never
+  // `--pass <true|false> --judge agent`.
+  describe('a pending screenshot_match (#327)', () => {
+    const shot = { assertion_id: 'home_matches', status: 'needs_agent', step_id: 's3', type: 'screenshot_match' };
+    const scenarioPath = path.join(projectRoot, 'scenarios', 'login.json');
+
+    test('names --update-references and --pass pending, never a judged verdict', () => {
+      const r = {
+        run_id: 'run_20261111_120000',
+        assertion_results: [shot],
+        executor: { kind: 'runner', scenario_path: 'scenarios/login.json' },
+      };
+      expect(pendingHint(r, { projectRoot })).toBe([
+        'Pending reference screenshot: home_matches. Never judge it by eye. Once the user confirms the screen is correct, record the baseline under a new run id:',
+        `mauto run ${scenarioPath} --update-references`,
+        'Otherwise leave it pending:',
+        'mauto result add-assertion --run-id run_20261111_120000 --step-id s3 --assertion-id home_matches --type screenshot_match --pass pending --message "<why>"',
+        `mauto result finalize --run-id run_20261111_120000 --scenario ${scenarioPath}`,
+      ].join('\n'));
+    });
+
+    test('beside a Tier-2 pending assertion, each gets its own instruction', () => {
+      const r = {
+        ...result,
+        assertion_results: [...result.assertion_results, shot],
+        executor: { kind: 'runner', scenario_path: 'scenarios/login.json' },
+      };
+      const hint = pendingHint(r, { projectRoot });
+      expect(hint).toMatch(/^Pending agent judgment: looks_right, copy_ok\. /);
+      expect(hint).toContain('--assertion-id looks_right --type visual_state --pass <true|false> --judge agent');
+      expect(hint).toContain(`mauto run ${scenarioPath} --update-references`);
+      expect(hint).toContain('--assertion-id home_matches --type screenshot_match --pass pending --message "<why>"');
+      expect(hint).not.toMatch(/screenshot_match --pass <true\|false>/);
+      expect(hint.split('\n').at(-1)).toMatch(/^mauto result finalize /);
+    });
+
+    test('without a recorded scenario path it names the placeholder', () => {
+      const hint = pendingHint({ run_id: 'run_20261111_120000', assertion_results: [shot] }, { projectRoot });
+      expect(hint).toContain('mauto run <scenario.json> --update-references');
+    });
+  });
+
   test('incompleteMessage counts the pending assertions, and names none when only a step is pending', () => {
     const { incompleteMessage } = require('../../../src/result/pending-hint');
     expect(incompleteMessage(result)).toBe('run run_20261111_120000 incomplete: 2 assertion(s) need agent judgment');
