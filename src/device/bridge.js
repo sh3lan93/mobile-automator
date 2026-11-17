@@ -171,19 +171,38 @@ class DeviceBridge {
   // does. So with the agent stopped (a new simulator, or any simulator after a
   // reboot), launch-then-elements left the app in the background and the next
   // step read the home screen. Device-probed on mobile-mcp 1.0.15 / iOS 18.4:
-  // stopping the agent reproduces it every time, and one element-list call
+  // stopping the agent reproduces it every time, and one agent-backed call
   // before the launch avoids it.
+  //
+  // The screen size is that call because it is the cheapest one that needs the
+  // agent (about 0.13s with the agent running) and it does not read the screen:
+  // an element list here would dump whatever is showing before the restart,
+  // which is slowest exactly when the app is stuck.
   //
   // Best effort on purpose: a launch needs neither the device lookup nor the
   // agent, so a failure here must not fail a launch that would have worked.
   // If the agent really cannot start, the next call that needs it says so.
   async _startAgentBeforeLaunch() {
     try {
-      if (!isIosSimulator(await this._currentDevice())) return;
-      await this._call('mobile_list_elements_on_screen', { format: 'json' });
+      if (isIosSimulator(await this._currentDevice())) await this.getScreenSize();
     } catch {
       // see above
     }
+  }
+
+  // The package/bundle identifier of the app in front. mobile-mcp answers in
+  // prose, "Foreground app: <name> (<id>)[, activity: <class>]", so the id is
+  // parsed out; anything else is a hard error rather than a guess. Throws on
+  // the legacy engine, which has no such primitive.
+  //
+  // Not proof that an app is hidden: while a system permission dialog is
+  // showing, iOS reports its home-screen process here, in front of an app that
+  // launched correctly (device-probed, iOS 18.4).
+  async getForegroundApp() {
+    const r = await this._call('mobile_get_foreground_app', {});
+    const m = typeof r === 'string' ? /^Foreground app: .*\(([^()\s]+)\)(?:, activity: .*)?$/.exec(r) : null;
+    if (!m) throw new Error(`Could not read the foreground app from "${String(r)}".`);
+    return m[1];
   }
 
   // Stop a running app by its package/bundle identifier.

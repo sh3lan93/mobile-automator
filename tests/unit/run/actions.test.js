@@ -47,14 +47,14 @@ describe('launch_app', () => {
   test('cold start by default goes through restartApp', async () => {
     const b = makeFakeBridge({ elements: [[el('Home')]] });
     await launchApp({ id: 'l', action: 'launch_app' }, ctxFor(b));
-    expect(b.methods()).toEqual(['restartApp', 'listElements']);
+    expect(b.methods()).toEqual(['restartApp', 'listElements', 'getForegroundApp']);
     expect(b.calls[0].args).toEqual(['com.example.app']);
   });
 
   test('cold: false resumes through launchApp', async () => {
     const b = makeFakeBridge({ elements: [[el('Home')]] });
     await launchApp({ id: 'l', action: 'launch_app', cold: false }, ctxFor(b));
-    expect(b.methods()).toEqual(['launchApp', 'listElements']);
+    expect(b.methods()).toEqual(['launchApp', 'listElements', 'getForegroundApp']);
   });
 
   test('zero elements until the timeout is a fatal drift error', async () => {
@@ -73,6 +73,49 @@ describe('launch_app', () => {
     const err = await launchApp({ id: 'l', action: 'launch_app' }, ctxFor(b)).catch((e) => e);
     expect(err.message).toBe('no such app');
     expect(err.fatal).toBeUndefined();
+  });
+
+  // #326: the element list alone cannot tell the app from the device home
+  // screen, which has elements too. So the step asks which app is in front and
+  // brings the scenario's app back once when it is another one.
+  describe('an app that is not in front after the launch', () => {
+    test('is brought to the front once, without restarting it', async () => {
+      const b = makeFakeBridge({
+        elements: [[el('Maps')]],
+        methods: { getForegroundApp: () => 'com.apple.springboard' },
+      });
+      await launchApp({ id: 'l', action: 'launch_app' }, ctxFor(b));
+      expect(b.methods()).toEqual(['restartApp', 'listElements', 'getForegroundApp', 'launchApp']);
+      expect(b.of('launchApp')[0].args).toEqual(['com.example.app']);
+    });
+
+    test('still passes: a system permission dialog is in front of a launch that worked', async () => {
+      const b = makeFakeBridge({
+        elements: [[el('Allow')]],
+        methods: { getForegroundApp: () => 'com.apple.springboard' },
+      });
+      await expect(launchApp({ id: 'l', action: 'launch_app' }, ctxFor(b))).resolves.toBeUndefined();
+    });
+
+    test('an engine that cannot report the foreground app changes nothing', async () => {
+      const b = makeFakeBridge({
+        elements: [[el('Home')]],
+        methods: { getForegroundApp: () => { throw new Error('not supported in legacy robot mode'); } },
+      });
+      await expect(launchApp({ id: 'l', action: 'launch_app' }, ctxFor(b))).resolves.toBeUndefined();
+      expect(b.methods()).toEqual(['restartApp', 'listElements', 'getForegroundApp']);
+    });
+
+    test('a failing relaunch propagates like any launch failure', async () => {
+      const b = makeFakeBridge({
+        elements: [[el('Maps')]],
+        methods: {
+          getForegroundApp: () => 'com.apple.springboard',
+          launchApp: () => { throw new Error('device offline'); },
+        },
+      });
+      await expect(launchApp({ id: 'l', action: 'launch_app' }, ctxFor(b))).rejects.toThrow('device offline');
+    });
   });
 });
 

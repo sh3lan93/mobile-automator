@@ -25,6 +25,26 @@ async function launchApp(step, { scenario, bridge, catalog, pollUntil }) {
         `(waited ${timeoutMs}ms): the element response shape drifted or the app did not render`
     );
   }
+  await bringToFront(bridge, appId);
+}
+
+// The gate above cannot tell the app from the device home screen, which has
+// elements too (#326: a launch that left the app in the background was
+// recorded as passed). So ask which app is in front, and when it is another
+// one, bring the scenario's app back: a plain launch, which keeps its state.
+//
+// Never a failure. Another app in front is also what a launch that worked
+// looks like while a system permission dialog is showing, and the step that
+// answers the dialog comes next. An engine that cannot report the foreground
+// app (the legacy one) leaves the step as it was.
+async function bringToFront(bridge, appId) {
+  let inFront;
+  try {
+    inFront = await bridge.getForegroundApp();
+  } catch {
+    return;
+  }
+  if (inFront !== appId) await bridge.launchApp(appId);
 }
 
 module.exports = { launchApp };
