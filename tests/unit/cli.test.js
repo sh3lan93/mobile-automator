@@ -1475,6 +1475,12 @@ describe('cli handlers', () => {
       expect(exitKind).toBe('invalid_input');
     });
 
+    test('a fresh setup reports no upgrades', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-gi-'));
+      const { envelope } = handleSetup({ projectRoot }, { mode: 'aware' });
+      expect(envelope.data.upgraded).toEqual([]);
+    });
+
     it('setup surfaces the telemetry notice in its envelope rather than printing a banner', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-notice-'));
       const { envelope } = handleSetup({ projectRoot }, { mode: 'aware' });

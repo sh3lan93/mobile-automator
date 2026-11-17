@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.40.3]
+
+### 🐛 Fixed
+
+- **`mauto setup` now keeps reference screenshots tracked** (#328). The
+  `.mobile-automator/.gitignore` it writes ignored all of `screenshots/`,
+  including the `screenshots/reference/` baselines that `screenshot_match`
+  compares against and that the docs tell you to commit. A plain `git add .`
+  skipped them, so in CI every `screenshot_match` had no baseline and the run
+  ended `incomplete` (exit `7`). The file now ignores `screenshots/*` and
+  re-includes `!screenshots/reference/`, so run actuals and diffs stay
+  ignored. An existing workspace whose `.gitignore` was never edited gets the
+  new body by re-running `mauto setup --mode <aware|agnostic>` with the mode
+  it already uses; the envelope lists the file under `data.upgraded`. An
+  edited `.gitignore` is left alone; the FAQ shows the two-line fix.
+
 ## [0.40.2]
 
 ### 🐛 Fixed

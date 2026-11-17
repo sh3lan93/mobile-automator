@@ -11,26 +11,51 @@ const path = require('path');
 
 const manager = require('../config/manager');
 const { workspaceDir } = require('../workspace/layout');
+const { atomicWrite } = require('../util/atomic');
 
 const SUBDIRS = ['scenarios', 'screenshots', 'results', 'memory'];
 
 // Runtime artifacts that must never reach a user's git history. `.session/`
-// has held a socket, pidfile and handle since the CLI landed; since #163 it
-// also holds daemon.log, which carries device serials, adb/simctl output and
-// stack traces. `.logs/` holds the structured event stream. Neither is
-// reproducible input and both are noise in a diff.
+// holds a socket, pidfile, handle and (since #163) daemon.log, which carries
+// device serials, adb/simctl output and stack traces. `.logs/` holds the
+// structured event stream. Neither is reproducible input.
 //
-// Written only when absent: a user who edits this file owns it thereafter.
-const GITIGNORE_BODY = [
-  '# Managed by `mauto setup`. Runtime artifacts — not source.',
-  '.session/',
-  '.logs/',
-  'screenshots/',
-  '',
-].join('\n');
+// `screenshots/` mixes run actuals and diffs (runtime output) with reference
+// baselines under `screenshots/reference/`, which `screenshot_match` reads and
+// the user commits (#328). The rule must be `screenshots/*`, not
+// `screenshots/`: git cannot re-include a path whose parent directory is
+// excluded, so `!screenshots/reference/` only works when the directory itself
+// is left un-ignored and its children are ignored instead.
+//
+// Every body `mauto setup` has shipped, oldest first. The last entry is what
+// setup writes; a file byte-identical to an earlier entry was never edited and
+// is upgraded to the last. To change the body, APPEND a new entry. Never edit
+// or remove a shipped one; tests/unit/setup/scaffold.test.js pins them.
+const GITIGNORE_BODIES = [
+  // 0.25.0 → 0.40.2 (b684f38): ignored all of screenshots/, baselines included.
+  [
+    '# Managed by `mauto setup`. Runtime artifacts — not source.',
+    '.session/',
+    '.logs/',
+    'screenshots/',
+    '',
+  ].join('\n'),
+  // 0.40.3 (#328): reference baselines tracked.
+  [
+    '# Managed by `mauto setup`. Runtime artifacts are ignored; reference screenshots are kept.',
+    '.session/',
+    '.logs/',
+    '# `screenshots/*`, not `screenshots/`, so the `reference/` exception below can apply.',
+    'screenshots/*',
+    '!screenshots/reference/',
+    '',
+  ].join('\n'),
+];
+const CURRENT_GITIGNORE_BODY = GITIGNORE_BODIES[GITIGNORE_BODIES.length - 1];
 
 function scaffold(projectRoot, { mode } = {}) {
   const created = [];
+  const upgraded = [];
 
   const baseDir = workspaceDir(projectRoot);
   ensureDir(baseDir, created);
@@ -40,8 +65,11 @@ function scaffold(projectRoot, { mode } = {}) {
 
   const gitignorePath = path.join(baseDir, '.gitignore');
   if (!fs.existsSync(gitignorePath)) {
-    fs.writeFileSync(gitignorePath, GITIGNORE_BODY);
+    atomicWrite(gitignorePath, CURRENT_GITIGNORE_BODY);
     created.push(gitignorePath);
+  } else if (GITIGNORE_BODIES.slice(0, -1).includes(fs.readFileSync(gitignorePath, 'utf8'))) {
+    atomicWrite(gitignorePath, CURRENT_GITIGNORE_BODY);
+    upgraded.push(gitignorePath);
   }
 
   const cfgPath = manager.configPath(projectRoot);
@@ -68,7 +96,7 @@ function scaffold(projectRoot, { mode } = {}) {
     manager.set(projectRoot, 'mode', mode);
   }
 
-  return { created, mode, configWritten };
+  return { created, upgraded, mode, configWritten };
 }
 
 function ensureDir(dir, created) {
@@ -78,4 +106,4 @@ function ensureDir(dir, created) {
   }
 }
 
-module.exports = { scaffold };
+module.exports = { scaffold, GITIGNORE_BODIES };

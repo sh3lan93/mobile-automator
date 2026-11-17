@@ -3,8 +3,10 @@
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+const { execFileSync } = require('child_process');
 
-const { scaffold } = require('../../../src/setup/scaffold');
+const { scaffold, GITIGNORE_BODIES } = require('../../../src/setup/scaffold');
 const { load } = require('../../../src/config/manager');
 
 function tmpRoot() {
@@ -83,7 +85,118 @@ describe('workspace .gitignore', () => {
     const body = fs.readFileSync(gi, 'utf8');
     expect(body).toContain('.session/');
     expect(body).toContain('.logs/');
-    expect(body).toContain('screenshots/');
+    const lines = body.split('\n');
+    expect(lines).toContain('screenshots/*');
+    expect(lines).toContain('!screenshots/reference/');
+    expect(lines).not.toContain('screenshots/');
+    expect(body).toBe(GITIGNORE_BODIES[GITIGNORE_BODIES.length - 1]);
+  });
+
+  // Every body `mauto setup` has shipped, by SHA-256, oldest first. Appending a
+  // new body to GITIGNORE_BODIES passes; editing or removing a shipped one
+  // fails, because workspaces holding that body could no longer be upgraded.
+  const SHIPPED_SHA256 = [
+    '1f69ab7950cc2d711b34055c90968d9a5bde5107d8f1cd85a5162afaaf9d87bc', // 0.25.0 → 0.40.2
+    '1d05ec4f470a448268a1e2e67d562d49d4550ee69bda72cf786db02d84cf38df', // 0.40.3 (#328)
+  ];
+
+  it('pins every shipped .gitignore body (append-only)', () => {
+    const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
+    const actual = GITIGNORE_BODIES.slice(0, SHIPPED_SHA256.length).map(sha);
+    if (JSON.stringify(actual) !== JSON.stringify(SHIPPED_SHA256)) {
+      throw new Error(
+        'a shipped .gitignore body was edited or removed; append a new entry instead\n' +
+          `expected: ${JSON.stringify(SHIPPED_SHA256)}\nactual:   ${JSON.stringify(actual)}`
+      );
+    }
+    // Readable oracle for the first body ever shipped.
+    expect(GITIGNORE_BODIES[0]).toBe(
+      '# Managed by `mauto setup`. Runtime artifacts — not source.\n.session/\n.logs/\nscreenshots/\n'
+    );
+  });
+
+  it('reports upgraded as an empty array on a fresh scaffold', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scaffold-'));
+    const { upgraded } = scaffold(root, { mode: 'platform-aware' });
+    expect(upgraded).toEqual([]);
+  });
+
+  it('keeps reference baselines tracked while ignoring run artifacts (real git)', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scaffold-git-'));
+    execFileSync('git', ['init', '-q'], { cwd: root });
+    scaffold(root, { mode: 'platform-aware' });
+
+    const ws = path.join(root, '.mobile-automator');
+    const files = {
+      reference: 'screenshots/reference/s1/a1.png',
+      actual: 'screenshots/s1/run_x/assert_a1.png',
+      diff: 'screenshots/assert/assert_x/diff.png',
+      log: '.session/daemon.log',
+    };
+    for (const rel of Object.values(files)) {
+      const abs = path.join(ws, rel);
+      fs.mkdirSync(path.dirname(abs), { recursive: true });
+      fs.writeFileSync(abs, 'x');
+    }
+    const ignored = (rel) => {
+      try {
+        execFileSync('git', ['check-ignore', '-q', path.join('.mobile-automator', rel)], { cwd: root });
+        return true;
+      } catch (err) {
+        if (err.status === 1) return false;
+        throw err;
+      }
+    };
+    expect(ignored(files.reference)).toBe(false);
+    expect(ignored(files.actual)).toBe(true);
+    expect(ignored(files.diff)).toBe(true);
+    expect(ignored(files.log)).toBe(true);
+
+    const status = execFileSync('git', ['status', '--porcelain', '--untracked-files=all'], { cwd: root, encoding: 'utf8' });
+    expect(status).toContain(`.mobile-automator/${files.reference}`);
+    expect(status).not.toContain(`.mobile-automator/${files.actual}`);
+  });
+
+  for (const [i, shipped] of GITIGNORE_BODIES.slice(0, -1).entries()) {
+    it(`upgrades a pristine .gitignore holding shipped body #${i}`, () => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scaffold-'));
+      fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
+      const gi = path.join(root, '.mobile-automator', '.gitignore');
+      fs.writeFileSync(gi, shipped);
+
+      const { created, upgraded } = scaffold(root, { mode: 'platform-aware' });
+
+      expect(fs.readFileSync(gi, 'utf8')).toBe(GITIGNORE_BODIES[GITIGNORE_BODIES.length - 1]);
+      expect(upgraded).toEqual([gi]);
+      expect(created).not.toContain(gi);
+    });
+  }
+
+  it('leaves a .gitignore already holding the current body alone', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scaffold-'));
+    fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
+    const gi = path.join(root, '.mobile-automator', '.gitignore');
+    const current = GITIGNORE_BODIES[GITIGNORE_BODIES.length - 1];
+    fs.writeFileSync(gi, current);
+
+    const { created, upgraded } = scaffold(root, { mode: 'platform-aware' });
+
+    expect(fs.readFileSync(gi, 'utf8')).toBe(current);
+    expect(upgraded).not.toContain(gi);
+    expect(created).not.toContain(gi);
+  });
+
+  it('keeps an edited .gitignore byte-for-byte and does not upgrade it', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scaffold-'));
+    fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
+    const gi = path.join(root, '.mobile-automator', '.gitignore');
+    const edited = '# mine\n.session/\nscreenshots/\n*.tmp\n';
+    fs.writeFileSync(gi, edited);
+
+    const { upgraded } = scaffold(root, { mode: 'platform-aware' });
+
+    expect(fs.readFileSync(gi, 'utf8')).toBe(edited);
+    expect(upgraded).toEqual([]);
   });
 
   it('reports the .gitignore in created[] on first write', () => {

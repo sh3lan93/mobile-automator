@@ -959,6 +959,7 @@ function handleSetup({ projectRoot, ancestorRoot = null, legacyRoot = null }, op
     envelope: ok(
       {
         created: r.created,
+        upgraded: r.upgraded,
         mode: r.mode,
         // A NOTICE, not a prompt. mauto verbs are invoked by an agent, so there
         // is nobody at the keyboard to answer a question — and an agent answering
