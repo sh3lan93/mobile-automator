@@ -17,11 +17,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   never judged by eye. But the hint that `mauto run` and `result finalize`
   print on exit `7` gave it the same
   `--pass <true|false> --judge agent` line as every agent-judged type. It now
-  names `mauto run <scenario> --update-references`, which records the
-  baseline under a new run id once the user confirms the screen is correct.
-  As the alternative it names the `result add-assertion … --pass pending`
-  line that leaves the assertion pending. Other pending types keep their
-  line.
+  lists the capture of each pending `screenshot_match` to show the user. It
+  then names `mauto run <scenario> --update-references`, which records the
+  baselines under a new run id once the user confirms the screen is correct
+  (it re-records every `screenshot_match` in the scenario), and says that
+  otherwise the assertion stays pending. It prints no `result add-assertion`
+  line for it. The assertion is already pending, so the only thing such a
+  line could do is replace the runner's entry and drop its screenshot paths.
+  The error message counts these apart too:
+  `1 assertion(s) need a reference screenshot`, not `need agent judgment`.
+  Other pending types keep their line and their count.
 
 ## [0.40.1]
 
