@@ -87,6 +87,9 @@ function makeFakeBridge({
     launchApp: () => null,
     terminateApp: () => null,
     restartApp: () => null,
+    // The app every run-ctx scenario launches (tests/helpers/run-ctx.js), so a
+    // launch_app step finds its app in front unless a test scripts otherwise.
+    getForegroundApp: () => 'com.example.app',
   };
 
   const bridge = { calls };

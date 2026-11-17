@@ -48,6 +48,7 @@ const CANNED = {
   mobile_list_elements_on_screen: 'Found these elements on screen: []',
   mobile_get_screen_size: 'Screen size is 1080x2400 pixels',
   mobile_get_orientation: 'Current device orientation is portrait',
+  mobile_get_foreground_app: 'Foreground app: Example (com.example), activity: MainActivity',
   mobile_list_crashes: [],
   mobile_get_crash: 'crash report text',
 };
@@ -87,6 +88,7 @@ async function recordWhatTheBridgeSends() {
   await bridge.openUrl('https://example.com');
   await bridge.setOrientation('portrait');
   await bridge.getOrientation();
+  await bridge.getForegroundApp();
   await bridge.listCrashes();
   await bridge.getCrash('c1');
 

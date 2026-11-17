@@ -509,7 +509,9 @@ describe('cli handlers', () => {
       const { envelope, exitKind } = await handleLaunch({ deviceBridge }, 'com.example.app');
       expect(exitKind).toBe('device');
       expect(envelope.hint).toMatch(/--resume/);
-      expect(calls).toEqual(['mobile_terminate_app']);
+      // The failed terminate is the last engine call: the app is never launched.
+      expect(calls[calls.length - 1]).toBe('mobile_terminate_app');
+      expect(calls).not.toContain('mobile_launch_app');
     });
 
     test('a launch failure is a failure envelope', async () => {
