@@ -1759,7 +1759,7 @@
 </code></pre></div>
 <ul>
 <li>The <strong>agent</strong> decides <em>what</em> to do: it resolves "the Login button" to a concrete element, judges visual assertions, assembles scenarios, and reads guidance via <code>mauto guide &lt;topic&gt;</code>.</li>
-<li><strong><code>mauto</code></strong> does the deterministic work: each verb performs one mechanical action or assertion and emits the uniform JSON envelope <code>{ok,data,error,hint,schema_version}</code>.</li>
+<li><strong><code>mauto</code></strong> does the deterministic work: each verb performs one mechanical action or assertion and emits the uniform JSON envelope <code>{ok,data,error,hint,schema_version}</code>. Replaying a saved scenario is deterministic too, so <code>mauto run &lt;scenario&gt;</code> does it in one invocation, with no agent: every step and every assertion the CLI can decide. Only what needs judgment is left for the agent.</li>
 <li><strong>mobile-mcp</strong> is the internal automation engine that <code>mauto</code> wraps. The agent never calls <code>mobile_*</code> tools directly — <code>mauto</code> is the only surface the agent uses, and it translates verbs into mobile-mcp calls behind a single persistent session daemon.</li>
 </ul>
 <h2 id="system-components">System Components<a class="headerlink" href="#system-components" title="Permanent link">&para;</a></h2>
@@ -1775,7 +1775,7 @@
 <p>The deterministic surface the agent drives. Every verb emits <code>{ok,data,error,hint,schema_version}</code>; <code>--human</code> is an opt-in readable flag.</p>
 <ul>
 <li><strong>Device actions:</strong> <code>elements</code>, <code>tap</code>, <code>type &lt;text&gt;</code>, <code>swipe</code>, <code>press &lt;button&gt;</code>, <code>screenshot &lt;path&gt;</code>, <code>long-press</code>, <code>double-tap</code>, <code>launch &lt;appId&gt;</code>, <code>terminate &lt;appId&gt;</code>, <code>install &lt;path&gt;</code>, <code>uninstall &lt;appId&gt;</code>, <code>open-url &lt;url&gt;</code>, <code>orientation &lt;portrait|landscape&gt;</code></li>
-<li><strong>Author &amp; verify:</strong> <code>validate &lt;file&gt;</code>, <code>assert &lt;type&gt;</code>, <code>result add-step</code>, <code>result finalize</code></li>
+<li><strong>Author &amp; verify:</strong> <code>validate &lt;file&gt;</code>, <code>run &lt;scenario&gt;</code> (unattended replay), <code>assert &lt;type&gt;</code>, <code>result add-step</code>, <code>result add-assertion</code>, <code>result finalize</code></li>
 <li><strong>Workspace:</strong> <code>setup</code>, <code>config get &lt;key&gt;</code>, <code>config set &lt;key&gt; &lt;value&gt;</code></li>
 <li><strong>Reasoning:</strong> <code>guide &lt;topic&gt;</code>, <code>bootstrap</code>, <code>schema &lt;name&gt;</code></li>
 <li><strong>Agent integration:</strong> <code>init --agent &lt;host&gt;</code>, <code>mcp</code> (MCP prompts server)</li>
@@ -1807,10 +1807,12 @@ Saved to .mobile-automator/scenarios/
         ↓
 agent pulls reasoning: mauto guide execute
         ↓
-For each step:
-  - agent drives the action via a mauto verb (→ mobile-mcp → device)
-  - agent judges the assertion (mauto assert for mechanical checks)
-  - agent records the step via mauto result add-step
+mauto run &lt;scenario&gt; (no agent needed for this part):
+  - performs every step (→ mobile-mcp → device)
+  - decides the mechanical and reference-screenshot assertions
+  - finalizes the result → .mobile-automator/results/
+        ↓   only when the run ends incomplete
+agent judges the pending assertions (mauto result add-assertion)
         ↓
 mauto result finalize → .mobile-automator/results/
 </code></pre></div>
@@ -1932,13 +1934,14 @@ mauto result finalize → .mobile-automator/results/
 
 5. Execution Phase:
    - Agent pulls reasoning: mauto guide execute
-   - For each step (agent drives verbs):
-     * mauto elements / screenshot → mobile-mcp → device (read state)
-     * mauto tap / type / swipe → mobile-mcp → device (act)
-     * mauto assert (mechanical, or screenshot_match against a reference screenshot)
-       or agent vision judgment (other visual types)
-     * mauto result add-step (record)
-   - mauto result finalize
+   - mauto run &lt;scenario&gt; replays it unattended:
+     * every step → mobile-mcp → device
+     * every assertion the CLI can decide (mechanical, or screenshot_match
+       against a reference screenshot)
+     * the finalized result file
+   - Only if the run ends incomplete: the agent judges the pending
+     assertions (agent vision judgment), records each with
+     mauto result add-assertion, then mauto result finalize
 
 6. Result JSON:
    {

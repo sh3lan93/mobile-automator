@@ -1710,12 +1710,12 @@
 <td><code>5</code></td>
 </tr>
 <tr>
-<td>Test failed: a failed <code>assert</code>, or <code>result finalize</code> of a failed or errored run</td>
+<td>Test failed: a failed <code>assert</code>, or <code>run</code> or <code>result finalize</code> of a failed or errored run</td>
 <td><code>test_failed</code></td>
 <td><code>6</code></td>
 </tr>
 <tr>
-<td>Run incomplete: <code>result finalize</code> of a run where nothing failed but an assertion still needs the agent's verdict</td>
+<td>Run incomplete: <code>run</code> or <code>result finalize</code> of a run where nothing failed but something still needs the agent's verdict</td>
 <td><code>incomplete</code></td>
 <td><code>7</code></td>
 </tr>
@@ -1839,6 +1839,10 @@
 <td>Validate a scenario JSON file against the <a href="../schema/">scenario schema</a>; warns (or, with <code>--strict</code>, fails) on actions that cannot replay unattended and on broken references (duplicate step ids, dangling <code>after_step</code> or condition <code>step_id</code>, steps with no <code>target</code>, undeclared variables), and warns on <code>launch_app</code> steps that leave <code>cold</code> unset and on waits with no <code>wait_config</code></td>
 </tr>
 <tr>
+<td><code>mauto run &lt;scenario&gt; [--device &lt;id&gt; --run-id &lt;id&gt; --timeout-ms &lt;ms&gt; --update-references --judge &lt;none&gt; --junit &lt;path&gt;]</code></td>
+<td>Replay a scenario unattended, in one invocation: the precondition device actions, every step, and every assertion the CLI can decide, then finalize the <a href="../result-schema/">result file</a>. <code>--run-id</code> names the run (minted as <code>run_YYYYMMDD_HHMMSS</code> when omitted); <code>--timeout-ms</code> caps how long any one step waits; <code>--update-references</code> records each <code>screenshot_match</code> capture as its reference screenshot instead of comparing; <code>--judge</code> says who decides the agent-judged assertions (only <code>none</code> is accepted, and it is the default); <code>--junit</code> also writes the run as a JUnit XML report (the file's directory must exist). Returns <code>{run_id, scenario_id, status, result_path, duration_seconds, steps, assertions, failed_step, failures, pending, junit_path, executor}</code>. Exits <code>0</code> passed, <code>6</code> <code>test_failed</code>, <code>7</code> <code>incomplete</code></td>
+</tr>
+<tr>
 <td><code>mauto assert &lt;type&gt; [--target --expected --operator --count --pattern --variable --permission --device --reference &lt;path&gt; --tolerance &lt;n&gt; --mask &lt;x,y,w,h \| element description&gt;… --update-references]</code></td>
 <td>Evaluate an assertion; mechanical types are decided by the CLI over the element list, <code>screenshot_match</code> is decided by the CLI against a <a href="../assertions/#screenshot_match">reference screenshot</a>, and the remaining visual types are deferred to the agent. A failed verdict exits <code>6</code> (<code>test_failed</code>) with the verdict in <code>data</code></td>
 </tr>
@@ -1860,6 +1864,17 @@
 </tr>
 </tbody>
 </table>
+<div class="admonition note">
+<p class="admonition-title"><code>run</code> outcomes and exit codes</p>
+<p><code>mauto run &lt;scenario&gt;</code> needs a workspace and no agent. It makes every refusal before touching a device: an unknown <code>--judge</code>, a <code>--timeout-ms</code> that is not a positive integer, a <code>--junit</code> path whose directory does not exist (or that names a directory), an invalid run id, and a scenario that is unreadable, schema-invalid, or fails <code>validate --strict</code> (for example one with an unsupported action) all fail with <code>invalid_input</code> (exit <code>3</code>).</p>
+<p>A run that reaches the device ends one of three ways, each with the same <code>data</code> keys and a finalized result file at <code>data.result_path</code>:</p>
+<ul>
+<li><strong>Passed</strong> (<code>ok: true</code>, exit <code>0</code>): every step ran and every assertion passed; <code>data.status</code> is <code>passed</code>.</li>
+<li><strong><code>test_failed</code></strong> (exit <code>6</code>): a step or an assertion failed; <code>data.status</code> is <code>failed</code> or <code>error</code>. The runner stops at a failed step. <code>data.failed_step</code> is the first failed step (<code>null</code> when only an assertion failed) and <code>data.failures</code> lists each failed step and assertion with its message.</li>
+<li><strong><code>incomplete</code></strong> (exit <code>7</code>): nothing failed, but something still needs an agent: an <a href="../assertions/#mechanical-vs-agent-judged-assertions">agent-judged assertion</a>, a <code>screenshot_match</code> whose reference screenshot does not exist yet, or a step the runner cannot perform by itself. <code>data.pending</code> lists the undecided assertions as <code>{assertion_id, step_id, type}</code>, and the <code>hint</code> prints the commands that complete the run. In CI there is no agent, so treat <code>7</code> as not passed.</li>
+</ul>
+<p><code>data.steps</code> counts <code>{total, passed, failed, error, skipped, needs_agent}</code> and <code>data.assertions</code> counts <code>{total, passed, failed, needs_agent}</code>. With <code>--junit</code>, the report is written for all three outcomes and <code>data.junit_path</code> names it; a <code>needs_agent</code> assertion is a <code>&lt;skipped&gt;</code> test case. If only the report cannot be written, the run fails with <code>environment</code> (exit <code>5</code>) and still carries the run's <code>data</code>. Any other failure (<code>device</code>, exit <code>2</code>) is not a verdict about the app. See the <a href="../../faq/#how-do-i-integrate-with-cicd">CI recipe</a>.</p>
+</div>
 <div class="admonition note">
 <p class="admonition-title"><code>validate</code> and replay warnings</p>
 <p>Schema-valid is not the same as replayable, so <code>validate</code> also reports replay warnings in <code>data.warnings</code>, with a summarising <code>hint</code>. A scenario with nothing to report gets the bare <code>{"valid": true}</code>.</p>

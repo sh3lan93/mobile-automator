@@ -1813,11 +1813,12 @@ mauto<span class="w"> </span>init<span class="w"> </span>--agent<span class="w">
 <li>Lists available scenarios</li>
 <li>Confirms device connection</li>
 <li>Installs a named artifact if you gave one; otherwise builds and installs (platform-aware) or asks you to install the app yourself (platform-agnostic)</li>
-<li>Executes the scenario step by step</li>
+<li>Replays the scenario with <code>mauto run &lt;scenario&gt;</code>, then judges any assertion the CLI could not decide</li>
 <li>Captures observations (flakiness, regressions, state context)</li>
 <li>Generates a detailed result report</li>
 </ol>
 <p>Results are saved to <code>.mobile-automator/results/&lt;run_id&gt;.json</code>.</p>
+<p>You can also replay a saved scenario yourself, with no agent: <code>mauto run .mobile-automator/scenarios/&lt;scenario&gt;.json</code> exits <code>0</code> when it passed, <code>6</code> when the test failed, and <code>7</code> when an assertion still needs an agent's judgment. See the <a href="../../guides/execute/#unattended-replay-with-mauto-run">Execute guide</a>.</p>
 <h2 id="step-6-review-results">Step 6: Review Results<a class="headerlink" href="#step-6-review-results" title="Permanent link">&para;</a></h2>
 <p>Open the result file in your editor:</p>
 <div class="highlight"><pre><span></span><code>cat<span class="w"> </span>.mobile-automator/results/&lt;run_id&gt;.json

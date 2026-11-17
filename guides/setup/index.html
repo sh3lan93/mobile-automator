@@ -2076,7 +2076,7 @@ mauto<span class="w"> </span>config<span class="w"> </span><span class="nb">set<
 </code></pre></div>
 <p>Switching clears the pinned device (the engines name Android emulators differently — re-select with <code>mauto devices use &lt;id&gt;</code>), and the next device verb restarts the session on the new engine. An exported <code>MOBILEMCP_LEGACY_ROBOT</code> overrides the key. See <a href="https://github.com/sh3lan93/mobile-automator/blob/main/TROUBLESHOOTING.md">TROUBLESHOOTING.md</a> for the Android <code>DeviceServer</code> cleanup the hint mentions.</p>
 <h3 id="replay-timings-optional">Replay timings (optional)<a class="headerlink" href="#replay-timings-optional" title="Permanent link">&para;</a></h3>
-<p>The in-progress <code>mauto run</code> replayer reads an optional <code>run</code> block from <code>config.json</code>. Every key is optional, none is written by <code>mauto setup</code>, and an absent key keeps its default:</p>
+<p>The <code>mauto run</code> replayer reads an optional <code>run</code> block from <code>config.json</code>. Every key is optional, none is written by <code>mauto setup</code>, and an absent key keeps its default:</p>
 <table>
 <thead>
 <tr>

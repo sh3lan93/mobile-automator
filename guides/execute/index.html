@@ -843,6 +843,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#unattended-replay-with-mauto-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unattended replay with mauto run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#prerequisites" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1843,6 +1854,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#unattended-replay-with-mauto-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unattended replay with mauto run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#prerequisites" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2347,10 +2369,48 @@
 </code></pre></div>
 <p>With any other agent, have it read the guide and drive the device through <code>mauto</code> verbs:</p>
 <div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>guide<span class="w"> </span>execute
-<span class="c1"># the agent then selects a scenario and device, runs it step-by-step,</span>
-<span class="c1"># and writes a detailed result report</span>
+<span class="c1"># the agent then selects a scenario and device, replays it with `mauto run`,</span>
+<span class="c1"># judges whatever the run left for an agent, and reports the result</span>
 </code></pre></div>
 <p>Results are saved to: <code>.mobile-automator/results/run_YYYYMMDD_HHMMSS.json</code></p>
+<hr />
+<h2 id="unattended-replay-with-mauto-run">Unattended replay with <code>mauto run</code><a class="headerlink" href="#unattended-replay-with-mauto-run" title="Permanent link">&para;</a></h2>
+<p>Execution starts with one command. The agent runs it first, and you can run it yourself (or from CI) with no agent at all:</p>
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>run<span class="w"> </span>.mobile-automator/scenarios/login_flow.json
+</code></pre></div>
+<p><code>mauto run</code> performs the precondition device actions, every step, and every assertion the CLI can decide, then writes the finalized result file. What happens next depends on the outcome:</p>
+<table>
+<thead>
+<tr>
+<th>Outcome</th>
+<th>Exit code</th>
+<th>What it means</th>
+<th>What happens next</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>passed</code></td>
+<td><code>0</code></td>
+<td>Every step ran and every assertion passed</td>
+<td>Nothing; the result file is final</td>
+</tr>
+<tr>
+<td><code>test_failed</code></td>
+<td><code>6</code></td>
+<td>A step or an assertion failed</td>
+<td>The agent reports the failure from the result; it does not retry or re-judge</td>
+</tr>
+<tr>
+<td><code>incomplete</code></td>
+<td><code>7</code></td>
+<td>Nothing failed, but something needs an agent: an agent-judged assertion, a <code>screenshot_match</code> with no baseline yet, or a step the runner cannot perform</td>
+<td>The agent judges what is pending, records each verdict with <code>mauto result add-assertion</code>, and finalizes again</td>
+</tr>
+</tbody>
+</table>
+<p>Any other failure is a tool, input or device error, not a verdict about your app. A scenario that contains an unsupported action is refused before any device work; the agent replays that one step by step instead.</p>
+<p>The phases described in the rest of this guide are what the agent does when it replays a scenario step by step: for the work an <code>incomplete</code> run leaves to it, or for a scenario <code>mauto run</code> refuses. For the flags and the returned data see the <a href="../../reference/cli-verbs/">CLI verbs reference</a>; for running in CI see the <a href="../../faq/#how-do-i-integrate-with-cicd">FAQ</a>.</p>
 <hr />
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <p>Before running execute, ensure:</p>
