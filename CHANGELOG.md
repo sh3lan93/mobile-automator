@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.40.4]
+
+### 🐛 Fixed
+
+- **A step `mauto run` left `needs_agent` can now be finished in the same
+  run** (#329). When the runner reached a step it cannot perform (an
+  `install_app` with no build path, a `device_property` condition it cannot
+  evaluate), it recorded the step `needs_agent`, stopped, and exited `7`, and
+  that record kept the run `incomplete` for good: `mauto result add-step` only
+  appended, so a second record for the step left the pending one in place.
+  `add-step` now replaces a `needs_agent` record for its `--step-id` in place,
+  the same way `add-assertion --assertion-id` replaces a pending assertion; a
+  record for a decided step still appends. The `incomplete` hint prints the
+  `mauto result add-step --run-id <id> --step-id <step> --status <pass|fail>`
+  line and says the later steps did not run, and the execute guide now tells
+  the agent to record the step, perform the later steps with one-shot verbs,
+  and re-finalize with `--scenario`, instead of replaying the whole scenario
+  under a new run id.
+
 ## [0.40.3]
 
 ### 🐛 Fixed
