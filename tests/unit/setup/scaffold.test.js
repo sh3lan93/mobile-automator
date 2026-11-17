@@ -3,6 +3,7 @@
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 const { scaffold } = require('../../../src/setup/scaffold');
 const { load } = require('../../../src/config/manager');
@@ -83,7 +84,92 @@ describe('workspace .gitignore', () => {
     const body = fs.readFileSync(gi, 'utf8');
     expect(body).toContain('.session/');
     expect(body).toContain('.logs/');
-    expect(body).toContain('screenshots/');
+    const lines = body.split('\n');
+    expect(lines).toContain('screenshots/*');
+    expect(lines).toContain('!screenshots/reference/');
+    expect(lines).not.toContain('screenshots/');
+  });
+
+  it('reports upgraded as an empty array on a fresh scaffold', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scaffold-'));
+    const { upgraded } = scaffold(root, { mode: 'platform-aware' });
+    expect(upgraded).toEqual([]);
+  });
+
+  it('keeps reference baselines tracked while ignoring run artifacts (real git)', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scaffold-git-'));
+    execFileSync('git', ['init', '-q'], { cwd: root });
+    scaffold(root, { mode: 'platform-aware' });
+
+    const ws = path.join(root, '.mobile-automator');
+    const files = {
+      reference: 'screenshots/reference/s1/a1.png',
+      actual: 'screenshots/s1/run_x/assert_a1.png',
+      diff: 'screenshots/assert/assert_x/diff.png',
+      log: '.session/daemon.log',
+    };
+    for (const rel of Object.values(files)) {
+      const abs = path.join(ws, rel);
+      fs.mkdirSync(path.dirname(abs), { recursive: true });
+      fs.writeFileSync(abs, 'x');
+    }
+    const ignored = (rel) => {
+      try {
+        execFileSync('git', ['check-ignore', '-q', path.join('.mobile-automator', rel)], { cwd: root });
+        return true;
+      } catch (err) {
+        if (err.status === 1) return false;
+        throw err;
+      }
+    };
+    expect(ignored(files.reference)).toBe(false);
+    expect(ignored(files.actual)).toBe(true);
+    expect(ignored(files.diff)).toBe(true);
+    expect(ignored(files.log)).toBe(true);
+
+    const status = execFileSync('git', ['status', '--porcelain', '--untracked-files=all'], { cwd: root, encoding: 'utf8' });
+    expect(status).toContain(`.mobile-automator/${files.reference}`);
+    expect(status).not.toContain(`.mobile-automator/${files.actual}`);
+  });
+
+  it('upgrades a pristine .gitignore that an earlier mauto setup wrote', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scaffold-'));
+    fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
+    const gi = path.join(root, '.mobile-automator', '.gitignore');
+    const legacy = '# Managed by `mauto setup`. Runtime artifacts — not source.\n.session/\n.logs/\nscreenshots/\n';
+    fs.writeFileSync(gi, legacy);
+
+    const { created, upgraded } = scaffold(root, { mode: 'platform-aware' });
+
+    const body = fs.readFileSync(gi, 'utf8');
+    expect(body).not.toBe(legacy);
+    expect(body.split('\n')).toContain('!screenshots/reference/');
+    expect(upgraded).toEqual([gi]);
+    expect(created).not.toContain(gi);
+  });
+
+  it('keeps an edited .gitignore that still ignores screenshots/ and flags it', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scaffold-'));
+    fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
+    const gi = path.join(root, '.mobile-automator', '.gitignore');
+    const edited = '# mine\n.session/\nscreenshots/\n*.tmp\n';
+    fs.writeFileSync(gi, edited);
+
+    const { upgraded, gitignoreIgnoresReferences } = scaffold(root, { mode: 'platform-aware' });
+
+    expect(fs.readFileSync(gi, 'utf8')).toBe(edited);
+    expect(upgraded).toEqual([]);
+    expect(gitignoreIgnoresReferences).toBe(true);
+  });
+
+  it('does not flag an edited .gitignore that re-includes the baselines', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scaffold-'));
+    fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
+    const gi = path.join(root, '.mobile-automator', '.gitignore');
+    fs.writeFileSync(gi, 'screenshots/\n!screenshots/reference/\n');
+
+    const { gitignoreIgnoresReferences } = scaffold(root, { mode: 'platform-aware' });
+    expect(gitignoreIgnoresReferences).toBe(false);
   });
 
   it('reports the .gitignore in created[] on first write', () => {
@@ -101,6 +187,7 @@ describe('workspace .gitignore', () => {
     scaffold(root, { mode: 'platform-aware' });
 
     expect(fs.readFileSync(gi, 'utf8')).toBe('# mine\n');
+    expect(scaffold(root, { mode: 'platform-aware' }).gitignoreIgnoresReferences).toBe(false);
   });
 });
 

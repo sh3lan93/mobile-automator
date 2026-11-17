@@ -1475,6 +1475,23 @@ describe('cli handlers', () => {
       expect(exitKind).toBe('invalid_input');
     });
 
+    test('hints when an edited workspace .gitignore still ignores reference screenshots', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-gi-'));
+      fs.mkdirSync(path.join(projectRoot, '.mobile-automator'), { recursive: true });
+      fs.writeFileSync(path.join(projectRoot, '.mobile-automator', '.gitignore'), '# mine\nscreenshots/\n');
+      const { envelope } = handleSetup({ projectRoot }, { mode: 'aware' });
+      expect(envelope.ok).toBe(true);
+      expect(envelope.data.upgraded).toEqual([]);
+      expect(envelope.hint).toContain('!screenshots/reference/');
+    });
+
+    test('a fresh setup reports no upgrades and no .gitignore hint', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-gi-'));
+      const { envelope } = handleSetup({ projectRoot }, { mode: 'aware' });
+      expect(envelope.data.upgraded).toEqual([]);
+      expect(envelope.hint || '').not.toContain('!screenshots/reference/');
+    });
+
     it('setup surfaces the telemetry notice in its envelope rather than printing a banner', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-notice-'));
       const { envelope } = handleSetup({ projectRoot }, { mode: 'aware' });
