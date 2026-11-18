@@ -1848,7 +1848,7 @@
 </tr>
 <tr>
 <td><code>mauto result add-step --run-id --step-id --status [--scenario-id --attempts --screenshot --error-message --observation &lt;type&gt;:&lt;message&gt; --capture &lt;name&gt;=&lt;value&gt;]</code></td>
-<td>Append a step result to a run; <code>--observation</code> and <code>--capture</code> are repeatable. <code>--status</code> accepts <code>pass | fail | skipped | error</code> (and <code>passed</code>, <code>failed</code>, <code>skip</code>) and rejects anything else with <code>invalid_input</code> (exit <code>3</code>)</td>
+<td>Append a step result to a run; <code>--observation</code> and <code>--capture</code> are repeatable. A record for a <code>--step-id</code> that <code>mauto run</code> left <code>needs_agent</code> replaces that pending record in place and adds a <code>state_context</code> observation saying what the runner left to the agent; any other record appends. For a parent step left pending by one of its sub-steps, record the parent, not the sub-step. <code>--status</code> accepts <code>pass | fail | skipped | error</code> (and <code>passed</code>, <code>failed</code>, <code>skip</code>) and rejects anything else with <code>invalid_input</code> (exit <code>3</code>)</td>
 </tr>
 <tr>
 <td><code>mauto result add-assertion --run-id --step-id --type --pass &lt;true\|false\|pending&gt; [--judge &lt;agent\|none&gt; --scenario-id --assertion-id --message --expected --actual --reference-screenshot &lt;path&gt; --actual-screenshot &lt;path&gt; --similarity-score &lt;0..1&gt;]</code></td>
