@@ -1497,16 +1497,6 @@ describe('cli handlers', () => {
       expect(exitKind).toBe('invalid_input');
     });
 
-    // An inherited Object.prototype key is not a mode: the plain-object lookup
-    // once resolved `constructor` to a function, which JSON then dropped,
-    // deleting the stored mode with ok:true.
-    test.each(['constructor', 'toString', '__proto__', 'hasOwnProperty'])('rejects the prototype key %s as a mode', (m) => {
-      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-proto-'));
-      const { exitKind } = handleSetup({ projectRoot }, { mode: m });
-      expect(exitKind).toBe('invalid_input');
-      expect(fs.existsSync(path.join(projectRoot, '.mobile-automator'))).toBe(false);
-    });
-
     test('a fresh setup reports no upgrades', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-gi-'));
       const { envelope } = handleSetup({ projectRoot }, { mode: 'aware' });

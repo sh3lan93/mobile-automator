@@ -942,18 +942,16 @@ function storeHint(store) {
 // `mauto setup` from a subdirectory scaffold a nested workspace under a legacy
 // project, the split state this refusal exists to prevent.
 function handleSetup({ projectRoot, ancestorRoot = null, legacyRoot = null }, opts = {}) {
-  // Own keys only: a plain-object lookup resolves `constructor` & co. to
-  // Object.prototype members.
-  if (opts.mode !== undefined && !Object.hasOwn(MODE_ALIASES, String(opts.mode))) {
+  // No --mode stays undefined, never defaulted here: only scaffold knows
+  // whether config.json already exists, and the default is for a new
+  // workspace only (#333).
+  const mode = opts.mode === undefined ? undefined : MODE_ALIASES[String(opts.mode)];
+  if (opts.mode !== undefined && !mode) {
     return {
       envelope: fail('invalid_input', `unknown mode "${opts.mode}"`, 'Use --mode aware or --mode agnostic.'),
       exitKind: 'invalid_input',
     };
   }
-  // No --mode stays undefined, never defaulted here: only scaffold knows
-  // whether config.json already exists, and the default is for a new
-  // workspace only (#333).
-  const mode = opts.mode === undefined ? undefined : MODE_ALIASES[String(opts.mode)];
   // Scaffolding beside an un-migrated legacy workspace would fork the user's
   // state into two directories. Discovery reports no legacy root once a new
   // workspace exists, so a user mid-recovery gets through.

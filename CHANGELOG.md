@@ -22,10 +22,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`mauto setup` reports a mode switch.** `data.mode_changed` is
   `{from, to}` when an explicit `--mode` changes the workspace's effective
   mode, and `null` otherwise.
-- **`mauto setup --mode constructor` (or any `Object.prototype` key) is
-  rejected** with `invalid_input`. The mode lookup read inherited keys, so it
-  stored a function that JSON then dropped, deleting the stored mode with
-  `ok: true`.
 
 ## [0.40.7]
 
