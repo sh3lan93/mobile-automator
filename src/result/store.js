@@ -7,15 +7,14 @@ const { atomicWrite } = require('../util/atomic');
 const { withLock } = require('../util/lock');
 const { OBSERVATION_TYPES, stepStatus } = require('./flags');
 const {
-  deriveRunStatus,
   isErroredStep,
   isFailedStep,
   isFailingAssertion,
   isPendingAssertion,
   isPendingStep,
 } = require('./outcome');
-const { unrecordedEntries } = require('./scenario-check');
-const { checkExplicitStatus } = require('./status-guard');
+const { ResultStoreRefusal } = require('./refusal');
+const { resolveRunStatus } = require('./status-guard');
 const { workspaceDir } = require('../workspace/layout');
 
 // Incremental result accumulator that persists to
@@ -484,26 +483,16 @@ class ResultStore {
   // after the refresh, so the status is decided from exactly the entries the
   // file is written with, never from an earlier snapshot.
   //
-  // An explicit `status` is checked the same way (#337): against the entries
-  // just re-read, by checkExplicitStatus (src/result/status-guard.js), before
-  // anything is written. A refusal throws StatusRefusedError and leaves the
-  // file as it was, so a step recorded concurrently can never be finalized
-  // under a status greener than the one it derives.
+  // An explicit `status` is decided the same way (#337): resolveRunStatus
+  // (src/result/status-guard.js) checks it against the entries just re-read,
+  // before anything changes, and throws StatusRefusedError for one greener
+  // than they derive — so a step recorded concurrently can never be finalized
+  // under a better status than its own records allow.
   finalize({ status, durationSeconds = 0, summary, metadata, measurements, executor, scenario } = {}) {
     return withLock(this._lock, () => {
       this._refreshFromDisk();
 
-      const unrecorded = scenario
-        ? unrecordedEntries({ steps: this._steps, assertions: this._assertions }, scenario)
-        : null;
-      const refusal = checkExplicitStatus({
-        status,
-        steps: this._steps,
-        assertions: this._assertions,
-        scenarioAssertionCount: scenario ? (scenario.assertions || []).length : undefined,
-        unrecorded,
-      });
-      if (refusal) throw new StatusRefusedError(refusal);
+      const resolvedStatus = resolveRunStatus({ status, steps: this._steps, assertions: this._assertions, scenario });
 
       // Appended INSIDE the lock and deduped by (type, message), so re-running
       // finalize — which the execute guide tells an agent to do after a failed
@@ -518,8 +507,6 @@ class ResultStore {
       const passed = this._assertions.filter((a) => a.status === 'passed').length;
       const failed = this._assertions.filter(isFailingAssertion).length;
       const total = this._assertions.length;
-
-      const resolvedStatus = status || deriveRunStatus(this._steps, this._assertions, unrecorded);
 
       const result = {
         run_id: this.runId,
@@ -586,12 +573,12 @@ function isResultRunId(runId) {
 // Typed error for a run id isResultRunId refuses, carrying the envelope's kind
 // and hint (the DeviceResolutionError pattern). Thrown by the ResultStore
 // constructor, returned as data by readFinalizedResult — one wording for both.
-class InvalidRunIdError extends Error {
+class InvalidRunIdError extends ResultStoreRefusal {
   constructor(projectRoot, runId) {
-    super(`invalid run id "${runId}"`);
-    this.name = 'InvalidRunIdError';
-    this.kind = 'invalid_input';
-    this.hint = `A run id names a file in ${resultsDir(projectRoot)}; it cannot contain a path separator.`;
+    super(
+      `invalid run id "${runId}"`,
+      `A run id names a file in ${resultsDir(projectRoot)}; it cannot contain a path separator.`
+    );
   }
 }
 
@@ -608,24 +595,9 @@ const ALREADY_DECIDED_HINT = {
 // Typed error for a pending entry recorded over one already decided (#275,
 // #329; see upsertPending): a decided entry is never turned back into an
 // undecided one. Carries the envelope's kind and hint, like InvalidRunIdError.
-class AlreadyDecidedError extends Error {
+class AlreadyDecidedError extends ResultStoreRefusal {
   constructor(what, id, status) {
-    super(`${what} "${id}" is already decided (${status}); it cannot go back to pending`);
-    this.name = 'AlreadyDecidedError';
-    this.kind = 'invalid_input';
-    this.hint = ALREADY_DECIDED_HINT[what](id);
-  }
-}
-
-// Typed error for an explicit finalize status the recorded entries do not
-// allow (#337; the rule and its wording are checkExplicitStatus's). Thrown
-// under the lock before any write, so a refused finalize changes nothing.
-class StatusRefusedError extends Error {
-  constructor({ message, hint }) {
-    super(message);
-    this.name = 'StatusRefusedError';
-    this.kind = 'invalid_input';
-    this.hint = hint;
+    super(`${what} "${id}" is already decided (${status}); it cannot go back to pending`, ALREADY_DECIDED_HINT[what](id));
   }
 }
 
@@ -691,5 +663,4 @@ module.exports = {
   isResultRunId,
   InvalidRunIdError,
   AlreadyDecidedError,
-  StatusRefusedError,
 };

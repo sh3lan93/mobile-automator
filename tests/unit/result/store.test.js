@@ -4,7 +4,8 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 
-const { ResultStore, StatusRefusedError } = require('../../../src/result/store');
+const { ResultStore } = require('../../../src/result/store');
+const { StatusRefusedError } = require('../../../src/result/status-guard');
 const { createCliAjv } = require('../../../src/schemas/cli-ajv');
 
 const RESULT_SCHEMA_PATH = path.resolve(

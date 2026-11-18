@@ -2,8 +2,9 @@
 
 // The scenario-aware half of `mauto result finalize` (#275): load and hash the
 // scenario, cross-check the recorded run against it, build the executor,
-// finalize, and map the finalized status to an envelope. Flag parsing stays with the caller. `finalizeRun` is injected so
-// this module never requires src/cli.js, which owns it.
+// finalize, and map the finalized status to an envelope. Flag parsing stays
+// with the caller. `finalizeRun` is injected so this module never requires
+// src/cli.js, which owns it.
 
 const path = require('path');
 
@@ -42,9 +43,9 @@ function finalizeAgainstScenario(
   // The scenario-mismatch refusal reads a snapshot taken before the store's
   // lock; it only ever refuses and never writes. Everything written — the
   // derived status (#335) and the check of an explicit --status (#337) — is
-  // decided under the lock, in ResultStore#finalize, which throws
-  // StatusRefusedError (invalid_input, nothing written) for a status greener
-  // than the run derives.
+  // decided under the lock, by resolveRunStatus in ResultStore#finalize, which
+  // throws StatusRefusedError (invalid_input, nothing written) for a status
+  // greener than the run derives.
   const context = loadScenarioContext({ validator, resultStoreFactory, projectRoot, cwd }, opts);
   if (context && context.failure) return context.failure;
 

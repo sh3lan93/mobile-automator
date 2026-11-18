@@ -14,7 +14,8 @@ const { loadScenario } = require('./scenario/load');
 const { evaluate, MECHANICAL_TYPES, REFERENCE_SCREENSHOT_TYPES } = require('./assertion/evaluator');
 const { observe } = require('./assertion/observe');
 const { fromCliFlags } = require('./assertion/fields');
-const { ResultStore, readFinalizedResult, InvalidRunIdError, AlreadyDecidedError, StatusRefusedError } = require('./result/store');
+const { ResultStore, readFinalizedResult } = require('./result/store');
+const { ResultStoreRefusal } = require('./result/refusal');
 const {
   OBSERVATION_TYPES, parseObservation, parseCapture, parseAssertionVerdict, parseSimilarityScore, RUN_STATUSES,
   parseRunStatus, parseStepStatus,
@@ -136,7 +137,7 @@ function usageLine(cmd) {
 // is the single boundary that guarantees a calling agent always receives one
 // JSON line + a meaningful exit code instead of a raw stack trace on stderr.
 //   CommanderError (parse failure) -> invalid_input, with the usage line as hint
-//   InvalidRunIdError            -> invalid_input, with the store's hint
+//   ResultStoreRefusal           -> its kind (invalid_input), with its hint
 //   SyntaxError                  -> invalid_input (a malformed JSON file)
 //   fs EACCES/ENOENT/EROFS/...    -> environment, with a filesystem hint
 //   anything else                -> internal
@@ -151,11 +152,11 @@ function toEnvelope(err) {
       exitKind: 'invalid_input',
     };
   }
-  // A --run-id the ResultStore refuses (#295), a pending verdict over a
-  // decided one (#275), or a finalize --status greener than the run derives
-  // (#337): the store owns the rule and the wording, so every result verb
-  // reports it identically.
-  if (err instanceof InvalidRunIdError || err instanceof AlreadyDecidedError || err instanceof StatusRefusedError) {
+  // A refusal from the result layer (src/result/refusal.js): a --run-id the
+  // ResultStore refuses (#295), a pending verdict over a decided one (#275),
+  // a finalize --status greener than the run derives (#337). The layer owns
+  // the rule and the wording, so every result verb reports it identically.
+  if (err instanceof ResultStoreRefusal) {
     return { envelope: fail(err.kind, err.message, err.hint), exitKind: err.kind };
   }
   if (err instanceof SyntaxError) {
