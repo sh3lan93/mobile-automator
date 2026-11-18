@@ -46,6 +46,7 @@ const {
 const selectionStore = require('../../src/device/selection');
 const sessionPaths = require('../../src/device/session-paths');
 const { createCliAjv } = require('../../src/schemas/cli-ajv');
+const { DEFAULT_LONG_PRESS_MS } = require('../../src/device/bridge');
 
 const RESULT_SCHEMA_PATH = path.resolve(
   __dirname,
@@ -399,13 +400,13 @@ describe('cli handlers', () => {
   });
 
   describe('handleLongPress', () => {
-    test('parses "x,y" and long-presses via the bridge (no duration)', async () => {
+    test('parses "x,y", long-presses at the default duration and reports it (#324)', async () => {
       const calls = [];
       const bridge = { longPress: async (c) => { calls.push(c); } };
       const { envelope, exitKind } = await handleLongPress({ deviceBridge: bridge }, '12,34');
       expect(exitKind).toBe('ok');
-      expect(envelope.data).toEqual({ long_pressed: [12, 34] });
-      expect(calls).toEqual([{ x: 12, y: 34 }]);
+      expect(envelope.data).toStrictEqual({ long_pressed: [12, 34], duration: DEFAULT_LONG_PRESS_MS });
+      expect(calls).toStrictEqual([{ x: 12, y: 34, duration: DEFAULT_LONG_PRESS_MS }]);
     });
 
     test('passes a valid duration through to the bridge and reports it', async () => {

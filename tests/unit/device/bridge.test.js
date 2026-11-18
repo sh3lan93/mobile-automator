@@ -1,6 +1,6 @@
 'use strict';
 
-const { DeviceBridge } = require('../../../src/device/bridge');
+const { DeviceBridge, DEFAULT_LONG_PRESS_MS } = require('../../../src/device/bridge');
 
 describe('DeviceBridge', () => {
   test('throws TypeError when call is not a function', () => {
@@ -119,12 +119,18 @@ describe('DeviceBridge', () => {
   });
 
   describe('longPress', () => {
-    test('invokes mobile_long_press_on_screen_at_coordinates with x,y and omits duration when absent', async () => {
+    // #324: the engine's own 500 ms default sits on Flutter's 500 ms
+    // kLongPressTimeout, so a press without a duration races the recognizer.
+    test('sends DEFAULT_LONG_PRESS_MS when no duration is given (never the engine default)', async () => {
       const calls = [];
       const call = async (tool, args) => { calls.push([tool, args]); return {}; };
       const bridge = new DeviceBridge({ call });
       await bridge.longPress({ x: 12, y: 34 });
-      expect(calls).toEqual([['mobile_long_press_on_screen_at_coordinates', { x: 12, y: 34 }]]);
+      expect(calls).toStrictEqual([['mobile_long_press_on_screen_at_coordinates', { x: 12, y: 34, duration: DEFAULT_LONG_PRESS_MS }]]);
+    });
+
+    test('DEFAULT_LONG_PRESS_MS clears the 500 ms platform long-press thresholds with margin', () => {
+      expect(DEFAULT_LONG_PRESS_MS).toBe(1000);
     });
 
     test('forwards duration when provided', async () => {
