@@ -65,3 +65,42 @@ describe('checkExplicitStatus: an explicit status may equal the derived one or b
     expect(checkExplicitStatus({ status: 'incomplete', steps: [step('failed')], assertions: [assertion('needs_agent')] })).not.toBeNull();
   });
 });
+
+// #335: with --scenario, a declared step or assertion the run never recorded
+// keeps a recorded-green run from being passed.
+describe('checkExplicitStatus with unrecorded scenario entries (#335)', () => {
+  const clean = { steps: [step('pass')], assertions: [assertion('passed')] };
+  const gaps = { steps: ['tap'], assertions: ['shown'] };
+  const none = { steps: [], assertions: [] };
+
+  test('passed over a recorded-green run with gaps is refused, naming them', () => {
+    const r = checkExplicitStatus({ status: 'passed', ...clean, unrecorded: gaps });
+    expect(r.message).toMatch(/never recorded/);
+    expect(r.message).toContain('tap');
+    expect(r.message).toContain('shown');
+    expect(r.hint).toMatch(/incomplete/);
+  });
+
+  test('incomplete over a recorded-green run with gaps is allowed', () => {
+    expect(checkExplicitStatus({ status: 'incomplete', ...clean, unrecorded: gaps })).toBeNull();
+  });
+
+  test('failed and error stay allowed over gaps', () => {
+    expect(checkExplicitStatus({ status: 'failed', ...clean, unrecorded: gaps })).toBeNull();
+    expect(checkExplicitStatus({ status: 'error', ...clean, unrecorded: gaps })).toBeNull();
+  });
+
+  test('empty gap lists change nothing', () => {
+    expect(checkExplicitStatus({ status: 'passed', ...clean, unrecorded: none })).toBeNull();
+    expect(checkExplicitStatus({ status: 'incomplete', ...clean, unrecorded: none })).not.toBeNull();
+  });
+
+  test('only steps, or only assertions, missing is enough', () => {
+    expect(checkExplicitStatus({ status: 'passed', ...clean, unrecorded: { steps: ['tap'], assertions: [] } })).not.toBeNull();
+    expect(checkExplicitStatus({ status: 'passed', ...clean, unrecorded: { steps: [], assertions: ['shown'] } })).not.toBeNull();
+  });
+
+  test('gaps do not lift a derived failed run: incomplete is still refused there', () => {
+    expect(checkExplicitStatus({ status: 'incomplete', steps: [step('failed')], assertions: [], unrecorded: gaps })).not.toBeNull();
+  });
+});

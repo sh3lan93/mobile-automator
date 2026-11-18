@@ -28,14 +28,33 @@ function pendingByClass(result) {
   return { judged: pending.filter((a) => !isReference(a)), references: pending.filter(isReference) };
 }
 
+// What `result finalize --scenario` found the scenario declares and the run
+// never recorded (#335): `{steps, assertions}` id lists, or none. `mauto run`
+// passes none, and its output is unchanged.
+const NO_GAPS = Object.freeze({ steps: [], assertions: [] });
+const gapsOf = (unrecorded) => unrecorded || NO_GAPS;
+const hasGaps = (unrecorded) => gapsOf(unrecorded).steps.length + gapsOf(unrecorded).assertions.length > 0;
+
+// The message part counting the unrecorded entries, or null.
+function gapCount(unrecorded) {
+  const { steps, assertions } = gapsOf(unrecorded);
+  if (!hasGaps(unrecorded)) return null;
+  const parts = [
+    steps.length ? `${steps.length} declared step(s)` : null,
+    assertions.length ? `${assertions.length}${steps.length ? '' : ' declared'} assertion(s)` : null,
+  ].filter(Boolean);
+  return `${parts.join(' and ')} never recorded`;
+}
+
 // The error message of an `incomplete` run, shared by `result finalize` and
-// `mauto run`. Counts the pending assertions by class; a run pending only on
-// a step names no count.
-function incompleteMessage(result) {
+// `mauto run`. Counts the pending assertions by class, then the declared
+// entries never recorded; a run pending only on a step names no count.
+function incompleteMessage(result, { unrecorded } = {}) {
   const { judged, references } = pendingByClass(result);
   const counts = [
     judged.length ? `${judged.length} assertion(s) need agent judgment` : null,
     references.length ? `${references.length}${judged.length ? '' : ' assertion(s)'} need a reference screenshot` : null,
+    gapCount(unrecorded),
   ].filter(Boolean);
   return `run ${result.run_id} incomplete${counts.length ? `: ${counts.join(', ')}` : ''}`;
 }
@@ -114,33 +133,67 @@ function stepBlock(steps, { runId }) {
   ];
 }
 
-// The hint for an `incomplete` run: the pending steps, a block per pending
-// class, then the re-finalize. The scenario path is the one the executor
+// The hint lines for what the scenario declares and the run never recorded
+// (#335): the ids, the record line for each, and how a step that did not
+// apply is recorded. Only the ids are known here, so an assertion's step and
+// type are left to fill from the scenario.
+function unrecordedBlock(unrecorded, { runId }) {
+  if (!hasGaps(unrecorded)) return [];
+  const { steps, assertions } = unrecorded;
+  const named = [
+    steps.length ? `steps ${steps.join(', ')}` : null,
+    assertions.length ? `assertions ${assertions.join(', ')}` : null,
+  ].filter(Boolean).join('; ');
+  return [
+    `Never recorded: ${named}. Perform each step with one-shot verbs and record it, and record each assertion after its step:`,
+    ...steps.map((id) => `mauto result add-step --run-id ${runId} --step-id ${arg(id)} --status <pass|fail|skipped>`),
+    ...assertions.map(
+      (id) =>
+        `mauto result add-assertion --run-id ${runId} --step-id <step_id> --assertion-id ${arg(id)} ` +
+        '--type <type> --pass <true|false> --message "<why>"'
+    ),
+    'A step whose condition does not hold, or that was optional and missed, is recorded --status skipped; its assertions still apply.',
+  ];
+}
+
+// The hint for an `incomplete` run: the pending steps, the entries never
+// recorded, a block per pending class, then the re-finalize. The scenario path is the one the executor
 // recorded, so the re-run and the re-finalize use the same file, printed
 // absolute (resolved against `projectRoot`): --scenario resolves against the
 // cwd while the workspace is discovered by walking up from it, so a
 // project-relative path would be wrong from any subdirectory.
-function pendingHint(result, { projectRoot }) {
+function pendingHint(result, { projectRoot, unrecorded }) {
   const { judged, references } = pendingByClass(result);
   const pendingSteps = (result.steps_executed || []).filter(isPendingStep);
   const runId = arg(result.run_id);
   const recorded = result.executor && result.executor.scenario_path;
   const scenario = recorded ? arg(path.resolve(projectRoot, recorded)) : '<scenario.json>';
   const nothingPending = judged.length + references.length === 0;
+  // With gaps, "no assertion is pending" would read as "nothing left to do".
+  const lastWord = hasGaps(unrecorded)
+    ? 'Re-finalize once every declared step and assertion is recorded:'
+    : 'No assertion is pending; re-finalize once the run is decided:';
   return [
     ...stepBlock(pendingSteps, { runId }),
+    ...unrecordedBlock(unrecorded, { runId }),
     ...judgedBlock(judged, { runId }),
     ...referenceBlock(references, { projectRoot, scenario }),
-    ...(nothingPending ? ['No assertion is pending; re-finalize once the run is decided:'] : []),
+    ...(nothingPending ? [lastWord] : []),
     `mauto result finalize --run-id ${runId} --scenario ${scenario}`,
   ].join('\n');
 }
 
 // The `incomplete` (exit 7) envelope, shared by `result finalize` and
 // `mauto run`: the message, the store's hints, then the commands that complete
-// the run. `data` is what the envelope carries.
-function incompleteEnvelope(result, { hints, projectRoot, data }) {
-  return fail('incomplete', incompleteMessage(result), [...hints, pendingHint(result, { projectRoot })].join('\n'), data);
+// the run. `data` is what the envelope carries; `unrecorded` is what
+// `result finalize --scenario` found never recorded (#335).
+function incompleteEnvelope(result, { hints, projectRoot, data, unrecorded }) {
+  return fail(
+    'incomplete',
+    incompleteMessage(result, { unrecorded }),
+    [...hints, pendingHint(result, { projectRoot, unrecorded })].join('\n'),
+    data
+  );
 }
 
 module.exports = { arg, pendingAssertions, pendingHint, incompleteMessage, incompleteEnvelope };

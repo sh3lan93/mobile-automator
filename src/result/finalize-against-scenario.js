@@ -10,7 +10,8 @@ const path = require('path');
 
 const { ok, fail } = require('../output/envelope');
 const { loadScenario } = require('../scenario/load');
-const { scenarioMismatch } = require('./scenario-check');
+const { scenarioMismatch, unrecordedEntries } = require('./scenario-check');
+const { deriveRunStatus } = require('./outcome');
 const { buildExecutor } = require('./executor');
 const { incompleteEnvelope } = require('./pending-hint');
 const { checkExplicitStatus } = require('./status-guard');
@@ -28,14 +29,20 @@ function finalizeAgainstScenario(
   let scenarioPath = null;
   let scenarioSha256 = null;
   let scenarioAssertionCount;
+  // What the run recorded, and what the scenario declares that it never did
+  // (#335); both null without --scenario.
+  let recorded = null;
+  let unrecorded = null;
   if (opts.scenario !== undefined) {
     const scenarioFile = path.resolve(cwd, opts.scenario);
     const loaded = loadScenario(validator, scenarioFile, { strict: false });
     if (loaded.failure) return loaded.failure;
-    const mismatch = scenarioMismatch(resultStoreFactory({ runId, scenarioId, projectRoot }).recorded(), loaded);
+    recorded = resultStoreFactory({ runId, scenarioId, projectRoot }).recorded();
+    const mismatch = scenarioMismatch(recorded, loaded);
     if (mismatch) {
       return { envelope: fail('invalid_input', mismatch.message, mismatch.hint, mismatch.data), exitKind: 'invalid_input' };
     }
+    unrecorded = unrecordedEntries(recorded, loaded.scenario);
     scenarioPath = scenarioFile;
     scenarioSha256 = loaded.sha256;
     scenarioAssertionCount = Array.isArray(loaded.scenario.assertions) ? loaded.scenario.assertions.length : 0;
@@ -45,13 +52,27 @@ function finalizeAgainstScenario(
   // never greener (src/result/status-guard.js). Refused before anything is
   // written.
   if (status !== undefined) {
-    const recorded = resultStoreFactory({ runId, scenarioId, projectRoot }).recorded();
+    const { steps, assertions } = recorded || resultStoreFactory({ runId, scenarioId, projectRoot }).recorded();
     const refusal = checkExplicitStatus({
-      status, steps: recorded.steps, assertions: recorded.assertions, scenarioAssertionCount,
+      status, steps, assertions, scenarioAssertionCount, unrecorded,
     });
     if (refusal) {
       return { envelope: fail('invalid_input', refusal.message, refusal.hint), exitKind: 'invalid_input' };
     }
+  }
+
+  // Gaps matter only to a run its records would decide green (#335): a run
+  // with a declared step or assertion never recorded is not a pass, so with
+  // --status omitted it finalizes `incomplete`. A failed or errored run is
+  // decided whatever it lacks (later steps legitimately never ran), so its
+  // gaps are not reported; a run already pending reports them, since they
+  // are part of what the agent still has to do.
+  let effectiveStatus = status;
+  let gaps = null;
+  if (unrecorded && unrecorded.steps.length + unrecorded.assertions.length > 0) {
+    const derived = deriveRunStatus(recorded.steps, recorded.assertions);
+    if (derived === 'passed' || derived === 'incomplete') gaps = unrecorded;
+    if (status === undefined && derived === 'passed') effectiveStatus = 'incomplete';
   }
 
   // Only provided keys: `defaultMetadata` fills the rest with 'unknown', and
@@ -66,7 +87,7 @@ function finalizeAgainstScenario(
   const { result, store, hints } = finalizeRun(
     { resultStoreFactory, memoryStoreFactory, projectRoot },
     {
-      runId, scenarioId, status, duration, metadata, summary: opts.summary,
+      runId, scenarioId, status: effectiveStatus, duration, metadata, summary: opts.summary,
       // No device is connected here, so none is claimed (plan decision 5).
       executor: buildExecutor({ kind: 'agent', projectRoot, scenarioPath, scenarioSha256 }),
     }
@@ -74,8 +95,13 @@ function finalizeAgainstScenario(
 
   // Exit 7: nothing failed, but an agent still has to judge something. The
   // file is written; the hint is the exact commands that complete it.
+  // `data.unrecorded` (#335) sits beside the result fields, never in the file.
   if (result.status === 'incomplete') {
-    return { envelope: incompleteEnvelope(result, { hints, projectRoot, data: result }), exitKind: 'incomplete' };
+    const data = gaps ? { ...result, unrecorded: gaps } : result;
+    return {
+      envelope: incompleteEnvelope(result, { hints, projectRoot, data, unrecorded: gaps }),
+      exitKind: 'incomplete',
+    };
   }
 
   // The exit code is keyed on the FINALIZED status, not the --status flag:
