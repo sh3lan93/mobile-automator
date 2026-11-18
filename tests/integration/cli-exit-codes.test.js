@@ -232,7 +232,7 @@ describe('completing a run left incomplete by a pending step (integration, #329)
     expect(r.status).toBe(7);
     const env = onlyEnvelope(r);
     expect(env.error.kind).toBe('incomplete');
-    expect(env.hint).toContain(`mauto result add-step --run-id ${RUN_ID} --step-id launch --status <pass|fail>`);
+    expect(env.hint).toContain(`mauto result add-step --run-id ${RUN_ID} --step-id launch --status <pass|fail|skipped>`);
   });
 
   test('recording the pending step and the step after it lets the run pass', () => {

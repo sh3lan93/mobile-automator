@@ -7,7 +7,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { ResultStore } = require('../../../src/result/store');
+const { ResultStore, AlreadyDecidedError } = require('../../../src/result/store');
 const { crossCheck } = require('../../../src/result/scenario-check');
 const { pendingHint } = require('../../../src/result/pending-hint');
 
@@ -77,6 +77,50 @@ describe('addStep resolves a needs_agent step (#329)', () => {
     expect(result.status).toBe('failed');
   });
 
+  test('the agent recording a step that does not apply as skipped lets the run pass', () => {
+    const runId = pendingRun('run_20261117_120005');
+    const store = new ResultStore({ runId, projectRoot: root });
+    store.addStep({ step_id: 'install', status: 'skipped' });
+    expect(store.finalize().status).toBe('passed');
+  });
+
+  test('the replacement leaves a state_context observation with what the runner asked', () => {
+    const runId = pendingRun('run_20261117_120006');
+    const store = new ResultStore({ runId, projectRoot: root });
+    store.addStep({ step_id: 'install', status: 'pass' });
+    expect(store.finalize().observations).toEqual([{
+      type: 'state_context',
+      step_id: 'install',
+      message: "mauto run left step 'install' to the agent (install the app by hand). The agent recorded it passed.",
+    }]);
+  });
+
+  test('a needs_agent record for a step already decided throws and writes nothing', () => {
+    const store = new ResultStore({ runId: 'run_20261117_120007', scenarioId: 's', projectRoot: root });
+    store.addStep({ step_id: 'install', status: 'pass' });
+    const before = fs.readFileSync(store.file, 'utf8');
+    let err;
+    try {
+      store.addStep({ step_id: 'install', status: 'skipped', needs_agent: true });
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeInstanceOf(AlreadyDecidedError);
+    expect(err.kind).toBe('invalid_input');
+    expect(err.message).toBe('step "install" is already decided (passed); it cannot go back to pending');
+    expect(err.hint).toMatch(/--run-id/);
+    expect(fs.readFileSync(store.file, 'utf8')).toBe(before);
+  });
+
+  test('a needs_agent record over a needs_agent record replaces it', () => {
+    const runId = pendingRun('run_20261117_120008');
+    const store = new ResultStore({ runId, projectRoot: root });
+    store.addStep({ step_id: 'install', status: 'skipped', needs_agent: true, error_message: 'again' });
+    const steps = store.finalize().steps_executed;
+    expect(steps).toHaveLength(2);
+    expect(steps[1]).toMatchObject({ step_id: 'install', needs_agent: true, error_message: 'again' });
+  });
+
   test('a decided step is never replaced: a second record for it still appends', () => {
     const store = new ResultStore({ runId: 'run_20261117_120002', scenarioId: 's', projectRoot: root });
     store.addStep({ step_id: 'tap', status: 'fail' });
@@ -95,8 +139,10 @@ describe('addStep resolves a needs_agent step (#329)', () => {
     const runId = pendingRun('run_20261117_120004');
     const hint = pendingHint(new ResultStore({ runId, projectRoot: root }).finalize(), { projectRoot: root });
     expect(hint).toContain('Pending step install: install the app by hand');
-    expect(hint).toContain(`mauto result add-step --run-id ${runId} --step-id install --status <pass|fail>`);
-    expect(hint).toMatch(/steps after it did not run/);
+    expect(hint).toContain(`mauto result add-step --run-id ${runId} --step-id install --status <pass|fail|skipped>`);
+    expect(hint).toMatch(/no step after it ran/);
+    // The condition case (#329 review): a step that does not apply is skipped.
+    expect(hint).toMatch(/condition does not hold is recorded skipped; its assertions still apply/);
   });
 });
 

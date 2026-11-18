@@ -15,7 +15,7 @@
 // writes the field, because a plain `store.js.includes(writes)` check is only
 // trustworthy when `writes` names a token unique to that write site:
 //   'substring'  — `writes` is a call/assignment-shaped token (e.g.
-//                  `this._assertions.push(entry)`) that occurs nowhere else in
+//                  `this._crashes.push(entry)`) that occurs nowhere else in
 //                  store.js, so deleting the real write makes it disappear.
 //   'behavioral' — the field is a bare scalar (e.g. `screenshot`) that also
 //                  appears as a destructured parameter name or elsewhere in
@@ -78,7 +78,7 @@ const RESULT_CAPABILITIES = {
     verb: 'add-assertion',
     flags: ['--type', '--pass', '--assertion-id', '--message', '--expected', '--actual'],
     store: 'addAssertion',
-    writes: 'this._assertions.push(entry)',
+    writes: 'upsertPending(this._assertions, entry',
     writeCheck: 'substring',
     schemaPointer: '/properties/assertion_results',
   },

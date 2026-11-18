@@ -79,17 +79,38 @@ function referenceBlock(references, { projectRoot, scenario }) {
   ];
 }
 
-// The hint lines for the steps the runner left to the agent: what each needs,
-// then the `result add-step` line that replaces its pending record
-// (ResultStore#addStep, #329). The runner stopped at the first one, so the
-// steps after it are the agent's too.
+// For a parent left pending by one of its sub-steps (src/run/tree.js: the
+// pending sub-step is the last entry of sub_steps_executed), the line saying
+// which sub-step stopped it, which already ran, and that the parent is what
+// gets recorded: a record for the sub-step's id would append, and the parent
+// would stay pending.
+function subStepLine(step) {
+  const subs = Array.isArray(step.sub_steps_executed) ? step.sub_steps_executed : [];
+  if (!subs.length) return [];
+  const stopped = subs[subs.length - 1].step_id;
+  const ran = subs.slice(0, -1).map((s) => s.step_id);
+  return [
+    `Step ${step.step_id} stopped at its sub-step ${stopped}; mauto run already ran ${ran.length ? ran.join(', ') : 'none of the others'}. ` +
+      `Do ${stopped} and every later sub-step of ${step.step_id}, then record ${step.step_id} once (not its sub-steps):`,
+  ];
+}
+
+// The hint lines for the steps the runner left to the agent (#329): what each
+// needs, then the `result add-step` line that replaces its pending record
+// (ResultStore#addStep). `skipped` is offered because the runner also leaves
+// a step pending when it cannot evaluate its condition, and a step whose
+// condition does not hold is skipped, its assertions still checked.
 function stepBlock(steps, { runId }) {
   if (!steps.length) return [];
   return [
-    ...steps.map((s) => `Pending step ${s.step_id}: ${s.error_message || 'needs an agent'}`),
-    'The runner stopped there, so the steps after it did not run. Do what it asks, record it, then perform ' +
-      'each later step (and its assertions) with one-shot verbs and record it the same way:',
-    ...steps.map((s) => `mauto result add-step --run-id ${runId} --step-id ${arg(s.step_id)} --status <pass|fail>`),
+    ...steps.flatMap((s) => [
+      `Pending step ${s.step_id}: ${s.error_message || 'needs an agent'}`,
+      ...subStepLine(s),
+      `mauto result add-step --run-id ${runId} --step-id ${arg(s.step_id)} --status <pass|fail|skipped>`,
+    ]),
+    'mauto run stops at a pending step, so no step after it ran: perform each later step and its assertions with ' +
+      'one-shot verbs, recording each the same way. A step whose condition does not hold is recorded skipped; ' +
+      'its assertions still apply.',
   ];
 }
 
