@@ -54,8 +54,8 @@ async function type(step, { bridge }) {
   await bridge.type(String(step.value));
 }
 
-// A numeric `value` is the press duration in ms; anything else leaves the
-// engine's default.
+// A numeric `value` is the press duration in ms; anything else leaves
+// DeviceBridge's DEFAULT_LONG_PRESS_MS (#324).
 async function longPress(step, ctx) {
   const { center } = await resolveStep(step, ctx);
   const args = { x: center[0], y: center[1] };

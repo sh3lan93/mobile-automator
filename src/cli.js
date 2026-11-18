@@ -46,6 +46,7 @@ const { readSessionId } = require('./device/session-handle');
 const { captureOnFailure } = require('./observe/failure-capture');
 const { crashTimestampMs } = require('./device/crash-model');
 const { probeCrashes } = require('./device/failure-probe');
+const { DEFAULT_LONG_PRESS_MS } = require('./device/bridge');
 const observeTelemetry = require('./observe/telemetry');
 const observeSpool = require('./observe/spool');
 const observeTransport = require('./observe/transport');
@@ -319,15 +320,12 @@ async function handleLongPress({ deviceBridge }, raw, { duration } = {}) {
       };
     }
   }
+  // Always send and report the duration actually used, so the envelope never
+  // hides which default applied (#324).
+  const pressMs = ms === undefined ? DEFAULT_LONG_PRESS_MS : ms;
   try {
-    if (ms === undefined) {
-      await deviceBridge.longPress({ x, y });
-    } else {
-      await deviceBridge.longPress({ x, y, duration: ms });
-    }
-    const data = { long_pressed: [x, y] };
-    if (ms !== undefined) data.duration = ms;
-    return { envelope: ok(data), exitKind: 'ok' };
+    await deviceBridge.longPress({ x, y, duration: pressMs });
+    return { envelope: ok({ long_pressed: [x, y], duration: pressMs }), exitKind: 'ok' };
   } catch (err) {
     return deviceFail(err);
   }
@@ -2102,7 +2100,7 @@ function buildProgram(deps = {}) {
     .command('long-press')
     .description('Long-press at absolute screen coordinates')
     .requiredOption('--at <x,y>', 'coordinates as "x,y"')
-    .option('--duration <ms>', 'press duration in milliseconds')
+    .option('--duration <ms>', `press duration in milliseconds (default ${DEFAULT_LONG_PRESS_MS})`)
     .option('--device <id>', 'target device id')
     .action(withEnvelope((opts) => withBridge(opts.device, (bridge) => handleLongPress({ deviceBridge: bridge }, opts.at, { duration: opts.duration }))));
 

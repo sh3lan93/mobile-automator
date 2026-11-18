@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.40.7]
+
+### 🐛 Fixed
+
+- **`mauto long-press` without `--duration` now triggers a Flutter
+  `onLongPress`** (#324). The bridge sent no duration, so mobile-mcp's 500 ms
+  default applied, which sits exactly on Flutter's 500 ms long-press timeout
+  (iOS's recognizer also defaults to 500 ms). The press raced the recognizer
+  and was dropped about one time in three, while the envelope said `ok`.
+  `DeviceBridge#longPress` now always sends a duration, `DEFAULT_LONG_PRESS_MS`
+  (1000 ms) when none is given. That covers both `mauto long-press` and a
+  `mauto run` `long_press` step with no numeric `value`. On the sample app's
+  cart row, 500 ms opened the dialog intermittently on Android (mobilecli and
+  legacy engines) and on an iOS simulator; 600 ms and up never missed.
+- **`mauto long-press` reports the duration it used.** `data.duration` is now
+  always present (previously only with an explicit `--duration`).
+- **The generate guides map "long press" and "double tap" to their own
+  verbs**, `mauto long-press` and `mauto double-tap`, not to nonexistent
+  "variants" of `mauto tap`.
+
+### 🔧 Internal
+
+- **`tests/lint/long-press-default-docs.test.js`** fails when a shipping doc
+  states a long-press default other than `DEFAULT_LONG_PRESS_MS`, or when no
+  doc states it. `mauto long-press --help` derives the default from the same
+  constant, and the guides no longer restate it.
+
 ## [0.40.6]
 
 ### 🐛 Fixed

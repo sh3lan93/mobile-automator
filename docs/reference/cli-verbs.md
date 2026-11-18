@@ -61,7 +61,7 @@ These verbs drive the screen. Each accepts `--device <id>` to target a specific 
 | `mauto type <text>` | Type text into the focused element |
 | `mauto swipe --direction <up\|down\|left\|right>` | Swipe in a cardinal direction |
 | `mauto press <button>` | Press a hardware button (`BACK`, `HOME`, `ENTER`, …) or a semantic action |
-| `mauto long-press --at <x,y> [--duration <ms>]` | Long-press at coordinates **(new in 0.21.0)** |
+| `mauto long-press --at <x,y> [--duration <ms>]` | Long-press at coordinates **(new in 0.21.0)**; `--duration` defaults to 1000 ms (since 0.40.7) and `data.duration` reports the value used |
 | `mauto double-tap --at <x,y>` | Double-tap at coordinates **(new in 0.21.0)** |
 | `mauto launch <appId> [--resume]` | Launch an installed app by package/bundle id. Restarts the app if it is running, so it opens on its initial screen; `--resume` brings a running app to the front in its current state instead **(new in 0.21.0; cold start by default since 0.34.0)** |
 | `mauto terminate <appId>` | Stop a running app by package/bundle id **(new in 0.34.0)** |

@@ -12,6 +12,17 @@ const { isAppNotRunning } = require('./app-not-running');
 // The error code of the bridge's own "cannot report the platform" failure.
 const PLATFORM_UNKNOWN = 'platform_unknown';
 
+// Long-press duration (ms) used when the caller gives none (#324). mobile-mcp's
+// own default is 500 ms, which sits exactly on Flutter's 500 ms
+// kLongPressTimeout (iOS's UILongPressGestureRecognizer also defaults to
+// 500 ms), so a default press raced the recognizer and was dropped about one
+// time in three while the envelope said ok. Measured on the sample app's cart
+// row: 500 ms opened the dialog intermittently on Android (mobilecli and
+// legacy) and an iOS simulator; 600 ms and up never missed. 1000 ms keeps
+// margin for platforms that raise their threshold (Android's accessibility
+// touch-and-hold delay).
+const DEFAULT_LONG_PRESS_MS = 1000;
+
 class DeviceBridge {
   constructor({ call, device = null }) {
     if (typeof call !== 'function') {
@@ -51,12 +62,11 @@ class DeviceBridge {
     return await this._call('mobile_click_on_screen_at_coordinates', { x, y });
   }
 
-  // Long-press at absolute screen coordinates. Optional duration (ms) overrides
-  // mobile-mcp's 500ms default; absent it is not sent so the default applies.
-  async longPress({ x, y, duration } = {}) {
-    const args = { x, y };
-    if (duration !== undefined) args.duration = duration;
-    return await this._call('mobile_long_press_on_screen_at_coordinates', args);
+  // Long-press at absolute screen coordinates for `duration` ms, or
+  // DEFAULT_LONG_PRESS_MS when none is given. The engine's own default is
+  // never relied on (#324): see the constant for why.
+  async longPress({ x, y, duration = DEFAULT_LONG_PRESS_MS } = {}) {
+    return await this._call('mobile_long_press_on_screen_at_coordinates', { x, y, duration });
   }
 
   // Double-tap at absolute screen coordinates.
@@ -309,4 +319,4 @@ class DeviceBridge {
   }
 }
 
-module.exports = { DeviceBridge, PLATFORM_UNKNOWN };
+module.exports = { DeviceBridge, PLATFORM_UNKNOWN, DEFAULT_LONG_PRESS_MS };
