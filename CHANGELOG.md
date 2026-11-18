@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.40.8]
+
+### 🐛 Fixed
+
+- **Re-running `mauto setup` without `--mode` keeps the workspace's mode**
+  (#333). `handleSetup` filled in `aware` before knowing whether a workspace
+  existed, and `scaffold` wrote it over the existing config, so the documented
+  `.gitignore` migration (#328) silently flipped an agnostic workspace to
+  platform-aware with `ok: true`. The platform-aware default (now
+  `DEFAULT_MODE` in `src/config/manager.js`, shared with `resolveMode`)
+  applies only when `config.json` is created; an existing workspace changes
+  mode only on an explicit `--mode`.
+- **`mauto setup` reports a mode switch.** `data.mode_changed` is
+  `{from, to}` when an explicit `--mode` changes the workspace's effective
+  mode, and `null` otherwise.
+- **`mauto setup --mode constructor` (or any `Object.prototype` key) is
+  rejected** with `invalid_input`. The mode lookup read inherited keys, so it
+  stored a function that JSON then dropped, deleting the stored mode with
+  `ok: true`.
+
 ## [0.40.7]
 
 ### 🐛 Fixed

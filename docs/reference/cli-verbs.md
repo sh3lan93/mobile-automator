@@ -176,7 +176,7 @@ Scaffold and configure the `.mobile-automator/` workspace.
 | `mauto config get <key>` | Read a config value by dotted path |
 | `mauto config set <key> <value>` | Write a config value by dotted path. `config set engine <mobilecli\|legacy>` also clears the pinned device when the engine changes, since device ids differ between engines |
 
-The mode is chosen at setup and stored as `mode` in `config.json`: `--mode aware` → `platform-aware` (single-OS / OS-specific UI tests); `--mode agnostic` → `platform-agnostic` (one scenario runs across platforms such as Flutter / RN / KMP / CMP). Configs predating the field are treated as `platform-aware`.
+The mode is chosen at setup and stored as `mode` in `config.json`: `--mode aware` → `platform-aware` (single-OS / OS-specific UI tests); `--mode agnostic` → `platform-agnostic` (one scenario runs across platforms such as Flutter / RN / KMP / CMP). Configs predating the field are treated as `platform-aware`. A new workspace without `--mode` gets `platform-aware`; re-running `setup` on an existing workspace keeps its mode unless `--mode` is given, and `data.mode_changed` is `{from, to}` when that switches it (else `null`).
 
 ---
 
