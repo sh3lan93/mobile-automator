@@ -24,9 +24,14 @@ function load(projectRoot) {
   return normalizeConfig(JSON.parse(fs.readFileSync(p, 'utf8')));
 }
 
+// The mode of a workspace that never chose one: what `mauto setup` writes into
+// a NEW config when no --mode is given, and what a config predating the field
+// is read as. One constant, so the two cannot disagree.
+const DEFAULT_MODE = 'platform-aware';
+
 // Default to platform-aware for null/empty/legacy configs.
 function resolveMode(cfg) {
-  return cfg && cfg.mode ? cfg.mode : 'platform-aware';
+  return cfg && cfg.mode ? cfg.mode : DEFAULT_MODE;
 }
 
 // Dotted-path lookup. Missing path -> undefined.
@@ -69,4 +74,4 @@ function setPath(obj, key, value) {
   cur[parts[parts.length - 1]] = value;
 }
 
-module.exports = { load, resolveMode, get, set, configPath };
+module.exports = { load, resolveMode, get, set, configPath, DEFAULT_MODE };

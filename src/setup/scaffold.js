@@ -4,7 +4,8 @@
 //
 // Creates the .mobile-automator/{scenarios,screenshots,results} tree and a
 // skeleton config.json. Idempotent: re-running never clobbers an existing
-// config's other fields — it only ensures the requested `mode` is set.
+// config's other fields, and changes its `mode` only when one is requested
+// explicitly (#333) — DEFAULT_MODE is for a new workspace, never a reset.
 
 const fs = require('fs');
 const path = require('path');
@@ -53,6 +54,9 @@ const GITIGNORE_BODIES = [
 ];
 const CURRENT_GITIGNORE_BODY = GITIGNORE_BODIES[GITIGNORE_BODIES.length - 1];
 
+// `mode` is optional: undefined means "the caller did not choose one". Returns
+// the workspace's effective mode and `modeChanged` ({from, to} when an explicit
+// mode changed an existing workspace's effective mode, else null).
 function scaffold(projectRoot, { mode } = {}) {
   const created = [];
   const upgraded = [];
@@ -73,30 +77,37 @@ function scaffold(projectRoot, { mode } = {}) {
   }
 
   const cfgPath = manager.configPath(projectRoot);
-  let configWritten = false;
-  if (!fs.existsSync(cfgPath)) {
-    // Fresh skeleton — single source of truth for the day-one config shape.
-    const skeleton = {
-      mode,
-      project_name: null,
-      environments: [],
-      default_environment: null,
-      // Written as a LITERAL false rather than omitted. An absent key that
-      // happens to default off is not discoverable; a visible false is, and
-      // discoverability is part of consent. The `else` branch below never
-      // touches this key: re-running setup must not silently revoke — or
-      // silently grant — a choice the project owner already made.
-      telemetry: { enabled: false },
-    };
-    fs.writeFileSync(cfgPath, JSON.stringify(skeleton, null, 2) + '\n');
-    created.push(cfgPath);
-    configWritten = true;
-  } else {
-    // Pre-existing config: only set the mode, preserving every other field.
-    manager.set(projectRoot, 'mode', mode);
+  if (fs.existsSync(cfgPath)) {
+    return { created, upgraded, configWritten: false, ...applyMode(projectRoot, mode) };
   }
+  // Fresh skeleton — single source of truth for the day-one config shape.
+  const skeleton = {
+    mode: mode || manager.DEFAULT_MODE,
+    project_name: null,
+    environments: [],
+    default_environment: null,
+    // Written as a LITERAL false rather than omitted. An absent key that
+    // happens to default off is not discoverable; a visible false is, and
+    // discoverability is part of consent. applyMode never touches this key:
+    // re-running setup must not silently revoke — or silently grant — a choice
+    // the project owner already made.
+    telemetry: { enabled: false },
+  };
+  fs.writeFileSync(cfgPath, JSON.stringify(skeleton, null, 2) + '\n');
+  created.push(cfgPath);
+  return { created, upgraded, configWritten: true, mode: skeleton.mode, modeChanged: null };
+}
 
-  return { created, upgraded, mode, configWritten };
+// An existing config keeps its mode unless one is requested (#333). An
+// explicit mode is stored whenever it differs from the stored value — so a
+// config predating the field gains it — but counts as a change only when the
+// effective mode (resolveMode) moves. Every other field is preserved.
+function applyMode(projectRoot, mode) {
+  const cfg = manager.load(projectRoot);
+  const current = manager.resolveMode(cfg);
+  if (!mode) return { mode: current, modeChanged: null };
+  if (!cfg || cfg.mode !== mode) manager.set(projectRoot, 'mode', mode);
+  return { mode, modeChanged: current === mode ? null : { from: current, to: mode } };
 }
 
 function ensureDir(dir, created) {
