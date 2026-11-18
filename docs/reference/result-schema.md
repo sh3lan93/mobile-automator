@@ -452,13 +452,13 @@ Then finalize again against the scenario the run executed. The hint names it by 
 mauto result finalize --run-id run_20261111_101500 --scenario /home/me/app/.mobile-automator/scenarios/profile_flow.json
 ```
 
-A step `mauto run` could not perform (`needs_agent: true`, named on a `Pending step <step_id>` hint line) stopped the run there, so the steps after it did not run. Do what the hint line asks, then record the step; the record replaces the pending one in place. Perform each later step with the one-shot verbs and record it, and its assertions, the same way, then finalize again:
+A step `mauto run` could not perform (`needs_agent: true`, named on a `Pending step <step_id>` hint line) stopped the run there, so the steps after it did not run. Do what the hint line asks, then record the step with `--status pass`, `fail` or `skipped` (`skipped` when the runner could not evaluate the step's condition and it does not hold; its assertions still apply). The record replaces the pending one in place, and a `state_context` observation records what the runner left to the agent, so the result still shows the step was not run unattended. When a sub-step stopped the run, its parent is the pending step: perform the remaining sub-steps, then record the parent. Perform each later step with the one-shot verbs and record it, and its assertions, the same way, then finalize again:
 
 ```bash
 mauto result add-step --run-id run_20261111_101500 --step-id install_build --status pass
 ```
 
-With every pending step and assertion decided, the status is derived again (`passed`, or `failed` if a verdict was `false`) and the original `executor` is kept. Recording `--pass pending` for an assertion that is already decided fails with `invalid_input`: a decided verdict never goes back to pending.
+With every pending step and assertion decided, the status is derived again (`passed`, or `failed` if a verdict was `false`) and the original `executor` is kept. Recording `--pass pending` for an assertion that is already decided fails with `invalid_input`: a decided verdict never goes back to pending. The same holds for steps: `mauto run` recording a step as `needs_agent` in a run where that step is already decided fails with `invalid_input`; run it under a new run id.
 
 ## Result File Locations & Naming
 
