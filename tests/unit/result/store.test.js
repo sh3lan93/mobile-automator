@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { ResultStore } = require('../../../src/result/store');
+const { StatusRefusedError } = require('../../../src/result/status-guard');
 const { createCliAjv } = require('../../../src/schemas/cli-ajv');
 
 const RESULT_SCHEMA_PATH = path.resolve(
@@ -225,7 +226,7 @@ describe('ResultStore', () => {
     test('defaults step_id to null when the observation is run-wide', () => {
       const store = freshStore();
       store.addObservation({ type: 'flakiness', message: 'network was slow throughout' });
-      expect(store.finalize({ status: 'passed' }).observations[0].step_id).toBeNull();
+      expect(store.finalize().observations[0].step_id).toBeNull();
     });
 
     test('coexists with the auto-derived flakiness observation', () => {
@@ -240,7 +241,7 @@ describe('ResultStore', () => {
     test('throws on an unknown type rather than persisting it', () => {
       const store = freshStore();
       expect(() => store.addObservation({ type: 'typo', message: 'x' })).toThrow(/unknown observation type/);
-      expect(store.finalize({ status: 'passed' }).observations).toEqual([]);
+      expect(store.finalize().observations).toEqual([]);
     });
 
     test('survives across store instances (one-shot CLI invocations)', () => {
@@ -252,25 +253,25 @@ describe('ResultStore', () => {
       const second = new ResultStore({ runId, scenarioId: 'obs', projectRoot });
       second.addObservation({ type: 'state_context', step_id: 'b', message: 'second process' });
 
-      expect(second.finalize({ status: 'passed' }).observations).toHaveLength(2);
+      expect(second.finalize().observations).toHaveLength(2);
     });
 
     test('throws when message is missing rather than persisting it', () => {
       const store = freshStore();
       expect(() => store.addObservation({ type: 'regression', step_id: 'a' })).toThrow(/message/i);
-      expect(store.finalize({ status: 'passed' }).observations).toEqual([]);
+      expect(store.finalize().observations).toEqual([]);
     });
 
     test('throws when message is whitespace-only rather than persisting it', () => {
       const store = freshStore();
       expect(() => store.addObservation({ type: 'regression', step_id: 'a', message: '   ' })).toThrow(/message/i);
-      expect(store.finalize({ status: 'passed' }).observations).toEqual([]);
+      expect(store.finalize().observations).toEqual([]);
     });
 
     test('coerces a numeric message to a string', () => {
       const store = freshStore();
       store.addObservation({ type: 'regression', step_id: 'a', message: 42 });
-      const result = store.finalize({ status: 'passed' });
+      const result = store.finalize();
       expect(result.observations[0].message).toBe('42');
       expect(typeof result.observations[0].message).toBe('string');
     });
@@ -542,9 +543,32 @@ describe('finalize derives status (#296)', () => {
     ]);
   });
 
-  test('an explicit status wins over a recorded failed step', () => {
+  // #337: an explicit status is checked under the lock, against the entries
+  // re-read there; a status greener than they derive is refused, unwritten.
+  test('an explicit status greener than a recorded failed step is refused, nothing written', () => {
     const store = newStore();
     store.addStep({ step_id: 's1', status: 'fail' });
-    expect(store.finalize({ status: 'passed' }).status).toBe('passed');
+    const before = fs.readFileSync(store.file, 'utf8');
+    let err;
+    try {
+      store.finalize({ status: 'passed' });
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeInstanceOf(StatusRefusedError);
+    expect(err.kind).toBe('invalid_input');
+    expect(err.message).toBe('cannot finalize --status passed: the recorded steps and assertions derive "failed"');
+    expect(err.hint).toMatch(/never better/);
+    expect(fs.readFileSync(store.file, 'utf8')).toBe(before);
+  });
+
+  test('an explicit status is checked against entries another store recorded after this one was built', () => {
+    const projectRoot = tmpRoot();
+    const store = new ResultStore({ runId: RUN_ID, scenarioId: 'race', projectRoot });
+    store.addStep({ step_id: 's1', status: 'pass' });
+    // A concurrent `result add-step`, through a separate store instance.
+    new ResultStore({ runId: RUN_ID, scenarioId: 'race', projectRoot }).addStep({ step_id: 's2', status: 'fail' });
+    expect(() => store.finalize({ status: 'passed' })).toThrow(StatusRefusedError);
+    expect(store.finalize({ status: 'error' }).status).toBe('error');
   });
 });
