@@ -68,6 +68,43 @@ function pendingSuffix(steps, assertions) {
 
 const ASSERTION_STATUSES = ['passed', 'failed', 'needs_agent'];
 
+// The one rule for entries an agent still has to decide (#275, #329), shared
+// by steps and assertions. An entry whose id names a pending entry REPLACES it
+// in place, keeping its position; a pending entry for an id already decided
+// throws AlreadyDecidedError, so a run never goes from decided back to
+// undecided; anything else appends. A falsy id (a derived assertion id) never
+// matches. Returns the entry it replaced, or null.
+function upsertPending(list, entry, { what, id, idOf, isPending }) {
+  const matches = (e) => Boolean(id) && e !== null && typeof e === 'object' && idOf(e) === id;
+  if (isPending(entry)) {
+    const decided = list.find((e) => matches(e) && !isPending(e));
+    if (decided) throw new AlreadyDecidedError(what, id, decided.status);
+  }
+  const index = list.findIndex((e) => matches(e) && isPending(e));
+  if (index === -1) {
+    list.push(entry);
+    return null;
+  }
+  const replaced = list[index];
+  list[index] = entry;
+  return replaced;
+}
+
+// What the agent took over from `mauto run` when it recorded a pending step
+// (#329), kept as a typed observation because the replacement record carries
+// none of the runner's facts: why it stopped and, for a parent a sub-step
+// stopped (always the last entry of sub_steps_executed, src/run/tree.js),
+// which sub-steps it had already run.
+function handoverMessage(pending, step) {
+  const subs = Array.isArray(pending.sub_steps_executed) ? pending.sub_steps_executed : [];
+  const ran = subs.slice(0, -1).map((s) => s.step_id);
+  return (
+    `mauto run left step '${pending.step_id}' to the agent (${pending.error_message || 'needs an agent'})` +
+    `${ran.length ? `; it had already run sub-steps ${ran.join(', ')}` : ''}. ` +
+    `The agent recorded it ${step.status}.`
+  );
+}
+
 // The status to record. `status` is the explicit form (#275, B3). The legacy
 // boolean `pass` of callers that predate it is still accepted, so they write
 // byte-identical result files; anything else (including the retired
@@ -269,7 +306,14 @@ class ResultStore {
         ...(step_duration_ms !== undefined ? { step_duration_ms } : {}),
         ...(Array.isArray(sub_steps_executed) ? { sub_steps_executed } : {}),
       };
-      this._steps.push(step);
+      // A step `mauto run` left to the agent is replaced by the agent's record,
+      // so the run can be finished with one-shot verbs (#329).
+      const replaced = upsertPending(this._steps, step, {
+        what: 'step', id: step_id, idOf: (s) => s.step_id, isPending: isPendingStep,
+      });
+      if (replaced && !isPendingStep(step)) {
+        this._observations.push({ type: 'state_context', step_id, message: handoverMessage(replaced, step) });
+      }
 
       // Flakiness bookkeeping: a step that ultimately PASSED but needed more than
       // one attempt is flaky.
@@ -347,14 +391,9 @@ class ResultStore {
       if (actual_screenshot != null) entry.actual_screenshot = String(actual_screenshot);
       if (similarity_score != null) entry.similarity_score = Number(similarity_score);
 
-      const sameId = (a) => Boolean(assertion_id) && a !== null && typeof a === 'object' && a.assertion_id === assertion_id;
-      if (isPendingAssertion(entry)) {
-        const decided = this._assertions.find((a) => sameId(a) && !isPendingAssertion(a));
-        if (decided) throw new AlreadyDecidedError(assertion_id, decided.status);
-      }
-      const pendingIndex = this._assertions.findIndex((a) => sameId(a) && isPendingAssertion(a));
-      if (pendingIndex === -1) this._assertions.push(entry);
-      else this._assertions[pendingIndex] = entry;
+      upsertPending(this._assertions, entry, {
+        what: 'assertion', id: assertion_id, idOf: (a) => a.assertion_id, isPending: isPendingAssertion,
+      });
       this._persistInProgress();
       return entry;
     });
@@ -531,17 +570,25 @@ class InvalidRunIdError extends Error {
   }
 }
 
-// Typed error for `pending` recorded over an assertion already decided (#275):
-// a decided verdict is never turned back into an undecided one. Carries the
-// envelope's kind and hint, like InvalidRunIdError.
+// The hint per kind of entry. An assertion is made pending with
+// `--pass pending`; a step only by `mauto run`, so its hint is the run id.
+const ALREADY_DECIDED_HINT = {
+  assertion: (id) =>
+    `Record a verdict for "${id}" with --pass true|false, or use a different --assertion-id for a new pending assertion.`,
+  step: (id) =>
+    `Step "${id}" was already decided in this run, so mauto run cannot leave it to the agent here. ` +
+    'Run the scenario under a new --run-id.',
+};
+
+// Typed error for a pending entry recorded over one already decided (#275,
+// #329; see upsertPending): a decided entry is never turned back into an
+// undecided one. Carries the envelope's kind and hint, like InvalidRunIdError.
 class AlreadyDecidedError extends Error {
-  constructor(assertionId, status) {
-    super(`assertion "${assertionId}" is already decided (${status}); it cannot go back to pending`);
+  constructor(what, id, status) {
+    super(`${what} "${id}" is already decided (${status}); it cannot go back to pending`);
     this.name = 'AlreadyDecidedError';
     this.kind = 'invalid_input';
-    this.hint =
-      `Record a verdict for "${assertionId}" with --pass true|false, or use a different --assertion-id ` +
-      'for a new pending assertion.';
+    this.hint = ALREADY_DECIDED_HINT[what](id);
   }
 }
 

@@ -257,6 +257,23 @@ describe('execute guide — starts with mauto run', () => {
         expect(section).toMatch(/mauto result finalize[^\n]*--scenario/);
       });
 
+      // #329: a pending step is finished in the SAME run — add-step replaces
+      // its needs_agent record — never by a replay under a new run id.
+      it('finishes a pending step in the same run with add-step', () => {
+        const start = out.indexOf('**A pending step.**');
+        expect(start).toBeGreaterThan(-1);
+        const section = out.slice(start, out.indexOf('### 4. Manual per-step replay'));
+        expect(section).toContain('mauto result add-step --run-id <run id> --step-id <step_id> --status <pass|fail|skipped>');
+        // A condition the runner could not evaluate may not hold (#329 review).
+        expect(section).toMatch(/does not hold[^\n]*`skipped`[^\n]*assertions/);
+        // A pending sub-step leaves its parent pending: record the parent.
+        expect(section).toMatch(/sub-step[^\n]*record the parent/);
+        expect(section).toMatch(/replaces the pending one in place/);
+        expect(section).toMatch(/every later step/);
+        expect(section).toMatch(/mauto result finalize[^\n]*--scenario/);
+        expect(section).not.toMatch(/new run id|new `MAUTO_RUN_ID`/);
+      });
+
       it('keeps the per-step recipe as the fallback', () => {
         const section = out.slice(out.indexOf('### 4. Manual per-step replay'), out.indexOf('### 5. Validate Assertions'));
         expect(section).toContain('mauto tap --at <x,y>');

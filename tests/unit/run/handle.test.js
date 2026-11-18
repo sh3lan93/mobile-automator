@@ -179,6 +179,45 @@ describe('provenance and the incomplete run (#275)', () => {
     expect(resultFile().steps_executed[0]).toMatchObject({ step_id: 'wifi_off', status: 'skipped', needs_agent: true });
   });
 
+  // #329: a sub-step the runner cannot perform leaves its PARENT pending. The
+  // hint must say which sub-step stopped it and which already ran, and the
+  // agent records the parent (never the sub-step) to complete the run.
+  test('a sub-step that needs an agent: the hint names it and the parent is what gets recorded', async () => {
+    const d = deps((args) => new ResultStore(args));
+    const nested = {
+      ...scenario,
+      steps: [{
+        id: 'offline', action: 'tap', description: 'd', target: 'More',
+        sub_steps: [
+          { id: 'open_more', action: 'tap', description: 'd', target: 'More' },
+          { id: 'wifi_off', action: 'disable_wifi', description: 'd' },
+          { id: 'retry', action: 'tap', description: 'd', target: 'More' },
+        ],
+      }],
+      assertions: [],
+    };
+    d.bridge = makeFakeBridge({ elements: [[el('More')]] });
+    const r = await handleRun(d, prepared(nested));
+    expect(r.exitKind).toBe('incomplete');
+    expect(r.envelope.hint).toContain('Pending step offline: sub-step wifi_off: disable_wifi cannot be run by mauto');
+    expect(r.envelope.hint).toContain(
+      'Step offline stopped at its sub-step wifi_off; mauto run already ran open_more. ' +
+      'Do wifi_off and every later sub-step of offline, then record offline once (not its sub-steps):'
+    );
+    expect(r.envelope.hint).toContain(`mauto result add-step --run-id ${RUN_ID} --step-id offline --status <pass|fail|skipped>`);
+
+    const store = new ResultStore({ runId: RUN_ID, projectRoot: root });
+    store.addStep({ step_id: 'offline', status: 'pass' });
+    const result = store.finalize();
+    expect(result.status).toBe('passed');
+    expect(result.steps_executed).toHaveLength(1);
+    expect(result.observations).toContainEqual({
+      type: 'state_context',
+      step_id: 'offline',
+      message: expect.stringMatching(/mauto run left step 'offline' to the agent .*sub-step wifi_off.*; it had already run sub-steps open_more\. The agent recorded it passed\./),
+    });
+  });
+
   test('a failure beside a pending assertion is test_failed, still listing what is pending', async () => {
     const d = deps((args) => new ResultStore(args));
     d.bridge = makeFakeBridge({ elements: [[el('More')]] });

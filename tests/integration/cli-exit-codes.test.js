@@ -178,3 +178,81 @@ describe('derived status (#296)', () => {
     expect(show.stdout).toMatch(/## demo {2}\(last 5 runs: F\)/);
   });
 });
+
+// #329: a step `mauto run` left `needs_agent` is completed with one-shot verbs.
+// The result file is seeded through ResultStore exactly as the runner leaves
+// it (finalized, `incomplete`, executor carrying the scenario hash), then
+// finished through the REAL bin: the pending step recorded, the step after it
+// recorded, re-finalized against the scenario.
+describe('completing a run left incomplete by a pending step (integration, #329)', () => {
+  const crypto = require('crypto');
+  const { ResultStore } = require('../../src/result/store');
+  let root;
+  let scenarioPath;
+
+  beforeEach(() => {
+    root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-pending-step-')));
+    fs.mkdirSync(path.join(root, '.git'));
+    expect(runCli(['setup', '--mode', 'platform-aware'], root).status).toBe(0);
+    scenarioPath = path.join(root, 'demo.json');
+    fs.writeFileSync(scenarioPath, JSON.stringify({
+      $schema_version: '2.0',
+      scenario_id: 'demo',
+      name: 'demo',
+      description: 'a pending step completed by hand',
+      platform: 'android',
+      app_package: 'com.example.app',
+      metadata: { app_version: '1.0', environment: 'test' },
+      steps: [
+        { id: 'launch', action: 'launch_app', description: 'd' },
+        { id: 'tap', action: 'tap', description: 'd', target: 'Login button' },
+      ],
+      assertions: [],
+      tags: [],
+    }));
+    const store = new ResultStore({ runId: RUN_ID, scenarioId: 'demo', projectRoot: root });
+    store.addStep({ step_id: 'launch', status: 'skipped', needs_agent: true, error_message: 'do it by hand' });
+    store.finalize({
+      executor: {
+        kind: 'runner',
+        scenario_path: 'demo.json',
+        scenario_sha256: crypto.createHash('sha256').update(fs.readFileSync(scenarioPath)).digest('hex'),
+      },
+    });
+  });
+
+  afterEach(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  const finalize = () => runCli(['result', 'finalize', '--run-id', RUN_ID, '--scenario', scenarioPath], root);
+
+  test('before the agent acts the run stays incomplete, and the hint names the add-step line', () => {
+    const r = finalize();
+    expect(r.status).toBe(7);
+    const env = onlyEnvelope(r);
+    expect(env.error.kind).toBe('incomplete');
+    expect(env.hint).toContain(`mauto result add-step --run-id ${RUN_ID} --step-id launch --status <pass|fail|skipped>`);
+  });
+
+  test('recording the pending step and the step after it lets the run pass', () => {
+    for (const step of ['launch', 'tap']) {
+      expect(runCli(['result', 'add-step', '--run-id', RUN_ID, '--step-id', step, '--status', 'pass'], root).status).toBe(0);
+    }
+    const r = finalize();
+    expect(r.status).toBe(0);
+    const env = onlyEnvelope(r);
+    expect(env.data.status).toBe('passed');
+    expect(env.data.steps_executed.map((s) => [s.step_id, s.status, s.needs_agent])).toEqual([
+      ['launch', 'passed', undefined],
+      ['tap', 'passed', undefined],
+    ]);
+    // The runner's provenance survives the agent completing its run.
+    expect(env.data.executor.kind).toBe('runner');
+  });
+
+  test('the agent recording the pending step as failed exits 6', () => {
+    runCli(['result', 'add-step', '--run-id', RUN_ID, '--step-id', 'launch', '--status', 'fail'], root);
+    expect(finalize().status).toBe(6);
+  });
+});

@@ -110,7 +110,15 @@ A pending `screenshot_match` is the exception: it is pending because its referen
 
 Then finalize again with the last line of the hint, `mauto result finalize --run-id <run id> --scenario <path>` (the hint prints the scenario's absolute path, so the command works from any directory). The status is derived again from what is now recorded: `passed` (exit code `0`), `failed` if any verdict was `false` (`test_failed`, exit code `6`), or still `incomplete` (exit code `7`) if you left anything pending. Report a run that is still `incomplete` as incomplete, never as passed.
 
-**A pending step.** A hint line `Pending step <step_id>: <what to do>`, with `data.steps.needs_agent` above zero, means the runner reached a step it cannot perform itself (for example an install with no build path, or a condition it cannot evaluate). It stopped there, so no later step ran, and that recorded step keeps this run `incomplete` whatever is added to it afterwards. Do what the line asks, then replay the whole scenario by hand (section 4) under a new run id: export a new `MAUTO_RUN_ID`, perform that step with the ordinary one-shot verbs, and say in your report that the unattended run ended `incomplete` at that step.
+**A pending step.** A hint line `Pending step <step_id>: <what to do>`, with `data.steps.needs_agent` above zero, means the runner reached a step it cannot perform itself (for example an install with no build path, or a condition it cannot evaluate). It stopped there, so no later step ran. Finish the same run by hand, under the same run id:
+
+1. **Do what the line asks**, with the ordinary one-shot verbs (section 4).
+2. **Record it** with the `mauto result add-step` line the hint prints for that step, choosing the status: `mauto result add-step --run-id <run id> --step-id <step_id> --status <pass|fail|skipped>`. If the runner could not evaluate the step's condition, decide it yourself: a step whose condition does not hold is recorded `skipped`, and its assertions still apply. That record replaces the pending one in place, and the result keeps a note of what the runner left to you; until you record it, the step keeps the run `incomplete`.
+   If the hint says the step stopped at one of its sub-steps, do that sub-step and every later sub-step of it, then record the parent with the line the hint prints, once. Never record the sub-step itself: its record would not replace the pending one, and the run would stay `incomplete`.
+3. **Perform every later step** in scenario order with the one-shot verbs (section 4), recording each with `mauto result add-step` and each of its assertions with `mauto result add-assertion` (section 5). Stop at a failed step, as the runner does.
+4. **Finalize again** with the last line of the hint, `mauto result finalize --run-id <run id> --scenario <path>`.
+
+In your report, say that the unattended run stopped at that step and that you completed the rest by hand.
 
 ### 4. Manual per-step replay
 

@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.40.4]
+
+### 🐛 Fixed
+
+- **A step `mauto run` left `needs_agent` can now be finished in the same
+  run** (#329). When the runner reached a step it cannot perform (an
+  `install_app` with no build path, a `device_property` condition it cannot
+  evaluate), it recorded the step `needs_agent`, stopped, and exited `7`, and
+  that record kept the run `incomplete` for good: `mauto result add-step` only
+  appended, so a second record for the step left the pending one in place.
+  `add-step` now replaces a `needs_agent` record for its `--step-id` in place,
+  the same way `add-assertion --assertion-id` replaces a pending assertion; a
+  record for a decided step still appends. Steps and assertions now share one
+  rule for pending entries, so a step can't go from decided back to pending
+  either: `mauto run` recording a pending step over one already decided in
+  the same run fails with `invalid_input` instead of making the run
+  `incomplete` again. The replacement adds a `state_context` observation
+  saying what the runner left to the agent (and, for a parent a sub-step
+  stopped, which sub-steps had already run), so a completed run still shows
+  it was not unattended. The `incomplete` hint prints the
+  `mauto result add-step --run-id <id> --step-id <step> --status <pass|fail|skipped>`
+  line (`skipped` for a step whose condition the runner could not evaluate and
+  that does not apply). For a parent step, it also names the sub-step that
+  stopped it and the ones that already ran. The execute guide now tells the
+  agent to record the step (the parent, never the sub-step), perform the later
+  steps with one-shot verbs, and re-finalize with `--scenario`, instead of
+  replaying the whole scenario under a new run id.
+
 ## [0.40.3]
 
 ### 🐛 Fixed
