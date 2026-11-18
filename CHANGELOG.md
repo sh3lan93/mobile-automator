@@ -23,8 +23,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   legacy engines) and on an iOS simulator; 600 ms and up never missed.
 - **`mauto long-press` reports the duration it used.** `data.duration` is now
   always present (previously only with an explicit `--duration`).
-- **The generate guides map "long press" to `mauto long-press`**, not to a
-  nonexistent "long-press variant" of `mauto tap`.
+- **The generate guides map "long press" and "double tap" to their own
+  verbs**, `mauto long-press` and `mauto double-tap`, not to nonexistent
+  "variants" of `mauto tap`.
+
+### 🔧 Internal
+
+- **`tests/lint/long-press-default-docs.test.js`** fails when a shipping doc
+  states a long-press default other than `DEFAULT_LONG_PRESS_MS`, or when no
+  doc states it. `mauto long-press --help` derives the default from the same
+  constant, and the guides no longer restate it.
 
 ## [0.40.6]
 

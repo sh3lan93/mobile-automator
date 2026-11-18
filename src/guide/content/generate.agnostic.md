@@ -104,7 +104,7 @@ Translate user language to action types and `mauto` verbs:
 | "clear app data", "fresh install" | `uninstall_app` + `install_app` | reset app to a clean state before scenario | Set `app_state: "fresh_install"` in preconditions and add `device_actions`: `[{ "action": "uninstall_app" }, { "action": "install_app" }]`. Leave out `target_package` and `value`: a cross-platform scenario must not bake in one platform's app identifier or build path, and the executor fills both per platform from config and the pre-flight build |
 | "tap", "click", "press" | `tap` | `mauto tap --at <x,y>` | Resolve coords from `mauto elements` |
 | "long press", "hold" | `long_press` | `mauto long-press --at <x,y>` | Resolve coords from `mauto elements` |
-| "double tap", "double click" | `double_tap` | `mauto tap --at <x,y>` (double-tap variant) | Resolve coords from `mauto elements` |
+| "double tap", "double click" | `double_tap` | `mauto double-tap --at <x,y>` | Resolve coords from `mauto elements` |
 | "enter", "type", "input" | `type` | `mauto type <text>` | |
 | "swipe" | `swipe` | `mauto swipe --direction <dir>` | Use `value` for direction |
 | "scroll to", "scroll until visible" | `scroll_to_element` | `mauto swipe --direction <dir>` (repeated) | Target is the element to scroll to |
