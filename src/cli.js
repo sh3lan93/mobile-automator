@@ -2100,7 +2100,7 @@ function buildProgram(deps = {}) {
     .command('long-press')
     .description('Long-press at absolute screen coordinates')
     .requiredOption('--at <x,y>', 'coordinates as "x,y"')
-    .option('--duration <ms>', 'press duration in milliseconds')
+    .option('--duration <ms>', `press duration in milliseconds (default ${DEFAULT_LONG_PRESS_MS})`)
     .option('--device <id>', 'target device id')
     .action(withEnvelope((opts) => withBridge(opts.device, (bridge) => handleLongPress({ deviceBridge: bridge }, opts.at, { duration: opts.duration }))));
 

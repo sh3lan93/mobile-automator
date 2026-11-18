@@ -155,7 +155,7 @@ For each step in the scenario:
 |---|---|---|
 | `launch_app` | `mauto launch <appId>` (add `--resume` when the step sets `"cold": false`) | `appId` from config / scenario metadata. Restarts the app so the step starts on its initial screen; `--resume` brings a running app to the front in its current state instead |
 | `tap` | `mauto tap --at <x,y>` | Find element first via `mauto elements` |
-| `long_press` | `mauto long-press --at <x,y>` | Optional `--duration <ms>` (default 1000) |
+| `long_press` | `mauto long-press --at <x,y>` | Optional `--duration <ms>` |
 | `double_tap` | `mauto double-tap --at <x,y>` | |
 | `type` | `mauto type <text>` | |
 | `swipe` | `mauto swipe --direction <dir>` | `value` = direction |
