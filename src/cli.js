@@ -774,7 +774,7 @@ function measureRun({ projectRoot, runId, reported }) {
 // with the callers.
 function finalizeRun(
   { resultStoreFactory, memoryStoreFactory, projectRoot },
-  { runId, scenarioId, status, duration, metadata, summary, executor }
+  { runId, scenarioId, status, duration, metadata, summary, executor, scenario }
 ) {
   // Measure BEFORE constructing the store: the trace is read-only here, and
   // deriving first keeps the store's lock window as small as it already is.
@@ -797,6 +797,9 @@ function finalizeRun(
     summary,
     // Who produced the result (#275); the store keeps the first one it saw.
     executor,
+    // The loaded scenario, from `result finalize --scenario` only (#335): the
+    // store reads the declared entries never recorded under its lock.
+    scenario,
   });
 
   // Retention, at the only moment a run is known to be over and the only place

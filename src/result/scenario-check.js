@@ -55,4 +55,58 @@ function scenarioMismatch(recorded, { scenario, sha256 }) {
   };
 }
 
-module.exports = { crossCheck, scenarioMismatch };
+// The reverse of crossCheck (#335): what the scenario declares that the run
+// never recorded, in document order: `{steps, assertions}`, steps as ids and
+// assertions as `{assertion_id, step_id, type}` (the shape pendingAssertions
+// in src/result/pending-hint.js gives, `step_id` the assertion's `after_step`),
+// so every consumer prints a record line without looking back into the
+// scenario. A run that stopped after its last record would otherwise derive
+// `passed` from what little it holds.
+//
+// Declared steps are `precondition_<n>` (one per device_action, as `mauto run`
+// records them) then the whole step tree. A step counts as recorded when it,
+// an ancestor or a descendant has a record: the runner records only top-level
+// steps and carries their sub-steps in `sub_steps_executed`, while an agent
+// may record sub-steps one by one. A sub-step whose parent has no record and
+// that has none of its own stays unrecorded, even when a sibling has one.
+// Preconditions have no tree, so only their own id covers them.
+//
+// No step is exempt for a reason: the runner records every step it reaches,
+// a false condition or an optional miss as `skipped`, and evaluates the
+// assertions after each; it stops early only on a failed step or one needing
+// an agent, whose run is already decided `failed` or `incomplete`.
+function unrecordedEntries(recorded, scenario) {
+  const stepIds = new Set(recorded.steps.map((s) => s.step_id));
+  const setup = scenario.preconditions && scenario.preconditions.device_actions;
+  const preconditions = (Array.isArray(setup) ? setup : [])
+    .map((_, i) => `precondition_${i + 1}`)
+    .filter((id) => !stepIds.has(id));
+
+  const tree = flattenSteps(scenario);
+  const recordedPaths = tree.filter(({ step }) => stepIds.has(step.id)).map(({ path }) => path);
+  const within = (inner, outer) => inner === outer || inner.startsWith(`${outer}.`);
+  const covered = (path) => recordedPaths.some((p) => within(path, p) || within(p, path));
+  const steps = tree.filter(({ path }) => !covered(path)).map(({ step }) => step.id);
+
+  const assertionIds = new Set(recorded.assertions.map((a) => a.assertion_id));
+  const assertions = (scenario.assertions || [])
+    .filter((a) => !assertionIds.has(a.id))
+    .map((a) => ({ assertion_id: a.id, step_id: a.after_step, type: a.type }));
+  return { steps: [...preconditions, ...steps], assertions };
+}
+
+// Whether an unrecordedEntries list names anything; null-safe, since only
+// `result finalize --scenario` has one.
+const hasUnrecorded = (unrecorded) =>
+  Boolean(unrecorded) && unrecorded.steps.length + unrecorded.assertions.length > 0;
+
+// The unrecorded entries named for a message or hint:
+// `steps tap, confirm; assertions shown`.
+function describeUnrecorded({ steps, assertions }) {
+  return [
+    steps.length ? `steps ${steps.join(', ')}` : null,
+    assertions.length ? `assertions ${assertions.map((a) => a.assertion_id).join(', ')}` : null,
+  ].filter(Boolean).join('; ');
+}
+
+module.exports = { crossCheck, scenarioMismatch, unrecordedEntries, hasUnrecorded, describeUnrecorded };

@@ -180,3 +180,31 @@ describe('deriveRunStatus agrees with the JUnit export (#296)', () => {
     }
   });
 });
+
+// #335: with --scenario, what the scenario declares and the run never recorded
+// keeps a run its records decide green from passing. One rule, here.
+describe('deriveRunStatus with unrecorded scenario entries (#335)', () => {
+  const gaps = { steps: ['tap'], assertions: [] };
+  const none = { steps: [], assertions: [] };
+
+  test('a run its records decide passed derives incomplete with gaps', () => {
+    expect(deriveRunStatus([step('passed')], [assertion('passed')], gaps)).toBe('incomplete');
+    expect(deriveRunStatus([step('passed')], [], { steps: [], assertions: [{ assertion_id: 'a', step_id: 's', type: 'element_exists' }] })).toBe('incomplete');
+  });
+
+  test('no gaps, empty gaps or no list leave the derivation unchanged', () => {
+    expect(deriveRunStatus([step('passed')], [], none)).toBe('passed');
+    expect(deriveRunStatus([step('passed')], [], null)).toBe('passed');
+    expect(deriveRunStatus([step('passed')], [])).toBe('passed');
+  });
+
+  test('a failing or errored run stays decided whatever it lacks', () => {
+    expect(deriveRunStatus([step('failed')], [], gaps)).toBe('failed');
+    expect(deriveRunStatus([step('error')], [], gaps)).toBe('error');
+    expect(deriveRunStatus([step('passed')], [assertion('failed')], gaps)).toBe('failed');
+  });
+
+  test('a pending run with gaps stays incomplete', () => {
+    expect(deriveRunStatus([step('passed')], [assertion('needs_agent')], gaps)).toBe('incomplete');
+  });
+});

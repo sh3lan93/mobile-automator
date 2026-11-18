@@ -303,3 +303,82 @@ describe('pendingHint (#275)', () => {
     ]);
   });
 });
+
+// #335: `result finalize --scenario` names what the scenario declares that the
+// run never recorded. Without `unrecorded` (how `mauto run` calls these) the
+// output is unchanged.
+describe('the incomplete message and hint with unrecorded entries (#335)', () => {
+  const { incompleteMessage, incompleteEnvelope } = require('../../../src/result/pending-hint');
+  const projectRoot = path.join(os.tmpdir(), 'proj');
+  const runId = 'run_20261118_120000';
+  const scenarioPath = path.join(projectRoot, 'login.json');
+  const clean = { run_id: runId, assertion_results: [], steps_executed: [{ step_id: 'launch', status: 'passed' }], executor: { scenario_path: 'login.json' } };
+  const shown = { assertion_id: 'shown', step_id: 'confirm', type: 'element_exists' };
+  const gaps = { steps: ['tap', 'confirm'], assertions: [shown] };
+
+  test('the message counts the declared steps and assertions never recorded', () => {
+    expect(incompleteMessage(clean, { unrecorded: gaps })).toBe(
+      `run ${runId} incomplete: 2 declared step(s) and 1 assertion(s) never recorded`
+    );
+    expect(incompleteMessage(clean, { unrecorded: { steps: ['tap'], assertions: [] } })).toBe(
+      `run ${runId} incomplete: 1 declared step(s) never recorded`
+    );
+    expect(incompleteMessage(clean, { unrecorded: { steps: [], assertions: [shown] } })).toBe(
+      `run ${runId} incomplete: 1 declared assertion(s) never recorded`
+    );
+  });
+
+  test('the message keeps the pending counts first', () => {
+    const r = { ...clean, assertion_results: [{ assertion_id: 'looks', status: 'needs_agent', type: 'visual_state' }] };
+    expect(incompleteMessage(r, { unrecorded: gaps })).toBe(
+      `run ${runId} incomplete: 1 assertion(s) need agent judgment, 2 declared step(s) and 1 assertion(s) never recorded`
+    );
+  });
+
+  test('empty gap lists leave the message unchanged', () => {
+    expect(incompleteMessage(clean, { unrecorded: { steps: [], assertions: [] } })).toBe(incompleteMessage(clean));
+  });
+
+  test('the hint lists each unrecorded id with its record line, then the re-finalize', () => {
+    expect(pendingHint(clean, { projectRoot, unrecorded: gaps })).toBe([
+      'Never recorded: steps tap, confirm; assertions shown. Perform each step with one-shot verbs and record it, ' +
+        'and record each assertion after its step:',
+      `mauto result add-step --run-id ${runId} --step-id tap --status <pass|fail|skipped>`,
+      `mauto result add-step --run-id ${runId} --step-id confirm --status <pass|fail|skipped>`,
+      `mauto result add-assertion --run-id ${runId} --step-id confirm --assertion-id shown --type element_exists --pass <true|false> --message "<why>"`,
+      'A step whose condition does not hold, or that was optional and missed, is recorded --status skipped; its assertions still apply.',
+      'Re-finalize once every declared step and assertion is recorded:',
+      `mauto result finalize --run-id ${runId} --scenario ${scenarioPath}`,
+    ].join('\n'));
+  });
+
+  test('beside a pending step, the pending step comes first and the gaps before the re-finalize', () => {
+    const r = { ...clean, steps_executed: [{ step_id: 'launch', status: 'skipped', needs_agent: true, error_message: 'by hand' }] };
+    const lines = pendingHint(r, { projectRoot, unrecorded: gaps }).split('\n');
+    expect(lines[0]).toBe('Pending step launch: by hand');
+    expect(lines.findIndex((l) => l.startsWith('Never recorded:'))).toBeGreaterThan(0);
+    expect(lines).not.toContain('No assertion is pending; re-finalize once the run is decided:');
+    expect(lines.at(-1)).toMatch(/^mauto result finalize /);
+  });
+
+  test('declared values are shell-quoted like every other argument', () => {
+    const odd = { ...shown, step_id: 'step one' };
+    expect(pendingHint(clean, { projectRoot, unrecorded: { steps: [], assertions: [odd] } })).toContain(
+      '--step-id "step one" --assertion-id shown --type element_exists'
+    );
+  });
+
+  test('without unrecorded the hint is unchanged', () => {
+    expect(pendingHint(clean, { projectRoot, unrecorded: { steps: [], assertions: [] } })).toBe(pendingHint(clean, { projectRoot }));
+    expect(pendingHint(clean, { projectRoot })).toContain('No assertion is pending');
+  });
+
+  test('incompleteEnvelope threads unrecorded into the message and the hint', () => {
+    const env = incompleteEnvelope(clean, { hints: [], projectRoot, data: clean, unrecorded: gaps });
+    expect(env.error.message).toMatch(/never recorded$/);
+    expect(env.hint).toContain('Never recorded: steps tap, confirm; assertions shown.');
+    const plain = incompleteEnvelope(clean, { hints: [], projectRoot, data: clean });
+    expect(plain.error.message).toBe(`run ${runId} incomplete`);
+    expect(plain.hint).not.toContain('Never recorded');
+  });
+});

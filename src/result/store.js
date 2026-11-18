@@ -14,6 +14,7 @@ const {
   isPendingAssertion,
   isPendingStep,
 } = require('./outcome');
+const { unrecordedEntries } = require('./scenario-check');
 const { workspaceDir } = require('../workspace/layout');
 
 // Incremental result accumulator that persists to
@@ -476,7 +477,12 @@ class ResultStore {
     return notes;
   }
 
-  finalize({ status, durationSeconds = 0, summary, metadata, measurements, executor } = {}) {
+  // `scenario` (#335) is the loaded scenario `result finalize --scenario`
+  // checks the run against: with it, a run that never recorded a declared
+  // step or assertion derives `incomplete`. Read here, under the lock and
+  // after the refresh, so the status is decided from exactly the entries the
+  // file is written with, never from an earlier snapshot.
+  finalize({ status, durationSeconds = 0, summary, metadata, measurements, executor, scenario } = {}) {
     return withLock(this._lock, () => {
       this._refreshFromDisk();
 
@@ -494,7 +500,10 @@ class ResultStore {
       const failed = this._assertions.filter(isFailingAssertion).length;
       const total = this._assertions.length;
 
-      const resolvedStatus = status || deriveRunStatus(this._steps, this._assertions);
+      const unrecorded = scenario
+        ? unrecordedEntries({ steps: this._steps, assertions: this._assertions }, scenario)
+        : null;
+      const resolvedStatus = status || deriveRunStatus(this._steps, this._assertions, unrecorded);
 
       const result = {
         run_id: this.runId,

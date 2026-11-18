@@ -58,6 +58,14 @@ function writeScenario(dir, doc = SCENARIO) {
 const add = (deps, runId, over) =>
   invoke(() => handleResultAddAssertion(deps, { runId, scenarioId: 'login_smoke', stepId: 'launch', ...over }));
 
+// Every entry SCENARIO declares, recorded green: finalize --scenario reads a
+// run that lacks any of them as incomplete (#335).
+function recordAll(deps, runId) {
+  handleResultAddStep(deps, { runId, scenarioId: 'login_smoke', stepId: 'launch', status: 'pass' });
+  add(deps, runId, { type: 'element_exists', assertionId: 'login_visible', pass: 'true' });
+  add(deps, runId, { type: 'visual_state', assertionId: 'looks_right', pass: 'true', judge: 'agent', message: 'ok' });
+}
+
 describe('result add-assertion --pass / --judge (#275)', () => {
   test('--pass pending records needs_agent with judge none, type and step', () => {
     const { deps, runId } = setup();
@@ -140,7 +148,7 @@ describe('result finalize --scenario and incomplete (#275)', () => {
   test('a matching --scenario hashes the file into the executor', () => {
     const { deps, runId, projectRoot } = setup();
     const scenarioPath = writeScenario(projectRoot);
-    add(deps, runId, { type: 'element_exists', assertionId: 'login_visible', pass: 'true' });
+    recordAll(deps, runId);
     const f = invoke(() => handleResultFinalize(deps, { runId, scenario: scenarioPath }));
     expect(f.exitKind).toBe('ok');
     const sha = require('crypto').createHash('sha256').update(fs.readFileSync(scenarioPath)).digest('hex');
@@ -155,7 +163,7 @@ describe('result finalize --scenario and incomplete (#275)', () => {
     const scenarioPath = writeScenario(projectRoot);
     const cwd = path.join(projectRoot, 'sub');
     fs.mkdirSync(cwd);
-    add(deps, runId, { type: 'element_exists', assertionId: 'login_visible', pass: 'true' });
+    recordAll(deps, runId);
     const f = invoke(() => handleResultFinalize({ ...deps, cwd }, { runId, scenario: path.join('..', 'sub', '..', 'login.json') }));
     expect(f.exitKind).toBe('ok');
     const sha = require('crypto').createHash('sha256').update(fs.readFileSync(scenarioPath)).digest('hex');

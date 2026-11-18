@@ -116,7 +116,7 @@ Then finalize again with the last line of the hint, `mauto result finalize --run
 2. **Record it** with the `mauto result add-step` line the hint prints for that step, choosing the status: `mauto result add-step --run-id <run id> --step-id <step_id> --status <pass|fail|skipped>`. If the runner could not evaluate the step's condition, decide it yourself: a step whose condition does not hold is recorded `skipped`, and its assertions still apply. That record replaces the pending one in place, and the result keeps a note of what the runner left to you; until you record it, the step keeps the run `incomplete`.
    If the hint says the step stopped at one of its sub-steps, do that sub-step and every later sub-step of it, then record the parent with the line the hint prints, once. Never record the sub-step itself: its record would not replace the pending one, and the run would stay `incomplete`.
 3. **Perform every later step** in scenario order with the one-shot verbs (section 4), recording each with `mauto result add-step` and each of its assertions with `mauto result add-assertion` (section 5). Stop at a failed step, as the runner does.
-4. **Finalize again** with the last line of the hint, `mauto result finalize --run-id <run id> --scenario <path>`.
+4. **Finalize again** with the last line of the hint, `mauto result finalize --run-id <run id> --scenario <path>`. With `--scenario`, finalize reads `incomplete` while any step or assertion the scenario declares has no record, and the hint lists each one; record a step that did not apply as `skipped` rather than leaving it out.
 
 In your report, say that the unattended run stopped at that step and that you completed the rest by hand.
 

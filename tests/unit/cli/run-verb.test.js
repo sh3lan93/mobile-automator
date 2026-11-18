@@ -420,7 +420,9 @@ describe('an incomplete run can be completed with one-shot verbs and re-finalize
     ]);
     expect(added.exitKind).toBe('ok');
     const finalized = await mauto(['result', 'finalize', '--run-id', agentRun, '--scenario', file]);
-    expect(finalized.exitKind).toBe('ok');
+    // Incomplete: the agent run records one of the scenario's entries, and
+    // the rest were never recorded (#335). The executor is written either way.
+    expect(finalized.exitKind).toBe('incomplete');
     expect(ran.envelope.data.executor.scenario_path).toBe(path.join('scenarios', 'demo.json'));
     expect(finalized.envelope.data.executor.scenario_path).toBe(ran.envelope.data.executor.scenario_path);
   });
