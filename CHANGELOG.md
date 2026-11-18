@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.40.5]
+
+### 🐛 Fixed
+
+- **`mauto result finalize --scenario` no longer passes a run that never
+  recorded part of its scenario** (#335). The status was derived from the
+  recorded entries only: `--scenario` checked that every recorded id belonged
+  to the scenario, but not that every declared step and assertion had a
+  record. So a run where an agent finished the step `mauto run` left
+  `needs_agent` and then stopped finalized `passed`, exit `0`, though the
+  steps and assertions after it never ran. Now a run whose records would
+  derive `passed` but that has no record of a declared precondition, step or
+  assertion finalizes `incomplete` (exit `7`): `data.unrecorded` lists the
+  missing step and assertion ids, and the hint prints the
+  `mauto result add-step` / `add-assertion` line for each. A step counts as
+  recorded through its own record, its parent's or a sub-step's, which is how
+  `mauto run` records sub-steps; a step that did not apply is recorded
+  `skipped`, and its assertions still apply. An explicit `--status passed`
+  over such a run is refused with `invalid_input`; `--status incomplete` is
+  allowed. A `failed` or `error` run is unchanged, since the steps after a
+  failure legitimately never ran. A test proves a passing `mauto run` leaves
+  nothing unrecorded, and the result file schema is unchanged.
+
 ## [0.40.4]
 
 ### 🐛 Fixed
