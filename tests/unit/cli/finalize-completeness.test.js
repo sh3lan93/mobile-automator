@@ -70,7 +70,7 @@ describe('result finalize --scenario reads unrecorded entries as incomplete (#33
     expect(f.envelope.ok).toBe(false);
     expect(f.envelope.error.kind).toBe('incomplete');
     expect(f.envelope.error.message).toBe(`run ${runId} incomplete: 1 declared step(s) and 1 assertion(s) never recorded`);
-    expect(f.envelope.data).toMatchObject({ status: 'incomplete', unrecorded: { steps: ['tap'], assertions: ['bought'] } });
+    expect(f.envelope.data).toMatchObject({ status: 'incomplete', unrecorded: { steps: ['tap'], assertions: [{ assertion_id: 'bought', step_id: 'tap', type: 'element_exists' }] } });
     expect(f.envelope.hint).toContain('Never recorded: steps tap; assertions bought.');
     expect(f.envelope.hint).toContain(`--step-id tap --status <pass|fail|skipped>`);
     // Filled from the scenario: the step it follows and its type.
@@ -103,7 +103,7 @@ describe('result finalize --scenario reads unrecorded entries as incomplete (#33
     handleResultAddStep(deps, { runId, stepId: 'launch', status: 'pass' });
     handleResultAddStep(deps, { runId, stepId: 'tap', status: 'skipped' });
     const f = invoke(() => handleResultFinalize(deps, { runId, scenario: scenarioPath }));
-    expect(f.envelope.data.unrecorded).toEqual({ steps: [], assertions: ['bought'] });
+    expect(f.envelope.data.unrecorded).toEqual({ steps: [], assertions: [{ assertion_id: 'bought', step_id: 'tap', type: 'element_exists' }] });
   });
 
   test('explicit --status passed over gaps -> invalid_input, nothing written', () => {
@@ -122,7 +122,7 @@ describe('result finalize --scenario reads unrecorded entries as incomplete (#33
     handleResultAddStep(deps, { runId, stepId: 'launch', status: 'pass' });
     const f = invoke(() => handleResultFinalize(deps, { runId, scenario: scenarioPath, status: 'incomplete' }));
     expect(f.exitKind).toBe('incomplete');
-    expect(f.envelope.data.unrecorded).toEqual({ steps: ['tap'], assertions: ['bought'] });
+    expect(f.envelope.data.unrecorded).toEqual({ steps: ['tap'], assertions: [{ assertion_id: 'bought', step_id: 'tap', type: 'element_exists' }] });
   });
 
   test('a failed run stays failed: later steps legitimately never ran, no gaps reported', () => {
@@ -138,8 +138,46 @@ describe('result finalize --scenario reads unrecorded entries as incomplete (#33
     const { deps, runId, scenarioPath } = pendingRun();
     const f = invoke(() => handleResultFinalize(deps, { runId, scenario: scenarioPath }));
     expect(f.exitKind).toBe('incomplete');
-    expect(f.envelope.data.unrecorded).toEqual({ steps: ['tap'], assertions: ['bought'] });
+    expect(f.envelope.data.unrecorded).toEqual({ steps: ['tap'], assertions: [{ assertion_id: 'bought', step_id: 'tap', type: 'element_exists' }] });
     expect(f.envelope.hint.split('\n')[0]).toBe('Pending step launch: launch it by hand');
     expect(f.envelope.hint).toContain('Never recorded: steps tap; assertions bought.');
+  });
+});
+
+// #335 review B2: the status is decided under the store lock, from what the
+// file holds then, not from a snapshot taken before it. A failed step landing
+// between the snapshot and the lock must finalize the run failed (exit 6),
+// not incomplete (exit 7) from the stale snapshot.
+describe('finalize --scenario decides the status under the lock (#335)', () => {
+  test('a failed step recorded after the snapshot finalizes failed, exit 6, no gaps', () => {
+    const { deps, runId, scenarioPath, file } = pendingRun();
+    handleResultAddStep(deps, { runId, stepId: 'launch', status: 'pass' });
+
+    // finalizeRun constructs the store that finalizes last; count the
+    // constructions in a dry run, then race the add-step in before that one.
+    let total = 0;
+    const counting = { ...deps, resultStoreFactory: (o) => { total += 1; return new ResultStore(o); } };
+    const dry = pendingRun();
+    handleResultAddStep(dry.deps, { runId: dry.runId, stepId: 'launch', status: 'pass' });
+    invoke(() => handleResultFinalize({ ...counting, projectRoot: dry.deps.projectRoot }, { runId: dry.runId, scenario: dry.scenarioPath }));
+    expect(total).toBeGreaterThan(1);
+
+    let calls = 0;
+    const racing = {
+      ...deps,
+      resultStoreFactory: (o) => {
+        calls += 1;
+        const store = new ResultStore(o);
+        if (calls === total) {
+          new ResultStore(o).addStep({ step_id: 'tap', status: 'fail', error_message: 'Buy missing' });
+        }
+        return store;
+      },
+    };
+    const f = invoke(() => handleResultFinalize(racing, { runId, scenario: scenarioPath }));
+    expect(f.envelope.data.status).toBe('failed');
+    expect(f.exitKind).toBe('test_failed');
+    expect(f.envelope.data).not.toHaveProperty('unrecorded');
+    expect(JSON.parse(fs.readFileSync(file, 'utf8')).status).toBe('failed');
   });
 });

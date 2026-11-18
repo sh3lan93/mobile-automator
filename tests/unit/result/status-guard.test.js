@@ -70,14 +70,15 @@ describe('checkExplicitStatus: an explicit status may equal the derived one or b
 // keeps a recorded-green run from being passed.
 describe('checkExplicitStatus with unrecorded scenario entries (#335)', () => {
   const clean = { steps: [step('pass')], assertions: [assertion('passed')] };
-  const gaps = { steps: ['tap'], assertions: ['shown'] };
+  const shown = { assertion_id: 'shown', step_id: 'tap', type: 'element_exists' };
+  const gaps = { steps: ['tap'], assertions: [shown] };
   const none = { steps: [], assertions: [] };
 
   test('passed over a recorded-green run with gaps is refused, naming them', () => {
     const r = checkExplicitStatus({ status: 'passed', ...clean, unrecorded: gaps });
-    expect(r.message).toMatch(/never recorded/);
-    expect(r.message).toContain('tap');
-    expect(r.message).toContain('shown');
+    expect(r.message).toBe(
+      'cannot finalize --status passed: the scenario declares entries this run never recorded: steps tap; assertions shown'
+    );
     expect(r.hint).toMatch(/incomplete/);
   });
 
@@ -97,7 +98,7 @@ describe('checkExplicitStatus with unrecorded scenario entries (#335)', () => {
 
   test('only steps, or only assertions, missing is enough', () => {
     expect(checkExplicitStatus({ status: 'passed', ...clean, unrecorded: { steps: ['tap'], assertions: [] } })).not.toBeNull();
-    expect(checkExplicitStatus({ status: 'passed', ...clean, unrecorded: { steps: [], assertions: ['shown'] } })).not.toBeNull();
+    expect(checkExplicitStatus({ status: 'passed', ...clean, unrecorded: { steps: [], assertions: [shown] } })).not.toBeNull();
   });
 
   test('gaps do not lift a derived failed run: incomplete is still refused there', () => {

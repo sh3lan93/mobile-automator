@@ -313,7 +313,8 @@ describe('the incomplete message and hint with unrecorded entries (#335)', () =>
   const runId = 'run_20261118_120000';
   const scenarioPath = path.join(projectRoot, 'login.json');
   const clean = { run_id: runId, assertion_results: [], steps_executed: [{ step_id: 'launch', status: 'passed' }], executor: { scenario_path: 'login.json' } };
-  const gaps = { steps: ['tap', 'confirm'], assertions: ['shown'] };
+  const shown = { assertion_id: 'shown', step_id: 'confirm', type: 'element_exists' };
+  const gaps = { steps: ['tap', 'confirm'], assertions: [shown] };
 
   test('the message counts the declared steps and assertions never recorded', () => {
     expect(incompleteMessage(clean, { unrecorded: gaps })).toBe(
@@ -322,7 +323,7 @@ describe('the incomplete message and hint with unrecorded entries (#335)', () =>
     expect(incompleteMessage(clean, { unrecorded: { steps: ['tap'], assertions: [] } })).toBe(
       `run ${runId} incomplete: 1 declared step(s) never recorded`
     );
-    expect(incompleteMessage(clean, { unrecorded: { steps: [], assertions: ['shown'] } })).toBe(
+    expect(incompleteMessage(clean, { unrecorded: { steps: [], assertions: [shown] } })).toBe(
       `run ${runId} incomplete: 1 declared assertion(s) never recorded`
     );
   });
@@ -338,11 +339,8 @@ describe('the incomplete message and hint with unrecorded entries (#335)', () =>
     expect(incompleteMessage(clean, { unrecorded: { steps: [], assertions: [] } })).toBe(incompleteMessage(clean));
   });
 
-  // The scenario's own assertions, as `result finalize --scenario` passes them.
-  const declared = [{ id: 'shown', after_step: 'confirm', type: 'element_exists', description: 'd' }];
-
   test('the hint lists each unrecorded id with its record line, then the re-finalize', () => {
-    expect(pendingHint(clean, { projectRoot, unrecorded: gaps, declaredAssertions: declared })).toBe([
+    expect(pendingHint(clean, { projectRoot, unrecorded: gaps })).toBe([
       'Never recorded: steps tap, confirm; assertions shown. Perform each step with one-shot verbs and record it, ' +
         'and record each assertion after its step:',
       `mauto result add-step --run-id ${runId} --step-id tap --status <pass|fail|skipped>`,
@@ -363,18 +361,9 @@ describe('the incomplete message and hint with unrecorded entries (#335)', () =>
     expect(lines.at(-1)).toMatch(/^mauto result finalize /);
   });
 
-  test('an assertion the declared list does not describe keeps the placeholders', () => {
-    const unknown = { steps: [], assertions: ['ghost'] };
-    for (const declaredAssertions of [undefined, declared]) {
-      expect(pendingHint(clean, { projectRoot, unrecorded: unknown, declaredAssertions })).toContain(
-        `mauto result add-assertion --run-id ${runId} --step-id <step_id> --assertion-id ghost --type <type> --pass <true|false> --message "<why>"`
-      );
-    }
-  });
-
   test('declared values are shell-quoted like every other argument', () => {
-    const odd = [{ id: 'shown', after_step: 'step one', type: 'element_exists' }];
-    expect(pendingHint(clean, { projectRoot, unrecorded: { steps: [], assertions: ['shown'] }, declaredAssertions: odd })).toContain(
+    const odd = { ...shown, step_id: 'step one' };
+    expect(pendingHint(clean, { projectRoot, unrecorded: { steps: [], assertions: [odd] } })).toContain(
       '--step-id "step one" --assertion-id shown --type element_exists'
     );
   });

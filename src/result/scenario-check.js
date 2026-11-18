@@ -56,9 +56,12 @@ function scenarioMismatch(recorded, { scenario, sha256 }) {
 }
 
 // The reverse of crossCheck (#335): what the scenario declares that the run
-// never recorded, as `{steps, assertions}` id lists in document order. A run
-// that stopped after its last record would otherwise derive `passed` from
-// what little it holds.
+// never recorded, in document order: `{steps, assertions}`, steps as ids and
+// assertions as `{assertion_id, step_id, type}` (the shape pendingAssertions
+// in src/result/pending-hint.js gives, `step_id` the assertion's `after_step`),
+// so every consumer prints a record line without looking back into the
+// scenario. A run that stopped after its last record would otherwise derive
+// `passed` from what little it holds.
 //
 // Declared steps are `precondition_<n>` (one per device_action, as `mauto run`
 // records them) then the whole step tree. A step counts as recorded when it,
@@ -86,8 +89,24 @@ function unrecordedEntries(recorded, scenario) {
   const steps = tree.filter(({ path }) => !covered(path)).map(({ step }) => step.id);
 
   const assertionIds = new Set(recorded.assertions.map((a) => a.assertion_id));
-  const assertions = (scenario.assertions || []).map((a) => a.id).filter((id) => !assertionIds.has(id));
+  const assertions = (scenario.assertions || [])
+    .filter((a) => !assertionIds.has(a.id))
+    .map((a) => ({ assertion_id: a.id, step_id: a.after_step, type: a.type }));
   return { steps: [...preconditions, ...steps], assertions };
 }
 
-module.exports = { crossCheck, scenarioMismatch, unrecordedEntries };
+// Whether an unrecordedEntries list names anything; null-safe, since only
+// `result finalize --scenario` has one.
+const hasUnrecorded = (unrecorded) =>
+  Boolean(unrecorded) && unrecorded.steps.length + unrecorded.assertions.length > 0;
+
+// The unrecorded entries named for a message or hint:
+// `steps tap, confirm; assertions shown`.
+function describeUnrecorded({ steps, assertions }) {
+  return [
+    steps.length ? `steps ${steps.join(', ')}` : null,
+    assertions.length ? `assertions ${assertions.map((a) => a.assertion_id).join(', ')}` : null,
+  ].filter(Boolean).join('; ');
+}
+
+module.exports = { crossCheck, scenarioMismatch, unrecordedEntries, hasUnrecorded, describeUnrecorded };

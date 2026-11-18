@@ -3,7 +3,7 @@
 // The reverse of crossCheck (#335): what a scenario declares that the run never
 // recorded. `result finalize --scenario` reads a run with gaps `incomplete`.
 
-const { unrecordedEntries } = require('../../../src/result/scenario-check');
+const { unrecordedEntries, hasUnrecorded, describeUnrecorded } = require('../../../src/result/scenario-check');
 
 const SCENARIO = {
   scenario_id: 'login',
@@ -43,7 +43,10 @@ describe('unrecordedEntries (#335)', () => {
       steps: [{ id: 'launch', action: 'launch_app' }, { id: 'tap', action: 'tap' }],
       assertions: [{ id: 'shown', type: 'element_exists', after_step: 'tap' }],
     };
-    expect(unrecordedEntries(recorded(['launch'], []), scenario)).toEqual({ steps: ['tap'], assertions: ['shown'] });
+    expect(unrecordedEntries(recorded(['launch'], []), scenario)).toEqual({
+      steps: ['tap'],
+      assertions: [{ assertion_id: 'shown', step_id: 'tap', type: 'element_exists' }],
+    });
   });
 
   test('preconditions are declared steps, in document order before the steps', () => {
@@ -78,8 +81,11 @@ describe('unrecordedEntries (#335)', () => {
     expect(unrecordedEntries(r, SCENARIO)).toEqual({ steps: [], assertions: [] });
   });
 
-  test('missing assertions are listed in document order', () => {
-    expect(unrecordedEntries(recorded(ALL_STEPS, []), SCENARIO).assertions).toEqual(['launched', 'logged_in']);
+  test('missing assertions are listed in document order, with the step they follow and their type', () => {
+    expect(unrecordedEntries(recorded(ALL_STEPS, []), SCENARIO).assertions).toEqual([
+      { assertion_id: 'launched', step_id: 'launch', type: 'element_exists' },
+      { assertion_id: 'logged_in', step_id: 'tap', type: 'element_exists' },
+    ]);
   });
 
   test('a scenario declaring nothing has nothing unrecorded', () => {
@@ -89,5 +95,23 @@ describe('unrecordedEntries (#335)', () => {
   test('a precondition is covered only by its own id', () => {
     const r = recorded(['precondition_2', 'launch', 'login_flow', 'tap']);
     expect(unrecordedEntries(r, SCENARIO).steps).toEqual(['precondition_1']);
+  });
+});
+
+describe('hasUnrecorded and describeUnrecorded (#335)', () => {
+  const shown = { assertion_id: 'shown', step_id: 'tap', type: 'element_exists' };
+
+  test('hasUnrecorded is null-safe and true only with an entry', () => {
+    expect(hasUnrecorded(null)).toBe(false);
+    expect(hasUnrecorded(undefined)).toBe(false);
+    expect(hasUnrecorded({ steps: [], assertions: [] })).toBe(false);
+    expect(hasUnrecorded({ steps: ['tap'], assertions: [] })).toBe(true);
+    expect(hasUnrecorded({ steps: [], assertions: [shown] })).toBe(true);
+  });
+
+  test('describeUnrecorded names the step ids, then the assertion ids', () => {
+    expect(describeUnrecorded({ steps: ['tap', 'confirm'], assertions: [shown] })).toBe('steps tap, confirm; assertions shown');
+    expect(describeUnrecorded({ steps: ['tap'], assertions: [] })).toBe('steps tap');
+    expect(describeUnrecorded({ steps: [], assertions: [shown] })).toBe('assertions shown');
   });
 });

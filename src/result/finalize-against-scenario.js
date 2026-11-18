@@ -10,11 +10,30 @@ const path = require('path');
 
 const { ok, fail } = require('../output/envelope');
 const { loadScenario } = require('../scenario/load');
-const { scenarioMismatch, unrecordedEntries } = require('./scenario-check');
-const { deriveRunStatus } = require('./outcome');
+const { scenarioMismatch, unrecordedEntries, hasUnrecorded } = require('./scenario-check');
 const { buildExecutor } = require('./executor');
 const { incompleteEnvelope } = require('./pending-hint');
 const { checkExplicitStatus } = require('./status-guard');
+
+// --scenario (#275): the file is loaded and hashed, and what the run has
+// recorded so far is cross-checked against it. Resolved against the caller's
+// cwd, as handleScreenshot resolves its path; buildExecutor decides how it is
+// recorded. Returns null without --scenario, `{ failure }` when it is refused,
+// else `{ file, sha256, scenario, recorded }`.
+function loadScenarioContext({ validator, resultStoreFactory, projectRoot, cwd }, { runId, scenarioId, scenario }) {
+  if (scenario === undefined) return null;
+  const file = path.resolve(cwd, scenario);
+  const loaded = loadScenario(validator, file, { strict: false });
+  if (loaded.failure) return { failure: loaded.failure };
+  const recorded = resultStoreFactory({ runId, scenarioId, projectRoot }).recorded();
+  const mismatch = scenarioMismatch(recorded, loaded);
+  if (mismatch) {
+    return {
+      failure: { envelope: fail('invalid_input', mismatch.message, mismatch.hint, mismatch.data), exitKind: 'invalid_input' },
+    };
+  }
+  return { file, sha256: loaded.sha256, scenario: loaded.scenario, recorded };
+}
 
 function finalizeAgainstScenario(
   { validator, resultStoreFactory, memoryStoreFactory, projectRoot, cwd = process.cwd(), finalizeRun },
@@ -22,60 +41,27 @@ function finalizeAgainstScenario(
 ) {
   const { runId, scenarioId, status, duration } = opts;
 
-  // --scenario (#275): the result is checked against the file it claims and
-  // the file is hashed into `executor`. Refused before anything is written.
-  // Resolved against the caller's cwd, as handleScreenshot resolves its path;
-  // buildExecutor decides how it is recorded.
-  let scenarioPath = null;
-  let scenarioSha256 = null;
-  let scenarioAssertionCount;
-  // What the run recorded, and what the scenario declares that it never did
-  // (#335); both null without --scenario.
-  let recorded = null;
-  let unrecorded = null;
-  // The scenario's assertions, which fill the hint's record lines (#335).
-  let declaredAssertions = [];
-  if (opts.scenario !== undefined) {
-    const scenarioFile = path.resolve(cwd, opts.scenario);
-    const loaded = loadScenario(validator, scenarioFile, { strict: false });
-    if (loaded.failure) return loaded.failure;
-    recorded = resultStoreFactory({ runId, scenarioId, projectRoot }).recorded();
-    const mismatch = scenarioMismatch(recorded, loaded);
-    if (mismatch) {
-      return { envelope: fail('invalid_input', mismatch.message, mismatch.hint, mismatch.data), exitKind: 'invalid_input' };
-    }
-    unrecorded = unrecordedEntries(recorded, loaded.scenario);
-    scenarioPath = scenarioFile;
-    scenarioSha256 = loaded.sha256;
-    declaredAssertions = Array.isArray(loaded.scenario.assertions) ? loaded.scenario.assertions : [];
-    scenarioAssertionCount = declaredAssertions.length;
-  }
+  // Both refusals below read a snapshot taken before the store's lock; they
+  // only ever refuse and never write, so the written status stays decided
+  // under the lock (ResultStore#finalize).
+  const context = loadScenarioContext({ validator, resultStoreFactory, projectRoot, cwd }, opts);
+  if (context && context.failure) return context.failure;
 
   // An explicit --status may equal the derived one or make the run worse,
   // never greener (src/result/status-guard.js). Refused before anything is
   // written.
   if (status !== undefined) {
-    const { steps, assertions } = recorded || resultStoreFactory({ runId, scenarioId, projectRoot }).recorded();
+    const { steps, assertions } = context ? context.recorded : resultStoreFactory({ runId, scenarioId, projectRoot }).recorded();
     const refusal = checkExplicitStatus({
-      status, steps, assertions, scenarioAssertionCount, unrecorded,
+      status,
+      steps,
+      assertions,
+      scenarioAssertionCount: context ? (context.scenario.assertions || []).length : undefined,
+      unrecorded: context ? unrecordedEntries(context.recorded, context.scenario) : null,
     });
     if (refusal) {
       return { envelope: fail('invalid_input', refusal.message, refusal.hint), exitKind: 'invalid_input' };
     }
-  }
-
-  // Gaps matter only to a run its records would decide green (#335): a run
-  // with a declared step or assertion never recorded is not a pass, so with
-  // --status omitted it finalizes `incomplete`. A failed or errored run is
-  // decided whatever it lacks (later steps legitimately never ran), so its
-  // gaps are not reported; a run already pending reports them, since they
-  // are part of what the agent still has to do.
-  let effectiveStatus = status;
-  let gaps = null;
-  if (unrecorded && unrecorded.steps.length + unrecorded.assertions.length > 0) {
-    const derived = deriveRunStatus(recorded.steps, recorded.assertions);
-    if (derived === 'passed' || derived === 'incomplete') gaps = unrecorded;
-    if (status === undefined && derived === 'passed') effectiveStatus = 'incomplete';
   }
 
   // Only provided keys: `defaultMetadata` fills the rest with 'unknown', and
@@ -90,19 +76,34 @@ function finalizeAgainstScenario(
   const { result, store, hints } = finalizeRun(
     { resultStoreFactory, memoryStoreFactory, projectRoot },
     {
-      runId, scenarioId, status: effectiveStatus, duration, metadata, summary: opts.summary,
+      runId, scenarioId, status, duration, metadata, summary: opts.summary,
       // No device is connected here, so none is claimed (plan decision 5).
-      executor: buildExecutor({ kind: 'agent', projectRoot, scenarioPath, scenarioSha256 }),
+      executor: buildExecutor({
+        kind: 'agent',
+        projectRoot,
+        scenarioPath: context ? context.file : null,
+        scenarioSha256: context ? context.sha256 : null,
+      }),
+      // With it, the store derives a run that never recorded a declared step
+      // or assertion `incomplete`, deciding under its lock (#335).
+      scenario: context ? context.scenario : undefined,
     }
   );
 
   // Exit 7: nothing failed, but an agent still has to judge something. The
   // file is written; the hint is the exact commands that complete it.
-  // `data.unrecorded` (#335) sits beside the result fields, never in the file.
+  // `data.unrecorded` (#335) is what the scenario declares and the written
+  // result never recorded, read from that result itself; it sits beside the
+  // result fields, never in the file. Only an incomplete run reports it: a
+  // failed or errored run is decided, and its later steps legitimately never
+  // ran.
   if (result.status === 'incomplete') {
-    const data = gaps ? { ...result, unrecorded: gaps } : result;
+    const unrecorded = context
+      ? unrecordedEntries({ steps: result.steps_executed, assertions: result.assertion_results }, context.scenario)
+      : null;
+    const data = hasUnrecorded(unrecorded) ? { ...result, unrecorded } : result;
     return {
-      envelope: incompleteEnvelope(result, { hints, projectRoot, data, unrecorded: gaps, declaredAssertions }),
+      envelope: incompleteEnvelope(result, { hints, projectRoot, data, unrecorded }),
       exitKind: 'incomplete',
     };
   }

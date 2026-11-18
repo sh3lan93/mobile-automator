@@ -20,7 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   steps and assertions after it never ran. Now a run whose records would
   derive `passed` but that has no record of a declared precondition, step or
   assertion finalizes `incomplete` (exit `7`): `data.unrecorded` lists the
-  missing step and assertion ids, and the hint prints the
+  missing step ids and, for each missing assertion, its id, the step it
+  follows and its type, and the hint prints the
   `mauto result add-step` / `add-assertion` line for each. A step counts as
   recorded through its own record, its parent's or a sub-step's, which is how
   `mauto run` records sub-steps; a step that did not apply is recorded

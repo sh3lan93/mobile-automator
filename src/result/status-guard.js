@@ -1,6 +1,7 @@
 'use strict';
 
 const { deriveRunStatus } = require('./outcome');
+const { hasUnrecorded, describeUnrecorded } = require('./scenario-check');
 
 // The rule for `result finalize --status <explicit>` (#275 review, B1): an
 // agent may make a run worse than the status derived from what was recorded,
@@ -14,31 +15,17 @@ const { deriveRunStatus } = require('./outcome');
 //   assertions) proves nothing, so it is refused — unless the caller loaded
 //   the `--scenario` and that scenario declares zero assertions
 //   (`scenarioAssertionCount === 0`).
-// - With `--scenario`, `unrecorded` (`{steps, assertions}`, from
-//   unrecordedEntries) lists what the scenario declares and the run never
-//   recorded (#335). A run that derives `passed` from its records but has
-//   gaps derives `incomplete` instead: `passed` is refused, `incomplete`
-//   allowed. A run already failing is decided whatever it lacks.
+// - With `--scenario`, `unrecorded` (from unrecordedEntries) lists what the
+//   scenario declares and the run never recorded (#335); deriveRunStatus
+//   reads a run with any of it `incomplete` unless it is already failing, so
+//   `passed` is refused there and `incomplete` allowed.
 //
 // Returns null when the status may be written, else `{message, hint}`.
 const SEVERITY = Object.freeze({ passed: 0, incomplete: 1, failed: 2, error: 3 });
 
-const hasGaps = (unrecorded) =>
-  Boolean(unrecorded) && (unrecorded.steps.length > 0 || unrecorded.assertions.length > 0);
-
-// The declared entries a run never recorded, named for a message.
-function describeGaps({ steps, assertions }) {
-  return [
-    steps.length ? `step(s) ${steps.join(', ')}` : null,
-    assertions.length ? `assertion(s) ${assertions.join(', ')}` : null,
-  ].filter(Boolean).join('; ');
-}
-
 function checkExplicitStatus({ status, steps = [], assertions = [], scenarioAssertionCount, unrecorded } = {}) {
   if (status === undefined) return null;
-  const recordedDerive = deriveRunStatus(steps, assertions);
-  const gaps = recordedDerive === 'passed' && hasGaps(unrecorded);
-  const derived = gaps ? 'incomplete' : recordedDerive;
+  const derived = deriveRunStatus(steps, assertions, unrecorded);
   const empty = steps.length === 0 && assertions.length === 0;
 
   if (status === 'passed' && empty && scenarioAssertionCount !== 0) {
@@ -53,10 +40,12 @@ function checkExplicitStatus({ status, steps = [], assertions = [], scenarioAsse
   const allowed = status === 'incomplete' ? derived === 'incomplete' : SEVERITY[status] >= SEVERITY[derived];
   if (allowed) return null;
 
-  if (gaps) {
+  // Refused over a run that derives incomplete with gaps: name them, since
+  // recording them is what completes it.
+  if (derived === 'incomplete' && hasUnrecorded(unrecorded)) {
     return {
       message:
-        `cannot finalize --status ${status}: the scenario declares entries this run never recorded: ${describeGaps(unrecorded)}`,
+        `cannot finalize --status ${status}: the scenario declares entries this run never recorded: ${describeUnrecorded(unrecorded)}`,
       hint:
         'A run that never recorded part of its scenario derives "incomplete". Record each with ' +
         '`mauto result add-step` / `add-assertion` (a step that did not apply is recorded --status skipped), ' +
