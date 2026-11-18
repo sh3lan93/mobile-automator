@@ -110,11 +110,11 @@ describe('finalizeRun', () => {
   test('records the run into memory and folds a memory failure into hints', () => {
     const recorded = [];
     const ok = deps(() => ({ recordRun: (r) => recorded.push(r.run_id), warnings: [] }));
-    finalizeRun(ok, { runId: 'run_a', scenarioId: 's', status: 'passed', metadata: {} });
+    finalizeRun(ok, { runId: 'run_a', scenarioId: 's', metadata: {} });
     expect(recorded).toEqual(['run_a']);
 
     const broken = deps(() => ({ recordRun: () => { throw new Error('disk full'); }, warnings: ['mem warn'] }));
-    const { hints } = finalizeRun(broken, { runId: 'run_b', scenarioId: 's', status: 'passed', metadata: {} });
+    const { hints } = finalizeRun(broken, { runId: 'run_b', scenarioId: 's', metadata: {} });
     expect(hints).toEqual(['run-history not updated: disk full', 'mem warn']);
   });
 });

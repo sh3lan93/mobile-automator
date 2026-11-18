@@ -14,7 +14,7 @@ const { loadScenario } = require('./scenario/load');
 const { evaluate, MECHANICAL_TYPES, REFERENCE_SCREENSHOT_TYPES } = require('./assertion/evaluator');
 const { observe } = require('./assertion/observe');
 const { fromCliFlags } = require('./assertion/fields');
-const { ResultStore, readFinalizedResult, InvalidRunIdError, AlreadyDecidedError } = require('./result/store');
+const { ResultStore, readFinalizedResult, InvalidRunIdError, AlreadyDecidedError, StatusRefusedError } = require('./result/store');
 const {
   OBSERVATION_TYPES, parseObservation, parseCapture, parseAssertionVerdict, parseSimilarityScore, RUN_STATUSES,
   parseRunStatus, parseStepStatus,
@@ -151,10 +151,11 @@ function toEnvelope(err) {
       exitKind: 'invalid_input',
     };
   }
-  // A --run-id the ResultStore refuses (#295), or a pending verdict over a
-  // decided one (#275): the store owns the rule and the wording, so every
-  // result verb reports it identically.
-  if (err instanceof InvalidRunIdError || err instanceof AlreadyDecidedError) {
+  // A --run-id the ResultStore refuses (#295), a pending verdict over a
+  // decided one (#275), or a finalize --status greener than the run derives
+  // (#337): the store owns the rule and the wording, so every result verb
+  // reports it identically.
+  if (err instanceof InvalidRunIdError || err instanceof AlreadyDecidedError || err instanceof StatusRefusedError) {
     return { envelope: fail(err.kind, err.message, err.hint), exitKind: err.kind };
   }
   if (err instanceof SyntaxError) {

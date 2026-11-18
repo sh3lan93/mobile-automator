@@ -1,9 +1,8 @@
 'use strict';
 
 // The scenario-aware half of `mauto result finalize` (#275): load and hash the
-// scenario, cross-check the recorded run against it, guard an explicit
-// --status, build the executor, finalize, and map the finalized status to an
-// envelope. Flag parsing stays with the caller. `finalizeRun` is injected so
+// scenario, cross-check the recorded run against it, build the executor,
+// finalize, and map the finalized status to an envelope. Flag parsing stays with the caller. `finalizeRun` is injected so
 // this module never requires src/cli.js, which owns it.
 
 const path = require('path');
@@ -13,13 +12,12 @@ const { loadScenario } = require('../scenario/load');
 const { scenarioMismatch, unrecordedEntries, hasUnrecorded } = require('./scenario-check');
 const { buildExecutor } = require('./executor');
 const { incompleteEnvelope } = require('./pending-hint');
-const { checkExplicitStatus } = require('./status-guard');
 
 // --scenario (#275): the file is loaded and hashed, and what the run has
 // recorded so far is cross-checked against it. Resolved against the caller's
 // cwd, as handleScreenshot resolves its path; buildExecutor decides how it is
 // recorded. Returns null without --scenario, `{ failure }` when it is refused,
-// else `{ file, sha256, scenario, recorded }`.
+// else `{ file, sha256, scenario }`.
 function loadScenarioContext({ validator, resultStoreFactory, projectRoot, cwd }, { runId, scenarioId, scenario }) {
   if (scenario === undefined) return null;
   const file = path.resolve(cwd, scenario);
@@ -32,7 +30,7 @@ function loadScenarioContext({ validator, resultStoreFactory, projectRoot, cwd }
       failure: { envelope: fail('invalid_input', mismatch.message, mismatch.hint, mismatch.data), exitKind: 'invalid_input' },
     };
   }
-  return { file, sha256: loaded.sha256, scenario: loaded.scenario, recorded };
+  return { file, sha256: loaded.sha256, scenario: loaded.scenario };
 }
 
 function finalizeAgainstScenario(
@@ -41,28 +39,14 @@ function finalizeAgainstScenario(
 ) {
   const { runId, scenarioId, status, duration } = opts;
 
-  // Both refusals below read a snapshot taken before the store's lock; they
-  // only ever refuse and never write, so the written status stays decided
-  // under the lock (ResultStore#finalize).
+  // The scenario-mismatch refusal reads a snapshot taken before the store's
+  // lock; it only ever refuses and never writes. Everything written — the
+  // derived status (#335) and the check of an explicit --status (#337) — is
+  // decided under the lock, in ResultStore#finalize, which throws
+  // StatusRefusedError (invalid_input, nothing written) for a status greener
+  // than the run derives.
   const context = loadScenarioContext({ validator, resultStoreFactory, projectRoot, cwd }, opts);
   if (context && context.failure) return context.failure;
-
-  // An explicit --status may equal the derived one or make the run worse,
-  // never greener (src/result/status-guard.js). Refused before anything is
-  // written.
-  if (status !== undefined) {
-    const { steps, assertions } = context ? context.recorded : resultStoreFactory({ runId, scenarioId, projectRoot }).recorded();
-    const refusal = checkExplicitStatus({
-      status,
-      steps,
-      assertions,
-      scenarioAssertionCount: context ? (context.scenario.assertions || []).length : undefined,
-      unrecorded: context ? unrecordedEntries(context.recorded, context.scenario) : null,
-    });
-    if (refusal) {
-      return { envelope: fail('invalid_input', refusal.message, refusal.hint), exitKind: 'invalid_input' };
-    }
-  }
 
   // Only provided keys: `defaultMetadata` fills the rest with 'unknown', and
   // the result schema requires all five fields to be strings, so threading

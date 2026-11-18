@@ -15,6 +15,7 @@ const {
   isPendingStep,
 } = require('./outcome');
 const { unrecordedEntries } = require('./scenario-check');
+const { checkExplicitStatus } = require('./status-guard');
 const { workspaceDir } = require('../workspace/layout');
 
 // Incremental result accumulator that persists to
@@ -482,9 +483,27 @@ class ResultStore {
   // step or assertion derives `incomplete`. Read here, under the lock and
   // after the refresh, so the status is decided from exactly the entries the
   // file is written with, never from an earlier snapshot.
+  //
+  // An explicit `status` is checked the same way (#337): against the entries
+  // just re-read, by checkExplicitStatus (src/result/status-guard.js), before
+  // anything is written. A refusal throws StatusRefusedError and leaves the
+  // file as it was, so a step recorded concurrently can never be finalized
+  // under a status greener than the one it derives.
   finalize({ status, durationSeconds = 0, summary, metadata, measurements, executor, scenario } = {}) {
     return withLock(this._lock, () => {
       this._refreshFromDisk();
+
+      const unrecorded = scenario
+        ? unrecordedEntries({ steps: this._steps, assertions: this._assertions }, scenario)
+        : null;
+      const refusal = checkExplicitStatus({
+        status,
+        steps: this._steps,
+        assertions: this._assertions,
+        scenarioAssertionCount: scenario ? (scenario.assertions || []).length : undefined,
+        unrecorded,
+      });
+      if (refusal) throw new StatusRefusedError(refusal);
 
       // Appended INSIDE the lock and deduped by (type, message), so re-running
       // finalize — which the execute guide tells an agent to do after a failed
@@ -500,9 +519,6 @@ class ResultStore {
       const failed = this._assertions.filter(isFailingAssertion).length;
       const total = this._assertions.length;
 
-      const unrecorded = scenario
-        ? unrecordedEntries({ steps: this._steps, assertions: this._assertions }, scenario)
-        : null;
       const resolvedStatus = status || deriveRunStatus(this._steps, this._assertions, unrecorded);
 
       const result = {
@@ -601,6 +617,18 @@ class AlreadyDecidedError extends Error {
   }
 }
 
+// Typed error for an explicit finalize status the recorded entries do not
+// allow (#337; the rule and its wording are checkExplicitStatus's). Thrown
+// under the lock before any write, so a refused finalize changes nothing.
+class StatusRefusedError extends Error {
+  constructor({ message, hint }) {
+    super(message);
+    this.name = 'StatusRefusedError';
+    this.kind = 'invalid_input';
+    this.hint = hint;
+  }
+}
+
 // Read a finalized result file for a report, WITHOUT going through the
 // ResultStore constructor: that constructor renames a corrupt file aside as a
 // `.corrupt.<ts>` sidecar, and a reader must never mutate the workspace it
@@ -663,4 +691,5 @@ module.exports = {
   isResultRunId,
   InvalidRunIdError,
   AlreadyDecidedError,
+  StatusRefusedError,
 };

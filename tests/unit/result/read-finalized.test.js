@@ -115,7 +115,7 @@ describe('readFinalizedResult', () => {
     const finalized = () => {
       const root = tmpRoot();
       const store = new ResultStore({ runId: RUN_ID, scenarioId: 'login', projectRoot: root });
-      return store.finalize({ status: 'passed', durationSeconds: 1 });
+      return store.finalize({ durationSeconds: 1 });
     };
     const withoutRunId = () => {
       const r = finalized();
@@ -159,7 +159,7 @@ describe('readFinalizedResult', () => {
   ])('a run-id-matching object with %s is accepted as written', (_label, mutate) => {
     const root = tmpRoot();
     const store = new ResultStore({ runId: RUN_ID, scenarioId: 'login', projectRoot: root });
-    const value = mutate(store.finalize({ status: 'passed', durationSeconds: 1 }));
+    const value = mutate(store.finalize({ durationSeconds: 1 }));
     fs.writeFileSync(resultFile(root, RUN_ID), JSON.stringify(value));
     expect(readFinalizedResult(root, RUN_ID)).toEqual({ result: value });
   });
