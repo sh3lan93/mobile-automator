@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.40.6]
+
+### 🐛 Fixed
+
+- **`mauto result finalize --status <s>` is checked against what the run
+  holds when it is written** (#337). The guard that lets an explicit status
+  only equal the derived one or make the run worse read the run before the
+  result store's lock, and the store then wrote the explicit status without
+  checking it again. So a `mauto result add-step --status fail` landing in
+  between let `--status incomplete` (exit `7`) or `--status passed` (exit
+  `0`) be written over a run whose own records derive `failed`. The check
+  now runs inside the store's lock, against the entries re-read there, with
+  or without `--scenario`; a refused status is `invalid_input` (exit `3`) and
+  nothing is written. The rule and its messages are unchanged. Calling
+  `ResultStore#finalize` with a status greener than the recorded entries
+  derive now throws `StatusRefusedError` instead of writing it.
+
 ## [0.40.5]
 
 ### 🐛 Fixed
