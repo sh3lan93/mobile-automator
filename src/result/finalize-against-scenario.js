@@ -33,6 +33,8 @@ function finalizeAgainstScenario(
   // (#335); both null without --scenario.
   let recorded = null;
   let unrecorded = null;
+  // The scenario's assertions, which fill the hint's record lines (#335).
+  let declaredAssertions = [];
   if (opts.scenario !== undefined) {
     const scenarioFile = path.resolve(cwd, opts.scenario);
     const loaded = loadScenario(validator, scenarioFile, { strict: false });
@@ -45,7 +47,8 @@ function finalizeAgainstScenario(
     unrecorded = unrecordedEntries(recorded, loaded.scenario);
     scenarioPath = scenarioFile;
     scenarioSha256 = loaded.sha256;
-    scenarioAssertionCount = Array.isArray(loaded.scenario.assertions) ? loaded.scenario.assertions.length : 0;
+    declaredAssertions = Array.isArray(loaded.scenario.assertions) ? loaded.scenario.assertions : [];
+    scenarioAssertionCount = declaredAssertions.length;
   }
 
   // An explicit --status may equal the derived one or make the run worse,
@@ -99,7 +102,7 @@ function finalizeAgainstScenario(
   if (result.status === 'incomplete') {
     const data = gaps ? { ...result, unrecorded: gaps } : result;
     return {
-      envelope: incompleteEnvelope(result, { hints, projectRoot, data, unrecorded: gaps }),
+      envelope: incompleteEnvelope(result, { hints, projectRoot, data, unrecorded: gaps, declaredAssertions }),
       exitKind: 'incomplete',
     };
   }

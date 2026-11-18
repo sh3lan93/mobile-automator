@@ -338,13 +338,16 @@ describe('the incomplete message and hint with unrecorded entries (#335)', () =>
     expect(incompleteMessage(clean, { unrecorded: { steps: [], assertions: [] } })).toBe(incompleteMessage(clean));
   });
 
+  // The scenario's own assertions, as `result finalize --scenario` passes them.
+  const declared = [{ id: 'shown', after_step: 'confirm', type: 'element_exists', description: 'd' }];
+
   test('the hint lists each unrecorded id with its record line, then the re-finalize', () => {
-    expect(pendingHint(clean, { projectRoot, unrecorded: gaps })).toBe([
+    expect(pendingHint(clean, { projectRoot, unrecorded: gaps, declaredAssertions: declared })).toBe([
       'Never recorded: steps tap, confirm; assertions shown. Perform each step with one-shot verbs and record it, ' +
         'and record each assertion after its step:',
       `mauto result add-step --run-id ${runId} --step-id tap --status <pass|fail|skipped>`,
       `mauto result add-step --run-id ${runId} --step-id confirm --status <pass|fail|skipped>`,
-      `mauto result add-assertion --run-id ${runId} --step-id <step_id> --assertion-id shown --type <type> --pass <true|false> --message "<why>"`,
+      `mauto result add-assertion --run-id ${runId} --step-id confirm --assertion-id shown --type element_exists --pass <true|false> --message "<why>"`,
       'A step whose condition does not hold, or that was optional and missed, is recorded --status skipped; its assertions still apply.',
       'Re-finalize once every declared step and assertion is recorded:',
       `mauto result finalize --run-id ${runId} --scenario ${scenarioPath}`,
@@ -358,6 +361,22 @@ describe('the incomplete message and hint with unrecorded entries (#335)', () =>
     expect(lines.findIndex((l) => l.startsWith('Never recorded:'))).toBeGreaterThan(0);
     expect(lines).not.toContain('No assertion is pending; re-finalize once the run is decided:');
     expect(lines.at(-1)).toMatch(/^mauto result finalize /);
+  });
+
+  test('an assertion the declared list does not describe keeps the placeholders', () => {
+    const unknown = { steps: [], assertions: ['ghost'] };
+    for (const declaredAssertions of [undefined, declared]) {
+      expect(pendingHint(clean, { projectRoot, unrecorded: unknown, declaredAssertions })).toContain(
+        `mauto result add-assertion --run-id ${runId} --step-id <step_id> --assertion-id ghost --type <type> --pass <true|false> --message "<why>"`
+      );
+    }
+  });
+
+  test('declared values are shell-quoted like every other argument', () => {
+    const odd = [{ id: 'shown', after_step: 'step one', type: 'element_exists' }];
+    expect(pendingHint(clean, { projectRoot, unrecorded: { steps: [], assertions: ['shown'] }, declaredAssertions: odd })).toContain(
+      '--step-id "step one" --assertion-id shown --type element_exists'
+    );
   });
 
   test('without unrecorded the hint is unchanged', () => {

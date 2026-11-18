@@ -73,7 +73,10 @@ describe('result finalize --scenario reads unrecorded entries as incomplete (#33
     expect(f.envelope.data).toMatchObject({ status: 'incomplete', unrecorded: { steps: ['tap'], assertions: ['bought'] } });
     expect(f.envelope.hint).toContain('Never recorded: steps tap; assertions bought.');
     expect(f.envelope.hint).toContain(`--step-id tap --status <pass|fail|skipped>`);
-    expect(f.envelope.hint).toContain('--assertion-id bought');
+    // Filled from the scenario: the step it follows and its type.
+    expect(f.envelope.hint).toContain(
+      `mauto result add-assertion --run-id ${runId} --step-id tap --assertion-id bought --type element_exists --pass <true|false> --message "<why>"`
+    );
     // The file is written incomplete, and carries no `unrecorded` field: the
     // result schema is unchanged.
     const saved = JSON.parse(fs.readFileSync(file, 'utf8'));

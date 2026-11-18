@@ -135,9 +135,11 @@ function stepBlock(steps, { runId }) {
 
 // The hint lines for what the scenario declares and the run never recorded
 // (#335): the ids, the record line for each, and how a step that did not
-// apply is recorded. Only the ids are known here, so an assertion's step and
-// type are left to fill from the scenario.
-function unrecordedBlock(unrecorded, { runId }) {
+// apply is recorded. An assertion's line names the step it follows and its
+// type from `declaredAssertions` (the scenario's assertions, which
+// `result finalize --scenario` has loaded); one it does not describe keeps
+// the placeholders.
+function unrecordedBlock(unrecorded, { runId, declaredAssertions = [] }) {
   if (!hasGaps(unrecorded)) return [];
   const { steps, assertions } = unrecorded;
   const named = [
@@ -147,11 +149,15 @@ function unrecordedBlock(unrecorded, { runId }) {
   return [
     `Never recorded: ${named}. Perform each step with one-shot verbs and record it, and record each assertion after its step:`,
     ...steps.map((id) => `mauto result add-step --run-id ${runId} --step-id ${arg(id)} --status <pass|fail|skipped>`),
-    ...assertions.map(
-      (id) =>
-        `mauto result add-assertion --run-id ${runId} --step-id <step_id> --assertion-id ${arg(id)} ` +
-        '--type <type> --pass <true|false> --message "<why>"'
-    ),
+    ...assertions.map((id) => {
+      const declared = declaredAssertions.find((a) => a && a.id === id) || {};
+      const stepId = typeof declared.after_step === 'string' ? arg(declared.after_step) : '<step_id>';
+      const type = typeof declared.type === 'string' ? arg(declared.type) : '<type>';
+      return (
+        `mauto result add-assertion --run-id ${runId} --step-id ${stepId} --assertion-id ${arg(id)} ` +
+        `--type ${type} --pass <true|false> --message "<why>"`
+      );
+    }),
     'A step whose condition does not hold, or that was optional and missed, is recorded --status skipped; its assertions still apply.',
   ];
 }
@@ -162,7 +168,7 @@ function unrecordedBlock(unrecorded, { runId }) {
 // absolute (resolved against `projectRoot`): --scenario resolves against the
 // cwd while the workspace is discovered by walking up from it, so a
 // project-relative path would be wrong from any subdirectory.
-function pendingHint(result, { projectRoot, unrecorded }) {
+function pendingHint(result, { projectRoot, unrecorded, declaredAssertions }) {
   const { judged, references } = pendingByClass(result);
   const pendingSteps = (result.steps_executed || []).filter(isPendingStep);
   const runId = arg(result.run_id);
@@ -175,7 +181,7 @@ function pendingHint(result, { projectRoot, unrecorded }) {
     : 'No assertion is pending; re-finalize once the run is decided:';
   return [
     ...stepBlock(pendingSteps, { runId }),
-    ...unrecordedBlock(unrecorded, { runId }),
+    ...unrecordedBlock(unrecorded, { runId, declaredAssertions }),
     ...judgedBlock(judged, { runId }),
     ...referenceBlock(references, { projectRoot, scenario }),
     ...(nothingPending ? [lastWord] : []),
@@ -186,12 +192,13 @@ function pendingHint(result, { projectRoot, unrecorded }) {
 // The `incomplete` (exit 7) envelope, shared by `result finalize` and
 // `mauto run`: the message, the store's hints, then the commands that complete
 // the run. `data` is what the envelope carries; `unrecorded` is what
-// `result finalize --scenario` found never recorded (#335).
-function incompleteEnvelope(result, { hints, projectRoot, data, unrecorded }) {
+// `result finalize --scenario` found never recorded (#335), and
+// `declaredAssertions` the scenario's assertions, which fill its record lines.
+function incompleteEnvelope(result, { hints, projectRoot, data, unrecorded, declaredAssertions }) {
   return fail(
     'incomplete',
     incompleteMessage(result, { unrecorded }),
-    [...hints, pendingHint(result, { projectRoot, unrecorded })].join('\n'),
+    [...hints, pendingHint(result, { projectRoot, unrecorded, declaredAssertions })].join('\n'),
     data
   );
 }
