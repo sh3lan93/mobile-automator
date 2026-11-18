@@ -2505,7 +2505,8 @@
 <p>Long-press on a UI element.</p>
 <p><strong>Fields:</strong>
 - <code>action</code> — <code>"long_press"</code>
-- <code>target</code> — Element to long-press</p>
+- <code>target</code> — Element to long-press
+- <code>value</code> <em>(optional)</em> — Press duration in milliseconds. When absent, <code>mauto</code> presses for 1000 ms, well above the 500 ms long-press thresholds of Flutter and iOS</p>
 <p><strong>Example:</strong>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"long_press_menu_item"</span><span class="p">,</span>
