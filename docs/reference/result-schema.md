@@ -91,7 +91,7 @@ Skipped steps count for nothing. A run that is already red stays red whatever an
 | `scenario_sha256` | string \| null | No | Hex SHA-256 of that file's bytes |
 | `mode` | string \| null | No | Workspace mode: `platform-aware` or `platform-agnostic` |
 
-`result finalize --scenario <path>` checks the result against that file before writing anything: the recorded `scenario_id` (when there is one) must match, and every recorded step id (including nested `sub_steps`) and assertion id must exist in the scenario. If the run already recorded a `scenario_sha256`, the file must hash to the same value. Any mismatch fails with `invalid_input` and leaves the result file unchanged.
+`result finalize --scenario <path>` checks the result against that file before writing anything: the recorded `scenario_id` (when there is one) must match, and every recorded step id (including nested `sub_steps`) and assertion id must exist in the scenario. If the run already recorded a `scenario_sha256`, the file must hash to the same value. Any mismatch fails with `invalid_input` and leaves the result file unchanged. The reverse is checked too: a run whose recorded entries would derive `passed` but that has no record of a step or assertion the scenario declares finalizes `incomplete` (exit `7`), with the missing ids in `data.unrecorded` (`{steps, assertions}`) and in the hint. A step is covered by its own record, its parent's or one of its sub-steps'; a step that did not apply is recorded `skipped`. An explicit `--status passed` over such a run is refused with `invalid_input`. A `failed` or `error` run is unaffected: the steps after a failure legitimately never ran.
 
 ### metadata Object
 
@@ -458,7 +458,7 @@ A step `mauto run` could not perform (`needs_agent: true`, named on a `Pending s
 mauto result add-step --run-id run_20261111_101500 --step-id install_build --status pass
 ```
 
-With every pending step and assertion decided, the status is derived again (`passed`, or `failed` if a verdict was `false`) and the original `executor` is kept. Recording `--pass pending` for an assertion that is already decided fails with `invalid_input`: a decided verdict never goes back to pending. The same holds for steps: `mauto run` recording a step as `needs_agent` in a run where that step is already decided fails with `invalid_input`; run it under a new run id.
+With every pending step and assertion decided, and every step and assertion the scenario declares recorded, the status is derived again (`passed`, or `failed` if a verdict was `false`) and the original `executor` is kept. Recording `--pass pending` for an assertion that is already decided fails with `invalid_input`: a decided verdict never goes back to pending. The same holds for steps: `mauto run` recording a step as `needs_agent` in a run where that step is already decided fails with `invalid_input`; run it under a new run id.
 
 ## Result File Locations & Naming
 
