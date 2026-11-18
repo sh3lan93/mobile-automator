@@ -163,6 +163,7 @@ Long-press on a UI element.
 **Fields:**
 - `action` — `"long_press"`
 - `target` — Element to long-press
+- `value` *(optional)* — Press duration in milliseconds. When absent, `mauto` presses for 1000 ms, well above the 500 ms long-press thresholds of Flutter and iOS
 
 **Example:**
 ```json
