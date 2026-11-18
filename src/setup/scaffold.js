@@ -98,15 +98,14 @@ function scaffold(projectRoot, { mode } = {}) {
   return { created, upgraded, configWritten: true, mode: skeleton.mode, modeChanged: null };
 }
 
-// An existing config keeps its mode unless one is requested (#333). An
-// explicit mode is stored whenever it differs from the stored value — so a
-// config predating the field gains it — but counts as a change only when the
-// effective mode (resolveMode) moves. Every other field is preserved.
+// An existing config keeps its mode unless one is requested (#333); an
+// explicit mode is written (every other field preserved) and reported as a
+// change only when it moves the effective mode (resolveMode), so a config
+// predating the field gains `mode` without a reported change.
 function applyMode(projectRoot, mode) {
-  const cfg = manager.load(projectRoot);
-  const current = manager.resolveMode(cfg);
+  const current = manager.resolveMode(manager.load(projectRoot));
   if (!mode) return { mode: current, modeChanged: null };
-  if (!cfg || cfg.mode !== mode) manager.set(projectRoot, 'mode', mode);
+  manager.set(projectRoot, 'mode', mode);
   return { mode, modeChanged: current === mode ? null : { from: current, to: mode } };
 }
 
