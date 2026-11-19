@@ -86,7 +86,10 @@ describe('session-end', () => {
     describe('an unmarked daemon (mauto <= 0.27.x, #237, #344)', () => {
       const terminations = (d) => d.log.filter((e) => e[0] === 'terminate');
 
-      test('unmarked + acked + lock names the same pid → unproven, never terminate()', async () => {
+      // endSession no longer reads the lock at all, so "the lock names this
+      // pid" cannot be set up here: the ack alone is the witness that used to
+      // unlock the group kill, and it is not enough any more.
+      test('acked and stuck past the budget: unproven, never terminate()', async () => {
         const d = deps({ acked: true, diesWithin: false, identity: 'unmarked' });
         expect(await endSession('/x', d.opts)).toEqual({ outcome: 'unproven', pid: 4000 });
         expect(terminations(d)).toHaveLength(0);
@@ -102,17 +105,6 @@ describe('session-end', () => {
         const d = deps({ acked: false, diesWithin: false, identity: 'unmarked' });
         expect(await endSession('/x', d.opts)).toEqual({ outcome: 'unproven', pid: 4000 });
         expect(terminations(d)).toHaveLength(0);
-      });
-
-      // Guard: no identity in the never-signal set reaches terminate(), acked or not.
-      test.each(
-        ['unmarked'].flatMap((identity) => [true, false].map((acked) => [identity, acked]))
-      )('%s identity (acked: %s) never calls terminate()', async (identity, acked) => {
-        const d = deps({ acked, diesWithin: false, identity });
-        const terminate = jest.fn(async () => 'dead');
-        d.opts.reaper.terminate = terminate;
-        await endSession('/x', d.opts);
-        expect(terminate).not.toHaveBeenCalled();
       });
     });
 
