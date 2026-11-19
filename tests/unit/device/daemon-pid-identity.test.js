@@ -9,9 +9,10 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const childProcess = require('child_process');
 
 const { cleanStale, startDaemon } = require('../../../src/device/session-daemon');
-const { pidIdentity, isZombie } = require('../../../src/device/process-identity');
+const { pidIdentity, isZombie, readPidFile } = require('../../../src/device/process-identity');
 const paths = require('../../../src/device/session-paths');
 const { ensureSalt, readSalt } = require('../../../src/device/session-salt');
 
@@ -256,5 +257,96 @@ describe('isZombie', () => {
       throw new Error('ps: not found');
     };
     expect(isZombie(7, { platform: 'darwin', execFile })).toBe(false);
+  });
+});
+
+// #344: the pid and lock files live in the workspace, which an attacker may
+// ship or plant. readPidFile must not follow a symlink out of it, nor block on
+// a FIFO: anything that is not a regular file reads as absent.
+describe('readPidFile (#344)', () => {
+  let dir;
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-readpid-'));
+  });
+  afterEach(() => {
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  test('a regular file "1234\\n" → 1234', () => {
+    const p = path.join(dir, 'daemon.pid');
+    fs.writeFileSync(p, '1234\n');
+    expect(readPidFile(p)).toBe(1234);
+  });
+
+  test('a missing file → null', () => {
+    expect(readPidFile(path.join(dir, 'missing.pid'))).toBeNull();
+  });
+
+  test('garbage → null', () => {
+    const p = path.join(dir, 'daemon.pid');
+    fs.writeFileSync(p, 'not a pid');
+    expect(readPidFile(p)).toBeNull();
+  });
+
+  test('readPidFile on a symlink to a file containing "1234" → null', () => {
+    const target = path.join(dir, 'target');
+    fs.writeFileSync(target, '1234');
+    const link = path.join(dir, 'daemon.pid');
+    fs.symlinkSync(target, link);
+    expect(readPidFile(link)).toBeNull();
+  });
+
+  // A blocking open on a FIFO with no writer blocks the event loop
+  // synchronously, so jest's own timeout could never fire. FIFO reads run in a
+  // child with a hard timeout instead: a block kills it (ETIMEDOUT) and the
+  // test fails rather than hanging the run. `prime` (a pid string) is written
+  // into the FIFO first, through an O_RDWR fd the child keeps open, so the
+  // FIFO holds readable data when readPidFile opens it.
+  function readPidFileInChild(p, prime) {
+    const modulePath = require.resolve('../../../src/device/process-identity');
+    const script = [
+      'const fs = require("fs");',
+      'const [, mod, file, prime] = process.argv;',
+      'if (prime) fs.writeSync(fs.openSync(file, fs.constants.O_RDWR | fs.constants.O_NONBLOCK), prime);',
+      'process.stdout.write(JSON.stringify(require(mod).readPidFile(file)));',
+    ].join('\n');
+    const args = ['-e', script, modulePath, p];
+    if (prime) args.push(prime);
+    return JSON.parse(childProcess.execFileSync(process.execPath, args, { encoding: 'utf8', timeout: 3000 }));
+  }
+
+  function makeFifo(p) {
+    try {
+      childProcess.execFileSync('mkfifo', [p], { stdio: 'ignore' });
+      return true;
+    } catch (_) {
+      return false; // no mkfifo on this host: nothing to test
+    }
+  }
+
+  test('readPidFile on a FIFO → null, does not block', () => {
+    const p = path.join(dir, 'daemon.pid');
+    if (!makeFifo(p)) return;
+    expect(readPidFileInChild(p)).toBeNull();
+  }, 10000);
+
+  // Only the isFile() check stands between this and 1234: the open does not
+  // block and the read returns the pid.
+  test('readPidFile on a FIFO holding "1234" → null (not a regular file)', () => {
+    const p = path.join(dir, 'daemon.pid');
+    if (!makeFifo(p)) return;
+    expect(readPidFileInChild(p, '1234\n')).toBeNull();
+  }, 10000);
+
+  test('a directory → null', () => {
+    const p = path.join(dir, 'daemon.pid');
+    fs.mkdirSync(p);
+    expect(readPidFile(p)).toBeNull();
+  });
+
+  test('a file longer than 32 bytes whose first bytes are "1234" → 1234', () => {
+    const p = path.join(dir, 'daemon.pid');
+    fs.writeFileSync(p, '1234' + ' '.repeat(28) + '9'.repeat(100));
+    expect(readPidFile(p)).toBe(1234);
   });
 });
