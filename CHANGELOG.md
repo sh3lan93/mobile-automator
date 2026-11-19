@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.40.9]
 
-### 🛡️ Security
+### 🔒 Security
 
 - **Device text can no longer drive a human's terminal** (#349). Element
   labels come from the app under test, and they reached `--human` output and
@@ -690,7 +690,7 @@ reject an unknown `--status`.**
 
 ## [0.36.0]
 
-### 🛡️ Security
+### 🔒 Security
 
 - Cleared GHSA-jm63-cq47-j5jp and GHSA-46jr-4wx8-v453, two
   `@modelcontextprotocol/server` HTTP-transport advisories accepted in the
@@ -1247,7 +1247,7 @@ working directory. Run `mauto session end` once after upgrading.
   `mauto session end`, restores the http(s)-only guard
   ([#212](https://github.com/sh3lan93/mobile-automator/issues/212)).
 
-### 🛡️ Security
+### 🔒 Security
 
 - Dropped the `toml` devDependency and the unused `tests/helpers.js` that was
   its only consumer (it parsed the removed Gemini-extension `.toml` commands).
@@ -1315,7 +1315,7 @@ under [0.27.0] ships in this version, including its breaking changes:
   `mauto devices use`; iOS simulators need a one-time agent install, and
   mauto's error hint prints the command. See [0.27.0] and TROUBLESHOOTING.
 
-### 🛡️ Security
+### 🔒 Security
 
 - Cleared GHSA-6qxp-vccf-f47h (high, `@modelcontextprotocol/sdk`: its OAuth
   client could send credentials to an authorization server chosen by the MCP
@@ -1399,7 +1399,7 @@ under [0.27.0] ships in this version, including its breaking changes:
   mauto sending anything anywhere?" no longer answers "not unless you turned
   it on" (#199).
 
-### 🛡️ Security
+### 🔒 Security
 
 - Cleared the two `sharp` advisories (GHSA-f88m-g3jw-g9cj,
   GHSA-rgj7-g3m4-5g8c) accepted in 0.26.0: they were reachable only through
@@ -1706,7 +1706,7 @@ under [0.27.0] ships in this version, including its breaking changes:
   report in a one-shot verb process. No behavior change; a unit test now pins
   the write-invalidates-memo invariant.
 
-### 🛡️ Security
+### 🔒 Security
 
 - Cleared the `ws`, `fast-uri` and `ip-address` high-severity advisories (and
   the moderate `hono`, `@hono/node-server`, `qs`, `body-parser` ones) in
