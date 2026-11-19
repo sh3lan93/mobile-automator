@@ -73,8 +73,8 @@ function isZombie(
 //   'unmarked'- only with `projectRoot`: alive and a mauto daemon whose command
 //               line carries no workspace marker at all (#237) — one started by
 //               mauto <= 0.27.x, or an editor open on the bin. Its line cannot
-//               prove whose it is either way; `session end` decides from the
-//               socket ack and the lock (src/device/session-end.js).
+//               prove whose it is either way, so `session end` never signals
+//               it and reports it 'unproven' (#344, src/device/session-end.js).
 //   'other'   - alive AND its command line does NOT (recycled pid)
 //   'unknown' - alive but `ps` itself failed (e.g. no `ps` on the host) —
 //               treated as 'ours' by cleanStale: never clean when unsure.
@@ -124,13 +124,33 @@ function pidIdentity(
   }
 }
 
+// The most a pid/lock file is read for: a pid plus a newline fits many times
+// over, and a planted multi-gigabyte file costs nothing.
+const PID_FILE_MAX_BYTES = 32;
+
 // Read a pid out of a one-line pid/lock file, or null when absent/garbage.
+// Both files live in the workspace, which may be checked in or planted (#344),
+// so the read never follows a symlink (O_NOFOLLOW), never blocks on a FIFO
+// (O_NONBLOCK), and accepts only a regular file: anything else reads as absent.
 function readPidFile(file) {
+  let fd;
   try {
-    const pid = parseInt(fs.readFileSync(file, 'utf8').trim(), 10);
+    fd = fs.openSync(file, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK);
+    if (!fs.fstatSync(fd).isFile()) return null;
+    const buf = Buffer.alloc(PID_FILE_MAX_BYTES);
+    const n = fs.readSync(fd, buf, 0, PID_FILE_MAX_BYTES, null);
+    const pid = parseInt(buf.toString('utf8', 0, n).trim(), 10);
     return Number.isInteger(pid) ? pid : null;
   } catch (_) {
     return null;
+  } finally {
+    if (fd !== undefined) {
+      try {
+        fs.closeSync(fd);
+      } catch (_) {
+        // already closed or invalid: nothing to release
+      }
+    }
   }
 }
 
