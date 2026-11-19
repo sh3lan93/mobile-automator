@@ -72,3 +72,15 @@ test('an incomplete run lists what is pending', () => {
   expect(out.endsWith('hint: do this\nthen that')).toBe(true);
   expect(out).not.toContain('failures:');
 });
+
+test('device-sourced control characters never reach the terminal (#349)', () => {
+  const envelope = fail('test_failed', 'boom\u001b[2J', 'h\u0007', data({
+    status: 'failed',
+    scenario_id: 'demo\u001b]0;pwned\u0007',
+    failures: ['step t (tap): not found "\u001b[31mX\u009b"'],
+  }));
+  const out = renderRunHuman(envelope);
+  // eslint-disable-next-line no-control-regex -- matching control chars is the point
+  expect(out).not.toMatch(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/);
+  expect(out.split('\n').length).toBeGreaterThan(3);
+});
