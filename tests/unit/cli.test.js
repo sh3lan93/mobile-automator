@@ -2214,8 +2214,12 @@ describe('cli handlers', () => {
       expect(r.envelope.error.kind).toBe('device');
       expect(r.envelope.data).toEqual({ stopped: false, already_stopped: false, pid: 4000 });
       expect(r.envelope.hint).toContain('ps -p 4000');
-      expect(r.envelope.hint).toContain('kill 4000');
-      expect(r.envelope.hint).not.toContain('kill -9 4000');
+      // SIGTERM first, then a group SIGKILL: an unproven daemon is often stuck
+      // (its SIGTERM handler never runs), and a 0.27.x daemon leads its own
+      // process group, so only the group kill also reaches its engine.
+      expect(r.envelope.hint).toContain('`kill 4000`');
+      expect(r.envelope.hint).toContain('`kill -9 -- -4000`');
+      expect(r.envelope.hint.indexOf('`kill 4000`')).toBeLessThan(r.envelope.hint.indexOf('`kill -9 -- -4000`'));
       expect(r.envelope.hint).not.toContain('did not answer the shutdown');
       expect(r.envelope.hint).toContain('mauto < 0.28');
       expect(r.envelope.hint).toContain('may still hold the workspace lock');

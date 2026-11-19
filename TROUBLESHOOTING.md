@@ -345,7 +345,9 @@ Daemons started by mauto 0.27 and earlier carry no marker at all, so
 `session end` cannot prove one is this workspace's and never signals it,
 whether or not it answers the shutdown. It fails with its `pid` rather than
 reporting it stopped (it may still hold the workspace lock). Check it with
-`ps -p <pid>` and stop it with `kill <pid>` if it is this workspace's daemon.
+`ps -p <pid>`. If it is this workspace's daemon, stop it with `kill <pid>`; if
+it is still alive a few seconds later, run `kill -9 -- -<pid>`, which reaches
+its whole process group, engine included.
 
 When mobile-automator is installed inside your project (a devDependency or a
 source checkout), mauto passes its daemon, the mobile-mcp engine and `mobilecli`

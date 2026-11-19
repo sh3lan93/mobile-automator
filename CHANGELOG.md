@@ -17,8 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   it used to be group-killed when it answered the shutdown and the workspace
   lock named its pid. Both are workspace files and sockets that a checked-in
   or planted workspace can forge. Such a daemon is now reported as a failure
-  naming its `pid`, with a `kill <pid>` hint, even when it answered the
-  shutdown.
+  naming its `pid`, even when it answered the shutdown. The hint says to stop
+  it with `kill <pid>`, then `kill -9 -- -<pid>` (its process group, engine
+  included) if it is still alive.
 - **The pid and lock files are read without following symlinks, and only when
   they are regular files.** A FIFO or a symlink in their place reads as
   absent, so it can neither point the read outside the workspace nor block
