@@ -41,9 +41,16 @@ function nullable(v) {
 // `Home&#10;Tab 1 of 3` instead of `Home\nTab 1 of 3` (#251). Decode numeric
 // (decimal / hex) references and the five XML named entities in ONE pass, so
 // `&amp;#10;` becomes the literal `&#10;` rather than a newline. Unknown named
-// entities and out-of-range code points are left exactly as received.
+// entities and out-of-range code points are left exactly as received. So is a
+// reference to a control character (C0 other than tab/newline, DEL, C1): the
+// app under test controls these labels, and decoding `&#27;` would mint a raw
+// ESC that later reaches a human's terminal (#349).
 const NAMED_ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
 const ENTITY_RE = /&(?:#(\d+)|#[xX]([0-9a-fA-F]+)|([a-zA-Z]+));/g;
+
+function isControlCode(code) {
+  return (code < 0x20 && code !== 0x09 && code !== 0x0a) || (code >= 0x7f && code <= 0x9f);
+}
 
 function decodeEntities(value) {
   if (typeof value !== 'string' || !value.includes('&')) return value;
@@ -52,7 +59,8 @@ function decodeEntities(value) {
       return Object.prototype.hasOwnProperty.call(NAMED_ENTITIES, name) ? NAMED_ENTITIES[name] : whole;
     }
     const code = dec !== undefined ? parseInt(dec, 10) : parseInt(hex, 16);
-    return Number.isInteger(code) && code >= 0 && code <= 0x10ffff ? String.fromCodePoint(code) : whole;
+    if (!Number.isInteger(code) || code < 0 || code > 0x10ffff || isControlCode(code)) return whole;
+    return String.fromCodePoint(code);
   });
 }
 
