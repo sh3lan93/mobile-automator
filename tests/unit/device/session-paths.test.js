@@ -134,7 +134,8 @@ describe('daemon workspace marker (#156, #236)', () => {
 
   // #237: a daemon started by mauto <= 0.27.x carries no marker at all. Telling
   // "names no workspace" apart from "names ANOTHER workspace" is what lets
-  // `session end` recognise the former by its socket and lock instead.
+  // `session end` report the former as 'unproven' with a `kill <pid>` hint
+  // (never signalled, #344) instead of as another workspace's daemon.
   test('commandHasWorkspaceMarker is true for either marker flag, whichever workspace it names (#237)', () => {
     expect(paths.commandHasWorkspaceMarker(cmd('/a/proj'))).toBe(true);
     expect(paths.commandHasWorkspaceMarker(cmd('/b/other', OTHER_SALT))).toBe(true);
