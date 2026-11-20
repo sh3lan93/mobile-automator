@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.40.9]
+
+### 🔒 Security
+
+- **Device text can no longer drive a human's terminal** (#349). Element
+  labels come from the app under test, and they reached `--human` output and
+  the stderr log sink with control characters intact. With the legacy engine,
+  `decodeEntities` would even decode `&#27;` into a raw ESC. Now:
+  - `decodeEntities` leaves a numeric reference to a control character (C0
+    other than tab and newline, DEL, C1) exactly as received. `&#10;` still
+    decodes to a newline (#251).
+  - A new `neutraliseControls` (`src/output/neutralise.js`) escapes control
+    characters as `\xHH` / `\u00HH` in the `--human` render, in
+    `mauto run --human`, and in the stderr sink. The stderr sink escapes
+    newlines as well, so one event always stays on one line.
+  - JSON output now also escapes C1 (U+0080–U+009F), which `JSON.stringify`
+    leaves raw. The escape is lossless: the parsed value is unchanged.
+
 ## [0.40.8]
 
 ### 🔒 Security

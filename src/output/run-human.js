@@ -7,6 +7,8 @@
 // reaches it and takes the generic render. JSON output never comes through
 // here.
 
+const { neutraliseControls } = require('./neutralise');
+
 const secondsOf = (value) => `${Math.round((Number(value) || 0) * 10) / 10}s`;
 
 function pendingLine({ assertion_id: id, type, step_id: step }) {
@@ -31,7 +33,8 @@ function renderRunHuman(envelope) {
   lines.push(`result: ${d.result_path}`);
   if (d.junit_path) lines.push(`junit: ${d.junit_path}`);
   if (envelope.hint) lines.push(`hint: ${envelope.hint}`);
-  return lines.join('\n');
+  // Failures and ids can carry device text; never let it drive the terminal (#349).
+  return neutraliseControls(lines.join('\n'));
 }
 
 module.exports = { renderRunHuman };

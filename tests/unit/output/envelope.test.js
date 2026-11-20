@@ -116,3 +116,27 @@ describe('envelope', () => {
     });
   });
 });
+
+// #349: device-sourced text must not reach a terminal as raw control chars.
+describe('render neutralises control characters (#349)', () => {
+  // eslint-disable-next-line no-control-regex -- matching control chars is the point
+  const CONTROL = /[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/;
+
+  test('human error render carries no raw control characters', () => {
+    const out = render(fail('device', '\u001b[2J\u009b', 'hint\u0007'), { human: true });
+    expect(out).not.toMatch(CONTROL);
+    expect(out).toContain('\n'); // the error/hint separator survives
+  });
+
+  test('human ok render carries no raw control characters from data keys or hint', () => {
+    const out = render(ok({ ['bad\u001b[31mkey']: 1 }, 'h\u009bint'), { human: true });
+    expect(out).not.toMatch(CONTROL);
+  });
+
+  test('JSON render escapes C1 losslessly', () => {
+    const out = render(fail('device', 'a\u009bb'));
+    expect(out).toContain('\\u009b');
+    expect(out).not.toContain('\u009b');
+    expect(JSON.parse(out).error.message).toBe('a\u009bb');
+  });
+});
