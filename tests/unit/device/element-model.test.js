@@ -180,6 +180,19 @@ describe('decodeEntities', () => {
   test('leaves an out-of-range code point untouched', () => {
     expect(decodeEntities('&#x110000;')).toBe('&#x110000;');
   });
+  test('never mints a control character from a numeric reference (#349)', () => {
+    const out = decodeEntities('&#27;[2J');
+    expect(out).toBe('&#27;[2J');
+    expect(out).not.toContain('\u001b');
+    for (const ref of ['&#x1B;', '&#7;', '&#13;', '&#127;', '&#x9b;', '&#0;', '&#128;', '&#x9F;', '&#x0B;']) {
+      expect(decodeEntities(`a${ref}b`)).toBe(`a${ref}b`);
+    }
+  });
+  test('still decodes tab and newline references', () => {
+    expect(decodeEntities('a&#9;b')).toBe('a\tb');
+    expect(decodeEntities('Home&#10;Tab')).toBe('Home\nTab');
+    expect(decodeEntities('&#xA0;&#160;')).toBe('\u00a0\u00a0');
+  });
   test('passes non-strings through', () => {
     expect(decodeEntities(null)).toBeNull();
     expect(decodeEntities(undefined)).toBeUndefined();

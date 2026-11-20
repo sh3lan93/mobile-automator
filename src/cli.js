@@ -1494,11 +1494,15 @@ const SESSION_END_FAILURE_HINTS = {
   survived: (pid, pidFile) =>
     `It is still alive after SIGTERM and SIGKILL and may still hold the workspace lock. Check it with \`ps -p ${pid}\` and stop it with \`kill -9 ${pid}\` (pidfile: ${pidFile}).`,
   foreign: (pid, pidFile) =>
-    `Something answered the shutdown, but this pid cannot be tied to this workspace, so it was not signalled: its command line names another workspace, or names none and the workspace lock does not name it. Check it with \`ps -p ${pid}\` and stop it manually (pidfile: ${pidFile}).`,
-  // #237: a daemon started by mauto <= 0.27.x carries no workspace marker, and
-  // without an ack nothing else proves it ours.
+    `Something answered the shutdown, but this pid cannot be tied to this workspace, so it was not signalled: its command line names another workspace. Check it with \`ps -p ${pid}\` and stop it manually (pidfile: ${pidFile}).`,
+  // #237/#344: a daemon started by mauto <= 0.27.x carries no workspace marker,
+  // and nothing else proves it ours — an ack or a lock can be forged by the
+  // workspace — so it is never signalled, acked or not. SIGTERM first: it lets
+  // the daemon tear its engine down. It is often stuck (its SIGTERM handler
+  // never runs), so the hint escalates to a group SIGKILL: 0.27.x spawned it
+  // detached, so its process group holds its engine too.
   unproven: (pid, pidFile) =>
-    `It did not answer the shutdown and its command line carries no workspace marker (a daemon started by mauto < 0.28), so this workspace cannot prove it is its own and it was not signalled. It may still hold the workspace lock. Check it with \`ps -p ${pid}\` and stop it with \`kill -9 ${pid}\` if it is this workspace's daemon (pidfile: ${pidFile}).`,
+    `Its command line carries no workspace marker (a daemon started by mauto < 0.28), so this workspace cannot prove it is its own and it was not signalled. It may still hold the workspace lock. Check it with \`ps -p ${pid}\`. If it is this workspace's daemon, stop it with \`kill ${pid}\`; if it is still alive a few seconds later, run \`kill -9 -- -${pid}\` (its process group, which includes its engine) (pidfile: ${pidFile}).`,
   unverified: (pid, pidFile) =>
     `It could not be identified (\`ps\` failed), so it was not signalled. Check it with \`ps -p ${pid}\` and stop it manually if it is this workspace's mauto daemon (pidfile: ${pidFile}).`,
 };

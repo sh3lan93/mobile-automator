@@ -2206,7 +2206,6 @@ describe('cli handlers', () => {
         client: { requestShutdown: async () => acked },
         end: {
           readPid: () => 4000,
-          readLockPid: () => null,
           identify: () => identity,
           reaper: { waitForDeath: async () => false, terminate: async () => { throw new Error('signalled'); } },
         },
@@ -2214,12 +2213,11 @@ describe('cli handlers', () => {
     }
 
     test.each([
-      ['foreign', true, /cannot be tied to this workspace, so it was not signalled/],
-      // #237: acked, marker-less, but the lock does not name the same pid.
-      ['unmarked', true, /cannot be tied to this workspace, so it was not signalled/],
+      ['foreign', true, /cannot be tied to this workspace, so it was not signalled: its command line names another workspace\. Check it/],
+      // #344: a marker-less (mauto < 0.28) daemon is never signalled, acked or not.
+      ['unmarked', true, /carries no workspace marker/],
       ['unknown', true, /could not be identified \(`ps` failed\), so it was not signalled/],
-      // #237: a marker-less (mauto < 0.28) daemon that did not answer.
-      ['unmarked', false, /did not answer the shutdown and its command line carries no workspace marker/],
+      ['unmarked', false, /carries no workspace marker/],
     ])('%s identity (acked: %s): fail(device), never signalled, with its own hint', async (identity, acked, hint) => {
       const r = await runStuck(identity, { acked });
       expect(r.exitKind).toBe('device');
@@ -2231,14 +2229,21 @@ describe('cli handlers', () => {
       expect(r.envelope.hint).toContain(sessionPaths.logFilePath('/x'));
     });
 
-    test('an unproven daemon (#237) is a failure that tells the user how to stop it', async () => {
-      const r = await runStuck('unmarked', { acked: false });
+    test.each([false, true])('an unproven daemon (#237, #344; acked: %s) is a failure that tells the user how to stop it', async (acked) => {
+      const r = await runStuck('unmarked', { acked });
       expect(r.envelope.ok).toBe(false);
       expect(r.envelope.error.kind).toBe('device');
       expect(r.envelope.data).toEqual({ stopped: false, already_stopped: false, pid: 4000 });
       expect(r.envelope.hint).toContain('ps -p 4000');
-      expect(r.envelope.hint).toContain('kill -9 4000');
+      // SIGTERM first, then a group SIGKILL: an unproven daemon is often stuck
+      // (its SIGTERM handler never runs), and a 0.27.x daemon leads its own
+      // process group, so only the group kill also reaches its engine.
+      expect(r.envelope.hint).toContain('`kill 4000`');
+      expect(r.envelope.hint).toContain('`kill -9 -- -4000`');
+      expect(r.envelope.hint.indexOf('`kill 4000`')).toBeLessThan(r.envelope.hint.indexOf('`kill -9 -- -4000`'));
+      expect(r.envelope.hint).not.toContain('did not answer the shutdown');
       expect(r.envelope.hint).toContain('mauto < 0.28');
+      expect(r.envelope.hint).toContain('may still hold the workspace lock');
     });
   });
 

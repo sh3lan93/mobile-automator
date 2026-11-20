@@ -32,6 +32,27 @@ describe('stderr sink', () => {
     expect(written[0]).toMatch(/^\[warn\] verb\.end verb=tap ok=false\n$/);
   });
 
+  it('escapes terminal control characters in values (#349)', () => {
+    const written = [];
+    stderrSink.write(
+      { level: 'warn', event: 'verb.end', message: '\u001b]0;x\u0007' },
+      { stream: { write: (s) => written.push(s) } }
+    );
+    expect(written[0]).not.toContain('\u001b');
+    expect(written[0]).not.toContain('\u0007');
+  });
+
+  it('keeps one event on one line even when a value holds a newline (#349)', () => {
+    const written = [];
+    stderrSink.write(
+      { level: 'info\u001b', event: 'e\nv', message: 'a\nfake [error] line' },
+      { stream: { write: (s) => written.push(s) } }
+    );
+    expect(written[0].split('\n')).toHaveLength(2);
+    expect(written[0].endsWith('\n')).toBe(true);
+    expect(written[0]).not.toContain('\u001b');
+  });
+
   it('never writes to stdout', () => {
     const spy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
     stderrSink.write({ level: 'error', event: 'x' }, { stream: { write() {} } });

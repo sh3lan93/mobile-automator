@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.40.8]
+## [0.40.10]
 
 ### 🐛 Fixed
 
@@ -22,6 +22,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`mauto setup` reports a mode switch.** `data.mode_changed` is
   `{from, to}` when an explicit `--mode` changes the workspace's effective
   mode, and `null` otherwise.
+
+## [0.40.9]
+
+### 🔒 Security
+
+- **Device text can no longer drive a human's terminal** (#349). Element
+  labels come from the app under test, and they reached `--human` output and
+  the stderr log sink with control characters intact. With the legacy engine,
+  `decodeEntities` would even decode `&#27;` into a raw ESC. Now:
+  - `decodeEntities` leaves a numeric reference to a control character (C0
+    other than tab and newline, DEL, C1) exactly as received. `&#10;` still
+    decodes to a newline (#251).
+  - A new `neutraliseControls` (`src/output/neutralise.js`) escapes control
+    characters as `\xHH` / `\u00HH` in the `--human` render, in
+    `mauto run --human`, and in the stderr sink. The stderr sink escapes
+    newlines as well, so one event always stays on one line.
+  - JSON output now also escapes C1 (U+0080–U+009F), which `JSON.stringify`
+    leaves raw. The escape is lossless: the parsed value is unchanged.
+
+## [0.40.8]
+
+### 🔒 Security
+
+- **`mauto session end` never signals a daemon whose command line names no
+  workspace** ([#344](https://github.com/sh3lan93/mobile-automator/issues/344)).
+  A daemon started by mauto 0.27 or earlier carries no workspace marker, and
+  it used to be group-killed when it answered the shutdown and the workspace
+  lock named its pid. Both are workspace files and sockets that a checked-in
+  or planted workspace can forge. Such a daemon is now reported as a failure
+  naming its `pid`, even when it answered the shutdown. The hint says to stop
+  it with `kill <pid>`, then `kill -9 -- -<pid>` (its process group, engine
+  included) if it is still alive.
+- **The pid and lock files are read without following symlinks, and only when
+  they are regular files.** A FIFO or a symlink in their place reads as
+  absent, so it can neither point the read outside the workspace nor block
+  the verb.
 
 ## [0.40.7]
 

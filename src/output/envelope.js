@@ -3,6 +3,8 @@
 // Stable contract between the `mauto` CLI and any calling agent.
 // Every command prints exactly one envelope on stdout.
 
+const { neutraliseControls } = require('./neutralise');
+
 const SCHEMA_VERSION = '2.1';
 
 const EXIT = {
@@ -83,7 +85,14 @@ function exitCodeFor(kind) {
 
 function render(envelope, { human = false } = {}) {
   if (!human) {
-    return JSON.stringify(envelope);
+    // JSON.stringify escapes C0 but leaves C1 (U+0080-U+009F) raw, and a raw
+    // U+009B is a one-byte CSI to a terminal (#349). Lossless: outside strings
+    // JSON text is ASCII, so C1 can only sit inside a string, where `\u009b`
+    // parses back to the same character.
+    return JSON.stringify(envelope).replace(
+      /[\u0080-\u009f]/g,
+      (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0')
+    );
   }
 
   if (envelope.ok) {
@@ -100,7 +109,8 @@ function render(envelope, { human = false } = {}) {
     if (envelope.hint) {
       line += `\nhint: ${envelope.hint}`;
     }
-    return line;
+    // Device text can reach here; newlines are this render's own separator.
+    return neutraliseControls(line);
   }
 
   const { kind, message } = envelope.error || {};
@@ -108,7 +118,7 @@ function render(envelope, { human = false } = {}) {
   if (envelope.hint) {
     out += `\nhint: ${envelope.hint}`;
   }
-  return out;
+  return neutraliseControls(out);
 }
 
 module.exports = {
