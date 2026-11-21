@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-const { createWorkspaceFile, openLeaf } = require('../workspace/safe-fs');
+const { createProjectFile, createWorkspaceFile, inWorkspace, openLeaf } = require('../workspace/safe-fs');
 
 // Atomic write: stream into a hidden temp file in the same directory,
 // fsync, then rename over the target. rename(2) within one dir is atomic, so
@@ -16,13 +16,22 @@ const { createWorkspaceFile, openLeaf } = require('../workspace/safe-fs');
 // O_EXCL|O_NOFOLLOW under a random name, so it cannot be pre-planted either
 // (#345).
 //
-// Two writers, one path each, sharing the core below:
-//   - atomicWorkspaceWrite confines the write to .mobile-automator/: the temp
+// Three writers, sharing the core below. Pick by who chose the path:
+//   - atomicWorkspaceWrite: mauto's own files in .mobile-automator/. The temp
 //     file is created by safe-fs's createWorkspaceFile, which walks the
 //     target's directory (symlink-free, owned by us, created when missing).
-//   - atomicWrite does NOT confine: it is for paths the user chose (junit
-//     --out) and creates the directory with a plain recursive mkdir. Any write
-//     into the workspace belongs in atomicWorkspaceWrite.
+//   - atomicProjectWrite: mauto's own files elsewhere in the project (the host
+//     files `mauto init` writes). Same walk, bounded by the project root, via
+//     createProjectFile (#347).
+//   - atomicOutputWrite: a path the user chose (`result export --out`,
+//     `run --junit`). Confined like atomicWorkspaceWrite when it lands in the
+//     workspace (inWorkspace), written unconfined anywhere else: an explicit
+//     path outside the workspace is the user's call (#347).
+//
+// The unconfined write (atomicWrite: a plain recursive mkdir, then the temp
+// file and rename) is private on purpose. Its only caller is
+// atomicOutputWrite, for a path that does not land in the workspace; nothing
+// else may reach it, so no write can skip the inWorkspace test (#347).
 
 // The one temp-file name for a write that lands at `file`: a hidden sibling in
 // the same directory (so a rename or link to `file` never crosses a
@@ -65,15 +74,34 @@ function writeViaTemp(file, contents, openTmp) {
   }
 }
 
-function atomicWorkspaceWrite(projectRoot, file, contents) {
-  // Positional, so a call that forgot the root shifts every argument left:
-  // `contents` is then missing, which is what catches it.
+// The rooted writers take the root positionally, so a call that forgot it
+// shifts every argument left: `contents` is then missing, which is what
+// catches it.
+function requireRoot(name, projectRoot, file, contents) {
   if (typeof projectRoot !== 'string' || typeof file !== 'string' || contents === undefined) {
-    throw new TypeError('atomicWorkspaceWrite(projectRoot, file, contents) needs the project root and the file');
+    throw new TypeError(`${name}(projectRoot, file, contents) needs the project root and the file`);
   }
+}
+
+function atomicWorkspaceWrite(projectRoot, file, contents) {
+  requireRoot('atomicWorkspaceWrite', projectRoot, file, contents);
   // createWorkspaceFile walks (and creates) the temp file's directory, which is
   // the target's: the rename stays inside the directory it checked.
   writeViaTemp(file, contents, (tmp) => createWorkspaceFile(projectRoot, tmp));
+}
+
+function atomicProjectWrite(projectRoot, file, contents) {
+  requireRoot('atomicProjectWrite', projectRoot, file, contents);
+  writeViaTemp(file, contents, (tmp) => createProjectFile(projectRoot, tmp));
+}
+
+function atomicOutputWrite(projectRoot, file, contents) {
+  requireRoot('atomicOutputWrite', projectRoot, file, contents);
+  // The workspace path inWorkspace returns, not `file`: through an aliased
+  // root they differ, and the walk must check the path the rename uses.
+  const ws = inWorkspace(projectRoot, file);
+  if (ws) atomicWorkspaceWrite(projectRoot, ws, contents);
+  else atomicWrite(file, contents);
 }
 
 function atomicWrite(file, contents) {
@@ -82,4 +110,4 @@ function atomicWrite(file, contents) {
   writeViaTemp(file, contents, (tmp) => openLeaf(tmp, O_WRONLY | O_CREAT | O_EXCL).fd);
 }
 
-module.exports = { atomicWrite, atomicWorkspaceWrite, tempPathFor };
+module.exports = { atomicWorkspaceWrite, atomicProjectWrite, atomicOutputWrite, tempPathFor };

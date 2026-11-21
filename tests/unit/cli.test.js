@@ -149,7 +149,7 @@ describe('cli handlers', () => {
     test('returns ok envelope with the saved path', async () => {
       const fakeBridge = { screenshot: async (p) => p };
       const { envelope, exitKind } = await handleScreenshot(
-        { deviceBridge: fakeBridge },
+        { deviceBridge: fakeBridge, projectRoot: '/work' },
         '/tmp/shot.png'
       );
       expect(exitKind).toBe('ok');
@@ -162,7 +162,7 @@ describe('cli handlers', () => {
       const calls = [];
       const fakeBridge = { screenshot: async (p) => { calls.push(p); return p; } };
       const { envelope, exitKind } = await handleScreenshot(
-        { deviceBridge: fakeBridge, cwd: '/work/sub' },
+        { deviceBridge: fakeBridge, projectRoot: '/work', cwd: '/work/sub' },
         'shots/home.png'
       );
       expect(exitKind).toBe('ok');
@@ -173,14 +173,14 @@ describe('cli handlers', () => {
     test('passes an absolute path through unchanged', async () => {
       const calls = [];
       const fakeBridge = { screenshot: async (p) => { calls.push(p); return p; } };
-      await handleScreenshot({ deviceBridge: fakeBridge, cwd: '/work/sub' }, '/tmp/shot.png');
+      await handleScreenshot({ deviceBridge: fakeBridge, projectRoot: '/work', cwd: '/work/sub' }, '/tmp/shot.png');
       expect(calls).toEqual(['/tmp/shot.png']);
     });
 
     test('normalizes .. segments', async () => {
       const calls = [];
       const fakeBridge = { screenshot: async (p) => { calls.push(p); return p; } };
-      await handleScreenshot({ deviceBridge: fakeBridge, cwd: '/work/sub' }, '../x.png');
+      await handleScreenshot({ deviceBridge: fakeBridge, projectRoot: '/work', cwd: '/work/sub' }, '../x.png');
       expect(calls).toEqual(['/work/x.png']);
     });
   });

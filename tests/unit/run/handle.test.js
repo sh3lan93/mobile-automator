@@ -308,4 +308,59 @@ describe('--junit (#282)', () => {
     expect(r.envelope.error.message).toBe(`could not write the JUnit report to ${path.join(root, 'r.xml')}: EACCES`);
     expect(r.envelope.data.status).toBe('failed');
   });
+
+  test('the writer is called with the project root, the path and the report', async () => {
+    const writeFile = jest.fn();
+    const junitPath = path.join(root, 'r.xml');
+    await handleRun({ ...deps((args) => new ResultStore(args)), writeFile }, { ...prepared(scenario), junitPath });
+    expect(writeFile).toHaveBeenCalledTimes(1);
+    expect(writeFile).toHaveBeenCalledWith(root, junitPath, toJUnit([resultFile()]).xml);
+  });
+
+  // #347: --junit is a path the user chose; one that lands in the workspace is
+  // written through safe-fs, so a committed link on the way is refused, never
+  // followed. The default writer (no writeFile injected) is the one under test.
+  describe('a report path inside the workspace (#347)', () => {
+    let outside;
+    beforeEach(() => {
+      outside = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-handle-run-outside-')));
+      fs.writeFileSync(path.join(outside, 'r.xml'), 'SECRET-CANARY');
+    });
+    afterEach(() => {
+      fs.rmSync(outside, { recursive: true, force: true });
+    });
+
+    test('through a symlinked directory: environment, the refusal\'s hint plus the saved result, the outside unchanged', async () => {
+      const ws = path.join(root, '.mobile-automator');
+      fs.mkdirSync(ws);
+      fs.symlinkSync(outside, path.join(ws, 'reports'));
+      const junitPath = path.join(ws, 'reports', 'r.xml');
+      const d = deps((args) => new ResultStore(args));
+
+      const r = await handleRun(d, { ...prepared(scenario), junitPath });
+
+      expect(r.exitKind).toBe('environment');
+      expect(r.envelope.ok).toBe(false);
+      expect(r.envelope.error.kind).toBe('environment');
+      expect(r.envelope.error.message).toMatch(/^Refusing to use workspace path /);
+      expect(r.envelope.error.message).toContain(path.join(ws, 'reports'));
+      const resultPath = path.join('.mobile-automator', 'results', `${RUN_ID}.json`);
+      expect(r.envelope.hint).toMatch(/never follows links/);
+      expect(r.envelope.hint).not.toMatch(/Check the directory exists and is writable/);
+      expect(r.envelope.hint).toContain(`The run is passed and its result is saved to ${resultPath}.`);
+      expect(r.envelope.data).toMatchObject({ status: 'passed', junit_path: null, result_path: resultPath });
+      expect(JSON.stringify(r)).not.toContain('SECRET-CANARY');
+      expect(fs.readdirSync(outside)).toEqual(['r.xml']);
+      expect(fs.readFileSync(path.join(outside, 'r.xml'), 'utf8')).toBe('SECRET-CANARY');
+      expect(resultFile().status).toBe('passed');
+    });
+
+    test('a clean workspace path is written', async () => {
+      const junitPath = path.join(root, '.mobile-automator', 'reports', 'r.xml');
+      const r = await handleRun(deps((args) => new ResultStore(args)), { ...prepared(scenario), junitPath });
+      expect(r.exitKind).toBe('ok');
+      expect(r.envelope.data.junit_path).toBe(junitPath);
+      expect(fs.readFileSync(junitPath, 'utf8')).toBe(toJUnit([resultFile()]).xml);
+    });
+  });
 });

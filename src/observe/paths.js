@@ -38,7 +38,7 @@ function mainLogPath(projectRoot, env = process.env) {
 // already chose.
 //
 // What this does NOT do is make rotation single-writer, and an earlier version
-// of this comment claimed it did. rotateIfLarge is statSync-then-renameSync, so
+// of this comment claimed it did. rotateIfLarge is lstatSync-then-renameSync, so
 // concurrent rotations can clobber a generation — but mauto.ndjson is ALREADY
 // multi-writer (any two concurrent `mauto` verbs race it), and daemon.ndjson is
 // not strictly single-writer either, because a spawn-race lock loser also runs

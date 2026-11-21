@@ -16,7 +16,7 @@ function makeFakeFs(overrides = {}) {
     {
       calls,
       mkdirSync() {},
-      statSync() { return { size: 0 }; },
+      lstatSync() { return { size: 0, isFile: () => true }; },
       renameSync(from, to) { calls.renamed.push([from, to]); },
       openSync() { return 7; },
       writeSync(fd, text) { calls.written.push([fd, text]); },
@@ -107,7 +107,7 @@ describe('session-log', () => {
 
   test('a missing log file is not an error — no rotation, still opens', () => {
     const fakeFs = makeFakeFs({
-      statSync() { throw enoent(); },
+      lstatSync() { throw enoent(); },
       renameSync() { throw new Error('must not rotate a missing file'); },
     });
     const handle = openDaemonLog('/proj', { fs: fakeFs });
@@ -122,7 +122,7 @@ describe('session-log', () => {
   // us at exactly the moment something is wrong enough to spawn twice.
   test('a rotation failure still yields a usable log — an oversized log beats no log', () => {
     const fakeFs = makeFakeFs({
-      statSync() { return { size: 1e9 }; },
+      lstatSync() { return { size: 1e9, isFile: () => true }; },
       renameSync() { throw enoent(); }, // a concurrent spawn already rotated
     });
     const handle = openDaemonLog('/proj', { fs: fakeFs });
@@ -132,7 +132,7 @@ describe('session-log', () => {
 
   test('an unreadable log directory does not block the open either', () => {
     const fakeFs = makeFakeFs({
-      statSync() { throw Object.assign(new Error('EACCES'), { code: 'EACCES' }); },
+      lstatSync() { throw Object.assign(new Error('EACCES'), { code: 'EACCES' }); },
     });
     expect(openDaemonLog('/proj', { fs: fakeFs }).stdio).toEqual(['ignore', 7, 7]);
   });

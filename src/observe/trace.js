@@ -14,6 +14,7 @@ const path = require('path');
 
 const { atCap } = require('./sinks/file');
 const { logsDir, runTracePath, RUN_TRACE_PREFIX } = require('./paths');
+const { inWorkspace, safeDir } = require('../workspace/safe-fs');
 
 // A device failure in the envelope's own taxonomy. `deviceFail` (src/output/device-fail.js) is
 // the ONLY producer of these two kinds, so counting them needs no list of which
@@ -132,9 +133,20 @@ function deriveRun(trace) {
 // Deletion is confined to `run-*.ndjson` in the resolved logs dir — files this
 // tool created, under a name it owns. Best-effort throughout: pruning a log
 // directory must never be the reason a finalize fails.
+//
+// A logs dir in the workspace is walked through safe-fs first (#347): a
+// cloned repo's `.logs -> /outside` would otherwise have this list and delete
+// files outside the workspace. The refusal lands in the catch below, so the
+// prune deletes nothing and reports 0. A MAUTO_LOG_DIR outside the workspace
+// is the user's own choice and is listed as before.
 function pruneRunTraces(projectRoot, { keep = KEEP_RUN_TRACES, except, env = process.env, fs = realFs } = {}) {
   try {
-    const dir = logsDir(projectRoot, env);
+    let dir = logsDir(projectRoot, env);
+    const confined = inWorkspace(projectRoot, dir, { fs });
+    if (confined) {
+      safeDir(projectRoot, confined, {}, { fs });
+      dir = confined;
+    }
     const exceptPath = except ? runTracePath(projectRoot, except, env) : null;
     const exceptName = exceptPath ? path.basename(exceptPath) : null;
 

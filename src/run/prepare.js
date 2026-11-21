@@ -12,7 +12,8 @@ const { parsePositiveInt } = require('../util/parse-positive-int');
 
 // Why the --junit path cannot take the report, or null. Checked before the
 // run, so a CI job learns of a typo'd report directory before the device
-// work rather than after it (atomicWrite would otherwise create the directory).
+// work rather than after it (the report writer would otherwise create the
+// directory).
 function statOf(p) {
   try {
     return fs.statSync(p);

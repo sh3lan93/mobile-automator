@@ -10,6 +10,9 @@ const {
 const { findFirst } = require('../../../src/assertion/evaluator');
 const { toEvaluatorInput, fromCliFlags, toCliFlags } = require('../../../src/assertion/fields');
 const { makeFakeBridge, makeFakeClock, el } = require('../../helpers/fake-bridge');
+const { workspaceDir } = require('../../../src/workspace/layout');
+const { UnsafePathError } = require('../../../src/workspace/safe-fs');
+const { CANARY, tmpDir, snapshot } = require('../../helpers/workspace-safety');
 const { solidPng, quadrantPng, writePng } = require('../../helpers/png');
 
 const WHITE = [255, 255, 255, 255];
@@ -22,8 +25,10 @@ let diffPath;
 beforeEach(() => {
   root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-refassert-'));
   referencePath = path.join(root, 'ref', 'a.png');
-  actualPath = path.join(root, 'shots', 'assert_a.png');
-  diffPath = path.join(root, 'shots', 'assert_a.diff.png');
+  // The actual and its diff land under the workspace, as runArtifacts /
+  // assertArtifacts put them (#347 confines them there).
+  actualPath = path.join(workspaceDir(root), 'screenshots', 'demo', 'run_1', 'assert_a.png');
+  diffPath = path.join(workspaceDir(root), 'screenshots', 'demo', 'run_1', 'assert_a.diff.png');
 });
 
 // The verdict body plus the diff, flattened so each test reads one object.
@@ -148,6 +153,19 @@ describe('decideReferenceScreenshot', () => {
     const v = await decide(bridge, { timeoutMs: 300, pollMs: 100 });
     expect(v).not.toHaveProperty('stable');
     expect(v.message).toMatch(/did not settle within 300ms/);
+  });
+
+  // #347: the baseline directory is a predictable path a cloned repo can
+  // commit as a link; recording through it would write outside the project.
+  test('--update-references refuses a baseline directory planted as a link, leaving its target unchanged', async () => {
+    const outside = tmpDir('mauto-refassert-outside-');
+    fs.writeFileSync(path.join(outside, 'a.png'), CANARY);
+    const before = snapshot(outside);
+    fs.symlinkSync(outside, path.join(root, 'ref'));
+    const bridge = makeFakeBridge({ screenshots: [solidPng(20, 20, WHITE)] });
+
+    await expect(decide(bridge, { updateReferences: true })).rejects.toThrow(UnsafePathError);
+    expect(snapshot(outside)).toEqual(before);
   });
 
   test('--update-references on an unsettled screen fails and records no baseline', async () => {

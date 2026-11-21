@@ -33,13 +33,19 @@
 - Running `mauto setup` in a subdirectory creates a *nested* workspace that shadows the
   ancestor one for everything run below it; `setup`'s hint warns when that happens.
 
-### ❌ "Refusing to use workspace path …" (exit 5)
+### ❌ "Refusing to use workspace path …" or "Refusing to use path …" (exit 5)
 - mauto reads and writes `.mobile-automator/` only when every directory and file in it
   is real (not a symlink), owned by you, and inside the workspace. A checked-in
   workspace is untrusted input, so mauto refuses rather than follows (#345). The
   reason in parentheses says which rule failed.
+- "Refusing to use path …" is the same check for a file mauto writes elsewhere in the
+  project (#347). This covers the host files `mauto init` installs (`.claude/`, `.cursor/`,
+  `.gemini/`, `.github/`, `.agents/`, `.mcp.json`), a reference screenshot outside the
+  workspace, and a `crash get --out` file. Every directory below the project root is
+  checked, as well as the file itself.
 - `(symlink)` / `(escape)`: replace the link with a real directory or file. For
-  example, `rm .mobile-automator/memory && mkdir .mobile-automator/memory`.
+  example, `rm .mobile-automator/memory && mkdir .mobile-automator/memory`, or
+  `rm .claude/skills && mkdir .claude/skills` before re-running `mauto init`.
 - `(foreign_owner)`: the path belongs to another uid. Fix it with
   `chown -R "$(id -u)" .mobile-automator`. In a CI container that runs as root over a
   checkout owned by another uid, set `MAUTO_TRUST_WORKSPACE_OWNER=1` instead. It skips
@@ -417,6 +423,13 @@ key means `mauto` could not ask: the device engine's crash helper was
 unavailable, the lookup exceeded its 3-second budget, or there was no device
 session to scope the reports against. In the last case, `mauto session start`
 first and re-run.
+
+`crash get --out` writes only where the device engine writes its own files: the
+project, the OS temp directory, or on macOS `/tmp` (#347). The project does not
+count when it is your home directory or contains it. Any other path fails
+`invalid_input` before the device is asked, and the hint lists the allowed
+directories. A path inside `.mobile-automator/` is always allowed, under the
+workspace rules above.
 
 Structured detail for any of those is in the event log:
 

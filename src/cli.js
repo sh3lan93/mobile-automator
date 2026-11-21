@@ -1,6 +1,7 @@
 'use strict';
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { Command } = require('commander');
 
@@ -22,7 +23,7 @@ const {
 } = require('./result/flags');
 const { finalizeAgainstScenario } = require('./result/finalize-against-scenario');
 const { toJUnit } = require('./result/junit');
-const { atomicWrite } = require('./util/atomic');
+const { atomicOutputWrite } = require('./util/atomic');
 const { MemoryStore } = require('./memory/store');
 const { FILES: MEMORY_FILES, AGENT_KINDS } = require('./memory/paths');
 const { validateEntryText, MAX_ENTRY_LEN } = require('./memory/entries');
@@ -64,7 +65,9 @@ const {
   workspaceFailure,
   legacyWorkspaceFailure,
 } = require('./workspace/discover');
-const { UnsafePathError } = require('./workspace/safe-fs');
+const {
+  UnsafePathError, inWorkspace, isInside, openOwnedLeaf, openWorkspaceFile, safeWorkspaceDest,
+} = require('./workspace/safe-fs');
 
 // Commander throws (via exitOverride) for two very different reasons, and the
 // split below is the ONLY thing that tells them apart.
@@ -218,9 +221,21 @@ async function handleElements({ deviceBridge }) {
 // Relative paths resolve against the caller's cwd HERE, not in the daemon: the
 // daemon runs from the project root, which is not where a verb run from a
 // subdirectory meant `./shot.png` (#214).
-async function handleScreenshot({ deviceBridge, cwd = process.cwd() }, destPath) {
+//
+// The engine writes the file, so the destination is checked before it is
+// handed over (#347). One inside .mobile-automator/ (through a symlinked alias
+// of the project root too) gets the workspace rules: its directories are
+// walked and created, a planted link refused. Anything else is the user's own
+// choice and reaches the bridge exactly as resolved; the engine applies its
+// own allowed-directories rule there. A refusal is thrown, before the bridge
+// is asked and outside the device catch below, so the envelope boundary
+// reports it environment with its own hint, as for every other verb.
+async function handleScreenshot({ deviceBridge, projectRoot, cwd = process.cwd() }, destPath) {
+  const resolved = path.resolve(cwd, destPath);
+  const confined = inWorkspace(projectRoot, resolved);
+  const dest = confined ? safeWorkspaceDest(projectRoot, confined) : resolved;
   try {
-    const savedPath = await deviceBridge.screenshot(path.resolve(cwd, destPath));
+    const savedPath = await deviceBridge.screenshot(dest);
     return { envelope: ok({ path: savedPath }), exitKind: 'ok' };
   } catch (err) {
     return {
@@ -907,10 +922,17 @@ function handleResultExport({ projectRoot, cwd = process.cwd() }, opts = {}) {
     return { envelope: ok({ format: opts.format, path: null, ...counts, xml }), exitKind: 'ok' };
   }
 
+  // A path the user chose: confined to the workspace rules when it lands in
+  // .mobile-automator/, where a committed link is refused (#347); written as
+  // given anywhere else.
   const outPath = path.resolve(cwd, opts.out);
   try {
-    atomicWrite(outPath, xml);
+    atomicOutputWrite(projectRoot, outPath, xml);
   } catch (err) {
+    // A refused path carries its own kind, message and hint.
+    if (err instanceof UnsafePathError) {
+      return { envelope: fail(err.kind, err.message, err.hint), exitKind: err.kind };
+    }
     return {
       envelope: fail(
         'environment',
@@ -1285,8 +1307,11 @@ function handleMemoryForget({ memoryStoreFactory, projectRoot }, opts = {}) {
 // ...); our own malformed-config guard carries 'corrupt_mcp_config'; anything
 // else (a TypeError, the leaked-placeholder guard) is an unexpected internal
 // error and must NOT be disguised as an environment problem — that would send
-// the operator to fix the filesystem for what is actually a code bug.
+// the operator to fix the filesystem for what is actually a code bug. A host
+// path refused as a symlink, foreign-owned, ... (#347) is 'unsafe_path', checked
+// first: its EUNSAFEPATH code would otherwise pass for an errno.
 function adapterErrorClass(err) {
+  if (err instanceof UnsafePathError) return 'unsafe_path';
   const code = err && err.code;
   if (typeof code === 'string' && /^E[A-Z]+$/.test(code)) return code;
   if (code === 'corrupt_mcp_config') return 'corrupt_mcp_config';
@@ -1303,16 +1328,21 @@ function hintForAdapterError(cls) {
   return 'Unexpected error during init (possibly a bug) — see the message, then re-run after resolving (writers are idempotent).';
 }
 
+// Returns the per-agent record, plus the error a failed agent threw, so a
+// single-agent init can report a typed error's own kind and hint.
 function applyOneAdapter(adapter, agent, projectRoot) {
   try {
     const r = adapter.apply({ projectRoot });
-    return { agent, ok: true, changes: r.changes };
+    return { record: { agent, ok: true, changes: r.changes }, err: null };
   } catch (err) {
     return {
-      agent,
-      ok: false,
-      error: adapterErrorClass(err),
-      message: (err && err.message) || String(err),
+      record: {
+        agent,
+        ok: false,
+        error: adapterErrorClass(err),
+        message: (err && err.message) || String(err),
+      },
+      err,
     };
   }
 }
@@ -1323,7 +1353,7 @@ function handleInit({ projectRoot, adapters = ADAPTERS, inspect = inspectHosts }
     const wasInstalled = installedBefore(inspect, projectRoot);
     // Continue-on-error: every host is attempted; the result is ONE envelope
     // carrying a per-agent ok/failed map. `ok` only when all succeed.
-    const perAgent = known.map((a) => applyOneAdapter(adapters[a], a, projectRoot));
+    const perAgent = known.map((a) => applyOneAdapter(adapters[a], a, projectRoot).record);
     const failed = perAgent.filter((r) => !r.ok);
     if (failed.length === 0) {
       return { envelope: ok({ agents: perAgent }, refreshHint(perAgent, wasInstalled)), exitKind: 'ok' };
@@ -1350,8 +1380,15 @@ function handleInit({ projectRoot, adapters = ADAPTERS, inspect = inspectHosts }
     };
   }
   const wasInstalled = installedBefore(inspect, projectRoot);
-  const r = applyOneAdapter(adapter, agent, projectRoot);
+  const { record: r, err } = applyOneAdapter(adapter, agent, projectRoot);
   if (!r.ok) {
+    // A refused host path (#347) carries its own kind (environment), message
+    // and hint, reported verbatim as toEnvelope reports it for every other
+    // verb: the hint says what to do about the link, which the generic
+    // filesystem hint below cannot.
+    if (err instanceof UnsafePathError) {
+      return { envelope: fail(err.kind, err.message, err.hint, { agents: [r] }), exitKind: err.kind };
+    }
     // A malformed host config is the user's input, not an environment fault —
     // surface it as invalid_input (exit 3), matching how every other verb
     // classifies bad JSON; fs/unknown adapter errors stay internal (exit 1).
@@ -1732,7 +1769,119 @@ async function handleCrashList({ deviceBridge, projectRoot }, opts = {}) {
   };
 }
 
-async function handleCrashGet({ deviceBridge, fs: fsDep = fs }, id, opts = {}) {
+// realpath, or null when there is none: the path does not exist (or cannot be
+// reached), so it contains nothing that does.
+function realpathOrNull(p) {
+  try {
+    return fs.realpathSync(p);
+  } catch (_) {
+    return null;
+  }
+}
+
+// Where `crash get --out` may write outside the workspace: the roots the device
+// engine allows for the files it writes itself (mobile-mcp's
+// getAllowedRoots). The project, unless it is the home directory or above it
+// (the engine's isTooBroadToAllow: it would make nearly every file the user
+// owns writable, and with no workspace found the project is just the cwd);
+// the OS temp directory; and on macOS /tmp too, because os.tmpdir() is
+// /var/folders/.../T there and the docs teach `--out /tmp/crash.txt`. Listed
+// as given, for the hint; compared as realpaths, as the engine compares them.
+// A home that does not exist protects nothing, so the project stays a root.
+function crashOutRoots(projectRoot, { tmpdir, platform, darwinTmp, homedir }) {
+  const home = realpathOrNull(homedir());
+  const project = realpathOrNull(projectRoot);
+  const projectTooBroad = Boolean(home && project && isInside(home, project));
+  const roots = projectTooBroad ? [] : [projectRoot];
+  roots.push(tmpdir());
+  if (platform === 'darwin') roots.push(darwinTmp);
+  return { roots, projectTooBroad };
+}
+
+function crashWriteFailure(given, err) {
+  return {
+    envelope: fail(
+      'environment',
+      `could not write the crash report to ${given}: ${err.message}`,
+      'Check the directory exists and is writable.'
+    ),
+    exitKind: 'environment',
+  };
+}
+
+// Why `out` (resolved, outside the workspace) may not take the report, or
+// null. Its directory must already exist (a missing one fails environment,
+// as the write itself always has) and realpath inside one of the roots. A
+// root with no realpath is skipped: it cannot contain a directory that exists.
+function crashOutRefusal(out, given, { roots, projectTooBroad }) {
+  let dir;
+  try {
+    dir = fs.realpathSync(path.dirname(out));
+  } catch (err) {
+    return crashWriteFailure(given, err);
+  }
+  const holdsDir = (root) => {
+    const real = realpathOrNull(root);
+    return real !== null && isInside(dir, real);
+  };
+  if (roots.some(holdsDir)) return null;
+  const hint = projectTooBroad
+    ? `Pass an --out path inside a temp directory: ${roots.join(', ')}. The project directory is not allowed: it is the home directory or contains it.`
+    : `Pass an --out path inside the project or a temp directory: ${roots.join(', ')}.`;
+  return {
+    envelope: fail('invalid_input', `--out resolves outside the directories a crash report may be written to: ${out}`, hint),
+    exitKind: 'invalid_input',
+  };
+}
+
+// The whole report into the fd, through safe-fs's leaf open in both cases:
+// O_NOFOLLOW (a link leaf, dangling or not, is refused), a regular file of
+// ours with one hard link, and the truncate only once those checks passed.
+function writeCrashReport(projectRoot, out, confined, report) {
+  const { O_WRONLY, O_CREAT, O_TRUNC } = fs.constants;
+  const flags = O_WRONLY | O_CREAT | O_TRUNC;
+  const fd = confined
+    ? openWorkspaceFile(projectRoot, confined, flags)
+    : openOwnedLeaf(out, flags, { scope: 'path' });
+  try {
+    fs.writeFileSync(fd, report);
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+// --out writes the FULL report and returns only its path. This is how a
+// tens-of-kilobytes native tombstone reaches a result file without passing
+// through the agent's context window.
+//
+// It is a path the caller chose in an untrusted checkout (#347), resolved
+// against the caller's cwd as handleScreenshot's is (#214). Inside
+// .mobile-automator/ (through a symlinked alias of the root too) it gets the
+// workspace rules: every directory walked, created when missing, a link on
+// the way refused. Anywhere else it must land in one of crashOutRoots, checked
+// before the device is asked, so a bad --out costs no device work. `tmpdir`,
+// `platform`, `darwinTmp` and `homedir` are injectable for tests.
+async function handleCrashGet(
+  {
+    deviceBridge, projectRoot, cwd = process.cwd(),
+    tmpdir = os.tmpdir, platform = process.platform, darwinTmp = '/tmp', homedir = os.homedir,
+  },
+  id,
+  opts = {}
+) {
+  let out = null;
+  let confined = null;
+  if (opts.out) {
+    out = path.resolve(cwd, opts.out);
+    confined = inWorkspace(projectRoot, out);
+    if (!confined) {
+      const refused = crashOutRefusal(
+        out, opts.out, crashOutRoots(projectRoot, { tmpdir, platform, darwinTmp, homedir })
+      );
+      if (refused) return refused;
+    }
+  }
+
   let report;
   try {
     report = await deviceBridge.getCrash(id);
@@ -1743,21 +1892,16 @@ async function handleCrashGet({ deviceBridge, fs: fsDep = fs }, id, opts = {}) {
     };
   }
 
-  // --out writes the FULL report and returns only its path. This is how a
-  // tens-of-kilobytes native tombstone reaches a result file without passing
-  // through the agent's context window.
-  if (opts.out) {
+  if (out) {
     try {
-      fsDep.writeFileSync(opts.out, report);
+      writeCrashReport(projectRoot, out, confined, report);
     } catch (err) {
-      return {
-        envelope: fail(
-          'environment',
-          `could not write the crash report to ${opts.out}: ${err.message}`,
-          'Check the directory exists and is writable.'
-        ),
-        exitKind: 'environment',
-      };
+      // A refused path carries its own kind, message and hint: the hint says
+      // what to do about the link, which the generic one below cannot.
+      if (err instanceof UnsafePathError) {
+        return { envelope: fail(err.kind, err.message, err.hint), exitKind: err.kind };
+      }
+      return crashWriteFailure(opts.out, err);
     }
     return { envelope: ok({ crash_id: id, path: opts.out, truncated: false }), exitKind: 'ok' };
   }
@@ -2030,7 +2174,7 @@ function buildProgram(deps = {}) {
     .option('--device <id>', 'target device id')
     .action(withEnvelope((destPath, opts) =>
       connectBridge(resolveVerbDevice(opts.device), (bridge) =>
-        handleScreenshot({ deviceBridge: bridge }, destPath)
+        handleScreenshot({ deviceBridge: bridge, projectRoot, cwd }, destPath)
       )
     ));
 
@@ -2546,7 +2690,7 @@ function buildProgram(deps = {}) {
     .option('--out <path>', 'write the full report to a file and return its path')
     .action(withEnvelope((id, opts) =>
       connectBridge(resolveVerbDevice(opts.device), (bridge) =>
-        handleCrashGet({ deviceBridge: bridge }, id, { full: opts.full, out: opts.out })
+        handleCrashGet({ deviceBridge: bridge, projectRoot, cwd }, id, { full: opts.full, out: opts.out })
       )
     ));
 

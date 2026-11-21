@@ -62,7 +62,7 @@ describe('device-failure envelopes carry the engine hint', () => {
   });
 
   it('screenshot (its own fail call) gets the engine hint', async () => {
-    const { envelope } = await handleScreenshot({ deviceBridge: { screenshot: throwing(B1_MESSAGE) } }, '/tmp/x.png');
+    const { envelope } = await handleScreenshot({ deviceBridge: { screenshot: throwing(B1_MESSAGE) }, projectRoot: '/work' }, '/tmp/x.png');
     expect(envelope.hint).toMatch(/agent install --device C6C6FFB9/);
   });
 
@@ -71,7 +71,7 @@ describe('device-failure envelopes carry the engine hint', () => {
       '"/elsewhere" is not in the list of allowed directories. Allowed directories include ' +
       'the current directory and the temp directory on this host.';
     const { envelope, exitKind } = await handleScreenshot(
-      { deviceBridge: { screenshot: throwing(msg) } },
+      { deviceBridge: { screenshot: throwing(msg) }, projectRoot: '/work' },
       '/elsewhere/x.png'
     );
     expect(exitKind).toBe('device');
@@ -103,7 +103,7 @@ describe('unrelated device failures keep their existing hints byte-identical', (
       .toBe('Ensure a device or simulator is connected and the app is running.');
     expect((await handleTap({ deviceBridge: plain }, '1,2')).envelope.hint)
       .toBe('Ensure a device or simulator is connected and the app is running.');
-    expect((await handleScreenshot({ deviceBridge: plain }, '/tmp/x.png')).envelope.hint)
+    expect((await handleScreenshot({ deviceBridge: plain, projectRoot: '/work' }, '/tmp/x.png')).envelope.hint)
       .toBe('Ensure a device or simulator is connected.');
     expect((await handleDevices({ deviceBridge: plain })).envelope.hint)
       .toBe('Ensure a device or simulator is connected and reachable.');

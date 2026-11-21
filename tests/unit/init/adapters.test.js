@@ -270,3 +270,135 @@ describe('apply: per-file changes + full idempotence (#144)', () => {
     expect(r.changes.find((c) => c.path === mcpPath).status).toBe('updated');
   });
 });
+
+// #347: a cloned repo can commit any host path init writes as a symlink. The
+// adapters read and write only through safe-fs's project scope, so a link on
+// the way (a directory or the leaf itself, dangling or not) is refused and its
+// target is never read, written or created.
+describe('apply refuses a symlinked host path (#347)', () => {
+  const { UnsafePathError } = require('../../../src/workspace/safe-fs');
+  const { CANARY, tmpDir, snapshot } = require('../../helpers/workspace-safety');
+
+  // A real project dir plus a sibling outside/ the links point into.
+  function project() {
+    const base = tmpDir('mauto-init-confine-');
+    const projectRoot = path.join(base, 'project');
+    const outside = path.join(base, 'outside');
+    fs.mkdirSync(projectRoot);
+    fs.mkdirSync(outside);
+    return { projectRoot, outside };
+  }
+
+  function applyClaude(projectRoot) {
+    let caught;
+    try {
+      ADAPTERS.claude.apply({ projectRoot });
+    } catch (err) {
+      caught = err;
+    }
+    return caught;
+  }
+
+  // Every regular file under the project, for "no written file contains the
+  // canary". Links are skipped: reading one would follow it to the canary.
+  function writtenContents(dir) {
+    const out = [];
+    for (const name of fs.readdirSync(dir)) {
+      const p = path.join(dir, name);
+      const st = fs.lstatSync(p);
+      if (st.isDirectory()) out.push(writtenContents(p));
+      else if (st.isFile()) out.push(fs.readFileSync(p, 'utf8'));
+    }
+    return out.join('\n');
+  }
+
+  test('.claude/skills -> outside dir is refused and the outside dir stays empty', () => {
+    const { projectRoot, outside } = project();
+    fs.mkdirSync(path.join(projectRoot, '.claude'));
+    fs.symlinkSync(outside, path.join(projectRoot, '.claude', 'skills'));
+
+    const err = applyClaude(projectRoot);
+
+    expect(err).toBeInstanceOf(UnsafePathError);
+    expect(err.reason).toBe('symlink');
+    expect(err.path).toBe(path.join(projectRoot, '.claude', 'skills'));
+    expect(fs.readdirSync(outside)).toEqual([]);
+  });
+
+  test('a leaf symlink to an outside file is refused and the file is unchanged', () => {
+    const { projectRoot, outside } = project();
+    const target = path.join(outside, 'cmd.md');
+    fs.writeFileSync(target, `${CANARY}\n`);
+    const leaf = path.join(projectRoot, '.claude', 'commands', 'mobile-automator-generate.md');
+    fs.mkdirSync(path.dirname(leaf), { recursive: true });
+    fs.symlinkSync(target, leaf);
+    const before = snapshot(outside);
+
+    const err = applyClaude(projectRoot);
+
+    expect(err).toBeInstanceOf(UnsafePathError);
+    expect(err.path).toBe(leaf);
+    expect(err.message).not.toContain(CANARY);
+    expect(snapshot(outside)).toEqual(before);
+    expect(fs.lstatSync(leaf).isSymbolicLink()).toBe(true);
+  });
+
+  test('a dangling leaf symlink is refused and its target is not created', () => {
+    const { projectRoot, outside } = project();
+    const target = path.join(outside, 'created-by-init.md');
+    const leaf = path.join(projectRoot, '.claude', 'commands', 'mobile-automator-generate.md');
+    fs.mkdirSync(path.dirname(leaf), { recursive: true });
+    fs.symlinkSync(target, leaf);
+
+    const err = applyClaude(projectRoot);
+
+    expect(err).toBeInstanceOf(UnsafePathError);
+    expect(err.reason).toBe('symlink');
+    expect(fs.existsSync(target)).toBe(false);
+    expect(fs.readdirSync(outside)).toEqual([]);
+  });
+
+  test('.mcp.json -> outside JSON file is refused, left unchanged, and never merged into a written file', () => {
+    const { projectRoot, outside } = project();
+    const target = path.join(outside, 'mcp.json');
+    fs.writeFileSync(target, JSON.stringify({ mcpServers: { secret: { command: CANARY } } }));
+    fs.symlinkSync(target, path.join(projectRoot, '.mcp.json'));
+    const before = snapshot(outside);
+
+    const err = applyClaude(projectRoot);
+
+    expect(err).toBeInstanceOf(UnsafePathError);
+    expect(err.path).toBe(path.join(projectRoot, '.mcp.json'));
+    expect(err.message).not.toContain(CANARY);
+    expect(snapshot(outside)).toEqual(before);
+    expect(writtenContents(projectRoot)).not.toContain(CANARY);
+  });
+
+  // A hard link is no symlink, so the read accepts it (it is ours and
+  // regular); but writing through it would rewrite the outside file by another
+  // name. The write replaces the entry instead, leaving the outside file alone.
+  test('a stale leaf hard-linked to an outside file is replaced, never written through', () => {
+    const { projectRoot, outside } = project();
+    const target = path.join(outside, 'cmd.md');
+    fs.writeFileSync(target, `${CANARY}\n`);
+    const leaf = path.join(projectRoot, '.claude', 'commands', 'mobile-automator-generate.md');
+    fs.mkdirSync(path.dirname(leaf), { recursive: true });
+    fs.linkSync(target, leaf);
+    const before = snapshot(outside);
+
+    const res = ADAPTERS.claude.apply({ projectRoot });
+
+    expect(res.changes.find((c) => c.path === leaf).status).toBe('updated');
+    expect(snapshot(outside)).toEqual(before);
+    expect(fs.readFileSync(leaf, 'utf8')).not.toContain(CANARY);
+    expect(fs.statSync(leaf).nlink).toBe(1);
+  });
+
+  test('a clean tree stays idempotent: a rerun reports every file unchanged', () => {
+    const { projectRoot } = project();
+    const first = ADAPTERS.claude.apply({ projectRoot });
+    expect(first.changes.every((c) => c.status === 'created')).toBe(true);
+    const second = ADAPTERS.claude.apply({ projectRoot });
+    expect(second.changes.every((c) => c.status === 'unchanged')).toBe(true);
+  });
+});

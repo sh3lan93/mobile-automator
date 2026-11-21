@@ -11,29 +11,34 @@
 // WHAT each host owns lives in host-plan.js (`planHost`); this module only
 // applies that plan, so the staleness detector and the writers share one
 // source (#144).
+//
+// Every host path sits in a checkout a clone can fill with symlinks
+// (.claude/skills -> ~/.ssh, a dangling .mcp.json -> anywhere), so it is read
+// and written only through safe-fs's project scope (#347): a link on the way,
+// or at the leaf, dangling or not, throws UnsafePathError and its target is
+// never read, written or created.
 
-const fs = require('fs');
 const path = require('path');
 
 const { planHost, HOSTS, MAUTO_SERVER, SKILL_DEST } = require('./host-plan');
+const { readProjectFile } = require('../workspace/safe-fs');
+const { atomicProjectWrite } = require('../util/atomic');
 
 // Returns 'created' | 'updated' | 'unchanged'.
-function writeIfChanged(filePath, content) {
-  const prev = fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : null;
+function writeIfChanged(projectRoot, filePath, content) {
+  const prev = readProjectFile(projectRoot, filePath);
   if (prev === content) return 'unchanged';
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, content);
+  atomicProjectWrite(projectRoot, filePath, content);
   return prev === null ? 'created' : 'updated';
 }
 
 // Returns { changed, status } where status is 'created' | 'updated' | 'unchanged'.
-function mergeMcpConfig(filePath) {
+function mergeMcpConfig(projectRoot, filePath) {
   let doc = {};
-  const existed = fs.existsSync(filePath);
-  if (existed) {
-    const existing = fs.readFileSync(filePath, 'utf8');
+  const prev = readProjectFile(projectRoot, filePath);
+  if (prev !== null) {
     try {
-      doc = JSON.parse(existing);
+      doc = JSON.parse(prev);
     } catch (err) {
       // A hand-edited / partially-written host config. Surface a typed,
       // actionable error instead of a bare SyntaxError, and never clobber the
@@ -49,10 +54,8 @@ function mergeMcpConfig(filePath) {
   }
   doc.mcpServers.mauto = { ...MAUTO_SERVER };
   const next = JSON.stringify(doc, null, 2) + '\n';
-  const prev = existed ? fs.readFileSync(filePath, 'utf8') : null;
   if (prev === next) return { changed: false, status: 'unchanged' };
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, next);
+  atomicProjectWrite(projectRoot, filePath, next);
   return { changed: true, status: prev === null ? 'created' : 'updated' };
 }
 
@@ -63,11 +66,11 @@ function makeAdapter(agent) {
       const changes = [];
       for (const { rel, content } of plan.files) {
         const file = path.join(projectRoot, rel);
-        changes.push({ path: file, status: writeIfChanged(file, content) });
+        changes.push({ path: file, status: writeIfChanged(projectRoot, file, content) });
       }
       if (plan.mcp) {
         const mcpPath = path.join(projectRoot, plan.mcp);
-        changes.push({ path: mcpPath, status: mergeMcpConfig(mcpPath).status });
+        changes.push({ path: mcpPath, status: mergeMcpConfig(projectRoot, mcpPath).status });
       }
       return { agent, changes };
     },
