@@ -157,3 +157,104 @@ describe('session-client', () => {
     await new Promise((resolve) => server.close(resolve));
   });
 });
+
+// The client connects only to a socket it can vouch for (#346): its directory
+// is private and the socket itself is a real socket of ours.
+const isRoot = typeof process.getuid === 'function' && process.getuid() === 0;
+const maybe = isRoot ? test.skip : test;
+
+// A listener that answers ping/shutdown and counts every connection made to it.
+function countingServer() {
+  const state = { connections: 0 };
+  state.server = net.createServer((socket) => {
+    state.connections += 1;
+    const parser = new FrameParser();
+    socket.setEncoding('utf8');
+    socket.on('error', () => {});
+    socket.on('data', (chunk) => {
+      for (const f of parser.push(chunk)) {
+        if (!f.value) continue;
+        socket.write(FrameParser.encode({ id: f.value.id, ok: true, result: {} }));
+      }
+    });
+  });
+  state.listen = (p) => new Promise((resolve) => state.server.listen(p, resolve));
+  state.close = () => new Promise((resolve) => state.server.close(resolve));
+  return state;
+}
+
+// A root whose in-workspace socket fits the sockaddr limit, or one too deep
+// for it (fallback location).
+function shortRoot() {
+  const root = fs.mkdtempSync(path.join('/tmp', 'mc-'));
+  expect(paths.socketPath(root)).toBe(paths.workspaceSocketPath(root));
+  return root;
+}
+function deepRoot() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-client-deep-'.padEnd(60, 'x')));
+  expect(paths.socketPath(root)).not.toBe(paths.workspaceSocketPath(root));
+  return root;
+}
+
+// Where the socket lives for each location, with its private directory made.
+const LOCATIONS = [
+  ['in-workspace', shortRoot],
+  ['fallback', deepRoot],
+];
+
+describe.each(LOCATIONS)('session-client socket verification (%s)', (_name, makeRoot) => {
+  async function drive(root) {
+    return {
+      conn: await tryConnect(root),
+      alive: await isAlive(root),
+      shutdown: await requestShutdown(root),
+      status: await getSessionStatus(root),
+    };
+  }
+
+  maybe('a symlink at the socket path is never connected to', async () => {
+    const root = makeRoot();
+    ensureSessionDirs(root);
+    const outside = fs.mkdtempSync(path.join('/tmp', 'mo-'));
+    const real = path.join(outside, 'real.sock');
+    const srv = countingServer();
+    await srv.listen(real);
+    fs.symlinkSync(real, paths.socketPath(root));
+
+    const r = await drive(root);
+    expect(srv.connections).toBe(0);
+    expect(r.conn).toBeNull();
+    expect(r.alive).toBe(false);
+    expect(r.shutdown).toBe(false);
+    expect(r.status).toEqual({ running: false, reason: null, in_flight: null, device: null });
+
+    await srv.close();
+    fs.rmSync(outside, { recursive: true, force: true });
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  maybe('a group/other-accessible socket directory is never connected to; tightening it restores the daemon', async () => {
+    const root = makeRoot();
+    ensureSessionDirs(root);
+    const dir = path.dirname(paths.socketPath(root));
+    const srv = countingServer();
+    await srv.listen(paths.socketPath(root));
+    fs.chmodSync(dir, 0o755);
+
+    const r = await drive(root);
+    expect(srv.connections).toBe(0);
+    expect(r.conn).toBeNull();
+    expect(r.alive).toBe(false);
+    expect(r.shutdown).toBe(false);
+    expect(r.status.running).toBe(false);
+
+    fs.chmodSync(dir, 0o700);
+    ensureSessionDirs(root);
+    expect(fs.statSync(dir).mode & 0o777).toBe(0o700);
+    expect(await isAlive(root)).toBe(true);
+    expect(srv.connections).toBe(1);
+
+    await srv.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+});
