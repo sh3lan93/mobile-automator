@@ -19,13 +19,19 @@ const realFs = require('fs');
 const MAX_LOG_BYTES = 1024 * 1024;
 
 // Best effort, and that is the contract, not a shortcut. Every failure here is
-// survivable — no log yet (ENOENT on stat), a concurrent writer that already
+// survivable — no log yet (ENOENT on lstat), a concurrent writer that already
 // rotated (ENOENT on rename), an unwritable directory (EACCES) — while the
 // caller's actual job (opening the daemon log, appending an event) is not.
 // An oversized log beats no log, so a rotation that cannot run is swallowed.
+//
+// Only a regular file is rotated (#347). lstat, never stat: a symlink at the
+// log path (planted in a cloned workspace) is left alone rather than sized by
+// its target and moved aside, and so is anything else that is not a regular
+// file; the caller's own open then decides what to do with it.
 function rotateIfLarge(logPath, { maxBytes = MAX_LOG_BYTES, fs = realFs } = {}) {
   try {
-    if (fs.statSync(logPath).size >= maxBytes) fs.renameSync(logPath, `${logPath}.1`);
+    const st = fs.lstatSync(logPath);
+    if (st.isFile() && st.size >= maxBytes) fs.renameSync(logPath, `${logPath}.1`);
   } catch (_) {
     /* nothing to rotate, or someone beat us to it */
   }

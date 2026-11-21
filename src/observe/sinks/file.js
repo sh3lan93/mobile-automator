@@ -9,12 +9,21 @@
 //
 // Every filesystem operation is guarded: a read-only workspace or a full disk
 // must degrade to "no logging", never to a failed `mauto tap`.
+//
+// A log under the workspace sits in a tree a cloned repo can fill with
+// symlinks (.logs -> /outside, a leaf mauto.ndjson -> a file outside), so it
+// is confined like every workspace write (#347): its directory goes through
+// safe-fs's checked walk (created when missing), and the leaf is opened
+// O_NOFOLLOW, ours and with one link. A refusal drops the event like any
+// other failure here. A log dir outside the workspace (MAUTO_LOG_DIR) is the
+// user's explicit choice and is written as before.
 
 const realFs = require('fs');
 const path = require('path');
 
 const { mainLogPath } = require('../paths');
 const { workspaceDir } = require('../../workspace/layout');
+const { inWorkspace, safeDir, openOwnedLeaf } = require('../../workspace/safe-fs');
 const { MAX_LOG_BYTES, rotateIfLarge } = require('../../util/log-rotate');
 
 function format(event) {
@@ -86,16 +95,38 @@ function shouldAppend(target, bound, fs) {
 // rolling diagnostics, 'cap' for a run trace. See shouldAppend for why the two
 // cannot share behaviour even though they share the one constant that bounds
 // them.
+//
+// The directory is walked once, before rotation; the append then opens the
+// leaf without walking again (openOwnedLeaf, not openWorkspaceFile).
 function write(event, { projectRoot, env = process.env, fs = realFs, logPath, bound = 'rotate' } = {}) {
   try {
     if (!allowed(projectRoot, env, fs)) return;
-    const target = logPath || mainLogPath(projectRoot, env);
-    fs.mkdirSync(path.dirname(target), { recursive: true });
+    let target = logPath || mainLogPath(projectRoot, env);
+    const confined = inWorkspace(projectRoot, target, { fs });
+    if (confined) {
+      safeDir(projectRoot, path.dirname(confined), { create: true }, { fs });
+      target = confined;
+    } else {
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+    }
     if (!shouldAppend(target, bound, fs)) return;
-    fs.appendFileSync(target, format(event));
+    append(target, format(event), fs);
   } catch (_) {
     // Observability must never be load-bearing. Losing a log line is always
     // preferable to failing the verb the user actually asked for.
+  }
+}
+
+// One open, write and close per event: no fd is held between events, so a
+// rotation in between is never written past. O_NOFOLLOW (via openOwnedLeaf),
+// where appendFileSync would follow a planted leaf link.
+function append(target, line, fs) {
+  const { O_WRONLY, O_APPEND, O_CREAT } = realFs.constants;
+  const fd = openOwnedLeaf(target, O_WRONLY | O_APPEND | O_CREAT, {}, { fs });
+  try {
+    fs.writeSync(fd, line);
+  } finally {
+    fs.closeSync(fd);
   }
 }
 
