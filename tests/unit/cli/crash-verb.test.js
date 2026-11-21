@@ -6,6 +6,7 @@ const path = require('path');
 
 const { handleCrashList, handleCrashGet, buildProgram } = require('../../../src/cli');
 const sessionPaths = require('../../../src/device/session-paths');
+const { CANARY, tmpDir, snapshot } = require('../../helpers/workspace-safety');
 
 const CRASHES = [
   { id: 'r-old', process: 'com.acme.app', timestamp: '2026-09-01T09:00:00.000Z' },
@@ -117,8 +118,9 @@ describe('handleCrashGet', () => {
   });
 
   it('--out writes the FULL report to disk and returns the path, not the bytes', async () => {
-    const dest = path.join(tmpRoot(), 'crash.txt');
-    const r = await handleCrashGet({ deviceBridge: bridge }, 'r1', { out: dest });
+    const root = tmpRoot();
+    const dest = path.join(root, 'crash.txt');
+    const r = await handleCrashGet({ deviceBridge: bridge, projectRoot: root, cwd: root }, 'r1', { out: dest });
     expect(r.exitKind).toBe('ok');
     expect(r.envelope.data.path).toBe(dest);
     expect(r.envelope.data).not.toHaveProperty('report');
@@ -126,11 +128,14 @@ describe('handleCrashGet', () => {
   });
 
   it('reports an unwritable --out as an environment failure, not a device one', async () => {
-    const r = await handleCrashGet({ deviceBridge: bridge }, 'r1', {
-      out: path.join(tmpRoot(), 'no', 'such', 'dir', 'crash.txt'),
+    const root = tmpRoot();
+    const r = await handleCrashGet({ deviceBridge: bridge, projectRoot: root, cwd: root }, 'r1', {
+      out: path.join(root, 'no', 'such', 'dir', 'crash.txt'),
     });
     expect(r.exitKind).toBe('environment');
     expect(r.envelope.error.kind).toBe('environment');
+    expect(r.envelope.error.message).toMatch(/^could not write the crash report to /);
+    expect(r.envelope.hint).toBe('Check the directory exists and is writable.');
   });
 
   it('propagates an engine failure as a device failure', async () => {
@@ -142,6 +147,243 @@ describe('handleCrashGet', () => {
     const r = await handleCrashGet({ deviceBridge: failing }, 'r1');
     expect(r.exitKind).toBe('device');
     expect(r.envelope.error.message).toMatch(/not found/);
+  });
+});
+
+// #347: --out is a path the user (or an agent) chose, and the checkout is
+// untrusted: a cloned repo can commit a link anywhere in it. Outside the
+// workspace the report may land only where the engine lets itself write (the
+// project, the OS temp directory and, on macOS, /tmp), checked before the
+// device is asked; inside it the workspace rules apply. Either way the leaf is
+// opened O_NOFOLLOW, a hard link refused, and the truncate deferred until the
+// checks pass.
+describe('handleCrashGet --out confinement (#347)', () => {
+  const REPORT = 'FATAL EXCEPTION: main\n  at com.acme.Boom.run(Boom.java:1)';
+
+  // A project one level below its own temp dir (so `..` stays in a temp dir),
+  // an outside dir holding the canary, and the temp dir the handler is told
+  // about: three different places.
+  function setup() {
+    const base = tmpDir('mauto-crash-out-');
+    const root = path.join(base, 'project');
+    const ws = path.join(root, '.mobile-automator');
+    fs.mkdirSync(ws, { recursive: true });
+    const outside = tmpDir('mauto-crash-outside-');
+    fs.writeFileSync(path.join(outside, 'target.txt'), CANARY);
+    const tmp = tmpDir('mauto-crash-tmp-');
+    return { base, root, ws, outside, tmp };
+  }
+
+  async function getWith({ root, tmp }, out, { cwd = root, platform = 'linux', darwinTmp } = {}) {
+    const asked = [];
+    const deviceBridge = {
+      getCrash: async (id) => {
+        asked.push(id);
+        return REPORT;
+      },
+    };
+    const r = await handleCrashGet(
+      { deviceBridge, projectRoot: root, cwd, tmpdir: () => tmp, platform, darwinTmp },
+      'r1',
+      { out }
+    );
+    return { r, asked };
+  }
+
+  function expectRefused(r, message) {
+    expect(r.exitKind).toBe('environment');
+    expect(r.envelope.ok).toBe(false);
+    expect(r.envelope.error.kind).toBe('environment');
+    expect(r.envelope.error.message).toMatch(message);
+    // The refusal's own hint, never the generic filesystem one.
+    expect(r.envelope.hint).not.toBe('Check the directory exists and is writable.');
+    expect(r.envelope.hint).toEqual(expect.any(String));
+    expect(JSON.stringify(r)).not.toContain(CANARY);
+  }
+
+  it('--out ../outside.txt outside the project and the temp dir is invalid_input, before the device is asked', async () => {
+    const s = setup();
+    const before = snapshot(s.base);
+
+    const { r, asked } = await getWith(s, '../outside.txt');
+
+    expect(r.exitKind).toBe('invalid_input');
+    expect(r.envelope.error.kind).toBe('invalid_input');
+    expect(r.envelope.error.message).toContain(path.join(s.base, 'outside.txt'));
+    expect(r.envelope.hint).toContain(s.root);
+    expect(r.envelope.hint).toContain(s.tmp);
+    expect(asked).toEqual([]);
+    expect(fs.existsSync(path.join(s.base, 'outside.txt'))).toBe(false);
+    expect(snapshot(s.base)).toEqual(before);
+  });
+
+  it('an absolute --out in a third directory is refused the same way', async () => {
+    const s = setup();
+    const before = snapshot(s.outside);
+
+    const { r, asked } = await getWith(s, path.join(s.outside, 'crash.txt'));
+
+    expect(r.exitKind).toBe('invalid_input');
+    expect(asked).toEqual([]);
+    expect(snapshot(s.outside)).toEqual(before);
+  });
+
+  it('a project directory that links outside both roots is refused: the check compares realpaths', async () => {
+    const s = setup();
+    fs.symlinkSync(s.outside, path.join(s.root, 'docs'));
+    const before = snapshot(s.outside);
+
+    const { r, asked } = await getWith(s, 'docs/crash.txt');
+
+    expect(r.exitKind).toBe('invalid_input');
+    // Names the path as resolved, never where the link points.
+    expect(r.envelope.error.message).toContain(path.join(s.root, 'docs', 'crash.txt'));
+    expect(r.envelope.error.message).not.toContain(s.outside);
+    expect(asked).toEqual([]);
+    expect(snapshot(s.outside)).toEqual(before);
+  });
+
+  it('--out .mobile-automator/crash.txt that links to an outside file is refused, the file unchanged', async () => {
+    const s = setup();
+    fs.symlinkSync(path.join(s.outside, 'target.txt'), path.join(s.ws, 'crash.txt'));
+    const before = snapshot(s.outside);
+
+    const { r } = await getWith(s, '.mobile-automator/crash.txt');
+
+    expectRefused(r, /^Refusing to use workspace path /);
+    expect(r.envelope.error.message).toContain(path.join(s.ws, 'crash.txt'));
+    expect(snapshot(s.outside)).toEqual(before);
+  });
+
+  it('a dangling link in the workspace is refused and its target never created', async () => {
+    const s = setup();
+    fs.symlinkSync(path.join(s.outside, 'new.txt'), path.join(s.ws, 'crash.txt'));
+    const before = snapshot(s.outside);
+
+    const { r } = await getWith(s, '.mobile-automator/crash.txt');
+
+    expectRefused(r, /^Refusing to use workspace path /);
+    expect(fs.existsSync(path.join(s.outside, 'new.txt'))).toBe(false);
+    expect(snapshot(s.outside)).toEqual(before);
+  });
+
+  it('a symlinked workspace directory on the way (.mobile-automator/reports -> outside) is refused', async () => {
+    const s = setup();
+    fs.symlinkSync(s.outside, path.join(s.ws, 'reports'));
+    const before = snapshot(s.outside);
+
+    const { r } = await getWith(s, '.mobile-automator/reports/crash.txt');
+
+    expectRefused(r, /^Refusing to use workspace path /);
+    expect(r.envelope.error.message).toContain(path.join(s.ws, 'reports'));
+    expect(snapshot(s.outside)).toEqual(before);
+  });
+
+  it('a project-root leaf that is a symlink is refused as a path', async () => {
+    const s = setup();
+    fs.symlinkSync(path.join(s.outside, 'target.txt'), path.join(s.root, 'crash.txt'));
+    const before = snapshot(s.outside);
+
+    const { r } = await getWith(s, 'crash.txt');
+
+    expectRefused(r, /^Refusing to use path /);
+    expect(r.envelope.error.message).toContain(path.join(s.root, 'crash.txt'));
+    expect(snapshot(s.outside)).toEqual(before);
+  });
+
+  it('a project-root leaf hard-linked to an outside file is refused, and the outside file is not emptied', async () => {
+    const s = setup();
+    fs.linkSync(path.join(s.outside, 'target.txt'), path.join(s.root, 'crash.txt'));
+    const before = snapshot(s.outside);
+
+    const { r } = await getWith(s, 'crash.txt');
+
+    expectRefused(r, /^Refusing to use path .*\(hardlink\)\.$/);
+    expect(fs.readFileSync(path.join(s.outside, 'target.txt'), 'utf8')).toBe(CANARY);
+    expect(snapshot(s.outside)).toEqual(before);
+  });
+
+  it('a path in the temp dir is written whole; data.path is the --out as given', async () => {
+    const s = setup();
+    const out = path.join(s.tmp, 'crash.txt');
+
+    const { r, asked } = await getWith(s, out);
+
+    expect(r.exitKind).toBe('ok');
+    expect(r.envelope.data).toEqual({ crash_id: 'r1', path: out, truncated: false });
+    expect(asked).toEqual(['r1']);
+    expect(fs.readFileSync(out, 'utf8')).toBe(REPORT);
+  });
+
+  it('an existing regular file is overwritten, not appended to', async () => {
+    const s = setup();
+    const out = path.join(s.tmp, 'crash.txt');
+    fs.writeFileSync(out, 'x'.repeat(REPORT.length * 3));
+
+    const { r } = await getWith(s, out);
+
+    expect(r.exitKind).toBe('ok');
+    expect(fs.readFileSync(out, 'utf8')).toBe(REPORT);
+  });
+
+  it('a relative --out resolves against cwd, and data.path keeps it as given', async () => {
+    const s = setup();
+    const sub = path.join(s.root, 'sub');
+    fs.mkdirSync(sub);
+
+    const { r } = await getWith(s, 'crash.txt', { cwd: sub });
+
+    expect(r.exitKind).toBe('ok');
+    expect(r.envelope.data.path).toBe('crash.txt');
+    expect(fs.readFileSync(path.join(sub, 'crash.txt'), 'utf8')).toBe(REPORT);
+  });
+
+  it('a clean workspace path is written, its missing directories created', async () => {
+    const s = setup();
+
+    const { r } = await getWith(s, '.mobile-automator/crashes/r1.txt');
+
+    expect(r.exitKind).toBe('ok');
+    expect(fs.readFileSync(path.join(s.ws, 'crashes', 'r1.txt'), 'utf8')).toBe(REPORT);
+  });
+
+  // macOS os.tmpdir() is /var/folders/.../T, not /tmp, and the engine adds /tmp
+  // there itself: `mauto crash get <id> --out /tmp/crash.txt` is documented.
+  // The stand-in for /tmp is injected so the test never writes to the real one.
+  describe('/tmp on macOS', () => {
+    it('on darwin a path under /tmp is allowed', async () => {
+      const s = setup();
+      const darwinTmp = tmpDir('mauto-crash-slash-tmp-');
+      const out = path.join(darwinTmp, 'crash.txt');
+
+      const { r } = await getWith(s, out, { platform: 'darwin', darwinTmp });
+
+      expect(r.exitKind).toBe('ok');
+      expect(fs.readFileSync(out, 'utf8')).toBe(REPORT);
+    });
+
+    it('on linux the same path is refused', async () => {
+      const s = setup();
+      const darwinTmp = tmpDir('mauto-crash-slash-tmp-');
+      const out = path.join(darwinTmp, 'crash.txt');
+
+      const { r, asked } = await getWith(s, out, { platform: 'linux', darwinTmp });
+
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.hint).not.toContain(darwinTmp);
+      expect(asked).toEqual([]);
+      expect(fs.existsSync(out)).toBe(false);
+    });
+
+    it('on darwin the refusal hint names every allowed root, /tmp included', async () => {
+      const s = setup();
+      const darwinTmp = tmpDir('mauto-crash-slash-tmp-');
+
+      const { r } = await getWith(s, '../outside.txt', { platform: 'darwin', darwinTmp });
+
+      expect(r.exitKind).toBe('invalid_input');
+      for (const root of [s.root, s.tmp, darwinTmp]) expect(r.envelope.hint).toContain(root);
+    });
   });
 });
 

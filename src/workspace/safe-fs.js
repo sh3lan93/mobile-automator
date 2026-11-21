@@ -497,6 +497,9 @@ module.exports = {
   safeWorkspaceDest,
   // Whether a path the user chose lands in the workspace.
   inWorkspace,
+  // The one containment test (`child` is `parent` or below it), for a caller
+  // that bounds a path the user chose by roots of its own (crash get --out).
+  isInside,
   // The path scope: project files outside the workspace.
   readProjectFile,
   createProjectFile,
