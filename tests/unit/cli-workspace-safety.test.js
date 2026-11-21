@@ -276,3 +276,30 @@ describe('connectBridge closes the connection on a failure after connect', () =>
     expect(closed).toHaveLength(1);
   });
 });
+
+// #346: discovery refuses a symlinked workspace directory, so a gated verb
+// fails environment before any store is touched.
+describe('a symlinked .mobile-automator/ (#346)', () => {
+  test.each([
+    ['memory show', ['memory', 'show']],
+    ['config get mode', ['config', 'get', 'mode']],
+  ])('%s fails environment naming the path', async (_n, argv) => {
+    const root = tmpDir();
+    const real = path.join(root, 'real-ws');
+    fs.mkdirSync(real);
+    fs.writeFileSync(path.join(real, 'config.json'), JSON.stringify({ mode: CANARY }));
+    fs.symlinkSync(real, path.join(root, '.mobile-automator'));
+
+    const { calls, written } = await runIn(root, argv);
+
+    expect(calls).toHaveLength(1);
+    const [r] = calls;
+    expect(r.exitKind).toBe('environment');
+    expect(r.envelope.ok).toBe(false);
+    expect(r.envelope.error.kind).toBe('environment');
+    expect(r.envelope.error.message).toContain(path.join(root, '.mobile-automator'));
+    expect(r.envelope.error.message).toContain('(symlink)');
+    expect(JSON.stringify(calls)).not.toContain(CANARY);
+    expect(written).not.toContain(CANARY);
+  });
+});

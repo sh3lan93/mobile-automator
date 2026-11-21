@@ -239,3 +239,104 @@ describe('noWorkspaceFailure', () => {
     expect(r.envelope.hint).toMatch(/mauto setup/);
   });
 });
+
+// #346: discovery vets the workspace it is about to adopt. "Foreign owner" is
+// an injected uid because jest cannot chown.
+describe('findWorkspaceRoot refuses an unsafe workspace (#346)', () => {
+  const MY_UID = process.getuid();
+  const asUid = (uid, which = ['lstatSync', 'fstatSync']) => {
+    const wrapped = { ...fs };
+    for (const name of which) {
+      wrapped[name] = (...args) => {
+        const st = fs[name](...args);
+        st.uid = uid;
+        return st;
+      };
+    }
+    return wrapped;
+  };
+
+  test('a foreign-owned .mobile-automator is refused, naming both uids', () => {
+    const root = tmpProject();
+    makeWorkspace(root);
+    const r = findWorkspaceRoot(root, { fs: asUid(9999, ['lstatSync']) });
+    expect(r.root).toBeNull();
+    expect(r.legacy).toBeNull();
+    expect(r.unsafe.reason).toBe('foreign_owner');
+    expect(r.unsafe.message).toContain(`uid 9999; you are uid ${MY_UID}`);
+  });
+
+  test('MAUTO_TRUST_WORKSPACE_OWNER=1 adopts the foreign-owned workspace', () => {
+    const root = tmpProject();
+    makeWorkspace(root);
+    const r = findWorkspaceRoot(root, { fs: asUid(9999), env: { MAUTO_TRUST_WORKSPACE_OWNER: '1' } });
+    expect(r).toEqual({ root, searched: [root], legacy: null });
+  });
+
+  test('a foreign-owned config.json is refused', () => {
+    const root = tmpProject();
+    makeWorkspace(root);
+    const r = findWorkspaceRoot(root, { fs: asUid(9999, ['fstatSync']) });
+    expect(r.root).toBeNull();
+    expect(r.unsafe.reason).toBe('foreign_owner');
+  });
+
+  test('a symlinked .mobile-automator is refused', () => {
+    const root = tmpProject();
+    const elsewhere = tmpProject();
+    makeWorkspace(elsewhere);
+    fs.symlinkSync(path.join(elsewhere, '.mobile-automator'), path.join(root, '.mobile-automator'));
+    const r = findWorkspaceRoot(root);
+    expect(r.root).toBeNull();
+    expect(r.unsafe.reason).toBe('symlink');
+    expect(r.unsafe.path).toBe(path.join(root, '.mobile-automator'));
+  });
+
+  test('a symlinked config.json is refused', () => {
+    const root = tmpProject();
+    makeWorkspace(root);
+    const real = path.join(root, 'real.json');
+    fs.renameSync(path.join(root, '.mobile-automator', 'config.json'), real);
+    fs.symlinkSync(real, path.join(root, '.mobile-automator', 'config.json'));
+    const r = findWorkspaceRoot(root);
+    expect(r.root).toBeNull();
+    expect(r.unsafe.reason).toBe('symlink');
+  });
+
+  test('a world-writable .mobile-automator is refused; group-writable is adopted', () => {
+    if (MY_UID === 0) return;
+    const root = tmpProject();
+    makeWorkspace(root);
+    const ws = path.join(root, '.mobile-automator');
+    fs.chmodSync(ws, 0o777);
+    const bad = findWorkspaceRoot(root);
+    expect(bad.root).toBeNull();
+    expect(bad.unsafe.reason).toBe('world_writable');
+    fs.chmodSync(ws, 0o775);
+    expect(findWorkspaceRoot(root).root).toBe(root);
+  });
+
+  test('an unsafe nearer workspace does not fall through to a safe ancestor', () => {
+    const root = tmpProject({ git: 'none' });
+    makeWorkspace(root);
+    const child = mkdirp(root, 'pkg');
+    makeWorkspace(child);
+    const r = findWorkspaceRoot(child, { fs: asUid(9999, ['lstatSync']) });
+    // every directory is foreign under the injected uid; the NEAREST decides
+    expect(r.root).toBeNull();
+    expect(r.unsafe.path).toBe(path.join(child, '.mobile-automator'));
+    expect(r.searched).toEqual([child]);
+  });
+
+  test('workspaceFailure renders environment with the refusal message and hint', () => {
+    const root = tmpProject();
+    makeWorkspace(root);
+    const ws = findWorkspaceRoot(root, { fs: asUid(9999, ['lstatSync']) });
+    const { envelope, exitKind } = workspaceFailure(ws);
+    expect(exitKind).toBe('environment');
+    expect(envelope.ok).toBe(false);
+    expect(envelope.error.kind).toBe('environment');
+    expect(envelope.error.message).toBe(ws.unsafe.message);
+    expect(envelope.hint).toBe(ws.unsafe.hint);
+  });
+});
