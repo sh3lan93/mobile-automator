@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.40.11]
+
+### 🔒 Security
+
+- **Raw output and crash traces can no longer drive a human's terminal**
+  (#353). Follow-up to #349: `emitRaw`, the stdout path for `mauto guide`,
+  `schema`, `bootstrap` and `memory show`, printed workspace-controlled text
+  (hand-edited memory markdown, config values filled into guide
+  placeholders) with control characters intact, and `diagnose` wrote the
+  `internal` stack trace, whose message can carry device text, to stderr the
+  same way. Both now pass through `neutraliseControls`: C0 and DEL become
+  `\xHH`, C1 becomes `\u00HH`, newlines and tabs are kept. Clean output is
+  byte-identical.
+
 ## [0.40.10]
 
 ### 🐛 Fixed
