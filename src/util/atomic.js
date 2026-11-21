@@ -24,12 +24,21 @@ const { createWorkspaceFile, openLeaf } = require('../workspace/safe-fs');
 //     --out) and creates the directory with a plain recursive mkdir. Any write
 //     into the workspace belongs in atomicWorkspaceWrite.
 
-// `openTmp(tmp)` creates the temp file exclusively and returns its fd.
-function writeViaTemp(file, contents, openTmp) {
-  const tmp = path.join(
+// The one temp-file name for a write that lands at `file`: a hidden sibling in
+// the same directory (so a rename or link to `file` never crosses a
+// filesystem), unique per process and call. Unguessable, but callers still
+// create it exclusively: the name alone is no defence against a planted entry.
+// Also used by device/session-salt.js, which link(2)s rather than renames.
+function tempPathFor(file) {
+  return path.join(
     path.dirname(file),
     `.${path.basename(file)}.tmp.${process.pid}.${Date.now()}.${crypto.randomBytes(6).toString('hex')}`
   );
+}
+
+// `openTmp(tmp)` creates the temp file exclusively and returns its fd.
+function writeViaTemp(file, contents, openTmp) {
+  const tmp = tempPathFor(file);
   // Outside the cleanup below: when this open fails nothing of ours exists at
   // `tmp`, so there is nothing to unlink.
   let fd = openTmp(tmp);
@@ -73,4 +82,4 @@ function atomicWrite(file, contents) {
   writeViaTemp(file, contents, (tmp) => openLeaf(tmp, O_WRONLY | O_CREAT | O_EXCL).fd);
 }
 
-module.exports = { atomicWrite, atomicWorkspaceWrite };
+module.exports = { atomicWrite, atomicWorkspaceWrite, tempPathFor };

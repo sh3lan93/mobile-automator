@@ -14,10 +14,10 @@
 // Kept out of session-paths.js so that module stays free of IO.
 
 const realFs = require('fs');
-const path = require('path');
 const crypto = require('crypto');
 
 const paths = require('./session-paths');
+const { tempPathFor } = require('../util/atomic');
 const { createWorkspaceFile, readWorkspaceFileOrNull } = require('../workspace/safe-fs');
 
 // The salt, or null when it is missing, unreadable or empty. Any other content
@@ -48,10 +48,7 @@ function ensureSalt(projectRoot, { fs = realFs } = {}) {
   if (existing) return existing;
 
   const file = paths.saltPath(projectRoot);
-  const tmp = path.join(
-    path.dirname(file),
-    `.${path.basename(file)}.tmp.${process.pid}.${crypto.randomBytes(6).toString('hex')}`
-  );
+  const tmp = tempPathFor(file);
   const salt = crypto.randomBytes(32).toString('hex');
   try {
     // Creates .session/ through the checked walk when missing; the link below

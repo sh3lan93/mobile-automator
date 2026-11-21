@@ -9,7 +9,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { atomicWrite, atomicWorkspaceWrite } = require('../../../src/util/atomic');
+const { atomicWrite, atomicWorkspaceWrite, tempPathFor } = require('../../../src/util/atomic');
 const { UnsafePathError } = require('../../../src/workspace/safe-fs');
 
 const ORIGINAL = '# Run History\nSECRET-CANARY\n';
@@ -124,5 +124,17 @@ describe('atomicWrite (paths the user chose)', () => {
     expect(opened).toHaveLength(2);
     expect(opened[0]).not.toBe(opened[1]);
     for (const p of opened) expect(path.basename(p)).toMatch(/^\.report\.xml\.tmp\.\d+\.\d+\.[0-9a-f]{12}$/);
+  });
+});
+
+describe('tempPathFor', () => {
+  test('names a hidden sibling of the file, carrying its basename and the pid, unique per call', () => {
+    const file = path.join('/ws', '.mobile-automator', '.session', 'marker.salt');
+    const a = tempPathFor(file);
+    const b = tempPathFor(file);
+    expect(path.dirname(a)).toBe(path.dirname(file));
+    expect(path.basename(a).startsWith('.marker.salt.tmp.')).toBe(true);
+    expect(path.basename(a)).toContain(`.${process.pid}.`);
+    expect(a).not.toBe(b);
   });
 });
