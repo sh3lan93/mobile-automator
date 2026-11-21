@@ -8,6 +8,7 @@ const path = require('path');
 const { startDaemon } = require('../../../src/device/session-daemon');
 const { tryConnect, isAlive, requestShutdown, getSessionStatus } = require('../../../src/device/session-client');
 const paths = require('../../../src/device/session-paths');
+const { ensureSessionDirs } = require('../../../src/device/session-dir');
 const { FrameParser } = require('../../../src/device/session-protocol');
 
 function tmpRoot() {
@@ -78,7 +79,7 @@ describe('session-client', () => {
   // A server speaking the daemon protocol with a chosen ping result.
   function fakeDaemon(root, result) {
     const sock = paths.socketPath(root);
-    fs.mkdirSync(path.dirname(sock), { recursive: true });
+    ensureSessionDirs(root);
     const server = net.createServer((s) => {
       const parser = new FrameParser();
       s.setEncoding('utf8');
@@ -114,7 +115,7 @@ describe('session-client', () => {
 
   test('call propagates kind + hint from an ok:false reply', async () => {
     const root = tmpRoot();
-    fs.mkdirSync(paths.sessionDir(root), { recursive: true });
+    ensureSessionDirs(root);
     // A fake daemon that answers every call frame with a typed error reply.
     const server = net.createServer((socket) => {
       const parser = new FrameParser();

@@ -24,6 +24,13 @@
 // MAUTO_TRUST_WORKSPACE_OWNER=1, which skips the owner comparison and nothing
 // else, like git's safe.directory.
 //
+// The device session's directories are stricter (#346): another user who can
+// enter `.session/` or the socket fallback directory can reach the daemon's
+// socket, and one who can write there can plant or swap it. safeDir's
+// `private` option makes the last component 0700-tight (no group or other
+// bit), and privateDir checks a directory outside the workspace (the socket
+// fallback) the same way, with an owner check no override can skip.
+//
 // Requires only layout, so device and store modules can import it without a
 // cycle. It knows nothing of envelopes: a refusal carries its own kind and
 // hint, and cli.js's toEnvelope maps it like any other typed error.
@@ -45,6 +52,7 @@ const REASONS = {
   not_regular: 'it is not a regular file',
   not_directory: 'it is not a directory',
   world_writable: 'it is writable by every user',
+  not_private: 'other users can access it',
   hardlink: 'it has more than one hard link',
   too_large: 'it is larger than the size limit',
 };
@@ -59,6 +67,8 @@ const HINTS = {
   not_regular: 'Replace it with a regular file, or delete it and let mauto recreate it.',
   not_directory: 'Replace it with a real directory, or delete it and let mauto recreate it.',
   world_writable: 'Any user could plant files there. Remove the world-write bit, for example: chmod o-w <path>.',
+  not_private:
+    'Only the user running mauto may use it. Run chmod 700 <path>, or delete it and let mauto recreate it.',
   hardlink: 'A second hard link would make mauto write to a file outside the workspace. Delete it and let mauto recreate it.',
   too_large: 'Workspace files are small; a file this size was not written by mauto. Delete or shrink it.',
 };
@@ -66,22 +76,57 @@ const HINTS = {
 const FALLBACK_REASON = 'it is not safe to use';
 const FALLBACK_HINT = 'Inspect the path and replace it with a real file or directory inside .mobile-automator/.';
 
+// What a refused path is, for the message's subject and the hint. Every
+// refusal is about a workspace path except privateDir's: the device session's
+// socket directory, outside the workspace (#346). There the workspace hints
+// point the wrong way, and the owner override they offer never applies (D-d).
+// The reason texts above fit both and are shared; only the hints that differ
+// are listed, the four privateDir can raise.
+const SOCKET_DIR_RECREATE = 'Remove it, and mauto recreates the directory 0700.';
+const SCOPES = {
+  workspace: { subject: 'workspace path', hints: HINTS, fallbackHint: FALLBACK_HINT },
+  session_socket_dir: {
+    subject: 'session socket directory',
+    hints: {
+      symlink: `mauto never follows a link for the session socket's directory. ${SOCKET_DIR_RECREATE}`,
+      not_directory: SOCKET_DIR_RECREATE,
+      foreign_owner:
+        'Another user owns it, so mauto will not trust a socket there. Remove it (its owner or root may have to), or set XDG_RUNTIME_DIR to a private directory of your own.',
+      not_private:
+        "Other users could reach the device session's socket through it. Run chmod 700 <path>, or remove it and let mauto recreate it 0700.",
+    },
+    fallbackHint: SOCKET_DIR_RECREATE,
+  },
+};
+
 // A refusal carries its own envelope fields, like the repo's other typed
 // errors: `kind` is always environment (the workspace is wrong, not the verb's
 // input), `message` and `hint` are the envelope text verbatim. So any boundary
 // that maps `err.kind`/`err.hint` (deviceFail, toEnvelope) reports it correctly
 // without knowing this class.
 class UnsafePathError extends Error {
-  // `file` is always the workspace path that was refused, never where a link
-  // points: the target is attacker-chosen and must not reach an envelope.
-  constructor(file, reason) {
-    super(`Refusing to use workspace path ${file}: ${REASONS[reason] || FALLBACK_REASON} (${reason}).`);
+  // `file` is always the path that was refused, never where a link points:
+  // the target is attacker-chosen and must not reach an envelope. `scope`
+  // (a SCOPES key, default workspace) says what kind of path it is.
+  //
+  // `owner` ({ uid, myUid }) is passed by the owner check alone, so a
+  // foreign_owner refusal names both uids instead of "another user", and the
+  // user knows whom to chown to (or that they are running as the wrong user).
+  // A uid is a number from lstat, never file content, so it may reach an
+  // envelope.
+  constructor(file, reason, { owner, scope } = {}) {
+    const s = SCOPES[scope] || SCOPES.workspace;
+    const text = owner
+      ? `it is owned by uid ${owner.uid}; you are uid ${owner.myUid}`
+      : REASONS[reason] || FALLBACK_REASON;
+    super(`Refusing to use ${s.subject} ${file}: ${text} (${reason}).`);
     this.name = 'UnsafePathError';
     this.code = 'EUNSAFEPATH';
     this.kind = 'environment';
-    this.hint = HINTS[reason] || FALLBACK_HINT;
+    this.hint = s.hints[reason] || s.fallbackHint;
     this.path = file;
     this.reason = reason;
+    if (owner) this.owner = { uid: owner.uid, myUid: owner.myUid };
   }
 }
 
@@ -93,16 +138,47 @@ function resolveDeps(deps = {}) {
   };
 }
 
-function checkOwner(p, st, { getuid, env }) {
-  if (env.MAUTO_TRUST_WORKSPACE_OWNER === '1') return;
-  if (st.uid !== getuid()) throw new UnsafePathError(p, 'foreign_owner');
+// The one owner comparison. `strict` ignores MAUTO_TRUST_WORKSPACE_OWNER: the
+// override is for a checkout someone else owns, never for a directory or
+// socket only we should be able to use.
+function checkOwner(p, st, { getuid, env }, { strict = false, scope } = {}) {
+  if (!strict && env.MAUTO_TRUST_WORKSPACE_OWNER === '1') return;
+  const myUid = getuid();
+  if (st.uid !== myUid) throw new UnsafePathError(p, 'foreign_owner', { owner: { uid: st.uid, myUid }, scope });
 }
 
-function checkDirComponent(p, st, d) {
-  if (st.isSymbolicLink()) throw new UnsafePathError(p, 'symlink');
-  if (!st.isDirectory()) throw new UnsafePathError(p, 'not_directory');
-  checkOwner(p, st, d);
-  if (st.mode & 0o002) throw new UnsafePathError(p, 'world_writable');
+// The one directory check. By default a workspace directory may be
+// group-writable but not world-writable. `private` forbids every group and
+// other bit (0700-tight). `strict` is private plus an owner comparison the
+// override cannot skip, for directories outside the workspace. `scope` names
+// the kind of path in a refusal (see SCOPES).
+function checkDirComponent(p, st, d, { strict = false, private: priv = strict, scope } = {}) {
+  if (st.isSymbolicLink()) throw new UnsafePathError(p, 'symlink', { scope });
+  if (!st.isDirectory()) throw new UnsafePathError(p, 'not_directory', { scope });
+  checkOwner(p, st, d, { strict, scope });
+  if (priv) {
+    if (st.mode & 0o077) throw new UnsafePathError(p, 'not_private', { scope });
+  } else if (st.mode & 0o002) {
+    throw new UnsafePathError(p, 'world_writable', { scope });
+  }
+}
+
+// lstat one directory level, making it first when it is missing and `create`
+// is set. Non-recursive on purpose: the caller has already checked the parent,
+// and checks what this returns. A mkdir race (EEXIST) is fine: whatever won it
+// is what gets checked.
+function lstatOrMkdir(fs, p, create, mode) {
+  try {
+    return fs.lstatSync(p);
+  } catch (err) {
+    if (err.code !== 'ENOENT' || !create) throw err;
+  }
+  try {
+    fs.mkdirSync(p, { mode });
+  } catch (mkErr) {
+    if (mkErr.code !== 'EEXIST') throw mkErr;
+  }
+  return fs.lstatSync(p);
 }
 
 function isInside(child, parent) {
@@ -110,8 +186,10 @@ function isInside(child, parent) {
 }
 
 // Walk `.mobile-automator` down to `dir`, one lstat per component, creating the
-// missing ones when asked. Returns the realpath of `dir`.
-function safeDir(projectRoot, dir, { create = false, mode } = {}, deps = {}) {
+// missing ones when asked. Returns the realpath of `dir`. With `private`, `dir`
+// itself must also be 0700-tight; the owner override still applies, because
+// `dir` is inside a workspace someone may have checked out as another uid.
+function safeDir(projectRoot, dir, { create = false, mode, private: priv = false } = {}, deps = {}) {
   const d = resolveDeps(deps);
   const { fs } = d;
   const ws = path.resolve(workspaceDir(projectRoot));
@@ -123,21 +201,7 @@ function safeDir(projectRoot, dir, { create = false, mode } = {}, deps = {}) {
   let p = ws;
   for (let i = 0; i <= parts.length; i++) {
     if (i > 0) p = path.join(p, parts[i - 1]);
-    let st;
-    try {
-      st = fs.lstatSync(p);
-    } catch (err) {
-      if (err.code !== 'ENOENT' || !create) throw err;
-      try {
-        // Non-recursive on purpose: each new level is made under a parent we
-        // just checked, then checked itself below.
-        fs.mkdirSync(p, { mode });
-      } catch (mkErr) {
-        if (mkErr.code !== 'EEXIST') throw mkErr;
-      }
-      st = fs.lstatSync(p);
-    }
-    checkDirComponent(p, st, d);
+    checkDirComponent(p, lstatOrMkdir(fs, p, create, mode), d, { private: priv && i === parts.length });
   }
 
   // The lstat walk already proves there is no link below the root; this
@@ -145,6 +209,23 @@ function safeDir(projectRoot, dir, { create = false, mode } = {}, deps = {}) {
   const real = fs.realpathSync(target);
   if (!isInside(real, fs.realpathSync(ws))) throw new UnsafePathError(target, 'escape');
   return real;
+}
+
+// A directory OUTSIDE the workspace that only we may use: the device session's
+// long-path socket fallback (session-paths.js privateSocketDir). It must be a
+// real directory, owned by us whatever MAUTO_TRUST_WORKSPACE_OWNER says, with
+// no group or other bit. Made 0700 when missing and `create` is set (only
+// this level; its parent, the temp dir or the XDG runtime dir, must exist).
+// Never chmodded: we only ever create it 0700, so a looser mode means someone
+// changed it, and that is refused rather than repaired. A refusal names the
+// session socket directory, with hints for it, never a workspace path.
+// Returns nothing.
+function privateDir(dir, { create = false } = {}, deps = {}) {
+  const d = resolveDeps(deps);
+  checkDirComponent(dir, lstatOrMkdir(d.fs, dir, create, 0o700), d, {
+    strict: true,
+    scope: 'session_socket_dir',
+  });
 }
 
 const OPEN_SYMLINK_CODES = new Set([
@@ -302,9 +383,15 @@ function readWorkspaceJsonOrNull(projectRoot, file, opts = {}, deps = {}) {
 
 module.exports = {
   UnsafePathError,
-  // Exported for the later #345 slices (#346/#347), which walk directories
-  // they then list or create into.
+  // Exported for the later security-hardening gate slices (#346/#347), which
+  // walk directories they then list or create into.
   safeDir,
+  privateDir,
+  // For a check layered on a leaf safe-fs cannot open (a Unix socket, which
+  // open(2) refuses): the same deps defaults and the same owner comparison,
+  // never a second copy (session-dir.js verifySocket).
+  resolveDeps,
+  checkOwner,
   openLeaf,
   openWorkspaceFile,
   createWorkspaceFile,

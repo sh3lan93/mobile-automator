@@ -8,8 +8,10 @@
 // the spawn+handshake tax exactly once.
 //
 // Lifecycle:
+//   - make (or tighten) the 0700 session directories (session-dir.js),
 //   - clean any stale socket/pidfile before binding,
-//   - listen on the socket, write handle + pidfile once listening,
+//   - listen on the socket (0600), write handle + pidfile once listening,
+//     every file through safe-fs, so a planted link is never written through,
 //   - route { type:'call', tool, args } frames to the single `call`,
 //   - reset an idle timer on every request; reap the daemon when it expires,
 //   - shut down cleanly on a { type:'shutdown' } control frame and on
@@ -29,6 +31,9 @@ const { safeObserve: guardObserve } = require('../observe/recorder');
 const { FLUSH_INTERVAL_MS } = require('../observe/flush');
 const { pidIdentity, readPidFile } = require('./process-identity');
 const { DEFAULT_ENGINE } = require('./engine');
+const { ensureSessionDirs } = require('./session-dir');
+const { createWorkspaceFile } = require('../workspace/safe-fs');
+const { atomicWorkspaceWrite } = require('../util/atomic');
 
 const DEFAULT_IDLE_MS = 5 * 60 * 1000;
 
@@ -186,12 +191,12 @@ async function startDaemon({
   // Guarded like the lock failure below, and for the same reason: this is the
   // FIRST filesystem operation the daemon performs, and it fails on exactly the
   // conditions daemon.start_failure exists to report (EACCES, EROFS, ENOSPC on
-  // the workspace). An unguarded throw here is the earliest invisible death
-  // there is — nothing else in the system records it, and the spawning verb
-  // sees only a readiness timeout.
-  const dir = paths.sessionDir(projectRoot);
+  // the workspace, or a refused path: a symlinked or foreign .session/, a
+  // fallback socket directory that is not ours and private). An unguarded
+  // throw here is the earliest invisible death there is — nothing else in the
+  // system records it, and the spawning verb sees only a readiness timeout.
   try {
-    fs.mkdirSync(dir, { recursive: true });
+    ensureSessionDirs(projectRoot);
   } catch (err) {
     safeObserve({
       level: 'error',
@@ -209,11 +214,13 @@ async function startDaemon({
   // `mauto` invocations that both saw isAlive=false would otherwise both spawn a
   // daemon and both call createCall (spawning mobile-mcp + grabbing the device)
   // before the loser hits EADDRINUSE. With the lock the loser fails here and
-  // exits before it ever spawns a child. O_EXCL ('wx') is the atomicity.
+  // exits before it ever spawns a child. O_EXCL is the atomicity; safe-fs's
+  // createWorkspaceFile adds O_NOFOLLOW, so a planted lock link is EEXIST too
+  // and is never created through.
   const lockFile = paths.lockPath(projectRoot);
   let lockFd;
   try {
-    lockFd = fs.openSync(lockFile, 'wx');
+    lockFd = createWorkspaceFile(projectRoot, lockFile, { mode: 0o600 });
     fs.writeSync(lockFd, String(process.pid) + '\n');
   } catch (err) {
     if (err && err.code === 'EEXIST') {
@@ -221,7 +228,12 @@ async function startDaemon({
       // JOB. It is worth seeing (a workspace where it repeats means two agents
       // are fighting over one device) but it is not a malfunction.
       safeObserve({ level: 'warn', event: 'daemon.lock_conflict', error_code: 'ELOCKED' });
-      const e = new Error('device session daemon already starting for this workspace (lock held)');
+      // cleanStale has already reaped a dead holder's lock, so this one names a
+      // live daemon. If no start is in progress, that daemon is stuck, and
+      // `session end` is what stops it.
+      const e = new Error(
+        'device session daemon already starting for this workspace (lock held); if none is starting, run `mauto session end`'
+      );
       e.code = 'ELOCKED';
       throw e;
     }
@@ -698,19 +710,39 @@ async function startDaemon({
     throw err;
   }
 
+  // bind(2) makes the socket file with mode 0777 minus the umask. Its
+  // directory is already private, but the socket does not rely on that alone
+  // (#346): listen() binds synchronously, so a 077 umask set around the call
+  // covers the bind, and the socket is never open to anyone else, even for an
+  // instant. process.umask is process-wide, so it is restored straight after
+  // the call. The chmod once listening pins 0600 whatever the platform made
+  // of the umask; if it fails, the start fails like a listen failure.
+  let listening = false;
   try {
     await new Promise((resolve, reject) => {
       server.once('error', reject);
-      server.listen(socketPath, () => {
-        server.removeListener('error', reject);
-        resolve();
-      });
+      const prevUmask = process.umask(0o077);
+      try {
+        server.listen(socketPath, () => {
+          server.removeListener('error', reject);
+          listening = true;
+          try {
+            fs.chmodSync(socketPath, 0o600);
+          } catch (chmodErr) {
+            reject(chmodErr);
+            return;
+          }
+          resolve();
+        });
+      } finally {
+        process.umask(prevUmask);
+      }
     });
   } catch (err) {
     // listen failed (e.g. EADDRINUSE from a double-spawn that beat us to the
-    // bind, or a recycled-pid wedge). Nothing is listening, so only the engine
-    // and the lock are undone.
-    await abortStart({ event: 'daemon.listen_failure', err, listening: false });
+    // bind, or a recycled-pid wedge): only the engine and the lock are undone.
+    // A failed chmod comes after the bind, so the listening socket goes too.
+    await abortStart({ event: 'daemon.listen_failure', err, listening });
   }
 
   // The engine died between connect and listen. Fail the start exactly like a
@@ -741,8 +773,10 @@ async function startDaemon({
     started_at: new Date().toISOString(),
     idle_ms: idleMs,
   };
-  fs.writeFileSync(paths.handlePath(projectRoot), JSON.stringify(handle, null, 2) + '\n');
-  fs.writeFileSync(paths.pidFilePath(projectRoot), String(process.pid) + '\n');
+  // Atomic and confined: a planted handle or pid link is replaced by the
+  // rename, never written through, and a reader never sees half a handle.
+  atomicWorkspaceWrite(projectRoot, paths.handlePath(projectRoot), JSON.stringify(handle, null, 2) + '\n');
+  atomicWorkspaceWrite(projectRoot, paths.pidFilePath(projectRoot), String(process.pid) + '\n');
 
   process.on('SIGTERM', onSignal);
   process.on('SIGINT', onSignal);
