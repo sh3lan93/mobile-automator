@@ -2,7 +2,7 @@
 
 const nodeFs = require('fs');
 
-const { createWorkspaceFile } = require('../workspace/safe-fs');
+const { createWorkspaceFile, UnsafePathError } = require('../workspace/safe-fs');
 
 // Advisory lock for shared read-modify-write files. The memory files are
 // appended across every run and verb, and the result files are written by
@@ -14,9 +14,14 @@ const { createWorkspaceFile } = require('../workspace/safe-fs');
 //
 // The lock path sits in a checked-in workspace, so whatever is there may have
 // been planted (#345). The entry is inspected with lstat, never stat: a
-// symlink, directory or FIFO at the lock path is not a lock any mauto process
-// made, so it is unlinked (the link itself, never its target) and the acquire
-// retries. O_EXCL never follows a link, and O_NOFOLLOW is added on top. The
+// symlink, FIFO or other non-regular entry at the lock path is not a lock any
+// mauto process made, so it is unlinked (the link itself, never its target)
+// and the acquire retries at once. When that unlink fails (a directory: EPERM
+// on macOS, EISDIR on Linux) the acquire throws UnsafePathError(not_regular)
+// straight away: waiting cannot fix it, and the verb fails environment instead
+// of stalling to the deadline. A regular stale lock whose unlink fails still
+// backs off, as contention or permissions on a real lock can clear. O_EXCL
+// never follows a link, and O_NOFOLLOW is added on top. The
 // project root is required: the lock file is always created by safe-fs's
 // createWorkspaceFile, which walks its directory (symlink-free, owned by us,
 // created when missing) on every attempt, so there is no unconfined path to
@@ -73,6 +78,7 @@ function acquire(projectRoot, lockPath, { now = Date.now, sleep = sleepSync, fs 
         try {
           fs.unlinkSync(lockPath);
         } catch (_unlinkErr) {
+          if (!st.isFile()) throw new UnsafePathError(lockPath, 'not_regular');
           backoffOrThrow();
           continue;
         }

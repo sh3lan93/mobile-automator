@@ -118,6 +118,24 @@ describe('util/lock deadline (#345)', () => {
     expect(clock.sleeps.length).toBeLessThan(MAX_SLEEPS);
   });
 
+  test('a real directory at the lock path is refused at once and left in place', () => {
+    const clock = fakeClock();
+    const { root, lp } = workspaceRoot();
+    fs.mkdirSync(lp);
+
+    let caught;
+    try {
+      acquire(root, lp, clock);
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(UnsafePathError);
+    expect(caught.reason).toBe('not_regular');
+    expect(caught.kind).toBe('environment');
+    expect(clock.sleeps).toEqual([]);
+    expect(fs.lstatSync(lp).isDirectory()).toBe(true);
+  });
+
   test('a real dangling symlink lock inside the workspace is replaced, never followed', () => {
     const root = tmpDir();
     const outside = path.join(root, 'outside');

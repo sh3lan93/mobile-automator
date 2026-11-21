@@ -176,6 +176,25 @@ describe('store verbs refuse a symlinked workspace path (#345)', () => {
   });
 });
 
+// A planted directory at the lock path is not a lock and cannot be unlinked:
+// the verb refuses it as environment at once, rather than stalling to the
+// lock's deadline and reporting internal.
+describe('a directory at the memory lock path', () => {
+  test('memory add fails environment and leaves it in place', async () => {
+    const { root, ws } = fixture((w) => fs.mkdirSync(path.join(w, '.session', 'memory.lock'), { recursive: true }));
+
+    const { calls } = await runIn(root, ['memory', 'add', 'a fact', '--kind', 'preferences']);
+
+    expect(calls).toHaveLength(1);
+    const [r] = calls;
+    expect(r.exitKind).toBe('environment');
+    expect(r.envelope.ok).toBe(false);
+    expect(r.envelope.error.kind).toBe('environment');
+    expect(r.envelope.error.message).toMatch(/not a regular file/);
+    expect(fs.lstatSync(path.join(ws, '.session', 'memory.lock')).isDirectory()).toBe(true);
+  });
+});
+
 // A failure after the factory returned a connection must close it, whatever
 // the error: the refusal above (readSessionId through a symlinked .session/)
 // and an ordinary throw alike. Both run inside the block whose `finally`
