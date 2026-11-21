@@ -74,7 +74,7 @@ function makeFlusher({
       if (fresh) batches.push(fresh);
 
       for (const file of batches) {
-        const payloads = spool.readBatch(file, { fs });
+        const payloads = spool.readBatch(file, { projectRoot, env, fs });
         if (payloads.length === 0) {
           safeUnlink(file, fs);
           continue;

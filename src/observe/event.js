@@ -226,6 +226,25 @@ function telemetryPayload(event = {}) {
   return out;
 }
 
+// telemetryPayload() for a value that did not come straight from makeEvent: a
+// line read back out of the spool, or a payload handed to the transport. Both
+// are untrusted (#348): `.mobile-automator/` is committed to repos, so a spool
+// line may never have been through the writer at all. Returns null when there
+// is nothing that may ship:
+//
+//   - a value that is not a plain object (JSON `null`, an array, a number) is
+//     not an event, and telemetryPayload(null) would throw;
+//   - a payload with no `event` (an unknown name that accepts() dropped) must
+//     not ship as a nameless fragment under an invented name.
+//
+// The spool reader and the transport both call this, so the two re-checks are
+// one rule and cannot drift apart.
+function shippablePayload(value) {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
+  const payload = telemetryPayload(value);
+  return payload.event ? payload : null;
+}
+
 module.exports = {
   EVENT_VERSION,
   LEVELS,
@@ -234,5 +253,6 @@ module.exports = {
   SEND_BASES,
   makeEvent,
   telemetryPayload,
+  shippablePayload,
   findUnenforced,
 };
