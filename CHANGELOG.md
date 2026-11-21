@@ -33,9 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   uid. The symlink and containment checks always apply. It works like git's
   `safe.directory`.
 - **The advisory lock always gives up after 5 s.** A dangling symlink at a
-  lock path made the acquire retry forever. A symlink, directory or FIFO at
-  the lock path is now removed (the link itself, never its target), and every
-  retry path is bounded.
+  lock path made the acquire retry forever. A symlink or FIFO at the lock
+  path is now removed (the link itself, never its target), and every retry
+  path is bounded. An entry that is not a regular file and cannot be
+  removed, such as a directory, is refused at once as `environment`.
 - **`devices clear` no longer deletes through a symlinked `.session/`.**
 - Atomic writes create their temp file with `O_EXCL|O_NOFOLLOW` under a random
   name, so a planted temp path cannot redirect the write. `config set` now
