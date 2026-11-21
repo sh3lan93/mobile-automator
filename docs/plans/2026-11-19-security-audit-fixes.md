@@ -1,6 +1,6 @@
 # Security hardening (gate #343): implementation plan
 
-> **Start here.** This is the single plan for milestone `security-hardening` (gate [#343](https://github.com/sh3lan93/mobile-automator/issues/343), slices #344–#349). Every agent picking up a slice reads the gate issue, then this plan's section for its slice, then the slice issue. Follow the milestone workflow in `CLAUDE.md`.
+> **Start here.** This is the single plan for milestone `security-hardening` (gate [#343](https://github.com/sh3lan93/mobile-automator/issues/343), slices #344–#349 and #353). Every agent picking up a slice reads the gate issue, then this plan's section for its slice, then the slice issue. Follow the milestone workflow in `CLAUDE.md`.
 
 | Slice | Issue | Plan section | Blocked by |
 |---|---|---|---|
@@ -10,6 +10,9 @@
 | S4: confine init, setup, log, screenshot, crash-output and replay writes | #347 | PR 4 / Task 5 | #345 |
 | S5: per-user telemetry consent, egress re-check, untrusted spool | #348 | PR 5 / Task 6 | #345, D1 |
 | S6: neutralise terminal control characters in device text | #349 | PR 6 / Task 7 | — |
+| S7: neutralise control characters in raw output and the diagnose stack trace | #353 | PR 7 / Task 8 | #349 |
+
+> **Status** (which slices have merged) is tracked by the checkboxes on gate #343, not here.
 
 > **Line numbers** are from the audited commit `c296ed8`. Since then, `src/cli.js`, `src/result/store.js`, `src/setup/scaffold.js` and `src/output/envelope.js` have changed, and `src/run/*` was added. Locate code by function name, not line.
 
@@ -286,7 +289,33 @@ Findings: `termesc:src/device/element-model.js:decodeEntities:entity-decode-mint
 
 ---
 
+## PR 7 (#353): Raw output and the diagnose stack trace
+
+Follow-up to PR 6 (#349 / PR #352). It was found in that PR's review, not by the audit. Two output paths that PR 6 did not list still print text without neutralising it.
+
+### Task 8: Route `emitRaw` and `diagnose` through `neutraliseControls`
+
+**Files:**
+- Modify: `src/cli.js`, `emitRaw` in the per-invocation emitters (stdout for `guide`, `schema`, `bootstrap` and `memory show`). Pass `content` through `neutraliseControls(content)` with its default options, which keep `\n` and `\t`. All four reach it through `emitMaybeRaw`. Two of them print workspace-controlled text: `memory show` (the memory markdown) and `guide` (whose placeholders are filled from `config.json`). The shipped guide content and the schema JSON hold no controls, so their output stays byte-identical.
+- Modify: `src/cli.js`, `diagnose(err, exitKind)`. Write `neutraliseControls(err.stack)`. Keep the stack's own line breaks: do **not** set `escapeNewlines`, because an `internal` error message can carry device text.
+- Reuse `src/output/neutralise.js` as is. Do not add a second regex (CLAUDE.md step 8).
+- Test: `tests/unit/cli-envelope-boundary.test.js` (it already exercises `diagnose`) and a `memory show` case. Put the `memory show` case wherever `memory show` is already tested (`grep -rln "memory show" tests/unit`).
+
+- [ ] **Step 1: Write failing tests.**
+  - `memory show` on a fixture whose `run-history.md` contains `\x1b[2J` and `\u009b`: stdout does not match `/[\x00-\x08\x0b-\x1f\x7f-\x9f]/`, and the lines and tabs of the entry are kept.
+  - `guide <topic>` with a `config.json` placeholder value containing `\x1b[2J`: stdout contains no `\x1b`.
+  - `guide <topic>` on a clean config: stdout is byte-identical before and after the change (a regression guard against escaping clean text).
+  - An `internal` error whose message is `'boom\x1b]0;x\x07'`: stderr contains no `\x1b` and no `\x07`, and still has more than one line.
+- [ ] **Step 2: Run** the tests. Expected: FAIL.
+- [ ] **Step 3: Implement** the modifications listed above.
+- [ ] **Step 4: Run** `npm test`, `npm run lint` and `npm run lint:guides`. Expected: PASS.
+- [ ] **Step 5: Commit** and bump the patch version.
+
+---
+
 ## Decisions to confirm before PR 3 and PR 5
+
+> D2 was approved on #343 on 2026-11-19. D1 and D3 are open; their state lives on the gate.
 
 - **D1 (PR 5): telemetry consent moves to a per-user file outside the repo.** Recommended. A committed `telemetry.enabled: true` alone no longer turns telemetry on. Cost: anyone who opted in today stops sending until they run `mauto telemetry enable` again. The alternative is the minimum fix: setup reports the real decision, and egress is rechecked. That keeps the committed opt-in, so the finding stays open.
 - **D2 (PR 2/3): owner-check escape hatch `MAUTO_TRUST_WORKSPACE_OWNER=1`.** Recommended, modelled on git's `safe.directory`. Without it, root-in-container CI over a checkout owned by another uid gets an `environment` failure on every verb.
