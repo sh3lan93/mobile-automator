@@ -15,6 +15,12 @@ const { cleanStale, startDaemon } = require('../../../src/device/session-daemon'
 const { pidIdentity, isZombie, readPidFile } = require('../../../src/device/process-identity');
 const paths = require('../../../src/device/session-paths');
 const { ensureSalt, readSalt } = require('../../../src/device/session-salt');
+const { ensureSessionDirs } = require('../../../src/device/session-dir');
+const { usePrivateRuntimeDir } = require('../../helpers/private-runtime-dir');
+
+// A deep temp root's socket goes to the fallback directory: keep it in a
+// temp dir of this file's, never the real per-user one (#346).
+usePrivateRuntimeDir();
 
 function tmpRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-pid-'));
@@ -144,7 +150,7 @@ describe('pidIdentity bound to a workspace (#156)', () => {
 describe('cleanStale with pid identity (#150)', () => {
   test('a lockfile pointing at a recycled (other) pid is cleaned — wedge cleared', () => {
     const root = tmpRoot();
-    fs.mkdirSync(paths.sessionDir(root), { recursive: true });
+    ensureSessionDirs(root);
     fs.writeFileSync(paths.lockPath(root), String(process.ppid) + '\n');
     fs.writeFileSync(paths.pidFilePath(root), '999999999\n');
     fs.writeFileSync(paths.socketPath(root), 'stale');
@@ -170,7 +176,7 @@ describe('cleanStale with pid identity (#150)', () => {
 
   test('a lockfile pointing at an ours pid is respected', () => {
     const root = tmpRoot();
-    fs.mkdirSync(paths.sessionDir(root), { recursive: true });
+    ensureSessionDirs(root);
     fs.writeFileSync(paths.lockPath(root), String(process.ppid) + '\n');
     fs.writeFileSync(paths.socketPath(root), 'stale');
 
@@ -182,7 +188,7 @@ describe('cleanStale with pid identity (#150)', () => {
 
   test('a lockfile pointing at an unknown pid is respected (never clean when unsure)', () => {
     const root = tmpRoot();
-    fs.mkdirSync(paths.sessionDir(root), { recursive: true });
+    ensureSessionDirs(root);
     fs.writeFileSync(paths.lockPath(root), String(process.ppid) + '\n');
     fs.writeFileSync(paths.socketPath(root), 'stale');
 

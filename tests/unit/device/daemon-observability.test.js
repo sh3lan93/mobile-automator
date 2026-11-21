@@ -18,6 +18,12 @@ const net = require('net');
 const { startDaemon } = require('../../../src/device/session-daemon');
 const sessionClient = require('../../../src/device/session-client');
 const paths = require('../../../src/device/session-paths');
+const { ensureSessionDirs } = require('../../../src/device/session-dir');
+const { usePrivateRuntimeDir } = require('../../helpers/private-runtime-dir');
+
+// A deep temp root's socket goes to the fallback directory: keep it in a
+// temp dir of this file's, never the real per-user one (#346).
+usePrivateRuntimeDir();
 
 function tmpRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-daemon-obs-'));
@@ -232,7 +238,9 @@ describe('daemon failure events', () => {
     const observe = collector();
     // A DIRECTORY at the socket path survives cleanStale's safeUnlink, so
     // listen() fails deterministically without needing a real port race.
-    fs.mkdirSync(paths.socketPath(root), { recursive: true });
+    // The socket's directory is made private first, as the daemon would.
+    ensureSessionDirs(root);
+    fs.mkdirSync(paths.socketPath(root));
 
     await expect(
       startDaemon({ projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall(), recorderFor: always(observe) })
@@ -246,7 +254,7 @@ describe('daemon failure events', () => {
   test('records daemon.start_failure at error when the session directory cannot be created', async () => {
     const root = tmpRoot();
     const observe = collector();
-    // mkdirSync of .session/ is the FIRST filesystem operation startDaemon
+    // Making .session/ is the FIRST filesystem operation startDaemon
     // performs, and it fails on the same EACCES/EROFS/ENOSPC class as the lock.
     // A regular FILE where the directory belongs reproduces that deterministically
     // — the same trick the listen_failure test above uses, and unlike a chmod it

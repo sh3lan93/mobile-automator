@@ -8,7 +8,13 @@ const path = require('path');
 const { startDaemon } = require('../../../src/device/session-daemon');
 const { tryConnect, isAlive, requestShutdown, getSessionStatus } = require('../../../src/device/session-client');
 const paths = require('../../../src/device/session-paths');
+const { ensureSessionDirs } = require('../../../src/device/session-dir');
 const { FrameParser } = require('../../../src/device/session-protocol');
+const { usePrivateRuntimeDir } = require('../../helpers/private-runtime-dir');
+
+// A deep temp root's socket goes to the fallback directory: keep it in a
+// temp dir of this file's, never the real per-user one (#346).
+usePrivateRuntimeDir();
 
 function tmpRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-client-'));
@@ -78,7 +84,7 @@ describe('session-client', () => {
   // A server speaking the daemon protocol with a chosen ping result.
   function fakeDaemon(root, result) {
     const sock = paths.socketPath(root);
-    fs.mkdirSync(path.dirname(sock), { recursive: true });
+    ensureSessionDirs(root);
     const server = net.createServer((s) => {
       const parser = new FrameParser();
       s.setEncoding('utf8');
@@ -114,7 +120,7 @@ describe('session-client', () => {
 
   test('call propagates kind + hint from an ok:false reply', async () => {
     const root = tmpRoot();
-    fs.mkdirSync(paths.sessionDir(root), { recursive: true });
+    ensureSessionDirs(root);
     // A fake daemon that answers every call frame with a typed error reply.
     const server = net.createServer((socket) => {
       const parser = new FrameParser();
@@ -149,5 +155,140 @@ describe('session-client', () => {
 
     await conn.close();
     await new Promise((resolve) => server.close(resolve));
+  });
+});
+
+// The client connects only to a socket it can vouch for (#346): its directory
+// is private and the socket itself is a real socket of ours.
+const isRoot = typeof process.getuid === 'function' && process.getuid() === 0;
+const maybe = isRoot ? test.skip : test;
+
+// A listener that answers ping/shutdown and counts every connection made to it.
+function countingServer() {
+  const state = { connections: 0 };
+  state.server = net.createServer((socket) => {
+    state.connections += 1;
+    const parser = new FrameParser();
+    socket.setEncoding('utf8');
+    socket.on('error', () => {});
+    socket.on('data', (chunk) => {
+      for (const f of parser.push(chunk)) {
+        if (!f.value) continue;
+        socket.write(FrameParser.encode({ id: f.value.id, ok: true, result: {} }));
+      }
+    });
+  });
+  state.listen = (p) => new Promise((resolve) => state.server.listen(p, resolve));
+  state.close = () => new Promise((resolve) => state.server.close(resolve));
+  return state;
+}
+
+// A root whose in-workspace socket fits the sockaddr limit, or one too deep
+// for it (fallback location). The short base is a hard-coded /tmp, not
+// os.tmpdir(): macOS's long tmpdir pushes the in-workspace socket past the limit.
+function shortRoot() {
+  const root = fs.mkdtempSync(path.join('/tmp', 'mc-'));
+  expect(paths.socketPath(root)).toBe(paths.workspaceSocketPath(root));
+  return root;
+}
+function deepRoot() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-client-deep-'.padEnd(60, 'x')));
+  expect(paths.socketPath(root)).not.toBe(paths.workspaceSocketPath(root));
+  return root;
+}
+
+const DOWN = { running: false, reason: null, in_flight: null, device: null };
+
+describe('session-client socket verification', () => {
+  async function drive(root) {
+    const conn = await tryConnect(root);
+    if (conn) await conn.close();
+    return {
+      conn,
+      alive: await isAlive(root),
+      shutdown: await requestShutdown(root),
+      status: await getSessionStatus(root),
+    };
+  }
+
+  function expectRefused(r) {
+    expect(r.conn).toBeNull();
+    expect(r.alive).toBe(false);
+    expect(r.shutdown).toBe(false);
+    expect(r.status).toEqual(DOWN);
+  }
+
+  describe.each([
+    ['in-workspace', shortRoot],
+    ['fallback', deepRoot],
+  ])('symlinked socket (%s)', (_name, makeRoot) => {
+    maybe('is never connected to', async () => {
+      const root = makeRoot();
+      const outside = fs.mkdtempSync(path.join('/tmp', 'mo-'));
+      const srv = countingServer();
+      try {
+        ensureSessionDirs(root);
+        const real = path.join(outside, 'real.sock');
+        await srv.listen(real);
+        fs.symlinkSync(real, paths.socketPath(root));
+
+        expectRefused(await drive(root));
+        expect(srv.connections).toBe(0);
+      } finally {
+        await srv.close();
+        fs.rmSync(outside, { recursive: true, force: true });
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    });
+  });
+
+  maybe('in-workspace: a 0755 .session/ is refused, then ensureSessionDirs tightens it and the daemon is reachable', async () => {
+    const root = shortRoot();
+    const srv = countingServer();
+    try {
+      ensureSessionDirs(root);
+      const dir = paths.sessionDir(root);
+      await srv.listen(paths.socketPath(root));
+      fs.chmodSync(dir, 0o755);
+
+      expectRefused(await drive(root));
+      expect(srv.connections).toBe(0);
+
+      ensureSessionDirs(root);
+      expect(fs.statSync(dir).mode & 0o777).toBe(0o700);
+      expect(await isAlive(root)).toBe(true);
+      expect(srv.connections).toBe(1);
+    } finally {
+      await srv.close();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  maybe('fallback: a 0755 socket directory is refused and never chmodded (D-b)', async () => {
+    const root = deepRoot();
+    const srv = countingServer();
+    try {
+      ensureSessionDirs(root);
+      const dir = path.dirname(paths.socketPath(root));
+      await srv.listen(paths.socketPath(root));
+      fs.chmodSync(dir, 0o755);
+
+      expectRefused(await drive(root));
+      expect(srv.connections).toBe(0);
+
+      let err = null;
+      try {
+        ensureSessionDirs(root);
+      } catch (e) {
+        err = e;
+      }
+      expect(err).not.toBeNull();
+      expect(err.name).toBe('UnsafePathError');
+      expect(err.reason).toBe('not_private');
+      expect(fs.statSync(dir).mode & 0o777).toBe(0o755);
+    } finally {
+      await srv.close();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 });

@@ -118,6 +118,29 @@ describe('util/lock deadline (#345)', () => {
     expect(clock.sleeps.length).toBeLessThan(MAX_SLEEPS);
   });
 
+  test('a non-regular entry another process already removed (unlink ENOENT) is retried, not refused', () => {
+    const clock = fakeClock();
+    const { root, lp } = workspaceRoot();
+    let opens = 0;
+    let unlinks = 0;
+    const lockFs = {
+      ...fakeFs(lp, {
+        lstatSync: () => ({ isFile: () => false, isSymbolicLink: () => true, mtimeMs: clock.now() }),
+        unlinkSync: () => {
+          unlinks += 1;
+          throw errno('ENOENT');
+        },
+      }),
+      openSync: (p, ...rest) => {
+        if (p === lp && opens++ === 0) throw errno('EEXIST');
+        return fs.openSync(p, ...rest);
+      },
+    };
+    expect(() => acquire(root, lp, { ...clock, fs: lockFs })).not.toThrow();
+    expect(unlinks).toBe(1);
+    expect(fs.lstatSync(lp).isFile()).toBe(true);
+  });
+
   test('a real directory at the lock path is refused at once and left in place', () => {
     const clock = fakeClock();
     const { root, lp } = workspaceRoot();

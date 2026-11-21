@@ -2,8 +2,10 @@
 
 // Pure path helpers for the per-workspace device session daemon.
 //
-// Everything lives under <projectRoot>/.mobile-automator/.session/:
-//   mauto.sock    — Unix domain socket the daemon listens on
+// Everything lives under <projectRoot>/.mobile-automator/.session/ (a 0700
+// directory, created and checked by session-dir.js):
+//   mauto.sock    — Unix domain socket the daemon listens on, unless the root
+//                   is too deep for a socket path (see SOCKET_PATH_LIMIT)
 //   daemon.pid    — pidfile written once the daemon is listening
 //   session.json  — handle describing the live session (device pin, socket, pid)
 //   daemon.log    — bounded stdout/stderr capture from the detached daemon
@@ -31,10 +33,13 @@ const SALT_NAME = 'marker.salt';
 
 // Unix domain socket paths have a hard length limit (~104 bytes on macOS,
 // ~108 on Linux). Deep project roots blow past it, so when the in-workspace
-// path would be too long we fall back to a short, deterministic socket path in
-// the OS temp dir keyed by a hash of the project root. pidfile + handle always
-// stay in the workspace (per-workspace ownership), and the handle records the
-// actual socket path it bound.
+// path would be too long we fall back to a short, deterministic socket path
+// keyed by a hash of the project root, inside a per-user directory that only
+// we may use (privateSocketDir below, 0700). Never directly in the OS temp dir:
+// anyone can create entries there, so another user could plant or swap the
+// socket before the daemon binds it (#346). pidfile + handle always stay in
+// the workspace (per-workspace ownership), and the handle records the actual
+// socket path it bound.
 const SOCKET_PATH_LIMIT = 100;
 
 function sessionDir(projectRoot) {
@@ -46,16 +51,30 @@ function workspaceSocketPath(projectRoot) {
   return path.join(sessionDir(projectRoot), SOCKET_NAME);
 }
 
+// The per-user directory holding the long-path socket fallback (#346). The
+// XDG runtime dir is per-user and 0700 by spec, so it is preferred when the
+// session has one; a relative value is ignored, as the spec says it must be.
+// Otherwise a directory of our own in the OS temp dir, named by uid so two
+// users on one host never share it. Only the name is built here: session-dir.js
+// creates it 0700 and refuses it unless it is a real directory, ours, and
+// private.
+function privateSocketDir({ env = process.env, getuid = process.getuid } = {}) {
+  const xdg = env.XDG_RUNTIME_DIR;
+  if (xdg && path.isAbsolute(xdg)) return path.join(xdg, 'mauto');
+  return path.join(os.tmpdir(), `mauto-${getuid()}`);
+}
+
 // The path the daemon binds and the client connects to. Deterministic from the
-// project root so both sides agree without reading the handle.
-function socketPath(projectRoot) {
+// project root (and, for the fallback, the user's env and uid) so both sides
+// agree without reading the handle. `deps` ({ env, getuid }) is for tests.
+function socketPath(projectRoot, deps = {}) {
   const inWorkspace = workspaceSocketPath(projectRoot);
   if (Buffer.byteLength(inWorkspace) <= SOCKET_PATH_LIMIT) return inWorkspace;
-  return path.join(os.tmpdir(), `mauto-${workspaceKey(projectRoot)}.sock`);
+  return path.join(privateSocketDir(deps), `${workspaceKey(projectRoot)}.sock`);
 }
 
 // A short, deterministic name for a workspace: the first 16 hex chars of
-// sha1(resolved project root). It names ONLY the tmpdir socket fallback above.
+// sha1(resolved project root). It names ONLY the socket fallback above.
 // It is unsalted, so anyone who guesses the root can compute it; the daemon's
 // argv marker uses daemonMarkerKey below instead (#236). Changing it moves the
 // socket a running daemon is bound to, so its output is pinned by tests.
@@ -63,10 +82,11 @@ function workspaceKey(projectRoot) {
   return crypto.createHash('sha1').update(path.resolve(projectRoot)).digest('hex').slice(0, 16);
 }
 
-// Deliberately has no os.tmpdir() fallback, unlike socketPath(). That fallback
-// exists solely because Unix domain socket paths hit a ~104-byte sockaddr
-// limit; a regular file has no such limit, so the log stays in the workspace
-// unconditionally and is always findable next to the session it describes.
+// Deliberately has no fallback outside the workspace, unlike socketPath().
+// That fallback exists solely because Unix domain socket paths hit a ~104-byte
+// sockaddr limit; a regular file has no such limit, so the log stays in the
+// workspace unconditionally and is always findable next to the session it
+// describes.
 function logFilePath(projectRoot) {
   return path.join(sessionDir(projectRoot), LOG_NAME);
 }
@@ -193,6 +213,7 @@ module.exports = {
   SOCKET_PATH_LIMIT,
   sessionDir,
   workspaceSocketPath,
+  privateSocketDir,
   socketPath,
   logFilePath,
   pidFilePath,

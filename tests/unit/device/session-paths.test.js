@@ -42,12 +42,66 @@ describe('session-paths', () => {
     // sockaddr length limit. That limit is a socket-only constraint, so the
     // log file must NOT follow the socket out to os.tmpdir().
     const deepRoot = '/' + 'deeply-nested-project-dir/'.repeat(6) + 'app';
-    expect(paths.socketPath(deepRoot)).not.toBe(paths.workspaceSocketPath(deepRoot));
-    expect(paths.socketPath(deepRoot).startsWith(os.tmpdir())).toBe(true);
+    const deps = { env: {} };
+    expect(paths.socketPath(deepRoot, deps)).not.toBe(paths.workspaceSocketPath(deepRoot));
+    expect(paths.socketPath(deepRoot, deps).startsWith(os.tmpdir())).toBe(true);
 
     expect(paths.logFilePath(deepRoot)).toBe(
       path.join(paths.sessionDir(deepRoot), 'daemon.log')
     );
+  });
+});
+
+// #346: a socket in a shared directory can be planted or swapped by another
+// user before the daemon binds it. The long-path fallback therefore lives in a
+// per-user directory (0700, checked by session-dir.js), never directly in the
+// world-writable tmpdir.
+describe('socketPath fallback in a per-user directory (#346)', () => {
+  const deepRoot = '/' + 'deeply-nested-project-dir/'.repeat(6) + 'app';
+  const key = () => paths.workspaceKey(deepRoot);
+
+  test('the deep root really is past the sockaddr limit, the short one is not', () => {
+    expect(Buffer.byteLength(paths.workspaceSocketPath(deepRoot))).toBeGreaterThan(paths.SOCKET_PATH_LIMIT);
+    expect(Buffer.byteLength(paths.workspaceSocketPath('/tmp/proj'))).toBeLessThanOrEqual(paths.SOCKET_PATH_LIMIT);
+  });
+
+  test('without XDG_RUNTIME_DIR the fallback is <tmpdir>/mauto-<uid>/<key>.sock', () => {
+    const deps = { env: {}, getuid: () => 1234 };
+    expect(paths.privateSocketDir(deps)).toBe(path.join(os.tmpdir(), 'mauto-1234'));
+    expect(paths.socketPath(deepRoot, deps)).toBe(path.join(os.tmpdir(), 'mauto-1234', `${key()}.sock`));
+    expect(path.basename(paths.socketPath(deepRoot, deps))).toMatch(/^[0-9a-f]{16}\.sock$/);
+  });
+
+  test('an absolute XDG_RUNTIME_DIR puts the fallback in <XDG_RUNTIME_DIR>/mauto/<key>.sock', () => {
+    const deps = { env: { XDG_RUNTIME_DIR: '/run/user/1234' }, getuid: () => 1234 };
+    expect(paths.privateSocketDir(deps)).toBe(path.join('/run/user/1234', 'mauto'));
+    expect(paths.socketPath(deepRoot, deps)).toBe(path.join('/run/user/1234', 'mauto', `${key()}.sock`));
+  });
+
+  test('a relative XDG_RUNTIME_DIR is ignored: the tmpdir form is used', () => {
+    const deps = { env: { XDG_RUNTIME_DIR: 'run/user/1234' }, getuid: () => 1234 };
+    expect(paths.privateSocketDir(deps)).toBe(path.join(os.tmpdir(), 'mauto-1234'));
+    expect(paths.socketPath(deepRoot, deps)).toBe(path.join(os.tmpdir(), 'mauto-1234', `${key()}.sock`));
+  });
+
+  test('an empty XDG_RUNTIME_DIR is ignored too', () => {
+    const deps = { env: { XDG_RUNTIME_DIR: '' }, getuid: () => 1234 };
+    expect(paths.privateSocketDir(deps)).toBe(path.join(os.tmpdir(), 'mauto-1234'));
+  });
+
+  test('a short root ignores both and stays in the workspace', () => {
+    for (const env of [{}, { XDG_RUNTIME_DIR: '/run/user/1234' }]) {
+      const deps = { env, getuid: () => 1234 };
+      expect(paths.socketPath('/tmp/proj', deps)).toBe(paths.workspaceSocketPath('/tmp/proj'));
+    }
+  });
+
+  test('defaults come from the real process (env and uid)', () => {
+    const xdg = process.env.XDG_RUNTIME_DIR;
+    const expected =
+      xdg && path.isAbsolute(xdg) ? path.join(xdg, 'mauto') : path.join(os.tmpdir(), `mauto-${process.getuid()}`);
+    expect(paths.privateSocketDir()).toBe(expected);
+    expect(paths.socketPath(deepRoot)).toBe(path.join(expected, `${key()}.sock`));
   });
 });
 
@@ -92,12 +146,13 @@ describe('daemon workspace marker (#156, #236)', () => {
     expect(paths.saltPath('/a/proj')).toBe(path.join(paths.sessionDir('/a/proj'), 'marker.salt'));
   });
 
-  test('the tmpdir socket fallback is still named by the same, unchanged digest', () => {
-    // A running daemon is bound to this path; salting the marker must not move it.
+  test('the fallback socket is still named by the same, unchanged, unsalted digest', () => {
+    // Salting the marker must not rename the socket: the client and the daemon
+    // both derive it from the root alone, without reading the salt.
     const deepRoot = '/' + 'deeply-nested-project-dir/'.repeat(6) + 'app';
-    const base = path.basename(paths.socketPath(deepRoot));
-    expect(base).toBe(`mauto-${paths.workspaceKey(deepRoot)}.sock`);
-    expect(base).toBe(`mauto-${sha16(deepRoot)}.sock`);
+    const base = path.basename(paths.socketPath(deepRoot, { env: {}, getuid: () => 1234 }));
+    expect(base).toBe(`${paths.workspaceKey(deepRoot)}.sock`);
+    expect(base).toBe(`${sha16(deepRoot)}.sock`);
   });
 
   test("commandNamesWorkspace matches this workspace's salted key at the end of the line", () => {

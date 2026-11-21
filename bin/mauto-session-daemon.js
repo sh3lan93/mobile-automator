@@ -12,6 +12,7 @@ const fs = require('fs');
 
 const { startDaemon } = require('../src/device/session-daemon');
 const paths = require('../src/device/session-paths');
+const { readPidFile } = require('../src/device/process-identity');
 const { sessionEngineFromEnv } = require('../src/device/engine');
 const { boundRecorder } = require('../src/observe/recorder');
 const { daemonEventLogPath } = require('../src/observe/paths');
@@ -35,14 +36,14 @@ function safeUnlinkSync(p) {
 // second mobile-mcp child starts — the exact C2/B2 orphan the lock prevents.
 // Gating on the lock's pid also stops a departing owner from nuking a successor
 // that has already taken over the workspace.
+//
+// The lock is read by readPidFile, the one pid reader, which never follows a
+// link (#346): a planted lock linking to a file that holds our pid must not
+// pass for ours, or this teardown would delete a live session's files.
 function cleanupWorkspaceIfOwned(projectRoot) {
-  let owner;
-  try {
-    owner = fs.readFileSync(paths.lockPath(projectRoot), 'utf8').trim();
-  } catch (_) {
-    return; // no lock present — nothing of ours to clean
-  }
-  if (owner !== String(process.pid)) return; // not our lock — leave the owner's files
+  // null when there is no lock, it is unreadable, a link, or not a pid.
+  const owner = readPidFile(paths.lockPath(projectRoot));
+  if (owner !== process.pid) return; // not our lock — leave the owner's files
   safeUnlinkSync(paths.lockPath(projectRoot));
   safeUnlinkSync(paths.socketPath(projectRoot));
   safeUnlinkSync(paths.pidFilePath(projectRoot));

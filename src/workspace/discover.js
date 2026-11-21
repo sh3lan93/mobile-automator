@@ -9,14 +9,18 @@
 // empty memory store). This module is the walk; src/cli.js decides what each
 // verb does with its answer.
 //
-// Pure apart from `fs.existsSync`, which is injectable so the walk's
-// termination can be tested without a real filesystem root.
+// The walk only reads: `fs.existsSync` for the markers, then (#346) lstat/fstat
+// through safe-fs on the workspace it is about to adopt. `{ fs, getuid, env }`
+// are injectable so the walk's termination and the owner check can be tested
+// without a real filesystem root or a second uid.
 
+const fsConstants = require('fs').constants;
 const path = require('path');
 
 const { fail } = require('../output/envelope');
 
-const { WORKSPACE_DIRNAME, LEGACY_WORKSPACE_DIRNAME } = require('./layout');
+const { WORKSPACE_DIRNAME, LEGACY_WORKSPACE_DIRNAME, workspaceDir } = require('./layout');
+const { UnsafePathError, safeDir, openWorkspaceFile } = require('./safe-fs');
 
 // The MARKER is `.mobile-automator/config.json`, not a bare `.mobile-automator/`
 // directory: `mauto setup` always writes config.json, so a real workspace
@@ -33,6 +37,19 @@ function markerPath(dir) {
 // where it is so they can `mv` it themselves.
 function legacyMarkerPath(dir) {
   return path.join(dir, LEGACY_WORKSPACE_DIRNAME, 'config.json');
+}
+
+// The refusal for a workspace at `dir`, or null when it is safe (or the
+// vetting failed some other way: see findWorkspaceRoot).
+function vetWorkspace(dir, deps) {
+  try {
+    safeDir(dir, workspaceDir(dir), {}, deps);
+    const fd = openWorkspaceFile(dir, markerPath(dir), fsConstants.O_RDONLY, 0o666, deps);
+    deps.fs.closeSync(fd);
+  } catch (err) {
+    if (err instanceof UnsafePathError) return err;
+  }
+  return null;
 }
 
 // Walk up from `startDir` and return the NEAREST directory holding a workspace.
@@ -52,12 +69,27 @@ function legacyMarkerPath(dir) {
 // mid-recovery). A legacy-only directory ends the walk with `legacy` set and no
 // root: carrying on to a new workspace further up would silently run every verb
 // against the ancestor's state while the project's own is left behind.
-function findWorkspaceRoot(startDir, { fs = require('fs') } = {}) {
+//
+// A directory that HAS the marker is vetted before it is adopted (#346): a
+// checked-in `.mobile-automator/` can be a symlink, owned by someone else or
+// world-writable, and adopting it would hand every verb (and the session
+// socket under it) to whoever planted it. The vetting is safe-fs's, not a copy:
+// the directory walk, then a read-only open of config.json. An unsafe
+// workspace STOPS the walk with `unsafe` set (the refusal itself) and no root;
+// continuing to a safe ancestor would silently run against the wrong project.
+// Any other vetting error (a race, EACCES) adopts it as before: the verb's own
+// read will report the real problem.
+function findWorkspaceRoot(startDir, { fs = require('fs'), getuid, env } = {}) {
+  const deps = { fs, getuid, env };
   const searched = [];
   let dir = path.resolve(startDir);
   for (;;) {
     searched.push(dir);
-    if (fs.existsSync(markerPath(dir))) return { root: dir, searched, legacy: null };
+    if (fs.existsSync(markerPath(dir))) {
+      const unsafe = vetWorkspace(dir, deps);
+      if (unsafe) return { root: null, searched, legacy: null, unsafe };
+      return { root: dir, searched, legacy: null };
+    }
     if (fs.existsSync(legacyMarkerPath(dir))) return { root: null, searched, legacy: dir };
     if (fs.existsSync(path.join(dir, '.git'))) break;
     const parent = path.dirname(dir);
@@ -101,6 +133,12 @@ function legacyWorkspaceFailure(dir) {
 // pre-rename folder was passed on the walk is policy owned here, so callers
 // hand over the whole result instead of choosing between the two failures.
 function workspaceFailure(workspace) {
+  if (workspace.unsafe) {
+    return {
+      envelope: fail('environment', workspace.unsafe.message, workspace.unsafe.hint),
+      exitKind: 'environment',
+    };
+  }
   return workspace.legacy
     ? legacyWorkspaceFailure(workspace.legacy)
     : noWorkspaceFailure(workspace.searched);

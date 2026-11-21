@@ -16,10 +16,28 @@ const path = require('path');
 const { cleanupWorkspaceIfOwned } = require('../../../bin/mauto-session-daemon');
 const paths = require('../../../src/device/session-paths');
 const { ensureSalt, readSalt } = require('../../../src/device/session-salt');
+const { ensureSessionDirs } = require('../../../src/device/session-dir');
+const { usePrivateRuntimeDir } = require('../../helpers/private-runtime-dir');
 
+// A deep temp root's socket goes to the fallback directory: keep it in a
+// temp dir of this file's, never the real per-user one (#346).
+usePrivateRuntimeDir();
+
+const roots = [];
 function tmpRoot() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-daemon-cleanup-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-daemon-cleanup-'));
+  roots.push(root);
+  return root;
 }
+
+// A deep tmpdir (macOS) puts the socket in the per-user fallback directory,
+// outside the root: remove it too, so seeded files do not pile up there.
+afterEach(() => {
+  for (const root of roots.splice(0)) {
+    fs.rmSync(paths.socketPath(root), { force: true });
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 const workspaceFiles = (root) => [
   paths.lockPath(root),
@@ -28,10 +46,12 @@ const workspaceFiles = (root) => [
   paths.handlePath(root),
 ];
 
-// Seed a workspace whose LOCK file names `lockPid` as the owner.
+// Seed a workspace whose LOCK file names `lockPid` as the owner. The
+// directories are made as the daemon makes them: the socket's may be the
+// per-user fallback, which must stay 0700.
 function seedWorkspace(root, lockPid) {
+  ensureSessionDirs(root);
   for (const f of workspaceFiles(root)) {
-    fs.mkdirSync(path.dirname(f), { recursive: true });
     fs.writeFileSync(f, `${lockPid}\n`);
   }
 }
@@ -66,5 +86,24 @@ describe('daemon bin: ownership-gated workspace cleanup', () => {
   test('no lock present -> a no-op that never throws', () => {
     const root = tmpRoot();
     expect(() => cleanupWorkspaceIfOwned(root)).not.toThrow();
+  });
+
+  // #346: the lock is read without following links. A planted link to a file
+  // holding our pid would otherwise pass for our own lock, and the exit
+  // teardown would delete the live session's files.
+  test('a lock that is a symlink to a file holding our pid is not ours', () => {
+    const root = tmpRoot();
+    seedWorkspace(root, process.pid + 1);
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-daemon-cleanup-out-'));
+    const target = path.join(outside, 'lock-target');
+    fs.writeFileSync(target, `${process.pid}\n`);
+    fs.unlinkSync(paths.lockPath(root));
+    fs.symlinkSync(target, paths.lockPath(root));
+
+    cleanupWorkspaceIfOwned(root);
+
+    expect(allExist(root)).toBe(true);
+    expect(fs.lstatSync(paths.lockPath(root)).isSymbolicLink()).toBe(true);
+    expect(fs.readFileSync(target, 'utf8')).toBe(`${process.pid}\n`);
   });
 });
