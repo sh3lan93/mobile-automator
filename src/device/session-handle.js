@@ -15,25 +15,19 @@
 //
 // An absent, unreadable or malformed handle means "no session", which is a
 // normal state, not an error. The one exception is a path safe-fs refuses
-// (#345): a symlinked .session/ or session.json throws UnsafePathError, so the
-// verb fails environment instead of trusting a planted handle.
+// (#345): readWorkspaceJsonOrNull lets that refusal through, so a symlinked
+// .session/ or session.json fails the verb environment instead of being
+// trusted as a planted handle.
 
 const realFs = require('fs');
 
 const { handlePath } = require('./session-paths');
 const { SESSION_ID_PATTERN } = require('./session-id');
-const { UnsafePathError, readWorkspaceFile } = require('../workspace/safe-fs');
+const { readWorkspaceJsonOrNull } = require('../workspace/safe-fs');
 
 function readHandle(projectRoot, { fs = realFs } = {}) {
-  try {
-    const raw = readWorkspaceFile(projectRoot, handlePath(projectRoot), {}, { fs });
-    if (raw == null) return null;
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' ? parsed : null;
-  } catch (err) {
-    if (err instanceof UnsafePathError) throw err;
-    return null;
-  }
+  const parsed = readWorkspaceJsonOrNull(projectRoot, handlePath(projectRoot), {}, { fs });
+  return parsed && typeof parsed === 'object' ? parsed : null;
 }
 
 function readSessionId(projectRoot, { fs = realFs } = {}) {

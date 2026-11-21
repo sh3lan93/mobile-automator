@@ -19,6 +19,8 @@ const {
   UnsafePathError,
   safeDir,
   readWorkspaceFile,
+  readWorkspaceFileOrNull,
+  readWorkspaceJsonOrNull,
   openWorkspaceFile,
   openLeaf,
   unsafePathFailure,
@@ -489,6 +491,64 @@ describe('openLeaf', () => {
     const wrapped = { ...fs, closeSync: (fd) => (closed.push(fd), fs.closeSync(fd)) };
     expectUnsafe(() => openLeaf(ws, O_RDONLY, 0o666, { fs: wrapped }), 'not_regular');
     expect(closed).toHaveLength(1);
+  });
+});
+
+// Absent or garbled is a normal state; a refused path never is.
+describe.each([
+  ['readWorkspaceFileOrNull', readWorkspaceFileOrNull],
+  ['readWorkspaceJsonOrNull', readWorkspaceJsonOrNull],
+])('%s', (_name, read) => {
+  // A read error other than a refusal: the leaf open fails EIO.
+  function eioFs(file) {
+    return {
+      ...fs,
+      openSync: (p, ...rest) => {
+        if (p !== file) return fs.openSync(p, ...rest);
+        const e = new Error('EIO: i/o error');
+        e.code = 'EIO';
+        throw e;
+      },
+    };
+  }
+
+  it('is null for an absent file and an absent parent dir', () => {
+    expect(read(root, path.join(ws, 'selection.json'))).toBeNull();
+    expect(read(root, path.join(ws, '.session', 'selection.json'))).toBeNull();
+  });
+
+  it('is null on a read error that is not a refusal', () => {
+    const file = path.join(ws, 'selection.json');
+    fs.writeFileSync(file, '{"device":"emulator-5554"}');
+    expect(read(root, file, {}, { fs: eioFs(file) })).toBeNull();
+  });
+
+  it('throws UnsafePathError on a symlinked leaf, never reading its target', () => {
+    const file = path.join(ws, 'selection.json');
+    fs.symlinkSync(canaryFile, file);
+    expectUnsafe(() => read(root, file), 'symlink');
+  });
+
+  it('throws UnsafePathError under a symlinked dir', () => {
+    fs.symlinkSync(outside, path.join(ws, '.session'));
+    expectUnsafe(() => read(root, path.join(ws, '.session', 'secret.txt')), 'symlink');
+  });
+});
+
+describe('the lenient readers on content', () => {
+  it('readWorkspaceFileOrNull returns the text as is', () => {
+    fs.writeFileSync(path.join(ws, 'salt'), 'abc\n');
+    expect(readWorkspaceFileOrNull(root, path.join(ws, 'salt'))).toBe('abc\n');
+  });
+
+  it('readWorkspaceJsonOrNull parses valid JSON', () => {
+    fs.writeFileSync(path.join(ws, 'selection.json'), '{"device":"emulator-5554"}');
+    expect(readWorkspaceJsonOrNull(root, path.join(ws, 'selection.json'))).toEqual({ device: 'emulator-5554' });
+  });
+
+  it('readWorkspaceJsonOrNull is null for garbled JSON', () => {
+    fs.writeFileSync(path.join(ws, 'selection.json'), '{"device":');
+    expect(readWorkspaceJsonOrNull(root, path.join(ws, 'selection.json'))).toBeNull();
   });
 });
 

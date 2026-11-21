@@ -245,6 +245,30 @@ function readWorkspaceFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES } =
   }
 }
 
+// The lenient readers, for state files where absent or garbled is a normal
+// state and a refused path never is. Absent, unreadable (EIO, EACCES, ...) or,
+// for the JSON reader, unparseable all read as null, so a verb treats it as "no
+// selection / no session". An UnsafePathError always propagates: a planted
+// link is never quietly read as "nothing there", it fails the verb environment.
+function readWorkspaceFileOrNull(projectRoot, file, opts = {}, deps = {}) {
+  try {
+    return readWorkspaceFile(projectRoot, file, opts, deps);
+  } catch (err) {
+    if (err instanceof UnsafePathError) throw err;
+    return null;
+  }
+}
+
+function readWorkspaceJsonOrNull(projectRoot, file, opts = {}, deps = {}) {
+  const raw = readWorkspaceFileOrNull(projectRoot, file, opts, deps);
+  if (raw == null) return null;
+  try {
+    return JSON.parse(raw);
+  } catch (_) {
+    return null;
+  }
+}
+
 // The envelope for a refusal: names the path and the reason, never the content
 // or a link target (UnsafePathError carries neither).
 function unsafePathFailure(err) {
@@ -257,5 +281,7 @@ module.exports = {
   openLeaf,
   openWorkspaceFile,
   readWorkspaceFile,
+  readWorkspaceFileOrNull,
+  readWorkspaceJsonOrNull,
   unsafePathFailure,
 };

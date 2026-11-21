@@ -8,7 +8,7 @@ const { withLock } = require('../util/lock');
 const { parseRunHistory, renderRunHistory, recordInModel, countEntries } = require('./history');
 const { atomicWorkspaceWrite } = require('../util/atomic');
 const { parseEntries, renderEntries, hasText } = require('./entries');
-const { UnsafePathError, readWorkspaceFile } = require('../workspace/safe-fs');
+const { UnsafePathError, readWorkspaceFile, readWorkspaceFileOrNull } = require('../workspace/safe-fs');
 
 // Cross-session memory store. Mirrors ResultStore's one-shot-process,
 // load-mutate-atomic-write shape, but the memory files are SHARED across runs
@@ -99,6 +99,8 @@ class MemoryStore {
   // ResultStore) and treated as empty so a write never clobbers unread bytes.
   // A path safe-fs refuses (#345) is never renamed: it may be a link to a file
   // outside the workspace, so it propagates and the verb fails environment.
+  // Not readWorkspaceFileOrNull: its fallback renames the file aside, which
+  // must never happen to a refused path, so it tells the two apart itself.
   _readRaw(name) {
     const file = this._file(name);
     try {
@@ -216,12 +218,7 @@ class MemoryStore {
   // Read without the corruption sidecar side effect (render is read-only).
   // Absent or unreadable is '', but a refused path (#345) fails the verb.
   _safeRead(name) {
-    try {
-      return readWorkspaceFile(this.projectRoot, this._file(name)) || '';
-    } catch (e) {
-      if (e instanceof UnsafePathError) throw e;
-      return '';
-    }
+    return readWorkspaceFileOrNull(this.projectRoot, this._file(name)) || '';
   }
 
   // lstat, never stat: a link's target mtime is not this file's.

@@ -11,15 +11,16 @@
 // `read` is graceful: a missing OR corrupt file returns null so a verb never
 // crashes on a half-written/garbage selection — it just behaves as "no
 // selection". The directory is created lazily on write. Every access goes
-// through safe-fs (#345): a symlinked .session/ or selection.json throws
-// UnsafePathError, so the verb fails environment instead of following it.
+// through safe-fs (#345): a symlinked .session/ or selection.json is refused
+// (readWorkspaceJsonOrNull lets the refusal through), so the verb fails
+// environment instead of following it.
 
 const fs = require('fs');
 const path = require('path');
 
 const paths = require('./session-paths');
 const { atomicWorkspaceWrite } = require('../util/atomic');
-const { UnsafePathError, readWorkspaceFile, safeDir } = require('../workspace/safe-fs');
+const { readWorkspaceJsonOrNull, safeDir } = require('../workspace/safe-fs');
 
 const SELECTION_NAME = 'selection.json';
 
@@ -29,16 +30,9 @@ function selectionPath(projectRoot) {
 
 // The persisted device id, or null when absent/corrupt.
 function read(projectRoot) {
-  try {
-    const raw = readWorkspaceFile(projectRoot, selectionPath(projectRoot));
-    if (raw == null) return null;
-    const parsed = JSON.parse(raw);
-    const id = parsed && parsed.device;
-    return id ? String(id) : null;
-  } catch (err) {
-    if (err instanceof UnsafePathError) throw err;
-    return null;
-  }
+  const parsed = readWorkspaceJsonOrNull(projectRoot, selectionPath(projectRoot));
+  const id = parsed && parsed.device;
+  return id ? String(id) : null;
 }
 
 // Persist a device id. Creates .mobile-automator/.session/ if needed. Written

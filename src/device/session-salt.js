@@ -18,21 +18,17 @@ const path = require('path');
 const crypto = require('crypto');
 
 const paths = require('./session-paths');
-const { UnsafePathError, openWorkspaceFile, readWorkspaceFile, safeDir } = require('../workspace/safe-fs');
+const { openWorkspaceFile, readWorkspaceFileOrNull, safeDir } = require('../workspace/safe-fs');
 
 // The salt, or null when it is missing, unreadable or empty. Any other content
 // IS the salt: an HMAC key needs no particular shape, so there is no
 // "malformed" salt to detect or repair. A null salt means no keyed daemon can
 // be proven this workspace's (commandNamesWorkspace). A path safe-fs refuses
-// (#345), such as a symlinked .session/ or salt, throws UnsafePathError.
+// (#345), such as a symlinked .session/ or salt, still fails the verb:
+// readWorkspaceFileOrNull lets the refusal through.
 function readSalt(projectRoot, { fs = realFs } = {}) {
-  try {
-    const raw = readWorkspaceFile(projectRoot, paths.saltPath(projectRoot), {}, { fs });
-    return raw == null ? null : raw.trim() || null;
-  } catch (err) {
-    if (err instanceof UnsafePathError) throw err;
-    return null;
-  }
+  const raw = readWorkspaceFileOrNull(projectRoot, paths.saltPath(projectRoot), {}, { fs });
+  return raw == null ? null : raw.trim() || null;
 }
 
 // The salt, created if this workspace has none yet. Throws when it can neither
