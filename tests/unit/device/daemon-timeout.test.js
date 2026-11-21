@@ -13,6 +13,11 @@ const path = require('path');
 
 const { startDaemon, DAEMON_CALL_TIMEOUT_MS } = require('../../../src/device/session-daemon');
 const sessionClient = require('../../../src/device/session-client');
+const { usePrivateRuntimeDir } = require('../../helpers/private-runtime-dir');
+
+// A deep temp root's socket goes to the fallback directory: keep it in a
+// temp dir of this file's, never the real per-user one (#346).
+usePrivateRuntimeDir();
 
 function tmpRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-timeout-'));

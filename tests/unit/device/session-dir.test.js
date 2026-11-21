@@ -17,7 +17,7 @@ const path = require('path');
 
 const { ensureSessionDir, ensureSessionDirs, verifySocket } = require('../../../src/device/session-dir');
 const paths = require('../../../src/device/session-paths');
-const { UnsafePathError } = require('../../../src/workspace/safe-fs');
+const { UnsafePathError, checkOwnSocket } = require('../../../src/workspace/safe-fs');
 
 const REAL_UID = process.getuid();
 // Root bypasses permission bits and its umask is often 0, so a mode-dependent
@@ -251,6 +251,18 @@ describe('verifySocket', () => {
     ensureSessionDirs(root);
     fs.writeFileSync(paths.workspaceSocketPath(root), 'not a socket');
     expect(verifySocket(root, { env: {} })).toBe(false);
+  });
+
+  // verifySocket swallows the refusal; the check it runs names the socket as
+  // the session socket, never as a workspace path, even in the fallback.
+  test('false for a regular file at the fallback socket path, refused as the session socket', () => {
+    const { root, deps } = longRoot();
+    ensureSessionDirs(root, deps);
+    const sock = paths.socketPath(root, deps);
+    fs.writeFileSync(sock, 'not a socket');
+    expect(verifySocket(root, deps)).toBe(false);
+    const err = expectRefusal(() => checkOwnSocket(sock, deps), 'not_regular');
+    expect(err.message).toBe(`Refusing to use session socket ${sock}: it is not a socket (not_regular).`);
   });
 
   test('false for a mauto.sock that is a symlink to a real listening socket elsewhere', async () => {

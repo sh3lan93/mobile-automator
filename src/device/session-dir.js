@@ -22,24 +22,20 @@
 const path = require('path');
 
 const paths = require('./session-paths');
-const { safeDir, privateDir, checkOwner, resolveDeps } = require('../workspace/safe-fs');
+const { safeDir, privateDir, privateWorkspaceDir, checkOwnSocket } = require('../workspace/safe-fs');
 
 function usesFallback(projectRoot, deps) {
   return paths.socketPath(projectRoot, deps) !== paths.workspaceSocketPath(projectRoot);
 }
 
-// Create (or tighten) .session/ alone. Throws UnsafePathError on a refused
-// path, or the fs error. `deps` ({ fs, getuid, env }) reaches safe-fs
+// Create (or tighten, from the 0755 an older mauto made) .session/ alone, and
+// return only once it is proven link-free and 0700. Throws UnsafePathError on
+// a refused path, or the fs error. `deps` ({ fs, getuid, env }) reaches safe-fs
 // unchanged. The daemon log needs only this: it lives in .session/ whatever
 // the socket does, and must survive a refused fallback directory, because that
 // refusal fails the daemon's start and the log is where the user is sent.
 function ensureSessionDir(projectRoot, deps = {}) {
-  const { fs } = resolveDeps(deps);
-  const dir = paths.sessionDir(projectRoot);
-  safeDir(projectRoot, dir, { create: true, mode: 0o700 }, deps);
-  // safeDir accepts the 0755 an older mauto made (a workspace directory may be
-  // group-readable); the session directory may not be, so tighten it here.
-  fs.chmodSync(dir, 0o700);
+  privateWorkspaceDir(projectRoot, paths.sessionDir(projectRoot), deps);
 }
 
 // .session/ and, for a deep root, the fallback socket directory: everything
@@ -58,16 +54,13 @@ function ensureSessionDirs(projectRoot, deps = {}) {
 // is false.
 function verifySocket(projectRoot, deps = {}) {
   try {
-    const d = resolveDeps(deps);
     const sock = paths.socketPath(projectRoot, deps);
     if (usesFallback(projectRoot, deps)) {
       privateDir(path.dirname(sock), {}, deps);
     } else {
       safeDir(projectRoot, paths.sessionDir(projectRoot), { private: true }, deps);
     }
-    const st = d.fs.lstatSync(sock);
-    if (!st.isSocket()) return false;
-    checkOwner(sock, st, d, { strict: true });
+    checkOwnSocket(sock, deps);
     return true;
   } catch (_) {
     return false;

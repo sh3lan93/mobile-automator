@@ -17,6 +17,11 @@ const sessionClient = require('../../../src/device/session-client');
 const paths = require('../../../src/device/session-paths');
 const { ensureSessionDirs } = require('../../../src/device/session-dir');
 const { FrameParser } = require('../../../src/device/session-protocol');
+const { usePrivateRuntimeDir } = require('../../helpers/private-runtime-dir');
+
+// A deep temp root's socket goes to the fallback directory: keep it in a
+// temp dir of this file's, never the real per-user one (#346).
+usePrivateRuntimeDir();
 
 function tmpRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-honesty-'));

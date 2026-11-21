@@ -13,6 +13,7 @@
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
+const net = require('net');
 const childProcess = require('child_process');
 
 const {
@@ -26,6 +27,8 @@ const {
   removeWorkspaceFile,
   openLeaf,
   privateDir,
+  privateWorkspaceDir,
+  checkOwnSocket,
 } = require('../../../src/workspace/safe-fs');
 // The envelope boundary: a refusal reaches the agent through toEnvelope's
 // typed-error branch, which maps the error's own kind, message and hint.
@@ -440,6 +443,136 @@ describe('privateDir (#346)', () => {
 // its refusals must not talk about a workspace or offer the owner override
 // (D-d: it never applies there). Same class and fields, so every boundary
 // still maps it as an environment failure.
+// .session/: a workspace directory that must end up 0700, including one an
+// older mauto made 0755. Its chmod follows links, so the directory is walked
+// again afterwards and only returned once it is proven link-free and private.
+describe('privateWorkspaceDir (#346)', () => {
+  let d;
+  beforeEach(() => {
+    d = path.join(ws, '.session');
+  });
+
+  itNotRoot('creates it 0700 under umask 022 and returns its realpath', () => {
+    const prev = process.umask(0o022);
+    try {
+      expect(privateWorkspaceDir(root, d)).toBe(fs.realpathSync(d));
+    } finally {
+      process.umask(prev);
+    }
+    expect(fs.lstatSync(d).mode & 0o777).toBe(0o700);
+  });
+
+  itNotRoot('tightens an existing 0755 one to 0700', () => {
+    fs.mkdirSync(d);
+    fs.chmodSync(d, 0o755);
+    privateWorkspaceDir(root, d);
+    expect(fs.lstatSync(d).mode & 0o777).toBe(0o700);
+  });
+
+  it('refuses a symlink before any chmod, leaving its target alone', () => {
+    fs.chmodSync(outside, 0o755);
+    fs.symlinkSync(outside, d);
+    expectUnsafe(() => privateWorkspaceDir(root, d), 'symlink');
+    expect(fs.lstatSync(outside).mode & 0o777).toBe(0o755);
+  });
+
+  it('a swap to a link between the walk and the chmod is refused, never returned', () => {
+    fs.mkdirSync(d);
+    const swapping = { ...fs };
+    swapping.chmodSync = (p, mode) => {
+      fs.renameSync(d, path.join(base, 'moved-session'));
+      fs.symlinkSync(outside, d);
+      return fs.chmodSync(p, mode);
+    };
+    expectUnsafe(() => privateWorkspaceDir(root, d, { fs: swapping }), 'symlink');
+  });
+
+  // A chmod that changes nothing (a filesystem that ignores modes, or a racing
+  // chmod back) must not pass for a private directory.
+  it('a directory still not 0700 after the chmod is refused (not_private)', () => {
+    fs.mkdirSync(d);
+    fs.chmodSync(d, 0o755);
+    const inert = { ...fs, chmodSync: () => {} };
+    expectUnsafe(() => privateWorkspaceDir(root, d, { fs: inert }), 'not_private');
+  });
+});
+
+// The device session's socket, which open(2) refuses, so it is checked by
+// lstat. Wherever it lives it is named the session socket, and the owner
+// override never applies to it (D-d).
+describe('checkOwnSocket (#346)', () => {
+  let servers;
+  beforeEach(() => {
+    servers = [];
+  });
+  afterEach(async () => {
+    await Promise.all(servers.map((srv) => new Promise((resolve) => srv.close(() => resolve()))));
+  });
+
+  function listen(sock) {
+    const server = net.createServer();
+    servers.push(server);
+    return new Promise((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(sock, () => resolve(server));
+    });
+  }
+
+  function expectSocketRefusal(fn, reason, sock) {
+    const err = expectUnsafe(fn, reason);
+    expect(err.kind).toBe('environment');
+    expect(err.path).toBe(sock);
+    expect(err.message.startsWith(`Refusing to use session socket ${sock}: `)).toBe(true);
+    for (const text of [err.message.replace(sock, '<sock>'), err.hint]) {
+      expect(text).not.toMatch(/workspace/i);
+      expect(text).not.toContain('.mobile-automator');
+      expect(text).not.toContain('MAUTO_TRUST_WORKSPACE_OWNER');
+    }
+    return err;
+  }
+
+  it('accepts a real socket of ours', async () => {
+    const sock = path.join(base, 's.sock');
+    await listen(sock);
+    expect(() => checkOwnSocket(sock)).not.toThrow();
+  });
+
+  it('refuses a regular file as not a socket (not_regular)', () => {
+    const sock = path.join(base, 's.sock');
+    fs.writeFileSync(sock, 'x');
+    const err = expectSocketRefusal(() => checkOwnSocket(sock), 'not_regular', sock);
+    expect(err.message).toBe(`Refusing to use session socket ${sock}: it is not a socket (not_regular).`);
+  });
+
+  it('refuses a link to a real listening socket (symlink)', async () => {
+    const real = path.join(base, 'real.sock');
+    await listen(real);
+    const sock = path.join(base, 's.sock');
+    fs.symlinkSync(real, sock);
+    expectSocketRefusal(() => checkOwnSocket(sock), 'symlink', sock);
+  });
+
+  it('refuses a socket owned by uid 9999, even with MAUTO_TRUST_WORKSPACE_OWNER=1 (foreign_owner)', async () => {
+    const sock = path.join(base, 's.sock');
+    await listen(sock);
+    const deps = { fs: foreignFs(['lstatSync'], 9999), env: { MAUTO_TRUST_WORKSPACE_OWNER: '1' } };
+    const err = expectSocketRefusal(() => checkOwnSocket(sock, deps), 'foreign_owner', sock);
+    expect(err.message).toContain(`it is owned by uid 9999; you are uid ${REAL_UID}`);
+    expect(err.owner).toEqual({ uid: 9999, myUid: REAL_UID });
+  });
+
+  it('a missing socket throws the plain ENOENT error', () => {
+    let caught;
+    try {
+      checkOwnSocket(path.join(base, 'nope.sock'));
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).not.toBeInstanceOf(UnsafePathError);
+    expect(caught.code).toBe('ENOENT');
+  });
+});
+
 describe('a privateDir refusal names the session socket directory (#346)', () => {
   let dir;
   beforeEach(() => {

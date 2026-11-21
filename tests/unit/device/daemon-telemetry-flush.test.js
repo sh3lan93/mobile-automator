@@ -5,6 +5,11 @@ const os = require('os');
 const path = require('path');
 
 const { startDaemon } = require('../../../src/device/session-daemon');
+const { usePrivateRuntimeDir } = require('../../helpers/private-runtime-dir');
+
+// A deep temp root's socket goes to the fallback directory: keep it in a
+// temp dir of this file's, never the real per-user one (#346).
+usePrivateRuntimeDir();
 
 function workspace() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-dflush-'));
