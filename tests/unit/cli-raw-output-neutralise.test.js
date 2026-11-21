@@ -15,6 +15,7 @@ const path = require('path');
 
 const cli = require('../../src/cli');
 const { MemoryStore } = require('../../src/memory/store');
+const { captureProcessIO } = require('../helpers/cli-harness');
 
 // eslint-disable-next-line no-control-regex -- matching control chars is the point
 const CONTROL = /[\x00-\x08\x0b-\x1f\x7f-\x9f]/;
@@ -26,28 +27,12 @@ function makeRoot(config = { mode: 'platform-aware' }) {
   return root;
 }
 
+// No injected `emitters`: buildProgram's default is the real makeEmitters, so
+// emitRaw -> finish -> process.stdout.write is the path under test.
 async function runCli(root, argv) {
-  const writes = [];
-  const errWrites = [];
-  const exitCodes = [];
-  const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation((s) => {
-    writes.push(String(s));
-    return true;
-  });
-  const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation((s) => {
-    errWrites.push(String(s));
-    return true;
-  });
-  const exitSpy = jest.spyOn(process, 'exit').mockImplementation((code) => {
-    exitCodes.push(code);
-  });
-  try {
-    await cli.buildProgram({ projectRoot: root }).parseAsync(['node', 'mauto', ...argv]);
-  } finally {
-    stdoutSpy.mockRestore();
-    stderrSpy.mockRestore();
-    exitSpy.mockRestore();
-  }
+  const { writes, errWrites, exitCodes } = await captureProcessIO(() =>
+    cli.buildProgram({ projectRoot: root }).parseAsync(['node', 'mauto', ...argv])
+  );
   return { stdout: writes.join(''), stderr: errWrites.join(''), exitCodes };
 }
 
