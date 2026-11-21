@@ -228,6 +228,25 @@ function createWorkspaceFile(projectRoot, file, { mode = 0o666 } = {}, deps = {}
   return openWorkspaceFile(projectRoot, file, O_WRONLY | O_CREAT | O_EXCL, mode, deps);
 }
 
+// THE way to delete a workspace file. The parent is walked first (no create):
+// unlinking through a symlinked parent would delete a file outside the
+// workspace, so that throws UnsafePathError instead. unlink(2) removes a
+// symlink leaf itself, never its target, so the leaf needs no check. Returns
+// true when it removed the file, false when the file or a parent directory
+// does not exist. Any other fs error propagates.
+function removeWorkspaceFile(projectRoot, file, deps = {}) {
+  const { fs } = resolveDeps(deps);
+  const resolved = path.resolve(file);
+  try {
+    safeDir(projectRoot, path.dirname(resolved), {}, deps);
+    fs.unlinkSync(resolved);
+  } catch (err) {
+    if (err.code === 'ENOENT') return false;
+    throw err;
+  }
+  return true;
+}
+
 // Read a workspace file as utf8. null when it (or a parent dir) does not exist.
 // Reads at most maxBytes + 1 so a planted huge file costs nothing.
 function readWorkspaceFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES } = {}, deps = {}) {
@@ -283,10 +302,13 @@ function readWorkspaceJsonOrNull(projectRoot, file, opts = {}, deps = {}) {
 
 module.exports = {
   UnsafePathError,
+  // Exported for the later #345 slices (#346/#347), which walk directories
+  // they then list or create into.
   safeDir,
   openLeaf,
   openWorkspaceFile,
   createWorkspaceFile,
+  removeWorkspaceFile,
   readWorkspaceFile,
   readWorkspaceFileOrNull,
   readWorkspaceJsonOrNull,

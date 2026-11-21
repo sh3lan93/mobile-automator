@@ -15,12 +15,11 @@
 // (readWorkspaceJsonOrNull lets the refusal through), so the verb fails
 // environment instead of following it.
 
-const fs = require('fs');
 const path = require('path');
 
 const paths = require('./session-paths');
 const { atomicWorkspaceWrite } = require('../util/atomic');
-const { readWorkspaceJsonOrNull, safeDir } = require('../workspace/safe-fs');
+const { readWorkspaceJsonOrNull, removeWorkspaceFile } = require('../workspace/safe-fs');
 
 const SELECTION_NAME = 'selection.json';
 
@@ -44,21 +43,10 @@ function write(projectRoot, id) {
 }
 
 // Remove the persisted selection. Idempotent — clearing when none exists is a
-// no-op. The .session/ walk comes first: unlinking through a symlinked
-// .session/ would delete a file outside the workspace, so that throws
-// UnsafePathError instead. unlink removes a link leaf itself, never its target.
+// no-op. removeWorkspaceFile walks .session/ first, so a symlinked .session/
+// throws UnsafePathError instead of deleting a file outside the workspace.
 function clear(projectRoot) {
-  try {
-    safeDir(projectRoot, paths.sessionDir(projectRoot));
-  } catch (err) {
-    if (err.code === 'ENOENT') return; // no .session/, so no selection
-    throw err;
-  }
-  try {
-    fs.unlinkSync(selectionPath(projectRoot));
-  } catch (err) {
-    if (err.code !== 'ENOENT') throw err;
-  }
+  removeWorkspaceFile(projectRoot, selectionPath(projectRoot));
 }
 
 // Pure precedence resolver: an explicit --device flag ALWAYS wins and is never

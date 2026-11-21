@@ -23,6 +23,7 @@ const {
   readWorkspaceJsonOrNull,
   openWorkspaceFile,
   createWorkspaceFile,
+  removeWorkspaceFile,
   openLeaf,
 } = require('../../../src/workspace/safe-fs');
 // The envelope boundary: a refusal reaches the agent through toEnvelope's
@@ -529,6 +530,43 @@ describe('createWorkspaceFile', () => {
     } finally {
       process.umask(umask);
     }
+  });
+});
+
+describe('removeWorkspaceFile', () => {
+  it('removes a regular file and returns true', () => {
+    const p = path.join(ws, '.session', 'selection.json');
+    fs.mkdirSync(path.dirname(p));
+    fs.writeFileSync(p, '{}');
+    expect(removeWorkspaceFile(root, p)).toBe(true);
+    expect(fs.existsSync(p)).toBe(false);
+  });
+
+  it('returns false for an absent leaf', () => {
+    fs.mkdirSync(path.join(ws, '.session'));
+    expect(removeWorkspaceFile(root, path.join(ws, '.session', 'selection.json'))).toBe(false);
+  });
+
+  it('returns false for an absent parent, creating nothing', () => {
+    expect(removeWorkspaceFile(root, path.join(ws, '.session', 'selection.json'))).toBe(false);
+    expect(fs.existsSync(path.join(ws, '.session'))).toBe(false);
+  });
+
+  it('removes a symlink leaf itself, leaving its outside target untouched', () => {
+    const link = path.join(ws, 'selection.json');
+    fs.symlinkSync(canaryFile, link);
+    const before = snapshot(outside);
+    expect(removeWorkspaceFile(root, link)).toBe(true);
+    expect(() => fs.lstatSync(link)).toThrow(/ENOENT/);
+    expect(snapshot(outside)).toEqual(before);
+  });
+
+  it('refuses a symlinked parent dir (symlink), deleting nothing outside', () => {
+    fs.symlinkSync(outside, path.join(ws, '.session'));
+    const before = snapshot(outside);
+    expectUnsafe(() => removeWorkspaceFile(root, path.join(ws, '.session', 'secret.txt')), 'symlink');
+    expect(fs.readFileSync(canaryFile, 'utf8')).toBe(CANARY);
+    expect(snapshot(outside)).toEqual(before);
   });
 });
 
