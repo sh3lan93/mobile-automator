@@ -1468,6 +1468,27 @@ describe('cli handlers', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-'));
       const { envelope } = handleSetup({ projectRoot }, {});
       expect(envelope.data.mode).toBe('platform-aware');
+      expect(envelope.data.mode_changed).toBeNull();
+    });
+
+    // #333 repro: setup --mode agnostic, then setup with no --mode.
+    test('re-running without --mode keeps an existing workspace\'s mode', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-keep-'));
+      handleSetup({ projectRoot }, { mode: 'agnostic' });
+      const { envelope, exitKind } = handleSetup({ projectRoot }, {});
+      expect(exitKind).toBe('ok');
+      expect(envelope.data.mode).toBe('platform-agnostic');
+      expect(envelope.data.mode_changed).toBeNull();
+      const cfg = JSON.parse(fs.readFileSync(path.join(projectRoot, '.mobile-automator', 'config.json'), 'utf8'));
+      expect(cfg.mode).toBe('platform-agnostic');
+    });
+
+    test('an explicit --mode that changes the mode is reported as mode_changed', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-change-'));
+      handleSetup({ projectRoot }, { mode: 'agnostic' });
+      const { envelope } = handleSetup({ projectRoot }, { mode: 'aware' });
+      expect(envelope.data.mode).toBe('platform-aware');
+      expect(envelope.data.mode_changed).toStrictEqual({ from: 'platform-agnostic', to: 'platform-aware' });
     });
 
     test('rejects an unknown mode', () => {

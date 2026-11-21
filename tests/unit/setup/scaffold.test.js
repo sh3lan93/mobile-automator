@@ -7,7 +7,7 @@ const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 
 const { scaffold, GITIGNORE_BODIES } = require('../../../src/setup/scaffold');
-const { load } = require('../../../src/config/manager');
+const { load, DEFAULT_MODE } = require('../../../src/config/manager');
 
 function tmpRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scaffold-'));
@@ -53,6 +53,7 @@ describe('setup/scaffold', () => {
     );
     const r = scaffold(root, { mode: 'platform-agnostic' });
     expect(r.configWritten).toBe(false);
+    expect(r.modeChanged).toStrictEqual({ from: 'platform-aware', to: 'platform-agnostic' });
     const cfg = load(root);
     expect(cfg.project_name).toBe('Existing');
     expect(cfg.app_package).toBe('com.x');
@@ -68,6 +69,69 @@ describe('setup/scaffold', () => {
     const cfg = load(root);
     expect(cfg.app_package).toBe('com.example');
     expect(cfg.mode).toBe('platform-agnostic');
+  });
+});
+
+// #333: the platform-aware default is for a NEW workspace only. Re-running
+// setup without a mode (the documented .gitignore migration path, #328) must
+// not reset an existing workspace's mode.
+describe('setup/scaffold mode on an existing workspace (#333)', () => {
+  function existingConfig(cfg) {
+    const root = tmpRoot();
+    fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
+    const p = path.join(root, '.mobile-automator', 'config.json');
+    fs.writeFileSync(p, JSON.stringify(cfg, null, 2) + '\n');
+    return { root, p };
+  }
+
+  it('a new workspace with no mode gets DEFAULT_MODE', () => {
+    const root = tmpRoot();
+    const r = scaffold(root, {});
+    expect(r.mode).toBe(DEFAULT_MODE);
+    expect(r.modeChanged).toBeNull();
+    expect(load(root).mode).toBe(DEFAULT_MODE);
+  });
+
+  it('no mode keeps an existing agnostic workspace agnostic and does not rewrite config.json', () => {
+    const { root, p } = existingConfig({ mode: 'platform-agnostic', app_package: 'com.x' });
+    const before = fs.readFileSync(p, 'utf8');
+    const r = scaffold(root, {});
+    expect(r.mode).toBe('platform-agnostic');
+    expect(r.modeChanged).toBeNull();
+    expect(fs.readFileSync(p, 'utf8')).toBe(before);
+  });
+
+  it('no mode on a config predating the mode field reports the resolved default and writes nothing', () => {
+    const { root, p } = existingConfig({ app_package: 'com.x' });
+    const before = fs.readFileSync(p, 'utf8');
+    const r = scaffold(root, {});
+    expect(r.mode).toBe(DEFAULT_MODE);
+    expect(r.modeChanged).toBeNull();
+    expect(fs.readFileSync(p, 'utf8')).toBe(before);
+  });
+
+  it('an explicit mode equal to the current one reports no change', () => {
+    const { root } = existingConfig({ mode: 'platform-agnostic' });
+    const r = scaffold(root, { mode: 'platform-agnostic' });
+    expect(r.mode).toBe('platform-agnostic');
+    expect(r.modeChanged).toBeNull();
+  });
+
+  it('an explicit mode on a config predating the field is stored but is not a change', () => {
+    const { root } = existingConfig({ app_package: 'com.x' });
+    const r = scaffold(root, { mode: DEFAULT_MODE });
+    expect(r.modeChanged).toBeNull();
+    expect(load(root).mode).toBe(DEFAULT_MODE);
+  });
+
+  it('an explicit different mode is written and reported as a change', () => {
+    const { root } = existingConfig({ mode: 'platform-agnostic', app_package: 'com.x' });
+    const r = scaffold(root, { mode: 'platform-aware' });
+    expect(r.mode).toBe('platform-aware');
+    expect(r.modeChanged).toStrictEqual({ from: 'platform-agnostic', to: 'platform-aware' });
+    const cfg = load(root);
+    expect(cfg.mode).toBe('platform-aware');
+    expect(cfg.app_package).toBe('com.x');
   });
 });
 

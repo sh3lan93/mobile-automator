@@ -102,7 +102,7 @@ The starter `config.json` written on first run:
 The mode is selected with `--mode` and stored in `config.json`. It governs how OS gestures are expressed in scenarios:
 
 ```bash
-mauto setup --mode aware       # default — single-OS / OS-specific UI tests
+mauto setup --mode aware       # default for a new workspace — single-OS / OS-specific UI tests
 mauto setup --mode agnostic    # cross-platform (Flutter / RN / KMP / CMP)
 ```
 
@@ -111,7 +111,7 @@ mauto setup --mode agnostic    # cross-platform (Flutter / RN / KMP / CMP)
 | `platform-aware` | Single-OS or OS-specific UI tests |
 | `platform-agnostic` | Cross-platform apps |
 
-Agnostic mode maps OS gestures to four semantic actions — `press_back`, `dismiss_keyboard`, `grant_permission`, `deny_permission` — that resolve to per-platform mechanics at replay time. Re-running `mauto setup --mode <mode>` only updates the stored `mode`, preserving every other field.
+Agnostic mode maps OS gestures to four semantic actions — `press_back`, `dismiss_keyboard`, `grant_permission`, `deny_permission` — that resolve to per-platform mechanics at replay time. Re-running `mauto setup` on an existing workspace preserves every field, `mode` included. Pass `--mode` only to switch: the envelope then reports `data.mode_changed: {from, to}` (it is `null` when the mode did not change).
 
 ---
 
@@ -290,7 +290,7 @@ Configs that predate the `mode` field are treated as `platform-aware`.
 
 ### Re-running setup
 
-`mauto setup` is idempotent — re-run it any time. It never clobbers existing config fields; it only ensures the requested mode is set and that the workspace directories exist.
+`mauto setup` is idempotent — re-run it any time. It never clobbers existing config fields, keeps the workspace's mode unless you pass `--mode`, and ensures the workspace directories exist.
 
 ---
 

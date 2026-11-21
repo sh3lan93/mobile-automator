@@ -942,9 +942,11 @@ function storeHint(store) {
 // `mauto setup` from a subdirectory scaffold a nested workspace under a legacy
 // project, the split state this refusal exists to prevent.
 function handleSetup({ projectRoot, ancestorRoot = null, legacyRoot = null }, opts = {}) {
-  const raw = opts.mode === undefined ? 'aware' : String(opts.mode);
-  const mode = MODE_ALIASES[raw];
-  if (!mode) {
+  // No --mode stays undefined, never defaulted here: only scaffold knows
+  // whether config.json already exists, and the default is for a new
+  // workspace only (#333).
+  const mode = opts.mode === undefined ? undefined : MODE_ALIASES[String(opts.mode)];
+  if (opts.mode !== undefined && !mode) {
     return {
       envelope: fail('invalid_input', `unknown mode "${opts.mode}"`, 'Use --mode aware or --mode agnostic.'),
       exitKind: 'invalid_input',
@@ -964,6 +966,7 @@ function handleSetup({ projectRoot, ancestorRoot = null, legacyRoot = null }, op
         created: r.created,
         upgraded: r.upgraded,
         mode: r.mode,
+        mode_changed: r.modeChanged,
         // A NOTICE, not a prompt. mauto verbs are invoked by an agent, so there
         // is nobody at the keyboard to answer a question — and an agent answering
         // a consent question on a human's behalf is worse than not asking. It
@@ -2352,7 +2355,7 @@ function buildProgram(deps = {}) {
   program
     .command('setup')
     .description('Scaffold the workspace (.mobile-automator/) and write a config')
-    .option('--mode <mode>', 'aware (platform-aware, default) | agnostic (platform-agnostic)')
+    .option('--mode <mode>', 'aware (platform-aware) | agnostic (platform-agnostic); a new workspace defaults to aware, an existing one keeps its mode')
     .action(withEnvelope((opts) => {
       // cwd, not the discovered root: setup creates a workspace where the user
       // stands. A discovered root that is not cwd is an ancestor worth naming.
