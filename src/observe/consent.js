@@ -31,6 +31,7 @@ const os = require('os');
 const path = require('path');
 
 const { atomicWrite } = require('../util/atomic');
+const { isPlainObject } = require('../util/is-plain-object');
 
 const FILE_NAME = 'telemetry-consent.json';
 
@@ -54,8 +55,6 @@ function projectKey(projectRoot, fs) {
     return path.resolve(projectRoot);
   }
 }
-
-const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 
 // The parsed record, or null when there is no usable one.
 function readRecord(file, fs) {

@@ -44,6 +44,8 @@ const { MOBILE_MCP_TOOL_NAMES } = require('../device/mobile-mcp-tools');
 // tests/lint/session-id-pure.test.js keeps it that way. The shape is owned by
 // its minter (#196).
 const { SESSION_ID_PATTERN } = require('../device/session-id');
+// Pure, no requires.
+const { isPlainObject } = require('../util/is-plain-object');
 
 const EVENT_VERSION = 1;
 
@@ -240,7 +242,7 @@ function telemetryPayload(event = {}) {
 // The spool reader and the transport both call this, so the two re-checks are
 // one rule and cannot drift apart.
 function shippablePayload(value) {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
+  if (!isPlainObject(value)) return null;
   const payload = telemetryPayload(value);
   return payload.event ? payload : null;
 }
