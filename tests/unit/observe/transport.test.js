@@ -14,9 +14,14 @@ function fakeFetch(impl) {
 
 const res = (status) => ({ status, ok: status >= 200 && status < 300 });
 
+// Catalog-valid message ids (32 lowercase hex). The transport re-applies the
+// field catalog (#348), so a short placeholder id would be dropped at the wire.
+const MSG_A = 'a'.repeat(32);
+const MSG_B = 'b'.repeat(32);
+
 describe('telemetry transport', () => {
   const PAYLOADS = [
-    { ts: '2026-09-05T10:00:00.000Z', event: 'verb.end', msg_id: 'aaaa', verb: 'tap', ok: true, dur_ms: 41 },
+    { ts: '2026-09-05T10:00:00.000Z', event: 'verb.end', msg_id: MSG_A, verb: 'tap', ok: true, dur_ms: 41 },
   ];
 
   it('ships a real token, distinct from the placeholder', () => {
@@ -57,7 +62,7 @@ describe('telemetry transport', () => {
     const ev = body.batch[0];
     expect(ev.event).toBe('verb.end');
     expect(ev.timestamp).toBe('2026-09-05T10:00:00.000Z');
-    expect(ev.uuid).toBe('aaaa');
+    expect(ev.uuid).toBe(MSG_A);
     expect(ev.properties.distinct_id).toBe('mauto-anonymous');
     expect(ev.properties.$process_person_profile).toBe(false);
     // The remaining spool keys ride through as properties, verbatim...
@@ -125,23 +130,64 @@ describe('telemetry transport', () => {
     const f = fakeFetch(() => res(200));
     const withGap = [
       ...PAYLOADS,
-      { ts: '2026-09-05T10:00:01.000Z', msg_id: 'bbbb' },
+      { ts: '2026-09-05T10:00:01.000Z', msg_id: MSG_B },
     ];
     const r = await transport.postBatch(withGap, { fetchImpl: f, env: { MAUTO_TELEMETRY_TOKEN: 'phc_real' } });
     expect(r).toEqual({ ok: true, retry: false, status: 200 });
     expect(f.calls).toHaveLength(1);
     expect(f.calls[0].body.batch).toHaveLength(1);
-    expect(f.calls[0].body.batch[0].uuid).toBe('aaaa');
+    expect(f.calls[0].body.batch[0].uuid).toBe(MSG_A);
   });
 
   it('posts nothing when every payload in the batch is missing an event', async () => {
     const f = fakeFetch(() => res(200));
     const r = await transport.postBatch(
-      [{ ts: '2026-09-05T10:00:01.000Z', msg_id: 'bbbb' }],
+      [{ ts: '2026-09-05T10:00:01.000Z', msg_id: MSG_B }],
       { fetchImpl: f, env: { MAUTO_TELEMETRY_TOKEN: 'phc_real' } },
     );
     expect(r).toEqual({ ok: true, retry: false, status: 0 });
     expect(f.calls).toHaveLength(0);
+  });
+
+  // The wire is the last line of defence (#348): whatever reaches postBatch —
+  // a spool line from a committed repo, a future caller that forgets the
+  // catalog — ships only the fields the catalog lets through.
+  it('toWireEvent drops a field outside EVENT_FIELDS', async () => {
+    const f = fakeFetch(() => res(200));
+    await transport.postBatch(
+      [{ event: 'verb.end', ts: '2026-09-05T10:00:00.000Z', msg_id: MSG_A, verb: 'tap', cwd: '/home/x', app_id: 'com.secret' }],
+      { fetchImpl: f, env: { MAUTO_TELEMETRY_TOKEN: 'phc_real' } },
+    );
+    expect(f.calls).toHaveLength(1);
+    const { properties } = f.calls[0].body.batch[0];
+    expect(properties.verb).toBe('tap');
+    expect(properties).not.toHaveProperty('cwd');
+    expect(properties).not.toHaveProperty('app_id');
+  });
+
+  it('does not post a payload whose event is outside the vocabulary', async () => {
+    const evil = { event: 'evil', ts: '2026-09-05T10:00:01.000Z', msg_id: MSG_B, verb: 'tap' };
+
+    const mixed = fakeFetch(() => res(200));
+    await transport.postBatch([...PAYLOADS, evil], { fetchImpl: mixed, env: { MAUTO_TELEMETRY_TOKEN: 'phc_real' } });
+    expect(mixed.calls).toHaveLength(1);
+    expect(mixed.calls[0].body.batch.map((e) => e.event)).toEqual(['verb.end']);
+
+    const onlyEvil = fakeFetch(() => res(200));
+    const r = await transport.postBatch([evil], { fetchImpl: onlyEvil, env: { MAUTO_TELEMETRY_TOKEN: 'phc_real' } });
+    expect(r).toEqual({ ok: true, retry: false, status: 0 });
+    expect(onlyEvil.calls).toHaveLength(0);
+  });
+
+  it('skips a null or non-object payload without throwing', async () => {
+    const f = fakeFetch(() => res(200));
+    const r = await transport.postBatch(
+      [null, undefined, 42, 'verb.end', [], ...PAYLOADS],
+      { fetchImpl: f, env: { MAUTO_TELEMETRY_TOKEN: 'phc_real' } },
+    );
+    expect(r).toEqual({ ok: true, retry: false, status: 200 });
+    expect(f.calls[0].body.batch).toHaveLength(1);
+    expect(f.calls[0].body.batch[0].uuid).toBe(MSG_A);
   });
 
   it('degrades rather than throwing on a runtime with no global fetch', async () => {
