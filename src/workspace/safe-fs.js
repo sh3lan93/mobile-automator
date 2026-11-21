@@ -170,8 +170,12 @@ function checkLeafOwnership(p, st, writes, d, scope) {
   if (writes && st.nlink !== 1) throw new UnsafePathError(p, 'hardlink', { scope });
 }
 
+// Lexical containment of two resolved paths. The filesystem root is the one
+// parent that already ends in a separator; appending another would make it
+// `//`, inside which nothing lies.
 function isInside(child, parent) {
-  return child === parent || child.startsWith(parent + path.sep);
+  const prefix = parent.endsWith(path.sep) ? parent : parent + path.sep;
+  return child === parent || child.startsWith(prefix);
 }
 
 // The one directory walk. `dir` must lie lexically inside `within` (else

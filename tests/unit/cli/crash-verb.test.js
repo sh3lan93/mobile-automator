@@ -386,6 +386,21 @@ describe('handleCrashGet --out confinement (#347)', () => {
       expect(fs.existsSync(path.join(s.root, 'crash.txt'))).toBe(false);
     });
 
+    // The filesystem root is above every home, so it is dropped like any
+    // other ancestor: the hint says so rather than offering `/` as a root.
+    // `outside` is a temp dir the handler is not told about.
+    it('a project root of / is above home: dropped, and the hint says so', async () => {
+      const s = setup();
+      const out = path.join(s.outside, 'crash.txt');
+
+      const { r, asked } = await getWith({ ...s, root: '/' }, out);
+
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.hint).toContain('The project directory is not allowed');
+      expect(asked).toEqual([]);
+      expect(fs.existsSync(out)).toBe(false);
+    });
+
     it('home reached through a link is compared by realpath', async () => {
       const s = setup();
       const alias = path.join(tmpDir('mauto-crash-home-alias-'), 'home');

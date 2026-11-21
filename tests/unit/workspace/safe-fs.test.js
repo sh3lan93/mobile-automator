@@ -30,6 +30,7 @@ const {
   safeWorkspaceDest,
   readProjectFile,
   createProjectFile,
+  isInside,
 } = require('../../../src/workspace/safe-fs');
 // The envelope boundary: a refusal reaches the agent through toEnvelope's
 // typed-error branch, which maps the error's own kind, message and hint.
@@ -1257,5 +1258,22 @@ describe('a refusal through toEnvelope', () => {
     expect(typeof envelope.hint).toBe('string');
     expect(envelope.hint.length).toBeGreaterThan(0);
     expect(JSON.stringify(envelope)).not.toContain(CANARY);
+  });
+});
+
+// Containment is lexical on resolved paths. The filesystem root is the one
+// parent that already ends in a separator, so `parent + sep` would be `//` and
+// nothing would be inside it (#347: the crash --out home rule asks whether a
+// project root of `/` contains the home directory).
+describe('isInside', () => {
+  test.each([
+    ['/a/b', '/a', true],
+    ['/a', '/a', true],
+    ['/ab', '/a', false],
+    ['/a', '/a/b', false],
+    ['/home/u', '/', true],
+    ['/', '/', true],
+  ])('isInside(%s, %s) is %s', (child, parent, expected) => {
+    expect(isInside(child, parent)).toBe(expected);
   });
 });
