@@ -89,12 +89,74 @@ describe('telemetry spool', () => {
     const boom = () => {
       throw Object.assign(new Error('ENOSPC'), { code: 'ENOSPC' });
     };
+    // Each call the writer can make, failing alone and all together, in the
+    // workspace and under MAUTO_LOG_DIR.
+    const failures = [
+      { appendFileSync: boom, statSync: boom, mkdirSync: boom, existsSync: () => true },
+      { openSync: boom },
+      { writeSync: boom },
+      { fstatSync: boom },
+      { lstatSync: boom },
+      { mkdirSync: boom },
+      {
+        appendFileSync: boom,
+        statSync: boom,
+        mkdirSync: boom,
+        openSync: boom,
+        writeSync: boom,
+        fstatSync: boom,
+        lstatSync: boom,
+        existsSync: () => true,
+      },
+    ];
+    for (const failing of failures) {
+      for (const env of [{}, { MAUTO_LOG_DIR: path.join(outsideDir(), 'logs') }]) {
+        expect(() =>
+          spool.write(
+            { level: 'info', src: 'cli', event: 'verb.end', ok: true },
+            { projectRoot: root, env, fs: { ...fs, ...failing } }
+          )
+        ).not.toThrow();
+      }
+    }
+  });
+
+  it('closes the spool when the append itself fails', () => {
+    const root = workspace();
+    const opened = [];
+    const closed = [];
+    const failingWrite = {
+      ...fs,
+      openSync: (...args) => {
+        const fd = fs.openSync(...args);
+        opened.push(fd);
+        return fd;
+      },
+      closeSync: (fd) => {
+        closed.push(fd);
+        return fs.closeSync(fd);
+      },
+      writeSync: () => {
+        throw Object.assign(new Error('ENOSPC'), { code: 'ENOSPC' });
+      },
+    };
     expect(() =>
-      spool.write(
-        { level: 'info', src: 'cli', event: 'verb.end', ok: true },
-        { projectRoot: root, env: {}, fs: { ...fs, appendFileSync: boom, statSync: boom, mkdirSync: boom, existsSync: () => true } }
-      )
+      spool.write({ level: 'info', src: 'cli', event: 'verb.end', ok: true }, { projectRoot: root, env: {}, fs: failingWrite })
     ).not.toThrow();
+    expect(opened).toHaveLength(1);
+    expect(closed).toEqual(opened);
+  });
+
+  it('measures the cap on the file it opened, not by a second lookup of the path', () => {
+    const root = workspace();
+    const target = spoolPath(root, {});
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, 'x'.repeat(spool.SPOOL_MAX_BYTES));
+    const statSaysEmpty = { ...fs, statSync: () => ({ size: 0 }) };
+
+    spool.write({ level: 'info', src: 'cli', event: 'verb.end', ok: true }, { projectRoot: root, env: {}, fs: statSaysEmpty });
+
+    expect(fs.statSync(target).size).toBe(spool.SPOOL_MAX_BYTES);
   });
 
   it('claims the spool by rename, so a concurrent writer loses nothing', () => {
@@ -181,51 +243,51 @@ describe('telemetry spool', () => {
 // as a link to a file elsewhere (#348). Everything here reads the spool the way
 // flush does and proves nothing outside the workspace is read, renamed or
 // changed.
+const VALID = { event: 'verb.end', verb: 'tap', ok: true };
+const VALID_LINES = `${JSON.stringify(VALID)}\n${JSON.stringify({ ...VALID, ok: false })}\n`;
+
+const outsideDir = () => fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-outside-'));
+const logsDirOf = (root) => path.dirname(spoolPath(root, {}));
+const batchPath = (root) => {
+  fs.mkdirSync(logsDirOf(root), { recursive: true });
+  return path.join(logsDirOf(root), 'telemetry.spool.sending.1.1');
+};
+// A file outside the workspace holding lines that would pass the catalog, so
+// an empty result can only mean it was refused, not that it was filtered.
+const secretFile = (dir = outsideDir()) => {
+  const f = path.join(dir, 'SECRET');
+  fs.writeFileSync(f, VALID_LINES);
+  return f;
+};
+const snapshot = (dir) =>
+  Object.fromEntries(
+    fs.readdirSync(dir).sort().map((n) => [n, fs.readFileSync(path.join(dir, n), 'utf8')])
+  );
+
+// A real fs whose fstat reports another uid for one file, as a batch planted
+// by another user (or extracted from an archive) would.
+function foreignOwnerFs(target) {
+  const fds = new Set();
+  return {
+    ...fs,
+    openSync(p, ...rest) {
+      const fd = fs.openSync(p, ...rest);
+      if (path.resolve(String(p)) === path.resolve(target)) fds.add(fd);
+      return fd;
+    },
+    fstatSync(fd, ...rest) {
+      const st = fs.fstatSync(fd, ...rest);
+      if (!fds.has(fd)) return st;
+      return Object.assign(Object.create(Object.getPrototypeOf(st)), st, { uid: st.uid + 1 });
+    },
+    closeSync(fd) {
+      fds.delete(fd);
+      return fs.closeSync(fd);
+    },
+  };
+}
+
 describe('the spool is read as untrusted input (#348)', () => {
-  const VALID = { event: 'verb.end', verb: 'tap', ok: true };
-  const VALID_LINES = `${JSON.stringify(VALID)}\n${JSON.stringify({ ...VALID, ok: false })}\n`;
-
-  const outsideDir = () => fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-outside-'));
-  const logsDirOf = (root) => path.dirname(spoolPath(root, {}));
-  const batchPath = (root) => {
-    fs.mkdirSync(logsDirOf(root), { recursive: true });
-    return path.join(logsDirOf(root), 'telemetry.spool.sending.1.1');
-  };
-  // A file outside the workspace holding lines that would pass the catalog, so
-  // an empty result can only mean it was refused, not that it was filtered.
-  const secretFile = (dir = outsideDir()) => {
-    const f = path.join(dir, 'SECRET');
-    fs.writeFileSync(f, VALID_LINES);
-    return f;
-  };
-  const snapshot = (dir) =>
-    Object.fromEntries(
-      fs.readdirSync(dir).sort().map((n) => [n, fs.readFileSync(path.join(dir, n), 'utf8')])
-    );
-
-  // A real fs whose fstat reports another uid for one file, as a batch planted
-  // by another user (or extracted from an archive) would.
-  function foreignOwnerFs(target) {
-    const fds = new Set();
-    return {
-      ...fs,
-      openSync(p, ...rest) {
-        const fd = fs.openSync(p, ...rest);
-        if (path.resolve(String(p)) === path.resolve(target)) fds.add(fd);
-        return fd;
-      },
-      fstatSync(fd, ...rest) {
-        const st = fs.fstatSync(fd, ...rest);
-        if (!fds.has(fd)) return st;
-        return Object.assign(Object.create(Object.getPrototypeOf(st)), st, { uid: st.uid + 1 });
-      },
-      closeSync(fd) {
-        fds.delete(fd);
-        return fs.closeSync(fd);
-      },
-    };
-  }
-
   it('reads a regular batch, so every refusal below is a refusal and not a broken reader', () => {
     const root = workspace();
     const batch = batchPath(root);
@@ -355,5 +417,90 @@ describe('the spool is read as untrusted input (#348)', () => {
     fs.symlinkSync(secret, spoolPath(root, {}));
     expect(spool.stats({ projectRoot: root, env: {} }))
       .toEqual({ path: spoolPath(root, {}), bytes: 0, events: 0, pending_batches: 0 });
+  });
+});
+
+// Once telemetry is on, every verb appends to the spool. A cloned repo that
+// ships `.logs/telemetry.spool -> ~/.bashrc`, or `.logs/` itself as a link,
+// would otherwise have JSON appended to a file of the attacker's choosing
+// (#348). Each case proves the file outside is byte-identical afterwards.
+describe('the spool is never appended to through a link (#348)', () => {
+  const EVENT = { level: 'info', src: 'cli', event: 'verb.end', verb: 'tap', ok: true };
+
+  it('still creates .logs/ and the spool on a fresh workspace', () => {
+    const root = workspace();
+    expect(fs.existsSync(logsDirOf(root))).toBe(false);
+    spool.write(EVENT, { projectRoot: root, env: {} });
+    expect(fs.lstatSync(logsDirOf(root)).isDirectory()).toBe(true);
+    expect(fs.lstatSync(spoolPath(root, {})).isFile()).toBe(true);
+    expect(readLines(spoolPath(root, {}))).toEqual([expect.objectContaining({ event: 'verb.end', verb: 'tap', ok: true })]);
+  });
+
+  it('never writes through a spool that is a symlink to a file outside the workspace', () => {
+    const root = workspace();
+    const secret = secretFile();
+    const before = fs.readFileSync(secret, 'utf8');
+    fs.mkdirSync(logsDirOf(root), { recursive: true });
+    fs.symlinkSync(secret, spoolPath(root, {}));
+
+    expect(() => spool.write(EVENT, { projectRoot: root, env: {} })).not.toThrow();
+    expect(fs.readFileSync(secret, 'utf8')).toBe(before);
+  });
+
+  it('never writes through a symlinked .logs/, whether or not a spool is already there', () => {
+    for (const withSpool of [false, true]) {
+      const root = workspace();
+      const outside = outsideDir();
+      secretFile(outside);
+      if (withSpool) fs.writeFileSync(path.join(outside, 'telemetry.spool'), VALID_LINES);
+      const before = snapshot(outside);
+      fs.symlinkSync(outside, logsDirOf(root));
+
+      expect(() => spool.write(EVENT, { projectRoot: root, env: {} })).not.toThrow();
+      expect(snapshot(outside)).toEqual(before);
+    }
+  });
+
+  it('never writes to a spool hard-linked to a file outside the workspace', () => {
+    const root = workspace();
+    const secret = secretFile();
+    const before = fs.readFileSync(secret, 'utf8');
+    fs.mkdirSync(logsDirOf(root), { recursive: true });
+    fs.linkSync(secret, spoolPath(root, {}));
+
+    expect(() => spool.write(EVENT, { projectRoot: root, env: {} })).not.toThrow();
+    expect(fs.readFileSync(secret, 'utf8')).toBe(before);
+  });
+
+  it('never writes to a spool in a .logs/ owned by another uid', () => {
+    const root = workspace();
+    spool.write(EVENT, { projectRoot: root, env: {} });
+    const before = snapshot(logsDirOf(root));
+
+    spool.write(EVENT, { projectRoot: root, env: {}, getuid: () => process.getuid() + 1 });
+
+    expect(snapshot(logsDirOf(root))).toEqual(before);
+  });
+
+  it('under MAUTO_LOG_DIR, never writes through a symlink leaf', () => {
+    const root = workspace();
+    const env = { MAUTO_LOG_DIR: outsideDir() };
+    const secret = secretFile();
+    const before = fs.readFileSync(secret, 'utf8');
+    fs.symlinkSync(secret, spoolPath(root, env));
+
+    expect(() => spool.write(EVENT, { projectRoot: root, env })).not.toThrow();
+    expect(fs.readFileSync(secret, 'utf8')).toBe(before);
+  });
+
+  it('under MAUTO_LOG_DIR, never writes to a hard-linked spool', () => {
+    const root = workspace();
+    const env = { MAUTO_LOG_DIR: outsideDir() };
+    const secret = secretFile();
+    const before = fs.readFileSync(secret, 'utf8');
+    fs.linkSync(secret, spoolPath(root, env));
+
+    expect(() => spool.write(EVENT, { projectRoot: root, env })).not.toThrow();
+    expect(fs.readFileSync(secret, 'utf8')).toBe(before);
   });
 });

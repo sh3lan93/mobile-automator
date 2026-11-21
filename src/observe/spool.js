@@ -37,7 +37,7 @@ const { workspaceDir } = require('../workspace/layout');
 const { UnsafePathError, safeDir, openLeaf, openWorkspaceFile } = require('../workspace/safe-fs');
 const { telemetryPayload, shippablePayload } = require('./event');
 
-const { O_RDONLY } = realFs.constants;
+const { O_RDONLY, O_WRONLY, O_APPEND, O_CREAT } = realFs.constants;
 
 // ~1000 lines at ~250 bytes. Not rotateIfLarge: that policy is for LOGS, and
 // renaming a queue to `.1` silently discards records that were pending
@@ -103,17 +103,22 @@ function closeQuietly(fs, fd) {
 // the user named in their own environment, so there the spool is the user's
 // own path: the NOFOLLOW regular-file leaf still applies, the workspace walk
 // and the owner check do not (the rule safe-fs applies to every user-chosen
-// path).
+// path). With O_CREAT the missing directories are created: through safe-fs's
+// checked walk in the workspace, and with a plain recursive mkdir under
+// MAUTO_LOG_DIR, as before.
 //
 // In both cases a file with a second hard link is refused, for a read as well
 // as a write. safe-fs checks the link count only on writes, but a batch is read
 // in order to be uploaded and then unlinked: a second link is a file elsewhere
 // by another name, and its contents would ship as this workspace's telemetry.
 function openSpoolFile(file, flags, { projectRoot, env, fs, getuid }) {
-  const fd =
-    env && env.MAUTO_LOG_DIR
-      ? openLeaf(file, flags, 0o666, { fs }).fd
-      : openWorkspaceFile(projectRoot, file, flags, 0o666, { fs, env, getuid });
+  let fd;
+  if (env && env.MAUTO_LOG_DIR) {
+    if (flags & O_CREAT) fs.mkdirSync(path.dirname(file), { recursive: true });
+    ({ fd } = openLeaf(file, flags, 0o666, { fs }));
+  } else {
+    fd = openWorkspaceFile(projectRoot, file, flags, 0o666, { fs, env, getuid });
+  }
   try {
     const stat = fs.fstatSync(fd);
     if (stat.nlink !== 1) throw new UnsafePathError(file, 'hardlink');
@@ -141,29 +146,40 @@ function spoolDirUsable(dir, { projectRoot, env, fs, getuid }) {
   }
 }
 
-function write(event, { projectRoot, env = process.env, fs = realFs } = {}) {
+// The append opens through openSpoolFile like every read (#348). Once telemetry
+// is on, every verb appends here, so a cloned repo that ships
+// `.logs/telemetry.spool -> ~/.bashrc`, a `.logs/` that is a link, or a spool
+// hard-linked to a file elsewhere would otherwise get JSON appended to a file
+// of its choosing. A refused open is a dropped line, like any other failure.
+function write(event, { projectRoot, env = process.env, fs = realFs, getuid } = {}) {
+  let fd;
   try {
     if (isSelfReferential(event)) return;
     if (!allowed(projectRoot, env, fs)) return;
 
-    const target = spoolPath(projectRoot, env);
-    fs.mkdirSync(path.dirname(target), { recursive: true });
+    let stat;
+    ({ fd, stat } = openSpoolFile(spoolPath(projectRoot, env), O_WRONLY | O_APPEND | O_CREAT, {
+      projectRoot,
+      env,
+      fs,
+      getuid,
+    }));
 
-    // One stat before the append. At the cap we drop the NEW line rather than
-    // evicting an old one: eviction means read-filter-rewrite on the hot path
-    // of every verb, and the older records are the ones already queued for
-    // delivery — evicting them loses more history than refusing one new line.
-    try {
-      if (fs.statSync(target).size >= SPOOL_MAX_BYTES) return;
-    } catch (_) {
-      /* no spool yet — proceed */
-    }
+    // The cap is the size of the file just opened, not of a second lookup by
+    // path, which could name a different file. At the cap we drop the NEW line
+    // rather than evicting an old one: eviction means read-filter-rewrite on
+    // the hot path of every verb, and the older records are the ones already
+    // queued for delivery — evicting them loses more history than refusing one
+    // new line.
+    if (stat.size >= SPOOL_MAX_BYTES) return;
 
     const payload = telemetryPayload({ ...event, msg_id: newMessageId() });
-    fs.appendFileSync(target, JSON.stringify(payload) + '\n');
+    fs.writeSync(fd, JSON.stringify(payload) + '\n');
   } catch (_) {
     // Observability is never load-bearing. Losing a telemetry line is always
     // preferable to failing the verb the user actually asked for.
+  } finally {
+    if (fd !== undefined) closeQuietly(fs, fd);
   }
 }
 
@@ -186,8 +202,8 @@ function nextClaimStamp() {
 
 // Atomic hand-off from "being appended to" to "being sent".
 //
-// renameSync within a directory is atomic, and it loses nothing: appendFileSync
-// opens by path and closes per call, so a verb that opened its fd BEFORE the
+// renameSync within a directory is atomic, and it loses nothing: write() opens
+// by path and closes per call, so a verb that opened its fd BEFORE the
 // rename writes into the claimed inode (that line ships with this batch) and a
 // verb that opens AFTER creates a fresh spool. There is no window in which a
 // line lands nowhere, and no truncate that could clobber a concurrent writer.
