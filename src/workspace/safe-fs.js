@@ -103,6 +103,19 @@ const PATH_HINTS = {
 
 const PATH_FALLBACK_HINT = 'Inspect the path and replace it with a real file or directory inside the project.';
 
+// The wording of a refusal, per scope: what the refused thing is called, the
+// reason and hint texts, and the hint for a reason with none of its own. An
+// unknown scope reads as the workspace one.
+const SCOPES = {
+  workspace: { subject: 'workspace path', reasons: REASONS, hints: HINTS, fallbackHint: FALLBACK_HINT },
+  path: {
+    subject: 'path',
+    reasons: { ...REASONS, ...PATH_REASONS },
+    hints: { ...HINTS, ...PATH_HINTS },
+    fallbackHint: PATH_FALLBACK_HINT,
+  },
+};
+
 // A refusal carries its own envelope fields, like the repo's other typed
 // errors: `kind` is always environment (the checkout is wrong, not the verb's
 // input), `message` and `hint` are the envelope text verbatim. So any boundary
@@ -111,18 +124,18 @@ const PATH_FALLBACK_HINT = 'Inspect the path and replace it with a real file or 
 //
 // `scope` says which rules refused it: 'workspace' (the default) for a path
 // under .mobile-automator/, 'path' for any other path mauto writes. It picks
-// the wording only; `kind`, `code` and `reason` are the same in both.
+// the wording only (SCOPES); `kind`, `code` and `reason` are the same in both.
 class UnsafePathError extends Error {
   // `file` is always the path that was refused, never where a link points: the
   // target is attacker-chosen and must not reach an envelope.
   constructor(file, reason, { scope = 'workspace' } = {}) {
-    const isPath = scope === 'path';
-    const text = (isPath && PATH_REASONS[reason]) || REASONS[reason] || FALLBACK_REASON;
-    super(`Refusing to use ${isPath ? 'path' : 'workspace path'} ${file}: ${text} (${reason}).`);
+    const s = SCOPES[scope] || SCOPES.workspace;
+    const text = s.reasons[reason] || FALLBACK_REASON;
+    super(`Refusing to use ${s.subject} ${file}: ${text} (${reason}).`);
     this.name = 'UnsafePathError';
     this.code = 'EUNSAFEPATH';
     this.kind = 'environment';
-    this.hint = (isPath && PATH_HINTS[reason]) || HINTS[reason] || (isPath ? PATH_FALLBACK_HINT : FALLBACK_HINT);
+    this.hint = s.hints[reason] || s.fallbackHint;
     this.path = file;
     this.reason = reason;
     this.scope = scope;
