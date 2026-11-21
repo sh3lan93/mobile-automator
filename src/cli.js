@@ -54,6 +54,7 @@ const { makeFlusher } = require('./observe/flush');
 const { prepareRun } = require('./run/prepare');
 const { handleRun } = require('./run/handle');
 const { renderRunHuman } = require('./output/run-human');
+const { neutraliseControls } = require('./output/neutralise');
 const { realClock } = require('./run/clock');
 const { handleAssertReference } = require('./run/assert-reference');
 const { makeRunTrace } = require('./run/trace');
@@ -2592,7 +2593,10 @@ function buildProgram(deps = {}) {
 // message + hint — so only `internal` warrants a trace.
 function diagnose(err, exitKind) {
   if (exitKind === 'internal' && err && err.stack) {
-    process.stderr.write(err.stack + '\n');
+    // An internal error's message can carry device text, so the trace is
+    // neutralised before it reaches a human's terminal (#353). Newlines are
+    // kept: a stack is multi-line by design.
+    process.stderr.write(neutraliseControls(err.stack) + '\n');
   }
 }
 
@@ -2714,9 +2718,13 @@ function makeEmitters({ projectRoot = process.cwd() } = {}) {
 
     emit: ({ envelope, exitKind, renderHuman }, human) => finish(fromEnvelope(envelope, exitKind, human, renderHuman)),
 
-    // Raw content (markdown / JSON schema / text) verbatim, no envelope
-    // wrapping. Used by the guide/schema/bootstrap success paths.
-    emitRaw: (content, exitKind) => finish({ text: content, exitKind, ok: true }),
+    // Raw content (markdown / JSON schema / text) with no envelope
+    // wrapping. Used by the guide/schema/bootstrap/memory show success paths.
+    // Memory markdown and config-filled guide placeholders are workspace-
+    // controlled, so control characters are neutralised (#353); newlines,
+    // tabs and CRLF line endings (memory files may be CRLF) are kept, so
+    // clean content passes through byte-identical.
+    emitRaw: (content, exitKind) => finish({ text: neutraliseControls(content), exitKind, ok: true }),
 
     // Last-resort emit for errors that escape BEFORE any action runs, so the
     // in-program withEnvelope boundary can't see them — a throw inside
