@@ -4,10 +4,11 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { makeFlusher, FLUSH_INTERVAL_MS, MAX_FLUSH_INTERVAL_MS, MAX_CLAIMED } = require('../../../src/observe/flush');
+const { makeFlusher, BATCH_SIZE, FLUSH_INTERVAL_MS, MAX_FLUSH_INTERVAL_MS, MAX_CLAIMED } = require('../../../src/observe/flush');
 const spool = require('../../../src/observe/spool');
 const { spoolPath } = require('../../../src/observe/paths');
 const telemetry = require('../../../src/observe/telemetry');
+const { setLocalConsent } = require('../../../src/observe/consent');
 const { userConfigEnv, grantLocalConsent } = require('../../helpers/user-config');
 
 // Its own XDG_CONFIG_HOME, so the consent record never touches the real one.
@@ -204,6 +205,127 @@ describe('telemetry flush', () => {
 
     expect(seen).toHaveLength(1);
     expect(seen[0]).toMatchObject({ level: 'debug', event: 'telemetry.flush', ok: false, count: 2, http_status: 503 });
+  });
+
+  // A daemon builds ONE flusher and drains with it for its whole life, so a
+  // decision taken by the first flush must not outlive a withdrawal (#348).
+  describe('re-checks consent at egress, without a memo (#348)', () => {
+    const configFile = (root) => path.join(root, '.mobile-automator', 'config.json');
+
+    it('flusher uploads nothing after config flips to disabled mid-daemon', async () => {
+      const root = workspace();
+      const transport = stubTransport([OK]);
+      const flush = makeFlusher({ projectRoot: root, env: TOKEN, transport });
+
+      spoolN(root, 2);
+      expect(await flush()).toMatchObject({ ok: true, sent: 2 });
+      expect(transport.calls).toHaveLength(1);
+
+      // Straight into the file, NOT through setEnabled: no memo reset may be
+      // needed for a running flusher to see it.
+      fs.writeFileSync(configFile(root), JSON.stringify({ telemetry: { enabled: false } }, null, 2));
+      spoolN(root, 2);
+
+      const r = await flush();
+      expect(transport.calls).toHaveLength(1);
+      expect(r).toMatchObject({ skipped: 'not_configured', sent: 0 });
+      // Returned before claiming: the spool is where the verbs left it.
+      expect(fs.existsSync(spoolPath(root, {}))).toBe(true);
+      expect(spool.listClaimed({ projectRoot: root, env: {} })).toEqual([]);
+    });
+
+    it('flusher uploads nothing after this user withdraws local consent mid-daemon', async () => {
+      const root = workspace();
+      const transport = stubTransport([OK]);
+      const flush = makeFlusher({ projectRoot: root, env: TOKEN, transport });
+
+      spoolN(root, 2);
+      expect(await flush()).toMatchObject({ ok: true, sent: 2 });
+
+      setLocalConsent(root, false, { env: TOKEN });
+      spoolN(root, 2);
+
+      const r = await flush();
+      expect(transport.calls).toHaveLength(1);
+      expect(r).toMatchObject({ skipped: 'not_consented_locally', sent: 0 });
+      expect(fs.existsSync(spoolPath(root, {}))).toBe(true);
+      expect(spool.listClaimed({ projectRoot: root, env: {} })).toEqual([]);
+    });
+
+    it('stops between chunks when consent is withdrawn mid-flush', async () => {
+      const root = workspace();
+      spoolN(root, BATCH_SIZE + 10);
+      const calls = [];
+      const transport = {
+        postBatch: async (payloads) => {
+          calls.push(payloads);
+          // The user runs `mauto telemetry disable` while chunk 1 is in flight.
+          setLocalConsent(root, false, { env: TOKEN });
+          return OK;
+        },
+      };
+
+      const r = await makeFlusher({ projectRoot: root, env: TOKEN, transport })();
+
+      expect(calls).toHaveLength(1);
+      expect(r).toMatchObject({ skipped: 'not_consented_locally', sent: BATCH_SIZE, dropped: 0 });
+      // A withdrawal is not a network failure: no backoff.
+      expect(r.nextDelayMs).toBe(FLUSH_INTERVAL_MS);
+      // The batch being processed stays claimed: nothing more is uploaded, and
+      // nothing is lost either.
+      const claimed = spool.listClaimed({ projectRoot: root, env: {} });
+      expect(claimed).toHaveLength(1);
+      expect(spool.readBatch(claimed[0], { projectRoot: root, env: {} })).toHaveLength(BATCH_SIZE + 10);
+    });
+
+    it('does not let the MAX_CLAIMED prune delete the batch a withdrawal stopped on', async () => {
+      const root = workspace();
+      // The oldest leftover is two chunks long; MAX_CLAIMED leftovers in all.
+      const failing = makeFlusher({ projectRoot: root, env: TOKEN, transport: stubTransport([RETRY]) });
+      spoolN(root, BATCH_SIZE + 1);
+      await failing();
+      for (let i = 1; i < MAX_CLAIMED; i++) {
+        spoolN(root, 1);
+        await failing();
+      }
+      const [oldest] = spool.listClaimed({ projectRoot: root, env: {} });
+      spoolN(root, 1); // the fresh claim makes MAX_CLAIMED + 1 batches
+
+      const transport = {
+        postBatch: async () => {
+          setLocalConsent(root, false, { env: TOKEN });
+          return OK;
+        },
+      };
+      const r = await makeFlusher({ projectRoot: root, env: TOKEN, transport })();
+
+      expect(r).toMatchObject({ skipped: 'not_consented_locally', sent: BATCH_SIZE });
+      expect(fs.existsSync(oldest)).toBe(true);
+      expect(spool.listClaimed({ projectRoot: root, env: {} })).toHaveLength(MAX_CLAIMED + 1);
+    });
+
+    it('stops before the next claimed batch when consent is withdrawn between batches', async () => {
+      const root = workspace();
+      // A leftover batch from an earlier retryable failure, then a fresh one.
+      spoolN(root, 1);
+      await makeFlusher({ projectRoot: root, env: TOKEN, transport: stubTransport([RETRY]) })();
+      spoolN(root, 1);
+
+      const calls = [];
+      const transport = {
+        postBatch: async (payloads) => {
+          calls.push(payloads);
+          fs.writeFileSync(configFile(root), JSON.stringify({ telemetry: { enabled: false } }, null, 2));
+          return OK;
+        },
+      };
+      const r = await makeFlusher({ projectRoot: root, env: TOKEN, transport })();
+
+      expect(calls).toHaveLength(1);
+      expect(r).toMatchObject({ skipped: 'not_configured', sent: 1 });
+      // The sent leftover is gone; the fresh claim was never posted and stays.
+      expect(spool.listClaimed({ projectRoot: root, env: {} })).toHaveLength(1);
+    });
   });
 
   it('never rejects, whatever the transport does', async () => {

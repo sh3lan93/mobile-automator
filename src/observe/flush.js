@@ -18,7 +18,7 @@ const realFs = require('fs');
 
 const spool = require('./spool');
 const realTransport = require('./transport');
-const { decideForProject } = require('./telemetry');
+const { decideNow } = require('./telemetry');
 
 // Two chunks covers a full 256 KiB spool at ~250 bytes/line, so the duplicate
 // window on a partial failure is at most one chunk.
@@ -47,10 +47,18 @@ function makeFlusher({
   let nextDelayMs = FLUSH_INTERVAL_MS;
 
   return async function flush() {
-    const decision = decideForProject(projectRoot, env);
     // Layer two of "no upload path is reachable while disabled": the transport
     // is not merely unused here, it is not REACHED. The unit suite injects a
     // transport that throws if called and asserts this line returns first.
+    //
+    // decideNow, never the memoised decideForProject, here and before every
+    // postBatch below (#348). The daemon builds one flusher and drains with it
+    // for its whole life; a memo pinned the first flush's decision for that
+    // life, so `mauto telemetry disable` never reached a daemon that was
+    // already running, and it kept uploading. Re-reading consent before every
+    // upload is what makes a withdrawal reach it. The cost is two small file
+    // reads per chunk, once a minute at most.
+    const decision = decideNow(projectRoot, env);
     if (!decision.enabled) {
       return { skipped: decision.reason, sent: 0, dropped: 0, kept: 0, kept_events: 0, ok: true, nextDelayMs };
     }
@@ -66,6 +74,9 @@ function makeFlusher({
     let keptEvents = 0;
     let lastStatus = 0;
     let retryable = false;
+    // Set when consent is withdrawn part-way through this flush: the reason
+    // the pre-upload check gave.
+    let withdrawn;
 
     try {
       // Leftovers first, oldest first, then whatever has accumulated since.
@@ -85,6 +96,13 @@ function makeFlusher({
         let batchDropped = 0;
 
         for (const part of chunk(payloads, BATCH_SIZE)) {
+          // The user may have withdrawn since the check above, or since the
+          // last chunk: `mauto telemetry disable` while a batch is in flight.
+          const current = decideNow(projectRoot, env);
+          if (!current.enabled) {
+            withdrawn = current.reason;
+            break;
+          }
           let r;
           try {
             r = await transport.postBatch(part, { env });
@@ -110,6 +128,14 @@ function makeFlusher({
         sent += batchSent;
         dropped += batchDropped;
 
+        // A withdrawal stops the flush where it is. The batch being processed
+        // is NOT unlinked: it stays claimed, so what it still holds is neither
+        // uploaded nor lost (a later opt-in drains it; while telemetry is off
+        // nothing spools, so nothing is added to it). It is not counted in
+        // `kept` either, which means "left claimed for retry" and drives the
+        // flush verb's retry hint.
+        if (withdrawn) break;
+
         if (batchRetryable) {
           kept += 1;
           keptEvents += payloads.length;
@@ -119,10 +145,14 @@ function makeFlusher({
         safeUnlink(file, fs);
       }
 
-      // Converge: beyond the cap, the oldest claimed batches go.
-      const remaining = spool.listClaimed({ projectRoot, env, fs });
-      for (const stale of remaining.slice(0, Math.max(0, remaining.length - MAX_CLAIMED))) {
-        safeUnlink(stale, fs);
+      // Converge: beyond the cap, the oldest claimed batches go. Not after a
+      // withdrawal: the oldest batch can be the one the flush stopped on, and
+      // the next flush that runs enabled prunes.
+      if (!withdrawn) {
+        const remaining = spool.listClaimed({ projectRoot, env, fs });
+        for (const stale of remaining.slice(0, Math.max(0, remaining.length - MAX_CLAIMED))) {
+          safeUnlink(stale, fs);
+        }
       }
     } catch (_) {
       // Observability is never load-bearing. A flush that blew up in an
@@ -138,6 +168,9 @@ function makeFlusher({
     // waiting longer).
     const ok = !retryable && dropped === 0;
 
+    // A withdrawal is not a network failure and never sets `retryable`, so it
+    // takes the normal interval, at which the next flush's first check
+    // returns early.
     nextDelayMs = retryable
       ? Math.min(nextDelayMs * 2, MAX_FLUSH_INTERVAL_MS)
       : FLUSH_INTERVAL_MS;
@@ -160,8 +193,11 @@ function makeFlusher({
     // Units: `kept` counts BATCHES (files) left claimed for retry; `sent`,
     // `dropped` and `kept_events` count events. `kept_events` exists because a
     // flush that only ever retries (nothing sent or dropped yet) still needs
-    // to report how many events it actually touched.
-    return { sent, dropped, kept, kept_events: keptEvents, ok, nextDelayMs };
+    // to report how many events it actually touched. A flush stopped by a
+    // withdrawal carries `skipped` like one that never started, with the
+    // counts it reached before stopping.
+    const result = { sent, dropped, kept, kept_events: keptEvents, ok, nextDelayMs };
+    return withdrawn ? { skipped: withdrawn, ...result } : result;
   };
 }
 

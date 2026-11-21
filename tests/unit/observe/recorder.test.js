@@ -418,6 +418,79 @@ describe('the spool sink is constructed only when telemetry is enabled', () => {
     expect(fs.existsSync(spoolPath(root, {}))).toBe(false);
   });
 
+  // The daemon builds its sinks ONCE (boundRecorder) and lives for hours, so
+  // the decision it built them under must not outlive a withdrawal (#348).
+  describe('a long-lived recorder re-checks consent (#348)', () => {
+    const { setLocalConsent, consentPath } = require('../../../src/observe/consent');
+    const spoolLines = (root) =>
+      fs.existsSync(spoolPath(root, {})) ? fs.readFileSync(spoolPath(root, {}), 'utf8').trim().split('\n') : [];
+    const event = { level: 'info', event: 'call.end', ok: true };
+
+    // consentGate reads Date.now at construction; jest's modern fake timers
+    // replace it, so the clock is driven here without a test-only option.
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2026-11-21T12:00:00Z'));
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it('the daemon stops spooling within a second of a withdrawal', () => {
+      const root = configuredWorkspace({ telemetry: { enabled: true } });
+      const observe = boundRecorder({ projectRoot: root, env: TOKEN, fields: { src: 'daemon' } });
+
+      observe(event);
+      expect(spoolLines(root)).toHaveLength(1);
+
+      setLocalConsent(root, false, { env: TOKEN });
+
+      // Inside the recheck interval the gate still holds the decision it last
+      // took, so this event MAY spool: a withdrawal is noticed within a
+      // second, not instantly. That bound is what keeps a file read off every
+      // event.
+      jest.advanceTimersByTime(telemetry.CONSENT_RECHECK_MS - 1);
+      observe(event);
+      expect(spoolLines(root).length).toBeLessThanOrEqual(2);
+      const before = spoolLines(root).length;
+
+      jest.advanceTimersByTime(1);
+      observe(event);
+      expect(spoolLines(root)).toHaveLength(before);
+
+      jest.advanceTimersByTime(60 * 1000);
+      observe(event);
+      expect(spoolLines(root)).toHaveLength(before);
+    });
+
+    it('the daemon stops spooling once the config flips to disabled, with no memo reset', () => {
+      const root = configuredWorkspace({ telemetry: { enabled: true } });
+      const observe = boundRecorder({ projectRoot: root, env: TOKEN, fields: { src: 'daemon' } });
+      observe(event);
+      expect(spoolLines(root)).toHaveLength(1);
+
+      fs.writeFileSync(
+        path.join(root, '.mobile-automator', 'config.json'),
+        JSON.stringify({ telemetry: { enabled: false } }, null, 2)
+      );
+      jest.advanceTimersByTime(telemetry.CONSENT_RECHECK_MS);
+      observe(event);
+      expect(spoolLines(root)).toHaveLength(1);
+    });
+
+    it('a one-shot record() reads the decision once', () => {
+      const root = configuredWorkspace({ telemetry: { enabled: true } });
+      const file = consentPath({ env: TOKEN });
+      const reads = jest.spyOn(fs, 'readFileSync');
+      try {
+        record({ level: 'info', src: 'cli', event: 'verb.end', verb: 'tap', ok: true }, { projectRoot: root, env: TOKEN });
+        expect(reads.mock.calls.filter(([p]) => p === file)).toHaveLength(1);
+      } finally {
+        reads.mockRestore();
+      }
+      // And the one read said yes: the event spooled.
+      expect(spoolLines(root)).toHaveLength(1);
+    });
+  });
+
   it('survives a throwing spool sink without depriving its neighbours', () => {
     const seen = [];
     record(
