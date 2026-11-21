@@ -106,7 +106,9 @@ async function decideReferenceScreenshot({
   const checkedMasks = masksOf(masks);
   const timeoutMs = timeoutFor({}, settings);
   const rel = (p) => (p ? path.relative(projectRoot, p) : null);
-  const capture = await captureStable({ bridge, dest: paths.actual, clock, timeoutMs, pollMs: settings.pollMs });
+  const capture = await captureStable({
+    projectRoot, bridge, dest: paths.actual, clock, timeoutMs, pollMs: settings.pollMs,
+  });
   const unsettled = capture.stable ? '' : ` (the screen did not settle within ${timeoutMs}ms; the last of ${capture.frames} frames was used)`;
   const referenceRel = rel(paths.reference);
   const record = (status, message, { mechanical = true, judge = { by: 'reference_screenshot' }, similarity = null } = {}) => ({
@@ -130,7 +132,7 @@ async function decideReferenceScreenshot({
         `screen did not settle within ${timeoutMs}ms; no reference recorded (${capture.frames} frames captured)`
       );
     }
-    writeReference(paths.actual, paths.reference);
+    writeReference(projectRoot, paths.actual, paths.reference);
     return decided('passed', `reference updated (--update-references): ${referenceRel}`, 1);
   }
   if (!fs.existsSync(paths.reference)) {
@@ -150,7 +152,7 @@ async function decideReferenceScreenshot({
   }
 
   const r = compareScreenshots({
-    referencePath: paths.reference, actualPath: paths.actual, tolerance: tol, masks: rects, diffPath: paths.diff,
+    projectRoot, referencePath: paths.reference, actualPath: paths.actual, tolerance: tol, masks: rects, diffPath: paths.diff,
   });
   if (r.dimensionsMismatch) {
     const { reference: a, actual: b } = r.dimensionsMismatch;

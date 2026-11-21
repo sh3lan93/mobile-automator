@@ -1,9 +1,9 @@
 'use strict';
 
-const fs = require('fs');
 const path = require('path');
 
 const { workspaceDir } = require('../workspace/layout');
+const { safeWorkspaceDest } = require('../workspace/safe-fs');
 const { evaluateCondition } = require('./condition');
 const { substituteStep } = require('./variables');
 
@@ -47,13 +47,14 @@ async function attempt(step, ctx, perform) {
 // Capture `<workspace>/screenshots/<scenario_id>/<run_id>/<name>.png`. Returns
 // the path relative to the project root (what the result file records), or
 // null when the capture failed: evidence is best-effort, never a step failure,
-// so a failure is only noted on the step.
+// so a failure is only noted on the step. The engine writes the file, so the
+// destination is checked first (#347): a planted link on the way is refused,
+// noted like any other capture failure, and the device is never asked.
 async function screenshot(name, { bridge, projectRoot, scenario, runId, observe }) {
   const abs = path.join(workspaceDir(projectRoot), 'screenshots', scenario.scenario_id, runId, `${name}.png`);
   const rel = path.relative(projectRoot, abs);
   try {
-    fs.mkdirSync(path.dirname(abs), { recursive: true });
-    await bridge.screenshot(abs);
+    await bridge.screenshot(safeWorkspaceDest(projectRoot, abs));
     return rel;
   } catch (err) {
     observe(`screenshot ${rel} failed: ${err.message}`);

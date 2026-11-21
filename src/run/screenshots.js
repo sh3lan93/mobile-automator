@@ -1,8 +1,12 @@
 'use strict';
 
 // Where reference-screenshot artifacts live and how they are captured (#281).
-// This module owns every path the comparison reads or writes, and ensureParent
-// is the one place that creates their directories.
+// This module owns every path the comparison reads or writes. Their
+// directories are created only by safe-fs's checked walk, never a plain mkdir,
+// so a link on the way is refused (#347): the capture's (captureStable)
+// through safeWorkspaceDest, the baseline's (writeReference) through
+// atomicProjectWrite, and the diff's (./reference-screenshot.js) through
+// atomicWorkspaceWrite.
 //
 //   <workspace>/screenshots/reference/<scenario_id>/<assertion_id>.png   the baseline
 //   <workspace>/screenshots/<scenario_id>/<run_id>/assert_<id>.png        `mauto run`'s actual
@@ -11,9 +15,9 @@
 //   <workspace>/screenshots/assert/<assert_YYYYMMDD_HHMMSS_hex>/diff.png   ... and its diff
 //
 // A scenario may name its own baseline (`reference_screenshot`), relative to
-// the workspace; whatever it names must stay inside the project root. The diff
-// always lands beside its actual, so creating the actual's directory (the
-// capture does) is enough for it.
+// the workspace; whatever it names must stay inside the project root, which is
+// why its write is project-scoped. The actual and the diff always land in the
+// workspace.
 
 const crypto = require('crypto');
 const fs = require('fs');
@@ -21,6 +25,8 @@ const path = require('path');
 const { PNG } = require('pngjs');
 
 const { workspaceDir } = require('../workspace/layout');
+const { safeWorkspaceDest } = require('../workspace/safe-fs');
+const { atomicProjectWrite } = require('../util/atomic');
 
 // One path segment: no separator, not `.`/`..`, not empty.
 function segment(kind, value) {
@@ -95,12 +101,6 @@ function assertArtifacts({ projectRoot, input, now }) {
   };
 }
 
-// Create `file`'s directory (and its parents) if it does not exist yet.
-function ensureParent(file) {
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  return file;
-}
-
 function decodeFrame(file) {
   try {
     return PNG.sync.read(fs.readFileSync(file));
@@ -117,8 +117,15 @@ const removeQuietly = (file) => fs.rmSync(file, { force: true });
 // or until `timeoutMs` has elapsed since the first capture. The last frame is
 // left at `dest`; the temporary frames (siblings of `dest`) are removed either
 // way. Returns { path: dest, stable, frames }.
-async function captureStable({ bridge, dest, clock, timeoutMs, pollMs }) {
-  ensureParent(dest);
+//
+// The engine writes every frame, so `dest` (under the workspace) is checked
+// before the first capture (#347): its directory walked and created, a link on
+// the way or at `dest` refused before the device is asked. The temporary
+// frames sit in that checked directory, and each is removed (a planted link
+// included, never its target) before the engine writes it; the last one is
+// renamed over `dest`, which replaces whatever is there.
+async function captureStable({ projectRoot, bridge, dest: wanted, clock, timeoutMs, pollMs }) {
+  const dest = safeWorkspaceDest(projectRoot, wanted);
   const temps = [0, 1].map((i) => path.join(path.dirname(dest), `.${path.basename(dest)}.frame${i}.tmp.png`));
   const capture = async (file) => {
     removeQuietly(file);
@@ -151,13 +158,16 @@ async function captureStable({ bridge, dest, clock, timeoutMs, pollMs }) {
   }
 }
 
-// Record `actualPath` as the baseline at `referencePath`.
-function writeReference(actualPath, referencePath) {
-  ensureParent(referencePath);
-  fs.copyFileSync(actualPath, referencePath);
+// Record `actualPath` as the baseline at `referencePath`. A baseline may sit
+// anywhere inside the project root (resolveReference), so the write is
+// project-scoped: every directory below the root is checked (created when
+// missing), and the atomic rename replaces a link at `referencePath` rather
+// than writing through it, as copyFileSync would (#347).
+function writeReference(projectRoot, actualPath, referencePath) {
+  atomicProjectWrite(projectRoot, referencePath, fs.readFileSync(actualPath));
   return referencePath;
 }
 
 module.exports = {
-  referencePathFor, resolveReference, runArtifacts, assertArtifacts, assertArtifactId, ensureParent, captureStable, writeReference,
+  referencePathFor, resolveReference, runArtifacts, assertArtifacts, assertArtifactId, captureStable, writeReference,
 };

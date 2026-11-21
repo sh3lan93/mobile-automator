@@ -18,6 +18,7 @@ const { workspaceDir } = require('../../../src/workspace/layout');
 const { runScenario } = require('../../../src/run/runner');
 const { runSettings } = require('../../../src/run/settings');
 const { makeFakeBridge, makeFakeClock, homeElements, el } = require('../../helpers/fake-bridge');
+const { tmpDir, snapshot } = require('../../helpers/workspace-safety');
 
 const RUN_ID = 'run_20261021_120000';
 
@@ -257,6 +258,27 @@ describe('runScenario', () => {
     expect(r.file.observations).toEqual([
       { type: 'state_context', step_id: 'tap_home', message: `screenshot ${rel} failed: no disk` },
     ]);
+  });
+
+  // #347: the engine writes step evidence wherever it is told, so a committed
+  // `screenshots -> elsewhere` would land it there. The refusal is noted on
+  // the step like any capture failure; the device is never asked.
+  test('a screenshots/ dir planted as a link is refused: no capture, a note on the step, outside empty', async () => {
+    const outside = tmpDir('mauto-run-outside-');
+    fs.mkdirSync(workspaceDir(projectRoot), { recursive: true });
+    fs.symlinkSync(outside, path.join(workspaceDir(projectRoot), 'screenshots'));
+    const b = makeFakeBridge({ elements: [[el('Home')]] });
+
+    const r = await exec(scenario([{ id: 'tap_home', action: 'tap', description: 'd', target: 'Home', checkpoint: true }]), b);
+
+    expect(r.finalized.status).toBe('passed');
+    expect(r.file.steps_executed[0].screenshot).toBeNull();
+    expect(b.of('screenshot')).toEqual([]);
+    expect(snapshot(outside)).toEqual({});
+    const rel = path.join('.mobile-automator', 'screenshots', 'demo', RUN_ID, 'step_tap_home.png');
+    const [note] = r.file.observations;
+    expect(note).toMatchObject({ type: 'state_context', step_id: 'tap_home' });
+    expect(note.message).toMatch(new RegExp(`^screenshot ${rel.replace(/[.]/g, '\\.')} failed: Refusing to use workspace path `));
   });
 
   test('an ambiguous tap target is recorded as exactly one state_context observation on its step', async () => {

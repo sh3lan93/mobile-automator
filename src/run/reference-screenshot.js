@@ -15,6 +15,8 @@ const fs = require('fs');
 const { PNG } = require('pngjs');
 const pixelmatch = require('pixelmatch');
 
+const { atomicWorkspaceWrite } = require('../util/atomic');
+
 const DEFAULT_TOLERANCE = 0.9;
 // pixelmatch's per-pixel colour threshold (0..1): smaller is more sensitive.
 const DEFAULT_THRESHOLD = 0.1;
@@ -51,8 +53,10 @@ function applyMasks(reference, actual, masks) {
   return count;
 }
 
+// `projectRoot` is needed only to write the diff (when `diffPath` is given).
 function compareScreenshots({
-  referencePath, actualPath, tolerance = DEFAULT_TOLERANCE, masks = [], diffPath = null, threshold = DEFAULT_THRESHOLD,
+  projectRoot, referencePath, actualPath, tolerance = DEFAULT_TOLERANCE, masks = [], diffPath = null,
+  threshold = DEFAULT_THRESHOLD,
 }) {
   const reference = read(referencePath);
   const actual = read(actualPath);
@@ -77,11 +81,13 @@ function compareScreenshots({
   const comparedPixels = width * height - maskedPixels;
   const similarity = comparedPixels === 0 ? 1 : 1 - diffPixels / comparedPixels;
 
-  // No mkdir: the diff lands in the actual's directory (./screenshots.js
-  // runArtifacts / assertArtifacts), which the capture already created.
+  // The diff lands beside the actual, in the workspace (./screenshots.js
+  // runArtifacts / assertArtifacts). Written atomically through the checked
+  // walk (#347): a link on the way is refused, and the rename replaces a link
+  // planted at diffPath rather than writing through it.
   let written = null;
   if (diffPixels > 0 && diffPath) {
-    fs.writeFileSync(diffPath, PNG.sync.write(diff));
+    atomicWorkspaceWrite(projectRoot, diffPath, PNG.sync.write(diff));
     written = diffPath;
   }
   return {
