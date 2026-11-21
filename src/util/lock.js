@@ -3,7 +3,7 @@
 const nodeFs = require('fs');
 const path = require('path');
 
-const { safeDir, openWorkspaceFile } = require('../workspace/safe-fs');
+const { safeDir, openWorkspaceFile, openLeaf } = require('../workspace/safe-fs');
 
 // Advisory lock for shared read-modify-write files. The memory files are
 // appended across every run and verb, and the result files are written by
@@ -39,11 +39,11 @@ function sleepSync(ms) {
 }
 
 function createLock(lockPath, projectRoot, fs) {
-  const { O_WRONLY, O_CREAT, O_EXCL, O_NOFOLLOW } = nodeFs.constants;
+  const { O_WRONLY, O_CREAT, O_EXCL } = nodeFs.constants;
   if (projectRoot) {
     return openWorkspaceFile(projectRoot, lockPath, O_WRONLY | O_CREAT | O_EXCL, 0o666, { fs });
   }
-  return fs.openSync(lockPath, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0o666);
+  return openLeaf(lockPath, O_WRONLY | O_CREAT | O_EXCL, 0o666, { fs }).fd;
 }
 
 function acquire(lockPath, { projectRoot, now = Date.now, sleep = sleepSync, fs = nodeFs } = {}) {

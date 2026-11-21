@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-const { safeDir, openWorkspaceFile } = require('../workspace/safe-fs');
+const { safeDir, openWorkspaceFile, openLeaf } = require('../workspace/safe-fs');
 
 // Atomic write: stream into a hidden temp file in the same directory,
 // fsync, then rename over the target. rename(2) within one dir is atomic, so
@@ -19,7 +19,7 @@ const { safeDir, openWorkspaceFile } = require('../workspace/safe-fs');
 // opened through it; without one (paths the user chose, such as junit --out)
 // the directory is created as before.
 function atomicWrite(file, contents, { projectRoot } = {}) {
-  const { O_WRONLY, O_CREAT, O_EXCL, O_NOFOLLOW } = fs.constants;
+  const { O_WRONLY, O_CREAT, O_EXCL } = fs.constants;
   const dir = path.dirname(file);
   if (projectRoot) safeDir(projectRoot, dir, { create: true });
   else fs.mkdirSync(dir, { recursive: true });
@@ -31,7 +31,7 @@ function atomicWrite(file, contents, { projectRoot } = {}) {
   // `tmp`, so there is nothing to unlink.
   let fd = projectRoot
     ? openWorkspaceFile(projectRoot, tmp, O_WRONLY | O_CREAT | O_EXCL)
-    : fs.openSync(tmp, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0o666);
+    : openLeaf(tmp, O_WRONLY | O_CREAT | O_EXCL).fd;
   try {
     fs.writeFileSync(fd, contents);
     fs.fsyncSync(fd);
