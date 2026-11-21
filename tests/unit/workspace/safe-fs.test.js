@@ -25,12 +25,13 @@ const {
   createWorkspaceFile,
   removeWorkspaceFile,
   openLeaf,
+  openOwnedLeaf,
 } = require('../../../src/workspace/safe-fs');
 // The envelope boundary: a refusal reaches the agent through toEnvelope's
 // typed-error branch, which maps the error's own kind, message and hint.
 const { toEnvelope } = require('../../../src/cli');
 
-const { O_RDONLY, O_WRONLY, O_RDWR, O_CREAT, O_TRUNC } = fs.constants;
+const { O_RDONLY, O_WRONLY, O_RDWR, O_CREAT, O_EXCL, O_TRUNC } = fs.constants;
 const CANARY = 'SECRET-CANARY';
 const REAL_UID = process.getuid();
 
@@ -104,20 +105,26 @@ function makeFifo(p) {
 }
 
 // A blocking open on a FIFO would freeze the event loop so jest's timeout
-// could never fire; run it in a child with a hard timeout instead.
-function readReasonInChild(projectRoot, file) {
+// could never fire; run it in a child with a hard timeout instead. `call` is
+// the expression to evaluate, with the module bound to `m` and the remaining
+// argv strings to `a`; the child prints the refusal reason (or fs code).
+function reasonInChild(call, ...args) {
   const modulePath = require.resolve('../../../src/workspace/safe-fs');
   const script = [
-    'const [, mod, rootDir, file] = process.argv;',
-    'try { require(mod).readWorkspaceFile(rootDir, file); process.stdout.write("null"); }',
+    'const [, mod, ...a] = process.argv; const m = require(mod);',
+    `try { ${call}; process.stdout.write("null"); }`,
     'catch (e) { process.stdout.write(JSON.stringify(e.reason || e.code)); }',
   ].join('\n');
   return JSON.parse(
-    childProcess.execFileSync(process.execPath, ['-e', script, modulePath, projectRoot, file], {
+    childProcess.execFileSync(process.execPath, ['-e', script, modulePath, ...args], {
       encoding: 'utf8',
       timeout: 3000,
     })
   );
+}
+
+function readReasonInChild(projectRoot, file) {
+  return reasonInChild('m.readWorkspaceFile(a[0], a[1])', projectRoot, file);
 }
 
 describe('safeDir', () => {
@@ -606,6 +613,114 @@ describe('openLeaf', () => {
   });
 });
 
+describe('openOwnedLeaf', () => {
+  it('opens a regular file and returns an fd', () => {
+    const p = path.join(ws, 'a');
+    fs.writeFileSync(p, 'abc');
+    const fd = openOwnedLeaf(p, O_RDONLY);
+    expect(typeof fd).toBe('number');
+    const buf = Buffer.alloc(3);
+    fs.readSync(fd, buf, 0, 3, 0);
+    fs.closeSync(fd);
+    expect(buf.toString()).toBe('abc');
+  });
+
+  it('refuses a symlink leaf (symlink), workspace scope by default', () => {
+    const link = path.join(ws, 'a');
+    fs.symlinkSync(canaryFile, link);
+    const err = expectUnsafe(() => openOwnedLeaf(link, O_RDONLY), 'symlink');
+    expect(err.scope).toBe('workspace');
+    expect(err.path).toBe(link);
+  });
+
+  it('refuses a dangling symlink leaf on O_CREAT (symlink), creating no target', () => {
+    const target = path.join(outside, 'planted.txt');
+    const link = path.join(ws, 'a');
+    fs.symlinkSync(target, link);
+    expectUnsafe(() => openOwnedLeaf(link, O_WRONLY | O_CREAT), 'symlink');
+    expect(fs.existsSync(target)).toBe(false);
+  });
+
+  it('refuses a FIFO leaf for a write (not_regular) without blocking', () => {
+    const p = path.join(ws, 'fifo');
+    if (!makeFifo(p)) return;
+    expect(reasonInChild('m.openOwnedLeaf(a[0], require("fs").constants.O_WRONLY)', p)).toBe('not_regular');
+    expect(reasonInChild('m.openOwnedLeaf(a[0], require("fs").constants.O_RDONLY)', p)).toBe('not_regular');
+  }, 10000);
+
+  it('refuses a hard-linked leaf for a write (hardlink), allows it for a read', () => {
+    const p = path.join(ws, 'a');
+    fs.linkSync(canaryFile, p);
+    expectUnsafe(() => openOwnedLeaf(p, O_WRONLY), 'hardlink');
+    expectUnsafe(() => openOwnedLeaf(p, O_RDWR), 'hardlink');
+    fs.closeSync(openOwnedLeaf(p, O_RDONLY));
+  });
+
+  it('defers O_TRUNC past the checks: a hard-linked outside file is not emptied', () => {
+    const p = path.join(ws, 'a');
+    fs.linkSync(canaryFile, p);
+    expectUnsafe(() => openOwnedLeaf(p, O_WRONLY | O_TRUNC), 'hardlink');
+    expect(fs.readFileSync(canaryFile, 'utf8')).toBe(CANARY);
+  });
+
+  it('defers O_TRUNC past the owner check: a refused foreign leaf keeps its content', () => {
+    const p = path.join(ws, 'a');
+    fs.writeFileSync(p, 'keep');
+    expectUnsafe(() => openOwnedLeaf(p, O_WRONLY | O_TRUNC, {}, { fs: foreignFs(['fstatSync']) }), 'foreign_owner');
+    expect(fs.readFileSync(p, 'utf8')).toBe('keep');
+  });
+
+  it('truncates an accepted leaf when O_TRUNC was asked, and only then', () => {
+    const p = path.join(ws, 'a');
+    fs.writeFileSync(p, 'old content');
+    let fd = openOwnedLeaf(p, O_WRONLY);
+    fs.closeSync(fd);
+    expect(fs.readFileSync(p, 'utf8')).toBe('old content');
+    fd = openOwnedLeaf(p, O_WRONLY | O_TRUNC);
+    fs.writeSync(fd, 'new');
+    fs.closeSync(fd);
+    expect(fs.readFileSync(p, 'utf8')).toBe('new');
+  });
+
+  it('creates with the given mode', () => {
+    const umask = process.umask(0o022);
+    try {
+      const p = path.join(ws, 'a');
+      fs.closeSync(openOwnedLeaf(p, O_WRONLY | O_CREAT | O_EXCL, { mode: 0o600 }));
+      expect(fs.statSync(p).mode & 0o777).toBe(0o600);
+    } finally {
+      process.umask(umask);
+    }
+  });
+
+  it('closes the fd on a refusal after the open', () => {
+    const p = path.join(ws, 'a');
+    fs.writeFileSync(p, 'x');
+    const closed = [];
+    const wrapped = foreignFs(['fstatSync']);
+    wrapped.closeSync = (fd) => (closed.push(fd), fs.closeSync(fd));
+    expectUnsafe(() => openOwnedLeaf(p, O_WRONLY, {}, { fs: wrapped }), 'foreign_owner');
+    expect(closed).toHaveLength(1);
+  });
+
+  it.each([
+    ['symlink', (p) => (fs.symlinkSync(canaryFile, p), () => openOwnedLeaf(p, O_RDONLY, { scope: 'path' }))],
+    ['not_regular', (p) => (fs.mkdirSync(p), () => openOwnedLeaf(p, O_RDONLY, { scope: 'path' }))],
+    ['hardlink', (p) => (fs.linkSync(canaryFile, p), () => openOwnedLeaf(p, O_WRONLY, { scope: 'path' }))],
+    [
+      'foreign_owner',
+      (p) => (
+        fs.writeFileSync(p, 'x'),
+        () => openOwnedLeaf(p, O_RDONLY, { scope: 'path' }, { fs: foreignFs(['fstatSync']) })
+      ),
+    ],
+  ])('a %s refusal carries the path scope it was given', (reason, setup) => {
+    const err = expectUnsafe(setup(path.join(ws, 'a')), reason);
+    expect(err.scope).toBe('path');
+    expect(err.message.startsWith('Refusing to use path ')).toBe(true);
+  });
+});
+
 // Absent or garbled is a normal state; a refused path never is.
 describe.each([
   ['readWorkspaceFileOrNull', readWorkspaceFileOrNull],
@@ -680,6 +795,67 @@ describe('UnsafePathError carries its own envelope fields', () => {
     expect(err.message).toBe('Refusing to use workspace path /ws/.mobile-automator/x: it is not safe to use (mystery).');
     expect(err.hint).toMatch(/inside \.mobile-automator\//);
   });
+
+  it('the scope defaults to workspace, with the workspace wording verbatim', () => {
+    const err = new UnsafePathError('/ws/.mobile-automator/memory', 'escape');
+    const explicit = new UnsafePathError('/ws/.mobile-automator/memory', 'escape', { scope: 'workspace' });
+    expect(err.scope).toBe('workspace');
+    expect(err.message).toBe(
+      'Refusing to use workspace path /ws/.mobile-automator/memory: it resolves outside the .mobile-automator/ workspace (escape).'
+    );
+    expect(err.hint).toBe(
+      'mauto only reads and writes inside .mobile-automator/. Replace any link on the way with a real directory or file inside .mobile-automator/.'
+    );
+    expect(explicit.message).toBe(err.message);
+    expect(explicit.hint).toBe(err.hint);
+  });
+});
+
+describe('UnsafePathError in the path scope (a project file, a user-chosen file)', () => {
+  const scoped = (reason) => new UnsafePathError('/p/.claude/skills', reason, { scope: 'path' });
+
+  it('escape names the project directory, not the workspace', () => {
+    const err = scoped('escape');
+    expect(err.scope).toBe('path');
+    expect(err.kind).toBe('environment');
+    expect(err.code).toBe('EUNSAFEPATH');
+    expect(err.message).toBe('Refusing to use path /p/.claude/skills: it resolves outside the project directory (escape).');
+    expect(err.hint).toBe(
+      'mauto only writes inside the project directory. Replace any link on the way with a real directory inside the project.'
+    );
+  });
+
+  it('symlink keeps the shared reason text, with a path hint', () => {
+    const err = scoped('symlink');
+    expect(err.message).toBe('Refusing to use path /p/.claude/skills: it is a symbolic link (symlink).');
+    expect(err.hint).toBe(
+      'mauto never writes through a symbolic link. Replace the link with a real directory or file, then re-run.'
+    );
+  });
+
+  it('foreign_owner keeps the escape hatch in a path hint', () => {
+    const err = scoped('foreign_owner');
+    expect(err.message).toBe('Refusing to use path /p/.claude/skills: it is owned by another user (foreign_owner).');
+    expect(err.hint).toBe(
+      'Files mauto writes must belong to the user running mauto. Fix the ownership (chown), or set MAUTO_TRUST_WORKSPACE_OWNER=1 if you trust this checkout (for example a CI container running as root); it skips only the owner check.'
+    );
+  });
+
+  it('a reason with no path override falls back to the shared text and hint', () => {
+    const err = scoped('world_writable');
+    const shared = new UnsafePathError('/p/.claude/skills', 'world_writable');
+    expect(err.message).toBe('Refusing to use path /p/.claude/skills: it is writable by every user (world_writable).');
+    expect(err.hint).toBe(shared.hint);
+  });
+
+  it.each(['hardlink', 'too_large', 'mystery', 'escape', 'symlink', 'foreign_owner'])(
+    'no %s hint in the path scope claims the file is in the workspace',
+    (reason) => {
+      // The escape hatch's variable name is the one mention allowed.
+      const hint = scoped(reason).hint.replace('MAUTO_TRUST_WORKSPACE_OWNER', '');
+      expect(hint).not.toMatch(/workspace|\.mobile-automator/i);
+    }
+  );
 });
 
 describe('a refusal through toEnvelope', () => {
