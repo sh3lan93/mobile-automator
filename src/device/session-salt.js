@@ -18,7 +18,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const paths = require('./session-paths');
-const { openWorkspaceFile, readWorkspaceFileOrNull, safeDir } = require('../workspace/safe-fs');
+const { createWorkspaceFile, readWorkspaceFileOrNull } = require('../workspace/safe-fs');
 
 // The salt, or null when it is missing, unreadable or empty. Any other content
 // IS the salt: an HMAC key needs no particular shape, so there is no
@@ -48,15 +48,15 @@ function ensureSalt(projectRoot, { fs = realFs } = {}) {
   if (existing) return existing;
 
   const file = paths.saltPath(projectRoot);
-  safeDir(projectRoot, path.dirname(file), { create: true }, { fs });
   const tmp = path.join(
     path.dirname(file),
     `.${path.basename(file)}.tmp.${process.pid}.${crypto.randomBytes(6).toString('hex')}`
   );
   const salt = crypto.randomBytes(32).toString('hex');
   try {
-    const { O_WRONLY, O_CREAT, O_EXCL } = realFs.constants;
-    const fd = openWorkspaceFile(projectRoot, tmp, O_WRONLY | O_CREAT | O_EXCL, 0o600, { fs });
+    // Creates .session/ through the checked walk when missing; the link below
+    // stays inside the directory that walk checked.
+    const fd = createWorkspaceFile(projectRoot, tmp, { mode: 0o600 }, { fs });
     try {
       fs.writeFileSync(fd, `${salt}\n`);
       fs.fsyncSync(fd);

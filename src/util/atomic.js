@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-const { safeDir, openWorkspaceFile, openLeaf } = require('../workspace/safe-fs');
+const { createWorkspaceFile, openLeaf } = require('../workspace/safe-fs');
 
 // Atomic write: stream into a hidden temp file in the same directory,
 // fsync, then rename over the target. rename(2) within one dir is atomic, so
@@ -17,9 +17,9 @@ const { safeDir, openWorkspaceFile, openLeaf } = require('../workspace/safe-fs')
 // (#345).
 //
 // Two writers, one path each, sharing the core below:
-//   - atomicWorkspaceWrite confines the write to .mobile-automator/: the
-//     target's directory is walked by safe-fs (symlink-free, owned by us,
-//     created when missing) and the temp file is opened through it.
+//   - atomicWorkspaceWrite confines the write to .mobile-automator/: the temp
+//     file is created by safe-fs's createWorkspaceFile, which walks the
+//     target's directory (symlink-free, owned by us, created when missing).
 //   - atomicWrite does NOT confine: it is for paths the user chose (junit
 //     --out) and creates the directory with a plain recursive mkdir. Any write
 //     into the workspace belongs in atomicWorkspaceWrite.
@@ -62,9 +62,9 @@ function atomicWorkspaceWrite(projectRoot, file, contents) {
   if (typeof projectRoot !== 'string' || typeof file !== 'string' || contents === undefined) {
     throw new TypeError('atomicWorkspaceWrite(projectRoot, file, contents) needs the project root and the file');
   }
-  const { O_WRONLY, O_CREAT, O_EXCL } = fs.constants;
-  safeDir(projectRoot, path.dirname(file), { create: true });
-  writeViaTemp(file, contents, (tmp) => openWorkspaceFile(projectRoot, tmp, O_WRONLY | O_CREAT | O_EXCL));
+  // createWorkspaceFile walks (and creates) the temp file's directory, which is
+  // the target's: the rename stays inside the directory it checked.
+  writeViaTemp(file, contents, (tmp) => createWorkspaceFile(projectRoot, tmp));
 }
 
 function atomicWrite(file, contents) {

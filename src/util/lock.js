@@ -1,9 +1,8 @@
 'use strict';
 
 const nodeFs = require('fs');
-const path = require('path');
 
-const { safeDir, openWorkspaceFile } = require('../workspace/safe-fs');
+const { createWorkspaceFile } = require('../workspace/safe-fs');
 
 // Advisory lock for shared read-modify-write files. The memory files are
 // appended across every run and verb, and the result files are written by
@@ -18,12 +17,12 @@ const { safeDir, openWorkspaceFile } = require('../workspace/safe-fs');
 // symlink, directory or FIFO at the lock path is not a lock any mauto process
 // made, so it is unlinked (the link itself, never its target) and the acquire
 // retries. O_EXCL never follows a link, and O_NOFOLLOW is added on top. The
-// project root is required: the lock's directory is always walked by safe-fs
-// (symlink-free, owned by us, created when missing) and the lock file is
-// always created through it, so there is no unconfined path to fall back to.
-// Every retry path, including
-// a lock that vanishes between open and lstat, is bounded by MAX_WAIT_MS: a
-// dangling symlink used to make open fail EEXIST and stat fail ENOENT forever.
+// project root is required: the lock file is always created by safe-fs's
+// createWorkspaceFile, which walks its directory (symlink-free, owned by us,
+// created when missing) on every attempt, so there is no unconfined path to
+// fall back to. Every retry path, including a lock that vanishes between open
+// and lstat, is bounded by MAX_WAIT_MS: a dangling symlink used to make open
+// fail EEXIST and stat fail ENOENT forever.
 
 // STALE_MS bounds how long a held lock may sit before another acquirer treats
 // it as abandoned. It is judged from the lockfile's creation mtime and is NOT
@@ -44,8 +43,6 @@ function acquire(projectRoot, lockPath, { now = Date.now, sleep = sleepSync, fs 
   if (typeof projectRoot !== 'string' || typeof lockPath !== 'string') {
     throw new TypeError('acquire(projectRoot, lockPath) needs the project root and the lock path');
   }
-  const { O_WRONLY, O_CREAT, O_EXCL } = nodeFs.constants;
-  safeDir(projectRoot, path.dirname(lockPath), { create: true }, { fs });
   const deadline = now() + MAX_WAIT_MS;
   const throwIfExpired = () => {
     if (now() >= deadline) {
@@ -59,7 +56,7 @@ function acquire(projectRoot, lockPath, { now = Date.now, sleep = sleepSync, fs 
   for (;;) {
     let fd;
     try {
-      fd = openWorkspaceFile(projectRoot, lockPath, O_WRONLY | O_CREAT | O_EXCL, 0o666, { fs });
+      fd = createWorkspaceFile(projectRoot, lockPath, {}, { fs });
     } catch (e) {
       if (e.code !== 'EEXIST') throw e;
       // Something is there. Break it if it is not a live lock of ours.

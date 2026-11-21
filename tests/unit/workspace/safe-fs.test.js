@@ -22,6 +22,7 @@ const {
   readWorkspaceFileOrNull,
   readWorkspaceJsonOrNull,
   openWorkspaceFile,
+  createWorkspaceFile,
   openLeaf,
 } = require('../../../src/workspace/safe-fs');
 // The envelope boundary: a refusal reaches the agent through toEnvelope's
@@ -457,6 +458,77 @@ describe('openWorkspaceFile', () => {
 
   it('refuses the project root itself as a "file" (escape)', () => {
     expectUnsafe(() => openWorkspaceFile(root, path.join(ws, 'x', '..'), O_RDONLY), 'escape');
+  });
+});
+
+describe('createWorkspaceFile', () => {
+  it('creates the file under missing dirs, each one a real directory', () => {
+    const p = path.join(ws, '.session', 'locks', 'new.lock');
+    const fd = createWorkspaceFile(root, p);
+    fs.writeSync(fd, 'ok');
+    fs.closeSync(fd);
+    expect(fs.readFileSync(p, 'utf8')).toBe('ok');
+    expect(fs.lstatSync(path.join(ws, '.session')).isDirectory()).toBe(true);
+    expect(fs.lstatSync(path.join(ws, '.session', 'locks')).isDirectory()).toBe(true);
+  });
+
+  it('walks the directories through the owner check, creating no file when it refuses', () => {
+    const p = path.join(ws, 'memory', 'new.md');
+    expectUnsafe(() => createWorkspaceFile(root, p, {}, { fs: foreignFs(['lstatSync']) }), 'foreign_owner');
+    expect(fs.existsSync(p)).toBe(false);
+  });
+
+  it('fails EEXIST, code intact, when the file already exists, leaving it untouched', () => {
+    const p = path.join(ws, 'lock');
+    fs.writeFileSync(p, 'held');
+    let caught;
+    try {
+      createWorkspaceFile(root, p);
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).not.toBeInstanceOf(UnsafePathError);
+    expect(caught.code).toBe('EEXIST');
+    expect(fs.readFileSync(p, 'utf8')).toBe('held');
+  });
+
+  it('refuses a symlinked parent dir (symlink), creating nothing outside', () => {
+    fs.symlinkSync(outside, path.join(ws, 'memory'));
+    const before = snapshot(outside);
+    expectUnsafe(() => createWorkspaceFile(root, path.join(ws, 'memory', 'new.md')), 'symlink');
+    expect(snapshot(outside)).toEqual(before);
+  });
+
+  it('refuses a dangling leaf symlink, creating no target', () => {
+    const target = path.join(outside, 'planted.txt');
+    const link = path.join(ws, 'lock');
+    fs.symlinkSync(target, link);
+    let caught;
+    try {
+      createWorkspaceFile(root, link);
+    } catch (err) {
+      caught = err;
+    }
+    // POSIX: O_CREAT|O_EXCL fails EEXIST on any existing name, a dangling link
+    // included, without following it. The lock relies on exactly this code
+    // to lstat the entry and unlink the link.
+    expect(caught.code).toBe('EEXIST');
+    expect(fs.existsSync(target)).toBe(false);
+    expect(fs.lstatSync(link).isSymbolicLink()).toBe(true);
+  });
+
+  it('honours mode (0o600 under umask 022)', () => {
+    const umask = process.umask(0o022);
+    try {
+      const p = path.join(ws, '.session', 'salt.tmp');
+      fs.closeSync(createWorkspaceFile(root, p, { mode: 0o600 }));
+      expect(fs.statSync(p).mode & 0o777).toBe(0o600);
+      const q = path.join(ws, 'default.tmp');
+      fs.closeSync(createWorkspaceFile(root, q));
+      expect(fs.statSync(q).mode & 0o777).toBe(0o644);
+    } finally {
+      process.umask(umask);
+    }
   });
 });
 

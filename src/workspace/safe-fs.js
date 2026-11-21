@@ -216,6 +216,18 @@ function openWorkspaceFile(projectRoot, file, flags, mode = 0o666, deps = {}) {
   return fd;
 }
 
+// THE way to create a new workspace file (a temp file, a lock, a sidecar).
+// Exclusive: O_WRONLY|O_CREAT|O_EXCL, plus the O_NOFOLLOW|O_NONBLOCK every
+// leaf open adds, so it never opens anything already there, a planted link
+// included. Missing parent directories are created by the same checked walk
+// as openWorkspaceFile, because this is openWorkspaceFile. An existing leaf
+// fails with its fs code (EEXIST) intact, which the lock's retry relies on.
+// `mode` is subject to the umask. Returns an fd the caller closes.
+function createWorkspaceFile(projectRoot, file, { mode = 0o666 } = {}, deps = {}) {
+  const { O_WRONLY, O_CREAT, O_EXCL } = nodeFs.constants;
+  return openWorkspaceFile(projectRoot, file, O_WRONLY | O_CREAT | O_EXCL, mode, deps);
+}
+
 // Read a workspace file as utf8. null when it (or a parent dir) does not exist.
 // Reads at most maxBytes + 1 so a planted huge file costs nothing.
 function readWorkspaceFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES } = {}, deps = {}) {
@@ -274,6 +286,7 @@ module.exports = {
   safeDir,
   openLeaf,
   openWorkspaceFile,
+  createWorkspaceFile,
   readWorkspaceFile,
   readWorkspaceFileOrNull,
   readWorkspaceJsonOrNull,

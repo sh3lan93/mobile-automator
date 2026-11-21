@@ -16,7 +16,7 @@ const {
 const { ResultStoreRefusal } = require('./refusal');
 const { resolveRunStatus } = require('./status-guard');
 const { workspaceDir } = require('../workspace/layout');
-const { UnsafePathError, openWorkspaceFile, readWorkspaceFile } = require('../workspace/safe-fs');
+const { UnsafePathError, createWorkspaceFile, readWorkspaceFile } = require('../workspace/safe-fs');
 
 // Incremental result accumulator that persists to
 //   <projectRoot>/.mobile-automator/results/<runId>.json
@@ -232,8 +232,7 @@ class ResultStore {
       // Cross-device or other rename failure — fall back to a copy, created
       // exclusively inside the workspace so it never writes through a link.
       try {
-        const { O_WRONLY, O_CREAT, O_EXCL } = fs.constants;
-        const fd = openWorkspaceFile(this.projectRoot, sidecar, O_WRONLY | O_CREAT | O_EXCL);
+        const fd = createWorkspaceFile(this.projectRoot, sidecar);
         try {
           fs.writeFileSync(fd, raw);
         } finally {
