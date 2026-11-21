@@ -161,8 +161,8 @@ describe('handleCrashGet --out confinement (#347)', () => {
   const REPORT = 'FATAL EXCEPTION: main\n  at com.acme.Boom.run(Boom.java:1)';
 
   // A project one level below its own temp dir (so `..` stays in a temp dir),
-  // an outside dir holding the canary, and the temp dir the handler is told
-  // about: three different places.
+  // an outside dir holding the canary, and the temp and home dirs the handler
+  // is told about: four different places.
   function setup() {
     const base = tmpDir('mauto-crash-out-');
     const root = path.join(base, 'project');
@@ -171,10 +171,15 @@ describe('handleCrashGet --out confinement (#347)', () => {
     const outside = tmpDir('mauto-crash-outside-');
     fs.writeFileSync(path.join(outside, 'target.txt'), CANARY);
     const tmp = tmpDir('mauto-crash-tmp-');
-    return { base, root, ws, outside, tmp };
+    const home = tmpDir('mauto-crash-home-');
+    return { base, root, ws, outside, tmp, home };
   }
 
-  async function getWith({ root, tmp }, out, { cwd = root, platform = 'linux', darwinTmp } = {}) {
+  async function getWith(
+    { root, tmp, home },
+    out,
+    { cwd = root, platform = 'linux', darwinTmp, homedir = () => home } = {}
+  ) {
     const asked = [];
     const deviceBridge = {
       getCrash: async (id) => {
@@ -183,7 +188,7 @@ describe('handleCrashGet --out confinement (#347)', () => {
       },
     };
     const r = await handleCrashGet(
-      { deviceBridge, projectRoot: root, cwd, tmpdir: () => tmp, platform, darwinTmp },
+      { deviceBridge, projectRoot: root, cwd, tmpdir: () => tmp, platform, darwinTmp, homedir },
       'r1',
       { out }
     );
@@ -350,6 +355,76 @@ describe('handleCrashGet --out confinement (#347)', () => {
   // macOS os.tmpdir() is /var/folders/.../T, not /tmp, and the engine adds /tmp
   // there itself: `mauto crash get <id> --out /tmp/crash.txt` is documented.
   // The stand-in for /tmp is injected so the test never writes to the real one.
+  // The engine never takes its cwd as a root when that is the home directory
+  // or above it (mobile-mcp's isTooBroadToAllow): it would make nearly every
+  // file the user owns writable. `crash get` has no workspace gate, so its
+  // project root is the cwd whenever no workspace is found; run from ~, it
+  // must not accept `--out ~/.bashrc`.
+  describe('a project that is the home directory or above it is no root', () => {
+    it('a project root equal to home: a path in it is invalid_input, and the hint does not list it', async () => {
+      const s = setup();
+
+      const { r, asked } = await getWith(s, 'crash.txt', { homedir: () => s.root });
+
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.hint).not.toContain(s.root);
+      expect(r.envelope.hint).toContain(s.tmp);
+      expect(asked).toEqual([]);
+      expect(fs.existsSync(path.join(s.root, 'crash.txt'))).toBe(false);
+    });
+
+    it('a project root above home: the same', async () => {
+      const s = setup();
+      const home = path.join(s.root, 'users', 'me');
+      fs.mkdirSync(home, { recursive: true });
+
+      const { r, asked } = await getWith(s, 'crash.txt', { homedir: () => home });
+
+      expect(r.exitKind).toBe('invalid_input');
+      expect(r.envelope.hint).not.toContain(s.root);
+      expect(asked).toEqual([]);
+      expect(fs.existsSync(path.join(s.root, 'crash.txt'))).toBe(false);
+    });
+
+    it('home reached through a link is compared by realpath', async () => {
+      const s = setup();
+      const alias = path.join(tmpDir('mauto-crash-home-alias-'), 'home');
+      fs.symlinkSync(s.root, alias);
+
+      const { r } = await getWith(s, 'crash.txt', { homedir: () => alias });
+
+      expect(r.exitKind).toBe('invalid_input');
+    });
+
+    it('a project in a subdirectory of home is still a root', async () => {
+      const s = setup();
+
+      const { r } = await getWith(s, 'crash.txt', { homedir: () => s.base });
+
+      expect(r.exitKind).toBe('ok');
+      expect(fs.readFileSync(path.join(s.root, 'crash.txt'), 'utf8')).toBe(REPORT);
+    });
+
+    it('a write inside .mobile-automator/ never reaches the rule', async () => {
+      const s = setup();
+
+      const { r } = await getWith(s, '.mobile-automator/crash.txt', { homedir: () => s.root });
+
+      expect(r.exitKind).toBe('ok');
+      expect(fs.readFileSync(path.join(s.ws, 'crash.txt'), 'utf8')).toBe(REPORT);
+    });
+
+    it('the temp directory stays a root', async () => {
+      const s = setup();
+      const out = path.join(s.tmp, 'crash.txt');
+
+      const { r } = await getWith(s, out, { homedir: () => s.root });
+
+      expect(r.exitKind).toBe('ok');
+      expect(fs.readFileSync(out, 'utf8')).toBe(REPORT);
+    });
+  });
+
   describe('/tmp on macOS', () => {
     it('on darwin a path under /tmp is allowed', async () => {
       const s = setup();

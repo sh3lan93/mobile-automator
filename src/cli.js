@@ -1769,16 +1769,33 @@ async function handleCrashList({ deviceBridge, projectRoot }, opts = {}) {
   };
 }
 
+// realpath, or null when there is none: the path does not exist (or cannot be
+// reached), so it contains nothing that does.
+function realpathOrNull(p) {
+  try {
+    return fs.realpathSync(p);
+  } catch (_) {
+    return null;
+  }
+}
+
 // Where `crash get --out` may write outside the workspace: the roots the device
 // engine allows for the files it writes itself (mobile-mcp's
-// getAllowedRoots): the project, the OS temp directory and, on macOS, /tmp
-// too, because os.tmpdir() is /var/folders/.../T there and the docs teach
-// `--out /tmp/crash.txt`. Listed as given, for the hint; compared as
-// realpaths, as the engine compares them.
-function crashOutRoots(projectRoot, { tmpdir, platform, darwinTmp }) {
-  const roots = [projectRoot, tmpdir()];
+// getAllowedRoots). The project, unless it is the home directory or above it
+// (the engine's isTooBroadToAllow: it would make nearly every file the user
+// owns writable, and with no workspace found the project is just the cwd);
+// the OS temp directory; and on macOS /tmp too, because os.tmpdir() is
+// /var/folders/.../T there and the docs teach `--out /tmp/crash.txt`. Listed
+// as given, for the hint; compared as realpaths, as the engine compares them.
+// A home that does not exist protects nothing, so the project stays a root.
+function crashOutRoots(projectRoot, { tmpdir, platform, darwinTmp, homedir }) {
+  const home = realpathOrNull(homedir());
+  const project = realpathOrNull(projectRoot);
+  const projectTooBroad = Boolean(home && project && isInside(home, project));
+  const roots = projectTooBroad ? [] : [projectRoot];
+  roots.push(tmpdir());
   if (platform === 'darwin') roots.push(darwinTmp);
-  return roots;
+  return { roots, projectTooBroad };
 }
 
 function crashWriteFailure(given, err) {
@@ -1794,28 +1811,25 @@ function crashWriteFailure(given, err) {
 
 // Why `out` (resolved, outside the workspace) may not take the report, or
 // null. Its directory must already exist (a missing one fails environment,
-// as the write itself always has) and realpath inside one of `roots`.
-function crashOutRefusal(out, given, roots) {
+// as the write itself always has) and realpath inside one of the roots. A
+// root with no realpath is skipped: it cannot contain a directory that exists.
+function crashOutRefusal(out, given, { roots, projectTooBroad }) {
   let dir;
   try {
     dir = fs.realpathSync(path.dirname(out));
   } catch (err) {
     return crashWriteFailure(given, err);
   }
-  const realRoot = (r) => {
-    try {
-      return fs.realpathSync(r);
-    } catch (_) {
-      return path.resolve(r);
-    }
+  const holdsDir = (root) => {
+    const real = realpathOrNull(root);
+    return real !== null && isInside(dir, real);
   };
-  if (roots.some((r) => isInside(dir, realRoot(r)))) return null;
+  if (roots.some(holdsDir)) return null;
+  const hint = projectTooBroad
+    ? `Pass an --out path inside a temp directory: ${roots.join(', ')}. The project directory is not allowed: it is the home directory or contains it.`
+    : `Pass an --out path inside the project or a temp directory: ${roots.join(', ')}.`;
   return {
-    envelope: fail(
-      'invalid_input',
-      `--out resolves outside the directories a crash report may be written to: ${out}`,
-      `Pass an --out path inside the project or a temp directory: ${roots.join(', ')}.`
-    ),
+    envelope: fail('invalid_input', `--out resolves outside the directories a crash report may be written to: ${out}`, hint),
     exitKind: 'invalid_input',
   };
 }
@@ -1846,11 +1860,11 @@ function writeCrashReport(projectRoot, out, confined, report) {
 // workspace rules: every directory walked, created when missing, a link on
 // the way refused. Anywhere else it must land in one of crashOutRoots, checked
 // before the device is asked, so a bad --out costs no device work. `tmpdir`,
-// `platform` and `darwinTmp` are injectable for tests.
+// `platform`, `darwinTmp` and `homedir` are injectable for tests.
 async function handleCrashGet(
   {
     deviceBridge, projectRoot, cwd = process.cwd(),
-    tmpdir = os.tmpdir, platform = process.platform, darwinTmp = '/tmp',
+    tmpdir = os.tmpdir, platform = process.platform, darwinTmp = '/tmp', homedir = os.homedir,
   },
   id,
   opts = {}
@@ -1861,7 +1875,9 @@ async function handleCrashGet(
     out = path.resolve(cwd, opts.out);
     confined = inWorkspace(projectRoot, out);
     if (!confined) {
-      const refused = crashOutRefusal(out, opts.out, crashOutRoots(projectRoot, { tmpdir, platform, darwinTmp }));
+      const refused = crashOutRefusal(
+        out, opts.out, crashOutRoots(projectRoot, { tmpdir, platform, darwinTmp, homedir })
+      );
       if (refused) return refused;
     }
   }
