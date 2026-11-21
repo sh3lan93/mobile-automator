@@ -10,5 +10,8 @@ module.exports = {
   roots: ['<rootDir>/tests'],
   testMatch: ['**/*.test.js'],
   testPathIgnorePatterns: ['/node_modules/', '<rootDir>/.claude/', '<rootDir>/.worktrees/'],
+  // Points XDG_CONFIG_HOME at a temp dir for every test file, and fails a file
+  // that changes the developer's real telemetry consent record (#348).
+  setupFilesAfterEnv: ['<rootDir>/tests/helpers/isolate-user-config.js'],
   verbose: true,
 };
