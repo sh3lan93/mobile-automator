@@ -1,9 +1,10 @@
 'use strict';
 
 // #347, end to end through buildProgram: `mauto init` writes host files into
-// the checkout, and a cloned repo can commit any of them as a symlink. A
-// refused path is an `environment` envelope that names the path, never what
-// the link points at, and the link's target is left byte-identical.
+// the checkout and `mauto setup` scaffolds .mobile-automator/, and a cloned
+// repo can commit any of those paths as a symlink. A refused path is an
+// `environment` envelope that names the path, never what the link points at,
+// and the link's target is left byte-identical.
 
 const fs = require('fs');
 const path = require('path');
@@ -62,6 +63,29 @@ describe('init refuses a symlinked host path (#347)', () => {
       expect(byAgent[agent].ok).toBe(true);
     }
     expect(fs.existsSync(path.join(root, '.gemini', 'skills', 'mobile-automator-generate', 'SKILL.md'))).toBe(true);
+    expect(JSON.stringify(calls)).not.toContain(CANARY);
+    expect(written).not.toContain(CANARY);
+    expect(snapshot(outside)).toEqual(before);
+  });
+});
+
+describe('setup refuses a symlinked workspace path (#347)', () => {
+  test('setup with .mobile-automator/screenshots -> outside fails environment', async () => {
+    const { root, ws, outside } = fixture((w, out) => {
+      fs.writeFileSync(path.join(out, 'shot.png'), CANARY);
+      fs.symlinkSync(out, path.join(w, 'screenshots'));
+    });
+    const before = snapshot(outside);
+
+    const { calls, written } = await runIn(root, ['setup']);
+
+    expect(calls).toHaveLength(1);
+    const [r] = calls;
+    expect(r.exitKind).toBe('environment');
+    expect(r.envelope.ok).toBe(false);
+    expect(r.envelope.error.kind).toBe('environment');
+    expect(r.envelope.error.message).toMatch(/^Refusing to use workspace path /);
+    expect(r.envelope.error.message).toContain(path.join(ws, 'screenshots'));
     expect(JSON.stringify(calls)).not.toContain(CANARY);
     expect(written).not.toContain(CANARY);
     expect(snapshot(outside)).toEqual(before);
