@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
     
     
       
@@ -1997,7 +1997,7 @@
 </tr>
 </tbody>
 </table>
-<p>The mode is chosen at setup and stored as <code>mode</code> in <code>config.json</code>: <code>--mode aware</code> → <code>platform-aware</code> (single-OS / OS-specific UI tests); <code>--mode agnostic</code> → <code>platform-agnostic</code> (one scenario runs across platforms such as Flutter / RN / KMP / CMP). Configs predating the field are treated as <code>platform-aware</code>.</p>
+<p>The mode is chosen at setup and stored as <code>mode</code> in <code>config.json</code>: <code>--mode aware</code> → <code>platform-aware</code> (single-OS / OS-specific UI tests); <code>--mode agnostic</code> → <code>platform-agnostic</code> (one scenario runs across platforms such as Flutter / RN / KMP / CMP). Configs predating the field are treated as <code>platform-aware</code>. A new workspace without <code>--mode</code> gets <code>platform-aware</code>; re-running <code>setup</code> on an existing workspace keeps its mode unless <code>--mode</code> is given, and <code>data.mode_changed</code> is <code>{from, to}</code> when that switches it (else <code>null</code>).</p>
 <hr />
 <h2 id="reasoning-verbs">Reasoning verbs<a class="headerlink" href="#reasoning-verbs" title="Permanent link">&para;</a></h2>
 <p>The agent pulls reasoning on demand. These verbs <strong>print raw content on success</strong> (see the RAW-output exception above), because the agent injects the text into its context.</p>

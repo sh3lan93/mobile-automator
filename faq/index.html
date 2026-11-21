@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
     
     
       
@@ -2998,7 +2998,7 @@ mauto<span class="w"> </span>run<span class="w"> </span><span class="s2">"</span
 </tbody>
 </table>
 <p>No separate status parsing is needed: the result file and the JUnit report are written for exit <code>0</code>, <code>6</code> and <code>7</code> alike, and the JSON envelope on stdout carries the same summary (<code>data.status</code>, <code>data.failures</code>, <code>data.pending</code>).</p>
-<p><strong>Keeping a CI scenario deterministic:</strong> a scenario whose assertions are all <a href="../reference/assertions/#mechanical-vs-agent-judged-assertions">mechanical types</a> never ends <code>incomplete</code>. Agent-judged types (for example <code>visual_state</code> or <code>toast_visible</code>) are left <code>needs_agent</code>, which ends the run <code>incomplete</code>; keep them out of CI scenarios, or run those scenarios through your agent instead. <code>screenshot_match</code> is deterministic once its baseline exists: record it locally with <code>mauto run &lt;scenario&gt; --update-references</code> when the screen is known to be correct, and commit the images under <code>.mobile-automator/screenshots/reference/</code>. Workspaces created by <code>mauto setup</code> 0.40.3 or later track <code>screenshots/reference/</code> and still ignore the rest of <code>screenshots/</code>. For an older workspace, re-run <code>mauto setup --mode &lt;aware|agnostic&gt;</code> with the mode it already uses (setup also sets <code>mode</code>, so pass yours): it upgrades a <code>.gitignore</code> you never edited. If you edited that file, replace <code>screenshots/</code> with <code>screenshots/*</code> and <code>!screenshots/reference/</code> yourself.</p>
+<p><strong>Keeping a CI scenario deterministic:</strong> a scenario whose assertions are all <a href="../reference/assertions/#mechanical-vs-agent-judged-assertions">mechanical types</a> never ends <code>incomplete</code>. Agent-judged types (for example <code>visual_state</code> or <code>toast_visible</code>) are left <code>needs_agent</code>, which ends the run <code>incomplete</code>; keep them out of CI scenarios, or run those scenarios through your agent instead. <code>screenshot_match</code> is deterministic once its baseline exists: record it locally with <code>mauto run &lt;scenario&gt; --update-references</code> when the screen is known to be correct, and commit the images under <code>.mobile-automator/screenshots/reference/</code>. Workspaces created by <code>mauto setup</code> 0.40.3 or later track <code>screenshots/reference/</code> and still ignore the rest of <code>screenshots/</code>. For an older workspace, re-run <code>mauto setup</code>: it upgrades a <code>.gitignore</code> you never edited and keeps the workspace's mode (since 0.40.10; on earlier versions pass the mode you use, <code>--mode &lt;aware|agnostic&gt;</code>). If you edited that file, replace <code>screenshots/</code> with <code>screenshots/*</code> and <code>!screenshots/reference/</code> yourself.</p>
 <p><strong>CI/CD tips:</strong>
 - Boot an emulator/simulator (or connect a device) and install your app before <code>mauto run</code>
 - Run one <code>mauto run</code> per scenario, each with its own <code>--junit</code> file

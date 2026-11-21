@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
     
     
       
@@ -2016,7 +2016,7 @@ mauto<span class="w"> </span>init<span class="w"> </span>--agent<span class="w">
 </code></pre></div>
 <h3 id="choosing-a-mode">Choosing a mode<a class="headerlink" href="#choosing-a-mode" title="Permanent link">&para;</a></h3>
 <p>The mode is selected with <code>--mode</code> and stored in <code>config.json</code>. It governs how OS gestures are expressed in scenarios:</p>
-<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>setup<span class="w"> </span>--mode<span class="w"> </span>aware<span class="w">       </span><span class="c1"># default — single-OS / OS-specific UI tests</span>
+<div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>setup<span class="w"> </span>--mode<span class="w"> </span>aware<span class="w">       </span><span class="c1"># default for a new workspace — single-OS / OS-specific UI tests</span>
 mauto<span class="w"> </span>setup<span class="w"> </span>--mode<span class="w"> </span>agnostic<span class="w">    </span><span class="c1"># cross-platform (Flutter / RN / KMP / CMP)</span>
 </code></pre></div>
 <table>
@@ -2037,7 +2037,7 @@ mauto<span class="w"> </span>setup<span class="w"> </span>--mode<span class="w">
 </tr>
 </tbody>
 </table>
-<p>Agnostic mode maps OS gestures to four semantic actions — <code>press_back</code>, <code>dismiss_keyboard</code>, <code>grant_permission</code>, <code>deny_permission</code> — that resolve to per-platform mechanics at replay time. Re-running <code>mauto setup --mode &lt;mode&gt;</code> only updates the stored <code>mode</code>, preserving every other field.</p>
+<p>Agnostic mode maps OS gestures to four semantic actions — <code>press_back</code>, <code>dismiss_keyboard</code>, <code>grant_permission</code>, <code>deny_permission</code> — that resolve to per-platform mechanics at replay time. Re-running <code>mauto setup</code> on an existing workspace preserves every field, <code>mode</code> included. Pass <code>--mode</code> only to switch: the envelope then reports <code>data.mode_changed: {from, to}</code> (it is <code>null</code> when the mode did not change).</p>
 <hr />
 <h2 id="step-4-confirm-a-device">Step 4: Confirm a device<a class="headerlink" href="#step-4-confirm-a-device" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>mauto<span class="w"> </span>devices
@@ -2205,7 +2205,7 @@ mauto<span class="w"> </span>config<span class="w"> </span><span class="nb">set<
 <p><strong>Problem:</strong> You scaffolded in the wrong mode.</p>
 <p><strong>Solution:</strong> Re-run <code>mauto setup --mode aware</code> or <code>mauto setup --mode agnostic</code>. It only updates the stored <code>mode</code>, preserving every other field.</p>
 <h3 id="re-running-setup">Re-running setup<a class="headerlink" href="#re-running-setup" title="Permanent link">&para;</a></h3>
-<p><code>mauto setup</code> is idempotent — re-run it any time. It never clobbers existing config fields; it only ensures the requested mode is set and that the workspace directories exist.</p>
+<p><code>mauto setup</code> is idempotent — re-run it any time. It never clobbers existing config fields, keeps the workspace's mode unless you pass <code>--mode</code>, and ensures the workspace directories exist.</p>
 <hr />
 <h2 id="after-setup">After Setup<a class="headerlink" href="#after-setup" title="Permanent link">&para;</a></h2>
 <p>Once setup and analysis are complete:</p>
