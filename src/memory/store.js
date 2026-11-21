@@ -8,6 +8,7 @@ const { withLock } = require('../util/lock');
 const { parseRunHistory, renderRunHistory, recordInModel, countEntries } = require('./history');
 const { atomicWrite } = require('../util/atomic');
 const { parseEntries, renderEntries, hasText } = require('./entries');
+const { UnsafePathError, readWorkspaceFile } = require('../workspace/safe-fs');
 
 // Cross-session memory store. Mirrors ResultStore's one-shot-process,
 // load-mutate-atomic-write shape, but the memory files are SHARED across runs
@@ -96,12 +97,15 @@ class MemoryStore {
   // Read a memory file's raw text, or '' if absent. A read failure other than
   // ENOENT is preserved as a sidecar + warning (defensive parity with
   // ResultStore) and treated as empty so a write never clobbers unread bytes.
+  // A path safe-fs refuses (#345) is never renamed: it may be a link to a file
+  // outside the workspace, so it propagates and the verb fails environment.
   _readRaw(name) {
     const file = this._file(name);
     try {
-      return fs.readFileSync(file, 'utf8');
+      const raw = readWorkspaceFile(this.projectRoot, file);
+      return raw == null ? '' : raw;
     } catch (e) {
-      if (e && e.code === 'ENOENT') return '';
+      if (e instanceof UnsafePathError) throw e;
       return this._preserveCorrupt(file, e);
     }
   }
@@ -125,7 +129,7 @@ class MemoryStore {
 
   // Delegates to the shared util (see src/util/atomic.js).
   _atomicWrite(file, contents) {
-    atomicWrite(file, contents);
+    atomicWrite(file, contents, { projectRoot: this.projectRoot });
   }
 
   // Acquire the lock, read this kind's raw bytes, run the edit, and write ONLY when
@@ -136,7 +140,7 @@ class MemoryStore {
       const { contents, result } = edit(this._readRaw(kind));
       if (contents != null) this._atomicWrite(this._file(kind), contents);
       return result;
-    });
+    }, { projectRoot: this.projectRoot });
   }
 
   // Auto-harvest: fold a finalized result into the rolling run-history aggregate.
@@ -210,17 +214,20 @@ class MemoryStore {
   }
 
   // Read without the corruption sidecar side effect (render is read-only).
+  // Absent or unreadable is '', but a refused path (#345) fails the verb.
   _safeRead(name) {
     try {
-      return fs.readFileSync(this._file(name), 'utf8');
-    } catch (_) {
+      return readWorkspaceFile(this.projectRoot, this._file(name)) || '';
+    } catch (e) {
+      if (e instanceof UnsafePathError) throw e;
       return '';
     }
   }
 
+  // lstat, never stat: a link's target mtime is not this file's.
   _mtimeDate(name) {
     try {
-      return fs.statSync(this._file(name)).mtime.toISOString().slice(0, 10);
+      return fs.lstatSync(this._file(name)).mtime.toISOString().slice(0, 10);
     } catch (_) {
       return null;
     }

@@ -73,8 +73,19 @@ describe('MemoryStore.recordRun', () => {
   test('a non-ENOENT read failure is tolerated: no throw, a warning is recorded', () => {
     const root = tmpRoot();
     const store = new MemoryStore({ projectRoot: root });
-    const spy = jest.spyOn(fs, 'readFileSync').mockImplementation(() => {
-      const e = new Error('EACCES'); e.code = 'EACCES'; throw e;
+    // The memory file is read through safe-fs (#345), which opens it with
+    // openSync; fail only that open, so the lock and the write still work.
+    // safe-fs reports a missing memory/ as absent before any open, so the file
+    // must exist for the open to be reached.
+    const file = memoryFile(root, 'run-history');
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, '# Run History\n');
+    const realOpen = fs.openSync;
+    const spy = jest.spyOn(fs, 'openSync').mockImplementation((p, ...rest) => {
+      if (String(p).endsWith('run-history.md')) {
+        const e = new Error('EACCES'); e.code = 'EACCES'; throw e;
+      }
+      return realOpen(p, ...rest);
     });
     try {
       expect(() => store.recordRun({ scenario_id: 'x', status: 'passed', observations: [] })).not.toThrow();
@@ -177,5 +188,34 @@ describe('MemoryStore.add / forget', () => {
     new MemoryStore({ projectRoot: root }).add('preferences', 'assert toast');
     const r = new MemoryStore({ projectRoot: root }).forget('preferences', 'nonexistent');
     expect(r).toEqual({ kind: 'preferences', removed: 0 });
+  });
+});
+
+describe('MemoryStore refuses symlinked memory files (#345)', () => {
+  const { UnsafePathError } = require('../../../src/workspace/safe-fs');
+
+  function planted() {
+    const root = fs.realpathSync(tmpRoot());
+    const outside = path.join(root, 'outside.md');
+    fs.writeFileSync(outside, '# App Knowledge\n- [2026-01-01] SECRET-CANARY\n');
+    const file = memoryFile(root, 'app-knowledge');
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.symlinkSync(outside, file);
+    return { root, outside, file };
+  }
+
+  test('a write verb throws UnsafePathError and never renames the refused path aside', () => {
+    const { root, outside, file } = planted();
+    const store = new MemoryStore({ projectRoot: root });
+    expect(() => store.add('app-knowledge', 'x')).toThrow(UnsafePathError);
+    expect(fs.lstatSync(file).isSymbolicLink()).toBe(true);
+    expect(fs.readdirSync(path.dirname(file))).toEqual(['app-knowledge.md']);
+    expect(fs.readFileSync(outside, 'utf8')).toContain('SECRET-CANARY');
+    expect(store.warnings).toEqual([]);
+  });
+
+  test('render throws UnsafePathError instead of printing the link target', () => {
+    const { root } = planted();
+    expect(() => new MemoryStore({ projectRoot: root }).render()).toThrow(UnsafePathError);
   });
 });

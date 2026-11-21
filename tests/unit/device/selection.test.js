@@ -78,3 +78,72 @@ describe('resolveDevice (pure precedence)', () => {
     expect(r).toEqual({ device: null, source: 'none' });
   });
 });
+
+// #345: a checked-in .session/ can be a symlink out of the workspace. The
+// selection store must refuse it rather than read, write or delete through it.
+describe('device selection store refuses symlinked workspace paths (#345)', () => {
+  const { UnsafePathError } = require('../../../src/workspace/safe-fs');
+
+  function plantedSession() {
+    const root = fs.realpathSync(tmpRoot());
+    const outside = path.join(root, 'outside');
+    fs.mkdirSync(outside);
+    fs.writeFileSync(path.join(outside, 'selection.json'), JSON.stringify({ device: 'SECRET-CANARY' }));
+    fs.mkdirSync(path.join(root, '.mobile-automator'));
+    fs.symlinkSync(outside, path.join(root, '.mobile-automator', '.session'));
+    return { root, outside };
+  }
+
+  function thrown(fn) {
+    try {
+      fn();
+    } catch (err) {
+      return err;
+    }
+    return null;
+  }
+
+  test('read throws UnsafePathError through a symlinked .session/ instead of reading it', () => {
+    const { root } = plantedSession();
+    const err = thrown(() => selection.read(root));
+    expect(err).toBeInstanceOf(UnsafePathError);
+    expect(err.reason).toBe('symlink');
+  });
+
+  test('read throws UnsafePathError on a symlinked selection.json leaf', () => {
+    const root = fs.realpathSync(tmpRoot());
+    const outside = path.join(root, 'outside.json');
+    fs.writeFileSync(outside, JSON.stringify({ device: 'SECRET-CANARY' }));
+    fs.mkdirSync(path.dirname(selection.selectionPath(root)), { recursive: true });
+    fs.symlinkSync(outside, selection.selectionPath(root));
+    expect(thrown(() => selection.read(root))).toBeInstanceOf(UnsafePathError);
+  });
+
+  test('write through a symlinked .session/ throws and leaves the outside file alone', () => {
+    const { root, outside } = plantedSession();
+    expect(thrown(() => selection.write(root, 'emulator-5554'))).toBeInstanceOf(UnsafePathError);
+    expect(fs.readdirSync(outside)).toEqual(['selection.json']);
+    expect(fs.readFileSync(path.join(outside, 'selection.json'), 'utf8')).toContain('SECRET-CANARY');
+  });
+
+  test('clear through a symlinked .session/ throws and never deletes the outside file', () => {
+    const { root, outside } = plantedSession();
+    expect(thrown(() => selection.clear(root))).toBeInstanceOf(UnsafePathError);
+    expect(fs.existsSync(path.join(outside, 'selection.json'))).toBe(true);
+  });
+
+  test('clear on a symlinked selection.json leaf removes the link, never its target', () => {
+    const root = fs.realpathSync(tmpRoot());
+    const outside = path.join(root, 'outside.json');
+    fs.writeFileSync(outside, '{}');
+    fs.mkdirSync(path.dirname(selection.selectionPath(root)), { recursive: true });
+    fs.symlinkSync(outside, selection.selectionPath(root));
+    selection.clear(root);
+    expect(fs.existsSync(selection.selectionPath(root))).toBe(false);
+    expect(fs.readFileSync(outside, 'utf8')).toBe('{}');
+  });
+
+  test('clear with no workspace at all is a no-op', () => {
+    expect(() => selection.clear(path.join(tmpRoot(), 'nope'))).not.toThrow();
+  });
+});

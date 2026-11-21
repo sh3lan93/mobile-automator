@@ -18,15 +18,19 @@ const path = require('path');
 const crypto = require('crypto');
 
 const paths = require('./session-paths');
+const { UnsafePathError, openWorkspaceFile, readWorkspaceFile, safeDir } = require('../workspace/safe-fs');
 
 // The salt, or null when it is missing, unreadable or empty. Any other content
 // IS the salt: an HMAC key needs no particular shape, so there is no
 // "malformed" salt to detect or repair. A null salt means no keyed daemon can
-// be proven this workspace's (commandNamesWorkspace).
+// be proven this workspace's (commandNamesWorkspace). A path safe-fs refuses
+// (#345), such as a symlinked .session/ or salt, throws UnsafePathError.
 function readSalt(projectRoot, { fs = realFs } = {}) {
   try {
-    return String(fs.readFileSync(paths.saltPath(projectRoot), 'utf8')).trim() || null;
-  } catch (_) {
+    const raw = readWorkspaceFile(projectRoot, paths.saltPath(projectRoot), {}, { fs });
+    return raw == null ? null : raw.trim() || null;
+  } catch (err) {
+    if (err instanceof UnsafePathError) throw err;
     return null;
   }
 }
@@ -48,14 +52,15 @@ function ensureSalt(projectRoot, { fs = realFs } = {}) {
   if (existing) return existing;
 
   const file = paths.saltPath(projectRoot);
-  fs.mkdirSync(path.dirname(file), { recursive: true });
+  safeDir(projectRoot, path.dirname(file), { create: true }, { fs });
   const tmp = path.join(
     path.dirname(file),
     `.${path.basename(file)}.tmp.${process.pid}.${crypto.randomBytes(6).toString('hex')}`
   );
   const salt = crypto.randomBytes(32).toString('hex');
   try {
-    const fd = fs.openSync(tmp, 'wx', 0o600);
+    const { O_WRONLY, O_CREAT, O_EXCL } = realFs.constants;
+    const fd = openWorkspaceFile(projectRoot, tmp, O_WRONLY | O_CREAT | O_EXCL, 0o600, { fs });
     try {
       fs.writeFileSync(fd, `${salt}\n`);
       fs.fsyncSync(fd);

@@ -75,7 +75,8 @@ describe('telemetry control surface', () => {
 
   it('checks the kill switches before it reads any config', () => {
     const root = workspace(ON);
-    const spy = jest.spyOn(fs, 'readFileSync');
+    // config.json is read through safe-fs (#345), which opens it with openSync.
+    const spy = jest.spyOn(fs, 'openSync');
     const before = spy.mock.calls.length;
     expect(telemetry.decideForProject(root, { ...TOKEN, MAUTO_TELEMETRY: '0' }))
       .toEqual({ enabled: false, reason: 'kill_switch' });
@@ -85,7 +86,7 @@ describe('telemetry control surface', () => {
 
   it('reads config.json once per project root, not once per event', () => {
     const root = workspace(ON);
-    const spy = jest.spyOn(fs, 'readFileSync');
+    const spy = jest.spyOn(fs, 'openSync');
     for (let i = 0; i < 25; i++) telemetry.decideForProject(root, TOKEN);
     const reads = spy.mock.calls.filter(([p]) => String(p).endsWith('config.json'));
     expect(reads).toHaveLength(1);

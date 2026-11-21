@@ -16,6 +16,12 @@ const {
 const { ResultStoreRefusal } = require('./refusal');
 const { resolveRunStatus } = require('./status-guard');
 const { workspaceDir } = require('../workspace/layout');
+const {
+  UnsafePathError,
+  openWorkspaceFile,
+  readWorkspaceFile,
+  unsafePathFailure,
+} = require('../workspace/safe-fs');
 
 // Incremental result accumulator that persists to
 //   <projectRoot>/.mobile-automator/results/<runId>.json
@@ -199,16 +205,14 @@ class ResultStore {
   // every previously recorded step). Instead we preserve the bytes as a
   // `.corrupt.<ts>` sidecar, record a structured warning (surfaced via the
   // envelope `hint`), and start a fresh accumulator.
+  //
+  // Read through safe-fs (#345): a results/ directory or result file that is a
+  // symlink throws UnsafePathError, which the CLI maps to environment.
   _load() {
-    let raw;
-    try {
-      raw = fs.readFileSync(this._file, 'utf8');
-    } catch (e) {
-      if (e && e.code === 'ENOENT') return {};
-      // Unexpected read failure (perms, I/O) — surface it honestly rather
-      // than masquerading as an empty run.
-      throw e;
-    }
+    // An unexpected read failure (perms, I/O, a refused path) throws — surface
+    // it honestly rather than masquerading as an empty run.
+    const raw = readWorkspaceFile(this.projectRoot, this._file);
+    if (raw == null) return {};
     try {
       return JSON.parse(raw);
     } catch (e) {
@@ -230,9 +234,16 @@ class ResultStore {
       fs.renameSync(this._file, sidecar);
       preserved = true;
     } catch (_renameErr) {
-      // Cross-device or other rename failure — fall back to a copy.
+      // Cross-device or other rename failure — fall back to a copy, created
+      // exclusively inside the workspace so it never writes through a link.
       try {
-        fs.writeFileSync(sidecar, raw);
+        const { O_WRONLY, O_CREAT, O_EXCL } = fs.constants;
+        const fd = openWorkspaceFile(this.projectRoot, sidecar, O_WRONLY | O_CREAT | O_EXCL);
+        try {
+          fs.writeFileSync(fd, raw);
+        } finally {
+          fs.closeSync(fd);
+        }
         preserved = true;
       } catch (_writeErr) {
         // ignore — reported below
@@ -250,7 +261,12 @@ class ResultStore {
   // `this._dir === path.dirname(this._file)` (results dir), so this is
   // behavior-identical to the previous inline implementation.
   _atomicWrite(contents) {
-    atomicWrite(this._file, contents);
+    atomicWrite(this._file, contents, { projectRoot: this.projectRoot });
+  }
+
+  // The per-runId lock, taken through safe-fs like every other workspace path.
+  _withLock(fn) {
+    return withLock(this._lock, fn, { projectRoot: this.projectRoot });
   }
 
   // The in-progress marker below is private to this module; readers ask
@@ -287,7 +303,7 @@ class ResultStore {
 
   addStep({ step_id, status, attempts = 1, screenshot = null, error_message = null, observations = null, needs_agent = false,
     condition_evaluated, step_duration_ms, sub_steps_executed } = {}) {
-    return withLock(this._lock, () => {
+    return this._withLock(() => {
       this._refreshFromDisk();
       const normalized = stepStatus(status);
       const retryCount = Math.max(0, Number(attempts) - 1);
@@ -337,7 +353,7 @@ class ResultStore {
   // freeform string, so writing there would produce untyped text in the wrong
   // shape (see #140 D2).
   addObservation({ type, step_id = null, message } = {}) {
-    return withLock(this._lock, () => {
+    return this._withLock(() => {
       this._refreshFromDisk();
       if (!OBSERVATION_TYPES.includes(type)) {
         throw new Error(
@@ -371,7 +387,7 @@ class ResultStore {
     step_id, assertion_id, type, status, pass, message, expected = null, actual = null, mechanical, judge,
     reference_screenshot = null, actual_screenshot = null, similarity_score = null,
   } = {}) {
-    return withLock(this._lock, () => {
+    return this._withLock(() => {
       this._refreshFromDisk();
       const entry = {
         assertion_id: assertion_id || `${step_id || 'assert'}_${type || 'unknown'}_${this._assertions.length + 1}`,
@@ -401,7 +417,7 @@ class ResultStore {
   }
 
   addCrash({ crash_id, process = null, timestamp = null, step_id = null, excerpt = null, report_path = null } = {}) {
-    return withLock(this._lock, () => {
+    return this._withLock(() => {
       this._refreshFromDisk();
       if (!crash_id || String(crash_id).trim() === '') {
         // Without an id the full report is unreachable, which makes the record
@@ -424,7 +440,7 @@ class ResultStore {
   }
 
   captureVariable(name, value) {
-    return withLock(this._lock, () => {
+    return this._withLock(() => {
       this._refreshFromDisk();
       this._capturedVariables[name] = value;
       this._persistInProgress();
@@ -489,7 +505,7 @@ class ResultStore {
   // than they derive — so a step recorded concurrently can never be finalized
   // under a better status than its own records allow.
   finalize({ status, durationSeconds = 0, summary, metadata, measurements, executor, scenario } = {}) {
-    return withLock(this._lock, () => {
+    return this._withLock(() => {
       this._refreshFromDisk();
 
       const resolvedStatus = resolveRunStatus({ status, steps: this._steps, assertions: this._assertions, scenario });
@@ -625,15 +641,20 @@ function readFinalizedResult(projectRoot, runId) {
   const file = resultFile(projectRoot, runId);
   let raw;
   try {
-    raw = fs.readFileSync(file, 'utf8');
+    raw = readWorkspaceFile(projectRoot, file);
   } catch (err) {
-    if (err && err.code === 'ENOENT') {
-      return invalid(
-        `no result file for ${runId}`,
-        `Expected ${file}; list the run ids with \`ls ${resultsDir(projectRoot)}\`.`
-      );
+    // A symlinked results/ or result file (#345): refused, never followed.
+    if (err instanceof UnsafePathError) {
+      const { error, hint } = unsafePathFailure(err).envelope;
+      return { error: { kind: error.kind, message: error.message, hint } };
     }
     return { error: { kind: 'environment', message: `could not read ${file}: ${err.message}`, hint: null } };
+  }
+  if (raw == null) {
+    return invalid(
+      `no result file for ${runId}`,
+      `Expected ${file}; list the run ids with \`ls ${resultsDir(projectRoot)}\`.`
+    );
   }
   let parsed;
   try {

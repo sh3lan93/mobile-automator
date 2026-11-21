@@ -10,13 +10,16 @@
 //
 // `read` is graceful: a missing OR corrupt file returns null so a verb never
 // crashes on a half-written/garbage selection — it just behaves as "no
-// selection". The directory is created lazily on write.
+// selection". The directory is created lazily on write. Every access goes
+// through safe-fs (#345): a symlinked .session/ or selection.json throws
+// UnsafePathError, so the verb fails environment instead of following it.
 
 const fs = require('fs');
 const path = require('path');
 
 const paths = require('./session-paths');
 const { atomicWrite } = require('../util/atomic');
+const { UnsafePathError, readWorkspaceFile, safeDir } = require('../workspace/safe-fs');
 
 const SELECTION_NAME = 'selection.json';
 
@@ -27,11 +30,13 @@ function selectionPath(projectRoot) {
 // The persisted device id, or null when absent/corrupt.
 function read(projectRoot) {
   try {
-    const raw = fs.readFileSync(selectionPath(projectRoot), 'utf8');
+    const raw = readWorkspaceFile(projectRoot, selectionPath(projectRoot));
+    if (raw == null) return null;
     const parsed = JSON.parse(raw);
     const id = parsed && parsed.device;
     return id ? String(id) : null;
-  } catch (_) {
+  } catch (err) {
+    if (err instanceof UnsafePathError) throw err;
     return null;
   }
 }
@@ -42,18 +47,27 @@ function read(projectRoot) {
 function write(projectRoot, id) {
   atomicWrite(
     selectionPath(projectRoot),
-    JSON.stringify({ device: String(id) }, null, 2) + '\n'
+    JSON.stringify({ device: String(id) }, null, 2) + '\n',
+    { projectRoot }
   );
   return String(id);
 }
 
 // Remove the persisted selection. Idempotent — clearing when none exists is a
-// no-op (never throws).
+// no-op. The .session/ walk comes first: unlinking through a symlinked
+// .session/ would delete a file outside the workspace, so that throws
+// UnsafePathError instead. unlink removes a link leaf itself, never its target.
 function clear(projectRoot) {
   try {
-    fs.rmSync(selectionPath(projectRoot), { force: true });
-  } catch (_) {
-    /* ignore */
+    safeDir(projectRoot, paths.sessionDir(projectRoot));
+  } catch (err) {
+    if (err.code === 'ENOENT') return; // no .session/, so no selection
+    throw err;
+  }
+  try {
+    fs.unlinkSync(selectionPath(projectRoot));
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
   }
 }
 

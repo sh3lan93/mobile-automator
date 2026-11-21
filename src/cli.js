@@ -63,6 +63,7 @@ const {
   workspaceFailure,
   legacyWorkspaceFailure,
 } = require('./workspace/discover');
+const { UnsafePathError, unsafePathFailure } = require('./workspace/safe-fs');
 
 // Commander throws (via exitOverride) for two very different reasons, and the
 // split below is the ONLY thing that tells them apart.
@@ -139,6 +140,7 @@ function usageLine(cmd) {
 // JSON line + a meaningful exit code instead of a raw stack trace on stderr.
 //   CommanderError (parse failure) -> invalid_input, with the usage line as hint
 //   ResultStoreRefusal           -> its kind (invalid_input), with its hint
+//   UnsafePathError              -> environment, naming the refused workspace path (#345)
 //   SyntaxError                  -> invalid_input (a malformed JSON file)
 //   fs EACCES/ENOENT/EROFS/...    -> environment, with a filesystem hint
 //   anything else                -> internal
@@ -160,6 +162,10 @@ function toEnvelope(err) {
   if (err instanceof ResultStoreRefusal) {
     return { envelope: fail(err.kind, err.message, err.hint), exitKind: err.kind };
   }
+  // A workspace path safe-fs refused (#345): a symlink, a foreign owner, ...
+  // Before the FS_ERROR_CODES branch, which would lose the reason and hint.
+  // The envelope names the path and reason, never the content or link target.
+  if (err instanceof UnsafePathError) return unsafePathFailure(err);
   if (err instanceof SyntaxError) {
     return {
       envelope: fail(
@@ -1961,11 +1967,17 @@ function buildProgram(deps = {}) {
       }));
       // AFTER the connect, deliberately: the handle is written when the daemon
       // starts listening, so before this point it may legitimately not exist
-      // yet. Best-effort — readSessionId never throws and returns null for an
+      // yet. Best-effort — readSessionId returns null for an
       // absent or malformed handle, which is a normal state (a one-shot
       // fallback connection has no daemon at all).
       emitters.setSessionId(readSessionId(projectRoot));
     } catch (err) {
+      // A refused workspace path (#345) is not a device failure: rethrow it to
+      // withEnvelope, whose toEnvelope maps it to environment.
+      if (err instanceof UnsafePathError) {
+        if (typeof close === 'function') await close();
+        throw err;
+      }
       emit(deviceFail(err), humanFlag());
       return;
     }

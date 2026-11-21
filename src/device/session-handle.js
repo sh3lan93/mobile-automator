@@ -13,19 +13,25 @@
 // pay a socket round trip for it, and a second copy in the ping reply would be
 // a second source of truth that can disagree with this one.
 //
-// Nothing here throws: an absent, unreadable or malformed handle means "no
-// session", which is a normal state, not an error.
+// An absent, unreadable or malformed handle means "no session", which is a
+// normal state, not an error. The one exception is a path safe-fs refuses
+// (#345): a symlinked .session/ or session.json throws UnsafePathError, so the
+// verb fails environment instead of trusting a planted handle.
 
 const realFs = require('fs');
 
 const { handlePath } = require('./session-paths');
 const { SESSION_ID_PATTERN } = require('./session-id');
+const { UnsafePathError, readWorkspaceFile } = require('../workspace/safe-fs');
 
 function readHandle(projectRoot, { fs = realFs } = {}) {
   try {
-    const parsed = JSON.parse(fs.readFileSync(handlePath(projectRoot), 'utf8'));
+    const raw = readWorkspaceFile(projectRoot, handlePath(projectRoot), {}, { fs });
+    if (raw == null) return null;
+    const parsed = JSON.parse(raw);
     return parsed && typeof parsed === 'object' ? parsed : null;
-  } catch (_) {
+  } catch (err) {
+    if (err instanceof UnsafePathError) throw err;
     return null;
   }
 }

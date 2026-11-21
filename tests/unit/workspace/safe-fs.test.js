@@ -544,7 +544,7 @@ describe('unsafePathFailure', () => {
     ['world_writable', () => (fs.chmodSync(ws, 0o777), safeDir(root, ws))],
     ['not_directory', () => (fs.writeFileSync(path.join(ws, 'm'), 'x'), safeDir(root, path.join(ws, 'm')))],
     ['too_large', () => (fs.writeFileSync(path.join(ws, 'b'), 'xx'), readWorkspaceFile(root, path.join(ws, 'b'), { maxBytes: 1 }))],
-  ])('%s yields an environment envelope with a hint and no canary', (reason, fn) => {
+  ])('%s yields an environment envelope with a hint and no canary', (_reason, fn) => {
     const { envelope, exitKind } = envelopeFor(fn);
     expect(exitKind).toBe('environment');
     expect(envelope.error.kind).toBe('environment');
