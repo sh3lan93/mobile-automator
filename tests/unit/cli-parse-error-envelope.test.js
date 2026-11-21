@@ -14,38 +14,13 @@ const path = require('path');
 const { CommanderError } = require('commander');
 
 const cli = require('../../src/cli');
+const { captureProcessIO } = require('../helpers/cli-harness');
 
-// Run the real CLI entry point with process.stdout.write / process.stderr.write
-// / process.exit stubbed (so the process doesn't actually terminate), capturing
-// every write + exit code. stderr is captured because `diagnose()` dumps
-// `err.stack` there for the `internal` kind — so a misclassified parse failure
-// shows up as stderr noise as well as a wrong `error.kind`.
-async function runCli(argv) {
-  const writes = [];
-  const errWrites = [];
-  const exitCodes = [];
-  const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation((s) => {
-    writes.push(s);
-    return true;
-  });
-  const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation((s) => {
-    errWrites.push(s);
-    return true;
-  });
-  const exitSpy = jest.spyOn(process, 'exit').mockImplementation((code) => {
-    exitCodes.push(code);
-  });
-
-  try {
-    await cli.run(['node', 'mauto', ...argv]);
-  } finally {
-    stdoutSpy.mockRestore();
-    stderrSpy.mockRestore();
-    exitSpy.mockRestore();
-  }
-
-  return { writes, errWrites, exitCodes };
-}
+// Run the real CLI entry point, capturing every write + exit code. stderr is
+// captured because `diagnose()` dumps `err.stack` there for the `internal`
+// kind — so a misclassified parse failure shows up as stderr noise as well as
+// a wrong `error.kind`.
+const runCli = (argv) => captureProcessIO(() => cli.run(['node', 'mauto', ...argv]));
 
 // The single JSON envelope line on stdout (everything else is ignored).
 function envelopeLine(writes) {

@@ -34,6 +34,16 @@ describe('neutraliseControls', () => {
     expect(neutraliseControls('a\tb\nc', { escapeNewlines: true })).toBe('a\tb\\x0Ac');
   });
 
+  // A CR that ends a line moves the cursor nowhere a bare LF would not; a lone
+  // CR returns to the line start and can forge a line (#353).
+  test('multi-line mode keeps CRLF but escapes a lone CR', () => {
+    expect(neutraliseControls('a\r\nb\rc\x1bd')).toBe('a\r\nb\\x0Dc\\x1Bd');
+  });
+
+  test('escapeNewlines escapes both halves of a CRLF', () => {
+    expect(neutraliseControls('a\r\nb', { escapeNewlines: true })).toBe('a\\x0D\\x0Ab');
+  });
+
   test('passes non-strings through unchanged', () => {
     const obj = { a: 1 };
     expect(neutraliseControls(obj)).toBe(obj);

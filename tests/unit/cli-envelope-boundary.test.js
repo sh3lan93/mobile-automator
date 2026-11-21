@@ -74,6 +74,24 @@ describe('envelope boundary (#120)', () => {
       expect(internalCalls).toBe(1); // the unexpected internal error got its trace
       expect(otherCalls).toBe(0); // expected/diagnosed classes stayed off stderr
     });
+
+    test('neutralises control chars in the stack but keeps its line breaks (#353)', () => {
+      const written = [];
+      const spy = jest.spyOn(process.stderr, 'write').mockImplementation((s) => {
+        written.push(String(s));
+        return true;
+      });
+      try {
+        diagnose(new Error('boom\x1b]0;x\x07'), 'internal');
+      } finally {
+        spy.mockRestore();
+      }
+      const out = written.join('');
+      expect(out).not.toContain('\x1b');
+      expect(out).not.toContain('\x07');
+      expect(out).toContain('boom\\x1B]0;x\\x07');
+      expect(out.split('\n').filter(Boolean).length).toBeGreaterThan(1);
+    });
   });
 
   test('(a) corrupt config.json -> one invalid_input envelope (config get)', async () => {
