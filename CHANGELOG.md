@@ -39,9 +39,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The memory lock retries when a concurrent process already removed a planted
   entry, instead of failing `not_regular`.
 
-**Upgrading:** a daemon started by an older version is not reused, because its
-socket is in the old location or in a `.session/` that is not 0700. Run
-`mauto session end` once to stop it.
+**Upgrading:** a daemon started by an older version is not reused once its
+socket fails the new checks.
+- Socket in `.session/` (the usual case): the first device verb tightens
+  `.session/` to 0700 and then finds the old daemon again, so nothing to do.
+- Socket in the old `<tmpdir>/mauto-<key>.sock` (a deep project path): the
+  client no longer looks there. Each device verb waits out the 15 s readiness
+  window, because the old daemon still holds the lock, then runs one-shot.
+  This lasts until the old daemon exits on its idle timeout (5 minutes) or you
+  run `mauto session end` once.
 
 ---
 

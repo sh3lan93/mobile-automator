@@ -44,6 +44,9 @@
   `chown -R "$(id -u)" .mobile-automator`. In a CI container that runs as root over a
   checkout owned by another uid, set `MAUTO_TRUST_WORKSPACE_OWNER=1` instead. It skips
   the owner check only, never the symlink checks.
+  For the session socket directory (the per-user `mauto` directory), remove it (mauto
+  recreates it 0700; its owner or root may have to) or point `XDG_RUNTIME_DIR` at a
+  private directory of your own. The override does not apply there.
 - `(world_writable)`: `chmod o-w <path>`. Group-writable directories are fine.
 - `(not_private)`: the session socket directory (`.mobile-automator/.session/`, or the
   per-user `mauto` directory under `$XDG_RUNTIME_DIR` or the temp directory) must be
@@ -56,7 +59,8 @@
 - Before any verb runs, mauto vets the `.mobile-automator/` it finds (#346). It refuses
   one that is a symlink, owned by another uid, or world-writable, and a `config.json`
   that is a symlink. It does not fall back to a parent workspace. Verbs that need a
-  workspace fail `environment`. Other verbs get no workspace, so a device verb runs one-shot with no daemon.
+  workspace fail `environment`. Other verbs get no workspace,
+  so a device verb runs one-shot with no daemon.
 - Owner mismatch, such as `owned by uid 1001; you are uid 0`: run
   `chown -R "$(id -u)" .mobile-automator`. In a CI container that runs as root over a
   checkout owned by another uid, set `MAUTO_TRUST_WORKSPACE_OWNER=1`. It skips the owner
@@ -65,11 +69,15 @@
 - Symlink: replace the link with a real directory or file.
 - World-writable: `chmod o-w .mobile-automator`.
 
-### ❌ A device session from before the upgrade is not reused
-- After upgrading to 0.40.13 or later, a daemon started by an older version is ignored.
-  Its socket is in the old `<tmpdir>/mauto-<key>.sock` location or in a `.session/` that
-  is not 0700, and mauto will not connect to it. Run `mauto session end` once to stop it.
-  The next device verb starts a new session.
+### ❌ Device verbs pause ~15 s after upgrading (deep project paths)
+- After upgrading to 0.40.13 or later, a daemon started by an older version in the
+  old `<tmpdir>/mauto-<key>.sock` location is ignored. This only happens when the
+  project path is too deep for a socket in `.mobile-automator/.session/`. The old
+  daemon still holds the session lock, so each device verb waits about 15 s for a new
+  daemon, then runs one-shot. It ends when the old daemon idles out (5 minutes) or
+  after `mauto session end`, which you need to run only once.
+- With the socket in `.session/` there is nothing to do: the first device verb
+  tightens it to 0700 and finds the old daemon again.
 
 ### ❌ mauto refuses to run on Windows
 - **At install**, npm stops with:

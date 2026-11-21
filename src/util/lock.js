@@ -18,13 +18,12 @@ const { createWorkspaceFile, UnsafePathError } = require('../workspace/safe-fs')
 // mauto process made, so it is unlinked (the link itself, never its target)
 // and the acquire retries at once. When that unlink fails ENOENT, a concurrent
 // process already removed the entry, so the acquire retries at once as well.
-// When it fails otherwise (a directory: EPERM
-// on macOS, EISDIR on Linux) the acquire throws UnsafePathError(not_regular)
-// straight away: waiting cannot fix it, and the verb fails environment instead
-// of stalling to the deadline. A regular stale lock whose unlink fails still
-// backs off, as contention or permissions on a real lock can clear. O_EXCL
-// never follows a link, and O_NOFOLLOW is added on top. The
-// project root is required: the lock file is always created by safe-fs's
+// When it fails otherwise (a directory: EPERM on macOS, EISDIR on Linux) the
+// acquire throws UnsafePathError(not_regular) straight away: waiting cannot
+// fix it, and the verb fails environment instead of stalling to the deadline.
+// A regular stale lock whose unlink fails still backs off, as contention or
+// permissions on a real lock can clear. O_EXCL never follows a link, and
+// O_NOFOLLOW is added on top. The project root is required: the lock file is always created by safe-fs's
 // createWorkspaceFile, which walks its directory (symlink-free, owned by us,
 // created when missing) on every attempt, so there is no unconfined path to
 // fall back to. Every retry path, including a lock that vanishes between open
