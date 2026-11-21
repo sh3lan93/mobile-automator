@@ -64,7 +64,7 @@ const {
   workspaceFailure,
   legacyWorkspaceFailure,
 } = require('./workspace/discover');
-const { UnsafePathError } = require('./workspace/safe-fs');
+const { UnsafePathError, inWorkspace, safeWorkspaceDest } = require('./workspace/safe-fs');
 
 // Commander throws (via exitOverride) for two very different reasons, and the
 // split below is the ONLY thing that tells them apart.
@@ -218,9 +218,21 @@ async function handleElements({ deviceBridge }) {
 // Relative paths resolve against the caller's cwd HERE, not in the daemon: the
 // daemon runs from the project root, which is not where a verb run from a
 // subdirectory meant `./shot.png` (#214).
-async function handleScreenshot({ deviceBridge, cwd = process.cwd() }, destPath) {
+//
+// The engine writes the file, so the destination is checked before it is
+// handed over (#347). One inside .mobile-automator/ (through a symlinked alias
+// of the project root too) gets the workspace rules: its directories are
+// walked and created, a planted link refused. Anything else is the user's own
+// choice and reaches the bridge exactly as resolved; the engine applies its
+// own allowed-directories rule there. A refusal is thrown, before the bridge
+// is asked and outside the device catch below, so the envelope boundary
+// reports it environment with its own hint, as for every other verb.
+async function handleScreenshot({ deviceBridge, projectRoot, cwd = process.cwd() }, destPath) {
+  const resolved = path.resolve(cwd, destPath);
+  const confined = inWorkspace(projectRoot, resolved);
+  const dest = confined ? safeWorkspaceDest(projectRoot, confined) : resolved;
   try {
-    const savedPath = await deviceBridge.screenshot(path.resolve(cwd, destPath));
+    const savedPath = await deviceBridge.screenshot(dest);
     return { envelope: ok({ path: savedPath }), exitKind: 'ok' };
   } catch (err) {
     return {
@@ -2045,7 +2057,7 @@ function buildProgram(deps = {}) {
     .option('--device <id>', 'target device id')
     .action(withEnvelope((destPath, opts) =>
       connectBridge(resolveVerbDevice(opts.device), (bridge) =>
-        handleScreenshot({ deviceBridge: bridge }, destPath)
+        handleScreenshot({ deviceBridge: bridge, projectRoot, cwd }, destPath)
       )
     ));
 
