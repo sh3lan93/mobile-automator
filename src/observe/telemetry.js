@@ -7,16 +7,24 @@
 //   1. MAUTO_TELEMETRY=0   a kill switch must win over everything, and it is
 //                          checked FIRST so it costs zero filesystem calls.
 //   2. DO_NOT_TRACK=1      the cross-tool convention, honoured.
-//   3. telemetry.enabled   the user's durable, explicit opt-in.
-//   4. a real token         a placeholder build cannot post even if enabled.
+//   3. telemetry.enabled   the project's opt-in, in its config.json.
+//   4. local consent       this user's own record, outside the repository
+//                          (src/observe/consent.js).
+//   5. a real token         a placeholder build cannot post even if enabled.
 //
 // MAUTO_TELEMETRY=1 deliberately does NOT enable. An off-switch is safe to
 // honour from the environment; an on-switch is a way to turn collection on for
 // a machine — a CI image, a shared shell profile, an inherited Dockerfile —
-// whose owner never consented. On-switches live in a file the project owner
-// edits.
+// whose owner never consented.
+//
+// For the same reason the on-switch is the config key AND (4), never the key
+// alone (#348). A file the project owner edits is a file anyone can commit: a
+// committed `enabled: true` used to turn telemetry on for everyone who cloned
+// the repo. The config key says the project allows it; only the per-user
+// record, which no repository can write, says this person agreed.
 
 const configManager = require('../config/manager');
+const { hasLocalConsent, setLocalConsent } = require('./consent');
 const { EVENT_FIELDS, NEVER_SENDS } = require('./event');
 const { hasToken } = require('./transport');
 
@@ -24,6 +32,7 @@ const REASONS = Object.freeze([
   'kill_switch',
   'do_not_track',
   'not_configured',
+  'not_consented_locally',
   'no_token',
   'enabled',
 ]);
@@ -50,6 +59,10 @@ const CONSENT_NOTICE = [
   'catalog the uploader uses. Run `mauto telemetry enable` to turn it on, or set',
   'MAUTO_TELEMETRY=0 (or DO_NOT_TRACK=1) to force it off everywhere.',
   '',
+  'Turning it on records your consent for this project on this machine only,',
+  'in a file outside the repository, so a committed config cannot turn it on',
+  'for anyone else.',
+  '',
   'The device engine mauto drives (mobile-mcp) has telemetry of its own, and it',
   'is off too: mauto starts it with MOBILEMCP_DISABLE_TELEMETRY=1.',
 ].join('\n');
@@ -61,14 +74,21 @@ function envKillSwitch(env = process.env) {
   return null;
 }
 
-function resolveTelemetry({ env = process.env, config = null } = {}) {
+// Whether the project's config opts in: a LITERAL true. A truthy string
+// ("true", "1") means someone hand-edited the file into a shape `mauto config
+// set` would never produce, and guessing at intent is not something a consent
+// flag gets to do.
+function configOptIn(config) {
+  return Boolean(config && config.telemetry && config.telemetry.enabled === true);
+}
+
+// `localConsent` is this user's per-user record for the project (see
+// src/observe/consent.js), and it too must be a literal true.
+function resolveTelemetry({ env = process.env, config = null, localConsent = false } = {}) {
   const killed = envKillSwitch(env);
   if (killed) return { enabled: false, reason: killed };
-  // A LITERAL true. A truthy string ("true", "1") means someone hand-edited
-  // the file into a shape `mauto config set` would never produce, and guessing
-  // at intent is not something a consent flag gets to do.
-  const configured = Boolean(config && config.telemetry && config.telemetry.enabled === true);
-  if (!configured) return { enabled: false, reason: 'not_configured' };
+  if (!configOptIn(config)) return { enabled: false, reason: 'not_configured' };
+  if (localConsent !== true) return { enabled: false, reason: 'not_consented_locally' };
   if (!hasToken(env)) return { enabled: false, reason: 'no_token' };
   return { enabled: true, reason: 'enabled' };
 }
@@ -96,46 +116,92 @@ function resolveEngineTelemetry(env = process.env) {
   return { disableValue: value, enabled: value === '', reason: 'user_env' };
 }
 
-// Memoised per project root. resolveLevels() is re-derived per record() call
-// because it reads only env; this one reads config.json, and a file read per
-// event is not acceptable on a path that runs on every verb.
+// The decision for a project, taken now: no memo. The one place the
+// precedence above meets the filesystem.
+function decideNow(projectRoot, env = process.env) {
+  try {
+    // Checked before any read, not after: a kill switch must cost nothing.
+    if (envKillSwitch(env)) return resolveTelemetry({ env, config: null });
+    const config = configManager.load(projectRoot);
+    // The consent record is read only when the config opts in, so the common
+    // off path costs no read beyond config.json.
+    const localConsent = configOptIn(config) && hasLocalConsent(projectRoot, { env });
+    return resolveTelemetry({ env, config, localConsent });
+  } catch (_) {
+    // A corrupt or unreadable config resolves OFF. Failing closed is the only
+    // acceptable direction for a consent flag.
+    return { enabled: false, reason: 'not_configured' };
+  }
+}
+
+// decideNow, memoised per project root, for one-shot verbs. resolveLevels() is
+// re-derived per record() call because it reads only env; this reads
+// config.json (and the consent record), and a file read per event is not
+// acceptable on a path that runs on every verb. A one-shot verb decides once
+// per process, which is correct by construction.
 //
-// The pinning consequence is the same one slice 2 documented for the daemon's
-// MAUTO_LOG_LEVEL: for a one-shot verb this is once per process (correct by
-// construction), and for the daemon it is once per daemon lifetime. Editing
-// config.json while a daemon is running does not change that daemon's
-// behaviour; `mauto session end` then re-run is the remedy.
+// Long-lived callers (the daemon) must NOT use this: they call decideNow or
+// consentGate. The memo pins the first decision for the life of the process,
+// and that is exactly what let a running daemon keep sending after the user
+// withdrew consent (#348).
 const memo = new Map();
 
 function decideForProject(projectRoot, env = process.env) {
   const key = String(projectRoot);
-  if (memo.has(key)) return memo.get(key);
-  let decision;
-  try {
-    // Checked before the read, not after: a kill switch must cost nothing.
-    decision = envKillSwitch(env)
-      ? resolveTelemetry({ env, config: null })
-      : resolveTelemetry({ env, config: configManager.load(projectRoot) });
-  } catch (_) {
-    // A corrupt or unreadable config resolves OFF. Failing closed is the only
-    // acceptable direction for a consent flag.
-    decision = { enabled: false, reason: 'not_configured' };
-  }
-  memo.set(key, decision);
-  return decision;
+  if (!memo.has(key)) memo.set(key, decideNow(projectRoot, env));
+  return memo.get(key);
 }
 
+// How often a long-lived caller re-reads the decision. Once a second bounds
+// how long a withdrawal goes unnoticed without a file read per event.
+const CONSENT_RECHECK_MS = 1000;
+
+// A re-checking decision for a long-lived caller: returns a function that says
+// whether telemetry is on, re-running decideNow at most once per `intervalMs`.
+// `initial` seeds it with a decision the caller already holds. A clock that
+// steps backwards re-checks rather than trusting a decision of unknown age.
+// The returned function never throws; when it cannot tell, it says no.
+function consentGate(
+  projectRoot,
+  env = process.env,
+  { initial, now = Date.now, intervalMs = CONSENT_RECHECK_MS } = {}
+) {
+  let decision = initial || decideNow(projectRoot, env);
+  let checkedAt = now();
+  return function telemetryAllowed() {
+    try {
+      const t = now();
+      if (t - checkedAt >= intervalMs || t < checkedAt) {
+        decision = decideNow(projectRoot, env);
+        checkedAt = t;
+      }
+      return decision.enabled === true;
+    } catch (_) {
+      return false;
+    }
+  };
+}
+
+// The write behind `mauto telemetry enable|disable`: the config key, then this
+// user's consent record. The config goes first so a disable takes effect even
+// if the consent write then fails (which propagates, so the verb reports it).
 // A write through the module that owns the decision also invalidates it, so no
-// caller can forget a pairing it never sees. The delete is surgical — the
-// affected root's key only; other roots' memoised decisions survive.
+// caller can forget a pairing it never sees; the delete is in a finally so a
+// failed write cannot leave a stale decision, and it is surgical: the affected
+// root's key only; other roots' memoised decisions survive.
 //
 // `config set` cannot route through this: its raw CLI strings need coerceValue
-// first, so that write stays in cli.js. That path does not invalidate, and
-// stays harmless for as long as nothing seeds the memo before a handler's own
-// report in a one-shot verb process.
-function setEnabled(projectRoot, value) {
-  configManager.set(projectRoot, 'telemetry.enabled', value);
-  memo.delete(String(projectRoot));
+// first, so that write stays in cli.js. It writes the config key only, never
+// the consent record. That path does not invalidate, and stays harmless for as
+// long as nothing seeds the memo before a handler's own report in a one-shot
+// verb process.
+function setEnabled(projectRoot, value, env = process.env) {
+  try {
+    configManager.set(projectRoot, 'telemetry.enabled', value);
+    setLocalConsent(projectRoot, value, { env });
+  } finally {
+    memo.delete(String(projectRoot));
+  }
 }
 
 // Test isolation only: production writes go through setEnabled above. Kept
@@ -162,7 +228,10 @@ module.exports = {
   envKillSwitch,
   resolveTelemetry,
   resolveEngineTelemetry,
+  decideNow,
   decideForProject,
+  CONSENT_RECHECK_MS,
+  consentGate,
   setEnabled,
   _resetMemo,
   sentFields,

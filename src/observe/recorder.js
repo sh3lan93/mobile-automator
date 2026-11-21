@@ -27,7 +27,7 @@ const { resolveLevels, atLeast } = require('./settings');
 const stderrSink = require('./sinks/stderr');
 const fileSink = require('./sinks/file');
 const spoolSink = require('./spool');
-const { decideForProject } = require('./telemetry');
+const { decideForProject, consentGate } = require('./telemetry');
 
 // `logPath` is passed straight through to the file sink, which already takes it
 // (sinks/file.js:44) and falls back to mauto.ndjson when it is undefined. So
@@ -84,12 +84,30 @@ function defaultSinks(projectRoot, env, { logPath, tracePath } = {}) {
   // must not be read as consent withdrawal (there is an explicit control for
   // that: MAUTO_TELEMETRY=0 / DO_NOT_TRACK=1).
   //
-  // decideForProject memoises per project root — one config.json read per
-  // process, not one per event. See src/observe/telemetry.js.
-  if (decideForProject(projectRoot, env).enabled) {
+  // Constructed or not is decided ONCE, by decideForProject, which memoises
+  // per project root: one config.json read per process, not one per event.
+  // See src/observe/telemetry.js.
+  //
+  // Once constructed, every write still asks a consent gate (#348). The
+  // daemon builds its sinks once, at boundRecorder, and lives for hours; a
+  // sink that trusted its construction-time decision kept spooling after
+  // `mauto telemetry disable`. The gate is built once per defaultSinks call,
+  // seeded with the decision just taken, and re-runs the unmemoised
+  // decideNow at most once a second (CONSENT_RECHECK_MS). So a one-shot verb,
+  // whose writes land within that second, does no read beyond the one above,
+  // and a daemon stops spooling within a second of a withdrawal (a seed the
+  // memo kept from an earlier call is trusted for that same second at most).
+  // An opt-in does not add a sink: a daemon started while telemetry was off
+  // has none, and a later `mauto telemetry enable` reaches it at its next
+  // start. Of the two directions, that is the safe one to be late in.
+  const decision = decideForProject(projectRoot, env);
+  if (decision.enabled) {
+    const allowed = consentGate(projectRoot, env, { initial: decision });
     sinks.push({
       threshold: spoolSink.SPOOL_LEVEL,
-      write: (e) => spoolSink.write(e, { projectRoot, env }),
+      write: (e) => {
+        if (allowed()) spoolSink.write(e, { projectRoot, env });
+      },
     });
   }
 
@@ -152,6 +170,10 @@ function safeObserve(observe) {
 //                stating: MAUTO_LOG_LEVEL and MAUTO_LOG_DIR are captured at
 //                construction and pinned for the caller's lifetime; for the
 //                daemon, `mauto session end` is how you change them.
+//                Telemetry consent is NOT pinned (#348): it lives in files, not
+//                the environment, and the spool sink re-checks it at most once
+//                a second (see defaultSinks), so a withdrawal reaches a running
+//                daemon without a session end.
 //
 // `fields` are stamped on every event and applied AFTER the caller's, so no call
 // site can forge `src`, claim another session's id or misreport its pid. That

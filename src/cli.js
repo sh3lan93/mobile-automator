@@ -949,7 +949,7 @@ function storeHint(store) {
 // setup honours the same answer every other verb does: checking only cwd let
 // `mauto setup` from a subdirectory scaffold a nested workspace under a legacy
 // project, the split state this refusal exists to prevent.
-function handleSetup({ projectRoot, ancestorRoot = null, legacyRoot = null }, opts = {}) {
+function handleSetup({ projectRoot, ancestorRoot = null, legacyRoot = null, env = process.env }, opts = {}) {
   // No --mode stays undefined, never defaulted here: only scaffold knows
   // whether config.json already exists, and the default is for a new
   // workspace only (#333).
@@ -965,6 +965,16 @@ function handleSetup({ projectRoot, ancestorRoot = null, legacyRoot = null }, op
   // workspace exists, so a user mid-recovery gets through.
   if (legacyRoot) return legacyWorkspaceFailure(legacyRoot);
   const r = scaffold(projectRoot, { mode });
+  // Taken AFTER scaffold, so a fresh workspace reads the `enabled: false` it
+  // was just given (`not_configured`) and an existing one reads its own config.
+  //
+  // #348: this used to be a hard-coded `enabled: false`. On a cloned repo whose
+  // committed config opted in, that was wrong: the committed key alone turned
+  // telemetry on, so the setup run that reported "off" spooled its own
+  // verb.end and the next daemon or `mauto telemetry flush` uploaded it. Now it
+  // is the decision every verb acts on, and with consent recorded per user a
+  // committed opt-in reads `not_consented_locally`.
+  const decision = observeTelemetry.decideForProject(projectRoot, env);
   const hint = ancestorRoot
     ? `An existing workspace was found in an ancestor directory (${ancestorRoot}). This new workspace in ${projectRoot} shadows it for every mauto verb run from here or below; remove it if you meant to use the ancestor's.`
     : null;
@@ -980,7 +990,7 @@ function handleSetup({ projectRoot, ancestorRoot = null, legacyRoot = null }, op
         // a consent question on a human's behalf is worse than not asking. It
         // rides in the envelope (structured, in-band) rather than as a stderr
         // banner, so the agent can surface it to the human it belongs to.
-        telemetry: { enabled: false, notice: observeTelemetry.CONSENT_NOTICE },
+        telemetry: { enabled: decision.enabled, reason: decision.reason, notice: observeTelemetry.CONSENT_NOTICE },
         next: 'run `mauto guide setup`',
       },
       hint
@@ -1012,7 +1022,14 @@ function handleConfigSet({ projectRoot, env = process.env, store = selectionStor
   }
   if (key === 'engine') return setEngine({ projectRoot, env, store }, value);
   configManager.set(projectRoot, key, value);
-  return { envelope: ok({ key, value }), exitKind: 'ok' };
+  // #348: `config set` changes the project's config and nothing else, so
+  // setting the opt-in key here records no consent. Said in-band, because the
+  // write succeeding reads like telemetry turning on.
+  const hint =
+    key === 'telemetry.enabled' && value === true
+      ? 'This changes only the project config; it records no consent. Telemetry stays off on this machine unless `mauto telemetry enable` has recorded your consent, outside the repository.'
+      : null;
+  return { envelope: ok({ key, value }, hint), exitKind: 'ok' };
 }
 
 // #251: switching the engine invalidates device ids — the default robot lists
@@ -1095,22 +1112,34 @@ function handleTelemetryStatus({ projectRoot, env = process.env }) {
 // MAUTO_TELEMETRY=0 is set would be a lie, and the config is not the place to
 // resolve a conflict the environment owns.
 function handleTelemetryEnable({ projectRoot, env = process.env }) {
-  observeTelemetry.setEnabled(projectRoot, true);
+  // The same env the report below reads: the consent record lives where that
+  // env's XDG_CONFIG_HOME / HOME says, so writing through any other would
+  // record consent somewhere the decision never looks.
+  observeTelemetry.setEnabled(projectRoot, true, env);
   const data = telemetryReport({ projectRoot, env });
+  // "for this project", not "in config.json": enable records both the config
+  // key and this user's consent (#348).
   const hint =
     data.reason === 'kill_switch'
-      ? 'Telemetry is enabled in config.json but MAUTO_TELEMETRY=0 is set in this environment and overrides it.'
+      ? 'Telemetry is enabled for this project, but MAUTO_TELEMETRY=0 is set in this environment and overrides it.'
       : data.reason === 'do_not_track'
-        ? 'Telemetry is enabled in config.json but DO_NOT_TRACK is set in this environment and overrides it.'
+        ? 'Telemetry is enabled for this project, but DO_NOT_TRACK is set in this environment and overrides it.'
         : data.reason === 'no_token'
-          ? 'Telemetry is enabled in config.json but this build ships no project token, so nothing will be sent.'
+          ? 'Telemetry is enabled for this project, but this build ships no project token, so nothing will be sent.'
           : undefined;
   return { envelope: ok(data, hint), exitKind: 'ok' };
 }
 
+// The hint is always shown: telling whether a session is running would take a
+// daemon liveness probe, and the advice is harmless when none is. A session
+// started by this version re-checks consent before every upload (#348); one
+// started by an older mauto decided once, at start, and keeps that decision.
+const DISABLE_SESSION_HINT =
+  'A running device session re-checks consent before every upload and stops sending, but a session started by an older mauto (before 0.40.15) keeps its old decision until it ends: run `mauto session end` to be sure.';
+
 function handleTelemetryDisable({ projectRoot, env = process.env }) {
-  observeTelemetry.setEnabled(projectRoot, false);
-  return { envelope: ok(telemetryReport({ projectRoot, env })), exitKind: 'ok' };
+  observeTelemetry.setEnabled(projectRoot, false, env);
+  return { envelope: ok(telemetryReport({ projectRoot, env }), DISABLE_SESSION_HINT), exitKind: 'ok' };
 }
 
 // The explicit escape hatch. This is the ONE verb allowed a network round trip,

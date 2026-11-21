@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.40.15]
+
+### ⚠️ Upgrade note
+
+- **If you opted in to telemetry, run `mauto telemetry enable` once more in
+  each project.** Consent is now recorded per user, outside the repository
+  (below), and an opt-in made before this release left no such record. Until
+  you re-run it, `mauto telemetry status` reports `enabled: false` with
+  reason `not_consented_locally` and nothing is sent.
+
+### 🔒 Security
+
+- **A committed opt-in no longer turns telemetry on for everyone who clones
+  the repository** ([#348](https://github.com/sh3lan93/mobile-automator/issues/348)).
+  The on-switch was `telemetry.enabled: true` in
+  `.mobile-automator/config.json`, a file that is routinely committed.
+  `mauto telemetry enable` now also records your consent in
+  `$XDG_CONFIG_HOME/mauto/telemetry-consent.json` (else
+  `~/.config/mauto/telemetry-consent.json`), keyed by the project's real
+  path, and telemetry is on only when both say so. `mauto telemetry disable`
+  removes the record. `mauto config set telemetry.enabled true` changes only
+  the project config and now says so in its hint.
+- **`mauto telemetry disable` reaches a device session that is already
+  running.** The daemon decided once, when it started, and kept spooling and
+  uploading after a disable. It now re-reads the decision before every upload
+  and at most once a second before it spools. A daemon started by an older
+  mauto still keeps its old decision until it ends, so the disable hint names
+  `mauto session end`.
+- **The telemetry spool is read as untrusted input.** A spool committed to
+  the repository, or a link at its path, was uploaded field for field. Every
+  spool line now passes the field catalog again when it is read and again at
+  the wire, so a field outside the published list never reaches the network.
+  The spool is never read, appended to, renamed or deleted through a symlink,
+  a hard link, a `.logs/` directory that is a link or that another user owns,
+  and a batch over 1 MiB is ignored.
+- **`mauto setup` reports the real telemetry decision.** It printed
+  `enabled: false` whatever the config said. It now reports `enabled` and
+  `reason` as `mauto telemetry status` does.
+
 ## [0.40.12]
 
 ### 🔒 Security
