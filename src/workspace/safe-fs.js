@@ -15,6 +15,22 @@
 //   - a write never goes to a leaf with a second hard link, which would be a
 //     file outside the workspace by another name.
 //
+// The rest of a checkout is just as untrusted, and mauto writes there too
+// (#347): the host files `mauto init` installs (.claude/skills/...,
+// .mcp.json). So the same rules come in two scopes, one directory walk and one
+// leaf open between them:
+//
+//   - workspace (safeDir, the *WorkspaceFile helpers, safeWorkspaceDest): the
+//     path must resolve inside .mobile-automator/;
+//   - path (readProjectFile, createProjectFile): it must resolve inside the
+//     project root.
+//
+// Both check every directory below the project root down to the file's own;
+// the scope sets the containment bound and words the refusal. A path the user
+// chose (--out, a screenshot to /tmp) is confined only when it lands in the
+// workspace, and inWorkspace says whether it does: anywhere else it is the
+// user's own call.
+//
 // Components above and including the project root are never checked: a
 // project reached through a symlinked parent (macOS /tmp -> /private/tmp, a
 // symlinked checkout) is the user's own choice, and containment compares
@@ -303,13 +319,14 @@ function removeWorkspaceFile(projectRoot, file, deps = {}) {
   return true;
 }
 
-// Read a workspace file as utf8. null when it (or a parent dir) does not exist.
-// Reads at most maxBytes + 1 so a planted huge file costs nothing.
-function readWorkspaceFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES } = {}, deps = {}) {
+// The one capped read: `open()` returns the checked fd. null when the file (or
+// a parent dir) does not exist. Reads at most maxBytes + 1 so a planted huge
+// file costs nothing.
+function readCapped(open, file, maxBytes, scope, deps) {
   const { fs } = resolveDeps(deps);
   let fd;
   try {
-    fd = openWorkspaceFile(projectRoot, file, nodeFs.constants.O_RDONLY, 0o666, deps);
+    fd = open();
   } catch (err) {
     if (err.code === 'ENOENT') return null;
     throw err;
@@ -325,11 +342,117 @@ function readWorkspaceFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES } =
       chunks.push(n === buf.length ? buf : buf.subarray(0, n));
       total += n;
     }
-    if (total > maxBytes) throw new UnsafePathError(path.resolve(file), 'too_large');
+    if (total > maxBytes) throw new UnsafePathError(path.resolve(file), 'too_large', { scope });
     return Buffer.concat(chunks, total).toString('utf8');
   } finally {
     closeQuietly(fs, fd);
   }
+}
+
+// Read a workspace file as utf8. null when it (or a parent dir) does not exist.
+function readWorkspaceFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES } = {}, deps = {}) {
+  const open = () => openWorkspaceFile(projectRoot, file, nodeFs.constants.O_RDONLY, 0o666, deps);
+  return readCapped(open, file, maxBytes, 'workspace', deps);
+}
+
+// A workspace destination another process writes: the engine saves a
+// screenshot to a path, so mauto never holds the fd. The directory is walked
+// and created like any workspace write; then the leaf is lstat'd (it is never
+// opened): absent is fine, anything there must be a regular file of ours with
+// one link. The writer's open comes after this check, but every directory on
+// the way is ours and not world-writable, so only a process already running
+// as the user could swap the leaf in between. Returns the resolved path.
+function safeWorkspaceDest(projectRoot, file, deps = {}) {
+  const d = resolveDeps(deps);
+  const resolved = path.resolve(file);
+  safeDir(projectRoot, path.dirname(resolved), { create: true }, deps);
+  let st;
+  try {
+    st = d.fs.lstatSync(resolved);
+  } catch (err) {
+    if (err.code === 'ENOENT') return resolved;
+    throw err;
+  }
+  if (st.isSymbolicLink()) throw new UnsafePathError(resolved, 'symlink');
+  if (!st.isFile()) throw new UnsafePathError(resolved, 'not_regular');
+  checkLeafOwnership(resolved, st, true, d, 'workspace');
+  return resolved;
+}
+
+// Where `file` lands in the workspace: its absolute path under
+// workspaceDir(projectRoot), or null when it names a place outside it. For a
+// path the user chose (--out, a screenshot destination), which gets the
+// workspace rules inside the workspace and is the user's own call anywhere
+// else.
+//
+// Lexical first. A path neither lexically in the workspace nor in the project
+// may still reach the project root through a symlinked ancestor (macOS /tmp ->
+// /private/tmp; the logical path zsh's `pwd` shows while process.cwd() is
+// physical), so its ancestors are realpath'd, and the first one that is the
+// project root re-roots the rest of the path under it. Top-down, shallowest
+// first, on purpose: a workspace directory planted as a link back to the root
+// realpaths to the root too, and matching it would carry the path out of the
+// workspace, past the very link the walk must refuse. Ancestors that do not
+// resolve are skipped. Lookups only (realpath); never throws for an ordinary
+// path.
+function inWorkspace(projectRoot, file, deps = {}) {
+  const { fs } = resolveDeps(deps);
+  const root = path.resolve(projectRoot);
+  const ws = path.resolve(workspaceDir(projectRoot));
+  const resolved = path.resolve(file);
+  if (isInside(resolved, ws)) return resolved;
+  if (isInside(resolved, root)) return null;
+
+  let realRoot;
+  try {
+    realRoot = fs.realpathSync(root);
+  } catch (_) {
+    return null;
+  }
+  const ancestors = [];
+  for (let a = path.dirname(resolved); ; a = path.dirname(a)) {
+    ancestors.unshift(a);
+    if (path.dirname(a) === a) break;
+  }
+  for (const a of ancestors) {
+    let real;
+    try {
+      real = fs.realpathSync(a);
+    } catch (_) {
+      continue;
+    }
+    if (real !== realRoot) continue;
+    const rerooted = path.join(root, path.relative(a, resolved));
+    return isInside(rerooted, ws) ? rerooted : null;
+  }
+  return null;
+}
+
+// A project file outside the workspace (a host file `mauto init` writes:
+// .claude/skills/..., .mcp.json): the same walk, bounded by the project root
+// instead of the workspace, then the checked leaf, both in the 'path' scope.
+function openProjectFile(projectRoot, file, flags, mode, deps) {
+  const resolved = path.resolve(file);
+  const create = Boolean(flags & nodeFs.constants.O_CREAT);
+  walkDirs(projectRoot, projectRoot, path.dirname(resolved), { create, scope: 'path' }, resolveDeps(deps));
+  return openOwnedLeaf(resolved, flags, { mode, scope: 'path' }, deps);
+}
+
+// readWorkspaceFile's project-rooted twin: utf8, null when the file or a
+// parent dir does not exist, capped at maxBytes. A symlink leaf, dangling or
+// not, is refused, never read as absent.
+function readProjectFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES } = {}, deps = {}) {
+  const open = () => openProjectFile(projectRoot, file, nodeFs.constants.O_RDONLY, 0o666, deps);
+  return readCapped(open, file, maxBytes, 'path', deps);
+}
+
+// createWorkspaceFile's project-rooted twin: exclusive (O_WRONLY|O_CREAT|
+// O_EXCL), missing directories below the project root created by the checked
+// walk, an existing leaf failing EEXIST intact. Returns an fd the caller
+// closes.
+function createProjectFile(projectRoot, file, { mode = 0o666 } = {}, deps = {}) {
+  const { O_WRONLY, O_CREAT, O_EXCL } = nodeFs.constants;
+  return openProjectFile(projectRoot, file, O_WRONLY | O_CREAT | O_EXCL, mode, deps);
 }
 
 // The lenient readers, for state files where absent or garbled is a normal
@@ -370,4 +493,11 @@ module.exports = {
   readWorkspaceFile,
   readWorkspaceFileOrNull,
   readWorkspaceJsonOrNull,
+  // A workspace file another process writes (the engine's screenshot).
+  safeWorkspaceDest,
+  // Whether a path the user chose lands in the workspace.
+  inWorkspace,
+  // The path scope: project files outside the workspace.
+  readProjectFile,
+  createProjectFile,
 };
