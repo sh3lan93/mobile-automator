@@ -33,6 +33,21 @@
 - Running `mauto setup` in a subdirectory creates a *nested* workspace that shadows the
   ancestor one for everything run below it; `setup`'s hint warns when that happens.
 
+### ❌ "Refusing to use workspace path …" (exit 5)
+- mauto reads and writes `.mobile-automator/` only when every directory and file in it
+  is real (not a symlink), owned by you, and inside the workspace. A checked-in
+  workspace is untrusted input, so mauto refuses rather than follows (#345). The
+  reason in parentheses says which rule failed.
+- `(symlink)` / `(escape)`: replace the link with a real directory or file. For
+  example, `rm .mobile-automator/memory && mkdir .mobile-automator/memory`.
+- `(foreign_owner)`: the path belongs to another uid. Fix it with
+  `chown -R "$(id -u)" .mobile-automator`. In a CI container that runs as root over a
+  checkout owned by another uid, set `MAUTO_TRUST_WORKSPACE_OWNER=1` instead. It skips
+  the owner check only, never the symlink checks.
+- `(world_writable)`: `chmod o-w <path>`. Group-writable directories are fine.
+- `(not_regular)` / `(not_directory)` / `(hardlink)` / `(too_large)`: delete the path and
+  let mauto recreate it.
+
 ### ❌ mauto refuses to run on Windows
 - **At install**, npm stops with:
   ```
