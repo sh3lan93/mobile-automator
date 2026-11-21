@@ -14,6 +14,7 @@ const fs = require('fs');
 
 const paths = require('./session-paths');
 const sessionSalt = require('./session-salt');
+const { openLeaf } = require('../workspace/safe-fs');
 
 // True when a pid is a live process we own. ESRCH => dead; EPERM => alive.
 // cleanStale routes through pidIdentity, which also checks the process's
@@ -132,11 +133,12 @@ const PID_FILE_MAX_BYTES = 32;
 // Both files live in the workspace, which may be checked in or planted (#344),
 // so the read never follows a symlink (O_NOFOLLOW), never blocks on a FIFO
 // (O_NONBLOCK), and accepts only a regular file: anything else reads as absent.
+// The leaf open is safe-fs's openLeaf, the one O_NOFOLLOW implementation; its
+// refusals (symlink, not a regular file) land in the catch below as absent.
 function readPidFile(file) {
   let fd;
   try {
-    fd = fs.openSync(file, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK);
-    if (!fs.fstatSync(fd).isFile()) return null;
+    ({ fd } = openLeaf(file, fs.constants.O_RDONLY));
     const buf = Buffer.alloc(PID_FILE_MAX_BYTES);
     const n = fs.readSync(fd, buf, 0, PID_FILE_MAX_BYTES, null);
     const pid = parseInt(buf.toString('utf8', 0, n).trim(), 10);
