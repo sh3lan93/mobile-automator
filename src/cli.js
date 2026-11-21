@@ -1095,7 +1095,10 @@ function handleTelemetryStatus({ projectRoot, env = process.env }) {
 // MAUTO_TELEMETRY=0 is set would be a lie, and the config is not the place to
 // resolve a conflict the environment owns.
 function handleTelemetryEnable({ projectRoot, env = process.env }) {
-  observeTelemetry.setEnabled(projectRoot, true);
+  // The same env the report below reads: the consent record lives where that
+  // env's XDG_CONFIG_HOME / HOME says, so writing through any other would
+  // record consent somewhere the decision never looks.
+  observeTelemetry.setEnabled(projectRoot, true, env);
   const data = telemetryReport({ projectRoot, env });
   const hint =
     data.reason === 'kill_switch'
@@ -1109,7 +1112,7 @@ function handleTelemetryEnable({ projectRoot, env = process.env }) {
 }
 
 function handleTelemetryDisable({ projectRoot, env = process.env }) {
-  observeTelemetry.setEnabled(projectRoot, false);
+  observeTelemetry.setEnabled(projectRoot, false, env);
   return { envelope: ok(telemetryReport({ projectRoot, env })), exitKind: 'ok' };
 }
 

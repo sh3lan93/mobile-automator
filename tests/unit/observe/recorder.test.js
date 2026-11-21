@@ -343,15 +343,21 @@ describe('the spool sink is constructed only when telemetry is enabled', () => {
   const telemetry = require('../../../src/observe/telemetry');
   const { spoolPath } = require('../../../src/observe/paths');
 
-  const TOKEN = { MAUTO_TELEMETRY_TOKEN: 'phc_real' };
+  const { userConfigEnv, grantLocalConsent } = require('../../helpers/user-config');
 
-  function configuredWorkspace(config) {
+  // Its own XDG_CONFIG_HOME, so the consent record never touches the real one.
+  const TOKEN = userConfigEnv({ MAUTO_TELEMETRY_TOKEN: 'phc_real' });
+
+  // An enabled config is also granted this user's local consent (#348) unless
+  // the test says otherwise: "opted in" now means both.
+  function configuredWorkspace(config, { consented = true } = {}) {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-sinks-'));
     fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
     fs.writeFileSync(
       path.join(root, '.mobile-automator', 'config.json'),
       JSON.stringify(config, null, 2)
     );
+    if (consented && config.telemetry && config.telemetry.enabled === true) grantLocalConsent(root, TOKEN);
     return root;
   }
 
@@ -365,6 +371,18 @@ describe('the spool sink is constructed only when telemetry is enabled', () => {
   it('builds three once a human has opted in', () => {
     const root = configuredWorkspace({ telemetry: { enabled: true } });
     expect(defaultSinks(root, TOKEN)).toHaveLength(3);
+  });
+
+  it('spools nothing for a committed opt-in this user never made, whatever the repo plants (#348)', () => {
+    const root = configuredWorkspace({ telemetry: { enabled: true } }, { consented: false });
+    // A consent-shaped record committed inside the workspace is not consent.
+    const planted = path.join(root, '.mobile-automator', '.session', 'telemetry-consent.json');
+    fs.mkdirSync(path.dirname(planted), { recursive: true });
+    fs.writeFileSync(planted, JSON.stringify({ projects: { [fs.realpathSync(root)]: true } }));
+
+    expect(defaultSinks(root, TOKEN)).toHaveLength(2);
+    record({ level: 'info', src: 'cli', event: 'verb.end', verb: 'tap', ok: true }, { projectRoot: root, env: TOKEN });
+    expect(fs.existsSync(spoolPath(root, {}))).toBe(false);
   });
 
   it('writes no spool file at all while disabled, at EVERY level', () => {

@@ -17,6 +17,8 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
+const { hasLocalConsent } = require('../../src/observe/consent');
+
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const CLI = path.join(REPO_ROOT, 'bin', 'mauto.js');
 
@@ -146,6 +148,10 @@ describe('workspace discovery (integration, #188)', () => {
       const cfg = JSON.parse(fs.readFileSync(path.join(root, '.mobile-automator', 'config.json'), 'utf8'));
       expect(cfg.telemetry.enabled).toBe(true);
       expect(fs.existsSync(path.join(nested, '.mobile-automator'))).toBe(false);
+      // The per-user consent (#348) is recorded for the discovered root, in
+      // the isolated XDG_CONFIG_HOME childEnv() passes down, not for cwd.
+      expect(hasLocalConsent(root)).toBe(true);
+      expect(hasLocalConsent(nested)).toBe(false);
     });
   });
 

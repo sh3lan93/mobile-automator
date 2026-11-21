@@ -8,9 +8,13 @@ const { makeFlusher, FLUSH_INTERVAL_MS, MAX_FLUSH_INTERVAL_MS, MAX_CLAIMED } = r
 const spool = require('../../../src/observe/spool');
 const { spoolPath } = require('../../../src/observe/paths');
 const telemetry = require('../../../src/observe/telemetry');
+const { userConfigEnv, grantLocalConsent } = require('../../helpers/user-config');
 
-const TOKEN = { MAUTO_TELEMETRY_TOKEN: 'phc_real' };
+// Its own XDG_CONFIG_HOME, so the consent record never touches the real one.
+const TOKEN = userConfigEnv({ MAUTO_TELEMETRY_TOKEN: 'phc_real' });
 
+// An enabled workspace is also granted this user's local consent (#348):
+// "enabled" now means the config key and the per-user record.
 function workspace({ enabled = true } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-flush-'));
   fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
@@ -18,6 +22,7 @@ function workspace({ enabled = true } = {}) {
     path.join(root, '.mobile-automator', 'config.json'),
     JSON.stringify({ telemetry: { enabled } }, null, 2)
   );
+  if (enabled) grantLocalConsent(root, TOKEN);
   return root;
 }
 
@@ -55,6 +60,20 @@ describe('telemetry flush', () => {
     };
     const flush = makeFlusher({ projectRoot: root, env: TOKEN, transport });
     await expect(flush()).resolves.toMatchObject({ skipped: 'not_configured', sent: 0, kept_events: 0 });
+  });
+
+  it('never touches the transport for a committed opt-in this user never made (#348)', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-flush-'));
+    fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.mobile-automator', 'config.json'), JSON.stringify({ telemetry: { enabled: true } }));
+    spoolN(root, 2);
+    const transport = {
+      postBatch: () => {
+        throw new Error('the transport must not be reachable without local consent');
+      },
+    };
+    const flush = makeFlusher({ projectRoot: root, env: TOKEN, transport });
+    await expect(flush()).resolves.toMatchObject({ skipped: 'not_consented_locally', sent: 0 });
   });
 
   it('never touches the transport under a kill switch, even with an enabled config', async () => {

@@ -21,9 +21,16 @@
 // the developer's ~/.config. Where the file lives comes from XDG_CONFIG_HOME
 // and HOME, and the environment is trusted the same way MAUTO_TELEMETRY_HOST
 // is: whoever controls it already controls this process.
+//
+// The format is { "projects": { "<realpath>": true } }. Reading fails closed:
+// a missing, unreadable, corrupt or oddly shaped file is "no consent", never a
+// guess at what someone meant.
 
+const realFs = require('fs');
 const os = require('os');
 const path = require('path');
+
+const { atomicWrite } = require('../util/atomic');
 
 const FILE_NAME = 'telemetry-consent.json';
 
@@ -37,4 +44,71 @@ function consentPath({ env = process.env, homedir = os.homedir } = {}) {
   return path.join(base, 'mauto', FILE_NAME);
 }
 
-module.exports = { consentPath };
+// The one key a project is recorded under. A root that cannot be resolved (it
+// was deleted, say) falls back to its absolute path, which simply matches no
+// record written while it existed.
+function projectKey(projectRoot, fs) {
+  try {
+    return fs.realpathSync(projectRoot);
+  } catch (_) {
+    return path.resolve(projectRoot);
+  }
+}
+
+const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+
+// The parsed record, or null when there is no usable one.
+function readRecord(file, fs) {
+  try {
+    const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (isPlainObject(doc) && isPlainObject(doc.projects)) return doc;
+  } catch (_) {
+    // missing, unreadable or corrupt: no record
+  }
+  return null;
+}
+
+// True only for an own `true` under this project's key. A truthy "true" or 1
+// is a hand edit no `mauto telemetry enable` would write, and a consent flag
+// does not get to guess. Never throws.
+function hasLocalConsent(projectRoot, { env = process.env, homedir = os.homedir, fs = realFs } = {}) {
+  try {
+    const doc = readRecord(consentPath({ env, homedir }), fs);
+    if (!doc) return false;
+    const key = projectKey(projectRoot, fs);
+    return Object.prototype.hasOwnProperty.call(doc.projects, key) && doc.projects[key] === true;
+  } catch (_) {
+    return false;
+  }
+}
+
+// `true` records consent for this project; anything else withdraws it and
+// keeps every other project's record. A withdrawal with no file is a no-op:
+// no file is created just to say "no". A corrupt or oddly shaped file is
+// replaced: that can lose other projects' records, but never invent one.
+//
+// The mauto dir is made 0700 (only that dir: the user's config dir is theirs
+// to set) before the file is written, so the file is never readable by others
+// even in the moment before its own chmod to 0600. Write errors propagate: a
+// user who ran `mauto telemetry enable` must hear that it did not stick.
+//
+// `fs` covers the reads and the directory; the write itself is
+// util/atomic.js's, which uses the real fs.
+function setLocalConsent(projectRoot, value, { env = process.env, homedir = os.homedir, fs = realFs } = {}) {
+  const file = consentPath({ env, homedir });
+  const grant = value === true;
+  if (!grant && !fs.existsSync(file)) return;
+
+  const doc = readRecord(file, fs) || { projects: {} };
+  const key = projectKey(projectRoot, fs);
+  if (grant) doc.projects[key] = true;
+  else delete doc.projects[key];
+
+  const dir = path.dirname(file);
+  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  fs.chmodSync(dir, 0o700);
+  atomicWrite(file, `${JSON.stringify(doc, null, 2)}\n`);
+  fs.chmodSync(file, 0o600);
+}
+
+module.exports = { consentPath, hasLocalConsent, setLocalConsent };

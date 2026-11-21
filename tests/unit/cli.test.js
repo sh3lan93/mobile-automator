@@ -3316,7 +3316,11 @@ describe('cli handlers', () => {
 
 describe('mauto telemetry', () => {
   const telemetryModule = require('../../src/observe/telemetry');
+  const { hasLocalConsent } = require('../../src/observe/consent');
   const { EVENT_FIELDS, NEVER_SENDS } = require('../../src/observe/event');
+  // Every env injected below carries its own XDG_CONFIG_HOME: an env without
+  // one would read, and on enable write, the developer's real ~/.config.
+  const { userConfigEnv, grantLocalConsent } = require('../helpers/user-config');
 
   function workspace(config = {}) {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-tv-'));
@@ -3329,7 +3333,7 @@ describe('mauto telemetry', () => {
 
   it('reports off, and says exactly how to turn it on', () => {
     const root = workspace({});
-    const { envelope, exitKind } = handleTelemetryStatus({ projectRoot: root, env: {} });
+    const { envelope, exitKind } = handleTelemetryStatus({ projectRoot: root, env: userConfigEnv() });
     expect(exitKind).toBe('ok');
     expect(envelope.ok).toBe(true);
     expect(envelope.data.enabled).toBe(false);
@@ -3339,22 +3343,22 @@ describe('mauto telemetry', () => {
 
   it('reports the device engine\'s own telemetry, off by default (#213)', () => {
     const root = workspace({});
-    const { envelope } = handleTelemetryStatus({ projectRoot: root, env: {} });
+    const { envelope } = handleTelemetryStatus({ projectRoot: root, env: userConfigEnv() });
     expect(envelope.data.engine).toEqual({ enabled: false, reason: 'default_off' });
   });
 
   it('reports an engine opt-in, and a kill switch overriding it (#213)', () => {
     const root = workspace({});
-    expect(handleTelemetryStatus({ projectRoot: root, env: { MOBILEMCP_DISABLE_TELEMETRY: '' } }).envelope.data.engine)
+    expect(handleTelemetryStatus({ projectRoot: root, env: userConfigEnv({ MOBILEMCP_DISABLE_TELEMETRY: '' }) }).envelope.data.engine)
       .toEqual({ enabled: true, reason: 'user_env' });
     telemetryModule._resetMemo();
-    expect(handleTelemetryStatus({ projectRoot: root, env: { MOBILEMCP_DISABLE_TELEMETRY: '', MAUTO_TELEMETRY: '0' } }).envelope.data.engine)
+    expect(handleTelemetryStatus({ projectRoot: root, env: userConfigEnv({ MOBILEMCP_DISABLE_TELEMETRY: '', MAUTO_TELEMETRY: '0' }) }).envelope.data.engine)
       .toEqual({ enabled: false, reason: 'kill_switch' });
   });
 
   it('renders the field list from the catalog, not from prose', () => {
     const root = workspace({});
-    const { envelope } = handleTelemetryStatus({ projectRoot: root, env: {} });
+    const { envelope } = handleTelemetryStatus({ projectRoot: root, env: userConfigEnv() });
     expect(envelope.data.fields_sent.sort())
       .toEqual(Object.keys(EVENT_FIELDS).filter((k) => EVENT_FIELDS[k].sends).sort());
     expect(envelope.data.fields_never_sent.sort()).toEqual([...NEVER_SENDS].sort());
@@ -3363,7 +3367,7 @@ describe('mauto telemetry', () => {
 
   it('reports the spool so a user can see what is queued before opting in', () => {
     const root = workspace({});
-    const { envelope } = handleTelemetryStatus({ projectRoot: root, env: {} });
+    const { envelope } = handleTelemetryStatus({ projectRoot: root, env: userConfigEnv() });
     expect(envelope.data.spool).toEqual({
       path: expect.stringContaining('telemetry.spool'),
       bytes: 0,
@@ -3372,21 +3376,27 @@ describe('mauto telemetry', () => {
     });
   });
 
-  it('enable writes the config key', () => {
+  it('reports a committed opt-in this user never made as off, not_consented_locally (#348)', () => {
+    const root = workspace({ telemetry: { enabled: true } });
+    const { envelope } = handleTelemetryStatus({ projectRoot: root, env: userConfigEnv({ MAUTO_TELEMETRY_TOKEN: 'phc_real' }) });
+    expect(envelope.data).toMatchObject({ enabled: false, reason: 'not_consented_locally' });
+  });
+
+  it('enable writes the config key and this user\'s local consent', () => {
     const root = workspace({});
-    const { envelope } = handleTelemetryEnable({ projectRoot: root, env: { MAUTO_TELEMETRY_TOKEN: 'phc_real' } });
+    const env = userConfigEnv({ MAUTO_TELEMETRY_TOKEN: 'phc_real' });
+    const { envelope } = handleTelemetryEnable({ projectRoot: root, env });
     expect(envelope.ok).toBe(true);
     expect(envelope.data.enabled).toBe(true);
     const cfg = JSON.parse(fs.readFileSync(path.join(root, '.mobile-automator', 'config.json'), 'utf8'));
     expect(cfg.telemetry.enabled).toBe(true);
+    expect(hasLocalConsent(root, { env })).toBe(true);
   });
 
   it('enable under a kill switch writes the intent but does NOT claim to be on', () => {
     const root = workspace({});
-    const { envelope } = handleTelemetryEnable({
-      projectRoot: root,
-      env: { MAUTO_TELEMETRY_TOKEN: 'phc_real', MAUTO_TELEMETRY: '0' },
-    });
+    const env = userConfigEnv({ MAUTO_TELEMETRY_TOKEN: 'phc_real', MAUTO_TELEMETRY: '0' });
+    const { envelope } = handleTelemetryEnable({ projectRoot: root, env });
     expect(envelope.ok).toBe(true);
     expect(envelope.data.enabled).toBe(false);
     expect(envelope.data.reason).toBe('kill_switch');
@@ -3395,14 +3405,19 @@ describe('mauto telemetry', () => {
     // override, not a rewrite of what the project owner asked for.
     const cfg = JSON.parse(fs.readFileSync(path.join(root, '.mobile-automator', 'config.json'), 'utf8'));
     expect(cfg.telemetry.enabled).toBe(true);
+    expect(hasLocalConsent(root, { env })).toBe(true);
   });
 
-  it('disable writes false and reports off', () => {
+  it('disable writes false, withdraws this user\'s consent and reports off', () => {
     const root = workspace({ telemetry: { enabled: true } });
-    const { envelope } = handleTelemetryDisable({ projectRoot: root, env: {} });
+    const env = userConfigEnv({ MAUTO_TELEMETRY_TOKEN: 'phc_real' });
+    grantLocalConsent(root, env);
+    expect(handleTelemetryStatus({ projectRoot: root, env }).envelope.data.enabled).toBe(true);
+    const { envelope } = handleTelemetryDisable({ projectRoot: root, env });
     expect(envelope.data.enabled).toBe(false);
     const cfg = JSON.parse(fs.readFileSync(path.join(root, '.mobile-automator', 'config.json'), 'utf8'));
     expect(cfg.telemetry.enabled).toBe(false);
+    expect(hasLocalConsent(root, { env })).toBe(false);
   });
 
   it('flush drains the spool through an injected flusher, never touching the real transport', async () => {
@@ -3412,7 +3427,7 @@ describe('mauto telemetry', () => {
       calls.push(true);
       return { sent: 3, dropped: 1, kept: 0, kept_events: 0, ok: false };
     };
-    const { envelope, exitKind } = await handleTelemetryFlush({ projectRoot: root, env: {}, flusher });
+    const { envelope, exitKind } = await handleTelemetryFlush({ projectRoot: root, env: userConfigEnv(), flusher });
     expect(exitKind).toBe('ok');
     expect(calls).toHaveLength(1);
     expect(envelope.data).toMatchObject({ sent: 3, dropped: 1, kept: 0, kept_events: 0, ok: false });
@@ -3426,7 +3441,7 @@ describe('mauto telemetry', () => {
   it('flush explains kept batches without claiming the verb failed', async () => {
     const root = workspace({ telemetry: { enabled: true } });
     const flusher = async () => ({ sent: 0, dropped: 0, kept: 1, kept_events: 40, ok: false });
-    const { envelope, exitKind } = await handleTelemetryFlush({ projectRoot: root, env: {}, flusher });
+    const { envelope, exitKind } = await handleTelemetryFlush({ projectRoot: root, env: userConfigEnv(), flusher });
     expect(exitKind).toBe('ok');
     expect(envelope.ok).toBe(true);
     expect(envelope.data).toMatchObject({ kept: 1, kept_events: 40, ok: false });
