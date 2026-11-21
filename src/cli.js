@@ -1285,8 +1285,11 @@ function handleMemoryForget({ memoryStoreFactory, projectRoot }, opts = {}) {
 // ...); our own malformed-config guard carries 'corrupt_mcp_config'; anything
 // else (a TypeError, the leaked-placeholder guard) is an unexpected internal
 // error and must NOT be disguised as an environment problem — that would send
-// the operator to fix the filesystem for what is actually a code bug.
+// the operator to fix the filesystem for what is actually a code bug. A host
+// path refused as a symlink, foreign-owned, ... (#347) is 'unsafe_path', checked
+// first: its EUNSAFEPATH code would otherwise pass for an errno.
 function adapterErrorClass(err) {
+  if (err instanceof UnsafePathError) return 'unsafe_path';
   const code = err && err.code;
   if (typeof code === 'string' && /^E[A-Z]+$/.test(code)) return code;
   if (code === 'corrupt_mcp_config') return 'corrupt_mcp_config';
@@ -1303,16 +1306,21 @@ function hintForAdapterError(cls) {
   return 'Unexpected error during init (possibly a bug) — see the message, then re-run after resolving (writers are idempotent).';
 }
 
+// Returns the per-agent record, plus the error a failed agent threw, so a
+// single-agent init can report a typed error's own kind and hint.
 function applyOneAdapter(adapter, agent, projectRoot) {
   try {
     const r = adapter.apply({ projectRoot });
-    return { agent, ok: true, changes: r.changes };
+    return { record: { agent, ok: true, changes: r.changes }, err: null };
   } catch (err) {
     return {
-      agent,
-      ok: false,
-      error: adapterErrorClass(err),
-      message: (err && err.message) || String(err),
+      record: {
+        agent,
+        ok: false,
+        error: adapterErrorClass(err),
+        message: (err && err.message) || String(err),
+      },
+      err,
     };
   }
 }
@@ -1323,7 +1331,7 @@ function handleInit({ projectRoot, adapters = ADAPTERS, inspect = inspectHosts }
     const wasInstalled = installedBefore(inspect, projectRoot);
     // Continue-on-error: every host is attempted; the result is ONE envelope
     // carrying a per-agent ok/failed map. `ok` only when all succeed.
-    const perAgent = known.map((a) => applyOneAdapter(adapters[a], a, projectRoot));
+    const perAgent = known.map((a) => applyOneAdapter(adapters[a], a, projectRoot).record);
     const failed = perAgent.filter((r) => !r.ok);
     if (failed.length === 0) {
       return { envelope: ok({ agents: perAgent }, refreshHint(perAgent, wasInstalled)), exitKind: 'ok' };
@@ -1350,8 +1358,15 @@ function handleInit({ projectRoot, adapters = ADAPTERS, inspect = inspectHosts }
     };
   }
   const wasInstalled = installedBefore(inspect, projectRoot);
-  const r = applyOneAdapter(adapter, agent, projectRoot);
+  const { record: r, err } = applyOneAdapter(adapter, agent, projectRoot);
   if (!r.ok) {
+    // A refused host path (#347) carries its own kind (environment), message
+    // and hint, reported verbatim as toEnvelope reports it for every other
+    // verb: the hint says what to do about the link, which the generic
+    // filesystem hint below cannot.
+    if (err instanceof UnsafePathError) {
+      return { envelope: fail(err.kind, err.message, err.hint, { agents: [r] }), exitKind: err.kind };
+    }
     // A malformed host config is the user's input, not an environment fault —
     // surface it as invalid_input (exit 3), matching how every other verb
     // classifies bad JSON; fs/unknown adapter errors stay internal (exit 1).
