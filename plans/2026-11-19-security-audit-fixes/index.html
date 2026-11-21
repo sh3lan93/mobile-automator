@@ -1491,6 +1491,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#pr-7-353-raw-output-and-the-diagnose-stack-trace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PR 7 (#353): Raw output and the diagnose stack trace
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PR 7 (#353): Raw output and the diagnose stack trace">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#task-8-route-emitraw-and-diagnose-through-neutralisecontrols" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 8: Route emitRaw and diagnose through neutraliseControls
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#decisions-to-confirm-before-pr-3-and-pr-5" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1534,7 +1562,7 @@
 
 <h1 id="security-hardening-gate-343-implementation-plan">Security hardening (gate #343): implementation plan<a class="headerlink" href="#security-hardening-gate-343-implementation-plan" title="Permanent link">&para;</a></h1>
 <blockquote>
-<p><strong>Start here.</strong> This is the single plan for milestone <code>security-hardening</code> (gate <a href="https://github.com/sh3lan93/mobile-automator/issues/343">#343</a>, slices #344–#349). Every agent picking up a slice reads the gate issue, then this plan's section for its slice, then the slice issue. Follow the milestone workflow in <code>CLAUDE.md</code>.</p>
+<p><strong>Start here.</strong> This is the single plan for milestone <code>security-hardening</code> (gate <a href="https://github.com/sh3lan93/mobile-automator/issues/343">#343</a>, slices #344–#349 and #353). Every agent picking up a slice reads the gate issue, then this plan's section for its slice, then the slice issue. Follow the milestone workflow in <code>CLAUDE.md</code>.</p>
 </blockquote>
 <table>
 <thead>
@@ -1582,9 +1610,16 @@
 <td>PR 6 / Task 7</td>
 <td>—</td>
 </tr>
+<tr>
+<td>S7: neutralise control characters in raw output and the diagnose stack trace</td>
+<td>#353</td>
+<td>PR 7 / Task 8</td>
+<td>#349</td>
+</tr>
 </tbody>
 </table>
 <blockquote>
+<p><strong>Status</strong> (which slices have merged) is tracked by the checkboxes on gate #343, not here.</p>
 <p><strong>Line numbers</strong> are from the audited commit <code>c296ed8</code>. Since then, <code>src/cli.js</code>, <code>src/result/store.js</code>, <code>src/setup/scaffold.js</code> and <code>src/output/envelope.js</code> have changed, and <code>src/run/*</code> was added. Locate code by function name, not line.</p>
 <p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (<code>- [ ]</code>) syntax for tracking.</p>
 </blockquote>
@@ -1825,7 +1860,30 @@ Rules: <code>safeDir</code> walks every component from <code>workspaceDir(projec
 <li>[ ] <strong>Step 5: Commit</strong> and bump the version.</li>
 </ul>
 <hr />
+<h2 id="pr-7-353-raw-output-and-the-diagnose-stack-trace">PR 7 (#353): Raw output and the diagnose stack trace<a class="headerlink" href="#pr-7-353-raw-output-and-the-diagnose-stack-trace" title="Permanent link">&para;</a></h2>
+<p>Follow-up to PR 6 (#349 / PR #352). It was found in that PR's review, not by the audit. Two output paths that PR 6 did not list still print text without neutralising it.</p>
+<h3 id="task-8-route-emitraw-and-diagnose-through-neutralisecontrols">Task 8: Route <code>emitRaw</code> and <code>diagnose</code> through <code>neutraliseControls</code><a class="headerlink" href="#task-8-route-emitraw-and-diagnose-through-neutralisecontrols" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Modify: <code>src/cli.js</code>, <code>emitRaw</code> in the per-invocation emitters (stdout for <code>guide</code>, <code>schema</code>, <code>bootstrap</code> and <code>memory show</code>). Pass <code>content</code> through <code>neutraliseControls(content)</code> with its default options, which keep <code>\n</code> and <code>\t</code>. All four reach it through <code>emitMaybeRaw</code>. Two of them print workspace-controlled text: <code>memory show</code> (the memory markdown) and <code>guide</code> (whose placeholders are filled from <code>config.json</code>). The shipped guide content and the schema JSON hold no controls, so their output stays byte-identical.
+- Modify: <code>src/cli.js</code>, <code>diagnose(err, exitKind)</code>. Write <code>neutraliseControls(err.stack)</code>. Keep the stack's own line breaks: do <strong>not</strong> set <code>escapeNewlines</code>, because an <code>internal</code> error message can carry device text.
+- Reuse <code>src/output/neutralise.js</code> as is. Do not add a second regex (CLAUDE.md step 8).
+- Test: <code>tests/unit/cli-envelope-boundary.test.js</code> (it already exercises <code>diagnose</code>) and a <code>memory show</code> case. Put the <code>memory show</code> case wherever <code>memory show</code> is already tested (<code>grep -rln "memory show" tests/unit</code>).</p>
+<ul>
+<li>[ ] <strong>Step 1: Write failing tests.</strong></li>
+<li><code>memory show</code> on a fixture whose <code>run-history.md</code> contains <code>\x1b[2J</code> and <code>\u009b</code>: stdout does not match <code>/[\x00-\x08\x0b-\x1f\x7f-\x9f]/</code>, and the lines and tabs of the entry are kept.</li>
+<li><code>guide &lt;topic&gt;</code> with a <code>config.json</code> placeholder value containing <code>\x1b[2J</code>: stdout contains no <code>\x1b</code>.</li>
+<li><code>guide &lt;topic&gt;</code> on a clean config: stdout is byte-identical before and after the change (a regression guard against escaping clean text).</li>
+<li>An <code>internal</code> error whose message is <code>'boom\x1b]0;x\x07'</code>: stderr contains no <code>\x1b</code> and no <code>\x07</code>, and still has more than one line.</li>
+<li>[ ] <strong>Step 2: Run</strong> the tests. Expected: FAIL.</li>
+<li>[ ] <strong>Step 3: Implement</strong> the modifications listed above.</li>
+<li>[ ] <strong>Step 4: Run</strong> <code>npm test</code>, <code>npm run lint</code> and <code>npm run lint:guides</code>. Expected: PASS.</li>
+<li>[ ] <strong>Step 5: Commit</strong> and bump the patch version.</li>
+</ul>
+<hr />
 <h2 id="decisions-to-confirm-before-pr-3-and-pr-5">Decisions to confirm before PR 3 and PR 5<a class="headerlink" href="#decisions-to-confirm-before-pr-3-and-pr-5" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p>D2 was approved on #343 on 2026-11-19. D1 and D3 are open; their state lives on the gate.</p>
+</blockquote>
 <ul>
 <li><strong>D1 (PR 5): telemetry consent moves to a per-user file outside the repo.</strong> Recommended. A committed <code>telemetry.enabled: true</code> alone no longer turns telemetry on. Cost: anyone who opted in today stops sending until they run <code>mauto telemetry enable</code> again. The alternative is the minimum fix: setup reports the real decision, and egress is rechecked. That keeps the committed opt-in, so the finding stays open.</li>
 <li><strong>D2 (PR 2/3): owner-check escape hatch <code>MAUTO_TRUST_WORKSPACE_OWNER=1</code>.</strong> Recommended, modelled on git's <code>safe.directory</code>. Without it, root-in-container CI over a checkout owned by another uid gets an <code>environment</code> failure on every verb.</li>
