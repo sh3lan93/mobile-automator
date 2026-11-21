@@ -23,8 +23,10 @@ const {
   readWorkspaceJsonOrNull,
   openWorkspaceFile,
   openLeaf,
-  unsafePathFailure,
 } = require('../../../src/workspace/safe-fs');
+// The envelope boundary: a refusal reaches the agent through toEnvelope's
+// typed-error branch, which maps the error's own kind, message and hint.
+const { toEnvelope } = require('../../../src/cli');
 
 const { O_RDONLY, O_WRONLY, O_RDWR, O_CREAT, O_TRUNC } = fs.constants;
 const CANARY = 'SECRET-CANARY';
@@ -570,7 +572,7 @@ describe('UnsafePathError carries its own envelope fields', () => {
   });
 });
 
-describe('unsafePathFailure', () => {
+describe('a refusal through toEnvelope', () => {
   function envelopeFor(fn) {
     let caught;
     try {
@@ -579,7 +581,7 @@ describe('unsafePathFailure', () => {
       caught = err;
     }
     expect(caught).toBeInstanceOf(UnsafePathError);
-    return unsafePathFailure(caught);
+    return toEnvelope(caught);
   }
 
   it('is an environment failure naming the refused path and the reason, never content or target', () => {

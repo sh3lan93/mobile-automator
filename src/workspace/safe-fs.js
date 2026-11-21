@@ -24,13 +24,13 @@
 // MAUTO_TRUST_WORKSPACE_OWNER=1, which skips the owner comparison and nothing
 // else, like git's safe.directory.
 //
-// Requires only envelope and layout, so device and store modules can import it
-// without a cycle.
+// Requires only layout, so device and store modules can import it without a
+// cycle. It knows nothing of envelopes: a refusal carries its own kind and
+// hint, and cli.js's toEnvelope maps it like any other typed error.
 
 const nodeFs = require('fs');
 const path = require('path');
 
-const { fail } = require('../output/envelope');
 const { workspaceDir } = require('./layout');
 
 const DEFAULT_MAX_BYTES = 16 * 1024 * 1024;
@@ -269,12 +269,6 @@ function readWorkspaceJsonOrNull(projectRoot, file, opts = {}, deps = {}) {
   }
 }
 
-// The envelope for a refusal: names the path and the reason, never the content
-// or a link target (UnsafePathError carries neither).
-function unsafePathFailure(err) {
-  return { envelope: fail(err.kind, err.message, err.hint), exitKind: err.kind };
-}
-
 module.exports = {
   UnsafePathError,
   safeDir,
@@ -283,5 +277,4 @@ module.exports = {
   readWorkspaceFile,
   readWorkspaceFileOrNull,
   readWorkspaceJsonOrNull,
-  unsafePathFailure,
 };

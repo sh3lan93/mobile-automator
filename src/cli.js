@@ -63,7 +63,7 @@ const {
   workspaceFailure,
   legacyWorkspaceFailure,
 } = require('./workspace/discover');
-const { UnsafePathError, unsafePathFailure } = require('./workspace/safe-fs');
+const { UnsafePathError } = require('./workspace/safe-fs');
 
 // Commander throws (via exitOverride) for two very different reasons, and the
 // split below is the ONLY thing that tells them apart.
@@ -139,8 +139,8 @@ function usageLine(cmd) {
 // is the single boundary that guarantees a calling agent always receives one
 // JSON line + a meaningful exit code instead of a raw stack trace on stderr.
 //   CommanderError (parse failure) -> invalid_input, with the usage line as hint
-//   ResultStoreRefusal           -> its kind (invalid_input), with its hint
-//   UnsafePathError              -> environment, naming the refused workspace path (#345)
+//   ResultStoreRefusal           -> its own kind (invalid_input) and hint
+//   UnsafePathError              -> its own kind (environment) and hint (#345)
 //   SyntaxError                  -> invalid_input (a malformed JSON file)
 //   fs EACCES/ENOENT/EROFS/...    -> environment, with a filesystem hint
 //   anything else                -> internal
@@ -155,17 +155,18 @@ function toEnvelope(err) {
       exitKind: 'invalid_input',
     };
   }
-  // A refusal from the result layer (src/result/refusal.js): a --run-id the
-  // ResultStore refuses (#295), a pending verdict over a decided one (#275),
-  // a finalize --status greener than the run derives (#337). The layer owns
-  // the rule and the wording, so every result verb reports it identically.
-  if (err instanceof ResultStoreRefusal) {
+  // Typed errors that carry their own kind, message and hint; the layer that
+  // throws owns the rule and the wording, so every verb reports it identically.
+  //   - ResultStoreRefusal (src/result/refusal.js): a --run-id the ResultStore
+  //     refuses (#295), a pending verdict over a decided one (#275), a
+  //     finalize --status greener than the run derives (#337).
+  //   - UnsafePathError (src/workspace/safe-fs.js): a workspace path refused
+  //     as a symlink, foreign-owned, escaping, ... (#345). Its message names
+  //     the path and reason, never file content or a link target. It must
+  //     come before the FS_ERROR_CODES branch, which would lose the hint.
+  if (err instanceof ResultStoreRefusal || err instanceof UnsafePathError) {
     return { envelope: fail(err.kind, err.message, err.hint), exitKind: err.kind };
   }
-  // A workspace path safe-fs refused (#345): a symlink, a foreign owner, ...
-  // Before the FS_ERROR_CODES branch, which would lose the reason and hint.
-  // The envelope names the path and reason, never the content or link target.
-  if (err instanceof UnsafePathError) return unsafePathFailure(err);
   if (err instanceof SyntaxError) {
     return {
       envelope: fail(
