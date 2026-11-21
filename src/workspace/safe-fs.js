@@ -63,13 +63,23 @@ const HINTS = {
   too_large: 'Workspace files are small; a file this size was not written by mauto. Delete or shrink it.',
 };
 
+const FALLBACK_REASON = 'it is not safe to use';
+const FALLBACK_HINT = 'Inspect the path and replace it with a real file or directory inside .mobile-automator/.';
+
+// A refusal carries its own envelope fields, like the repo's other typed
+// errors: `kind` is always environment (the workspace is wrong, not the verb's
+// input), `message` and `hint` are the envelope text verbatim. So any boundary
+// that maps `err.kind`/`err.hint` (deviceFail, toEnvelope) reports it correctly
+// without knowing this class.
 class UnsafePathError extends Error {
   // `file` is always the workspace path that was refused, never where a link
   // points: the target is attacker-chosen and must not reach an envelope.
   constructor(file, reason) {
-    super(`Refusing to use ${file}: ${REASONS[reason] || reason}`);
+    super(`Refusing to use workspace path ${file}: ${REASONS[reason] || FALLBACK_REASON} (${reason}).`);
     this.name = 'UnsafePathError';
     this.code = 'EUNSAFEPATH';
+    this.kind = 'environment';
+    this.hint = HINTS[reason] || FALLBACK_HINT;
     this.path = file;
     this.reason = reason;
   }
@@ -238,15 +248,7 @@ function readWorkspaceFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES } =
 // The envelope for a refusal: names the path and the reason, never the content
 // or a link target (UnsafePathError carries neither).
 function unsafePathFailure(err) {
-  const reason = REASONS[err.reason] || 'it is not safe to use';
-  return {
-    envelope: fail(
-      'environment',
-      `Refusing to use workspace path ${err.path}: ${reason} (${err.reason}).`,
-      HINTS[err.reason] || 'Inspect the path and replace it with a real file or directory inside .mobile-automator/.'
-    ),
-    exitKind: 'environment',
-  };
+  return { envelope: fail(err.kind, err.message, err.hint), exitKind: err.kind };
 }
 
 module.exports = {

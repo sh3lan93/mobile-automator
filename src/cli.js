@@ -1972,11 +1972,15 @@ function buildProgram(deps = {}) {
       // fallback connection has no daemon at all).
       emitters.setSessionId(readSessionId(projectRoot));
     } catch (err) {
-      // A refused workspace path (#345) is not a device failure: rethrow it to
-      // withEnvelope, whose toEnvelope maps it to environment.
-      if (err instanceof UnsafePathError) {
-        if (typeof close === 'function') await close();
-        throw err;
+      // A throw after the factory returned (readSessionId, say) must not leak
+      // the connection. deviceFail honours a typed error's kind and hint, so a
+      // refused workspace path (#345) still reads as environment.
+      if (typeof close === 'function') {
+        try {
+          await close();
+        } catch (_) {
+          /* the connect-phase error below is the one to report */
+        }
       }
       emit(deviceFail(err), humanFlag());
       return;

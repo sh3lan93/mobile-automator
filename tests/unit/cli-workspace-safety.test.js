@@ -68,8 +68,9 @@ const fakeBridgeFactory = async () => ({
   close: async () => {},
 });
 
-async function runIn(root, argv) {
-  const { calls, emitters } = captureEmitters();
+async function runIn(root, argv, { deviceBridgeFactory = fakeBridgeFactory, emitterOverrides = {} } = {}) {
+  const { calls, emitters: base } = captureEmitters();
+  const emitters = { ...base, ...emitterOverrides };
   const written = [];
   const out = jest.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
     written.push(String(chunk));
@@ -84,7 +85,7 @@ async function runIn(root, argv) {
       cwd: root,
       workspace: findWorkspaceRoot(root),
       emitters,
-      deviceBridgeFactory: fakeBridgeFactory,
+      deviceBridgeFactory,
     }).parseAsync(['node', 'mauto', ...argv]);
   } finally {
     out.mockRestore();
@@ -172,5 +173,50 @@ describe('store verbs refuse a symlinked workspace path (#345)', () => {
     expect(JSON.stringify(calls)).not.toContain(CANARY);
     expect(written).not.toContain(CANARY);
     expect(snapshot(outside)).toEqual(before);
+  });
+});
+
+// A failure after the factory returned a connection must close it, whatever
+// the error: the refusal above (readSessionId through a symlinked .session/)
+// and an ordinary throw alike.
+describe('connectBridge closes the connection on a failure after connect', () => {
+  function closingFactory() {
+    const closed = [];
+    const factory = async () => ({
+      bridge: { listDevices: async () => [{ id: 'emulator-5554', name: 'Pixel', platform: 'android' }] },
+      close: async () => {
+        closed.push(true);
+      },
+    });
+    return { closed, factory };
+  }
+
+  test('a refused workspace path after connect closes it and fails environment', async () => {
+    const { root } = fixture((ws, outside) => {
+      fs.mkdirSync(path.join(outside, 'session'));
+      fs.symlinkSync(path.join(outside, 'session'), path.join(ws, '.session'));
+    });
+    const { closed, factory } = closingFactory();
+    const { calls } = await runIn(root, ['devices', 'use', 'emulator-5554'], { deviceBridgeFactory: factory });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].exitKind).toBe('environment');
+    expect(closed).toHaveLength(1);
+  });
+
+  test('any other throw after connect closes it too, and still emits one envelope', async () => {
+    const { root } = fixture(() => {});
+    const { closed, factory } = closingFactory();
+    const { calls } = await runIn(root, ['devices', 'use', 'emulator-5554'], {
+      deviceBridgeFactory: factory,
+      emitterOverrides: {
+        setSessionId: () => {
+          throw new Error('boom after connect');
+        },
+      },
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].envelope.ok).toBe(false);
+    expect(calls[0].envelope.error.message).toBe('boom after connect');
+    expect(closed).toHaveLength(1);
   });
 });

@@ -492,6 +492,24 @@ describe('openLeaf', () => {
   });
 });
 
+describe('UnsafePathError carries its own envelope fields', () => {
+  it('kind is environment, message names the path and reason, hint is the reason hint', () => {
+    const err = new UnsafePathError('/ws/.mobile-automator/config.json', 'symlink');
+    expect(err.kind).toBe('environment');
+    expect(err.message).toBe(
+      'Refusing to use workspace path /ws/.mobile-automator/config.json: it is a symbolic link (symlink).'
+    );
+    expect(err.hint).toMatch(/never follows links/);
+  });
+
+  it('an unknown reason still gets a reason text and a hint', () => {
+    const err = new UnsafePathError('/ws/.mobile-automator/x', 'mystery');
+    expect(err.kind).toBe('environment');
+    expect(err.message).toBe('Refusing to use workspace path /ws/.mobile-automator/x: it is not safe to use (mystery).');
+    expect(err.hint).toMatch(/inside \.mobile-automator\//);
+  });
+});
+
 describe('unsafePathFailure', () => {
   function envelopeFor(fn) {
     let caught;
