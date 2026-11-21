@@ -18,8 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   placeholders) with control characters intact, and `diagnose` wrote the
   `internal` stack trace, whose message can carry device text, to stderr the
   same way. Both now pass through `neutraliseControls`: C0 and DEL become
-  `\xHH`, C1 becomes `\u00HH`, newlines and tabs are kept. Clean output is
-  byte-identical.
+  `\xHH`, C1 becomes `\u00HH`, newlines and tabs are kept. Raw output also
+  keeps the CR of a CRLF line ending (memory files may be saved with CRLF),
+  while a lone CR is escaped. Clean output is byte-identical.
 
 ## [0.40.10]
 

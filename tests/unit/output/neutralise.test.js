@@ -34,6 +34,12 @@ describe('neutraliseControls', () => {
     expect(neutraliseControls('a\tb\nc', { escapeNewlines: true })).toBe('a\tb\\x0Ac');
   });
 
+  test('keepCrlf keeps CR only when it ends a line; a lone CR is still escaped (#353)', () => {
+    expect(neutraliseControls('a\r\nb\rc\x1bd', { keepCrlf: true })).toBe('a\r\nb\\x0Dc\\x1Bd');
+    // The default is unchanged: every CR is escaped.
+    expect(neutraliseControls('a\r\nb')).toBe('a\\x0D\nb');
+  });
+
   test('passes non-strings through unchanged', () => {
     const obj = { a: 1 };
     expect(neutraliseControls(obj)).toBe(obj);

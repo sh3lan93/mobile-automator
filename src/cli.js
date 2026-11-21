@@ -2721,9 +2721,10 @@ function makeEmitters({ projectRoot = process.cwd() } = {}) {
     // Raw content (markdown / JSON schema / text) with no envelope
     // wrapping. Used by the guide/schema/bootstrap/memory show success paths.
     // Memory markdown and config-filled guide placeholders are workspace-
-    // controlled, so control characters are neutralised (#353); newlines and
-    // tabs are kept, and clean content passes through byte-identical.
-    emitRaw: (content, exitKind) => finish({ text: neutraliseControls(content), exitKind, ok: true }),
+    // controlled, so control characters are neutralised (#353); newlines,
+    // tabs and the CR of a CRLF line ending (memory files may be CRLF) are
+    // kept, so clean content passes through byte-identical.
+    emitRaw: (content, exitKind) => finish({ text: neutraliseControls(content, { keepCrlf: true }), exitKind, ok: true }),
 
     // Last-resort emit for errors that escape BEFORE any action runs, so the
     // in-program withEnvelope boundary can't see them — a throw inside
