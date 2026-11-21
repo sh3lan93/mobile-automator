@@ -1,14 +1,15 @@
 'use strict';
 
-// #345: atomicWrite into a checked-in workspace must not follow a committed
-// symlink out of it. With a projectRoot the directory is walked by safe-fs;
-// either way the temp file is created O_EXCL|O_NOFOLLOW under a random name.
+// #345: a write into a checked-in workspace must not follow a committed
+// symlink out of it. atomicWorkspaceWrite walks the directory with safe-fs;
+// both writers create the temp file O_EXCL|O_NOFOLLOW under a random name.
+// atomicWrite (paths the user chose) does not confine, by design.
 
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { atomicWrite } = require('../../../src/util/atomic');
+const { atomicWrite, atomicWorkspaceWrite } = require('../../../src/util/atomic');
 const { UnsafePathError } = require('../../../src/workspace/safe-fs');
 
 const ORIGINAL = '# Run History\nSECRET-CANARY\n';
@@ -32,7 +33,7 @@ function thrown(fn) {
   return null;
 }
 
-describe('atomicWrite with a projectRoot (#345)', () => {
+describe('atomicWorkspaceWrite (#345)', () => {
   test.each([
     ['an absolute', (outside) => outside],
     ['a relative', () => path.join('..', 'outside')],
@@ -41,7 +42,7 @@ describe('atomicWrite with a projectRoot (#345)', () => {
     fs.symlinkSync(target(outside), path.join(ws, 'memory'));
     const file = path.join(ws, 'memory', 'run-history.md');
 
-    const err = thrown(() => atomicWrite(file, 'pwned\n', { projectRoot: root }));
+    const err = thrown(() => atomicWorkspaceWrite(root, file, 'pwned\n'));
 
     expect(err).toBeInstanceOf(UnsafePathError);
     expect(err.reason).toBe('symlink');
@@ -55,7 +56,7 @@ describe('atomicWrite with a projectRoot (#345)', () => {
     const file = path.join(ws, 'memory', 'run-history.md');
     fs.symlinkSync(path.join(outside, 'run-history.md'), file);
 
-    atomicWrite(file, 'fresh\n', { projectRoot: root });
+    atomicWorkspaceWrite(root, file, 'fresh\n');
 
     expect(fs.lstatSync(file).isFile()).toBe(true);
     expect(fs.readFileSync(file, 'utf8')).toBe('fresh\n');
@@ -65,13 +66,30 @@ describe('atomicWrite with a projectRoot (#345)', () => {
   test('creates missing workspace directories and leaves no temp file behind', () => {
     const { root, ws } = fixture();
     const file = path.join(ws, 'results', 'r1.json');
-    atomicWrite(file, '{}\n', { projectRoot: root });
+    atomicWorkspaceWrite(root, file, '{}\n');
     expect(fs.readFileSync(file, 'utf8')).toBe('{}\n');
     expect(fs.readdirSync(path.join(ws, 'results'))).toEqual(['r1.json']);
   });
+
+  test('refuses a target outside the workspace, writing nothing', () => {
+    const { root } = fixture();
+    const file = path.join(root, 'elsewhere', 'r1.json');
+    const err = thrown(() => atomicWorkspaceWrite(root, file, '{}\n'));
+    expect(err).toBeInstanceOf(UnsafePathError);
+    expect(err.reason).toBe('escape');
+    expect(fs.existsSync(path.join(root, 'elsewhere'))).toBe(false);
+  });
+
+  test('without a project root it throws a TypeError and writes nothing', () => {
+    const { ws } = fixture();
+    const file = path.join(ws, 'results', 'r1.json');
+    const err = thrown(() => atomicWorkspaceWrite(file, '{}\n'));
+    expect(err).toBeInstanceOf(TypeError);
+    expect(fs.existsSync(path.join(ws, 'results'))).toBe(false);
+  });
 });
 
-describe('atomicWrite without a projectRoot', () => {
+describe('atomicWrite (paths the user chose)', () => {
   test('writes, creating parent directories, with no temp file left', () => {
     const { root } = fixture();
     const file = path.join(root, 'out', 'deep', 'report.xml');

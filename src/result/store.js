@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const { atomicWrite } = require('../util/atomic');
+const { atomicWorkspaceWrite } = require('../util/atomic');
 const { withLock } = require('../util/lock');
 const { OBSERVATION_TYPES, stepStatus } = require('./flags');
 const {
@@ -146,7 +146,7 @@ class ResultStore {
   constructor({ runId, scenarioId, projectRoot, metadata } = {}) {
     if (!projectRoot) throw new Error('ResultStore requires a projectRoot');
     // The one gate for every writer (#295): the id becomes `<runId>.json` and
-    // `<runId>.lock` below, and atomicWrite creates parent directories, so an
+    // `<runId>.lock` below, and atomicWorkspaceWrite creates parent directories, so an
     // id with a separator would write outside results/. Same rule as the
     // reader, readFinalizedResult, so the two cannot disagree on valid ids.
     // Thrown before anything is read or written; the CLI's toEnvelope maps it
@@ -261,12 +261,12 @@ class ResultStore {
   // `this._dir === path.dirname(this._file)` (results dir), so this is
   // behavior-identical to the previous inline implementation.
   _atomicWrite(contents) {
-    atomicWrite(this._file, contents, { projectRoot: this.projectRoot });
+    atomicWorkspaceWrite(this.projectRoot, this._file, contents);
   }
 
   // The per-runId lock, taken through safe-fs like every other workspace path.
   _withLock(fn) {
-    return withLock(this._lock, fn, { projectRoot: this.projectRoot });
+    return withLock(this.projectRoot, this._lock, fn);
   }
 
   // The in-progress marker below is private to this module; readers ask

@@ -9,7 +9,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { acquire, release, STALE_MS, RETRY_MS, MAX_WAIT_MS } = require('../../../src/util/lock');
+const { acquire, release, withLock, STALE_MS, RETRY_MS, MAX_WAIT_MS } = require('../../../src/util/lock');
 const { UnsafePathError } = require('../../../src/workspace/safe-fs');
 
 const MAX_SLEEPS = MAX_WAIT_MS / RETRY_MS + 2;
@@ -50,27 +50,43 @@ function capped(fn, max = 100_000) {
   };
 }
 
-function fakeFs(overrides) {
+// A real project root with `.mobile-automator/.session/`, so safe-fs walks real
+// directories; the fake fs below only lies about the lock path itself.
+function workspaceRoot() {
+  const root = tmpDir();
+  fs.mkdirSync(path.join(root, '.mobile-automator', '.session'), { recursive: true });
+  return { root, lp: path.join(root, '.mobile-automator', '.session', 'memory.lock') };
+}
+
+// Real fs for every path but `lp`: open on it always fails EEXIST, lstat on it
+// fails ENOENT unless overridden.
+function fakeFs(lp, overrides = {}) {
+  const at = (fake, real) => (p, ...rest) => (p === lp ? fake(p, ...rest) : real(p, ...rest));
   return {
-    mkdirSync: () => undefined,
-    openSync: capped(() => {
-      throw errno('EEXIST');
-    }),
-    lstatSync: () => {
-      throw errno('ENOENT');
-    },
-    unlinkSync: () => undefined,
-    writeSync: () => undefined,
-    closeSync: () => undefined,
-    ...overrides,
+    ...fs,
+    openSync: at(
+      capped(() => {
+        throw errno('EEXIST');
+      }),
+      fs.openSync
+    ),
+    lstatSync: at(
+      overrides.lstatSync ||
+        (() => {
+          throw errno('ENOENT');
+        }),
+      fs.lstatSync
+    ),
+    unlinkSync: at(overrides.unlinkSync || (() => undefined), fs.unlinkSync),
   };
 }
 
 describe('util/lock deadline (#345)', () => {
   test('a lock that keeps vanishing (EEXIST then ENOENT) times out within the deadline', () => {
     const clock = fakeClock();
-    const lockFs = fakeFs();
-    expect(() => acquire('/ws/.session/memory.lock', { ...clock, fs: lockFs })).toThrow(/could not acquire/);
+    const { root, lp } = workspaceRoot();
+    const lockFs = fakeFs(lp);
+    expect(() => acquire(root, lp, { ...clock, fs: lockFs })).toThrow(/could not acquire/);
     expect(clock.sleeps.length).toBeGreaterThan(0);
     expect(clock.sleeps.length).toBeLessThan(MAX_SLEEPS);
   });
@@ -78,38 +94,40 @@ describe('util/lock deadline (#345)', () => {
   test('a non-regular entry that unlink removes but open keeps refusing still times out', () => {
     const clock = fakeClock();
     const unlinked = [];
-    const lockFs = fakeFs({
+    const { root, lp } = workspaceRoot();
+    const lockFs = fakeFs(lp, {
       lstatSync: () => ({ isFile: () => false, isSymbolicLink: () => true, mtimeMs: clock.now() }),
       unlinkSync: capped((p) => unlinked.push(p)),
     });
-    expect(() => acquire('/ws/.session/memory.lock', { ...clock, fs: lockFs })).toThrow(/could not acquire/);
+    expect(() => acquire(root, lp, { ...clock, fs: lockFs })).toThrow(/could not acquire/);
     expect(unlinked.length).toBeGreaterThan(0);
     expect(clock.sleeps.length).toBeLessThan(MAX_SLEEPS);
   });
 
   test('a failed unlink backs off rather than spinning', () => {
     const clock = fakeClock();
-    const lockFs = fakeFs({
+    const { root, lp } = workspaceRoot();
+    const lockFs = fakeFs(lp, {
       lstatSync: () => ({ isFile: () => true, isSymbolicLink: () => false, mtimeMs: 0 }),
       unlinkSync: () => {
         throw errno('EPERM');
       },
     });
-    expect(() => acquire('/ws/.session/memory.lock', { ...clock, fs: lockFs })).toThrow(/could not acquire/);
+    expect(() => acquire(root, lp, { ...clock, fs: lockFs })).toThrow(/could not acquire/);
     expect(clock.sleeps.length).toBeGreaterThan(0);
     expect(clock.sleeps.length).toBeLessThan(MAX_SLEEPS);
   });
 
-  test('a real dangling symlink at the lock path is replaced, never followed', () => {
-    const dir = tmpDir();
-    const outside = path.join(dir, 'outside');
+  test('a real dangling symlink lock inside the workspace is replaced, never followed', () => {
+    const root = tmpDir();
+    const outside = path.join(root, 'outside');
     fs.mkdirSync(outside);
-    const lockDir = path.join(dir, 'locks');
-    fs.mkdirSync(lockDir);
-    const lp = path.join(lockDir, 'memory.lock');
+    const session = path.join(root, '.mobile-automator', '.session');
+    fs.mkdirSync(session, { recursive: true });
+    const lp = path.join(session, 'memory.lock');
     fs.symlinkSync(path.join(outside, 'target'), lp);
 
-    acquire(lp);
+    acquire(root, lp);
     try {
       expect(fs.lstatSync(lp).isFile()).toBe(true);
       expect(fs.existsSync(path.join(outside, 'target'))).toBe(false);
@@ -119,25 +137,7 @@ describe('util/lock deadline (#345)', () => {
     }
   });
 
-  test('with a projectRoot, a dangling symlink lock inside the workspace is replaced too', () => {
-    const root = tmpDir();
-    const outside = path.join(root, 'outside');
-    fs.mkdirSync(outside);
-    const session = path.join(root, '.mobile-automator', '.session');
-    fs.mkdirSync(session, { recursive: true });
-    const lp = path.join(session, 'memory.lock');
-    fs.symlinkSync(path.join(outside, 'target'), lp);
-
-    acquire(lp, { projectRoot: root });
-    try {
-      expect(fs.lstatSync(lp).isFile()).toBe(true);
-      expect(fs.readdirSync(outside)).toEqual([]);
-    } finally {
-      release(lp);
-    }
-  });
-
-  test('with a projectRoot, a lock directory that is a symlink out of the workspace is refused', () => {
+  test('a lock directory that is a symlink out of the workspace is refused', () => {
     const root = tmpDir();
     const outside = path.join(root, 'outside');
     fs.mkdirSync(outside);
@@ -147,7 +147,7 @@ describe('util/lock deadline (#345)', () => {
 
     let caught;
     try {
-      acquire(lp, { projectRoot: root });
+      acquire(root, lp);
     } catch (err) {
       caught = err;
     }
@@ -159,38 +159,52 @@ describe('util/lock deadline (#345)', () => {
 
 describe('util/lock existing behaviour', () => {
   test('a stale lock is broken and re-acquired', () => {
-    const lp = path.join(tmpDir(), 'x.lock');
-    acquire(lp);
+    const { root, lp } = workspaceRoot();
+    acquire(root, lp);
     const past = new Date(Date.now() - STALE_MS - 1000);
     fs.utimesSync(lp, past, past);
-    expect(() => acquire(lp)).not.toThrow();
+    expect(() => acquire(root, lp)).not.toThrow();
     release(lp);
   });
 
   test('a live lock times out', () => {
-    const lp = path.join(tmpDir(), 'x.lock');
-    acquire(lp);
+    const { root, lp } = workspaceRoot();
+    acquire(root, lp);
     const clock = fakeClock();
     try {
-      expect(() => acquire(lp, clock)).toThrow(/could not acquire/);
+      expect(() => acquire(root, lp, clock)).toThrow(/could not acquire/);
       expect(clock.sleeps.length).toBeLessThan(MAX_SLEEPS);
     } finally {
       release(lp);
     }
   });
 
-  test('a lock in a missing directory creates the directory (no projectRoot)', () => {
-    const lp = path.join(tmpDir(), 'a', 'b', 'x.lock');
-    acquire(lp);
+  test('a missing lock directory is created inside the workspace', () => {
+    const root = tmpDir();
+    const lp = path.join(root, '.mobile-automator', 'results', 'r1.lock');
+    acquire(root, lp);
     expect(fs.lstatSync(lp).isFile()).toBe(true);
     release(lp);
   });
 
-  test('with a projectRoot, a missing lock directory is created inside the workspace', () => {
+  test('a lock path outside the workspace is refused, and nothing is created', () => {
     const root = tmpDir();
-    const lp = path.join(root, '.mobile-automator', 'results', 'r1.lock');
-    acquire(lp, { projectRoot: root });
-    expect(fs.lstatSync(lp).isFile()).toBe(true);
-    release(lp);
+    const lp = path.join(root, 'elsewhere', 'x.lock');
+    let caught;
+    try {
+      acquire(root, lp);
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(UnsafePathError);
+    expect(caught.reason).toBe('escape');
+    expect(fs.existsSync(path.join(root, 'elsewhere'))).toBe(false);
+  });
+
+  test.each([
+    ['acquire without a project root', () => acquire('/ws/.mobile-automator/.session/memory.lock')],
+    ['withLock without a project root', () => withLock('/ws/.mobile-automator/.session/memory.lock', () => 1)],
+  ])('%s throws a TypeError before touching the fs', (_label, call) => {
+    expect(call).toThrow(TypeError);
   });
 });

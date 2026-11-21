@@ -18,7 +18,7 @@ const fs = require('fs');
 const path = require('path');
 
 const paths = require('./session-paths');
-const { atomicWrite } = require('../util/atomic');
+const { atomicWorkspaceWrite } = require('../util/atomic');
 const { UnsafePathError, readWorkspaceFile, safeDir } = require('../workspace/safe-fs');
 
 const SELECTION_NAME = 'selection.json';
@@ -42,14 +42,10 @@ function read(projectRoot) {
 }
 
 // Persist a device id. Creates .mobile-automator/.session/ if needed. Written
-// via atomicWrite (tmp + fsync + rename) so a concurrent reader or a crash
+// via atomicWorkspaceWrite (tmp + fsync + rename) so a concurrent reader or a crash
 // sees the old-complete or new-complete selection, never a torn one.
 function write(projectRoot, id) {
-  atomicWrite(
-    selectionPath(projectRoot),
-    JSON.stringify({ device: String(id) }, null, 2) + '\n',
-    { projectRoot }
-  );
+  atomicWorkspaceWrite(projectRoot, selectionPath(projectRoot), JSON.stringify({ device: String(id) }, null, 2) + '\n');
   return String(id);
 }
 

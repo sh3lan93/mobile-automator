@@ -14,24 +14,25 @@ const { safeDir, openWorkspaceFile, openLeaf } = require('../workspace/safe-fs')
 // rename replaces whatever sits at `file`, a symlink included, so a planted
 // link leaf is replaced, never written through. The temp file is created
 // O_EXCL|O_NOFOLLOW under a random name, so it cannot be pre-planted either
-// (#345). With a projectRoot the target's directory is walked by safe-fs
-// (symlink-free, owned by us, created when missing) and the temp file is
-// opened through it; without one (paths the user chose, such as junit --out)
-// the directory is created as before.
-function atomicWrite(file, contents, { projectRoot } = {}) {
-  const { O_WRONLY, O_CREAT, O_EXCL } = fs.constants;
-  const dir = path.dirname(file);
-  if (projectRoot) safeDir(projectRoot, dir, { create: true });
-  else fs.mkdirSync(dir, { recursive: true });
+// (#345).
+//
+// Two writers, one path each, sharing the core below:
+//   - atomicWorkspaceWrite confines the write to .mobile-automator/: the
+//     target's directory is walked by safe-fs (symlink-free, owned by us,
+//     created when missing) and the temp file is opened through it.
+//   - atomicWrite does NOT confine: it is for paths the user chose (junit
+//     --out) and creates the directory with a plain recursive mkdir. Any write
+//     into the workspace belongs in atomicWorkspaceWrite.
+
+// `openTmp(tmp)` creates the temp file exclusively and returns its fd.
+function writeViaTemp(file, contents, openTmp) {
   const tmp = path.join(
-    dir,
+    path.dirname(file),
     `.${path.basename(file)}.tmp.${process.pid}.${Date.now()}.${crypto.randomBytes(6).toString('hex')}`
   );
   // Outside the cleanup below: when this open fails nothing of ours exists at
   // `tmp`, so there is nothing to unlink.
-  let fd = projectRoot
-    ? openWorkspaceFile(projectRoot, tmp, O_WRONLY | O_CREAT | O_EXCL)
-    : openLeaf(tmp, O_WRONLY | O_CREAT | O_EXCL).fd;
+  let fd = openTmp(tmp);
   try {
     fs.writeFileSync(fd, contents);
     fs.fsyncSync(fd);
@@ -55,4 +56,21 @@ function atomicWrite(file, contents, { projectRoot } = {}) {
   }
 }
 
-module.exports = { atomicWrite };
+function atomicWorkspaceWrite(projectRoot, file, contents) {
+  // Positional, so a call that forgot the root shifts every argument left:
+  // `contents` is then missing, which is what catches it.
+  if (typeof projectRoot !== 'string' || typeof file !== 'string' || contents === undefined) {
+    throw new TypeError('atomicWorkspaceWrite(projectRoot, file, contents) needs the project root and the file');
+  }
+  const { O_WRONLY, O_CREAT, O_EXCL } = fs.constants;
+  safeDir(projectRoot, path.dirname(file), { create: true });
+  writeViaTemp(file, contents, (tmp) => openWorkspaceFile(projectRoot, tmp, O_WRONLY | O_CREAT | O_EXCL));
+}
+
+function atomicWrite(file, contents) {
+  const { O_WRONLY, O_CREAT, O_EXCL } = fs.constants;
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  writeViaTemp(file, contents, (tmp) => openLeaf(tmp, O_WRONLY | O_CREAT | O_EXCL).fd);
+}
+
+module.exports = { atomicWrite, atomicWorkspaceWrite };

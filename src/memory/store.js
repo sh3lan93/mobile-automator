@@ -6,7 +6,7 @@ const path = require('path');
 const { memoryFile, lockPath, KINDS, HEADERS } = require('./paths');
 const { withLock } = require('../util/lock');
 const { parseRunHistory, renderRunHistory, recordInModel, countEntries } = require('./history');
-const { atomicWrite } = require('../util/atomic');
+const { atomicWorkspaceWrite } = require('../util/atomic');
 const { parseEntries, renderEntries, hasText } = require('./entries');
 const { UnsafePathError, readWorkspaceFile } = require('../workspace/safe-fs');
 
@@ -129,18 +129,18 @@ class MemoryStore {
 
   // Delegates to the shared util (see src/util/atomic.js).
   _atomicWrite(file, contents) {
-    atomicWrite(file, contents, { projectRoot: this.projectRoot });
+    atomicWorkspaceWrite(this.projectRoot, file, contents);
   }
 
   // Acquire the lock, read this kind's raw bytes, run the edit, and write ONLY when
   // the edit produced new contents. Single owner of the "under lock + write-when-changed"
   // invariant for every memory mutation.
   _editUnderLock(kind, edit) {
-    return withLock(lockPath(this.projectRoot), () => {
+    return withLock(this.projectRoot, lockPath(this.projectRoot), () => {
       const { contents, result } = edit(this._readRaw(kind));
       if (contents != null) this._atomicWrite(this._file(kind), contents);
       return result;
-    }, { projectRoot: this.projectRoot });
+    });
   }
 
   // Auto-harvest: fold a finalized result into the rolling run-history aggregate.

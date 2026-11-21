@@ -9,7 +9,7 @@ const path = require('path');
 const { normalizeConfig } = require('./coerce');
 const { workspaceDir } = require('../workspace/layout');
 const { readWorkspaceFile } = require('../workspace/safe-fs');
-const { atomicWrite } = require('../util/atomic');
+const { atomicWorkspaceWrite } = require('../util/atomic');
 
 function configPath(projectRoot) {
   return path.join(workspaceDir(projectRoot), 'config.json');
@@ -49,7 +49,7 @@ function get(projectRoot, key) {
 function set(projectRoot, key, value) {
   const cfg = load(projectRoot) || {};
   setPath(cfg, key, value);
-  atomicWrite(configPath(projectRoot), JSON.stringify(cfg, null, 2) + '\n', { projectRoot });
+  atomicWorkspaceWrite(projectRoot, configPath(projectRoot), JSON.stringify(cfg, null, 2) + '\n');
   return cfg;
 }
 
