@@ -16,20 +16,22 @@ const { createProjectFile, createWorkspaceFile, inWorkspace, openLeaf } = requir
 // O_EXCL|O_NOFOLLOW under a random name, so it cannot be pre-planted either
 // (#345).
 //
-// Four writers, sharing the core below. Pick by who chose the path:
+// Three writers, sharing the core below. Pick by who chose the path:
 //   - atomicWorkspaceWrite: mauto's own files in .mobile-automator/. The temp
 //     file is created by safe-fs's createWorkspaceFile, which walks the
 //     target's directory (symlink-free, owned by us, created when missing).
 //   - atomicProjectWrite: mauto's own files elsewhere in the project (the host
 //     files `mauto init` writes). Same walk, bounded by the project root, via
 //     createProjectFile (#347).
-//   - atomicOutputWrite: a path the user chose (--out, --junit). Confined
-//     like atomicWorkspaceWrite when it lands in the workspace (inWorkspace),
-//     written by atomicWrite anywhere else: an explicit path outside the
-//     workspace is the user's call (#347).
-//   - atomicWrite does NOT confine: it creates the directory with a plain
-//     recursive mkdir. Reach it through atomicOutputWrite for a user's path;
-//     a write mauto chose belongs in one of the two confined writers.
+//   - atomicOutputWrite: a path the user chose (`result export --out`,
+//     `run --junit`). Confined like atomicWorkspaceWrite when it lands in the
+//     workspace (inWorkspace), written unconfined anywhere else: an explicit
+//     path outside the workspace is the user's call (#347).
+//
+// The unconfined write (atomicWrite: a plain recursive mkdir, then the temp
+// file and rename) is private on purpose. Its only caller is
+// atomicOutputWrite, for a path that does not land in the workspace; nothing
+// else may reach it, so no write can skip the inWorkspace test (#347).
 
 // The one temp-file name for a write that lands at `file`: a hidden sibling in
 // the same directory (so a rename or link to `file` never crosses a
@@ -108,4 +110,4 @@ function atomicWrite(file, contents) {
   writeViaTemp(file, contents, (tmp) => openLeaf(tmp, O_WRONLY | O_CREAT | O_EXCL).fd);
 }
 
-module.exports = { atomicWrite, atomicWorkspaceWrite, atomicProjectWrite, atomicOutputWrite, tempPathFor };
+module.exports = { atomicWorkspaceWrite, atomicProjectWrite, atomicOutputWrite, tempPathFor };

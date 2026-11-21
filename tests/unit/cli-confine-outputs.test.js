@@ -95,3 +95,43 @@ describe('crash get --out confines a workspace destination (#347)', () => {
     expect(fs.readFileSync(path.join(ws, 'crashes', 'r1.txt'), 'utf8')).toBe(REPORT);
   });
 });
+
+describe('result export --out confines a workspace destination (#347)', () => {
+  const PASSED = require('./result/fixtures/passed.json');
+
+  // A finalized result to export, plus `.mobile-automator/reports` planted as
+  // a link to the outside dir, which already holds the canary.
+  function withResult(plant = () => {}) {
+    return fixture((ws, outside) => {
+      fs.mkdirSync(path.join(ws, 'results'));
+      fs.writeFileSync(path.join(ws, 'results', `${PASSED.run_id}.json`), JSON.stringify(PASSED, null, 2));
+      plant(ws, outside);
+    });
+  }
+  const exportArgv = (out) => ['result', 'export', '--run-id', PASSED.run_id, '--format', 'junit', '--out', out];
+
+  test('--out .mobile-automator/reports/r.xml with reports -> outside fails environment, the outside unchanged', async () => {
+    const { root, ws, outside } = withResult((w, o) => {
+      fs.writeFileSync(path.join(o, 'r.xml'), CANARY);
+      fs.symlinkSync(o, path.join(w, 'reports'));
+    });
+    const before = snapshot(outside);
+
+    const out = await runIn(root, exportArgv('.mobile-automator/reports/r.xml'));
+
+    expectRefused(out, path.join(ws, 'reports'));
+    expect(snapshot(outside)).toEqual(before);
+  });
+
+  test('an explicit path outside the project is written as before', async () => {
+    const { root } = withResult();
+    const dest = path.join(tmpDir('mauto-cli-export-elsewhere-'), 'r.xml');
+
+    const { calls } = await runIn(root, exportArgv(dest));
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].exitKind).toBe('ok');
+    expect(calls[0].envelope.data.path).toBe(dest);
+    expect(fs.readFileSync(dest, 'utf8')).toMatch(/^<\?xml/);
+  });
+});

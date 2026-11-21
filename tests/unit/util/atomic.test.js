@@ -3,17 +3,15 @@
 // #345: a write into a checked-in workspace must not follow a committed
 // symlink out of it. atomicWorkspaceWrite walks the directory with safe-fs;
 // every writer creates the temp file O_EXCL|O_NOFOLLOW under a random name.
-// atomicWrite (paths the user chose) does not confine, by design.
 // #347: atomicProjectWrite confines a project file the same way, and
 // atomicOutputWrite confines a user-chosen path only when it lands in the
-// workspace.
+// workspace; anywhere else it writes unconfined, by design.
 
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
 const {
-  atomicWrite,
   atomicWorkspaceWrite,
   atomicProjectWrite,
   atomicOutputWrite,
@@ -98,11 +96,19 @@ describe('atomicWorkspaceWrite (#345)', () => {
   });
 });
 
-describe('atomicWrite (paths the user chose)', () => {
+// The unconfined write is private: reached only through atomicOutputWrite,
+// for a path outside the workspace.
+describe('atomicOutputWrite outside the workspace (paths the user chose)', () => {
+  test('the unconfined writer is not exported', () => {
+    expect(Object.keys(require('../../../src/util/atomic')).sort()).toEqual([
+      'atomicOutputWrite', 'atomicProjectWrite', 'atomicWorkspaceWrite', 'tempPathFor',
+    ]);
+  });
+
   test('writes, creating parent directories, with no temp file left', () => {
     const { root } = fixture();
     const file = path.join(root, 'out', 'deep', 'report.xml');
-    atomicWrite(file, '<x/>');
+    atomicOutputWrite(root, file, '<x/>');
     expect(fs.readFileSync(file, 'utf8')).toBe('<x/>');
     expect(fs.readdirSync(path.dirname(file))).toEqual(['report.xml']);
   });
@@ -111,7 +117,7 @@ describe('atomicWrite (paths the user chose)', () => {
     const { root } = fixture();
     const file = path.join(root, 'report.xml');
     fs.writeFileSync(file, 'old');
-    atomicWrite(file, 'new');
+    atomicOutputWrite(root, file, 'new');
     expect(fs.readFileSync(file, 'utf8')).toBe('new');
   });
 
@@ -125,8 +131,8 @@ describe('atomicWrite (paths the user chose)', () => {
       return realOpen(p, ...rest);
     });
     try {
-      atomicWrite(file, 'a');
-      atomicWrite(file, 'b');
+      atomicOutputWrite(root, file, 'a');
+      atomicOutputWrite(root, file, 'b');
     } finally {
       spy.mockRestore();
     }

@@ -23,7 +23,7 @@ const {
 } = require('./result/flags');
 const { finalizeAgainstScenario } = require('./result/finalize-against-scenario');
 const { toJUnit } = require('./result/junit');
-const { atomicWrite } = require('./util/atomic');
+const { atomicOutputWrite } = require('./util/atomic');
 const { MemoryStore } = require('./memory/store');
 const { FILES: MEMORY_FILES, AGENT_KINDS } = require('./memory/paths');
 const { validateEntryText, MAX_ENTRY_LEN } = require('./memory/entries');
@@ -922,10 +922,17 @@ function handleResultExport({ projectRoot, cwd = process.cwd() }, opts = {}) {
     return { envelope: ok({ format: opts.format, path: null, ...counts, xml }), exitKind: 'ok' };
   }
 
+  // A path the user chose: confined to the workspace rules when it lands in
+  // .mobile-automator/, where a committed link is refused (#347); written as
+  // given anywhere else.
   const outPath = path.resolve(cwd, opts.out);
   try {
-    atomicWrite(outPath, xml);
+    atomicOutputWrite(projectRoot, outPath, xml);
   } catch (err) {
+    // A refused path carries its own kind, message and hint.
+    if (err instanceof UnsafePathError) {
+      return { envelope: fail(err.kind, err.message, err.hint), exitKind: err.kind };
+    }
     return {
       envelope: fail(
         'environment',
