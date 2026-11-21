@@ -45,8 +45,31 @@
   checkout owned by another uid, set `MAUTO_TRUST_WORKSPACE_OWNER=1` instead. It skips
   the owner check only, never the symlink checks.
 - `(world_writable)`: `chmod o-w <path>`. Group-writable directories are fine.
+- `(not_private)`: the session socket directory (`.mobile-automator/.session/`, or the
+  per-user `mauto` directory under `$XDG_RUNTIME_DIR` or the temp directory) must be
+  mode 0700. Run `chmod 700 <path>`. mauto never changes the mode of the fallback
+  directory for you. `MAUTO_TRUST_WORKSPACE_OWNER=1` does not apply to it.
 - `(not_regular)` / `(not_directory)` / `(hardlink)` / `(too_large)`: delete the path and
   let mauto recreate it.
+
+### ❌ "… .mobile-automator … owned by uid N" (exit 5)
+- Before any verb runs, mauto vets the `.mobile-automator/` it finds (#346). It refuses
+  one that is a symlink, owned by another uid, or world-writable, and a `config.json`
+  that is a symlink. It does not fall back to a parent workspace. Verbs that need a
+  workspace fail `environment`. Other verbs get no workspace, so a device verb runs one-shot with no daemon.
+- Owner mismatch, such as `owned by uid 1001; you are uid 0`: run
+  `chown -R "$(id -u)" .mobile-automator`. In a CI container that runs as root over a
+  checkout owned by another uid, set `MAUTO_TRUST_WORKSPACE_OWNER=1`. It skips the owner
+  check only. It never skips the symlink or mode checks, and it never applies to the
+  session socket.
+- Symlink: replace the link with a real directory or file.
+- World-writable: `chmod o-w .mobile-automator`.
+
+### ❌ A device session from before the upgrade is not reused
+- After upgrading to 0.40.13 or later, a daemon started by an older version is ignored.
+  Its socket is in the old `<tmpdir>/mauto-<key>.sock` location or in a `.session/` that
+  is not 0700, and mauto will not connect to it. Run `mauto session end` once to stop it.
+  The next device verb starts a new session.
 
 ### ❌ mauto refuses to run on Windows
 - **At install**, npm stops with:

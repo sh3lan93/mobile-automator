@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.40.13]
+
+### 🔒 Security
+
+- **The device-session socket is reachable only by you**
+  ([#346](https://github.com/sh3lan93/mobile-automator/issues/346)).
+  The daemon socket used to sit in a shared temp directory or in a `.session/`
+  folder anyone could enter, so another local user could connect to it and
+  drive your device. Now:
+  - `.session/` is mode 0700 and the socket is mode 0600. A 0755 `.session/`
+    left by an older version is tightened, then checked again.
+  - A project root too deep for the socket path limit (about 100 bytes) uses
+    `$XDG_RUNTIME_DIR/mauto/` when that variable is set and absolute, else
+    `<tmpdir>/mauto-<uid>/`. That directory must be a real 0700 directory
+    owned by you. A loose or foreign one is refused (`not_private`,
+    `foreign_owner`) and never chmodded.
+  - The client checks the socket and its directory before every connect: the
+    directory is private, and the socket is a real socket owned by you. A
+    failed check reads as "no daemon", so the verb starts its own and
+    `session end` falls back to the pid check.
+  - The daemon writes its handle, pid file, lock and `daemon.log` only through
+    the safe-fs helper from #345.
+- **A planted `.mobile-automator/` is refused at discovery.** Discovery now
+  rejects a `.mobile-automator/` that is a symlink, owned by another user
+  (unless `MAUTO_TRUST_WORKSPACE_OWNER=1`) or world-writable, and a
+  `config.json` that is a symlink. The walk stops there rather than adopting a
+  parent workspace. Verbs that need a workspace fail `environment` (exit 5).
+- `foreign_owner` refusals now name both uids, for example `owned by uid 1001;
+  you are uid 0`.
+- The memory lock retries when a concurrent process already removed a planted
+  entry, instead of failing `not_regular`.
+
+**Upgrading:** a daemon started by an older version is not reused, because its
+socket is in the old location or in a `.session/` that is not 0700. Run
+`mauto session end` once to stop it.
+
+---
+
 ## [0.40.12]
 
 ### 🔒 Security
