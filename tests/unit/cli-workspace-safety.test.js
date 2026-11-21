@@ -178,7 +178,9 @@ describe('store verbs refuse a symlinked workspace path (#345)', () => {
 
 // A failure after the factory returned a connection must close it, whatever
 // the error: the refusal above (readSessionId through a symlinked .session/)
-// and an ordinary throw alike.
+// and an ordinary throw alike. Both run inside the block whose `finally`
+// closes the connection, so they are classified like any throw from the verb
+// itself: by toEnvelope, not as a device-connect failure.
 describe('connectBridge closes the connection on a failure after connect', () => {
   function closingFactory() {
     const closed = [];
@@ -203,6 +205,40 @@ describe('connectBridge closes the connection on a failure after connect', () =>
     expect(closed).toHaveLength(1);
   });
 
+  // Only the handle leaf is planted, so readSessionId is the first reader to
+  // hit it: the verb must fail there, before it touches the device, not later
+  // when another reader of the handle trips over the same link.
+  test('a refused session handle fails the verb before any device call', async () => {
+    const { root } = fixture((ws, outside) => {
+      fs.writeFileSync(path.join(outside, 'session.json'), JSON.stringify({ session_id: CANARY }));
+      fs.mkdirSync(path.join(ws, '.session'));
+      fs.symlinkSync(path.join(outside, 'session.json'), path.join(ws, '.session', 'session.json'));
+    });
+    const closed = [];
+    const deviceCalls = [];
+    const factory = async () => ({
+      bridge: {
+        listElements: async () => {
+          deviceCalls.push('listElements');
+          return [];
+        },
+      },
+      close: async () => {
+        closed.push(true);
+      },
+    });
+    const { calls, written } = await runIn(root, ['elements', '--device', 'emulator-5554'], {
+      deviceBridgeFactory: factory,
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].exitKind).toBe('environment');
+    expect(calls[0].envelope.error.message).toMatch(/Refusing to use workspace path/);
+    expect(deviceCalls).toEqual([]);
+    expect(closed).toHaveLength(1);
+    expect(JSON.stringify(calls)).not.toContain(CANARY);
+    expect(written).not.toContain(CANARY);
+  });
+
   test('any other throw after connect closes it too, and still emits one envelope', async () => {
     const { root } = fixture(() => {});
     const { closed, factory } = closingFactory();
@@ -216,6 +252,7 @@ describe('connectBridge closes the connection on a failure after connect', () =>
     });
     expect(calls).toHaveLength(1);
     expect(calls[0].envelope.ok).toBe(false);
+    expect(calls[0].exitKind).toBe('internal');
     expect(calls[0].envelope.error.message).toBe('boom after connect');
     expect(closed).toHaveLength(1);
   });

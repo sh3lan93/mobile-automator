@@ -1966,27 +1966,19 @@ function buildProgram(deps = {}) {
         projectRoot,
         autostart: Boolean(workspace.root),
       }));
-      // AFTER the connect, deliberately: the handle is written when the daemon
-      // starts listening, so before this point it may legitimately not exist
-      // yet. Best-effort — readSessionId returns null for an
-      // absent or malformed handle, which is a normal state (a one-shot
-      // fallback connection has no daemon at all).
-      emitters.setSessionId(readSessionId(projectRoot));
     } catch (err) {
-      // A throw after the factory returned (readSessionId, say) must not leak
-      // the connection. deviceFail honours a typed error's kind and hint, so a
-      // refused workspace path (#345) still reads as environment.
-      if (typeof close === 'function') {
-        try {
-          await close();
-        } catch (_) {
-          /* the connect-phase error below is the one to report */
-        }
-      }
       emit(deviceFail(err), humanFlag());
       return;
     }
     try {
+      // AFTER the connect, deliberately: the handle is written when the daemon
+      // starts listening, so before this point it may legitimately not exist
+      // yet. An absent or malformed handle reads as null, a normal state (a
+      // one-shot fallback connection has no daemon at all). A handle path
+      // safe-fs refuses (#345) throws instead and fails the verb environment
+      // through withEnvelope. Inside this block so that `finally` closes the
+      // connection on that throw too.
+      emitters.setSessionId(readSessionId(projectRoot));
       const r = await fn(bridge);
       // The ONE window where a device failure can still be investigated: after
       // fn(bridge) has produced its verdict and before `finally` closes the
