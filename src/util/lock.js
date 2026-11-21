@@ -1,15 +1,27 @@
 'use strict';
 
-const fs = require('fs');
+const nodeFs = require('fs');
 const path = require('path');
+
+const { safeDir, openWorkspaceFile } = require('../workspace/safe-fs');
 
 // Advisory lock for shared read-modify-write files. The memory files are
 // appended across every run and verb, and the result files are written by
 // one-shot CLI processes, so a naive read-modify-write races: two processes
 // both read the old bytes and one write is silently lost. atomic-rename only
 // protects readers from torn reads, NOT writers from lost updates — hence this
-// explicit lock. We use O_CREAT|O_EXCL ('wx') as the mutex and break a lock
-// whose holder crashed (mtime older than STALE_MS).
+// explicit lock. We use O_CREAT|O_EXCL as the mutex and break a lock whose
+// holder crashed (mtime older than STALE_MS).
+//
+// The lock path sits in a checked-in workspace, so whatever is there may have
+// been planted (#345). The entry is inspected with lstat, never stat: a
+// symlink, directory or FIFO at the lock path is not a lock any mauto process
+// made, so it is unlinked (the link itself, never its target) and the acquire
+// retries. O_EXCL never follows a link, and O_NOFOLLOW is added on top. With a
+// projectRoot, the lock's directory is walked by safe-fs (symlink-free, owned
+// by us) and the lock file is created through it. Every retry path, including
+// a lock that vanishes between open and lstat, is bounded by MAX_WAIT_MS: a
+// dangling symlink used to make open fail EEXIST and stat fail ENOENT forever.
 
 // STALE_MS bounds how long a held lock may sit before another acquirer treats
 // it as abandoned. It is judged from the lockfile's creation mtime and is NOT
@@ -26,55 +38,75 @@ function sleepSync(ms) {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
-function acquire(lockPath, { now = Date.now, sleep = sleepSync } = {}) {
-  fs.mkdirSync(path.dirname(lockPath), { recursive: true });
+function createLock(lockPath, projectRoot, fs) {
+  const { O_WRONLY, O_CREAT, O_EXCL, O_NOFOLLOW } = nodeFs.constants;
+  if (projectRoot) {
+    return openWorkspaceFile(projectRoot, lockPath, O_WRONLY | O_CREAT | O_EXCL, 0o666, { fs });
+  }
+  return fs.openSync(lockPath, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0o666);
+}
+
+function acquire(lockPath, { projectRoot, now = Date.now, sleep = sleepSync, fs = nodeFs } = {}) {
+  if (projectRoot) safeDir(projectRoot, path.dirname(lockPath), { create: true }, { fs });
+  else fs.mkdirSync(path.dirname(lockPath), { recursive: true });
   const deadline = now() + MAX_WAIT_MS;
-  const backoffOrThrow = () => {
+  const throwIfExpired = () => {
     if (now() >= deadline) {
       throw new Error(`could not acquire lock at ${lockPath} within ${MAX_WAIT_MS}ms`);
     }
+  };
+  const backoffOrThrow = () => {
+    throwIfExpired();
     sleep(RETRY_MS);
   };
   for (;;) {
+    let fd;
     try {
-      const fd = fs.openSync(lockPath, 'wx');
-      fs.writeSync(fd, String(process.pid));
-      fs.closeSync(fd);
-      return;
+      fd = createLock(lockPath, projectRoot, fs);
     } catch (e) {
       if (e.code !== 'EEXIST') throw e;
-      // Someone holds it. Break it if it looks abandoned.
+      // Something is there. Break it if it is not a live lock of ours.
+      let st;
       try {
-        const st = fs.statSync(lockPath);
-        if (now() - st.mtimeMs > STALE_MS) {
+        st = fs.lstatSync(lockPath);
+      } catch (_statErr) {
+        // ENOENT (it vanished between open and lstat) or a persistent
+        // lstat failure (EACCES, ...): either way, a bounded backoff.
+        backoffOrThrow();
+        continue;
+      }
+      if (!st.isFile() || now() - st.mtimeMs > STALE_MS) {
+        try {
           fs.unlinkSync(lockPath);
-          continue; // retry immediately
-        }
-      } catch (statErr) {
-        if (statErr.code !== 'ENOENT') {
-          // Not the benign vanished-lock case — apply the bounded backoff so
-          // a persistent stat/unlink failure (EACCES/EPERM/EBUSY, ...) times
-          // out instead of busy-looping the CPU forever.
+        } catch (_unlinkErr) {
           backoffOrThrow();
+          continue;
         }
-        continue; // ENOENT: lock vanished between open and stat — retry now;
-        // any other error already backed off above before retrying.
+        throwIfExpired(); // retry immediately, but never past the deadline
+        continue;
       }
       backoffOrThrow();
+      continue;
     }
+    try {
+      fs.writeSync(fd, String(process.pid));
+    } finally {
+      fs.closeSync(fd);
+    }
+    return;
   }
 }
 
 function release(lockPath) {
   try {
-    fs.unlinkSync(lockPath);
+    nodeFs.unlinkSync(lockPath);
   } catch (_) {
     /* already gone — fine */
   }
 }
 
-function withLock(lockPath, fn) {
-  acquire(lockPath);
+function withLock(lockPath, fn, opts = {}) {
+  acquire(lockPath, opts);
   try {
     return fn();
   } finally {

@@ -39,7 +39,7 @@ describe('memory/lock', () => {
     release(lp);
   });
 
-  test('a persistent non-ENOENT stat error times out instead of hanging', () => {
+  test('a persistent non-ENOENT lstat error times out instead of hanging', () => {
     const lp = tmpLock();
     acquire(lp); // held — a second acquire must go down the EEXIST branch
 
@@ -47,7 +47,7 @@ describe('memory/lock', () => {
     const clock = () => now;
     const sleep = () => { now += 100; }; // advance virtual time instead of real sleep
 
-    const statSpy = jest.spyOn(fs, 'statSync').mockImplementation(() => {
+    const statSpy = jest.spyOn(fs, 'lstatSync').mockImplementation(() => {
       const e = new Error('EACCES: permission denied');
       e.code = 'EACCES';
       throw e;
