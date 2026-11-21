@@ -76,15 +76,15 @@ describe('ResultStore cross-process mutual exclusion (per-runId advisory lock)',
     const sleep = () => {
       now += 100;
     };
-    acquire(r1Lock, { now: clock, sleep });
-    acquire(r2Lock, { now: clock, sleep });
+    acquire(projectRoot, r1Lock, { now: clock, sleep });
+    acquire(projectRoot, r2Lock, { now: clock, sleep });
     expect(now).toBe(1000);
     release(r1Lock);
     release(r2Lock);
 
     // Store-level proof: while r1's lock is held (a concurrent process
     // mid-write on r1), a mutator on r2 proceeds without blocking.
-    acquire(r1Lock);
+    acquire(projectRoot, r1Lock);
     try {
       b.addStep({ step_id: 's3', status: 'pass' });
     } finally {

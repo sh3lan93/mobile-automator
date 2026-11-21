@@ -572,3 +572,40 @@ describe('finalize derives status (#296)', () => {
     expect(store.finalize({ status: 'error' }).status).toBe('error');
   });
 });
+
+// #295/#345: the run id becomes `<runId>.json` and `<runId>.lock`, so a
+// traversal id must be refused before the store touches the filesystem at all:
+// no read, no lstat walk, no directory created, no lock taken.
+describe('ResultStore refuses an invalid run id before any fs call', () => {
+  const { InvalidRunIdError } = require('../../../src/result/store');
+  const FS_METHODS = [
+    'readFileSync',
+    'writeFileSync',
+    'openSync',
+    'readSync',
+    'lstatSync',
+    'statSync',
+    'fstatSync',
+    'mkdirSync',
+    'realpathSync',
+    'renameSync',
+    'unlinkSync',
+    'existsSync',
+  ];
+
+  test.each(['../../../outside/v', '/../x'])('runId %j', (runId) => {
+    const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-runid-pin-'));
+    const spies = FS_METHODS.map((m) => jest.spyOn(fs, m));
+    let caught;
+    try {
+      new ResultStore({ projectRoot, runId });
+    } catch (err) {
+      caught = err;
+    }
+    const calls = Object.fromEntries(FS_METHODS.map((m, i) => [m, spies[i].mock.calls.length]));
+    spies.forEach((s) => s.mockRestore());
+
+    expect(caught).toBeInstanceOf(InvalidRunIdError);
+    expect(calls).toEqual(Object.fromEntries(FS_METHODS.map((m) => [m, 0])));
+  });
+});

@@ -156,9 +156,12 @@ describe('handleResultExport', () => {
     });
   });
 
-  test('an unreadable result file fails environment', () => {
+  // Root reads a mode-000 file anyway, so there is nothing to observe as root.
+  const isRoot = typeof process.getuid === 'function' && process.getuid() === 0;
+  (isRoot ? test.skip : test)('an unreadable result file fails environment', () => {
     const root = tmpRoot();
-    fs.mkdirSync(path.join(resultsDir(root), `${PASSED.run_id}.json`));
+    writeResult(root, PASSED);
+    fs.chmodSync(path.join(resultsDir(root), `${PASSED.run_id}.json`), 0o000);
     const r = exportWith(root, { runIds: [PASSED.run_id], format: 'junit' });
     expect(r.exitKind).toBe('environment');
     expect(r.envelope.error).toEqual({ kind: 'environment', message: expect.stringMatching(/^could not read /) });

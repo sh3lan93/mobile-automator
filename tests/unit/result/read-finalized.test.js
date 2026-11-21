@@ -164,13 +164,42 @@ describe('readFinalizedResult', () => {
     expect(readFinalizedResult(root, RUN_ID)).toEqual({ result: value });
   });
 
-  test('an unreadable file (not ENOENT) is environment', () => {
+  // Root reads a mode-000 file anyway, so there is nothing to observe as root.
+  const isRoot = typeof process.getuid === 'function' && process.getuid() === 0;
+  (isRoot ? test.skip : test)('an unreadable file (not ENOENT) is environment', () => {
     const root = tmpRoot();
-    // A directory at the result path makes the read fail with EISDIR.
+    // A file with no read permission makes the open fail with EACCES.
+    fs.writeFileSync(resultFile(root, RUN_ID), '{}');
+    fs.chmodSync(resultFile(root, RUN_ID), 0o000);
+    const { error } = readFinalizedResult(root, RUN_ID);
+    expect(error.kind).toBe('environment');
+    expect(error.message).toMatch(/^could not read .*EACCES/);
+    expect(error.hint).toBeNull();
+  });
+
+  test('a directory at the result path is refused as not a regular file (#345)', () => {
+    const root = tmpRoot();
     fs.mkdirSync(resultFile(root, RUN_ID));
     const { error } = readFinalizedResult(root, RUN_ID);
     expect(error.kind).toBe('environment');
-    expect(error.message).toMatch(/^could not read .*EISDIR/);
-    expect(error.hint).toBeNull();
+    expect(error.message).toMatch(/^Refusing to use workspace path .*\(not_regular\)\.$/);
+    expect(typeof error.hint).toBe('string');
+  });
+
+  test('a symlinked results/ is refused and never read (#345)', () => {
+    const base = tmpRoot();
+    const root = fs.realpathSync(base);
+    const outside = path.join(root, 'outside');
+    fs.mkdirSync(outside);
+    fs.writeFileSync(path.join(outside, `${RUN_ID}.json`), JSON.stringify({ run_id: RUN_ID, summary: 'SECRET-CANARY' }));
+    const results = path.join(workspaceDir(root), 'results');
+    fs.rmdirSync(results);
+    fs.symlinkSync(outside, results);
+    const out = readFinalizedResult(root, RUN_ID);
+    expect(out.result).toBeUndefined();
+    expect(out.error.kind).toBe('environment');
+    expect(out.error.message).toMatch(/\(symlink\)/);
+    expect(JSON.stringify(out)).not.toContain('SECRET-CANARY');
+    expect(fs.readdirSync(outside)).toEqual([`${RUN_ID}.json`]);
   });
 });

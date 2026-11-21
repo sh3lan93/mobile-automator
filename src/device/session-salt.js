@@ -14,21 +14,21 @@
 // Kept out of session-paths.js so that module stays free of IO.
 
 const realFs = require('fs');
-const path = require('path');
 const crypto = require('crypto');
 
 const paths = require('./session-paths');
+const { tempPathFor } = require('../util/atomic');
+const { createWorkspaceFile, readWorkspaceFileOrNull } = require('../workspace/safe-fs');
 
 // The salt, or null when it is missing, unreadable or empty. Any other content
 // IS the salt: an HMAC key needs no particular shape, so there is no
 // "malformed" salt to detect or repair. A null salt means no keyed daemon can
-// be proven this workspace's (commandNamesWorkspace).
+// be proven this workspace's (commandNamesWorkspace). A path safe-fs refuses
+// (#345), such as a symlinked .session/ or salt, still fails the verb:
+// readWorkspaceFileOrNull lets the refusal through.
 function readSalt(projectRoot, { fs = realFs } = {}) {
-  try {
-    return String(fs.readFileSync(paths.saltPath(projectRoot), 'utf8')).trim() || null;
-  } catch (_) {
-    return null;
-  }
+  const raw = readWorkspaceFileOrNull(projectRoot, paths.saltPath(projectRoot), {}, { fs });
+  return raw == null ? null : raw.trim() || null;
 }
 
 // The salt, created if this workspace has none yet. Throws when it can neither
@@ -48,14 +48,12 @@ function ensureSalt(projectRoot, { fs = realFs } = {}) {
   if (existing) return existing;
 
   const file = paths.saltPath(projectRoot);
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  const tmp = path.join(
-    path.dirname(file),
-    `.${path.basename(file)}.tmp.${process.pid}.${crypto.randomBytes(6).toString('hex')}`
-  );
+  const tmp = tempPathFor(file);
   const salt = crypto.randomBytes(32).toString('hex');
   try {
-    const fd = fs.openSync(tmp, 'wx', 0o600);
+    // Creates .session/ through the checked walk when missing; the link below
+    // stays inside the directory that walk checked.
+    const fd = createWorkspaceFile(projectRoot, tmp, { mode: 0o600 }, { fs });
     try {
       fs.writeFileSync(fd, `${salt}\n`);
       fs.fsyncSync(fd);

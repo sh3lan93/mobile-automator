@@ -138,3 +138,35 @@ describe('config/manager', () => {
     });
   });
 });
+
+describe('config/manager refuses a symlinked config.json (#345)', () => {
+  const { UnsafePathError } = require('../../../src/workspace/safe-fs');
+
+  function planted() {
+    const root = fs.realpathSync(tmpRoot());
+    const outside = path.join(root, 'outside.json');
+    fs.writeFileSync(outside, JSON.stringify({ mode: 'SECRET-CANARY' }));
+    fs.mkdirSync(path.join(root, '.mobile-automator'));
+    fs.symlinkSync(outside, configPath(root));
+    return { root, outside };
+  }
+
+  it('load throws UnsafePathError instead of following the link', () => {
+    const { root } = planted();
+    expect(() => load(root)).toThrow(UnsafePathError);
+  });
+
+  it('set throws and leaves the outside file byte-identical', () => {
+    const { root, outside } = planted();
+    const before = fs.readFileSync(outside, 'utf8');
+    expect(() => set(root, 'mode', 'platform-aware')).toThrow(UnsafePathError);
+    expect(fs.readFileSync(outside, 'utf8')).toBe(before);
+  });
+
+  it('set writes pretty JSON plus a newline, with no temp file left behind', () => {
+    const root = tmpRoot();
+    set(root, 'mode', 'platform-agnostic');
+    expect(fs.readFileSync(configPath(root), 'utf8')).toBe('{\n  "mode": "platform-agnostic"\n}\n');
+    expect(fs.readdirSync(path.dirname(configPath(root)))).toEqual(['config.json']);
+  });
+});

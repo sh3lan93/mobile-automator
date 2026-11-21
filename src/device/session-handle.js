@@ -13,21 +13,21 @@
 // pay a socket round trip for it, and a second copy in the ping reply would be
 // a second source of truth that can disagree with this one.
 //
-// Nothing here throws: an absent, unreadable or malformed handle means "no
-// session", which is a normal state, not an error.
+// An absent, unreadable or malformed handle means "no session", which is a
+// normal state, not an error. The one exception is a path safe-fs refuses
+// (#345): readWorkspaceJsonOrNull lets that refusal through, so a symlinked
+// .session/ or session.json fails the verb environment instead of being
+// trusted as a planted handle.
 
 const realFs = require('fs');
 
 const { handlePath } = require('./session-paths');
 const { SESSION_ID_PATTERN } = require('./session-id');
+const { readWorkspaceJsonOrNull } = require('../workspace/safe-fs');
 
 function readHandle(projectRoot, { fs = realFs } = {}) {
-  try {
-    const parsed = JSON.parse(fs.readFileSync(handlePath(projectRoot), 'utf8'));
-    return parsed && typeof parsed === 'object' ? parsed : null;
-  } catch (_) {
-    return null;
-  }
+  const parsed = readWorkspaceJsonOrNull(projectRoot, handlePath(projectRoot), {}, { fs });
+  return parsed && typeof parsed === 'object' ? parsed : null;
 }
 
 function readSessionId(projectRoot, { fs = realFs } = {}) {

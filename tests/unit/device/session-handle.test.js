@@ -73,3 +73,27 @@ describe('readSessionId', () => {
     expect(readSessionId(root)).toBeNull();
   });
 });
+
+describe('readHandle refuses a symlinked handle (#345)', () => {
+  const { UnsafePathError } = require('../../../src/workspace/safe-fs');
+
+  it('throws UnsafePathError for a session.json that links outside, never reading it', () => {
+    const root = fs.realpathSync(tmpRoot());
+    const outside = path.join(root, 'outside.json');
+    fs.writeFileSync(outside, JSON.stringify({ pid: 1, session_id: 'abcdef0123456789' }));
+    fs.mkdirSync(paths.sessionDir(root), { recursive: true });
+    fs.symlinkSync(outside, paths.handlePath(root));
+    expect(() => readHandle(root)).toThrow(UnsafePathError);
+    expect(() => readSessionId(root)).toThrow(UnsafePathError);
+  });
+
+  it('throws UnsafePathError through a symlinked .session/', () => {
+    const root = fs.realpathSync(tmpRoot());
+    const outside = path.join(root, 'outside');
+    fs.mkdirSync(outside);
+    fs.writeFileSync(path.join(outside, 'session.json'), JSON.stringify({ pid: 1 }));
+    fs.mkdirSync(path.join(root, '.mobile-automator'));
+    fs.symlinkSync(outside, paths.sessionDir(root));
+    expect(() => readHandle(root)).toThrow(UnsafePathError);
+  });
+});

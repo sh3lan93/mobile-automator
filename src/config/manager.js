@@ -5,10 +5,11 @@
 // Reads/writes .mobile-automator/config.json under a project root.
 // A config without an explicit `mode` is treated as `platform-aware`.
 
-const fs = require('fs');
 const path = require('path');
 const { normalizeConfig } = require('./coerce');
 const { workspaceDir } = require('../workspace/layout');
+const { readWorkspaceFile } = require('../workspace/safe-fs');
+const { atomicWorkspaceWrite } = require('../util/atomic');
 
 function configPath(projectRoot) {
   return path.join(workspaceDir(projectRoot), 'config.json');
@@ -17,11 +18,12 @@ function configPath(projectRoot) {
 // Parsed config object, or null when the file is absent. Values written before
 // the config schema existed are healed on the way out (a comma-joined list key
 // becomes a real array) — see #136. Since set() is load-mutate-write, the next
-// write persists the healed shape.
+// write persists the healed shape. Read through safe-fs (#345): a config.json
+// that is a symlink (or sits under one) throws UnsafePathError, never follows.
 function load(projectRoot) {
-  const p = configPath(projectRoot);
-  if (!fs.existsSync(p)) return null;
-  return normalizeConfig(JSON.parse(fs.readFileSync(p, 'utf8')));
+  const raw = readWorkspaceFile(projectRoot, configPath(projectRoot));
+  if (raw == null) return null;
+  return normalizeConfig(JSON.parse(raw));
 }
 
 // The mode of a workspace that never chose one: what `mauto setup` writes into
@@ -42,12 +44,12 @@ function get(projectRoot, key) {
 }
 
 // Load-or-{}, set the dotted path, write back preserving every other field as
-// pretty 2-space JSON. Creates .mobile-automator/ if needed.
+// pretty 2-space JSON. Creates .mobile-automator/ if needed; the write is
+// atomic and goes through safe-fs, so it never lands outside the workspace.
 function set(projectRoot, key, value) {
   const cfg = load(projectRoot) || {};
   setPath(cfg, key, value);
-  fs.mkdirSync(workspaceDir(projectRoot), { recursive: true });
-  fs.writeFileSync(configPath(projectRoot), JSON.stringify(cfg, null, 2) + '\n');
+  atomicWorkspaceWrite(projectRoot, configPath(projectRoot), JSON.stringify(cfg, null, 2) + '\n');
   return cfg;
 }
 

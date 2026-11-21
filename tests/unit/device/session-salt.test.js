@@ -101,3 +101,28 @@ describe('session-salt (#236)', () => {
     // Eight node processes boot under the full suite's parallel load.
   }, 20000);
 });
+
+describe('session-salt refuses symlinked workspace paths (#345)', () => {
+  const { UnsafePathError } = require('../../../src/workspace/safe-fs');
+
+  test('readSalt and ensureSalt throw UnsafePathError on a salt that links outside', () => {
+    const root = fs.realpathSync(tmpRoot());
+    const outside = path.join(root, 'outside.salt');
+    fs.writeFileSync(outside, 'SECRET-CANARY\n');
+    fs.mkdirSync(paths.sessionDir(root), { recursive: true });
+    fs.symlinkSync(outside, paths.saltPath(root));
+    expect(() => readSalt(root)).toThrow(UnsafePathError);
+    expect(() => ensureSalt(root)).toThrow(UnsafePathError);
+    expect(fs.readFileSync(outside, 'utf8')).toBe('SECRET-CANARY\n');
+  });
+
+  test('ensureSalt never creates a salt through a symlinked .session/', () => {
+    const root = fs.realpathSync(tmpRoot());
+    const outside = path.join(root, 'outside');
+    fs.mkdirSync(outside);
+    fs.mkdirSync(path.join(root, '.mobile-automator'));
+    fs.symlinkSync(outside, paths.sessionDir(root));
+    expect(() => ensureSalt(root)).toThrow(UnsafePathError);
+    expect(fs.readdirSync(outside)).toEqual([]);
+  });
+});

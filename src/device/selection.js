@@ -10,13 +10,16 @@
 //
 // `read` is graceful: a missing OR corrupt file returns null so a verb never
 // crashes on a half-written/garbage selection — it just behaves as "no
-// selection". The directory is created lazily on write.
+// selection". The directory is created lazily on write. Every access goes
+// through safe-fs (#345): a symlinked .session/ or selection.json is refused
+// (readWorkspaceJsonOrNull lets the refusal through), so the verb fails
+// environment instead of following it.
 
-const fs = require('fs');
 const path = require('path');
 
 const paths = require('./session-paths');
-const { atomicWrite } = require('../util/atomic');
+const { atomicWorkspaceWrite } = require('../util/atomic');
+const { readWorkspaceJsonOrNull, removeWorkspaceFile } = require('../workspace/safe-fs');
 
 const SELECTION_NAME = 'selection.json';
 
@@ -26,35 +29,24 @@ function selectionPath(projectRoot) {
 
 // The persisted device id, or null when absent/corrupt.
 function read(projectRoot) {
-  try {
-    const raw = fs.readFileSync(selectionPath(projectRoot), 'utf8');
-    const parsed = JSON.parse(raw);
-    const id = parsed && parsed.device;
-    return id ? String(id) : null;
-  } catch (_) {
-    return null;
-  }
+  const parsed = readWorkspaceJsonOrNull(projectRoot, selectionPath(projectRoot));
+  const id = parsed && parsed.device;
+  return id ? String(id) : null;
 }
 
 // Persist a device id. Creates .mobile-automator/.session/ if needed. Written
-// via atomicWrite (tmp + fsync + rename) so a concurrent reader or a crash
+// via atomicWorkspaceWrite (tmp + fsync + rename) so a concurrent reader or a crash
 // sees the old-complete or new-complete selection, never a torn one.
 function write(projectRoot, id) {
-  atomicWrite(
-    selectionPath(projectRoot),
-    JSON.stringify({ device: String(id) }, null, 2) + '\n'
-  );
+  atomicWorkspaceWrite(projectRoot, selectionPath(projectRoot), JSON.stringify({ device: String(id) }, null, 2) + '\n');
   return String(id);
 }
 
 // Remove the persisted selection. Idempotent — clearing when none exists is a
-// no-op (never throws).
+// no-op. removeWorkspaceFile walks .session/ first, so a symlinked .session/
+// throws UnsafePathError instead of deleting a file outside the workspace.
 function clear(projectRoot) {
-  try {
-    fs.rmSync(selectionPath(projectRoot), { force: true });
-  } catch (_) {
-    /* ignore */
-  }
+  removeWorkspaceFile(projectRoot, selectionPath(projectRoot));
 }
 
 // Pure precedence resolver: an explicit --device flag ALWAYS wins and is never

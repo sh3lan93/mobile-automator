@@ -64,6 +64,7 @@ const {
   workspaceFailure,
   legacyWorkspaceFailure,
 } = require('./workspace/discover');
+const { UnsafePathError } = require('./workspace/safe-fs');
 
 // Commander throws (via exitOverride) for two very different reasons, and the
 // split below is the ONLY thing that tells them apart.
@@ -139,7 +140,8 @@ function usageLine(cmd) {
 // is the single boundary that guarantees a calling agent always receives one
 // JSON line + a meaningful exit code instead of a raw stack trace on stderr.
 //   CommanderError (parse failure) -> invalid_input, with the usage line as hint
-//   ResultStoreRefusal           -> its kind (invalid_input), with its hint
+//   ResultStoreRefusal           -> its own kind (invalid_input) and hint
+//   UnsafePathError              -> its own kind (environment) and hint (#345)
 //   SyntaxError                  -> invalid_input (a malformed JSON file)
 //   fs EACCES/ENOENT/EROFS/...    -> environment, with a filesystem hint
 //   anything else                -> internal
@@ -154,11 +156,16 @@ function toEnvelope(err) {
       exitKind: 'invalid_input',
     };
   }
-  // A refusal from the result layer (src/result/refusal.js): a --run-id the
-  // ResultStore refuses (#295), a pending verdict over a decided one (#275),
-  // a finalize --status greener than the run derives (#337). The layer owns
-  // the rule and the wording, so every result verb reports it identically.
-  if (err instanceof ResultStoreRefusal) {
+  // Typed errors that carry their own kind, message and hint; the layer that
+  // throws owns the rule and the wording, so every verb reports it identically.
+  //   - ResultStoreRefusal (src/result/refusal.js): a --run-id the ResultStore
+  //     refuses (#295), a pending verdict over a decided one (#275), a
+  //     finalize --status greener than the run derives (#337).
+  //   - UnsafePathError (src/workspace/safe-fs.js): a workspace path refused
+  //     as a symlink, foreign-owned, escaping, ... (#345). Its message names
+  //     the path and reason, never file content or a link target. It must
+  //     come before the FS_ERROR_CODES branch, which would lose the hint.
+  if (err instanceof ResultStoreRefusal || err instanceof UnsafePathError) {
     return { envelope: fail(err.kind, err.message, err.hint), exitKind: err.kind };
   }
   if (err instanceof SyntaxError) {
@@ -1960,17 +1967,19 @@ function buildProgram(deps = {}) {
         projectRoot,
         autostart: Boolean(workspace.root),
       }));
-      // AFTER the connect, deliberately: the handle is written when the daemon
-      // starts listening, so before this point it may legitimately not exist
-      // yet. Best-effort — readSessionId never throws and returns null for an
-      // absent or malformed handle, which is a normal state (a one-shot
-      // fallback connection has no daemon at all).
-      emitters.setSessionId(readSessionId(projectRoot));
     } catch (err) {
       emit(deviceFail(err), humanFlag());
       return;
     }
     try {
+      // AFTER the connect, deliberately: the handle is written when the daemon
+      // starts listening, so before this point it may legitimately not exist
+      // yet. An absent or malformed handle reads as null, a normal state (a
+      // one-shot fallback connection has no daemon at all). A handle path
+      // safe-fs refuses (#345) throws instead and fails the verb environment
+      // through withEnvelope. Inside this block so that `finally` closes the
+      // connection on that throw too.
+      emitters.setSessionId(readSessionId(projectRoot));
       const r = await fn(bridge);
       // The ONE window where a device failure can still be investigated: after
       // fn(bridge) has produced its verdict and before `finally` closes the

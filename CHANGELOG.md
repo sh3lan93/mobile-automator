@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.40.12]
+
+### 🔒 Security
+
+- **Workspace files are never read or written through a symlink**
+  ([#345](https://github.com/sh3lan93/mobile-automator/issues/345)).
+  `.mobile-automator/` is checked into repos, so a cloned workspace could ship
+  `memory/`, `results/`, `.session/` or `config.json` as a link to a file
+  outside it, and `memory show` printed that file's content or `result
+  add-step` wrote into it. Every read and write of the memory, config,
+  result, device-selection, session-handle and marker-salt files now goes
+  through one helper (`src/workspace/safe-fs.js`). It refuses:
+  - a symlink anywhere from `.mobile-automator/` down;
+  - a file or directory owned by another user;
+  - a world-writable directory (group-writable is fine);
+  - a non-regular file, a hard-linked write target, or a path that resolves
+    outside the workspace.
+
+  The verb fails `environment` (exit 5). The envelope names the refused path
+  and the reason, never the file's content or where a link points. A project
+  root reached through a symlinked parent (macOS `/tmp`) still works.
+- **`MAUTO_TRUST_WORKSPACE_OWNER=1`** skips the owner check, and only that
+  check, for a CI container running as root over a checkout owned by another
+  uid. The symlink and containment checks always apply. It works like git's
+  `safe.directory`.
+- **The advisory lock always gives up after 5 s.** A dangling symlink at a
+  lock path made the acquire retry forever. A symlink or FIFO at the lock
+  path is now removed (the link itself, never its target), and every retry
+  path is bounded. An entry that is not a regular file and cannot be
+  removed, such as a directory, is refused at once as `environment`.
+- **`devices clear` no longer deletes through a symlinked `.session/`.**
+- Atomic writes create their temp file with `O_EXCL|O_NOFOLLOW` under a random
+  name, so a planted temp path cannot redirect the write. `config set` now
+  writes atomically too.
+
 ## [0.40.11]
 
 ### 🔒 Security
