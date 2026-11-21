@@ -16,7 +16,9 @@ const { createWorkspaceFile, UnsafePathError } = require('../workspace/safe-fs')
 // been planted (#345). The entry is inspected with lstat, never stat: a
 // symlink, FIFO or other non-regular entry at the lock path is not a lock any
 // mauto process made, so it is unlinked (the link itself, never its target)
-// and the acquire retries at once. When that unlink fails (a directory: EPERM
+// and the acquire retries at once. When that unlink fails ENOENT, a concurrent
+// process already removed the entry, so the acquire retries at once as well.
+// When it fails otherwise (a directory: EPERM
 // on macOS, EISDIR on Linux) the acquire throws UnsafePathError(not_regular)
 // straight away: waiting cannot fix it, and the verb fails environment instead
 // of stalling to the deadline. A regular stale lock whose unlink fails still
@@ -77,7 +79,12 @@ function acquire(projectRoot, lockPath, { now = Date.now, sleep = sleepSync, fs 
       if (!st.isFile() || now() - st.mtimeMs > STALE_MS) {
         try {
           fs.unlinkSync(lockPath);
-        } catch (_unlinkErr) {
+        } catch (unlinkErr) {
+          if (unlinkErr.code === 'ENOENT') {
+            // A concurrent process already removed it: retry at once.
+            throwIfExpired();
+            continue;
+          }
           if (!st.isFile()) throw new UnsafePathError(lockPath, 'not_regular');
           backoffOrThrow();
           continue;
