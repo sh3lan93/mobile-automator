@@ -123,6 +123,26 @@ describe('userPath: the workspace scope', () => {
 
 // The entry points for a path the user chose: each makes the workspace-scope
 // choice itself and hands back the path to use.
+// userDir's one caller is MAUTO_LOG_DIR, chosen by the environment, not the
+// checkout, so #362 leaves it out: in the project, outside the workspace, it
+// stays the user's call, made by a plain mkdir and used as given.
+describe('userDir in the project, outside the workspace (#362: unchanged)', () => {
+  it('follows a linked directory as the user chose it, never refusing it', () => {
+    const linked = path.join(root, 'logs');
+    fs.symlinkSync(outside, linked);
+    expect(userDir(root, linked)).toBe(linked);
+    expect(userDir(root, path.join(linked, 'deeper'), { create: true })).toBe(path.join(linked, 'deeper'));
+    expect(fs.existsSync(path.join(outside, 'deeper'))).toBe(true);
+  });
+
+  it('returns the path as given through an aliased root, not re-rooted', () => {
+    const { realRoot, alias } = aliasedRoot(base, root);
+    const given = path.join(alias, 'logs');
+    expect(userDir(realRoot, given, { create: true })).toBe(given);
+    expect(fs.existsSync(path.join(realRoot, 'logs'))).toBe(true);
+  });
+});
+
 describe('userDir / userDest / userFile (#347)', () => {
   it('userDir walks a workspace directory, refusing a link; elsewhere it only mkdirs', () => {
     fs.symlinkSync(outside, path.join(ws, '.logs'));

@@ -184,6 +184,12 @@ const PROJECT_PATH = dirPolicy({
 //   - destCreates: whether a destination another process writes (the
 //     engine's screenshot) gets its missing directories made (destInScope).
 //   - destLeaf: whether that destination's leaf is checked (checkDestLeaf).
+//   - userDir(projectRoot, { path, given }, { create }, d): what userDir does
+//     with a directory the user chose, `path` userPath's, `given` the path as
+//     the caller resolved it. Its one caller is MAUTO_LOG_DIR, which the
+//     environment chooses, not the checkout, so only the workspace row
+//     confines it; the other two leave it the user's call (usersOwnDir),
+//     exactly as before #362.
 //
 //   - workspace: walked, bounded by .mobile-automator/; a destination's
 //     directories are made, like every workspace write, and its leaf checked.
@@ -200,18 +206,31 @@ const PROJECT_PATH = dirPolicy({
 // An unknown scope's wording reads as the workspace one. A caller's own policy
 // (src/device/session-dir.js) is handed to the check as `policy` and never
 // listed here.
+
+// A directory the user chose and owns: made with a plain recursive mkdir when
+// `create`, then used as given (never re-rooted).
+const usersOwnDir = (root, { given }, { create }, d) => {
+  if (create) d.fs.mkdirSync(given, { recursive: true });
+  return given;
+};
+
 const SCOPES = Object.freeze({
   workspace: Object.freeze({
     policy: WORKSPACE_DIR,
     walk: (root, dir, opts, d) => walkDirs(root, workspaceDir(root), dir, opts, d),
     destCreates: true,
     destLeaf: true,
+    userDir: (root, { path: p }, { create }, d) => {
+      walkDirs(root, workspaceDir(root), p, { create }, d);
+      return p;
+    },
   }),
   path: Object.freeze({
     policy: PROJECT_PATH,
     walk: (root, dir, opts, d) => walkDirs(root, root, dir, opts, d),
     destCreates: false,
     destLeaf: true,
+    userDir: usersOwnDir,
   }),
   outside: Object.freeze({
     policy: PROJECT_PATH,
@@ -221,6 +240,7 @@ const SCOPES = Object.freeze({
     },
     destCreates: false,
     destLeaf: false,
+    userDir: usersOwnDir,
   }),
 });
 
@@ -711,19 +731,14 @@ function userPath(projectRoot, file, deps) {
   return { path: p, scope: isInside(p, path.resolve(workspaceDir(projectRoot))) ? 'workspace' : 'path' };
 }
 
-// A directory the user chose: the checked walk when it lands in the
-// workspace, else a plain recursive mkdir when `create` (two-way on purpose:
-// see the header). Returns the path to use (re-rooted inside the workspace,
-// as given anywhere else), not its realpath.
+// A directory the user chose: its row's userDir (see SCOPES). The checked
+// walk when it lands in the workspace; anywhere else, the project included, a
+// plain recursive mkdir when `create` (MAUTO_LOG_DIR stays out of #362: see
+// the header). Returns the path to use (re-rooted inside the workspace, as
+// given anywhere else), not its realpath.
 function userDir(projectRoot, dir, { create = false } = {}, deps = {}) {
-  const target = userPath(projectRoot, dir, deps);
-  if (target.scope === 'workspace') {
-    safeDir(projectRoot, target.path, { create }, deps);
-    return target.path;
-  }
-  const given = path.resolve(dir);
-  if (create) resolveDeps(deps).fs.mkdirSync(given, { recursive: true });
-  return given;
+  const { path: p, scope } = userPath(projectRoot, dir, deps);
+  return SCOPES[scope].userDir(projectRoot, { path: p, given: path.resolve(dir) }, { create }, resolveDeps(deps));
 }
 
 // A file another process writes at a path the user chose (the engine's
