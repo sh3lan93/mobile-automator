@@ -10,6 +10,7 @@ const { version: PKG_VERSION } = require('../package.json');
 const { ok, fail, render, exitCodeFor } = require('./output/envelope');
 const selectionStore = require('./device/selection');
 const { FS_ERROR_CODES, deviceHint, deviceFail } = require('./output/device-fail');
+const { typedFail } = require('./output/typed-fail');
 const { ScenarioValidator } = require('./scenario/validator');
 const { loadScenario } = require('./scenario/load');
 const { evaluate, MECHANICAL_TYPES, REFERENCE_SCREENSHOT_TYPES } = require('./assertion/evaluator');
@@ -168,9 +169,7 @@ function toEnvelope(err) {
   //     as a symlink, foreign-owned, escaping, ... (#345). Its message names
   //     the path and reason, never file content or a link target. It must
   //     come before the FS_ERROR_CODES branch, which would lose the hint.
-  if (err instanceof ResultStoreRefusal || err instanceof UnsafePathError) {
-    return { envelope: fail(err.kind, err.message, err.hint), exitKind: err.kind };
-  }
+  if (err instanceof ResultStoreRefusal || err instanceof UnsafePathError) return typedFail(err);
   if (err instanceof SyntaxError) {
     return {
       envelope: fail(
@@ -927,10 +926,9 @@ function handleResultExport({ projectRoot, cwd = process.cwd() }, opts = {}) {
   try {
     atomicOutputWrite(projectRoot, outPath, xml);
   } catch (err) {
-    // A refused path carries its own kind, message and hint.
-    if (err instanceof UnsafePathError) {
-      return { envelope: fail(err.kind, err.message, err.hint), exitKind: err.kind };
-    }
+    // A refused path propagates to the envelope boundary (toEnvelope), which
+    // reports its own kind, message and hint.
+    if (err instanceof UnsafePathError) throw err;
     return {
       envelope: fail(
         'environment',
@@ -1384,9 +1382,7 @@ function handleInit({ projectRoot, adapters = ADAPTERS, inspect = inspectHosts }
     // and hint, reported verbatim as toEnvelope reports it for every other
     // verb: the hint says what to do about the link, which the generic
     // filesystem hint below cannot.
-    if (err instanceof UnsafePathError) {
-      return { envelope: fail(err.kind, err.message, err.hint, { agents: [r] }), exitKind: err.kind };
-    }
+    if (err instanceof UnsafePathError) return typedFail(err, { data: { agents: [r] } });
     // A malformed host config is the user's input, not an environment fault —
     // surface it as invalid_input (exit 3), matching how every other verb
     // classifies bad JSON; fs/unknown adapter errors stay internal (exit 1).
@@ -1889,11 +1885,9 @@ async function handleCrashGet(
     try {
       writeCrashReport(target, report);
     } catch (err) {
-      // A refused path carries its own kind, message and hint: the hint says
-      // what to do about the link, which the generic one below cannot.
-      if (err instanceof UnsafePathError) {
-        return { envelope: fail(err.kind, err.message, err.hint), exitKind: err.kind };
-      }
+      // A refused path propagates to the envelope boundary (toEnvelope): its
+      // own hint says what to do about the link, which the generic one cannot.
+      if (err instanceof UnsafePathError) throw err;
       return crashWriteFailure(opts.out, err);
     }
     return { envelope: ok({ crash_id: id, path: opts.out, truncated: false }), exitKind: 'ok' };

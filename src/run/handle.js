@@ -14,6 +14,7 @@ const { runData } = require('./summary');
 const { toJUnit } = require('../result/junit');
 const { atomicOutputWrite } = require('../util/atomic');
 const { UnsafePathError } = require('../workspace/safe-fs');
+const { typedFail } = require('../output/typed-fail');
 const configManager = require('../config/manager');
 
 // The device's platform for the executor. Null only when the bridge itself
@@ -120,15 +121,14 @@ async function handleRun(
     } catch (err) {
       const data = runData(result, facts);
       const saved = `${result.status} and its result is saved to ${data.result_path}.`;
-      const refused = err instanceof UnsafePathError;
+      if (err instanceof UnsafePathError) {
+        return typedFail(err, { data, hintBefore: hints, hintAfter: `The run is ${saved}` });
+      }
       return {
         envelope: fail(
           'environment',
-          refused ? err.message : `could not write the JUnit report to ${junitPath}: ${err.message}`,
-          [
-            ...hints,
-            refused ? `${err.hint} The run is ${saved}` : `Check the directory exists and is writable; the run is ${saved}`,
-          ].join(' '),
+          `could not write the JUnit report to ${junitPath}: ${err.message}`,
+          [...hints, `Check the directory exists and is writable; the run is ${saved}`].join(' '),
           data
         ),
         exitKind: 'environment',

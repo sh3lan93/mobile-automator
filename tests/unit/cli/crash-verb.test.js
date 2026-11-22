@@ -4,7 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { handleCrashList, handleCrashGet, buildProgram } = require('../../../src/cli');
+const { handleCrashList, handleCrashGet, buildProgram, toEnvelope } = require('../../../src/cli');
 const sessionPaths = require('../../../src/device/session-paths');
 const { CANARY, tmpDir, snapshot } = require('../../helpers/workspace-safety');
 
@@ -187,11 +187,13 @@ describe('handleCrashGet --out confinement (#347)', () => {
         return REPORT;
       },
     };
+    // A refusal is thrown to the envelope boundary, as the verb's wrapper
+    // sees it: map it there.
     const r = await handleCrashGet(
       { deviceBridge, projectRoot: root, cwd, tmpdir: () => tmp, platform, darwinTmp, homedir },
       'r1',
       { out }
-    );
+    ).catch(toEnvelope);
     return { r, asked };
   }
 
