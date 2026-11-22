@@ -589,7 +589,9 @@ describe('inPinnedDir', () => {
     const root = shortRoot();
     ensureSessionDirs(root);
     const argError = Object.assign(new TypeError('bad arg'), { code: 'ERR_INVALID_ARG_TYPE' });
-    for (const bug of [new TypeError('not a function'), new Error('boom'), argError]) {
+    // A code shaped like an errno that is none (isFsError checks the errno table).
+    const notErrno = Object.assign(new Error('made up'), { code: 'EFOO' });
+    for (const bug of [new TypeError('not a function'), new Error('boom'), argError, notErrno]) {
       expect(() =>
         inPinnedDir(paths.sessionDir(root), SESSION_DIR, () => {
           throw bug;
