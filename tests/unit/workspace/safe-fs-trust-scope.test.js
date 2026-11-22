@@ -16,6 +16,8 @@ const {
   readProjectFile,
   readUserFile,
   openUserLeaf,
+  readOwnedLeaf,
+  userDirLeaves,
 } = require('../../../src/workspace/safe-fs');
 const consent = require('../../../src/observe/consent');
 const sink = require('../../../src/observe/sinks/file');
@@ -84,6 +86,32 @@ describe('outside the project the override never applies', () => {
     expect(err.scope).toBe('path');
     expect(err.hint).not.toContain('MAUTO_TRUST_WORKSPACE_OWNER');
     expect(err.message).toContain(`you are uid ${REAL_UID + 1}`);
+  });
+
+  // A strict leaf is outside the checkout, and its refusal is never
+  // re-scoped: it must not call itself a workspace path, nor offer the
+  // override its rule refuses. The consent read is readOwnedLeaf's default
+  // (consent.js), a MAUTO_LOG_DIR leaf is a userDirLeaves leaf (append.js).
+  it('a strict-leaf refusal says neither "workspace path" nor the override', () => {
+    const consentFile = path.join(outside, 'xdg', 'mauto', 'telemetry-consent.json');
+    fs.mkdirSync(path.dirname(consentFile), { recursive: true });
+    fs.writeFileSync(consentFile, '{}');
+    const logs = path.join(outside, 'logs');
+    fs.mkdirSync(logs);
+    fs.writeFileSync(path.join(logs, 'mauto.ndjson'), '');
+    const deps = { getuid: foreignUid, env: OVERRIDE };
+    const leaf = userDirLeaves(root, logs, {}, deps).leaf('mauto.ndjson');
+    for (const [refused, file] of [
+      [() => readOwnedLeaf(consentFile, {}, deps), consentFile],
+      [() => leaf.open(O_WRONLY), leaf.path],
+      [() => leaf.read(), leaf.path],
+    ]) {
+      const err = expectUnsafe(refused, 'foreign_owner');
+      expect(err.scope).toBe('path');
+      expect(err.message.startsWith(`Refusing to use path ${file}:`)).toBe(true);
+      expect(err.message).not.toContain('workspace path');
+      expect(err.hint).not.toContain('MAUTO_TRUST_WORKSPACE_OWNER');
+    }
   });
 
   it('a foreign consent file is no consent, override or not', () => {

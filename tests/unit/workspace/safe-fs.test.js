@@ -30,6 +30,9 @@ const {
 // The envelope boundary: a refusal reaches the agent through toEnvelope's
 // typed-error branch, which maps the error's own kind, message and hint.
 const { toEnvelope } = require('../../../src/cli');
+
+// A leaf inside the checkout whose directory was walked: the workspace policy.
+const IN_WS = { policy: WORKSPACE_DIR };
 const {
   makeSafeFsFixture,
   removeSafeFsFixture,
@@ -612,12 +615,16 @@ describe('openOwnedLeaf', () => {
     expect(buf.toString()).toBe('abc');
   });
 
-  it('refuses a symlink leaf (symlink), workspace scope by default', () => {
+  it('refuses a symlink leaf (symlink), worded under the leaf policy: path-neutral by default', () => {
     const link = path.join(ws, 'a');
     fs.symlinkSync(canaryFile, link);
     const err = expectUnsafe(() => openOwnedLeaf(link, O_RDONLY), 'symlink');
-    expect(err.scope).toBe('workspace');
+    expect(err.scope).toBe('path');
+    expect(err.message.startsWith(`Refusing to use path ${link}:`)).toBe(true);
     expect(err.path).toBe(link);
+    const inWs = expectUnsafe(() => openOwnedLeaf(link, O_RDONLY, { policy: WORKSPACE_DIR }), 'symlink');
+    expect(inWs.scope).toBe('workspace');
+    expect(inWs.message.startsWith(`Refusing to use workspace path ${link}:`)).toBe(true);
   });
 
   it('refuses a dangling symlink leaf on O_CREAT (symlink), creating no target', () => {
@@ -704,17 +711,17 @@ describe('openOwnedLeaf', () => {
   });
 
   it.each([
-    ['symlink', (p) => (fs.symlinkSync(canaryFile, p), () => openOwnedLeaf(p, O_RDONLY))],
-    ['not_regular', (p) => (fs.mkdirSync(p), () => openOwnedLeaf(p, O_RDONLY))],
-    ['hardlink', (p) => (fs.linkSync(canaryFile, p), () => openOwnedLeaf(p, O_WRONLY))],
+    ['symlink', (p) => (fs.symlinkSync(canaryFile, p), () => openOwnedLeaf(p, O_RDONLY, IN_WS))],
+    ['not_regular', (p) => (fs.mkdirSync(p), () => openOwnedLeaf(p, O_RDONLY, IN_WS))],
+    ['hardlink', (p) => (fs.linkSync(canaryFile, p), () => openOwnedLeaf(p, O_WRONLY, IN_WS))],
     [
       'foreign_owner',
       (p) => (
         fs.writeFileSync(p, 'x'),
-        () => openOwnedLeaf(p, O_RDONLY, {}, { fs: foreignFs(['fstatSync']) })
+        () => openOwnedLeaf(p, O_RDONLY, IN_WS, { fs: foreignFs(['fstatSync']) })
       ),
     ],
-  ])('a %s refusal is scope-free; inScope re-words it for the path scope, same path and reason', (reason, setup) => {
+  ])('a %s refusal under the workspace policy is scope-free; inScope re-words it for the path scope, same path and reason', (reason, setup) => {
     const p = path.join(ws, 'a');
     const err = expectUnsafe(setup(p), reason);
     expect(err.scope).toBe('workspace');
@@ -728,10 +735,21 @@ describe('openOwnedLeaf', () => {
   it('inScope keeps the owner check own detail: both uids still named in the path scope', () => {
     const p = path.join(ws, 'a');
     fs.writeFileSync(p, 'x');
-    const err = expectUnsafe(() => openOwnedLeaf(p, O_RDONLY, {}, { fs: foreignFs(['fstatSync']) }), 'foreign_owner');
+    const err = expectUnsafe(() => openOwnedLeaf(p, O_RDONLY, IN_WS, { fs: foreignFs(['fstatSync']) }), 'foreign_owner');
     const detail = `it is owned by uid ${REAL_UID + 1}; you are uid ${REAL_UID}`;
     expect(err.message).toContain(detail);
     expect(err.inScope('path').message).toBe(`Refusing to use path ${p}: ${detail} (foreign_owner).`);
+  });
+
+  // A refusal under a rule of its own already says what that rule means: a
+  // strict leaf's re-scoped to the workspace would offer the very override
+  // its rule refuses.
+  it('inScope leaves a refusal under a policy that is not a scope as it is', () => {
+    const p = path.join(ws, 'a');
+    fs.writeFileSync(p, 'x');
+    const err = expectUnsafe(() => openOwnedLeaf(p, O_RDONLY, {}, { fs: foreignFs(['fstatSync']) }), 'foreign_owner');
+    expect(err.inScope('workspace')).toBe(err);
+    expect(err.inScope('workspace').hint).not.toContain('MAUTO_TRUST_WORKSPACE_OWNER');
   });
 });
 

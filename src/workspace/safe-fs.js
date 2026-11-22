@@ -176,34 +176,32 @@ const PROJECT_PATH = dirPolicy({
 // (the override applies, as it does to the directory the leaf sits in), else
 // STRICT_LEAF, the default. STRICT_LEAF is the one strict leaf rule: the
 // override never applies, and its foreign_owner refusal never offers it.
-// Scope-free, like every check: a scoped entry point re-words it.
+//
+// Its wording is its own and path-neutral (subject 'path', reported as the
+// path scope), because a strict leaf is outside the checkout (an --out
+// target, a MAUTO_LOG_DIR leaf, the per-user consent file) and its refusal is
+// never re-worded: inScope leaves a refusal thrown under any policy but a
+// scope's own as it is. Only the owner hint differs from the path scope's,
+// and only the escape hint, which no leaf open throws, names the project.
 const STRICT_LEAF = dirPolicy({
-  ...WORKSPACE_DIR,
+  ...PROJECT_PATH,
   trustOverride: false,
   hints: {
-    ...HINTS,
+    ...PROJECT_PATH.hints,
     foreign_owner:
       'Files mauto uses outside the checkout must belong to the user running mauto. Fix the ownership (chown), or choose a path of your own.',
   },
+  fallbackHint: 'Inspect the path and replace it with a regular file of your own.',
 });
 
 // The one wording table: a scope name -> its policy. An unknown scope reads as
 // the workspace one. A SCOPES entry only words a refusal (inScope reads its
-// subject, reasons and hints); which owner rule ran is the leaf's policy
-// above. 'user' is a strict leaf at a path the user chose outside the
-// workspace (openUserLeaf, readUserFile): the path scope's wording with
-// STRICT_LEAF's owner hint, reported as the path scope. A caller's own policy
-// (src/device/session-dir.js) is handed to the check as `policy` and never
-// listed here.
-const SCOPES = {
-  workspace: WORKSPACE_DIR,
-  path: PROJECT_PATH,
-  user: dirPolicy({
-    ...PROJECT_PATH,
-    trustOverride: STRICT_LEAF.trustOverride,
-    hints: { ...PROJECT_PATH.hints, foreign_owner: STRICT_LEAF.hints.foreign_owner },
-  }),
-};
+// subject, reasons and hints); which owner rule ran is the policy the check
+// was handed. A policy that is not listed here (STRICT_LEAF, a caller's own
+// such as src/device/session-dir.js's) words its refusals itself and is never
+// re-worded.
+const SCOPES = { workspace: WORKSPACE_DIR, path: PROJECT_PATH };
+const SCOPE_POLICIES = new Set(Object.values(SCOPES));
 
 // A refusal carries its own envelope fields, like the repo's other typed
 // errors: `kind` is always environment (the checkout is wrong, not the verb's
@@ -211,11 +209,13 @@ const SCOPES = {
 // that maps `err.kind`/`err.hint` (deviceFail, toEnvelope) reports it correctly
 // without knowing this class.
 //
-// The wording comes from a policy: `policy` when the check ran under a
-// caller's own, else SCOPES[scope] ('workspace', the default, for a path under
-// .mobile-automator/; 'path' for any other path mauto writes). `kind`, `code`
-// and `reason` are the same whatever the wording. A scoped entry point
-// re-words what the checks throw once, through withScope.
+// The wording comes from a policy: `policy` when the check ran under one
+// (STRICT_LEAF, a caller's own), else SCOPES[scope] ('workspace', the
+// default, for a path under .mobile-automator/; 'path' for any other path
+// mauto writes). The refusal keeps the policy it was thrown under, so a
+// re-wording can tell a scope's refusal from one under a rule of its own.
+// `kind`, `code` and `reason` are the same whatever the wording. A scoped
+// entry point re-words what the checks throw once, through withScope.
 class UnsafePathError extends TypedRefusal {
   // `file` is always the path that was refused, never where a link points:
   // the target is attacker-chosen and must not reach an envelope. `detail` is
@@ -232,10 +232,17 @@ class UnsafePathError extends TypedRefusal {
     this.reason = reason;
     this.scope = policy.scope;
     this.detail = detail;
+    // Not enumerable: the rule, not a field of the refusal's envelope.
+    Object.defineProperty(this, 'policy', { value: policy });
   }
 
-  // The same refusal (path, reason, detail, code, kind) worded for `scope`.
+  // The same refusal (path, reason, detail, code, kind) worded for `scope`,
+  // when it was thrown under a scope's own policy (WORKSPACE_DIR, every
+  // check's default, or PROJECT_PATH). A refusal thrown under any other
+  // policy (STRICT_LEAF, session-dir.js's) already says what its own rule
+  // means, and is returned as it is.
   inScope(scope) {
+    if (!SCOPE_POLICIES.has(this.policy)) return this;
     return new UnsafePathError(this.path, this.reason, { scope, detail: this.detail });
   }
 }
@@ -311,7 +318,7 @@ function lstatOrMkdir(fs, p, create, mode) {
 // link (a second one would be a file elsewhere by another name).
 function checkLeafOwnership(p, st, writes, d, policy) {
   checkOwner(p, st, d, policy);
-  if (writes && st.nlink !== 1) throw new UnsafePathError(p, 'hardlink');
+  if (writes && st.nlink !== 1) throw new UnsafePathError(p, 'hardlink', { policy });
 }
 
 // Check ONE directory under a caller-supplied policy, making it first (`mode`,
@@ -467,7 +474,16 @@ function openOwnedLeaf(file, flags, { mode = 0o666, singleLink = false, policy =
   // O_TRUNC acts inside open(), before the owner and hard-link checks could
   // refuse: a hard link to a file outside would already be emptied. Open
   // without it and truncate only once every check has passed.
-  const { fd, stat } = openLeaf(resolved, flags & ~O_TRUNC, mode, deps);
+  let opened;
+  try {
+    opened = openLeaf(resolved, flags & ~O_TRUNC, mode, deps);
+  } catch (err) {
+    // openLeaf has no policy: its refusal is worded under the leaf's, like
+    // every other refusal of this open.
+    if (err instanceof UnsafePathError) throw new UnsafePathError(err.path, err.reason, { policy });
+    throw err;
+  }
+  const { fd, stat } = opened;
   try {
     checkLeafOwnership(resolved, stat, writes || singleLink, d, policy);
     if (writes && flags & O_TRUNC) d.fs.ftruncateSync(fd, 0);
@@ -527,8 +543,9 @@ const ABSENT = new Set(['null', 'throw']);
 // The one capped read: `open()` returns the fd. Absent per `absent` (above).
 // Reads at most maxBytes + 1 so a planted huge file costs nothing. Decoded
 // with `encoding`; null returns the Buffer, byte for byte (a scenario is
-// hashed on exactly what was read, #275).
-function readCapped(open, file, { maxBytes, encoding = 'utf8', absent = 'null' }, deps) {
+// hashed on exactly what was read, #275). A too_large refusal is worded under
+// `policy` (the leaf's, for readOwnedLeaf).
+function readCapped(open, file, { maxBytes, encoding = 'utf8', absent = 'null', policy = WORKSPACE_DIR }, deps) {
   if (!ABSENT.has(absent)) throw new TypeError(`readCapped: absent must be 'null' or 'throw', not ${absent}`);
   const { fs } = resolveDeps(deps);
   let fd;
@@ -549,7 +566,7 @@ function readCapped(open, file, { maxBytes, encoding = 'utf8', absent = 'null' }
       chunks.push(n === buf.length ? buf : buf.subarray(0, n));
       total += n;
     }
-    if (total > maxBytes) throw new UnsafePathError(path.resolve(file), 'too_large');
+    if (total > maxBytes) throw new UnsafePathError(path.resolve(file), 'too_large', { policy });
     const bytes = Buffer.concat(chunks, total);
     return encoding === null ? bytes : bytes.toString(encoding);
   } finally {
@@ -562,7 +579,7 @@ function readCapped(open, file, { maxBytes, encoding = 'utf8', absent = 'null' }
 // too_large past maxBytes. `singleLink` and `policy` as for openOwnedLeaf.
 function readOwnedLeaf(file, { maxBytes = DEFAULT_MAX_BYTES, singleLink = false, policy = STRICT_LEAF } = {}, deps = {}) {
   const open = () => openOwnedLeaf(file, nodeFs.constants.O_RDONLY, { singleLink, policy }, deps);
-  return readCapped(open, file, { maxBytes }, deps);
+  return readCapped(open, file, { maxBytes, policy }, deps);
 }
 
 // Read a workspace file (utf8, or the Buffer with `encoding: null`). null when
@@ -669,7 +686,8 @@ function readProjectFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES, enco
 //   - outside the project, or anywhere when projectRoot is null (no
 //     checkout): the user's own file, read as they named it. A link is
 //     followed, and only the size cap applies: no owner, link or regular-file
-//     check, as `cat` would read it.
+//     check, as `cat` would read it. Its one refusal, too_large, is worded
+//     in the path scope.
 function readUserFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES, encoding = 'utf8', absent = 'null' } = {}, deps = {}) {
   const opts = { maxBytes, encoding, absent };
   const { path: p, scope } = userPath(projectRoot, file, deps);
@@ -677,7 +695,7 @@ function readUserFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES, encodin
   if (scope === 'path') return readProjectFile(projectRoot, p, opts, deps);
   const { fs } = resolveDeps(deps);
   const open = () => fs.openSync(p, nodeFs.constants.O_RDONLY);
-  return withScope('user', () => readCapped(open, p, opts, deps));
+  return withScope('path', () => readCapped(open, p, opts, deps));
 }
 
 // createWorkspaceFile's project-rooted twin: exclusive (O_WRONLY|O_CREAT|
@@ -776,11 +794,12 @@ function userFile(projectRoot, file, deps = {}) {
 
 // The leaf open for a path the user chose outside the workspace, whose
 // directory the caller has settled itself: openOwnedLeaf (O_NOFOLLOW, ours,
-// one link for a write, the truncate deferred), a refusal worded in the 'path'
-// scope. Outside the checkout, so the owner override never applies (#363).
-// Creates no directory. Returns an fd the caller closes.
+// one link for a write, the truncate deferred) under STRICT_LEAF. Outside the
+// checkout, so the owner override never applies (#363), and a refusal is
+// STRICT_LEAF's path-neutral wording, `err.scope === 'path'`. Creates no
+// directory. Returns an fd the caller closes.
 function openUserLeaf(file, flags, mode = 0o666, deps = {}) {
-  return withScope('user', () => openOwnedLeaf(file, flags, { mode, policy: STRICT_LEAF }, deps));
+  return openOwnedLeaf(file, flags, { mode, policy: STRICT_LEAF }, deps);
 }
 
 // The lenient readers, for state files where absent or garbled is a normal
