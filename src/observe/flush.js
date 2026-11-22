@@ -37,6 +37,45 @@ function chunk(items, size) {
   return out;
 }
 
+// One claimed batch, chunk by chunk. Returns how it ended and what it moved:
+//
+//   done       every chunk was posted or permanently dropped; unlink the file.
+//   retry      a chunk failed retryably; the file stays claimed for later.
+//   withdrawn  consent was withdrawn before a chunk (`mauto telemetry
+//              disable` while a batch is in flight); `reason` is why.
+//
+// `status` is the last HTTP status seen, or undefined when nothing was posted.
+async function drainBatch(payloads, { projectRoot, env, transport }) {
+  let sent = 0;
+  let dropped = 0;
+  let status;
+  for (const part of chunk(payloads, BATCH_SIZE)) {
+    // The user may have withdrawn since the flush's first check, or since the
+    // last chunk.
+    const current = decideNow(projectRoot, env);
+    if (!current.enabled) return { outcome: 'withdrawn', reason: current.reason, sent, dropped, status };
+    let r;
+    try {
+      r = await transport.postBatch(part, { env });
+    } catch (_) {
+      // postBatch is documented never to reject; this is the guarantee
+      // restated locally so an injected transport cannot break the daemon.
+      r = { ok: false, retry: true, status: 0 };
+    }
+    status = r.status;
+    if (r.ok) {
+      sent += part.length;
+      continue;
+    }
+    // Stop at the first retryable chunk; the file stays claimed.
+    if (r.retry) return { outcome: 'retry', sent, dropped, status };
+    // Permanent (4xx other than 429): a malformed body or a revoked token
+    // would retry forever and the queue would never drain. Drop it.
+    dropped += part.length;
+  }
+  return { outcome: 'done', sent, dropped, status };
+}
+
 function makeFlusher({
   projectRoot,
   env = process.env,
@@ -74,8 +113,8 @@ function makeFlusher({
     let keptEvents = 0;
     let lastStatus = 0;
     let retryable = false;
-    // Set when consent is withdrawn part-way through this flush: the reason
-    // the pre-upload check gave.
+    // The reason the pre-upload check gave, when consent is withdrawn part-way
+    // through this flush.
     let withdrawn;
 
     try {
@@ -91,52 +130,22 @@ function makeFlusher({
           continue;
         }
 
-        let batchRetryable = false;
-        let batchSent = 0;
-        let batchDropped = 0;
+        const r = await drainBatch(payloads, { projectRoot, env, transport });
+        sent += r.sent;
+        dropped += r.dropped;
+        if (r.status !== undefined) lastStatus = r.status;
 
-        for (const part of chunk(payloads, BATCH_SIZE)) {
-          // The user may have withdrawn since the check above, or since the
-          // last chunk: `mauto telemetry disable` while a batch is in flight.
-          const current = decideNow(projectRoot, env);
-          if (!current.enabled) {
-            withdrawn = current.reason;
-            break;
-          }
-          let r;
-          try {
-            r = await transport.postBatch(part, { env });
-          } catch (_) {
-            // postBatch is documented never to reject; this is the guarantee
-            // restated locally so an injected transport cannot break the daemon.
-            r = { ok: false, retry: true, status: 0 };
-          }
-          lastStatus = r.status;
-          if (r.ok) {
-            batchSent += part.length;
-            continue;
-          }
-          if (r.retry) {
-            batchRetryable = true;
-            break; // stop at the first retryable chunk; the file stays claimed
-          }
-          // Permanent (4xx other than 429): a malformed body or a revoked token
-          // would retry forever and the queue would never drain. Drop it.
-          batchDropped += part.length;
+        if (r.outcome === 'withdrawn') {
+          // A withdrawal stops the flush where it is. This batch is NOT
+          // unlinked: it stays claimed, so what it still holds is neither
+          // uploaded nor lost (a later opt-in drains it; while telemetry is off
+          // nothing spools, so nothing is added to it). It is not counted in
+          // `kept` either, which means "left claimed for retry" and drives the
+          // flush verb's retry hint.
+          withdrawn = r.reason;
+          break;
         }
-
-        sent += batchSent;
-        dropped += batchDropped;
-
-        // A withdrawal stops the flush where it is. The batch being processed
-        // is NOT unlinked: it stays claimed, so what it still holds is neither
-        // uploaded nor lost (a later opt-in drains it; while telemetry is off
-        // nothing spools, so nothing is added to it). It is not counted in
-        // `kept` either, which means "left claimed for retry" and drives the
-        // flush verb's retry hint.
-        if (withdrawn) break;
-
-        if (batchRetryable) {
+        if (r.outcome === 'retry') {
           kept += 1;
           keptEvents += payloads.length;
           retryable = true;
