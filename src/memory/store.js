@@ -8,7 +8,8 @@ const { withLock } = require('../util/lock');
 const { parseRunHistory, renderRunHistory, recordInModel, countEntries } = require('./history');
 const { atomicWorkspaceWrite } = require('../util/atomic');
 const { parseEntries, renderEntries, hasText } = require('./entries');
-const { UnsafePathError, readWorkspaceFile, readWorkspaceFileOrNull } = require('../workspace/safe-fs');
+const { readWorkspaceFile, readWorkspaceFileOrNull } = require('../workspace/safe-fs');
+const { isTypedRefusal } = require('../output/typed-refusal');
 
 // Cross-session memory store. Mirrors ResultStore's one-shot-process,
 // load-mutate-atomic-write shape, but the memory files are SHARED across runs
@@ -107,7 +108,7 @@ class MemoryStore {
       const raw = readWorkspaceFile(this.projectRoot, file);
       return raw == null ? '' : raw;
     } catch (e) {
-      if (e instanceof UnsafePathError) throw e;
+      if (isTypedRefusal(e)) throw e;
       return this._preserveCorrupt(file, e);
     }
   }

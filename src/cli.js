@@ -9,13 +9,13 @@ const { ok, fail, render, exitCodeFor } = require('./output/envelope');
 const selectionStore = require('./device/selection');
 const { FS_ERROR_CODES, deviceHint, deviceFail } = require('./output/device-fail');
 const { typedFail } = require('./output/typed-fail');
+const { isTypedRefusal } = require('./output/typed-refusal');
 const { ScenarioValidator } = require('./scenario/validator');
 const { loadScenario } = require('./scenario/load');
 const { evaluate, MECHANICAL_TYPES, REFERENCE_SCREENSHOT_TYPES } = require('./assertion/evaluator');
 const { observe } = require('./assertion/observe');
 const { fromCliFlags } = require('./assertion/fields');
 const { ResultStore, readFinalizedResult } = require('./result/store');
-const { ResultStoreRefusal } = require('./result/refusal');
 const {
   OBSERVATION_TYPES, parseObservation, parseCapture, parseAssertionVerdict, parseSimilarityScore, RUN_STATUSES,
   parseRunStatus, parseStepStatus,
@@ -67,7 +67,7 @@ const {
 const {
   UnsafePathError, userDest,
 } = require('./workspace/safe-fs');
-const { OutputPathRefusal, crashOutTarget, writeCrashReport } = require('./workspace/output-roots');
+const { crashOutTarget, writeCrashReport } = require('./workspace/output-roots');
 
 // Commander throws (via exitOverride) for two very different reasons, and the
 // split below is the ONLY thing that tells them apart.
@@ -143,9 +143,7 @@ function usageLine(cmd) {
 // is the single boundary that guarantees a calling agent always receives one
 // JSON line + a meaningful exit code instead of a raw stack trace on stderr.
 //   CommanderError (parse failure) -> invalid_input, with the usage line as hint
-//   ResultStoreRefusal           -> its own kind (invalid_input) and hint
-//   UnsafePathError              -> its own kind (environment) and hint (#345)
-//   OutputPathRefusal            -> its own kind (invalid_input) and hint (#347)
+//   TypedRefusal (any subclass)  -> its own kind, message and hint
 //   SyntaxError                  -> invalid_input (a malformed JSON file)
 //   fs EACCES/ENOENT/EROFS/...    -> environment, with a filesystem hint
 //   anything else                -> internal
@@ -160,8 +158,9 @@ function toEnvelope(err) {
       exitKind: 'invalid_input',
     };
   }
-  // Typed errors that carry their own kind, message and hint; the layer that
-  // throws owns the rule and the wording, so every verb reports it identically.
+  // Typed refusals (src/output/typed-refusal.js) carry their own kind, message
+  // and hint; the layer that throws owns the rule and the wording, so every
+  // verb reports it identically. Today:
   //   - ResultStoreRefusal (src/result/refusal.js): a --run-id the ResultStore
   //     refuses (#295), a pending verdict over a decided one (#275), a
   //     finalize --status greener than the run derives (#337).
@@ -171,9 +170,7 @@ function toEnvelope(err) {
   //     come before the FS_ERROR_CODES branch, which would lose the hint.
   //   - OutputPathRefusal (src/workspace/output-roots.js): a crash get --out
   //     outside the roots a crash report may be written to (#347).
-  if (err instanceof ResultStoreRefusal || err instanceof UnsafePathError || err instanceof OutputPathRefusal) {
-    return typedFail(err);
-  }
+  if (isTypedRefusal(err)) return typedFail(err);
   if (err instanceof SyntaxError) {
     return {
       envelope: fail(
@@ -932,7 +929,7 @@ function handleResultExport({ projectRoot, cwd = process.cwd() }, opts = {}) {
   } catch (err) {
     // A refused path propagates to the envelope boundary (toEnvelope), which
     // reports its own kind, message and hint.
-    if (err instanceof UnsafePathError) throw err;
+    if (isTypedRefusal(err)) throw err;
     return {
       envelope: fail(
         'environment',
@@ -1386,7 +1383,7 @@ function handleInit({ projectRoot, adapters = ADAPTERS, inspect = inspectHosts }
     // and hint, reported verbatim as toEnvelope reports it for every other
     // verb: the hint says what to do about the link, which the generic
     // filesystem hint below cannot.
-    if (err instanceof UnsafePathError) return typedFail(err, { data: { agents: [r] } });
+    if (isTypedRefusal(err)) return typedFail(err, { data: { agents: [r] } });
     // A malformed host config is the user's input, not an environment fault —
     // surface it as invalid_input (exit 3), matching how every other verb
     // classifies bad JSON; fs/unknown adapter errors stay internal (exit 1).
@@ -1801,7 +1798,7 @@ async function handleCrashGet(
     try {
       target = crashOutTarget(projectRoot, path.resolve(cwd, opts.out), { tmpdir, platform, darwinTmp, homedir });
     } catch (err) {
-      if (err instanceof OutputPathRefusal) throw err;
+      if (isTypedRefusal(err)) throw err;
       return crashWriteFailure(opts.out, err);
     }
   }
@@ -1820,7 +1817,7 @@ async function handleCrashGet(
     try {
       writeCrashReport(target, report);
     } catch (err) {
-      if (err instanceof UnsafePathError) throw err;
+      if (isTypedRefusal(err)) throw err;
       return crashWriteFailure(opts.out, err);
     }
     return { envelope: ok({ crash_id: id, path: opts.out, truncated: false }), exitKind: 'ok' };

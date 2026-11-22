@@ -47,6 +47,7 @@
 const nodeFs = require('fs');
 const path = require('path');
 
+const { TypedRefusal } = require('../output/typed-refusal');
 const { workspaceDir } = require('./layout');
 
 const DEFAULT_MAX_BYTES = 16 * 1024 * 1024;
@@ -127,17 +128,18 @@ const SCOPES = {
 // the wording only (SCOPES); `kind`, `code` and `reason` are the same in both.
 // The checks below never know the scope: they throw the default wording, and
 // a scoped entry point re-words what they throw once, through withScope.
-class UnsafePathError extends Error {
+class UnsafePathError extends TypedRefusal {
   // `file` is always the path that was refused, never where a link points: the
   // target is attacker-chosen and must not reach an envelope.
   constructor(file, reason, { scope = 'workspace' } = {}) {
     const s = SCOPES[scope] || SCOPES.workspace;
     const text = s.reasons[reason] || FALLBACK_REASON;
-    super(`Refusing to use ${s.subject} ${file}: ${text} (${reason}).`);
-    this.name = 'UnsafePathError';
+    super(
+      'environment',
+      `Refusing to use ${s.subject} ${file}: ${text} (${reason}).`,
+      s.hints[reason] || s.fallbackHint
+    );
     this.code = 'EUNSAFEPATH';
-    this.kind = 'environment';
-    this.hint = s.hints[reason] || s.fallbackHint;
     this.path = file;
     this.reason = reason;
     this.scope = scope;

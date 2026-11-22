@@ -13,8 +13,8 @@ const { runSettings } = require('./settings');
 const { runData } = require('./summary');
 const { toJUnit } = require('../result/junit');
 const { atomicOutputWrite } = require('../util/atomic');
-const { UnsafePathError } = require('../workspace/safe-fs');
 const { typedFail } = require('../output/typed-fail');
+const { isTypedRefusal } = require('../output/typed-refusal');
 const configManager = require('../config/manager');
 
 // The device's platform for the executor. Null only when the bridge itself
@@ -121,7 +121,7 @@ async function handleRun(
     } catch (err) {
       const data = runData(result, facts);
       const saved = `${result.status} and its result is saved to ${data.result_path}.`;
-      if (err instanceof UnsafePathError) {
+      if (isTypedRefusal(err)) {
         return typedFail(err, { data, hintBefore: hints, hintAfter: `The run is ${saved}` });
       }
       return {

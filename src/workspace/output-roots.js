@@ -18,16 +18,14 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+const { TypedRefusal } = require('../output/typed-refusal');
 const { isInside, userFile } = require('./safe-fs');
 
 // A path the user chose that the rule refuses: their input is wrong, not the
 // checkout, so invalid_input (exit 3), with a hint naming the allowed roots.
-class OutputPathRefusal extends Error {
+class OutputPathRefusal extends TypedRefusal {
   constructor(message, hint) {
-    super(message);
-    this.name = 'OutputPathRefusal';
-    this.kind = 'invalid_input';
-    this.hint = hint;
+    super('invalid_input', message, hint);
   }
 }
 
