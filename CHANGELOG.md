@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.40.17]
+
+### 🔒 Security
+
+- **Scenario files, reference screenshots, run captures and the run trace are
+  read through the same checked walk as other workspace files**
+  ([#363](https://github.com/sh3lan93/mobile-automator/issues/363)). That
+  covers the scenario that `mauto validate`, `mauto run` and
+  `mauto result finalize --scenario` read, every PNG a `screenshot_match`
+  compares or records, and the trace `result finalize` measures. A committed
+  link inside the checkout, at the file or at a directory on the way (a
+  `flows -> /outside` directory link, a linked baseline), is refused with an
+  `environment` error that names the path, and none of the link's target is
+  printed. In `mauto run` such a refusal ends the run `environment` instead
+  of failing the assertion. A path outside the project is your own choice
+  and is read as before, links followed; it is only size-capped. The
+  scenario hash is unchanged for normal files.
+- **`MAUTO_TRUST_WORKSPACE_OWNER=1` now applies only inside the checkout.** It
+  still lets workspace and project files owned by another uid be used (a CI
+  container running as root), but never a file outside the project: an
+  `--out` or `--junit` target, a `MAUTO_LOG_DIR` outside the workspace, or
+  the per-user telemetry consent file. A refusal there no longer suggests
+  the override.
+
 ## [0.40.16]
 
 ### ⚠️ Upgrade note
