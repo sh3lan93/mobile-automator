@@ -17,11 +17,11 @@ const { cleanupWorkspaceIfOwned } = require('../../../bin/mauto-session-daemon')
 const paths = require('../../../src/device/session-paths');
 const { ensureSalt, readSalt } = require('../../../src/device/session-salt');
 const { ensureSessionDirs } = require('../../../src/device/session-dir');
-const { usePrivateTmpdir } = require('../../helpers/private-tmpdir');
+const { useSocketDeps } = require('../../helpers/socket-deps');
 
 // A deep temp root's socket goes to the fallback directory: keep it in a
 // temp dir of this file's, never the real per-user one (#346).
-usePrivateTmpdir();
+const socketDeps = useSocketDeps();
 
 const roots = [];
 function tmpRoot() {
@@ -34,14 +34,14 @@ function tmpRoot() {
 // outside the root: remove it too, so seeded files do not pile up there.
 afterEach(() => {
   for (const root of roots.splice(0)) {
-    fs.rmSync(paths.socketPath(root), { force: true });
+    fs.rmSync(paths.socketPath(root, socketDeps()), { force: true });
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
 
 const workspaceFiles = (root) => [
   paths.lockPath(root),
-  paths.socketPath(root),
+  paths.socketPath(root, socketDeps()),
   paths.pidFilePath(root),
   paths.handlePath(root),
 ];
@@ -50,7 +50,7 @@ const workspaceFiles = (root) => [
 // directories are made as the daemon makes them: the socket's may be the
 // per-user fallback, which must stay 0700.
 function seedWorkspace(root, lockPid) {
-  ensureSessionDirs(root);
+  ensureSessionDirs(root, socketDeps());
   for (const f of workspaceFiles(root)) {
     fs.writeFileSync(f, `${lockPid}\n`);
   }
@@ -63,14 +63,14 @@ describe('daemon bin: ownership-gated workspace cleanup', () => {
   test('a spawn-race LOSER (lock owned by another pid) leaves the winner files intact', () => {
     const root = tmpRoot();
     seedWorkspace(root, process.pid + 1); // someone else owns the lock
-    cleanupWorkspaceIfOwned(root, paths.socketPath(root)); // as if the loser process is exiting
+    cleanupWorkspaceIfOwned(root, paths.socketPath(root, socketDeps())); // as if the loser process is exiting
     expect(allExist(root)).toBe(true);
   });
 
   test('the OWNER (lock holds our pid) tears its workspace down', () => {
     const root = tmpRoot();
     seedWorkspace(root, process.pid);
-    cleanupWorkspaceIfOwned(root, paths.socketPath(root));
+    cleanupWorkspaceIfOwned(root, paths.socketPath(root, socketDeps()));
     expect(noneExist(root)).toBe(true);
   });
 
@@ -81,7 +81,7 @@ describe('daemon bin: ownership-gated workspace cleanup', () => {
     const root = tmpRoot();
     seedWorkspace(root, process.pid);
     cleanupWorkspaceIfOwned(root, null);
-    expect(fs.existsSync(paths.socketPath(root))).toBe(true);
+    expect(fs.existsSync(paths.socketPath(root, socketDeps()))).toBe(true);
     expect(fs.existsSync(paths.lockPath(root))).toBe(false);
     expect(fs.existsSync(paths.pidFilePath(root))).toBe(false);
     expect(fs.existsSync(paths.handlePath(root))).toBe(false);
@@ -91,14 +91,14 @@ describe('daemon bin: ownership-gated workspace cleanup', () => {
     const root = tmpRoot();
     seedWorkspace(root, process.pid);
     const salt = ensureSalt(root);
-    cleanupWorkspaceIfOwned(root, paths.socketPath(root));
+    cleanupWorkspaceIfOwned(root, paths.socketPath(root, socketDeps()));
     expect(noneExist(root)).toBe(true);
     expect(readSalt(root)).toBe(salt);
   });
 
   test('no lock present -> a no-op that never throws', () => {
     const root = tmpRoot();
-    expect(() => cleanupWorkspaceIfOwned(root, paths.socketPath(root))).not.toThrow();
+    expect(() => cleanupWorkspaceIfOwned(root, paths.socketPath(root, socketDeps()))).not.toThrow();
   });
 
   // #346: the lock is read without following links. A planted link to a file
@@ -113,7 +113,7 @@ describe('daemon bin: ownership-gated workspace cleanup', () => {
     fs.unlinkSync(paths.lockPath(root));
     fs.symlinkSync(target, paths.lockPath(root));
 
-    cleanupWorkspaceIfOwned(root, paths.socketPath(root));
+    cleanupWorkspaceIfOwned(root, paths.socketPath(root, socketDeps()));
 
     expect(allExist(root)).toBe(true);
     expect(fs.lstatSync(paths.lockPath(root)).isSymbolicLink()).toBe(true);

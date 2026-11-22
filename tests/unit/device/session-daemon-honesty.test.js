@@ -17,11 +17,11 @@ const sessionClient = require('../../../src/device/session-client');
 const paths = require('../../../src/device/session-paths');
 const { ensureSessionDirs } = require('../../../src/device/session-dir');
 const { FrameParser } = require('../../../src/device/session-protocol');
-const { usePrivateTmpdir } = require('../../helpers/private-tmpdir');
+const { useSocketDeps } = require('../../helpers/socket-deps');
 
 // A deep temp root's socket goes to the fallback directory: keep it in a
 // temp dir of this file's, never the real per-user one (#346).
-usePrivateTmpdir();
+const socketDeps = useSocketDeps();
 
 function tmpRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-honesty-'));
@@ -62,9 +62,9 @@ describe('session-daemon honesty + lifecycle (#122)', () => {
   test('slow call + short idle: reply still arrives (idle does not fire mid-call)', async () => {
     const root = tmpRoot();
     const { createCall, state } = makeStubCreateCall({ delayMs: 120 });
-    const daemon = await startDaemon({ projectRoot: root, idleMs: 40, createCall });
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 40, createCall });
 
-    const conn = await sessionClient.tryConnect(root);
+    const conn = await sessionClient.tryConnect(root, socketDeps());
     const res = await conn.call('mobile_press_button', { button: 'BACK' });
     expect(res).toEqual({ echoed: 'mobile_press_button', args: { button: 'BACK' } });
     expect(state.calls).toHaveLength(1);
@@ -79,9 +79,9 @@ describe('session-daemon honesty + lifecycle (#122)', () => {
   test('non-serializable result becomes an explicit ok:false frame, never a dropped reply', async () => {
     const root = tmpRoot();
     const { createCall } = makeStubCreateCall({ circular: true });
-    const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall });
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall });
 
-    const conn = await sessionClient.tryConnect(root);
+    const conn = await sessionClient.tryConnect(root, socketDeps());
     await expect(conn.call('mobile_take_screenshot', {})).rejects.toThrow(/serializ/i);
 
     await conn.close();
@@ -94,9 +94,9 @@ describe('session-daemon honesty + lifecycle (#122)', () => {
   test('client socket destroyed mid-call: daemon survives and surfaces undeliverable', async () => {
     const root = tmpRoot();
     const { createCall, state } = makeStubCreateCall({ delayMs: 100 });
-    const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall });
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall });
 
-    const socket = net.createConnection(paths.socketPath(root));
+    const socket = net.createConnection(paths.socketPath(root, socketDeps()));
     await new Promise((resolve, reject) => {
       socket.once('connect', resolve);
       socket.once('error', reject);
@@ -112,7 +112,7 @@ describe('session-daemon honesty + lifecycle (#122)', () => {
     expect(state.calls).toHaveLength(1); // the call really executed
     expect(daemon.undeliverable.length).toBeGreaterThanOrEqual(1);
     // Daemon is still healthy and serving.
-    expect(await sessionClient.isAlive(root)).toBe(true);
+    expect(await sessionClient.isAlive(root, socketDeps())).toBe(true);
 
     await daemon.stop();
   });
@@ -122,19 +122,19 @@ describe('session-daemon honesty + lifecycle (#122)', () => {
   test('double spawn / one root: exactly one binds; the loser spawns no child', async () => {
     const root = tmpRoot();
     const { createCall, state } = makeStubCreateCall();
-    const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall });
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall });
     expect(state.builds).toBe(1);
 
     // The loser re-uses the SAME stub createCall so we can assert it is never
     // invoked a second time (i.e. no child is spawned).
     await expect(
-      startDaemon({ projectRoot: root, idleMs: 0, createCall })
+      startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall })
     ).rejects.toThrow();
     expect(state.builds).toBe(1); // loser never built a second connection
 
     await daemon.stop();
     // Lock is released on stop, so a fresh daemon can start afterwards.
-    const again = await startDaemon({ projectRoot: root, idleMs: 0, createCall });
+    const again = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall });
     expect(state.builds).toBe(2);
     await again.stop();
   });
@@ -147,10 +147,10 @@ describe('session-daemon honesty + lifecycle (#122)', () => {
     // Write a LIVE pidfile (this test process) so cleanStale treats the session
     // as live and does NOT unlink the blocker's socket — the daemon then gets
     // past the (absent) lock to the failing listen, exercising the close() path.
-    ensureSessionDirs(root);
+    ensureSessionDirs(root, socketDeps());
     fs.writeFileSync(paths.pidFilePath(root), String(process.pid) + '\n');
     const blocker = net.createServer();
-    const socketPath = paths.socketPath(root);
+    const socketPath = paths.socketPath(root, socketDeps());
     await new Promise((resolve, reject) => {
       blocker.once('error', reject);
       blocker.listen(socketPath, resolve);
@@ -158,7 +158,7 @@ describe('session-daemon honesty + lifecycle (#122)', () => {
 
     const { createCall, state } = makeStubCreateCall();
     await expect(
-      startDaemon({ projectRoot: root, idleMs: 0, createCall })
+      startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall })
     ).rejects.toThrow();
     // createCall ran (built the connection) but must have been closed on failure.
     expect(state.builds).toBe(1);
@@ -176,7 +176,7 @@ describe('session-daemon honesty + lifecycle (#122)', () => {
   describe('non-object frames get a malformed-frame reply, and the daemon keeps serving', () => {
     // Raw socket so the test can send lines no client would ever encode.
     async function rawExchange(root, lines, expected) {
-      const socket = net.createConnection(paths.socketPath(root));
+      const socket = net.createConnection(paths.socketPath(root, socketDeps()));
       await new Promise((resolve, reject) => {
         socket.once('connect', resolve);
         socket.once('error', reject);
@@ -204,7 +204,7 @@ describe('session-daemon honesty + lifecycle (#122)', () => {
     ])('%s', async (_label, line) => {
       const root = tmpRoot();
       const { createCall } = makeStubCreateCall();
-      const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall });
+      const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall });
       try {
         const replies = await rawExchange(root, [line, FrameParser.encode({ id: 2, type: 'ping' })], 2);
         expect(replies[0]).toEqual({
@@ -213,7 +213,7 @@ describe('session-daemon honesty + lifecycle (#122)', () => {
           error: { message: expect.stringMatching(/malformed frame/) },
         });
         expect(replies[1]).toMatchObject({ id: 2, ok: true, result: { pong: true } });
-        expect(await sessionClient.isAlive(root)).toBe(true);
+        expect(await sessionClient.isAlive(root, socketDeps())).toBe(true);
       } finally {
         await daemon.stop();
       }
@@ -228,7 +228,7 @@ describe('session-daemon honesty + lifecycle (#122)', () => {
     const root = tmpRoot();
     const events = [];
     const { createCall } = makeStubCreateCall({ delayMs: 100 });
-    const daemon = await startDaemon({
+    const daemon = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       idleMs: 0,
       createCall,
@@ -238,7 +238,7 @@ describe('session-daemon honesty + lifecycle (#122)', () => {
       },
     });
     try {
-      const socket = net.createConnection(paths.socketPath(root));
+      const socket = net.createConnection(paths.socketPath(root, socketDeps()));
       await new Promise((resolve, reject) => {
         socket.once('connect', resolve);
         socket.once('error', reject);
@@ -255,7 +255,7 @@ describe('session-daemon honesty + lifecycle (#122)', () => {
           message: expect.stringMatching(/undeliverable sink exploded/),
         })
       );
-      expect(await sessionClient.isAlive(root)).toBe(true);
+      expect(await sessionClient.isAlive(root, socketDeps())).toBe(true);
     } finally {
       await daemon.stop();
     }

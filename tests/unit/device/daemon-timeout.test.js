@@ -13,11 +13,11 @@ const path = require('path');
 
 const { startDaemon, DAEMON_CALL_TIMEOUT_MS } = require('../../../src/device/session-daemon');
 const sessionClient = require('../../../src/device/session-client');
-const { usePrivateTmpdir } = require('../../helpers/private-tmpdir');
+const { useSocketDeps } = require('../../helpers/socket-deps');
 
 // A deep temp root's socket goes to the fallback directory: keep it in a
 // temp dir of this file's, never the real per-user one (#346).
-usePrivateTmpdir();
+const socketDeps = useSocketDeps();
 
 function tmpRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-timeout-'));
@@ -39,7 +39,7 @@ describe('session-daemon per-call timeout (#149)', () => {
   test('a call that never resolves is bounded by DAEMON_CALL_TIMEOUT_MS with kind:timeout + verify-state hint', async () => {
     const root = tmpRoot();
     const { createCall } = hangingCreateCall();
-    const daemon = await startDaemon({
+    const daemon = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       idleMs: 0,
       createCall,
@@ -47,7 +47,7 @@ describe('session-daemon per-call timeout (#149)', () => {
       scheduleTimeout: async () => {},
     });
 
-    const conn = await sessionClient.tryConnect(root);
+    const conn = await sessionClient.tryConnect(root, socketDeps());
     let err = null;
     try {
       await conn.call('mobile_press_button', { button: 'BACK' });
@@ -60,7 +60,7 @@ describe('session-daemon per-call timeout (#149)', () => {
     expect(err.hint).toMatch(/verify state/);
 
     // in_flight returned to 0 after the timeout reply went out.
-    expect(await sessionClient.getSessionStatus(root)).toEqual({ running: true, reason: null, in_flight: 0, device: null });
+    expect(await sessionClient.getSessionStatus(root, socketDeps())).toEqual({ running: true, reason: null, in_flight: 0, device: null });
 
     await conn.close();
     await daemon.stop();
@@ -74,7 +74,7 @@ describe('session-daemon per-call timeout (#149)', () => {
       },
       close: async () => {},
     });
-    const daemon = await startDaemon({
+    const daemon = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       idleMs: 0,
       createCall,
@@ -82,7 +82,7 @@ describe('session-daemon per-call timeout (#149)', () => {
       scheduleTimeout: () => new Promise(() => {}),
     });
 
-    const conn = await sessionClient.tryConnect(root);
+    const conn = await sessionClient.tryConnect(root, socketDeps());
     let err = null;
     try {
       await conn.call('mobile_press_button', {});
@@ -94,7 +94,7 @@ describe('session-daemon per-call timeout (#149)', () => {
     expect(err.kind).toBeUndefined();
     expect(err.hint).toBeUndefined();
 
-    expect(await sessionClient.getSessionStatus(root)).toEqual({ running: true, reason: null, in_flight: 0, device: null });
+    expect(await sessionClient.getSessionStatus(root, socketDeps())).toEqual({ running: true, reason: null, in_flight: 0, device: null });
 
     await conn.close();
     await daemon.stop();
@@ -103,7 +103,7 @@ describe('session-daemon per-call timeout (#149)', () => {
   test('stopping guard: a call frame after stop() began is rejected without incrementing in_flight', async () => {
     const root = tmpRoot();
     const { createCall, resolvers } = hangingCreateCall();
-    const daemon = await startDaemon({
+    const daemon = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       idleMs: 0,
       createCall,
@@ -111,14 +111,14 @@ describe('session-daemon per-call timeout (#149)', () => {
     });
 
     // One hanging call keeps stop()'s drain blocked (server still listening).
-    const connA = await sessionClient.tryConnect(root);
+    const connA = await sessionClient.tryConnect(root, socketDeps());
     const callP = connA.call('hang', {});
     await new Promise((r) => setTimeout(r, 20));
 
     const stopP = daemon.stop(); // stopping=true synchronously; drain waits on inFlight=1
 
     // A NEW connection's call frame must be rejected up front.
-    const connB = await sessionClient.tryConnect(root);
+    const connB = await sessionClient.tryConnect(root, socketDeps());
     let err = null;
     try {
       await connB.call('late', {});
@@ -129,7 +129,7 @@ describe('session-daemon per-call timeout (#149)', () => {
     expect(err.message).toMatch(/shutting down/);
 
     // in_flight is still 1 — the rejected call never incremented it.
-    expect(await sessionClient.getSessionStatus(root)).toEqual({ running: true, reason: null, in_flight: 1, device: null });
+    expect(await sessionClient.getSessionStatus(root, socketDeps())).toEqual({ running: true, reason: null, in_flight: 1, device: null });
 
     // Release the hanging call so stop()'s drain completes.
     resolvers[0]({ done: true });
@@ -143,7 +143,7 @@ describe('session-daemon per-call timeout (#149)', () => {
   test('ping reports in_flight reflecting outstanding calls', async () => {
     const root = tmpRoot();
     const { createCall, resolvers } = hangingCreateCall();
-    const daemon = await startDaemon({
+    const daemon = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       idleMs: 0,
       createCall,
@@ -152,19 +152,19 @@ describe('session-daemon per-call timeout (#149)', () => {
 
     // Two calls in flight on separate connections (frames on one socket are
     // handled sequentially, so concurrency needs two sockets).
-    const connA = await sessionClient.tryConnect(root);
-    const connB = await sessionClient.tryConnect(root);
+    const connA = await sessionClient.tryConnect(root, socketDeps());
+    const connB = await sessionClient.tryConnect(root, socketDeps());
     const pA = connA.call('a', {});
     const pB = connB.call('b', {});
     await new Promise((r) => setTimeout(r, 20));
 
-    expect(await sessionClient.getSessionStatus(root)).toEqual({ running: true, reason: null, in_flight: 2, device: null });
+    expect(await sessionClient.getSessionStatus(root, socketDeps())).toEqual({ running: true, reason: null, in_flight: 2, device: null });
 
     resolvers[0]({ done: 'a' });
     resolvers[1]({ done: 'b' });
     await Promise.all([pA, pB]);
 
-    expect(await sessionClient.getSessionStatus(root)).toEqual({ running: true, reason: null, in_flight: 0, device: null });
+    expect(await sessionClient.getSessionStatus(root, socketDeps())).toEqual({ running: true, reason: null, in_flight: 0, device: null });
 
     await connA.close();
     await connB.close();
@@ -190,7 +190,7 @@ describe('session-daemon per-call timeout (#149)', () => {
       },
       close: async () => {},
     });
-    const daemon = await startDaemon({
+    const daemon = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       idleMs: 0,
       createCall,
@@ -198,7 +198,7 @@ describe('session-daemon per-call timeout (#149)', () => {
       scheduleTimeout: () => new Promise(() => {}),
     });
 
-    const conn = await sessionClient.tryConnect(root);
+    const conn = await sessionClient.tryConnect(root, socketDeps());
     let err = null;
     try {
       await conn.call('mobile_press_button', {});
@@ -223,7 +223,7 @@ describe('session-daemon per-call timeout (#149)', () => {
     // hung at exactly the moment a human needs to know.
     const root = tmpRoot();
     const { createCall } = hangingCreateCall();
-    const daemon = await startDaemon({
+    const daemon = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       idleMs: 0,
       createCall,
@@ -231,7 +231,7 @@ describe('session-daemon per-call timeout (#149)', () => {
       scheduleTimeout: async () => {},
     });
 
-    const conn = await sessionClient.tryConnect(root);
+    const conn = await sessionClient.tryConnect(root, socketDeps());
     let err = null;
     try {
       await conn.call('/Users/someone/unreleased-thing.apk', {});

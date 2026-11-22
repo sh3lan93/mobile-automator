@@ -10,11 +10,11 @@ const paths = require('../../../src/device/session-paths');
 const { ensureSalt, readSalt } = require('../../../src/device/session-salt');
 const { ensureSessionDirs } = require('../../../src/device/session-dir');
 const { UnsafePathError } = require('../../../src/workspace/safe-fs');
-const { usePrivateTmpdir } = require('../../helpers/private-tmpdir');
+const { useSocketDeps } = require('../../helpers/socket-deps');
 
 // A deep temp root's socket goes to the fallback directory: keep it in a
 // temp dir of this file's, never the real per-user one (#346).
-const privateTmp = usePrivateTmpdir();
+const socketDeps = useSocketDeps();
 
 // Captured before any test fakes the clock, so a bounded wait still expires.
 const realSetTimeout = setTimeout;
@@ -59,9 +59,9 @@ describe('session-daemon', () => {
   test('serves a request via the fake connection', async () => {
     const root = tmpRoot();
     const { createCall, state } = makeFakeCreateCall();
-    const daemon = await startDaemon({ root, projectRoot: root, idleMs: 0, createCall });
+    const daemon = await startDaemon({ socketDeps: socketDeps(), root, projectRoot: root, idleMs: 0, createCall });
 
-    const conn = await sessionClient.tryConnect(root);
+    const conn = await sessionClient.tryConnect(root, socketDeps());
     const res = await conn.call('mobile_press_button', { button: 'BACK' });
     expect(res).toEqual({ echoed: 'mobile_press_button', args: { button: 'BACK' } });
     expect(state.calls).toHaveLength(1);
@@ -73,10 +73,10 @@ describe('session-daemon', () => {
   test('single-connection invariant: N calls across M clients build exactly one connection', async () => {
     const root = tmpRoot();
     const { createCall, state } = makeFakeCreateCall();
-    const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall });
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall });
 
     for (let i = 0; i < 5; i++) {
-      const conn = await sessionClient.tryConnect(root);
+      const conn = await sessionClient.tryConnect(root, socketDeps());
       await conn.call('mobile_list_elements_on_screen', {});
       await conn.close();
     }
@@ -96,7 +96,7 @@ describe('session-daemon', () => {
       seen = opts;
       return { call: async () => ({}), close: async () => {} };
     };
-    const daemon = await startDaemon({
+    const daemon = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       engine: 'legacy',
       engineSource: 'config',
@@ -115,7 +115,7 @@ describe('session-daemon', () => {
   test('writes handle + pidfile on listen and removes them on stop', async () => {
     const root = tmpRoot();
     const { createCall } = makeFakeCreateCall();
-    const daemon = await startDaemon({ projectRoot: root, device: 'emulator-5554', idleMs: 0, createCall });
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, device: 'emulator-5554', idleMs: 0, createCall });
 
     expect(fs.existsSync(paths.handlePath(root))).toBe(true);
     expect(fs.existsSync(paths.pidFilePath(root))).toBe(true);
@@ -129,14 +129,14 @@ describe('session-daemon', () => {
     await daemon.stop();
     expect(fs.existsSync(paths.handlePath(root))).toBe(false);
     expect(fs.existsSync(paths.pidFilePath(root))).toBe(false);
-    expect(fs.existsSync(paths.socketPath(root))).toBe(false);
+    expect(fs.existsSync(paths.socketPath(root, socketDeps()))).toBe(false);
   });
 
   test('stop never deletes the marker salt: it is created once, never rotated (#236)', async () => {
     const root = tmpRoot();
     const salt = ensureSalt(root);
     const { createCall } = makeFakeCreateCall();
-    const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall });
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall });
     await daemon.stop();
     expect(readSalt(root)).toBe(salt);
   });
@@ -144,11 +144,11 @@ describe('session-daemon', () => {
   test('idle timeout reaps the daemon', async () => {
     const root = tmpRoot();
     const { createCall, state } = makeFakeCreateCall();
-    const daemon = await startDaemon({ projectRoot: root, idleMs: 50, createCall });
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 50, createCall });
 
     await daemon.whenStopped;
     expect(state.closed).toBe(1);
-    expect(fs.existsSync(paths.socketPath(root))).toBe(false);
+    expect(fs.existsSync(paths.socketPath(root, socketDeps()))).toBe(false);
   });
 
   // Fake clock, not real sleeps: with real time, any event-loop stall longer
@@ -172,17 +172,17 @@ describe('session-daemon', () => {
       const root = tmpRoot();
       const { createCall, state } = makeFakeCreateCall();
       const idleMs = 1000;
-      daemon = await startDaemon({ projectRoot: root, idleMs, createCall });
+      daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs, createCall });
 
       // Three pings, each just inside the idle window, keep it alive well past
       // the original one — only possible if every request re-arms the timer.
       for (let i = 0; i < 3; i++) {
         await jest.advanceTimersByTimeAsync(idleMs - 1);
-        const conn = await sessionClient.tryConnect(root);
+        const conn = await sessionClient.tryConnect(root, socketDeps());
         await conn.call('ping_tool', {});
         await conn.close();
       }
-      expect(await sessionClient.isAlive(root)).toBe(true);
+      expect(await sessionClient.isAlive(root, socketDeps())).toBe(true);
 
       // And the timer is still armed: it reaps exactly idleMs after the last
       // request, so a daemon that never idles cannot pass this test.
@@ -196,47 +196,47 @@ describe('session-daemon', () => {
 
   test('cleanStale removes a stale socket/pidfile so a fresh daemon can bind', async () => {
     const root = tmpRoot();
-    ensureSessionDirs(root);
+    ensureSessionDirs(root, socketDeps());
     // Write a pidfile pointing at a definitely-dead pid + a leftover socket file.
     fs.writeFileSync(paths.pidFilePath(root), '999999999\n');
-    fs.writeFileSync(paths.socketPath(root), 'stale');
+    fs.writeFileSync(paths.socketPath(root, socketDeps()), 'stale');
     fs.writeFileSync(paths.handlePath(root), '{}');
 
     expect(() => cleanStale(root)).toThrow(/requires socketPath/);
-    const r = cleanStale(root, { socketPath: paths.socketPath(root) });
+    const r = cleanStale(root, { socketPath: paths.socketPath(root, socketDeps()) });
     expect(r.cleaned).toBe(true);
-    expect(fs.existsSync(paths.socketPath(root))).toBe(false);
+    expect(fs.existsSync(paths.socketPath(root, socketDeps()))).toBe(false);
     expect(fs.existsSync(paths.pidFilePath(root))).toBe(false);
 
     // And a fresh daemon binds cleanly afterwards.
     const { createCall } = makeFakeCreateCall();
-    const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall });
-    expect(await sessionClient.isAlive(root)).toBe(true);
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall });
+    expect(await sessionClient.isAlive(root, socketDeps())).toBe(true);
     await daemon.stop();
   });
 
   test('startDaemon reaps its own stale leftovers before binding', async () => {
     const root = tmpRoot();
-    ensureSessionDirs(root);
+    ensureSessionDirs(root, socketDeps());
     fs.writeFileSync(paths.pidFilePath(root), '999999999\n');
-    fs.writeFileSync(paths.socketPath(root), 'stale');
+    fs.writeFileSync(paths.socketPath(root, socketDeps()), 'stale');
 
     const { createCall } = makeFakeCreateCall();
-    const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall });
-    expect(await sessionClient.isAlive(root)).toBe(true);
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall });
+    expect(await sessionClient.isAlive(root, socketDeps())).toBe(true);
     await daemon.stop();
   });
 
   test('shutdown control frame stops the daemon', async () => {
     const root = tmpRoot();
     const { createCall, state } = makeFakeCreateCall();
-    const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall });
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall });
 
-    const acked = await sessionClient.requestShutdown(root);
+    const acked = await sessionClient.requestShutdown(root, socketDeps());
     expect(acked).toBe(true);
     await daemon.whenStopped;
     expect(state.closed).toBe(1);
-    expect(fs.existsSync(paths.socketPath(root))).toBe(false);
+    expect(fs.existsSync(paths.socketPath(root, socketDeps()))).toBe(false);
   });
 });
 
@@ -252,17 +252,22 @@ describe('session-daemon private files (#346)', () => {
     return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-daemon-out-'));
   }
 
-  // The isolation every daemon suite relies on (tests/helpers/private-tmpdir.js):
-  // the socket is in the workspace, or in this file's private temp dir, never in
-  // the real per-user fallback directory.
-  test('the socket lands in the workspace or in this file\'s private temp dir, nowhere else', async () => {
-    const root = tmpRoot();
+  // The isolation every daemon suite relies on (tests/helpers/socket-deps.js):
+  // a root too deep for an in-workspace socket binds in the fallback under the
+  // socketDeps it was given, never the real per-user directory, and the client
+  // given the same deps finds it there. Deep on every host, so this is never
+  // vacuously in the workspace.
+  test('a deep root binds in the fallback under its socketDeps, and the client finds it there', async () => {
+    const root = path.join(tmpRoot(), 'd'.repeat(80));
+    fs.mkdirSync(root);
     const { createCall } = makeFakeCreateCall();
-    const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall });
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall });
     try {
-      const { file, inWorkspace } = paths.socketLocation(root);
+      const { file, inWorkspace } = paths.socketLocation(root, socketDeps());
+      expect(inWorkspace).toBe(false);
+      expect(file.startsWith(socketDeps().tmpdir() + path.sep)).toBe(true);
       expect(daemon.socketPath).toBe(file);
-      expect(inWorkspace || file.startsWith(privateTmp() + path.sep)).toBe(true);
+      expect(await sessionClient.isAlive(root, socketDeps())).toBe(true);
     } finally {
       await daemon.stop();
     }
@@ -287,7 +292,7 @@ describe('session-daemon private files (#346)', () => {
     }
 
     const { createCall } = makeFakeCreateCall();
-    const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall });
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall });
     try {
       for (const target of Object.values(targets)) {
         expect(fs.readFileSync(target, 'utf8')).toBe(`${process.pid}\n`);
@@ -322,7 +327,7 @@ describe('session-daemon private files (#346)', () => {
       }
       return { call: async () => ({}), close: async () => {} };
     };
-    const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall });
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall });
     try {
       for (const [link, target] of Object.entries(targets)) {
         expect(fs.readFileSync(target, 'utf8')).toBe('precious\n');
@@ -340,7 +345,7 @@ describe('session-daemon private files (#346)', () => {
     let daemon;
     try {
       const { createCall } = makeFakeCreateCall();
-      daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall });
+      daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall });
       expect(process.umask(0o022)).toBe(0o022);
       expect(mode(paths.sessionDir(root))).toBe(0o700);
       expect(fs.lstatSync(daemon.socketPath).isSocket()).toBe(true);
@@ -354,7 +359,7 @@ describe('session-daemon private files (#346)', () => {
 
   test('a socket that cannot be made 0600 fails the start like a listen failure, undoing it', async () => {
     const root = tmpRoot();
-    const sock = paths.socketPath(root);
+    const sock = paths.socketPath(root, socketDeps());
     const realChmod = fs.chmodSync;
     const chmod = jest.spyOn(fs, 'chmodSync').mockImplementation((p, m) => {
       if (p === sock) throw Object.assign(new Error('EPERM'), { code: 'EPERM' });
@@ -364,7 +369,7 @@ describe('session-daemon private files (#346)', () => {
     const events = [];
     try {
       await expect(
-        startDaemon({ projectRoot: root, idleMs: 0, createCall, recorderFor: () => (e) => events.push(e) })
+        startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall, recorderFor: () => (e) => events.push(e) })
       ).rejects.toMatchObject({ code: 'EPERM' });
     } finally {
       chmod.mockRestore();
@@ -381,7 +386,7 @@ describe('session-daemon private files (#346)', () => {
     fs.mkdirSync(paths.sessionDir(root), { recursive: true });
     fs.chmodSync(paths.sessionDir(root), 0o755);
     const { createCall } = makeFakeCreateCall();
-    const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall });
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall });
     try {
       expect(mode(paths.sessionDir(root))).toBe(0o700);
     } finally {
@@ -396,7 +401,7 @@ describe('session-daemon private files (#346)', () => {
     fs.symlinkSync(outside, paths.sessionDir(root));
     const { createCall, state } = makeFakeCreateCall();
     const events = [];
-    const start = startDaemon({
+    const start = startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       idleMs: 0,
       createCall,
@@ -412,9 +417,9 @@ describe('session-daemon private files (#346)', () => {
   test('a lock-race loser is told how to clear a stuck lock', async () => {
     const root = tmpRoot();
     const { createCall } = makeFakeCreateCall();
-    const winner = await startDaemon({ projectRoot: root, idleMs: 0, createCall });
+    const winner = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall });
     try {
-      const loser = startDaemon({ projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall().createCall });
+      const loser = startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall().createCall });
       await expect(loser).rejects.toMatchObject({ code: 'ELOCKED' });
       await expect(loser).rejects.toThrow(/lock held.*if none is starting, run `mauto session end`/);
     } finally {

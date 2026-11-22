@@ -145,6 +145,11 @@ async function startDaemon({
   // process that is actually a daemon — injects makeFlusher.
   flushFor = null,
   flushIntervalMs = FLUSH_INTERVAL_MS,
+  // Where the socket fallback lives ({ tmpdir, getuid }, session-paths.js),
+  // handed to ensureSessionDirs and nowhere else: the path it answers is the
+  // one this daemon uses. Production (the bin) passes none. The in-process
+  // tests pass a temp dir of their own, and the same value to the client.
+  socketDeps = {},
 } = {}) {
   if (!projectRoot) throw new TypeError('startDaemon requires projectRoot');
 
@@ -206,7 +211,7 @@ async function startDaemon({
   // directory of that path, with nothing recomputed in between.
   let socketPath;
   try {
-    socketPath = ensureSessionDirs(projectRoot);
+    socketPath = ensureSessionDirs(projectRoot, socketDeps);
   } catch (err) {
     safeObserve({
       level: 'error',

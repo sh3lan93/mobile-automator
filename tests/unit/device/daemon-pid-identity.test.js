@@ -16,11 +16,11 @@ const { pidIdentity, isZombie, readPidFile } = require('../../../src/device/proc
 const paths = require('../../../src/device/session-paths');
 const { ensureSalt, readSalt } = require('../../../src/device/session-salt');
 const { ensureSessionDirs } = require('../../../src/device/session-dir');
-const { usePrivateTmpdir } = require('../../helpers/private-tmpdir');
+const { useSocketDeps } = require('../../helpers/socket-deps');
 
 // A deep temp root's socket goes to the fallback directory: keep it in a
 // temp dir of this file's, never the real per-user one (#346).
-usePrivateTmpdir();
+const socketDeps = useSocketDeps();
 
 function tmpRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-pid-'));
@@ -150,15 +150,15 @@ describe('pidIdentity bound to a workspace (#156)', () => {
 describe('cleanStale with pid identity (#150)', () => {
   test('a lockfile pointing at a recycled (other) pid is cleaned — wedge cleared', () => {
     const root = tmpRoot();
-    ensureSessionDirs(root);
+    ensureSessionDirs(root, socketDeps());
     fs.writeFileSync(paths.lockPath(root), String(process.ppid) + '\n');
     fs.writeFileSync(paths.pidFilePath(root), '999999999\n');
-    fs.writeFileSync(paths.socketPath(root), 'stale');
+    fs.writeFileSync(paths.socketPath(root, socketDeps()), 'stale');
     fs.writeFileSync(paths.handlePath(root), '{}');
 
-    const r = cleanStale(root, { socketPath: paths.socketPath(root), execFile: () => 'node /usr/bin/something-else' });
+    const r = cleanStale(root, { socketPath: paths.socketPath(root, socketDeps()), execFile: () => 'node /usr/bin/something-else' });
     expect(r.cleaned).toBe(true);
-    expect(fs.existsSync(paths.socketPath(root))).toBe(false);
+    expect(fs.existsSync(paths.socketPath(root, socketDeps()))).toBe(false);
     expect(fs.existsSync(paths.lockPath(root))).toBe(false);
     expect(fs.existsSync(paths.pidFilePath(root))).toBe(false);
   });
@@ -170,37 +170,37 @@ describe('cleanStale with pid identity (#150)', () => {
     fs.writeFileSync(paths.pidFilePath(root), '999999999\n');
     fs.writeFileSync(paths.handlePath(root), '{}');
 
-    expect(cleanStale(root, { socketPath: paths.socketPath(root), execFile: () => 'node /usr/bin/something-else' }).cleaned).toBe(true);
+    expect(cleanStale(root, { socketPath: paths.socketPath(root, socketDeps()), execFile: () => 'node /usr/bin/something-else' }).cleaned).toBe(true);
     expect(readSalt(root)).toBe(salt);
   });
 
   test('a lockfile pointing at an ours pid is respected', () => {
     const root = tmpRoot();
-    ensureSessionDirs(root);
+    ensureSessionDirs(root, socketDeps());
     fs.writeFileSync(paths.lockPath(root), String(process.ppid) + '\n');
-    fs.writeFileSync(paths.socketPath(root), 'stale');
+    fs.writeFileSync(paths.socketPath(root, socketDeps()), 'stale');
 
-    const r = cleanStale(root, { socketPath: paths.socketPath(root), execFile: () => 'node /path/to/mauto-session-daemon.js' });
+    const r = cleanStale(root, { socketPath: paths.socketPath(root, socketDeps()), execFile: () => 'node /path/to/mauto-session-daemon.js' });
     expect(r.cleaned).toBe(false);
     expect(r.livePid).toBe(process.ppid);
-    expect(fs.existsSync(paths.socketPath(root))).toBe(true); // untouched
+    expect(fs.existsSync(paths.socketPath(root, socketDeps()))).toBe(true); // untouched
   });
 
   test('a lockfile pointing at an unknown pid is respected (never clean when unsure)', () => {
     const root = tmpRoot();
-    ensureSessionDirs(root);
+    ensureSessionDirs(root, socketDeps());
     fs.writeFileSync(paths.lockPath(root), String(process.ppid) + '\n');
-    fs.writeFileSync(paths.socketPath(root), 'stale');
+    fs.writeFileSync(paths.socketPath(root, socketDeps()), 'stale');
 
     const r = cleanStale(root, {
-      socketPath: paths.socketPath(root),
+      socketPath: paths.socketPath(root, socketDeps()),
       execFile: () => {
         throw new Error('ENOENT');
       },
     });
     expect(r.cleaned).toBe(false);
     expect(r.livePid).toBe(process.ppid);
-    expect(fs.existsSync(paths.socketPath(root))).toBe(true);
+    expect(fs.existsSync(paths.socketPath(root, socketDeps()))).toBe(true);
   });
 });
 
@@ -214,7 +214,7 @@ describe('stale lock from a daemon killed mid-startup (#156)', () => {
     const dead = require('child_process').spawnSync(process.execPath, ['-e', '']).pid;
     fs.writeFileSync(paths.lockPath(root), `${dead}\n`);
 
-    const daemon = await startDaemon({
+    const daemon = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       createCall: async () => ({ call: async () => ({}), close: async () => {} }),
     });

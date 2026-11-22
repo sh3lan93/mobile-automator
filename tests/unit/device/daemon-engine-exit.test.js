@@ -12,11 +12,11 @@ const { startDaemon } = require('../../../src/device/session-daemon');
 const sessionClient = require('../../../src/device/session-client');
 const paths = require('../../../src/device/session-paths');
 const { FrameParser } = require('../../../src/device/session-protocol');
-const { usePrivateTmpdir } = require('../../helpers/private-tmpdir');
+const { useSocketDeps } = require('../../helpers/socket-deps');
 
 // A deep temp root's socket goes to the fallback directory: keep it in a
 // temp dir of this file's, never the real per-user one (#346).
-usePrivateTmpdir();
+const socketDeps = useSocketDeps();
 
 function tmpRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-engine-exit-'));
@@ -52,7 +52,7 @@ function engineStub({ exitDuringConnect = false } = {}) {
 function rawPing(root) {
   return new Promise((resolve, reject) => {
     const parser = new FrameParser();
-    const sock = net.createConnection(paths.socketPath(root));
+    const sock = net.createConnection(paths.socketPath(root, socketDeps()));
     sock.setEncoding('utf8');
     sock.on('error', reject);
     sock.on('connect', () => sock.write(FrameParser.encode({ id: 1, type: 'ping' })));
@@ -71,7 +71,7 @@ describe('daemon engine exit (#156)', () => {
   test('ping reports engine_alive:true while the engine is up', async () => {
     const root = tmpRoot();
     const { createCall } = engineStub();
-    const daemon = await startDaemon({ projectRoot: root, createCall });
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, createCall });
     const res = await rawPing(root);
     expect(res.result.engine_alive).toBe(true);
     await daemon.stop();
@@ -81,7 +81,7 @@ describe('daemon engine exit (#156)', () => {
     const root = tmpRoot();
     const obs = collector();
     const { createCall, s } = engineStub();
-    const daemon = await startDaemon({ projectRoot: root, createCall, recorderFor: () => obs });
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, createCall, recorderFor: () => obs });
 
     s.exit();
     await daemon.whenStopped;
@@ -97,9 +97,9 @@ describe('daemon engine exit (#156)', () => {
   test('an in-flight call gets its error reply before teardown; ping during the drain says engine_alive:false', async () => {
     const root = tmpRoot();
     const { createCall, s } = engineStub();
-    const daemon = await startDaemon({ projectRoot: root, createCall });
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, createCall });
 
-    const conn = await sessionClient.tryConnect(root);
+    const conn = await sessionClient.tryConnect(root, socketDeps());
     const pending = conn.call('hang', {}).catch((e) => e);
     while (!s.release) await new Promise((r) => setTimeout(r, 5));
 
@@ -120,7 +120,7 @@ describe('daemon engine exit (#156)', () => {
     const root = tmpRoot();
     const obs = collector();
     const { createCall, s } = engineStub({ exitDuringConnect: true });
-    const err = await startDaemon({ projectRoot: root, createCall, recorderFor: () => obs }).catch((e) => e);
+    const err = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, createCall, recorderFor: () => obs }).catch((e) => e);
 
     expect(err.code).toBe('ENGINE_EXITED');
     expect(gone(root)).toEqual([]);
@@ -134,8 +134,8 @@ describe('daemon engine exit (#156)', () => {
     const root = tmpRoot();
     const obs = collector();
     const { createCall } = engineStub();
-    const daemon = await startDaemon({ projectRoot: root, createCall, recorderFor: () => obs });
-    expect(await sessionClient.requestShutdown(root)).toBe(true);
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, createCall, recorderFor: () => obs });
+    expect(await sessionClient.requestShutdown(root, socketDeps())).toBe(true);
     await daemon.whenStopped;
     expect(obs.names()).not.toContain('daemon.engine_exit');
   });
@@ -144,7 +144,7 @@ describe('daemon engine exit (#156)', () => {
     const root = tmpRoot();
     const obs = collector();
     const { createCall, s } = engineStub();
-    const daemon = await startDaemon({ projectRoot: root, createCall, recorderFor: () => obs });
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, createCall, recorderFor: () => obs });
     s.exit();
     s.exit();
     await daemon.whenStopped;

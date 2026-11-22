@@ -10,11 +10,11 @@ const { tryConnect, isAlive, requestShutdown, getSessionStatus } = require('../.
 const paths = require('../../../src/device/session-paths');
 const { ensureSessionDirs } = require('../../../src/device/session-dir');
 const { FrameParser } = require('../../../src/device/session-protocol');
-const { usePrivateTmpdir } = require('../../helpers/private-tmpdir');
+const { useSocketDeps } = require('../../helpers/socket-deps');
 
 // A deep temp root's socket goes to the fallback directory: keep it in a
 // temp dir of this file's, never the real per-user one (#346).
-usePrivateTmpdir();
+const socketDeps = useSocketDeps();
 
 function tmpRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-client-'));
@@ -30,18 +30,18 @@ function fakeCreateCall() {
 describe('session-client', () => {
   test('tryConnect returns null when no socket exists', async () => {
     const root = tmpRoot();
-    expect(await tryConnect(root)).toBeNull();
+    expect(await tryConnect(root, socketDeps())).toBeNull();
   });
 
   test('isAlive is false when no daemon is running', async () => {
     const root = tmpRoot();
-    expect(await isAlive(root)).toBe(false);
+    expect(await isAlive(root, socketDeps())).toBe(false);
   });
 
   test('tryConnect + call works against an in-process daemon', async () => {
     const root = tmpRoot();
-    const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall: fakeCreateCall() });
-    const conn = await tryConnect(root);
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall: fakeCreateCall() });
+    const conn = await tryConnect(root, socketDeps());
     expect(conn).not.toBeNull();
     const res = await conn.call('mobile_type_keys', { text: 'hi' });
     expect(res).toEqual({ tool: 'mobile_type_keys', args: { text: 'hi' } });
@@ -51,40 +51,40 @@ describe('session-client', () => {
 
   test('isAlive is true against a live daemon', async () => {
     const root = tmpRoot();
-    const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall: fakeCreateCall() });
-    expect(await isAlive(root)).toBe(true);
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall: fakeCreateCall() });
+    expect(await isAlive(root, socketDeps())).toBe(true);
     await daemon.stop();
   });
 
   test('requestShutdown stops a live daemon and returns true', async () => {
     const root = tmpRoot();
-    const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall: fakeCreateCall() });
-    expect(await requestShutdown(root)).toBe(true);
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall: fakeCreateCall() });
+    expect(await requestShutdown(root, socketDeps())).toBe(true);
     await daemon.whenStopped;
-    expect(await isAlive(root)).toBe(false);
+    expect(await isAlive(root, socketDeps())).toBe(false);
   });
 
   test('requestShutdown returns false when no daemon is reachable', async () => {
     const root = tmpRoot();
-    expect(await requestShutdown(root)).toBe(false);
+    expect(await requestShutdown(root, socketDeps())).toBe(false);
   });
 
   test('getSessionStatus reports running:false with nulls when no daemon is up', async () => {
     const root = tmpRoot();
-    expect(await getSessionStatus(root)).toEqual({ running: false, reason: null, in_flight: null, device: null });
+    expect(await getSessionStatus(root, socketDeps())).toEqual({ running: false, reason: null, in_flight: null, device: null });
   });
 
   test('getSessionStatus reports running:true with in_flight and device against a live daemon', async () => {
     const root = tmpRoot();
-    const daemon = await startDaemon({ projectRoot: root, device: 'emulator-5554', idleMs: 0, createCall: fakeCreateCall() });
-    expect(await getSessionStatus(root)).toEqual({ running: true, reason: null, in_flight: 0, device: 'emulator-5554' });
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, device: 'emulator-5554', idleMs: 0, createCall: fakeCreateCall() });
+    expect(await getSessionStatus(root, socketDeps())).toEqual({ running: true, reason: null, in_flight: 0, device: 'emulator-5554' });
     await daemon.stop();
   });
 
   // A server speaking the daemon protocol with a chosen ping result.
   function fakeDaemon(root, result) {
-    const sock = paths.socketPath(root);
-    ensureSessionDirs(root);
+    const sock = paths.socketPath(root, socketDeps());
+    ensureSessionDirs(root, socketDeps());
     const server = net.createServer((s) => {
       const parser = new FrameParser();
       s.setEncoding('utf8');
@@ -101,7 +101,7 @@ describe('session-client', () => {
     const root = tmpRoot();
     const server = await fakeDaemon(root, { pong: true, device: 'A', in_flight: 1, engine_alive: false });
     try {
-      expect(await getSessionStatus(root)).toEqual({ running: false, reason: 'engine_exited', in_flight: 1, device: 'A' });
+      expect(await getSessionStatus(root, socketDeps())).toEqual({ running: false, reason: 'engine_exited', in_flight: 1, device: 'A' });
     } finally {
       await new Promise((r) => server.close(r));
     }
@@ -112,7 +112,7 @@ describe('session-client', () => {
     const root = tmpRoot();
     const server = await fakeDaemon(root, { pong: true, device: null, in_flight: 0 });
     try {
-      expect(await getSessionStatus(root)).toEqual({ running: true, reason: null, in_flight: 0, device: null });
+      expect(await getSessionStatus(root, socketDeps())).toEqual({ running: true, reason: null, in_flight: 0, device: null });
     } finally {
       await new Promise((r) => server.close(r));
     }
@@ -120,7 +120,7 @@ describe('session-client', () => {
 
   test('call propagates kind + hint from an ok:false reply', async () => {
     const root = tmpRoot();
-    ensureSessionDirs(root);
+    ensureSessionDirs(root, socketDeps());
     // A fake daemon that answers every call frame with a typed error reply.
     const server = net.createServer((socket) => {
       const parser = new FrameParser();
@@ -139,9 +139,9 @@ describe('session-client', () => {
         }
       });
     });
-    await new Promise((resolve) => server.listen(paths.socketPath(root), resolve));
+    await new Promise((resolve) => server.listen(paths.socketPath(root, socketDeps()), resolve));
 
-    const conn = await tryConnect(root);
+    const conn = await tryConnect(root, socketDeps());
     let err = null;
     try {
       await conn.call('mobile_press_button', {});
@@ -188,12 +188,12 @@ function countingServer() {
 // os.tmpdir(): macOS's long tmpdir pushes the in-workspace socket past the limit.
 function shortRoot() {
   const root = fs.mkdtempSync(path.join('/tmp', 'mc-'));
-  expect(paths.socketLocation(root).inWorkspace).toBe(true);
+  expect(paths.socketLocation(root, socketDeps()).inWorkspace).toBe(true);
   return root;
 }
 function deepRoot() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-client-deep-'.padEnd(60, 'x')));
-  expect(paths.socketLocation(root).inWorkspace).toBe(false);
+  expect(paths.socketLocation(root, socketDeps()).inWorkspace).toBe(false);
   return root;
 }
 
@@ -201,13 +201,13 @@ const DOWN = { running: false, reason: null, in_flight: null, device: null };
 
 describe('session-client socket verification', () => {
   async function drive(root) {
-    const conn = await tryConnect(root);
+    const conn = await tryConnect(root, socketDeps());
     if (conn) await conn.close();
     return {
       conn,
-      alive: await isAlive(root),
-      shutdown: await requestShutdown(root),
-      status: await getSessionStatus(root),
+      alive: await isAlive(root, socketDeps()),
+      shutdown: await requestShutdown(root, socketDeps()),
+      status: await getSessionStatus(root, socketDeps()),
     };
   }
 
@@ -227,10 +227,10 @@ describe('session-client socket verification', () => {
       const outside = fs.mkdtempSync(path.join('/tmp', 'mo-'));
       const srv = countingServer();
       try {
-        ensureSessionDirs(root);
+        ensureSessionDirs(root, socketDeps());
         const real = path.join(outside, 'real.sock');
         await srv.listen(real);
-        fs.symlinkSync(real, paths.socketPath(root));
+        fs.symlinkSync(real, paths.socketPath(root, socketDeps()));
 
         expectRefused(await drive(root));
         expect(srv.connections).toBe(0);
@@ -246,17 +246,17 @@ describe('session-client socket verification', () => {
     const root = shortRoot();
     const srv = countingServer();
     try {
-      ensureSessionDirs(root);
+      ensureSessionDirs(root, socketDeps());
       const dir = paths.sessionDir(root);
-      await srv.listen(paths.socketPath(root));
+      await srv.listen(paths.socketPath(root, socketDeps()));
       fs.chmodSync(dir, 0o755);
 
       expectRefused(await drive(root));
       expect(srv.connections).toBe(0);
 
-      ensureSessionDirs(root);
+      ensureSessionDirs(root, socketDeps());
       expect(fs.statSync(dir).mode & 0o777).toBe(0o700);
-      expect(await isAlive(root)).toBe(true);
+      expect(await isAlive(root, socketDeps())).toBe(true);
       expect(srv.connections).toBe(1);
     } finally {
       await srv.close();
@@ -268,9 +268,9 @@ describe('session-client socket verification', () => {
     const root = deepRoot();
     const srv = countingServer();
     try {
-      ensureSessionDirs(root);
-      const dir = path.dirname(paths.socketPath(root));
-      await srv.listen(paths.socketPath(root));
+      ensureSessionDirs(root, socketDeps());
+      const dir = path.dirname(paths.socketPath(root, socketDeps()));
+      await srv.listen(paths.socketPath(root, socketDeps()));
       fs.chmodSync(dir, 0o755);
 
       expectRefused(await drive(root));
@@ -278,7 +278,7 @@ describe('session-client socket verification', () => {
 
       let err = null;
       try {
-        ensureSessionDirs(root);
+        ensureSessionDirs(root, socketDeps());
       } catch (e) {
         err = e;
       }

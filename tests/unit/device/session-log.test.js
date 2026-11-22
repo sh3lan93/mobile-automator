@@ -10,11 +10,11 @@ const {
   logFilePath,
   socketLocation,
 } = require('../../../src/device/session-paths');
-const { usePrivateTmpdir } = require('../../helpers/private-tmpdir');
+const { useSocketDeps } = require('../../helpers/socket-deps');
 
 // A deep temp root's socket goes to the fallback directory: keep it in a
 // temp dir of this file's, never the real per-user one (#346).
-usePrivateTmpdir();
+const socketDeps = useSocketDeps();
 
 // One fake-fs shape for the whole file. Defaults are the happy path (the
 // session directory exists, private and ours; an empty existing log, fd 7);
@@ -277,7 +277,7 @@ describe('session-log', () => {
   test('a deep root whose fallback socket directory is refused still gets its log', () => {
     const root = path.join(newRoot(), 'd'.repeat(80));
     fs.mkdirSync(root);
-    const { dir: fallbackDir, inWorkspace } = socketLocation(root);
+    const { dir: fallbackDir, inWorkspace } = socketLocation(root, socketDeps());
     expect(inWorkspace).toBe(false);
     // The fallback directory reads as another user's. Only lstat is wrapped, and
     // only for that path, so nothing is created or changed there.

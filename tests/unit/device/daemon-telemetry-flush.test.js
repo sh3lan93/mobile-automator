@@ -5,11 +5,11 @@ const os = require('os');
 const path = require('path');
 
 const { startDaemon } = require('../../../src/device/session-daemon');
-const { usePrivateTmpdir } = require('../../helpers/private-tmpdir');
+const { useSocketDeps } = require('../../helpers/socket-deps');
 
 // A deep temp root's socket goes to the fallback directory: keep it in a
 // temp dir of this file's, never the real per-user one (#346).
-usePrivateTmpdir();
+const socketDeps = useSocketDeps();
 
 function workspace() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-dflush-'));
@@ -30,7 +30,7 @@ describe('daemon telemetry flush', () => {
 
   it('does nothing at all when no flusher is injected', async () => {
     const root = workspace();
-    const d = await startDaemon({ projectRoot: root, createCall, idleMs: 0 });
+    const d = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, createCall, idleMs: 0 });
     // No timer, no seam, no behaviour change for the ~40 in-process tests.
     jest.advanceTimersByTime(10 * 60 * 1000);
     await d.stop('shutdown');
@@ -45,7 +45,7 @@ describe('daemon telemetry flush', () => {
       return { ok: true, nextDelayMs: 1000 };
     };
 
-    const d = await startDaemon({ projectRoot: root, createCall, idleMs: 0, flushFor: () => flush, flushIntervalMs: 1000 });
+    const d = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, createCall, idleMs: 0, flushFor: () => flush, flushIntervalMs: 1000 });
     await jest.advanceTimersByTimeAsync(3500);
     expect(calls.length).toBeGreaterThanOrEqual(3);
     await d.stop('shutdown');
@@ -57,7 +57,7 @@ describe('daemon telemetry flush', () => {
     let i = 0;
     const flush = async () => ({ ok: false, nextDelayMs: delays[Math.min(i++, delays.length - 1)] });
 
-    const d = await startDaemon({ projectRoot: root, createCall, idleMs: 0, flushFor: () => flush, flushIntervalMs: 4000 });
+    const d = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, createCall, idleMs: 0, flushFor: () => flush, flushIntervalMs: 4000 });
     await jest.advanceTimersByTimeAsync(4000);   // first fire
     await jest.advanceTimersByTimeAsync(7999);   // not yet — it asked for 8000
     expect(i).toBe(1);
@@ -75,7 +75,7 @@ describe('daemon telemetry flush', () => {
     let flushes = 0;
     const flush = async () => { flushes++; return { ok: true, nextDelayMs: 1000 }; };
 
-    const d = await startDaemon({
+    const d = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root, createCall: slowCreateCall, idleMs: 0, flushFor: () => flush, flushIntervalMs: 1000,
     });
     // Simulated in-flight work is exercised through the daemon's own socket in
@@ -92,7 +92,7 @@ describe('daemon telemetry flush', () => {
     let flushes = 0;
     const flush = async () => { flushes++; return { ok: true, nextDelayMs: 1000 }; };
 
-    const d = await startDaemon({ projectRoot: root, createCall, idleMs: 0, flushFor: () => flush, flushIntervalMs: 1000 });
+    const d = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, createCall, idleMs: 0, flushFor: () => flush, flushIntervalMs: 1000 });
     await jest.advanceTimersByTimeAsync(1000);
     const seen = flushes;
     await d.stop('shutdown');
@@ -103,7 +103,7 @@ describe('daemon telemetry flush', () => {
   it('a throwing flusher never takes the daemon down', async () => {
     const root = workspace();
     const flush = async () => { throw new Error('flusher exploded'); };
-    const d = await startDaemon({ projectRoot: root, createCall, idleMs: 0, flushFor: () => flush, flushIntervalMs: 500 });
+    const d = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, createCall, idleMs: 0, flushFor: () => flush, flushIntervalMs: 500 });
     await jest.advanceTimersByTimeAsync(2000);
     await expect(d.stop('shutdown')).resolves.toBeUndefined();
   });

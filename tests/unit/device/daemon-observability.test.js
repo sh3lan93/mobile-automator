@@ -19,11 +19,11 @@ const { startDaemon } = require('../../../src/device/session-daemon');
 const sessionClient = require('../../../src/device/session-client');
 const paths = require('../../../src/device/session-paths');
 const { ensureSessionDirs } = require('../../../src/device/session-dir');
-const { usePrivateTmpdir } = require('../../helpers/private-tmpdir');
+const { useSocketDeps } = require('../../helpers/socket-deps');
 
 // A deep temp root's socket goes to the fallback directory: keep it in a
 // temp dir of this file's, never the real per-user one (#346).
-usePrivateTmpdir();
+const socketDeps = useSocketDeps();
 
 function tmpRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-daemon-obs-'));
@@ -78,7 +78,7 @@ describe('daemon lifecycle events', () => {
   test('records daemon.start with the pinned device and a startup duration', async () => {
     const root = tmpRoot();
     const observe = collector();
-    const daemon = await startDaemon({
+    const daemon = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       device: 'emulator-5554',
       idleMs: 0,
@@ -98,7 +98,7 @@ describe('daemon lifecycle events', () => {
 
   test('writes its session id into the handle and exposes it on the daemon', async () => {
     const root = tmpRoot();
-    const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall() });
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall() });
 
     const handle = JSON.parse(fs.readFileSync(paths.handlePath(root), 'utf8'));
     expect(handle.session_id).toMatch(/^[0-9a-f]{16}$/);
@@ -115,7 +115,7 @@ describe('daemon lifecycle events', () => {
     // silently. Nothing can hand it an id any more, and this is the tripwire for
     // reintroducing the parameter.
     const root = tmpRoot();
-    const daemon = await startDaemon({
+    const daemon = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       idleMs: 0,
       createCall: makeFakeCreateCall(),
@@ -132,7 +132,7 @@ describe('daemon lifecycle events', () => {
   test('records daemon.stop with the reason and the session lifetime', async () => {
     const root = tmpRoot();
     const observe = collector();
-    const daemon = await startDaemon({
+    const daemon = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       idleMs: 0,
       createCall: makeFakeCreateCall(),
@@ -150,7 +150,7 @@ describe('daemon lifecycle events', () => {
   test('names the idle reap as the reason when the idle timer fires', async () => {
     const root = tmpRoot();
     const observe = collector();
-    const daemon = await startDaemon({
+    const daemon = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       idleMs: 50,
       createCall: makeFakeCreateCall(),
@@ -165,14 +165,14 @@ describe('daemon lifecycle events', () => {
   test('names a shutdown frame as the reason', async () => {
     const root = tmpRoot();
     const observe = collector();
-    const daemon = await startDaemon({
+    const daemon = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       idleMs: 0,
       createCall: makeFakeCreateCall(),
       recorderFor: always(observe),
     });
 
-    expect(await sessionClient.requestShutdown(root)).toBe(true);
+    expect(await sessionClient.requestShutdown(root, socketDeps())).toBe(true);
     await daemon.whenStopped;
 
     expect(observe.named('daemon.stop')[0].stop_reason).toBe('shutdown');
@@ -181,7 +181,7 @@ describe('daemon lifecycle events', () => {
   test('records at most one daemon.stop even when stop() is called twice', async () => {
     const root = tmpRoot();
     const observe = collector();
-    const daemon = await startDaemon({
+    const daemon = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       idleMs: 0,
       createCall: makeFakeCreateCall(),
@@ -198,11 +198,11 @@ describe('daemon lifecycle events', () => {
 describe('daemon failure events', () => {
   test('records daemon.lock_conflict at warn when a second daemon loses the race', async () => {
     const root = tmpRoot();
-    const winner = await startDaemon({ projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall() });
+    const winner = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall() });
 
     const observe = collector();
     await expect(
-      startDaemon({ projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall(), recorderFor: always(observe) })
+      startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall(), recorderFor: always(observe) })
     ).rejects.toMatchObject({ code: 'ELOCKED' });
 
     const [conflict] = observe.named('daemon.lock_conflict');
@@ -222,7 +222,7 @@ describe('daemon failure events', () => {
     };
 
     await expect(
-      startDaemon({ projectRoot: root, idleMs: 0, createCall: boom, recorderFor: always(observe) })
+      startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall: boom, recorderFor: always(observe) })
     ).rejects.toThrow('no devices found');
 
     const [fail] = observe.named('daemon.connect_failure');
@@ -239,11 +239,11 @@ describe('daemon failure events', () => {
     // A DIRECTORY at the socket path survives cleanStale's safeUnlink, so
     // listen() fails deterministically without needing a real port race.
     // The socket's directory is made private first, as the daemon would.
-    ensureSessionDirs(root);
-    fs.mkdirSync(paths.socketPath(root));
+    ensureSessionDirs(root, socketDeps());
+    fs.mkdirSync(paths.socketPath(root, socketDeps()));
 
     await expect(
-      startDaemon({ projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall(), recorderFor: always(observe) })
+      startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall(), recorderFor: always(observe) })
     ).rejects.toThrow();
 
     const [fail] = observe.named('daemon.listen_failure');
@@ -263,7 +263,7 @@ describe('daemon failure events', () => {
     fs.writeFileSync(paths.sessionDir(root), 'not a directory\n');
 
     await expect(
-      startDaemon({ projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall(), recorderFor: always(observe) })
+      startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall(), recorderFor: always(observe) })
     ).rejects.toThrow();
 
     const [fail] = observe.named('daemon.start_failure');
@@ -288,7 +288,7 @@ describe('observability is never load-bearing', () => {
   test('a throwing observe does not stop the daemon from starting or stopping', async () => {
     const root = tmpRoot();
 
-    const daemon = await startDaemon({
+    const daemon = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       idleMs: 0,
       createCall: makeFakeCreateCall(),
@@ -315,13 +315,13 @@ describe('observability is never load-bearing', () => {
     // there would both mask the real cause and leak the lock, wedging every
     // later spawn in this workspace.
     await expect(
-      startDaemon({ projectRoot: root, idleMs: 0, createCall: boom, recorderFor: always(explode) })
+      startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall: boom, recorderFor: always(explode) })
     ).rejects.toMatchObject({ code: 'ENODEV' });
 
     expect(fs.existsSync(paths.lockPath(root))).toBe(false);
 
     // Proof the workspace is not wedged: a fresh daemon still takes the lock.
-    const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall() });
+    const daemon = await startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall() });
     await daemon.stop();
   });
 
@@ -335,7 +335,7 @@ describe('observability is never load-bearing', () => {
     // call.start fires BEFORE call(), so an unguarded sink would mean the tap
     // never reaches the device — observability deciding whether an action runs.
     let calls = 0;
-    const daemon = await startDaemon({
+    const daemon = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       idleMs: 0,
       createCall: makeFakeCreateCall(async (tool) => {
@@ -345,7 +345,7 @@ describe('observability is never load-bearing', () => {
       recorderFor: always(explode),
     });
 
-    const conn = await sessionClient.tryConnect(root);
+    const conn = await sessionClient.tryConnect(root, socketDeps());
     await expect(conn.call('mobile_press_button', { button: 'BACK' })).resolves.toEqual({
       echoed: 'mobile_press_button',
     });
@@ -354,7 +354,7 @@ describe('observability is never load-bearing', () => {
     // Still usable afterwards, and the frame accounting is intact.
     await expect(conn.call('mobile_press_button', { button: 'HOME' })).resolves.toBeDefined();
     expect(calls).toBe(2);
-    expect(await sessionClient.getSessionStatus(root)).toEqual({ running: true, reason: null, in_flight: 0, device: null });
+    expect(await sessionClient.getSessionStatus(root, socketDeps())).toEqual({ running: true, reason: null, in_flight: 0, device: null });
 
     await conn.close();
     await expect(daemon.stop()).resolves.toBeUndefined();
@@ -362,7 +362,7 @@ describe('observability is never load-bearing', () => {
 
   test('a throwing observe never masks the device error it was recording', async () => {
     const root = tmpRoot();
-    const daemon = await startDaemon({
+    const daemon = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       idleMs: 0,
       createCall: makeFakeCreateCall(async () => {
@@ -371,7 +371,7 @@ describe('observability is never load-bearing', () => {
       recorderFor: always(explode),
     });
 
-    const conn = await sessionClient.tryConnect(root);
+    const conn = await sessionClient.tryConnect(root, socketDeps());
     let err = null;
     try {
       await conn.call('mobile_press_button', { button: 'BACK' });
@@ -383,7 +383,7 @@ describe('observability is never load-bearing', () => {
     expect(err.message).toBe('adb: device offline');
     expect(err.message).not.toMatch(/observe exploded/);
 
-    expect(await sessionClient.getSessionStatus(root)).toEqual({ running: true, reason: null, in_flight: 0, device: null });
+    expect(await sessionClient.getSessionStatus(root, socketDeps())).toEqual({ running: true, reason: null, in_flight: 0, device: null });
 
     await conn.close();
     await daemon.stop();
@@ -399,14 +399,14 @@ describe('device call events', () => {
   test('records call.end at info with the primitive and a measured duration', async () => {
     const root = tmpRoot();
     const observe = collector();
-    const daemon = await startDaemon({
+    const daemon = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       idleMs: 0,
       createCall: makeFakeCreateCall(),
       recorderFor: always(observe),
     });
 
-    const conn = await sessionClient.tryConnect(root);
+    const conn = await sessionClient.tryConnect(root, socketDeps());
     await conn.call('mobile_press_button', { button: 'BACK' });
     await conn.close();
 
@@ -432,7 +432,7 @@ describe('device call events', () => {
     const root = tmpRoot();
     const observe = collector();
     const resolvers = [];
-    const daemon = await startDaemon({
+    const daemon = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       idleMs: 0,
       createCall: makeFakeCreateCall(
@@ -441,8 +441,8 @@ describe('device call events', () => {
       recorderFor: always(observe),
     });
 
-    const a = await sessionClient.tryConnect(root);
-    const b = await sessionClient.tryConnect(root);
+    const a = await sessionClient.tryConnect(root, socketDeps());
+    const b = await sessionClient.tryConnect(root, socketDeps());
     const callA = a.call('mobile_press_button', { button: 'BACK' });
     const callB = b.call('mobile_swipe_on_screen', {});
     while (resolvers.length < 2) await new Promise((r) => setTimeout(r, 5));
@@ -471,14 +471,14 @@ describe('device call events', () => {
     // caller text on a field cleared for the network.
     const root = tmpRoot();
     const observe = collector();
-    const daemon = await startDaemon({
+    const daemon = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       idleMs: 0,
       createCall: makeFakeCreateCall(),
       recorderFor: always(observe),
     });
 
-    const raw = net.connect(paths.socketPath(root));
+    const raw = net.connect(paths.socketPath(root, socketDeps()));
     await new Promise((r) => raw.once('connect', r));
     raw.write(
       JSON.stringify({
@@ -501,7 +501,7 @@ describe('device call events', () => {
   test('records the undeliverable-reply seam as a warn event', async () => {
     const root = tmpRoot();
     const observe = collector();
-    const daemon = await startDaemon({
+    const daemon = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       idleMs: 0,
       createCall: makeFakeCreateCall(async () => {
@@ -512,7 +512,7 @@ describe('device call events', () => {
       recorderFor: always(observe),
     });
 
-    const raw = net.connect(paths.socketPath(root));
+    const raw = net.connect(paths.socketPath(root, socketDeps()));
     await new Promise((r) => raw.once('connect', r));
     raw.write(JSON.stringify({ id: 1, type: 'call', tool: 'mobile_press_button', args: {} }) + '\n');
     await new Promise((r) => setTimeout(r, 10));
@@ -543,14 +543,14 @@ describe('device call events', () => {
     // append per device call and nothing more.
     const root = tmpRoot();
     const logDir = path.join(root, 'logs');
-    const daemon = await startDaemon({
+    const daemon = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       idleMs: 0,
       createCall: makeFakeCreateCall(),
       recorderFor: recorderInto(root, logDir),
     });
 
-    const conn = await sessionClient.tryConnect(root);
+    const conn = await sessionClient.tryConnect(root, socketDeps());
     await conn.call('mobile_press_button', { button: 'BACK' });
     await conn.call('mobile_press_button', { button: 'HOME' });
     await conn.close();
@@ -576,14 +576,14 @@ describe('device call events', () => {
     // the exact join a reader of daemon.ndjson has to make.
     const root = tmpRoot();
     const logDir = path.join(root, 'logs');
-    const daemon = await startDaemon({
+    const daemon = await startDaemon({ socketDeps: socketDeps(),
       projectRoot: root,
       idleMs: 0,
       createCall: makeFakeCreateCall(),
       recorderFor: recorderInto(root, logDir),
     });
 
-    const conn = await sessionClient.tryConnect(root);
+    const conn = await sessionClient.tryConnect(root, socketDeps());
     await conn.call('mobile_press_button', { button: 'BACK' });
     await conn.close();
 
