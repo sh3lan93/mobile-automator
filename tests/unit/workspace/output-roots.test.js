@@ -116,7 +116,7 @@ describe('crashOutTarget', () => {
     fs.mkdirSync(path.join(s.root, 'sub'));
     for (const out of [path.join(s.root, 'c.txt'), path.join(s.tmp, 'c.txt'), path.join(s.root, 'sub', 'c.txt')]) {
       const t = crashOutTarget(s.root, out, s.host);
-      expect(t).toMatchObject({ path: out, confined: false });
+      expect(t).toMatchObject({ path: out });
     }
   });
 
@@ -157,14 +157,14 @@ describe('crashOutTarget', () => {
     const s = setup();
     fs.mkdirSync(path.join(s.root, 'reports'));
     const out = path.join(s.root, 'reports', 'c.txt');
-    expect(crashOutTarget(s.root, out, s.host)).toMatchObject({ path: out, confined: false, scope: 'project' });
+    expect(crashOutTarget(s.root, out, s.host)).toMatchObject({ path: out, scope: 'path' });
   });
 
   it('a root that does not resolve is skipped, not matched', () => {
     const s = setup();
     const host = { ...s.host, tmpdir: () => path.join(s.base, 'no-such-tmp') };
     refusal(() => crashOutTarget(s.root, path.join(s.outside, 'c.txt'), host));
-    expect(crashOutTarget(s.root, path.join(s.root, 'c.txt'), host).confined).toBe(false);
+    expect(crashOutTarget(s.root, path.join(s.root, 'c.txt'), host).scope).toBe('path');
   });
 
   it('a project that is home: its paths are refused, the temp dir still allowed, and the hint says why', () => {
@@ -174,7 +174,7 @@ describe('crashOutTarget', () => {
     expect(err.hint).toContain('The project directory is not allowed');
     expect(err.hint).not.toContain(s.root);
     expect(err.hint).toContain(s.tmp);
-    expect(crashOutTarget(s.root, path.join(s.tmp, 'c.txt'), host).confined).toBe(false);
+    expect(crashOutTarget(s.root, path.join(s.tmp, 'c.txt'), host).scope).toBe('outside');
   });
 
   describe('/tmp on macOS', () => {
@@ -199,7 +199,6 @@ describe('crashOutTarget', () => {
       const out = path.join(s.root, '.mobile-automator', 'c.txt');
       expect(crashOutTarget(s.root, out, { ...s.host, homedir: () => s.root })).toMatchObject({
         path: out,
-        confined: true,
       });
     });
 
@@ -208,7 +207,7 @@ describe('crashOutTarget', () => {
       const alias = path.join(tmpDir('mauto-out-roots-root-alias-'), 'p');
       fs.symlinkSync(s.root, alias);
       const t = crashOutTarget(s.root, path.join(alias, '.mobile-automator', 'c.txt'), s.host);
-      expect(t).toMatchObject({ path: path.join(s.root, '.mobile-automator', 'c.txt'), confined: true });
+      expect(t).toMatchObject({ path: path.join(s.root, '.mobile-automator', 'c.txt') });
     });
   });
 

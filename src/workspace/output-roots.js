@@ -57,8 +57,8 @@ function crashOutRoots(
   return { roots, projectTooBroad };
 }
 
-// Where the report for `out` (absolute) goes, userFile's `{ path, confined,
-// scope, open }`, checked before the device is asked so a bad --out costs no
+// Where the report for `out` (absolute) goes, userFile's `{ path, scope,
+// open }`, checked before the device is asked so a bad --out costs no
 // device work, and creating nothing: a failed device call leaves no trace.
 //
 // First, in every scope, userFile's preflight: in the project (workspace or
@@ -91,7 +91,7 @@ function crashOutTarget(projectRoot, out, host = {}) {
     const real = realpathOrNull(root);
     return real !== null && isInside(dir, real);
   };
-  if (roots.some(holdsDir)) return target.scope === 'project' ? target : { ...target, open: openUserLeaf };
+  if (roots.some(holdsDir)) return target.scope === 'path' ? target : { ...target, open: openUserLeaf };
   throw new OutputPathRefusal(
     `--out resolves outside the directories a crash report may be written to: ${target.path}`,
     projectTooBroad

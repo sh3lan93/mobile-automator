@@ -142,13 +142,13 @@ describe('userDir / userDest / userFile (#347)', () => {
   it('userFile confines a workspace file and words an outside refusal in the path scope', () => {
     fs.symlinkSync(outside, path.join(ws, 'results'));
     const inside = userFile(root, path.join(ws, 'results', 'r.txt'));
-    expect(inside.confined).toBe(true);
+    expect(inside.scope).toBe('workspace');
     expect(expectUnsafe(() => inside.open(inside.path, O_WRONLY | O_CREAT), 'symlink').scope).toBe('workspace');
 
     const leaf = path.join(outside, 'r.txt');
     fs.symlinkSync(canaryFile, leaf);
     const out = userFile(root, leaf);
-    expect(out).toMatchObject({ confined: false, path: leaf });
+    expect(out).toMatchObject({ path: leaf });
     expect(expectUnsafe(() => out.open(out.path, O_WRONLY | O_CREAT), 'symlink').scope).toBe('path');
     expect(snapshot(outside)).toEqual({ 'r.txt': CANARY, 'secret.txt': CANARY });
   });
@@ -162,16 +162,14 @@ describe('inProject / userPath scopes (#362)', () => {
     const elsewhere = path.join(outside, 'r.xml');
     expect(userPath(root, path.join(ws, 'reports', 'r.xml'))).toEqual({
       path: path.join(ws, 'reports', 'r.xml'),
-      confined: true,
       scope: 'workspace',
     });
     expect(userPath(root, path.join(root, 'reports', 'r.xml'))).toEqual({
       path: path.join(root, 'reports', 'r.xml'),
-      confined: false,
-      scope: 'project',
+      scope: 'path',
     });
-    expect(userPath(root, root)).toMatchObject({ path: root, scope: 'project' });
-    expect(userPath(root, elsewhere)).toEqual({ path: elsewhere, confined: false, scope: 'outside' });
+    expect(userPath(root, root)).toMatchObject({ path: root, scope: 'path' });
+    expect(userPath(root, elsewhere)).toEqual({ path: elsewhere, scope: 'outside' });
   });
 
   it('inProject keeps a lexical project path and is null outside the project', () => {
@@ -186,8 +184,7 @@ describe('inProject / userPath scopes (#362)', () => {
     expect(inProject(realRoot, path.join(alias, 'reports', 'r.xml'))).toBe(path.join(realRoot, 'reports', 'r.xml'));
     expect(userPath(realRoot, path.join(alias, 'reports', 'r.xml'))).toEqual({
       path: path.join(realRoot, 'reports', 'r.xml'),
-      confined: false,
-      scope: 'project',
+      scope: 'path',
     });
   });
 });
@@ -200,7 +197,7 @@ describe('userFile in the project, outside the workspace (#362)', () => {
     fs.symlinkSync(outside, reports());
     const before = snapshot(outside);
     const t = userFile(root, path.join(reports(), 'r.xml'));
-    expect(t.scope).toBe('project');
+    expect(t.scope).toBe('path');
     const err = expectUnsafe(() => openIn(t), 'symlink');
     expect(err.kind).toBe('environment');
     expect(err.scope).toBe('path');

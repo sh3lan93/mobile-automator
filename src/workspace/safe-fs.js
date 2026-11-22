@@ -631,8 +631,10 @@ function createProjectFile(projectRoot, file, { mode = 0o666 } = {}, deps = {}) 
 }
 
 // Paths the user chose (--out, --junit, a screenshot destination, a
-// MAUTO_LOG_DIR): `{ path, confined, scope }`, scope 'workspace', 'project' or
-// 'outside' (see the header), `confined` true for the workspace one. In the
+// MAUTO_LOG_DIR): `{ path, scope }`, scope 'workspace', 'path' (in the project,
+// outside the workspace) or 'outside' (see the header). A scope is named as
+// SCOPES names its wording, so a target's `scope` is its refusal's
+// `err.scope`. In the
 // workspace and the project `path` is the one inProject re-roots (through an
 // aliased root it differs from the one given, and every check and write must
 // use the checked one); outside it is the given path resolved. The entry
@@ -640,9 +642,8 @@ function createProjectFile(projectRoot, file, { mode = 0o666 } = {}, deps = {}) 
 // paths itself.
 function userPath(projectRoot, file, deps) {
   const p = inProject(projectRoot, file, deps);
-  if (!p) return { path: path.resolve(file), confined: false, scope: 'outside' };
-  const scope = isInside(p, path.resolve(workspaceDir(projectRoot))) ? 'workspace' : 'project';
-  return { path: p, confined: scope === 'workspace', scope };
+  if (!p) return { path: path.resolve(file), scope: 'outside' };
+  return { path: p, scope: isInside(p, path.resolve(workspaceDir(projectRoot))) ? 'workspace' : 'path' };
 }
 
 // A directory the user chose: the checked walk when it lands in the
@@ -651,7 +652,7 @@ function userPath(projectRoot, file, deps) {
 // as given anywhere else), not its realpath.
 function userDir(projectRoot, dir, { create = false } = {}, deps = {}) {
   const target = userPath(projectRoot, dir, deps);
-  if (target.confined) {
+  if (target.scope === 'workspace') {
     safeDir(projectRoot, target.path, { create }, deps);
     return target.path;
   }
@@ -678,7 +679,7 @@ function userDest(projectRoot, file, deps = {}) {
 }
 
 // A file mauto writes itself at a path the user chose: userPath's `path`,
-// `confined` and `scope`, plus
+// and `scope`, plus
 //   - `open(file, flags, mode)` for it or a sibling in the same directory (a
 //     temp file). In the workspace openWorkspaceFile; in the project
 //     openProjectFile (#362), a refusal worded in the 'path' scope. Both walk
@@ -703,7 +704,7 @@ function userFile(projectRoot, file, deps = {}) {
       },
     };
   }
-  if (target.scope === 'project') {
+  if (target.scope === 'path') {
     return {
       ...target,
       open: (f, flags, mode = 0o666) => withScope('path', () => openProjectFile(projectRoot, f, flags, mode, deps)),
