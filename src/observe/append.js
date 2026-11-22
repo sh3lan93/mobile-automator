@@ -8,13 +8,14 @@
 // Three steps, each a single function:
 //   * allowed: the no-workspace gate. No .mobile-automator/ and no
 //     MAUTO_LOG_DIR means no file is written at all.
-//   * inSettledDir: the file's path inside a directory settled through
-//     safe-fs's userDir (the checked walk when it lands in the workspace, a
-//     plain mkdir when it is a MAUTO_LOG_DIR outside it; created only when
-//     asked). A cloned repo can ship `.logs/` as a link, so no observe file is
-//     reached through a directory that was not checked.
-//   * appendLine: one open, write and close, through safe-fs's openOwnedLeaf
-//     (O_NOFOLLOW, a regular file, ours, one hard link). appendFileSync would
+//   * settledLeaf: the file inside a directory settled through safe-fs's
+//     userDir (the checked walk when it lands in the workspace, a plain mkdir
+//     when it is a MAUTO_LOG_DIR outside it; created only when asked). A
+//     cloned repo can ship `.logs/` as a link, so no observe file is reached
+//     through a directory that was not checked.
+//   * appendLine: one open, write and close, through the settled leaf's open
+//     (safe-fs's openOwnedLeaf: O_NOFOLLOW, a regular file, ours, one hard
+//     link, the owner rule bound by userDir). appendFileSync would
 //     follow a planted `mauto.ndjson -> ~/.bashrc`, and a file hard-linked to
 //     one elsewhere would be written by another name. A refusal throws; every
 //     caller drops the line, since observability is never load-bearing.
@@ -24,10 +25,9 @@
 // (renamed by a rotation or a spool claim between the two calls, or swapped).
 
 const realFs = require('fs');
-const path = require('path');
 
 const { workspaceDir } = require('../workspace/layout');
-const { settleUserDir, openOwnedLeaf } = require('../workspace/safe-fs');
+const { userDir } = require('../workspace/safe-fs');
 
 const { O_WRONLY, O_APPEND, O_CREAT } = realFs.constants;
 
@@ -50,20 +50,15 @@ function allowed(projectRoot, env, fs = realFs) {
 }
 
 // `name`'s basename inside `dir`, after settling `dir` through safe-fs's
-// settleUserDir (created when `create`): `{ path, confined }`. The path is the
-// one to use: in the workspace it is re-rooted, so it can differ from `dir`.
-// `confined` (the directory is in the workspace) is what the leaf's open or
-// read passes as `trustOverride`: MAUTO_TRUST_WORKSPACE_OWNER=1 applies to a
-// leaf in the checkout only, never to one in a MAUTO_LOG_DIR outside it (#363).
-// Throws on a refusal.
+// userDir (created when `create`): userDir's leaf, `{ path, open, read }`. The
+// path is the one to use: in the workspace it is re-rooted, so it can differ
+// from `dir`; a caller that opens nothing (a list, a rename) uses it alone.
+// `open` and `read` carry the owner rule userDir bound from where the
+// directory landed: MAUTO_TRUST_WORKSPACE_OWNER=1 applies to a leaf in the
+// checkout only, never to one in a MAUTO_LOG_DIR outside it (#363). Throws on
+// a refusal.
 function settledLeaf(projectRoot, dir, name, { create = false } = {}, { fs = realFs, env, getuid } = {}) {
-  const settled = settleUserDir(projectRoot, dir, { create }, { fs, env, getuid });
-  return { path: path.join(settled.path, path.basename(name)), confined: settled.confined };
-}
-
-// settledLeaf's path alone, for a caller that opens no leaf (a list, a rename).
-function inSettledDir(projectRoot, dir, name, opts = {}, deps = {}) {
-  return settledLeaf(projectRoot, dir, name, opts, deps).path;
+  return userDir(projectRoot, dir, { create }, { fs, env, getuid }).leaf(name);
 }
 
 // The one size comparison a cap makes, shared by the append below and atCap,
@@ -72,17 +67,15 @@ function reached(size, capBytes) {
   return size >= capBytes;
 }
 
-// Appends `line` to `target`, a leaf whose directory the caller settled
-// (settledLeaf). Returns false when `capBytes` is given and the file already
-// holds that much: the NEW line is dropped and nothing older is touched. Throws
-// on a refused or failed open or write; the fd is closed either way.
-// `trustOverride` is settledLeaf's `confined`; without it the owner is
-// compared outright.
+// Appends `line` to `leaf`, a settledLeaf. Returns false when `capBytes` is
+// given and the file already holds that much: the NEW line is dropped and
+// nothing older is touched. Throws on a refused or failed open or write; the
+// fd is closed either way. `fs` writes to the fd the leaf opened.
 //
 // One open per line: no fd is held between lines, so a rotation or a claim in
 // between is never written past.
-function appendLine(target, line, { capBytes, trustOverride = false, fs = realFs, env, getuid } = {}) {
-  const fd = openOwnedLeaf(target, O_WRONLY | O_APPEND | O_CREAT, { trustOverride }, { fs, env, getuid });
+function appendLine(leaf, line, { capBytes, fs = realFs } = {}) {
+  const fd = leaf.open(O_WRONLY | O_APPEND | O_CREAT);
   try {
     if (capBytes !== undefined && reached(fs.fstatSync(fd).size, capBytes)) return false;
     fs.writeSync(fd, line);
@@ -105,4 +98,4 @@ function atCap(target, { fs = realFs, maxBytes } = {}) {
   }
 }
 
-module.exports = { allowed, settledLeaf, inSettledDir, appendLine, atCap };
+module.exports = { allowed, settledLeaf, appendLine, atCap };

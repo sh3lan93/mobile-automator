@@ -142,15 +142,15 @@ describe('userDir / userDest / userFile (#347)', () => {
     fs.symlinkSync(outside, path.join(ws, '.logs'));
     expectUnsafe(() => userDir(root, path.join(ws, '.logs'), { create: true }), 'symlink');
     const plain = path.join(outside, 'logs', 'deep');
-    expect(userDir(root, plain, { create: true })).toBe(plain);
+    expect(userDir(root, plain, { create: true }).path).toBe(plain);
     expect(fs.lstatSync(plain).isDirectory()).toBe(true);
-    expect(userDir(root, path.join(outside, 'absent'))).toBe(path.join(outside, 'absent'));
+    expect(userDir(root, path.join(outside, 'absent')).path).toBe(path.join(outside, 'absent'));
     expect(fs.existsSync(path.join(outside, 'absent'))).toBe(false);
   });
 
   it('userDir and userDest return the re-rooted path through an aliased root', () => {
     const { realRoot, alias, realWs } = aliasedRoot(base, root);
-    expect(userDir(realRoot, path.join(alias, '.mobile-automator', 'a'), { create: true })).toBe(path.join(realWs, 'a'));
+    expect(userDir(realRoot, path.join(alias, '.mobile-automator', 'a'), { create: true }).path).toBe(path.join(realWs, 'a'));
     expect(userDest(realRoot, path.join(alias, '.mobile-automator', 'b', 'x.png'))).toBe(path.join(realWs, 'b', 'x.png'));
   });
 

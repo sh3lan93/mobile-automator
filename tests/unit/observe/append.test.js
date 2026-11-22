@@ -23,7 +23,7 @@ beforeEach(() => {
 afterEach(() => removeSafeFsFixture(fx.base));
 
 const logsDir = () => path.join(fx.ws, '.logs');
-const settled = (name = 'x.ndjson') => append.inSettledDir(fx.root, logsDir(), name, { create: true });
+const settled = (name = 'x.ndjson', deps = {}) => append.settledLeaf(fx.root, logsDir(), name, { create: true }, deps);
 
 describe('allowed: the no-workspace gate', () => {
   it('allows a set-up workspace and refuses a directory without one', () => {
@@ -36,10 +36,10 @@ describe('allowed: the no-workspace gate', () => {
   });
 });
 
-describe('inSettledDir', () => {
+describe('settledLeaf', () => {
   it('creates the directory when asked and names the basename inside it', () => {
     const target = settled(path.join('/somewhere/else', 'x.ndjson'));
-    expect(target).toBe(path.join(logsDir(), 'x.ndjson'));
+    expect(target.path).toBe(path.join(logsDir(), 'x.ndjson'));
     expect(fs.lstatSync(logsDir()).isDirectory()).toBe(true);
   });
 
@@ -54,48 +54,48 @@ describe('appendLine', () => {
     const target = settled();
     expect(append.appendLine(target, 'a\n')).toBe(true);
     expect(append.appendLine(target, 'b\n')).toBe(true);
-    expect(fs.readFileSync(target, 'utf8')).toBe('a\nb\n');
+    expect(fs.readFileSync(target.path, 'utf8')).toBe('a\nb\n');
   });
 
   it('drops the new line once the file has reached capBytes, and keeps the old bytes', () => {
     const target = settled();
-    fs.writeFileSync(target, 'x'.repeat(10));
+    fs.writeFileSync(target.path, 'x'.repeat(10));
     expect(append.appendLine(target, 'new\n', { capBytes: 10 })).toBe(false);
-    expect(fs.readFileSync(target, 'utf8')).toBe('x'.repeat(10));
+    expect(fs.readFileSync(target.path, 'utf8')).toBe('x'.repeat(10));
     expect(append.appendLine(target, 'new\n', { capBytes: 11 })).toBe(true);
   });
 
   it('measures the cap on the fd it opened, not by a stat of the path', () => {
     const target = settled();
-    fs.writeFileSync(target, 'x'.repeat(10));
+    fs.writeFileSync(target.path, 'x'.repeat(10));
     const statSaysEmpty = { ...fs, statSync: () => ({ size: 0 }) };
     expect(append.appendLine(target, 'new\n', { capBytes: 10, fs: statSaysEmpty })).toBe(false);
-    expect(fs.statSync(target).size).toBe(10);
+    expect(fs.statSync(target.path).size).toBe(10);
   });
 
   it('never writes through a symlinked leaf', () => {
     const target = settled();
-    fs.symlinkSync(fx.canaryFile, target);
+    fs.symlinkSync(fx.canaryFile, target.path);
     expectUnsafe(() => append.appendLine(target, 'x\n'), 'symlink');
     expect(fs.readFileSync(fx.canaryFile, 'utf8')).toBe(CANARY);
   });
 
   it('never writes to a leaf hard-linked to a file elsewhere', () => {
     const target = settled();
-    fs.linkSync(fx.canaryFile, target);
+    fs.linkSync(fx.canaryFile, target.path);
     expectUnsafe(() => append.appendLine(target, 'x\n'), 'hardlink');
     expect(fs.readFileSync(fx.canaryFile, 'utf8')).toBe(CANARY);
   });
 
   it('never writes to a leaf owned by another uid', () => {
-    const target = settled();
-    fs.writeFileSync(target, 'old\n');
-    expectUnsafe(() => append.appendLine(target, 'x\n', { fs: foreignFs(['fstatSync']) }), 'foreign_owner');
-    expect(fs.readFileSync(target, 'utf8')).toBe('old\n');
+    const foreign = foreignFs(['fstatSync']);
+    const target = settled('x.ndjson', { fs: foreign });
+    fs.writeFileSync(target.path, 'old\n');
+    expectUnsafe(() => append.appendLine(target, 'x\n', { fs: foreign }), 'foreign_owner');
+    expect(fs.readFileSync(target.path, 'utf8')).toBe('old\n');
   });
 
   it('closes the fd when the write fails', () => {
-    const target = settled();
     const opened = [];
     const closed = [];
     const failing = {
@@ -113,6 +113,7 @@ describe('appendLine', () => {
         throw Object.assign(new Error('ENOSPC'), { code: 'ENOSPC' });
       },
     };
+    const target = settled('x.ndjson', { fs: failing });
     expect(() => append.appendLine(target, 'x\n', { fs: failing })).toThrow('ENOSPC');
     expect(opened).toHaveLength(1);
     expect(closed).toEqual(opened);
@@ -122,10 +123,10 @@ describe('appendLine', () => {
 describe('atCap', () => {
   it('uses the same comparison as the append: at or past maxBytes', () => {
     const target = settled();
-    expect(append.atCap(target, { maxBytes: 10 })).toBe(false); // no file yet
-    fs.writeFileSync(target, 'x'.repeat(9));
-    expect(append.atCap(target, { maxBytes: 10 })).toBe(false);
-    fs.writeFileSync(target, 'x'.repeat(10));
-    expect(append.atCap(target, { maxBytes: 10 })).toBe(true);
+    expect(append.atCap(target.path, { maxBytes: 10 })).toBe(false); // no file yet
+    fs.writeFileSync(target.path, 'x'.repeat(9));
+    expect(append.atCap(target.path, { maxBytes: 10 })).toBe(false);
+    fs.writeFileSync(target.path, 'x'.repeat(10));
+    expect(append.atCap(target.path, { maxBytes: 10 })).toBe(true);
   });
 });
