@@ -1,6 +1,6 @@
 'use strict';
 
-// safe-fs for paths the user chose (#347): inWorkspace, the userDir /
+// safe-fs for paths the user chose (#347): the userPath scopes, the userDir /
 // userDest / userFile entry points, safeWorkspaceDest and isInside. Inside
 // the workspace they get the workspace rules; elsewhere they are the user's
 // call. Fixture: tests/helpers/safe-fs-fixture.js.
@@ -10,7 +10,6 @@ const fs = require('fs');
 const path = require('path');
 
 const {
-  inWorkspace,
   inProject,
   safeWorkspaceDest,
   isInside,
@@ -45,25 +44,37 @@ afterEach(() => {
   removeSafeFsFixture(base);
 });
 
-describe('inWorkspace', () => {
+// userPath is private: its classification is read off the userFile target,
+// which every writer gets. workspacePath is that target's path when it lands
+// in the workspace scope, else null (what the deleted inWorkspace returned).
+const userPath = (root_, file, deps) => {
+  const { path: p, scope } = userFile(root_, file, deps);
+  return { path: p, scope };
+};
+const workspacePath = (root_, file, deps) => {
+  const t = userPath(root_, file, deps);
+  return t.scope === 'workspace' ? t.path : null;
+};
+
+describe('userPath: the workspace scope', () => {
   it('returns a path inside the workspace as is', () => {
     const p = path.join(ws, 'screenshots', 'a.png');
-    expect(inWorkspace(root, p)).toBe(p);
-    expect(inWorkspace(root, ws)).toBe(ws);
+    expect(workspacePath(root, p)).toBe(p);
+    expect(workspacePath(root, ws)).toBe(ws);
   });
 
   it('is null for a project file outside the workspace', () => {
-    expect(inWorkspace(root, path.join(root, 'shots', 'a.png'))).toBeNull();
-    expect(inWorkspace(root, path.join(root, '.mobile-automator-old', 'a.png'))).toBeNull();
-    expect(inWorkspace(root, root)).toBeNull();
+    expect(workspacePath(root, path.join(root, 'shots', 'a.png'))).toBeNull();
+    expect(workspacePath(root, path.join(root, '.mobile-automator-old', 'a.png'))).toBeNull();
+    expect(workspacePath(root, root)).toBeNull();
   });
 
   it('is null for a path outside the project (an explicit /tmp/x.png)', () => {
     const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-elsewhere-'));
     try {
-      expect(inWorkspace(root, path.join(elsewhere, 'x.png'))).toBeNull();
-      expect(inWorkspace(root, path.join(outside, 'x.png'))).toBeNull();
-      expect(inWorkspace(root, path.join(base, 'nope', 'deeper', 'x.png'))).toBeNull();
+      expect(workspacePath(root, path.join(elsewhere, 'x.png'))).toBeNull();
+      expect(workspacePath(root, path.join(outside, 'x.png'))).toBeNull();
+      expect(workspacePath(root, path.join(base, 'nope', 'deeper', 'x.png'))).toBeNull();
     } finally {
       fs.rmSync(elsewhere, { recursive: true, force: true });
     }
@@ -71,21 +82,21 @@ describe('inWorkspace', () => {
 
   it('maps a workspace path reached through a symlinked parent onto the real root', () => {
     const { realRoot, alias, realWs } = aliasedRoot(base, root);
-    expect(inWorkspace(realRoot, path.join(alias, '.mobile-automator', 'screenshots', 'a.png'))).toBe(
+    expect(workspacePath(realRoot, path.join(alias, '.mobile-automator', 'screenshots', 'a.png'))).toBe(
       path.join(realWs, 'screenshots', 'a.png')
     );
-    expect(inWorkspace(realRoot, path.join(alias, '.mobile-automator'))).toBe(realWs);
+    expect(workspacePath(realRoot, path.join(alias, '.mobile-automator'))).toBe(realWs);
   });
 
   it('is null for a project file outside the workspace reached through the alias', () => {
     const { realRoot, alias } = aliasedRoot(base, root);
-    expect(inWorkspace(realRoot, path.join(alias, 'shots', 'a.png'))).toBeNull();
+    expect(workspacePath(realRoot, path.join(alias, 'shots', 'a.png'))).toBeNull();
   });
 
   it('still maps a symlinked .mobile-automator/screenshots reached through the alias, so a walk refuses it', () => {
     const { realRoot, alias, realWs } = aliasedRoot(base, root);
     fs.symlinkSync(outside, path.join(realWs, 'screenshots'));
-    const got = inWorkspace(realRoot, path.join(alias, '.mobile-automator', 'screenshots', 'a.png'));
+    const got = workspacePath(realRoot, path.join(alias, '.mobile-automator', 'screenshots', 'a.png'));
     expect(got).toBe(path.join(realWs, 'screenshots', 'a.png'));
     expectUnsafe(() => safeWorkspaceDest(realRoot, got), 'symlink');
   });
@@ -96,7 +107,7 @@ describe('inWorkspace', () => {
   it('maps through the shallowest ancestor that is the root, not a workspace link back to it', () => {
     const { realRoot, alias, realWs } = aliasedRoot(base, root);
     fs.symlinkSync('..', path.join(realWs, 'screenshots'));
-    const got = inWorkspace(realRoot, path.join(alias, '.mobile-automator', 'screenshots', 'a.png'));
+    const got = workspacePath(realRoot, path.join(alias, '.mobile-automator', 'screenshots', 'a.png'));
     expect(got).toBe(path.join(realWs, 'screenshots', 'a.png'));
     expectUnsafe(() => safeWorkspaceDest(realRoot, got), 'symlink');
   });
@@ -105,12 +116,12 @@ describe('inWorkspace', () => {
     const { realRoot, alias } = aliasedRoot(base, root);
     const lookOnly = { realpathSync: fs.realpathSync };
     const p = path.join(alias, '.mobile-automator', 'screenshots', 'a.png');
-    expect(inWorkspace(realRoot, p, { fs: lookOnly })).toBe(path.join(realRoot, '.mobile-automator', 'screenshots', 'a.png'));
-    expect(inWorkspace(realRoot, path.join(outside, 'x.png'), { fs: lookOnly })).toBeNull();
+    expect(workspacePath(realRoot, p, { fs: lookOnly })).toBe(path.join(realRoot, '.mobile-automator', 'screenshots', 'a.png'));
+    expect(workspacePath(realRoot, path.join(outside, 'x.png'), { fs: lookOnly })).toBeNull();
   });
 });
 
-// The entry points for a path the user chose: each makes the inWorkspace
+// The entry points for a path the user chose: each makes the workspace-scope
 // choice itself and hands back the path to use.
 describe('userDir / userDest / userFile (#347)', () => {
   it('userDir walks a workspace directory, refusing a link; elsewhere it only mkdirs', () => {
@@ -156,13 +167,6 @@ describe('userDir / userDest / userFile (#347)', () => {
 // #362: a path inside the project but outside the workspace (`reports/r.xml`,
 // with `reports` a committed link to anywhere) gets the project walk, worded
 // in the 'path' scope. Only a path outside the project is the user's own call.
-// userPath is private: its classification is read off the userFile target,
-// which every writer gets.
-const userPath = (root_, file) => {
-  const { path: p, scope } = userFile(root_, file);
-  return { path: p, scope };
-};
-
 describe('inProject / userPath scopes (#362)', () => {
   it('classifies a workspace, a project and an outside path', () => {
     const elsewhere = path.join(outside, 'r.xml');

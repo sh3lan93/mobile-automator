@@ -643,14 +643,6 @@ function inProject(projectRoot, file, deps = {}) {
   return null;
 }
 
-// Where `file` lands in the workspace: its inProject path when userPath puts
-// it in the workspace scope, else null. userPath holds the one membership
-// rule; this only reads it.
-function inWorkspace(projectRoot, file, deps = {}) {
-  const { path: p, scope } = userPath(projectRoot, file, deps);
-  return scope === 'workspace' ? p : null;
-}
-
 // A project file outside the workspace (a host file `mauto init` writes:
 // .claude/skills/..., .mcp.json): the same walk, bounded by the project root
 // instead of the workspace, then the checked leaf. A refusal from either is
@@ -813,10 +805,6 @@ module.exports = {
   // Where a path lands in the project (re-rooted through an aliased root), or
   // null: the one re-root, which userPath builds on.
   inProject,
-  // Where a path the user chose lands in the workspace, read off userPath.
-  // Exported for its unit tests only: callers use userDir / userDest /
-  // userFile, which apply the scope themselves.
-  inWorkspace,
   // Paths the user chose: each entry point classifies the path (userPath,
   // private) and applies its scope's rules.
   userDir,
