@@ -1,6 +1,6 @@
 # Security hardening (gate #343): implementation plan
 
-> **Start here.** This is the single plan for milestone `security-hardening` (gate [#343](https://github.com/sh3lan93/mobile-automator/issues/343), slices #344–#349 and #353). Every agent picking up a slice reads the gate issue, then this plan's section for its slice, then the slice issue. Follow the milestone workflow in `CLAUDE.md`.
+> **Start here.** This is the single plan for milestone `security-hardening` (gate [#343](https://github.com/sh3lan93/mobile-automator/issues/343), slices #344–#349, #353 and #361–#363). Every agent picking up a slice reads the gate issue, then this plan's section for its slice, then the slice issue. Follow the milestone workflow in `CLAUDE.md`.
 
 | Slice | Issue | Plan section | Blocked by |
 |---|---|---|---|
@@ -11,6 +11,9 @@
 | S5: per-user telemetry consent, egress re-check, untrusted spool | #348 | PR 5 / Task 6 | #345, D1 |
 | S6: neutralise terminal control characters in device text | #349 | PR 6 / Task 7 | — |
 | S7: neutralise control characters in raw output and the diagnose stack trace | #353 | PR 7 / Task 8 | #349 |
+| S8: connect only to the session socket that was checked | #361 | PR 8 / Task 9 | — |
+| S9: report writers refuse a directory link inside the project | #362 | PR 9 / Task 10 | — |
+| S10: scenario and remaining workspace reads go through safe-fs | #363 | PR 10 / Task 11 | — |
 
 > **Status** (which slices have merged) is tracked by the checkboxes on gate #343, not here.
 
@@ -310,6 +313,36 @@ Follow-up to PR 6 (#349 / PR #352). It was found in that PR's review, not by the
 - [ ] **Step 3: Implement** the modifications listed above.
 - [ ] **Step 4: Run** `npm test`, `npm run lint` and `npm run lint:guides`. Expected: PASS.
 - [ ] **Step 5: Commit** and bump the patch version.
+
+---
+
+## Run-3 follow-ups (S8–S10)
+
+The gate's re-audit (run-3, 2026-11-22, at `516b60b`) found that 19 of run-2's 20 findings no longer reproduce, including both medium ones. It also found one residual and two low regressions introduced by the fixes. Each became a slice. They build on the safe-fs that shipped (see PRs #356, #357, #359, #358), not on this plan's original interface blocks. After they merge, a short re-check of these three closes the gate.
+
+### PR 8 (#361): connect only to the socket that was checked (Task 9)
+
+Regression of PR 3. `verifySocket` checks `.session/` by path, and the client then connects by path. safe-fs accepts a group-writable `.mobile-automator/` on purpose (Review Focus 1), so on a umask-002 workspace a member of the victim's group can swap `.session/` between the check and the connect.
+
+- Make the check and the connect name the same directory: either connect through the pinned, checked directory, or refuse the in-workspace socket when any directory from `.mobile-automator/` down to `.session/` is writable by others, and use the private `<tmpdir>/mauto-<uid>/` socket instead.
+- Before the first call frame, the daemon proves it knows the workspace secret (`.session/marker.salt`, mode 0600), for example an HMAC over a client nonce. Failing that, the client treats it as "no daemon". No native addon.
+- Test: a sandbox-style test with a second uid in the victim's group that keeps swapping `.session/` gets zero frames; the umask-022 control and the upgrade path are unchanged.
+
+### PR 9 (#362): report writers refuse a directory link inside the project (Task 10)
+
+Regression of PR 4. `result export --out` and `run --junit` treat any path outside `.mobile-automator/` as the user's own choice, so a committed directory link inside the project (`reports/ -> /outside`) is followed. `crash get --out` already checks this.
+
+- An output path inside the project root but outside the workspace goes through the project-scoped walk (`openProjectFile`), and `realpath(dirname)` must stay inside `realpath(projectRoot)`. Paths outside the project keep today's behaviour.
+- `run --junit`'s pre-check uses the same walk, before any device work.
+- One rule for all three output writers; no second copy of "is this path inside the project".
+
+### PR 10 (#363): scenario and remaining reads go through safe-fs (Task 11)
+
+Residual of run-2's workspace-read finding. `loadScenario` (`src/scenario/load.js`) reads with a plain `fs.readFileSync`, so `validate`, `run` and `result finalize --scenario` follow a committed scenario link.
+
+- `loadScenario` takes the project root. Inside the workspace it reads through the safe-fs workspace reader; elsewhere it uses the no-follow user-leaf open. It hashes the bytes actually read, so `run`/`finalize` hashes stay byte-exact (a Buffer-returning reader, not a re-encoded string).
+- Check `src/run/reference-screenshot.js` and `src/observe/trace.js` reads and route them the same way.
+- Decide the file scope of `MAUTO_TRUST_WORKSPACE_OWNER=1`: `checkLeafOwnership` applies the workspace rule to every leaf, including user-chosen paths outside the workspace. Scope it to workspace leaves, or document why not, and test it.
 
 ---
 
