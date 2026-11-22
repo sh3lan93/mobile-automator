@@ -410,6 +410,13 @@ function closeQuietly(fs, fd) {
 // `singleLink` applies the one-hard-link rule to a read too. A reader that
 // uploads and then deletes what it read (the telemetry spool, #348) must not
 // read a file elsewhere by another name: its contents would ship as ours.
+//
+// `file` reaches open(2) exactly as given: a relative name is opened relative
+// to the process's current directory itself, never through a path rebuilt
+// from that directory's name (path.resolve), which another process could have
+// renamed meanwhile. The session client relies on this to read a leaf in a
+// directory it has entered and checked (#361). `resolved` only names the leaf
+// in a refusal.
 function openOwnedLeaf(file, flags, { mode = 0o666, singleLink = false } = {}, deps = {}) {
   const d = resolveDeps(deps);
   const { O_WRONLY, O_RDWR, O_TRUNC } = nodeFs.constants;
@@ -418,7 +425,14 @@ function openOwnedLeaf(file, flags, { mode = 0o666, singleLink = false } = {}, d
   // O_TRUNC acts inside open(), before the owner and hard-link checks could
   // refuse: a hard link to a file outside would already be emptied. Open
   // without it and truncate only once every check has passed.
-  const { fd, stat } = openLeaf(resolved, flags & ~O_TRUNC, mode, deps);
+  let opened;
+  try {
+    opened = openLeaf(file, flags & ~O_TRUNC, mode, deps);
+  } catch (err) {
+    if (err instanceof UnsafePathError && file !== resolved) throw new UnsafePathError(resolved, err.reason);
+    throw err;
+  }
+  const { fd, stat } = opened;
   try {
     checkLeafOwnership(resolved, stat, writes || singleLink, d);
     if (writes && flags & O_TRUNC) d.fs.ftruncateSync(fd, 0);
