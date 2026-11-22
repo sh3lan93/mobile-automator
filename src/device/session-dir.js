@@ -19,6 +19,8 @@
 //
 // Every check is safe-fs's; this module only says which apply where.
 
+const fs = require('fs');
+
 const paths = require('./session-paths');
 const {
   PRIVATE_WORKSPACE_DIR,
@@ -64,4 +66,34 @@ function verifySocket(projectRoot, deps = {}) {
   }
 }
 
-module.exports = { ensureSessionDir, ensureSessionDirs, verifySocket };
+// Bind `server` to `socketPath` so no other user can use the socket, even for
+// an instant. bind(2) makes the socket file 0777 minus the umask, and the
+// directory being private is not the only guard (#346): listen() binds
+// synchronously, so a 077 umask set around the call covers the bind. The umask
+// is process-wide, so it is restored in a finally straight after. The chmod
+// once listening pins 0600 whatever the platform made of the umask. Resolves
+// once listening and 0600; rejects on a listen error, or on a failed chmod,
+// with the server then still listening (server.listening), so the caller
+// closes it and removes the socket.
+function listenOwnerOnly(server, socketPath) {
+  return new Promise((resolve, reject) => {
+    server.once('error', reject);
+    const prevUmask = process.umask(0o077);
+    try {
+      server.listen(socketPath, () => {
+        server.removeListener('error', reject);
+        try {
+          fs.chmodSync(socketPath, 0o600);
+        } catch (chmodErr) {
+          reject(chmodErr);
+          return;
+        }
+        resolve();
+      });
+    } finally {
+      process.umask(prevUmask);
+    }
+  });
+}
+
+module.exports = { ensureSessionDir, ensureSessionDirs, verifySocket, listenOwnerOnly };

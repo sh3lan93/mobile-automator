@@ -15,7 +15,7 @@ const net = require('net');
 const os = require('os');
 const path = require('path');
 
-const { ensureSessionDir, ensureSessionDirs, verifySocket } = require('../../../src/device/session-dir');
+const { ensureSessionDir, ensureSessionDirs, verifySocket, listenOwnerOnly } = require('../../../src/device/session-dir');
 const paths = require('../../../src/device/session-paths');
 const { UnsafePathError } = require('../../../src/workspace/safe-fs');
 
@@ -333,5 +333,78 @@ describe('verifySocket', () => {
     await listen(paths.socketPath(root, deps));
     fs.chmodSync(fallbackDir, 0o755);
     expect(verifySocket(root, deps)).toBe(false);
+  });
+});
+
+// The daemon's bind (#346): the socket is never usable by anyone else, from
+// the bind on, and the process-wide umask is always put back.
+describe('listenOwnerOnly', () => {
+  function sockIn() {
+    const root = shortRoot();
+    ensureSessionDirs(root);
+    return paths.workspaceSocketPath(root);
+  }
+  function server() {
+    const srv = net.createServer();
+    servers.push(srv);
+    return srv;
+  }
+
+  testNotRoot('under umask 022 the socket is 0600, and the umask is restored', async () => {
+    const sock = sockIn();
+    const prev = process.umask(0o022);
+    try {
+      await listenOwnerOnly(server(), sock);
+      expect(process.umask(0o022)).toBe(0o022);
+    } finally {
+      process.umask(prev);
+    }
+    expect(fs.lstatSync(sock).isSocket()).toBe(true);
+    expect(mode(sock)).toBe(0o600);
+  });
+
+  // Between bind and chmod the socket has whatever mode the umask gave it.
+  // With the chmod disabled, the umask alone must already keep others out.
+  testNotRoot('the bind itself runs under umask 077, so the socket is private before the chmod', async () => {
+    const sock = sockIn();
+    const prev = process.umask(0o022);
+    const chmod = jest.spyOn(fs, 'chmodSync').mockImplementation(() => {});
+    try {
+      await listenOwnerOnly(server(), sock);
+    } finally {
+      chmod.mockRestore();
+      process.umask(prev);
+    }
+    expect(mode(sock) & 0o077).toBe(0);
+  });
+
+  test('a listen error rejects, leaves the server not listening and restores the umask', async () => {
+    const sock = sockIn();
+    await listen(sock);
+    const srv = server();
+    const prev = process.umask(0o022);
+    try {
+      await expect(listenOwnerOnly(srv, sock)).rejects.toMatchObject({ code: 'EADDRINUSE' });
+      expect(process.umask(0o022)).toBe(0o022);
+    } finally {
+      process.umask(prev);
+    }
+    expect(srv.listening).toBe(false);
+  });
+
+  test('a failed chmod rejects with the server still listening, for the caller to close', async () => {
+    const sock = sockIn();
+    const realChmod = fs.chmodSync;
+    const chmod = jest.spyOn(fs, 'chmodSync').mockImplementation((p, m) => {
+      if (p === sock) throw Object.assign(new Error('EPERM'), { code: 'EPERM' });
+      return realChmod(p, m);
+    });
+    const srv = server();
+    try {
+      await expect(listenOwnerOnly(srv, sock)).rejects.toMatchObject({ code: 'EPERM' });
+    } finally {
+      chmod.mockRestore();
+    }
+    expect(srv.listening).toBe(true);
   });
 });

@@ -31,7 +31,7 @@ const { safeObserve: guardObserve } = require('../observe/recorder');
 const { FLUSH_INTERVAL_MS } = require('../observe/flush');
 const { pidIdentity, readPidFile } = require('./process-identity');
 const { DEFAULT_ENGINE } = require('./engine');
-const { ensureSessionDirs } = require('./session-dir');
+const { ensureSessionDirs, listenOwnerOnly } = require('./session-dir');
 const { createWorkspaceFile } = require('../workspace/safe-fs');
 const { atomicWorkspaceWrite } = require('../util/atomic');
 
@@ -685,11 +685,12 @@ async function startDaemon({
   const socketPath = paths.socketPath(projectRoot);
 
   // A start that fails once the connection exists: record why, undo what was
-  // built (the listening socket, if any, then the engine), release the lock, and
+  // built (the socket, if the server is listening, then the engine), release
+  // the lock, and
   // rethrow — so a failed start never leaks the mobile-mcp child or wedges the
   // next spawn behind a held lock. The connect failure above has no `close` yet
   // and so does its own, smaller teardown.
-  async function abortStart({ event, err, listening }) {
+  async function abortStart({ event, err }) {
     safeObserve({
       level: 'error',
       event,
@@ -697,7 +698,7 @@ async function startDaemon({
       message: err && (err.message || String(err)),
       dur_ms: Date.now() - startedAtMs,
     });
-    if (listening) {
+    if (server.listening) {
       await new Promise((resolve) => server.close(() => resolve()));
       safeUnlink(socketPath);
     }
@@ -710,39 +711,14 @@ async function startDaemon({
     throw err;
   }
 
-  // bind(2) makes the socket file with mode 0777 minus the umask. Its
-  // directory is already private, but the socket does not rely on that alone
-  // (#346): listen() binds synchronously, so a 077 umask set around the call
-  // covers the bind, and the socket is never open to anyone else, even for an
-  // instant. process.umask is process-wide, so it is restored straight after
-  // the call. The chmod once listening pins 0600 whatever the platform made
-  // of the umask; if it fails, the start fails like a listen failure.
-  let listening = false;
+  // The socket is 0600 from the bind on (session-dir.js listenOwnerOnly).
   try {
-    await new Promise((resolve, reject) => {
-      server.once('error', reject);
-      const prevUmask = process.umask(0o077);
-      try {
-        server.listen(socketPath, () => {
-          server.removeListener('error', reject);
-          listening = true;
-          try {
-            fs.chmodSync(socketPath, 0o600);
-          } catch (chmodErr) {
-            reject(chmodErr);
-            return;
-          }
-          resolve();
-        });
-      } finally {
-        process.umask(prevUmask);
-      }
-    });
+    await listenOwnerOnly(server, socketPath);
   } catch (err) {
     // listen failed (e.g. EADDRINUSE from a double-spawn that beat us to the
     // bind, or a recycled-pid wedge): only the engine and the lock are undone.
     // A failed chmod comes after the bind, so the listening socket goes too.
-    await abortStart({ event: 'daemon.listen_failure', err, listening });
+    await abortStart({ event: 'daemon.listen_failure', err });
   }
 
   // The engine died between connect and listen. Fail the start exactly like a
@@ -752,7 +728,7 @@ async function startDaemon({
   if (!engineAlive) {
     const err = new Error('mobile-mcp exited before the device session daemon was ready');
     err.code = 'ENGINE_EXITED';
-    await abortStart({ event: 'daemon.connect_failure', err, listening: true });
+    await abortStart({ event: 'daemon.connect_failure', err });
   }
 
   // Serving from here on: an engine exit reaps the daemon (see onEngineExit).

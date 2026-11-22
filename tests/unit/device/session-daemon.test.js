@@ -375,26 +375,6 @@ describe('session-daemon private files (#346)', () => {
     expect(fs.existsSync(paths.handlePath(root))).toBe(false);
   });
 
-  // The chmod after bind is not the whole story: between bind and chmod the
-  // socket exists with whatever mode the umask gave it. With the chmod
-  // disabled, the umask alone must already have kept other users out.
-  testNotRoot('the socket is bound under umask 077, so it is private before the chmod', async () => {
-    const root = tmpRoot();
-    ensureSessionDirs(root);
-    const prev = process.umask(0o022);
-    const chmod = jest.spyOn(fs, 'chmodSync').mockImplementation(() => {});
-    let daemon;
-    try {
-      const { createCall } = makeFakeCreateCall();
-      daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall });
-      expect(mode(daemon.socketPath) & 0o077).toBe(0);
-    } finally {
-      chmod.mockRestore();
-      process.umask(prev);
-      if (daemon) await daemon.stop();
-    }
-  });
-
   testNotRoot('a pre-existing 0755 .session (an older mauto) is 0700 after start', async () => {
     const root = tmpRoot();
     fs.mkdirSync(paths.sessionDir(root), { recursive: true });
