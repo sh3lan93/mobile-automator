@@ -118,10 +118,13 @@ async function attackerDir(root, { mode = 0o700 } = {}) {
 // An fs that, the first time the socket's lstat is asked for (by either
 // spelling, absolute or relative), answers it truthfully and THEN swaps the
 // attacker's directory into .session/'s place: the moment right after the
-// check. The swap is undone on the next turn of the event loop, so it covers
+// check. With `at: 'pin'` the swap follows the pinned check of '.' instead:
+// right after the client entered the directory, before it reads anything.
+// With `hold`, the swap stays until the test calls state.restore(), so it
+// also covers whatever the client does after it connected. The swap is undone on the next turn of the event loop, so it covers
 // everything a client does synchronously after its check. With `foreign`, the
 // attacker's inodes report another uid, as another user's would.
-function swappingFs(root, atk, { foreign = true } = {}) {
+function swappingFs(root, atk, { foreign = true, at = 'socket', hold = false } = {}) {
   const session = paths.sessionDir(root);
   const parked = `${session}-parked`;
   const atkInodes = new Set();
@@ -139,16 +142,18 @@ function swappingFs(root, atk, { foreign = true } = {}) {
     ...fs,
     lstatSync: (p, ...rest) => {
       const st = disguise(fs.lstatSync(p, ...rest));
-      if (path.basename(String(p)) === paths.SOCKET_NAME && !state.armed) {
+      const trigger = at === 'pin' ? p === '.' : path.basename(String(p)) === paths.SOCKET_NAME;
+      if (trigger && !state.armed) {
         state.armed = true;
         fs.renameSync(session, parked);
         fs.renameSync(atk, session);
         state.swaps += 1;
-        setImmediate(() => {
+        state.restore = () => {
           fs.renameSync(session, atk);
           fs.renameSync(parked, session);
           state.armed = false;
-        });
+        };
+        if (!hold) setImmediate(state.restore);
       }
       return st;
     },
@@ -186,22 +191,24 @@ describe('the client connects through the directory it checked (#361)', () => {
   });
 
   // The salt the proof is checked against comes from the pinned directory
-  // too: a salt looked up by name after the check would be the attacker's,
+  // too. The swap here lands right after the client entered .session/, so a
+  // salt looked up by name at any point after that would be the attacker's,
   // the genuine daemon's proof would not match it, and the client would turn
   // the real daemon away.
   maybe('the proof is checked against the salt of the checked directory, not one read by name later', async () => {
     const root = shortRoot();
     await liveDaemon(root);
     const atk = await attackerDir(root);
-    const { fs: swapFs, state } = swappingFs(root, atk.dir, { foreign: false });
+    const { fs: swapFs, state } = swappingFs(root, atk.dir, { foreign: false, at: 'pin', hold: true });
     const deps = { ...socketDeps(), fs: swapFs };
 
     const conn = await tryConnect(root, deps);
-    await tick();
+    state.restore();
     expect(conn).not.toBeNull();
     await conn.close();
-    expect(await isAlive(root, deps)).toBe(true);
-    await tick();
+    const alive = await isAlive(root, deps);
+    state.restore();
+    expect(alive).toBe(true);
     expect(state.swaps).toBe(2);
     expect(atk.peer.types.filter((t) => t !== 'hello')).toEqual([]);
   });
