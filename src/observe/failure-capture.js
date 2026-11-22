@@ -28,6 +28,7 @@ const realFs = require('fs');
 const path = require('path');
 
 const { workspaceDir } = require('../workspace/layout');
+const { safeWorkspaceDest } = require('../workspace/safe-fs');
 const { record } = require('./recorder');
 const { runTracePath } = require('./paths');
 
@@ -114,8 +115,11 @@ async function captureOnFailure({
     if (!fs.existsSync(workspaceDir(projectRoot))) return null;
     if (!bridge || typeof bridge.screenshot !== 'function') return null;
 
-    const dest = failureShotPath(projectRoot, runId, verb);
-    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    // The engine writes the PNG, so the destination is checked before it is
+    // handed over (#347): its directories walked and created, a planted link
+    // (screenshots/ -> a shared dir) refused. A refusal lands in the catch
+    // below like any other capture failure: no screenshot, no bridge call.
+    const dest = safeWorkspaceDest(projectRoot, failureShotPath(projectRoot, runId, verb), { fs });
     // Bounded by the layers below, not here: the daemon fails a call at
     // DAEMON_CALL_TIMEOUT_MS and the client gives up on a reply at its own
     // timeout, so this cannot wait forever. A third bound would be a third

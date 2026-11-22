@@ -1,19 +1,13 @@
 'use strict';
 
 // safe-fs (#345): every workspace read/write refuses a symlinked, foreign,
-// world-writable or otherwise planted path. Real tmp trees, because the
-// guarantees are about how the kernel resolves (or refuses to resolve) links;
-// only "another owner" is simulated (an injected getuid or a wrapped fs),
-// because jest cannot chown.
-//
-// Each fixture has a project root holding `.mobile-automator/` and a sibling
-// `outside/` holding a canary file. A refusal must leave `outside/` exactly as
-// it was and never put the canary or the outside path in an envelope.
+// world-writable or otherwise planted path. The fixture (a project root, its
+// .mobile-automator/ and an outside/ canary) is tests/helpers/safe-fs-fixture.js.
+// The project-file readers/writers are in safe-fs-project.test.js and the
+// user-chosen path entry points in safe-fs-user-path.test.js (#347).
 
-const os = require('os');
 const fs = require('fs');
 const path = require('path');
-const childProcess = require('child_process');
 
 const {
   UnsafePathError,
@@ -25,14 +19,25 @@ const {
   createWorkspaceFile,
   removeWorkspaceFile,
   openLeaf,
+  openOwnedLeaf,
 } = require('../../../src/workspace/safe-fs');
 // The envelope boundary: a refusal reaches the agent through toEnvelope's
 // typed-error branch, which maps the error's own kind, message and hint.
 const { toEnvelope } = require('../../../src/cli');
+const {
+  makeSafeFsFixture,
+  removeSafeFsFixture,
+  CANARY,
+  REAL_UID,
+  snapshot,
+  expectUnsafe,
+  foreignFs,
+  makeFifo,
+  reasonInChild,
+  readReasonInChild,
+} = require('../../helpers/safe-fs-fixture');
 
-const { O_RDONLY, O_WRONLY, O_RDWR, O_CREAT, O_TRUNC } = fs.constants;
-const CANARY = 'SECRET-CANARY';
-const REAL_UID = process.getuid();
+const { O_RDONLY, O_WRONLY, O_RDWR, O_CREAT, O_EXCL, O_TRUNC } = fs.constants;
 
 let base;
 let root;
@@ -41,84 +46,12 @@ let outside;
 let canaryFile;
 
 beforeEach(() => {
-  base = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-safefs-'));
-  root = path.join(base, 'project');
-  ws = path.join(root, '.mobile-automator');
-  outside = path.join(base, 'outside');
-  fs.mkdirSync(ws, { recursive: true });
-  fs.mkdirSync(outside);
-  canaryFile = path.join(outside, 'secret.txt');
-  fs.writeFileSync(canaryFile, CANARY);
+  ({ base, root, ws, outside, canaryFile } = makeSafeFsFixture());
 });
 
 afterEach(() => {
-  fs.rmSync(base, { recursive: true, force: true });
+  removeSafeFsFixture(base);
 });
-
-// A snapshot of every name and byte under outside/, to prove a refusal wrote,
-// created and truncated nothing there.
-function snapshot(dir) {
-  const out = {};
-  for (const name of fs.readdirSync(dir).sort()) {
-    const p = path.join(dir, name);
-    const st = fs.lstatSync(p);
-    out[name] = st.isDirectory() ? snapshot(p) : fs.readFileSync(p, 'utf8');
-  }
-  return out;
-}
-
-function expectUnsafe(fn, reason) {
-  let caught;
-  try {
-    fn();
-  } catch (err) {
-    caught = err;
-  }
-  expect(caught).toBeInstanceOf(UnsafePathError);
-  expect(caught.code).toBe('EUNSAFEPATH');
-  expect(caught.reason).toBe(reason);
-  return caught;
-}
-
-// An fs whose stat calls report another owner. `which` picks lstat (the dir
-// walk), fstat (the leaf) or both.
-function foreignFs(which = ['lstatSync', 'fstatSync']) {
-  const wrapped = { ...fs };
-  for (const name of which) {
-    wrapped[name] = (...args) => {
-      const st = fs[name](...args);
-      st.uid = REAL_UID + 1;
-      return st;
-    };
-  }
-  return wrapped;
-}
-
-function makeFifo(p) {
-  try {
-    childProcess.execFileSync('mkfifo', [p], { stdio: 'ignore' });
-    return true;
-  } catch (_) {
-    return false; // no mkfifo on this host: nothing to test
-  }
-}
-
-// A blocking open on a FIFO would freeze the event loop so jest's timeout
-// could never fire; run it in a child with a hard timeout instead.
-function readReasonInChild(projectRoot, file) {
-  const modulePath = require.resolve('../../../src/workspace/safe-fs');
-  const script = [
-    'const [, mod, rootDir, file] = process.argv;',
-    'try { require(mod).readWorkspaceFile(rootDir, file); process.stdout.write("null"); }',
-    'catch (e) { process.stdout.write(JSON.stringify(e.reason || e.code)); }',
-  ].join('\n');
-  return JSON.parse(
-    childProcess.execFileSync(process.execPath, ['-e', script, modulePath, projectRoot, file], {
-      encoding: 'utf8',
-      timeout: 3000,
-    })
-  );
-}
 
 describe('safeDir', () => {
   it('returns the realpath of an existing workspace subdirectory', () => {
@@ -243,6 +176,31 @@ describe('safeDir', () => {
     expect(caught).toBeDefined();
     expect(caught).not.toBeInstanceOf(UnsafePathError);
     expect(caught.code).toBe('ENOENT');
+  });
+
+  // The check-only walk for a directory a later write creates (#347).
+  describe('missingOk', () => {
+    it('a missing component is nothing to refuse: null, and nothing created', () => {
+      expect(safeDir(root, path.join(ws, 'nope', 'deeper'), { missingOk: true })).toBeNull();
+      expect(fs.existsSync(path.join(ws, 'nope'))).toBe(false);
+    });
+
+    it('a missing workspace directory is nothing to refuse either', () => {
+      fs.rmSync(ws, { recursive: true });
+      expect(safeDir(root, path.join(ws, 'a'), { missingOk: true })).toBeNull();
+      expect(fs.existsSync(ws)).toBe(false);
+    });
+
+    it('a link above the missing part is still refused', () => {
+      fs.symlinkSync(outside, path.join(ws, 'reports'));
+      expectUnsafe(() => safeDir(root, path.join(ws, 'reports', 'new', 'dir'), { missingOk: true }), 'symlink');
+      expect(fs.existsSync(path.join(outside, 'new'))).toBe(false);
+    });
+
+    it('an existing directory returns its realpath, as without it', () => {
+      fs.mkdirSync(path.join(ws, 'memory'));
+      expect(safeDir(root, path.join(ws, 'memory'), { missingOk: true })).toBe(fs.realpathSync(path.join(ws, 'memory')));
+    });
   });
 
   it('a newly created dir is re-checked (a world-writable mode is refused)', () => {
@@ -606,6 +564,119 @@ describe('openLeaf', () => {
   });
 });
 
+describe('openOwnedLeaf', () => {
+  it('opens a regular file and returns an fd', () => {
+    const p = path.join(ws, 'a');
+    fs.writeFileSync(p, 'abc');
+    const fd = openOwnedLeaf(p, O_RDONLY);
+    expect(typeof fd).toBe('number');
+    const buf = Buffer.alloc(3);
+    fs.readSync(fd, buf, 0, 3, 0);
+    fs.closeSync(fd);
+    expect(buf.toString()).toBe('abc');
+  });
+
+  it('refuses a symlink leaf (symlink), workspace scope by default', () => {
+    const link = path.join(ws, 'a');
+    fs.symlinkSync(canaryFile, link);
+    const err = expectUnsafe(() => openOwnedLeaf(link, O_RDONLY), 'symlink');
+    expect(err.scope).toBe('workspace');
+    expect(err.path).toBe(link);
+  });
+
+  it('refuses a dangling symlink leaf on O_CREAT (symlink), creating no target', () => {
+    const target = path.join(outside, 'planted.txt');
+    const link = path.join(ws, 'a');
+    fs.symlinkSync(target, link);
+    expectUnsafe(() => openOwnedLeaf(link, O_WRONLY | O_CREAT), 'symlink');
+    expect(fs.existsSync(target)).toBe(false);
+  });
+
+  it('refuses a FIFO leaf for a write (not_regular) without blocking', () => {
+    const p = path.join(ws, 'fifo');
+    if (!makeFifo(p)) return;
+    expect(reasonInChild('m.openOwnedLeaf(a[0], require("fs").constants.O_WRONLY)', p)).toBe('not_regular');
+    expect(reasonInChild('m.openOwnedLeaf(a[0], require("fs").constants.O_RDONLY)', p)).toBe('not_regular');
+  }, 10000);
+
+  it('refuses a hard-linked leaf for a write (hardlink), allows it for a read', () => {
+    const p = path.join(ws, 'a');
+    fs.linkSync(canaryFile, p);
+    expectUnsafe(() => openOwnedLeaf(p, O_WRONLY), 'hardlink');
+    expectUnsafe(() => openOwnedLeaf(p, O_RDWR), 'hardlink');
+    fs.closeSync(openOwnedLeaf(p, O_RDONLY));
+  });
+
+  it('defers O_TRUNC past the checks: a hard-linked outside file is not emptied', () => {
+    const p = path.join(ws, 'a');
+    fs.linkSync(canaryFile, p);
+    expectUnsafe(() => openOwnedLeaf(p, O_WRONLY | O_TRUNC), 'hardlink');
+    expect(fs.readFileSync(canaryFile, 'utf8')).toBe(CANARY);
+  });
+
+  it('defers O_TRUNC past the owner check: a refused foreign leaf keeps its content', () => {
+    const p = path.join(ws, 'a');
+    fs.writeFileSync(p, 'keep');
+    expectUnsafe(() => openOwnedLeaf(p, O_WRONLY | O_TRUNC, {}, { fs: foreignFs(['fstatSync']) }), 'foreign_owner');
+    expect(fs.readFileSync(p, 'utf8')).toBe('keep');
+  });
+
+  it('truncates an accepted leaf when O_TRUNC was asked, and only then', () => {
+    const p = path.join(ws, 'a');
+    fs.writeFileSync(p, 'old content');
+    let fd = openOwnedLeaf(p, O_WRONLY);
+    fs.closeSync(fd);
+    expect(fs.readFileSync(p, 'utf8')).toBe('old content');
+    fd = openOwnedLeaf(p, O_WRONLY | O_TRUNC);
+    fs.writeSync(fd, 'new');
+    fs.closeSync(fd);
+    expect(fs.readFileSync(p, 'utf8')).toBe('new');
+  });
+
+  it('creates with the given mode', () => {
+    const umask = process.umask(0o022);
+    try {
+      const p = path.join(ws, 'a');
+      fs.closeSync(openOwnedLeaf(p, O_WRONLY | O_CREAT | O_EXCL, { mode: 0o600 }));
+      expect(fs.statSync(p).mode & 0o777).toBe(0o600);
+    } finally {
+      process.umask(umask);
+    }
+  });
+
+  it('closes the fd on a refusal after the open', () => {
+    const p = path.join(ws, 'a');
+    fs.writeFileSync(p, 'x');
+    const closed = [];
+    const wrapped = foreignFs(['fstatSync']);
+    wrapped.closeSync = (fd) => (closed.push(fd), fs.closeSync(fd));
+    expectUnsafe(() => openOwnedLeaf(p, O_WRONLY, {}, { fs: wrapped }), 'foreign_owner');
+    expect(closed).toHaveLength(1);
+  });
+
+  it.each([
+    ['symlink', (p) => (fs.symlinkSync(canaryFile, p), () => openOwnedLeaf(p, O_RDONLY))],
+    ['not_regular', (p) => (fs.mkdirSync(p), () => openOwnedLeaf(p, O_RDONLY))],
+    ['hardlink', (p) => (fs.linkSync(canaryFile, p), () => openOwnedLeaf(p, O_WRONLY))],
+    [
+      'foreign_owner',
+      (p) => (
+        fs.writeFileSync(p, 'x'),
+        () => openOwnedLeaf(p, O_RDONLY, {}, { fs: foreignFs(['fstatSync']) })
+      ),
+    ],
+  ])('a %s refusal is scope-free; inScope re-words it for the path scope, same path and reason', (reason, setup) => {
+    const p = path.join(ws, 'a');
+    const err = expectUnsafe(setup(p), reason);
+    expect(err.scope).toBe('workspace');
+    const scoped = err.inScope('path');
+    expect(scoped).toBeInstanceOf(UnsafePathError);
+    expect(scoped).toMatchObject({ scope: 'path', reason, path: err.path, code: err.code, kind: err.kind });
+    expect(scoped.message.startsWith('Refusing to use path ')).toBe(true);
+    expect(scoped.hint).toBe(new UnsafePathError(err.path, reason, { scope: 'path' }).hint);
+  });
+});
+
 // Absent or garbled is a normal state; a refused path never is.
 describe.each([
   ['readWorkspaceFileOrNull', readWorkspaceFileOrNull],
@@ -680,7 +751,22 @@ describe('UnsafePathError carries its own envelope fields', () => {
     expect(err.message).toBe('Refusing to use workspace path /ws/.mobile-automator/x: it is not safe to use (mystery).');
     expect(err.hint).toMatch(/inside \.mobile-automator\//);
   });
+
+  it('the scope defaults to workspace, with the workspace wording verbatim', () => {
+    const err = new UnsafePathError('/ws/.mobile-automator/memory', 'escape');
+    const explicit = new UnsafePathError('/ws/.mobile-automator/memory', 'escape', { scope: 'workspace' });
+    expect(err.scope).toBe('workspace');
+    expect(err.message).toBe(
+      'Refusing to use workspace path /ws/.mobile-automator/memory: it resolves outside the .mobile-automator/ workspace (escape).'
+    );
+    expect(err.hint).toBe(
+      'mauto only reads and writes inside .mobile-automator/. Replace any link on the way with a real directory or file inside .mobile-automator/.'
+    );
+    expect(explicit.message).toBe(err.message);
+    expect(explicit.hint).toBe(err.hint);
+  });
 });
+
 
 describe('a refusal through toEnvelope', () => {
   function envelopeFor(fn) {

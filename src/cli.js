@@ -1,6 +1,5 @@
 'use strict';
 
-const fs = require('fs');
 const path = require('path');
 const { Command } = require('commander');
 
@@ -8,21 +7,23 @@ const { version: PKG_VERSION } = require('../package.json');
 
 const { ok, fail, render, exitCodeFor } = require('./output/envelope');
 const selectionStore = require('./device/selection');
-const { FS_ERROR_CODES, deviceHint, deviceFail } = require('./output/device-fail');
+const { deviceHint, deviceFail } = require('./output/device-fail');
+const { FS_ERROR_CODES, isFsError } = require('./output/fs-error');
+const { typedFail } = require('./output/typed-fail');
+const { isTypedRefusal } = require('./output/typed-refusal');
 const { ScenarioValidator } = require('./scenario/validator');
 const { loadScenario } = require('./scenario/load');
 const { evaluate, MECHANICAL_TYPES, REFERENCE_SCREENSHOT_TYPES } = require('./assertion/evaluator');
 const { observe } = require('./assertion/observe');
 const { fromCliFlags } = require('./assertion/fields');
 const { ResultStore, readFinalizedResult } = require('./result/store');
-const { ResultStoreRefusal } = require('./result/refusal');
 const {
   OBSERVATION_TYPES, parseObservation, parseCapture, parseAssertionVerdict, parseSimilarityScore, RUN_STATUSES,
   parseRunStatus, parseStepStatus,
 } = require('./result/flags');
 const { finalizeAgainstScenario } = require('./result/finalize-against-scenario');
 const { toJUnit } = require('./result/junit');
-const { atomicWrite } = require('./util/atomic');
+const { atomicOutputWrite } = require('./util/atomic');
 const { MemoryStore } = require('./memory/store');
 const { FILES: MEMORY_FILES, AGENT_KINDS } = require('./memory/paths');
 const { validateEntryText, MAX_ENTRY_LEN } = require('./memory/entries');
@@ -64,7 +65,10 @@ const {
   workspaceFailure,
   legacyWorkspaceFailure,
 } = require('./workspace/discover');
-const { UnsafePathError } = require('./workspace/safe-fs');
+const {
+  UnsafePathError, userDest,
+} = require('./workspace/safe-fs');
+const { crashOutTarget, writeCrashReport } = require('./workspace/output-roots');
 
 // Commander throws (via exitOverride) for two very different reasons, and the
 // split below is the ONLY thing that tells them apart.
@@ -140,8 +144,7 @@ function usageLine(cmd) {
 // is the single boundary that guarantees a calling agent always receives one
 // JSON line + a meaningful exit code instead of a raw stack trace on stderr.
 //   CommanderError (parse failure) -> invalid_input, with the usage line as hint
-//   ResultStoreRefusal           -> its own kind (invalid_input) and hint
-//   UnsafePathError              -> its own kind (environment) and hint (#345)
+//   TypedRefusal (any subclass)  -> its own kind, message and hint
 //   SyntaxError                  -> invalid_input (a malformed JSON file)
 //   fs EACCES/ENOENT/EROFS/...    -> environment, with a filesystem hint
 //   anything else                -> internal
@@ -156,8 +159,9 @@ function toEnvelope(err) {
       exitKind: 'invalid_input',
     };
   }
-  // Typed errors that carry their own kind, message and hint; the layer that
-  // throws owns the rule and the wording, so every verb reports it identically.
+  // Typed refusals (src/output/typed-refusal.js) carry their own kind, message
+  // and hint; the layer that throws owns the rule and the wording, so every
+  // verb reports it identically. Today:
   //   - ResultStoreRefusal (src/result/refusal.js): a --run-id the ResultStore
   //     refuses (#295), a pending verdict over a decided one (#275), a
   //     finalize --status greener than the run derives (#337).
@@ -165,9 +169,9 @@ function toEnvelope(err) {
   //     as a symlink, foreign-owned, escaping, ... (#345). Its message names
   //     the path and reason, never file content or a link target. It must
   //     come before the FS_ERROR_CODES branch, which would lose the hint.
-  if (err instanceof ResultStoreRefusal || err instanceof UnsafePathError) {
-    return { envelope: fail(err.kind, err.message, err.hint), exitKind: err.kind };
-  }
+  //   - OutputPathRefusal (src/workspace/output-roots.js): a crash get --out
+  //     outside the roots a crash report may be written to (#347).
+  if (isTypedRefusal(err)) return typedFail(err);
   if (err instanceof SyntaxError) {
     return {
       envelope: fail(
@@ -218,9 +222,19 @@ async function handleElements({ deviceBridge }) {
 // Relative paths resolve against the caller's cwd HERE, not in the daemon: the
 // daemon runs from the project root, which is not where a verb run from a
 // subdirectory meant `./shot.png` (#214).
-async function handleScreenshot({ deviceBridge, cwd = process.cwd() }, destPath) {
+//
+// The engine writes the file, so the destination is checked before it is
+// handed over (#347). One inside .mobile-automator/ (through a symlinked alias
+// of the project root too) gets the workspace rules: its directories are
+// walked and created, a planted link refused. Anything else is the user's own
+// choice and reaches the bridge exactly as resolved; the engine applies its
+// own allowed-directories rule there. A refusal is thrown, before the bridge
+// is asked and outside the device catch below, so the envelope boundary
+// reports it environment with its own hint, as for every other verb.
+async function handleScreenshot({ deviceBridge, projectRoot, cwd = process.cwd() }, destPath) {
+  const dest = userDest(projectRoot, path.resolve(cwd, destPath));
   try {
-    const savedPath = await deviceBridge.screenshot(path.resolve(cwd, destPath));
+    const savedPath = await deviceBridge.screenshot(dest);
     return { envelope: ok({ path: savedPath }), exitKind: 'ok' };
   } catch (err) {
     return {
@@ -907,10 +921,17 @@ function handleResultExport({ projectRoot, cwd = process.cwd() }, opts = {}) {
     return { envelope: ok({ format: opts.format, path: null, ...counts, xml }), exitKind: 'ok' };
   }
 
+  // A path the user chose: confined to the workspace rules when it lands in
+  // .mobile-automator/, where a committed link is refused (#347); written as
+  // given anywhere else.
   const outPath = path.resolve(cwd, opts.out);
   try {
-    atomicWrite(outPath, xml);
+    atomicOutputWrite(projectRoot, outPath, xml);
   } catch (err) {
+    // Only a filesystem error is this write's failure. Anything else (a
+    // refused path, a bug) propagates to the envelope boundary (toEnvelope),
+    // which reports a refusal's own kind, message and hint.
+    if (!isFsError(err)) throw err;
     return {
       envelope: fail(
         'environment',
@@ -1321,8 +1342,11 @@ function handleMemoryForget({ memoryStoreFactory, projectRoot }, opts = {}) {
 // ...); our own malformed-config guard carries 'corrupt_mcp_config'; anything
 // else (a TypeError, the leaked-placeholder guard) is an unexpected internal
 // error and must NOT be disguised as an environment problem — that would send
-// the operator to fix the filesystem for what is actually a code bug.
+// the operator to fix the filesystem for what is actually a code bug. A host
+// path refused as a symlink, foreign-owned, ... (#347) is 'unsafe_path', checked
+// first: its EUNSAFEPATH code would otherwise pass for an errno.
 function adapterErrorClass(err) {
+  if (err instanceof UnsafePathError) return 'unsafe_path';
   const code = err && err.code;
   if (typeof code === 'string' && /^E[A-Z]+$/.test(code)) return code;
   if (code === 'corrupt_mcp_config') return 'corrupt_mcp_config';
@@ -1339,16 +1363,21 @@ function hintForAdapterError(cls) {
   return 'Unexpected error during init (possibly a bug) — see the message, then re-run after resolving (writers are idempotent).';
 }
 
+// Returns the per-agent record, plus the error a failed agent threw, so a
+// single-agent init can report a typed error's own kind and hint.
 function applyOneAdapter(adapter, agent, projectRoot) {
   try {
     const r = adapter.apply({ projectRoot });
-    return { agent, ok: true, changes: r.changes };
+    return { record: { agent, ok: true, changes: r.changes }, err: null };
   } catch (err) {
     return {
-      agent,
-      ok: false,
-      error: adapterErrorClass(err),
-      message: (err && err.message) || String(err),
+      record: {
+        agent,
+        ok: false,
+        error: adapterErrorClass(err),
+        message: (err && err.message) || String(err),
+      },
+      err,
     };
   }
 }
@@ -1359,7 +1388,7 @@ function handleInit({ projectRoot, adapters = ADAPTERS, inspect = inspectHosts }
     const wasInstalled = installedBefore(inspect, projectRoot);
     // Continue-on-error: every host is attempted; the result is ONE envelope
     // carrying a per-agent ok/failed map. `ok` only when all succeed.
-    const perAgent = known.map((a) => applyOneAdapter(adapters[a], a, projectRoot));
+    const perAgent = known.map((a) => applyOneAdapter(adapters[a], a, projectRoot).record);
     const failed = perAgent.filter((r) => !r.ok);
     if (failed.length === 0) {
       return { envelope: ok({ agents: perAgent }, refreshHint(perAgent, wasInstalled)), exitKind: 'ok' };
@@ -1386,8 +1415,13 @@ function handleInit({ projectRoot, adapters = ADAPTERS, inspect = inspectHosts }
     };
   }
   const wasInstalled = installedBefore(inspect, projectRoot);
-  const r = applyOneAdapter(adapter, agent, projectRoot);
+  const { record: r, err } = applyOneAdapter(adapter, agent, projectRoot);
   if (!r.ok) {
+    // A refused host path (#347) carries its own kind (environment), message
+    // and hint, reported verbatim as toEnvelope reports it for every other
+    // verb: the hint says what to do about the link, which the generic
+    // filesystem hint below cannot.
+    if (isTypedRefusal(err)) return typedFail(err, { data: { agents: [r] } });
     // A malformed host config is the user's input, not an environment fault —
     // surface it as invalid_input (exit 3), matching how every other verb
     // classifies bad JSON; fs/unknown adapter errors stay internal (exit 1).
@@ -1768,7 +1802,43 @@ async function handleCrashList({ deviceBridge, projectRoot }, opts = {}) {
   };
 }
 
-async function handleCrashGet({ deviceBridge, fs: fsDep = fs }, id, opts = {}) {
+function crashWriteFailure(given, err) {
+  return {
+    envelope: fail(
+      'environment',
+      `could not write the crash report to ${given}: ${err.message}`,
+      'Check the directory exists and is writable.'
+    ),
+    exitKind: 'environment',
+  };
+}
+
+// --out writes the FULL report and returns only its path. This is how a
+// tens-of-kilobytes native tombstone reaches a result file without passing
+// through the agent's context window.
+//
+// It is a path the caller chose in an untrusted checkout (#347), resolved
+// against the caller's cwd as handleScreenshot's is (#214). Inside
+// .mobile-automator/ (through a symlinked alias of the root too) it gets the
+// workspace rules: every directory walked and a link on the way refused
+// before the device is asked; the write creates the missing directories and
+// refuses a link at the report itself. Anywhere else it must land in one of
+// the roots src/workspace/output-roots.js allows, checked before the device
+// is asked. A bad --out costs no device work, and the pre-check creates
+// nothing. A filesystem error is the write failure; anything else, a refusal
+// (that rule's or a link's) included, propagates to toEnvelope. `outRootsHost` is passed through to that module
+// untouched (its host facts, which it defaults; tests inject them).
+async function handleCrashGet({ deviceBridge, projectRoot, cwd = process.cwd(), outRootsHost }, id, opts = {}) {
+  let target = null;
+  if (opts.out) {
+    try {
+      target = crashOutTarget(projectRoot, path.resolve(cwd, opts.out), outRootsHost);
+    } catch (err) {
+      if (!isFsError(err)) throw err;
+      return crashWriteFailure(opts.out, err);
+    }
+  }
+
   let report;
   try {
     report = await deviceBridge.getCrash(id);
@@ -1779,21 +1849,12 @@ async function handleCrashGet({ deviceBridge, fs: fsDep = fs }, id, opts = {}) {
     };
   }
 
-  // --out writes the FULL report and returns only its path. This is how a
-  // tens-of-kilobytes native tombstone reaches a result file without passing
-  // through the agent's context window.
-  if (opts.out) {
+  if (target) {
     try {
-      fsDep.writeFileSync(opts.out, report);
+      writeCrashReport(target, report);
     } catch (err) {
-      return {
-        envelope: fail(
-          'environment',
-          `could not write the crash report to ${opts.out}: ${err.message}`,
-          'Check the directory exists and is writable.'
-        ),
-        exitKind: 'environment',
-      };
+      if (!isFsError(err)) throw err;
+      return crashWriteFailure(opts.out, err);
     }
     return { envelope: ok({ crash_id: id, path: opts.out, truncated: false }), exitKind: 'ok' };
   }
@@ -2066,7 +2127,7 @@ function buildProgram(deps = {}) {
     .option('--device <id>', 'target device id')
     .action(withEnvelope((destPath, opts) =>
       connectBridge(resolveVerbDevice(opts.device), (bridge) =>
-        handleScreenshot({ deviceBridge: bridge }, destPath)
+        handleScreenshot({ deviceBridge: bridge, projectRoot, cwd }, destPath)
       )
     ));
 
@@ -2098,7 +2159,7 @@ function buildProgram(deps = {}) {
     .option('--junit <path>', 'also write the run as a JUnit XML report to this file (its directory must exist)')
     .action(withEnvelope(requireWorkspace(async (file, opts) => {
       const prepared = prepareRun({
-        validator, file: path.resolve(cwd, file), runId: opts.runId, timeoutMs: opts.timeoutMs, judge: opts.judge,
+        validator, projectRoot, file: path.resolve(cwd, file), runId: opts.runId, timeoutMs: opts.timeoutMs, judge: opts.judge,
         junit: opts.junit, cwd, env: process.env,
       });
       if (prepared.failure) return emit(prepared.failure, humanFlag());
@@ -2582,7 +2643,7 @@ function buildProgram(deps = {}) {
     .option('--out <path>', 'write the full report to a file and return its path')
     .action(withEnvelope((id, opts) =>
       connectBridge(resolveVerbDevice(opts.device), (bridge) =>
-        handleCrashGet({ deviceBridge: bridge }, id, { full: opts.full, out: opts.out })
+        handleCrashGet({ deviceBridge: bridge, projectRoot, cwd }, id, { full: opts.full, out: opts.out })
       )
     ));
 

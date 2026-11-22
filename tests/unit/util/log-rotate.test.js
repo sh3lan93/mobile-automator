@@ -55,13 +55,17 @@ describe('rotateIfLarge', () => {
   it('swallows a rename failure — an oversized log beats no log', () => {
     // A concurrent writer that already rotated, or an unwritable directory.
     // Rotation is a disk guard; losing it must never cost the caller its log.
+    const renamed = [];
     const boom = {
-      statSync: () => ({ size: 999 }),
-      renameSync() {
+      lstatSync: () => ({ size: 999, isFile: () => true }),
+      renameSync(from) {
+        renamed.push(from);
         throw new Error('EACCES');
       },
     };
     expect(() => rotateIfLarge('/anywhere.log', { maxBytes: 10, fs: boom })).not.toThrow();
+    // The rename was attempted: the failure swallowed is the one under test.
+    expect(renamed).toEqual(['/anywhere.log']);
   });
 
   it('defaults to the shared 1 MiB cap', () => {
@@ -73,6 +77,35 @@ describe('rotateIfLarge', () => {
     rotateIfLarge(logPath);
 
     expect(fs.statSync(`${logPath}.1`).size).toBe(MAX_LOG_BYTES);
+  });
+});
+
+// #347: rotation renames whatever sits at the log path. A symlink there (or
+// anything that is not a regular file) is left alone, so a planted link never
+// has its target's size counted or the link moved aside.
+describe('rotateIfLarge leaves anything but a regular file alone (#347)', () => {
+  it('a symlink leaf whose target is over the cap is not renamed and its target is unchanged', () => {
+    const dir = workspace();
+    const target = path.join(dir, 'outside.log');
+    fs.writeFileSync(target, 'x'.repeat(20));
+    const logPath = path.join(dir, 'a.log');
+    fs.symlinkSync(target, logPath);
+
+    rotateIfLarge(logPath, { maxBytes: 10 });
+
+    expect(fs.lstatSync(logPath).isSymbolicLink()).toBe(true);
+    expect(fs.existsSync(`${logPath}.1`)).toBe(false);
+    expect(fs.readFileSync(target, 'utf8')).toBe('x'.repeat(20));
+  });
+
+  it('a regular file over the cap still rotates', () => {
+    const logPath = path.join(workspace(), 'a.log');
+    fs.writeFileSync(logPath, 'x'.repeat(20));
+
+    rotateIfLarge(logPath, { maxBytes: 10 });
+
+    expect(fs.existsSync(logPath)).toBe(false);
+    expect(fs.readFileSync(`${logPath}.1`, 'utf8')).toBe('x'.repeat(20));
   });
 });
 
