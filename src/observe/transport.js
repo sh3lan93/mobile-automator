@@ -13,6 +13,15 @@
 // This module RESHAPES a spool line into PostHog's envelope. It never adds a
 // fact: everything in `properties` came out of telemetryPayload(), which
 // iterates the field catalog rather than the event.
+//
+// It also applies that catalog AGAIN, as the last line of defence (#348).
+// The writer and the spool reader both apply it, but `.mobile-automator/` is
+// committed to repos and a payload's history cannot be seen from here, so
+// toWireEvent() runs every payload through shippablePayload(): a field outside
+// the catalog, or a value its accepts() check rejects, never reaches the wire,
+// and a payload with no known event is not posted at all.
+
+const { shippablePayload } = require('./event');
 
 // EU cloud by default. No user content reaches the wire at all (the catalog
 // guarantees that), but app package names are the sensitive class this design
@@ -60,16 +69,21 @@ function endpointUrl(env = process.env) {
   return `${host}/batch/`;
 }
 
+// One payload in PostHog's envelope, or null when nothing in it may ship: not
+// an object, or no event the vocabulary knows once the catalog has been
+// re-applied (#348).
 function toWireEvent(payload) {
+  const clean = shippablePayload(payload);
+  if (!clean) return null;
   const properties = { distinct_id: ANON_DISTINCT_ID, $process_person_profile: false };
-  for (const [k, v] of Object.entries(payload)) {
+  for (const [k, v] of Object.entries(clean)) {
     if (WIRE_KEYS.includes(k)) continue;
     properties[k] = v;
   }
   return {
-    event: payload.event,
-    timestamp: payload.ts,
-    uuid: payload.msg_id,
+    event: clean.event,
+    timestamp: clean.ts,
+    uuid: clean.msg_id,
     properties,
   };
 }
@@ -114,9 +128,11 @@ async function postBatch(payloads, { fetchImpl, env = process.env, timeoutMs = P
   // telemetryPayload() drops a value that fails its accepts() check, so a
   // payload can arrive here with no `event` (an unrecognised event name was
   // dropped). Posting that fragment under an invented event name would be
-  // worse than dropping it; skip it instead of pretending it is a real event.
-  const usable = payloads.filter((p) => p && p.event);
-  if (usable.length === 0) return { ok: true, retry: false, status: 0 };
+  // worse than dropping it; toWireEvent() returns null for it, and for
+  // anything that is not an object, and this is the one place those are
+  // skipped.
+  const wire = payloads.map(toWireEvent).filter(Boolean);
+  if (wire.length === 0) return { ok: true, retry: false, status: 0 };
 
   if (!hasToken(env)) return { ok: false, retry: false, status: 0 };
 
@@ -128,7 +144,7 @@ async function postBatch(payloads, { fetchImpl, env = process.env, timeoutMs = P
 
   const body = JSON.stringify({
     api_key: resolveToken(env),
-    batch: usable.map(toWireEvent),
+    batch: wire,
   });
 
   const controller = new AbortController();

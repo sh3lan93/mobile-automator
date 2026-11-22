@@ -1,6 +1,13 @@
 'use strict';
 
-const { makeEvent, telemetryPayload, EVENT_FIELDS, EVENT_VERSION, LEVELS } = require('../../../src/observe/event');
+const {
+  makeEvent,
+  telemetryPayload,
+  shippablePayload,
+  EVENT_FIELDS,
+  EVENT_VERSION,
+  LEVELS,
+} = require('../../../src/observe/event');
 
 describe('makeEvent', () => {
   it('stamps the ambient fields', () => {
@@ -202,5 +209,27 @@ describe('telemetry transport field classifications', () => {
     expect(p.msg_id).toBe('b3a1c0de4f5a6b7c8d9e0f1a2b3c4d5e');
     expect(p.count).toBe(42);
     expect(p.http_status).toBe(200);
+  });
+});
+
+// The re-check the spool reader and the transport both apply to a value that
+// did not come straight from makeEvent (#348).
+describe('shippablePayload', () => {
+  it('is telemetryPayload for a plain object that names a known event', () => {
+    const e = { event: 'verb.end', verb: 'tap', ok: true, cwd: '/home/x', app_id: 'com.secret' };
+    expect(shippablePayload(e)).toEqual(telemetryPayload(e));
+    expect(shippablePayload(e)).toEqual({ event: 'verb.end', verb: 'tap', ok: true });
+  });
+
+  it('is null for anything that is not a plain object, an array with an event key included', () => {
+    const arrayWithEvent = Object.assign([], { event: 'verb.end', verb: 'tap' });
+    for (const v of [null, undefined, 42, 'verb.end', true, [], arrayWithEvent]) {
+      expect(shippablePayload(v)).toBeNull();
+    }
+  });
+
+  it('is null when the event is missing or outside the vocabulary, never a nameless fragment', () => {
+    expect(shippablePayload({ verb: 'tap', ok: true })).toBeNull();
+    expect(shippablePayload({ event: 'evil', verb: 'tap', ok: true })).toBeNull();
   });
 });

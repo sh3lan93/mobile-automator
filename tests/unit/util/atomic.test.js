@@ -101,7 +101,7 @@ describe('atomicWorkspaceWrite (#345)', () => {
 describe('atomicOutputWrite outside the workspace (paths the user chose)', () => {
   test('the unconfined writer is not exported', () => {
     expect(Object.keys(require('../../../src/util/atomic')).sort()).toEqual([
-      'atomicOutputWrite', 'atomicProjectWrite', 'atomicWorkspaceWrite', 'tempPathFor',
+      'atomicOutputWrite', 'atomicProjectWrite', 'atomicUserLeafWrite', 'atomicWorkspaceWrite', 'tempPathFor',
     ]);
   });
 
@@ -291,5 +291,56 @@ describe('tempPathFor', () => {
     expect(path.basename(a).startsWith('.marker.salt.tmp.')).toBe(true);
     expect(path.basename(a)).toContain(`.${process.pid}.`);
     expect(a).not.toBe(b);
+  });
+});
+
+// #348: mauto's own file outside every project (the per-user consent record),
+// in a directory the caller settled: no project root, the temp file opened
+// through openUserLeaf.
+describe('atomicUserLeafWrite', () => {
+  const { atomicUserLeafWrite } = require('../../../src/util/atomic');
+
+  test('writes with the given mode, overwriting, with no temp file left', () => {
+    const dir = elsewhere();
+    const file = path.join(dir, 'record.json');
+    fs.writeFileSync(file, 'old');
+    fs.chmodSync(file, 0o644);
+    atomicUserLeafWrite(file, 'new', { mode: 0o600 });
+    expect(fs.readFileSync(file, 'utf8')).toBe('new');
+    expect(fs.statSync(file).mode & 0o777).toBe(0o600);
+    expect(fs.readdirSync(dir)).toEqual(['record.json']);
+  });
+
+  test('replaces a planted symlink leaf, never writing through it', () => {
+    const dir = elsewhere();
+    const outside = path.join(elsewhere(), 'secret.txt');
+    fs.writeFileSync(outside, ORIGINAL);
+    const file = path.join(dir, 'record.json');
+    fs.symlinkSync(outside, file);
+    atomicUserLeafWrite(file, 'new', { mode: 0o600 });
+    expect(fs.lstatSync(file).isSymbolicLink()).toBe(false);
+    expect(fs.readFileSync(file, 'utf8')).toBe('new');
+    expect(fs.readFileSync(outside, 'utf8')).toBe(ORIGINAL);
+  });
+
+  test('opens the temp file through the user-leaf rule (O_NOFOLLOW, refusal in the path scope)', () => {
+    const dir = elsewhere();
+    const file = path.join(dir, 'record.json');
+    const spy = jest.spyOn(fs, 'fstatSync').mockImplementation(() => ({ isFile: () => true, uid: process.getuid() + 1, nlink: 1 }));
+    let err;
+    try {
+      err = thrown(() => atomicUserLeafWrite(file, 'x', { mode: 0o600 }));
+    } finally {
+      spy.mockRestore();
+    }
+    expect(err).toBeInstanceOf(UnsafePathError);
+    expect(err.reason).toBe('foreign_owner');
+    expect(err.scope).toBe('path');
+    // Nothing is renamed into place.
+    expect(fs.existsSync(file)).toBe(false);
+  });
+
+  test('refuses a call without contents', () => {
+    expect(() => atomicUserLeafWrite('/tmp/x')).toThrow(TypeError);
   });
 });

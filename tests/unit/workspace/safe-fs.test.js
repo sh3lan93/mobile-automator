@@ -23,6 +23,7 @@ const {
   removeWorkspaceFile,
   openLeaf,
   openOwnedLeaf,
+  readOwnedLeaf,
   dirPolicy,
   WORKSPACE_DIR,
 } = require('../../../src/workspace/safe-fs');
@@ -642,6 +643,19 @@ describe('openOwnedLeaf', () => {
     fs.closeSync(openOwnedLeaf(p, O_RDONLY));
   });
 
+  it('refuses a hard-linked leaf for a read too with singleLink (hardlink)', () => {
+    const p = path.join(ws, 'a');
+    fs.linkSync(canaryFile, p);
+    fs.closeSync(openOwnedLeaf(p, O_RDONLY));
+    expectUnsafe(() => openOwnedLeaf(p, O_RDONLY, { singleLink: true }), 'hardlink');
+  });
+
+  it('opens a one-link leaf for a read with singleLink', () => {
+    const p = path.join(ws, 'a');
+    fs.writeFileSync(p, 'x');
+    fs.closeSync(openOwnedLeaf(p, O_RDONLY, { singleLink: true }));
+  });
+
   it('defers O_TRUNC past the checks: a hard-linked outside file is not emptied', () => {
     const p = path.join(ws, 'a');
     fs.linkSync(canaryFile, p);
@@ -718,6 +732,45 @@ describe('openOwnedLeaf', () => {
     const detail = `it is owned by uid ${REAL_UID + 1}; you are uid ${REAL_UID}`;
     expect(err.message).toContain(detail);
     expect(err.inScope('path').message).toBe(`Refusing to use path ${p}: ${detail} (foreign_owner).`);
+  });
+});
+
+describe('readOwnedLeaf', () => {
+  it('returns the content of a leaf', () => {
+    const p = path.join(ws, 'a');
+    fs.writeFileSync(p, 'hello');
+    expect(readOwnedLeaf(p)).toBe('hello');
+  });
+
+  it('is null when the leaf is absent', () => {
+    expect(readOwnedLeaf(path.join(ws, 'missing'))).toBeNull();
+  });
+
+  it('refuses a symlink leaf, never reading its target', () => {
+    const p = path.join(ws, 'a');
+    fs.symlinkSync(canaryFile, p);
+    const err = expectUnsafe(() => readOwnedLeaf(p), 'symlink');
+    expect(err.message).not.toContain(CANARY);
+  });
+
+  it('refuses a leaf past maxBytes (too_large), reads one at it', () => {
+    const p = path.join(ws, 'a');
+    fs.writeFileSync(p, '12345');
+    expect(readOwnedLeaf(p, { maxBytes: 5 })).toBe('12345');
+    expectUnsafe(() => readOwnedLeaf(p, { maxBytes: 4 }), 'too_large');
+  });
+
+  it('reads a second link by default, refuses it with singleLink (hardlink)', () => {
+    const p = path.join(ws, 'a');
+    fs.linkSync(canaryFile, p);
+    expect(readOwnedLeaf(p)).toBe(CANARY);
+    expectUnsafe(() => readOwnedLeaf(p, { singleLink: true }), 'hardlink');
+  });
+
+  it('refuses a leaf of another owner', () => {
+    const p = path.join(ws, 'a');
+    fs.writeFileSync(p, 'x');
+    expectUnsafe(() => readOwnedLeaf(p, {}, { fs: foreignFs(['fstatSync']) }), 'foreign_owner');
   });
 });
 

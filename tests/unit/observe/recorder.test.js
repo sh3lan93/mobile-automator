@@ -33,7 +33,9 @@ function collector(threshold = 'debug') {
 // between the two sinks — instead of re-stating resolveLevels() in the test.
 function spyDefaults(env) {
   const seen = [];
-  const sinks = defaultSinks('/unused', env).map((sink) => ({
+  // The log sinks only: the spool sink has its own level and consent rules,
+  // tested in their own describe block below.
+  const sinks = defaultSinks('/unused', env).filter((sink) => sink.name !== 'spool').map((sink) => ({
     ...sink,
     write: (e) => seen.push({ threshold: sink.threshold, event: e }),
   }));
@@ -128,8 +130,14 @@ describe('defaultSinks', () => {
     }
   });
 
-  it('turns both sinks off at MAUTO_LOG_LEVEL=silent', () => {
-    for (const sink of defaultSinks('/unused', { MAUTO_LOG_LEVEL: 'silent' })) {
+  it('names every sink, the spool last', () => {
+    expect(defaultSinks('/unused', {}).map((s) => s.name)).toEqual(['stderr', 'file', 'spool']);
+    expect(defaultSinks('/unused', {}, { tracePath: '/unused/x/run-a.ndjson' }).map((s) => s.name))
+      .toEqual(['stderr', 'file', 'trace', 'spool']);
+  });
+
+  it('turns both log sinks off at MAUTO_LOG_LEVEL=silent', () => {
+    for (const sink of defaultSinks('/unused', { MAUTO_LOG_LEVEL: 'silent' }).filter((s) => s.name !== 'spool')) {
       expect(sink.threshold).toBeNull();
     }
   });
@@ -252,8 +260,9 @@ describe('boundRecorder', () => {
 
 describe('run trace sink', () => {
   it('adds a third sink only when a trace path is given', () => {
-    expect(defaultSinks('/proj', {}, {})).toHaveLength(2);
-    expect(defaultSinks('/proj', {}, { tracePath: '/proj/x/run-a.ndjson' })).toHaveLength(3);
+    const names = (opts) => defaultSinks('/proj', {}, opts).map((s) => s.name);
+    expect(names({})).not.toContain('trace');
+    expect(names({ tracePath: '/proj/x/run-a.ndjson' }).filter((n) => n === 'trace')).toHaveLength(1);
   });
 
   // The trace is an ADDITIONAL file, not a redirect. Sending run events to the
@@ -299,17 +308,19 @@ describe('run trace sink', () => {
     const root = workspace();
     const seen = { stderr: [], file: [] };
     const tracePath = path.join(root, '.mobile-automator', '.logs', 'run-smoke.ndjson');
-    const sinks = defaultSinks(root, { MAUTO_LOG_LEVEL: 'info' }, { tracePath }).map((sink, i) => ({
-      ...sink,
-      write:
-        i === 0
-          ? (e) => seen.stderr.push(e)
-          : i === 1
-            ? (e) => seen.file.push(e)
-            : () => {
-                throw new Error('trace sink exploded');
-              },
-    }));
+    const sinks = defaultSinks(root, { MAUTO_LOG_LEVEL: 'info' }, { tracePath })
+      .filter((sink) => sink.name !== 'spool')
+      .map((sink) => ({
+        ...sink,
+        write:
+          sink.name === 'stderr'
+            ? (e) => seen.stderr.push(e)
+            : sink.name === 'file'
+              ? (e) => seen.file.push(e)
+              : () => {
+                  throw new Error('trace sink exploded');
+                },
+      }));
 
     expect(() =>
       record({ level: 'warn', src: 'cli', event: 'verb.end' }, { sinks, env: {} })
@@ -339,32 +350,45 @@ describe('run trace sink', () => {
   });
 });
 
-describe('the spool sink is constructed only when telemetry is enabled', () => {
+describe('the spool sink writes only while telemetry is enabled', () => {
   const telemetry = require('../../../src/observe/telemetry');
   const { spoolPath } = require('../../../src/observe/paths');
 
-  const TOKEN = { MAUTO_TELEMETRY_TOKEN: 'phc_real' };
+  const { userConfigEnv, grantLocalConsent } = require('../../helpers/user-config');
 
-  function configuredWorkspace(config) {
+  // Its own XDG_CONFIG_HOME, so the consent record never touches the real one.
+  const TOKEN = userConfigEnv({ MAUTO_TELEMETRY_TOKEN: 'phc_real' });
+
+  // An enabled config is also granted this user's local consent (#348) unless
+  // the test says otherwise: "opted in" now means both.
+  function configuredWorkspace(config, { consented = true } = {}) {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-sinks-'));
     fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
     fs.writeFileSync(
       path.join(root, '.mobile-automator', 'config.json'),
       JSON.stringify(config, null, 2)
     );
+    if (consented && config.telemetry && config.telemetry.enabled === true) grantLocalConsent(root, TOKEN);
     return root;
   }
 
   beforeEach(() => telemetry._resetMemo());
 
-  it('builds two sinks while telemetry is off', () => {
-    const root = configuredWorkspace({ telemetry: { enabled: false } });
-    expect(defaultSinks(root, TOKEN)).toHaveLength(2);
+  it('spools once a human has opted in', () => {
+    const root = configuredWorkspace({ telemetry: { enabled: true } });
+    record({ level: 'info', src: 'cli', event: 'verb.end', verb: 'tap', ok: true }, { projectRoot: root, env: TOKEN });
+    expect(fs.existsSync(spoolPath(root, {}))).toBe(true);
   });
 
-  it('builds three once a human has opted in', () => {
-    const root = configuredWorkspace({ telemetry: { enabled: true } });
-    expect(defaultSinks(root, TOKEN)).toHaveLength(3);
+  it('spools nothing for a committed opt-in this user never made, whatever the repo plants (#348)', () => {
+    const root = configuredWorkspace({ telemetry: { enabled: true } }, { consented: false });
+    // A consent-shaped record committed inside the workspace is not consent.
+    const planted = path.join(root, '.mobile-automator', '.session', 'telemetry-consent.json');
+    fs.mkdirSync(path.dirname(planted), { recursive: true });
+    fs.writeFileSync(planted, JSON.stringify({ projects: { [fs.realpathSync(root)]: true } }));
+
+    record({ level: 'info', src: 'cli', event: 'verb.end', verb: 'tap', ok: true }, { projectRoot: root, env: TOKEN });
+    expect(fs.existsSync(spoolPath(root, {}))).toBe(false);
   });
 
   it('writes no spool file at all while disabled, at EVERY level', () => {
@@ -398,6 +422,90 @@ describe('the spool sink is constructed only when telemetry is enabled', () => {
     telemetry._resetMemo();
     record({ level: 'info', src: 'cli', event: 'verb.end', verb: 'tap', ok: true }, { projectRoot: root, env: { ...TOKEN, DO_NOT_TRACK: '1' } });
     expect(fs.existsSync(spoolPath(root, {}))).toBe(false);
+  });
+
+  // The daemon builds its sinks ONCE (boundRecorder) and lives for hours, so
+  // the decision it built them under must not outlive a withdrawal (#348).
+  describe('a long-lived recorder re-checks consent (#348)', () => {
+    const { setLocalConsent, consentPath } = require('../../../src/observe/consent');
+    const spoolLines = (root) =>
+      fs.existsSync(spoolPath(root, {})) ? fs.readFileSync(spoolPath(root, {}), 'utf8').trim().split('\n') : [];
+    const event = { level: 'info', event: 'call.end', ok: true };
+
+    // decideForProject reads Date.now to age its cache; jest's modern fake timers
+    // replace it, so the clock is driven here without a test-only option.
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2026-11-21T12:00:00Z'));
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it('the daemon stops spooling within a second of a withdrawal', () => {
+      const root = configuredWorkspace({ telemetry: { enabled: true } });
+      const observe = boundRecorder({ projectRoot: root, env: TOKEN, fields: { src: 'daemon' } });
+
+      observe(event);
+      expect(spoolLines(root)).toHaveLength(1);
+
+      setLocalConsent(root, false, { env: TOKEN });
+
+      // Inside the max age the cache still holds the decision it last
+      // took, so this event MAY spool: a withdrawal is noticed within a
+      // second, not instantly. That bound is what keeps a file read off every
+      // event.
+      jest.advanceTimersByTime(telemetry.DECISION_MAX_AGE_MS - 1);
+      observe(event);
+      expect(spoolLines(root).length).toBeLessThanOrEqual(2);
+      const before = spoolLines(root).length;
+
+      jest.advanceTimersByTime(1);
+      observe(event);
+      expect(spoolLines(root)).toHaveLength(before);
+
+      jest.advanceTimersByTime(60 * 1000);
+      observe(event);
+      expect(spoolLines(root)).toHaveLength(before);
+    });
+
+    it('a daemon started while telemetry was off follows a later opt-in within a second', () => {
+      const root = configuredWorkspace({ telemetry: { enabled: false } });
+      const observe = boundRecorder({ projectRoot: root, env: TOKEN, fields: { src: 'daemon' } });
+      observe(event);
+      expect(spoolLines(root)).toHaveLength(0);
+
+      telemetry.setEnabled(root, true, TOKEN);
+      observe(event);
+      expect(spoolLines(root)).toHaveLength(1);
+    });
+
+    it('the daemon stops spooling once the config flips to disabled, with no cache reset', () => {
+      const root = configuredWorkspace({ telemetry: { enabled: true } });
+      const observe = boundRecorder({ projectRoot: root, env: TOKEN, fields: { src: 'daemon' } });
+      observe(event);
+      expect(spoolLines(root)).toHaveLength(1);
+
+      fs.writeFileSync(
+        path.join(root, '.mobile-automator', 'config.json'),
+        JSON.stringify({ telemetry: { enabled: false } }, null, 2)
+      );
+      jest.advanceTimersByTime(telemetry.DECISION_MAX_AGE_MS);
+      observe(event);
+      expect(spoolLines(root)).toHaveLength(1);
+    });
+
+    it('a one-shot record() reads the decision once', () => {
+      const root = configuredWorkspace({ telemetry: { enabled: true } });
+      const file = consentPath({ env: TOKEN });
+      const reads = jest.spyOn(fs, 'openSync'); // the consent read opens the leaf through safe-fs
+      try {
+        record({ level: 'info', src: 'cli', event: 'verb.end', verb: 'tap', ok: true }, { projectRoot: root, env: TOKEN });
+        expect(reads.mock.calls.filter(([p]) => p === file)).toHaveLength(1);
+      } finally {
+        reads.mockRestore();
+      }
+      // And the one read said yes: the event spooled.
+      expect(spoolLines(root)).toHaveLength(1);
+    });
   });
 
   it('survives a throwing spool sink without depriving its neighbours', () => {

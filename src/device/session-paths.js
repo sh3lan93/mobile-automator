@@ -17,11 +17,11 @@
 // touching the filesystem. argvPath is the one exception: it reads realpaths,
 // but never writes.
 
-const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 const { workspaceDir } = require('../workspace/layout');
+const { realOrResolved } = require('../util/real-or-resolved');
 
 const SESSION_DIRNAME = '.session';
 const SOCKET_NAME = 'mauto.sock';
@@ -206,14 +206,6 @@ function commandHasWorkspaceMarker(command) {
 // in unit tests) falls back to path.resolve. "Under" is strict: the root itself
 // is not under it, and a sibling sharing its prefix (/a/proj2 vs /a/proj) is
 // outside it.
-function realOrResolved(p) {
-  try {
-    return fs.realpathSync(p);
-  } catch (_e) {
-    return path.resolve(p);
-  }
-}
-
 function argvPath(projectRoot, absPath) {
   const rel = path.relative(realOrResolved(projectRoot), realOrResolved(absPath));
   if (!rel || path.isAbsolute(rel) || rel === '..' || rel.startsWith('..' + path.sep)) return absPath;

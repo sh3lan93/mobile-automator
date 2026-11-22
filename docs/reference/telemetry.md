@@ -19,6 +19,8 @@ mobile-mcp, has separate telemetry of its own. Upstream it is on by default;
   no user id. Events are anonymous and uncorrelated.
 - Everything is spooled to a local file first. You can read it before it goes:
   `cat .mobile-automator/.logs/telemetry.spool`.
+- Consent is yours, not the repository's. It is recorded per user, outside the
+  repository, so a config someone committed cannot turn telemetry on for you.
 
 ## Turning it on and off
 
@@ -29,11 +31,46 @@ mauto telemetry disable    # opt back out
 mauto telemetry flush      # upload what is queued now
 ```
 
-`mauto telemetry enable` writes `telemetry.enabled: true` into
-`.mobile-automator/config.json`. `mauto config set telemetry.enabled true` does
-the same thing.
+`mauto telemetry enable` does two things, and telemetry is on only when both
+are in place:
 
-Two environment variables override the config and always win:
+1. It writes `telemetry.enabled: true` into `.mobile-automator/config.json`:
+   the project allows telemetry.
+2. It records **your** consent for this project in a file outside the
+   repository: `$XDG_CONFIG_HOME/mauto/telemetry-consent.json`, or
+   `~/.config/mauto/telemetry-consent.json` when `XDG_CONFIG_HOME` is not set.
+   The file is keyed by the project's real path (symlinks resolved) and holds
+   nothing else:
+
+   ```json
+   { "projects": { "/Users/you/code/my-app": true } }
+   ```
+
+`config.json` is usually committed, and a committed `telemetry.enabled: true`
+on its own turns nothing on. Everyone who clones the repository has to run
+`mauto telemetry enable` themselves; until then `mauto telemetry status`
+reports `enabled: false` with reason `not_consented_locally`. For the same
+reason `mauto config set telemetry.enabled true` changes only the project
+config and records no consent.
+
+`mauto telemetry disable` writes `telemetry.enabled: false` and removes this
+project from your consent file. A device session that is already running
+re-checks before every upload and stops sending. A session started by a
+`mauto` older than 0.40.16 does not, so run `mauto session end` after
+disabling if you upgraded with one running.
+
+`mauto telemetry status` reports why telemetry is on or off in `data.reason`:
+
+| `reason` | Meaning |
+|---|---|
+| `kill_switch` | `MAUTO_TELEMETRY=0` is set. |
+| `do_not_track` | `DO_NOT_TRACK` is set. |
+| `not_configured` | `config.json` does not say `telemetry.enabled: true`. |
+| `not_consented_locally` | The project config opts in, but you have not run `mauto telemetry enable` on this machine. |
+| `no_token` | This build has no project token, so it cannot send. |
+| `enabled` | Telemetry is on. |
+
+Two environment variables override all of this and always win:
 
 | Variable | Effect |
 |---|---|
@@ -43,8 +80,8 @@ Two environment variables override the config and always win:
 `MAUTO_TELEMETRY=1` deliberately does **not** enable telemetry. An off-switch is
 safe to honour from the environment; an on-switch is a way to turn collection on
 for a machine — a CI image, a shared shell profile, an inherited Dockerfile —
-whose owner never consented to it. Opting in happens in a file the project owner
-edits.
+whose owner never consented to it. Opting in happens through
+`mauto telemetry enable`, which writes your own consent file.
 
 Two further environment variables can redirect **where** enabled telemetry is
 sent: `MAUTO_TELEMETRY_HOST` (default `eu.i.posthog.com`) and
@@ -117,6 +154,19 @@ device session daemon uploads it during its idle window. `mauto telemetry flush`
 does it on demand. Nothing is retried forever: the spool is capped at 256 KiB,
 at most three pending batches are kept, and failed uploads back off from one
 minute to thirty.
+
+The uploader re-reads your consent, uncached, before every upload, and the
+daemon re-checks it at most once a second before it spools another line. A
+flush stopped by a disable leaves what it had not sent in place, unsent;
+`data.skipped` then gives the reason.
+
+The spool sits in a directory that can be committed to the repository, so the
+uploader treats it as untrusted. It applies the field list above to every
+line it reads, and again just before the upload, so a line edited by hand or
+checked in can never add a field. It never reads, appends to, renames or
+deletes a spool that is a symlink or a hard link, or one inside a `.logs/`
+directory that is a link or that another user owns, and it ignores a batch
+over 1 MiB.
 
 `mauto telemetry flush` reports its outcome in two units: `sent` and `dropped`
 count **events** (`dropped` events were permanently rejected by the endpoint

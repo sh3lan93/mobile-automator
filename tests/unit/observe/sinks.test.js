@@ -275,6 +275,18 @@ describe('file sink bounding modes', () => {
     expect(fs.readFileSync(target, 'utf8')).toBe(original);
   });
 
+  it("'cap' measures the cap on the trace it opened, not by a stat of the path (#348)", () => {
+    const root = boundedWorkspace();
+    const target = path.join(root, '.mobile-automator', '.logs', 'run-smoke.ndjson');
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, 'x'.repeat(MAX_LOG_BYTES_CANONICAL));
+    const statSaysEmpty = { ...fs, statSync: () => ({ size: 0 }) };
+
+    fileSink.write(event, { projectRoot: root, env: {}, fs: statSaysEmpty, logPath: target, bound: 'cap' });
+
+    expect(fs.statSync(target).size).toBe(MAX_LOG_BYTES_CANONICAL);
+  });
+
   it("'cap' appends normally below the cap", () => {
     const root = boundedWorkspace();
     const target = path.join(root, '.mobile-automator', '.logs', 'run-smoke.ndjson');

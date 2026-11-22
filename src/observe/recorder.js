@@ -16,7 +16,8 @@
 // have DIFFERENT thresholds (stderr warn, file info) and only the recorder
 // knows which sink it is currently feeding.
 //
-// A sink is a { threshold, write } pair and ALWAYS states its own threshold —
+// A sink is a { name, threshold, write } triple and ALWAYS states its own
+// threshold —
 // there is no default filled in on its behalf. A test that wants the real
 // thresholds wraps defaultSinks(root, env) and swaps only `write`, so it
 // exercises the levels production resolves instead of a branch that exists
@@ -59,11 +60,12 @@ const { decideForProject } = require('./telemetry');
 function defaultSinks(projectRoot, env, { logPath, tracePath } = {}) {
   const levels = resolveLevels(env);
   const sinks = [
-    { threshold: levels.stderr, write: (e) => stderrSink.write(e) },
-    { threshold: levels.file, write: (e) => fileSink.write(e, { projectRoot, env, logPath }) },
+    { name: 'stderr', threshold: levels.stderr, write: (e) => stderrSink.write(e) },
+    { name: 'file', threshold: levels.file, write: (e) => fileSink.write(e, { projectRoot, env, logPath }) },
   ];
   if (tracePath) {
     sinks.push({
+      name: 'trace',
       threshold: levels.file,
       // bound:'cap' — a trace must not rotate; see sinks/file.js.
       write: (e) => fileSink.write(e, { projectRoot, env, logPath: tracePath, bound: 'cap' }),
@@ -71,12 +73,12 @@ function defaultSinks(projectRoot, env, { logPath, tracePath } = {}) {
   }
 
   // The spool is the ONLY path by which an event can leave this machine, so
-  // it is not merely level-gated — it is not CONSTRUCTED at all until a
-  // human has opted in. While telemetry is off there is no spool file,
-  // which means there is nothing for a flusher to find even if one ran.
-  // That is the first of the three layers behind "no upload path is
-  // reachable while disabled"; the other two are flush()'s own early
-  // return and the one-file transport lint guard.
+  // it is not merely level-gated: every write asks whether telemetry is on,
+  // and while it is off nothing is written, so there is no spool file and
+  // nothing for a flusher to find even if one ran. That is the first of the
+  // three layers behind "no upload path is reachable while disabled"; the
+  // other two are flush()'s own per-upload check and the one-file transport
+  // lint guard.
   //
   // Its threshold is spool.SPOOL_LEVEL, deliberately NOT levels.file:
   // telemetry has its own separate control, so MAUTO_LOG_LEVEL=debug must
@@ -84,14 +86,21 @@ function defaultSinks(projectRoot, env, { logPath, tracePath } = {}) {
   // must not be read as consent withdrawal (there is an explicit control for
   // that: MAUTO_TELEMETRY=0 / DO_NOT_TRACK=1).
   //
-  // decideForProject memoises per project root — one config.json read per
-  // process, not one per event. See src/observe/telemetry.js.
-  if (decideForProject(projectRoot, env).enabled) {
-    sinks.push({
-      threshold: spoolSink.SPOOL_LEVEL,
-      write: (e) => spoolSink.write(e, { projectRoot, env }),
-    });
-  }
+  // The decision is asked at WRITE time, never at construction (#348): the
+  // daemon builds its sinks once and lives for hours, so a decision taken
+  // when it started would outlive a withdrawal, and would also keep it deaf
+  // to a later opt-in. decideForProject caches the decision per project root
+  // for at most a second (DECISION_MAX_AGE_MS in src/observe/telemetry.js): a
+  // one-shot verb, whose writes land within that second, reads config.json
+  // once, and a running daemon follows `mauto telemetry enable` and `disable`
+  // alike within a second.
+  sinks.push({
+    name: 'spool',
+    threshold: spoolSink.SPOOL_LEVEL,
+    write: (e) => {
+      if (decideForProject(projectRoot, env).enabled) spoolSink.write(e, { projectRoot, env });
+    },
+  });
 
   return sinks;
 }
@@ -152,6 +161,10 @@ function safeObserve(observe) {
 //                stating: MAUTO_LOG_LEVEL and MAUTO_LOG_DIR are captured at
 //                construction and pinned for the caller's lifetime; for the
 //                daemon, `mauto session end` is how you change them.
+//                Telemetry consent is NOT pinned (#348): it lives in files, not
+//                the environment, and the spool sink re-checks it at most once
+//                a second (see defaultSinks), so a withdrawal reaches a running
+//                daemon without a session end.
 //
 // `fields` are stamped on every event and applied AFTER the caller's, so no call
 // site can forge `src`, claim another session's id or misreport its pid. That

@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-const { createProjectFile, createWorkspaceFile, userFile } = require('../workspace/safe-fs');
+const { createProjectFile, createWorkspaceFile, openUserLeaf, userFile } = require('../workspace/safe-fs');
 
 // Atomic write: stream into a hidden temp file in the same directory,
 // fsync, then rename over the target. rename(2) within one dir is atomic, so
@@ -16,7 +16,7 @@ const { createProjectFile, createWorkspaceFile, userFile } = require('../workspa
 // O_EXCL|O_NOFOLLOW under a random name, so it cannot be pre-planted either
 // (#345).
 //
-// Three writers, sharing the core below. Pick by who chose the path:
+// Four writers, sharing the core below. Pick by who chose the path:
 //   - atomicWorkspaceWrite: mauto's own files in .mobile-automator/. The temp
 //     file is created by safe-fs's createWorkspaceFile, which walks the
 //     target's directory (symlink-free, owned by us, created when missing).
@@ -29,6 +29,11 @@ const { createProjectFile, createWorkspaceFile, userFile } = require('../workspa
 //     (a plain recursive mkdir) anywhere else: an explicit path outside the
 //     workspace is the user's call (#347). There is no exported unconfined
 //     writer, so no write can skip that decision.
+//   - atomicUserLeafWrite: mauto's own file outside every project (the
+//     per-user telemetry consent record), in a directory the caller settled
+//     itself. No project root and no walk: the temp file is opened through
+//     safe-fs's openUserLeaf (O_NOFOLLOW, ours, one link), the leaf rule #359
+//     set for a path outside any project, and created with `mode`.
 
 // The one temp-file name for a write that lands at `file`: a hidden sibling in
 // the same directory (so a rename or link to `file` never crosses a
@@ -101,4 +106,15 @@ function atomicOutputWrite(projectRoot, file, contents) {
   writeViaTemp(target.path, contents, (tmp) => target.open(tmp, O_WRONLY | O_CREAT | O_EXCL));
 }
 
-module.exports = { atomicWorkspaceWrite, atomicProjectWrite, atomicOutputWrite, tempPathFor };
+// `mode` is the temp file's creation mode, and so the file's: the rename
+// moves that inode into place, and umask can only remove bits, so a 0o600
+// write is never readable by others, not even before a chmod could run.
+function atomicUserLeafWrite(file, contents, { mode = 0o666 } = {}) {
+  if (typeof file !== 'string' || contents === undefined) {
+    throw new TypeError('atomicUserLeafWrite(file, contents) needs the file and its contents');
+  }
+  const { O_WRONLY, O_CREAT, O_EXCL } = fs.constants;
+  writeViaTemp(file, contents, (tmp) => openUserLeaf(tmp, O_WRONLY | O_CREAT | O_EXCL, mode));
+}
+
+module.exports = { atomicWorkspaceWrite, atomicProjectWrite, atomicOutputWrite, atomicUserLeafWrite, tempPathFor };

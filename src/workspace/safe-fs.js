@@ -406,7 +406,11 @@ function closeQuietly(fs, fd) {
 // walked: openLeaf, then the leaf must be ours and, for an open that writes,
 // have exactly one hard link. Returns an fd the caller closes; on a refusal
 // the fd is closed first.
-function openOwnedLeaf(file, flags, { mode = 0o666 } = {}, deps = {}) {
+//
+// `singleLink` applies the one-hard-link rule to a read too. A reader that
+// uploads and then deletes what it read (the telemetry spool, #348) must not
+// read a file elsewhere by another name: its contents would ship as ours.
+function openOwnedLeaf(file, flags, { mode = 0o666, singleLink = false } = {}, deps = {}) {
   const d = resolveDeps(deps);
   const { O_WRONLY, O_RDWR, O_TRUNC } = nodeFs.constants;
   const resolved = path.resolve(file);
@@ -416,7 +420,7 @@ function openOwnedLeaf(file, flags, { mode = 0o666 } = {}, deps = {}) {
   // without it and truncate only once every check has passed.
   const { fd, stat } = openLeaf(resolved, flags & ~O_TRUNC, mode, deps);
   try {
-    checkLeafOwnership(resolved, stat, writes, d);
+    checkLeafOwnership(resolved, stat, writes || singleLink, d);
     if (writes && flags & O_TRUNC) d.fs.ftruncateSync(fd, 0);
   } catch (err) {
     closeQuietly(d.fs, fd);
@@ -493,6 +497,13 @@ function readCapped(open, file, maxBytes, deps) {
   } finally {
     closeQuietly(fs, fd);
   }
+}
+
+// The capped utf8 read of a leaf whose directory the caller has settled
+// itself (userDir): openOwnedLeaf read-only, null when it does not exist,
+// too_large past maxBytes. `singleLink` as for openOwnedLeaf.
+function readOwnedLeaf(file, { maxBytes = DEFAULT_MAX_BYTES, singleLink = false } = {}, deps = {}) {
+  return readCapped(() => openOwnedLeaf(file, nodeFs.constants.O_RDONLY, { singleLink }, deps), file, maxBytes, deps);
 }
 
 // Read a workspace file as utf8. null when it (or a parent dir) does not exist.
@@ -696,6 +707,8 @@ module.exports = {
   openLeaf,
   // The checked leaf open, for a caller that walked the directory itself.
   openOwnedLeaf,
+  // Its capped read, for a reader that settled the directory itself (the spool).
+  readOwnedLeaf,
   openWorkspaceFile,
   createWorkspaceFile,
   removeWorkspaceFile,
