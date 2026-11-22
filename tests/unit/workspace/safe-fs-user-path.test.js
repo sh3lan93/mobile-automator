@@ -11,6 +11,8 @@ const path = require('path');
 
 const {
   inWorkspace,
+  inProject,
+  readUserFile,
   safeWorkspaceDest,
   isInside,
   userDir,
@@ -233,5 +235,111 @@ describe('isInside', () => {
     ['/', '/', true],
   ])('isInside(%s, %s) is %s', (child, parent, expected) => {
     expect(isInside(child, parent)).toBe(expected);
+  });
+});
+
+describe('inProject (#363)', () => {
+  it('returns a path lexically inside the project as is, the workspace included', () => {
+    expect(inProject(root, path.join(root, 'flows', 'x.json'))).toBe(path.join(root, 'flows', 'x.json'));
+    expect(inProject(root, path.join(ws, 'scenarios', 'x.json'))).toBe(path.join(ws, 'scenarios', 'x.json'));
+    expect(inProject(root, root)).toBe(path.resolve(root));
+  });
+
+  it('is null for a path outside the project', () => {
+    expect(inProject(root, path.join(outside, 'x.json'))).toBeNull();
+    expect(inProject(root, path.join(base, 'nope', 'x.json'))).toBeNull();
+    expect(inProject(root, `${root}-sibling/x.json`)).toBeNull();
+  });
+
+  it('re-roots a project path reached through a symlinked ancestor', () => {
+    const { realRoot, alias } = aliasedRoot(base, root);
+    expect(inProject(realRoot, path.join(alias, 'flows', 'x.json'))).toBe(path.join(realRoot, 'flows', 'x.json'));
+    expect(inProject(realRoot, path.join(alias, '.mobile-automator', 'a'))).toBe(path.join(realRoot, '.mobile-automator', 'a'));
+  });
+});
+
+// The read for a path the user named (#363): a scenario, a baseline, a trace.
+// Inside the checkout it is a checked walk and a checked leaf; outside the
+// project it is the user's own file, read as they named it.
+describe('readUserFile (#363)', () => {
+  const BYTES = Buffer.from([0xef, 0xbb, 0xbf, 0x7b, 0x0d, 0x0a, 0xff, 0xfe, 0xc3, 0xa9, 0x7d]);
+
+  it('returns the exact bytes with encoding null, and utf8 text by default', () => {
+    fs.mkdirSync(path.join(ws, 'scenarios'));
+    const p = path.join(ws, 'scenarios', 'x.json');
+    fs.writeFileSync(p, BYTES);
+    const got = readUserFile(root, p, { encoding: null });
+    expect(Buffer.isBuffer(got)).toBe(true);
+    expect(got.equals(BYTES)).toBe(true);
+    fs.writeFileSync(p, '{"a":1}');
+    expect(readUserFile(root, p)).toBe('{"a":1}');
+  });
+
+  it('reads a project file and a file outside the project byte-exact', () => {
+    fs.mkdirSync(path.join(root, 'flows'));
+    fs.writeFileSync(path.join(root, 'flows', 'x.json'), BYTES);
+    expect(readUserFile(root, path.join(root, 'flows', 'x.json'), { encoding: null }).equals(BYTES)).toBe(true);
+    fs.writeFileSync(path.join(outside, 'y.json'), BYTES);
+    expect(readUserFile(root, path.join(outside, 'y.json'), { encoding: null }).equals(BYTES)).toBe(true);
+  });
+
+  it('refuses a symlink leaf in the workspace, in the workspace scope', () => {
+    fs.mkdirSync(path.join(ws, 'scenarios'));
+    fs.symlinkSync(canaryFile, path.join(ws, 'scenarios', 'x.json'));
+    const err = expectUnsafe(() => readUserFile(root, path.join(ws, 'scenarios', 'x.json')), 'symlink');
+    expect(err.scope).toBe('workspace');
+    expect(err.message).not.toContain(CANARY);
+    expect(err.message).not.toContain(canaryFile);
+  });
+
+  it('refuses a directory link inside the project, in the path scope', () => {
+    fs.writeFileSync(path.join(outside, 'x.json'), CANARY);
+    fs.symlinkSync(outside, path.join(root, 'flows'));
+    const err = expectUnsafe(() => readUserFile(root, path.join(root, 'flows', 'x.json')), 'symlink');
+    expect(err.scope).toBe('path');
+    expect(err.message).toMatch(/^Refusing to use path /);
+    expect(err.message).not.toContain(CANARY);
+    expect(err.message).not.toContain(outside);
+  });
+
+  it('refuses a symlink leaf inside the project, dangling or not', () => {
+    fs.symlinkSync(canaryFile, path.join(root, 'x.json'));
+    expectUnsafe(() => readUserFile(root, path.join(root, 'x.json')), 'symlink');
+    fs.symlinkSync(path.join(outside, 'gone.json'), path.join(root, 'y.json'));
+    expectUnsafe(() => readUserFile(root, path.join(root, 'y.json')), 'symlink');
+  });
+
+  it("follows the user's own link outside the project", () => {
+    const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-elsewhere-'));
+    try {
+      const link = path.join(elsewhere, 'mine.json');
+      fs.symlinkSync(canaryFile, link);
+      expect(readUserFile(root, link)).toBe(CANARY);
+    } finally {
+      fs.rmSync(elsewhere, { recursive: true, force: true });
+    }
+  });
+
+  it('is null for an absent file or parent, in every scope', () => {
+    expect(readUserFile(root, path.join(ws, 'scenarios', 'none.json'))).toBeNull();
+    expect(readUserFile(root, path.join(root, 'flows', 'none.json'))).toBeNull();
+    expect(readUserFile(root, path.join(outside, 'none', 'none.json'))).toBeNull();
+  });
+
+  it('refuses a file past the cap (too_large), in every scope', () => {
+    fs.writeFileSync(path.join(ws, 'big'), 'x'.repeat(11));
+    fs.writeFileSync(path.join(root, 'big'), 'x'.repeat(11));
+    fs.writeFileSync(path.join(outside, 'big'), 'x'.repeat(11));
+    expectUnsafe(() => readUserFile(root, path.join(ws, 'big'), { maxBytes: 10 }), 'too_large');
+    expectUnsafe(() => readUserFile(root, path.join(root, 'big'), { maxBytes: 10 }), 'too_large');
+    const err = expectUnsafe(() => readUserFile(root, path.join(outside, 'big'), { maxBytes: 10 }), 'too_large');
+    expect(err.message).toMatch(/^Refusing to use path /);
+    expect(readUserFile(root, path.join(outside, 'big'), { maxBytes: 11 })).toBe('x'.repeat(11));
+  });
+
+  it('re-roots a workspace path reached through an aliased root before the walk', () => {
+    const { realRoot, alias, realWs } = aliasedRoot(base, root);
+    fs.symlinkSync(outside, path.join(realWs, 'scenarios'));
+    expectUnsafe(() => readUserFile(realRoot, path.join(alias, '.mobile-automator', 'scenarios', 'secret.txt')), 'symlink');
   });
 });
