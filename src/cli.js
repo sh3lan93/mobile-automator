@@ -1784,8 +1784,8 @@ function crashWriteFailure(given, err) {
 // .mobile-automator/ (through a symlinked alias of the root too) it gets the
 // workspace rules: every directory walked, created when missing, a link on
 // the way refused. Anywhere else it must land in one of the roots
-// src/workspace/output-roots.js allows, checked before the device is asked, so
-// a bad --out costs no device work. A refusal (that rule's or a link's)
+// src/workspace/output-roots.js allows. Both are checked before the device is
+// asked, so a bad --out costs no device work. A refusal (that rule's or a link's)
 // propagates to toEnvelope; any other fs error is the write failure. `tmpdir`,
 // `platform`, `darwinTmp` and `homedir` are injectable for tests.
 async function handleCrashGet(
@@ -2123,7 +2123,7 @@ function buildProgram(deps = {}) {
     .option('--junit <path>', 'also write the run as a JUnit XML report to this file (its directory must exist)')
     .action(withEnvelope(requireWorkspace(async (file, opts) => {
       const prepared = prepareRun({
-        validator, file: path.resolve(cwd, file), runId: opts.runId, timeoutMs: opts.timeoutMs, judge: opts.judge,
+        validator, projectRoot, file: path.resolve(cwd, file), runId: opts.runId, timeoutMs: opts.timeoutMs, judge: opts.judge,
         junit: opts.junit, cwd, env: process.env,
       });
       if (prepared.failure) return emit(prepared.failure, humanFlag());

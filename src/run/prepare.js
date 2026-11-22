@@ -4,6 +4,9 @@ const fs = require('fs');
 const path = require('path');
 
 const { fail } = require('../output/envelope');
+const { typedFail } = require('../output/typed-fail');
+const { isTypedRefusal } = require('../output/typed-refusal');
+const { userDest } = require('../workspace/safe-fs');
 const { loadScenario } = require('../scenario/load');
 const { isResultRunId } = require('../result/store');
 const { resolveRunId } = require('../observe/settings');
@@ -32,6 +35,23 @@ function junitRefusal(junitPath) {
   return null;
 }
 
+// The workspace rules for a --junit path that lands in .mobile-automator/
+// (#347), before the run: the stat checks above follow links, so a report
+// directory planted as a link would pass them and be refused only by the
+// write, after the device work. userDest walks the directory and checks the
+// leaf exactly as the writer will (and is a no-op anywhere else), so the
+// refusal, with its own kind, message and hint, lands first. Returns the
+// failure, or null.
+function junitWorkspaceRefusal(projectRoot, junitPath) {
+  try {
+    userDest(projectRoot, junitPath);
+    return null;
+  } catch (err) {
+    if (isTypedRefusal(err)) return { failure: typedFail(err) };
+    throw err;
+  }
+}
+
 // The values `mauto run --judge` accepts. Private: src/result/flags.js
 // exports a different JUDGES, the ones `result add-assertion` takes.
 const RUN_JUDGES = Object.freeze(['none']);
@@ -48,7 +68,7 @@ const refuse = (kind, message, hint) => ({ failure: { envelope: fail(kind, messa
 // executor; `timeoutMs` and `junitPath` (resolved against `cwd`) are null
 // when not given — or `{ failure: { envelope, exitKind } }`.
 function prepareRun({
-  validator, file, runId: flag, timeoutMs: timeoutFlag, judge = 'none', junit,
+  validator, projectRoot, file, runId: flag, timeoutMs: timeoutFlag, judge = 'none', junit,
   cwd = process.cwd(), env = process.env, now = () => new Date(),
 }) {
   // --judge names who decides the assertions only an agent can judge. Only
@@ -88,6 +108,8 @@ function prepareRun({
         'Pass --junit a file path whose directory already exists; mauto run writes the report there after the run.'
       );
     }
+    const unsafe = junitWorkspaceRefusal(projectRoot, junitPath);
+    if (unsafe) return unsafe;
   }
 
   const loaded = loadScenario(validator, file, { strict: true });

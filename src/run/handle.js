@@ -112,9 +112,10 @@ async function handleRun(
   // this run, written once the run is finalized. A failed write overrides any
   // outcome — a CI job must never upload a report that is silently missing —
   // and still names the saved result, with junit_path null. The path is the
-  // user's: one that lands in the workspace is written through safe-fs, and a
-  // committed link there is refused with the refusal's own message and hint
-  // (#347).
+  // user's: one that lands in the workspace is written through safe-fs (#347).
+  // prepareRun already refused a committed link there before the run; a link
+  // planted during it is still refused here, with the refusal's own message
+  // and hint.
   if (junitPath) {
     try {
       writeFile(projectRoot, junitPath, toJUnit([result]).xml);

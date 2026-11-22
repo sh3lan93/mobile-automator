@@ -19,7 +19,7 @@ const os = require('os');
 const path = require('path');
 
 const { TypedRefusal } = require('../output/typed-refusal');
-const { isInside, userFile } = require('./safe-fs');
+const { isInside, safeWorkspaceDest, userFile } = require('./safe-fs');
 
 // A path the user chose that the rule refuses: their input is wrong, not the
 // checkout, so invalid_input (exit 3), with a hint naming the allowed roots.
@@ -61,14 +61,21 @@ function crashOutRoots(
 }
 
 // Where the report for `out` (absolute) goes: userFile's handle, checked
-// before the device is asked so a bad --out costs no device work. Outside the
-// workspace its directory must already exist and realpath inside one of the
-// roots. Throws OutputPathRefusal when it does not; a directory that does not
-// exist (or cannot be realpath'd) throws its own fs error, which the caller
-// reports as the write failure it always was.
+// before the device is asked so a bad --out costs no device work. Inside the
+// workspace its directory is walked now, created where missing as the write
+// would create it, and the leaf checked, so a planted link is refused
+// (UnsafePathError) before the device call rather than at the write; the
+// write's own open checks it all again. Outside the workspace its directory
+// must already exist and realpath inside one of the roots. Throws
+// OutputPathRefusal when it does not; a directory that does not exist (or
+// cannot be realpath'd) throws its own fs error, which the caller reports as
+// the write failure it always was.
 function crashOutTarget(projectRoot, out, host = {}) {
   const target = userFile(projectRoot, out);
-  if (target.confined) return target;
+  if (target.confined) {
+    safeWorkspaceDest(projectRoot, target.path);
+    return target;
+  }
 
   const { roots, projectTooBroad } = crashOutRoots(projectRoot, host);
   const dir = fs.realpathSync(path.dirname(target.path));

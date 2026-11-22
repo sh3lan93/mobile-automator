@@ -137,6 +137,29 @@ describe('mauto run — refusals before any device work', () => {
     expect(factory).not.toHaveBeenCalled();
   });
 
+  test('--junit through a symlinked workspace directory is refused before any device work (#347)', async () => {
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-run-verb-outside-'));
+    try {
+      fs.symlinkSync(outside, path.join(root, '.mobile-automator', 'reports'));
+      const { r, factory, bridge } = await runCli([
+        writeScenario(scenario()), '--run-id', RUN_ID, '--junit', path.join(root, '.mobile-automator', 'reports', 'r.xml'),
+      ]);
+      expect(r.exitKind).toBe('environment');
+      expect(r.envelope.error.kind).toBe('environment');
+      expect(r.envelope.error.message).toMatch(/^Refusing to use workspace path /);
+      expect(r.envelope.error.message).toContain(path.join(root, '.mobile-automator', 'reports'));
+      expect(r.envelope.error.message).not.toContain(outside);
+      expect(r.envelope.hint).not.toMatch(/Check the directory exists/);
+      // Neither connected nor driven: the scenario never ran.
+      expect(factory).not.toHaveBeenCalled();
+      expect(bridge.calls).toEqual([]);
+      expect(fs.readdirSync(outside)).toEqual([]);
+      expect(fs.existsSync(path.join(root, '.mobile-automator', 'results'))).toBe(false);
+    } finally {
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
   test('an unreadable scenario is invalid_input', async () => {
     const { r, factory } = await runCli([path.join(root, 'missing.json'), '--run-id', RUN_ID]);
     expect(r.exitKind).toBe('invalid_input');

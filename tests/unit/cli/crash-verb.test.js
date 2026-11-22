@@ -250,14 +250,15 @@ describe('handleCrashGet --out confinement (#347)', () => {
     expect(snapshot(s.outside)).toEqual(before);
   });
 
-  it('--out .mobile-automator/crash.txt that links to an outside file is refused, the file unchanged', async () => {
+  it('--out .mobile-automator/crash.txt that links to an outside file is refused before the device is asked, the file unchanged', async () => {
     const s = setup();
     fs.symlinkSync(path.join(s.outside, 'target.txt'), path.join(s.ws, 'crash.txt'));
     const before = snapshot(s.outside);
 
-    const { r } = await getWith(s, '.mobile-automator/crash.txt');
+    const { r, asked } = await getWith(s, '.mobile-automator/crash.txt');
 
     expectRefused(r, /^Refusing to use workspace path /);
+    expect(asked).toEqual([]);
     expect(r.envelope.error.message).toContain(path.join(s.ws, 'crash.txt'));
     expect(snapshot(s.outside)).toEqual(before);
   });
@@ -274,14 +275,16 @@ describe('handleCrashGet --out confinement (#347)', () => {
     expect(snapshot(s.outside)).toEqual(before);
   });
 
-  it('a symlinked workspace directory on the way (.mobile-automator/reports -> outside) is refused', async () => {
+  it('a symlinked workspace directory on the way (.mobile-automator/reports -> outside) is refused before the device is asked', async () => {
     const s = setup();
     fs.symlinkSync(s.outside, path.join(s.ws, 'reports'));
     const before = snapshot(s.outside);
 
-    const { r } = await getWith(s, '.mobile-automator/reports/crash.txt');
+    const { r, asked } = await getWith(s, '.mobile-automator/reports/crash.txt');
 
     expectRefused(r, /^Refusing to use workspace path /);
+    // Refused at target time: a planted link costs no device work.
+    expect(asked).toEqual([]);
     expect(r.envelope.error.message).toContain(path.join(s.ws, 'reports'));
     expect(snapshot(s.outside)).toEqual(before);
   });
