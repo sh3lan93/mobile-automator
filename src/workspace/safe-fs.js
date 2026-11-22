@@ -26,8 +26,8 @@
 //     project root.
 //
 // Both check every directory below the project root down to the file's own;
-// the scope (its row of CONFINED_SCOPES) sets the containment bound, and its
-// SCOPES entry words the refusal. These two names are the only scope names:
+// the scope's one row of SCOPES sets the containment bound and words the
+// refusal. These two names are the only scope names:
 // a target's `scope` and a refusal's `err.scope` use them alike.
 //
 // A path the user chose (--out, --junit, a screenshot destination) is sorted
@@ -170,10 +170,27 @@ const PROJECT_PATH = dirPolicy({
   fallbackHint: 'Inspect the path and replace it with a real file or directory inside the project.',
 });
 
-// The one wording table: a scope name -> its policy. An unknown scope reads as
-// the workspace one. A caller's own policy (src/device/session-dir.js) is
-// handed to the check as `policy` and never listed here.
-const SCOPES = { workspace: WORKSPACE_DIR, path: PROJECT_PATH };
+// The one scope table: a scope name -> everything that scope means, so a
+// scope is added or renamed in one row and nowhere else.
+//   - policy: the directory rules and the wording of every refusal under it
+//     (UnsafePathError, withScope).
+//   - within: the bound the directory walk stays within (walkScope).
+//   - destCreates: whether a destination another process writes (the
+//     engine's screenshot) gets its missing directories made (destInScope).
+//
+//   - workspace: bounded by .mobile-automator/; a destination's directories
+//     are made, like every workspace write.
+//   - path: bounded by the project root (#347, #362); a destination's
+//     directories are not made, as none are for a path the user chose outside
+//     the workspace, so a missing one is reported by the writer as before.
+//
+// An unknown scope's wording reads as the workspace one. A caller's own policy
+// (src/device/session-dir.js) is handed to the check as `policy` and never
+// listed here.
+const SCOPES = Object.freeze({
+  workspace: Object.freeze({ policy: WORKSPACE_DIR, within: (root) => workspaceDir(root), destCreates: true }),
+  path: Object.freeze({ policy: PROJECT_PATH, within: (root) => root, destCreates: false }),
+});
 
 // A refusal carries its own envelope fields, like the repo's other typed
 // errors: `kind` is always environment (the checkout is wrong, not the verb's
@@ -182,7 +199,7 @@ const SCOPES = { workspace: WORKSPACE_DIR, path: PROJECT_PATH };
 // without knowing this class.
 //
 // The wording comes from a policy: `policy` when the check ran under a
-// caller's own, else SCOPES[scope] ('workspace', the default, for a path under
+// caller's own, else SCOPES[scope].policy ('workspace', the default, for a path under
 // .mobile-automator/; 'path' for any other path mauto writes). `kind`, `code`
 // and `reason` are the same whatever the wording. A scoped entry point
 // re-words what the checks throw once, through withScope.
@@ -191,7 +208,7 @@ class UnsafePathError extends TypedRefusal {
   // the target is attacker-chosen and must not reach an envelope. `detail` is
   // the reason text when the check states its own (the owner check names both
   // uids), else the policy's text for `reason`. It must never be file content.
-  constructor(file, reason, { scope = 'workspace', policy = SCOPES[scope] || WORKSPACE_DIR, detail } = {}) {
+  constructor(file, reason, { scope = 'workspace', policy = (SCOPES[scope] || SCOPES.workspace).policy, detail } = {}) {
     super(
       'environment',
       `Refusing to use ${policy.subject} ${file}: ${detail || policy.reasons[reason] || FALLBACK_REASON} (${reason}).`,
@@ -296,26 +313,14 @@ function checkDir(dir, policy, { create = false, mode } = {}, deps = {}) {
   checkDirComponent(dir, lstatOrMkdir(d.fs, dir, create, mode), d, policy);
 }
 
-// The two scopes a path can be confined to, one row each, keyed by the SCOPES
-// name that words their refusals: the bound the directory walk stays within,
-// and whether a destination another process writes (the engine's screenshot)
-// gets its missing directories made. Every confined open, check-only walk and
-// destination check below is one function over this table, so the workspace
-// and the project differ only here.
-//   - workspace: bounded by .mobile-automator/; a destination's directories
-//     are made, like every workspace write.
-//   - path: bounded by the project root (#347, #362); a destination's
-//     directories are not made, as none are for a path the user chose outside
-//     the workspace, so a missing one is reported by the writer as before.
-const CONFINED_SCOPES = Object.freeze({
-  workspace: Object.freeze({ within: (root) => workspaceDir(root), destCreates: true }),
-  path: Object.freeze({ within: (root) => root, destCreates: false }),
-});
+// Every confined open, check-only walk and destination check below is one
+// function over the SCOPES rows, so the workspace and the project differ only
+// there.
 
 // The directory walk of `dir` under a confined scope's bound (see walkDirs).
 // Its refusals are not re-worded here: an entry point wraps them in withScope.
 function walkScope(projectRoot, scope, dir, opts, deps) {
-  return walkDirs(projectRoot, CONFINED_SCOPES[scope].within(projectRoot), dir, opts, resolveDeps(deps));
+  return walkDirs(projectRoot, SCOPES[scope].within(projectRoot), dir, opts, resolveDeps(deps));
 }
 
 // A confined open: the walk of the file's directory (creating the missing
@@ -330,7 +335,7 @@ function openInScope(projectRoot, scope, file, flags, mode, deps) {
 // (created or check-only, per the scope's row), then checkDestLeaf. Returns
 // `resolved`.
 function destInScope(projectRoot, scope, resolved, deps) {
-  const dirOpts = CONFINED_SCOPES[scope].destCreates ? { create: true } : { missingOk: true };
+  const dirOpts = SCOPES[scope].destCreates ? { create: true } : { missingOk: true };
   walkScope(projectRoot, scope, path.dirname(resolved), dirOpts, deps);
   return checkDestLeaf(resolved, resolveDeps(deps));
 }
@@ -701,7 +706,7 @@ function userDir(projectRoot, dir, { create = false } = {}, deps = {}) {
 
 // A file another process writes at a path the user chose (the engine's
 // screenshot). In the workspace or the project, destInScope under its row of
-// CONFINED_SCOPES (#362: in the project the walk creates nothing, then the
+// SCOPES (#362: in the project the walk creates nothing, then the
 // same leaf check), a refusal worded for the scope. Outside, the resolved
 // path byte-for-byte. Returns the path to hand over.
 function userDest(projectRoot, file, deps = {}) {
@@ -714,7 +719,7 @@ function userDest(projectRoot, file, deps = {}) {
 // and `scope`, plus
 //   - `open(file, flags, mode)` for it or a sibling in the same directory (a
 //     temp file). In the workspace or the project (#362), openInScope under
-//     its row of CONFINED_SCOPES, a refusal worded for the scope: every
+//     its row of SCOPES, a refusal worded for the scope: every
 //     directory walked (created under O_CREAT, never through a link), then
 //     the checked leaf. Outside, O_CREAT makes the directory with a plain
 //     recursive mkdir and the leaf is still opened O_NOFOLLOW, ours and with
