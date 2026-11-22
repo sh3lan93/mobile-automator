@@ -59,7 +59,7 @@ const { realClock } = require('./run/clock');
 const { handleAssertReference } = require('./run/assert-reference');
 const { makeRunTrace } = require('./run/trace');
 const { parsePositiveInt } = require('./util/parse-positive-int');
-const { findWorkspaceRoot, workspaceFailure } = require('./workspace/discover');
+const { findWorkspaceRoot, foundRoot: foundRootOf, workspaceFailure } = require('./workspace/discover');
 const { UnsafePathError } = require('./workspace/safe-fs');
 
 // Commander throws (via exitOverride) for two very different reasons, and the
@@ -953,7 +953,8 @@ function storeHint(store) {
 // Discovery owns the walk, so setup honours the same answer every other verb
 // does: checking only cwd let `mauto setup` from a subdirectory scaffold a
 // nested workspace under a legacy (or refused) project.
-function handleSetup({ projectRoot, workspace = { kind: 'none', searched: [projectRoot] } }, opts = {}) {
+function handleSetup({ projectRoot, workspace }, opts = {}) {
+  if (!workspace) throw new TypeError('handleSetup requires the discovery result (workspace)');
   // No --mode stays undefined, never defaulted here: only scaffold knows
   // whether config.json already exists, and the default is for a new
   // workspace only (#333).
@@ -1802,25 +1803,6 @@ function realDeviceBridge(args) {
   return require('./device/connection').acquireConnection(args);
 }
 
-// The root every handler and file sink uses, from the discovery result. Only a
-// `found` workspace supplies one. Every other outcome falls back to cwd, which
-// is what the tolerant verbs (guide, mcp, read-only device/session) have always
-// used; `unsafe` deliberately among them: a refused workspace reads as "no
-// workspace", so its directory is never adopted, and requireWorkspace fails
-// the verbs that need one with the refusal itself.
-function projectRootFor(workspace, cwd) {
-  switch (workspace.kind) {
-    case 'found':
-      return workspace.root;
-    case 'legacy':
-    case 'unsafe':
-    case 'none':
-      return cwd;
-    default:
-      throw new Error(`unknown workspace kind "${workspace.kind}"`);
-  }
-}
-
 function buildProgram(deps = {}) {
   const {
     // Factory returning { bridge, close }. Overridable in tests.
@@ -1846,10 +1828,22 @@ function buildProgram(deps = {}) {
     workspace = deps.projectRoot !== undefined
       ? { kind: 'found', root: deps.projectRoot, searched: [deps.projectRoot] }
       : findWorkspaceRoot(cwd),
+  } = deps;
+
+  // The discovered root, or null for every other outcome, derived ONCE here.
+  // Everything that only asks "is there a workspace, and where" reads this:
+  // the project root below, the autostart gate, assert's root. Only the two
+  // places whose failure differs by outcome (requireWorkspace through
+  // workspaceFailure, and setup) look at `kind`. A refused (`unsafe`)
+  // workspace reads as none, deliberately: its directory is never adopted.
+  const foundRoot = foundRootOf(workspace);
+
+  const {
     // Project root used to resolve .mobile-automator/results/ — and, through the
-    // emitters below, .mobile-automator/.logs/. One root, one tree: see
-    // projectRootFor.
-    projectRoot = projectRootFor(workspace, cwd),
+    // emitters below, .mobile-automator/.logs/. One root, one tree: the
+    // discovered one, or cwd for the tolerant verbs (guide, mcp, read-only
+    // device/session), which have always used it.
+    projectRoot = foundRoot || cwd,
     // The exit paths. run() passes its own instance so the help/version and
     // fatal paths it owns share this program's resolved verb.
     emitters = makeEmitters({ projectRoot }),
@@ -1950,7 +1944,7 @@ function buildProgram(deps = {}) {
   // (exit 5) naming where we looked (or why the workspace there was refused,
   // or where the legacy one is), so the agent can recover.
   const requireWorkspace = (action) => (...args) => {
-    if (workspace.kind !== 'found') {
+    if (!foundRoot) {
       emit(workspaceFailure(workspace), humanFlag());
       return undefined;
     }
@@ -2000,7 +1994,7 @@ function buildProgram(deps = {}) {
       ({ bridge, close } = await deviceBridgeFactory({
         device,
         projectRoot,
-        autostart: workspace.kind === 'found',
+        autostart: Boolean(foundRoot),
       }));
     } catch (err) {
       emit(deviceFail(err), humanFlag());
@@ -2217,7 +2211,7 @@ function buildProgram(deps = {}) {
     .option('--device <id>', 'target device id')
     .action(withEnvelope((type, opts) =>
       withBridge(opts.device, (bridge) =>
-        handleAssert({ deviceBridge: bridge, projectRoot: workspace.kind === 'found' ? workspace.root : null, clock }, type, {
+        handleAssert({ deviceBridge: bridge, projectRoot: foundRoot, clock }, type, {
           target: opts.target,
           expected: opts.expected,
           operator: opts.operator,
@@ -2812,12 +2806,14 @@ async function run(argv) {
     activeEmitters.emitFatal(err, argv.slice(2).includes('--human'));
     return;
   }
-  const projectRoot = projectRootFor(workspace, cwd);
+  // The same derivation buildProgram makes (foundRoot), needed here first
+  // because the emitters exist before the program does.
+  const projectRoot = foundRootOf(workspace) || cwd;
   const emitters = makeEmitters({ projectRoot });
   activeEmitters = emitters;
   try {
-    // No projectRoot here, deliberately: buildProgram derives it with
-    // projectRootFor, and an injected projectRoot is the test seam
+    // No projectRoot here, deliberately: buildProgram derives it from the
+    // workspace, and an injected projectRoot is the test seam
     // that FABRICATES a workspace — passing one would arm that branch and
     // silently disable the requireWorkspace gate.
     const program = buildProgram({ emitters, cwd, workspace });

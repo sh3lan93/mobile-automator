@@ -84,6 +84,22 @@ describe('buildProgram workspace wiring (#188)', () => {
     // The daemon is a per-workspace artifact; with no workspace there is
     // nowhere legitimate to put its .session/ tree, so the connection seam
     // must be told not to autostart one (the verb connects one-shot instead).
+    // assert gets the discovered root, never cwd: a reference comparison with
+    // no workspace has nowhere legitimate to write its screenshots.
+    test('assert screenshot_match fails environment instead of writing under cwd', async () => {
+      const { calls, emitters } = captureEmitters();
+      await buildProgram({
+        workspace,
+        cwd,
+        emitters,
+        deviceBridgeFactory: async () => ({ bridge: {}, close: async () => {} }),
+      }).parseAsync(['node', 'mauto', 'assert', 'screenshot_match', '--reference', 'r.png', '--device', 'emulator-5554']);
+      expect(calls).toHaveLength(1);
+      expect(calls[0].exitKind).toBe('environment');
+      expect(calls[0].envelope.error.message).toMatch(/needs a workspace/);
+      expect(fs.existsSync(path.join(cwd, '.mobile-automator'))).toBe(false);
+    });
+
     test('device verbs never autostart a daemon: connectBridge passes autostart:false', async () => {
       const factoryArgs = [];
       const { calls, emitters } = captureEmitters();

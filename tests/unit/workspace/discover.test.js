@@ -14,7 +14,7 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 
-const { findWorkspaceRoot, noWorkspaceFailure, workspaceFailure } = require('../../../src/workspace/discover');
+const { findWorkspaceRoot, foundRoot, noWorkspaceFailure, workspaceFailure } = require('../../../src/workspace/discover');
 
 function tmpProject({ git = 'dir' } = {}) {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-discover-')));
@@ -193,6 +193,22 @@ describe('findWorkspaceRoot legacy detection', () => {
     fs.mkdirSync(path.join(repo, '.git'));
     const r = findWorkspaceRoot(mkdirp(repo, 'a'));
     expect(r.kind).toBe('none');
+  });
+});
+
+// The one place a result becomes a root: only `found` has one, and a refused
+// or legacy workspace never lends its directory to a verb.
+describe('foundRoot', () => {
+  test('is the root for found', () => {
+    expect(foundRoot({ kind: 'found', root: '/p', searched: ['/p'] })).toBe('/p');
+  });
+
+  test.each([
+    [{ kind: 'legacy', dir: '/p', searched: ['/p'] }],
+    [{ kind: 'unsafe', refusal: new Error('x'), searched: ['/p'] }],
+    [{ kind: 'none', searched: ['/p'] }],
+  ])('is null for %j', (ws) => {
+    expect(foundRoot(ws)).toBeNull();
   });
 });
 

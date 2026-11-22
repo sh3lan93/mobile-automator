@@ -118,6 +118,15 @@ function findWorkspaceRoot(startDir, { fs = require('fs'), getuid, env } = {}) {
   return { kind: 'none', searched };
 }
 
+// The workspace root a `findWorkspaceRoot` result supplies: `root` for
+// `found`, null for every other outcome. The ONE place the tagged result
+// becomes a root. A caller that only needs "is there a workspace, and where"
+// reads this; one that must say WHY there is none switches on `kind`
+// (workspaceFailure, setup).
+function foundRoot(workspace) {
+  return workspace.kind === 'found' ? workspace.root : null;
+}
+
 // The honest answer when discovery found nothing, for a verb that cannot work
 // without a workspace. `environment` (exit 5), matching the CLI's other
 // fixable-by-the-caller faults: an agent reading `ok:true` with a missing value
@@ -170,6 +179,7 @@ function workspaceFailure(workspace) {
 
 module.exports = {
   findWorkspaceRoot,
+  foundRoot,
   workspaceFailure,
   legacyWorkspaceFailure,
   // noWorkspaceFailure is exported for its own unit tests only; verbs go
