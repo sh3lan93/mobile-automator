@@ -350,6 +350,31 @@ describe('readUserFile (#363)', () => {
     expect(readUserFile(root, path.join(outside, 'none', 'none.json'))).toBeNull();
   });
 
+  it("with absent: 'throw', lets the fs's own ENOENT through, in every scope", () => {
+    fs.mkdirSync(path.join(ws, 'scenarios'));
+    fs.mkdirSync(path.join(root, 'flows'));
+    for (const p of [
+      path.join(ws, 'scenarios', 'none.json'),
+      path.join(root, 'flows', 'none.json'),
+      path.join(outside, 'none.json'),
+    ]) {
+      let err;
+      try {
+        readUserFile(root, p, { absent: 'throw' });
+      } catch (e) {
+        err = e;
+      }
+      expect(err).toBeDefined();
+      expect(err.code).toBe('ENOENT');
+      expect(err.syscall).toBe('open');
+      expect(err.message).toBe(`ENOENT: no such file or directory, open '${p}'`);
+    }
+  });
+
+  it('refuses an absent mode it does not know', () => {
+    expect(() => readUserFile(root, path.join(outside, 'none.json'), { absent: 'maybe' })).toThrow(TypeError);
+  });
+
   it('refuses a file past the cap (too_large), in every scope', () => {
     fs.writeFileSync(path.join(ws, 'big'), 'x'.repeat(11));
     fs.writeFileSync(path.join(root, 'big'), 'x'.repeat(11));

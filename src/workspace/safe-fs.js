@@ -507,17 +507,24 @@ function removeWorkspaceFile(projectRoot, file, deps = {}) {
   return true;
 }
 
-// The one capped read: `open()` returns the fd. null when the file (or a
-// parent dir) does not exist. Reads at most maxBytes + 1 so a planted huge
-// file costs nothing. Decoded with `encoding`; null returns the Buffer, byte
-// for byte (a scenario is hashed on exactly what was read, #275).
-function readCapped(open, file, maxBytes, deps, encoding = 'utf8') {
+// What a read does when the file (or a parent dir) does not exist: 'null'
+// returns null (a state file that is simply not there yet), 'throw' lets the
+// fs's own ENOENT through, its message intact, for a caller that reports a
+// missing file the user named (a scenario, a PNG).
+const ABSENT = new Set(['null', 'throw']);
+
+// The one capped read: `open()` returns the fd. Absent per `absent` (above).
+// Reads at most maxBytes + 1 so a planted huge file costs nothing. Decoded
+// with `encoding`; null returns the Buffer, byte for byte (a scenario is
+// hashed on exactly what was read, #275).
+function readCapped(open, file, { maxBytes, encoding = 'utf8', absent = 'null' }, deps) {
+  if (!ABSENT.has(absent)) throw new TypeError(`readCapped: absent must be 'null' or 'throw', not ${absent}`);
   const { fs } = resolveDeps(deps);
   let fd;
   try {
     fd = open();
   } catch (err) {
-    if (err.code === 'ENOENT') return null;
+    if (err.code === 'ENOENT' && absent === 'null') return null;
     throw err;
   }
   try {
@@ -545,14 +552,14 @@ function readCapped(open, file, maxBytes, deps, encoding = 'utf8') {
 // openOwnedLeaf.
 function readOwnedLeaf(file, { maxBytes = DEFAULT_MAX_BYTES, singleLink = false, trustOverride = false } = {}, deps = {}) {
   const open = () => openOwnedLeaf(file, nodeFs.constants.O_RDONLY, { singleLink, trustOverride }, deps);
-  return readCapped(open, file, maxBytes, deps);
+  return readCapped(open, file, { maxBytes }, deps);
 }
 
 // Read a workspace file (utf8, or the Buffer with `encoding: null`). null when
-// it (or a parent dir) does not exist.
-function readWorkspaceFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES, encoding = 'utf8' } = {}, deps = {}) {
+// it (or a parent dir) does not exist; its ENOENT with `absent: 'throw'`.
+function readWorkspaceFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES, encoding = 'utf8', absent = 'null' } = {}, deps = {}) {
   const open = () => openWorkspaceFile(projectRoot, file, nodeFs.constants.O_RDONLY, 0o666, deps);
-  return readCapped(open, file, maxBytes, deps, encoding);
+  return readCapped(open, file, { maxBytes, encoding, absent }, deps);
 }
 
 // A workspace destination another process writes: the engine saves a
@@ -661,15 +668,17 @@ function openProjectFile(projectRoot, file, flags, mode, deps) {
 
 // readWorkspaceFile's project-rooted twin: utf8 (the Buffer with `encoding:
 // null`), null when the file or a parent dir does not exist, capped at
-// maxBytes. A symlink leaf, dangling or not, is refused, never read as absent.
-function readProjectFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES, encoding = 'utf8' } = {}, deps = {}) {
+// maxBytes (`absent` as for readWorkspaceFile). A symlink leaf, dangling or
+// not, is refused, never read as absent.
+function readProjectFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES, encoding = 'utf8', absent = 'null' } = {}, deps = {}) {
   const open = () => openProjectFile(projectRoot, file, nodeFs.constants.O_RDONLY, 0o666, deps);
-  return withScope('path', () => readCapped(open, file, maxBytes, deps, encoding));
+  return withScope('path', () => readCapped(open, file, { maxBytes, encoding, absent }, deps));
 }
 
 // A file the user named to read (#363): a scenario, a reference screenshot, a
 // run trace. utf8, or the Buffer with `encoding: null`; null when it (or a
-// parent dir) does not exist; refused past maxBytes (too_large).
+// parent dir) does not exist, or the fs's own ENOENT with `absent: 'throw'`;
+// refused past maxBytes (too_large).
 //   - in the workspace: readWorkspaceFile on the re-rooted path;
 //   - elsewhere in the project: readProjectFile on the re-rooted path, so a
 //     committed `flows -> /outside` or a leaf link is refused, never followed;
@@ -677,13 +686,14 @@ function readProjectFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES, enco
 //     checkout): the user's own file, read as they named it. A link is
 //     followed, and only the size cap applies: no owner, link or regular-file
 //     check, as `cat` would read it.
-function readUserFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES, encoding = 'utf8' } = {}, deps = {}) {
+function readUserFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES, encoding = 'utf8', absent = 'null' } = {}, deps = {}) {
+  const opts = { maxBytes, encoding, absent };
   const at = locate(projectRoot, file, deps);
-  if (at.where === 'workspace') return readWorkspaceFile(projectRoot, at.path, { maxBytes, encoding }, deps);
-  if (at.where === 'project') return readProjectFile(projectRoot, at.path, { maxBytes, encoding }, deps);
+  if (at.where === 'workspace') return readWorkspaceFile(projectRoot, at.path, opts, deps);
+  if (at.where === 'project') return readProjectFile(projectRoot, at.path, opts, deps);
   const { fs } = resolveDeps(deps);
   const open = () => fs.openSync(at.path, nodeFs.constants.O_RDONLY);
-  return withScope('user', () => readCapped(open, at.path, maxBytes, deps, encoding));
+  return withScope('user', () => readCapped(open, at.path, opts, deps));
 }
 
 // createWorkspaceFile's project-rooted twin: exclusive (O_WRONLY|O_CREAT|

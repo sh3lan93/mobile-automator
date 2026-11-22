@@ -39,14 +39,10 @@ const { isTypedRefusal } = require('../output/typed-refusal');
 const PNG_MAX_BYTES = 64 * 1024 * 1024;
 
 // The bytes of the PNG at `file`, read through readUserFile under
-// `projectRoot`. An absent file throws ENOENT, as the plain read did; a refused
-// path throws its UnsafePathError.
+// `projectRoot`. An absent file throws the fs's own ENOENT, as the plain read
+// did; a refused path throws its UnsafePathError.
 function readPngBytes(projectRoot, file) {
-  const bytes = readUserFile(projectRoot, file, { encoding: null, maxBytes: PNG_MAX_BYTES });
-  if (bytes === null) {
-    throw Object.assign(new Error(`ENOENT: no such file or directory, open '${file}'`), { code: 'ENOENT', path: file });
-  }
-  return bytes;
+  return readUserFile(projectRoot, file, { encoding: null, maxBytes: PNG_MAX_BYTES, absent: 'throw' });
 }
 
 // The decoded PNG at `file` (pngjs's { width, height, data }).
