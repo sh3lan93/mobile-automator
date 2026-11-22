@@ -1840,9 +1840,14 @@ function crashOutRefusal(out, given, { roots, projectTooBroad }) {
 function writeCrashReport(projectRoot, out, confined, report) {
   const { O_WRONLY, O_CREAT, O_TRUNC } = fs.constants;
   const flags = O_WRONLY | O_CREAT | O_TRUNC;
-  const fd = confined
-    ? openWorkspaceFile(projectRoot, confined, flags)
-    : openOwnedLeaf(out, flags, { scope: 'path' });
+  let fd;
+  try {
+    fd = confined ? openWorkspaceFile(projectRoot, confined, flags) : openOwnedLeaf(out, flags);
+  } catch (err) {
+    // Outside the workspace the refusal reads in the path scope.
+    if (!confined && err instanceof UnsafePathError) throw err.inScope('path');
+    throw err;
+  }
   try {
     fs.writeFileSync(fd, report);
   } finally {

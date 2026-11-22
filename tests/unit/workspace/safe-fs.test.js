@@ -722,20 +722,25 @@ describe('openOwnedLeaf', () => {
   });
 
   it.each([
-    ['symlink', (p) => (fs.symlinkSync(canaryFile, p), () => openOwnedLeaf(p, O_RDONLY, { scope: 'path' }))],
-    ['not_regular', (p) => (fs.mkdirSync(p), () => openOwnedLeaf(p, O_RDONLY, { scope: 'path' }))],
-    ['hardlink', (p) => (fs.linkSync(canaryFile, p), () => openOwnedLeaf(p, O_WRONLY, { scope: 'path' }))],
+    ['symlink', (p) => (fs.symlinkSync(canaryFile, p), () => openOwnedLeaf(p, O_RDONLY))],
+    ['not_regular', (p) => (fs.mkdirSync(p), () => openOwnedLeaf(p, O_RDONLY))],
+    ['hardlink', (p) => (fs.linkSync(canaryFile, p), () => openOwnedLeaf(p, O_WRONLY))],
     [
       'foreign_owner',
       (p) => (
         fs.writeFileSync(p, 'x'),
-        () => openOwnedLeaf(p, O_RDONLY, { scope: 'path' }, { fs: foreignFs(['fstatSync']) })
+        () => openOwnedLeaf(p, O_RDONLY, {}, { fs: foreignFs(['fstatSync']) })
       ),
     ],
-  ])('a %s refusal carries the path scope it was given', (reason, setup) => {
-    const err = expectUnsafe(setup(path.join(ws, 'a')), reason);
-    expect(err.scope).toBe('path');
-    expect(err.message.startsWith('Refusing to use path ')).toBe(true);
+  ])('a %s refusal is scope-free; inScope re-words it for the path scope, same path and reason', (reason, setup) => {
+    const p = path.join(ws, 'a');
+    const err = expectUnsafe(setup(p), reason);
+    expect(err.scope).toBe('workspace');
+    const scoped = err.inScope('path');
+    expect(scoped).toBeInstanceOf(UnsafePathError);
+    expect(scoped).toMatchObject({ scope: 'path', reason, path: err.path, code: err.code, kind: err.kind });
+    expect(scoped.message.startsWith('Refusing to use path ')).toBe(true);
+    expect(scoped.hint).toBe(new UnsafePathError(err.path, reason, { scope: 'path' }).hint);
   });
 });
 

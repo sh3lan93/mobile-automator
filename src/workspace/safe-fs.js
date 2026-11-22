@@ -125,6 +125,8 @@ const SCOPES = {
 // `scope` says which rules refused it: 'workspace' (the default) for a path
 // under .mobile-automator/, 'path' for any other path mauto writes. It picks
 // the wording only (SCOPES); `kind`, `code` and `reason` are the same in both.
+// The checks below never know the scope: they throw the default wording, and
+// a scoped entry point re-words what they throw once, through withScope.
 class UnsafePathError extends Error {
   // `file` is always the path that was refused, never where a link points: the
   // target is attacker-chosen and must not reach an envelope.
@@ -140,6 +142,23 @@ class UnsafePathError extends Error {
     this.reason = reason;
     this.scope = scope;
   }
+
+  // The same refusal (path, reason, code, kind) worded for `scope`.
+  inScope(scope) {
+    return new UnsafePathError(this.path, this.reason, { scope });
+  }
+}
+
+// Run `fn`, re-wording any refusal it throws for `scope`. The one place a
+// scope is applied: the checks stay scope-free, and each scoped entry point
+// wraps its whole body once.
+function withScope(scope, fn) {
+  try {
+    return fn();
+  } catch (err) {
+    if (err instanceof UnsafePathError) throw err.inScope(scope);
+    throw err;
+  }
 }
 
 function resolveDeps(deps = {}) {
@@ -150,24 +169,24 @@ function resolveDeps(deps = {}) {
   };
 }
 
-function checkOwner(p, st, { getuid, env }, scope = 'workspace') {
+function checkOwner(p, st, { getuid, env }) {
   if (env.MAUTO_TRUST_WORKSPACE_OWNER === '1') return;
-  if (st.uid !== getuid()) throw new UnsafePathError(p, 'foreign_owner', { scope });
+  if (st.uid !== getuid()) throw new UnsafePathError(p, 'foreign_owner');
 }
 
-function checkDirComponent(p, st, d, scope = 'workspace') {
-  if (st.isSymbolicLink()) throw new UnsafePathError(p, 'symlink', { scope });
-  if (!st.isDirectory()) throw new UnsafePathError(p, 'not_directory', { scope });
-  checkOwner(p, st, d, scope);
-  if (st.mode & 0o002) throw new UnsafePathError(p, 'world_writable', { scope });
+function checkDirComponent(p, st, d) {
+  if (st.isSymbolicLink()) throw new UnsafePathError(p, 'symlink');
+  if (!st.isDirectory()) throw new UnsafePathError(p, 'not_directory');
+  checkOwner(p, st, d);
+  if (st.mode & 0o002) throw new UnsafePathError(p, 'world_writable');
 }
 
 // The leaf rules shared by every leaf mauto opens or hands to a writer: it is
 // ours and, when it will be written, has exactly one hard link (a second one
 // would be a file elsewhere by another name).
-function checkLeafOwnership(p, st, writes, d, scope) {
-  checkOwner(p, st, d, scope);
-  if (writes && st.nlink !== 1) throw new UnsafePathError(p, 'hardlink', { scope });
+function checkLeafOwnership(p, st, writes, d) {
+  checkOwner(p, st, d);
+  if (writes && st.nlink !== 1) throw new UnsafePathError(p, 'hardlink');
 }
 
 // Lexical containment of two resolved paths. The filesystem root is the one
@@ -184,12 +203,12 @@ function isInside(child, parent) {
 // time when asked. The project root and its ancestors are never checked (see
 // the header). Last, realpath(dir) must lie inside realpath(within). Returns
 // the realpath of `dir`.
-function walkDirs(projectRoot, within, dir, { create = false, mode, scope = 'workspace' } = {}, d) {
+function walkDirs(projectRoot, within, dir, { create = false, mode } = {}, d) {
   const { fs } = d;
   const root = path.resolve(projectRoot);
   const bound = path.resolve(within);
   const target = path.resolve(dir);
-  if (!isInside(target, bound)) throw new UnsafePathError(target, 'escape', { scope });
+  if (!isInside(target, bound)) throw new UnsafePathError(target, 'escape');
 
   const rel = path.relative(root, target);
   let p = root;
@@ -209,13 +228,13 @@ function walkDirs(projectRoot, within, dir, { create = false, mode, scope = 'wor
       }
       st = fs.lstatSync(p);
     }
-    checkDirComponent(p, st, d, scope);
+    checkDirComponent(p, st, d);
   }
 
   // The lstat walk already proves there is no link below the root; this
   // catches anything it cannot see (a component swapped mid-walk).
   const real = fs.realpathSync(target);
-  if (!isInside(real, fs.realpathSync(bound))) throw new UnsafePathError(target, 'escape', { scope });
+  if (!isInside(real, fs.realpathSync(bound))) throw new UnsafePathError(target, 'escape');
   return real;
 }
 
@@ -238,17 +257,16 @@ const OPEN_NOT_REGULAR_CODES = new Set([
 
 // The one O_NOFOLLOW leaf open. No owner, hard-link or directory checks (it
 // has no project context); openOwnedLeaf layers the leaf ones on top and the
-// directory walk the rest. `scope` only words a refusal. The caller closes the
-// returned fd.
-function openLeaf(file, flags, mode = 0o666, deps = {}, scope = 'workspace') {
+// directory walk the rest. The caller closes the returned fd.
+function openLeaf(file, flags, mode = 0o666, deps = {}) {
   const { fs } = resolveDeps(deps);
   const { O_NOFOLLOW, O_NONBLOCK } = nodeFs.constants;
   let fd;
   try {
     fd = fs.openSync(file, flags | O_NOFOLLOW | O_NONBLOCK, mode);
   } catch (err) {
-    if (OPEN_SYMLINK_CODES.has(err.code)) throw new UnsafePathError(file, 'symlink', { scope });
-    if (OPEN_NOT_REGULAR_CODES.has(err.code)) throw new UnsafePathError(file, 'not_regular', { scope });
+    if (OPEN_SYMLINK_CODES.has(err.code)) throw new UnsafePathError(file, 'symlink');
+    if (OPEN_NOT_REGULAR_CODES.has(err.code)) throw new UnsafePathError(file, 'not_regular');
     throw err;
   }
   let stat;
@@ -260,7 +278,7 @@ function openLeaf(file, flags, mode = 0o666, deps = {}, scope = 'workspace') {
   }
   if (!stat.isFile()) {
     closeQuietly(fs, fd);
-    throw new UnsafePathError(file, 'not_regular', { scope });
+    throw new UnsafePathError(file, 'not_regular');
   }
   return { fd, stat };
 }
@@ -277,7 +295,7 @@ function closeQuietly(fs, fd) {
 // walked: openLeaf, then the leaf must be ours and, for an open that writes,
 // have exactly one hard link. Returns an fd the caller closes; on a refusal
 // the fd is closed first.
-function openOwnedLeaf(file, flags, { mode = 0o666, scope = 'workspace' } = {}, deps = {}) {
+function openOwnedLeaf(file, flags, { mode = 0o666 } = {}, deps = {}) {
   const d = resolveDeps(deps);
   const { O_WRONLY, O_RDWR, O_TRUNC } = nodeFs.constants;
   const resolved = path.resolve(file);
@@ -285,9 +303,9 @@ function openOwnedLeaf(file, flags, { mode = 0o666, scope = 'workspace' } = {}, 
   // O_TRUNC acts inside open(), before the owner and hard-link checks could
   // refuse: a hard link to a file outside would already be emptied. Open
   // without it and truncate only once every check has passed.
-  const { fd, stat } = openLeaf(resolved, flags & ~O_TRUNC, mode, deps, scope);
+  const { fd, stat } = openLeaf(resolved, flags & ~O_TRUNC, mode, deps);
   try {
-    checkLeafOwnership(resolved, stat, writes, d, scope);
+    checkLeafOwnership(resolved, stat, writes, d);
     if (writes && flags & O_TRUNC) d.fs.ftruncateSync(fd, 0);
   } catch (err) {
     closeQuietly(d.fs, fd);
@@ -339,7 +357,7 @@ function removeWorkspaceFile(projectRoot, file, deps = {}) {
 // The one capped read: `open()` returns the checked fd. null when the file (or
 // a parent dir) does not exist. Reads at most maxBytes + 1 so a planted huge
 // file costs nothing.
-function readCapped(open, file, maxBytes, scope, deps) {
+function readCapped(open, file, maxBytes, deps) {
   const { fs } = resolveDeps(deps);
   let fd;
   try {
@@ -359,7 +377,7 @@ function readCapped(open, file, maxBytes, scope, deps) {
       chunks.push(n === buf.length ? buf : buf.subarray(0, n));
       total += n;
     }
-    if (total > maxBytes) throw new UnsafePathError(path.resolve(file), 'too_large', { scope });
+    if (total > maxBytes) throw new UnsafePathError(path.resolve(file), 'too_large');
     return Buffer.concat(chunks, total).toString('utf8');
   } finally {
     closeQuietly(fs, fd);
@@ -369,7 +387,7 @@ function readCapped(open, file, maxBytes, scope, deps) {
 // Read a workspace file as utf8. null when it (or a parent dir) does not exist.
 function readWorkspaceFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES } = {}, deps = {}) {
   const open = () => openWorkspaceFile(projectRoot, file, nodeFs.constants.O_RDONLY, 0o666, deps);
-  return readCapped(open, file, maxBytes, 'workspace', deps);
+  return readCapped(open, file, maxBytes, deps);
 }
 
 // A workspace destination another process writes: the engine saves a
@@ -392,7 +410,7 @@ function safeWorkspaceDest(projectRoot, file, deps = {}) {
   }
   if (st.isSymbolicLink()) throw new UnsafePathError(resolved, 'symlink');
   if (!st.isFile()) throw new UnsafePathError(resolved, 'not_regular');
-  checkLeafOwnership(resolved, st, true, d, 'workspace');
+  checkLeafOwnership(resolved, st, true, d);
   return resolved;
 }
 
@@ -447,12 +465,13 @@ function inWorkspace(projectRoot, file, deps = {}) {
 
 // A project file outside the workspace (a host file `mauto init` writes:
 // .claude/skills/..., .mcp.json): the same walk, bounded by the project root
-// instead of the workspace, then the checked leaf, both in the 'path' scope.
+// instead of the workspace, then the checked leaf. A refusal from either is
+// worded for the 'path' scope (by its callers, which wrap it in withScope).
 function openProjectFile(projectRoot, file, flags, mode, deps) {
   const resolved = path.resolve(file);
   const create = Boolean(flags & nodeFs.constants.O_CREAT);
-  walkDirs(projectRoot, projectRoot, path.dirname(resolved), { create, scope: 'path' }, resolveDeps(deps));
-  return openOwnedLeaf(resolved, flags, { mode, scope: 'path' }, deps);
+  walkDirs(projectRoot, projectRoot, path.dirname(resolved), { create }, resolveDeps(deps));
+  return openOwnedLeaf(resolved, flags, { mode }, deps);
 }
 
 // readWorkspaceFile's project-rooted twin: utf8, null when the file or a
@@ -460,7 +479,7 @@ function openProjectFile(projectRoot, file, flags, mode, deps) {
 // not, is refused, never read as absent.
 function readProjectFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES } = {}, deps = {}) {
   const open = () => openProjectFile(projectRoot, file, nodeFs.constants.O_RDONLY, 0o666, deps);
-  return readCapped(open, file, maxBytes, 'path', deps);
+  return withScope('path', () => readCapped(open, file, maxBytes, deps));
 }
 
 // createWorkspaceFile's project-rooted twin: exclusive (O_WRONLY|O_CREAT|
@@ -469,7 +488,7 @@ function readProjectFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES } = {
 // closes.
 function createProjectFile(projectRoot, file, { mode = 0o666 } = {}, deps = {}) {
   const { O_WRONLY, O_CREAT, O_EXCL } = nodeFs.constants;
-  return openProjectFile(projectRoot, file, O_WRONLY | O_CREAT | O_EXCL, mode, deps);
+  return withScope('path', () => openProjectFile(projectRoot, file, O_WRONLY | O_CREAT | O_EXCL, mode, deps));
 }
 
 // The lenient readers, for state files where absent or garbled is a normal
