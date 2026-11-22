@@ -76,7 +76,7 @@
 - World-writable: `chmod o-w .mobile-automator`.
 
 ### ❌ Device verbs pause ~15 s after upgrading (deep project paths)
-- After upgrading to 0.40.13 or later, a daemon started by an older version in the
+- After upgrading to 0.40.15 or later, a daemon started by an older version in the
   old `<tmpdir>/mauto-<key>.sock` location is ignored. This only happens when the
   project path is too deep for a socket in `.mobile-automator/.session/`. The old
   daemon still holds the session lock, so each device verb waits about 15 s for a new

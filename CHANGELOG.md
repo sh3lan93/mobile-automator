@@ -7,50 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.40.14]
-
-### 🔒 Security
-
-- **`mauto init`, `setup`, logs, screenshots and crash reports never write
-  through a symlink**
-  ([#347](https://github.com/sh3lan93/mobile-automator/issues/347)). Follow-up
-  to #345, which confined the stores. A cloned checkout could ship
-  `.claude/skills`, `.mcp.json`, `.mobile-automator/screenshots/` or `.logs/`
-  as a link, and these writers followed it out of the project.
-  - **`mauto init`** reads and writes its host files (`.claude/`, `.cursor/`,
-    `.gemini/`, `.github/`, `.agents/`, `.mcp.json`) under the same rules as
-    the workspace, bounded by the project directory. A link anywhere below the
-    project root, a dangling one at the file itself included, fails that
-    agent with `environment` (exit 5): "Refusing to use path …". `--agent
-    all` still tries every agent and reports the refused one as
-    `unsafe_path`.
-  - **`mauto setup`** creates `.mobile-automator/` and its directories, and
-    writes `.gitignore` and `config.json`, only through those rules.
-  - **Logs:** an event is dropped rather than appended through a link,
-    rotation renames only a regular file, and trace pruning never lists or
-    deletes through a symlinked `.logs/`. A `MAUTO_LOG_DIR` outside the
-    workspace is written as before.
-  - **Screenshots:** a `mauto screenshot` destination inside the workspace
-    (also when reached through a symlinked project directory, such as macOS
-    `/tmp`), failure screenshots, `mauto run` step screenshots, reference
-    captures, diffs and `--update-references` baselines are all checked before
-    the engine writes them. Any other path, such as `mauto screenshot
-    /tmp/x.png`, reaches the engine unchanged.
-  - **`result export --out` and `run --junit`** go through the same checks
-    when they land in the workspace. A link planted at the report file itself
-    is replaced, never written through. Elsewhere they write as before.
-- **`mauto crash get --out` stays in the project or a temp directory.** The
-  path resolves against the current directory and must land in the project,
-  the OS temp directory or, on macOS, `/tmp`: the directories the device
-  engine allows for screenshots. As with the engine, the project does not
-  count when it is your home directory or contains it. Anything else fails
-  `invalid_input` before the device is asked. The file is opened without
-  following a link, and a hard-linked target is refused before it is
-  truncated.
-
----
-
-## [0.40.13]
+## [0.40.15]
 
 ### 🔒 Security
 
@@ -92,6 +49,49 @@ socket fails the new checks.
   window, because the old daemon still holds the lock, then runs one-shot.
   This lasts until the old daemon exits on its idle timeout (5 minutes) or you
   run `mauto session end` once.
+
+---
+
+## [0.40.14]
+
+### 🔒 Security
+
+- **`mauto init`, `setup`, logs, screenshots and crash reports never write
+  through a symlink**
+  ([#347](https://github.com/sh3lan93/mobile-automator/issues/347)). Follow-up
+  to #345, which confined the stores. A cloned checkout could ship
+  `.claude/skills`, `.mcp.json`, `.mobile-automator/screenshots/` or `.logs/`
+  as a link, and these writers followed it out of the project.
+  - **`mauto init`** reads and writes its host files (`.claude/`, `.cursor/`,
+    `.gemini/`, `.github/`, `.agents/`, `.mcp.json`) under the same rules as
+    the workspace, bounded by the project directory. A link anywhere below the
+    project root, a dangling one at the file itself included, fails that
+    agent with `environment` (exit 5): "Refusing to use path …". `--agent
+    all` still tries every agent and reports the refused one as
+    `unsafe_path`.
+  - **`mauto setup`** creates `.mobile-automator/` and its directories, and
+    writes `.gitignore` and `config.json`, only through those rules.
+  - **Logs:** an event is dropped rather than appended through a link,
+    rotation renames only a regular file, and trace pruning never lists or
+    deletes through a symlinked `.logs/`. A `MAUTO_LOG_DIR` outside the
+    workspace is written as before.
+  - **Screenshots:** a `mauto screenshot` destination inside the workspace
+    (also when reached through a symlinked project directory, such as macOS
+    `/tmp`), failure screenshots, `mauto run` step screenshots, reference
+    captures, diffs and `--update-references` baselines are all checked before
+    the engine writes them. Any other path, such as `mauto screenshot
+    /tmp/x.png`, reaches the engine unchanged.
+  - **`result export --out` and `run --junit`** go through the same checks
+    when they land in the workspace. A link planted at the report file itself
+    is replaced, never written through. Elsewhere they write as before.
+- **`mauto crash get --out` stays in the project or a temp directory.** The
+  path resolves against the current directory and must land in the project,
+  the OS temp directory or, on macOS, `/tmp`: the directories the device
+  engine allows for screenshots. As with the engine, the project does not
+  count when it is your home directory or contains it. Anything else fails
+  `invalid_input` before the device is asked. The file is opened without
+  following a link, and a hard-linked target is refused before it is
+  truncated.
 
 ---
 
