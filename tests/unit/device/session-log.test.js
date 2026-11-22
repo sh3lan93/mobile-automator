@@ -285,7 +285,7 @@ describe('session-log', () => {
       ...fs,
       lstatSync: (p, ...rest) => {
         const st = fs.lstatSync(p, ...rest);
-        if (path.resolve(p) === fallbackDir) st.uid = 9999;
+        if (path.resolve(p) === fallbackDir) st.uid = process.getuid() + 1;
         return st;
       },
     };

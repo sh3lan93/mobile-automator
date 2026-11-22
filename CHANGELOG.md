@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `session end` falls back to the pid check.
   - The daemon writes its handle, pid file, lock and `daemon.log` only through
     the safe-fs helper from #345.
+  - A daemon that fails to start on a refused directory writes the refusal and
+    its hint to `.mobile-automator/.session/daemon.log`.
 - **A planted `.mobile-automator/` is refused at discovery.** Discovery now
   rejects a `.mobile-automator/` that is a symlink, owned by another user
   (unless `MAUTO_TRUST_WORKSPACE_OWNER=1`) or world-writable, and a

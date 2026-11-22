@@ -244,6 +244,8 @@ describe('noWorkspaceFailure', () => {
 // an injected uid because jest cannot chown.
 describe('findWorkspaceRoot refuses an unsafe workspace (#346)', () => {
   const MY_UID = process.getuid();
+  // Never ours, whatever uid the tests run as (a CI runner's is often 1001).
+  const FOREIGN_UID = MY_UID + 1;
   const asUid = (uid, which = ['lstatSync', 'fstatSync']) => {
     const wrapped = { ...fs };
     for (const name of which) {
@@ -259,24 +261,24 @@ describe('findWorkspaceRoot refuses an unsafe workspace (#346)', () => {
   test('a foreign-owned .mobile-automator is refused, naming both uids', () => {
     const root = tmpProject();
     makeWorkspace(root);
-    const r = findWorkspaceRoot(root, { fs: asUid(9999, ['lstatSync']) });
+    const r = findWorkspaceRoot(root, { fs: asUid(FOREIGN_UID, ['lstatSync']) });
     expect(r.root).toBeNull();
     expect(r.legacy).toBeNull();
     expect(r.unsafe.reason).toBe('foreign_owner');
-    expect(r.unsafe.message).toContain(`uid 9999; you are uid ${MY_UID}`);
+    expect(r.unsafe.message).toContain(`uid ${FOREIGN_UID}; you are uid ${MY_UID}`);
   });
 
   test('MAUTO_TRUST_WORKSPACE_OWNER=1 adopts the foreign-owned workspace', () => {
     const root = tmpProject();
     makeWorkspace(root);
-    const r = findWorkspaceRoot(root, { fs: asUid(9999), env: { MAUTO_TRUST_WORKSPACE_OWNER: '1' } });
+    const r = findWorkspaceRoot(root, { fs: asUid(FOREIGN_UID), env: { MAUTO_TRUST_WORKSPACE_OWNER: '1' } });
     expect(r).toEqual({ root, searched: [root], legacy: null });
   });
 
   test('a foreign-owned config.json is refused', () => {
     const root = tmpProject();
     makeWorkspace(root);
-    const r = findWorkspaceRoot(root, { fs: asUid(9999, ['fstatSync']) });
+    const r = findWorkspaceRoot(root, { fs: asUid(FOREIGN_UID, ['fstatSync']) });
     expect(r.root).toBeNull();
     expect(r.unsafe.reason).toBe('foreign_owner');
   });
@@ -321,7 +323,7 @@ describe('findWorkspaceRoot refuses an unsafe workspace (#346)', () => {
     makeWorkspace(root);
     const child = mkdirp(root, 'pkg');
     makeWorkspace(child);
-    const r = findWorkspaceRoot(child, { fs: asUid(9999, ['lstatSync']) });
+    const r = findWorkspaceRoot(child, { fs: asUid(FOREIGN_UID, ['lstatSync']) });
     // every directory is foreign under the injected uid; the NEAREST decides
     expect(r.root).toBeNull();
     expect(r.unsafe.path).toBe(path.join(child, '.mobile-automator'));
@@ -331,7 +333,7 @@ describe('findWorkspaceRoot refuses an unsafe workspace (#346)', () => {
   test('workspaceFailure renders environment with the refusal message and hint', () => {
     const root = tmpProject();
     makeWorkspace(root);
-    const ws = findWorkspaceRoot(root, { fs: asUid(9999, ['lstatSync']) });
+    const ws = findWorkspaceRoot(root, { fs: asUid(FOREIGN_UID, ['lstatSync']) });
     const { envelope, exitKind } = workspaceFailure(ws);
     expect(exitKind).toBe('environment');
     expect(envelope.ok).toBe(false);

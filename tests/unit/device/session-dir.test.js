@@ -17,9 +17,11 @@ const path = require('path');
 
 const { ensureSessionDir, ensureSessionDirs, verifySocket } = require('../../../src/device/session-dir');
 const paths = require('../../../src/device/session-paths');
-const { UnsafePathError, checkOwnSocket } = require('../../../src/workspace/safe-fs');
+const { UnsafePathError } = require('../../../src/workspace/safe-fs');
 
 const REAL_UID = process.getuid();
+// Never ours, whatever uid the tests run as.
+const FOREIGN_UID = REAL_UID + 1;
 // Root bypasses permission bits and its umask is often 0, so a mode-dependent
 // assertion proves nothing there.
 const testNotRoot = REAL_UID === 0 ? test.skip : test;
@@ -78,7 +80,7 @@ function listen(sock) {
 }
 
 // An fs whose lstatSync reports `uid` for the paths `pick` selects.
-function foreignLstat(pick, uid = 9999) {
+function foreignLstat(pick, uid = FOREIGN_UID) {
   return {
     ...fs,
     lstatSync: (p, ...rest) => {
@@ -157,14 +159,14 @@ describe('ensureSessionDirs', () => {
     expect(mode(paths.sessionDir(root))).toBe(0o700);
   });
 
-  test('refuses a pre-existing fallback directory owned by uid 9999 (foreign_owner)', () => {
+  test('refuses a pre-existing fallback directory owned by another uid (foreign_owner)', () => {
     const { root, deps, fallbackDir } = longRoot();
     fs.mkdirSync(fallbackDir, { mode: 0o700 });
     const fsx = foreignLstat((p) => p === fallbackDir);
     const err = expectRefusal(() => ensureSessionDirs(root, { ...deps, fs: fsx }), 'foreign_owner');
     expect(err.path).toBe(fallbackDir);
     expect(err.message).toBe(
-      `Refusing to use session socket directory ${fallbackDir}: it is owned by uid 9999; you are uid ${REAL_UID} (foreign_owner).`
+      `Refusing to use session socket directory ${fallbackDir}: it is owned by uid ${FOREIGN_UID}; you are uid ${REAL_UID} (foreign_owner).`
     );
     // The override is for workspaces, never for the socket's directory (D-d).
     const env = { ...deps.env, MAUTO_TRUST_WORKSPACE_OWNER: '1' };
@@ -256,16 +258,11 @@ describe('verifySocket', () => {
     expect(verifySocket(root, { env: {} })).toBe(false);
   });
 
-  // verifySocket swallows the refusal; the check it runs names the socket as
-  // the session socket, never as a workspace path, even in the fallback.
-  test('false for a regular file at the fallback socket path, refused as the session socket', () => {
+  test('false for a regular file at the fallback socket path', () => {
     const { root, deps } = longRoot();
     ensureSessionDirs(root, deps);
-    const sock = paths.socketPath(root, deps);
-    fs.writeFileSync(sock, 'not a socket');
+    fs.writeFileSync(paths.socketPath(root, deps), 'not a socket');
     expect(verifySocket(root, deps)).toBe(false);
-    const err = expectRefusal(() => checkOwnSocket(sock, deps), 'not_regular');
-    expect(err.message).toBe(`Refusing to use session socket ${sock}: it is not a socket (not_regular).`);
   });
 
   test('false for a mauto.sock that is a symlink to a real listening socket elsewhere', async () => {

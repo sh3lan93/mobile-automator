@@ -25,7 +25,7 @@ const {
   safeDir,
   privateDir,
   privateWorkspaceDir,
-  checkOwnSocket,
+  isOwnSocket,
 } = require('../workspace/safe-fs');
 
 // Create (or tighten, from the 0755 an older mauto made) .session/ alone, and
@@ -58,8 +58,7 @@ function verifySocket(projectRoot, deps = {}) {
     const { file, dir, inWorkspace } = paths.socketLocation(projectRoot, deps);
     if (inWorkspace) safeDir(projectRoot, dir, { policy: PRIVATE_WORKSPACE_DIR }, deps);
     else privateDir(dir, {}, deps);
-    checkOwnSocket(file, deps);
-    return true;
+    return isOwnSocket(file, deps);
   } catch (_) {
     return false;
   }

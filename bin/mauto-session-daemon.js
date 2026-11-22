@@ -176,11 +176,22 @@ async function main() {
   process.exit(0);
 }
 
+// A start that failed, as written to stderr, which is .session/daemon.log: the
+// file a verb whose daemon never became ready is sent to (connection.js
+// daemonLogHint). A refusal carries a hint (an UnsafePathError: what to do
+// about a session socket directory that is not private, say), and the log is
+// the only place the user will see it, so it goes on the line after the
+// message.
+function writeStartFailure(err, write = (text) => process.stderr.write(text)) {
+  write(`mauto-session-daemon: ${(err && err.message) || err}\n`);
+  if (err && err.hint) write(`mauto-session-daemon: hint: ${err.hint}\n`);
+}
+
 if (require.main === module) {
   main().catch((err) => {
-    process.stderr.write(`mauto-session-daemon: ${err.message || err}\n`);
+    writeStartFailure(err);
     process.exit(1);
   });
 }
 
-module.exports = { main, cleanupWorkspaceIfOwned };
+module.exports = { main, cleanupWorkspaceIfOwned, writeStartFailure };

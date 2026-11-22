@@ -28,7 +28,7 @@ const {
   openLeaf,
   privateDir,
   privateWorkspaceDir,
-  checkOwnSocket,
+  isOwnSocket,
   PRIVATE_WORKSPACE_DIR,
 } = require('../../../src/workspace/safe-fs');
 // The envelope boundary: a refusal reaches the agent through toEnvelope's
@@ -38,6 +38,9 @@ const { toEnvelope } = require('../../../src/cli');
 const { O_RDONLY, O_WRONLY, O_RDWR, O_CREAT, O_TRUNC } = fs.constants;
 const CANARY = 'SECRET-CANARY';
 const REAL_UID = process.getuid();
+// A uid that is never ours, whatever uid the tests run as (a CI runner is
+// often 1001, so no fixed number is safe to compare with the real uid).
+const FOREIGN_UID = REAL_UID + 1;
 // Root bypasses permission bits and its umask is often 0, so a mode-dependent
 // assertion proves nothing there.
 const itNotRoot = REAL_UID === 0 ? it.skip : it;
@@ -90,7 +93,7 @@ function expectUnsafe(fn, reason) {
 
 // An fs whose stat calls report another owner. `which` picks lstat (the dir
 // walk), fstat (the leaf) or both.
-function foreignFs(which = ['lstatSync', 'fstatSync'], uid = REAL_UID + 1) {
+function foreignFs(which = ['lstatSync', 'fstatSync'], uid = FOREIGN_UID) {
   const wrapped = { ...fs };
   for (const name of which) {
     wrapped[name] = (...args) => {
@@ -409,13 +412,12 @@ describe('privateDir (#346)', () => {
     expectUnsafe(() => privateDir(dir, { create: true }), 'not_directory');
   });
 
-  it('refuses a dir owned by uid 9999, even with MAUTO_TRUST_WORKSPACE_OWNER=1 (foreign_owner)', () => {
+  it('refuses a dir owned by another uid, even with MAUTO_TRUST_WORKSPACE_OWNER=1 (foreign_owner)', () => {
     fs.mkdirSync(dir);
     fs.chmodSync(dir, 0o700);
-    const deps = { fs: foreignFs(['lstatSync'], 9999), env: { MAUTO_TRUST_WORKSPACE_OWNER: '1' } };
+    const deps = { fs: foreignFs(['lstatSync']), env: { MAUTO_TRUST_WORKSPACE_OWNER: '1' } };
     const err = expectUnsafe(() => privateDir(dir, { create: true }, deps), 'foreign_owner');
-    expect(err.message).toContain('uid 9999');
-    expect(err.message).toContain(`uid ${REAL_UID}`);
+    expect(err.message).toContain(`it is owned by uid ${FOREIGN_UID}; you are uid ${REAL_UID}`);
   });
 
   it.each([['0755', 0o755], ['0750', 0o750], ['0705', 0o705], ['0777', 0o777]])('refuses an existing dir of ours at %s (not_private), leaving its mode', (_label, mode) => {
@@ -504,9 +506,9 @@ describe('privateWorkspaceDir (#346)', () => {
 });
 
 // The device session's socket, which open(2) refuses, so it is checked by
-// lstat. Wherever it lives it is named the session socket, and the owner
-// override never applies to it (D-d).
-describe('checkOwnSocket (#346)', () => {
+// lstat. A predicate: the client never reports a bad socket, it starts its own
+// daemon. The owner override never applies to it (D-d).
+describe('isOwnSocket (#346)', () => {
   let servers;
   beforeEach(() => {
     servers = [];
@@ -524,58 +526,37 @@ describe('checkOwnSocket (#346)', () => {
     });
   }
 
-  function expectSocketRefusal(fn, reason, sock) {
-    const err = expectUnsafe(fn, reason);
-    expect(err.kind).toBe('environment');
-    expect(err.path).toBe(sock);
-    expect(err.message.startsWith(`Refusing to use session socket ${sock}: `)).toBe(true);
-    for (const text of [err.message.replace(sock, '<sock>'), err.hint]) {
-      expect(text).not.toMatch(/workspace/i);
-      expect(text).not.toContain('.mobile-automator');
-      expect(text).not.toContain('MAUTO_TRUST_WORKSPACE_OWNER');
-    }
-    return err;
-  }
-
-  it('accepts a real socket of ours', async () => {
+  it('true for a real socket of ours', async () => {
     const sock = path.join(base, 's.sock');
     await listen(sock);
-    expect(() => checkOwnSocket(sock)).not.toThrow();
+    expect(isOwnSocket(sock)).toBe(true);
   });
 
-  it('refuses a regular file as not a socket (not_regular)', () => {
+  it('false for a regular file', () => {
     const sock = path.join(base, 's.sock');
     fs.writeFileSync(sock, 'x');
-    const err = expectSocketRefusal(() => checkOwnSocket(sock), 'not_regular', sock);
-    expect(err.message).toBe(`Refusing to use session socket ${sock}: it is not a socket (not_regular).`);
+    expect(isOwnSocket(sock)).toBe(false);
   });
 
-  it('refuses a link to a real listening socket (symlink)', async () => {
+  it('false for a link to a real listening socket of ours', async () => {
     const real = path.join(base, 'real.sock');
     await listen(real);
     const sock = path.join(base, 's.sock');
     fs.symlinkSync(real, sock);
-    expectSocketRefusal(() => checkOwnSocket(sock), 'symlink', sock);
+    expect(isOwnSocket(sock)).toBe(false);
   });
 
-  it('refuses a socket owned by uid 9999, even with MAUTO_TRUST_WORKSPACE_OWNER=1 (foreign_owner)', async () => {
+  it('false for a socket owned by another uid, even with MAUTO_TRUST_WORKSPACE_OWNER=1', async () => {
     const sock = path.join(base, 's.sock');
     await listen(sock);
-    const deps = { fs: foreignFs(['lstatSync'], 9999), env: { MAUTO_TRUST_WORKSPACE_OWNER: '1' } };
-    const err = expectSocketRefusal(() => checkOwnSocket(sock, deps), 'foreign_owner', sock);
-    expect(err.message).toContain(`it is owned by uid 9999; you are uid ${REAL_UID}`);
-    expect(err.owner).toEqual({ uid: 9999, myUid: REAL_UID });
+    expect(isOwnSocket(sock, { fs: foreignFs(['lstatSync']) })).toBe(false);
+    expect(isOwnSocket(sock, { fs: foreignFs(['lstatSync']), env: { MAUTO_TRUST_WORKSPACE_OWNER: '1' } })).toBe(false);
   });
 
-  it('a missing socket throws the plain ENOENT error', () => {
-    let caught;
-    try {
-      checkOwnSocket(path.join(base, 'nope.sock'));
-    } catch (err) {
-      caught = err;
-    }
-    expect(caught).not.toBeInstanceOf(UnsafePathError);
-    expect(caught.code).toBe('ENOENT');
+  it('false for a missing socket; any other fs error propagates', () => {
+    expect(isOwnSocket(path.join(base, 'nope.sock'))).toBe(false);
+    const broken = { ...fs, lstatSync: () => { throw Object.assign(new Error('EIO'), { code: 'EIO' }); } };
+    expect(() => isOwnSocket(path.join(base, 's.sock'), { fs: broken })).toThrow('EIO');
   });
 });
 
@@ -592,9 +573,7 @@ describe('a privateDir refusal names the session socket directory (#346)', () =>
     foreign_owner: () => (fs.mkdirSync(dir), fs.chmodSync(dir, 0o700)),
   };
   const depsFor = (reason) =>
-    reason === 'foreign_owner'
-      ? { fs: foreignFs(['lstatSync'], 9999), env: { MAUTO_TRUST_WORKSPACE_OWNER: '1' } }
-      : {};
+    reason === 'foreign_owner' ? { fs: foreignFs(['lstatSync']), env: { MAUTO_TRUST_WORKSPACE_OWNER: '1' } } : {};
 
   it.each(Object.keys(cases))('%s: no workspace wording and no owner override, same fields', (reason) => {
     cases[reason]();
@@ -623,8 +602,7 @@ describe('a privateDir refusal names the session socket directory (#346)', () =>
       return err;
     };
     const foreign = hintFor('foreign_owner');
-    expect(foreign.message).toContain(`it is owned by uid 9999; you are uid ${REAL_UID}`);
-    expect(foreign.owner).toEqual({ uid: 9999, myUid: REAL_UID });
+    expect(foreign.message).toContain(`it is owned by uid ${FOREIGN_UID}; you are uid ${REAL_UID}`);
     expect(foreign.hint).toMatch(/another user owns it/i);
     expect(foreign.hint).toContain('XDG_RUNTIME_DIR');
     expect(hintFor('not_private').hint).toContain('chmod 700 <path>');
@@ -641,29 +619,31 @@ describe('a privateDir refusal names the session socket directory (#346)', () =>
 });
 
 describe('a foreign_owner refusal names both uids (D-c)', () => {
-  it('in the message, keeping path and reason, with the uids on err.owner', () => {
-    const err = expectUnsafe(() => safeDir(root, ws, {}, { fs: foreignFs(['lstatSync'], 1001) }), 'foreign_owner');
+  // Both uids are injected: a fixed "foreign" uid compared with the real one
+  // collides on a host whose uid it happens to be (a CI runner's is 1001).
+  const deps = (which) => ({ fs: foreignFs(which, 1001), getuid: () => 1000 });
+
+  it('in the message, keeping path and reason', () => {
+    const err = expectUnsafe(() => safeDir(root, ws, {}, deps(['lstatSync'])), 'foreign_owner');
     expect(err.path).toBe(ws);
     expect(err.message).toBe(
-      `Refusing to use workspace path ${ws}: it is owned by uid 1001; you are uid ${REAL_UID} (foreign_owner).`
+      `Refusing to use workspace path ${ws}: it is owned by uid 1001; you are uid 1000 (foreign_owner).`
     );
-    expect(err.owner).toEqual({ uid: 1001, myUid: REAL_UID });
+    // Message text only: the uids are not error fields.
+    expect(err).not.toHaveProperty('owner');
   });
 
   it('for a foreign leaf too', () => {
     const p = path.join(ws, 'config.json');
     fs.writeFileSync(p, '{}');
-    const err = expectUnsafe(
-      () => readWorkspaceFile(root, p, {}, { fs: foreignFs(['fstatSync'], 1001) }),
-      'foreign_owner'
-    );
-    expect(err.message).toContain('owned by uid 1001');
-    expect(err.message).toContain(`you are uid ${REAL_UID}`);
+    // The directories read as ours (1000), the leaf as 1001's.
+    const leafFs = { ...foreignFs(['lstatSync'], 1000), fstatSync: foreignFs(['fstatSync'], 1001).fstatSync };
+    const err = expectUnsafe(() => readWorkspaceFile(root, p, {}, { fs: leafFs, getuid: () => 1000 }), 'foreign_owner');
+    expect(err.message).toContain('it is owned by uid 1001; you are uid 1000');
   });
 
-  it('every other reason carries no owner and keeps its message', () => {
+  it('every other reason keeps its message', () => {
     const err = new UnsafePathError('/ws/.mobile-automator/x', 'symlink');
-    expect(err.owner).toBeUndefined();
     expect(err.message).toBe('Refusing to use workspace path /ws/.mobile-automator/x: it is a symbolic link (symlink).');
   });
 });
