@@ -119,6 +119,13 @@ function expectRefusal(fn, reason) {
 }
 
 describe('ensureSessionDirs', () => {
+  test('returns the socket path whose directory it prepared, in the workspace or the fallback', () => {
+    const root = shortRoot();
+    expect(ensureSessionDirs(root)).toBe(paths.workspaceSocketPath(root));
+    const deep = longRoot();
+    expect(ensureSessionDirs(deep.root, deep.deps)).toBe(path.join(deep.fallbackDir, `${paths.workspaceKey(deep.root)}.sock`));
+  });
+
   test('a short root never creates the fallback directory', () => {
     const root = shortRoot();
     const tmp = path.join(base, 'tmp');
@@ -334,46 +341,46 @@ describe('verifySocket', () => {
     return root;
   }
 
-  test('true for a real listener in a 0700 .session', async () => {
+  test('the socket path for a real listener in a 0700 .session', async () => {
     const root = await liveShort();
-    expect(verifySocket(root, { env: {} })).toBe(true);
+    expect(verifySocket(root, { env: {} })).toBe(paths.workspaceSocketPath(root));
   });
 
-  test('true for a real listener in a private fallback directory', async () => {
+  test('the socket path for a real listener in a private fallback directory', async () => {
     const { root, deps } = longRoot();
     ensureSessionDirs(root, deps);
     await listen(paths.socketPath(root, deps));
-    expect(verifySocket(root, deps)).toBe(true);
+    expect(verifySocket(root, deps)).toBe(paths.socketPath(root, deps));
   });
 
-  test('false for a missing socket', () => {
+  test('null for a missing socket', () => {
     const root = shortRoot();
     ensureSessionDirs(root);
-    expect(verifySocket(root, { env: {} })).toBe(false);
+    expect(verifySocket(root, { env: {} })).toBeNull();
   });
 
-  test('false when there is no workspace at all, and never throws', () => {
-    expect(verifySocket(path.join(base, 'nope'), { env: {} })).toBe(false);
+  test('null when there is no workspace at all, and never throws', () => {
+    expect(verifySocket(path.join(base, 'nope'), { env: {} })).toBeNull();
   });
 
-  test('false for a regular file at the socket path', () => {
+  test('null for a regular file at the socket path', () => {
     const root = shortRoot();
     ensureSessionDirs(root);
     fs.writeFileSync(paths.workspaceSocketPath(root), 'not a socket');
-    expect(verifySocket(root, { env: {} })).toBe(false);
+    expect(verifySocket(root, { env: {} })).toBeNull();
   });
 
-  test('false for a regular file at the fallback socket path', () => {
+  test('null for a regular file at the fallback socket path', () => {
     const { root, deps } = longRoot();
     ensureSessionDirs(root, deps);
     fs.writeFileSync(paths.socketPath(root, deps), 'not a socket');
-    expect(verifySocket(root, deps)).toBe(false);
+    expect(verifySocket(root, deps)).toBeNull();
   });
 
-  test('false when .session is 0755, even with a real listener of ours in it', async () => {
+  test('null when .session is 0755, even with a real listener of ours in it', async () => {
     const root = await liveShort();
     fs.chmodSync(paths.sessionDir(root), 0o755);
-    expect(verifySocket(root, { env: {} })).toBe(false);
+    expect(verifySocket(root, { env: {} })).toBeNull();
   });
 
   // D-d: the override skips the owner check on workspace directories, so a
@@ -384,17 +391,17 @@ describe('verifySocket', () => {
     const sock = paths.workspaceSocketPath(root);
     const env = { MAUTO_TRUST_WORKSPACE_OWNER: '1' };
     const foreignDirs = foreignLstat((p) => p !== sock);
-    expect(verifySocket(root, { env: {}, fs: foreignDirs })).toBe(false);
-    expect(verifySocket(root, { env, fs: foreignDirs })).toBe(true);
-    expect(verifySocket(root, { env, fs: foreignLstat(() => true) })).toBe(false);
+    expect(verifySocket(root, { env: {}, fs: foreignDirs })).toBeNull();
+    expect(verifySocket(root, { env, fs: foreignDirs })).toBe(sock);
+    expect(verifySocket(root, { env, fs: foreignLstat(() => true) })).toBeNull();
   });
 
-  test('false for a fallback directory other users can enter', async () => {
+  test('null for a fallback directory other users can enter', async () => {
     const { root, deps, fallbackDir } = longRoot();
     ensureSessionDirs(root, deps);
     await listen(paths.socketPath(root, deps));
     fs.chmodSync(fallbackDir, 0o755);
-    expect(verifySocket(root, deps)).toBe(false);
+    expect(verifySocket(root, deps)).toBeNull();
   });
 });
 

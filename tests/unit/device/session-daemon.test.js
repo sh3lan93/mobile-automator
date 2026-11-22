@@ -202,7 +202,8 @@ describe('session-daemon', () => {
     fs.writeFileSync(paths.socketPath(root), 'stale');
     fs.writeFileSync(paths.handlePath(root), '{}');
 
-    const r = cleanStale(root);
+    expect(() => cleanStale(root)).toThrow(/requires socketPath/);
+    const r = cleanStale(root, { socketPath: paths.socketPath(root) });
     expect(r.cleaned).toBe(true);
     expect(fs.existsSync(paths.socketPath(root))).toBe(false);
     expect(fs.existsSync(paths.pidFilePath(root))).toBe(false);

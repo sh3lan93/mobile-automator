@@ -19,7 +19,6 @@
 
 const net = require('net');
 
-const paths = require('./session-paths');
 const { verifySocket } = require('./session-dir');
 const { FrameParser } = require('./session-protocol');
 
@@ -40,11 +39,13 @@ function connectSocket(socketPath) {
   });
 }
 
-// The ONE place the client opens a connection: resolves null, without
-// creating one, when the socket cannot be vouched for.
+// The ONE place the client opens a connection: to exactly the path
+// verifySocket vouched for, never one recomputed after the check. Resolves
+// null, without creating one, when the socket cannot be vouched for.
 function connectVerified(projectRoot) {
-  if (!verifySocket(projectRoot)) return Promise.resolve(null);
-  return connectSocket(paths.socketPath(projectRoot));
+  const socketPath = verifySocket(projectRoot);
+  if (!socketPath) return Promise.resolve(null);
+  return connectSocket(socketPath);
 }
 
 // Build a { call, close, request } client over an already-connected socket.

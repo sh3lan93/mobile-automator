@@ -40,12 +40,17 @@ function safeUnlinkSync(p) {
 // The lock is read by readPidFile, the one pid reader, which never follows a
 // link (#346): a planted lock linking to a file that holds our pid must not
 // pass for ours, or this teardown would delete a live session's files.
-function cleanupWorkspaceIfOwned(projectRoot) {
+//
+// `socketPath` is the path the daemon bound (startDaemon's own answer), never
+// recomputed here. It is null until startDaemon resolves; a socket bound
+// before that is unlinked by startDaemon's own failed-start teardown, and a
+// leftover is swept by the next start's cleanStale.
+function cleanupWorkspaceIfOwned(projectRoot, socketPath = null) {
   // null when there is no lock, it is unreadable, a link, or not a pid.
   const owner = readPidFile(paths.lockPath(projectRoot));
   if (owner !== process.pid) return; // not our lock — leave the owner's files
   safeUnlinkSync(paths.lockPath(projectRoot));
-  safeUnlinkSync(paths.socketPath(projectRoot));
+  if (socketPath) safeUnlinkSync(socketPath);
   safeUnlinkSync(paths.pidFilePath(projectRoot));
   safeUnlinkSync(paths.handlePath(projectRoot));
 }
@@ -113,7 +118,7 @@ async function main() {
   // start many daemons don't accumulate global listeners.)
   // 'exit' allows only synchronous work — drop the lock + socket + pidfile so
   // the next spawn isn't wedged by leftovers from this process.
-  const onExit = () => cleanupWorkspaceIfOwned(projectRoot);
+  const onExit = () => cleanupWorkspaceIfOwned(projectRoot, daemon && daemon.socketPath);
   process.on('exit', onExit);
   // One fatal handler, two registrations. The two crashes differ by exactly two
   // strings; everything else about them is load-bearing and identical, so they

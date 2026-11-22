@@ -78,7 +78,12 @@ function safeUnlink(p) {
 // ours ('other') is a RECYCLED pid: the daemon that wrote it is long dead and an
 // unrelated process inherited the number, so the stale files are cleaned instead
 // of wedging every spawn for the lifetime of that unrelated process.
-function cleanStale(projectRoot, { execFile } = {}) {
+//
+// `socketPath` is required: the path the caller will bind (ensureSessionDirs'
+// answer), so the socket swept is the one about to be bound, never a second
+// computation of it.
+function cleanStale(projectRoot, { execFile, socketPath } = {}) {
+  if (!socketPath) throw new TypeError('cleanStale requires socketPath');
   const pidFile = paths.pidFilePath(projectRoot);
   const lockFile = paths.lockPath(projectRoot);
   let livePid = null;
@@ -95,7 +100,7 @@ function cleanStale(projectRoot, { execFile } = {}) {
   }
   if (livePid) return { cleaned: false, livePid };
 
-  safeUnlink(paths.socketPath(projectRoot));
+  safeUnlink(socketPath);
   safeUnlink(pidFile);
   safeUnlink(paths.handlePath(projectRoot));
   safeUnlink(lockFile);
@@ -195,8 +200,13 @@ async function startDaemon({
   // fallback socket directory that is not ours and private). An unguarded
   // throw here is the earliest invisible death there is — nothing else in the
   // system records it, and the spawning verb sees only a readiness timeout.
+  //
+  // It also decides, once, the socket path this daemon binds, sweeps, unlinks
+  // and records in its handle (#346): the directory it checked is the
+  // directory of that path, with nothing recomputed in between.
+  let socketPath;
   try {
-    ensureSessionDirs(projectRoot);
+    socketPath = ensureSessionDirs(projectRoot);
   } catch (err) {
     safeObserve({
       level: 'error',
@@ -208,7 +218,7 @@ async function startDaemon({
   }
 
   // Reap a crashed daemon's leftovers before we bind.
-  cleanStale(projectRoot, { execFile });
+  cleanStale(projectRoot, { execFile, socketPath });
 
   // Acquire an EXCLUSIVE per-workspace lock BEFORE building the connection. Two
   // `mauto` invocations that both saw isAlive=false would otherwise both spawn a
@@ -475,7 +485,7 @@ async function startDaemon({
       /* best-effort */
     }
 
-    safeUnlink(paths.socketPath(projectRoot));
+    safeUnlink(socketPath);
     safeUnlink(paths.pidFilePath(projectRoot));
     safeUnlink(paths.handlePath(projectRoot));
     releaseLock();
@@ -681,8 +691,6 @@ async function startDaemon({
       sockets.delete(socket);
     });
   });
-
-  const socketPath = paths.socketPath(projectRoot);
 
   // A start that fails once the connection exists: record why, undo what was
   // built (the socket, if the server is listening, then the engine), release

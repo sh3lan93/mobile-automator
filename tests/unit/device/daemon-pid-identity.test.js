@@ -156,7 +156,7 @@ describe('cleanStale with pid identity (#150)', () => {
     fs.writeFileSync(paths.socketPath(root), 'stale');
     fs.writeFileSync(paths.handlePath(root), '{}');
 
-    const r = cleanStale(root, { execFile: () => 'node /usr/bin/something-else' });
+    const r = cleanStale(root, { socketPath: paths.socketPath(root), execFile: () => 'node /usr/bin/something-else' });
     expect(r.cleaned).toBe(true);
     expect(fs.existsSync(paths.socketPath(root))).toBe(false);
     expect(fs.existsSync(paths.lockPath(root))).toBe(false);
@@ -170,7 +170,7 @@ describe('cleanStale with pid identity (#150)', () => {
     fs.writeFileSync(paths.pidFilePath(root), '999999999\n');
     fs.writeFileSync(paths.handlePath(root), '{}');
 
-    expect(cleanStale(root, { execFile: () => 'node /usr/bin/something-else' }).cleaned).toBe(true);
+    expect(cleanStale(root, { socketPath: paths.socketPath(root), execFile: () => 'node /usr/bin/something-else' }).cleaned).toBe(true);
     expect(readSalt(root)).toBe(salt);
   });
 
@@ -180,7 +180,7 @@ describe('cleanStale with pid identity (#150)', () => {
     fs.writeFileSync(paths.lockPath(root), String(process.ppid) + '\n');
     fs.writeFileSync(paths.socketPath(root), 'stale');
 
-    const r = cleanStale(root, { execFile: () => 'node /path/to/mauto-session-daemon.js' });
+    const r = cleanStale(root, { socketPath: paths.socketPath(root), execFile: () => 'node /path/to/mauto-session-daemon.js' });
     expect(r.cleaned).toBe(false);
     expect(r.livePid).toBe(process.ppid);
     expect(fs.existsSync(paths.socketPath(root))).toBe(true); // untouched
@@ -193,6 +193,7 @@ describe('cleanStale with pid identity (#150)', () => {
     fs.writeFileSync(paths.socketPath(root), 'stale');
 
     const r = cleanStale(root, {
+      socketPath: paths.socketPath(root),
       execFile: () => {
         throw new Error('ENOENT');
       },

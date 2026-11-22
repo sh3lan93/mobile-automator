@@ -63,29 +63,42 @@ describe('daemon bin: ownership-gated workspace cleanup', () => {
   test('a spawn-race LOSER (lock owned by another pid) leaves the winner files intact', () => {
     const root = tmpRoot();
     seedWorkspace(root, process.pid + 1); // someone else owns the lock
-    cleanupWorkspaceIfOwned(root); // as if the loser process is exiting
+    cleanupWorkspaceIfOwned(root, paths.socketPath(root)); // as if the loser process is exiting
     expect(allExist(root)).toBe(true);
   });
 
   test('the OWNER (lock holds our pid) tears its workspace down', () => {
     const root = tmpRoot();
     seedWorkspace(root, process.pid);
-    cleanupWorkspaceIfOwned(root);
+    cleanupWorkspaceIfOwned(root, paths.socketPath(root));
     expect(noneExist(root)).toBe(true);
+  });
+
+  // Before startDaemon resolves the bin knows no bound socket (null): it never
+  // computes one, so the socket is left for startDaemon's own teardown or the
+  // next start's cleanStale, and everything else still goes.
+  test('the OWNER with no bound socket yet removes the rest and leaves the socket path alone', () => {
+    const root = tmpRoot();
+    seedWorkspace(root, process.pid);
+    cleanupWorkspaceIfOwned(root, null);
+    expect(fs.existsSync(paths.socketPath(root))).toBe(true);
+    expect(fs.existsSync(paths.lockPath(root))).toBe(false);
+    expect(fs.existsSync(paths.pidFilePath(root))).toBe(false);
+    expect(fs.existsSync(paths.handlePath(root))).toBe(false);
   });
 
   test("the OWNER's teardown spares the marker salt (#236)", () => {
     const root = tmpRoot();
     seedWorkspace(root, process.pid);
     const salt = ensureSalt(root);
-    cleanupWorkspaceIfOwned(root);
+    cleanupWorkspaceIfOwned(root, paths.socketPath(root));
     expect(noneExist(root)).toBe(true);
     expect(readSalt(root)).toBe(salt);
   });
 
   test('no lock present -> a no-op that never throws', () => {
     const root = tmpRoot();
-    expect(() => cleanupWorkspaceIfOwned(root)).not.toThrow();
+    expect(() => cleanupWorkspaceIfOwned(root, paths.socketPath(root))).not.toThrow();
   });
 
   // #346: the lock is read without following links. A planted link to a file
@@ -100,7 +113,7 @@ describe('daemon bin: ownership-gated workspace cleanup', () => {
     fs.unlinkSync(paths.lockPath(root));
     fs.symlinkSync(target, paths.lockPath(root));
 
-    cleanupWorkspaceIfOwned(root);
+    cleanupWorkspaceIfOwned(root, paths.socketPath(root));
 
     expect(allExist(root)).toBe(true);
     expect(fs.lstatSync(paths.lockPath(root)).isSymbolicLink()).toBe(true);

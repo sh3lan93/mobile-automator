@@ -94,12 +94,15 @@ function ensureSessionDir(projectRoot, deps = {}) {
 // the daemon needs before it binds. The fallback is made 0700 when missing
 // (only that level; its parent must exist) and never chmodded: we only ever
 // create it 0700, so a looser mode means someone changed it, and that is
-// refused rather than repaired. Throws like ensureSessionDir; `deps` also
-// reaches session-paths.
+// refused rather than repaired. Returns the socket path whose directory it
+// prepared: the ONE path the daemon binds, unlinks and records in its handle,
+// so it never binds somewhere it did not check. Throws like ensureSessionDir;
+// `deps` also reaches session-paths.
 function ensureSessionDirs(projectRoot, deps = {}) {
   ensureSessionDir(projectRoot, deps);
-  const { dir, inWorkspace } = paths.socketLocation(projectRoot, deps);
+  const { file, dir, inWorkspace } = paths.socketLocation(projectRoot, deps);
   if (!inWorkspace) checkDir(dir, SOCKET_DIR, { create: true, mode: 0o700 }, deps);
+  return file;
 }
 
 // Is `file` a real socket, not a link, owned by us whatever
@@ -109,18 +112,20 @@ function isOwnSocket(file, deps = {}) {
   return isOwnLeaf(file, SOCKET, deps);
 }
 
-// May the client connect to this workspace's socket? True only when its
-// directory is private (.session/ under SESSION_DIR through a link-free walk,
-// or the fallback directory under SOCKET_DIR) and the socket is our own. Any
-// failure, including a missing socket, is false.
+// May the client connect to this workspace's socket? Returns the socket path
+// only when its directory is private (.session/ under SESSION_DIR through a
+// link-free walk, or the fallback directory under SOCKET_DIR) and the socket is
+// our own; that path is the ONE the client then connects to, so it never
+// connects anywhere it did not check. Any failure, including a missing socket,
+// is null.
 function verifySocket(projectRoot, deps = {}) {
   try {
     const { file, dir, inWorkspace } = paths.socketLocation(projectRoot, deps);
     if (inWorkspace) safeDir(projectRoot, dir, { policy: SESSION_DIR }, deps);
     else checkDir(dir, SOCKET_DIR, {}, deps);
-    return isOwnSocket(file, deps);
+    return isOwnSocket(file, deps) ? file : null;
   } catch (_) {
-    return false;
+    return null;
   }
 }
 
