@@ -147,7 +147,7 @@ describe('userDir / userDest / userFile (#347)', () => {
     const leaf = path.join(outside, 'r.txt');
     fs.symlinkSync(canaryFile, leaf);
     const out = userFile(root, leaf);
-    expect(out).toMatchObject({ path: leaf });
+    expect(out).toMatchObject({ path: leaf, scope: 'outside' });
     expect(expectUnsafe(() => out.open(out.path, O_WRONLY | O_CREAT), 'symlink').scope).toBe('path');
     expect(snapshot(outside)).toEqual({ 'r.txt': CANARY, 'secret.txt': CANARY });
   });

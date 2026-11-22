@@ -27,8 +27,8 @@
 //
 // Both check every directory below the project root down to the file's own;
 // the scope's one row of SCOPES sets the containment bound and words the
-// refusal. These two names are the only scope names:
-// a target's `scope` and a refusal's `err.scope` use them alike.
+// refusal. These two are the only scopes with rules, and the only values a
+// refusal's `err.scope` takes (null aside, for a caller's own policy).
 //
 // A path the user chose (--out, --junit, a screenshot destination) is sorted
 // by userPath, on the path inProject re-roots, into one of those two or a
@@ -41,6 +41,10 @@
 //     userFile (result export --out, run --junit, crash get --out) and
 //     userDest (mauto screenshot <path>) apply them;
 //   - 'outside': anywhere else (an explicit /tmp/x.png), the user's own call.
+//     It has no SCOPES row: nothing is walked, and the one check left, the
+//     leaf open (openUserLeaf), words its refusal in the 'path' scope. So a
+//     confined target's `scope` is its refusal's `err.scope`, and an outside
+//     target's refusal reads `err.scope === 'path'`.
 //
 // userDir stays two-way (workspace, or the user's call): its one caller is
 // MAUTO_LOG_DIR, which the environment chooses, not the checkout.
@@ -674,10 +678,8 @@ function createProjectFile(projectRoot, file, { mode = 0o666 } = {}, deps = {}) 
 
 // Paths the user chose (--out, --junit, a screenshot destination, a
 // MAUTO_LOG_DIR): `{ path, scope }`, scope 'workspace', 'path' (in the project,
-// outside the workspace) or 'outside' (see the header). A scope is named as
-// SCOPES names its wording, so a target's `scope` is its refusal's
-// `err.scope`. In the
-// workspace and the project `path` is the one inProject re-roots (through an
+// outside the workspace) or 'outside' (see the header for how each maps to
+// a refusal's `err.scope`). In the workspace and the project `path` is the one inProject re-roots (through an
 // aliased root it differs from the one given, and every check and write must
 // use the checked one); outside it is the given path resolved. The entry
 // points below make the choice, so no caller tests a scope's bound, swaps
