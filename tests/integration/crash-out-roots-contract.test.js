@@ -77,6 +77,11 @@ function withHost({ platform, homedir }, fn) {
   }
 }
 
+function isUnder(file, dir) {
+  const rel = path.relative(dir, file);
+  return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
+}
+
 function oursAllows(file) {
   try {
     crashOutTarget(project, file);
@@ -123,7 +128,12 @@ describe.each(['darwin', 'linux'])('crash --out roots agree with the pinned engi
       engine: engineAllows(file),
     }));
     expect({ file, ours }).toEqual({ file, ours: engine });
-    if (expected !== undefined) expect(ours).toBe(expected);
+    // On a linux host the fixtures themselves live under the real /tmp, which
+    // the darwin rule admits: there a refused-project case is allowed by both
+    // rules (agreement above is the contract), so its fixed expectation only
+    // holds where the fixture is not under /tmp.
+    const underSlashTmp = platform === 'darwin' && isUnder(file, fs.realpathSync('/tmp'));
+    if (expected !== undefined && !underSlashTmp) expect(ours).toBe(expected);
   });
 
   it('a file directly under /tmp is allowed on darwin only', () => {
