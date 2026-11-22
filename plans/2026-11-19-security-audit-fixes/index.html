@@ -1519,6 +1519,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#run-3-follow-ups-s8s10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run-3 follow-ups (S8–S10)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Run-3 follow-ups (S8–S10)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pr-8-361-connect-only-to-the-socket-that-was-checked-task-9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PR 8 (#361): connect only to the socket that was checked (Task 9)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pr-9-362-report-writers-refuse-a-directory-link-inside-the-project-task-10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PR 9 (#362): report writers refuse a directory link inside the project (Task 10)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pr-10-363-scenario-and-remaining-reads-go-through-safe-fs-task-11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PR 10 (#363): scenario and remaining reads go through safe-fs (Task 11)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#decisions-to-confirm-before-pr-3-and-pr-5" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1562,7 +1612,7 @@
 
 <h1 id="security-hardening-gate-343-implementation-plan">Security hardening (gate #343): implementation plan<a class="headerlink" href="#security-hardening-gate-343-implementation-plan" title="Permanent link">&para;</a></h1>
 <blockquote>
-<p><strong>Start here.</strong> This is the single plan for milestone <code>security-hardening</code> (gate <a href="https://github.com/sh3lan93/mobile-automator/issues/343">#343</a>, slices #344–#349 and #353). Every agent picking up a slice reads the gate issue, then this plan's section for its slice, then the slice issue. Follow the milestone workflow in <code>CLAUDE.md</code>.</p>
+<p><strong>Start here.</strong> This is the single plan for milestone <code>security-hardening</code> (gate <a href="https://github.com/sh3lan93/mobile-automator/issues/343">#343</a>, slices #344–#349, #353 and #361–#363). Every agent picking up a slice reads the gate issue, then this plan's section for its slice, then the slice issue. Follow the milestone workflow in <code>CLAUDE.md</code>.</p>
 </blockquote>
 <table>
 <thead>
@@ -1615,6 +1665,24 @@
 <td>#353</td>
 <td>PR 7 / Task 8</td>
 <td>#349</td>
+</tr>
+<tr>
+<td>S8: connect only to the session socket that was checked</td>
+<td>#361</td>
+<td>PR 8 / Task 9</td>
+<td>—</td>
+</tr>
+<tr>
+<td>S9: report writers refuse a directory link inside the project</td>
+<td>#362</td>
+<td>PR 9 / Task 10</td>
+<td>—</td>
+</tr>
+<tr>
+<td>S10: scenario and remaining workspace reads go through safe-fs</td>
+<td>#363</td>
+<td>PR 10 / Task 11</td>
+<td>—</td>
 </tr>
 </tbody>
 </table>
@@ -1878,6 +1946,30 @@ Rules: <code>safeDir</code> walks every component from <code>workspaceDir(projec
 <li>[ ] <strong>Step 3: Implement</strong> the modifications listed above.</li>
 <li>[ ] <strong>Step 4: Run</strong> <code>npm test</code>, <code>npm run lint</code> and <code>npm run lint:guides</code>. Expected: PASS.</li>
 <li>[ ] <strong>Step 5: Commit</strong> and bump the patch version.</li>
+</ul>
+<hr />
+<h2 id="run-3-follow-ups-s8s10">Run-3 follow-ups (S8–S10)<a class="headerlink" href="#run-3-follow-ups-s8s10" title="Permanent link">&para;</a></h2>
+<p>The gate's re-audit (run-3, 2026-11-22, at <code>516b60b</code>) found that 19 of run-2's 20 findings no longer reproduce, including both medium ones. It also found one residual and two low regressions introduced by the fixes. Each became a slice. They build on the safe-fs that shipped (see PRs #356, #357, #359, #358), not on this plan's original interface blocks. After they merge, a short re-check of these three closes the gate.</p>
+<h3 id="pr-8-361-connect-only-to-the-socket-that-was-checked-task-9">PR 8 (#361): connect only to the socket that was checked (Task 9)<a class="headerlink" href="#pr-8-361-connect-only-to-the-socket-that-was-checked-task-9" title="Permanent link">&para;</a></h3>
+<p>Regression of PR 3. <code>verifySocket</code> checks <code>.session/</code> by path, and the client then connects by path. safe-fs accepts a group-writable <code>.mobile-automator/</code> on purpose (Review Focus 1), so on a umask-002 workspace a member of the victim's group can swap <code>.session/</code> between the check and the connect.</p>
+<ul>
+<li>Make the check and the connect name the same directory: either connect through the pinned, checked directory, or refuse the in-workspace socket when any directory from <code>.mobile-automator/</code> down to <code>.session/</code> is writable by others, and use the private <code>&lt;tmpdir&gt;/mauto-&lt;uid&gt;/</code> socket instead.</li>
+<li>Before the first call frame, the daemon proves it knows the workspace secret (<code>.session/marker.salt</code>, mode 0600), for example an HMAC over a client nonce. Failing that, the client treats it as "no daemon". No native addon.</li>
+<li>Test: a sandbox-style test with a second uid in the victim's group that keeps swapping <code>.session/</code> gets zero frames; the umask-022 control and the upgrade path are unchanged.</li>
+</ul>
+<h3 id="pr-9-362-report-writers-refuse-a-directory-link-inside-the-project-task-10">PR 9 (#362): report writers refuse a directory link inside the project (Task 10)<a class="headerlink" href="#pr-9-362-report-writers-refuse-a-directory-link-inside-the-project-task-10" title="Permanent link">&para;</a></h3>
+<p>Regression of PR 4. <code>result export --out</code> and <code>run --junit</code> treat any path outside <code>.mobile-automator/</code> as the user's own choice, so a committed directory link inside the project (<code>reports/ -&gt; /outside</code>) is followed. <code>crash get --out</code> already checks this.</p>
+<ul>
+<li>An output path inside the project root but outside the workspace goes through the project-scoped walk (<code>openProjectFile</code>), and <code>realpath(dirname)</code> must stay inside <code>realpath(projectRoot)</code>. Paths outside the project keep today's behaviour.</li>
+<li><code>run --junit</code>'s pre-check uses the same walk, before any device work.</li>
+<li>One rule for all three output writers; no second copy of "is this path inside the project".</li>
+</ul>
+<h3 id="pr-10-363-scenario-and-remaining-reads-go-through-safe-fs-task-11">PR 10 (#363): scenario and remaining reads go through safe-fs (Task 11)<a class="headerlink" href="#pr-10-363-scenario-and-remaining-reads-go-through-safe-fs-task-11" title="Permanent link">&para;</a></h3>
+<p>Residual of run-2's workspace-read finding. <code>loadScenario</code> (<code>src/scenario/load.js</code>) reads with a plain <code>fs.readFileSync</code>, so <code>validate</code>, <code>run</code> and <code>result finalize --scenario</code> follow a committed scenario link.</p>
+<ul>
+<li><code>loadScenario</code> takes the project root. Inside the workspace it reads through the safe-fs workspace reader; elsewhere it uses the no-follow user-leaf open. It hashes the bytes actually read, so <code>run</code>/<code>finalize</code> hashes stay byte-exact (a Buffer-returning reader, not a re-encoded string).</li>
+<li>Check <code>src/run/reference-screenshot.js</code> and <code>src/observe/trace.js</code> reads and route them the same way.</li>
+<li>Decide the file scope of <code>MAUTO_TRUST_WORKSPACE_OWNER=1</code>: <code>checkLeafOwnership</code> applies the workspace rule to every leaf, including user-chosen paths outside the workspace. Scope it to workspace leaves, or document why not, and test it.</li>
 </ul>
 <hr />
 <h2 id="decisions-to-confirm-before-pr-3-and-pr-5">Decisions to confirm before PR 3 and PR 5<a class="headerlink" href="#decisions-to-confirm-before-pr-3-and-pr-5" title="Permanent link">&para;</a></h2>
