@@ -156,7 +156,9 @@ describe('handleCrashGet', () => {
 // project, the OS temp directory and, on macOS, /tmp), checked before the
 // device is asked; inside it the workspace rules apply. Either way the leaf is
 // opened O_NOFOLLOW, a hard link refused, and the truncate deferred until the
-// checks pass.
+// checks pass. These are the handler's cases (refused before the device is
+// asked, the write, the envelope); which directories are roots (home, /tmp,
+// the temp dir) is tested on the module, tests/unit/workspace/output-roots.test.js.
 describe('handleCrashGet --out confinement (#347)', () => {
   const REPORT = 'FATAL EXCEPTION: main\n  at com.acme.Boom.run(Boom.java:1)';
 
@@ -175,11 +177,7 @@ describe('handleCrashGet --out confinement (#347)', () => {
     return { base, root, ws, outside, tmp, home };
   }
 
-  async function getWith(
-    { root, tmp, home },
-    out,
-    { cwd = root, platform = 'linux', darwinTmp, homedir = () => home } = {}
-  ) {
+  async function getWith({ root, tmp, home }, out, { cwd = root } = {}) {
     const asked = [];
     const deviceBridge = {
       getCrash: async (id) => {
@@ -190,7 +188,7 @@ describe('handleCrashGet --out confinement (#347)', () => {
     // A refusal is thrown to the envelope boundary, as the verb's wrapper
     // sees it: map it there.
     const r = await handleCrashGet(
-      { deviceBridge, projectRoot: root, cwd, tmpdir: () => tmp, platform, darwinTmp, homedir },
+      { deviceBridge, projectRoot: root, cwd, outRootsHost: { tmpdir: () => tmp, platform: 'linux', homedir: () => home } },
       'r1',
       { out }
     ).catch(toEnvelope);
@@ -222,32 +220,6 @@ describe('handleCrashGet --out confinement (#347)', () => {
     expect(asked).toEqual([]);
     expect(fs.existsSync(path.join(s.base, 'outside.txt'))).toBe(false);
     expect(snapshot(s.base)).toEqual(before);
-  });
-
-  it('an absolute --out in a third directory is refused the same way', async () => {
-    const s = setup();
-    const before = snapshot(s.outside);
-
-    const { r, asked } = await getWith(s, path.join(s.outside, 'crash.txt'));
-
-    expect(r.exitKind).toBe('invalid_input');
-    expect(asked).toEqual([]);
-    expect(snapshot(s.outside)).toEqual(before);
-  });
-
-  it('a project directory that links outside both roots is refused: the check compares realpaths', async () => {
-    const s = setup();
-    fs.symlinkSync(s.outside, path.join(s.root, 'docs'));
-    const before = snapshot(s.outside);
-
-    const { r, asked } = await getWith(s, 'docs/crash.txt');
-
-    expect(r.exitKind).toBe('invalid_input');
-    // Names the path as resolved, never where the link points.
-    expect(r.envelope.error.message).toContain(path.join(s.root, 'docs', 'crash.txt'));
-    expect(r.envelope.error.message).not.toContain(s.outside);
-    expect(asked).toEqual([]);
-    expect(snapshot(s.outside)).toEqual(before);
   });
 
   it('--out .mobile-automator/crash.txt that links to an outside file is refused before the device is asked, the file unchanged', async () => {
@@ -357,129 +329,6 @@ describe('handleCrashGet --out confinement (#347)', () => {
     expect(fs.readFileSync(path.join(s.ws, 'crashes', 'r1.txt'), 'utf8')).toBe(REPORT);
   });
 
-  // macOS os.tmpdir() is /var/folders/.../T, not /tmp, and the engine adds /tmp
-  // there itself: `mauto crash get <id> --out /tmp/crash.txt` is documented.
-  // The stand-in for /tmp is injected so the test never writes to the real one.
-  // The engine never takes its cwd as a root when that is the home directory
-  // or above it (mobile-mcp's isTooBroadToAllow): it would make nearly every
-  // file the user owns writable. `crash get` has no workspace gate, so its
-  // project root is the cwd whenever no workspace is found; run from ~, it
-  // must not accept `--out ~/.bashrc`.
-  describe('a project that is the home directory or above it is no root', () => {
-    it('a project root equal to home: a path in it is invalid_input, and the hint does not list it', async () => {
-      const s = setup();
-
-      const { r, asked } = await getWith(s, 'crash.txt', { homedir: () => s.root });
-
-      expect(r.exitKind).toBe('invalid_input');
-      expect(r.envelope.hint).not.toContain(s.root);
-      expect(r.envelope.hint).toContain(s.tmp);
-      expect(asked).toEqual([]);
-      expect(fs.existsSync(path.join(s.root, 'crash.txt'))).toBe(false);
-    });
-
-    it('a project root above home: the same', async () => {
-      const s = setup();
-      const home = path.join(s.root, 'users', 'me');
-      fs.mkdirSync(home, { recursive: true });
-
-      const { r, asked } = await getWith(s, 'crash.txt', { homedir: () => home });
-
-      expect(r.exitKind).toBe('invalid_input');
-      expect(r.envelope.hint).not.toContain(s.root);
-      expect(asked).toEqual([]);
-      expect(fs.existsSync(path.join(s.root, 'crash.txt'))).toBe(false);
-    });
-
-    // The filesystem root is above every home, so it is dropped like any
-    // other ancestor: the hint says so rather than offering `/` as a root.
-    // `outside` is a temp dir the handler is not told about.
-    it('a project root of / is above home: dropped, and the hint says so', async () => {
-      const s = setup();
-      const out = path.join(s.outside, 'crash.txt');
-
-      const { r, asked } = await getWith({ ...s, root: '/' }, out);
-
-      expect(r.exitKind).toBe('invalid_input');
-      expect(r.envelope.hint).toContain('The project directory is not allowed');
-      expect(asked).toEqual([]);
-      expect(fs.existsSync(out)).toBe(false);
-    });
-
-    it('home reached through a link is compared by realpath', async () => {
-      const s = setup();
-      const alias = path.join(tmpDir('mauto-crash-home-alias-'), 'home');
-      fs.symlinkSync(s.root, alias);
-
-      const { r } = await getWith(s, 'crash.txt', { homedir: () => alias });
-
-      expect(r.exitKind).toBe('invalid_input');
-    });
-
-    it('a project in a subdirectory of home is still a root', async () => {
-      const s = setup();
-
-      const { r } = await getWith(s, 'crash.txt', { homedir: () => s.base });
-
-      expect(r.exitKind).toBe('ok');
-      expect(fs.readFileSync(path.join(s.root, 'crash.txt'), 'utf8')).toBe(REPORT);
-    });
-
-    it('a write inside .mobile-automator/ never reaches the rule', async () => {
-      const s = setup();
-
-      const { r } = await getWith(s, '.mobile-automator/crash.txt', { homedir: () => s.root });
-
-      expect(r.exitKind).toBe('ok');
-      expect(fs.readFileSync(path.join(s.ws, 'crash.txt'), 'utf8')).toBe(REPORT);
-    });
-
-    it('the temp directory stays a root', async () => {
-      const s = setup();
-      const out = path.join(s.tmp, 'crash.txt');
-
-      const { r } = await getWith(s, out, { homedir: () => s.root });
-
-      expect(r.exitKind).toBe('ok');
-      expect(fs.readFileSync(out, 'utf8')).toBe(REPORT);
-    });
-  });
-
-  describe('/tmp on macOS', () => {
-    it('on darwin a path under /tmp is allowed', async () => {
-      const s = setup();
-      const darwinTmp = tmpDir('mauto-crash-slash-tmp-');
-      const out = path.join(darwinTmp, 'crash.txt');
-
-      const { r } = await getWith(s, out, { platform: 'darwin', darwinTmp });
-
-      expect(r.exitKind).toBe('ok');
-      expect(fs.readFileSync(out, 'utf8')).toBe(REPORT);
-    });
-
-    it('on linux the same path is refused', async () => {
-      const s = setup();
-      const darwinTmp = tmpDir('mauto-crash-slash-tmp-');
-      const out = path.join(darwinTmp, 'crash.txt');
-
-      const { r, asked } = await getWith(s, out, { platform: 'linux', darwinTmp });
-
-      expect(r.exitKind).toBe('invalid_input');
-      expect(r.envelope.hint).not.toContain(darwinTmp);
-      expect(asked).toEqual([]);
-      expect(fs.existsSync(out)).toBe(false);
-    });
-
-    it('on darwin the refusal hint names every allowed root, /tmp included', async () => {
-      const s = setup();
-      const darwinTmp = tmpDir('mauto-crash-slash-tmp-');
-
-      const { r } = await getWith(s, '../outside.txt', { platform: 'darwin', darwinTmp });
-
-      expect(r.exitKind).toBe('invalid_input');
-      for (const root of [s.root, s.tmp, darwinTmp]) expect(r.envelope.hint).toContain(root);
-    });
-  });
 });
 
 describe('registration', () => {

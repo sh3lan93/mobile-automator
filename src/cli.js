@@ -1789,17 +1789,13 @@ function crashWriteFailure(given, err) {
 // src/workspace/output-roots.js allows. Both are checked before the device is
 // asked, so a bad --out costs no device work. A filesystem error is the write
 // failure; anything else, a refusal (that rule's or a link's) included,
-// propagates to toEnvelope. `tmpdir`,
-// `platform`, `darwinTmp` and `homedir` are injectable for tests.
-async function handleCrashGet(
-  { deviceBridge, projectRoot, cwd = process.cwd(), tmpdir, platform, darwinTmp, homedir },
-  id,
-  opts = {}
-) {
+// propagates to toEnvelope. `outRootsHost` is passed through to that module
+// untouched (its host facts, which it defaults; tests inject them).
+async function handleCrashGet({ deviceBridge, projectRoot, cwd = process.cwd(), outRootsHost }, id, opts = {}) {
   let target = null;
   if (opts.out) {
     try {
-      target = crashOutTarget(projectRoot, path.resolve(cwd, opts.out), { tmpdir, platform, darwinTmp, homedir });
+      target = crashOutTarget(projectRoot, path.resolve(cwd, opts.out), outRootsHost);
     } catch (err) {
       if (!isFsError(err)) throw err;
       return crashWriteFailure(opts.out, err);

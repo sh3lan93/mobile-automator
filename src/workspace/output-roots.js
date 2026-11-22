@@ -47,6 +47,10 @@ function realpathOrNull(p) {
 // OS temp directory; and on macOS /tmp too, because os.tmpdir() is
 // /var/folders/.../T there and the docs teach `--out /tmp/crash.txt`. A home
 // that does not exist protects nothing, so the project stays a root.
+//
+// `host` holds the host facts (tmpdir(), platform, darwinTmp, homedir()), each
+// defaulting to the real one here, read at call time. The crash handler
+// passes it through untouched; only tests fill it.
 function crashOutRoots(
   projectRoot,
   { tmpdir = os.tmpdir, platform = process.platform, darwinTmp = '/tmp', homedir = os.homedir } = {}
