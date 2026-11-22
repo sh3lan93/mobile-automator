@@ -23,12 +23,12 @@ const { createWorkspaceFile, UnsafePathError } = require('../workspace/safe-fs')
 // fix it, and the verb fails environment instead of stalling to the deadline.
 // A regular stale lock whose unlink fails still backs off, as contention or
 // permissions on a real lock can clear. O_EXCL never follows a link, and
-// O_NOFOLLOW is added on top. The project root is required: the lock file is always created by safe-fs's
-// createWorkspaceFile, which walks its directory (symlink-free, owned by us,
-// created when missing) on every attempt, so there is no unconfined path to
-// fall back to. Every retry path, including a lock that vanishes between open
-// and lstat, is bounded by MAX_WAIT_MS: a dangling symlink used to make open
-// fail EEXIST and stat fail ENOENT forever.
+// O_NOFOLLOW is added on top. The project root is required: the lock file is
+// always created by safe-fs's createWorkspaceFile, which walks its directory
+// (symlink-free, owned by us, created when missing) on every attempt, so there
+// is no unconfined path to fall back to. Every retry path, including a lock
+// that vanishes between open and lstat, is bounded by MAX_WAIT_MS: a dangling
+// symlink used to make open fail EEXIST and stat fail ENOENT forever.
 
 // STALE_MS bounds how long a held lock may sit before another acquirer treats
 // it as abandoned. It is judged from the lockfile's creation mtime and is NOT

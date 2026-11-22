@@ -2,7 +2,9 @@
 
 // session-dir (#346): the device session's socket is reachable only through
 // directories no other user can enter, and the client trusts a socket only
-// when its directory and the socket itself check out. Real tmp trees and real
+// when its directory and the socket itself check out. Each rule is pinned once,
+// at the lowest layer, in tests/unit/workspace/safe-fs-private.test.js; this
+// file covers which check applies where: one case per location and branch. Real tmp trees and real
 // listening sockets, because the guarantees are about what lstat sees; only
 // "another owner" is simulated (a wrapped lstatSync), because jest cannot
 // chown.
@@ -104,39 +106,6 @@ function expectRefusal(fn, reason) {
 }
 
 describe('ensureSessionDirs', () => {
-  testNotRoot('creates .session 0700 under umask 022', () => {
-    const root = shortRoot();
-    const prev = process.umask(0o022);
-    try {
-      ensureSessionDirs(root);
-    } finally {
-      process.umask(prev);
-    }
-    expect(fs.lstatSync(paths.sessionDir(root)).isDirectory()).toBe(true);
-    expect(mode(paths.sessionDir(root))).toBe(0o700);
-  });
-
-  // The upgrade path: an older mauto made .session/ at 0755.
-  testNotRoot('tightens an existing 0755 .session to 0700', () => {
-    const root = shortRoot();
-    fs.mkdirSync(paths.sessionDir(root), { recursive: true });
-    fs.chmodSync(paths.sessionDir(root), 0o755);
-    ensureSessionDirs(root);
-    expect(mode(paths.sessionDir(root))).toBe(0o700);
-  });
-
-  test('refuses a symlinked .session and changes nothing where it points', () => {
-    const root = shortRoot();
-    const outside = path.join(base, 'outside');
-    fs.mkdirSync(outside);
-    fs.chmodSync(outside, 0o755);
-    fs.mkdirSync(path.join(root, '.mobile-automator'));
-    fs.symlinkSync(outside, paths.sessionDir(root));
-    expectRefusal(() => ensureSessionDirs(root), 'symlink');
-    expect(mode(outside)).toBe(0o755);
-    expect(fs.readdirSync(outside)).toEqual([]);
-  });
-
   test('a short root never creates the fallback directory', () => {
     const root = shortRoot();
     const xdg = path.join(base, 'xdg');
@@ -157,20 +126,6 @@ describe('ensureSessionDirs', () => {
     expect(mode(fallbackDir)).toBe(0o700);
     // The handle and pid file still live in the workspace.
     expect(mode(paths.sessionDir(root))).toBe(0o700);
-  });
-
-  test('refuses a pre-existing fallback directory owned by another uid (foreign_owner)', () => {
-    const { root, deps, fallbackDir } = longRoot();
-    fs.mkdirSync(fallbackDir, { mode: 0o700 });
-    const fsx = foreignLstat((p) => p === fallbackDir);
-    const err = expectRefusal(() => ensureSessionDirs(root, { ...deps, fs: fsx }), 'foreign_owner');
-    expect(err.path).toBe(fallbackDir);
-    expect(err.message).toBe(
-      `Refusing to use session socket directory ${fallbackDir}: it is owned by uid ${FOREIGN_UID}; you are uid ${REAL_UID} (foreign_owner).`
-    );
-    // The override is for workspaces, never for the socket's directory (D-d).
-    const env = { ...deps.env, MAUTO_TRUST_WORKSPACE_OWNER: '1' };
-    expectRefusal(() => ensureSessionDirs(root, { env, fs: fsx }), 'foreign_owner');
   });
 
   test('refuses a pre-existing fallback directory that other users can enter (not_private), leaving it', () => {
@@ -197,16 +152,6 @@ describe('ensureSessionDir', () => {
       process.umask(prev);
     }
     expect(mode(paths.sessionDir(root))).toBe(0o700);
-  });
-
-  test('refuses a symlinked .session', () => {
-    const root = shortRoot();
-    const outside = path.join(base, 'outside');
-    fs.mkdirSync(outside);
-    fs.mkdirSync(path.join(root, '.mobile-automator'));
-    fs.symlinkSync(outside, paths.sessionDir(root));
-    expectRefusal(() => ensureSessionDir(root), 'symlink');
-    expect(fs.readdirSync(outside)).toEqual([]);
   });
 
   test('for a deep root, never makes or checks the fallback directory', () => {
@@ -265,35 +210,10 @@ describe('verifySocket', () => {
     expect(verifySocket(root, deps)).toBe(false);
   });
 
-  test('false for a mauto.sock that is a symlink to a real listening socket elsewhere', async () => {
-    const root = shortRoot();
-    ensureSessionDirs(root);
-    const elsewhere = path.join(base, 'elsewhere.sock');
-    await listen(elsewhere);
-    fs.symlinkSync(elsewhere, paths.workspaceSocketPath(root));
-    expect(verifySocket(root, { env: {} })).toBe(false);
-  });
-
-  test('false for a symlinked .session holding a real listener', async () => {
-    const root = shortRoot();
-    const outside = path.join(base, 'o');
-    fs.mkdirSync(outside, { mode: 0o700 });
-    fs.mkdirSync(path.join(root, '.mobile-automator'));
-    fs.symlinkSync(outside, paths.sessionDir(root));
-    await listen(path.join(outside, paths.SOCKET_NAME));
-    expect(verifySocket(root, { env: {} })).toBe(false);
-  });
-
   test('false when .session is 0755, even with a real listener of ours in it', async () => {
     const root = await liveShort();
     fs.chmodSync(paths.sessionDir(root), 0o755);
     expect(verifySocket(root, { env: {} })).toBe(false);
-  });
-
-  test('false when the socket is owned by another uid', async () => {
-    const root = await liveShort();
-    const sock = paths.workspaceSocketPath(root);
-    expect(verifySocket(root, { env: {}, fs: foreignLstat((p) => p === sock) })).toBe(false);
   });
 
   // D-d: the override skips the owner check on workspace directories, so a
@@ -307,24 +227,6 @@ describe('verifySocket', () => {
     expect(verifySocket(root, { env: {}, fs: foreignDirs })).toBe(false);
     expect(verifySocket(root, { env, fs: foreignDirs })).toBe(true);
     expect(verifySocket(root, { env, fs: foreignLstat(() => true) })).toBe(false);
-  });
-
-  test('false for a symlinked fallback directory holding a real listener', async () => {
-    const { root, deps, fallbackDir } = longRoot();
-    const real = path.join(base, 'r');
-    fs.mkdirSync(real, { mode: 0o700 });
-    fs.symlinkSync(real, fallbackDir);
-    await listen(path.join(real, path.basename(paths.socketPath(root, deps))));
-    expect(verifySocket(root, deps)).toBe(false);
-  });
-
-  test('false for a foreign-owned fallback directory, override or not', async () => {
-    const { root, deps, fallbackDir } = longRoot();
-    ensureSessionDirs(root, deps);
-    await listen(paths.socketPath(root, deps));
-    const fsx = foreignLstat((p) => p === fallbackDir);
-    expect(verifySocket(root, { ...deps, fs: fsx })).toBe(false);
-    expect(verifySocket(root, { env: { ...deps.env, MAUTO_TRUST_WORKSPACE_OWNER: '1' }, fs: fsx })).toBe(false);
   });
 
   test('false for a fallback directory other users can enter', async () => {
