@@ -32,27 +32,27 @@ beforeEach(() => telemetry._resetMemo());
 
 describe('telemetry control surface', () => {
   it('is off when nothing has been configured', () => {
-    expect(telemetry.resolveTelemetry({ env: TOKEN, config: null }))
+    expect(telemetry.resolveTelemetry({ env: TOKEN, loadConfig: () => null }))
       .toEqual({ enabled: false, reason: 'not_configured' });
-    expect(telemetry.resolveTelemetry({ env: TOKEN, config: {} }))
+    expect(telemetry.resolveTelemetry({ env: TOKEN, loadConfig: () => ({}) }))
       .toEqual({ enabled: false, reason: 'not_configured' });
-    expect(telemetry.resolveTelemetry({ env: TOKEN, config: { telemetry: { enabled: false } } }))
+    expect(telemetry.resolveTelemetry({ env: TOKEN, loadConfig: () => ({ telemetry: { enabled: false } }) }))
       .toEqual({ enabled: false, reason: 'not_configured' });
   });
 
   it('is on only for a literal true in the config, not a truthy string', () => {
-    expect(telemetry.resolveTelemetry({ env: TOKEN, config: ON, localConsent: true }))
+    expect(telemetry.resolveTelemetry({ env: TOKEN, loadConfig: () => ON, readConsent: () => true }))
       .toEqual({ enabled: true, reason: 'enabled' });
-    expect(telemetry.resolveTelemetry({ env: TOKEN, config: { telemetry: { enabled: 'true' } }, localConsent: true }))
+    expect(telemetry.resolveTelemetry({ env: TOKEN, loadConfig: () => ({ telemetry: { enabled: 'true' } }), readConsent: () => true }))
       .toEqual({ enabled: false, reason: 'not_configured' });
   });
 
   it('keeps a committed opt-in alone off: it needs this user\'s local consent too (#348)', () => {
     // config.json is a file anyone can commit. Without the per-user record,
     // one developer's opt-in would turn telemetry on for every clone.
-    expect(telemetry.resolveTelemetry({ env: TOKEN, config: ON }))
+    expect(telemetry.resolveTelemetry({ env: TOKEN, loadConfig: () => ON }))
       .toEqual({ enabled: false, reason: 'not_consented_locally' });
-    expect(telemetry.resolveTelemetry({ env: TOKEN, config: ON, localConsent: 'true' }))
+    expect(telemetry.resolveTelemetry({ env: TOKEN, loadConfig: () => ON, readConsent: () => 'true' }))
       .toEqual({ enabled: false, reason: 'not_consented_locally' });
   });
 
@@ -63,25 +63,25 @@ describe('telemetry control surface', () => {
 
   it('checks local consent after the config and before the token', () => {
     // No config opt-in: the config is the first thing missing, so it is named.
-    expect(telemetry.resolveTelemetry({ env: TOKEN, config: null, localConsent: true }))
+    expect(telemetry.resolveTelemetry({ env: TOKEN, loadConfig: () => null, readConsent: () => true }))
       .toEqual({ enabled: false, reason: 'not_configured' });
     // A placeholder build that is also unconsented reports the consent gap.
-    expect(telemetry.resolveTelemetry({ env: { MAUTO_TELEMETRY_TOKEN: TOKEN_PLACEHOLDER }, config: ON }))
+    expect(telemetry.resolveTelemetry({ env: { MAUTO_TELEMETRY_TOKEN: TOKEN_PLACEHOLDER }, loadConfig: () => ON }))
       .toEqual({ enabled: false, reason: 'not_consented_locally' });
   });
 
   it('lets MAUTO_TELEMETRY=0 win over an enabled, consented config', () => {
-    expect(telemetry.resolveTelemetry({ env: { ...TOKEN, MAUTO_TELEMETRY: '0' }, config: ON, localConsent: true }))
+    expect(telemetry.resolveTelemetry({ env: { ...TOKEN, MAUTO_TELEMETRY: '0' }, loadConfig: () => ON, readConsent: () => true }))
       .toEqual({ enabled: false, reason: 'kill_switch' });
   });
 
   it('honours DO_NOT_TRACK', () => {
     for (const v of ['1', 'true', 'TRUE']) {
-      expect(telemetry.resolveTelemetry({ env: { ...TOKEN, DO_NOT_TRACK: v }, config: ON, localConsent: true }))
+      expect(telemetry.resolveTelemetry({ env: { ...TOKEN, DO_NOT_TRACK: v }, loadConfig: () => ON, readConsent: () => true }))
         .toEqual({ enabled: false, reason: 'do_not_track' });
     }
     // DO_NOT_TRACK=0 is an explicit "tracking is fine", not a kill switch.
-    expect(telemetry.resolveTelemetry({ env: { ...TOKEN, DO_NOT_TRACK: '0' }, config: ON, localConsent: true }))
+    expect(telemetry.resolveTelemetry({ env: { ...TOKEN, DO_NOT_TRACK: '0' }, loadConfig: () => ON, readConsent: () => true }))
       .toEqual({ enabled: true, reason: 'enabled' });
   });
 
@@ -89,7 +89,7 @@ describe('telemetry control surface', () => {
     // An off-switch may live in the environment. An ON-switch may not: it is a
     // way to enable collection on a machine — a CI image, a shared profile, an
     // inherited Dockerfile — whose owner never consented.
-    expect(telemetry.resolveTelemetry({ env: { ...TOKEN, MAUTO_TELEMETRY: '1' }, config: null }))
+    expect(telemetry.resolveTelemetry({ env: { ...TOKEN, MAUTO_TELEMETRY: '1' }, loadConfig: () => null }))
       .toEqual({ enabled: false, reason: 'not_configured' });
   });
 
@@ -97,8 +97,24 @@ describe('telemetry control surface', () => {
     // A real token ships now (Task 12 graduation), so this state is no longer
     // reachable via an absent override — only an explicit placeholder proves
     // the mechanism still holds.
-    expect(telemetry.resolveTelemetry({ env: { MAUTO_TELEMETRY_TOKEN: TOKEN_PLACEHOLDER }, config: ON, localConsent: true }))
+    expect(telemetry.resolveTelemetry({ env: { MAUTO_TELEMETRY_TOKEN: TOKEN_PLACEHOLDER }, loadConfig: () => ON, readConsent: () => true }))
       .toEqual({ enabled: false, reason: 'no_token' });
+  });
+
+  it('calls its readers lazily: no config read under a kill switch, no consent read while the config is off', () => {
+    const loadConfig = jest.fn(() => ON);
+    const readConsent = jest.fn(() => true);
+    telemetry.resolveTelemetry({ env: { ...TOKEN, MAUTO_TELEMETRY: '0' }, loadConfig, readConsent });
+    expect(loadConfig).not.toHaveBeenCalled();
+    expect(readConsent).not.toHaveBeenCalled();
+
+    const off = jest.fn(() => ({ telemetry: { enabled: false } }));
+    telemetry.resolveTelemetry({ env: TOKEN, loadConfig: off, readConsent });
+    expect(off).toHaveBeenCalledTimes(1);
+    expect(readConsent).not.toHaveBeenCalled();
+
+    telemetry.resolveTelemetry({ env: TOKEN, loadConfig, readConsent });
+    expect(readConsent).toHaveBeenCalledTimes(1);
   });
 
   it('checks the kill switches before it touches the filesystem at all', () => {

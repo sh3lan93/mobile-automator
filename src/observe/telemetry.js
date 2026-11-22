@@ -82,13 +82,20 @@ function configOptIn(config) {
   return Boolean(config && config.telemetry && config.telemetry.enabled === true);
 }
 
-// `localConsent` is this user's per-user record for the project (see
-// src/observe/consent.js), and it too must be a literal true.
-function resolveTelemetry({ env = process.env, config = null, localConsent = false } = {}) {
+// The precedence above, written once. The readers are called lazily, in this
+// order, so a kill switch costs no filesystem call and the consent record is
+// read only when the config opts in. `readConsent` is this user's per-user
+// record for the project (see src/observe/consent.js), and it too must return
+// a literal true.
+function resolveTelemetry({
+  env = process.env,
+  loadConfig = () => null,
+  readConsent = () => false,
+} = {}) {
   const killed = envKillSwitch(env);
   if (killed) return { enabled: false, reason: killed };
-  if (!configOptIn(config)) return { enabled: false, reason: 'not_configured' };
-  if (localConsent !== true) return { enabled: false, reason: 'not_consented_locally' };
+  if (!configOptIn(loadConfig())) return { enabled: false, reason: 'not_configured' };
+  if (readConsent() !== true) return { enabled: false, reason: 'not_consented_locally' };
   if (!hasToken(env)) return { enabled: false, reason: 'no_token' };
   return { enabled: true, reason: 'enabled' };
 }
@@ -117,16 +124,14 @@ function resolveEngineTelemetry(env = process.env) {
 }
 
 // The decision for a project, taken now: no cache. The one place the
-// precedence above meets the filesystem.
+// precedence meets the filesystem.
 function decideNow(projectRoot, env = process.env) {
   try {
-    // Checked before any read, not after: a kill switch must cost nothing.
-    if (envKillSwitch(env)) return resolveTelemetry({ env, config: null });
-    const config = configManager.load(projectRoot);
-    // The consent record is read only when the config opts in, so the common
-    // off path costs no read beyond config.json.
-    const localConsent = configOptIn(config) && hasLocalConsent(projectRoot, { env });
-    return resolveTelemetry({ env, config, localConsent });
+    return resolveTelemetry({
+      env,
+      loadConfig: () => configManager.load(projectRoot),
+      readConsent: () => hasLocalConsent(projectRoot, { env }),
+    });
   } catch (_) {
     // A corrupt or unreadable config resolves OFF. Failing closed is the only
     // acceptable direction for a consent flag.
