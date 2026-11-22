@@ -628,8 +628,12 @@ function inProject(projectRoot, file, deps = {}) {
 // aliased root it differs from the one given, and every check and write must
 // use it), else the path resolved as named. inWorkspace, userPath and
 // readUserFile all decide through here, so the rule exists once.
+//
+// A null projectRoot means there is no checkout (validate run where no
+// workspace was found): everything is 'outside', the user's own. This is the
+// one place that reading is made.
 function locate(projectRoot, file, deps = {}) {
-  const rerooted = inProject(projectRoot, file, deps);
+  const rerooted = projectRoot === null ? null : inProject(projectRoot, file, deps);
   if (!rerooted) return { path: path.resolve(file), where: 'outside' };
   const where = isInside(rerooted, path.resolve(workspaceDir(projectRoot))) ? 'workspace' : 'project';
   return { path: rerooted, where };
@@ -669,9 +673,10 @@ function readProjectFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES, enco
 //   - in the workspace: readWorkspaceFile on the re-rooted path;
 //   - elsewhere in the project: readProjectFile on the re-rooted path, so a
 //     committed `flows -> /outside` or a leaf link is refused, never followed;
-//   - outside the project: the user's own file, read as they named it. A link
-//     is followed, and only the size cap applies: no owner, link or
-//     regular-file check, as `cat` would read it.
+//   - outside the project, or anywhere when projectRoot is null (no
+//     checkout): the user's own file, read as they named it. A link is
+//     followed, and only the size cap applies: no owner, link or regular-file
+//     check, as `cat` would read it.
 function readUserFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES, encoding = 'utf8' } = {}, deps = {}) {
   const at = locate(projectRoot, file, deps);
   if (at.where === 'workspace') return readWorkspaceFile(projectRoot, at.path, { maxBytes, encoding }, deps);

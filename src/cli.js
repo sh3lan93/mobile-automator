@@ -242,9 +242,11 @@ async function handleScreenshot({ deviceBridge, projectRoot, cwd = process.cwd()
   }
 }
 
-// `projectRoot` is the discovered workspace root, else the cwd: validate runs
-// without a workspace, and a scenario there is still read through the checked
-// walk of the directory it was run in (#363).
+// `projectRoot` is the DISCOVERED workspace root, or null when none was found
+// (never the cwd fallback): validate runs without a workspace, and then there
+// is no checkout to bound the read, so the scenario is the user's own file and
+// is read as named (#363). Inside a found workspace it is read through the
+// checked walk, a committed link refused.
 function handleValidate({ validator, projectRoot }, file, opts = {}) {
   const loaded = loadScenario(validator, file, { ...opts, projectRoot });
   if (loaded.failure) return loaded.failure;
@@ -2167,7 +2169,7 @@ function buildProgram(deps = {}) {
     .description('Validate a scenario JSON file against the scenario schema')
     .option('--strict', 'fail (instead of warn) when the scenario cannot replay unattended')
     .action(withEnvelope((file, opts) => {
-      const r = handleValidate({ validator, projectRoot }, file, { strict: Boolean(opts && opts.strict) });
+      const r = handleValidate({ validator, projectRoot: foundRoot }, file, { strict: Boolean(opts && opts.strict) });
       emit(r, humanFlag());
     }));
 

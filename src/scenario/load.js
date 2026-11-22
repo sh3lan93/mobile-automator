@@ -28,13 +28,18 @@ const cannotRead = (message) => ({
 // safe-fs's readUserFile, so a scenario inside the checkout reached through a
 // committed link (a linked leaf, `flows -> /outside`) is refused environment,
 // the message naming the path and never what it points at, while a file
-// outside the project is the user's own and is read as named.
+// outside the project is the user's own and is read as named. An explicit
+// null means there is no checkout (validate without a workspace): every file
+// is then outside it. Leaving it out is a bug, and throws.
 function loadScenario(validator, file, opts = {}) {
-  if (!opts.projectRoot) throw new TypeError('loadScenario: projectRoot is required');
+  const { projectRoot } = opts;
+  if (projectRoot !== null && (typeof projectRoot !== 'string' || projectRoot === '')) {
+    throw new TypeError('loadScenario: projectRoot is required (a path, or null for no checkout)');
+  }
   let raw;
   let sha256;
   try {
-    const bytes = readUserFile(opts.projectRoot, file, { encoding: null });
+    const bytes = readUserFile(projectRoot, file, { encoding: null });
     if (bytes === null) return cannotRead(`ENOENT: no such file or directory, open '${file}'`);
     sha256 = crypto.createHash('sha256').update(bytes).digest('hex');
     raw = bytes.toString('utf8');

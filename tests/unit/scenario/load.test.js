@@ -127,6 +127,18 @@ describe('unreadable files stay invalid_input', () => {
   });
 
   test('projectRoot is required', () => {
+    expect(() => loadScenario(validator, path.join(outside, 'x.json'), {})).toThrow(TypeError);
     expect(() => loadScenario(validator, path.join(outside, 'x.json'), {})).toThrow(/projectRoot/);
+  });
+});
+
+describe('a null projectRoot is no checkout: every file is the user\'s own', () => {
+  test('a link the walk would refuse inside a project is followed', () => {
+    fs.writeFileSync(path.join(outside, 'real.json'), JSON.stringify(SCENARIO));
+    fs.symlinkSync(path.join(outside, 'real.json'), path.join(ws, 'scenarios', 'linked.json'));
+    expect(load(path.join(ws, 'scenarios', 'linked.json')).failure.exitKind).toBe('environment');
+    const loaded = load(path.join(ws, 'scenarios', 'linked.json'), { projectRoot: null });
+    expect(loaded.failure).toBeUndefined();
+    expect(loaded.sha256).toBe(sha(path.join(outside, 'real.json')));
   });
 });

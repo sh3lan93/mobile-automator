@@ -22,8 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `environment` error that names the path, and none of the link's target is
   printed. In `mauto run` such a refusal ends the run `environment` instead
   of failing the assertion. A path outside the project is your own choice
-  and is read as before, links followed; it is only size-capped. The
-  scenario hash is unchanged for normal files.
+  and is read as before, links followed; it is only size-capped. So is
+  every scenario `mauto validate` reads where no workspace is found: with no
+  checkout there is nothing to walk. The scenario hash is unchanged for
+  normal files.
 - **`MAUTO_TRUST_WORKSPACE_OWNER=1` now applies only inside the checkout.** It
   still lets workspace and project files owned by another uid be used (a CI
   container running as root), but never a file outside the project: an

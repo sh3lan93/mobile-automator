@@ -100,3 +100,36 @@ describe("a scenario outside the project is the user's own", () => {
     }
   });
 });
+
+// Without a workspace there is no checkout, so validate reads the scenario as
+// the user named it: the cwd is never taken for a project root and walked
+// (from `/`, that walk refused macOS's /var link and Linux's o+w /tmp).
+describe('validate without a workspace reads the user\'s own file', () => {
+  test('run from /, a scenario under the temp dir validates', async () => {
+    const elsewhere = tmpDir('mauto-noworkspace-');
+    try {
+      const file = path.join(elsewhere, 's.json');
+      fs.writeFileSync(file, JSON.stringify(scenario()));
+      const { calls } = await runIn(elsewhere, ['validate', file], { cwd: '/' });
+      expect(calls).toHaveLength(1);
+      expect(calls[0].exitKind).toBe('ok');
+      expect(calls[0].envelope.data).toEqual({ valid: true });
+    } finally {
+      fs.rmSync(elsewhere, { recursive: true, force: true });
+    }
+  });
+
+  test("run from the directory holding it, the user's own link is followed", async () => {
+    const elsewhere = tmpDir('mauto-noworkspace-');
+    try {
+      fs.writeFileSync(path.join(elsewhere, 'real.json'), JSON.stringify(scenario()));
+      fs.symlinkSync(path.join(elsewhere, 'real.json'), path.join(elsewhere, 'mine.json'));
+      const { calls } = await runIn(elsewhere, ['validate', path.join(elsewhere, 'mine.json')], { cwd: elsewhere });
+      expect(calls).toHaveLength(1);
+      expect(calls[0].exitKind).toBe('ok');
+      expect(calls[0].envelope.data).toEqual({ valid: true });
+    } finally {
+      fs.rmSync(elsewhere, { recursive: true, force: true });
+    }
+  });
+});
