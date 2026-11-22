@@ -476,7 +476,7 @@ queue that gets renamed mid-flush, not part of the event log.
 If it is growing and never draining, the daemon is not running (it is what
 uploads) or the network is unreachable. `mauto telemetry flush` drains it
 synchronously and reports what happened. `mauto telemetry disable` stops it
-being written at all. A device session started by a mauto older than 0.40.15
+being written at all. A device session started by a mauto older than 0.40.16
 keeps its old decision until it ends, so run `mauto session end` after
 disabling if one was running when you upgraded.
 
@@ -486,7 +486,7 @@ recorded per user, outside the repository
 (`$XDG_CONFIG_HOME/mauto/telemetry-consent.json`, else
 `~/.config/mauto/telemetry-consent.json`), so a committed opt-in turns nothing
 on. Expect this reason on a fresh clone of a repository whose config opts in,
-and in projects you opted in to before 0.40.15. Run `mauto telemetry enable`
+and in projects you opted in to before 0.40.16. Run `mauto telemetry enable`
 if you want telemetry on.
 
 **The device engine** (mobile-mcp, which mauto runs to drive devices) has its

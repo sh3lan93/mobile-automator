@@ -56,7 +56,7 @@ config and records no consent.
 `mauto telemetry disable` writes `telemetry.enabled: false` and removes this
 project from your consent file. A device session that is already running
 re-checks before every upload and stops sending. A session started by a
-`mauto` older than 0.40.15 does not, so run `mauto session end` after
+`mauto` older than 0.40.16 does not, so run `mauto session end` after
 disabling if you upgraded with one running.
 
 `mauto telemetry status` reports why telemetry is on or off in `data.reason`:

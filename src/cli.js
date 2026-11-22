@@ -1150,7 +1150,7 @@ function handleTelemetryEnable({ projectRoot, env = process.env }) {
 // started by this version re-checks consent before every upload (#348); one
 // started by an older mauto decided once, at start, and keeps that decision.
 const DISABLE_SESSION_HINT =
-  'A running device session re-checks consent before every upload and stops sending, but a session started by an older mauto (before 0.40.15) keeps its old decision until it ends: run `mauto session end` to be sure.';
+  'A running device session re-checks consent before every upload and stops sending, but a session started by an older mauto (before 0.40.16) keeps its old decision until it ends: run `mauto session end` to be sure.';
 
 function handleTelemetryDisable({ projectRoot, env = process.env }) {
   observeTelemetry.setEnabled(projectRoot, false, env);
