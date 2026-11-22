@@ -39,7 +39,7 @@ function loadScenario(validator, file, opts = {}) {
   let raw;
   let sha256;
   try {
-    const bytes = readUserFile(projectRoot, file, { encoding: null, absent: 'throw' });
+    const bytes = readUserFile(projectRoot, file, { encoding: null, throwIfAbsent: true });
     sha256 = crypto.createHash('sha256').update(bytes).digest('hex');
     raw = bytes.toString('utf8');
   } catch (err) {

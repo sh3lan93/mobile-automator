@@ -42,7 +42,7 @@ const PNG_MAX_BYTES = 64 * 1024 * 1024;
 // `projectRoot`. An absent file throws the fs's own ENOENT, as the plain read
 // did; a refused path throws its UnsafePathError.
 function readPngBytes(projectRoot, file) {
-  return readUserFile(projectRoot, file, { encoding: null, maxBytes: PNG_MAX_BYTES, absent: 'throw' });
+  return readUserFile(projectRoot, file, { encoding: null, maxBytes: PNG_MAX_BYTES, throwIfAbsent: true });
 }
 
 // The decoded PNG at `file` (pngjs's { width, height, data }).
