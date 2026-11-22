@@ -20,23 +20,27 @@
 // .mcp.json). So the same rules come in two scopes, one directory walk and one
 // leaf open between them:
 //
-//   - workspace (safeDir, the *WorkspaceFile helpers, safeWorkspaceDest): the
-//     path must resolve inside .mobile-automator/;
-//   - path (readProjectFile, createProjectFile): it must resolve inside the
+//   - 'workspace' (safeDir, the *WorkspaceFile helpers, safeWorkspaceDest):
+//     the path must resolve inside .mobile-automator/;
+//   - 'path' (readProjectFile, createProjectFile): it must resolve inside the
 //     project root.
 //
 // Both check every directory below the project root down to the file's own;
-// the scope sets the containment bound and words the refusal. A path the user
-// chose (--out, --junit, a screenshot destination) falls in one of three
-// scopes (userPath, on the path inProject re-roots):
+// the scope (its row of CONFINED_SCOPES) sets the containment bound, and its
+// SCOPES entry words the refusal. These two names are the only scope names:
+// a target's `scope` and a refusal's `err.scope` use them alike.
 //
-//   - workspace: inside .mobile-automator/, the workspace rules;
-//   - project: inside the project root but outside the workspace
+// A path the user chose (--out, --junit, a screenshot destination) is sorted
+// by userPath, on the path inProject re-roots, into one of those two or a
+// third, 'outside':
+//
+//   - 'workspace': inside .mobile-automator/, the workspace rules;
+//   - 'path': inside the project root but outside the workspace
 //     (`reports/r.xml`, where a cloned repo can commit `reports` as a link to
-//     anywhere), the path-scope rules (#362). userFile (result export --out,
-//     run --junit, crash get --out) and userDest (mauto screenshot <path>)
-//     apply them;
-//   - outside: anywhere else (an explicit /tmp/x.png), the user's own call.
+//     anywhere), the same rules as mauto's own host files there (#362).
+//     userFile (result export --out, run --junit, crash get --out) and
+//     userDest (mauto screenshot <path>) apply them;
+//   - 'outside': anywhere else (an explicit /tmp/x.png), the user's own call.
 //
 // userDir stays two-way (workspace, or the user's call): its one caller is
 // MAUTO_LOG_DIR, which the environment chooses, not the checkout.
@@ -630,11 +634,12 @@ function inProject(projectRoot, file, deps = {}) {
   return null;
 }
 
-// Where `file` lands in the workspace: its inProject path when that lies
-// under workspaceDir(projectRoot), else null.
+// Where `file` lands in the workspace: its inProject path when userPath puts
+// it in the workspace scope, else null. userPath holds the one membership
+// rule; this only reads it.
 function inWorkspace(projectRoot, file, deps = {}) {
-  const p = inProject(projectRoot, file, deps);
-  return p && isInside(p, path.resolve(workspaceDir(projectRoot))) ? p : null;
+  const { path: p, scope } = userPath(projectRoot, file, deps);
+  return scope === 'workspace' ? p : null;
 }
 
 // A project file outside the workspace (a host file `mauto init` writes:
@@ -799,14 +804,14 @@ module.exports = {
   // A workspace file another process writes (the engine's screenshot).
   safeWorkspaceDest,
   // Where a path lands in the project (re-rooted through an aliased root), or
-  // null: the one re-root, which inWorkspace and userPath build on.
+  // null: the one re-root, which userPath builds on.
   inProject,
-  // Where a path the user chose lands in the workspace. Exported for its unit
-  // tests only: callers use userDir / userDest / userFile, which apply it.
+  // Where a path the user chose lands in the workspace, read off userPath.
+  // Exported for its unit tests only: callers use userDir / userDest /
+  // userFile, which apply the scope themselves.
   inWorkspace,
-  // Paths the user chose: workspace, project or outside scope (userPath), the
-  // entry points applying each scope's rules.
-  userPath,
+  // Paths the user chose: each entry point classifies the path (userPath,
+  // private) and applies its scope's rules.
   userDir,
   userDest,
   userFile,

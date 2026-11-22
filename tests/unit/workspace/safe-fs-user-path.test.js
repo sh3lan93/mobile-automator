@@ -12,7 +12,6 @@ const path = require('path');
 const {
   inWorkspace,
   inProject,
-  userPath,
   safeWorkspaceDest,
   isInside,
   userDir,
@@ -157,6 +156,13 @@ describe('userDir / userDest / userFile (#347)', () => {
 // #362: a path inside the project but outside the workspace (`reports/r.xml`,
 // with `reports` a committed link to anywhere) gets the project walk, worded
 // in the 'path' scope. Only a path outside the project is the user's own call.
+// userPath is private: its classification is read off the userFile target,
+// which every writer gets.
+const userPath = (root_, file) => {
+  const { path: p, scope } = userFile(root_, file);
+  return { path: p, scope };
+};
+
 describe('inProject / userPath scopes (#362)', () => {
   it('classifies a workspace, a project and an outside path', () => {
     const elsewhere = path.join(outside, 'r.xml');
