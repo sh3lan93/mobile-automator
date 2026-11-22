@@ -191,7 +191,7 @@ describe('cli handlers', () => {
     test('valid scenario -> ok envelope, exitKind ok', () => {
       const file = writeTmp('s.json', JSON.stringify(validScenario()));
       const validator = new ScenarioValidator({ schemaPath: SCHEMA_PATH });
-      const { envelope, exitKind } = handleValidate({ validator }, file);
+      const { envelope, exitKind } = handleValidate({ validator, projectRoot: path.dirname(file) }, file);
       expect(exitKind).toBe('ok');
       expect(envelope.ok).toBe(true);
       expect(envelope.data).toEqual({ valid: true });
@@ -206,7 +206,7 @@ describe('cli handlers', () => {
       const run = (scenario, opts) => {
         const file = writeTmp('u.json', JSON.stringify(scenario));
         const validator = new ScenarioValidator({ schemaPath: SCHEMA_PATH });
-        return handleValidate({ validator }, file, opts);
+        return handleValidate({ validator, projectRoot: path.dirname(file) }, file, opts);
       };
 
       test('clean scenario -> no warnings key, no hint', () => {
@@ -276,7 +276,7 @@ describe('cli handlers', () => {
       const run = (scenario, opts) => {
         const file = writeTmp('l.json', JSON.stringify(scenario));
         const validator = new ScenarioValidator({ schemaPath: SCHEMA_PATH });
-        return handleValidate({ validator }, file, opts);
+        return handleValidate({ validator, projectRoot: path.dirname(file) }, file, opts);
       };
 
       test('advisory only -> ok with the warning and an advisory hint', () => {
@@ -316,7 +316,7 @@ describe('cli handlers', () => {
       delete bad.app_package;
       const file = writeTmp('bad.json', JSON.stringify(bad));
       const validator = new ScenarioValidator({ schemaPath: SCHEMA_PATH });
-      const { envelope, exitKind } = handleValidate({ validator }, file);
+      const { envelope, exitKind } = handleValidate({ validator, projectRoot: path.dirname(file) }, file);
       expect(exitKind).toBe('invalid_input');
       expect(envelope.ok).toBe(false);
       expect(envelope.error.kind).toBe('invalid_input');
@@ -327,7 +327,7 @@ describe('cli handlers', () => {
     test('unreadable / unparseable file -> invalid_input fail', () => {
       const file = writeTmp('broken.json', '{ not valid json');
       const validator = new ScenarioValidator({ schemaPath: SCHEMA_PATH });
-      const { envelope, exitKind } = handleValidate({ validator }, file);
+      const { envelope, exitKind } = handleValidate({ validator, projectRoot: path.dirname(file) }, file);
       expect(exitKind).toBe('invalid_input');
       expect(envelope.ok).toBe(false);
       expect(envelope.error.kind).toBe('invalid_input');
@@ -336,7 +336,7 @@ describe('cli handlers', () => {
     test('missing file -> invalid_input fail', () => {
       const validator = new ScenarioValidator({ schemaPath: SCHEMA_PATH });
       const { envelope, exitKind } = handleValidate(
-        { validator },
+        { validator, projectRoot: os.tmpdir() },
         '/no/such/file/here.json'
       );
       expect(exitKind).toBe('invalid_input');

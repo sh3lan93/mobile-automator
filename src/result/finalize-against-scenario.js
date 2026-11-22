@@ -22,7 +22,7 @@ const { incompleteEnvelope } = require('./pending-hint');
 function loadScenarioContext({ validator, resultStoreFactory, projectRoot, cwd }, { runId, scenarioId, scenario }) {
   if (scenario === undefined) return null;
   const file = path.resolve(cwd, scenario);
-  const loaded = loadScenario(validator, file, { strict: false });
+  const loaded = loadScenario(validator, file, { strict: false, projectRoot });
   if (loaded.failure) return { failure: loaded.failure };
   const recorded = resultStoreFactory({ runId, scenarioId, projectRoot }).recorded();
   const mismatch = scenarioMismatch(recorded, loaded);
