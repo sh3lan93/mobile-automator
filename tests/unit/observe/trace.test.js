@@ -159,6 +159,27 @@ describe('pruneRunTraces', () => {
     expect(fs.existsSync(path.join(dir, 'run-notes.txt'))).toBe(true);
   });
 
+  // #347: a .logs/ planted as a link to an outside dir would make the prune
+  // list and delete files there. The walk refuses the link; nothing is
+  // deleted and the prune reports 0.
+  it('deletes nothing through a .logs -> outside link', () => {
+    const { tmpDir, snapshot } = require('../../helpers/workspace-safety');
+    const base = tmpDir('mauto-trace-confine-');
+    const root = path.join(base, 'project');
+    const outside = path.join(base, 'outside');
+    fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
+    fs.mkdirSync(outside);
+    for (let i = 0; i < KEEP_RUN_TRACES + 5; i += 1) {
+      fs.writeFileSync(path.join(outside, `run-old${i}.ndjson`), `{"i":${i}}\n`);
+    }
+    fs.symlinkSync(outside, path.join(root, '.mobile-automator', '.logs'));
+    const before = snapshot(outside);
+
+    expect(pruneRunTraces(root, { except: 'current', env: {} })).toBe(0);
+
+    expect(snapshot(outside)).toEqual(before);
+  });
+
   it('is never load-bearing — a missing or unreadable logs dir is a no-op', () => {
     const bare = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-trace-bare-'));
     expect(() => pruneRunTraces(bare, { except: 'x', env: {} })).not.toThrow();

@@ -21,7 +21,7 @@ const {
   REAL_UID,
   FOREIGN_UID,
   itNotRoot,
-  makeFixture,
+  makeSafeFsFixture,
   snapshot,
   expectUnsafe,
   foreignFs,
@@ -46,7 +46,7 @@ let ws;
 let outside;
 
 beforeEach(() => {
-  ({ base, root, ws, outside } = makeFixture());
+  ({ base, root, ws, outside } = makeSafeFsFixture());
 });
 
 afterEach(() => {

@@ -16,7 +16,8 @@ const {
 const { ResultStoreRefusal } = require('./refusal');
 const { resolveRunStatus } = require('./status-guard');
 const { workspaceDir } = require('../workspace/layout');
-const { UnsafePathError, createWorkspaceFile, readWorkspaceFile } = require('../workspace/safe-fs');
+const { createWorkspaceFile, readWorkspaceFile } = require('../workspace/safe-fs');
+const { isTypedRefusal } = require('../output/typed-refusal');
 
 // Incremental result accumulator that persists to
 //   <projectRoot>/.mobile-automator/results/<runId>.json
@@ -638,7 +639,7 @@ function readFinalizedResult(projectRoot, runId) {
     raw = readWorkspaceFile(projectRoot, file);
   } catch (err) {
     // A symlinked results/ or result file (#345): refused, never followed.
-    if (err instanceof UnsafePathError) {
+    if (isTypedRefusal(err)) {
       const { kind, message, hint } = err;
       return { error: { kind, message, hint } };
     }

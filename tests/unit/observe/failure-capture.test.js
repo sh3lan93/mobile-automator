@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { captureOnFailure, isCapturable } = require('../../../src/observe/failure-capture');
+const { tmpDir, snapshot } = require('../../helpers/workspace-safety');
 
 function workspace() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-failcap-'));
@@ -178,6 +179,62 @@ describe('screenshot on device failure', () => {
         bridge, result: failing('device'), projectRoot: undefined, runId: 'run_20260101_000001', verb: 'tap', env: ENV,
       })
     ).resolves.toBeNull();
+  });
+
+  // #347: the engine writes the PNG wherever it is told, so a committed
+  // `screenshots -> /some/shared/0777 dir` would put a photograph of the app
+  // in a directory every user can read and plant in. The destination is
+  // walked first; a refusal is no capture, no bridge call, and (rule 2) the
+  // verb's own result untouched.
+  describe('never captures through a link (#347)', () => {
+    // A bridge that writes only where it is told, creating nothing on the way.
+    function plainBridge() {
+      const calls = [];
+      return {
+        calls,
+        async screenshot(dest) {
+          calls.push(dest);
+          fs.writeFileSync(dest, 'PNG');
+          return dest;
+        },
+      };
+    }
+
+    it('refuses screenshots/ planted as a link to a world-writable outside dir', async () => {
+      const root = workspace();
+      const outside = tmpDir('mauto-failcap-outside-');
+      fs.chmodSync(outside, 0o777);
+      fs.symlinkSync(outside, path.join(root, '.mobile-automator', 'screenshots'));
+      const result = failing('device');
+      const before = JSON.stringify(result);
+      const bridge = plainBridge();
+
+      const shot = await captureOnFailure({
+        bridge, result, projectRoot: root, runId: 'smoke', verb: 'tap', env: ENV,
+      });
+
+      expect(shot).toBeNull();
+      expect(bridge.calls).toEqual([]);
+      expect(snapshot(outside)).toEqual({});
+      expect(JSON.stringify(result)).toBe(before);
+      const events = traceEvents(root, 'smoke');
+      expect(events).toHaveLength(1);
+      expect(events[0]).toMatchObject({ event: 'screenshot.capture_failed', verb: 'tap' });
+      expect(events[0].message).toMatch(/^Refusing to use workspace path /);
+    });
+
+    it('a clean tree still captures, its directories created by the walk', async () => {
+      const root = workspace();
+      const bridge = plainBridge();
+
+      const shot = await captureOnFailure({
+        bridge, result: failing('device'), projectRoot: root, runId: 'smoke', verb: 'tap', env: ENV,
+      });
+
+      expect(shot).toBeTruthy();
+      expect(bridge.calls).toEqual([shot]);
+      expect(fs.readFileSync(shot, 'utf8')).toBe('PNG');
+    });
   });
 
   it('survives a bridge with no screenshot method and an unwritable workspace', async () => {

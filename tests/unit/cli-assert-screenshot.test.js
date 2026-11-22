@@ -14,6 +14,7 @@ const { ResultStore } = require('../../src/result/store');
 const { workspaceDir } = require('../../src/workspace/layout');
 const { makeFakeBridge, makeFakeClock, el } = require('../helpers/fake-bridge');
 const { solidPng, quadrantPng, writePng } = require('../helpers/png');
+const { CANARY, tmpDir, snapshot } = require('../helpers/workspace-safety');
 
 const WHITE = [255, 255, 255, 255];
 const BLACK = [0, 0, 0, 255];
@@ -213,4 +214,47 @@ test('argv: --reference, --tolerance, repeated --mask and --update-references re
   expect(emitted[0].exitKind).toBe('ok');
   expect(emitted[0].envelope.data.similarity_score).toBe(1);
   expect(bridge.of('getScreenSize').length).toBeGreaterThan(0);
+});
+
+// #347: the capture, the baseline and the diff are all written through
+// safe-fs, so a cloned repo's planted link is refused, and the refusal is the
+// environment kind with its own hint (deviceFail keeps a typed error's kind),
+// never a device failure.
+describe('a planted link is refused environment (#347)', () => {
+  function outsideWithCanary() {
+    const dir = tmpDir('mauto-assert-shot-outside-');
+    fs.writeFileSync(path.join(dir, 'home.png'), CANARY);
+    return dir;
+  }
+  const expectEnvironment = (r) => {
+    expect(r.exitKind).toBe('environment');
+    expect(r.envelope.ok).toBe(false);
+    expect(r.envelope.error.kind).toBe('environment');
+    expect(r.envelope.error.message).toMatch(/^Refusing to use /);
+    expect(r.envelope.hint).toMatch(/link/);
+  };
+
+  test('--update-references with the baseline directory linked outside writes nothing there', async () => {
+    const outside = outsideWithCanary();
+    const before = snapshot(outside);
+    fs.mkdirSync(workspaceDir(root), { recursive: true });
+    fs.symlinkSync(outside, path.join(workspaceDir(root), 'ref'));
+    const r = await assertShot(makeFakeBridge({ screenshots: [solidPng(20, 20, WHITE)] }), {
+      reference: 'ref/home.png', updateReferences: true,
+    });
+    expectEnvironment(r);
+    expect(snapshot(outside)).toEqual(before);
+  });
+
+  test('screenshots/ linked outside: refused before the device is asked', async () => {
+    const outside = outsideWithCanary();
+    const before = snapshot(outside);
+    fs.mkdirSync(workspaceDir(root), { recursive: true });
+    fs.symlinkSync(outside, path.join(workspaceDir(root), 'screenshots'));
+    const bridge = makeFakeBridge({ screenshots: [solidPng(20, 20, WHITE)] });
+    const r = await assertShot(bridge, { reference: 'ref/home.png' });
+    expectEnvironment(r);
+    expect(bridge.of('screenshot')).toEqual([]);
+    expect(snapshot(outside)).toEqual(before);
+  });
 });

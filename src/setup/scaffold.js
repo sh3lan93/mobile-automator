@@ -6,13 +6,19 @@
 // skeleton config.json. Idempotent: re-running never clobbers an existing
 // config's other fields, and changes its `mode` only when one is requested
 // explicitly (#333) — DEFAULT_MODE is for a new workspace, never a reset.
+//
+// The workspace may already exist in a cloned repo, symlinks included, so
+// every directory is created and every file read and written through safe-fs
+// (#347): a link anywhere under .mobile-automator/, or .mobile-automator/
+// itself, throws UnsafePathError and its target is never written or created.
 
 const fs = require('fs');
 const path = require('path');
 
 const manager = require('../config/manager');
 const { workspaceDir } = require('../workspace/layout');
-const { atomicWrite } = require('../util/atomic');
+const { safeDir, readWorkspaceFile } = require('../workspace/safe-fs');
+const { atomicWorkspaceWrite } = require('../util/atomic');
 
 const SUBDIRS = ['scenarios', 'screenshots', 'results', 'memory'];
 
@@ -62,22 +68,26 @@ function scaffold(projectRoot, { mode } = {}) {
   const upgraded = [];
 
   const baseDir = workspaceDir(projectRoot);
-  ensureDir(baseDir, created);
+  ensureDir(projectRoot, baseDir, created);
   for (const sub of SUBDIRS) {
-    ensureDir(path.join(baseDir, sub), created);
+    ensureDir(projectRoot, path.join(baseDir, sub), created);
   }
 
   const gitignorePath = path.join(baseDir, '.gitignore');
-  if (!fs.existsSync(gitignorePath)) {
-    atomicWrite(gitignorePath, CURRENT_GITIGNORE_BODY);
+  const gitignore = readWorkspaceFile(projectRoot, gitignorePath);
+  if (gitignore === null) {
+    atomicWorkspaceWrite(projectRoot, gitignorePath, CURRENT_GITIGNORE_BODY);
     created.push(gitignorePath);
-  } else if (GITIGNORE_BODIES.slice(0, -1).includes(fs.readFileSync(gitignorePath, 'utf8'))) {
-    atomicWrite(gitignorePath, CURRENT_GITIGNORE_BODY);
+  } else if (GITIGNORE_BODIES.slice(0, -1).includes(gitignore)) {
+    atomicWorkspaceWrite(projectRoot, gitignorePath, CURRENT_GITIGNORE_BODY);
     upgraded.push(gitignorePath);
   }
 
+  // lstat, not existsSync: a symlinked config.json, dangling or not, counts as
+  // present, so applyMode's load refuses it rather than the skeleton write
+  // replacing it unseen.
   const cfgPath = manager.configPath(projectRoot);
-  if (fs.existsSync(cfgPath)) {
+  if (present(cfgPath)) {
     return { created, upgraded, configWritten: false, ...applyMode(projectRoot, mode) };
   }
   // Fresh skeleton — single source of truth for the day-one config shape.
@@ -93,7 +103,7 @@ function scaffold(projectRoot, { mode } = {}) {
     // the project owner already made.
     telemetry: { enabled: false },
   };
-  fs.writeFileSync(cfgPath, JSON.stringify(skeleton, null, 2) + '\n');
+  atomicWorkspaceWrite(projectRoot, cfgPath, JSON.stringify(skeleton, null, 2) + '\n');
   created.push(cfgPath);
   return { created, upgraded, configWritten: true, mode: skeleton.mode, modeChanged: null };
 }
@@ -109,11 +119,24 @@ function applyMode(projectRoot, mode) {
   return { mode, modeChanged: current === mode ? null : { from: current, to: mode } };
 }
 
-function ensureDir(dir, created) {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-    created.push(dir);
+// Whether anything sits at `p`, a symlink (dangling or not) included.
+function present(p) {
+  try {
+    fs.lstatSync(p);
+    return true;
+  } catch (err) {
+    if (err.code === 'ENOENT') return false;
+    throw err;
   }
+}
+
+// The checked walk creates `dir` and refuses a link on the way. Reported as
+// created only when nothing was there before: a link counts as present, and
+// the walk then refuses it.
+function ensureDir(projectRoot, dir, created) {
+  const existed = present(dir);
+  safeDir(projectRoot, dir, { create: true });
+  if (!existed) created.push(dir);
 }
 
 module.exports = { scaffold, GITIGNORE_BODIES };

@@ -21,20 +21,25 @@ const socketDeps = useSocketDeps();
 // each test overrides only the call it is about, so the override IS the test's
 // subject rather than noise around it. The directory and leaf stubs are what
 // safe-fs asks of an fs: lstat each directory, realpath for containment, chmod
-// .session/ to 0700, fstat the opened leaf.
+// .session/ to 0700, fstat the opened leaf. lstat of the log itself is
+// rotation's (#347: lstat, only a regular file rotates), so it is its own
+// stub, `logLstat`, and a rotation test overrides that alone, leaving the
+// directory walk on the happy path.
 const UID = process.getuid();
+const LOG = logFilePath('/proj');
 function makeFakeFs(overrides = {}) {
   const calls = { renamed: [], closed: [], written: [], opened: [] };
-  return Object.assign(
+  const fake = Object.assign(
     {
       calls,
-      lstatSync() {
+      lstatSync(p) {
+        if (p === LOG) return fake.logLstat(p);
         return { isSymbolicLink: () => false, isDirectory: () => true, uid: UID, mode: 0o40700 };
       },
+      logLstat() { return { size: 0, isFile: () => true }; },
       realpathSync(p) { return p; },
       mkdirSync() {},
       chmodSync() {},
-      statSync() { return { size: 0 }; },
       renameSync(from, to) { calls.renamed.push([from, to]); },
       openSync(file, flags, mode) { calls.opened.push([file, flags, mode]); return 7; },
       fstatSync() { return { isFile: () => true, uid: UID, nlink: 1 }; },
@@ -43,6 +48,7 @@ function makeFakeFs(overrides = {}) {
     },
     overrides
   );
+  return fake;
 }
 
 const enoent = () => Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
@@ -145,7 +151,7 @@ describe('session-log', () => {
 
   test('a missing log file is not an error — no rotation, still opens', () => {
     const fakeFs = makeFakeFs({
-      statSync() { throw enoent(); },
+      logLstat() { throw enoent(); },
       renameSync() { throw new Error('must not rotate a missing file'); },
     });
     const handle = openDaemonLog('/proj', { fs: fakeFs });
@@ -160,7 +166,7 @@ describe('session-log', () => {
   // us at exactly the moment something is wrong enough to spawn twice.
   test('a rotation failure still yields a usable log — an oversized log beats no log', () => {
     const fakeFs = makeFakeFs({
-      statSync() { return { size: 1e9 }; },
+      logLstat() { return { size: 1e9, isFile: () => true }; },
       renameSync() { throw enoent(); }, // a concurrent spawn already rotated
     });
     const handle = openDaemonLog('/proj', { fs: fakeFs });
@@ -170,7 +176,7 @@ describe('session-log', () => {
 
   test('an unreadable log directory does not block the open either', () => {
     const fakeFs = makeFakeFs({
-      statSync() { throw Object.assign(new Error('EACCES'), { code: 'EACCES' }); },
+      logLstat() { throw Object.assign(new Error('EACCES'), { code: 'EACCES' }); },
     });
     expect(openDaemonLog('/proj', { fs: fakeFs }).stdio).toEqual(['ignore', 7, 7]);
   });

@@ -131,16 +131,56 @@ describe('file sink', () => {
   });
 
   it('swallows a write failure instead of throwing', () => {
+    // A read-only workspace: .logs/ is missing, so the checked walk tries to
+    // create it, and that mkdir fails. Every later call fails too.
+    const calls = [];
+    const erofs = (name) => () => {
+      calls.push(name);
+      throw Object.assign(new Error('EROFS: read-only file system'), { code: 'EROFS' });
+    };
     const boom = {
       existsSync() { return true; },
-      mkdirSync() { throw new Error('EROFS: read-only file system'); },
-      statSync() { throw new Error('nope'); },
-      appendFileSync() { throw new Error('nope'); },
-      renameSync() { throw new Error('nope'); },
+      lstatSync(p) {
+        if (p === '/x/.mobile-automator') return { isSymbolicLink: () => false, isDirectory: () => true, uid: process.getuid(), mode: 0o755 };
+        throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+      },
+      mkdirSync: erofs('mkdirSync'),
+      realpathSync: (p) => p,
+      openSync: erofs('openSync'),
+      writeSync: erofs('writeSync'),
+      renameSync: erofs('renameSync'),
     };
     expect(() =>
       fileSink.write({ level: 'info', event: 'e' }, { projectRoot: '/x', env: {}, fs: boom })
     ).not.toThrow();
+    // The failure under test is the one that happened, not a TypeError from a
+    // call the fake does not stub.
+    expect(calls).toEqual(['mkdirSync']);
+  });
+
+  it('swallows a failed append instead of throwing', () => {
+    const root = workspace();
+    const opened = [];
+    const closed = [];
+    const boom = {
+      ...fs,
+      openSync: (...args) => {
+        const fd = fs.openSync(...args);
+        opened.push(fd);
+        return fd;
+      },
+      closeSync: (fd) => {
+        closed.push(fd);
+        fs.closeSync(fd);
+      },
+      writeSync() { throw Object.assign(new Error('ENOSPC: no space left on device'), { code: 'ENOSPC' }); },
+    };
+    expect(() =>
+      fileSink.write({ level: 'info', event: 'e' }, { projectRoot: root, env: {}, fs: boom })
+    ).not.toThrow();
+    // The fd is closed despite the failed write.
+    expect(opened).toHaveLength(1);
+    expect(closed).toEqual(opened);
   });
 
   it('emits a parseable line for an event containing a quote', () => {
@@ -266,5 +306,79 @@ describe('file sink bounding modes', () => {
     fileSink.write(event, { projectRoot: bare, env: {}, logPath: target, bound: 'cap' });
 
     expect(fs.existsSync(target)).toBe(false);
+  });
+});
+
+// #347: .logs/ and the files in it sit in a workspace a cloned repo can fill
+// with symlinks. The sink walks the log directory through safe-fs and opens
+// the leaf O_NOFOLLOW, so a link drops the event silently (a sink never fails
+// a verb) and the link's target is never appended to, rotated or created.
+describe('file sink never follows a link (#347)', () => {
+  const { CANARY, tmpDir, snapshot } = require('../../helpers/workspace-safety');
+  const { MAX_LOG_BYTES: CAP } = require('../../../src/util/log-rotate');
+
+  function project() {
+    const base = tmpDir('mauto-sink-confine-');
+    const root = path.join(base, 'project');
+    const outside = path.join(base, 'outside');
+    fs.mkdirSync(path.join(root, '.mobile-automator'), { recursive: true });
+    fs.mkdirSync(outside);
+    return { root, logs: path.join(root, '.mobile-automator', '.logs'), outside };
+  }
+
+  const event = { level: 'info', event: 'verb.end', verb: 'tap' };
+
+  it('.logs -> outside dir: no write, no throw', () => {
+    const { root, logs, outside } = project();
+    fs.symlinkSync(outside, logs);
+
+    expect(() => fileSink.write(event, { projectRoot: root, env: {} })).not.toThrow();
+
+    expect(fs.readdirSync(outside)).toEqual([]);
+  });
+
+  it('a leaf mauto.ndjson -> outside file is not appended to', () => {
+    const { root, logs, outside } = project();
+    const target = path.join(outside, 'secret.txt');
+    fs.writeFileSync(target, `${CANARY}\n`);
+    fs.mkdirSync(logs);
+    fs.symlinkSync(target, path.join(logs, 'mauto.ndjson'));
+    const before = snapshot(outside);
+
+    fileSink.write(event, { projectRoot: root, env: {} });
+
+    expect(snapshot(outside)).toEqual(before);
+    expect(fs.lstatSync(path.join(logs, 'mauto.ndjson')).isSymbolicLink()).toBe(true);
+  });
+
+  it('.logs -> outside dir holding an over-cap mauto.ndjson is not rotated', () => {
+    const { root, logs, outside } = project();
+    fs.writeFileSync(path.join(outside, 'mauto.ndjson'), 'x'.repeat(CAP));
+    fs.symlinkSync(outside, logs);
+    const before = snapshot(outside);
+
+    fileSink.write(event, { projectRoot: root, env: {} });
+
+    expect(snapshot(outside)).toEqual(before);
+    expect(fs.existsSync(path.join(outside, 'mauto.ndjson.1'))).toBe(false);
+  });
+
+  it('a run trace (bound: cap) through a symlinked .logs is not written', () => {
+    const { root, logs, outside } = project();
+    fs.symlinkSync(outside, logs);
+
+    fileSink.write(event, { projectRoot: root, env: {}, logPath: path.join(logs, 'run-r1.ndjson'), bound: 'cap' });
+
+    expect(fs.readdirSync(outside)).toEqual([]);
+  });
+
+  it("MAUTO_LOG_DIR outside the workspace is the user's own call and still logs", () => {
+    const { root } = project();
+    const elsewhere = path.join(tmpDir('mauto-sink-elsewhere-'), 'logs');
+
+    fileSink.write(event, { projectRoot: root, env: { MAUTO_LOG_DIR: elsewhere } });
+
+    expect(JSON.parse(fs.readFileSync(path.join(elsewhere, 'mauto.ndjson'), 'utf8')).verb).toBe('tap');
+    expect(fs.existsSync(path.join(root, '.mobile-automator', '.logs'))).toBe(false);
   });
 });

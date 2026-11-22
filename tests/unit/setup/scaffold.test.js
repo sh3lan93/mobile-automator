@@ -303,3 +303,104 @@ describe('telemetry default', () => {
     expect(cfg.mode).toBe('platform-agnostic');
   });
 });
+
+// #347: a cloned repo can commit .mobile-automator/ (or any path under it) as
+// a symlink. scaffold creates and writes only through safe-fs, so a link is
+// refused with UnsafePathError and its target is never written or created.
+describe('scaffold refuses a symlinked workspace path (#347)', () => {
+  const { UnsafePathError } = require('../../../src/workspace/safe-fs');
+  const { CANARY, tmpDir, snapshot } = require('../../helpers/workspace-safety');
+
+  function project() {
+    const base = tmpDir('mauto-scaffold-confine-');
+    const root = path.join(base, 'project');
+    const outside = path.join(base, 'outside');
+    fs.mkdirSync(root);
+    fs.mkdirSync(outside);
+    return { root, ws: path.join(root, '.mobile-automator'), outside };
+  }
+
+  function scaffoldError(root) {
+    try {
+      scaffold(root, { mode: 'platform-aware' });
+    } catch (err) {
+      return err;
+    }
+    return undefined;
+  }
+
+  it('.mobile-automator -> outside dir is refused and nothing is created there', () => {
+    const { root, ws, outside } = project();
+    fs.symlinkSync(outside, ws);
+
+    const err = scaffoldError(root);
+
+    expect(err).toBeInstanceOf(UnsafePathError);
+    expect(err.reason).toBe('symlink');
+    expect(err.path).toBe(ws);
+    expect(fs.readdirSync(outside)).toEqual([]);
+  });
+
+  it('.mobile-automator/screenshots -> outside dir is refused and the outside dir is unchanged', () => {
+    const { root, ws, outside } = project();
+    fs.writeFileSync(path.join(outside, 'keep.txt'), CANARY);
+    fs.mkdirSync(ws);
+    fs.symlinkSync(outside, path.join(ws, 'screenshots'));
+    const before = snapshot(outside);
+
+    const err = scaffoldError(root);
+
+    expect(err).toBeInstanceOf(UnsafePathError);
+    expect(err.path).toBe(path.join(ws, 'screenshots'));
+    expect(snapshot(outside)).toEqual(before);
+  });
+
+  it('.gitignore -> outside file is refused and the file is unchanged', () => {
+    const { root, ws, outside } = project();
+    const target = path.join(outside, 'gitignore');
+    fs.writeFileSync(target, `${CANARY}\n`);
+    fs.mkdirSync(ws);
+    fs.symlinkSync(target, path.join(ws, '.gitignore'));
+    const before = snapshot(outside);
+
+    const err = scaffoldError(root);
+
+    expect(err).toBeInstanceOf(UnsafePathError);
+    expect(err.path).toBe(path.join(ws, '.gitignore'));
+    expect(err.message).not.toContain(CANARY);
+    expect(snapshot(outside)).toEqual(before);
+  });
+
+  it('a dangling config.json symlink is refused and its target is not created', () => {
+    const { root, ws, outside } = project();
+    const target = path.join(outside, 'config.json');
+    fs.mkdirSync(ws);
+    fs.symlinkSync(target, path.join(ws, 'config.json'));
+
+    const err = scaffoldError(root);
+
+    expect(err).toBeInstanceOf(UnsafePathError);
+    expect(err.reason).toBe('symlink');
+    expect(err.path).toBe(path.join(ws, 'config.json'));
+    expect(fs.existsSync(target)).toBe(false);
+    expect(fs.readdirSync(outside)).toEqual([]);
+  });
+
+  it('a fresh scaffold still reports the same created list', () => {
+    const { root, ws } = project();
+
+    const { created } = scaffold(root, { mode: 'platform-aware' });
+
+    expect(created).toEqual([
+      ws,
+      path.join(ws, 'scenarios'),
+      path.join(ws, 'screenshots'),
+      path.join(ws, 'results'),
+      path.join(ws, 'memory'),
+      path.join(ws, '.gitignore'),
+      path.join(ws, 'config.json'),
+    ]);
+    // A rerun creates nothing.
+    expect(scaffold(root, { mode: 'platform-aware' }).created).toEqual([]);
+  });
+});

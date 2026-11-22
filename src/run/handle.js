@@ -12,7 +12,9 @@ const { NO_TRACE } = require('./trace');
 const { runSettings } = require('./settings');
 const { runData } = require('./summary');
 const { toJUnit } = require('../result/junit');
-const { atomicWrite } = require('../util/atomic');
+const { atomicOutputWrite } = require('../util/atomic');
+const { typedFail } = require('../output/typed-fail');
+const { isTypedRefusal } = require('../output/typed-refusal');
 const configManager = require('../config/manager');
 
 // The device's platform for the executor. Null only when the bridge itself
@@ -45,7 +47,7 @@ async function handleRun(
     evaluator = require('../assertion/evaluator'),
     catalog = require('../device/action-catalog'),
     loadConfig = configManager.load,
-    writeFile = atomicWrite,
+    writeFile = atomicOutputWrite,
   },
   { scenario, runId, file, sha256, deviceId = null, timeoutMs = null, updateReferences = false, junitPath = null }
 ) {
@@ -109,17 +111,25 @@ async function handleRun(
   // --junit: the report `mauto result export --format junit` would render for
   // this run, written once the run is finalized. A failed write overrides any
   // outcome — a CI job must never upload a report that is silently missing —
-  // and still names the saved result, with junit_path null.
+  // and still names the saved result, with junit_path null. The path is the
+  // user's: one that lands in the workspace is written through safe-fs (#347).
+  // prepareRun already refused a committed link there before the run; a link
+  // planted during it is still refused here, with the refusal's own message
+  // and hint.
   if (junitPath) {
     try {
-      writeFile(junitPath, toJUnit([result]).xml);
+      writeFile(projectRoot, junitPath, toJUnit([result]).xml);
     } catch (err) {
       const data = runData(result, facts);
+      const saved = `${result.status} and its result is saved to ${data.result_path}.`;
+      if (isTypedRefusal(err)) {
+        return typedFail(err, { data, hintBefore: hints, hintAfter: `The run is ${saved}` });
+      }
       return {
         envelope: fail(
           'environment',
           `could not write the JUnit report to ${junitPath}: ${err.message}`,
-          [...hints, `Check the directory exists and is writable; the run is ${result.status} and its result is saved to ${data.result_path}.`].join(' '),
+          [...hints, `Check the directory exists and is writable; the run is ${saved}`].join(' '),
           data
         ),
         exitKind: 'environment',

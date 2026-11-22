@@ -10,7 +10,8 @@
 // (exit 0), and --update-references records it instead.
 
 const { ok, fail } = require('../output/envelope');
-const { FS_ERROR_CODES, deviceFail } = require('../output/device-fail');
+const { deviceFail } = require('../output/device-fail');
+const { FS_ERROR_CODES } = require('../output/fs-error');
 const { fromCliFlags } = require('../assertion/fields');
 const { findFirst } = require('../assertion/evaluator');
 const configManager = require('../config/manager');

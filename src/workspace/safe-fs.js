@@ -15,6 +15,22 @@
 //   - a write never goes to a leaf with a second hard link, which would be a
 //     file outside the workspace by another name.
 //
+// The rest of a checkout is just as untrusted, and mauto writes there too
+// (#347): the host files `mauto init` installs (.claude/skills/...,
+// .mcp.json). So the same rules come in two scopes, one directory walk and one
+// leaf open between them:
+//
+//   - workspace (safeDir, the *WorkspaceFile helpers, safeWorkspaceDest): the
+//     path must resolve inside .mobile-automator/;
+//   - path (readProjectFile, createProjectFile): it must resolve inside the
+//     project root.
+//
+// Both check every directory below the project root down to the file's own;
+// the scope sets the containment bound and words the refusal. A path the user
+// chose (--out, a screenshot to /tmp) is confined only when it lands in the
+// workspace (inWorkspace), anywhere else it is the user's own call; userDir,
+// userDest and userFile are the entry points that make that choice.
+//
 // Components above and including the project root are never checked: a
 // project reached through a symlinked parent (macOS /tmp -> /private/tmp, a
 // symlinked checkout) is the user's own choice, and containment compares
@@ -37,6 +53,7 @@
 const nodeFs = require('fs');
 const path = require('path');
 
+const { TypedRefusal } = require('../output/typed-refusal');
 const { workspaceDir } = require('./layout');
 
 const DEFAULT_MAX_BYTES = 16 * 1024 * 1024;
@@ -44,11 +61,12 @@ const READ_CHUNK = 64 * 1024;
 
 // Plain-English reason text: the envelope message says what is wrong with the
 // path, the hint (from the policy, below) says what to do about it.
-// foreign_owner has no text here: the owner check always states its own,
-// naming both uids (see checkOwner).
+// The owner check always states its own foreign_owner text, naming both uids
+// (see checkOwner); the one here is for a refusal built without that detail.
 const REASONS = {
   symlink: 'it is a symbolic link',
   escape: 'it resolves outside the .mobile-automator/ workspace',
+  foreign_owner: 'it is owned by another user',
   not_regular: 'it is not a regular file',
   not_directory: 'it is not a directory',
   world_writable: 'it is writable by every user',
@@ -76,13 +94,16 @@ const FALLBACK_HINT = 'Inspect the path and replace it with a real file or direc
 
 // A directory policy: everything one directory check needs, and everything a
 // refusal under it says, so no check or message reads a field the policy might
-// not have. Built only by dirPolicy, which requires every field:
+// not have. Built only by dirPolicy, which requires every field below:
 //   - subject: what a refusal calls the path ("workspace path").
 //   - hints: reason -> what to do about it; fallbackHint for any other reason.
 //   - trustOverride: whether MAUTO_TRUST_WORKSPACE_OWNER=1 may skip the owner
 //     comparison. Right for a checkout someone may own as another uid, wrong
 //     for anything only we should be able to use.
 //   - forbiddenBits, modeReason: the mode bits that refuse it, and the reason.
+// Two optional fields: `reasons`, reason-text overrides laid over REASONS (the
+// path scope words an escape differently), and `scope`, the SCOPES name a
+// refusal under the policy reports as err.scope (null for a caller's own).
 const POLICY_FIELDS = ['subject', 'hints', 'fallbackHint', 'trustOverride', 'forbiddenBits', 'modeReason'];
 
 function dirPolicy(fields) {
@@ -94,6 +115,8 @@ function dirPolicy(fields) {
   if (typeof policy.trustOverride !== 'boolean') throw new TypeError('dirPolicy: trustOverride must be a boolean');
   if (!REASONS[policy.modeReason]) throw new TypeError(`dirPolicy: unknown modeReason ${policy.modeReason}`);
   policy.hints = Object.freeze({ ...policy.hints });
+  policy.reasons = Object.freeze({ ...REASONS, ...fields.reasons });
+  policy.scope = fields.scope === undefined ? null : fields.scope;
   return Object.freeze(policy);
 }
 
@@ -101,6 +124,7 @@ function dirPolicy(fields) {
 // is not a directory's (a leaf, an escape): `g+w` is accepted (Ubuntu's umask
 // 002), `o+w` is not, and the owner override applies.
 const WORKSPACE_DIR = dirPolicy({
+  scope: 'workspace',
   subject: 'workspace path',
   hints: HINTS,
   fallbackHint: FALLBACK_HINT,
@@ -109,25 +133,78 @@ const WORKSPACE_DIR = dirPolicy({
   modeReason: 'world_writable',
 });
 
+// A path outside the workspace (a host file `mauto init` writes, a file the
+// user named with --out): the workspace's rules, worded for the project. Only
+// the texts that would name the workspace differ; every other reason falls
+// back to the workspace ones, so both scopes read the same there.
+const PROJECT_PATH = dirPolicy({
+  ...WORKSPACE_DIR,
+  scope: 'path',
+  subject: 'path',
+  reasons: { escape: 'it resolves outside the project directory' },
+  hints: {
+    ...HINTS,
+    symlink: 'mauto never writes through a symbolic link. Replace the link with a real directory or file, then re-run.',
+    escape:
+      'mauto only writes inside the project directory. Replace any link on the way with a real directory inside the project.',
+    foreign_owner:
+      'Files mauto writes must belong to the user running mauto. Fix the ownership (chown), or set MAUTO_TRUST_WORKSPACE_OWNER=1 if you trust this checkout (for example a CI container running as root); it skips only the owner check.',
+    hardlink:
+      'A second hard link would make mauto write to another file by a different name. Delete it and let mauto recreate it.',
+    too_large: 'A file this size was not written by mauto. Delete or shrink it.',
+  },
+  fallbackHint: 'Inspect the path and replace it with a real file or directory inside the project.',
+});
+
+// The one wording table: a scope name -> its policy. An unknown scope reads as
+// the workspace one. A caller's own policy (src/device/session-dir.js) is
+// handed to the check as `policy` and never listed here.
+const SCOPES = { workspace: WORKSPACE_DIR, path: PROJECT_PATH };
+
 // A refusal carries its own envelope fields, like the repo's other typed
-// errors: `kind` is always environment (the workspace is wrong, not the verb's
+// errors: `kind` is always environment (the checkout is wrong, not the verb's
 // input), `message` and `hint` are the envelope text verbatim. So any boundary
 // that maps `err.kind`/`err.hint` (deviceFail, toEnvelope) reports it correctly
 // without knowing this class.
-class UnsafePathError extends Error {
+//
+// The wording comes from a policy: `policy` when the check ran under a
+// caller's own, else SCOPES[scope] ('workspace', the default, for a path under
+// .mobile-automator/; 'path' for any other path mauto writes). `kind`, `code`
+// and `reason` are the same whatever the wording. A scoped entry point
+// re-words what the checks throw once, through withScope.
+class UnsafePathError extends TypedRefusal {
   // `file` is always the path that was refused, never where a link points:
-  // the target is attacker-chosen and must not reach an envelope. `policy`
-  // (default WORKSPACE_DIR) supplies the subject and the hint. `detail` is the
-  // reason text, REASONS[reason] unless the caller states its own (the owner
-  // check names both uids). It must never be file content.
-  constructor(file, reason, { policy = WORKSPACE_DIR, detail = REASONS[reason] || FALLBACK_REASON } = {}) {
-    super(`Refusing to use ${policy.subject} ${file}: ${detail} (${reason}).`);
-    this.name = 'UnsafePathError';
+  // the target is attacker-chosen and must not reach an envelope. `detail` is
+  // the reason text when the check states its own (the owner check names both
+  // uids), else the policy's text for `reason`. It must never be file content.
+  constructor(file, reason, { scope = 'workspace', policy = SCOPES[scope] || WORKSPACE_DIR, detail } = {}) {
+    super(
+      'environment',
+      `Refusing to use ${policy.subject} ${file}: ${detail || policy.reasons[reason] || FALLBACK_REASON} (${reason}).`,
+      policy.hints[reason] || policy.fallbackHint
+    );
     this.code = 'EUNSAFEPATH';
-    this.kind = 'environment';
-    this.hint = policy.hints[reason] || policy.fallbackHint;
     this.path = file;
     this.reason = reason;
+    this.scope = policy.scope;
+    this.detail = detail;
+  }
+
+  // The same refusal (path, reason, detail, code, kind) worded for `scope`.
+  inScope(scope) {
+    return new UnsafePathError(this.path, this.reason, { scope, detail: this.detail });
+  }
+}
+
+// Run `fn`, re-wording any refusal it throws for `scope`. The one place a
+// scope is applied: the checks stay scope-free, and each scoped entry point
+// wraps its whole body once.
+function withScope(scope, fn) {
+  try {
+    return fn();
+  } catch (err) {
+    if (err instanceof UnsafePathError) throw err.inScope(scope);
+    throw err;
   }
 }
 
@@ -184,8 +261,13 @@ function lstatOrMkdir(fs, p, create, mode) {
   return fs.lstatSync(p);
 }
 
-function isInside(child, parent) {
-  return child === parent || child.startsWith(parent + path.sep);
+// The leaf rules shared by every leaf mauto opens or hands to a writer: it is
+// ours and, when it will be written, has exactly one hard link (a second one
+// would be a file elsewhere by another name). The leaf is owned under the same
+// rule as the workspace directory it sits in.
+function checkLeafOwnership(p, st, writes, d) {
+  checkOwner(p, st, d, WORKSPACE_DIR);
+  if (writes && st.nlink !== 1) throw new UnsafePathError(p, 'hardlink');
 }
 
 // Check ONE directory under a caller-supplied policy, making it first (`mode`,
@@ -200,30 +282,78 @@ function checkDir(dir, policy, { create = false, mode } = {}, deps = {}) {
   checkDirComponent(dir, lstatOrMkdir(d.fs, dir, create, mode), d, policy);
 }
 
-// Walk `.mobile-automator` down to `dir`, one lstat per component, creating the
-// missing ones when asked. Returns the realpath of `dir`. Every component above
-// `dir` is checked as a WORKSPACE_DIR; `dir` itself under `policy` (default
-// WORKSPACE_DIR), so a caller can hold its own directory to a stricter rule.
-function safeDir(projectRoot, dir, { create = false, mode, policy = WORKSPACE_DIR } = {}, deps = {}) {
-  const d = resolveDeps(deps);
-  const { fs } = d;
-  const ws = path.resolve(workspaceDir(projectRoot));
-  const target = path.resolve(dir);
-  if (!isInside(target, ws)) throw new UnsafePathError(target, 'escape');
+// Lexical containment of two resolved paths. The filesystem root is the one
+// parent that already ends in a separator; appending another would make it
+// `//`, inside which nothing lies.
+function isInside(child, parent) {
+  const prefix = parent.endsWith(path.sep) ? parent : parent + path.sep;
+  return child === parent || child.startsWith(prefix);
+}
 
-  const rel = path.relative(ws, target);
+// The one directory walk. `dir` must lie lexically inside `within` (else
+// escape); then every component strictly below the project root, down to and
+// including `dir`, is lstat-checked, the missing ones created one level at a
+// time when asked. The project root and its ancestors are never checked (see
+// the header). Last, realpath(dir) must lie inside realpath(within). Returns
+// the realpath of `dir`.
+//
+// `missingOk` (without `create`) is the check-only walk for a directory a
+// later write will create: a missing component is nothing to refuse (nothing
+// below it exists, so nothing below it can be a link), so the walk stops there,
+// the components above it checked, the deepest existing one realpath-checked
+// when it lies within the bound, and returns null. Without it a missing
+// component throws ENOENT, as it always has.
+//
+// Every component above `dir` is checked as a WORKSPACE_DIR; `dir` itself
+// under `policy` (default WORKSPACE_DIR), so a caller can hold its own
+// directory to a stricter rule (session-dir.js's .session/).
+function walkDirs(projectRoot, within, dir, { create = false, mode, missingOk = false, policy = WORKSPACE_DIR } = {}, d) {
+  const { fs } = d;
+  const root = path.resolve(projectRoot);
+  const bound = path.resolve(within);
+  const target = path.resolve(dir);
+  if (!isInside(target, bound)) throw new UnsafePathError(target, 'escape');
+
+  const rel = path.relative(root, target);
   const parts = rel ? rel.split(path.sep) : [];
-  let p = ws;
-  for (let i = 0; i <= parts.length; i++) {
-    if (i > 0) p = path.join(p, parts[i - 1]);
-    checkDirComponent(p, lstatOrMkdir(fs, p, create, mode), d, i === parts.length ? policy : WORKSPACE_DIR);
+  let p = root;
+  for (let i = 0; i < parts.length; i++) {
+    p = path.join(p, parts[i]);
+    let st;
+    try {
+      st = lstatOrMkdir(fs, p, create, mode);
+    } catch (err) {
+      if (err.code === 'ENOENT' && !create && missingOk) return checkDeepestExisting(path.dirname(p), bound, fs);
+      throw err;
+    }
+    checkDirComponent(p, st, d, i === parts.length - 1 ? policy : WORKSPACE_DIR);
   }
 
   // The lstat walk already proves there is no link below the root; this
   // catches anything it cannot see (a component swapped mid-walk).
   const real = fs.realpathSync(target);
-  if (!isInside(real, fs.realpathSync(ws))) throw new UnsafePathError(target, 'escape');
+  if (!isInside(real, fs.realpathSync(bound))) throw new UnsafePathError(target, 'escape');
   return real;
+}
+
+// The end of a missingOk walk that stopped at a missing component: `existing`
+// is the deepest directory there. Above the bound (the bound itself is
+// missing) there is nothing of the bound's to compare; within it, its realpath
+// must stay within the bound's, as a full walk's would.
+function checkDeepestExisting(existing, bound, fs) {
+  if (isInside(existing, bound) && !isInside(fs.realpathSync(existing), fs.realpathSync(bound))) {
+    throw new UnsafePathError(existing, 'escape');
+  }
+  return null;
+}
+
+// A workspace directory: `.mobile-automator` down to `dir`, one lstat per
+// component, creating the missing ones when asked. Returns the realpath of
+// `dir`; with `missingOk`, null when it does not exist yet (see walkDirs).
+// `dir` itself is checked under `policy` (default WORKSPACE_DIR), every
+// component above it as a WORKSPACE_DIR.
+function safeDir(projectRoot, dir, { create = false, mode, missingOk = false, policy = WORKSPACE_DIR } = {}, deps = {}) {
+  return walkDirs(projectRoot, workspaceDir(projectRoot), dir, { create, mode, missingOk, policy }, resolveDeps(deps));
 }
 
 const OPEN_SYMLINK_CODES = new Set([
@@ -236,9 +366,9 @@ const OPEN_NOT_REGULAR_CODES = new Set([
   'EISDIR', // a directory opened for writing
 ]);
 
-// The one O_NOFOLLOW leaf open. No owner or workspace checks (it has no
-// workspace context); callers that have one layer them on top. The caller
-// closes the returned fd.
+// The one O_NOFOLLOW leaf open. No owner, hard-link or directory checks (it
+// has no project context); openOwnedLeaf layers the leaf ones on top and the
+// directory walk the rest. The caller closes the returned fd.
 function openLeaf(file, flags, mode = 0o666, deps = {}) {
   const { fs } = resolveDeps(deps);
   const { O_NOFOLLOW, O_NONBLOCK } = nodeFs.constants;
@@ -272,28 +402,36 @@ function closeQuietly(fs, fd) {
   }
 }
 
-// Open a workspace file: a checked directory walk, then the leaf. Returns an
-// fd the caller closes. O_CREAT also creates the missing directories.
-function openWorkspaceFile(projectRoot, file, flags, mode = 0o666, deps = {}) {
+// The checked leaf open, for a leaf whose directory the caller has already
+// walked: openLeaf, then the leaf must be ours and, for an open that writes,
+// have exactly one hard link. Returns an fd the caller closes; on a refusal
+// the fd is closed first.
+function openOwnedLeaf(file, flags, { mode = 0o666 } = {}, deps = {}) {
   const d = resolveDeps(deps);
-  const { O_CREAT, O_WRONLY, O_RDWR, O_TRUNC } = nodeFs.constants;
+  const { O_WRONLY, O_RDWR, O_TRUNC } = nodeFs.constants;
   const resolved = path.resolve(file);
   const writes = Boolean(flags & (O_WRONLY | O_RDWR));
-  safeDir(projectRoot, path.dirname(resolved), { create: Boolean(flags & O_CREAT) }, deps);
   // O_TRUNC acts inside open(), before the owner and hard-link checks could
   // refuse: a hard link to a file outside would already be emptied. Open
   // without it and truncate only once every check has passed.
   const { fd, stat } = openLeaf(resolved, flags & ~O_TRUNC, mode, deps);
   try {
-    // The leaf is owned under the same rule as the workspace directory it sits in.
-    checkOwner(resolved, stat, d, WORKSPACE_DIR);
-    if (writes && stat.nlink !== 1) throw new UnsafePathError(resolved, 'hardlink');
+    checkLeafOwnership(resolved, stat, writes, d);
     if (writes && flags & O_TRUNC) d.fs.ftruncateSync(fd, 0);
   } catch (err) {
     closeQuietly(d.fs, fd);
     throw err;
   }
   return fd;
+}
+
+// Open a workspace file: a checked directory walk, then the checked leaf.
+// Returns an fd the caller closes. O_CREAT also creates the missing
+// directories.
+function openWorkspaceFile(projectRoot, file, flags, mode = 0o666, deps = {}) {
+  const resolved = path.resolve(file);
+  safeDir(projectRoot, path.dirname(resolved), { create: Boolean(flags & nodeFs.constants.O_CREAT) }, deps);
+  return openOwnedLeaf(resolved, flags, { mode }, deps);
 }
 
 // THE way to create a new workspace file (a temp file, a lock, a sidecar).
@@ -327,13 +465,14 @@ function removeWorkspaceFile(projectRoot, file, deps = {}) {
   return true;
 }
 
-// Read a workspace file as utf8. null when it (or a parent dir) does not exist.
-// Reads at most maxBytes + 1 so a planted huge file costs nothing.
-function readWorkspaceFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES } = {}, deps = {}) {
+// The one capped read: `open()` returns the checked fd. null when the file (or
+// a parent dir) does not exist. Reads at most maxBytes + 1 so a planted huge
+// file costs nothing.
+function readCapped(open, file, maxBytes, deps) {
   const { fs } = resolveDeps(deps);
   let fd;
   try {
-    fd = openWorkspaceFile(projectRoot, file, nodeFs.constants.O_RDONLY, 0o666, deps);
+    fd = open();
   } catch (err) {
     if (err.code === 'ENOENT') return null;
     throw err;
@@ -354,6 +493,171 @@ function readWorkspaceFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES } =
   } finally {
     closeQuietly(fs, fd);
   }
+}
+
+// Read a workspace file as utf8. null when it (or a parent dir) does not exist.
+function readWorkspaceFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES } = {}, deps = {}) {
+  const open = () => openWorkspaceFile(projectRoot, file, nodeFs.constants.O_RDONLY, 0o666, deps);
+  return readCapped(open, file, maxBytes, deps);
+}
+
+// A workspace destination another process writes: the engine saves a
+// screenshot to a path, so mauto never holds the fd. The directory is walked
+// and created like any workspace write; then the leaf is lstat'd (it is never
+// opened): absent is fine, anything there must be a regular file of ours with
+// one link. The writer's open comes after this check, but every directory on
+// the way is ours and not world-writable, so only a process already running
+// as the user could swap the leaf in between. Returns the resolved path.
+function safeWorkspaceDest(projectRoot, file, deps = {}) {
+  const d = resolveDeps(deps);
+  const resolved = path.resolve(file);
+  safeDir(projectRoot, path.dirname(resolved), { create: true }, deps);
+  let st;
+  try {
+    st = d.fs.lstatSync(resolved);
+  } catch (err) {
+    if (err.code === 'ENOENT') return resolved;
+    throw err;
+  }
+  if (st.isSymbolicLink()) throw new UnsafePathError(resolved, 'symlink');
+  if (!st.isFile()) throw new UnsafePathError(resolved, 'not_regular');
+  checkLeafOwnership(resolved, st, true, d);
+  return resolved;
+}
+
+// Where `file` lands in the workspace: its absolute path under
+// workspaceDir(projectRoot), or null when it names a place outside it. For a
+// path the user chose (--out, a screenshot destination), which gets the
+// workspace rules inside the workspace and is the user's own call anywhere
+// else.
+//
+// Lexical first. A path neither lexically in the workspace nor in the project
+// may still reach the project root through a symlinked ancestor (macOS /tmp ->
+// /private/tmp; the logical path zsh's `pwd` shows while process.cwd() is
+// physical), so its ancestors are realpath'd, and the first one that is the
+// project root re-roots the rest of the path under it. Top-down, shallowest
+// first, on purpose: a workspace directory planted as a link back to the root
+// realpaths to the root too, and matching it would carry the path out of the
+// workspace, past the very link the walk must refuse. Ancestors that do not
+// resolve are skipped. Lookups only (realpath); never throws for an ordinary
+// path.
+function inWorkspace(projectRoot, file, deps = {}) {
+  const { fs } = resolveDeps(deps);
+  const root = path.resolve(projectRoot);
+  const ws = path.resolve(workspaceDir(projectRoot));
+  const resolved = path.resolve(file);
+  if (isInside(resolved, ws)) return resolved;
+  if (isInside(resolved, root)) return null;
+
+  let realRoot;
+  try {
+    realRoot = fs.realpathSync(root);
+  } catch (_) {
+    return null;
+  }
+  const ancestors = [];
+  for (let a = path.dirname(resolved); ; a = path.dirname(a)) {
+    ancestors.unshift(a);
+    if (path.dirname(a) === a) break;
+  }
+  for (const a of ancestors) {
+    let real;
+    try {
+      real = fs.realpathSync(a);
+    } catch (_) {
+      continue;
+    }
+    if (real !== realRoot) continue;
+    const rerooted = path.join(root, path.relative(a, resolved));
+    return isInside(rerooted, ws) ? rerooted : null;
+  }
+  return null;
+}
+
+// A project file outside the workspace (a host file `mauto init` writes:
+// .claude/skills/..., .mcp.json): the same walk, bounded by the project root
+// instead of the workspace, then the checked leaf. A refusal from either is
+// worded for the 'path' scope (by its callers, which wrap it in withScope).
+function openProjectFile(projectRoot, file, flags, mode, deps) {
+  const resolved = path.resolve(file);
+  const create = Boolean(flags & nodeFs.constants.O_CREAT);
+  walkDirs(projectRoot, projectRoot, path.dirname(resolved), { create }, resolveDeps(deps));
+  return openOwnedLeaf(resolved, flags, { mode }, deps);
+}
+
+// readWorkspaceFile's project-rooted twin: utf8, null when the file or a
+// parent dir does not exist, capped at maxBytes. A symlink leaf, dangling or
+// not, is refused, never read as absent.
+function readProjectFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES } = {}, deps = {}) {
+  const open = () => openProjectFile(projectRoot, file, nodeFs.constants.O_RDONLY, 0o666, deps);
+  return withScope('path', () => readCapped(open, file, maxBytes, deps));
+}
+
+// createWorkspaceFile's project-rooted twin: exclusive (O_WRONLY|O_CREAT|
+// O_EXCL), missing directories below the project root created by the checked
+// walk, an existing leaf failing EEXIST intact. Returns an fd the caller
+// closes.
+function createProjectFile(projectRoot, file, { mode = 0o666 } = {}, deps = {}) {
+  const { O_WRONLY, O_CREAT, O_EXCL } = nodeFs.constants;
+  return withScope('path', () => openProjectFile(projectRoot, file, O_WRONLY | O_CREAT | O_EXCL, mode, deps));
+}
+
+// Paths the user chose (--out, --junit, a screenshot destination, a
+// MAUTO_LOG_DIR). Inside the workspace they get the workspace rules, on the
+// path inWorkspace re-roots (through an aliased root it differs from the one
+// given, and every check and write must use the checked one); anywhere else
+// they are the user's own call. The entry points below make that choice, so
+// no caller tests inWorkspace or swaps paths itself.
+function userPath(projectRoot, file, deps) {
+  const confined = inWorkspace(projectRoot, file, deps);
+  return confined ? { path: confined, confined: true } : { path: path.resolve(file), confined: false };
+}
+
+// A directory the user chose: the checked walk when it lands in the
+// workspace, else a plain recursive mkdir when `create`. Returns the path to
+// use (re-rooted inside the workspace), not its realpath.
+function userDir(projectRoot, dir, { create = false } = {}, deps = {}) {
+  const target = userPath(projectRoot, dir, deps);
+  if (target.confined) safeDir(projectRoot, target.path, { create }, deps);
+  else if (create) resolveDeps(deps).fs.mkdirSync(target.path, { recursive: true });
+  return target.path;
+}
+
+// A file another process writes at a path the user chose (the engine's
+// screenshot): safeWorkspaceDest in the workspace, else the resolved path
+// byte-for-byte. Returns the path to hand over.
+function userDest(projectRoot, file, deps = {}) {
+  const target = userPath(projectRoot, file, deps);
+  return target.confined ? safeWorkspaceDest(projectRoot, target.path, deps) : target.path;
+}
+
+// A file mauto writes itself at a path the user chose: where it lands
+// (`path`, re-rooted in the workspace), whether that is in the workspace
+// (`confined`), and `open(file, flags, mode)` for it or a sibling in the same
+// directory (a temp file). In the workspace that is openWorkspaceFile (the
+// walk, created under O_CREAT, then the checked leaf); elsewhere O_CREAT makes
+// the directory with a plain recursive mkdir and the leaf is still opened
+// O_NOFOLLOW, ours and with one link, a refusal worded in the 'path' scope.
+// Returns an fd the caller closes.
+function userFile(projectRoot, file, deps = {}) {
+  const target = userPath(projectRoot, file, deps);
+  const open = target.confined
+    ? (f, flags, mode = 0o666) => openWorkspaceFile(projectRoot, f, flags, mode, deps)
+    : (f, flags, mode = 0o666) => {
+        if (flags & nodeFs.constants.O_CREAT) {
+          resolveDeps(deps).fs.mkdirSync(path.dirname(path.resolve(f)), { recursive: true });
+        }
+        return openUserLeaf(f, flags, mode, deps);
+      };
+  return { ...target, open };
+}
+
+// The leaf open for a path the user chose outside the workspace, whose
+// directory the caller has settled itself: openOwnedLeaf (O_NOFOLLOW, ours,
+// one link for a write, the truncate deferred), a refusal worded in the 'path'
+// scope. Creates no directory. Returns an fd the caller closes.
+function openUserLeaf(file, flags, mode = 0o666, deps = {}) {
+  return withScope('path', () => openOwnedLeaf(file, flags, { mode }, deps));
 }
 
 // The lenient readers, for state files where absent or garbled is a normal
@@ -390,10 +694,28 @@ module.exports = {
   checkDir,
   safeDir,
   openLeaf,
+  // The checked leaf open, for a caller that walked the directory itself.
+  openOwnedLeaf,
   openWorkspaceFile,
   createWorkspaceFile,
   removeWorkspaceFile,
   readWorkspaceFile,
   readWorkspaceFileOrNull,
   readWorkspaceJsonOrNull,
+  // A workspace file another process writes (the engine's screenshot).
+  safeWorkspaceDest,
+  // Where a path the user chose lands in the workspace. Exported for its unit
+  // tests only: callers use userDir / userDest / userFile, which apply it.
+  inWorkspace,
+  // Paths the user chose: confined in the workspace, the user's call elsewhere.
+  userDir,
+  userDest,
+  userFile,
+  openUserLeaf,
+  // The one containment test (`child` is `parent` or below it), for a caller
+  // that bounds a path the user chose by roots of its own (crash get --out).
+  isInside,
+  // The path scope: project files outside the workspace.
+  readProjectFile,
+  createProjectFile,
 };
