@@ -1450,17 +1450,19 @@ describe('cli handlers', () => {
       expect(cfg.mode).toBe('platform-agnostic');
     });
 
-    test('refuses when discovery reports a legacy workspace (legacyRoot)', () => {
+    test('refuses when discovery reports a legacy workspace', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-legacy-'));
-      const { exitKind, envelope } = handleSetup({ projectRoot, legacyRoot: projectRoot }, { mode: 'aware' });
+      const workspace = { kind: 'legacy', dir: projectRoot, searched: [projectRoot] };
+      const { exitKind, envelope } = handleSetup({ projectRoot, workspace }, { mode: 'aware' });
       expect(exitKind).toBe('environment');
       expect(envelope.error.message).toContain('legacy');
       expect(fs.existsSync(path.join(projectRoot, '.mobile-automator'))).toBe(false);
     });
 
-    test('scaffolds normally when no legacy workspace is reported', () => {
+    test('scaffolds normally when discovery found nothing', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-both-'));
-      const { envelope } = handleSetup({ projectRoot, legacyRoot: null }, { mode: 'aware' });
+      const workspace = { kind: 'none', searched: [projectRoot] };
+      const { envelope } = handleSetup({ projectRoot, workspace }, { mode: 'aware' });
       expect(envelope.ok).toBe(true);
     });
 

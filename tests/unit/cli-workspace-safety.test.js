@@ -68,7 +68,7 @@ const fakeBridgeFactory = async () => ({
   close: async () => {},
 });
 
-async function runIn(root, argv, { deviceBridgeFactory = fakeBridgeFactory, emitterOverrides = {} } = {}) {
+async function runIn(root, argv, { deviceBridgeFactory = fakeBridgeFactory, emitterOverrides = {}, cwd = root } = {}) {
   const { calls, emitters: base } = captureEmitters();
   const emitters = { ...base, ...emitterOverrides };
   const written = [];
@@ -82,8 +82,8 @@ async function runIn(root, argv, { deviceBridgeFactory = fakeBridgeFactory, emit
   });
   try {
     await buildProgram({
-      cwd: root,
-      workspace: findWorkspaceRoot(root),
+      cwd,
+      workspace: findWorkspaceRoot(cwd),
       emitters,
       deviceBridgeFactory,
     }).parseAsync(['node', 'mauto', ...argv]);
@@ -354,5 +354,53 @@ describe('a tolerant device verb in an unsafe workspace (#346)', () => {
     expect(calls[0].exitKind).toBe('environment');
     expect(calls[0].envelope.error.message).toContain(path.join(root, '.mobile-automator'));
     expect(calls[0].envelope.error.message).toContain('(world_writable)');
+  });
+});
+
+// setup is the one verb that creates a workspace where the user stands, so it
+// is not behind requireWorkspace. Below a refused workspace, scaffolding would
+// leave a nested workspace that silently hides the refusal for every later
+// verb run there (#346): it refuses with the refusal itself instead, as it does
+// beside a legacy workspace. Only discovery's `unsafe` result can stop it.
+describe('setup in or below a refused workspace (#346)', () => {
+  function plantSymlinked() {
+    const root = tmpDir();
+    const real = path.join(root, 'real-ws');
+    fs.mkdirSync(real);
+    fs.writeFileSync(path.join(real, 'config.json'), JSON.stringify({ mode: 'platform-aware' }));
+    fs.symlinkSync(real, path.join(root, '.mobile-automator'));
+    const sub = path.join(root, 'pkg');
+    fs.mkdirSync(sub);
+    return { root, real, sub };
+  }
+
+  test('from a subdirectory: fails environment naming the refused path and scaffolds nothing', async () => {
+    const { root, real, sub } = plantSymlinked();
+    const before = snapshot(real);
+
+    const { calls } = await runIn(root, ['setup'], { cwd: sub });
+
+    expect(calls).toHaveLength(1);
+    const [r] = calls;
+    expect(r.exitKind).toBe('environment');
+    expect(r.envelope.ok).toBe(false);
+    expect(r.envelope.error.kind).toBe('environment');
+    expect(r.envelope.error.message).toContain(path.join(root, '.mobile-automator'));
+    expect(r.envelope.error.message).toContain('(symlink)');
+    expect(r.envelope.hint).toBeTruthy();
+    expect(fs.existsSync(path.join(sub, '.mobile-automator'))).toBe(false);
+    expect(snapshot(real)).toEqual(before);
+  });
+
+  test('at the refused workspace itself: fails environment and leaves it untouched', async () => {
+    const { root, real } = plantSymlinked();
+    const before = snapshot(real);
+
+    const { calls } = await runIn(root, ['setup']);
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].exitKind).toBe('environment');
+    expect(calls[0].envelope.error.message).toContain('(symlink)');
+    expect(snapshot(real)).toEqual(before);
   });
 });

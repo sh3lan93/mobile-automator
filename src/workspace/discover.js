@@ -62,7 +62,15 @@ function vetWorkspace(dir, deps) {
   return { adopt: true };
 }
 
-// Walk up from `startDir` and return the NEAREST directory holding a workspace.
+// Walk up from `startDir` and say what it found, as one of four outcomes told
+// apart by `kind` (every consumer switches on it, so a new outcome cannot be
+// silently read as another):
+//
+//   { kind: 'found',  root, searched }     the nearest workspace, vetted
+//   { kind: 'legacy', dir, searched }      `dir` holds a pre-rename workspace
+//   { kind: 'unsafe', refusal, searched }  the nearest workspace was refused
+//   { kind: 'none',   searched }           no workspace up to the boundary
+//
 // `searched` lists every directory checked, in order, so a caller that finds
 // nothing can tell the user exactly where it looked.
 //
@@ -76,19 +84,20 @@ function vetWorkspace(dir, deps) {
 // The walk stops at the first directory holding EITHER marker, so the nearest
 // workspace wins whichever name it uses — as it did before the rename. In that
 // directory the new marker wins over a legacy one beside it (the user is
-// mid-recovery). A legacy-only directory ends the walk with `legacy` set and no
-// root: carrying on to a new workspace further up would silently run every verb
-// against the ancestor's state while the project's own is left behind.
+// mid-recovery). A legacy-only directory ends the walk as `legacy`: carrying
+// on to a new workspace further up would silently run every verb against the
+// ancestor's state while the project's own is left behind.
 //
 // A directory that HAS the marker is vetted before it is adopted (#346): a
 // checked-in `.mobile-automator/` can be a symlink, owned by someone else or
 // world-writable, and adopting it would hand every verb (and the session
 // socket under it) to whoever planted it. The vetting is safe-fs's, not a copy:
 // the directory walk, then a read-only open of config.json. An unsafe
-// workspace STOPS the walk with `unsafe` set (the refusal itself) and no root;
-// continuing to a safe ancestor would silently run against the wrong project.
-// A race or an unreadable path (ENOENT, EACCES, EPERM) adopts it as before:
-// the verb's own read will report the real problem. Any other error throws.
+// workspace STOPS the walk as `unsafe`, carrying the refusal (an
+// UnsafePathError); continuing to a safe ancestor would silently run against
+// the wrong project. A race or an unreadable path (ENOENT, EACCES, EPERM)
+// adopts it as before: the verb's own read will report the real problem. Any
+// other error throws.
 function findWorkspaceRoot(startDir, { fs = require('fs'), getuid, env } = {}) {
   const deps = { fs, getuid, env };
   const searched = [];
@@ -97,16 +106,16 @@ function findWorkspaceRoot(startDir, { fs = require('fs'), getuid, env } = {}) {
     searched.push(dir);
     if (fs.existsSync(markerPath(dir))) {
       const vetted = vetWorkspace(dir, deps);
-      if (!vetted.adopt) return { root: null, searched, legacy: null, unsafe: vetted.unsafe };
-      return { root: dir, searched, legacy: null };
+      if (!vetted.adopt) return { kind: 'unsafe', refusal: vetted.unsafe, searched };
+      return { kind: 'found', root: dir, searched };
     }
-    if (fs.existsSync(legacyMarkerPath(dir))) return { root: null, searched, legacy: dir };
+    if (fs.existsSync(legacyMarkerPath(dir))) return { kind: 'legacy', dir, searched };
     if (fs.existsSync(path.join(dir, '.git'))) break;
     const parent = path.dirname(dir);
     if (parent === dir) break; // filesystem root
     dir = parent;
   }
-  return { root: null, searched, legacy: null };
+  return { kind: 'none', searched };
 }
 
 // The honest answer when discovery found nothing, for a verb that cannot work
@@ -139,19 +148,24 @@ function legacyWorkspaceFailure(dir) {
   };
 }
 
-// The failure for a `findWorkspaceRoot` result that has no workspace. Whether a
-// pre-rename folder was passed on the walk is policy owned here, so callers
-// hand over the whole result instead of choosing between the two failures.
+// The failure for a `findWorkspaceRoot` result that is not `found`, for a verb
+// that cannot work without a workspace. Which failure each outcome gets is
+// policy owned here, so callers hand over the whole result instead of choosing.
+// A `found` result is a caller bug: there is nothing to fail.
 function workspaceFailure(workspace) {
-  if (workspace.unsafe) {
-    return {
-      envelope: fail('environment', workspace.unsafe.message, workspace.unsafe.hint),
-      exitKind: 'environment',
-    };
+  switch (workspace.kind) {
+    case 'unsafe':
+      return {
+        envelope: fail('environment', workspace.refusal.message, workspace.refusal.hint),
+        exitKind: 'environment',
+      };
+    case 'legacy':
+      return legacyWorkspaceFailure(workspace.dir);
+    case 'none':
+      return noWorkspaceFailure(workspace.searched);
+    default:
+      throw new Error(`workspaceFailure: no failure for a "${workspace.kind}" workspace`);
   }
-  return workspace.legacy
-    ? legacyWorkspaceFailure(workspace.legacy)
-    : noWorkspaceFailure(workspace.searched);
 }
 
 module.exports = {

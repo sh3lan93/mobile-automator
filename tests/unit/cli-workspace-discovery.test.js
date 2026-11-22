@@ -10,6 +10,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { buildProgram } = require('../../src/cli');
+const { UnsafePathError } = require('../../src/workspace/safe-fs');
 
 function tmpDir() {
   return fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cli-ws-')));
@@ -47,7 +48,7 @@ describe('buildProgram workspace wiring (#188)', () => {
 
     beforeEach(() => {
       cwd = tmpDir();
-      workspace = { root: null, searched: [cwd, path.dirname(cwd)] };
+      workspace = { kind: 'none', searched: [cwd, path.dirname(cwd)] };
     });
 
     test.each([
@@ -108,6 +109,56 @@ describe('buildProgram workspace wiring (#188)', () => {
     });
   });
 
+  // The two refusal outcomes, injected so only buildProgram's switch on `kind`
+  // can satisfy these: cwd holds no workspace, so a gate that let either kind
+  // through would read config from cwd and answer ok:true.
+  describe.each([
+    ['unsafe', (cwd) => ({
+      kind: 'unsafe',
+      refusal: new UnsafePathError(path.join(path.dirname(cwd), '.mobile-automator'), 'symlink'),
+      searched: [cwd, path.dirname(cwd)],
+    }), /\(symlink\)/],
+    ['legacy', (cwd) => ({ kind: 'legacy', dir: path.dirname(cwd), searched: [cwd, path.dirname(cwd)] }), /legacy workspace/],
+  ])('discovery reports %s', (_kind, make, message) => {
+    let cwd;
+    let workspace;
+
+    beforeEach(() => {
+      cwd = tmpDir();
+      workspace = make(cwd);
+    });
+
+    test('a gated verb fails environment with that outcome\'s failure', async () => {
+      const calls = await runIn({ workspace, cwd }, 'config', 'get', 'mode');
+      expect(calls).toHaveLength(1);
+      expect(calls[0].exitKind).toBe('environment');
+      expect(calls[0].envelope.error.message).toMatch(message);
+      expect(fs.existsSync(path.join(cwd, '.mobile-automator'))).toBe(false);
+    });
+
+    test('a tolerant device verb runs one-shot against cwd: no autostart', async () => {
+      const factoryArgs = [];
+      const { emitters } = captureEmitters();
+      await buildProgram({
+        workspace,
+        cwd,
+        emitters,
+        deviceBridgeFactory: async (args) => {
+          factoryArgs.push(args);
+          return { bridge: { listDevices: async () => [] }, close: async () => {} };
+        },
+      }).parseAsync(['node', 'mauto', 'devices']);
+      expect(factoryArgs).toEqual([{ device: null, projectRoot: cwd, autostart: false }]);
+    });
+
+    test('setup refuses and scaffolds nothing', async () => {
+      const calls = await runIn({ workspace, cwd }, 'setup');
+      expect(calls[0].exitKind).toBe('environment');
+      expect(calls[0].envelope.error.message).toMatch(message);
+      expect(fs.existsSync(path.join(cwd, '.mobile-automator'))).toBe(false);
+    });
+  });
+
   describe('workspace discovered in an ancestor', () => {
     let root;
     let sub;
@@ -119,7 +170,7 @@ describe('buildProgram workspace wiring (#188)', () => {
       fs.writeFileSync(path.join(root, '.mobile-automator', 'config.json'), '{"mode":"platform-agnostic"}\n');
       sub = path.join(root, 'pkg');
       fs.mkdirSync(sub);
-      workspace = { root, searched: [sub, root] };
+      workspace = { kind: 'found', root, searched: [sub, root] };
     });
 
     test('config get reads the ancestor workspace', async () => {
@@ -151,7 +202,7 @@ describe('buildProgram workspace wiring (#188)', () => {
     });
 
     test('setup in the workspace root itself carries no ancestor hint', async () => {
-      const calls = await runIn({ workspace: { root, searched: [root] }, cwd: root }, 'setup');
+      const calls = await runIn({ workspace: { kind: 'found', root, searched: [root] }, cwd: root }, 'setup');
       expect(calls[0].envelope.ok).toBe(true);
       expect(calls[0].envelope.hint).toBeUndefined();
     });

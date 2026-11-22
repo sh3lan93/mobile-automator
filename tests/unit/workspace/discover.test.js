@@ -43,7 +43,7 @@ describe('findWorkspaceRoot', () => {
   test('finds a workspace in the start directory itself', () => {
     const root = tmpProject();
     makeWorkspace(root);
-    expect(findWorkspaceRoot(root)).toEqual({ root, searched: [root], legacy: null });
+    expect(findWorkspaceRoot(root)).toEqual({ kind: 'found', root, searched: [root] });
   });
 
   test('finds a workspace three levels up', () => {
@@ -69,7 +69,7 @@ describe('findWorkspaceRoot', () => {
     fs.mkdirSync(path.join(repo, '.git'));
     const sub = mkdirp(repo, 'a');
     const r = findWorkspaceRoot(sub);
-    expect(r.root).toBeNull();
+    expect(r.kind).toBe('none');
     expect(r.searched).toEqual([sub, repo]);
   });
 
@@ -80,7 +80,7 @@ describe('findWorkspaceRoot', () => {
     fs.writeFileSync(path.join(repo, '.git'), 'gitdir: /elsewhere\n');
     const sub = mkdirp(repo, 'a');
     const r = findWorkspaceRoot(sub);
-    expect(r.root).toBeNull();
+    expect(r.kind).toBe('none');
     expect(r.searched).toEqual([sub, repo]);
   });
 
@@ -98,7 +98,7 @@ describe('findWorkspaceRoot', () => {
     fs.mkdirSync(path.join(root, '.mobile-automator'));
     const sub = mkdirp(root, 'src');
     const r = findWorkspaceRoot(sub);
-    expect(r.root).toBeNull();
+    expect(r.kind).toBe('none');
   });
 
   test('the nearest of two nested workspaces wins', () => {
@@ -110,13 +110,12 @@ describe('findWorkspaceRoot', () => {
     expect(findWorkspaceRoot(deep).root).toBe(inner);
   });
 
-  test('nothing found -> root:null and the full searched list ending at the .git boundary', () => {
+  test('nothing found -> kind none and the full searched list ending at the .git boundary', () => {
     const root = tmpProject();
     const deep = mkdirp(root, 'a', 'b');
     expect(findWorkspaceRoot(deep)).toEqual({
-      root: null,
+      kind: 'none',
       searched: [deep, path.join(root, 'a'), root],
-      legacy: null,
     });
   });
 
@@ -124,7 +123,7 @@ describe('findWorkspaceRoot', () => {
     const fakeFs = { existsSync: () => false };
     const start = path.join(path.sep, 'x', 'y');
     const r = findWorkspaceRoot(start, { fs: fakeFs });
-    expect(r.root).toBeNull();
+    expect(r.kind).toBe('none');
     expect(r.searched).toEqual([start, path.join(path.sep, 'x'), path.sep]);
   });
 
@@ -145,7 +144,7 @@ describe('findWorkspaceRoot legacy detection', () => {
   test('reports a legacy workspace in the start directory', () => {
     const root = tmpProject();
     makeLegacy(root);
-    expect(findWorkspaceRoot(root)).toEqual({ root: null, searched: [root], legacy: root });
+    expect(findWorkspaceRoot(root)).toEqual({ kind: 'legacy', dir: root, searched: [root] });
   });
 
   test('reports a legacy workspace two levels up', () => {
@@ -153,8 +152,8 @@ describe('findWorkspaceRoot legacy detection', () => {
     makeLegacy(root);
     const deep = mkdirp(root, 'src', 'x');
     const r = findWorkspaceRoot(deep);
-    expect(r.root).toBeNull();
-    expect(r.legacy).toBe(root);
+    expect(r.kind).toBe('legacy');
+    expect(r.dir).toBe(root);
   });
 
   test('the new workspace wins when both exist', () => {
@@ -162,8 +161,7 @@ describe('findWorkspaceRoot legacy detection', () => {
     makeLegacy(root);
     makeWorkspace(root);
     const r = findWorkspaceRoot(root);
-    expect(r.root).toBe(root);
-    expect(r.legacy).toBeNull();
+    expect(r).toEqual({ kind: 'found', root, searched: [root] });
   });
 
   test('a nearer legacy workspace shadows a new one in an ancestor', () => {
@@ -171,7 +169,7 @@ describe('findWorkspaceRoot legacy detection', () => {
     makeWorkspace(root);
     const app = mkdirp(root, 'app');
     makeLegacy(app);
-    expect(findWorkspaceRoot(app)).toEqual({ root: null, searched: [app], legacy: app });
+    expect(findWorkspaceRoot(app)).toEqual({ kind: 'legacy', dir: app, searched: [app] });
   });
 
   test('a nearer new workspace still wins over a legacy one above it', () => {
@@ -185,7 +183,7 @@ describe('findWorkspaceRoot legacy detection', () => {
   test('a legacy folder without config.json is not legacy', () => {
     const root = tmpProject();
     fs.mkdirSync(path.join(root, 'mobile-automator'));
-    expect(findWorkspaceRoot(root).legacy).toBeNull();
+    expect(findWorkspaceRoot(root).kind).toBe('none');
   });
 
   test('does not report a legacy folder above the .git boundary', () => {
@@ -194,14 +192,13 @@ describe('findWorkspaceRoot legacy detection', () => {
     const repo = mkdirp(outer, 'repo');
     fs.mkdirSync(path.join(repo, '.git'));
     const r = findWorkspaceRoot(mkdirp(repo, 'a'));
-    expect(r.root).toBeNull();
-    expect(r.legacy).toBeNull();
+    expect(r.kind).toBe('none');
   });
 });
 
 describe('workspaceFailure', () => {
-  test('with a legacy dir names it and gives the mv fix', () => {
-    const r = workspaceFailure({ root: null, searched: ['/p'], legacy: '/p' });
+  test('legacy names the dir and gives the mv fix', () => {
+    const r = workspaceFailure({ kind: 'legacy', dir: '/p', searched: ['/p'] });
     expect(r.exitKind).toBe('environment');
     expect(r.envelope.error.message).toContain('/p/mobile-automator/');
     expect(r.envelope.error.message).toContain('.mobile-automator/');
@@ -210,16 +207,20 @@ describe('workspaceFailure', () => {
     expect(r.envelope.hint).not.toMatch(/session end/);
   });
 
-  test('without a legacy dir is the plain no-workspace failure', () => {
-    const r = workspaceFailure({ root: null, searched: ['/p/a', '/p'], legacy: null });
+  test('none is the plain no-workspace failure', () => {
+    const r = workspaceFailure({ kind: 'none', searched: ['/p/a', '/p'] });
     expect(r.envelope.error.message).toMatch(/\.mobile-automator/);
     expect(r.envelope.error.message).not.toContain('legacy');
     for (const p of ['/p/a', '/p']) expect(r.envelope.hint).toContain(p);
   });
 
-  test('treats an absent legacy field as none', () => {
-    const r = workspaceFailure({ root: null, searched: ['/p'] });
-    expect(r.envelope.error.message).not.toContain('legacy');
+  // A found workspace has nothing to fail, and an unknown kind is a bug: both
+  // throw rather than pick a failure that does not fit.
+  test.each([
+    [{ kind: 'found', root: '/p', searched: ['/p'] }],
+    [{ root: null, searched: ['/p'] }],
+  ])('throws for %j', (ws) => {
+    expect(() => workspaceFailure(ws)).toThrow(/no failure/);
   });
 });
 
@@ -262,25 +263,25 @@ describe('findWorkspaceRoot refuses an unsafe workspace (#346)', () => {
     const root = tmpProject();
     makeWorkspace(root);
     const r = findWorkspaceRoot(root, { fs: asUid(FOREIGN_UID, ['lstatSync']) });
-    expect(r.root).toBeNull();
-    expect(r.legacy).toBeNull();
-    expect(r.unsafe.reason).toBe('foreign_owner');
-    expect(r.unsafe.message).toContain(`uid ${FOREIGN_UID}; you are uid ${MY_UID}`);
+    expect(r.kind).toBe('unsafe');
+    expect(r.refusal.reason).toBe('foreign_owner');
+    expect(r.refusal.message).toContain(`uid ${FOREIGN_UID}; you are uid ${MY_UID}`);
+    expect(Object.keys(r).sort()).toEqual(['kind', 'refusal', 'searched']);
   });
 
   test('MAUTO_TRUST_WORKSPACE_OWNER=1 adopts the foreign-owned workspace', () => {
     const root = tmpProject();
     makeWorkspace(root);
     const r = findWorkspaceRoot(root, { fs: asUid(FOREIGN_UID), env: { MAUTO_TRUST_WORKSPACE_OWNER: '1' } });
-    expect(r).toEqual({ root, searched: [root], legacy: null });
+    expect(r).toEqual({ kind: 'found', root, searched: [root] });
   });
 
   test('a foreign-owned config.json is refused', () => {
     const root = tmpProject();
     makeWorkspace(root);
     const r = findWorkspaceRoot(root, { fs: asUid(FOREIGN_UID, ['fstatSync']) });
-    expect(r.root).toBeNull();
-    expect(r.unsafe.reason).toBe('foreign_owner');
+    expect(r.kind).toBe('unsafe');
+    expect(r.refusal.reason).toBe('foreign_owner');
   });
 
   test('a symlinked .mobile-automator is refused', () => {
@@ -289,9 +290,9 @@ describe('findWorkspaceRoot refuses an unsafe workspace (#346)', () => {
     makeWorkspace(elsewhere);
     fs.symlinkSync(path.join(elsewhere, '.mobile-automator'), path.join(root, '.mobile-automator'));
     const r = findWorkspaceRoot(root);
-    expect(r.root).toBeNull();
-    expect(r.unsafe.reason).toBe('symlink');
-    expect(r.unsafe.path).toBe(path.join(root, '.mobile-automator'));
+    expect(r.kind).toBe('unsafe');
+    expect(r.refusal.reason).toBe('symlink');
+    expect(r.refusal.path).toBe(path.join(root, '.mobile-automator'));
   });
 
   test('a symlinked config.json is refused', () => {
@@ -301,8 +302,8 @@ describe('findWorkspaceRoot refuses an unsafe workspace (#346)', () => {
     fs.renameSync(path.join(root, '.mobile-automator', 'config.json'), real);
     fs.symlinkSync(real, path.join(root, '.mobile-automator', 'config.json'));
     const r = findWorkspaceRoot(root);
-    expect(r.root).toBeNull();
-    expect(r.unsafe.reason).toBe('symlink');
+    expect(r.kind).toBe('unsafe');
+    expect(r.refusal.reason).toBe('symlink');
   });
 
   test('a world-writable .mobile-automator is refused; group-writable is adopted', () => {
@@ -312,8 +313,8 @@ describe('findWorkspaceRoot refuses an unsafe workspace (#346)', () => {
     const ws = path.join(root, '.mobile-automator');
     fs.chmodSync(ws, 0o777);
     const bad = findWorkspaceRoot(root);
-    expect(bad.root).toBeNull();
-    expect(bad.unsafe.reason).toBe('world_writable');
+    expect(bad.kind).toBe('unsafe');
+    expect(bad.refusal.reason).toBe('world_writable');
     fs.chmodSync(ws, 0o775);
     expect(findWorkspaceRoot(root).root).toBe(root);
   });
@@ -325,8 +326,8 @@ describe('findWorkspaceRoot refuses an unsafe workspace (#346)', () => {
     makeWorkspace(child);
     const r = findWorkspaceRoot(child, { fs: asUid(FOREIGN_UID, ['lstatSync']) });
     // every directory is foreign under the injected uid; the NEAREST decides
-    expect(r.root).toBeNull();
-    expect(r.unsafe.path).toBe(path.join(child, '.mobile-automator'));
+    expect(r.kind).toBe('unsafe');
+    expect(r.refusal.path).toBe(path.join(child, '.mobile-automator'));
     expect(r.searched).toEqual([child]);
   });
 
@@ -341,7 +342,7 @@ describe('findWorkspaceRoot refuses an unsafe workspace (#346)', () => {
         throw Object.assign(new Error('EACCES: permission denied'), { code: 'EACCES' });
       },
     };
-    expect(findWorkspaceRoot(root, { fs: denied })).toEqual({ root, searched: [root], legacy: null });
+    expect(findWorkspaceRoot(root, { fs: denied })).toEqual({ kind: 'found', root, searched: [root] });
   });
 
   test('a marker that raced away after existsSync (ENOENT) adopts the workspace', () => {
@@ -383,7 +384,7 @@ describe('findWorkspaceRoot refuses an unsafe workspace (#346)', () => {
     expect(exitKind).toBe('environment');
     expect(envelope.ok).toBe(false);
     expect(envelope.error.kind).toBe('environment');
-    expect(envelope.error.message).toBe(ws.unsafe.message);
-    expect(envelope.hint).toBe(ws.unsafe.hint);
+    expect(envelope.error.message).toBe(ws.refusal.message);
+    expect(envelope.hint).toBe(ws.refusal.hint);
   });
 });
