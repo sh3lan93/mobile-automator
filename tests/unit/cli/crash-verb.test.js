@@ -222,7 +222,9 @@ describe('handleCrashGet --out confinement (#347)', () => {
     expect(snapshot(s.base)).toEqual(before);
   });
 
-  it('--out .mobile-automator/crash.txt that links to an outside file is refused before the device is asked, the file unchanged', async () => {
+  // The leaf is checked by the write's own open (O_NOFOLLOW), the one place
+  // that checks it: after the device call, before a byte is written.
+  it('--out .mobile-automator/crash.txt that links to an outside file is refused at the write, the file unchanged', async () => {
     const s = setup();
     fs.symlinkSync(path.join(s.outside, 'target.txt'), path.join(s.ws, 'crash.txt'));
     const before = snapshot(s.outside);
@@ -230,8 +232,9 @@ describe('handleCrashGet --out confinement (#347)', () => {
     const { r, asked } = await getWith(s, '.mobile-automator/crash.txt');
 
     expectRefused(r, /^Refusing to use workspace path /);
-    expect(asked).toEqual([]);
+    expect(asked).toEqual(['r1']);
     expect(r.envelope.error.message).toContain(path.join(s.ws, 'crash.txt'));
+    expect(fs.readFileSync(path.join(s.outside, 'target.txt'), 'utf8')).toBe(CANARY);
     expect(snapshot(s.outside)).toEqual(before);
   });
 
@@ -318,6 +321,26 @@ describe('handleCrashGet --out confinement (#347)', () => {
     expect(r.exitKind).toBe('ok');
     expect(r.envelope.data.path).toBe('crash.txt');
     expect(fs.readFileSync(path.join(sub, 'crash.txt'), 'utf8')).toBe(REPORT);
+  });
+
+  // The pre-check walks the workspace directories without creating any: a
+  // failed device call leaves nothing behind.
+  it('a failed getCrash with --out in a new workspace subdirectory leaves no directory behind', async () => {
+    const s = setup();
+    const deviceBridge = {
+      getCrash: async () => {
+        throw new Error('crash report r1 not found');
+      },
+    };
+
+    const r = await handleCrashGet(
+      { deviceBridge, projectRoot: s.root, cwd: s.root },
+      'r1',
+      { out: '.mobile-automator/new/dir/x.txt' }
+    ).catch(toEnvelope);
+
+    expect(r.exitKind).toBe('device');
+    expect(fs.existsSync(path.join(s.ws, 'new'))).toBe(false);
   });
 
   it('a clean workspace path is written, its missing directories created', async () => {

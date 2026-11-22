@@ -1784,12 +1784,13 @@ function crashWriteFailure(given, err) {
 // It is a path the caller chose in an untrusted checkout (#347), resolved
 // against the caller's cwd as handleScreenshot's is (#214). Inside
 // .mobile-automator/ (through a symlinked alias of the root too) it gets the
-// workspace rules: every directory walked, created when missing, a link on
-// the way refused. Anywhere else it must land in one of the roots
-// src/workspace/output-roots.js allows. Both are checked before the device is
-// asked, so a bad --out costs no device work. A filesystem error is the write
-// failure; anything else, a refusal (that rule's or a link's) included,
-// propagates to toEnvelope. `outRootsHost` is passed through to that module
+// workspace rules: every directory walked and a link on the way refused
+// before the device is asked; the write creates the missing directories and
+// refuses a link at the report itself. Anywhere else it must land in one of
+// the roots src/workspace/output-roots.js allows, checked before the device
+// is asked. A bad --out costs no device work, and the pre-check creates
+// nothing. A filesystem error is the write failure; anything else, a refusal
+// (that rule's or a link's) included, propagates to toEnvelope. `outRootsHost` is passed through to that module
 // untouched (its host facts, which it defaults; tests inject them).
 async function handleCrashGet({ deviceBridge, projectRoot, cwd = process.cwd(), outRootsHost }, id, opts = {}) {
   let target = null;

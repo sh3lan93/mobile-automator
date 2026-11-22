@@ -19,7 +19,7 @@ const os = require('os');
 const path = require('path');
 
 const { TypedRefusal } = require('../output/typed-refusal');
-const { isInside, safeWorkspaceDest, userFile } = require('./safe-fs');
+const { isInside, openUserLeaf, safeDir, userFile } = require('./safe-fs');
 
 // A path the user chose that the rule refuses: their input is wrong, not the
 // checkout, so invalid_input (exit 3), with a hint naming the allowed roots.
@@ -64,20 +64,27 @@ function crashOutRoots(
   return { roots, projectTooBroad };
 }
 
-// Where the report for `out` (absolute) goes: userFile's handle, checked
-// before the device is asked so a bad --out costs no device work. Inside the
-// workspace its directory is walked now, created where missing as the write
-// would create it, and the leaf checked, so a planted link is refused
-// (UnsafePathError) before the device call rather than at the write; the
-// write's own open checks it all again. Outside the workspace its directory
-// must already exist and realpath inside one of the roots. Throws
-// OutputPathRefusal when it does not; a directory that does not exist (or
-// cannot be realpath'd) throws its own fs error, which the caller reports as
-// the write failure it always was.
+// Where the report for `out` (absolute) goes, `{ path, confined, open }`,
+// checked before the device is asked so a bad --out costs no device work, and
+// creating nothing: a failed device call leaves no trace.
+//
+// Inside the workspace its directory is walked check-only, so a planted
+// directory link is refused (UnsafePathError) before the device call; a
+// directory that does not exist yet is nothing to refuse. The write's open
+// (userFile's openWorkspaceFile under O_CREAT) is the one place that creates
+// the missing directories, walking again, and checks the leaf, so a link at
+// the report itself is refused there, before anything is written.
+//
+// Outside the workspace its directory must already exist and realpath inside
+// one of the roots. Throws OutputPathRefusal when it does not; a directory
+// that does not exist (or cannot be realpath'd) throws its own fs error, which
+// the caller reports as the write failure it always was. Its open creates no
+// directory (the realpath just proved it exists): openUserLeaf, the checked
+// leaf alone.
 function crashOutTarget(projectRoot, out, host = {}) {
   const target = userFile(projectRoot, out);
   if (target.confined) {
-    safeWorkspaceDest(projectRoot, target.path);
+    safeDir(projectRoot, path.dirname(target.path), { missingOk: true });
     return target;
   }
 
@@ -87,7 +94,7 @@ function crashOutTarget(projectRoot, out, host = {}) {
     const real = realpathOrNull(root);
     return real !== null && isInside(dir, real);
   };
-  if (roots.some(holdsDir)) return target;
+  if (roots.some(holdsDir)) return { ...target, open: openUserLeaf };
   throw new OutputPathRefusal(
     `--out resolves outside the directories a crash report may be written to: ${target.path}`,
     projectTooBroad

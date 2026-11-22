@@ -205,7 +205,14 @@ function isInside(child, parent) {
 // time when asked. The project root and its ancestors are never checked (see
 // the header). Last, realpath(dir) must lie inside realpath(within). Returns
 // the realpath of `dir`.
-function walkDirs(projectRoot, within, dir, { create = false, mode } = {}, d) {
+//
+// `missingOk` (without `create`) is the check-only walk for a directory a
+// later write will create: a missing component is nothing to refuse (nothing
+// below it exists, so nothing below it can be a link), so the walk stops there,
+// the components above it checked, the deepest existing one realpath-checked
+// when it lies within the bound, and returns null. Without it a missing
+// component throws ENOENT, as it always has.
+function walkDirs(projectRoot, within, dir, { create = false, mode, missingOk = false } = {}, d) {
   const { fs } = d;
   const root = path.resolve(projectRoot);
   const bound = path.resolve(within);
@@ -220,6 +227,7 @@ function walkDirs(projectRoot, within, dir, { create = false, mode } = {}, d) {
     try {
       st = fs.lstatSync(p);
     } catch (err) {
+      if (err.code === 'ENOENT' && !create && missingOk) return checkDeepestExisting(path.dirname(p), bound, fs);
       if (err.code !== 'ENOENT' || !create) throw err;
       try {
         // Non-recursive on purpose: each new level is made under a parent we
@@ -240,11 +248,22 @@ function walkDirs(projectRoot, within, dir, { create = false, mode } = {}, d) {
   return real;
 }
 
+// The end of a missingOk walk that stopped at a missing component: `existing`
+// is the deepest directory there. Above the bound (the bound itself is
+// missing) there is nothing of the bound's to compare; within it, its realpath
+// must stay within the bound's, as a full walk's would.
+function checkDeepestExisting(existing, bound, fs) {
+  if (isInside(existing, bound) && !isInside(fs.realpathSync(existing), fs.realpathSync(bound))) {
+    throw new UnsafePathError(existing, 'escape');
+  }
+  return null;
+}
+
 // A workspace directory: `.mobile-automator` down to `dir`, one lstat per
 // component, creating the missing ones when asked. Returns the realpath of
-// `dir`.
-function safeDir(projectRoot, dir, { create = false, mode } = {}, deps = {}) {
-  return walkDirs(projectRoot, workspaceDir(projectRoot), dir, { create, mode }, resolveDeps(deps));
+// `dir`; with `missingOk`, null when it does not exist yet (see walkDirs).
+function safeDir(projectRoot, dir, { create = false, mode, missingOk = false } = {}, deps = {}) {
+  return walkDirs(projectRoot, workspaceDir(projectRoot), dir, { create, mode, missingOk }, resolveDeps(deps));
 }
 
 const OPEN_SYMLINK_CODES = new Set([
@@ -534,14 +553,21 @@ function userFile(projectRoot, file, deps = {}) {
   const target = userPath(projectRoot, file, deps);
   const open = target.confined
     ? (f, flags, mode = 0o666) => openWorkspaceFile(projectRoot, f, flags, mode, deps)
-    : (f, flags, mode = 0o666) =>
-        withScope('path', () => {
-          if (flags & nodeFs.constants.O_CREAT) {
-            resolveDeps(deps).fs.mkdirSync(path.dirname(path.resolve(f)), { recursive: true });
-          }
-          return openOwnedLeaf(f, flags, { mode }, deps);
-        });
+    : (f, flags, mode = 0o666) => {
+        if (flags & nodeFs.constants.O_CREAT) {
+          resolveDeps(deps).fs.mkdirSync(path.dirname(path.resolve(f)), { recursive: true });
+        }
+        return openUserLeaf(f, flags, mode, deps);
+      };
   return { ...target, open };
+}
+
+// The leaf open for a path the user chose outside the workspace, whose
+// directory the caller has settled itself: openOwnedLeaf (O_NOFOLLOW, ours,
+// one link for a write, the truncate deferred), a refusal worded in the 'path'
+// scope. Creates no directory. Returns an fd the caller closes.
+function openUserLeaf(file, flags, mode = 0o666, deps = {}) {
+  return withScope('path', () => openOwnedLeaf(file, flags, { mode }, deps));
 }
 
 // The lenient readers, for state files where absent or garbled is a normal
@@ -591,6 +617,7 @@ module.exports = {
   userDir,
   userDest,
   userFile,
+  openUserLeaf,
   // The one containment test (`child` is `parent` or below it), for a caller
   // that bounds a path the user chose by roots of its own (crash get --out).
   isInside,

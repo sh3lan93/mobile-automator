@@ -178,6 +178,31 @@ describe('safeDir', () => {
     expect(caught.code).toBe('ENOENT');
   });
 
+  // The check-only walk for a directory a later write creates (#347).
+  describe('missingOk', () => {
+    it('a missing component is nothing to refuse: null, and nothing created', () => {
+      expect(safeDir(root, path.join(ws, 'nope', 'deeper'), { missingOk: true })).toBeNull();
+      expect(fs.existsSync(path.join(ws, 'nope'))).toBe(false);
+    });
+
+    it('a missing workspace directory is nothing to refuse either', () => {
+      fs.rmSync(ws, { recursive: true });
+      expect(safeDir(root, path.join(ws, 'a'), { missingOk: true })).toBeNull();
+      expect(fs.existsSync(ws)).toBe(false);
+    });
+
+    it('a link above the missing part is still refused', () => {
+      fs.symlinkSync(outside, path.join(ws, 'reports'));
+      expectUnsafe(() => safeDir(root, path.join(ws, 'reports', 'new', 'dir'), { missingOk: true }), 'symlink');
+      expect(fs.existsSync(path.join(outside, 'new'))).toBe(false);
+    });
+
+    it('an existing directory returns its realpath, as without it', () => {
+      fs.mkdirSync(path.join(ws, 'memory'));
+      expect(safeDir(root, path.join(ws, 'memory'), { missingOk: true })).toBe(fs.realpathSync(path.join(ws, 'memory')));
+    });
+  });
+
   it('a newly created dir is re-checked (a world-writable mode is refused)', () => {
     const umask = process.umask(0);
     try {
