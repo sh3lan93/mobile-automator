@@ -22,10 +22,11 @@
 // committed to repos, so a cloned repo can ship `.logs/telemetry.spool`, a
 // claimed batch, or `.logs/` itself, with any content or as a link to a file
 // elsewhere, and flush would upload it and then delete it. So the spool goes
-// through safe-fs the way the file sink does: every operation first settles
-// its directory with userDir (the checked walk in the workspace, created only
-// by write), then opens the leaf with openOwnedLeaf / readOwnedLeaf
-// (O_NOFOLLOW, a regular file, ours, one hard link, a read included). And
+// through safe-fs the way the file sink does, and through the same append
+// (append.js): every operation first settles its directory with userDir (the
+// checked walk in the workspace, created only by write), then opens the leaf
+// with openOwnedLeaf / readOwnedLeaf (O_NOFOLLOW, a regular file, ours, one
+// hard link, a read included). And
 // every line read back passes the field catalog again (shippablePayload), even
 // though the writer already applied it: a committed or hand-edited spool never
 // went through the writer.
@@ -39,11 +40,9 @@ const crypto = require('crypto');
 const path = require('path');
 
 const { spoolPath } = require('./paths');
-const { allowed } = require('./sinks/file');
-const { userDir, openOwnedLeaf, readOwnedLeaf } = require('../workspace/safe-fs');
+const { allowed, inSettledDir, appendLine } = require('./append');
+const { readOwnedLeaf } = require('../workspace/safe-fs');
 const { telemetryPayload, shippablePayload } = require('./event');
-
-const { O_WRONLY, O_APPEND, O_CREAT } = realFs.constants;
 
 // ~1000 lines at ~250 bytes. Not rotateIfLarge: that policy is for LOGS, and
 // renaming a queue to `.1` silently discards records that were pending
@@ -83,49 +82,37 @@ function isSelfReferential(event) {
   return typeof event.event === 'string' && event.event.startsWith('telemetry.');
 }
 
-// The spool directory, settled through safe-fs's userDir (created only when
-// `create`): the path to use, re-rooted in the workspace. Every operation
-// names its file as path.join(spoolDir(...), basename), so none reaches a
-// file through a directory it has not checked. Throws on a refusal; each
-// caller reads that as "nothing here".
-function spoolDir({ projectRoot, env, fs, getuid }, { create = false } = {}) {
-  return userDir(projectRoot, path.dirname(spoolPath(projectRoot, env)), { create }, { fs, env, getuid });
+// `name`'s path inside the spool directory, settled through append.js's
+// inSettledDir (safe-fs's userDir, created only when `create`). Every
+// operation names its file by basename inside the spool directory, never by
+// the path it was handed, so none reaches a file through a directory it has
+// not checked. Throws on a refusal; each caller reads that as "nothing here".
+function inSpoolDir(name, { projectRoot, env, fs, getuid }, { create = false } = {}) {
+  return inSettledDir(projectRoot, path.dirname(spoolPath(projectRoot, env)), name, { create }, { fs, env, getuid });
 }
 
-// `name`'s path inside the settled spool directory.
-function inSpoolDir(name, opts, { create = false } = {}) {
-  return path.join(spoolDir(opts, { create }), path.basename(name));
-}
-
-// The append opens through safe-fs like every read (#348). Once telemetry
-// is on, every verb appends here, so a cloned repo that ships
+// The append is append.js's appendLine, the one the log sink uses (#348).
+// Once telemetry is on, every verb appends here, so a cloned repo that ships
 // `.logs/telemetry.spool -> ~/.bashrc`, a `.logs/` that is a link, or a spool
 // hard-linked to a file elsewhere would otherwise get JSON appended to a file
 // of its choosing. A refused open is a dropped line, like any other failure.
+//
+// The cap is SPOOL_MAX_BYTES, checked on the fd appendLine opened. At the cap
+// the NEW line is dropped rather than an old one evicted: eviction means
+// read-filter-rewrite on the hot path of every verb, and the older records are
+// the ones already queued for delivery — evicting them loses more history
+// than refusing one new line.
 function write(event, { projectRoot, env = process.env, fs = realFs, getuid } = {}) {
   try {
     if (isSelfReferential(event)) return;
     // Same gate as the file sink: no .mobile-automator/ workspace and no
-    // MAUTO_LOG_DIR, no spool (see sinks/file.js allowed).
+    // MAUTO_LOG_DIR, no spool (see append.js allowed).
     if (!allowed(projectRoot, env, fs)) return;
 
     const deps = { fs, env, getuid };
     const file = inSpoolDir(spoolPath(projectRoot, env), { projectRoot, ...deps }, { create: true });
-    const fd = openOwnedLeaf(file, O_WRONLY | O_APPEND | O_CREAT, {}, deps);
-    try {
-      // The cap is the size of the file just opened, not of a second lookup by
-      // path, which could name a different file. At the cap we drop the NEW
-      // line rather than evicting an old one: eviction means
-      // read-filter-rewrite on the hot path of every verb, and the older
-      // records are the ones already queued for delivery — evicting them loses
-      // more history than refusing one new line.
-      if (fs.fstatSync(fd).size >= SPOOL_MAX_BYTES) return;
-
-      const payload = telemetryPayload({ ...event, msg_id: newMessageId() });
-      fs.writeSync(fd, JSON.stringify(payload) + '\n');
-    } finally {
-      fs.closeSync(fd);
-    }
+    const payload = telemetryPayload({ ...event, msg_id: newMessageId() });
+    appendLine(file, JSON.stringify(payload) + '\n', { ...deps, capBytes: SPOOL_MAX_BYTES });
   } catch (_) {
     // Observability is never load-bearing. Losing a telemetry line is always
     // preferable to failing the verb the user actually asked for.
@@ -180,7 +167,7 @@ function listClaimed({ projectRoot, env = process.env, fs = realFs, getuid } = {
   let dir;
   let names;
   try {
-    dir = spoolDir({ projectRoot, env, fs, getuid });
+    dir = path.dirname(inSpoolDir(spoolPath(projectRoot, env), { projectRoot, env, fs, getuid }));
     names = fs.readdirSync(dir);
   } catch (_) {
     return [];
