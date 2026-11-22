@@ -12,6 +12,7 @@ const fs = require('fs');
 
 const { startDaemon } = require('../src/device/session-daemon');
 const paths = require('../src/device/session-paths');
+const { readPidFile } = require('../src/device/process-identity');
 const { sessionEngineFromEnv } = require('../src/device/engine');
 const { boundRecorder } = require('../src/observe/recorder');
 const { daemonEventLogPath } = require('../src/observe/paths');
@@ -35,16 +36,21 @@ function safeUnlinkSync(p) {
 // second mobile-mcp child starts — the exact C2/B2 orphan the lock prevents.
 // Gating on the lock's pid also stops a departing owner from nuking a successor
 // that has already taken over the workspace.
-function cleanupWorkspaceIfOwned(projectRoot) {
-  let owner;
-  try {
-    owner = fs.readFileSync(paths.lockPath(projectRoot), 'utf8').trim();
-  } catch (_) {
-    return; // no lock present — nothing of ours to clean
-  }
-  if (owner !== String(process.pid)) return; // not our lock — leave the owner's files
+//
+// The lock is read by readPidFile, the one pid reader, which never follows a
+// link (#346): a planted lock linking to a file that holds our pid must not
+// pass for ours, or this teardown would delete a live session's files.
+//
+// `socketPath` is the path the daemon bound (startDaemon's own answer), never
+// recomputed here. It is null until startDaemon resolves; a socket bound
+// before that is unlinked by startDaemon's own failed-start teardown, and a
+// leftover is swept by the next start's cleanStale.
+function cleanupWorkspaceIfOwned(projectRoot, socketPath = null) {
+  // null when there is no lock, it is unreadable, a link, or not a pid.
+  const owner = readPidFile(paths.lockPath(projectRoot));
+  if (owner !== process.pid) return; // not our lock — leave the owner's files
   safeUnlinkSync(paths.lockPath(projectRoot));
-  safeUnlinkSync(paths.socketPath(projectRoot));
+  if (socketPath) safeUnlinkSync(socketPath);
   safeUnlinkSync(paths.pidFilePath(projectRoot));
   safeUnlinkSync(paths.handlePath(projectRoot));
 }
@@ -112,7 +118,7 @@ async function main() {
   // start many daemons don't accumulate global listeners.)
   // 'exit' allows only synchronous work — drop the lock + socket + pidfile so
   // the next spawn isn't wedged by leftovers from this process.
-  const onExit = () => cleanupWorkspaceIfOwned(projectRoot);
+  const onExit = () => cleanupWorkspaceIfOwned(projectRoot, daemon && daemon.socketPath);
   process.on('exit', onExit);
   // One fatal handler, two registrations. The two crashes differ by exactly two
   // strings; everything else about them is load-bearing and identical, so they
@@ -175,11 +181,22 @@ async function main() {
   process.exit(0);
 }
 
+// A start that failed, as written to stderr, which is .session/daemon.log: the
+// file a verb whose daemon never became ready is sent to (connection.js
+// daemonLogHint). A refusal carries a hint (an UnsafePathError: what to do
+// about a session socket directory that is not private, say), and the log is
+// the only place the user will see it, so it goes on the line after the
+// message.
+function writeStartFailure(err, write = (text) => process.stderr.write(text)) {
+  write(`mauto-session-daemon: ${(err && err.message) || err}\n`);
+  if (err && err.hint) write(`mauto-session-daemon: hint: ${err.hint}\n`);
+}
+
 if (require.main === module) {
   main().catch((err) => {
-    process.stderr.write(`mauto-session-daemon: ${err.message || err}\n`);
+    writeStartFailure(err);
     process.exit(1);
   });
 }
 
-module.exports = { main, cleanupWorkspaceIfOwned };
+module.exports = { main, cleanupWorkspaceIfOwned, writeStartFailure };

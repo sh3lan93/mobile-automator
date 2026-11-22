@@ -11,7 +11,9 @@
 
 const realFs = require('fs');
 
-const { sessionDir, logFilePath } = require('./session-paths');
+const { logFilePath } = require('./session-paths');
+const { ensureSessionDir } = require('./session-dir');
+const { openWorkspaceFile } = require('../workspace/safe-fs');
 // Rotation lives in src/util/log-rotate.js because the structured event log
 // wants the identical policy. Re-exported below so this module's public surface
 // is unchanged for its existing callers.
@@ -44,18 +46,24 @@ function daemonLogHint(projectRoot) {
 function openDaemonLog(projectRoot, { maxBytes = MAX_LOG_BYTES, fs = realFs } = {}) {
   let fd;
   try {
-    // The parent must create .session/: only startDaemon creates it today, and
-    // that runs in the child — too late for an fd the parent has to open first.
-    fs.mkdirSync(sessionDir(projectRoot), { recursive: true });
+    // The parent must create .session/ (0700, as startDaemon would, #346):
+    // startDaemon runs in the child — too late for an fd the parent has to
+    // open first. Only .session/, never the fallback socket directory: if that
+    // is refused, the daemon's start fails, and this log is what explains it.
+    ensureSessionDir(projectRoot, { fs });
 
     const logPath = logFilePath(projectRoot);
     rotateIfLarge(logPath, { maxBytes, fs });
 
-    // Append, never 'w'. Lock-race losers exit ELOCKED through
+    // Append, never truncate. Lock-race losers exit ELOCKED through
     // bin/mauto-session-daemon.js and write to this same file; truncating on
     // open would let a loser erase the winner's just-written crash trace.
-    fd = fs.openSync(logPath, 'a');
+    // Through safe-fs: a planted daemon.log link is refused, not written
+    // through, and a new log is 0600 (it holds stack traces and device output).
+    const { O_WRONLY, O_APPEND, O_CREAT } = realFs.constants;
+    fd = openWorkspaceFile(projectRoot, logPath, O_WRONLY | O_APPEND | O_CREAT, 0o600, { fs });
   } catch (_) {
+    // Including a refused path (UnsafePathError): no log, never no spawn.
     return IGNORED;
   }
 

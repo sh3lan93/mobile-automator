@@ -8,8 +8,10 @@
 // the spawn+handshake tax exactly once.
 //
 // Lifecycle:
+//   - make (or tighten) the 0700 session directories (session-dir.js),
 //   - clean any stale socket/pidfile before binding,
-//   - listen on the socket, write handle + pidfile once listening,
+//   - listen on the socket (0600), write handle + pidfile once listening,
+//     every file through safe-fs, so a planted link is never written through,
 //   - route { type:'call', tool, args } frames to the single `call`,
 //   - reset an idle timer on every request; reap the daemon when it expires,
 //   - shut down cleanly on a { type:'shutdown' } control frame and on
@@ -29,6 +31,9 @@ const { safeObserve: guardObserve } = require('../observe/recorder');
 const { FLUSH_INTERVAL_MS } = require('../observe/flush');
 const { pidIdentity, readPidFile } = require('./process-identity');
 const { DEFAULT_ENGINE } = require('./engine');
+const { ensureSessionDirs, listenOwnerOnly } = require('./session-dir');
+const { createWorkspaceFile } = require('../workspace/safe-fs');
+const { atomicWorkspaceWrite } = require('../util/atomic');
 
 const DEFAULT_IDLE_MS = 5 * 60 * 1000;
 
@@ -73,7 +78,12 @@ function safeUnlink(p) {
 // ours ('other') is a RECYCLED pid: the daemon that wrote it is long dead and an
 // unrelated process inherited the number, so the stale files are cleaned instead
 // of wedging every spawn for the lifetime of that unrelated process.
-function cleanStale(projectRoot, { execFile } = {}) {
+//
+// `socketPath` is required: the path the caller will bind (ensureSessionDirs'
+// answer), so the socket swept is the one about to be bound, never a second
+// computation of it.
+function cleanStale(projectRoot, { execFile, socketPath } = {}) {
+  if (!socketPath) throw new TypeError('cleanStale requires socketPath');
   const pidFile = paths.pidFilePath(projectRoot);
   const lockFile = paths.lockPath(projectRoot);
   let livePid = null;
@@ -90,7 +100,7 @@ function cleanStale(projectRoot, { execFile } = {}) {
   }
   if (livePid) return { cleaned: false, livePid };
 
-  safeUnlink(paths.socketPath(projectRoot));
+  safeUnlink(socketPath);
   safeUnlink(pidFile);
   safeUnlink(paths.handlePath(projectRoot));
   safeUnlink(lockFile);
@@ -135,6 +145,11 @@ async function startDaemon({
   // process that is actually a daemon — injects makeFlusher.
   flushFor = null,
   flushIntervalMs = FLUSH_INTERVAL_MS,
+  // Where the socket fallback lives ({ tmpdir, getuid }, session-paths.js),
+  // handed to ensureSessionDirs and nowhere else: the path it answers is the
+  // one this daemon uses. Production (the bin) passes none. The in-process
+  // tests pass a temp dir of their own, and the same value to the client.
+  socketDeps = {},
 } = {}) {
   if (!projectRoot) throw new TypeError('startDaemon requires projectRoot');
 
@@ -186,12 +201,17 @@ async function startDaemon({
   // Guarded like the lock failure below, and for the same reason: this is the
   // FIRST filesystem operation the daemon performs, and it fails on exactly the
   // conditions daemon.start_failure exists to report (EACCES, EROFS, ENOSPC on
-  // the workspace). An unguarded throw here is the earliest invisible death
-  // there is — nothing else in the system records it, and the spawning verb
-  // sees only a readiness timeout.
-  const dir = paths.sessionDir(projectRoot);
+  // the workspace, or a refused path: a symlinked or foreign .session/, a
+  // fallback socket directory that is not ours and private). An unguarded
+  // throw here is the earliest invisible death there is — nothing else in the
+  // system records it, and the spawning verb sees only a readiness timeout.
+  //
+  // It also decides, once, the socket path this daemon binds, sweeps, unlinks
+  // and records in its handle (#346): the directory it checked is the
+  // directory of that path, with nothing recomputed in between.
+  let socketPath;
   try {
-    fs.mkdirSync(dir, { recursive: true });
+    socketPath = ensureSessionDirs(projectRoot, socketDeps);
   } catch (err) {
     safeObserve({
       level: 'error',
@@ -203,17 +223,19 @@ async function startDaemon({
   }
 
   // Reap a crashed daemon's leftovers before we bind.
-  cleanStale(projectRoot, { execFile });
+  cleanStale(projectRoot, { execFile, socketPath });
 
   // Acquire an EXCLUSIVE per-workspace lock BEFORE building the connection. Two
   // `mauto` invocations that both saw isAlive=false would otherwise both spawn a
   // daemon and both call createCall (spawning mobile-mcp + grabbing the device)
   // before the loser hits EADDRINUSE. With the lock the loser fails here and
-  // exits before it ever spawns a child. O_EXCL ('wx') is the atomicity.
+  // exits before it ever spawns a child. O_EXCL is the atomicity; safe-fs's
+  // createWorkspaceFile adds O_NOFOLLOW, so a planted lock link is EEXIST too
+  // and is never created through.
   const lockFile = paths.lockPath(projectRoot);
   let lockFd;
   try {
-    lockFd = fs.openSync(lockFile, 'wx');
+    lockFd = createWorkspaceFile(projectRoot, lockFile, { mode: 0o600 });
     fs.writeSync(lockFd, String(process.pid) + '\n');
   } catch (err) {
     if (err && err.code === 'EEXIST') {
@@ -221,7 +243,12 @@ async function startDaemon({
       // JOB. It is worth seeing (a workspace where it repeats means two agents
       // are fighting over one device) but it is not a malfunction.
       safeObserve({ level: 'warn', event: 'daemon.lock_conflict', error_code: 'ELOCKED' });
-      const e = new Error('device session daemon already starting for this workspace (lock held)');
+      // cleanStale has already reaped a dead holder's lock, so this one names a
+      // live daemon. If no start is in progress, that daemon is stuck, and
+      // `session end` is what stops it.
+      const e = new Error(
+        'device session daemon already starting for this workspace (lock held); if none is starting, run `mauto session end`'
+      );
       e.code = 'ELOCKED';
       throw e;
     }
@@ -463,7 +490,7 @@ async function startDaemon({
       /* best-effort */
     }
 
-    safeUnlink(paths.socketPath(projectRoot));
+    safeUnlink(socketPath);
     safeUnlink(paths.pidFilePath(projectRoot));
     safeUnlink(paths.handlePath(projectRoot));
     releaseLock();
@@ -670,14 +697,13 @@ async function startDaemon({
     });
   });
 
-  const socketPath = paths.socketPath(projectRoot);
-
   // A start that fails once the connection exists: record why, undo what was
-  // built (the listening socket, if any, then the engine), release the lock, and
+  // built (the socket, if the server is listening, then the engine), release
+  // the lock, and
   // rethrow — so a failed start never leaks the mobile-mcp child or wedges the
   // next spawn behind a held lock. The connect failure above has no `close` yet
   // and so does its own, smaller teardown.
-  async function abortStart({ event, err, listening }) {
+  async function abortStart({ event, err }) {
     safeObserve({
       level: 'error',
       event,
@@ -685,7 +711,7 @@ async function startDaemon({
       message: err && (err.message || String(err)),
       dur_ms: Date.now() - startedAtMs,
     });
-    if (listening) {
+    if (server.listening) {
       await new Promise((resolve) => server.close(() => resolve()));
       safeUnlink(socketPath);
     }
@@ -698,19 +724,14 @@ async function startDaemon({
     throw err;
   }
 
+  // The socket is 0600 from the bind on (session-dir.js listenOwnerOnly).
   try {
-    await new Promise((resolve, reject) => {
-      server.once('error', reject);
-      server.listen(socketPath, () => {
-        server.removeListener('error', reject);
-        resolve();
-      });
-    });
+    await listenOwnerOnly(server, socketPath);
   } catch (err) {
     // listen failed (e.g. EADDRINUSE from a double-spawn that beat us to the
-    // bind, or a recycled-pid wedge). Nothing is listening, so only the engine
-    // and the lock are undone.
-    await abortStart({ event: 'daemon.listen_failure', err, listening: false });
+    // bind, or a recycled-pid wedge): only the engine and the lock are undone.
+    // A failed chmod comes after the bind, so the listening socket goes too.
+    await abortStart({ event: 'daemon.listen_failure', err });
   }
 
   // The engine died between connect and listen. Fail the start exactly like a
@@ -720,7 +741,7 @@ async function startDaemon({
   if (!engineAlive) {
     const err = new Error('mobile-mcp exited before the device session daemon was ready');
     err.code = 'ENGINE_EXITED';
-    await abortStart({ event: 'daemon.connect_failure', err, listening: true });
+    await abortStart({ event: 'daemon.connect_failure', err });
   }
 
   // Serving from here on: an engine exit reaps the daemon (see onEngineExit).
@@ -741,8 +762,10 @@ async function startDaemon({
     started_at: new Date().toISOString(),
     idle_ms: idleMs,
   };
-  fs.writeFileSync(paths.handlePath(projectRoot), JSON.stringify(handle, null, 2) + '\n');
-  fs.writeFileSync(paths.pidFilePath(projectRoot), String(process.pid) + '\n');
+  // Atomic and confined: a planted handle or pid link is replaced by the
+  // rename, never written through, and a reader never sees half a handle.
+  atomicWorkspaceWrite(projectRoot, paths.handlePath(projectRoot), JSON.stringify(handle, null, 2) + '\n');
+  atomicWorkspaceWrite(projectRoot, paths.pidFilePath(projectRoot), String(process.pid) + '\n');
 
   process.on('SIGTERM', onSignal);
   process.on('SIGINT', onSignal);

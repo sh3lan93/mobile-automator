@@ -69,7 +69,9 @@ const fakeBridgeFactory = async () => ({
   close: async () => {},
 });
 
-async function runIn(root, argv, { deviceBridgeFactory = fakeBridgeFactory, emitterOverrides = {} } = {}) {
+// `cwd` (default `root`) is where the verb runs from, and where discovery
+// starts: a subdirectory of `root` for a verb run below the workspace.
+async function runIn(root, argv, { deviceBridgeFactory = fakeBridgeFactory, emitterOverrides = {}, cwd = root } = {}) {
   const { calls, emitters: base } = captureEmitters();
   const emitters = { ...base, ...emitterOverrides };
   const written = [];
@@ -83,8 +85,8 @@ async function runIn(root, argv, { deviceBridgeFactory = fakeBridgeFactory, emit
   });
   try {
     await buildProgram({
-      cwd: root,
-      workspace: findWorkspaceRoot(root),
+      cwd,
+      workspace: findWorkspaceRoot(cwd),
       emitters,
       deviceBridgeFactory,
     }).parseAsync(['node', 'mauto', ...argv]);

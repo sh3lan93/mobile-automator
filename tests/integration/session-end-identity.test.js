@@ -125,7 +125,7 @@ test("an unanswering marker-less daemon (mauto <= 0.27.x) is unproven, never sig
     expect(await endSession(mine)).toEqual({ outcome: 'unproven', pid: daemon.pid });
     expect(pidAlive(daemon.pid)).toBe(true);
     // Why 'already_stopped' was a lie: the lock is still held as far as a spawn knows.
-    expect(cleanStale(mine)).toEqual({ cleaned: false, livePid: daemon.pid });
+    expect(cleanStale(mine, { socketPath: paths.socketPath(mine) })).toEqual({ cleaned: false, livePid: daemon.pid });
   } finally {
     killGroup(daemon.pid);
   }

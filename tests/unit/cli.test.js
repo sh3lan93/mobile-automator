@@ -1434,9 +1434,18 @@ describe('cli handlers', () => {
   // --- Slice 3: workspace + reasoning-delivery floor ----------------------
 
   describe('handleSetup', () => {
+    // What discovery reports for a fresh temp dir.
+    const noWorkspace = (dir) => ({ kind: 'none', searched: [dir] });
+
+    test('requires the discovery result: there is no fabricated default', () => {
+      const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-'));
+      expect(() => handleSetup({ projectRoot }, { mode: 'aware' })).toThrow(/requires the discovery result/);
+      expect(fs.existsSync(path.join(projectRoot, '.mobile-automator'))).toBe(false);
+    });
+
     test('scaffolds into an injected projectRoot and maps aware->platform-aware', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-'));
-      const { envelope, exitKind } = handleSetup({ projectRoot }, { mode: 'aware' });
+      const { envelope, exitKind } = handleSetup({ projectRoot, workspace: noWorkspace(projectRoot) }, { mode: 'aware' });
       expect(exitKind).toBe('ok');
       expect(envelope.ok).toBe(true);
       expect(envelope.data.mode).toBe('platform-aware');
@@ -1446,29 +1455,31 @@ describe('cli handlers', () => {
 
     test('maps agnostic->platform-agnostic and writes config mode', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-'));
-      const { envelope } = handleSetup({ projectRoot }, { mode: 'agnostic' });
+      const { envelope } = handleSetup({ projectRoot, workspace: noWorkspace(projectRoot) }, { mode: 'agnostic' });
       expect(envelope.data.mode).toBe('platform-agnostic');
       const cfg = JSON.parse(fs.readFileSync(path.join(projectRoot, '.mobile-automator', 'config.json'), 'utf8'));
       expect(cfg.mode).toBe('platform-agnostic');
     });
 
-    test('refuses when discovery reports a legacy workspace (legacyRoot)', () => {
+    test('refuses when discovery reports a legacy workspace', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-legacy-'));
-      const { exitKind, envelope } = handleSetup({ projectRoot, legacyRoot: projectRoot }, { mode: 'aware' });
+      const workspace = { kind: 'legacy', dir: projectRoot, searched: [projectRoot] };
+      const { exitKind, envelope } = handleSetup({ projectRoot, workspace }, { mode: 'aware' });
       expect(exitKind).toBe('environment');
       expect(envelope.error.message).toContain('legacy');
       expect(fs.existsSync(path.join(projectRoot, '.mobile-automator'))).toBe(false);
     });
 
-    test('scaffolds normally when no legacy workspace is reported', () => {
+    test('scaffolds normally when discovery found nothing', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-both-'));
-      const { envelope } = handleSetup({ projectRoot, legacyRoot: null }, { mode: 'aware' });
+      const workspace = { kind: 'none', searched: [projectRoot] };
+      const { envelope } = handleSetup({ projectRoot, workspace }, { mode: 'aware' });
       expect(envelope.ok).toBe(true);
     });
 
     test('defaults to platform-aware when no --mode given', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-'));
-      const { envelope } = handleSetup({ projectRoot }, {});
+      const { envelope } = handleSetup({ projectRoot, workspace: noWorkspace(projectRoot) }, {});
       expect(envelope.data.mode).toBe('platform-aware');
       expect(envelope.data.mode_changed).toBeNull();
     });
@@ -1476,8 +1487,8 @@ describe('cli handlers', () => {
     // #333 repro: setup --mode agnostic, then setup with no --mode.
     test('re-running without --mode keeps an existing workspace\'s mode', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-keep-'));
-      handleSetup({ projectRoot }, { mode: 'agnostic' });
-      const { envelope, exitKind } = handleSetup({ projectRoot }, {});
+      handleSetup({ projectRoot, workspace: noWorkspace(projectRoot) }, { mode: 'agnostic' });
+      const { envelope, exitKind } = handleSetup({ projectRoot, workspace: noWorkspace(projectRoot) }, {});
       expect(exitKind).toBe('ok');
       expect(envelope.data.mode).toBe('platform-agnostic');
       expect(envelope.data.mode_changed).toBeNull();
@@ -1487,27 +1498,30 @@ describe('cli handlers', () => {
 
     test('an explicit --mode that changes the mode is reported as mode_changed', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-change-'));
-      handleSetup({ projectRoot }, { mode: 'agnostic' });
-      const { envelope } = handleSetup({ projectRoot }, { mode: 'aware' });
+      handleSetup({ projectRoot, workspace: noWorkspace(projectRoot) }, { mode: 'agnostic' });
+      const { envelope } = handleSetup({ projectRoot, workspace: noWorkspace(projectRoot) }, { mode: 'aware' });
       expect(envelope.data.mode).toBe('platform-aware');
       expect(envelope.data.mode_changed).toStrictEqual({ from: 'platform-agnostic', to: 'platform-aware' });
     });
 
     test('rejects an unknown mode', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-'));
-      const { exitKind } = handleSetup({ projectRoot }, { mode: 'windows' });
+      const { exitKind } = handleSetup({ projectRoot, workspace: noWorkspace(projectRoot) }, { mode: 'windows' });
       expect(exitKind).toBe('invalid_input');
     });
 
     test('a fresh setup reports no upgrades', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-gi-'));
-      const { envelope } = handleSetup({ projectRoot }, { mode: 'aware' });
+      const { envelope } = handleSetup({ projectRoot, workspace: noWorkspace(projectRoot) }, { mode: 'aware' });
       expect(envelope.data.upgraded).toEqual([]);
     });
 
     it('setup surfaces the telemetry notice in its envelope rather than printing a banner', () => {
       const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-setup-notice-'));
-      const { envelope } = handleSetup({ projectRoot, env: userConfigEnv() }, { mode: 'aware' });
+      const { envelope } = handleSetup(
+        { projectRoot, workspace: noWorkspace(projectRoot), env: userConfigEnv() },
+        { mode: 'aware' }
+      );
       expect(envelope.data.telemetry).toEqual({
         enabled: false,
         reason: 'not_configured',
@@ -1536,7 +1550,7 @@ describe('cli handlers', () => {
       it('reports a committed opt-in this user never made as off, not_consented_locally', () => {
         const projectRoot = optedInWorkspace();
         const env = userConfigEnv({ MAUTO_TELEMETRY_TOKEN: 'phc_real' });
-        const { envelope } = handleSetup({ projectRoot, env }, {});
+        const { envelope } = handleSetup({ projectRoot, workspace: noWorkspace(projectRoot), env }, {});
         expect(envelope.data.telemetry).toMatchObject({ enabled: false, reason: 'not_consented_locally' });
         expect(envelope.data.telemetry.enabled).toBe(telemetry.decideNow(projectRoot, env).enabled);
         expect(envelope.data.telemetry.notice).toBe(telemetry.CONSENT_NOTICE);
@@ -1546,7 +1560,7 @@ describe('cli handlers', () => {
         const projectRoot = optedInWorkspace();
         const env = userConfigEnv({ MAUTO_TELEMETRY_TOKEN: 'phc_real' });
         grantLocalConsent(projectRoot, env);
-        const { envelope } = handleSetup({ projectRoot, env }, {});
+        const { envelope } = handleSetup({ projectRoot, workspace: noWorkspace(projectRoot), env }, {});
         expect(envelope.data.telemetry).toMatchObject({ enabled: true, reason: 'enabled' });
         expect(envelope.data.telemetry.enabled).toBe(telemetry.decideNow(projectRoot, env).enabled);
       });
