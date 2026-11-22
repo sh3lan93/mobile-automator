@@ -426,7 +426,7 @@ describe('the spool sink is constructed only when telemetry is enabled', () => {
       fs.existsSync(spoolPath(root, {})) ? fs.readFileSync(spoolPath(root, {}), 'utf8').trim().split('\n') : [];
     const event = { level: 'info', event: 'call.end', ok: true };
 
-    // consentGate reads Date.now at construction; jest's modern fake timers
+    // decideForProject reads Date.now to age its cache; jest's modern fake timers
     // replace it, so the clock is driven here without a test-only option.
     beforeEach(() => {
       jest.useFakeTimers();
@@ -443,11 +443,11 @@ describe('the spool sink is constructed only when telemetry is enabled', () => {
 
       setLocalConsent(root, false, { env: TOKEN });
 
-      // Inside the recheck interval the gate still holds the decision it last
+      // Inside the max age the cache still holds the decision it last
       // took, so this event MAY spool: a withdrawal is noticed within a
       // second, not instantly. That bound is what keeps a file read off every
       // event.
-      jest.advanceTimersByTime(telemetry.CONSENT_RECHECK_MS - 1);
+      jest.advanceTimersByTime(telemetry.DECISION_MAX_AGE_MS - 1);
       observe(event);
       expect(spoolLines(root).length).toBeLessThanOrEqual(2);
       const before = spoolLines(root).length;
@@ -461,7 +461,7 @@ describe('the spool sink is constructed only when telemetry is enabled', () => {
       expect(spoolLines(root)).toHaveLength(before);
     });
 
-    it('the daemon stops spooling once the config flips to disabled, with no memo reset', () => {
+    it('the daemon stops spooling once the config flips to disabled, with no cache reset', () => {
       const root = configuredWorkspace({ telemetry: { enabled: true } });
       const observe = boundRecorder({ projectRoot: root, env: TOKEN, fields: { src: 'daemon' } });
       observe(event);
@@ -471,7 +471,7 @@ describe('the spool sink is constructed only when telemetry is enabled', () => {
         path.join(root, '.mobile-automator', 'config.json'),
         JSON.stringify({ telemetry: { enabled: false } }, null, 2)
       );
-      jest.advanceTimersByTime(telemetry.CONSENT_RECHECK_MS);
+      jest.advanceTimersByTime(telemetry.DECISION_MAX_AGE_MS);
       observe(event);
       expect(spoolLines(root)).toHaveLength(1);
     });

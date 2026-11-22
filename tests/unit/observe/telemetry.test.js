@@ -170,19 +170,24 @@ describe('telemetry control surface', () => {
     expect(consentReads(workspace())).toBe(0);
   });
 
-  it('decides afresh on every decideNow call, with no memo to reset', () => {
+  it('decides afresh on every decideNow call, with no cache to reset', () => {
     const root = workspace(ON);
     const env = tokenEnv();
     grantLocalConsent(root, env);
-    expect(telemetry.decideNow(root, env).enabled).toBe(true);
-    expect(telemetry.decideForProject(root, env).enabled).toBe(true);
-    fs.writeFileSync(path.join(root, '.mobile-automator', 'config.json'), JSON.stringify({ telemetry: { enabled: false } }));
-    expect(telemetry.decideNow(root, env)).toEqual({ enabled: false, reason: 'not_configured' });
-    // The memo is what a one-shot verb wants and a long-lived caller must not use.
-    expect(telemetry.decideForProject(root, env).enabled).toBe(true);
+    jest.useFakeTimers();
+    try {
+      expect(telemetry.decideNow(root, env).enabled).toBe(true);
+      expect(telemetry.decideForProject(root, env).enabled).toBe(true);
+      fs.writeFileSync(path.join(root, '.mobile-automator', 'config.json'), JSON.stringify({ telemetry: { enabled: false } }));
+      expect(telemetry.decideNow(root, env)).toEqual({ enabled: false, reason: 'not_configured' });
+      // decideForProject's cache holds a decision for up to a second.
+      expect(telemetry.decideForProject(root, env).enabled).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
-  it('invalidates the memoised decision when the config is written through setEnabled', () => {
+  it('invalidates the cached decision when the config is written through setEnabled', () => {
     const root = workspace();
     const env = tokenEnv();
     expect(telemetry.decideForProject(root, env))
@@ -214,7 +219,7 @@ describe('telemetry control surface', () => {
     expect(Object.keys(record.projects)).toEqual([fs.realpathSync(other)]);
   });
 
-  it('writes the config before the consent record, and always clears the memo', () => {
+  it('writes the config before the consent record, and always clears the cache', () => {
     const root = workspace(ON);
     const env = tokenEnv();
     grantLocalConsent(root, env);
@@ -225,7 +230,7 @@ describe('telemetry control surface', () => {
     fs.mkdirSync(path.join(file, 'blocker'), { recursive: true });
 
     expect(() => telemetry.setEnabled(root, false, env)).toThrow();
-    // The disable still landed, and the memoised "enabled" did not survive it.
+    // The disable still landed, and the cached "enabled" did not survive it.
     const cfg = JSON.parse(fs.readFileSync(path.join(root, '.mobile-automator', 'config.json'), 'utf8'));
     expect(cfg.telemetry.enabled).toBe(false);
     expect(telemetry.decideForProject(root, env)).toEqual({ enabled: false, reason: 'not_configured' });
@@ -270,9 +275,9 @@ describe('telemetry control surface', () => {
   });
 });
 
-describe('consentGate: the long-lived caller\'s re-check (#348)', () => {
-  // A daemon outlives the verb that started it, so a decision taken once at
-  // spawn would keep sending after `mauto telemetry disable`.
+describe('decideForProject: a decision cached for at most a second (#348)', () => {
+  // A daemon outlives the verb that started it, so a decision cached for the
+  // life of the process would keep sending after `mauto telemetry disable`.
   function consented() {
     const root = workspace(ON);
     const env = tokenEnv();
@@ -281,85 +286,75 @@ describe('consentGate: the long-lived caller\'s re-check (#348)', () => {
   }
   const configOpens = (spy) => spy.mock.calls.filter(([p]) => String(p).endsWith('config.json')).length;
 
-  it('re-checks at most once per CONSENT_RECHECK_MS', () => {
-    expect(telemetry.CONSENT_RECHECK_MS).toBe(1000);
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-11-21T12:00:00Z'));
+  });
+  afterEach(() => jest.useRealTimers());
+
+  it('re-reads at most once per DECISION_MAX_AGE_MS', () => {
+    expect(telemetry.DECISION_MAX_AGE_MS).toBe(1000);
     const { root, env } = consented();
-    let t = 0;
-    const gate = telemetry.consentGate(root, env, { now: () => t });
     const spy = jest.spyOn(fs, 'openSync');
-    t = 999;
-    expect(gate()).toBe(true);
-    expect(gate()).toBe(true);
-    expect(configOpens(spy)).toBe(0);
-    t = 1000;
-    expect(gate()).toBe(true);
-    expect(configOpens(spy)).toBe(1);
-    spy.mockRestore();
+    try {
+      expect(telemetry.decideForProject(root, env).enabled).toBe(true);
+      expect(configOpens(spy)).toBe(1);
+      jest.advanceTimersByTime(999);
+      expect(telemetry.decideForProject(root, env).enabled).toBe(true);
+      expect(telemetry.decideForProject(root, env).enabled).toBe(true);
+      expect(configOpens(spy)).toBe(1);
+      jest.advanceTimersByTime(1);
+      expect(telemetry.decideForProject(root, env).enabled).toBe(true);
+      expect(configOpens(spy)).toBe(2);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
-  it('flips to false once consent is withdrawn and the interval has passed', () => {
+  it('flips to off once consent is withdrawn and the max age has passed', () => {
     const { root, env } = consented();
-    let t = 0;
-    const gate = telemetry.consentGate(root, env, { now: () => t });
-    expect(gate()).toBe(true);
+    expect(telemetry.decideForProject(root, env).enabled).toBe(true);
     consent.setLocalConsent(root, false, { env });
-    t = 500;
-    expect(gate()).toBe(true);
-    t = 1000;
-    expect(gate()).toBe(false);
+    jest.advanceTimersByTime(500);
+    expect(telemetry.decideForProject(root, env).enabled).toBe(true);
+    jest.advanceTimersByTime(500);
+    expect(telemetry.decideForProject(root, env))
+      .toEqual({ enabled: false, reason: 'not_consented_locally' });
   });
 
-  it('flips to false when the config is turned off under it', () => {
+  it('flips to off when the config is turned off under it', () => {
     const { root, env } = consented();
-    let t = 0;
-    const gate = telemetry.consentGate(root, env, { now: () => t });
+    expect(telemetry.decideForProject(root, env).enabled).toBe(true);
     fs.writeFileSync(path.join(root, '.mobile-automator', 'config.json'), JSON.stringify({ telemetry: { enabled: false } }));
-    t = 1500;
-    expect(gate()).toBe(false);
+    jest.advanceTimersByTime(1500);
+    expect(telemetry.decideForProject(root, env)).toEqual({ enabled: false, reason: 'not_configured' });
   });
 
-  it('starts from an injected initial decision without deciding again', () => {
+  it('re-reads when the clock goes backwards rather than trusting a decision of unknown age', () => {
     const { root, env } = consented();
-    let t = 0;
+    expect(telemetry.decideForProject(root, env).enabled).toBe(true);
+    consent.setLocalConsent(root, false, { env });
+    jest.setSystemTime(new Date('2026-11-21T11:59:59.900Z'));
+    expect(telemetry.decideForProject(root, env).enabled).toBe(false);
+  });
+
+  it('ages each project root on its own', () => {
+    const a = consented();
+    const b = workspace(ON);
+    grantLocalConsent(b, a.env);
+    telemetry.decideForProject(a.root, a.env);
+    jest.advanceTimersByTime(600);
+    telemetry.decideForProject(b, a.env);
+    jest.advanceTimersByTime(400);
     const spy = jest.spyOn(fs, 'openSync');
-    const gate = telemetry.consentGate(root, env, { initial: { enabled: false, reason: 'not_configured' }, now: () => t });
-    expect(gate()).toBe(false);
-    expect(configOpens(spy)).toBe(0);
-    t = 1000;
-    expect(gate()).toBe(true);
-    spy.mockRestore();
-  });
-
-  it('honours a custom interval', () => {
-    const { root, env } = consented();
-    let t = 0;
-    const gate = telemetry.consentGate(root, env, { now: () => t, intervalMs: 10 });
-    consent.setLocalConsent(root, false, { env });
-    t = 10;
-    expect(gate()).toBe(false);
-  });
-
-  it('re-checks when the clock goes backwards rather than trusting a stale decision', () => {
-    const { root, env } = consented();
-    let t = 5000;
-    const gate = telemetry.consentGate(root, env, { now: () => t });
-    consent.setLocalConsent(root, false, { env });
-    t = 0;
-    expect(gate()).toBe(false);
-  });
-
-  it('never throws, and fails closed when it cannot tell the time', () => {
-    const { root, env } = consented();
-    let broken = false;
-    const gate = telemetry.consentGate(root, env, {
-      now: () => {
-        if (broken) throw new Error('clock gone');
-        return 0;
-      },
-    });
-    broken = true;
-    expect(() => gate()).not.toThrow();
-    expect(gate()).toBe(false);
+    try {
+      telemetry.decideForProject(a.root, a.env);
+      telemetry.decideForProject(b, a.env);
+      // Only a's entry is a second old; b's is still fresh.
+      expect(configOpens(spy)).toBe(1);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
 

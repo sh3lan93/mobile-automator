@@ -116,7 +116,7 @@ function resolveEngineTelemetry(env = process.env) {
   return { disableValue: value, enabled: value === '', reason: 'user_env' };
 }
 
-// The decision for a project, taken now: no memo. The one place the
+// The decision for a project, taken now: no cache. The one place the
 // precedence above meets the filesystem.
 function decideNow(projectRoot, env = process.env) {
   try {
@@ -134,52 +134,27 @@ function decideNow(projectRoot, env = process.env) {
   }
 }
 
-// decideNow, memoised per project root, for one-shot verbs. resolveLevels() is
-// re-derived per record() call because it reads only env; this reads
-// config.json (and the consent record), and a file read per event is not
-// acceptable on a path that runs on every verb. A one-shot verb decides once
-// per process, which is correct by construction.
+// decideNow, cached per project root for at most DECISION_MAX_AGE_MS. The
+// decision reads config.json (and the consent record), and a file read per
+// event is not acceptable on a path that runs on every verb, so it is cached;
+// and a cache that never expires is what let a running daemon keep sending
+// after the user withdrew consent (#348), so it expires.
 //
-// Long-lived callers (the daemon) must NOT use this: they call decideNow or
-// consentGate. The memo pins the first decision for the life of the process,
-// and that is exactly what let a running daemon keep sending after the user
-// withdrew consent (#348).
-const memo = new Map();
+// A one-shot verb, whose writes land within the same second, therefore reads
+// once; a long-lived caller (the daemon) re-reads at most once a second. A
+// clock that steps backwards re-reads rather than trusting a decision of
+// unknown age.
+const DECISION_MAX_AGE_MS = 1000;
+const cache = new Map();
 
 function decideForProject(projectRoot, env = process.env) {
   const key = String(projectRoot);
-  if (!memo.has(key)) memo.set(key, decideNow(projectRoot, env));
-  return memo.get(key);
-}
-
-// How often a long-lived caller re-reads the decision. Once a second bounds
-// how long a withdrawal goes unnoticed without a file read per event.
-const CONSENT_RECHECK_MS = 1000;
-
-// A re-checking decision for a long-lived caller: returns a function that says
-// whether telemetry is on, re-running decideNow at most once per `intervalMs`.
-// `initial` seeds it with a decision the caller already holds. A clock that
-// steps backwards re-checks rather than trusting a decision of unknown age.
-// The returned function never throws; when it cannot tell, it says no.
-function consentGate(
-  projectRoot,
-  env = process.env,
-  { initial, now = Date.now, intervalMs = CONSENT_RECHECK_MS } = {}
-) {
-  let decision = initial || decideNow(projectRoot, env);
-  let checkedAt = now();
-  return function telemetryAllowed() {
-    try {
-      const t = now();
-      if (t - checkedAt >= intervalMs || t < checkedAt) {
-        decision = decideNow(projectRoot, env);
-        checkedAt = t;
-      }
-      return decision.enabled === true;
-    } catch (_) {
-      return false;
-    }
-  };
+  const now = Date.now();
+  const hit = cache.get(key);
+  if (hit && now >= hit.at && now - hit.at < DECISION_MAX_AGE_MS) return hit.decision;
+  const decision = decideNow(projectRoot, env);
+  cache.set(key, { decision, at: now });
+  return decision;
 }
 
 // The write behind `mauto telemetry enable|disable`: the config key, then this
@@ -188,27 +163,27 @@ function consentGate(
 // A write through the module that owns the decision also invalidates it, so no
 // caller can forget a pairing it never sees; the delete is in a finally so a
 // failed write cannot leave a stale decision, and it is surgical: the affected
-// root's key only; other roots' memoised decisions survive.
+// root's key only; other roots' cached decisions survive.
 //
 // `config set` cannot route through this: its raw CLI strings need coerceValue
 // first, so that write stays in cli.js. It writes the config key only, never
 // the consent record. That path does not invalidate, and stays harmless for as
-// long as nothing seeds the memo before a handler's own report in a one-shot
+// long as nothing seeds the cache before a handler's own report in a one-shot
 // verb process.
 function setEnabled(projectRoot, value, env = process.env) {
   try {
     configManager.set(projectRoot, 'telemetry.enabled', value);
     setLocalConsent(projectRoot, value, { env });
   } finally {
-    memo.delete(String(projectRoot));
+    cache.delete(String(projectRoot));
   }
 }
 
 // Test isolation only: production writes go through setEnabled above. Kept
 // because a test process is long-lived where a verb process is not, and one
-// memo spans every workspace the suite builds.
+// cache spans every workspace the suite builds.
 function _resetMemo() {
-  memo.clear();
+  cache.clear();
 }
 
 // The disclosure is COMPUTED from the catalog, never restated. That is what
@@ -230,8 +205,7 @@ module.exports = {
   resolveEngineTelemetry,
   decideNow,
   decideForProject,
-  CONSENT_RECHECK_MS,
-  consentGate,
+  DECISION_MAX_AGE_MS,
   setEnabled,
   _resetMemo,
   sentFields,

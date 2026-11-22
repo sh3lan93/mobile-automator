@@ -51,9 +51,9 @@ function makeFlusher({
     // is not merely unused here, it is not REACHED. The unit suite injects a
     // transport that throws if called and asserts this line returns first.
     //
-    // decideNow, never the memoised decideForProject, here and before every
+    // decideNow, never the cached decideForProject, here and before every
     // postBatch below (#348). The daemon builds one flusher and drains with it
-    // for its whole life; a memo pinned the first flush's decision for that
+    // for its whole life; a memo once pinned the first flush's decision for that
     // life, so `mauto telemetry disable` never reached a daemon that was
     // already running, and it kept uploading. Re-reading consent before every
     // upload is what makes a withdrawal reach it. The cost is two small file
