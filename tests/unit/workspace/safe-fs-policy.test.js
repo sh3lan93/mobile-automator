@@ -1,15 +1,13 @@
 'use strict';
 
 // safe-fs's generic primitives for a caller with its own rules: dirPolicy,
-// checkDir (one directory), safeDir's policy for its last component, and
-// isOwnLeaf (a leaf that cannot be opened). Every policy here is the test's
+// checkDir (one directory) and safeDir's policy for its last component. Every policy here is the test's
 // own, so these pin the primitives, not any caller's policy; the device
 // session's policies built on them (#346) are in
 // tests/unit/device/session-dir.test.js. The fixture is
 // tests/helpers/safe-fs-fixture.js.
 
 const fs = require('fs');
-const net = require('net');
 const path = require('path');
 
 const {
@@ -18,7 +16,6 @@ const {
   dirPolicy,
   checkDir,
   safeDir,
-  isOwnLeaf,
 } = require('../../../src/workspace/safe-fs');
 const {
   REAL_UID,
@@ -289,78 +286,5 @@ describe('a refusal is worded by its policy', () => {
     const err = expectUnsafe(() => safeDir(root, ws, {}, { getuid: () => REAL_UID + 1 }), 'foreign_owner');
     expect(err.message.startsWith(`Refusing to use workspace path ${ws}: `)).toBe(true);
     expect(err.hint).toContain('MAUTO_TRUST_WORKSPACE_OWNER=1');
-  });
-});
-
-// A leaf open(2) refuses (a socket), checked by lstat. A predicate.
-describe('isOwnLeaf', () => {
-  const SOCKET_NO_OVERRIDE = { type: 'socket', trustOverride: false };
-  let servers;
-  beforeEach(() => {
-    servers = [];
-  });
-  afterEach(async () => {
-    await Promise.all(servers.map((srv) => new Promise((resolve) => srv.close(() => resolve()))));
-  });
-
-  function listen(sock) {
-    const server = net.createServer();
-    servers.push(server);
-    return new Promise((resolve, reject) => {
-      server.once('error', reject);
-      server.listen(sock, () => resolve(server));
-    });
-  }
-
-  it('true for a real leaf of that type that is ours', async () => {
-    const sock = path.join(base, 's.sock');
-    await listen(sock);
-    expect(isOwnLeaf(sock, SOCKET_NO_OVERRIDE)).toBe(true);
-  });
-
-  it('false for a leaf of another type', () => {
-    const file = path.join(base, 's.sock');
-    fs.writeFileSync(file, 'x');
-    expect(isOwnLeaf(file, SOCKET_NO_OVERRIDE)).toBe(false);
-    expect(isOwnLeaf(file, { type: 'file', trustOverride: false })).toBe(true);
-  });
-
-  it('false for a link to a real leaf of ours', async () => {
-    const real = path.join(base, 'real.sock');
-    await listen(real);
-    const sock = path.join(base, 's.sock');
-    fs.symlinkSync(real, sock);
-    expect(isOwnLeaf(sock, SOCKET_NO_OVERRIDE)).toBe(false);
-  });
-
-  it('a foreign leaf is false without trustOverride, even with MAUTO_TRUST_WORKSPACE_OWNER=1', async () => {
-    const sock = path.join(base, 's.sock');
-    await listen(sock);
-    expect(isOwnLeaf(sock, SOCKET_NO_OVERRIDE, { fs: foreignFs(['lstatSync']), env: OVERRIDE })).toBe(false);
-  });
-
-  it('with trustOverride, the override lets the same foreign leaf pass', async () => {
-    const sock = path.join(base, 's.sock');
-    await listen(sock);
-    const rule = { type: 'socket', trustOverride: true };
-    expect(isOwnLeaf(sock, rule, { fs: foreignFs(['lstatSync']), env: OVERRIDE })).toBe(true);
-    expect(isOwnLeaf(sock, rule, { fs: foreignFs(['lstatSync']), env: {} })).toBe(false);
-  });
-
-  it('false for a missing leaf; any other fs error propagates', () => {
-    expect(isOwnLeaf(path.join(base, 'nope.sock'), SOCKET_NO_OVERRIDE)).toBe(false);
-    const broken = {
-      ...fs,
-      lstatSync: () => {
-        throw Object.assign(new Error('EIO'), { code: 'EIO' });
-      },
-    };
-    expect(() => isOwnLeaf(path.join(base, 's.sock'), SOCKET_NO_OVERRIDE, { fs: broken })).toThrow('EIO');
-  });
-
-  it('refuses an incomplete rule: an unknown type, or no trustOverride', () => {
-    const p = path.join(base, 'x');
-    expect(() => isOwnLeaf(p, { type: 'fifo', trustOverride: false })).toThrow(/unknown type/);
-    expect(() => isOwnLeaf(p, { type: 'socket' })).toThrow(/trustOverride/);
   });
 });

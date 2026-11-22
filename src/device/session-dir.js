@@ -16,21 +16,21 @@
 //     (session-paths.js privateSocketDir), held to SOCKET_DIR: a real 0700
 //     directory of ours, whatever MAUTO_TRUST_WORKSPACE_OWNER says (D-d).
 //     ensureSessionDirs adds it.
-//   - the socket itself is held to SOCKET: a real socket, not a link, owned
-//     by us, no override (D-d). Before connecting, the client asks
+//   - the socket itself must be a real socket, not a link, owned by us, with
+//     no override (D-d): isOwnSocket. Before connecting, the client asks
 //     verifySocket. It never throws: a socket that fails any check reads as
 //     "no daemon here", so the verb starts its own instead of talking to
 //     someone else's.
 //   - the daemon binds through listenOwnerOnly, so the socket is never usable
 //     by another user, even between the bind and the chmod.
 //
-// The checks themselves are safe-fs's generic primitives (checkDir, safeDir,
-// isOwnLeaf); the policies and their wording are this module's.
+// The directory checks are safe-fs's generic primitives (checkDir, safeDir);
+// the policies, their wording and the socket check are this module's.
 
 const fs = require('fs');
 
 const paths = require('./session-paths');
-const { WORKSPACE_DIR, dirPolicy, checkDir, safeDir, isOwnLeaf } = require('../workspace/safe-fs');
+const { WORKSPACE_DIR, dirPolicy, checkDir, safeDir } = require('../workspace/safe-fs');
 
 // .session/: a workspace directory, so it keeps the workspace wording and the
 // owner override (a CI checkout owned by another uid), but no group or other
@@ -67,9 +67,6 @@ const SOCKET_DIR = dirPolicy({
   modeReason: 'not_private',
 });
 
-// The socket leaf: never the override (D-d).
-const SOCKET = Object.freeze({ type: 'socket', trustOverride: false });
-
 // Create (or tighten, from the 0755 an older mauto made) .session/ alone, and
 // return only once it is proven link-free and 0700. The walk makes it 0700
 // when missing; the chmod tightens an existing one. chmod follows links, so a
@@ -105,11 +102,21 @@ function ensureSessionDirs(projectRoot, deps = {}) {
   return file;
 }
 
-// Is `file` a real socket, not a link, owned by us whatever
-// MAUTO_TRUST_WORKSPACE_OWNER says? False when nothing is there; any other fs
-// error propagates. Its directory is the caller's to check first.
-function isOwnSocket(file, deps = {}) {
-  return isOwnLeaf(file, SOCKET, deps);
+// Is `file` a real socket owned by us? An lstat, because open(2) refuses a
+// socket. lstat describes a link itself, so a link is never a socket. The
+// owner is compared outright: MAUTO_TRUST_WORKSPACE_OWNER never applies to the
+// socket (D-d). False when nothing is there; any other fs error propagates.
+// Its directory is the caller's to check first. `deps` ({ fs, getuid }) is for
+// tests.
+function isOwnSocket(file, { fs: f = fs, getuid = process.getuid } = {}) {
+  let st;
+  try {
+    st = f.lstatSync(file);
+  } catch (err) {
+    if (err.code === 'ENOENT') return false;
+    throw err;
+  }
+  return st.isSocket() && st.uid === getuid();
 }
 
 // May the client connect to this workspace's socket? Returns the socket path

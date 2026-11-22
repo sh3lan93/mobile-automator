@@ -226,35 +226,6 @@ function safeDir(projectRoot, dir, { create = false, mode, policy = WORKSPACE_DI
   return real;
 }
 
-// The leaf kinds isOwnLeaf can check for.
-const LEAF_TYPES = Object.freeze({
-  socket: (st) => st.isSocket(),
-  file: (st) => st.isFile(),
-});
-
-// Is `file` a real `type` (not a link to one) owned by us, under `trustOverride`
-// (whether MAUTO_TRUST_WORKSPACE_OWNER=1 may skip the owner comparison)? For a
-// leaf that cannot be opened to check (open(2) refuses a socket), so this is an
-// lstat. A predicate, not a refusal: false when it is anything else, or when
-// nothing is there; any other fs error propagates. Its directory is the
-// caller's to check first.
-function isOwnLeaf(file, { type, trustOverride }, deps = {}) {
-  const isType = LEAF_TYPES[type];
-  if (!isType) throw new TypeError(`isOwnLeaf: unknown type ${type}`);
-  if (typeof trustOverride !== 'boolean') throw new TypeError('isOwnLeaf: trustOverride must be a boolean');
-  const d = resolveDeps(deps);
-  let st;
-  try {
-    st = d.fs.lstatSync(file);
-  } catch (err) {
-    if (err.code === 'ENOENT') return false;
-    throw err;
-  }
-  // lstat describes a link itself, never its target, so a link is never of
-  // `type`: the type check is the link check.
-  return isType(st) && ownedByUs(st, d, trustOverride);
-}
-
 const OPEN_SYMLINK_CODES = new Set([
   'ELOOP', // Linux and macOS: O_NOFOLLOW on a symlink
   'EMLINK', // FreeBSD's spelling of the same refusal
@@ -412,14 +383,12 @@ function readWorkspaceJsonOrNull(projectRoot, file, opts = {}, deps = {}) {
 module.exports = {
   UnsafePathError,
   // The generic primitives for a caller with its own policy (the device
-  // session, session-dir.js): build a policy, check
-  // one directory or a workspace walk under it, check a leaf that cannot be
-  // opened.
+  // session, session-dir.js): build a policy, then check one directory or a
+  // workspace walk under it.
   dirPolicy,
   WORKSPACE_DIR,
   checkDir,
   safeDir,
-  isOwnLeaf,
   openLeaf,
   openWorkspaceFile,
   createWorkspaceFile,

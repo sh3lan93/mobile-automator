@@ -3,7 +3,7 @@
 // safe-fs (#345): every workspace read/write refuses a symlinked, foreign,
 // world-writable or otherwise planted path. The fixture and its rules are in
 // tests/helpers/safe-fs-fixture.js. The primitives a caller drives with its
-// own policy (dirPolicy, checkDir, safeDir's last-component policy, isOwnLeaf)
+// own policy (dirPolicy, checkDir, safeDir's last-component policy)
 // are in safe-fs-policy.test.js; the device session's policies built on them
 // (#346) in tests/unit/device/session-dir.test.js.
 

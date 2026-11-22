@@ -5,7 +5,7 @@
 // when its directory and the socket itself check out. This file pins the
 // session's policies (.session/, the fallback socket directory, the socket),
 // their wording, and which applies where, one case per rule. The generic
-// primitives they are built on (checkDir, safeDir's policy, isOwnLeaf) are
+// primitives they are built on (checkDir, safeDir's policy) are
 // pinned in tests/unit/workspace/safe-fs-policy.test.js. Real tmp trees and
 // real listening sockets, because the guarantees are about what lstat sees;
 // only "another owner" is simulated (a wrapped lstatSync), because jest cannot
@@ -325,11 +325,27 @@ describe('isOwnSocket', () => {
   test('false for a socket owned by another uid, even with MAUTO_TRUST_WORKSPACE_OWNER=1', async () => {
     const sock = path.join(base, 's.sock');
     await listen(sock);
-    expect(isOwnSocket(sock, { fs: foreignLstat(() => true), env: { MAUTO_TRUST_WORKSPACE_OWNER: '1' } })).toBe(false);
+    // Set both ways a check could read it: the process env and an injected one.
+    const had = Object.prototype.hasOwnProperty.call(process.env, 'MAUTO_TRUST_WORKSPACE_OWNER');
+    const prev = process.env.MAUTO_TRUST_WORKSPACE_OWNER;
+    process.env.MAUTO_TRUST_WORKSPACE_OWNER = '1';
+    try {
+      expect(isOwnSocket(sock, { fs: foreignLstat(() => true), env: { MAUTO_TRUST_WORKSPACE_OWNER: '1' } })).toBe(false);
+    } finally {
+      if (had) process.env.MAUTO_TRUST_WORKSPACE_OWNER = prev;
+      else delete process.env.MAUTO_TRUST_WORKSPACE_OWNER;
+    }
   });
 
-  test('false for a missing socket', () => {
+  test('false for a missing socket; any other fs error propagates', () => {
     expect(isOwnSocket(path.join(base, 'nope.sock'))).toBe(false);
+    const broken = {
+      ...fs,
+      lstatSync: () => {
+        throw Object.assign(new Error('EIO'), { code: 'EIO' });
+      },
+    };
+    expect(() => isOwnSocket(path.join(base, 's.sock'), { fs: broken })).toThrow('EIO');
   });
 });
 
