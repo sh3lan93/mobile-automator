@@ -670,8 +670,9 @@ function createProjectFile(projectRoot, file, { mode = 0o666 } = {}, deps = {}) 
 // workspace and the project `path` is the one inProject re-roots (through an
 // aliased root it differs from the one given, and every check and write must
 // use the checked one); outside it is the given path resolved. The entry
-// points below make the choice, so no caller tests a scope's bound or swaps
-// paths itself.
+// points below make the choice, so no caller tests a scope's bound, swaps
+// paths or swaps in its own open; a caller may read `scope` only for a policy
+// of its own on top (crash get --out's roots apply outside the workspace).
 function userPath(projectRoot, file, deps) {
   const p = inProject(projectRoot, file, deps);
   if (!p) return { path: path.resolve(file), scope: 'outside' };
@@ -718,7 +719,13 @@ function userDest(projectRoot, file, deps = {}) {
 //     for a caller that refuses a bad path before it does other work (run
 //     --junit, crash get --out). A missing directory is nothing to refuse. A
 //     no-op outside the project.
-function userFile(projectRoot, file, deps = {}) {
+// `mkdirOutside` (default true): whether that open, under O_CREAT, makes a
+// missing directory outside the project. A writer whose directory must
+// already exist there (crash get --out, which realpaths it against its roots)
+// passes false, so the open creates nothing outside and a missing directory
+// fails ENOENT. The confined scopes are unaffected: their walk is the one
+// place a directory is made.
+function userFile(projectRoot, file, { mkdirOutside = true } = {}, deps = {}) {
   const target = userPath(projectRoot, file, deps);
   const { scope } = target;
   if (scope !== 'outside') {
@@ -734,7 +741,7 @@ function userFile(projectRoot, file, deps = {}) {
   return {
     ...target,
     open: (f, flags, mode = 0o666) => {
-      if (flags & nodeFs.constants.O_CREAT) {
+      if (mkdirOutside && flags & nodeFs.constants.O_CREAT) {
         resolveDeps(deps).fs.mkdirSync(path.dirname(path.resolve(f)), { recursive: true });
       }
       return openUserLeaf(f, flags, mode, deps);

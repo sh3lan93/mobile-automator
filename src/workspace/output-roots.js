@@ -20,7 +20,7 @@ const os = require('os');
 const path = require('path');
 
 const { TypedRefusal } = require('../output/typed-refusal');
-const { isInside, openUserLeaf, userFile } = require('./safe-fs');
+const { isInside, userFile } = require('./safe-fs');
 // realpath or null, not realOrResolved: a root with no realpath is skipped,
 // since it cannot contain a directory that exists.
 const { realpathOrNull } = require('../util/real-or-resolved');
@@ -69,19 +69,19 @@ function crashOutRoots(
 // nothing.
 //
 // In the workspace the roots do not apply. The write's open (userFile's
-// openWorkspaceFile under O_CREAT) is the one place that creates the missing
+// confined open under O_CREAT) is the one place that creates the missing
 // directories, walking again, and checks the leaf, so a link at the report
 // itself is refused there, before anything is written.
 //
 // Anywhere else its directory must already exist and realpath inside one of
 // the roots. Throws OutputPathRefusal when it does not; a directory that does
 // not exist (or cannot be realpath'd) throws its own fs error, which the
-// caller reports as the write failure it always was. In the project its open
-// is userFile's (openProjectFile: the walk again, then the checked leaf);
-// outside the project openUserLeaf, the checked leaf alone, creating no
+// caller reports as the write failure it always was. The open is userFile's
+// in every scope: in the project the walk again, then the checked leaf;
+// outside it, with `mkdirOutside: false`, the checked leaf alone, creating no
 // directory (the realpath just proved it exists).
 function crashOutTarget(projectRoot, out, host = {}) {
-  const target = userFile(projectRoot, out);
+  const target = userFile(projectRoot, out, { mkdirOutside: false });
   target.preflight();
   if (target.scope === 'workspace') return target;
 
@@ -91,7 +91,7 @@ function crashOutTarget(projectRoot, out, host = {}) {
     const real = realpathOrNull(root);
     return real !== null && isInside(dir, real);
   };
-  if (roots.some(holdsDir)) return target.scope === 'path' ? target : { ...target, open: openUserLeaf };
+  if (roots.some(holdsDir)) return target;
   throw new OutputPathRefusal(
     `--out resolves outside the directories a crash report may be written to: ${target.path}`,
     projectTooBroad
