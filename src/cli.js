@@ -7,7 +7,8 @@ const { version: PKG_VERSION } = require('../package.json');
 
 const { ok, fail, render, exitCodeFor } = require('./output/envelope');
 const selectionStore = require('./device/selection');
-const { FS_ERROR_CODES, deviceHint, deviceFail } = require('./output/device-fail');
+const { deviceHint, deviceFail } = require('./output/device-fail');
+const { FS_ERROR_CODES, isFsError } = require('./output/fs-error');
 const { typedFail } = require('./output/typed-fail');
 const { isTypedRefusal } = require('./output/typed-refusal');
 const { ScenarioValidator } = require('./scenario/validator');
@@ -927,9 +928,10 @@ function handleResultExport({ projectRoot, cwd = process.cwd() }, opts = {}) {
   try {
     atomicOutputWrite(projectRoot, outPath, xml);
   } catch (err) {
-    // A refused path propagates to the envelope boundary (toEnvelope), which
-    // reports its own kind, message and hint.
-    if (isTypedRefusal(err)) throw err;
+    // Only a filesystem error is this write's failure. Anything else (a
+    // refused path, a bug) propagates to the envelope boundary (toEnvelope),
+    // which reports a refusal's own kind, message and hint.
+    if (!isFsError(err)) throw err;
     return {
       envelope: fail(
         'environment',
@@ -1785,8 +1787,9 @@ function crashWriteFailure(given, err) {
 // workspace rules: every directory walked, created when missing, a link on
 // the way refused. Anywhere else it must land in one of the roots
 // src/workspace/output-roots.js allows. Both are checked before the device is
-// asked, so a bad --out costs no device work. A refusal (that rule's or a link's)
-// propagates to toEnvelope; any other fs error is the write failure. `tmpdir`,
+// asked, so a bad --out costs no device work. A filesystem error is the write
+// failure; anything else, a refusal (that rule's or a link's) included,
+// propagates to toEnvelope. `tmpdir`,
 // `platform`, `darwinTmp` and `homedir` are injectable for tests.
 async function handleCrashGet(
   { deviceBridge, projectRoot, cwd = process.cwd(), tmpdir, platform, darwinTmp, homedir },
@@ -1798,7 +1801,7 @@ async function handleCrashGet(
     try {
       target = crashOutTarget(projectRoot, path.resolve(cwd, opts.out), { tmpdir, platform, darwinTmp, homedir });
     } catch (err) {
-      if (isTypedRefusal(err)) throw err;
+      if (!isFsError(err)) throw err;
       return crashWriteFailure(opts.out, err);
     }
   }
@@ -1817,7 +1820,7 @@ async function handleCrashGet(
     try {
       writeCrashReport(target, report);
     } catch (err) {
-      if (isTypedRefusal(err)) throw err;
+      if (!isFsError(err)) throw err;
       return crashWriteFailure(opts.out, err);
     }
     return { envelope: ok({ crash_id: id, path: opts.out, truncated: false }), exitKind: 'ok' };

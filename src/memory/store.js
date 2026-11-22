@@ -9,7 +9,7 @@ const { parseRunHistory, renderRunHistory, recordInModel, countEntries } = requi
 const { atomicWorkspaceWrite } = require('../util/atomic');
 const { parseEntries, renderEntries, hasText } = require('./entries');
 const { readWorkspaceFile, readWorkspaceFileOrNull } = require('../workspace/safe-fs');
-const { isTypedRefusal } = require('../output/typed-refusal');
+const { isFsError } = require('../output/fs-error');
 
 // Cross-session memory store. Mirrors ResultStore's one-shot-process,
 // load-mutate-atomic-write shape, but the memory files are SHARED across runs
@@ -98,17 +98,19 @@ class MemoryStore {
   // Read a memory file's raw text, or '' if absent. A read failure other than
   // ENOENT is preserved as a sidecar + warning (defensive parity with
   // ResultStore) and treated as empty so a write never clobbers unread bytes.
-  // A path safe-fs refuses (#345) is never renamed: it may be a link to a file
-  // outside the workspace, so it propagates and the verb fails environment.
-  // Not readWorkspaceFileOrNull: its fallback renames the file aside, which
-  // must never happen to a refused path, so it tells the two apart itself.
+  // Only a filesystem error is set aside. A path safe-fs refuses (#345) is
+  // never renamed: it may be a link to a file outside the workspace, so it
+  // propagates and the verb fails environment with the refusal's own hint;
+  // a non-fs throw (a bug) propagates too, and fails internal rather than
+  // moving the user's memory file aside. Not readWorkspaceFileOrNull: its
+  // fallback swallows every non-refusal error.
   _readRaw(name) {
     const file = this._file(name);
     try {
       const raw = readWorkspaceFile(this.projectRoot, file);
       return raw == null ? '' : raw;
     } catch (e) {
-      if (isTypedRefusal(e)) throw e;
+      if (!isFsError(e)) throw e;
       return this._preserveCorrupt(file, e);
     }
   }

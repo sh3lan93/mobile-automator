@@ -5,9 +5,10 @@
 // the wording. ResultStoreRefusal (src/result/refusal.js), UnsafePathError
 // (src/workspace/safe-fs.js) and OutputPathRefusal
 // (src/workspace/output-roots.js) extend it. toEnvelope (src/cli.js) maps any
-// of them with one check, and a handler that turns "any other error" into its
-// own write failure lets a refusal through with isTypedRefusal, so no site
-// names a concrete class. Requires nothing, so any layer can extend it.
+// of them with one check, so no site names a concrete class. A handler that
+// reports its own write failure catches filesystem errors only
+// (isFsError, src/output/fs-error.js), so a refusal passes through it to the
+// boundary untouched. Requires nothing, so any layer can extend it.
 class TypedRefusal extends Error {
   constructor(kind, message, hint) {
     super(message);
