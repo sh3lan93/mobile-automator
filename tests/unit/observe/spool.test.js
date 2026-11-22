@@ -420,6 +420,50 @@ describe('the spool is read as untrusted input (#348)', () => {
   });
 });
 
+describe('remove: claimed batches are deleted through safe-fs (#348)', () => {
+  it('removes a claimed batch, so the refusal below is a refusal and not a broken remove', () => {
+    const root = workspace();
+    spool.write(VALID, { projectRoot: root, env: {} });
+    const batch = spool.claim({ projectRoot: root, env: {} });
+    expect(fs.existsSync(batch)).toBe(true);
+    spool.remove(batch, { projectRoot: root, env: {} });
+    expect(fs.existsSync(batch)).toBe(false);
+  });
+
+  it('unlinks nothing outside when .logs/ became a symlink between claim and remove', () => {
+    const root = workspace();
+    spool.write(VALID, { projectRoot: root, env: {} });
+    const batch = spool.claim({ projectRoot: root, env: {} });
+    expect(batch).not.toBeNull();
+
+    // Swap the real .logs/ for a link to a directory outside that holds a
+    // file of the same name as the claimed batch.
+    const outside = outsideDir();
+    fs.writeFileSync(path.join(outside, path.basename(batch)), VALID_LINES);
+    secretFile(outside);
+    const before = snapshot(outside);
+    fs.renameSync(logsDirOf(root), path.join(root, '.mobile-automator', 'logs-moved'));
+    fs.symlinkSync(outside, logsDirOf(root));
+
+    expect(() => spool.remove(batch, { projectRoot: root, env: {} })).not.toThrow();
+    expect(snapshot(outside)).toEqual(before);
+  });
+
+  it('under MAUTO_LOG_DIR, removes a batch with a plain unlink', () => {
+    const root = workspace();
+    const env = { MAUTO_LOG_DIR: outsideDir() };
+    spool.write(VALID, { projectRoot: root, env });
+    const batch = spool.claim({ projectRoot: root, env });
+    spool.remove(batch, { projectRoot: root, env });
+    expect(fs.existsSync(batch)).toBe(false);
+  });
+
+  it('never throws for a batch that is already gone', () => {
+    const root = workspace();
+    expect(() => spool.remove(batchPath(root), { projectRoot: root, env: {} })).not.toThrow();
+  });
+});
+
 // Once telemetry is on, every verb appends to the spool. A cloned repo that
 // ships `.logs/telemetry.spool -> ~/.bashrc`, or `.logs/` itself as a link,
 // would otherwise have JSON appended to a file of the attacker's choosing

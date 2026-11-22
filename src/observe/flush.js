@@ -14,8 +14,6 @@
 //     LOSING records rather than duplicating them. Duplicates are recoverable
 //     at the sink; a lost record is not.
 
-const realFs = require('fs');
-
 const spool = require('./spool');
 const realTransport = require('./transport');
 const { decideNow } = require('./telemetry');
@@ -81,7 +79,6 @@ function makeFlusher({
   env = process.env,
   transport = realTransport,
   observe = () => {},
-  fs = realFs,
 } = {}) {
   let nextDelayMs = FLUSH_INTERVAL_MS;
 
@@ -119,14 +116,14 @@ function makeFlusher({
 
     try {
       // Leftovers first, oldest first, then whatever has accumulated since.
-      const batches = spool.listClaimed({ projectRoot, env, fs });
-      const fresh = spool.claim({ projectRoot, env, fs });
+      const batches = spool.listClaimed({ projectRoot, env });
+      const fresh = spool.claim({ projectRoot, env });
       if (fresh) batches.push(fresh);
 
       for (const file of batches) {
-        const payloads = spool.readBatch(file, { projectRoot, env, fs });
+        const payloads = spool.readBatch(file, { projectRoot, env });
         if (payloads.length === 0) {
-          safeUnlink(file, fs);
+          spool.remove(file, { projectRoot, env });
           continue;
         }
 
@@ -151,16 +148,16 @@ function makeFlusher({
           retryable = true;
           break; // the network is down; do not hammer the remaining batches
         }
-        safeUnlink(file, fs);
+        spool.remove(file, { projectRoot, env });
       }
 
       // Converge: beyond the cap, the oldest claimed batches go. Not after a
       // withdrawal: the oldest batch can be the one the flush stopped on, and
       // the next flush that runs enabled prunes.
       if (!withdrawn) {
-        const remaining = spool.listClaimed({ projectRoot, env, fs });
+        const remaining = spool.listClaimed({ projectRoot, env });
         for (const stale of remaining.slice(0, Math.max(0, remaining.length - MAX_CLAIMED))) {
-          safeUnlink(stale, fs);
+          spool.remove(stale, { projectRoot, env });
         }
       }
     } catch (_) {
@@ -208,15 +205,6 @@ function makeFlusher({
     const result = { sent, dropped, kept, kept_events: keptEvents, ok, nextDelayMs };
     return withdrawn ? { skipped: withdrawn, ...result } : result;
   };
-}
-
-function safeUnlink(file, fs) {
-  try {
-    fs.unlinkSync(file);
-  } catch (_) {
-    // Already gone, or a read-only .logs. Either way the next flush's
-    // MAX_CLAIMED prune is the backstop.
-  }
 }
 
 module.exports = { BATCH_SIZE, FLUSH_INTERVAL_MS, MAX_FLUSH_INTERVAL_MS, MAX_CLAIMED, makeFlusher };

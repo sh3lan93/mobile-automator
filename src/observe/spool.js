@@ -34,7 +34,13 @@ const path = require('path');
 
 const { spoolPath } = require('./paths');
 const { workspaceDir } = require('../workspace/layout');
-const { UnsafePathError, safeDir, openLeaf, openWorkspaceFile } = require('../workspace/safe-fs');
+const {
+  UnsafePathError,
+  safeDir,
+  openLeaf,
+  openWorkspaceFile,
+  removeWorkspaceFile,
+} = require('../workspace/safe-fs');
 const { telemetryPayload, shippablePayload } = require('./event');
 
 const { O_RDONLY, O_WRONLY, O_APPEND, O_CREAT } = realFs.constants;
@@ -77,12 +83,21 @@ function isSelfReferential(event) {
   return typeof event.event === 'string' && event.event.startsWith('telemetry.');
 }
 
+// Where the spool lives, decided in one place. `confined` is true when it is
+// a workspace file (the `.logs/` paths.logsDir returns under
+// `.mobile-automator/`) and so gets safe-fs's workspace rules; false under
+// MAUTO_LOG_DIR, a directory the user named in their own environment.
+function spoolLocation(projectRoot, env) {
+  const file = spoolPath(projectRoot, env);
+  return { file, dir: path.dirname(file), confined: !(env && env.MAUTO_LOG_DIR) };
+}
+
 // Same gate as the file sink: no .mobile-automator/ workspace, no artifacts.
 // mauto runs from wherever a user is standing, so creating this tree as a
 // side effect of logging would litter unrelated repos with a directory that
 // has no .gitignore in it.
-function allowed(projectRoot, env, fs) {
-  if (env && env.MAUTO_LOG_DIR) return true;
+function allowed(projectRoot, { confined }, fs) {
+  if (!confined) return true;
   return fs.existsSync(workspaceDir(projectRoot));
 }
 
@@ -113,11 +128,11 @@ function closeQuietly(fs, fd) {
 // by another name, and its contents would ship as this workspace's telemetry.
 function openSpoolFile(file, flags, { projectRoot, env, fs, getuid }) {
   let fd;
-  if (env && env.MAUTO_LOG_DIR) {
+  if (spoolLocation(projectRoot, env).confined) {
+    fd = openWorkspaceFile(projectRoot, file, flags, 0o666, { fs, env, getuid });
+  } else {
     if (flags & O_CREAT) fs.mkdirSync(path.dirname(file), { recursive: true });
     ({ fd } = openLeaf(file, flags, 0o666, { fs }));
-  } else {
-    fd = openWorkspaceFile(projectRoot, file, flags, 0o666, { fs, env, getuid });
   }
   try {
     const stat = fs.fstatSync(fd);
@@ -132,12 +147,13 @@ function openSpoolFile(file, flags, { projectRoot, env, fs, getuid }) {
 // Whether claim() and listClaimed() may rename and list inside the spool's
 // directory (#348). flush unlinks every batch listClaimed() names, so through
 // a `.logs/` that is a link, or that belongs to another user, a flush would
-// rename and delete files outside the workspace. Without MAUTO_LOG_DIR the
-// directory must pass safe-fs's checked walk; any refusal, or no `.logs/` yet,
-// reads as "nothing here". Under MAUTO_LOG_DIR it is the user's own directory
-// and is not checked.
-function spoolDirUsable(dir, { projectRoot, env, fs, getuid }) {
-  if (env && env.MAUTO_LOG_DIR) return true;
+// rename and delete files outside the workspace. A confined directory must
+// pass safe-fs's checked walk; any refusal, or no `.logs/` yet, reads as
+// "nothing here". Under MAUTO_LOG_DIR it is the user's own directory and is
+// not checked.
+function spoolDirUsable({ projectRoot, env, fs, getuid }) {
+  const { dir, confined } = spoolLocation(projectRoot, env);
+  if (!confined) return true;
   try {
     safeDir(projectRoot, dir, {}, { fs, env, getuid });
     return true;
@@ -155,10 +171,11 @@ function write(event, { projectRoot, env = process.env, fs = realFs, getuid } = 
   let fd;
   try {
     if (isSelfReferential(event)) return;
-    if (!allowed(projectRoot, env, fs)) return;
+    const location = spoolLocation(projectRoot, env);
+    if (!allowed(projectRoot, location, fs)) return;
 
     let stat;
-    ({ fd, stat } = openSpoolFile(spoolPath(projectRoot, env), O_WRONLY | O_APPEND | O_CREAT, {
+    ({ fd, stat } = openSpoolFile(location.file, O_WRONLY | O_APPEND | O_CREAT, {
       projectRoot,
       env,
       fs,
@@ -208,8 +225,8 @@ function nextClaimStamp() {
 // verb that opens AFTER creates a fresh spool. There is no window in which a
 // line lands nowhere, and no truncate that could clobber a concurrent writer.
 function claim({ projectRoot, env = process.env, fs = realFs, getuid } = {}) {
+  if (!spoolDirUsable({ projectRoot, env, fs, getuid })) return null;
   const source = spoolPath(projectRoot, env);
-  if (!spoolDirUsable(path.dirname(source), { projectRoot, env, fs, getuid })) return null;
   const target = `${source}${CLAIM_SUFFIX}.${process.pid}.${nextClaimStamp()}`;
   try {
     fs.renameSync(source, target);
@@ -222,9 +239,9 @@ function claim({ projectRoot, env = process.env, fs = realFs, getuid } = {}) {
 // Oldest first: the suffix carries pid then epoch-ms, so a lexical sort on the
 // trailing number would misorder across digit widths. Sort on the parsed stamp.
 function listClaimed({ projectRoot, env = process.env, fs = realFs, getuid } = {}) {
-  const dir = path.dirname(spoolPath(projectRoot, env));
-  if (!spoolDirUsable(dir, { projectRoot, env, fs, getuid })) return [];
-  const prefix = `${path.basename(spoolPath(projectRoot, env))}${CLAIM_SUFFIX}.`;
+  if (!spoolDirUsable({ projectRoot, env, fs, getuid })) return [];
+  const { file, dir } = spoolLocation(projectRoot, env);
+  const prefix = `${path.basename(file)}${CLAIM_SUFFIX}.`;
   let names;
   try {
     names = fs.readdirSync(dir);
@@ -285,6 +302,25 @@ function readBatch(file, { projectRoot, env = process.env, fs = realFs, getuid }
   return readSpool(file, { projectRoot, env, fs, getuid }).payloads;
 }
 
+// Deletes a claimed batch, or one the prune drops. A confined batch goes
+// through safe-fs's removeWorkspaceFile, which walks `.logs/` first: listing
+// and unlinking are separate steps, and a `.logs/` swapped for a link between
+// them would otherwise make flush delete a file outside the workspace. Under
+// MAUTO_LOG_DIR it is a plain unlink. Never throws: a batch that is already
+// gone, a read-only `.logs/` or a refused walk all leave the file for the
+// next flush's MAX_CLAIMED prune.
+function remove(file, { projectRoot, env = process.env, fs = realFs, getuid } = {}) {
+  try {
+    if (spoolLocation(projectRoot, env).confined) {
+      removeWorkspaceFile(projectRoot, file, { fs, env, getuid });
+    } else {
+      fs.unlinkSync(file);
+    }
+  } catch (_) {
+    // the prune is the backstop
+  }
+}
+
 // What `mauto telemetry status` shows a user deciding whether to opt in. The
 // spool is read exactly as flush reads it, so a refused spool shows zeros
 // rather than the size of whatever a link points at (#348).
@@ -309,5 +345,6 @@ module.exports = {
   claim,
   listClaimed,
   readBatch,
+  remove,
   stats,
 };
