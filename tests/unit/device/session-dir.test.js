@@ -21,12 +21,15 @@ const os = require('os');
 const path = require('path');
 
 const {
+  SESSION_DIR,
   ensureSessionDir,
   ensureSessionDirs,
   isOwnSocket,
-  verifySocket,
+  inPinnedDir,
+  connectPinned,
   listenOwnerOnly,
 } = require('../../../src/device/session-dir');
+const { ensureSalt, readSalt } = require('../../../src/device/session-salt');
 const paths = require('../../../src/device/session-paths');
 const { UnsafePathError } = require('../../../src/workspace/safe-fs');
 // The envelope boundary: a refusal reaches the agent through toEnvelope's
@@ -349,75 +352,181 @@ describe('isOwnSocket', () => {
   });
 });
 
-describe('verifySocket', () => {
+describe('connectPinned', () => {
+  // Resolve what connectPinned answered: null, or the salt it read with the
+  // connection it opened awaited (and closed).
+  async function pinned(root, deps) {
+    const r = connectPinned(root, (n) => net.createConnection(n), deps);
+    if (!r) return null;
+    const connected = await new Promise((resolve) => {
+      r.socket.once('connect', () => resolve(true));
+      r.socket.once('error', () => resolve(false));
+    });
+    r.socket.destroy();
+    return { salt: r.salt, connected };
+  }
+
   async function liveShort() {
     const root = shortRoot();
     ensureSessionDirs(root);
+    ensureSalt(root);
     await listen(paths.socketPath(root, { env: {} }));
     return root;
   }
 
-  test('the socket path for a real listener in a 0700 .session', async () => {
+  test('a connection and the salt for a real listener in a 0700 .session', async () => {
     const root = await liveShort();
-    expect(verifySocket(root, { env: {} })).toBe(paths.workspaceSocketPath(root));
+    expect(await pinned(root, { env: {} })).toEqual({ salt: readSalt(root), connected: true });
   });
 
-  test('the socket path for a real listener in a private fallback directory', async () => {
+  test('a connection and the salt for a real listener in a private fallback directory', async () => {
     const { root, deps } = longRoot();
     ensureSessionDirs(root, deps);
+    ensureSalt(root);
     await listen(paths.socketPath(root, deps));
-    expect(verifySocket(root, deps)).toBe(paths.socketPath(root, deps));
+    expect(await pinned(root, deps)).toEqual({ salt: readSalt(root), connected: true });
   });
 
-  test('null for a missing socket', () => {
+  test('null for a missing socket', async () => {
     const root = shortRoot();
     ensureSessionDirs(root);
-    expect(verifySocket(root, { env: {} })).toBeNull();
+    ensureSalt(root);
+    expect(await pinned(root, { env: {} })).toBeNull();
+  });
+
+  test('null without a salt, even with a real listener of ours (in-workspace and fallback)', async () => {
+    const root = shortRoot();
+    ensureSessionDirs(root);
+    await listen(paths.socketPath(root, { env: {} }));
+    expect(await pinned(root, { env: {} })).toBeNull();
+    fs.writeFileSync(paths.saltPath(root), '  \n');
+    expect(await pinned(root, { env: {} })).toBeNull();
+
+    const deep = longRoot();
+    ensureSessionDirs(deep.root, deep.deps);
+    await listen(paths.socketPath(deep.root, deep.deps));
+    expect(await pinned(deep.root, deep.deps)).toBeNull();
+  });
+
+  test('null for a symlinked salt', async () => {
+    const root = await liveShort();
+    const elsewhere = path.join(base, 'salt');
+    fs.writeFileSync(elsewhere, 'theirs\n');
+    fs.unlinkSync(paths.saltPath(root));
+    fs.symlinkSync(elsewhere, paths.saltPath(root));
+    expect(await pinned(root, { env: {} })).toBeNull();
   });
 
   test('null when there is no workspace at all, and never throws', () => {
-    expect(verifySocket(path.join(base, 'nope'), { env: {} })).toBeNull();
+    expect(connectPinned(path.join(base, 'nope'), (n) => net.createConnection(n), { env: {} })).toBeNull();
   });
 
-  test('null for a regular file at the socket path', () => {
+  test('null for a regular file at the socket path', async () => {
     const root = shortRoot();
     ensureSessionDirs(root);
+    ensureSalt(root);
     fs.writeFileSync(paths.workspaceSocketPath(root), 'not a socket');
-    expect(verifySocket(root, { env: {} })).toBeNull();
+    expect(await pinned(root, { env: {} })).toBeNull();
   });
 
-  test('null for a regular file at the fallback socket path', () => {
+  test('null for a regular file at the fallback socket path', async () => {
     const { root, deps } = longRoot();
     ensureSessionDirs(root, deps);
+    ensureSalt(root);
     fs.writeFileSync(paths.socketPath(root, deps), 'not a socket');
-    expect(verifySocket(root, deps)).toBeNull();
+    expect(await pinned(root, deps)).toBeNull();
   });
 
   test('null when .session is 0755, even with a real listener of ours in it', async () => {
     const root = await liveShort();
     fs.chmodSync(paths.sessionDir(root), 0o755);
-    expect(verifySocket(root, { env: {} })).toBeNull();
+    expect(await pinned(root, { env: {} })).toBeNull();
   });
 
   // D-d: the override skips the owner check on workspace directories, so a
   // CI checkout owned by another uid still works, but the socket itself must
-  // always be ours.
+  // always be ours. Matched by basename: the pinned checks lstat '.' and
+  // 'mauto.sock', relative to the directory they are in.
   test('MAUTO_TRUST_WORKSPACE_OWNER=1 lets a foreign .session pass, never a foreign socket', async () => {
     const root = await liveShort();
-    const sock = paths.workspaceSocketPath(root);
     const env = { MAUTO_TRUST_WORKSPACE_OWNER: '1' };
-    const foreignDirs = foreignLstat((p) => p !== sock);
-    expect(verifySocket(root, { env: {}, fs: foreignDirs })).toBeNull();
-    expect(verifySocket(root, { env, fs: foreignDirs })).toBe(sock);
-    expect(verifySocket(root, { env, fs: foreignLstat(() => true) })).toBeNull();
+    const foreignDirs = foreignLstat((p) => path.basename(p) !== paths.SOCKET_NAME);
+    expect(await pinned(root, { env: {}, fs: foreignDirs })).toBeNull();
+    expect(await pinned(root, { env, fs: foreignDirs })).toEqual({ salt: readSalt(root), connected: true });
+    expect(await pinned(root, { env, fs: foreignLstat(() => true) })).toBeNull();
   });
 
   test('null for a fallback directory other users can enter', async () => {
     const { root, deps, fallbackDir } = longRoot();
     ensureSessionDirs(root, deps);
+    ensureSalt(root);
     await listen(paths.socketPath(root, deps));
     fs.chmodSync(fallbackDir, 0o755);
-    expect(verifySocket(root, deps)).toBeNull();
+    expect(await pinned(root, deps)).toBeNull();
+  });
+
+  test('the working directory is the same afterwards, on success and on refusal', async () => {
+    const before = process.cwd();
+    const root = await liveShort();
+    expect(await pinned(root, { env: {} })).not.toBeNull();
+    expect(process.cwd()).toBe(before);
+    fs.chmodSync(paths.sessionDir(root), 0o755);
+    expect(await pinned(root, { env: {} })).toBeNull();
+    expect(process.cwd()).toBe(before);
+  });
+});
+
+describe('inPinnedDir', () => {
+  test('runs fn inside the directory, checked as ".", and restores the working directory', () => {
+    const before = process.cwd();
+    const root = shortRoot();
+    ensureSessionDirs(root);
+    const seen = inPinnedDir(paths.sessionDir(root), SESSION_DIR, () => process.cwd());
+    expect(seen).toBe(fs.realpathSync(paths.sessionDir(root)));
+    expect(process.cwd()).toBe(before);
+  });
+
+  test('null, with fn never run, when the directory fails the check or cannot be entered', () => {
+    const before = process.cwd();
+    const root = shortRoot();
+    ensureSessionDirs(root);
+    fs.chmodSync(paths.sessionDir(root), 0o755);
+    const fn = jest.fn(() => 'ran');
+    expect(inPinnedDir(paths.sessionDir(root), SESSION_DIR, fn)).toBeNull();
+    expect(inPinnedDir(path.join(base, 'missing'), SESSION_DIR, fn)).toBeNull();
+    expect(fn).not.toHaveBeenCalled();
+    expect(process.cwd()).toBe(before);
+  });
+
+  test('null when fn throws, and the working directory is still restored', () => {
+    const before = process.cwd();
+    const root = shortRoot();
+    ensureSessionDirs(root);
+    expect(
+      inPinnedDir(paths.sessionDir(root), SESSION_DIR, () => {
+        throw new Error('boom');
+      })
+    ).toBeNull();
+    expect(process.cwd()).toBe(before);
+  });
+
+  test('a failed restore is thrown, never swallowed', () => {
+    const before = process.cwd();
+    const root = shortRoot();
+    ensureSessionDirs(root);
+    const realChdir = process.chdir;
+    let calls = 0;
+    const spy = jest.spyOn(process, 'chdir').mockImplementation((d) => {
+      calls += 1;
+      if (calls === 2) throw Object.assign(new Error('ENOENT: restore'), { code: 'ENOENT' });
+      return realChdir.call(process, d);
+    });
+    try {
+      expect(() => inPinnedDir(paths.sessionDir(root), SESSION_DIR, () => 'ok')).toThrow('ENOENT: restore');
+    } finally {
+      spy.mockRestore();
+      process.chdir(before);
+    }
   });
 });
 

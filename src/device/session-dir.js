@@ -17,9 +17,10 @@
 //     directory of ours, whatever MAUTO_TRUST_WORKSPACE_OWNER says (D-d).
 //     ensureSessionDirs adds it.
 //   - the socket itself must be a real socket, not a link, owned by us, with
-//     no override (D-d): isOwnSocket. Before connecting, the client asks
-//     verifySocket. It never throws: a socket that fails any check reads as
-//     "no daemon here", so the verb starts its own instead of talking to
+//     no override (D-d): isOwnSocket. The client connects only through
+//     connectPinned, which runs these checks and then connects through the
+//     very directory it checked (#361). A socket that fails any check reads
+//     as "no daemon here", so the verb starts its own instead of talking to
 //     someone else's.
 //   - the daemon binds through listenOwnerOnly, so the socket is never usable
 //     by another user, even between the bind and the chmod.
@@ -28,9 +29,11 @@
 // the policies, their wording and the socket check are this module's.
 
 const fs = require('fs');
+const path = require('path');
 
 const paths = require('./session-paths');
-const { WORKSPACE_DIR, dirPolicy, checkDir, safeDir } = require('../workspace/safe-fs');
+const { parseSalt } = require('./session-salt');
+const { WORKSPACE_DIR, dirPolicy, checkDir, safeDir, readOwnedLeaf } = require('../workspace/safe-fs');
 
 // .session/: a workspace directory, so it keeps the workspace wording and the
 // owner override (a CI checkout owned by another uid), but no group or other
@@ -119,21 +122,124 @@ function isOwnSocket(file, { fs: f = fs, getuid = process.getuid } = {}) {
   return st.isSocket() && st.uid === getuid();
 }
 
-// May the client connect to this workspace's socket? Returns the socket path
-// only when its directory is private (.session/ under SESSION_DIR through a
-// link-free walk, or the fallback directory under SOCKET_DIR) and the socket is
-// our own; that path is the ONE the client then connects to, so it never
-// connects anywhere it did not check. Any failure, including a missing socket,
-// is null.
-function verifySocket(projectRoot, deps = {}) {
+// Run `fn` with the process inside `dir`, once '.' (the directory the
+// process is now in, whatever it is called by then) checks out under
+// `policy`, and return what `fn` returned. Null, with `fn` never run, when the
+// directory cannot be entered or fails the check, or when `fn` throws. The
+// previous working directory is always restored; a restore that fails is
+// thrown, never swallowed, because every relative path after it would resolve
+// somewhere else. `deps` ({ fs, getuid, env }) reaches safe-fs.
+//
+// Why a chdir (#361): a directory checked by its path and then used by its
+// path can be another directory by the second use, since a group-writable
+// parent (safe-fs accepts one; umask 002) lets a group member rename it in
+// between. Pinning the checked directory and using it through relative names
+// closes that gap. Node has neither connectat(2) nor fchdir(2), and macOS's
+// /dev/fd/N does not traverse directories, so the only handle on a directory
+// is the working directory itself.
+//
+// The working directory is process-wide, so the window is kept fully
+// synchronous: nothing between the chdir and the restore awaits, takes a
+// callback or yields to the event loop, so no other JS runs inside it. What
+// `fn` does must resolve its relative names synchronously too: safe-fs's
+// *Sync calls, and net.createConnection on a Unix socket, which does its
+// connect(2) inline (libuv) before returning. And no fs call that mauto
+// started earlier can be in flight in the libuv thread pool, resolving a
+// relative path against the pinned directory: src/ and bin/ use no async fs
+// API at all (guarded by tests/lint/no-async-fs.test.js).
+function inPinnedDir(dir, policy, fn, deps = {}) {
+  let prev;
   try {
-    const { file, dir, inWorkspace } = paths.socketLocation(projectRoot, deps);
-    if (inWorkspace) safeDir(projectRoot, dir, { policy: SESSION_DIR }, deps);
-    else checkDir(dir, SOCKET_DIR, {}, deps);
-    return isOwnSocket(file, deps) ? file : null;
+    prev = process.cwd();
+    process.chdir(dir);
   } catch (_) {
     return null;
   }
+  let result = null;
+  try {
+    checkDir('.', policy, {}, deps);
+    result = fn();
+  } catch (_) {
+    result = null;
+  }
+  try {
+    process.chdir(prev);
+  } catch (err) {
+    if (result && result.socket) result.socket.destroy();
+    throw err;
+  }
+  return result;
+}
+
+// The workspace salt, read by its relative name inside the pinned .session/
+// (inPinnedDir): no link, a regular file of ours. Null when missing or empty.
+function readPinnedSalt(deps) {
+  return parseSalt(readOwnedLeaf(paths.SALT_NAME, {}, deps));
+}
+
+// Connect to `name` in the pinned directory when it is our own socket. The
+// connection is started here, inside the window; the caller awaits it.
+function connectOwnSocket(name, connect, deps) {
+  return isOwnSocket(name, deps) ? connect(name) : null;
+}
+
+// Open a connection to this workspace's session socket, but only through
+// directories the client checked, and with the salt the daemon must prove it
+// holds (#346, #361). `connect(name)` opens the connection by the socket's
+// relative name and must resolve that name before it returns: the client
+// passes net.createConnection, which does (see inPinnedDir). Returns
+// { socket, salt } (the socket still connecting)
+// or null: no workspace, a directory that is not private, a socket that is
+// not ours, or no salt. Never throws, except for a failed restore of the
+// working directory (inPinnedDir).
+//
+// The path checks are the same as ever, as a prefilter, so every refusal
+// (and the 0755 .session/ an older mauto made, which the daemon tightens)
+// reads as before. Then each directory is pinned and used by relative names
+// only (inPinnedDir):
+//   - in-workspace: ONE pinned block in .session/ reads marker.salt, checks
+//     the socket and connects, so the salt and the socket come from the same
+//     directory, the one checked;
+//   - fallback: the salt is read in a pinned .session/, then the socket is
+//     checked and connected in the pinned fallback directory.
+// The salt never comes from a second lookup by path (session-salt readSalt):
+// that could read a salt from a different directory than the one checked.
+function connectPinned(projectRoot, connect, deps = {}) {
+  let loc;
+  let sessionDir;
+  try {
+    loc = paths.socketLocation(projectRoot, deps);
+    sessionDir = paths.sessionDir(projectRoot);
+    safeDir(projectRoot, sessionDir, { policy: SESSION_DIR }, deps);
+    if (!loc.inWorkspace) checkDir(loc.dir, SOCKET_DIR, {}, deps);
+  } catch (_) {
+    return null;
+  }
+  const name = path.basename(loc.file);
+  if (loc.inWorkspace) {
+    return inPinnedDir(
+      sessionDir,
+      SESSION_DIR,
+      () => {
+        const salt = readPinnedSalt(deps);
+        if (!salt) return null;
+        const socket = connectOwnSocket(name, connect, deps);
+        return socket ? { socket, salt } : null;
+      },
+      deps
+    );
+  }
+  const salt = inPinnedDir(sessionDir, SESSION_DIR, () => readPinnedSalt(deps), deps);
+  if (!salt) return null;
+  return inPinnedDir(
+    loc.dir,
+    SOCKET_DIR,
+    () => {
+      const socket = connectOwnSocket(name, connect, deps);
+      return socket ? { socket, salt } : null;
+    },
+    deps
+  );
 }
 
 // Bind `server` to `socketPath` so no other user can use the socket, even for
@@ -166,4 +272,12 @@ function listenOwnerOnly(server, socketPath) {
   });
 }
 
-module.exports = { ensureSessionDir, ensureSessionDirs, isOwnSocket, verifySocket, listenOwnerOnly };
+module.exports = {
+  SESSION_DIR,
+  ensureSessionDir,
+  ensureSessionDirs,
+  isOwnSocket,
+  inPinnedDir,
+  connectPinned,
+  listenOwnerOnly,
+};

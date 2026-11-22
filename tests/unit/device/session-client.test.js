@@ -10,6 +10,7 @@ const { tryConnect, isAlive, requestShutdown, getSessionStatus } = require('../.
 const paths = require('../../../src/device/session-paths');
 const { ensureSessionDirs } = require('../../../src/device/session-dir');
 const { FrameParser } = require('../../../src/device/session-protocol');
+const { ensureSalt } = require('../../../src/device/session-salt');
 const { useSocketDeps } = require('../../helpers/socket-deps');
 
 // A deep temp root's socket goes to the fallback directory: keep it in a
@@ -18,6 +19,11 @@ const socketDeps = useSocketDeps();
 
 function tmpRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-client-'));
+}
+
+// The reply a daemon of `root` holding `salt` gives a hello (#361).
+function helloReply(frame, salt, root) {
+  return FrameParser.encode({ id: frame.id, ok: true, result: { proof: paths.sessionProof(salt, root, frame.nonce) } });
 }
 
 function fakeCreateCall() {
@@ -81,16 +87,19 @@ describe('session-client', () => {
     await daemon.stop();
   });
 
-  // A server speaking the daemon protocol with a chosen ping result.
+  // A server speaking the daemon protocol with a chosen ping result. It
+  // answers the hello as a real daemon of this workspace would (#361).
   function fakeDaemon(root, result) {
     const sock = paths.socketPath(root, socketDeps());
     ensureSessionDirs(root, socketDeps());
+    const salt = ensureSalt(root);
     const server = net.createServer((s) => {
       const parser = new FrameParser();
       s.setEncoding('utf8');
       s.on('data', (chunk) => {
         for (const f of parser.push(chunk)) {
-          if (f.value) s.write(FrameParser.encode({ id: f.value.id, ok: true, result }));
+          if (f.value && f.value.type === 'hello') s.write(helloReply(f.value, salt, root));
+          else if (f.value) s.write(FrameParser.encode({ id: f.value.id, ok: true, result }));
         }
       });
     });
@@ -121,12 +130,14 @@ describe('session-client', () => {
   test('call propagates kind + hint from an ok:false reply', async () => {
     const root = tmpRoot();
     ensureSessionDirs(root, socketDeps());
+    const salt = ensureSalt(root);
     // A fake daemon that answers every call frame with a typed error reply.
     const server = net.createServer((socket) => {
       const parser = new FrameParser();
       socket.setEncoding('utf8');
       socket.on('data', (chunk) => {
         for (const f of parser.push(chunk)) {
+          if (f.value && f.value.type === 'hello') socket.write(helloReply(f.value, salt, root));
           if (f.value && f.value.type === 'call') {
             socket.write(
               FrameParser.encode({
@@ -163,8 +174,9 @@ describe('session-client', () => {
 const isRoot = typeof process.getuid === 'function' && process.getuid() === 0;
 const maybe = isRoot ? test.skip : test;
 
-// A listener that answers ping/shutdown and counts every connection made to it.
-function countingServer() {
+// A listener that answers hello as `root`'s daemon, answers ping/shutdown, and
+// counts every connection made to it. Without a root it cannot prove itself.
+function countingServer(root = null) {
   const state = { connections: 0 };
   state.server = net.createServer((socket) => {
     state.connections += 1;
@@ -174,7 +186,8 @@ function countingServer() {
     socket.on('data', (chunk) => {
       for (const f of parser.push(chunk)) {
         if (!f.value) continue;
-        socket.write(FrameParser.encode({ id: f.value.id, ok: true, result: {} }));
+        if (f.value.type === 'hello' && root) socket.write(helloReply(f.value, ensureSalt(root), root));
+        else socket.write(FrameParser.encode({ id: f.value.id, ok: true, result: {} }));
       }
     });
   });
@@ -228,6 +241,7 @@ describe('session-client socket verification', () => {
       const srv = countingServer();
       try {
         ensureSessionDirs(root, socketDeps());
+        ensureSalt(root); // so only the symlink can be what refuses it
         const real = path.join(outside, 'real.sock');
         await srv.listen(real);
         fs.symlinkSync(real, paths.socketPath(root, socketDeps()));
@@ -244,9 +258,10 @@ describe('session-client socket verification', () => {
 
   maybe('in-workspace: a 0755 .session/ is refused, then ensureSessionDirs tightens it and the daemon is reachable', async () => {
     const root = shortRoot();
-    const srv = countingServer();
+    const srv = countingServer(root);
     try {
       ensureSessionDirs(root, socketDeps());
+      ensureSalt(root);
       const dir = paths.sessionDir(root);
       await srv.listen(paths.socketPath(root, socketDeps()));
       fs.chmodSync(dir, 0o755);
@@ -266,9 +281,10 @@ describe('session-client socket verification', () => {
 
   maybe('fallback: a 0755 socket directory is refused and never chmodded (D-b)', async () => {
     const root = deepRoot();
-    const srv = countingServer();
+    const srv = countingServer(root);
     try {
       ensureSessionDirs(root, socketDeps());
+      ensureSalt(root);
       const dir = path.dirname(paths.socketPath(root, socketDeps()));
       await srv.listen(paths.socketPath(root, socketDeps()));
       fs.chmodSync(dir, 0o755);

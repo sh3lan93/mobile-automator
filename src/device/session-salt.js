@@ -20,6 +20,13 @@ const paths = require('./session-paths');
 const { tempPathFor } = require('../util/atomic');
 const { createWorkspaceFile, readWorkspaceFileOrNull } = require('../workspace/safe-fs');
 
+// The salt in a salt file's raw text (null when there is none): trimmed, and
+// null when empty. The one parse, shared with the session client's pinned read
+// (session-dir.js connectPinned, #361).
+function parseSalt(raw) {
+  return raw == null ? null : raw.trim() || null;
+}
+
 // The salt, or null when it is missing, unreadable or empty. Any other content
 // IS the salt: an HMAC key needs no particular shape, so there is no
 // "malformed" salt to detect or repair. A null salt means no keyed daemon can
@@ -27,8 +34,7 @@ const { createWorkspaceFile, readWorkspaceFileOrNull } = require('../workspace/s
 // (#345), such as a symlinked .session/ or salt, still fails the verb:
 // readWorkspaceFileOrNull lets the refusal through.
 function readSalt(projectRoot, { fs = realFs } = {}) {
-  const raw = readWorkspaceFileOrNull(projectRoot, paths.saltPath(projectRoot), {}, { fs });
-  return raw == null ? null : raw.trim() || null;
+  return parseSalt(readWorkspaceFileOrNull(projectRoot, paths.saltPath(projectRoot), {}, { fs }));
 }
 
 // The salt, created if this workspace has none yet. Throws when it can neither
@@ -79,4 +85,4 @@ function ensureSalt(projectRoot, { fs = realFs } = {}) {
   }
 }
 
-module.exports = { ensureSalt, readSalt };
+module.exports = { ensureSalt, readSalt, parseSalt };
