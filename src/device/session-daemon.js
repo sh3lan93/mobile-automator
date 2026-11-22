@@ -32,10 +32,13 @@ const { FLUSH_INTERVAL_MS } = require('../observe/flush');
 const { pidIdentity, readPidFile } = require('./process-identity');
 const { DEFAULT_ENGINE } = require('./engine');
 const { ensureSessionDirs, listenOwnerOnly } = require('./session-dir');
+const { ensureSalt } = require('./session-salt');
 const { createWorkspaceFile } = require('../workspace/safe-fs');
 const { atomicWorkspaceWrite } = require('../util/atomic');
 
 const DEFAULT_IDLE_MS = 5 * 60 * 1000;
+// The longest hello nonce the daemon answers (#361). The client sends 64 hex.
+const MAX_NONCE_LENGTH = 256;
 
 // Per-call timeout for the shared mobile-mcp connection. Deliberately BELOW the
 // client's DEFAULT_TIMEOUT_MS (30000) so the daemon's timeout error always wins
@@ -209,9 +212,14 @@ async function startDaemon({
   // It also decides, once, the socket path this daemon binds, sweeps, unlinks
   // and records in its handle (#346): the directory it checked is the
   // directory of that path, with nothing recomputed in between.
+  //
+  // The workspace salt is read (or created) here once and kept in memory: it is
+  // the secret this daemon proves it holds when a client says hello (#361).
   let socketPath;
+  let salt;
   try {
     socketPath = ensureSessionDirs(projectRoot, socketDeps);
+    salt = ensureSalt(projectRoot);
   } catch (err) {
     safeObserve({
       level: 'error',
@@ -638,6 +646,19 @@ async function startDaemon({
             ok: true,
             result: { pong: true, device, in_flight: inFlight, engine_alive: engineAlive },
           });
+          armIdle();
+          continue;
+        }
+        if (req.type === 'hello') {
+          // The handshake (#361, session-protocol.js): prove we hold this
+          // workspace's salt. The nonce is the client's; bound its size so a
+          // peer cannot make us HMAC an arbitrary amount.
+          const { nonce } = req;
+          if (typeof nonce !== 'string' || nonce.length === 0 || nonce.length > MAX_NONCE_LENGTH) {
+            await reply({ id: req.id, ok: false, error: { message: 'hello needs a nonce: a string of 1 to 256 characters' } });
+          } else {
+            await reply({ id: req.id, ok: true, result: { proof: paths.sessionProof(salt, projectRoot, nonce) } });
+          }
           armIdle();
           continue;
         }

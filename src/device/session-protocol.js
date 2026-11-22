@@ -10,6 +10,16 @@
 //   { id, type: 'call', tool, args }     — route a mobile-mcp tool call
 //   { id, type: 'shutdown' }             — control: ask the daemon to exit
 //   { id, type: 'ping' }                 — liveness probe
+//   { id, type: 'hello', nonce }         — handshake (#361): the client's
+//                                          first frame on every connection
+//
+// The daemon answers hello with { id, ok: true, result: { proof } }, where
+// proof is session-paths.sessionProof(salt, projectRoot, nonce): proof that it
+// holds this workspace's session secret (.session/marker.salt). The client
+// sends nothing else until the proof checks out. A nonce that is missing, not
+// a string, empty or longer than 256 characters is refused (ok: false). A
+// daemon older than the handshake answers `unknown request type`, which the
+// client reads as "no daemon".
 //
 // Response frames:
 //   { id, ok: true, result }

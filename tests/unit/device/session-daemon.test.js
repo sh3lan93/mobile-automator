@@ -427,3 +427,92 @@ describe('session-daemon private files (#346)', () => {
     }
   });
 });
+
+// The daemon's half of the client's handshake (#361): it proves it holds the
+// workspace's session secret by answering a client nonce with
+// sessionProof(salt, root, nonce).
+describe('session-daemon hello (#361)', () => {
+  const net = require('net');
+  const { FrameParser } = require('../../../src/device/session-protocol');
+
+  // Send raw frames over one connection, resolve the replies in order.
+  function exchange(sockPath, frames) {
+    return new Promise((resolve, reject) => {
+      const socket = net.createConnection(sockPath);
+      const parser = new FrameParser();
+      const replies = [];
+      socket.setEncoding('utf8');
+      socket.on('error', reject);
+      socket.on('connect', () => {
+        for (const f of frames) socket.write(FrameParser.encode(f));
+      });
+      socket.on('data', (chunk) => {
+        for (const f of parser.push(chunk)) replies.push(f.value);
+        if (replies.length === frames.length) {
+          socket.end();
+          resolve(replies);
+        }
+      });
+    });
+  }
+
+  function start(root, extra = {}) {
+    return startDaemon({ socketDeps: socketDeps(), projectRoot: root, idleMs: 0, createCall: makeFakeCreateCall().createCall, ...extra });
+  }
+
+  test('daemon start ensures the workspace salt', async () => {
+    const root = tmpRoot();
+    expect(readSalt(root)).toBeNull();
+    const daemon = await start(root);
+    try {
+      expect(readSalt(root)).toMatch(/^[0-9a-f]{64}$/);
+    } finally {
+      await daemon.stop();
+    }
+  });
+
+  test('hello is answered with the proof for this workspace and the nonce', async () => {
+    const root = tmpRoot();
+    const daemon = await start(root);
+    try {
+      const salt = readSalt(root);
+      const [a, b] = await exchange(daemon.socketPath, [
+        { id: 1, type: 'hello', nonce: 'abc' },
+        { id: 2, type: 'hello', nonce: 'def' },
+      ]);
+      expect(a).toEqual({ id: 1, ok: true, result: { proof: paths.sessionProof(salt, root, 'abc') } });
+      expect(b).toEqual({ id: 2, ok: true, result: { proof: paths.sessionProof(salt, root, 'def') } });
+    } finally {
+      await daemon.stop();
+    }
+  });
+
+  test('a missing, non-string, empty or oversized nonce is rejected', async () => {
+    const root = tmpRoot();
+    const daemon = await start(root);
+    try {
+      const replies = await exchange(daemon.socketPath, [
+        { id: 1, type: 'hello' },
+        { id: 2, type: 'hello', nonce: 42 },
+        { id: 3, type: 'hello', nonce: '' },
+        { id: 4, type: 'hello', nonce: 'x'.repeat(257) },
+      ]);
+      for (const [i, r] of replies.entries()) {
+        expect(r).toMatchObject({ id: i + 1, ok: false, error: { message: expect.stringMatching(/nonce/) } });
+        expect(r.result).toBeUndefined();
+      }
+    } finally {
+      await daemon.stop();
+    }
+  });
+
+  test('a salt that cannot be read or created fails the start as daemon.start_failure', async () => {
+    const root = tmpRoot();
+    fs.mkdirSync(paths.sessionDir(root), { recursive: true, mode: 0o700 });
+    fs.writeFileSync(paths.saltPath(root), '\n'); // empty: ensureSalt never replaces it
+    const events = [];
+    const starting = start(root, { recorderFor: () => (e) => events.push(e) });
+    await expect(starting).rejects.toThrow(/salt/);
+    expect(events.map((e) => e.event)).toContain('daemon.start_failure');
+  });
+});

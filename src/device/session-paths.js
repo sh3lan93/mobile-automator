@@ -161,6 +161,18 @@ function daemonMarkerKey(projectRoot, salt) {
   return crypto.createHmac('sha256', String(salt)).update(path.resolve(projectRoot)).digest('hex').slice(0, 16);
 }
 
+// The daemon's answer to the client's hello (#361): HMAC-SHA256 keyed by the
+// workspace salt over a tagged message naming the real project root and the
+// client's nonce, as hex. Only a process that can read this workspace's
+// .session/marker.salt can produce it, and the root keeps a copied workspace
+// (which carries the salt) from vouching for the original. The nonce makes
+// each answer single-use. The `v1` tag versions the message: changing it
+// strands every running daemon, so it changes only with the tag.
+function sessionProof(salt, projectRoot, nonce) {
+  const message = `mauto-session-proof:v1\n${realOrResolved(projectRoot)}\n${nonce}`;
+  return crypto.createHmac('sha256', String(salt)).update(message).digest('hex');
+}
+
 function daemonArgv(projectRoot, salt) {
   return [DAEMON_WORKSPACE_FLAG, daemonMarkerKey(projectRoot, salt)];
 }
@@ -233,6 +245,7 @@ module.exports = {
   saltPath,
   workspaceKey,
   daemonMarkerKey,
+  sessionProof,
   DAEMON_WORKSPACE_FLAG,
   LEGACY_DAEMON_ROOT_FLAG,
   daemonArgv,
