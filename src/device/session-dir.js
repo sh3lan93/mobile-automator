@@ -199,23 +199,20 @@ function connectOwnSocket(name, connect, deps) {
 // holds (#346, #361). `connect(name)` opens the connection by the socket's
 // relative name and must resolve that name before it returns: the client
 // passes net.createConnection, which does (see inPinnedDir). Returns
-// { socket, salt } (the socket still connecting)
-// or null: no workspace, a directory that is not private, a socket that is
-// not ours, or no salt. Throws only what inPinnedDir throws (a failed restore
-// of the working directory, or an error that is not a refusal), with any
-// socket it opened destroyed first.
+// { socket, salt } (the socket still connecting) or null: no workspace, a
+// directory that is not private, a socket that is not ours, or no salt.
+// Throws only what inPinnedDir throws (a failed restore of the working
+// directory, or an error that is not a refusal), with any socket it opened
+// destroyed first.
 //
-// The path checks are the same as ever, as a prefilter, so every refusal
-// (and the 0755 .session/ an older mauto made, which the daemon tightens)
-// reads as before. Then each directory is pinned and used by relative names
-// only (inPinnedDir):
-//   - in-workspace: ONE pinned block in .session/ reads marker.salt, checks
-//     the socket and connects, so the salt and the socket come from the same
-//     directory, the one checked;
-//   - fallback: the salt is read in a pinned .session/, then the socket is
-//     checked and connected in the pinned fallback directory.
-// The salt never comes from a second lookup by path (session-salt readSalt):
-// that could read a salt from a different directory than the one checked.
+// The path prefilter stays because the safeDir walk checks every component
+// from .mobile-automator/ down (link-free, not world-writable, inside the
+// workspace), which the pinned check of '.' alone cannot see, and it keeps
+// every existing refusal unchanged. The pins are what make the decision
+// stick for .session/ itself: the salt is read, and the socket checked and
+// connected, by relative names inside the directories just checked. The salt
+// and the socket share one pin when the socket is in .session/; the fallback
+// socket gets a pin of its own.
 function connectPinned(projectRoot, connect, deps = {}) {
   let loc;
   let sessionDir;
@@ -228,38 +225,25 @@ function connectPinned(projectRoot, connect, deps = {}) {
     return null;
   }
   const name = path.basename(loc.file);
-  // The socket connect opened, destroyed here when inPinnedDir throws after it
-  // (a failed restore, or an error that is not a refusal).
-  let opened = null;
+  let salt = null;
+  let socket = null;
+  const readSaltStep = () => Boolean((salt = readPinnedSalt(deps)));
+  const connectStep = () => Boolean((socket = connectOwnSocket(name, connect, deps)));
+  const pins = loc.inWorkspace
+    ? [[sessionDir, SESSION_DIR, () => readSaltStep() && connectStep()]]
+    : [
+        [sessionDir, SESSION_DIR, readSaltStep],
+        [loc.dir, SOCKET_DIR, connectStep],
+      ];
+  let ok = false;
   try {
-    if (loc.inWorkspace) {
-      return inPinnedDir(
-        sessionDir,
-        SESSION_DIR,
-        () => {
-          const salt = readPinnedSalt(deps);
-          if (!salt) return null;
-          const socket = (opened = connectOwnSocket(name, connect, deps));
-          return socket ? { socket, salt } : null;
-        },
-        deps
-      );
-    }
-    const salt = inPinnedDir(sessionDir, SESSION_DIR, () => readPinnedSalt(deps), deps);
-    if (!salt) return null;
-    return inPinnedDir(
-      loc.dir,
-      SOCKET_DIR,
-      () => {
-        const socket = (opened = connectOwnSocket(name, connect, deps));
-        return socket ? { socket, salt } : null;
-      },
-      deps
-    );
-  } catch (err) {
-    if (opened) opened.destroy();
-    throw err;
+    ok = pins.every(([dir, policy, step]) => inPinnedDir(dir, policy, step, deps));
+  } finally {
+    // A pin that threw (or refused) after the connect leaves the socket ours
+    // to close.
+    if (!ok && socket) socket.destroy();
   }
+  return ok ? { socket, salt } : null;
 }
 
 // Bind `server` to `socketPath` so no other user can use the socket, even for
