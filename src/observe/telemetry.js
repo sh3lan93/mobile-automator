@@ -175,20 +175,24 @@ function decideForProject(projectRoot, env = process.env) {
 // per-user act that only `mauto telemetry enable` records. It goes through
 // setConfigOptIn below.
 function setEnabled(projectRoot, value, env = process.env) {
-  try {
+  writeInvalidating(projectRoot, () => {
     configManager.set(projectRoot, 'telemetry.enabled', value);
     setLocalConsent(projectRoot, value, { env });
-  } finally {
-    cache.delete(String(projectRoot));
-  }
+  });
 }
 
 // The write behind `mauto config set telemetry.enabled`: the config key only,
 // never the consent record. Owned here so it invalidates the cached decision
 // like setEnabled does.
 function setConfigOptIn(projectRoot, value) {
+  writeInvalidating(projectRoot, () => configManager.set(projectRoot, 'telemetry.enabled', value));
+}
+
+// Every write through this module drops that root's cached decision, in a
+// finally so a failed write cannot leave a stale one behind.
+function writeInvalidating(projectRoot, write) {
   try {
-    configManager.set(projectRoot, 'telemetry.enabled', value);
+    write();
   } finally {
     cache.delete(String(projectRoot));
   }
