@@ -21,6 +21,9 @@
 // the developer's ~/.config. Where the file lives comes from XDG_CONFIG_HOME,
 // else the user's home directory, and the environment is trusted the same way
 // MAUTO_TELEMETRY_HOST is: whoever controls it already controls this process.
+// The write still goes through atomicOutputWrite, the one atomic writer for a
+// path mauto did not put in the workspace (#347 left no unconfined one): out
+// here it walks nothing and only creates its own temp file O_NOFOLLOW.
 //
 // The format is { "projects": { "<realpath>": true } }. Reading fails closed:
 // a missing, unreadable, corrupt or oddly shaped file is "no consent", never a
@@ -30,7 +33,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { atomicWrite } = require('../util/atomic');
+const { atomicOutputWrite } = require('../util/atomic');
 const { isPlainObject } = require('../util/is-plain-object');
 const { realOrResolved } = require('../util/real-or-resolved');
 
@@ -96,7 +99,7 @@ function setLocalConsent(projectRoot, value, { env = process.env, homedir = os.h
   const dir = path.dirname(file);
   fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
   fs.chmodSync(dir, 0o700);
-  atomicWrite(file, `${JSON.stringify(doc, null, 2)}\n`);
+  atomicOutputWrite(projectRoot, file, `${JSON.stringify(doc, null, 2)}\n`);
   fs.chmodSync(file, 0o600);
 }
 
