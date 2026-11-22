@@ -1,7 +1,5 @@
 'use strict';
 
-const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const { Command } = require('commander');
 
@@ -67,8 +65,9 @@ const {
   legacyWorkspaceFailure,
 } = require('./workspace/discover');
 const {
-  UnsafePathError, isInside, userDest, userFile,
+  UnsafePathError, userDest,
 } = require('./workspace/safe-fs');
+const { OutputPathRefusal, crashOutTarget, writeCrashReport } = require('./workspace/output-roots');
 
 // Commander throws (via exitOverride) for two very different reasons, and the
 // split below is the ONLY thing that tells them apart.
@@ -146,6 +145,7 @@ function usageLine(cmd) {
 //   CommanderError (parse failure) -> invalid_input, with the usage line as hint
 //   ResultStoreRefusal           -> its own kind (invalid_input) and hint
 //   UnsafePathError              -> its own kind (environment) and hint (#345)
+//   OutputPathRefusal            -> its own kind (invalid_input) and hint (#347)
 //   SyntaxError                  -> invalid_input (a malformed JSON file)
 //   fs EACCES/ENOENT/EROFS/...    -> environment, with a filesystem hint
 //   anything else                -> internal
@@ -169,7 +169,11 @@ function toEnvelope(err) {
   //     as a symlink, foreign-owned, escaping, ... (#345). Its message names
   //     the path and reason, never file content or a link target. It must
   //     come before the FS_ERROR_CODES branch, which would lose the hint.
-  if (err instanceof ResultStoreRefusal || err instanceof UnsafePathError) return typedFail(err);
+  //   - OutputPathRefusal (src/workspace/output-roots.js): a crash get --out
+  //     outside the roots a crash report may be written to (#347).
+  if (err instanceof ResultStoreRefusal || err instanceof UnsafePathError || err instanceof OutputPathRefusal) {
+    return typedFail(err);
+  }
   if (err instanceof SyntaxError) {
     return {
       envelope: fail(
@@ -1763,35 +1767,6 @@ async function handleCrashList({ deviceBridge, projectRoot }, opts = {}) {
   };
 }
 
-// realpath, or null when there is none: the path does not exist (or cannot be
-// reached), so it contains nothing that does.
-function realpathOrNull(p) {
-  try {
-    return fs.realpathSync(p);
-  } catch (_) {
-    return null;
-  }
-}
-
-// Where `crash get --out` may write outside the workspace: the roots the device
-// engine allows for the files it writes itself (mobile-mcp's
-// getAllowedRoots). The project, unless it is the home directory or above it
-// (the engine's isTooBroadToAllow: it would make nearly every file the user
-// owns writable, and with no workspace found the project is just the cwd);
-// the OS temp directory; and on macOS /tmp too, because os.tmpdir() is
-// /var/folders/.../T there and the docs teach `--out /tmp/crash.txt`. Listed
-// as given, for the hint; compared as realpaths, as the engine compares them.
-// A home that does not exist protects nothing, so the project stays a root.
-function crashOutRoots(projectRoot, { tmpdir, platform, darwinTmp, homedir }) {
-  const home = realpathOrNull(homedir());
-  const project = realpathOrNull(projectRoot);
-  const projectTooBroad = Boolean(home && project && isInside(home, project));
-  const roots = projectTooBroad ? [] : [projectRoot];
-  roots.push(tmpdir());
-  if (platform === 'darwin') roots.push(darwinTmp);
-  return { roots, projectTooBroad };
-}
-
 function crashWriteFailure(given, err) {
   return {
     envelope: fail(
@@ -1803,44 +1778,6 @@ function crashWriteFailure(given, err) {
   };
 }
 
-// Why `out` (resolved, outside the workspace) may not take the report, or
-// null. Its directory must already exist (a missing one fails environment,
-// as the write itself always has) and realpath inside one of the roots. A
-// root with no realpath is skipped: it cannot contain a directory that exists.
-function crashOutRefusal(out, given, { roots, projectTooBroad }) {
-  let dir;
-  try {
-    dir = fs.realpathSync(path.dirname(out));
-  } catch (err) {
-    return crashWriteFailure(given, err);
-  }
-  const holdsDir = (root) => {
-    const real = realpathOrNull(root);
-    return real !== null && isInside(dir, real);
-  };
-  if (roots.some(holdsDir)) return null;
-  const hint = projectTooBroad
-    ? `Pass an --out path inside a temp directory: ${roots.join(', ')}. The project directory is not allowed: it is the home directory or contains it.`
-    : `Pass an --out path inside the project or a temp directory: ${roots.join(', ')}.`;
-  return {
-    envelope: fail('invalid_input', `--out resolves outside the directories a crash report may be written to: ${out}`, hint),
-    exitKind: 'invalid_input',
-  };
-}
-
-// The whole report into the fd, through safe-fs's leaf open in both cases:
-// O_NOFOLLOW (a link leaf, dangling or not, is refused), a regular file of
-// ours with one hard link, and the truncate only once those checks passed.
-function writeCrashReport(target, report) {
-  const { O_WRONLY, O_CREAT, O_TRUNC } = fs.constants;
-  const fd = target.open(target.path, O_WRONLY | O_CREAT | O_TRUNC);
-  try {
-    fs.writeFileSync(fd, report);
-  } finally {
-    fs.closeSync(fd);
-  }
-}
-
 // --out writes the FULL report and returns only its path. This is how a
 // tens-of-kilobytes native tombstone reaches a result file without passing
 // through the agent's context window.
@@ -1849,25 +1786,23 @@ function writeCrashReport(target, report) {
 // against the caller's cwd as handleScreenshot's is (#214). Inside
 // .mobile-automator/ (through a symlinked alias of the root too) it gets the
 // workspace rules: every directory walked, created when missing, a link on
-// the way refused. Anywhere else it must land in one of crashOutRoots, checked
-// before the device is asked, so a bad --out costs no device work. `tmpdir`,
+// the way refused. Anywhere else it must land in one of the roots
+// src/workspace/output-roots.js allows, checked before the device is asked, so
+// a bad --out costs no device work. A refusal (that rule's or a link's)
+// propagates to toEnvelope; any other fs error is the write failure. `tmpdir`,
 // `platform`, `darwinTmp` and `homedir` are injectable for tests.
 async function handleCrashGet(
-  {
-    deviceBridge, projectRoot, cwd = process.cwd(),
-    tmpdir = os.tmpdir, platform = process.platform, darwinTmp = '/tmp', homedir = os.homedir,
-  },
+  { deviceBridge, projectRoot, cwd = process.cwd(), tmpdir, platform, darwinTmp, homedir },
   id,
   opts = {}
 ) {
   let target = null;
   if (opts.out) {
-    target = userFile(projectRoot, path.resolve(cwd, opts.out));
-    if (!target.confined) {
-      const refused = crashOutRefusal(
-        target.path, opts.out, crashOutRoots(projectRoot, { tmpdir, platform, darwinTmp, homedir })
-      );
-      if (refused) return refused;
+    try {
+      target = crashOutTarget(projectRoot, path.resolve(cwd, opts.out), { tmpdir, platform, darwinTmp, homedir });
+    } catch (err) {
+      if (err instanceof OutputPathRefusal) throw err;
+      return crashWriteFailure(opts.out, err);
     }
   }
 
@@ -1885,8 +1820,6 @@ async function handleCrashGet(
     try {
       writeCrashReport(target, report);
     } catch (err) {
-      // A refused path propagates to the envelope boundary (toEnvelope): its
-      // own hint says what to do about the link, which the generic one cannot.
       if (err instanceof UnsafePathError) throw err;
       return crashWriteFailure(opts.out, err);
     }
