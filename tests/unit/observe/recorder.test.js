@@ -496,7 +496,7 @@ describe('the spool sink writes only while telemetry is enabled', () => {
     it('a one-shot record() reads the decision once', () => {
       const root = configuredWorkspace({ telemetry: { enabled: true } });
       const file = consentPath({ env: TOKEN });
-      const reads = jest.spyOn(fs, 'readFileSync');
+      const reads = jest.spyOn(fs, 'openSync'); // the consent read opens the leaf through safe-fs
       try {
         record({ level: 'info', src: 'cli', event: 'verb.end', verb: 'tap', ok: true }, { projectRoot: root, env: TOKEN });
         expect(reads.mock.calls.filter(([p]) => p === file)).toHaveLength(1);

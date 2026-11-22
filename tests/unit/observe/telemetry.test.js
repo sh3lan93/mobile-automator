@@ -172,7 +172,7 @@ describe('telemetry control surface', () => {
   it('does not read the consent record while the config is off', () => {
     const env = tokenEnv();
     const consentReads = (root) => {
-      const spy = jest.spyOn(fs, 'readFileSync');
+      const spy = jest.spyOn(fs, 'openSync'); // the consent read opens the leaf through safe-fs
       telemetry.decideNow(root, env);
       const n = spy.mock.calls.filter(([p]) => String(p) === consent.consentPath({ env })).length;
       spy.mockRestore();

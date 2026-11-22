@@ -144,6 +144,65 @@ describe('the per-user consent record (#348)', () => {
       .toThrow(expect.objectContaining({ code: 'ENOTDIR' }));
   });
 
+  // Outside every project, both sides use safe-fs's user-leaf rule (#348):
+  // O_NOFOLLOW, a regular file owned by this user, a capped read.
+  describe('the user-leaf rule', () => {
+    const granted = (root) => JSON.stringify({ projects: { [fs.realpathSync(root)]: true } });
+    const elsewhere = () => fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-consent-out-'));
+
+    it('reads a regular record, so every refusal below is a refusal and not a broken reader', () => {
+      const env = userConfigEnv();
+      const root = project();
+      plant(env, granted(root));
+      expect(consent.hasLocalConsent(root, { env })).toBe(true);
+    });
+
+    it('reads a consent file that is a symlink as no consent, even to a granting record', () => {
+      const env = userConfigEnv();
+      const root = project();
+      const outside = path.join(elsewhere(), 'record.json');
+      fs.writeFileSync(outside, granted(root));
+      const file = consent.consentPath({ env });
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.symlinkSync(outside, file);
+      expect(consent.hasLocalConsent(root, { env })).toBe(false);
+    });
+
+    it('reads a file past CONSENT_MAX_BYTES as no consent', () => {
+      const env = userConfigEnv();
+      const root = project();
+      const record = granted(root);
+      plant(env, record + ' '.repeat(consent.CONSENT_MAX_BYTES - record.length + 1));
+      expect(consent.hasLocalConsent(root, { env })).toBe(false);
+      // The control: at the cap exactly it still reads.
+      plant(env, record + ' '.repeat(consent.CONSENT_MAX_BYTES - record.length));
+      expect(consent.hasLocalConsent(root, { env })).toBe(true);
+    });
+
+    it("reads another user's file as no consent", () => {
+      const env = userConfigEnv();
+      const root = project();
+      plant(env, granted(root));
+      expect(consent.hasLocalConsent(root, { env, getuid: () => process.getuid() + 1 })).toBe(false);
+    });
+
+    it('replaces a symlink planted at the record on a write, leaving its target untouched', () => {
+      const env = userConfigEnv();
+      const root = project();
+      const outside = path.join(elsewhere(), 'secret.txt');
+      fs.writeFileSync(outside, 'SECRET-CANARY');
+      const file = consent.consentPath({ env });
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.symlinkSync(outside, file);
+
+      consent.setLocalConsent(root, true, { env });
+
+      expect(fs.readFileSync(outside, 'utf8')).toBe('SECRET-CANARY');
+      expect(fs.lstatSync(file).isSymbolicLink()).toBe(false);
+      expect(readRecord(env)).toEqual({ projects: { [fs.realpathSync(root)]: true } });
+    });
+  });
+
   it('never consults a consent-shaped file planted inside the repository', () => {
     const env = userConfigEnv();
     const root = project();
