@@ -13,6 +13,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { OutputPathRefusal, crashOutRoots, crashOutTarget } = require('../../../src/workspace/output-roots');
+const { UnsafePathError } = require('../../../src/workspace/safe-fs');
 const { tmpDir } = require('../../helpers/workspace-safety');
 
 // A project one level below its own temp dir, plus a temp dir, a home and an
@@ -37,6 +38,17 @@ function refusal(fn) {
     return err;
   }
   throw new Error('expected an OutputPathRefusal');
+}
+
+function unsafe(fn) {
+  try {
+    fn();
+  } catch (err) {
+    expect(err).toBeInstanceOf(UnsafePathError);
+    expect(err.kind).toBe('environment');
+    return err;
+  }
+  throw new Error('expected an UnsafePathError');
 }
 
 describe('crashOutRoots', () => {
@@ -122,12 +134,30 @@ describe('crashOutTarget', () => {
     refusal(() => crashOutTarget(s.root, path.join(s.base, 'c.txt'), s.host));
   });
 
-  it('compares realpaths: a project directory linking outside every root is refused, by its own name', () => {
+  // #362: a project directory link is refused by the project walk before the
+  // roots are compared, wherever it points, by its own name.
+  it('a project directory linking outside every root is refused, by its own name', () => {
     const s = setup();
     fs.symlinkSync(s.outside, path.join(s.root, 'docs'));
-    const err = refusal(() => crashOutTarget(s.root, path.join(s.root, 'docs', 'c.txt'), s.host));
-    expect(err.message).toContain(path.join(s.root, 'docs', 'c.txt'));
+    const err = unsafe(() => crashOutTarget(s.root, path.join(s.root, 'docs', 'c.txt'), s.host));
+    expect(err.message).toContain(path.join(s.root, 'docs'));
     expect(err.message).not.toContain(s.outside);
+  });
+
+  it('a project reports/ linking into the temp dir (an allowed root) is refused, the temp dir left empty', () => {
+    const s = setup();
+    fs.symlinkSync(s.tmp, path.join(s.root, 'reports'));
+    const err = unsafe(() => crashOutTarget(s.root, path.join(s.root, 'reports', 'c.txt'), s.host));
+    expect(err.reason).toBe('symlink');
+    expect(err.scope).toBe('path');
+    expect(fs.readdirSync(s.tmp)).toEqual([]);
+  });
+
+  it('a plain project reports/ is allowed, in the project scope', () => {
+    const s = setup();
+    fs.mkdirSync(path.join(s.root, 'reports'));
+    const out = path.join(s.root, 'reports', 'c.txt');
+    expect(crashOutTarget(s.root, out, s.host)).toMatchObject({ path: out, confined: false, scope: 'project' });
   });
 
   it('a root that does not resolve is skipped, not matched', () => {

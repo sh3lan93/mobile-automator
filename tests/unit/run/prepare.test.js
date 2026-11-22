@@ -208,15 +208,35 @@ describe('--junit (#282)', () => {
     }
   });
 
-  test('a symlinked directory outside the workspace is the user\'s call', () => {
+  // #362: inside the project, outside the workspace, the same refusal, in
+  // the path scope.
+  test('a symlinked project directory outside the workspace is refused environment, before the scenario is read', () => {
     const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-prepare-outside-'));
     try {
       fs.symlinkSync(outside, path.join(root, 'reports'));
-      const p = prepare({ file: write(scenario()), runId: RUN_ID, junit: 'reports/r.xml', cwd: root });
-      expect(p.failure).toBeUndefined();
-      expect(p.junitPath).toBe(path.join(root, 'reports', 'r.xml'));
+      const p = prepare({ file: path.join(root, 'missing.json'), runId: RUN_ID, junit: 'reports/r.xml', cwd: root });
+      expect(p.failure.exitKind).toBe('environment');
+      expect(p.failure.envelope.error.message).toMatch(/^Refusing to use path /);
+      expect(p.failure.envelope.error.message).toContain(path.join(root, 'reports'));
+      expect(p.failure.envelope.error.message).not.toContain(outside);
+      expect(fs.readdirSync(outside)).toEqual([]);
     } finally {
       fs.rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  test('a symlinked directory outside the project is the user\'s call', () => {
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-prepare-outside-'));
+    const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-prepare-elsewhere-'));
+    try {
+      const link = path.join(elsewhere, 'reports');
+      fs.symlinkSync(outside, link);
+      const p = prepare({ file: write(scenario()), runId: RUN_ID, junit: path.join(link, 'r.xml'), cwd: root });
+      expect(p.failure).toBeUndefined();
+      expect(p.junitPath).toBe(path.join(link, 'r.xml'));
+    } finally {
+      fs.rmSync(outside, { recursive: true, force: true });
+      fs.rmSync(elsewhere, { recursive: true, force: true });
     }
   });
 

@@ -4,7 +4,8 @@
 // caller named. A cloned repo can commit a link anywhere in
 // .mobile-automator/, so a path that lands there gets the workspace rules and
 // a refusal is one `environment` envelope with the refusal's own hint. A path
-// anywhere else keeps the verb's own rule.
+// elsewhere in the project gets the same walk in the path scope (#362); one
+// outside the project keeps the verb's own rule.
 
 const fs = require('fs');
 const path = require('path');
@@ -133,5 +134,72 @@ describe('result export --out confines a workspace destination (#347)', () => {
     expect(calls[0].exitKind).toBe('ok');
     expect(calls[0].envelope.data.path).toBe(dest);
     expect(fs.readFileSync(dest, 'utf8')).toMatch(/^<\?xml/);
+  });
+});
+
+// #362: a path inside the project but outside the workspace, through a
+// committed `reports` link to an outside directory. The refusal is the path
+// scope's; the outside directory stays empty. A plain reports/ and an explicit
+// path outside the project still work.
+function expectProjectRefused({ calls, written }, refusedPath, outsideDir) {
+  expect(calls).toHaveLength(1);
+  const [r] = calls;
+  expect(r.exitKind).toBe('environment');
+  expect(r.envelope.ok).toBe(false);
+  expect(r.envelope.error.kind).toBe('environment');
+  expect(r.envelope.error.message).toMatch(/^Refusing to use path /);
+  expect(r.envelope.error.message).toContain(refusedPath);
+  expect(r.envelope.error.message).not.toContain(outsideDir);
+  expect(r.envelope.hint).toMatch(/never writes through a symbolic link/);
+  expect(written).not.toContain(CANARY);
+}
+
+describe('report writers refuse a linked project directory outside the workspace (#362)', () => {
+  const PASSED = require('./result/fixtures/passed.json');
+  const exportArgv = (out) => ['result', 'export', '--run-id', PASSED.run_id, '--format', 'junit', '--out', out];
+
+  // A finalized result, plus `reports` (in the project, not the workspace)
+  // planted by `plant(root)`.
+  function project(plant = () => {}) {
+    const elsewhere = tmpDir('mauto-cli-362-outside-');
+    const fx = fixture((ws) => {
+      fs.mkdirSync(path.join(ws, 'results'));
+      fs.writeFileSync(path.join(ws, 'results', `${PASSED.run_id}.json`), JSON.stringify(PASSED, null, 2));
+    });
+    plant(fx.root, elsewhere);
+    return { ...fx, elsewhere };
+  }
+  const linkReports = (root, elsewhere) => fs.symlinkSync(elsewhere, path.join(root, 'reports'));
+
+  test('export --out reports/r.xml with reports -> outside fails environment, the outside dir empty', async () => {
+    const { root, elsewhere } = project(linkReports);
+    const out = await runIn(root, exportArgv('reports/r.xml'));
+    expectProjectRefused(out, path.join(root, 'reports'), elsewhere);
+    expect(fs.readdirSync(elsewhere)).toEqual([]);
+  });
+
+  test('export --out reports/r.xml into a plain reports/ is written', async () => {
+    const { root } = project((r) => fs.mkdirSync(path.join(r, 'reports')));
+    const { calls } = await runIn(root, exportArgv('reports/r.xml'));
+    expect(calls[0].exitKind).toBe('ok');
+    expect(fs.readFileSync(path.join(root, 'reports', 'r.xml'), 'utf8')).toMatch(/^<\?xml/);
+  });
+
+  test('crash get --out reports/c.txt with reports -> outside fails environment before the device is asked', async () => {
+    const { root, elsewhere } = project(linkReports);
+    const { asked, factory } = crashFactory();
+    const out = await runIn(root, ['crash', 'get', 'r1', '--out', 'reports/c.txt'], { deviceBridgeFactory: factory });
+    expectProjectRefused(out, path.join(root, 'reports'), elsewhere);
+    expect(asked).toEqual([]);
+    expect(fs.readdirSync(elsewhere)).toEqual([]);
+  });
+
+  test('crash get --out reports/c.txt into a plain reports/ is written whole', async () => {
+    const { root } = project((r) => fs.mkdirSync(path.join(r, 'reports')));
+    const { asked, factory } = crashFactory();
+    const { calls } = await runIn(root, ['crash', 'get', 'r1', '--out', 'reports/c.txt'], { deviceBridgeFactory: factory });
+    expect(calls[0].exitKind).toBe('ok');
+    expect(asked).toEqual(['r1']);
+    expect(fs.readFileSync(path.join(root, 'reports', 'c.txt'), 'utf8')).toBe(REPORT);
   });
 });
