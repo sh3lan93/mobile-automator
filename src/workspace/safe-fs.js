@@ -719,13 +719,7 @@ function userDest(projectRoot, file, deps = {}) {
 //     for a caller that refuses a bad path before it does other work (run
 //     --junit, crash get --out). A missing directory is nothing to refuse. A
 //     no-op outside the project.
-// `mkdirOutside` (default true): whether that open, under O_CREAT, makes a
-// missing directory outside the project. A writer whose directory must
-// already exist there (crash get --out, which realpaths it against its roots)
-// passes false, so the open creates nothing outside and a missing directory
-// fails ENOENT. The confined scopes are unaffected: their walk is the one
-// place a directory is made.
-function userFile(projectRoot, file, { mkdirOutside = true } = {}, deps = {}) {
+function userFile(projectRoot, file, deps = {}) {
   const target = userPath(projectRoot, file, deps);
   const { scope } = target;
   if (scope !== 'outside') {
@@ -741,7 +735,7 @@ function userFile(projectRoot, file, { mkdirOutside = true } = {}, deps = {}) {
   return {
     ...target,
     open: (f, flags, mode = 0o666) => {
-      if (mkdirOutside && flags & nodeFs.constants.O_CREAT) {
+      if (flags & nodeFs.constants.O_CREAT) {
         resolveDeps(deps).fs.mkdirSync(path.dirname(path.resolve(f)), { recursive: true });
       }
       return openUserLeaf(f, flags, mode, deps);

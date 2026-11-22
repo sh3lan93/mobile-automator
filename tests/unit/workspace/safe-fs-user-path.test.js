@@ -189,28 +189,6 @@ describe('inProject / userPath scopes (#362)', () => {
   });
 });
 
-// crash get --out's directory must already exist outside the project, so its
-// open must create none there: an option of userFile, not a caller-swapped open.
-describe('userFile mkdirOutside', () => {
-  it('makes a missing directory outside the project by default, and none when false', () => {
-    const made = path.join(outside, 'made', 'r.txt');
-    fs.closeSync(userFile(root, made).open(made, O_WRONLY | O_CREAT));
-    expect(fs.existsSync(made)).toBe(true);
-
-    const notMade = path.join(outside, 'not-made', 'r.txt');
-    const t = userFile(root, notMade, { mkdirOutside: false });
-    expect(() => t.open(notMade, O_WRONLY | O_CREAT)).toThrow(expect.objectContaining({ code: 'ENOENT' }));
-    expect(fs.existsSync(path.dirname(notMade))).toBe(false);
-  });
-
-  it('leaves a confined scope creating its directories through the walk', () => {
-    const inWs = path.join(ws, 'new-dir', 'r.txt');
-    const t = userFile(root, inWs, { mkdirOutside: false });
-    fs.closeSync(t.open(t.path, O_WRONLY | O_CREAT));
-    expect(fs.existsSync(inWs)).toBe(true);
-  });
-});
-
 describe('userFile in the project, outside the workspace (#362)', () => {
   const reports = () => path.join(root, 'reports');
   const openIn = (t) => t.open(t.path, O_WRONLY | O_CREAT);
@@ -248,10 +226,10 @@ describe('userFile in the project, outside the workspace (#362)', () => {
   it('refuses a foreign-owned directory; MAUTO_TRUST_WORKSPACE_OWNER=1 skips the owner check only', () => {
     fs.mkdirSync(reports());
     const file = path.join(reports(), 'r.xml');
-    expect(expectUnsafe(() => openIn(userFile(root, file, {}, { fs: foreignAt(reports()) })), 'foreign_owner').scope).toBe(
+    expect(expectUnsafe(() => openIn(userFile(root, file, { fs: foreignAt(reports()) })), 'foreign_owner').scope).toBe(
       'path'
     );
-    const trusted = userFile(root, file, {}, { fs: foreignAt(reports()), env: { MAUTO_TRUST_WORKSPACE_OWNER: '1' } });
+    const trusted = userFile(root, file, { fs: foreignAt(reports()), env: { MAUTO_TRUST_WORKSPACE_OWNER: '1' } });
     fs.closeSync(openIn(trusted));
     expect(fs.existsSync(file)).toBe(true);
 

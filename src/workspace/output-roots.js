@@ -78,10 +78,10 @@ function crashOutRoots(
 // not exist (or cannot be realpath'd) throws its own fs error, which the
 // caller reports as the write failure it always was. The open is userFile's
 // in every scope: in the project the walk again, then the checked leaf;
-// outside it, with `mkdirOutside: false`, the checked leaf alone, creating no
-// directory (the realpath just proved it exists).
+// outside it the checked leaf, after a recursive mkdir that is a no-op there
+// (the realpath just proved the directory exists), so nothing is created.
 function crashOutTarget(projectRoot, out, host = {}) {
-  const target = userFile(projectRoot, out, { mkdirOutside: false });
+  const target = userFile(projectRoot, out);
   target.preflight();
   if (target.scope === 'workspace') return target;
 
