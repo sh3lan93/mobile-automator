@@ -33,7 +33,7 @@ const path = require('path');
 
 const paths = require('./session-paths');
 const { parseSalt } = require('./session-salt');
-const { WORKSPACE_DIR, dirPolicy, checkDir, safeDir, readOwnedLeaf } = require('../workspace/safe-fs');
+const { UnsafePathError, WORKSPACE_DIR, dirPolicy, checkDir, safeDir, readOwnedLeaf } = require('../workspace/safe-fs');
 
 // .session/: a workspace directory, so it keeps the workspace wording and the
 // owner override (a CI checkout owned by another uid), but no group or other
@@ -122,13 +122,26 @@ function isOwnSocket(file, { fs: f = fs, getuid = process.getuid } = {}) {
   return st.isSocket() && st.uid === getuid();
 }
 
+// An expected refusal of a pinned directory or what is in it: an
+// UnsafePathError, or a system error, whose `code` is an errno name (ENOENT,
+// EACCES, ENOTDIR, ELOOP, EPERM, ...). Anything else is not a refusal and must
+// never read as "no daemon": a TypeError or other bug, and Node's own
+// argument errors, whose codes are ERR_* (ERR_INVALID_ARG_TYPE). Matched by
+// shape, not instanceof Error: an fs error can come from another realm (jest).
+const ERRNO_CODE = /^E[A-Z0-9]+$/;
+function isRefusal(err) {
+  return err instanceof UnsafePathError || (err != null && typeof err.code === 'string' && ERRNO_CODE.test(err.code));
+}
+
 // Run `fn` with the process inside `dir`, once '.' (the directory the
 // process is now in, whatever it is called by then) checks out under
 // `policy`, and return what `fn` returned. Null, with `fn` never run, when the
-// directory cannot be entered or fails the check, or when `fn` throws. The
-// previous working directory is always restored; a restore that fails is
-// thrown, never swallowed, because every relative path after it would resolve
-// somewhere else. `deps` ({ fs, getuid, env }) reaches safe-fs.
+// directory cannot be entered or fails the check; null too when `fn` throws a
+// refusal (isRefusal). Any other error propagates. The previous working
+// directory is always restored first; a restore that fails is thrown, never
+// swallowed, because every relative path after it would resolve somewhere
+// else. What `fn` opened is the caller's to clean up when this throws.
+// `deps` ({ fs, getuid, env }) reaches safe-fs.
 //
 // Why a chdir (#361): a directory checked by its path and then used by its
 // path can be another directory by the second use, since a group-writable
@@ -152,23 +165,21 @@ function inPinnedDir(dir, policy, fn, deps = {}) {
   try {
     prev = process.cwd();
     process.chdir(dir);
-  } catch (_) {
-    return null;
-  }
-  let result = null;
-  try {
-    checkDir('.', policy, {}, deps);
-    result = fn();
-  } catch (_) {
-    result = null;
-  }
-  try {
-    process.chdir(prev);
   } catch (err) {
-    if (result && result.socket) result.socket.destroy();
+    if (isRefusal(err)) return null;
     throw err;
   }
-  return result;
+  try {
+    try {
+      checkDir('.', policy, {}, deps);
+      return fn();
+    } catch (err) {
+      if (isRefusal(err)) return null;
+      throw err;
+    }
+  } finally {
+    process.chdir(prev);
+  }
 }
 
 // The workspace salt, read by its relative name inside the pinned .session/
@@ -190,8 +201,9 @@ function connectOwnSocket(name, connect, deps) {
 // passes net.createConnection, which does (see inPinnedDir). Returns
 // { socket, salt } (the socket still connecting)
 // or null: no workspace, a directory that is not private, a socket that is
-// not ours, or no salt. Never throws, except for a failed restore of the
-// working directory (inPinnedDir).
+// not ours, or no salt. Throws only what inPinnedDir throws (a failed restore
+// of the working directory, or an error that is not a refusal), with any
+// socket it opened destroyed first.
 //
 // The path checks are the same as ever, as a prefilter, so every refusal
 // (and the 0755 .session/ an older mauto made, which the daemon tightens)
@@ -216,30 +228,38 @@ function connectPinned(projectRoot, connect, deps = {}) {
     return null;
   }
   const name = path.basename(loc.file);
-  if (loc.inWorkspace) {
+  // The socket connect opened, destroyed here when inPinnedDir throws after it
+  // (a failed restore, or an error that is not a refusal).
+  let opened = null;
+  try {
+    if (loc.inWorkspace) {
+      return inPinnedDir(
+        sessionDir,
+        SESSION_DIR,
+        () => {
+          const salt = readPinnedSalt(deps);
+          if (!salt) return null;
+          const socket = (opened = connectOwnSocket(name, connect, deps));
+          return socket ? { socket, salt } : null;
+        },
+        deps
+      );
+    }
+    const salt = inPinnedDir(sessionDir, SESSION_DIR, () => readPinnedSalt(deps), deps);
+    if (!salt) return null;
     return inPinnedDir(
-      sessionDir,
-      SESSION_DIR,
+      loc.dir,
+      SOCKET_DIR,
       () => {
-        const salt = readPinnedSalt(deps);
-        if (!salt) return null;
-        const socket = connectOwnSocket(name, connect, deps);
+        const socket = (opened = connectOwnSocket(name, connect, deps));
         return socket ? { socket, salt } : null;
       },
       deps
     );
+  } catch (err) {
+    if (opened) opened.destroy();
+    throw err;
   }
-  const salt = inPinnedDir(sessionDir, SESSION_DIR, () => readPinnedSalt(deps), deps);
-  if (!salt) return null;
-  return inPinnedDir(
-    loc.dir,
-    SOCKET_DIR,
-    () => {
-      const socket = connectOwnSocket(name, connect, deps);
-      return socket ? { socket, salt } : null;
-    },
-    deps
-  );
 }
 
 // Bind `server` to `socketPath` so no other user can use the socket, even for

@@ -465,6 +465,57 @@ describe('connectPinned', () => {
     expect(await pinned(root, deps)).toBeNull();
   });
 
+  // The socket connect opened is connectPinned's to clean up when the pin
+  // throws after it: here, a failed restore of the working directory (the
+  // restore of the pin that connects: chdir call 2 in-workspace, 4 fallback).
+  test.each([
+    ['in-workspace', 2],
+    ['fallback', 4],
+  ])('a failed restore after the connect destroys the socket and throws (%s)', async (where, failingCall) => {
+    const before = process.cwd();
+    let root;
+    let deps;
+    if (where === 'in-workspace') {
+      root = await liveShort();
+      deps = { env: {} };
+    } else {
+      ({ root, deps } = longRoot());
+      ensureSessionDirs(root, deps);
+      ensureSalt(root);
+      await listen(paths.socketPath(root, deps));
+    }
+    const socket = { destroy: jest.fn() };
+    const realChdir = process.chdir;
+    let calls = 0;
+    const spy = jest.spyOn(process, 'chdir').mockImplementation((d) => {
+      calls += 1;
+      if (calls === failingCall) throw Object.assign(new Error('ENOENT: restore'), { code: 'ENOENT' });
+      return realChdir.call(process, d);
+    });
+    try {
+      expect(() => connectPinned(root, () => socket, deps)).toThrow('ENOENT: restore');
+    } finally {
+      spy.mockRestore();
+      process.chdir(before);
+    }
+    expect(socket.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  test('an error connect throws that is not a refusal propagates; nothing was opened', async () => {
+    const before = process.cwd();
+    const root = await liveShort();
+    expect(() =>
+      connectPinned(
+        root,
+        () => {
+          throw new TypeError('connect is broken');
+        },
+        { env: {} }
+      )
+    ).toThrow('connect is broken');
+    expect(process.cwd()).toBe(before);
+  });
+
   test('the working directory is the same afterwards, on success and on refusal', async () => {
     const before = process.cwd();
     const root = await liveShort();
@@ -498,15 +549,53 @@ describe('inPinnedDir', () => {
     expect(process.cwd()).toBe(before);
   });
 
-  test('null when fn throws, and the working directory is still restored', () => {
+  test('null when fn throws a refusal (UnsafePathError, an fs error), and the working directory is restored', () => {
     const before = process.cwd();
     const root = shortRoot();
     ensureSessionDirs(root);
-    expect(
-      inPinnedDir(paths.sessionDir(root), SESSION_DIR, () => {
-        throw new Error('boom');
-      })
-    ).toBeNull();
+    const refusals = [
+      new UnsafePathError('x', 'symlink'),
+      Object.assign(new Error('ENOENT: gone'), { code: 'ENOENT' }),
+      Object.assign(new Error('EACCES: denied'), { code: 'EACCES' }),
+    ];
+    for (const refusal of refusals) {
+      expect(
+        inPinnedDir(paths.sessionDir(root), SESSION_DIR, () => {
+          throw refusal;
+        })
+      ).toBeNull();
+      expect(process.cwd()).toBe(before);
+    }
+  });
+
+  test('any other error fn throws propagates, after the working directory is restored', () => {
+    const before = process.cwd();
+    const root = shortRoot();
+    ensureSessionDirs(root);
+    const argError = Object.assign(new TypeError('bad arg'), { code: 'ERR_INVALID_ARG_TYPE' });
+    for (const bug of [new TypeError('not a function'), new Error('boom'), argError]) {
+      expect(() =>
+        inPinnedDir(paths.sessionDir(root), SESSION_DIR, () => {
+          throw bug;
+        })
+      ).toThrow(bug);
+      expect(process.cwd()).toBe(before);
+    }
+  });
+
+  test('entering the directory: a refusal is null, any other error propagates', () => {
+    const before = process.cwd();
+    const fn = jest.fn(() => 'ran');
+    const spy = jest.spyOn(process, 'chdir').mockImplementationOnce(() => {
+      throw new TypeError('bad dir');
+    });
+    try {
+      expect(() => inPinnedDir(base, SESSION_DIR, fn)).toThrow('bad dir');
+    } finally {
+      spy.mockRestore();
+    }
+    expect(inPinnedDir(path.join(base, 'missing'), SESSION_DIR, fn)).toBeNull();
+    expect(fn).not.toHaveBeenCalled();
     expect(process.cwd()).toBe(before);
   });
 
