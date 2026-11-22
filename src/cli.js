@@ -1112,9 +1112,9 @@ function handleTelemetryStatus({ projectRoot, env = process.env }) {
 // MAUTO_TELEMETRY=0 is set would be a lie, and the config is not the place to
 // resolve a conflict the environment owns.
 function handleTelemetryEnable({ projectRoot, env = process.env }) {
-  // The same env the report below reads: the consent record lives where that
-  // env's XDG_CONFIG_HOME / HOME says, so writing through any other would
-  // record consent somewhere the decision never looks.
+  // The same env the report below reads: the consent record lives under that
+  // env's XDG_CONFIG_HOME, else the user's home directory, so writing through
+  // any other env would record consent somewhere the decision never looks.
   observeTelemetry.setEnabled(projectRoot, true, env);
   const data = telemetryReport({ projectRoot, env });
   // "for this project", not "in config.json": enable records both the config

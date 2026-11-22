@@ -18,20 +18,21 @@
 // Why no safe-fs: the file is NOT read through src/workspace/safe-fs.js and
 // gets no owner or symlink checks. Those checks defend against a hostile
 // repository, and a repository can commit .mobile-automator/ but cannot write
-// the developer's ~/.config. Where the file lives comes from XDG_CONFIG_HOME
-// and HOME, and the environment is trusted the same way MAUTO_TELEMETRY_HOST
-// is: whoever controls it already controls this process.
+// the developer's ~/.config. Where the file lives comes from XDG_CONFIG_HOME,
+// else the user's home directory, and the environment is trusted the same way
+// MAUTO_TELEMETRY_HOST is: whoever controls it already controls this process.
 //
 // The format is { "projects": { "<realpath>": true } }. Reading fails closed:
 // a missing, unreadable, corrupt or oddly shaped file is "no consent", never a
 // guess at what someone meant.
 
-const realFs = require('fs');
+const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
 const { atomicWrite } = require('../util/atomic');
 const { isPlainObject } = require('../util/is-plain-object');
+const { realOrResolved } = require('../util/real-or-resolved');
 
 const FILE_NAME = 'telemetry-consent.json';
 
@@ -45,19 +46,8 @@ function consentPath({ env = process.env, homedir = os.homedir } = {}) {
   return path.join(base, 'mauto', FILE_NAME);
 }
 
-// The one key a project is recorded under. A root that cannot be resolved (it
-// was deleted, say) falls back to its absolute path, which simply matches no
-// record written while it existed.
-function projectKey(projectRoot, fs) {
-  try {
-    return fs.realpathSync(projectRoot);
-  } catch (_) {
-    return path.resolve(projectRoot);
-  }
-}
-
 // The parsed record, or null when there is no usable one.
-function readRecord(file, fs) {
+function readRecord(file) {
   try {
     const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
     if (isPlainObject(doc) && isPlainObject(doc.projects)) return doc;
@@ -70,11 +60,14 @@ function readRecord(file, fs) {
 // True only for an own `true` under this project's key. A truthy "true" or 1
 // is a hand edit no `mauto telemetry enable` would write, and a consent flag
 // does not get to guess. Never throws.
-function hasLocalConsent(projectRoot, { env = process.env, homedir = os.homedir, fs = realFs } = {}) {
+function hasLocalConsent(projectRoot, { env = process.env, homedir = os.homedir } = {}) {
   try {
-    const doc = readRecord(consentPath({ env, homedir }), fs);
+    const doc = readRecord(consentPath({ env, homedir }));
     if (!doc) return false;
-    const key = projectKey(projectRoot, fs);
+    // The one key a project is recorded under. A root that cannot be resolved
+    // (it was deleted, say) falls back to its absolute path, which simply
+    // matches no record written while it existed.
+    const key = realOrResolved(projectRoot);
     return Object.prototype.hasOwnProperty.call(doc.projects, key) && doc.projects[key] === true;
   } catch (_) {
     return false;
@@ -90,16 +83,13 @@ function hasLocalConsent(projectRoot, { env = process.env, homedir = os.homedir,
 // to set) before the file is written, so the file is never readable by others
 // even in the moment before its own chmod to 0600. Write errors propagate: a
 // user who ran `mauto telemetry enable` must hear that it did not stick.
-//
-// `fs` covers the reads and the directory; the write itself is
-// util/atomic.js's, which uses the real fs.
-function setLocalConsent(projectRoot, value, { env = process.env, homedir = os.homedir, fs = realFs } = {}) {
+function setLocalConsent(projectRoot, value, { env = process.env, homedir = os.homedir } = {}) {
   const file = consentPath({ env, homedir });
   const grant = value === true;
   if (!grant && !fs.existsSync(file)) return;
 
-  const doc = readRecord(file, fs) || { projects: {} };
-  const key = projectKey(projectRoot, fs);
+  const doc = readRecord(file) || { projects: {} };
+  const key = realOrResolved(projectRoot);
   if (grant) doc.projects[key] = true;
   else delete doc.projects[key];
 
