@@ -9,13 +9,13 @@
 //   * allowed: the no-workspace gate. No .mobile-automator/ and no
 //     MAUTO_LOG_DIR means no file is written at all.
 //   * settledLeaf: the file inside a directory settled through safe-fs's
-//     userDir (the checked walk when it lands in the workspace, a plain mkdir
+//     userDirLeaves (the checked walk when it lands in the workspace, a plain mkdir
 //     when it is a MAUTO_LOG_DIR outside it; created only when asked). A
 //     cloned repo can ship `.logs/` as a link, so no observe file is reached
 //     through a directory that was not checked.
 //   * appendLine: one open, write and close, through the settled leaf's open
 //     (safe-fs's openOwnedLeaf: O_NOFOLLOW, a regular file, ours, one hard
-//     link, the owner rule bound by userDir). appendFileSync would
+//     link, the owner rule bound by userDirLeaves). appendFileSync would
 //     follow a planted `mauto.ndjson -> ~/.bashrc`, and a file hard-linked to
 //     one elsewhere would be written by another name. A refusal throws; every
 //     caller drops the line, since observability is never load-bearing.
@@ -27,7 +27,7 @@
 const realFs = require('fs');
 
 const { workspaceDir } = require('../workspace/layout');
-const { userDir } = require('../workspace/safe-fs');
+const { userDirLeaves } = require('../workspace/safe-fs');
 
 const { O_WRONLY, O_APPEND, O_CREAT } = realFs.constants;
 
@@ -50,15 +50,15 @@ function allowed(projectRoot, env, fs = realFs) {
 }
 
 // `name`'s basename inside `dir`, after settling `dir` through safe-fs's
-// userDir (created when `create`): userDir's leaf, `{ path, open, read }`. The
+// userDirLeaves (created when `create`): its leaf, `{ path, open, read }`. The
 // path is the one to use: in the workspace it is re-rooted, so it can differ
 // from `dir`; a caller that opens nothing (a list, a rename) uses it alone.
-// `open` and `read` carry the owner rule userDir bound from where the
+// `open` and `read` carry the owner rule userDirLeaves bound from where the
 // directory landed: MAUTO_TRUST_WORKSPACE_OWNER=1 applies to a leaf in the
 // checkout only, never to one in a MAUTO_LOG_DIR outside it (#363). Throws on
 // a refusal.
 function settledLeaf(projectRoot, dir, name, { create = false } = {}, { fs = realFs, env, getuid } = {}) {
-  return userDir(projectRoot, dir, { create }, { fs, env, getuid }).leaf(name);
+  return userDirLeaves(projectRoot, dir, { create }, { fs, env, getuid }).leaf(name);
 }
 
 // The one size comparison a cap makes, shared by the append below and atCap,

@@ -158,7 +158,7 @@ function deriveRun(trace) {
 // is the user's own choice and is listed as before.
 function pruneRunTraces(projectRoot, { keep = KEEP_RUN_TRACES, except, env = process.env, fs = realFs } = {}) {
   try {
-    const dir = userDir(projectRoot, logsDir(projectRoot, env), {}, { fs }).path;
+    const dir = userDir(projectRoot, logsDir(projectRoot, env), {}, { fs });
     const exceptPath = except ? runTracePath(projectRoot, except, env) : null;
     const exceptName = exceptPath ? path.basename(exceptPath) : null;
 

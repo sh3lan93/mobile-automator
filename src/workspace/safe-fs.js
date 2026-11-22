@@ -28,8 +28,9 @@
 // Both check every directory below the project root down to the file's own;
 // the scope sets the containment bound and words the refusal. A path the user
 // chose (--out, a screenshot to /tmp) is confined only when it lands in the
-// workspace (locate), anywhere else it is the user's own call; userDir,
-// userDest and userFile are the entry points that make that choice.
+// workspace (userPath's scope), anywhere else it is the user's own call;
+// userDir, userDirLeaves, userDest and userFile are the entry points that
+// make that choice.
 //
 // Components above and including the project root are never checked: a
 // project reached through a symlinked parent (macOS /tmp -> /private/tmp, a
@@ -44,13 +45,14 @@
 // MAUTO_LOG_DIR outside the workspace, the per-user consent file), whose leaf
 // opens run under STRICT_LEAF (#363), nor to the device session, whose
 // policy (src/device/session-dir.js) compares the owner outright. Which rule a
-// leaf in a directory the user chose gets is decided once, where userDir
-// settles that directory.
+// leaf in a directory the user chose gets is decided once, where
+// userDirLeaves settles that directory.
 //
 // A path the user named to read (a scenario, a reference screenshot, a run
-// trace) goes through readUserFile: inside the workspace or the project it is
-// the checked walk and leaf of that scope; outside the project it is the
-// user's own file, read as named (links followed), only size-capped (#363).
+// trace) goes through readUserFile, which branches on userPath's scope:
+// inside the workspace or the project it is the checked walk and leaf of that
+// scope; outside the project it is the user's own file, read as named (links
+// followed), only size-capped (#363).
 //
 // Every directory check runs under a policy (dirPolicy, below): the owner rule,
 // the forbidden mode bits, and what a refusal says. WORKSPACE_DIR is the
@@ -456,7 +458,7 @@ function closeQuietly(fs, fd) {
 // `policy` is the leaf owner rule (see STRICT_LEAF): STRICT_LEAF by default,
 // WORKSPACE_DIR only for a leaf inside the checkout whose directory the caller
 // walked. A caller that leaves it out gets the owner compared outright. Only
-// safe-fs's own entry points and userDir's leaves pass one.
+// safe-fs's own entry points and userDirLeaves's leaves pass one.
 function openOwnedLeaf(file, flags, { mode = 0o666, singleLink = false, policy = STRICT_LEAF } = {}, deps = {}) {
   const d = resolveDeps(deps);
   const { O_WRONLY, O_RDWR, O_TRUNC } = nodeFs.constants;
@@ -555,8 +557,8 @@ function readCapped(open, file, { maxBytes, encoding = 'utf8', absent = 'null' }
   }
 }
 
-// The capped utf8 read of a leaf whose directory has been settled (a userDir
-// leaf's read): openOwnedLeaf read-only, null when it does not exist,
+// The capped utf8 read of a leaf whose directory has been settled (a
+// userDirLeaves leaf's read): openOwnedLeaf read-only, null when it does not exist,
 // too_large past maxBytes. `singleLink` and `policy` as for openOwnedLeaf.
 function readOwnedLeaf(file, { maxBytes = DEFAULT_MAX_BYTES, singleLink = false, policy = STRICT_LEAF } = {}, deps = {}) {
   const open = () => openOwnedLeaf(file, nodeFs.constants.O_RDONLY, { singleLink, policy }, deps);
@@ -595,7 +597,7 @@ function safeWorkspaceDest(projectRoot, file, deps = {}) {
 }
 
 // Where `file` lands in the project: its absolute path under projectRoot, or
-// null when it names a place outside it. The one re-rooting, under locate
+// null when it names a place outside it. The one re-rooting, under userPath
 // (which every membership decision goes through).
 //
 // Lexical first. A path not lexically in the project may still reach the
@@ -631,36 +633,10 @@ function inProject(projectRoot, file, deps = {}) {
     } catch (_) {
       continue;
     }
-    if (real === realRoot) return path.join(root, path.relative(a, resolved));
+    if (real !== realRoot) continue;
+    return path.join(root, path.relative(a, resolved));
   }
   return null;
-}
-
-// The one membership decision for a path the user named: `{ path, where }`,
-// `where` being 'workspace' (its inProject path is under
-// workspaceDir(projectRoot)), 'project' (elsewhere under the project root) or
-// 'outside'. `path` is the inProject path inside the checkout (through an
-// aliased root it differs from the one given, and every check and write must
-// use it), else the path resolved as named. inWorkspace, userPath and
-// readUserFile all decide through here, so the rule exists once.
-//
-// A null projectRoot means there is no checkout (validate run where no
-// workspace was found): everything is 'outside', the user's own. This is the
-// one place that reading is made.
-function locate(projectRoot, file, deps = {}) {
-  const rerooted = projectRoot === null ? null : inProject(projectRoot, file, deps);
-  if (!rerooted) return { path: path.resolve(file), where: 'outside' };
-  const where = isInside(rerooted, path.resolve(workspaceDir(projectRoot))) ? 'workspace' : 'project';
-  return { path: rerooted, where };
-}
-
-// Where `file` lands in the workspace: locate's path when it is there, else
-// null. For a path the user chose (--out, a screenshot destination), which
-// gets the workspace rules inside the workspace and is the user's own call
-// anywhere else.
-function inWorkspace(projectRoot, file, deps = {}) {
-  const at = locate(projectRoot, file, deps);
-  return at.where === 'workspace' ? at.path : null;
 }
 
 // A project file outside the workspace (a host file `mauto init` writes:
@@ -696,12 +672,12 @@ function readProjectFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES, enco
 //     check, as `cat` would read it.
 function readUserFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES, encoding = 'utf8', absent = 'null' } = {}, deps = {}) {
   const opts = { maxBytes, encoding, absent };
-  const at = locate(projectRoot, file, deps);
-  if (at.where === 'workspace') return readWorkspaceFile(projectRoot, at.path, opts, deps);
-  if (at.where === 'project') return readProjectFile(projectRoot, at.path, opts, deps);
+  const { path: p, scope } = userPath(projectRoot, file, deps);
+  if (scope === 'workspace') return readWorkspaceFile(projectRoot, p, opts, deps);
+  if (scope === 'path') return readProjectFile(projectRoot, p, opts, deps);
   const { fs } = resolveDeps(deps);
-  const open = () => fs.openSync(at.path, nodeFs.constants.O_RDONLY);
-  return withScope('user', () => readCapped(open, at.path, opts, deps));
+  const open = () => fs.openSync(p, nodeFs.constants.O_RDONLY);
+  return withScope('user', () => readCapped(open, p, opts, deps));
 }
 
 // createWorkspaceFile's project-rooted twin: exclusive (O_WRONLY|O_CREAT|
@@ -713,21 +689,27 @@ function createProjectFile(projectRoot, file, { mode = 0o666 } = {}, deps = {}) 
   return withScope('path', () => openProjectFile(projectRoot, file, O_WRONLY | O_CREAT | O_EXCL, mode, deps));
 }
 
-// Paths the user chose (--out, --junit, a screenshot destination, a
-// MAUTO_LOG_DIR). Inside the workspace they get the workspace rules, on the
-// path locate re-roots; anywhere else (the rest of the project included) they
-// are the user's own call, on the path as named. The entry points below make that choice, so no
-// caller tests membership or swaps paths itself.
+// Where a path the user chose or named lands: `{ path, scope }`, scope
+// 'workspace' (in .mobile-automator/), 'path' (in the project, outside the
+// workspace) or 'outside'. In the workspace and the project `path` is the one
+// inProject re-roots (through an aliased root it differs from the one given,
+// and every check must use the checked one); outside it is the given path
+// resolved. The one classifier: readUserFile and every entry point below
+// decide through it, so no caller tests membership or swaps paths itself.
+//
+// A null projectRoot means there is no checkout (validate run where no
+// workspace was found): everything is 'outside', the user's own.
 function userPath(projectRoot, file, deps) {
-  const at = locate(projectRoot, file, deps);
-  if (at.where === 'workspace') return { path: at.path, confined: true };
-  return { path: path.resolve(file), confined: false };
+  if (projectRoot === null) return { path: path.resolve(file), scope: 'outside' };
+  const p = inProject(projectRoot, file, deps);
+  if (!p) return { path: path.resolve(file), scope: 'outside' };
+  return { path: p, scope: isInside(p, path.resolve(workspaceDir(projectRoot))) ? 'workspace' : 'path' };
 }
 
 // A directory the user chose: the checked walk when it lands in the
-// workspace, else a plain recursive mkdir when `create`. A null projectRoot
-// (no checkout: the per-user consent dir) is always outside. Returns the
-// settled directory:
+// workspace, else a plain recursive mkdir when `create`. The writers confine
+// only the workspace here; anywhere else, the rest of the project included,
+// is the user's call, on the path as given. Returns the settled directory:
 //   - `path`: the one to use (re-rooted inside the workspace, not its
 //     realpath), for a caller that lists or renames in it;
 //   - `leaf(name)`: `name`'s basename inside it, as `{ path, open, read }`.
@@ -736,20 +718,30 @@ function userPath(projectRoot, file, deps) {
 // The leaf owner rule is bound here, once, from where the directory landed
 // (#363): WORKSPACE_DIR in the workspace (MAUTO_TRUST_WORKSPACE_OWNER=1
 // applies), STRICT_LEAF anywhere else. No caller passes it.
-function userDir(projectRoot, dir, { create = false } = {}, deps = {}) {
+function userDirLeaves(projectRoot, dir, { create = false } = {}, deps = {}) {
   const target = userPath(projectRoot, dir, deps);
-  if (target.confined) safeDir(projectRoot, target.path, { create }, deps);
-  else if (create) resolveDeps(deps).fs.mkdirSync(target.path, { recursive: true });
-  const policy = target.confined ? WORKSPACE_DIR : STRICT_LEAF;
+  const confined = target.scope === 'workspace';
+  const settled = confined ? target.path : path.resolve(dir);
+  if (confined) safeDir(projectRoot, settled, { create }, deps);
+  else if (create) resolveDeps(deps).fs.mkdirSync(settled, { recursive: true });
+  const policy = confined ? WORKSPACE_DIR : STRICT_LEAF;
   const leaf = (name) => {
-    const file = path.join(target.path, path.basename(name));
+    const file = path.join(settled, path.basename(name));
     return {
       path: file,
       open: (flags, { mode, singleLink } = {}) => openOwnedLeaf(file, flags, { mode, singleLink, policy }, deps),
       read: ({ maxBytes, singleLink } = {}) => readOwnedLeaf(file, { maxBytes, singleLink, policy }, deps),
     };
   };
-  return { path: target.path, leaf };
+  return { path: settled, leaf };
+}
+
+// userDirLeaves's directory alone, as a string. It exists because this is
+// main's userDir API, which #362 keeps: a caller that only walks or lists the
+// directory (a trace prune, run --junit's preflight) and opens no leaf
+// through it.
+function userDir(projectRoot, dir, opts = {}, deps = {}) {
+  return userDirLeaves(projectRoot, dir, opts, deps).path;
 }
 
 // A file another process writes at a path the user chose (the engine's
@@ -757,7 +749,7 @@ function userDir(projectRoot, dir, { create = false } = {}, deps = {}) {
 // byte-for-byte. Returns the path to hand over.
 function userDest(projectRoot, file, deps = {}) {
   const target = userPath(projectRoot, file, deps);
-  return target.confined ? safeWorkspaceDest(projectRoot, target.path, deps) : target.path;
+  return target.scope === 'workspace' ? safeWorkspaceDest(projectRoot, target.path, deps) : path.resolve(file);
 }
 
 // A file mauto writes itself at a path the user chose: where it lands
@@ -770,7 +762,8 @@ function userDest(projectRoot, file, deps = {}) {
 // Returns an fd the caller closes.
 function userFile(projectRoot, file, deps = {}) {
   const target = userPath(projectRoot, file, deps);
-  const open = target.confined
+  const confined = target.scope === 'workspace';
+  const open = confined
     ? (f, flags, mode = 0o666) => openWorkspaceFile(projectRoot, f, flags, mode, deps)
     : (f, flags, mode = 0o666) => {
         if (flags & nodeFs.constants.O_CREAT) {
@@ -778,7 +771,7 @@ function userFile(projectRoot, file, deps = {}) {
         }
         return openUserLeaf(f, flags, mode, deps);
       };
-  return { ...target, open };
+  return { path: confined ? target.path : path.resolve(file), confined, open };
 }
 
 // The leaf open for a path the user chose outside the workspace, whose
@@ -836,15 +829,16 @@ module.exports = {
   readWorkspaceJsonOrNull,
   // A workspace file another process writes (the engine's screenshot).
   safeWorkspaceDest,
-  // Where a path the user chose lands in the workspace. Exported for its unit
-  // tests only: callers use userDir / userDest / userFile, which apply it.
-  inWorkspace,
-  // Where a path lands in the project (re-rooted), or null outside it.
+  // Where a path lands in the project (re-rooted through an aliased root), or
+  // null: the one re-root, which userPath builds on.
   inProject,
-  // The one classifier: { path, where: 'workspace' | 'project' | 'outside' }.
-  locate,
+  // The one classifier: { path, scope: 'workspace' | 'path' | 'outside' }.
+  // Exported for its unit tests: callers use the entry points that apply it.
+  userPath,
   // Paths the user chose: confined in the workspace, the user's call elsewhere.
+  // userDir is the directory alone; userDirLeaves adds its owner-bound leaves.
   userDir,
+  userDirLeaves,
   userDest,
   userFile,
   openUserLeaf,

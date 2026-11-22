@@ -83,8 +83,8 @@ function isSelfReferential(event) {
 }
 
 // `name` inside the spool directory, settled through append.js's settledLeaf
-// (safe-fs's userDir, created only when `create`): `{ path, open, read }`,
-// the owner rule bound by userDir (#363). Every operation names its file by
+// (safe-fs's userDirLeaves, created only when `create`): `{ path, open, read }`,
+// the owner rule bound by userDirLeaves (#363). Every operation names its file by
 // basename inside the spool directory, never by the path it was handed, so
 // none reaches a file through a directory it has not checked; one that opens
 // nothing (a rename, a list, an unlink) uses `.path`. Throws on a refusal;

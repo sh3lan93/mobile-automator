@@ -1,7 +1,7 @@
 'use strict';
 
-// safe-fs for paths the user chose (#347): inWorkspace, the userDir /
-// userDest / userFile entry points, safeWorkspaceDest and isInside. Inside
+// safe-fs for paths the user chose (#347): userPath, the userDir /
+// userDirLeaves / userDest / userFile entry points, safeWorkspaceDest and isInside. Inside
 // the workspace they get the workspace rules; elsewhere they are the user's
 // call. Fixture: tests/helpers/safe-fs-fixture.js.
 
@@ -10,13 +10,13 @@ const fs = require('fs');
 const path = require('path');
 
 const {
-  inWorkspace,
   inProject,
-  locate,
+  userPath,
   readUserFile,
   safeWorkspaceDest,
   isInside,
   userDir,
+  userDirLeaves,
   userDest,
   userFile,
 } = require('../../../src/workspace/safe-fs');
@@ -47,25 +47,33 @@ afterEach(() => {
   removeSafeFsFixture(base);
 });
 
-describe('inWorkspace', () => {
+// userPath's workspace scope: what inWorkspace used to answer, now one
+// label of the one classifier.
+const wsPath = (root_, p, deps) => {
+  const at = userPath(root_, p, deps);
+  return at.scope === 'workspace' ? at.path : null;
+};
+
+describe('userPath: the workspace scope', () => {
   it('returns a path inside the workspace as is', () => {
     const p = path.join(ws, 'screenshots', 'a.png');
-    expect(inWorkspace(root, p)).toBe(p);
-    expect(inWorkspace(root, ws)).toBe(ws);
+    expect(wsPath(root, p)).toBe(p);
+    expect(wsPath(root, ws)).toBe(ws);
   });
 
-  it('is null for a project file outside the workspace', () => {
-    expect(inWorkspace(root, path.join(root, 'shots', 'a.png'))).toBeNull();
-    expect(inWorkspace(root, path.join(root, '.mobile-automator-old', 'a.png'))).toBeNull();
-    expect(inWorkspace(root, root)).toBeNull();
+  it('is not the workspace for a project file outside it', () => {
+    expect(userPath(root, path.join(root, 'shots', 'a.png')).scope).toBe('path');
+    expect(userPath(root, path.join(root, '.mobile-automator-old', 'a.png')).scope).toBe('path');
+    expect(userPath(root, root).scope).toBe('path');
   });
 
-  it('is null for a path outside the project (an explicit /tmp/x.png)', () => {
+  it('is outside for a path outside the project (an explicit /tmp/x.png)', () => {
     const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-elsewhere-'));
     try {
-      expect(inWorkspace(root, path.join(elsewhere, 'x.png'))).toBeNull();
-      expect(inWorkspace(root, path.join(outside, 'x.png'))).toBeNull();
-      expect(inWorkspace(root, path.join(base, 'nope', 'deeper', 'x.png'))).toBeNull();
+      for (const p of [path.join(elsewhere, 'x.png'), path.join(outside, 'x.png'), path.join(base, 'nope', 'deeper', 'x.png')]) {
+        expect(userPath(root, p)).toEqual({ path: p, scope: 'outside' });
+        expect(inProject(root, p)).toBeNull();
+      }
     } finally {
       fs.rmSync(elsewhere, { recursive: true, force: true });
     }
@@ -73,21 +81,24 @@ describe('inWorkspace', () => {
 
   it('maps a workspace path reached through a symlinked parent onto the real root', () => {
     const { realRoot, alias, realWs } = aliasedRoot(base, root);
-    expect(inWorkspace(realRoot, path.join(alias, '.mobile-automator', 'screenshots', 'a.png'))).toBe(
+    expect(wsPath(realRoot, path.join(alias, '.mobile-automator', 'screenshots', 'a.png'))).toBe(
       path.join(realWs, 'screenshots', 'a.png')
     );
-    expect(inWorkspace(realRoot, path.join(alias, '.mobile-automator'))).toBe(realWs);
+    expect(wsPath(realRoot, path.join(alias, '.mobile-automator'))).toBe(realWs);
   });
 
-  it('is null for a project file outside the workspace reached through the alias', () => {
+  it('is the path scope, re-rooted, for a project file outside the workspace reached through the alias', () => {
     const { realRoot, alias } = aliasedRoot(base, root);
-    expect(inWorkspace(realRoot, path.join(alias, 'shots', 'a.png'))).toBeNull();
+    expect(userPath(realRoot, path.join(alias, 'shots', 'a.png'))).toEqual({
+      path: path.join(realRoot, 'shots', 'a.png'),
+      scope: 'path',
+    });
   });
 
   it('still maps a symlinked .mobile-automator/screenshots reached through the alias, so a walk refuses it', () => {
     const { realRoot, alias, realWs } = aliasedRoot(base, root);
     fs.symlinkSync(outside, path.join(realWs, 'screenshots'));
-    const got = inWorkspace(realRoot, path.join(alias, '.mobile-automator', 'screenshots', 'a.png'));
+    const got = wsPath(realRoot, path.join(alias, '.mobile-automator', 'screenshots', 'a.png'));
     expect(got).toBe(path.join(realWs, 'screenshots', 'a.png'));
     expectUnsafe(() => safeWorkspaceDest(realRoot, got), 'symlink');
   });
@@ -98,7 +109,7 @@ describe('inWorkspace', () => {
   it('maps through the shallowest ancestor that is the root, not a workspace link back to it', () => {
     const { realRoot, alias, realWs } = aliasedRoot(base, root);
     fs.symlinkSync('..', path.join(realWs, 'screenshots'));
-    const got = inWorkspace(realRoot, path.join(alias, '.mobile-automator', 'screenshots', 'a.png'));
+    const got = wsPath(realRoot, path.join(alias, '.mobile-automator', 'screenshots', 'a.png'));
     expect(got).toBe(path.join(realWs, 'screenshots', 'a.png'));
     expectUnsafe(() => safeWorkspaceDest(realRoot, got), 'symlink');
   });
@@ -107,50 +118,58 @@ describe('inWorkspace', () => {
     const { realRoot, alias } = aliasedRoot(base, root);
     const lookOnly = { realpathSync: fs.realpathSync };
     const p = path.join(alias, '.mobile-automator', 'screenshots', 'a.png');
-    expect(inWorkspace(realRoot, p, { fs: lookOnly })).toBe(path.join(realRoot, '.mobile-automator', 'screenshots', 'a.png'));
-    expect(inWorkspace(realRoot, path.join(outside, 'x.png'), { fs: lookOnly })).toBeNull();
+    expect(wsPath(realRoot, p, { fs: lookOnly })).toBe(path.join(realRoot, '.mobile-automator', 'screenshots', 'a.png'));
+    expect(userPath(realRoot, path.join(outside, 'x.png'), { fs: lookOnly }).scope).toBe('outside');
   });
 });
 
 // The one classifier every membership decision goes through (#363).
-describe('locate', () => {
+describe('userPath', () => {
   it('names the workspace, the rest of the project, and outside', () => {
     const inWs = path.join(ws, 'scenarios', 'a.json');
-    expect(locate(root, inWs)).toEqual({ path: inWs, where: 'workspace' });
+    expect(userPath(root, inWs)).toEqual({ path: inWs, scope: 'workspace' });
     const inProj = path.join(root, 'flows', 'a.json');
-    expect(locate(root, inProj)).toEqual({ path: inProj, where: 'project' });
+    expect(userPath(root, inProj)).toEqual({ path: inProj, scope: 'path' });
     const out = path.join(base, 'elsewhere', 'a.json');
-    expect(locate(root, out)).toEqual({ path: out, where: 'outside' });
+    expect(userPath(root, out)).toEqual({ path: out, scope: 'outside' });
   });
 
-  it('re-roots a path through an aliased root, and inWorkspace agrees with it', () => {
+  it('re-roots a path through an aliased root, agreeing with inProject', () => {
     const { realRoot, alias, realWs } = aliasedRoot(base, root);
     const p = path.join(alias, '.mobile-automator', 'a.json');
-    expect(locate(realRoot, p)).toEqual({ path: path.join(realWs, 'a.json'), where: 'workspace' });
-    expect(inWorkspace(realRoot, p)).toBe(locate(realRoot, p).path);
-    expect(locate(realRoot, path.join(alias, 'flows', 'a.json'))).toEqual({
+    expect(userPath(realRoot, p)).toEqual({ path: path.join(realWs, 'a.json'), scope: 'workspace' });
+    expect(inProject(realRoot, p)).toBe(userPath(realRoot, p).path);
+    expect(userPath(realRoot, path.join(alias, 'flows', 'a.json'))).toEqual({
       path: path.join(realRoot, 'flows', 'a.json'),
-      where: 'project',
+      scope: 'path',
     });
+  });
+
+  it('a null projectRoot (no checkout) is outside, the path as named', () => {
+    const p = path.join(ws, 'scenarios', 'a.json');
+    expect(userPath(null, p)).toEqual({ path: p, scope: 'outside' });
   });
 });
 
-// The entry points for a path the user chose: each makes the inWorkspace
+// The entry points for a path the user chose: each makes the userPath
 // choice itself and hands back the path to use.
 describe('userDir / userDest / userFile (#347)', () => {
   it('userDir walks a workspace directory, refusing a link; elsewhere it only mkdirs', () => {
     fs.symlinkSync(outside, path.join(ws, '.logs'));
     expectUnsafe(() => userDir(root, path.join(ws, '.logs'), { create: true }), 'symlink');
     const plain = path.join(outside, 'logs', 'deep');
-    expect(userDir(root, plain, { create: true }).path).toBe(plain);
+    expect(userDir(root, plain, { create: true })).toBe(plain);
     expect(fs.lstatSync(plain).isDirectory()).toBe(true);
-    expect(userDir(root, path.join(outside, 'absent')).path).toBe(path.join(outside, 'absent'));
+    expect(userDir(root, path.join(outside, 'absent'))).toBe(path.join(outside, 'absent'));
     expect(fs.existsSync(path.join(outside, 'absent'))).toBe(false);
   });
 
   it('userDir and userDest return the re-rooted path through an aliased root', () => {
     const { realRoot, alias, realWs } = aliasedRoot(base, root);
-    expect(userDir(realRoot, path.join(alias, '.mobile-automator', 'a'), { create: true }).path).toBe(path.join(realWs, 'a'));
+    expect(userDir(realRoot, path.join(alias, '.mobile-automator', 'a'), { create: true })).toBe(path.join(realWs, 'a'));
+    expect(userDirLeaves(realRoot, path.join(alias, '.mobile-automator', 'a')).leaf('x/f.txt').path).toBe(
+      path.join(realWs, 'a', 'f.txt')
+    );
     expect(userDest(realRoot, path.join(alias, '.mobile-automator', 'b', 'x.png'))).toBe(path.join(realWs, 'b', 'x.png'));
   });
 
