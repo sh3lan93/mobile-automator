@@ -27,7 +27,7 @@ const realFs = require('fs');
 const path = require('path');
 
 const { workspaceDir } = require('../workspace/layout');
-const { userDir, openOwnedLeaf } = require('../workspace/safe-fs');
+const { settleUserDir, openOwnedLeaf } = require('../workspace/safe-fs');
 
 const { O_WRONLY, O_APPEND, O_CREAT } = realFs.constants;
 
@@ -49,11 +49,21 @@ function allowed(projectRoot, env, fs = realFs) {
   return fs.existsSync(workspaceDir(projectRoot));
 }
 
-// `name`'s basename inside `dir`, after settling `dir` through userDir
-// (created when `create`). The path returned is the one to use: in the
-// workspace it is re-rooted, so it can differ from `dir`. Throws on a refusal.
-function inSettledDir(projectRoot, dir, name, { create = false } = {}, { fs = realFs, env, getuid } = {}) {
-  return path.join(userDir(projectRoot, dir, { create }, { fs, env, getuid }), path.basename(name));
+// `name`'s basename inside `dir`, after settling `dir` through safe-fs's
+// settleUserDir (created when `create`): `{ path, confined }`. The path is the
+// one to use: in the workspace it is re-rooted, so it can differ from `dir`.
+// `confined` (the directory is in the workspace) is what the leaf's open or
+// read passes as `trustOverride`: MAUTO_TRUST_WORKSPACE_OWNER=1 applies to a
+// leaf in the checkout only, never to one in a MAUTO_LOG_DIR outside it (#363).
+// Throws on a refusal.
+function settledLeaf(projectRoot, dir, name, { create = false } = {}, { fs = realFs, env, getuid } = {}) {
+  const settled = settleUserDir(projectRoot, dir, { create }, { fs, env, getuid });
+  return { path: path.join(settled.path, path.basename(name)), confined: settled.confined };
+}
+
+// settledLeaf's path alone, for a caller that opens no leaf (a list, a rename).
+function inSettledDir(projectRoot, dir, name, opts = {}, deps = {}) {
+  return settledLeaf(projectRoot, dir, name, opts, deps).path;
 }
 
 // The one size comparison a cap makes, shared by the append below and atCap,
@@ -63,14 +73,16 @@ function reached(size, capBytes) {
 }
 
 // Appends `line` to `target`, a leaf whose directory the caller settled
-// (inSettledDir). Returns false when `capBytes` is given and the file already
+// (settledLeaf). Returns false when `capBytes` is given and the file already
 // holds that much: the NEW line is dropped and nothing older is touched. Throws
 // on a refused or failed open or write; the fd is closed either way.
+// `trustOverride` is settledLeaf's `confined`; without it the owner is
+// compared outright.
 //
 // One open per line: no fd is held between lines, so a rotation or a claim in
 // between is never written past.
-function appendLine(target, line, { capBytes, fs = realFs, env, getuid } = {}) {
-  const fd = openOwnedLeaf(target, O_WRONLY | O_APPEND | O_CREAT, {}, { fs, env, getuid });
+function appendLine(target, line, { capBytes, trustOverride = false, fs = realFs, env, getuid } = {}) {
+  const fd = openOwnedLeaf(target, O_WRONLY | O_APPEND | O_CREAT, { trustOverride }, { fs, env, getuid });
   try {
     if (capBytes !== undefined && reached(fs.fstatSync(fd).size, capBytes)) return false;
     fs.writeSync(fd, line);
@@ -93,4 +105,4 @@ function atCap(target, { fs = realFs, maxBytes } = {}) {
   }
 }
 
-module.exports = { allowed, inSettledDir, appendLine, atCap };
+module.exports = { allowed, settledLeaf, inSettledDir, appendLine, atCap };

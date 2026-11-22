@@ -62,7 +62,8 @@ function consentPath({ env = process.env, homedir = os.homedir } = {}) {
 // The parsed record, or null when there is no usable one.
 function readRecord(file, deps) {
   try {
-    const doc = JSON.parse(readOwnedLeaf(file, { maxBytes: CONSENT_MAX_BYTES }, deps));
+    // Outside every checkout: MAUTO_TRUST_WORKSPACE_OWNER=1 never applies (#363).
+    const doc = JSON.parse(readOwnedLeaf(file, { maxBytes: CONSENT_MAX_BYTES, trustOverride: false }, deps));
     if (isPlainObject(doc) && isPlainObject(doc.projects)) return doc;
   } catch (_) {
     // missing (readOwnedLeaf's null parses to null), refused, too large,

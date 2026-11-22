@@ -40,7 +40,7 @@ const crypto = require('crypto');
 const path = require('path');
 
 const { spoolPath } = require('./paths');
-const { allowed, inSettledDir, appendLine } = require('./append');
+const { allowed, settledLeaf, appendLine } = require('./append');
 const { readOwnedLeaf } = require('../workspace/safe-fs');
 const { telemetryPayload, shippablePayload } = require('./event');
 
@@ -87,8 +87,15 @@ function isSelfReferential(event) {
 // operation names its file by basename inside the spool directory, never by
 // the path it was handed, so none reaches a file through a directory it has
 // not checked. Throws on a refusal; each caller reads that as "nothing here".
-function inSpoolDir(name, { projectRoot, env, fs, getuid }, { create = false } = {}) {
-  return inSettledDir(projectRoot, path.dirname(spoolPath(projectRoot, env)), name, { create }, { fs, env, getuid });
+//
+// spoolLeaf is the same, with whether the directory is in the workspace
+// (`confined`), which a leaf open passes as `trustOverride` (#363).
+function spoolLeaf(name, { projectRoot, env, fs, getuid }, { create = false } = {}) {
+  return settledLeaf(projectRoot, path.dirname(spoolPath(projectRoot, env)), name, { create }, { fs, env, getuid });
+}
+
+function inSpoolDir(name, deps, opts = {}) {
+  return spoolLeaf(name, deps, opts).path;
 }
 
 // The append is append.js's appendLine, the one the log sink uses (#348).
@@ -110,9 +117,13 @@ function write(event, { projectRoot, env = process.env, fs = realFs, getuid } = 
     if (!allowed(projectRoot, env, fs)) return;
 
     const deps = { fs, env, getuid };
-    const file = inSpoolDir(spoolPath(projectRoot, env), { projectRoot, ...deps }, { create: true });
+    const leaf = spoolLeaf(spoolPath(projectRoot, env), { projectRoot, ...deps }, { create: true });
     const payload = telemetryPayload({ ...event, msg_id: newMessageId() });
-    appendLine(file, JSON.stringify(payload) + '\n', { ...deps, capBytes: SPOOL_MAX_BYTES });
+    appendLine(leaf.path, JSON.stringify(payload) + '\n', {
+      ...deps,
+      capBytes: SPOOL_MAX_BYTES,
+      trustOverride: leaf.confined,
+    });
   } catch (_) {
     // Observability is never load-bearing. Losing a telemetry line is always
     // preferable to failing the verb the user actually asked for.
@@ -210,9 +221,10 @@ function shippableLines(text) {
 function readSpool(file, { projectRoot, env = process.env, fs = realFs, getuid } = {}) {
   try {
     const deps = { fs, env, getuid };
+    const leaf = spoolLeaf(file, { projectRoot, ...deps });
     const text = readOwnedLeaf(
-      inSpoolDir(file, { projectRoot, ...deps }),
-      { maxBytes: SPOOL_READ_MAX_BYTES, singleLink: true },
+      leaf.path,
+      { maxBytes: SPOOL_READ_MAX_BYTES, singleLink: true, trustOverride: leaf.confined },
       deps
     );
     if (text === null) return { bytes: 0, payloads: [] };
