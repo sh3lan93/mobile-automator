@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.40.17]
+
+### 🔒 Security
+
+- **Report writers and `mauto screenshot <path>` no longer write through a
+  link in the project** ([#362](https://github.com/sh3lan93/mobile-automator/issues/362)).
+  A path inside the project but outside `.mobile-automator/` was treated as
+  the user's own call, so `result export --out reports/r.xml`,
+  `run --junit reports/r.xml`, `crash get --out reports/c.txt` and
+  `mauto screenshot reports/a.png` wrote wherever a committed `reports` link
+  pointed. These paths now get the same checks as the files `mauto init`
+  writes: every directory below the project root must be a real directory,
+  owned by you and not world-writable, or the verb fails `environment`
+  (exit `5`). `run --junit` and `crash get --out` refuse before any device
+  work. Paths outside the project (for example `/tmp/r.xml`) are unchanged.
+  A project directory owned by root or writable by everyone (for example a
+  `build/` made by a Docker container) is now refused too;
+  `MAUTO_TRUST_WORKSPACE_OWNER=1` covers the owner case.
+
 ## [0.40.16]
 
 ### ⚠️ Upgrade note
