@@ -21,29 +21,29 @@
 // The spool is read as UNTRUSTED input (#348). `.mobile-automator/` is
 // committed to repos, so a cloned repo can ship `.logs/telemetry.spool`, a
 // claimed batch, or `.logs/` itself, with any content or as a link to a file
-// elsewhere, and flush would upload it and then delete it. So every open here
-// goes through one checked opener (openSpoolFile), claim() and listClaimed()
-// check the directory before they rename or list in it, and every line read
-// back passes the field catalog again (shippablePayload), even though the
-// writer already applied it: a committed or hand-edited spool never went
-// through the writer.
+// elsewhere, and flush would upload it and then delete it. So the spool goes
+// through safe-fs the way the file sink does: every operation first settles
+// its directory with userDir (the checked walk in the workspace, created only
+// by write), then opens the leaf with openOwnedLeaf / readOwnedLeaf
+// (O_NOFOLLOW, a regular file, ours, one hard link, a read included). And
+// every line read back passes the field catalog again (shippablePayload), even
+// though the writer already applied it: a committed or hand-edited spool never
+// went through the writer.
+//
+// A MAUTO_LOG_DIR inside the workspace gets the workspace rules too (userDir
+// re-roots it); outside it the directory is the user's own choice, but the
+// leaf is still O_NOFOLLOW, ours and single-link.
 
 const realFs = require('fs');
 const crypto = require('crypto');
 const path = require('path');
 
 const { spoolPath } = require('./paths');
-const { workspaceDir } = require('../workspace/layout');
-const {
-  UnsafePathError,
-  safeDir,
-  openLeaf,
-  openWorkspaceFile,
-  removeWorkspaceFile,
-} = require('../workspace/safe-fs');
+const { allowed } = require('./sinks/file');
+const { userDir, openOwnedLeaf, readOwnedLeaf } = require('../workspace/safe-fs');
 const { telemetryPayload, shippablePayload } = require('./event');
 
-const { O_RDONLY, O_WRONLY, O_APPEND, O_CREAT } = realFs.constants;
+const { O_WRONLY, O_APPEND, O_CREAT } = realFs.constants;
 
 // ~1000 lines at ~250 bytes. Not rotateIfLarge: that policy is for LOGS, and
 // renaming a queue to `.1` silently discards records that were pending
@@ -83,120 +83,52 @@ function isSelfReferential(event) {
   return typeof event.event === 'string' && event.event.startsWith('telemetry.');
 }
 
-// Where the spool lives, decided in one place. `confined` is true when it is
-// a workspace file (the `.logs/` paths.logsDir returns under
-// `.mobile-automator/`) and so gets safe-fs's workspace rules; false under
-// MAUTO_LOG_DIR, a directory the user named in their own environment.
-function spoolLocation(projectRoot, env) {
-  const file = spoolPath(projectRoot, env);
-  return { file, dir: path.dirname(file), confined: !(env && env.MAUTO_LOG_DIR) };
+// The spool directory, settled through safe-fs's userDir (created only when
+// `create`): the path to use, re-rooted in the workspace. Every operation
+// names its file as path.join(spoolDir(...), basename), so none reaches a
+// file through a directory it has not checked. Throws on a refusal; each
+// caller reads that as "nothing here".
+function spoolDir({ projectRoot, env, fs, getuid }, { create = false } = {}) {
+  return userDir(projectRoot, path.dirname(spoolPath(projectRoot, env)), { create }, { fs, env, getuid });
 }
 
-// Same gate as the file sink: no .mobile-automator/ workspace, no artifacts.
-// mauto runs from wherever a user is standing, so creating this tree as a
-// side effect of logging would litter unrelated repos with a directory that
-// has no .gitignore in it.
-function allowed(projectRoot, { confined }, fs) {
-  if (!confined) return true;
-  return fs.existsSync(workspaceDir(projectRoot));
+// `name`'s path inside the settled spool directory.
+function inSpoolDir(name, opts, { create = false } = {}) {
+  return path.join(spoolDir(opts, { create }), path.basename(name));
 }
 
-function closeQuietly(fs, fd) {
-  try {
-    fs.closeSync(fd);
-  } catch (_) {
-    // already closed or invalid: nothing to release
-  }
-}
-
-// The one way this module opens a spool file (#348). Returns { fd, stat }; the
-// caller closes the fd. Throws on any refusal, having closed the fd.
-//
-// Without MAUTO_LOG_DIR the spool is a workspace file and gets safe-fs's
-// workspace rules: a checked directory walk from `.mobile-automator` down, a
-// NOFOLLOW regular-file leaf, and an owner check. MAUTO_LOG_DIR is a directory
-// the user named in their own environment, so there the spool is the user's
-// own path: the NOFOLLOW regular-file leaf still applies, the workspace walk
-// and the owner check do not (the rule safe-fs applies to every user-chosen
-// path). With O_CREAT the missing directories are created: through safe-fs's
-// checked walk in the workspace, and with a plain recursive mkdir under
-// MAUTO_LOG_DIR, as before.
-//
-// In both cases a file with a second hard link is refused, for a read as well
-// as a write. safe-fs checks the link count only on writes, but a batch is read
-// in order to be uploaded and then unlinked: a second link is a file elsewhere
-// by another name, and its contents would ship as this workspace's telemetry.
-function openSpoolFile(file, flags, { projectRoot, env, fs, getuid }) {
-  let fd;
-  if (spoolLocation(projectRoot, env).confined) {
-    fd = openWorkspaceFile(projectRoot, file, flags, 0o666, { fs, env, getuid });
-  } else {
-    if (flags & O_CREAT) fs.mkdirSync(path.dirname(file), { recursive: true });
-    ({ fd } = openLeaf(file, flags, 0o666, { fs }));
-  }
-  try {
-    const stat = fs.fstatSync(fd);
-    if (stat.nlink !== 1) throw new UnsafePathError(file, 'hardlink');
-    return { fd, stat };
-  } catch (err) {
-    closeQuietly(fs, fd);
-    throw err;
-  }
-}
-
-// Whether claim() and listClaimed() may rename and list inside the spool's
-// directory (#348). flush unlinks every batch listClaimed() names, so through
-// a `.logs/` that is a link, or that belongs to another user, a flush would
-// rename and delete files outside the workspace. A confined directory must
-// pass safe-fs's checked walk; any refusal, or no `.logs/` yet, reads as
-// "nothing here". Under MAUTO_LOG_DIR it is the user's own directory and is
-// not checked.
-function spoolDirUsable({ projectRoot, env, fs, getuid }) {
-  const { dir, confined } = spoolLocation(projectRoot, env);
-  if (!confined) return true;
-  try {
-    safeDir(projectRoot, dir, {}, { fs, env, getuid });
-    return true;
-  } catch (_) {
-    return false;
-  }
-}
-
-// The append opens through openSpoolFile like every read (#348). Once telemetry
+// The append opens through safe-fs like every read (#348). Once telemetry
 // is on, every verb appends here, so a cloned repo that ships
 // `.logs/telemetry.spool -> ~/.bashrc`, a `.logs/` that is a link, or a spool
 // hard-linked to a file elsewhere would otherwise get JSON appended to a file
 // of its choosing. A refused open is a dropped line, like any other failure.
 function write(event, { projectRoot, env = process.env, fs = realFs, getuid } = {}) {
-  let fd;
   try {
     if (isSelfReferential(event)) return;
-    const location = spoolLocation(projectRoot, env);
-    if (!allowed(projectRoot, location, fs)) return;
+    // Same gate as the file sink: no .mobile-automator/ workspace and no
+    // MAUTO_LOG_DIR, no spool (see sinks/file.js allowed).
+    if (!allowed(projectRoot, env, fs)) return;
 
-    let stat;
-    ({ fd, stat } = openSpoolFile(location.file, O_WRONLY | O_APPEND | O_CREAT, {
-      projectRoot,
-      env,
-      fs,
-      getuid,
-    }));
+    const deps = { fs, env, getuid };
+    const file = inSpoolDir(spoolPath(projectRoot, env), { projectRoot, ...deps }, { create: true });
+    const fd = openOwnedLeaf(file, O_WRONLY | O_APPEND | O_CREAT, {}, deps);
+    try {
+      // The cap is the size of the file just opened, not of a second lookup by
+      // path, which could name a different file. At the cap we drop the NEW
+      // line rather than evicting an old one: eviction means
+      // read-filter-rewrite on the hot path of every verb, and the older
+      // records are the ones already queued for delivery — evicting them loses
+      // more history than refusing one new line.
+      if (fs.fstatSync(fd).size >= SPOOL_MAX_BYTES) return;
 
-    // The cap is the size of the file just opened, not of a second lookup by
-    // path, which could name a different file. At the cap we drop the NEW line
-    // rather than evicting an old one: eviction means read-filter-rewrite on
-    // the hot path of every verb, and the older records are the ones already
-    // queued for delivery — evicting them loses more history than refusing one
-    // new line.
-    if (stat.size >= SPOOL_MAX_BYTES) return;
-
-    const payload = telemetryPayload({ ...event, msg_id: newMessageId() });
-    fs.writeSync(fd, JSON.stringify(payload) + '\n');
+      const payload = telemetryPayload({ ...event, msg_id: newMessageId() });
+      fs.writeSync(fd, JSON.stringify(payload) + '\n');
+    } finally {
+      fs.closeSync(fd);
+    }
   } catch (_) {
     // Observability is never load-bearing. Losing a telemetry line is always
     // preferable to failing the verb the user actually asked for.
-  } finally {
-    if (fd !== undefined) closeQuietly(fs, fd);
   }
 }
 
@@ -224,26 +156,31 @@ function nextClaimStamp() {
 // rename writes into the claimed inode (that line ships with this batch) and a
 // verb that opens AFTER creates a fresh spool. There is no window in which a
 // line lands nowhere, and no truncate that could clobber a concurrent writer.
+//
+// The rename happens inside the userDir-settled directory (#348): flush
+// unlinks every batch it claims, so through a `.logs/` that is a link, or that
+// belongs to another user, it would rename and delete files elsewhere.
 function claim({ projectRoot, env = process.env, fs = realFs, getuid } = {}) {
-  if (!spoolDirUsable({ projectRoot, env, fs, getuid })) return null;
-  const source = spoolPath(projectRoot, env);
-  const target = `${source}${CLAIM_SUFFIX}.${process.pid}.${nextClaimStamp()}`;
   try {
+    const source = inSpoolDir(spoolPath(projectRoot, env), { projectRoot, env, fs, getuid });
+    const target = `${source}${CLAIM_SUFFIX}.${process.pid}.${nextClaimStamp()}`;
     fs.renameSync(source, target);
     return target;
   } catch (_) {
-    return null; // nothing spooled, or another flusher beat us to it
+    return null; // nothing spooled, a refused directory, or another flusher beat us to it
   }
 }
 
 // Oldest first: the suffix carries pid then epoch-ms, so a lexical sort on the
 // trailing number would misorder across digit widths. Sort on the parsed stamp.
+// Listed inside the userDir-settled directory, like claim(); a refusal, or no
+// directory yet, lists nothing.
 function listClaimed({ projectRoot, env = process.env, fs = realFs, getuid } = {}) {
-  if (!spoolDirUsable({ projectRoot, env, fs, getuid })) return [];
-  const { file, dir } = spoolLocation(projectRoot, env);
-  const prefix = `${path.basename(file)}${CLAIM_SUFFIX}.`;
+  const prefix = `${path.basename(spoolPath(projectRoot, env))}${CLAIM_SUFFIX}.`;
+  let dir;
   let names;
   try {
+    dir = spoolDir({ projectRoot, env, fs, getuid });
     names = fs.readdirSync(dir);
   } catch (_) {
     return [];
@@ -276,24 +213,25 @@ function shippableLines(text) {
   return out;
 }
 
-// One spool file through the checked opener: its size and the payloads in it
-// that may ship. A refused, absent, oversized or unreadable file is
-// { bytes: 0, payloads: [] }, never a throw: observability is never
-// load-bearing. The read is bounded by the fstat size of the opened fd, so a
-// file that grows after the check cannot push it past SPOOL_READ_MAX_BYTES.
+// One spool file, by its name inside the settled spool directory: its size and
+// the payloads in it that may ship. A refused, absent, oversized or unreadable
+// file is { bytes: 0, payloads: [] }, never a throw: observability is never
+// load-bearing. The read is capped (readOwnedLeaf reads at most
+// SPOOL_READ_MAX_BYTES + 1), and it refuses a second hard link: a batch is
+// read to be uploaded and then unlinked, and a second link is a file elsewhere
+// by another name whose contents would ship as this workspace's telemetry.
 function readSpool(file, { projectRoot, env = process.env, fs = realFs, getuid } = {}) {
-  let fd;
   try {
-    let stat;
-    ({ fd, stat } = openSpoolFile(file, O_RDONLY, { projectRoot, env, fs, getuid }));
-    if (stat.size > SPOOL_READ_MAX_BYTES) return { bytes: 0, payloads: [] };
-    const buf = Buffer.alloc(stat.size);
-    const n = fs.readSync(fd, buf, 0, buf.length, 0);
-    return { bytes: stat.size, payloads: shippableLines(buf.toString('utf8', 0, n)) };
+    const deps = { fs, env, getuid };
+    const text = readOwnedLeaf(
+      inSpoolDir(file, { projectRoot, ...deps }),
+      { maxBytes: SPOOL_READ_MAX_BYTES, singleLink: true },
+      deps
+    );
+    if (text === null) return { bytes: 0, payloads: [] };
+    return { bytes: Buffer.byteLength(text), payloads: shippableLines(text) };
   } catch (_) {
     return { bytes: 0, payloads: [] };
-  } finally {
-    if (fd !== undefined) closeQuietly(fs, fd);
   }
 }
 
@@ -302,20 +240,16 @@ function readBatch(file, { projectRoot, env = process.env, fs = realFs, getuid }
   return readSpool(file, { projectRoot, env, fs, getuid }).payloads;
 }
 
-// Deletes a claimed batch, or one the prune drops. A confined batch goes
-// through safe-fs's removeWorkspaceFile, which walks `.logs/` first: listing
-// and unlinking are separate steps, and a `.logs/` swapped for a link between
-// them would otherwise make flush delete a file outside the workspace. Under
-// MAUTO_LOG_DIR it is a plain unlink. Never throws: a batch that is already
-// gone, a read-only `.logs/` or a refused walk all leave the file for the
-// next flush's MAX_CLAIMED prune.
+// Deletes a claimed batch, or one the prune drops: the spool directory is
+// walked (userDir, no create), then the batch is unlinked by name inside it.
+// Listing and unlinking are separate steps, and a `.logs/` swapped for a link
+// between them would otherwise make flush delete a file outside the workspace.
+// unlink(2) removes a link leaf itself, never its target. Never throws: a
+// batch that is already gone, a read-only `.logs/` or a refused walk all leave
+// the file for the next flush's MAX_CLAIMED prune.
 function remove(file, { projectRoot, env = process.env, fs = realFs, getuid } = {}) {
   try {
-    if (spoolLocation(projectRoot, env).confined) {
-      removeWorkspaceFile(projectRoot, file, { fs, env, getuid });
-    } else {
-      fs.unlinkSync(file);
-    }
+    fs.unlinkSync(inSpoolDir(file, { projectRoot, env, fs, getuid }));
   } catch (_) {
     // the prune is the backstop
   }

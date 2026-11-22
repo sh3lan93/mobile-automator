@@ -124,4 +124,5 @@ function append(target, line, fs) {
   }
 }
 
-module.exports = { format, write, atCap };
+// allowed is shared with the telemetry spool, which applies the same gate.
+module.exports = { format, write, atCap, allowed };

@@ -336,6 +336,27 @@ describe('the spool is read as untrusted input (#348)', () => {
     expect(spool.readBatch(spoolPath(root, env), { projectRoot: root, env })).toEqual([]);
   });
 
+  it('under MAUTO_LOG_DIR, returns nothing for a batch owned by another uid (the leaf rules of every user-chosen path)', () => {
+    const root = workspace();
+    const env = { MAUTO_LOG_DIR: outsideDir() };
+    const batch = path.join(env.MAUTO_LOG_DIR, 'telemetry.spool.sending.1.1');
+    fs.writeFileSync(batch, VALID_LINES);
+    expect(spool.readBatch(batch, { projectRoot: root, env })).toHaveLength(2);
+    expect(spool.readBatch(batch, { projectRoot: root, env, fs: foreignOwnerFs(batch) })).toEqual([]);
+  });
+
+  it('a MAUTO_LOG_DIR inside the workspace gets the workspace rules: nothing is read through a symlinked .logs/', () => {
+    const root = workspace();
+    const outside = outsideDir();
+    fs.writeFileSync(path.join(outside, 'telemetry.spool'), VALID_LINES);
+    const logs = path.join(root, '.mobile-automator', 'mylogs');
+    fs.symlinkSync(outside, logs);
+    const env = { MAUTO_LOG_DIR: logs };
+    expect(spool.stats({ projectRoot: root, env })).toMatchObject({ bytes: 0, events: 0 });
+    expect(spool.claim({ projectRoot: root, env })).toBeNull();
+    expect(fs.existsSync(path.join(outside, 'telemetry.spool'))).toBe(true);
+  });
+
   it('under MAUTO_LOG_DIR, the spool is the user\'s own path: written, claimed, listed and read with no workspace at all', () => {
     const bare = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-bare-'));
     const env = { MAUTO_LOG_DIR: path.join(outsideDir(), 'nested', 'logs') };
