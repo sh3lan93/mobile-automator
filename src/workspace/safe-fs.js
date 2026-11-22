@@ -27,9 +27,19 @@
 //
 // Both check every directory below the project root down to the file's own;
 // the scope sets the containment bound and words the refusal. A path the user
-// chose (--out, a screenshot to /tmp) is confined only when it lands in the
-// workspace (inWorkspace), anywhere else it is the user's own call; userDir,
-// userDest and userFile are the entry points that make that choice.
+// chose (--out, --junit, a screenshot destination) falls in one of three
+// scopes (userPath, on the path inProject re-roots):
+//
+//   - workspace: inside .mobile-automator/, the workspace rules;
+//   - project: inside the project root but outside the workspace
+//     (`reports/r.xml`, where a cloned repo can commit `reports` as a link to
+//     anywhere), the path-scope rules (#362). userFile (result export --out,
+//     run --junit, crash get --out) and userDest (mauto screenshot <path>)
+//     apply them;
+//   - outside: anywhere else (an explicit /tmp/x.png), the user's own call.
+//
+// userDir stays two-way (workspace, or the user's call): its one caller is
+// MAUTO_LOG_DIR, which the environment chooses, not the checkout.
 //
 // Components above and including the project root are never checked: a
 // project reached through a symlinked parent (macOS /tmp -> /private/tmp, a
@@ -520,9 +530,16 @@ function readWorkspaceFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES } =
 // the way is ours and not world-writable, so only a process already running
 // as the user could swap the leaf in between. Returns the resolved path.
 function safeWorkspaceDest(projectRoot, file, deps = {}) {
-  const d = resolveDeps(deps);
   const resolved = path.resolve(file);
   safeDir(projectRoot, path.dirname(resolved), { create: true }, deps);
+  return checkDestLeaf(resolved, resolveDeps(deps));
+}
+
+// The leaf of a destination another process writes, lstat'd, never opened:
+// absent is fine, anything there must be a regular file of ours with one
+// link. Shared by safeWorkspaceDest and userDest's project scope. Returns
+// `resolved`.
+function checkDestLeaf(resolved, d) {
   let st;
   try {
     st = d.fs.lstatSync(resolved);
@@ -536,29 +553,23 @@ function safeWorkspaceDest(projectRoot, file, deps = {}) {
   return resolved;
 }
 
-// Where `file` lands in the workspace: its absolute path under
-// workspaceDir(projectRoot), or null when it names a place outside it. For a
-// path the user chose (--out, a screenshot destination), which gets the
-// workspace rules inside the workspace and is the user's own call anywhere
-// else.
+// Where `file` lands in the project: its absolute path under
+// path.resolve(projectRoot), or null when it names a place outside it.
 //
-// Lexical first. A path neither lexically in the workspace nor in the project
-// may still reach the project root through a symlinked ancestor (macOS /tmp ->
-// /private/tmp; the logical path zsh's `pwd` shows while process.cwd() is
-// physical), so its ancestors are realpath'd, and the first one that is the
-// project root re-roots the rest of the path under it. Top-down, shallowest
-// first, on purpose: a workspace directory planted as a link back to the root
-// realpaths to the root too, and matching it would carry the path out of the
-// workspace, past the very link the walk must refuse. Ancestors that do not
-// resolve are skipped. Lookups only (realpath); never throws for an ordinary
-// path.
-function inWorkspace(projectRoot, file, deps = {}) {
+// Lexical first. A path not lexically in the project may still reach the
+// project root through a symlinked ancestor (macOS /tmp -> /private/tmp; the
+// logical path zsh's `pwd` shows while process.cwd() is physical), so its
+// ancestors are realpath'd, and the first one that is the project root
+// re-roots the rest of the path under it. Top-down, shallowest first, on
+// purpose: a workspace directory planted as a link back to the root realpaths
+// to the root too, and matching it would carry the path out of the workspace,
+// past the very link the walk must refuse. Ancestors that do not resolve are
+// skipped. Lookups only (realpath); never throws for an ordinary path.
+function inProject(projectRoot, file, deps = {}) {
   const { fs } = resolveDeps(deps);
   const root = path.resolve(projectRoot);
-  const ws = path.resolve(workspaceDir(projectRoot));
   const resolved = path.resolve(file);
-  if (isInside(resolved, ws)) return resolved;
-  if (isInside(resolved, root)) return null;
+  if (isInside(resolved, root)) return resolved;
 
   let realRoot;
   try {
@@ -579,10 +590,16 @@ function inWorkspace(projectRoot, file, deps = {}) {
       continue;
     }
     if (real !== realRoot) continue;
-    const rerooted = path.join(root, path.relative(a, resolved));
-    return isInside(rerooted, ws) ? rerooted : null;
+    return path.join(root, path.relative(a, resolved));
   }
   return null;
+}
+
+// Where `file` lands in the workspace: its inProject path when that lies
+// under workspaceDir(projectRoot), else null.
+function inWorkspace(projectRoot, file, deps = {}) {
+  const p = inProject(projectRoot, file, deps);
+  return p && isInside(p, path.resolve(workspaceDir(projectRoot))) ? p : null;
 }
 
 // A project file outside the workspace (a host file `mauto init` writes:
@@ -614,53 +631,97 @@ function createProjectFile(projectRoot, file, { mode = 0o666 } = {}, deps = {}) 
 }
 
 // Paths the user chose (--out, --junit, a screenshot destination, a
-// MAUTO_LOG_DIR). Inside the workspace they get the workspace rules, on the
-// path inWorkspace re-roots (through an aliased root it differs from the one
-// given, and every check and write must use the checked one); anywhere else
-// they are the user's own call. The entry points below make that choice, so
-// no caller tests inWorkspace or swaps paths itself.
+// MAUTO_LOG_DIR): `{ path, confined, scope }`, scope 'workspace', 'project' or
+// 'outside' (see the header), `confined` true for the workspace one. In the
+// workspace and the project `path` is the one inProject re-roots (through an
+// aliased root it differs from the one given, and every check and write must
+// use the checked one); outside it is the given path resolved. The entry
+// points below make the choice, so no caller tests a scope's bound or swaps
+// paths itself.
 function userPath(projectRoot, file, deps) {
-  const confined = inWorkspace(projectRoot, file, deps);
-  return confined ? { path: confined, confined: true } : { path: path.resolve(file), confined: false };
+  const p = inProject(projectRoot, file, deps);
+  if (!p) return { path: path.resolve(file), confined: false, scope: 'outside' };
+  const scope = isInside(p, path.resolve(workspaceDir(projectRoot))) ? 'workspace' : 'project';
+  return { path: p, confined: scope === 'workspace', scope };
 }
 
 // A directory the user chose: the checked walk when it lands in the
-// workspace, else a plain recursive mkdir when `create`. Returns the path to
-// use (re-rooted inside the workspace), not its realpath.
+// workspace, else a plain recursive mkdir when `create` (two-way on purpose:
+// see the header). Returns the path to use (re-rooted inside the workspace,
+// as given anywhere else), not its realpath.
 function userDir(projectRoot, dir, { create = false } = {}, deps = {}) {
   const target = userPath(projectRoot, dir, deps);
-  if (target.confined) safeDir(projectRoot, target.path, { create }, deps);
-  else if (create) resolveDeps(deps).fs.mkdirSync(target.path, { recursive: true });
-  return target.path;
+  if (target.confined) {
+    safeDir(projectRoot, target.path, { create }, deps);
+    return target.path;
+  }
+  const given = path.resolve(dir);
+  if (create) resolveDeps(deps).fs.mkdirSync(given, { recursive: true });
+  return given;
 }
 
 // A file another process writes at a path the user chose (the engine's
-// screenshot): safeWorkspaceDest in the workspace, else the resolved path
+// screenshot). In the workspace, safeWorkspaceDest. In the project, the
+// project walk, creating nothing (a missing directory is nothing to refuse,
+// and the engine reports it as it always has), then safeWorkspaceDest's leaf
+// check, worded in the 'path' scope (#362). Outside, the resolved path
 // byte-for-byte. Returns the path to hand over.
 function userDest(projectRoot, file, deps = {}) {
   const target = userPath(projectRoot, file, deps);
-  return target.confined ? safeWorkspaceDest(projectRoot, target.path, deps) : target.path;
+  if (target.scope === 'workspace') return safeWorkspaceDest(projectRoot, target.path, deps);
+  if (target.scope === 'outside') return target.path;
+  const d = resolveDeps(deps);
+  return withScope('path', () => {
+    walkDirs(projectRoot, projectRoot, path.dirname(target.path), { missingOk: true }, d);
+    return checkDestLeaf(target.path, d);
+  });
 }
 
-// A file mauto writes itself at a path the user chose: where it lands
-// (`path`, re-rooted in the workspace), whether that is in the workspace
-// (`confined`), and `open(file, flags, mode)` for it or a sibling in the same
-// directory (a temp file). In the workspace that is openWorkspaceFile (the
-// walk, created under O_CREAT, then the checked leaf); elsewhere O_CREAT makes
-// the directory with a plain recursive mkdir and the leaf is still opened
-// O_NOFOLLOW, ours and with one link, a refusal worded in the 'path' scope.
-// Returns an fd the caller closes.
+// A file mauto writes itself at a path the user chose: userPath's `path`,
+// `confined` and `scope`, plus
+//   - `open(file, flags, mode)` for it or a sibling in the same directory (a
+//     temp file). In the workspace openWorkspaceFile; in the project
+//     openProjectFile (#362), a refusal worded in the 'path' scope. Both walk
+//     every directory (created under O_CREAT, never through a link) and then
+//     open the checked leaf. Outside, O_CREAT makes the directory with a plain
+//     recursive mkdir and the leaf is still opened O_NOFOLLOW, ours and with
+//     one link, a refusal worded in the 'path' scope. Returns an fd the
+//     caller closes.
+//   - `preflight()`: the same directory walk, check-only, creating nothing,
+//     for a caller that refuses a bad path before it does other work (run
+//     --junit, crash get --out). A missing directory is nothing to refuse. A
+//     no-op outside the project.
 function userFile(projectRoot, file, deps = {}) {
   const target = userPath(projectRoot, file, deps);
-  const open = target.confined
-    ? (f, flags, mode = 0o666) => openWorkspaceFile(projectRoot, f, flags, mode, deps)
-    : (f, flags, mode = 0o666) => {
-        if (flags & nodeFs.constants.O_CREAT) {
-          resolveDeps(deps).fs.mkdirSync(path.dirname(path.resolve(f)), { recursive: true });
-        }
-        return openUserLeaf(f, flags, mode, deps);
-      };
-  return { ...target, open };
+  const dir = path.dirname(target.path);
+  if (target.scope === 'workspace') {
+    return {
+      ...target,
+      open: (f, flags, mode = 0o666) => openWorkspaceFile(projectRoot, f, flags, mode, deps),
+      preflight: () => {
+        safeDir(projectRoot, dir, { missingOk: true }, deps);
+      },
+    };
+  }
+  if (target.scope === 'project') {
+    return {
+      ...target,
+      open: (f, flags, mode = 0o666) => withScope('path', () => openProjectFile(projectRoot, f, flags, mode, deps)),
+      preflight: () => {
+        withScope('path', () => walkDirs(projectRoot, projectRoot, dir, { missingOk: true }, resolveDeps(deps)));
+      },
+    };
+  }
+  return {
+    ...target,
+    open: (f, flags, mode = 0o666) => {
+      if (flags & nodeFs.constants.O_CREAT) {
+        resolveDeps(deps).fs.mkdirSync(path.dirname(path.resolve(f)), { recursive: true });
+      }
+      return openUserLeaf(f, flags, mode, deps);
+    },
+    preflight: () => {},
+  };
 }
 
 // The leaf open for a path the user chose outside the workspace, whose
@@ -717,10 +778,15 @@ module.exports = {
   readWorkspaceJsonOrNull,
   // A workspace file another process writes (the engine's screenshot).
   safeWorkspaceDest,
+  // Where a path lands in the project (re-rooted through an aliased root), or
+  // null: the one re-root, which inWorkspace and userPath build on.
+  inProject,
   // Where a path the user chose lands in the workspace. Exported for its unit
   // tests only: callers use userDir / userDest / userFile, which apply it.
   inWorkspace,
-  // Paths the user chose: confined in the workspace, the user's call elsewhere.
+  // Paths the user chose: workspace, project or outside scope (userPath), the
+  // entry points applying each scope's rules.
+  userPath,
   userDir,
   userDest,
   userFile,

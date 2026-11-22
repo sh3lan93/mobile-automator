@@ -170,10 +170,23 @@ describe('handleResultExport', () => {
   test('an unwritable --out fails environment', () => {
     const root = tmpRoot();
     writeResult(root, PASSED);
-    fs.writeFileSync(path.join(root, 'a-file'), '');
-    const r = exportWith(root, { runIds: [PASSED.run_id], format: 'junit', out: 'a-file/junit.xml' });
+    const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-result-export-elsewhere-'));
+    fs.writeFileSync(path.join(elsewhere, 'a-file'), '');
+    const r = exportWith(root, { runIds: [PASSED.run_id], format: 'junit', out: path.join(elsewhere, 'a-file', 'junit.xml') });
     expect(r.exitKind).toBe('environment');
     expect(r.envelope.error.message).toMatch(/could not write/);
+    fs.rmSync(elsewhere, { recursive: true, force: true });
+  });
+
+  // #362: in the project, the directory walk refuses a component that is not
+  // a directory itself, a typed refusal for the envelope boundary.
+  test('an --out in the project under a file is refused (not_directory)', () => {
+    const root = tmpRoot();
+    writeResult(root, PASSED);
+    fs.writeFileSync(path.join(root, 'a-file'), '');
+    expect(() => exportWith(root, { runIds: [PASSED.run_id], format: 'junit', out: 'a-file/junit.xml' })).toThrow(
+      expect.objectContaining({ code: 'EUNSAFEPATH', kind: 'environment', reason: 'not_directory', scope: 'path' })
+    );
   });
 });
 

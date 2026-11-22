@@ -11,6 +11,8 @@ const path = require('path');
 
 const {
   inWorkspace,
+  inProject,
+  userPath,
   safeWorkspaceDest,
   isInside,
   userDir,
@@ -149,6 +151,176 @@ describe('userDir / userDest / userFile (#347)', () => {
     expect(out).toMatchObject({ confined: false, path: leaf });
     expect(expectUnsafe(() => out.open(out.path, O_WRONLY | O_CREAT), 'symlink').scope).toBe('path');
     expect(snapshot(outside)).toEqual({ 'r.txt': CANARY, 'secret.txt': CANARY });
+  });
+});
+
+// #362: a path inside the project but outside the workspace (`reports/r.xml`,
+// with `reports` a committed link to anywhere) gets the project walk, worded
+// in the 'path' scope. Only a path outside the project is the user's own call.
+describe('inProject / userPath scopes (#362)', () => {
+  it('classifies a workspace, a project and an outside path', () => {
+    const elsewhere = path.join(outside, 'r.xml');
+    expect(userPath(root, path.join(ws, 'reports', 'r.xml'))).toEqual({
+      path: path.join(ws, 'reports', 'r.xml'),
+      confined: true,
+      scope: 'workspace',
+    });
+    expect(userPath(root, path.join(root, 'reports', 'r.xml'))).toEqual({
+      path: path.join(root, 'reports', 'r.xml'),
+      confined: false,
+      scope: 'project',
+    });
+    expect(userPath(root, root)).toMatchObject({ path: root, scope: 'project' });
+    expect(userPath(root, elsewhere)).toEqual({ path: elsewhere, confined: false, scope: 'outside' });
+  });
+
+  it('inProject keeps a lexical project path and is null outside the project', () => {
+    expect(inProject(root, path.join(root, 'reports', 'r.xml'))).toBe(path.join(root, 'reports', 'r.xml'));
+    expect(inProject(root, path.join(ws, 'a'))).toBe(path.join(ws, 'a'));
+    expect(inProject(root, path.join(outside, 'r.xml'))).toBeNull();
+    expect(inProject(root, path.join(base, 'r.xml'))).toBeNull();
+  });
+
+  it('re-roots a project path reached through a symlinked parent onto the real root', () => {
+    const { realRoot, alias } = aliasedRoot(base, root);
+    expect(inProject(realRoot, path.join(alias, 'reports', 'r.xml'))).toBe(path.join(realRoot, 'reports', 'r.xml'));
+    expect(userPath(realRoot, path.join(alias, 'reports', 'r.xml'))).toEqual({
+      path: path.join(realRoot, 'reports', 'r.xml'),
+      confined: false,
+      scope: 'project',
+    });
+  });
+});
+
+describe('userFile in the project, outside the workspace (#362)', () => {
+  const reports = () => path.join(root, 'reports');
+  const openIn = (t) => t.open(t.path, O_WRONLY | O_CREAT);
+
+  it('refuses a linked reports/ (symlink, path scope), the outside untouched', () => {
+    fs.symlinkSync(outside, reports());
+    const before = snapshot(outside);
+    const t = userFile(root, path.join(reports(), 'r.xml'));
+    expect(t.scope).toBe('project');
+    const err = expectUnsafe(() => openIn(t), 'symlink');
+    expect(err.kind).toBe('environment');
+    expect(err.scope).toBe('path');
+    expect(err.message).toMatch(/^Refusing to use path /);
+    expect(err.message).not.toContain(outside);
+    expect(snapshot(outside)).toEqual(before);
+  });
+
+  it('refuses a nested link (reports/sub -> outside)', () => {
+    fs.mkdirSync(reports());
+    fs.symlinkSync(outside, path.join(reports(), 'sub'));
+    const before = snapshot(outside);
+    const t = userFile(root, path.join(reports(), 'sub', 'r.xml'));
+    expect(expectUnsafe(() => openIn(t), 'symlink').scope).toBe('path');
+    expect(snapshot(outside)).toEqual(before);
+  });
+
+  it('refuses a world-writable directory', () => {
+    fs.mkdirSync(reports());
+    fs.chmodSync(reports(), 0o777);
+    const t = userFile(root, path.join(reports(), 'r.xml'));
+    expect(expectUnsafe(() => openIn(t), 'world_writable').scope).toBe('path');
+    expect(fs.readdirSync(reports())).toEqual([]);
+  });
+
+  it('refuses a foreign-owned directory; MAUTO_TRUST_WORKSPACE_OWNER=1 skips the owner check only', () => {
+    fs.mkdirSync(reports());
+    const file = path.join(reports(), 'r.xml');
+    expect(expectUnsafe(() => openIn(userFile(root, file, { fs: foreignAt(reports()) })), 'foreign_owner').scope).toBe(
+      'path'
+    );
+    const trusted = userFile(root, file, { fs: foreignAt(reports()), env: { MAUTO_TRUST_WORKSPACE_OWNER: '1' } });
+    fs.closeSync(openIn(trusted));
+    expect(fs.existsSync(file)).toBe(true);
+
+    const linked = path.join(root, 'linked');
+    fs.symlinkSync(outside, linked);
+    const t = userFile(root, path.join(linked, 'r.xml'), { env: { MAUTO_TRUST_WORKSPACE_OWNER: '1' } });
+    expectUnsafe(() => openIn(t), 'symlink');
+  });
+
+  it('a plain reports/ works, its missing directories created by an O_CREAT open', () => {
+    const file = path.join(reports(), 'deep', 'r.xml');
+    const t = userFile(root, file);
+    const fd = openIn(t);
+    fs.writeSync(fd, '<x/>');
+    fs.closeSync(fd);
+    expect(fs.lstatSync(path.join(reports(), 'deep')).isDirectory()).toBe(true);
+    expect(fs.readFileSync(file, 'utf8')).toBe('<x/>');
+  });
+
+  it('preflight creates nothing and refuses a link, in every scope', () => {
+    userFile(root, path.join(reports(), 'deep', 'r.xml')).preflight();
+    expect(fs.existsSync(reports())).toBe(false);
+
+    fs.symlinkSync(outside, reports());
+    expect(expectUnsafe(() => userFile(root, path.join(reports(), 'r.xml')).preflight(), 'symlink').scope).toBe('path');
+
+    fs.symlinkSync(outside, path.join(ws, 'results'));
+    expect(
+      expectUnsafe(() => userFile(root, path.join(ws, 'results', 'r.xml')).preflight(), 'symlink').scope
+    ).toBe('workspace');
+    userFile(root, path.join(ws, 'absent', 'r.xml')).preflight();
+    expect(fs.existsSync(path.join(ws, 'absent'))).toBe(false);
+
+    const out = path.join(outside, 'none', 'r.xml');
+    userFile(root, out).preflight();
+    expect(fs.existsSync(path.dirname(out))).toBe(false);
+  });
+
+  it('an outside path is unchanged: a linked directory there is the user\'s call', () => {
+    const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-elsewhere-'));
+    try {
+      const link = path.join(elsewhere, 'link');
+      fs.symlinkSync(outside, link);
+      const t = userFile(root, path.join(link, 'r.xml'));
+      expect(t.scope).toBe('outside');
+      t.preflight();
+      fs.closeSync(openIn(t));
+      expect(fs.existsSync(path.join(outside, 'r.xml'))).toBe(true);
+    } finally {
+      fs.rmSync(elsewhere, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('userDest in the project, outside the workspace (#362)', () => {
+  const reports = () => path.join(root, 'reports');
+
+  it('refuses a linked reports/ (symlink, path scope), the outside untouched', () => {
+    fs.symlinkSync(outside, reports());
+    const before = snapshot(outside);
+    const err = expectUnsafe(() => userDest(root, path.join(reports(), 'a.png')), 'symlink');
+    expect(err.scope).toBe('path');
+    expect(err.kind).toBe('environment');
+    expect(snapshot(outside)).toEqual(before);
+  });
+
+  it('refuses a symlink leaf, a non-regular leaf and a foreign-owned directory', () => {
+    fs.mkdirSync(reports());
+    fs.symlinkSync(canaryFile, path.join(reports(), 'a.png'));
+    expect(expectUnsafe(() => userDest(root, path.join(reports(), 'a.png')), 'symlink').scope).toBe('path');
+    fs.mkdirSync(path.join(reports(), 'b.png'));
+    expectUnsafe(() => userDest(root, path.join(reports(), 'b.png')), 'not_regular');
+    expectUnsafe(() => userDest(root, path.join(reports(), 'c.png'), { fs: foreignAt(reports()) }), 'foreign_owner');
+    expect(fs.readFileSync(canaryFile, 'utf8')).toBe(CANARY);
+  });
+
+  it('a plain directory works; a missing one is not created', () => {
+    fs.mkdirSync(reports());
+    expect(userDest(root, path.join(reports(), 'a.png'))).toBe(path.join(reports(), 'a.png'));
+    const missing = path.join(root, 'shots', 'deep', 'a.png');
+    expect(userDest(root, missing)).toBe(missing);
+    expect(fs.existsSync(path.join(root, 'shots'))).toBe(false);
+  });
+
+  it('an explicit path outside the project is returned byte-for-byte, nothing checked or made', () => {
+    const given = path.join(outside, 'deeper', 'a.png');
+    expect(userDest(root, given)).toBe(given);
+    expect(fs.existsSync(path.dirname(given))).toBe(false);
   });
 });
 
