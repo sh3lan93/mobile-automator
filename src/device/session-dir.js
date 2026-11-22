@@ -46,8 +46,7 @@ const SESSION_DIR = dirPolicy({
   modeReason: 'not_private',
 });
 
-// The fallback socket directory, outside the workspace (the temp dir or the
-// XDG runtime dir). The workspace hints point the wrong way there, and the
+// The fallback socket directory, outside the workspace, in the temp dir. The workspace hints point the wrong way there, and the
 // owner override they offer never applies, so it has wording of its own; only
 // the reasons it can raise have a hint. The daemon prints a refusal's hint
 // under its message in daemon.log.
@@ -58,7 +57,7 @@ const SOCKET_DIR = dirPolicy({
     symlink: `mauto never follows a link for the session socket's directory. ${SOCKET_DIR_RECREATE}`,
     not_directory: SOCKET_DIR_RECREATE,
     foreign_owner:
-      'Another user owns it, so mauto will not trust a socket there. Remove it (its owner or root may have to), or set XDG_RUNTIME_DIR to a private directory of your own.',
+      'Another user owns it, so mauto will not trust a socket there. Remove it (its owner or root may have to), and mauto recreates it 0700.',
     not_private:
       "Other users could reach the device session's socket through it. Run chmod 700 <path>, or remove it and let mauto recreate it 0700.",
   },

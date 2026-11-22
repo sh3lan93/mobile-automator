@@ -44,12 +44,12 @@
   `chown -R "$(id -u)" .mobile-automator`. In a CI container that runs as root over a
   checkout owned by another uid, set `MAUTO_TRUST_WORKSPACE_OWNER=1` instead. It skips
   the owner check only, never the symlink checks.
-  For the session socket directory (the per-user `mauto` directory), remove it (mauto
-  recreates it 0700; its owner or root may have to) or point `XDG_RUNTIME_DIR` at a
-  private directory of your own. The override does not apply there.
+  For the session socket directory (the per-user `mauto-<uid>` directory in the temp
+  directory), remove it, and mauto recreates it 0700. Its owner or root may have to
+  remove it. The override does not apply there.
 - `(world_writable)`: `chmod o-w <path>`. Group-writable directories are fine.
 - `(not_private)`: the session socket directory (`.mobile-automator/.session/`, or the
-  per-user `mauto` directory under `$XDG_RUNTIME_DIR` or the temp directory) must be
+  per-user `mauto-<uid>` directory in the temp directory) must be
   mode 0700. Run `chmod 700 <path>`. mauto never changes the mode of the fallback
   directory for you. `MAUTO_TRUST_WORKSPACE_OWNER=1` does not apply to it.
 - `(not_regular)` / `(not_directory)` / `(hardlink)` / `(too_large)`: delete the path and

@@ -12,7 +12,8 @@
 // chown.
 //
 // Nothing here touches the real per-user fallback directory: a long root's
-// fallback is pointed at an XDG_RUNTIME_DIR inside the test's own temp dir.
+// fallback is pointed (an injected tmpdir) at a directory inside the test's
+// own temp dir.
 
 const fs = require('fs');
 const net = require('net');
@@ -72,15 +73,16 @@ function shortRoot() {
 function longRoot() {
   const root = path.join(base, 'd'.repeat(80));
   fs.mkdirSync(root);
-  const xdg = path.join(base, 'xdg');
-  fs.mkdirSync(xdg, { mode: 0o700 });
-  const deps = { env: { XDG_RUNTIME_DIR: xdg } };
+  const tmp = path.join(base, 'tmp');
+  fs.mkdirSync(tmp, { mode: 0o700 });
+  const deps = { tmpdir: () => tmp };
+  const fallbackDir = path.join(tmp, `mauto-${REAL_UID}`);
   expect(paths.socketLocation(root, deps)).toEqual({
-    file: path.join(xdg, 'mauto', `${paths.workspaceKey(root)}.sock`),
-    dir: path.join(xdg, 'mauto'),
+    file: path.join(fallbackDir, `${paths.workspaceKey(root)}.sock`),
+    dir: fallbackDir,
     inWorkspace: false,
   });
-  return { root, deps, fallbackDir: path.join(xdg, 'mauto') };
+  return { root, deps, fallbackDir };
 }
 
 function listen(sock) {
@@ -119,10 +121,10 @@ function expectRefusal(fn, reason) {
 describe('ensureSessionDirs', () => {
   test('a short root never creates the fallback directory', () => {
     const root = shortRoot();
-    const xdg = path.join(base, 'xdg');
-    fs.mkdirSync(xdg);
-    ensureSessionDirs(root, { env: { XDG_RUNTIME_DIR: xdg } });
-    expect(fs.existsSync(path.join(xdg, 'mauto'))).toBe(false);
+    const tmp = path.join(base, 'tmp');
+    fs.mkdirSync(tmp);
+    ensureSessionDirs(root, { tmpdir: () => tmp });
+    expect(fs.readdirSync(tmp)).toEqual([]);
   });
 
   testNotRoot('a long root also gets its fallback directory, created 0700 under umask 022', () => {
@@ -242,7 +244,7 @@ describe('the fallback socket directory (ensureSessionDirs, deep root)', () => {
     not_private: () => (fs.mkdirSync(fallbackDir), fs.chmodSync(fallbackDir, 0o750), deps),
     foreign_owner: () => {
       fs.mkdirSync(fallbackDir, { mode: 0o700 });
-      return { env: { ...deps.env, ...OVERRIDE }, fs: foreignLstat((p) => p === fallbackDir) };
+      return { ...deps, env: OVERRIDE, fs: foreignLstat((p) => p === fallbackDir) };
     },
   };
 
@@ -276,7 +278,7 @@ describe('the fallback socket directory (ensureSessionDirs, deep root)', () => {
     const foreign = hintFor('foreign_owner');
     expect(foreign.message).toContain(`it is owned by uid ${FOREIGN_UID}; you are uid ${REAL_UID}`);
     expect(foreign.hint).toMatch(/another user owns it/i);
-    expect(foreign.hint).toContain('XDG_RUNTIME_DIR');
+    expect(foreign.hint).toMatch(/recreates it 0700/);
     expect(hintFor('not_private').hint).toContain('chmod 700 <path>');
     for (const reason of ['symlink', 'not_directory']) {
       expect(hintFor(reason).hint).toMatch(/remove it.*0700/i);

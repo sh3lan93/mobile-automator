@@ -51,17 +51,22 @@ function workspaceSocketPath(projectRoot) {
   return path.join(sessionDir(projectRoot), SOCKET_NAME);
 }
 
-// The per-user directory holding the long-path socket fallback (#346). The
-// XDG runtime dir is per-user and 0700 by spec, so it is preferred when the
-// session has one; a relative value is ignored, as the spec says it must be.
-// Otherwise a directory of our own in the OS temp dir, named by uid so two
-// users on one host never share it. Only the name is built here: session-dir.js
-// creates it 0700 and refuses it unless it is a real directory, ours, and
-// private.
-function privateSocketDir({ env = process.env, getuid = process.getuid } = {}) {
-  const xdg = env.XDG_RUNTIME_DIR;
-  if (xdg && path.isAbsolute(xdg)) return path.join(xdg, 'mauto');
-  return path.join(os.tmpdir(), `mauto-${getuid()}`);
+// The per-user directory holding the long-path socket fallback (#346): always
+// <os.tmpdir()>/mauto-<uid>, named by uid so two users on one host never share
+// it. Only the name is built here: session-dir.js creates it 0700 and refuses
+// it unless it is a real directory, ours, and private.
+//
+// The client and the daemon each compute this path on their own, so it must
+// depend on as little ambient state as possible: when the two disagree, the
+// client never finds the live daemon, cannot take its lock (ELOCKED), and
+// waits out the start timeout. The temp dir (TMPDIR) is the one input, and
+// the pre-#346 fallback already depended on it. The XDG runtime directory is
+// deliberately NOT read: it is a second, more volatile input (unset under sudo
+// and cron, often different in an IDE than in a shell), so preferring it
+// would split client and daemon in exactly those cases. `{ getuid, tmpdir }`
+// are for tests.
+function privateSocketDir({ getuid = process.getuid, tmpdir = os.tmpdir } = {}) {
+  return path.join(tmpdir(), `mauto-${getuid()}`);
 }
 
 // Where the session socket lives, decided once, here (#346). `file` is the
@@ -69,8 +74,8 @@ function privateSocketDir({ env = process.env, getuid = process.getuid } = {}) {
 // that must be private; `inWorkspace` says which of the two it is: the
 // workspace's .session/ (checked by a workspace walk) or the per-user fallback
 // (checked outside the workspace, with no owner override). Deterministic from
-// the project root (and, for the fallback, the user's env and uid) so both
-// sides agree without reading the handle. `deps` ({ env, getuid }) is for
+// the project root (and, for the fallback, the temp dir and uid) so both
+// sides agree without reading the handle. `deps` ({ getuid, tmpdir }) is for
 // tests. The limit is in bytes, as the kernel counts it.
 function socketLocation(projectRoot, deps = {}) {
   const file = workspaceSocketPath(projectRoot);

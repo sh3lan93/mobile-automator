@@ -8,8 +8,8 @@
 // The real bin is spawned: the top-level catch only runs under
 // `require.main === module`. The start fails in ensureSessionDirs, before any
 // engine exists, so no device is touched. The project root is deep enough that
-// its socket falls back to <XDG_RUNTIME_DIR>/mauto, here a 0755 directory in
-// this test's own temp dir, which is refused not_private.
+// its socket falls back to <TMPDIR>/mauto-<uid>, here (TMPDIR pointed into
+// this test's own temp dir) a 0755 directory, which is refused not_private.
 
 const childProcess = require('child_process');
 const fs = require('fs');
@@ -50,8 +50,8 @@ describe('bin/mauto-session-daemon start failure', () => {
   test('a refused socket directory exits 1 with its message and hint on stderr', () => {
     const root = path.join(base, 'd'.repeat(80));
     fs.mkdirSync(root);
-    const xdg = path.join(base, 'xdg');
-    const sockDir = path.join(xdg, 'mauto');
+    const tmp = path.join(base, 'tmp');
+    const sockDir = path.join(tmp, `mauto-${process.getuid()}`);
     fs.mkdirSync(sockDir, { recursive: true });
     fs.chmodSync(sockDir, 0o755);
 
@@ -63,7 +63,7 @@ describe('bin/mauto-session-daemon start failure', () => {
         PATH: process.env.PATH,
         HOME: base,
         MAUTO_SESSION_PROJECT_ROOT: root,
-        XDG_RUNTIME_DIR: xdg,
+        TMPDIR: tmp,
         MAUTO_LOG_DIR: path.join(base, 'logs'),
         MAUTO_TELEMETRY: '0',
         DO_NOT_TRACK: '1',

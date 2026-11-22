@@ -19,9 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `.session/` is mode 0700 and the socket is mode 0600. A 0755 `.session/`
     left by an older version is tightened, then checked again.
   - A project root too deep for the socket path limit (about 100 bytes) uses
-    `$XDG_RUNTIME_DIR/mauto/` when that variable is set and absolute, else
-    `<tmpdir>/mauto-<uid>/`. That directory must be a real 0700 directory
-    owned by you. A loose or foreign one is refused (`not_private`,
+    `<tmpdir>/mauto-<uid>/`, where `<tmpdir>` follows `TMPDIR`. That directory
+    must be a real 0700 directory owned by you. A loose or foreign one is refused (`not_private`,
     `foreign_owner`) and never chmodded.
   - The client checks the socket and its directory before every connect: the
     directory is private, and the socket is a real socket owned by you. A

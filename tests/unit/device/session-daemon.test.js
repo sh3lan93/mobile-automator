@@ -10,11 +10,11 @@ const paths = require('../../../src/device/session-paths');
 const { ensureSalt, readSalt } = require('../../../src/device/session-salt');
 const { ensureSessionDirs } = require('../../../src/device/session-dir');
 const { UnsafePathError } = require('../../../src/workspace/safe-fs');
-const { usePrivateRuntimeDir } = require('../../helpers/private-runtime-dir');
+const { usePrivateTmpdir } = require('../../helpers/private-tmpdir');
 
 // A deep temp root's socket goes to the fallback directory: keep it in a
 // temp dir of this file's, never the real per-user one (#346).
-const runtimeDir = usePrivateRuntimeDir();
+const privateTmp = usePrivateTmpdir();
 
 // Captured before any test fakes the clock, so a bounded wait still expires.
 const realSetTimeout = setTimeout;
@@ -251,17 +251,17 @@ describe('session-daemon private files (#346)', () => {
     return fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-daemon-out-'));
   }
 
-  // The isolation every daemon suite relies on (tests/helpers/private-runtime-dir.js):
-  // the socket is in the workspace, or in this file's runtime dir, never in
+  // The isolation every daemon suite relies on (tests/helpers/private-tmpdir.js):
+  // the socket is in the workspace, or in this file's private temp dir, never in
   // the real per-user fallback directory.
-  test('the socket lands in the workspace or in this file\'s runtime dir, nowhere else', async () => {
+  test('the socket lands in the workspace or in this file\'s private temp dir, nowhere else', async () => {
     const root = tmpRoot();
     const { createCall } = makeFakeCreateCall();
     const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall });
     try {
       const { file, inWorkspace } = paths.socketLocation(root);
       expect(daemon.socketPath).toBe(file);
-      expect(inWorkspace || file.startsWith(runtimeDir() + path.sep)).toBe(true);
+      expect(inWorkspace || file.startsWith(privateTmp() + path.sep)).toBe(true);
     } finally {
       await daemon.stop();
     }

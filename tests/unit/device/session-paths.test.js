@@ -65,41 +65,39 @@ describe('socketPath fallback in a per-user directory (#346)', () => {
     expect(Buffer.byteLength(paths.workspaceSocketPath('/tmp/proj'))).toBeLessThanOrEqual(paths.SOCKET_PATH_LIMIT);
   });
 
-  test('without XDG_RUNTIME_DIR the fallback is <tmpdir>/mauto-<uid>/<key>.sock', () => {
-    const deps = { env: {}, getuid: () => 1234 };
-    expect(paths.privateSocketDir(deps)).toBe(path.join(os.tmpdir(), 'mauto-1234'));
-    expect(paths.socketPath(deepRoot, deps)).toBe(path.join(os.tmpdir(), 'mauto-1234', `${key()}.sock`));
+  test('the fallback is <tmpdir>/mauto-<uid>/<key>.sock', () => {
+    const deps = { getuid: () => 1234, tmpdir: () => '/t' };
+    expect(paths.privateSocketDir(deps)).toBe(path.join('/t', 'mauto-1234'));
+    expect(paths.socketPath(deepRoot, deps)).toBe(path.join('/t', 'mauto-1234', `${key()}.sock`));
     expect(path.basename(paths.socketPath(deepRoot, deps))).toMatch(/^[0-9a-f]{16}\.sock$/);
   });
 
-  test('an absolute XDG_RUNTIME_DIR puts the fallback in <XDG_RUNTIME_DIR>/mauto/<key>.sock', () => {
-    const deps = { env: { XDG_RUNTIME_DIR: '/run/user/1234' }, getuid: () => 1234 };
-    expect(paths.privateSocketDir(deps)).toBe(path.join('/run/user/1234', 'mauto'));
-    expect(paths.socketPath(deepRoot, deps)).toBe(path.join('/run/user/1234', 'mauto', `${key()}.sock`));
-  });
-
-  test('a relative XDG_RUNTIME_DIR is ignored: the tmpdir form is used', () => {
-    const deps = { env: { XDG_RUNTIME_DIR: 'run/user/1234' }, getuid: () => 1234 };
-    expect(paths.privateSocketDir(deps)).toBe(path.join(os.tmpdir(), 'mauto-1234'));
-    expect(paths.socketPath(deepRoot, deps)).toBe(path.join(os.tmpdir(), 'mauto-1234', `${key()}.sock`));
-  });
-
-  test('an empty XDG_RUNTIME_DIR is ignored too', () => {
-    const deps = { env: { XDG_RUNTIME_DIR: '' }, getuid: () => 1234 };
-    expect(paths.privateSocketDir(deps)).toBe(path.join(os.tmpdir(), 'mauto-1234'));
-  });
-
-  test('a short root ignores both and stays in the workspace', () => {
-    for (const env of [{}, { XDG_RUNTIME_DIR: '/run/user/1234' }]) {
-      const deps = { env, getuid: () => 1234 };
-      expect(paths.socketPath('/tmp/proj', deps)).toBe(paths.workspaceSocketPath('/tmp/proj'));
+  // The client and the daemon compute the fallback separately, so a second
+  // ambient input would let them disagree (sudo, cron and IDEs often differ in
+  // XDG_RUNTIME_DIR): the client would never find the live daemon. It is read
+  // neither from the process env nor from an injected one.
+  test('XDG_RUNTIME_DIR is ignored, wherever it comes from', () => {
+    const had = Object.prototype.hasOwnProperty.call(process.env, 'XDG_RUNTIME_DIR');
+    const prev = process.env.XDG_RUNTIME_DIR;
+    process.env.XDG_RUNTIME_DIR = '/run/user/1234';
+    try {
+      const deps = { env: { XDG_RUNTIME_DIR: '/run/user/1234' }, getuid: () => 1234 };
+      expect(paths.privateSocketDir(deps)).toBe(path.join(os.tmpdir(), 'mauto-1234'));
+      expect(paths.privateSocketDir()).toBe(path.join(os.tmpdir(), `mauto-${process.getuid()}`));
+      expect(paths.socketLocation(deepRoot, deps).dir).toBe(path.join(os.tmpdir(), 'mauto-1234'));
+    } finally {
+      if (had) process.env.XDG_RUNTIME_DIR = prev;
+      else delete process.env.XDG_RUNTIME_DIR;
     }
   });
 
-  test('defaults come from the real process (env and uid)', () => {
-    const xdg = process.env.XDG_RUNTIME_DIR;
-    const expected =
-      xdg && path.isAbsolute(xdg) ? path.join(xdg, 'mauto') : path.join(os.tmpdir(), `mauto-${process.getuid()}`);
+  test('a short root stays in the workspace', () => {
+    const deps = { getuid: () => 1234, tmpdir: () => '/t' };
+    expect(paths.socketPath('/tmp/proj', deps)).toBe(paths.workspaceSocketPath('/tmp/proj'));
+  });
+
+  test('defaults come from the real process (temp dir and uid)', () => {
+    const expected = path.join(os.tmpdir(), `mauto-${process.getuid()}`);
     expect(paths.privateSocketDir()).toBe(expected);
     expect(paths.socketPath(deepRoot)).toBe(path.join(expected, `${key()}.sock`));
   });
@@ -109,32 +107,27 @@ describe('socketPath fallback in a per-user directory (#346)', () => {
 // (ensureSessionDirs) and the client (verifySocket), so they can never disagree.
 describe('socketLocation (#346)', () => {
   const deepRoot = '/' + 'deeply-nested-project-dir/'.repeat(6) + 'app';
-  const deps = { env: { XDG_RUNTIME_DIR: '/run/user/1234' }, getuid: () => 1234 };
+  const deps = { getuid: () => 1234, tmpdir: () => '/t' };
   // A root whose in-workspace socket path is exactly `bytes` long.
   const rootOfSocketBytes = (bytes) => {
     const tail = paths.workspaceSocketPath('/r').length - '/r'.length;
     return '/' + 'r'.repeat(bytes - tail - 1);
   };
 
-  test('a short root: the socket is in .session/, whatever the env says', () => {
-    for (const env of [{}, { XDG_RUNTIME_DIR: '/run/user/1234' }]) {
-      expect(paths.socketLocation('/tmp/proj', { env, getuid: () => 1234 })).toEqual({
-        file: paths.workspaceSocketPath('/tmp/proj'),
-        dir: paths.sessionDir('/tmp/proj'),
-        inWorkspace: true,
-      });
-    }
+  test('a short root: the socket is in .session/', () => {
+    expect(paths.socketLocation('/tmp/proj', deps)).toEqual({
+      file: paths.workspaceSocketPath('/tmp/proj'),
+      dir: paths.sessionDir('/tmp/proj'),
+      inWorkspace: true,
+    });
   });
 
   test('a deep root: the socket is in the per-user fallback directory', () => {
     expect(paths.socketLocation(deepRoot, deps)).toEqual({
-      file: path.join('/run/user/1234', 'mauto', `${paths.workspaceKey(deepRoot)}.sock`),
-      dir: path.join('/run/user/1234', 'mauto'),
+      file: path.join('/t', 'mauto-1234', `${paths.workspaceKey(deepRoot)}.sock`),
+      dir: path.join('/t', 'mauto-1234'),
       inWorkspace: false,
     });
-    expect(paths.socketLocation(deepRoot, { env: {}, getuid: () => 1234 }).dir).toBe(
-      path.join(os.tmpdir(), 'mauto-1234')
-    );
   });
 
   test('dir is always the directory holding file, and socketPath is file', () => {
