@@ -221,8 +221,10 @@ function connectPinned(projectRoot, connect, deps = {}) {
     sessionDir = paths.sessionDir(projectRoot);
     safeDir(projectRoot, sessionDir, { policy: SESSION_DIR }, deps);
     if (!loc.inWorkspace) checkDir(loc.dir, SOCKET_DIR, {}, deps);
-  } catch (_) {
-    return null;
+  } catch (err) {
+    // The same rule as inside a pin: a refusal is "no daemon", a bug is not.
+    if (isRefusal(err)) return null;
+    throw err;
   }
   const name = path.basename(loc.file);
   let salt = null;

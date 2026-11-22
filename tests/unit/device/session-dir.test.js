@@ -516,6 +516,22 @@ describe('connectPinned', () => {
     expect(process.cwd()).toBe(before);
   });
 
+  test('the path prefilter applies the same rule: a refusal is null, a bug propagates', async () => {
+    const root = await liveShort();
+    const failingLstat = (err) => ({
+      ...fs,
+      lstatSync: () => {
+        throw err;
+      },
+    });
+    const connect = (n) => net.createConnection(n);
+    const enoent = Object.assign(new Error('gone'), { code: 'ENOENT' });
+    expect(connectPinned(root, connect, { env: {}, fs: failingLstat(enoent) })).toBeNull();
+    expect(() => connectPinned(root, connect, { env: {}, fs: failingLstat(new TypeError('lstat is broken')) })).toThrow(
+      'lstat is broken'
+    );
+  });
+
   test('the working directory is the same afterwards, on success and on refusal', async () => {
     const before = process.cwd();
     const root = await liveShort();
