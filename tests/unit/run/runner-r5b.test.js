@@ -160,3 +160,18 @@ test('a reference outside the project root fails the assertion, not the run', as
   expect(r.exitKind).toBe('test_failed');
   expect(resultFile().assertion_results[0].message).toMatch(/assertion errored: .*outside the project root/);
 });
+
+// #363: a committed link at the baseline is the checkout's fault. The run
+// still finalizes (never left in progress), but it reports environment with
+// the refusal's own message, not a failed assertion, and nothing of the
+// target reaches the envelope.
+test('a baseline that is a link ends the run environment', async () => {
+  const { UnsafePathError } = require('../../../src/workspace/safe-fs');
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-run-r5b-out-'));
+  const secret = writePng(path.join(outside, 'secret.png'), solidPng(20, 20, BLACK));
+  fs.mkdirSync(path.dirname(defaultRef()), { recursive: true });
+  fs.symlinkSync(secret, defaultRef());
+  await expect(run(bridgeShowing(solidPng(20, 20, WHITE)), scenarioWith({}))).rejects.toBeInstanceOf(UnsafePathError);
+  expect(resultFile()._in_progress).toBeUndefined();
+  fs.rmSync(outside, { recursive: true, force: true });
+});

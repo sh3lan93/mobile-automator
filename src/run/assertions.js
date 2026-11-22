@@ -6,6 +6,7 @@ const { observe } = require('../assertion/observe');
 const { substituteAssertion } = require('./variables');
 const { decideReferenceScreenshot } = require('./reference-assertion');
 const { runArtifacts } = require('./screenshots');
+const { isTypedRefusal } = require('../output/typed-refusal');
 
 // A screenshot_match (#281) is decided by comparing a stable capture against
 // its reference image, not over the element list: the shared decision in
@@ -88,6 +89,10 @@ async function runAssertion(assertion, ctx, previous = null) {
     resolved = substituteAssertion(assertion, variables);
     body = await verdictFor(resolved, ctx, previous);
   } catch (err) {
+    // A refused path (a committed link to a baseline, #363) is the checkout's
+    // fault, not the screen's: it ends the run environment, as every other
+    // verb reports it, instead of reading as a failed assertion.
+    if (isTypedRefusal(err)) throw err;
     // An evaluator error is a failed assertion, attributed to no one. (A
     // screenshot_match has no expected field, so expectedOf is null for it.)
     body = { expected: expectedOf(resolved), status: 'failed', message: `assertion errored: ${err.message}` };

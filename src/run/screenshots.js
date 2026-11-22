@@ -18,6 +18,12 @@
 // the workspace; whatever it names must stay inside the project root, which is
 // why its write is project-scoped. The actual and the diff always land in the
 // workspace.
+//
+// Every PNG this directory reads (baseline, actual, captured frame) is read
+// through readPngBytes / readPng, i.e. safe-fs's readUserFile (#363): inside
+// the checkout a link on the way or at the leaf is refused (UnsafePathError,
+// environment), never followed, so a committed `reference/<id>.png ->
+// ~/secret.png` is not decoded and diffed against the screen.
 
 const crypto = require('crypto');
 const fs = require('fs');
@@ -25,8 +31,28 @@ const path = require('path');
 const { PNG } = require('pngjs');
 
 const { workspaceDir } = require('../workspace/layout');
-const { safeWorkspaceDest } = require('../workspace/safe-fs');
+const { safeWorkspaceDest, readUserFile } = require('../workspace/safe-fs');
 const { atomicProjectWrite } = require('../util/atomic');
+const { isTypedRefusal } = require('../output/typed-refusal');
+
+// A screenshot PNG is a few MB; a file far past that was not captured by mauto.
+const PNG_MAX_BYTES = 64 * 1024 * 1024;
+
+// The bytes of the PNG at `file`, read through readUserFile under
+// `projectRoot`. An absent file throws ENOENT, as the plain read did; a refused
+// path throws its UnsafePathError.
+function readPngBytes(projectRoot, file) {
+  const bytes = readUserFile(projectRoot, file, { encoding: null, maxBytes: PNG_MAX_BYTES });
+  if (bytes === null) {
+    throw Object.assign(new Error(`ENOENT: no such file or directory, open '${file}'`), { code: 'ENOENT', path: file });
+  }
+  return bytes;
+}
+
+// The decoded PNG at `file` (pngjs's { width, height, data }).
+function readPng(projectRoot, file) {
+  return PNG.sync.read(readPngBytes(projectRoot, file));
+}
 
 // One path segment: no separator, not `.`/`..`, not empty.
 function segment(kind, value) {
@@ -101,10 +127,13 @@ function assertArtifacts({ projectRoot, input, now }) {
   };
 }
 
-function decodeFrame(file) {
+// A refusal is not "unreadable": it propagates as is, so it reaches the
+// envelope as environment.
+function decodeFrame(projectRoot, file) {
   try {
-    return PNG.sync.read(fs.readFileSync(file));
+    return readPng(projectRoot, file);
   } catch (err) {
+    if (isTypedRefusal(err)) throw err;
     throw new Error(`screenshot ${file} is not a readable PNG (${err.message})`);
   }
 }
@@ -130,7 +159,7 @@ async function captureStable({ projectRoot, bridge, dest: wanted, clock, timeout
   const capture = async (file) => {
     removeQuietly(file);
     await bridge.screenshot(file);
-    return decodeFrame(file);
+    return decodeFrame(projectRoot, file);
   };
 
   try {
@@ -164,10 +193,11 @@ async function captureStable({ projectRoot, bridge, dest: wanted, clock, timeout
 // missing), and the atomic rename replaces a link at `referencePath` rather
 // than writing through it, as copyFileSync would (#347).
 function writeReference(projectRoot, actualPath, referencePath) {
-  atomicProjectWrite(projectRoot, referencePath, fs.readFileSync(actualPath));
+  atomicProjectWrite(projectRoot, referencePath, readPngBytes(projectRoot, actualPath));
   return referencePath;
 }
 
 module.exports = {
   referencePathFor, resolveReference, runArtifacts, assertArtifacts, assertArtifactId, captureStable, writeReference,
+  readPng, PNG_MAX_BYTES,
 };
