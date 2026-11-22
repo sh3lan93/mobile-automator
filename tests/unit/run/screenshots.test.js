@@ -5,9 +5,11 @@ const os = require('os');
 const path = require('path');
 
 const {
-  referencePathFor, resolveReference, runArtifacts, assertArtifacts, ensureParent, captureStable, writeReference,
+  referencePathFor, resolveReference, runArtifacts, assertArtifacts, captureStable, writeReference,
 } = require('../../../src/run/screenshots');
 const { workspaceDir } = require('../../../src/workspace/layout');
+const { UnsafePathError } = require('../../../src/workspace/safe-fs');
+const { CANARY, tmpDir, snapshot } = require('../../helpers/workspace-safety');
 const { makeFakeBridge, makeFakeClock } = require('../../helpers/fake-bridge');
 const { solidPng, writePng } = require('../../helpers/png');
 
@@ -15,6 +17,14 @@ let root;
 beforeEach(() => {
   root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-shots-'));
 });
+
+// An outside directory holding a canary: a refused write must leave it
+// byte-identical (snapshot before and after).
+function outsideDir() {
+  const dir = tmpDir('mauto-shots-outside-');
+  fs.writeFileSync(path.join(dir, 'keep.png'), CANARY);
+  return dir;
+}
 
 describe('referencePathFor', () => {
   test('is <workspace>/screenshots/reference/<scenario_id>/<assertion_id>.png', () => {
@@ -60,8 +70,48 @@ describe('writeReference', () => {
   test('copies the actual to the reference path, creating its directory', () => {
     const actual = writePng(path.join(root, 'a.png'), solidPng(4, 4));
     const ref = path.join(root, 'deep', 'er', 'ref.png');
-    writeReference(actual, ref);
+    writeReference(root, actual, ref);
     expect(fs.readFileSync(ref)).toEqual(fs.readFileSync(actual));
+  });
+
+  // #347: copyFileSync follows a link at its destination, and a cloned repo
+  // can commit the baseline directory as one.
+  test('refuses screenshots/reference planted as a link to outside, leaving it unchanged', () => {
+    const outside = outsideDir();
+    const before = snapshot(outside);
+    fs.mkdirSync(path.join(workspaceDir(root), 'screenshots'), { recursive: true });
+    fs.symlinkSync(outside, path.join(workspaceDir(root), 'screenshots', 'reference'));
+    const actual = writePng(path.join(workspaceDir(root), 'screenshots', 'a.png'), solidPng(4, 4));
+
+    expect(() => writeReference(root, actual, referencePathFor(root, 'login', 'keep')))
+      .toThrow(UnsafePathError);
+    expect(snapshot(outside)).toEqual(before);
+  });
+
+  test('refuses an explicit project-relative baseline whose directory is a link to outside', () => {
+    const outside = outsideDir();
+    const before = snapshot(outside);
+    fs.symlinkSync(outside, path.join(root, 'baselines'));
+    const actual = writePng(path.join(workspaceDir(root), 'screenshots', 'a.png'), solidPng(4, 4));
+    const ref = resolveReference(root, { id: 'a1', reference_screenshot: '../baselines/keep.png' }, 'scn');
+
+    expect(() => writeReference(root, actual, ref)).toThrow(UnsafePathError);
+    expect(snapshot(outside)).toEqual(before);
+  });
+
+  test('replaces a baseline planted as a link leaf, never writing through it', () => {
+    const outside = outsideDir();
+    const before = snapshot(outside);
+    const ref = referencePathFor(root, 'login', 'home');
+    fs.mkdirSync(path.dirname(ref), { recursive: true });
+    fs.symlinkSync(path.join(outside, 'keep.png'), ref);
+    const actual = writePng(path.join(workspaceDir(root), 'screenshots', 'a.png'), solidPng(4, 4));
+
+    writeReference(root, actual, ref);
+
+    expect(fs.lstatSync(ref).isFile()).toBe(true);
+    expect(fs.readFileSync(ref)).toEqual(fs.readFileSync(actual));
+    expect(snapshot(outside)).toEqual(before);
   });
 });
 
@@ -76,11 +126,15 @@ describe('captureStable', () => {
   const B = solidPng(8, 8, [0, 255, 0, 255]);
   const C = solidPng(8, 8, [0, 0, 255, 255]);
 
+  // The capture lands under the workspace, as runArtifacts / assertArtifacts
+  // put it; its directory is created by the checked walk.
+  const shotIn = (...p) => path.join(workspaceDir(root), 'screenshots', ...p);
+
   test('captures until two consecutive frames are identical and leaves the last one at dest', async () => {
     const bridge = makeFakeBridge({ methods: frames(A, B, C, C) });
     const clock = makeFakeClock();
-    const dest = path.join(root, 'out', 'shot.png');
-    const r = await captureStable({ bridge, dest, clock, timeoutMs: 10000, pollMs: 100 });
+    const dest = shotIn('out', 'shot.png');
+    const r = await captureStable({ projectRoot: root, bridge, dest, clock, timeoutMs: 10000, pollMs: 100 });
     expect(r).toEqual({ path: dest, stable: true, frames: 4 });
     expect(fs.readFileSync(dest)).toEqual(C);
     expect(fs.readdirSync(path.dirname(dest))).toEqual(['shot.png']);
@@ -92,27 +146,43 @@ describe('captureStable', () => {
       methods: { screenshot: ([dest], n) => fs.writeFileSync(dest, n % 2 ? A : B) },
     });
     const clock = makeFakeClock();
-    const dest = path.join(root, 'shot.png');
-    const r = await captureStable({ bridge, dest, clock, timeoutMs: 1000, pollMs: 250 });
+    const dest = shotIn('shot.png');
+    const r = await captureStable({ projectRoot: root, bridge, dest, clock, timeoutMs: 1000, pollMs: 250 });
     expect(r.stable).toBe(false);
     expect(r.frames).toBe(5);
     expect(clock.now()).toBe(1000);
     expect(fs.existsSync(dest)).toBe(true);
-    expect(fs.readdirSync(root)).toEqual(['shot.png']);
+    expect(fs.readdirSync(shotIn())).toEqual(['shot.png']);
   });
 
   test('a frame that is not a PNG is an error naming it, and leaves no temp files', async () => {
     const bridge = makeFakeBridge();
-    const dest = path.join(root, 'shot.png');
-    await expect(captureStable({ bridge, dest, clock: makeFakeClock(), timeoutMs: 1000, pollMs: 100 }))
+    const dest = shotIn('shot.png');
+    await expect(captureStable({ projectRoot: root, bridge, dest, clock: makeFakeClock(), timeoutMs: 1000, pollMs: 100 }))
       .rejects.toThrow(/not a readable PNG/);
-    expect(fs.readdirSync(root)).toEqual([]);
+    expect(fs.readdirSync(shotIn())).toEqual([]);
   });
 
   test('a capture that writes nothing is an error', async () => {
     const bridge = makeFakeBridge({ methods: { screenshot: () => null } });
-    await expect(captureStable({ bridge, dest: path.join(root, 's.png'), clock: makeFakeClock(), timeoutMs: 100, pollMs: 10 }))
+    await expect(captureStable({ projectRoot: root, bridge, dest: shotIn('s.png'), clock: makeFakeClock(), timeoutMs: 100, pollMs: 10 }))
       .rejects.toThrow(/not a readable PNG/);
+  });
+
+  // #347: the engine writes each frame, so a committed
+  // `screenshots/<scenario> -> elsewhere` would land them there.
+  test('refuses screenshots/<scenario> planted as a link before any capture', async () => {
+    const outside = outsideDir();
+    const before = snapshot(outside);
+    fs.mkdirSync(shotIn(), { recursive: true });
+    fs.symlinkSync(outside, shotIn('login'));
+    const bridge = makeFakeBridge({ methods: frames(A, A) });
+
+    await expect(
+      captureStable({ projectRoot: root, bridge, dest: shotIn('login', 'run_1', 'assert_a.png'), clock: makeFakeClock(), timeoutMs: 1000, pollMs: 100 })
+    ).rejects.toThrow(UnsafePathError);
+    expect(bridge.of('screenshot')).toEqual([]);
+    expect(snapshot(outside)).toEqual(before);
   });
 });
 
@@ -162,16 +232,8 @@ describe('assertArtifacts', () => {
       .toThrow(/outside the project/);
   });
 
-  test('makes no directory: the capture and writeReference do (ensureParent)', () => {
+  test('makes no directory: the capture and writeReference do', () => {
     assertArtifacts({ projectRoot: root, input: { reference_screenshot: 'ref/home.png' }, now });
     expect(fs.readdirSync(root)).toEqual([]);
-  });
-});
-
-describe('ensureParent', () => {
-  test('creates the directory a file will land in, and returns the file', () => {
-    const file = path.join(root, 'a', 'b', 'c.png');
-    expect(ensureParent(file)).toBe(file);
-    expect(fs.statSync(path.dirname(file)).isDirectory()).toBe(true);
   });
 });

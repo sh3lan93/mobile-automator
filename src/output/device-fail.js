@@ -8,11 +8,6 @@
 const { fail } = require('./envelope');
 const { engineHint } = require('../device/engine-hints');
 
-// fs error codes that signal an environment/filesystem problem (perms, missing
-// path, read-only FS, disk full) rather than a logic bug — surfaced as
-// `environment` with a filesystem-specific hint.
-const FS_ERROR_CODES = new Set(['EACCES', 'ENOENT', 'EROFS', 'ENOSPC', 'EPERM']);
-
 // The hint for any device-kind failure. Precedence: an explicit err.hint wins
 // (our own code attached it knowing the exact cause — a DeviceResolutionError,
 // the daemon-log pointer, a timeout); then engineHint, which recognises engine
@@ -38,4 +33,4 @@ function deviceFail(err) {
   };
 }
 
-module.exports = { FS_ERROR_CODES, deviceHint, deviceFail };
+module.exports = { deviceHint, deviceFail };

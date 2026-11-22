@@ -4,6 +4,9 @@ const fs = require('fs');
 const path = require('path');
 
 const { fail } = require('../output/envelope');
+const { typedFail } = require('../output/typed-fail');
+const { isTypedRefusal } = require('../output/typed-refusal');
+const { userDir } = require('../workspace/safe-fs');
 const { loadScenario } = require('../scenario/load');
 const { isResultRunId } = require('../result/store');
 const { resolveRunId } = require('../observe/settings');
@@ -12,7 +15,8 @@ const { parsePositiveInt } = require('../util/parse-positive-int');
 
 // Why the --junit path cannot take the report, or null. Checked before the
 // run, so a CI job learns of a typo'd report directory before the device
-// work rather than after it (atomicWrite would otherwise create the directory).
+// work rather than after it (the report writer would otherwise create the
+// directory).
 function statOf(p) {
   try {
     return fs.statSync(p);
@@ -31,6 +35,25 @@ function junitRefusal(junitPath) {
   return null;
 }
 
+// The workspace rules for a --junit path that lands in .mobile-automator/
+// (#347), before the run: the stat checks above follow links, so a report
+// directory planted as a link would pass them and be refused only by the
+// write, after the device work. userDir walks the report's directory as the
+// writer will (no create: the stat checks above proved it exists; a no-op
+// anywhere else), so the refusal, with its own kind, message and hint, lands
+// first. Directories only: a link at the report file itself is not refused,
+// because the atomic writer replaces it (as `result export --out` does).
+// Returns the failure, or null.
+function junitWorkspaceRefusal(projectRoot, junitPath) {
+  try {
+    userDir(projectRoot, path.dirname(junitPath));
+    return null;
+  } catch (err) {
+    if (isTypedRefusal(err)) return { failure: typedFail(err) };
+    throw err;
+  }
+}
+
 // The values `mauto run --judge` accepts. Private: src/result/flags.js
 // exports a different JUDGES, the ones `result add-assertion` takes.
 const RUN_JUDGES = Object.freeze(['none']);
@@ -47,7 +70,7 @@ const refuse = (kind, message, hint) => ({ failure: { envelope: fail(kind, messa
 // executor; `timeoutMs` and `junitPath` (resolved against `cwd`) are null
 // when not given — or `{ failure: { envelope, exitKind } }`.
 function prepareRun({
-  validator, file, runId: flag, timeoutMs: timeoutFlag, judge = 'none', junit,
+  validator, projectRoot, file, runId: flag, timeoutMs: timeoutFlag, judge = 'none', junit,
   cwd = process.cwd(), env = process.env, now = () => new Date(),
 }) {
   // --judge names who decides the assertions only an agent can judge. Only
@@ -87,6 +110,8 @@ function prepareRun({
         'Pass --junit a file path whose directory already exists; mauto run writes the report there after the run.'
       );
     }
+    const unsafe = junitWorkspaceRefusal(projectRoot, junitPath);
+    if (unsafe) return unsafe;
   }
 
   const loaded = loadScenario(validator, file, { strict: true });

@@ -47,7 +47,7 @@ function write(sc) {
 
 // An empty env by default, so a MAUTO_RUN_ID in the developer's shell cannot
 // leak into a case that does not set one.
-const prepare = (args) => prepareRun({ validator, env: {}, ...args });
+const prepare = (args) => prepareRun({ validator, projectRoot: root, env: {}, ...args });
 
 describe('the scenario', () => {
   test('an unreadable file is invalid_input', () => {
@@ -186,6 +186,38 @@ describe('--junit (#282)', () => {
     const p = prepare({ file: write(scenario()), runId: RUN_ID, junit: 'afile/r.xml', cwd: root });
     expect(p.failure.exitKind).toBe('invalid_input');
     expect(p.failure.envelope.error.message).toBe(`--junit directory is not a directory: ${path.join(root, 'afile')}`);
+  });
+
+  // #347: the stat checks above follow links, so a report directory planted
+  // as a link in the workspace would pass them; the workspace walk refuses it
+  // here, before any device work, with the refusal's own kind and hint.
+  test('a symlinked workspace directory is refused environment, before the scenario is read', () => {
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-prepare-outside-'));
+    try {
+      fs.mkdirSync(path.join(root, '.mobile-automator'));
+      fs.symlinkSync(outside, path.join(root, '.mobile-automator', 'reports'));
+      const p = prepare({
+        file: path.join(root, 'missing.json'), runId: RUN_ID, junit: '.mobile-automator/reports/r.xml', cwd: root,
+      });
+      expect(p.failure.exitKind).toBe('environment');
+      expect(p.failure.envelope.error.message).toMatch(/^Refusing to use workspace path /);
+      expect(p.failure.envelope.error.message).not.toContain(outside);
+      expect(fs.readdirSync(outside)).toEqual([]);
+    } finally {
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  test('a symlinked directory outside the workspace is the user\'s call', () => {
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-prepare-outside-'));
+    try {
+      fs.symlinkSync(outside, path.join(root, 'reports'));
+      const p = prepare({ file: write(scenario()), runId: RUN_ID, junit: 'reports/r.xml', cwd: root });
+      expect(p.failure).toBeUndefined();
+      expect(p.junitPath).toBe(path.join(root, 'reports', 'r.xml'));
+    } finally {
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
   });
 
   test('a path that is itself a directory is invalid_input', () => {

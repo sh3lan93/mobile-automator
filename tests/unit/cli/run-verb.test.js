@@ -137,6 +137,52 @@ describe('mauto run — refusals before any device work', () => {
     expect(factory).not.toHaveBeenCalled();
   });
 
+  test('--junit through a symlinked workspace directory is refused before any device work (#347)', async () => {
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-run-verb-outside-'));
+    try {
+      fs.symlinkSync(outside, path.join(root, '.mobile-automator', 'reports'));
+      const { r, factory, bridge } = await runCli([
+        writeScenario(scenario()), '--run-id', RUN_ID, '--junit', path.join(root, '.mobile-automator', 'reports', 'r.xml'),
+      ]);
+      expect(r.exitKind).toBe('environment');
+      expect(r.envelope.error.kind).toBe('environment');
+      expect(r.envelope.error.message).toMatch(/^Refusing to use workspace path /);
+      expect(r.envelope.error.message).toContain(path.join(root, '.mobile-automator', 'reports'));
+      expect(r.envelope.error.message).not.toContain(outside);
+      expect(r.envelope.hint).not.toMatch(/Check the directory exists/);
+      // Neither connected nor driven: the scenario never ran.
+      expect(factory).not.toHaveBeenCalled();
+      expect(bridge.calls).toEqual([]);
+      expect(fs.readdirSync(outside)).toEqual([]);
+      expect(fs.existsSync(path.join(root, '.mobile-automator', 'results'))).toBe(false);
+    } finally {
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  test('a --junit file that is a link in the workspace passes the preflight and is replaced, its target unchanged (#347)', async () => {
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-run-verb-outside-'));
+    try {
+      const target = path.join(outside, 'target.xml');
+      fs.writeFileSync(target, 'CANARY');
+      const reports = path.join(root, '.mobile-automator', 'reports');
+      fs.mkdirSync(reports);
+      const junit = path.join(reports, 'r.xml');
+      fs.symlinkSync(target, junit);
+      const { r, factory } = await runCli([writeScenario(scenario()), '--run-id', RUN_ID, '--junit', junit]);
+      expect(factory).toHaveBeenCalled();
+      expect(r.exitKind).toBe('ok');
+      expect(r.envelope.data.junit_path).toBe(junit);
+      // The atomic writer renamed a regular file over the link.
+      expect(fs.lstatSync(junit).isSymbolicLink()).toBe(false);
+      expect(fs.readFileSync(junit, 'utf8')).toMatch(/<testsuites/);
+      expect(fs.readFileSync(target, 'utf8')).toBe('CANARY');
+      expect(fs.readdirSync(outside)).toEqual(['target.xml']);
+    } finally {
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
   test('an unreadable scenario is invalid_input', async () => {
     const { r, factory } = await runCli([path.join(root, 'missing.json'), '--run-id', RUN_ID]);
     expect(r.exitKind).toBe('invalid_input');
