@@ -60,14 +60,8 @@ const { realClock } = require('./run/clock');
 const { handleAssertReference } = require('./run/assert-reference');
 const { makeRunTrace } = require('./run/trace');
 const { parsePositiveInt } = require('./util/parse-positive-int');
-const {
-  findWorkspaceRoot,
-  workspaceFailure,
-  legacyWorkspaceFailure,
-} = require('./workspace/discover');
-const {
-  UnsafePathError, userDest,
-} = require('./workspace/safe-fs');
+const { findWorkspaceRoot, foundRoot: foundRootOf, workspaceFailure } = require('./workspace/discover');
+const { UnsafePathError, userDest } = require('./workspace/safe-fs');
 const { crashOutTarget, writeCrashReport } = require('./workspace/output-roots');
 
 // Commander throws (via exitOverride) for two very different reasons, and the
@@ -960,17 +954,26 @@ function storeHint(store) {
 // on success; only their ERROR paths (unknown topic/name) fall back to the
 // `fail(...)` envelope + exit 3.
 
-// `ancestorRoot` is the workspace discovery found ABOVE cwd, if any. setup
-// still scaffolds in cwd — it is the one verb whose job is to create a
-// workspace where the user stands — but a nested workspace silently shadows
-// the ancestor for every later verb run below it, so say so.
-//
-// `legacyRoot` is the pre-rename workspace discovery found at or above cwd, if
-// any (and no new workspace beside or above it). Discovery owns that walk, so
-// setup honours the same answer every other verb does: checking only cwd let
-// `mauto setup` from a subdirectory scaffold a nested workspace under a legacy
-// project, the split state this refusal exists to prevent.
-function handleSetup({ projectRoot, ancestorRoot = null, legacyRoot = null }, opts = {}) {
+// `workspace` is the discovery result (`findWorkspaceRoot`) for cwd, and setup
+// switches on its kind like every other consumer:
+//   - found: setup still scaffolds in cwd (`projectRoot`). It is the one verb
+//     whose job is to create a workspace where the user stands, but a found
+//     root ABOVE cwd is shadowed by the new one for every later verb run below
+//     it, so the hint says so.
+//   - legacy: a pre-rename workspace at or above cwd. Scaffolding beside or
+//     below it would fork the user's state into two directories. Discovery
+//     reports `legacy` only when no new workspace sits beside it, so a user
+//     mid-recovery gets through.
+//   - unsafe: a refused workspace at or above cwd (#346). Scaffolding below it
+//     would silently create a nested workspace that hides the refusal, and
+//     every later verb run here would use it, the "wrong project" outcome
+//     discovery stops to prevent. Refused with the refusal's own message.
+//   - none: scaffold, no hint.
+// Discovery owns the walk, so setup honours the same answer every other verb
+// does: checking only cwd let `mauto setup` from a subdirectory scaffold a
+// nested workspace under a legacy (or refused) project.
+function handleSetup({ projectRoot, workspace }, opts = {}) {
+  if (!workspace) throw new TypeError('handleSetup requires the discovery result (workspace)');
   // No --mode stays undefined, never defaulted here: only scaffold knows
   // whether config.json already exists, and the default is for a new
   // workspace only (#333).
@@ -981,10 +984,19 @@ function handleSetup({ projectRoot, ancestorRoot = null, legacyRoot = null }, op
       exitKind: 'invalid_input',
     };
   }
-  // Scaffolding beside an un-migrated legacy workspace would fork the user's
-  // state into two directories. Discovery reports no legacy root once a new
-  // workspace exists, so a user mid-recovery gets through.
-  if (legacyRoot) return legacyWorkspaceFailure(legacyRoot);
+  let ancestorRoot = null;
+  switch (workspace.kind) {
+    case 'legacy':
+    case 'unsafe':
+      return workspaceFailure(workspace);
+    case 'found':
+      if (workspace.root !== projectRoot) ancestorRoot = workspace.root;
+      break;
+    case 'none':
+      break;
+    default:
+      throw new Error(`setup: unknown workspace kind "${workspace.kind}"`);
+  }
   const r = scaffold(projectRoot, { mode });
   const hint = ancestorRoot
     ? `An existing workspace was found in an ancestor directory (${ancestorRoot}). This new workspace in ${projectRoot} shadows it for every mauto verb run from here or below; remove it if you meant to use the ancestor's.`
@@ -1863,22 +1875,34 @@ function buildProgram(deps = {}) {
     // user stands in, never a discovered ancestor. Defaults to an injected
     // projectRoot so tests that inject only a root keep writing there.
     cwd = deps.projectRoot !== undefined ? deps.projectRoot : process.cwd(),
-    // The upward-discovery result `{ root, searched }` (#188): run() resolves
-    // it once and passes it in, tests inject it wholesale, and a bare
-    // buildProgram() discovers from cwd exactly as run() does. ONE fabrication
-    // rule, stated once: a caller that injects ONLY a projectRoot is trusted
-    // to know where the workspace is ({ root: projectRoot }) — the legacy
+    // The upward-discovery result (#188; a `kind`-tagged outcome, see
+    // findWorkspaceRoot): run() resolves it once and passes it in, tests
+    // inject it wholesale, and a bare buildProgram() discovers from cwd
+    // exactly as run() does. ONE fabrication rule, stated once: a caller that
+    // injects ONLY a projectRoot is trusted to know where the workspace is
+    // ({ kind: 'found', root: projectRoot }) — the legacy
     // handler-test seam, and deliberately gate-arming. run() passes cwd +
     // workspace and NEVER projectRoot, so production cannot arm this branch
     // and silently disable the requireWorkspace gate.
     workspace = deps.projectRoot !== undefined
-      ? { root: deps.projectRoot, searched: [deps.projectRoot] }
+      ? { kind: 'found', root: deps.projectRoot, searched: [deps.projectRoot] }
       : findWorkspaceRoot(cwd),
+  } = deps;
+
+  // The discovered root, or null for every other outcome, derived ONCE here.
+  // Everything that only asks "is there a workspace, and where" reads this:
+  // the project root below, the autostart gate, assert's root. Only the two
+  // places whose failure differs by outcome (requireWorkspace through
+  // workspaceFailure, and setup) look at `kind`. A refused (`unsafe`)
+  // workspace reads as none, deliberately: its directory is never adopted.
+  const foundRoot = foundRootOf(workspace);
+
+  const {
     // Project root used to resolve .mobile-automator/results/ — and, through the
-    // emitters below, .mobile-automator/.logs/. One root, one tree. The
-    // discovered workspace when there is one; cwd otherwise, which is what the
-    // tolerant verbs (guide, mcp, read-only device/session) have always used.
-    projectRoot = workspace.root || cwd,
+    // emitters below, .mobile-automator/.logs/. One root, one tree: the
+    // discovered one, or cwd for the tolerant verbs (guide, mcp, read-only
+    // device/session), which have always used it.
+    projectRoot = foundRoot || cwd,
     // The exit paths. run() passes its own instance so the help/version and
     // fatal paths it owns share this program's resolved verb.
     emitters = makeEmitters({ projectRoot }),
@@ -1976,9 +2000,10 @@ function buildProgram(deps = {}) {
   // confident wrong answers — `ok:true` with a value silently absent, an
   // "empty" memory store, a result file written where nobody will look — and
   // `config set` would even create a stray workspace. Fail environment
-  // (exit 5) naming where we looked, so the agent can recover.
+  // (exit 5) naming where we looked (or why the workspace there was refused,
+  // or where the legacy one is), so the agent can recover.
   const requireWorkspace = (action) => (...args) => {
-    if (!workspace.root) {
+    if (!foundRoot) {
       emit(workspaceFailure(workspace), humanFlag());
       return undefined;
     }
@@ -2022,11 +2047,13 @@ function buildProgram(deps = {}) {
       // and logs live under .mobile-automator/. With no discovered workspace
       // there is nowhere legitimate to put one, so never autostart: the verb
       // connects one-shot and creates nothing. `ok:true` plus a phantom
-      // workspace is the exact #188 pathology.
+      // workspace is the exact #188 pathology. An `unsafe` workspace counts as
+      // none here on purpose (#346): a daemon autostarted there would put its
+      // socket in a directory someone else controls.
       ({ bridge, close } = await deviceBridgeFactory({
         device,
         projectRoot,
-        autostart: Boolean(workspace.root),
+        autostart: Boolean(foundRoot),
       }));
     } catch (err) {
       emit(deviceFail(err), humanFlag());
@@ -2243,7 +2270,7 @@ function buildProgram(deps = {}) {
     .option('--device <id>', 'target device id')
     .action(withEnvelope((type, opts) =>
       withBridge(opts.device, (bridge) =>
-        handleAssert({ deviceBridge: bridge, projectRoot: workspace.root || null, clock }, type, {
+        handleAssert({ deviceBridge: bridge, projectRoot: foundRoot, clock }, type, {
           target: opts.target,
           expected: opts.expected,
           operator: opts.operator,
@@ -2429,12 +2456,8 @@ function buildProgram(deps = {}) {
     .option('--mode <mode>', 'aware (platform-aware) | agnostic (platform-agnostic); a new workspace defaults to aware, an existing one keeps its mode')
     .action(withEnvelope((opts) => {
       // cwd, not the discovered root: setup creates a workspace where the user
-      // stands. A discovered root that is not cwd is an ancestor worth naming.
-      const ancestorRoot = workspace.root && workspace.root !== cwd ? workspace.root : null;
-      const r = handleSetup(
-        { projectRoot: cwd, ancestorRoot, legacyRoot: workspace.legacy || null },
-        { mode: opts.mode }
-      );
+      // stands. handleSetup reads the discovery result for the rest.
+      const r = handleSetup({ projectRoot: cwd, workspace }, { mode: opts.mode });
       emit(r, humanFlag());
     }));
 
@@ -2832,13 +2855,24 @@ async function run(argv) {
   // No workspace found falls back to cwd for the verbs that tolerate that;
   // buildProgram fails the ones that cannot (#188).
   const cwd = process.cwd();
-  const workspace = findWorkspaceRoot(cwd);
-  const projectRoot = workspace.root || cwd;
+  let workspace;
+  try {
+    workspace = findWorkspaceRoot(cwd);
+  } catch (err) {
+    // Discovery throws only what it cannot classify (EMFILE, a bug): the
+    // normal fatal envelope, rooted at cwd, never an unhandled rejection.
+    activeEmitters = makeEmitters({ projectRoot: cwd });
+    activeEmitters.emitFatal(err, argv.slice(2).includes('--human'));
+    return;
+  }
+  // The same derivation buildProgram makes (foundRoot), needed here first
+  // because the emitters exist before the program does.
+  const projectRoot = foundRootOf(workspace) || cwd;
   const emitters = makeEmitters({ projectRoot });
   activeEmitters = emitters;
   try {
-    // No projectRoot here, deliberately: buildProgram derives it as
-    // `workspace.root || cwd`, and an injected projectRoot is the test seam
+    // No projectRoot here, deliberately: buildProgram derives it from the
+    // workspace, and an injected projectRoot is the test seam
     // that FABRICATES a workspace — passing one would arm that branch and
     // silently disable the requireWorkspace gate.
     const program = buildProgram({ emitters, cwd, workspace });

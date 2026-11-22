@@ -4,7 +4,10 @@
 // world-writable or otherwise planted path. The fixture (a project root, its
 // .mobile-automator/ and an outside/ canary) is tests/helpers/safe-fs-fixture.js.
 // The project-file readers/writers are in safe-fs-project.test.js and the
-// user-chosen path entry points in safe-fs-user-path.test.js (#347).
+// user-chosen path entry points in safe-fs-user-path.test.js (#347). The
+// primitives a caller drives with its own policy (dirPolicy, checkDir,
+// safeDir's last-component policy) are in safe-fs-policy.test.js; the device
+// session's policies built on them (#346) in tests/unit/device/session-dir.test.js.
 
 const fs = require('fs');
 const path = require('path');
@@ -20,6 +23,8 @@ const {
   removeWorkspaceFile,
   openLeaf,
   openOwnedLeaf,
+  dirPolicy,
+  WORKSPACE_DIR,
 } = require('../../../src/workspace/safe-fs');
 // The envelope boundary: a refusal reaches the agent through toEnvelope's
 // typed-error branch, which maps the error's own kind, message and hint.
@@ -233,6 +238,36 @@ describe('safeDir', () => {
       throw e;
     };
     expectUnsafe(() => safeDir(root, path.join(ws, 'memory'), { create: true }, { fs: racing }), 'symlink');
+  });
+});
+
+describe('a foreign_owner refusal names both uids (D-c)', () => {
+  // Both uids are injected: a fixed "foreign" uid compared with the real one
+  // collides on a host whose uid it happens to be (a CI runner's is 1001).
+  const deps = (which) => ({ fs: foreignFs(which, 1001), getuid: () => 1000 });
+
+  it('in the message, keeping path and reason', () => {
+    const err = expectUnsafe(() => safeDir(root, ws, {}, deps(['lstatSync'])), 'foreign_owner');
+    expect(err.path).toBe(ws);
+    expect(err.message).toBe(
+      `Refusing to use workspace path ${ws}: it is owned by uid 1001; you are uid 1000 (foreign_owner).`
+    );
+    // Message text only: the uids are not error fields.
+    expect(err).not.toHaveProperty('owner');
+  });
+
+  it('for a foreign leaf too', () => {
+    const p = path.join(ws, 'config.json');
+    fs.writeFileSync(p, '{}');
+    // The directories read as ours (1000), the leaf as 1001's.
+    const leafFs = { ...foreignFs(['lstatSync'], 1000), fstatSync: foreignFs(['fstatSync'], 1001).fstatSync };
+    const err = expectUnsafe(() => readWorkspaceFile(root, p, {}, { fs: leafFs, getuid: () => 1000 }), 'foreign_owner');
+    expect(err.message).toContain('it is owned by uid 1001; you are uid 1000');
+  });
+
+  it('every other reason keeps its message', () => {
+    const err = new UnsafePathError('/ws/.mobile-automator/x', 'symlink');
+    expect(err.message).toBe('Refusing to use workspace path /ws/.mobile-automator/x: it is a symbolic link (symlink).');
   });
 });
 
@@ -675,6 +710,15 @@ describe('openOwnedLeaf', () => {
     expect(scoped.message.startsWith('Refusing to use path ')).toBe(true);
     expect(scoped.hint).toBe(new UnsafePathError(err.path, reason, { scope: 'path' }).hint);
   });
+
+  it('inScope keeps the owner check own detail: both uids still named in the path scope', () => {
+    const p = path.join(ws, 'a');
+    fs.writeFileSync(p, 'x');
+    const err = expectUnsafe(() => openOwnedLeaf(p, O_RDONLY, {}, { fs: foreignFs(['fstatSync']) }), 'foreign_owner');
+    const detail = `it is owned by uid ${REAL_UID + 1}; you are uid ${REAL_UID}`;
+    expect(err.message).toContain(detail);
+    expect(err.inScope('path').message).toBe(`Refusing to use path ${p}: ${detail} (foreign_owner).`);
+  });
 });
 
 // Absent or garbled is a normal state; a refused path never is.
@@ -810,7 +854,7 @@ describe('a refusal through toEnvelope', () => {
   it('foreign_owner hint names MAUTO_TRUST_WORKSPACE_OWNER=1 and says it skips only the owner check', () => {
     const { envelope } = envelopeFor(() => safeDir(root, ws, {}, { getuid: () => REAL_UID + 1 }));
     expect(envelope.error.message).toContain(ws);
-    expect(envelope.error.message).toMatch(/owned by another user/i);
+    expect(envelope.error.message).toContain(`owned by uid ${REAL_UID}; you are uid ${REAL_UID + 1}`);
     expect(envelope.hint).toContain('MAUTO_TRUST_WORKSPACE_OWNER=1');
     expect(envelope.hint).toMatch(/only the owner check/i);
   });
@@ -818,6 +862,13 @@ describe('a refusal through toEnvelope', () => {
   it.each([
     ['escape', () => safeDir(root, path.join(ws, '..', '..', 'outside'))],
     ['world_writable', () => (fs.chmodSync(ws, 0o777), safeDir(root, ws))],
+    [
+      'not_private',
+      () => (
+        fs.chmodSync(ws, 0o755),
+        safeDir(root, ws, { policy: dirPolicy({ ...WORKSPACE_DIR, forbiddenBits: 0o077, modeReason: 'not_private' }) })
+      ),
+    ],
     ['not_directory', () => (fs.writeFileSync(path.join(ws, 'm'), 'x'), safeDir(root, path.join(ws, 'm')))],
     ['too_large', () => (fs.writeFileSync(path.join(ws, 'b'), 'xx'), readWorkspaceFile(root, path.join(ws, 'b'), { maxBytes: 1 }))],
   ])('%s yields an environment envelope with a hint and no canary', (_reason, fn) => {

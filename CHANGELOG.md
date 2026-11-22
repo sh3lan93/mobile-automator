@@ -48,6 +48,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   following a link, and a hard-linked target is refused before it is
   truncated.
 
+---
+
+## [0.40.13]
+
+### 🔒 Security
+
+- **The device-session socket is reachable only by you**
+  ([#346](https://github.com/sh3lan93/mobile-automator/issues/346)).
+  The daemon socket used to sit in a shared temp directory or in a `.session/`
+  folder anyone could enter, so another local user could connect to it and
+  drive your device. Now:
+  - `.session/` is mode 0700 and the socket is mode 0600. A 0755 `.session/`
+    left by an older version is tightened, then checked again.
+  - A project root too deep for the socket path limit (about 100 bytes) uses
+    `<tmpdir>/mauto-<uid>/`, where `<tmpdir>` follows `TMPDIR`. That directory
+    must be a real 0700 directory owned by you. A loose or foreign one is refused (`not_private`,
+    `foreign_owner`) and never chmodded.
+  - The client checks the socket and its directory before every connect: the
+    directory is private, and the socket is a real socket owned by you. A
+    failed check reads as "no daemon", so the verb starts its own and
+    `session end` falls back to the pid check.
+  - The daemon writes its handle, pid file, lock and `daemon.log` only through
+    the safe-fs helper from #345.
+  - A daemon that fails to start on a refused directory writes the refusal and
+    its hint to `.mobile-automator/.session/daemon.log`.
+- **A planted `.mobile-automator/` is refused at discovery.** Discovery now
+  rejects a `.mobile-automator/` that is a symlink, owned by another user
+  (unless `MAUTO_TRUST_WORKSPACE_OWNER=1`) or world-writable, and a
+  `config.json` that is a symlink. The walk stops there rather than adopting a
+  parent workspace. Verbs that need a workspace fail `environment` (exit 5).
+- `foreign_owner` refusals now name both uids, for example `owned by uid 1001;
+  you are uid 0`.
+- The memory lock retries when a concurrent process already removed a planted
+  entry, instead of failing `not_regular`.
+
+**Upgrading:** a daemon started by an older version is not reused once its
+socket fails the new checks.
+- Socket in `.session/` (the usual case): the first device verb tightens
+  `.session/` to 0700 and then finds the old daemon again, so nothing to do.
+- Socket in the old `<tmpdir>/mauto-<key>.sock` (a deep project path): the
+  client no longer looks there. Each device verb waits out the 15 s readiness
+  window, because the old daemon still holds the lock, then runs one-shot.
+  This lasts until the old daemon exits on its idle timeout (5 minutes) or you
+  run `mauto session end` once.
+
+---
+
 ## [0.40.12]
 
 ### 🔒 Security

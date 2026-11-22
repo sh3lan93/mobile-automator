@@ -5,25 +5,50 @@ const os = require('os');
 const path = require('path');
 
 const { openDaemonLog, IGNORED, MAX_LOG_BYTES } = require('../../../src/device/session-log');
-const { sessionDir, logFilePath } = require('../../../src/device/session-paths');
+const {
+  sessionDir,
+  logFilePath,
+  socketLocation,
+} = require('../../../src/device/session-paths');
+const { useSocketDeps } = require('../../helpers/socket-deps');
 
-// One fake-fs shape for the whole file. Defaults are the happy path (an empty
-// existing log, fd 7); each test overrides only the call it is about, so the
-// override IS the test's subject rather than noise around it.
+// A deep temp root's socket goes to the fallback directory: keep it in a
+// temp dir of this file's, never the real per-user one (#346).
+const socketDeps = useSocketDeps();
+
+// One fake-fs shape for the whole file. Defaults are the happy path (the
+// session directory exists, private and ours; an empty existing log, fd 7);
+// each test overrides only the call it is about, so the override IS the test's
+// subject rather than noise around it. The directory and leaf stubs are what
+// safe-fs asks of an fs: lstat each directory, realpath for containment, chmod
+// .session/ to 0700, fstat the opened leaf. lstat of the log itself is
+// rotation's (#347: lstat, only a regular file rotates), so it is its own
+// stub, `logLstat`, and a rotation test overrides that alone, leaving the
+// directory walk on the happy path.
+const UID = process.getuid();
+const LOG = logFilePath('/proj');
 function makeFakeFs(overrides = {}) {
-  const calls = { renamed: [], closed: [], written: [] };
-  return Object.assign(
+  const calls = { renamed: [], closed: [], written: [], opened: [] };
+  const fake = Object.assign(
     {
       calls,
+      lstatSync(p) {
+        if (p === LOG) return fake.logLstat(p);
+        return { isSymbolicLink: () => false, isDirectory: () => true, uid: UID, mode: 0o40700 };
+      },
+      logLstat() { return { size: 0, isFile: () => true }; },
+      realpathSync(p) { return p; },
       mkdirSync() {},
-      lstatSync() { return { size: 0, isFile: () => true }; },
+      chmodSync() {},
       renameSync(from, to) { calls.renamed.push([from, to]); },
-      openSync() { return 7; },
+      openSync(file, flags, mode) { calls.opened.push([file, flags, mode]); return 7; },
+      fstatSync() { return { isFile: () => true, uid: UID, nlink: 1 }; },
       writeSync(fd, text) { calls.written.push([fd, text]); },
       closeSync(fd) { calls.closed.push(fd); },
     },
     overrides
   );
+  return fake;
 }
 
 const enoent = () => Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
@@ -63,8 +88,27 @@ describe('session-log', () => {
   });
 
   test('an unwritable workspace degrades rather than throwing', () => {
-    const fakeFs = makeFakeFs({ mkdirSync() { throw Object.assign(new Error('EACCES'), { code: 'EACCES' }); } });
+    const fakeFs = makeFakeFs({
+      lstatSync() { throw enoent(); },
+      mkdirSync() { throw Object.assign(new Error('EACCES'), { code: 'EACCES' }); },
+    });
     expect(openDaemonLog('/proj', { fs: fakeFs })).toBe(IGNORED);
+  });
+
+  // Append, never truncate (see the real-fs test below), and created 0600
+  // without following a planted link.
+  test('opens the log write-only, append, create, no-follow, mode 0600, never truncating', () => {
+    const fakeFs = makeFakeFs();
+    openDaemonLog('/proj', { fs: fakeFs });
+    const [[file, flags, mode]] = fakeFs.calls.opened;
+    const { O_WRONLY, O_APPEND, O_CREAT, O_NOFOLLOW, O_TRUNC } = fs.constants;
+    expect(file).toBe(logFilePath('/proj'));
+    expect(flags & O_WRONLY).toBe(O_WRONLY);
+    expect(flags & O_APPEND).toBe(O_APPEND);
+    expect(flags & O_CREAT).toBe(O_CREAT);
+    expect(flags & O_NOFOLLOW).toBe(O_NOFOLLOW);
+    expect(flags & O_TRUNC).toBe(0);
+    expect(mode).toBe(0o600);
   });
 
   // --- rotation is best-effort; the log is not ------------------------------
@@ -107,7 +151,7 @@ describe('session-log', () => {
 
   test('a missing log file is not an error — no rotation, still opens', () => {
     const fakeFs = makeFakeFs({
-      lstatSync() { throw enoent(); },
+      logLstat() { throw enoent(); },
       renameSync() { throw new Error('must not rotate a missing file'); },
     });
     const handle = openDaemonLog('/proj', { fs: fakeFs });
@@ -122,7 +166,7 @@ describe('session-log', () => {
   // us at exactly the moment something is wrong enough to spawn twice.
   test('a rotation failure still yields a usable log — an oversized log beats no log', () => {
     const fakeFs = makeFakeFs({
-      lstatSync() { return { size: 1e9, isFile: () => true }; },
+      logLstat() { return { size: 1e9, isFile: () => true }; },
       renameSync() { throw enoent(); }, // a concurrent spawn already rotated
     });
     const handle = openDaemonLog('/proj', { fs: fakeFs });
@@ -132,7 +176,7 @@ describe('session-log', () => {
 
   test('an unreadable log directory does not block the open either', () => {
     const fakeFs = makeFakeFs({
-      lstatSync() { throw Object.assign(new Error('EACCES'), { code: 'EACCES' }); },
+      logLstat() { throw Object.assign(new Error('EACCES'), { code: 'EACCES' }); },
     });
     expect(openDaemonLog('/proj', { fs: fakeFs }).stdio).toEqual(['ignore', 7, 7]);
   });
@@ -193,5 +237,71 @@ describe('session-log', () => {
     openDaemonLog(root).close(); // default maxBytes
 
     expect(fs.existsSync(`${logFilePath(root)}.1`)).toBe(true);
+  });
+
+  // --- #346: the log is written only through safe-fs ------------------------
+
+  test('a symlinked .session degrades to IGNORED and creates nothing where it points', () => {
+    const root = newRoot();
+    const outside = newRoot();
+    fs.mkdirSync(path.join(root, '.mobile-automator'));
+    fs.symlinkSync(outside, sessionDir(root));
+
+    expect(openDaemonLog(root)).toBe(IGNORED);
+    expect(fs.readdirSync(outside)).toEqual([]);
+  });
+
+  test('a symlinked daemon.log degrades to IGNORED and leaves its target unchanged', () => {
+    const root = newRoot();
+    const outside = newRoot();
+    const target = path.join(outside, 'target.txt');
+    fs.writeFileSync(target, 'precious');
+    fs.mkdirSync(sessionDir(root), { recursive: true });
+    fs.symlinkSync(target, logFilePath(root));
+
+    expect(openDaemonLog(root)).toBe(IGNORED);
+    expect(fs.readFileSync(target, 'utf8')).toBe('precious');
+    expect(fs.readdirSync(outside)).toEqual(['target.txt']);
+  });
+
+  const isRoot = UID === 0;
+  (isRoot ? test.skip : test)('a new log file is 0600 and .session 0700, even under umask 022', () => {
+    const root = newRoot();
+    const prev = process.umask(0o022);
+    try {
+      openDaemonLog(root).close();
+    } finally {
+      process.umask(prev);
+    }
+    expect(fs.lstatSync(logFilePath(root)).mode & 0o777).toBe(0o600);
+    expect(fs.lstatSync(sessionDir(root)).mode & 0o777).toBe(0o700);
+  });
+
+  // The log lives in .session/, never in the socket's fallback directory, so a
+  // refused fallback directory must not cost it: that refusal fails the
+  // daemon's start, and daemon.log is where the spawning verb's hint points.
+  test('a deep root whose fallback socket directory is refused still gets its log', () => {
+    const root = path.join(newRoot(), 'd'.repeat(80));
+    fs.mkdirSync(root);
+    const { dir: fallbackDir, inWorkspace } = socketLocation(root, socketDeps());
+    expect(inWorkspace).toBe(false);
+    // The fallback directory reads as another user's. Only lstat is wrapped, and
+    // only for that path, so nothing is created or changed there.
+    const fsx = {
+      ...fs,
+      lstatSync: (p, ...rest) => {
+        const st = fs.lstatSync(p, ...rest);
+        if (path.resolve(p) === fallbackDir) st.uid = process.getuid() + 1;
+        return st;
+      },
+    };
+
+    const handle = openDaemonLog(root, { fs: fsx });
+    expect(handle).not.toBe(IGNORED);
+    expect(typeof handle.stdio[1]).toBe('number');
+    handle.write('still logged\n');
+    handle.close();
+    expect(fs.lstatSync(logFilePath(root)).isFile()).toBe(true);
+    expect(fs.readFileSync(logFilePath(root), 'utf8')).toBe('still logged\n');
   });
 });

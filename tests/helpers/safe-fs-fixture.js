@@ -1,9 +1,9 @@
 'use strict';
 
-// The shared fixture for the safe-fs suites (#345, #347): a real tmp tree,
-// because the guarantees are about how the kernel resolves (or refuses to
-// resolve) links; only "another owner" is simulated (an injected getuid or a
-// wrapped fs), because jest cannot chown.
+// The shared fixture of the safe-fs suites (tests/unit/workspace/safe-fs*.test.js,
+// #345, #346, #347): a real tmp tree, because the guarantees are about how the
+// kernel resolves (or refuses to resolve) links; only "another owner" is
+// simulated (an injected getuid or a wrapped fs), because jest cannot chown.
 //
 // Each fixture has a project root holding `.mobile-automator/` and a sibling
 // `outside/` holding a canary file. A refusal must leave `outside/` exactly as
@@ -18,6 +18,12 @@ const { UnsafePathError } = require('../../src/workspace/safe-fs');
 
 const CANARY = 'SECRET-CANARY';
 const REAL_UID = process.getuid();
+// A uid that is never ours, whatever uid the tests run as (a CI runner is
+// often 1001, so no fixed number is safe to compare with the real uid).
+const FOREIGN_UID = REAL_UID + 1;
+// Root bypasses permission bits and its umask is often 0, so a mode-dependent
+// assertion proves nothing there.
+const itNotRoot = REAL_UID === 0 ? it.skip : it;
 
 // A fresh fixture: { base, root, ws, outside, canaryFile }. Remove it with
 // removeSafeFsFixture(base).
@@ -37,7 +43,7 @@ function removeSafeFsFixture(base) {
   fs.rmSync(base, { recursive: true, force: true });
 }
 
-// A snapshot of every name and byte under outside/, to prove a refusal wrote,
+// A snapshot of every name and byte under dir, to prove a refusal wrote,
 // created and truncated nothing there. Nested, so an empty directory created
 // there shows too.
 function snapshot(dir) {
@@ -63,14 +69,14 @@ function expectUnsafe(fn, reason) {
   return caught;
 }
 
-// An fs whose stat calls report another owner. `which` picks lstat (the dir
-// walk), fstat (the leaf) or both.
-function foreignFs(which = ['lstatSync', 'fstatSync']) {
+// An fs whose stat calls report another owner (`uid`, default FOREIGN_UID).
+// `which` picks lstat (the dir walk), fstat (the leaf) or both.
+function foreignFs(which = ['lstatSync', 'fstatSync'], uid = FOREIGN_UID) {
   const wrapped = { ...fs };
   for (const name of which) {
     wrapped[name] = (...args) => {
       const st = fs[name](...args);
-      st.uid = REAL_UID + 1;
+      st.uid = uid;
       return st;
     };
   }
@@ -84,7 +90,7 @@ function foreignAt(target) {
     ...fs,
     lstatSync: (p, ...rest) => {
       const st = fs.lstatSync(p, ...rest);
-      if (path.resolve(p) === path.resolve(target)) st.uid = REAL_UID + 1;
+      if (path.resolve(p) === path.resolve(target)) st.uid = FOREIGN_UID;
       return st;
     },
   };
@@ -135,6 +141,8 @@ function aliasedRoot(base, root) {
 module.exports = {
   CANARY,
   REAL_UID,
+  FOREIGN_UID,
+  itNotRoot,
   makeSafeFsFixture,
   removeSafeFsFixture,
   snapshot,

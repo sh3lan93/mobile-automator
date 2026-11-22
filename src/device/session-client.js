@@ -7,10 +7,19 @@
 // one-shot bridge. Returns null when no live daemon is reachable (the caller
 // then falls back to a one-shot spawn). Requests are correlated by id so a
 // single connection can multiplex concurrent calls.
+//
+// The client never connects to a socket it cannot vouch for (#346). The
+// socket is the only authentication the daemon has: it answers any peer that
+// reaches it, and every call can drive the device. So the only thing that
+// keeps a stranger from being that peer is the directory the socket sits in.
+// Before every connection verifySocket (session-dir.js) proves that directory
+// is private (0700, ours, no links on the way) and that the socket is a real
+// socket of ours; otherwise the client acts as if no daemon exists, and
+// connects nothing.
 
 const net = require('net');
 
-const paths = require('./session-paths');
+const { verifySocket } = require('./session-dir');
 const { FrameParser } = require('./session-protocol');
 
 const DEFAULT_TIMEOUT_MS = 30000;
@@ -28,6 +37,20 @@ function connectSocket(socketPath) {
     socket.once('connect', () => done(socket));
     socket.once('error', () => done(null));
   });
+}
+
+// The ONE place the client opens a connection: to exactly the path
+// verifySocket vouched for, never one recomputed after the check. Resolves
+// null, without creating one, when the socket cannot be vouched for.
+//
+// `socketDeps` ({ tmpdir, getuid }) is where the socket fallback is looked
+// for, reaching verifySocket unchanged; every entry point below takes it as
+// its second argument. Production passes none. Tests pass the same value they
+// gave startDaemon, so both sides agree without touching the process.
+function connectVerified(projectRoot, socketDeps = {}) {
+  const socketPath = verifySocket(projectRoot, socketDeps);
+  if (!socketPath) return Promise.resolve(null);
+  return connectSocket(socketPath);
 }
 
 // Build a { call, close, request } client over an already-connected socket.
@@ -108,8 +131,8 @@ function wrapSocket(socket) {
 }
 
 // Returns { call, close } against a live daemon, or null when unreachable.
-async function tryConnect(projectRoot) {
-  const socket = await connectSocket(paths.socketPath(projectRoot));
+async function tryConnect(projectRoot, socketDeps) {
+  const socket = await connectVerified(projectRoot, socketDeps);
   if (!socket) return null;
   const { call, close } = wrapSocket(socket);
   return { call, close };
@@ -117,8 +140,8 @@ async function tryConnect(projectRoot) {
 
 // Liveness probe: connect + ping. Returns the handle device on success, false
 // otherwise. Used to decide daemon-vs-oneshot and to poll a spawned daemon.
-async function isAlive(projectRoot) {
-  const socket = await connectSocket(paths.socketPath(projectRoot));
+async function isAlive(projectRoot, socketDeps) {
+  const socket = await connectVerified(projectRoot, socketDeps);
   if (!socket) return false;
   const client = wrapSocket(socket);
   try {
@@ -133,8 +156,8 @@ async function isAlive(projectRoot) {
 
 // Ask a live daemon to shut down. Resolves true when a daemon acknowledged,
 // false when none was reachable.
-async function requestShutdown(projectRoot) {
-  const socket = await connectSocket(paths.socketPath(projectRoot));
+async function requestShutdown(projectRoot, socketDeps) {
+  const socket = await connectVerified(projectRoot, socketDeps);
   if (!socket) return false;
   const client = wrapSocket(socket);
   try {
@@ -154,9 +177,9 @@ async function requestShutdown(projectRoot) {
 // A daemon whose engine has died is NOT running (#156): it is draining toward
 // its own exit and can never serve a call. Only an explicit engine_alive:false
 // counts — a pre-0.28 daemon omits the field and is treated as alive.
-async function getSessionStatus(projectRoot) {
+async function getSessionStatus(projectRoot, socketDeps) {
   const down = { running: false, reason: null, in_flight: null, device: null };
-  const socket = await connectSocket(paths.socketPath(projectRoot));
+  const socket = await connectVerified(projectRoot, socketDeps);
   if (!socket) return down;
   const client = wrapSocket(socket);
   try {
