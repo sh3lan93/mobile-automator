@@ -66,7 +66,7 @@ const {
   legacyWorkspaceFailure,
 } = require('./workspace/discover');
 const {
-  UnsafePathError, inWorkspace, isInside, openOwnedLeaf, openWorkspaceFile, safeWorkspaceDest,
+  UnsafePathError, isInside, userDest, userFile,
 } = require('./workspace/safe-fs');
 
 // Commander throws (via exitOverride) for two very different reasons, and the
@@ -231,9 +231,7 @@ async function handleElements({ deviceBridge }) {
 // is asked and outside the device catch below, so the envelope boundary
 // reports it environment with its own hint, as for every other verb.
 async function handleScreenshot({ deviceBridge, projectRoot, cwd = process.cwd() }, destPath) {
-  const resolved = path.resolve(cwd, destPath);
-  const confined = inWorkspace(projectRoot, resolved);
-  const dest = confined ? safeWorkspaceDest(projectRoot, confined) : resolved;
+  const dest = userDest(projectRoot, path.resolve(cwd, destPath));
   try {
     const savedPath = await deviceBridge.screenshot(dest);
     return { envelope: ok({ path: savedPath }), exitKind: 'ok' };
@@ -1837,17 +1835,9 @@ function crashOutRefusal(out, given, { roots, projectTooBroad }) {
 // The whole report into the fd, through safe-fs's leaf open in both cases:
 // O_NOFOLLOW (a link leaf, dangling or not, is refused), a regular file of
 // ours with one hard link, and the truncate only once those checks passed.
-function writeCrashReport(projectRoot, out, confined, report) {
+function writeCrashReport(target, report) {
   const { O_WRONLY, O_CREAT, O_TRUNC } = fs.constants;
-  const flags = O_WRONLY | O_CREAT | O_TRUNC;
-  let fd;
-  try {
-    fd = confined ? openWorkspaceFile(projectRoot, confined, flags) : openOwnedLeaf(out, flags);
-  } catch (err) {
-    // Outside the workspace the refusal reads in the path scope.
-    if (!confined && err instanceof UnsafePathError) throw err.inScope('path');
-    throw err;
-  }
+  const fd = target.open(target.path, O_WRONLY | O_CREAT | O_TRUNC);
   try {
     fs.writeFileSync(fd, report);
   } finally {
@@ -1874,14 +1864,12 @@ async function handleCrashGet(
   id,
   opts = {}
 ) {
-  let out = null;
-  let confined = null;
+  let target = null;
   if (opts.out) {
-    out = path.resolve(cwd, opts.out);
-    confined = inWorkspace(projectRoot, out);
-    if (!confined) {
+    target = userFile(projectRoot, path.resolve(cwd, opts.out));
+    if (!target.confined) {
       const refused = crashOutRefusal(
-        out, opts.out, crashOutRoots(projectRoot, { tmpdir, platform, darwinTmp, homedir })
+        target.path, opts.out, crashOutRoots(projectRoot, { tmpdir, platform, darwinTmp, homedir })
       );
       if (refused) return refused;
     }
@@ -1897,9 +1885,9 @@ async function handleCrashGet(
     };
   }
 
-  if (out) {
+  if (target) {
     try {
-      writeCrashReport(projectRoot, out, confined, report);
+      writeCrashReport(target, report);
     } catch (err) {
       // A refused path carries its own kind, message and hint: the hint says
       // what to do about the link, which the generic one below cannot.

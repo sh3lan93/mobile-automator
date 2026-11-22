@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-const { createProjectFile, createWorkspaceFile, inWorkspace, openLeaf } = require('../workspace/safe-fs');
+const { createProjectFile, createWorkspaceFile, userFile } = require('../workspace/safe-fs');
 
 // Atomic write: stream into a hidden temp file in the same directory,
 // fsync, then rename over the target. rename(2) within one dir is atomic, so
@@ -24,14 +24,11 @@ const { createProjectFile, createWorkspaceFile, inWorkspace, openLeaf } = requir
 //     files `mauto init` writes). Same walk, bounded by the project root, via
 //     createProjectFile (#347).
 //   - atomicOutputWrite: a path the user chose (`result export --out`,
-//     `run --junit`). Confined like atomicWorkspaceWrite when it lands in the
-//     workspace (inWorkspace), written unconfined anywhere else: an explicit
-//     path outside the workspace is the user's call (#347).
-//
-// The unconfined write (atomicWrite: a plain recursive mkdir, then the temp
-// file and rename) is private on purpose. Its only caller is
-// atomicOutputWrite, for a path that does not land in the workspace; nothing
-// else may reach it, so no write can skip the inWorkspace test (#347).
+//     `run --junit`). safe-fs's userFile decides: confined like
+//     atomicWorkspaceWrite when it lands in the workspace, written unconfined
+//     (a plain recursive mkdir) anywhere else: an explicit path outside the
+//     workspace is the user's call (#347). There is no exported unconfined
+//     writer, so no write can skip that decision.
 
 // The one temp-file name for a write that lands at `file`: a hidden sibling in
 // the same directory (so a rename or link to `file` never crosses a
@@ -97,17 +94,11 @@ function atomicProjectWrite(projectRoot, file, contents) {
 
 function atomicOutputWrite(projectRoot, file, contents) {
   requireRoot('atomicOutputWrite', projectRoot, file, contents);
-  // The workspace path inWorkspace returns, not `file`: through an aliased
-  // root they differ, and the walk must check the path the rename uses.
-  const ws = inWorkspace(projectRoot, file);
-  if (ws) atomicWorkspaceWrite(projectRoot, ws, contents);
-  else atomicWrite(file, contents);
-}
-
-function atomicWrite(file, contents) {
   const { O_WRONLY, O_CREAT, O_EXCL } = fs.constants;
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  writeViaTemp(file, contents, (tmp) => openLeaf(tmp, O_WRONLY | O_CREAT | O_EXCL).fd);
+  // target.path, not `file`: through an aliased root they differ, and the
+  // rename must use the path the open checked.
+  const target = userFile(projectRoot, file);
+  writeViaTemp(target.path, contents, (tmp) => target.open(tmp, O_WRONLY | O_CREAT | O_EXCL));
 }
 
 module.exports = { atomicWorkspaceWrite, atomicProjectWrite, atomicOutputWrite, tempPathFor };

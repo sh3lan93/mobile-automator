@@ -14,7 +14,7 @@ const path = require('path');
 
 const { atCap } = require('./sinks/file');
 const { logsDir, runTracePath, RUN_TRACE_PREFIX } = require('./paths');
-const { inWorkspace, safeDir } = require('../workspace/safe-fs');
+const { userDir } = require('../workspace/safe-fs');
 
 // A device failure in the envelope's own taxonomy. `deviceFail` (src/output/device-fail.js) is
 // the ONLY producer of these two kinds, so counting them needs no list of which
@@ -141,12 +141,7 @@ function deriveRun(trace) {
 // is the user's own choice and is listed as before.
 function pruneRunTraces(projectRoot, { keep = KEEP_RUN_TRACES, except, env = process.env, fs = realFs } = {}) {
   try {
-    let dir = logsDir(projectRoot, env);
-    const confined = inWorkspace(projectRoot, dir, { fs });
-    if (confined) {
-      safeDir(projectRoot, confined, {}, { fs });
-      dir = confined;
-    }
+    const dir = userDir(projectRoot, logsDir(projectRoot, env), {}, { fs });
     const exceptPath = except ? runTracePath(projectRoot, except, env) : null;
     const exceptName = exceptPath ? path.basename(exceptPath) : null;
 

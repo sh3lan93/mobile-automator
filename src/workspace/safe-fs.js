@@ -28,8 +28,8 @@
 // Both check every directory below the project root down to the file's own;
 // the scope sets the containment bound and words the refusal. A path the user
 // chose (--out, a screenshot to /tmp) is confined only when it lands in the
-// workspace, and inWorkspace says whether it does: anywhere else it is the
-// user's own call.
+// workspace (inWorkspace), anywhere else it is the user's own call; userDir,
+// userDest and userFile are the entry points that make that choice.
 //
 // Components above and including the project root are never checked: a
 // project reached through a symlinked parent (macOS /tmp -> /private/tmp, a
@@ -491,6 +491,57 @@ function createProjectFile(projectRoot, file, { mode = 0o666 } = {}, deps = {}) 
   return withScope('path', () => openProjectFile(projectRoot, file, O_WRONLY | O_CREAT | O_EXCL, mode, deps));
 }
 
+// Paths the user chose (--out, --junit, a screenshot destination, a
+// MAUTO_LOG_DIR). Inside the workspace they get the workspace rules, on the
+// path inWorkspace re-roots (through an aliased root it differs from the one
+// given, and every check and write must use the checked one); anywhere else
+// they are the user's own call. The entry points below make that choice, so
+// no caller tests inWorkspace or swaps paths itself.
+function userPath(projectRoot, file, deps) {
+  const confined = inWorkspace(projectRoot, file, deps);
+  return confined ? { path: confined, confined: true } : { path: path.resolve(file), confined: false };
+}
+
+// A directory the user chose: the checked walk when it lands in the
+// workspace, else a plain recursive mkdir when `create`. Returns the path to
+// use (re-rooted inside the workspace), not its realpath.
+function userDir(projectRoot, dir, { create = false } = {}, deps = {}) {
+  const target = userPath(projectRoot, dir, deps);
+  if (target.confined) safeDir(projectRoot, target.path, { create }, deps);
+  else if (create) resolveDeps(deps).fs.mkdirSync(target.path, { recursive: true });
+  return target.path;
+}
+
+// A file another process writes at a path the user chose (the engine's
+// screenshot): safeWorkspaceDest in the workspace, else the resolved path
+// byte-for-byte. Returns the path to hand over.
+function userDest(projectRoot, file, deps = {}) {
+  const target = userPath(projectRoot, file, deps);
+  return target.confined ? safeWorkspaceDest(projectRoot, target.path, deps) : target.path;
+}
+
+// A file mauto writes itself at a path the user chose: where it lands
+// (`path`, re-rooted in the workspace), whether that is in the workspace
+// (`confined`), and `open(file, flags, mode)` for it or a sibling in the same
+// directory (a temp file). In the workspace that is openWorkspaceFile (the
+// walk, created under O_CREAT, then the checked leaf); elsewhere O_CREAT makes
+// the directory with a plain recursive mkdir and the leaf is still opened
+// O_NOFOLLOW, ours and with one link, a refusal worded in the 'path' scope.
+// Returns an fd the caller closes.
+function userFile(projectRoot, file, deps = {}) {
+  const target = userPath(projectRoot, file, deps);
+  const open = target.confined
+    ? (f, flags, mode = 0o666) => openWorkspaceFile(projectRoot, f, flags, mode, deps)
+    : (f, flags, mode = 0o666) =>
+        withScope('path', () => {
+          if (flags & nodeFs.constants.O_CREAT) {
+            resolveDeps(deps).fs.mkdirSync(path.dirname(path.resolve(f)), { recursive: true });
+          }
+          return openOwnedLeaf(f, flags, { mode }, deps);
+        });
+  return { ...target, open };
+}
+
 // The lenient readers, for state files where absent or garbled is a normal
 // state and a refused path never is. Absent, unreadable (EIO, EACCES, ...) or,
 // for the JSON reader, unparseable all read as null, so a verb treats it as "no
@@ -531,8 +582,13 @@ module.exports = {
   readWorkspaceJsonOrNull,
   // A workspace file another process writes (the engine's screenshot).
   safeWorkspaceDest,
-  // Whether a path the user chose lands in the workspace.
+  // Where a path the user chose lands in the workspace. Exported for its unit
+  // tests only: callers use userDir / userDest / userFile, which apply it.
   inWorkspace,
+  // Paths the user chose: confined in the workspace, the user's call elsewhere.
+  userDir,
+  userDest,
+  userFile,
   // The one containment test (`child` is `parent` or below it), for a caller
   // that bounds a path the user chose by roots of its own (crash get --out).
   isInside,

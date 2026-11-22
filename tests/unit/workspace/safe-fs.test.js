@@ -31,6 +31,9 @@ const {
   readProjectFile,
   createProjectFile,
   isInside,
+  userDir,
+  userDest,
+  userFile,
 } = require('../../../src/workspace/safe-fs');
 // The envelope boundary: a refusal reaches the agent through toEnvelope's
 // typed-error branch, which maps the error's own kind, message and hint.
@@ -816,6 +819,49 @@ describe('inWorkspace', () => {
     const p = path.join(alias, '.mobile-automator', 'screenshots', 'a.png');
     expect(inWorkspace(realRoot, p, { fs: lookOnly })).toBe(path.join(realRoot, '.mobile-automator', 'screenshots', 'a.png'));
     expect(inWorkspace(realRoot, path.join(outside, 'x.png'), { fs: lookOnly })).toBeNull();
+  });
+});
+
+// The entry points for a path the user chose: each makes the inWorkspace
+// choice itself and hands back the path to use.
+describe('userDir / userDest / userFile (#347)', () => {
+  it('userDir walks a workspace directory, refusing a link; elsewhere it only mkdirs', () => {
+    fs.symlinkSync(outside, path.join(ws, '.logs'));
+    expectUnsafe(() => userDir(root, path.join(ws, '.logs'), { create: true }), 'symlink');
+    const plain = path.join(outside, 'logs', 'deep');
+    expect(userDir(root, plain, { create: true })).toBe(plain);
+    expect(fs.lstatSync(plain).isDirectory()).toBe(true);
+    expect(userDir(root, path.join(outside, 'absent'))).toBe(path.join(outside, 'absent'));
+    expect(fs.existsSync(path.join(outside, 'absent'))).toBe(false);
+  });
+
+  it('userDir and userDest return the re-rooted path through an aliased root', () => {
+    const { realRoot, alias, realWs } = aliasedRoot();
+    expect(userDir(realRoot, path.join(alias, '.mobile-automator', 'a'), { create: true })).toBe(path.join(realWs, 'a'));
+    expect(userDest(realRoot, path.join(alias, '.mobile-automator', 'b', 'x.png'))).toBe(path.join(realWs, 'b', 'x.png'));
+  });
+
+  it('userDest refuses a workspace leaf link and passes any other path through unchanged', () => {
+    fs.symlinkSync(canaryFile, path.join(ws, 'shot.png'));
+    expectUnsafe(() => userDest(root, path.join(ws, 'shot.png')), 'symlink');
+    const given = path.join(outside, 'link-or-not.png');
+    fs.symlinkSync(canaryFile, given);
+    expect(userDest(root, given)).toBe(given);
+    expect(fs.readFileSync(canaryFile, 'utf8')).toBe(CANARY);
+  });
+
+  it('userFile confines a workspace file and words an outside refusal in the path scope', () => {
+    fs.symlinkSync(outside, path.join(ws, 'results'));
+    const inside = userFile(root, path.join(ws, 'results', 'r.txt'));
+    expect(inside.confined).toBe(true);
+    expect(expectUnsafe(() => inside.open(inside.path, O_WRONLY | O_CREAT), 'symlink').scope).toBe('workspace');
+
+    const leaf = path.join(outside, 'r.txt');
+    fs.symlinkSync(canaryFile, leaf);
+    const out = userFile(root, leaf);
+    expect(out).toMatchObject({ confined: false, path: leaf });
+    expect(expectUnsafe(() => out.open(out.path, O_WRONLY | O_CREAT), 'symlink').scope).toBe('path');
+    expect(snapshot(outside)).toEqual({ 'r.txt': CANARY, 'secret.txt': CANARY });
   });
 });
 

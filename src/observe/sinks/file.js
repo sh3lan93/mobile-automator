@@ -23,7 +23,7 @@ const path = require('path');
 
 const { mainLogPath } = require('../paths');
 const { workspaceDir } = require('../../workspace/layout');
-const { inWorkspace, safeDir, openOwnedLeaf } = require('../../workspace/safe-fs');
+const { userDir, openOwnedLeaf } = require('../../workspace/safe-fs');
 const { MAX_LOG_BYTES, rotateIfLarge } = require('../../util/log-rotate');
 
 function format(event) {
@@ -101,14 +101,8 @@ function shouldAppend(target, bound, fs) {
 function write(event, { projectRoot, env = process.env, fs = realFs, logPath, bound = 'rotate' } = {}) {
   try {
     if (!allowed(projectRoot, env, fs)) return;
-    let target = logPath || mainLogPath(projectRoot, env);
-    const confined = inWorkspace(projectRoot, target, { fs });
-    if (confined) {
-      safeDir(projectRoot, path.dirname(confined), { create: true }, { fs });
-      target = confined;
-    } else {
-      fs.mkdirSync(path.dirname(target), { recursive: true });
-    }
+    const given = logPath || mainLogPath(projectRoot, env);
+    const target = path.join(userDir(projectRoot, path.dirname(given), { create: true }, { fs }), path.basename(given));
     if (!shouldAppend(target, bound, fs)) return;
     append(target, format(event), fs);
   } catch (_) {
