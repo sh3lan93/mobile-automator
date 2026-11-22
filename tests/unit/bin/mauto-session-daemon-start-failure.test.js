@@ -32,10 +32,10 @@ afterEach(() => {
 describe('writeStartFailure', () => {
   test('writes the message, then the hint on its own line', () => {
     const lines = [];
-    writeStartFailure(new UnsafePathError('/x/mauto', 'not_private', {}), (t) => lines.push(t));
+    writeStartFailure(new UnsafePathError('/x/mauto', 'world_writable'), (t) => lines.push(t));
     expect(lines).toEqual([
-      'mauto-session-daemon: Refusing to use workspace path /x/mauto: other users can access it (not_private).\n',
-      expect.stringMatching(/^mauto-session-daemon: hint: .*chmod 700 <path>.*\n$/),
+      'mauto-session-daemon: Refusing to use workspace path /x/mauto: it is writable by every user (world_writable).\n',
+      expect.stringMatching(/^mauto-session-daemon: hint: .*chmod o-w <path>.*\n$/),
     ]);
   });
 

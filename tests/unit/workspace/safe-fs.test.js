@@ -2,8 +2,10 @@
 
 // safe-fs (#345): every workspace read/write refuses a symlinked, foreign,
 // world-writable or otherwise planted path. The fixture and its rules are in
-// tests/helpers/safe-fs-fixture.js. The device session's private directories
-// and socket (#346) are in safe-fs-private.test.js.
+// tests/helpers/safe-fs-fixture.js. The primitives a caller drives with its
+// own policy (dirPolicy, checkDir, safeDir's last-component policy, isOwnLeaf)
+// are in safe-fs-policy.test.js; the device session's policies built on them
+// (#346) in tests/unit/device/session-dir.test.js.
 
 const fs = require('fs');
 const path = require('path');
@@ -19,7 +21,8 @@ const {
   createWorkspaceFile,
   removeWorkspaceFile,
   openLeaf,
-  PRIVATE_WORKSPACE_DIR,
+  dirPolicy,
+  WORKSPACE_DIR,
 } = require('../../../src/workspace/safe-fs');
 // The envelope boundary: a refusal reaches the agent through toEnvelope's
 // typed-error branch, which maps the error's own kind, message and hint.
@@ -717,7 +720,13 @@ describe('a refusal through toEnvelope', () => {
   it.each([
     ['escape', () => safeDir(root, path.join(ws, '..', '..', 'outside'))],
     ['world_writable', () => (fs.chmodSync(ws, 0o777), safeDir(root, ws))],
-    ['not_private', () => (fs.chmodSync(ws, 0o755), safeDir(root, ws, { policy: PRIVATE_WORKSPACE_DIR }))],
+    [
+      'not_private',
+      () => (
+        fs.chmodSync(ws, 0o755),
+        safeDir(root, ws, { policy: dirPolicy({ ...WORKSPACE_DIR, forbiddenBits: 0o077, modeReason: 'not_private' }) })
+      ),
+    ],
     ['not_directory', () => (fs.writeFileSync(path.join(ws, 'm'), 'x'), safeDir(root, path.join(ws, 'm')))],
     ['too_large', () => (fs.writeFileSync(path.join(ws, 'b'), 'xx'), readWorkspaceFile(root, path.join(ws, 'b'), { maxBytes: 1 }))],
   ])('%s yields an environment envelope with a hint and no canary', (_reason, fn) => {

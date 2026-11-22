@@ -2,11 +2,13 @@
 
 // session-dir (#346): the device session's socket is reachable only through
 // directories no other user can enter, and the client trusts a socket only
-// when its directory and the socket itself check out. Each rule is pinned once,
-// at the lowest layer, in tests/unit/workspace/safe-fs-private.test.js; this
-// file covers which check applies where: one case per location and branch. Real tmp trees and real
-// listening sockets, because the guarantees are about what lstat sees; only
-// "another owner" is simulated (a wrapped lstatSync), because jest cannot
+// when its directory and the socket itself check out. This file pins the
+// session's policies (.session/, the fallback socket directory, the socket),
+// their wording, and which applies where, one case per rule. The generic
+// primitives they are built on (checkDir, safeDir's policy, isOwnLeaf) are
+// pinned in tests/unit/workspace/safe-fs-policy.test.js. Real tmp trees and
+// real listening sockets, because the guarantees are about what lstat sees;
+// only "another owner" is simulated (a wrapped lstatSync), because jest cannot
 // chown.
 //
 // Nothing here touches the real per-user fallback directory: a long root's
@@ -17,9 +19,18 @@ const net = require('net');
 const os = require('os');
 const path = require('path');
 
-const { ensureSessionDir, ensureSessionDirs, verifySocket, listenOwnerOnly } = require('../../../src/device/session-dir');
+const {
+  ensureSessionDir,
+  ensureSessionDirs,
+  isOwnSocket,
+  verifySocket,
+  listenOwnerOnly,
+} = require('../../../src/device/session-dir');
 const paths = require('../../../src/device/session-paths');
 const { UnsafePathError } = require('../../../src/workspace/safe-fs');
+// The envelope boundary: a refusal reaches the agent through toEnvelope's
+// typed-error branch, which maps the error's own kind, message and hint.
+const { toEnvelope } = require('../../../src/cli');
 
 const REAL_UID = process.getuid();
 // Never ours, whatever uid the tests run as.
@@ -163,6 +174,153 @@ describe('ensureSessionDir', () => {
     fs.chmodSync(fallbackDir, 0o755);
     expect(() => ensureSessionDir(root, deps)).not.toThrow();
     expect(() => ensureSessionDirs(root, deps)).toThrow(UnsafePathError);
+  });
+
+  test('refuses a symlinked .session before any chmod, leaving its target alone', () => {
+    const root = shortRoot();
+    const target = path.join(base, 'elsewhere');
+    fs.mkdirSync(target);
+    fs.chmodSync(target, 0o755);
+    fs.mkdirSync(path.join(root, '.mobile-automator'));
+    fs.symlinkSync(target, paths.sessionDir(root));
+    expectRefusal(() => ensureSessionDir(root), 'symlink');
+    expect(mode(target)).toBe(0o755);
+  });
+
+  test('a swap to a link between the walk and the chmod is refused, never returned', () => {
+    const root = shortRoot();
+    const dir = paths.sessionDir(root);
+    const target = path.join(base, 'elsewhere');
+    fs.mkdirSync(target);
+    fs.mkdirSync(dir, { recursive: true });
+    const swapping = {
+      ...fs,
+      chmodSync: (p, m) => {
+        fs.renameSync(dir, path.join(base, 'moved-session'));
+        fs.symlinkSync(target, dir);
+        return fs.chmodSync(p, m);
+      },
+    };
+    expectRefusal(() => ensureSessionDir(root, { fs: swapping }), 'symlink');
+  });
+
+  // A chmod that changes nothing (a filesystem that ignores modes, or a racing
+  // chmod back) must not pass for a private directory. The refusal keeps the
+  // workspace wording: .session/ is a workspace directory.
+  test('a .session still not 0700 after the chmod is refused (not_private), worded as a workspace path', () => {
+    const root = shortRoot();
+    const dir = paths.sessionDir(root);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.chmodSync(dir, 0o755);
+    const inert = { ...fs, chmodSync: () => {} };
+    const err = expectRefusal(() => ensureSessionDir(root, { fs: inert }), 'not_private');
+    expect(err.message).toBe(`Refusing to use workspace path ${dir}: other users can access it (not_private).`);
+    expect(err.hint).toContain('chmod 700 <path>');
+  });
+});
+
+// The fallback socket directory, outside the workspace: a real 0700 directory
+// of ours, whatever MAUTO_TRUST_WORKSPACE_OWNER says (D-d), never chmodded.
+describe('the fallback socket directory (ensureSessionDirs, deep root)', () => {
+  const OVERRIDE = { MAUTO_TRUST_WORKSPACE_OWNER: '1' };
+  let root;
+  let deps;
+  let fallbackDir;
+  beforeEach(() => {
+    ({ root, deps, fallbackDir } = longRoot());
+  });
+
+  // Each refusal case: plant it, and the deps that make it refused.
+  const cases = {
+    symlink: () => {
+      const target = path.join(base, 'elsewhere');
+      fs.mkdirSync(target, { mode: 0o700 });
+      fs.symlinkSync(target, fallbackDir);
+      return deps;
+    },
+    not_directory: () => (fs.writeFileSync(fallbackDir, 'x'), deps),
+    not_private: () => (fs.mkdirSync(fallbackDir), fs.chmodSync(fallbackDir, 0o750), deps),
+    foreign_owner: () => {
+      fs.mkdirSync(fallbackDir, { mode: 0o700 });
+      return { env: { ...deps.env, ...OVERRIDE }, fs: foreignLstat((p) => p === fallbackDir) };
+    },
+  };
+
+  test.each(Object.keys(cases))('%s is refused, even with the owner override for foreign_owner', (reason) => {
+    expectRefusal(() => ensureSessionDirs(root, cases[reason]()), reason);
+  });
+
+  test.each(Object.keys(cases))('%s: worded as the session socket directory, with no workspace advice', (reason) => {
+    const err = expectRefusal(() => ensureSessionDirs(root, cases[reason]()), reason);
+    expect(err.path).toBe(fallbackDir);
+    expect(err.message.startsWith(`Refusing to use session socket directory ${fallbackDir}: `)).toBe(true);
+    expect(err.message.endsWith(` (${reason}).`)).toBe(true);
+    // The path is under the test's temp dir, which this test does not name.
+    for (const text of [err.message.replace(fallbackDir, '<dir>'), err.hint]) {
+      expect(text).not.toMatch(/workspace/i);
+      expect(text).not.toContain('.mobile-automator');
+      expect(text).not.toContain('MAUTO_TRUST_WORKSPACE_OWNER');
+    }
+    const { envelope, exitKind } = toEnvelope(err);
+    expect(exitKind).toBe('environment');
+    expect(envelope.error.message).toBe(err.message);
+    expect(envelope.hint).toBe(err.hint);
+  });
+
+  test('the hints say what to do with that directory', () => {
+    const hintFor = (reason) => {
+      const err = expectRefusal(() => ensureSessionDirs(root, cases[reason]()), reason);
+      fs.rmSync(fallbackDir, { recursive: true, force: true });
+      return err;
+    };
+    const foreign = hintFor('foreign_owner');
+    expect(foreign.message).toContain(`it is owned by uid ${FOREIGN_UID}; you are uid ${REAL_UID}`);
+    expect(foreign.hint).toMatch(/another user owns it/i);
+    expect(foreign.hint).toContain('XDG_RUNTIME_DIR');
+    expect(hintFor('not_private').hint).toContain('chmod 700 <path>');
+    for (const reason of ['symlink', 'not_directory']) {
+      expect(hintFor(reason).hint).toMatch(/remove it.*0700/i);
+    }
+  });
+
+  test('a loose mode is refused, never repaired', () => {
+    fs.mkdirSync(fallbackDir);
+    fs.chmodSync(fallbackDir, 0o777);
+    expectRefusal(() => ensureSessionDirs(root, deps), 'not_private');
+    expect(mode(fallbackDir)).toBe(0o777);
+  });
+});
+
+// The socket leaf: a real socket, not a link, ours, whatever the override says.
+describe('isOwnSocket', () => {
+  test('true for a real socket of ours', async () => {
+    const sock = path.join(base, 's.sock');
+    await listen(sock);
+    expect(isOwnSocket(sock)).toBe(true);
+  });
+
+  test('false for a regular file', () => {
+    const sock = path.join(base, 's.sock');
+    fs.writeFileSync(sock, 'x');
+    expect(isOwnSocket(sock)).toBe(false);
+  });
+
+  test('false for a link to a real listening socket of ours', async () => {
+    const real = path.join(base, 'real.sock');
+    await listen(real);
+    const sock = path.join(base, 's.sock');
+    fs.symlinkSync(real, sock);
+    expect(isOwnSocket(sock)).toBe(false);
+  });
+
+  test('false for a socket owned by another uid, even with MAUTO_TRUST_WORKSPACE_OWNER=1', async () => {
+    const sock = path.join(base, 's.sock');
+    await listen(sock);
+    expect(isOwnSocket(sock, { fs: foreignLstat(() => true), env: { MAUTO_TRUST_WORKSPACE_OWNER: '1' } })).toBe(false);
+  });
+
+  test('false for a missing socket', () => {
+    expect(isOwnSocket(path.join(base, 'nope.sock'))).toBe(false);
   });
 });
 
