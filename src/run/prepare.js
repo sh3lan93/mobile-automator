@@ -6,7 +6,7 @@ const path = require('path');
 const { fail } = require('../output/envelope');
 const { typedFail } = require('../output/typed-fail');
 const { isTypedRefusal } = require('../output/typed-refusal');
-const { userDest } = require('../workspace/safe-fs');
+const { userDir } = require('../workspace/safe-fs');
 const { loadScenario } = require('../scenario/load');
 const { isResultRunId } = require('../result/store');
 const { resolveRunId } = require('../observe/settings');
@@ -38,13 +38,15 @@ function junitRefusal(junitPath) {
 // The workspace rules for a --junit path that lands in .mobile-automator/
 // (#347), before the run: the stat checks above follow links, so a report
 // directory planted as a link would pass them and be refused only by the
-// write, after the device work. userDest walks the directory and checks the
-// leaf exactly as the writer will (and is a no-op anywhere else), so the
-// refusal, with its own kind, message and hint, lands first. Returns the
-// failure, or null.
+// write, after the device work. userDir walks the report's directory as the
+// writer will (no create: the stat checks above proved it exists; a no-op
+// anywhere else), so the refusal, with its own kind, message and hint, lands
+// first. Directories only: a link at the report file itself is not refused,
+// because the atomic writer replaces it (as `result export --out` does).
+// Returns the failure, or null.
 function junitWorkspaceRefusal(projectRoot, junitPath) {
   try {
-    userDest(projectRoot, junitPath);
+    userDir(projectRoot, path.dirname(junitPath));
     return null;
   } catch (err) {
     if (isTypedRefusal(err)) return { failure: typedFail(err) };
