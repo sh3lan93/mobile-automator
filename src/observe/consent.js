@@ -17,8 +17,8 @@
 //
 // The rule for the file: it lives outside every project, so both sides use
 // safe-fs's user-leaf rule (the one #359 set for paths outside any project),
-// not the workspace walk. The read is a leaf of userDirLeaves(null, ...), the
-// strict leaf rule (no checkout, so no owner override), and the write is
+// not the workspace walk. The read is readOwnedLeaf, under its default leaf
+// rule, STRICT_LEAF (no checkout, so no owner override), and the write is
 // atomicUserLeafWrite, whose temp file opens through openUserLeaf: either way
 // the leaf is opened O_NOFOLLOW, must be a regular file owned by this user,
 // and a write never lands in a file with a second hard link (the rename
@@ -41,7 +41,7 @@ const path = require('path');
 const { atomicUserLeafWrite } = require('../util/atomic');
 const { isPlainObject } = require('../util/is-plain-object');
 const { realOrResolved } = require('../util/real-or-resolved');
-const { userDirLeaves } = require('../workspace/safe-fs');
+const { readOwnedLeaf } = require('../workspace/safe-fs');
 
 const FILE_NAME = 'telemetry-consent.json';
 
@@ -63,14 +63,13 @@ function consentPath({ env = process.env, homedir = os.homedir } = {}) {
 // The parsed record, or null when there is no usable one.
 function readRecord(file, deps) {
   try {
-    // A per-user file outside every checkout: settled with no project root
-    // (null), so userDirLeaves binds the strict leaf rule and
-    // MAUTO_TRUST_WORKSPACE_OWNER=1 never applies (#363).
-    const leaf = userDirLeaves(null, path.dirname(file), {}, deps).leaf(file);
-    const doc = JSON.parse(leaf.read({ maxBytes: CONSENT_MAX_BYTES }));
+    // A per-user file outside every checkout: readOwnedLeaf's strict default
+    // (STRICT_LEAF) is the rule, so MAUTO_TRUST_WORKSPACE_OWNER=1 never
+    // applies (#363). No policy is passed on purpose.
+    const doc = JSON.parse(readOwnedLeaf(file, { maxBytes: CONSENT_MAX_BYTES }, deps));
     if (isPlainObject(doc) && isPlainObject(doc.projects)) return doc;
   } catch (_) {
-    // missing (the read's null parses to null), refused, too large,
+    // missing (readOwnedLeaf's null parses to null), refused, too large,
     // unreadable or corrupt: no record
   }
   return null;
