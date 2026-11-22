@@ -12,6 +12,7 @@ const path = require('path');
 const {
   inWorkspace,
   inProject,
+  locate,
   readUserFile,
   safeWorkspaceDest,
   isInside,
@@ -108,6 +109,29 @@ describe('inWorkspace', () => {
     const p = path.join(alias, '.mobile-automator', 'screenshots', 'a.png');
     expect(inWorkspace(realRoot, p, { fs: lookOnly })).toBe(path.join(realRoot, '.mobile-automator', 'screenshots', 'a.png'));
     expect(inWorkspace(realRoot, path.join(outside, 'x.png'), { fs: lookOnly })).toBeNull();
+  });
+});
+
+// The one classifier every membership decision goes through (#363).
+describe('locate', () => {
+  it('names the workspace, the rest of the project, and outside', () => {
+    const inWs = path.join(ws, 'scenarios', 'a.json');
+    expect(locate(root, inWs)).toEqual({ path: inWs, where: 'workspace' });
+    const inProj = path.join(root, 'flows', 'a.json');
+    expect(locate(root, inProj)).toEqual({ path: inProj, where: 'project' });
+    const out = path.join(base, 'elsewhere', 'a.json');
+    expect(locate(root, out)).toEqual({ path: out, where: 'outside' });
+  });
+
+  it('re-roots a path through an aliased root, and inWorkspace agrees with it', () => {
+    const { realRoot, alias, realWs } = aliasedRoot(base, root);
+    const p = path.join(alias, '.mobile-automator', 'a.json');
+    expect(locate(realRoot, p)).toEqual({ path: path.join(realWs, 'a.json'), where: 'workspace' });
+    expect(inWorkspace(realRoot, p)).toBe(locate(realRoot, p).path);
+    expect(locate(realRoot, path.join(alias, 'flows', 'a.json'))).toEqual({
+      path: path.join(realRoot, 'flows', 'a.json'),
+      where: 'project',
+    });
   });
 });
 

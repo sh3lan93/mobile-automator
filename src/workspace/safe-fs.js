@@ -28,7 +28,7 @@
 // Both check every directory below the project root down to the file's own;
 // the scope sets the containment bound and words the refusal. A path the user
 // chose (--out, a screenshot to /tmp) is confined only when it lands in the
-// workspace (inWorkspace), anywhere else it is the user's own call; userDir,
+// workspace (locate), anywhere else it is the user's own call; userDir,
 // userDest and userFile are the entry points that make that choice.
 //
 // Components above and including the project root are never checked: a
@@ -580,8 +580,8 @@ function safeWorkspaceDest(projectRoot, file, deps = {}) {
 }
 
 // Where `file` lands in the project: its absolute path under projectRoot, or
-// null when it names a place outside it. The one re-rooting, shared by
-// inWorkspace (a path the user chose to write) and readUserFile (one to read).
+// null when it names a place outside it. The one re-rooting, under locate
+// (which every membership decision goes through).
 //
 // Lexical first. A path not lexically in the project may still reach the
 // project root through a symlinked ancestor (macOS /tmp -> /private/tmp; the
@@ -621,13 +621,27 @@ function inProject(projectRoot, file, deps = {}) {
   return null;
 }
 
-// Where `file` lands in the workspace: its inProject path when that is under
-// workspaceDir(projectRoot), else null. For a path the user chose (--out, a
-// screenshot destination), which gets the workspace rules inside the
-// workspace and is the user's own call anywhere else.
-function inWorkspace(projectRoot, file, deps = {}) {
+// The one membership decision for a path the user named: `{ path, where }`,
+// `where` being 'workspace' (its inProject path is under
+// workspaceDir(projectRoot)), 'project' (elsewhere under the project root) or
+// 'outside'. `path` is the inProject path inside the checkout (through an
+// aliased root it differs from the one given, and every check and write must
+// use it), else the path resolved as named. inWorkspace, userPath and
+// readUserFile all decide through here, so the rule exists once.
+function locate(projectRoot, file, deps = {}) {
   const rerooted = inProject(projectRoot, file, deps);
-  return rerooted && isInside(rerooted, path.resolve(workspaceDir(projectRoot))) ? rerooted : null;
+  if (!rerooted) return { path: path.resolve(file), where: 'outside' };
+  const where = isInside(rerooted, path.resolve(workspaceDir(projectRoot))) ? 'workspace' : 'project';
+  return { path: rerooted, where };
+}
+
+// Where `file` lands in the workspace: locate's path when it is there, else
+// null. For a path the user chose (--out, a screenshot destination), which
+// gets the workspace rules inside the workspace and is the user's own call
+// anywhere else.
+function inWorkspace(projectRoot, file, deps = {}) {
+  const at = locate(projectRoot, file, deps);
+  return at.where === 'workspace' ? at.path : null;
 }
 
 // A project file outside the workspace (a host file `mauto init` writes:
@@ -659,15 +673,12 @@ function readProjectFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES, enco
 //     is followed, and only the size cap applies: no owner, link or
 //     regular-file check, as `cat` would read it.
 function readUserFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES, encoding = 'utf8' } = {}, deps = {}) {
-  const rerooted = inProject(projectRoot, file, deps);
-  if (rerooted && isInside(rerooted, path.resolve(workspaceDir(projectRoot)))) {
-    return readWorkspaceFile(projectRoot, rerooted, { maxBytes, encoding }, deps);
-  }
-  if (rerooted) return readProjectFile(projectRoot, rerooted, { maxBytes, encoding }, deps);
-  const resolved = path.resolve(file);
+  const at = locate(projectRoot, file, deps);
+  if (at.where === 'workspace') return readWorkspaceFile(projectRoot, at.path, { maxBytes, encoding }, deps);
+  if (at.where === 'project') return readProjectFile(projectRoot, at.path, { maxBytes, encoding }, deps);
   const { fs } = resolveDeps(deps);
-  const open = () => fs.openSync(resolved, nodeFs.constants.O_RDONLY);
-  return withScope('user', () => readCapped(open, resolved, maxBytes, deps, encoding));
+  const open = () => fs.openSync(at.path, nodeFs.constants.O_RDONLY);
+  return withScope('user', () => readCapped(open, at.path, maxBytes, deps, encoding));
 }
 
 // createWorkspaceFile's project-rooted twin: exclusive (O_WRONLY|O_CREAT|
@@ -681,13 +692,13 @@ function createProjectFile(projectRoot, file, { mode = 0o666 } = {}, deps = {}) 
 
 // Paths the user chose (--out, --junit, a screenshot destination, a
 // MAUTO_LOG_DIR). Inside the workspace they get the workspace rules, on the
-// path inWorkspace re-roots (through an aliased root it differs from the one
-// given, and every check and write must use the checked one); anywhere else
-// they are the user's own call. The entry points below make that choice, so
-// no caller tests inWorkspace or swaps paths itself.
+// path locate re-roots; anywhere else (the rest of the project included) they
+// are the user's own call, on the path as named. The entry points below make that choice, so no
+// caller tests membership or swaps paths itself.
 function userPath(projectRoot, file, deps) {
-  const confined = inWorkspace(projectRoot, file, deps);
-  return confined ? { path: confined, confined: true } : { path: path.resolve(file), confined: false };
+  const at = locate(projectRoot, file, deps);
+  if (at.where === 'workspace') return { path: at.path, confined: true };
+  return { path: path.resolve(file), confined: false };
 }
 
 // A directory the user chose: the checked walk when it lands in the
@@ -796,6 +807,8 @@ module.exports = {
   inWorkspace,
   // Where a path lands in the project (re-rooted), or null outside it.
   inProject,
+  // The one classifier: { path, where: 'workspace' | 'project' | 'outside' }.
+  locate,
   // Paths the user chose: confined in the workspace, the user's call elsewhere.
   settleUserDir,
   userDir,
