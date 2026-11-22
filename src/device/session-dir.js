@@ -20,7 +20,13 @@
 // Every check is safe-fs's; this module only says which apply where.
 
 const paths = require('./session-paths');
-const { safeDir, privateDir, privateWorkspaceDir, checkOwnSocket } = require('../workspace/safe-fs');
+const {
+  PRIVATE_WORKSPACE_DIR,
+  safeDir,
+  privateDir,
+  privateWorkspaceDir,
+  checkOwnSocket,
+} = require('../workspace/safe-fs');
 
 // Create (or tighten, from the 0755 an older mauto made) .session/ alone, and
 // return only once it is proven link-free and 0700. Throws UnsafePathError on
@@ -50,7 +56,7 @@ function ensureSessionDirs(projectRoot, deps = {}) {
 function verifySocket(projectRoot, deps = {}) {
   try {
     const { file, dir, inWorkspace } = paths.socketLocation(projectRoot, deps);
-    if (inWorkspace) safeDir(projectRoot, dir, { private: true }, deps);
+    if (inWorkspace) safeDir(projectRoot, dir, { policy: PRIVATE_WORKSPACE_DIR }, deps);
     else privateDir(dir, {}, deps);
     checkOwnSocket(file, deps);
     return true;

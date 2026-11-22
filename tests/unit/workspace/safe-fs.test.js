@@ -29,6 +29,7 @@ const {
   privateDir,
   privateWorkspaceDir,
   checkOwnSocket,
+  PRIVATE_WORKSPACE_DIR,
 } = require('../../../src/workspace/safe-fs');
 // The envelope boundary: a refusal reaches the agent through toEnvelope's
 // typed-error branch, which maps the error's own kind, message and hint.
@@ -288,7 +289,7 @@ describe('safeDir', () => {
 // #346: `.session/` and the long-path socket fallback hold the device
 // session's socket, so no other user may even look inside them: the check is
 // 0700-tight (no group or other bit), not just "not world-writable".
-describe('safeDir { private: true } (#346)', () => {
+describe('safeDir with the PRIVATE_WORKSPACE_DIR policy (#346)', () => {
   let d;
   beforeEach(() => {
     d = path.join(ws, '.session');
@@ -298,16 +299,21 @@ describe('safeDir { private: true } (#346)', () => {
 
   it('accepts a 0700 target under a group-writable workspace (only the last component is private)', () => {
     fs.chmodSync(ws, 0o775);
-    expect(safeDir(root, d, { private: true })).toBe(fs.realpathSync(d));
+    expect(safeDir(root, d, { policy: PRIVATE_WORKSPACE_DIR })).toBe(fs.realpathSync(d));
+  });
+
+  it('the components above it stay workspace directories: a world-writable one is world_writable', () => {
+    fs.chmodSync(ws, 0o777);
+    expectUnsafe(() => safeDir(root, d, { policy: PRIVATE_WORKSPACE_DIR }), 'world_writable');
   });
 
   it.each([['0755', 0o755], ['0750', 0o750], ['0705', 0o705], ['0701', 0o701]])('refuses a target at %s (not_private)', (_label, mode) => {
     fs.chmodSync(d, mode);
-    const err = expectUnsafe(() => safeDir(root, d, { private: true }), 'not_private');
+    const err = expectUnsafe(() => safeDir(root, d, { policy: PRIVATE_WORKSPACE_DIR }), 'not_private');
     expect(err.path).toBe(d);
   });
 
-  it('without private, the same 0755 and g+w targets are still accepted', () => {
+  it('under the default policy, the same 0755 and g+w targets are still accepted', () => {
     for (const mode of [0o755, 0o775]) {
       fs.chmodSync(d, mode);
       expect(safeDir(root, d)).toBe(fs.realpathSync(d));
@@ -316,22 +322,22 @@ describe('safeDir { private: true } (#346)', () => {
 
   it('still honours MAUTO_TRUST_WORKSPACE_OWNER=1 for a foreign-owned 0700 target (D-d)', () => {
     const deps = { fs: foreignFs(['lstatSync']), env: { MAUTO_TRUST_WORKSPACE_OWNER: '1' } };
-    expect(safeDir(root, d, { private: true }, deps)).toBe(fs.realpathSync(d));
+    expect(safeDir(root, d, { policy: PRIVATE_WORKSPACE_DIR }, deps)).toBe(fs.realpathSync(d));
     // ...and without the override the same target is foreign.
-    expectUnsafe(() => safeDir(root, d, { private: true }, { fs: foreignFs(['lstatSync']) }), 'foreign_owner');
+    expectUnsafe(() => safeDir(root, d, { policy: PRIVATE_WORKSPACE_DIR }, { fs: foreignFs(['lstatSync']) }), 'foreign_owner');
   });
 
   it('the override never loosens the mode check', () => {
     fs.chmodSync(d, 0o750);
     const deps = { fs: foreignFs(['lstatSync']), env: { MAUTO_TRUST_WORKSPACE_OWNER: '1' } };
-    expectUnsafe(() => safeDir(root, d, { private: true }, deps), 'not_private');
+    expectUnsafe(() => safeDir(root, d, { policy: PRIVATE_WORKSPACE_DIR }, deps), 'not_private');
   });
 
   itNotRoot('create + mode 0o700 makes a private target under umask 022', () => {
     const fresh = path.join(ws, 'fresh');
     const umask = process.umask(0o022);
     try {
-      safeDir(root, fresh, { create: true, mode: 0o700, private: true });
+      safeDir(root, fresh, { create: true, mode: 0o700, policy: PRIVATE_WORKSPACE_DIR });
     } finally {
       process.umask(umask);
     }
@@ -1116,7 +1122,7 @@ describe('a refusal through toEnvelope', () => {
   it.each([
     ['escape', () => safeDir(root, path.join(ws, '..', '..', 'outside'))],
     ['world_writable', () => (fs.chmodSync(ws, 0o777), safeDir(root, ws))],
-    ['not_private', () => (fs.chmodSync(ws, 0o755), safeDir(root, ws, { private: true }))],
+    ['not_private', () => (fs.chmodSync(ws, 0o755), safeDir(root, ws, { policy: PRIVATE_WORKSPACE_DIR }))],
     ['not_directory', () => (fs.writeFileSync(path.join(ws, 'm'), 'x'), safeDir(root, path.join(ws, 'm')))],
     ['too_large', () => (fs.writeFileSync(path.join(ws, 'b'), 'xx'), readWorkspaceFile(root, path.join(ws, 'b'), { maxBytes: 1 }))],
   ])('%s yields an environment envelope with a hint and no canary', (_reason, fn) => {

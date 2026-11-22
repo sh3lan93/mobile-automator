@@ -26,12 +26,10 @@
 //
 // The device session's directories are stricter (#346): another user who can
 // enter `.session/` or the socket fallback directory can reach the daemon's
-// socket, and one who can write there can plant or swap it. safeDir's
-// `private` option makes the last component 0700-tight (no group or other
-// bit), and privateWorkspaceDir makes `.session/` so. privateDir checks a
-// directory outside the workspace (the socket fallback) the same way, and
-// checkOwnSocket the socket itself, both with an owner check no override can
-// skip.
+// socket, and one who can write there can plant or swap it. Every directory
+// check therefore runs under one of three named policies (WORKSPACE_DIR,
+// PRIVATE_WORKSPACE_DIR, PRIVATE_DIR, below), and checkOwnSocket checks the
+// socket itself with an owner check no override can skip.
 //
 // Requires only layout, so device and store modules can import it without a
 // cycle. It knows nothing of envelopes: a refusal carries its own kind and
@@ -80,40 +78,74 @@ const FALLBACK_HINT = 'Inspect the path and replace it with a real file or direc
 
 // What a refused path is, for the message's subject, reason text and hint.
 // Every refusal is about a workspace path except two of the device session's
-// (#346): its socket directory outside the workspace (privateDir) and its
+// (#346): its socket directory outside the workspace (PRIVATE_DIR) and its
 // socket, wherever it lives (checkOwnSocket). There the workspace hints point
 // the wrong way, and the owner override they offer never applies (D-d). The
 // reason texts are shared, but for a socket "not a regular file" is the wrong
 // complaint. Only the hints each of those can raise are listed.
+const WORKSPACE_PATH = Object.freeze({
+  subject: 'workspace path',
+  reasons: REASONS,
+  hints: HINTS,
+  fallbackHint: FALLBACK_HINT,
+});
 const SOCKET_DIR_RECREATE = 'Remove it, and mauto recreates the directory 0700.';
+const SESSION_SOCKET_DIR = Object.freeze({
+  subject: 'session socket directory',
+  reasons: REASONS,
+  hints: {
+    symlink: `mauto never follows a link for the session socket's directory. ${SOCKET_DIR_RECREATE}`,
+    not_directory: SOCKET_DIR_RECREATE,
+    foreign_owner:
+      'Another user owns it, so mauto will not trust a socket there. Remove it (its owner or root may have to), or set XDG_RUNTIME_DIR to a private directory of your own.',
+    not_private:
+      "Other users could reach the device session's socket through it. Run chmod 700 <path>, or remove it and let mauto recreate it 0700.",
+  },
+  fallbackHint: SOCKET_DIR_RECREATE,
+});
 const SOCKET_REBIND = 'Remove it; the next session start binds a new socket there.';
-const SCOPES = {
-  workspace: { subject: 'workspace path', reasons: REASONS, hints: HINTS, fallbackHint: FALLBACK_HINT },
-  session_socket: {
-    subject: 'session socket',
-    reasons: { ...REASONS, not_regular: 'it is not a socket' },
-    hints: {
-      symlink: `mauto never connects to a session socket through a link. ${SOCKET_REBIND}`,
-      not_regular: SOCKET_REBIND,
-      foreign_owner:
-        'Another user owns it, so mauto will not connect to it. Remove it (its owner or root may have to).',
-    },
-    fallbackHint: SOCKET_REBIND,
+const SESSION_SOCKET = Object.freeze({
+  subject: 'session socket',
+  reasons: { ...REASONS, not_regular: 'it is not a socket' },
+  hints: {
+    symlink: `mauto never connects to a session socket through a link. ${SOCKET_REBIND}`,
+    not_regular: SOCKET_REBIND,
+    foreign_owner: 'Another user owns it, so mauto will not connect to it. Remove it (its owner or root may have to).',
   },
-  session_socket_dir: {
-    subject: 'session socket directory',
-    reasons: REASONS,
-    hints: {
-      symlink: `mauto never follows a link for the session socket's directory. ${SOCKET_DIR_RECREATE}`,
-      not_directory: SOCKET_DIR_RECREATE,
-      foreign_owner:
-        'Another user owns it, so mauto will not trust a socket there. Remove it (its owner or root may have to), or set XDG_RUNTIME_DIR to a private directory of your own.',
-      not_private:
-        "Other users could reach the device session's socket through it. Run chmod 700 <path>, or remove it and let mauto recreate it 0700.",
-    },
-    fallbackHint: SOCKET_DIR_RECREATE,
-  },
-};
+  fallbackHint: SOCKET_REBIND,
+});
+
+// The three directory policies (#346). Every directory check is exactly one of
+// them, so no meaningless combination can be asked for:
+//   - trustOverride: whether MAUTO_TRUST_WORKSPACE_OWNER=1 may skip the owner
+//     comparison. Only inside a workspace, which someone may have checked out
+//     as another uid; never for a directory outside it.
+//   - forbiddenBits: the mode bits that refuse it, as modeReason.
+//   - wording: what a refusal calls it (see above).
+// WORKSPACE_DIR is any directory in .mobile-automator/: `g+w` is accepted
+// (Ubuntu's umask 002), `o+w` is not. PRIVATE_WORKSPACE_DIR is `.session/`:
+// 0700-tight, the override still applying. PRIVATE_DIR is the socket fallback
+// outside the workspace: 0700-tight, always ours.
+const WORKSPACE_DIR = Object.freeze({
+  trustOverride: true,
+  forbiddenBits: 0o002,
+  modeReason: 'world_writable',
+  wording: WORKSPACE_PATH,
+});
+const PRIVATE_WORKSPACE_DIR = Object.freeze({
+  trustOverride: true,
+  forbiddenBits: 0o077,
+  modeReason: 'not_private',
+  wording: WORKSPACE_PATH,
+});
+const PRIVATE_DIR = Object.freeze({
+  trustOverride: false,
+  forbiddenBits: 0o077,
+  modeReason: 'not_private',
+  wording: SESSION_SOCKET_DIR,
+});
+// The socket leaf's owner rule: never the override (D-d).
+const SOCKET = Object.freeze({ trustOverride: false, wording: SESSION_SOCKET });
 
 // A refusal carries its own envelope fields, like the repo's other typed
 // errors: `kind` is always environment (the workspace is wrong, not the verb's
@@ -122,24 +154,23 @@ const SCOPES = {
 // without knowing this class.
 class UnsafePathError extends Error {
   // `file` is always the path that was refused, never where a link points:
-  // the target is attacker-chosen and must not reach an envelope. `scope`
-  // (a SCOPES key, default workspace) says what kind of path it is.
+  // the target is attacker-chosen and must not reach an envelope. `wording`
+  // (default WORKSPACE_PATH) says what kind of path it is.
   //
   // `owner` ({ uid, myUid }) is passed by the owner check alone, so a
   // foreign_owner refusal names both uids instead of "another user", and the
   // user knows whom to chown to (or that they are running as the wrong user).
   // A uid is a number from lstat, never file content, so it may reach an
   // envelope.
-  constructor(file, reason, { owner, scope } = {}) {
-    const s = SCOPES[scope] || SCOPES.workspace;
+  constructor(file, reason, { owner, wording = WORKSPACE_PATH } = {}) {
     const text = owner
       ? `it is owned by uid ${owner.uid}; you are uid ${owner.myUid}`
-      : s.reasons[reason] || FALLBACK_REASON;
-    super(`Refusing to use ${s.subject} ${file}: ${text} (${reason}).`);
+      : wording.reasons[reason] || FALLBACK_REASON;
+    super(`Refusing to use ${wording.subject} ${file}: ${text} (${reason}).`);
     this.name = 'UnsafePathError';
     this.code = 'EUNSAFEPATH';
     this.kind = 'environment';
-    this.hint = s.hints[reason] || s.fallbackHint;
+    this.hint = wording.hints[reason] || wording.fallbackHint;
     this.path = file;
     this.reason = reason;
     if (owner) this.owner = { uid: owner.uid, myUid: owner.myUid };
@@ -154,29 +185,25 @@ function resolveDeps(deps = {}) {
   };
 }
 
-// The one owner comparison. `strict` ignores MAUTO_TRUST_WORKSPACE_OWNER: the
-// override is for a checkout someone else owns, never for a directory or
-// socket only we should be able to use.
-function checkOwner(p, st, { getuid, env }, { strict = false, scope } = {}) {
-  if (!strict && env.MAUTO_TRUST_WORKSPACE_OWNER === '1') return;
+// The one owner comparison, under a policy's trustOverride (see the policies
+// above): the override is for a checkout someone else owns, never for a
+// directory or socket only we should be able to use.
+function checkOwner(p, st, { getuid, env }, policy) {
+  if (policy.trustOverride && env.MAUTO_TRUST_WORKSPACE_OWNER === '1') return;
   const myUid = getuid();
-  if (st.uid !== myUid) throw new UnsafePathError(p, 'foreign_owner', { owner: { uid: st.uid, myUid }, scope });
+  if (st.uid !== myUid) {
+    throw new UnsafePathError(p, 'foreign_owner', { owner: { uid: st.uid, myUid }, wording: policy.wording });
+  }
 }
 
-// The one directory check. By default a workspace directory may be
-// group-writable but not world-writable. `private` forbids every group and
-// other bit (0700-tight). `strict` is private plus an owner comparison the
-// override cannot skip, for directories outside the workspace. `scope` names
-// the kind of path in a refusal (see SCOPES).
-function checkDirComponent(p, st, d, { strict = false, private: priv = strict, scope } = {}) {
-  if (st.isSymbolicLink()) throw new UnsafePathError(p, 'symlink', { scope });
-  if (!st.isDirectory()) throw new UnsafePathError(p, 'not_directory', { scope });
-  checkOwner(p, st, d, { strict, scope });
-  if (priv) {
-    if (st.mode & 0o077) throw new UnsafePathError(p, 'not_private', { scope });
-  } else if (st.mode & 0o002) {
-    throw new UnsafePathError(p, 'world_writable', { scope });
-  }
+// The one directory check: a real directory, owned under the policy's rule,
+// with none of its forbidden mode bits.
+function checkDirComponent(p, st, d, policy) {
+  const { wording } = policy;
+  if (st.isSymbolicLink()) throw new UnsafePathError(p, 'symlink', { wording });
+  if (!st.isDirectory()) throw new UnsafePathError(p, 'not_directory', { wording });
+  checkOwner(p, st, d, policy);
+  if (st.mode & policy.forbiddenBits) throw new UnsafePathError(p, policy.modeReason, { wording });
 }
 
 // lstat one directory level, making it first when it is missing and `create`
@@ -202,10 +229,10 @@ function isInside(child, parent) {
 }
 
 // Walk `.mobile-automator` down to `dir`, one lstat per component, creating the
-// missing ones when asked. Returns the realpath of `dir`. With `private`, `dir`
-// itself must also be 0700-tight; the owner override still applies, because
-// `dir` is inside a workspace someone may have checked out as another uid.
-function safeDir(projectRoot, dir, { create = false, mode, private: priv = false } = {}, deps = {}) {
+// missing ones when asked. Returns the realpath of `dir`. Every component above
+// `dir` is checked as a WORKSPACE_DIR; `dir` itself under `policy` (default
+// WORKSPACE_DIR; PRIVATE_WORKSPACE_DIR for `.session/`).
+function safeDir(projectRoot, dir, { create = false, mode, policy = WORKSPACE_DIR } = {}, deps = {}) {
   const d = resolveDeps(deps);
   const { fs } = d;
   const ws = path.resolve(workspaceDir(projectRoot));
@@ -217,7 +244,7 @@ function safeDir(projectRoot, dir, { create = false, mode, private: priv = false
   let p = ws;
   for (let i = 0; i <= parts.length; i++) {
     if (i > 0) p = path.join(p, parts[i - 1]);
-    checkDirComponent(p, lstatOrMkdir(fs, p, create, mode), d, { private: priv && i === parts.length });
+    checkDirComponent(p, lstatOrMkdir(fs, p, create, mode), d, i === parts.length ? policy : WORKSPACE_DIR);
   }
 
   // The lstat walk already proves there is no link below the root; this
@@ -228,9 +255,9 @@ function safeDir(projectRoot, dir, { create = false, mode, private: priv = false
 }
 
 // A directory OUTSIDE the workspace that only we may use: the device session's
-// long-path socket fallback (session-paths.js privateSocketDir). It must be a
-// real directory, owned by us whatever MAUTO_TRUST_WORKSPACE_OWNER says, with
-// no group or other bit. Made 0700 when missing and `create` is set (only
+// long-path socket fallback (session-paths.js privateSocketDir), checked as a
+// PRIVATE_DIR: a real directory, owned by us whatever
+// MAUTO_TRUST_WORKSPACE_OWNER says, with no group or other bit. Made 0700 when missing and `create` is set (only
 // this level; its parent, the temp dir or the XDG runtime dir, must exist).
 // Never chmodded: we only ever create it 0700, so a looser mode means someone
 // changed it, and that is refused rather than repaired. A refusal names the
@@ -238,10 +265,7 @@ function safeDir(projectRoot, dir, { create = false, mode, private: priv = false
 // Returns nothing.
 function privateDir(dir, { create = false } = {}, deps = {}) {
   const d = resolveDeps(deps);
-  checkDirComponent(dir, lstatOrMkdir(d.fs, dir, create, 0o700), d, {
-    strict: true,
-    scope: 'session_socket_dir',
-  });
+  checkDirComponent(dir, lstatOrMkdir(d.fs, dir, create, 0o700), d, PRIVATE_DIR);
 }
 
 // A workspace directory that must be 0700 (the device session's .session/):
@@ -257,7 +281,7 @@ function privateWorkspaceDir(projectRoot, dir, deps = {}) {
   const { fs } = resolveDeps(deps);
   safeDir(projectRoot, dir, { create: true, mode: 0o700 }, deps);
   fs.chmodSync(dir, 0o700);
-  return safeDir(projectRoot, dir, { private: true }, deps);
+  return safeDir(projectRoot, dir, { policy: PRIVATE_WORKSPACE_DIR }, deps);
 }
 
 // The device session's socket, wherever it lives. open(2) cannot open a
@@ -267,11 +291,11 @@ function privateWorkspaceDir(projectRoot, dir, deps = {}) {
 // fs error (ENOENT for no socket). Returns nothing.
 function checkOwnSocket(file, deps = {}) {
   const d = resolveDeps(deps);
-  const scope = 'session_socket';
+  const { wording } = SOCKET;
   const st = d.fs.lstatSync(file);
-  if (st.isSymbolicLink()) throw new UnsafePathError(file, 'symlink', { scope });
-  if (!st.isSocket()) throw new UnsafePathError(file, 'not_regular', { scope });
-  checkOwner(file, st, d, { strict: true, scope });
+  if (st.isSymbolicLink()) throw new UnsafePathError(file, 'symlink', { wording });
+  if (!st.isSocket()) throw new UnsafePathError(file, 'not_regular', { wording });
+  checkOwner(file, st, d, SOCKET);
 }
 
 const OPEN_SYMLINK_CODES = new Set([
@@ -333,7 +357,8 @@ function openWorkspaceFile(projectRoot, file, flags, mode = 0o666, deps = {}) {
   // without it and truncate only once every check has passed.
   const { fd, stat } = openLeaf(resolved, flags & ~O_TRUNC, mode, deps);
   try {
-    checkOwner(resolved, stat, d);
+    // The leaf is owned under the same rule as the workspace directory it sits in.
+    checkOwner(resolved, stat, d, WORKSPACE_DIR);
     if (writes && stat.nlink !== 1) throw new UnsafePathError(resolved, 'hardlink');
     if (writes && flags & O_TRUNC) d.fs.ftruncateSync(fd, 0);
   } catch (err) {
@@ -432,6 +457,8 @@ module.exports = {
   // Exported for the later security-hardening gate slices (#346/#347), which
   // walk directories they then list or create into.
   safeDir,
+  // safeDir's policy for `.session/` (session-dir.js verifySocket).
+  PRIVATE_WORKSPACE_DIR,
   // The device session's own checks (session-dir.js).
   privateDir,
   privateWorkspaceDir,
