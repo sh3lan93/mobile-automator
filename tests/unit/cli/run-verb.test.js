@@ -237,7 +237,7 @@ describe('mauto run — a run', () => {
 
     // run.start + one run.step per step were stamped before finalize, spanning
     // the (real) time the device calls took.
-    const events = readTrace(runTracePath(root, RUN_ID)).events;
+    const events = readTrace(runTracePath(root, RUN_ID), { projectRoot: root }).events;
     expect(events.filter((e) => e.event === 'run.start')).toHaveLength(1);
     expect(events.filter((e) => e.event === 'run.step')).toHaveLength(2);
     expect(events.every((e) => e.verb === 'run' && e.run_id === RUN_ID)).toBe(true);

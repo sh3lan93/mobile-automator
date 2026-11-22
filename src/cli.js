@@ -748,10 +748,11 @@ const DURATION_TOLERANCE_SECONDS = 1;
 const DURATION_TOLERANCE_RATIO = 0.1;
 
 // Turn the run's trace into the duration to record and the measurement block to
-// record beside it. Total: an unreadable, absent or unmeasurable trace yields
-// the reported value and a `measurements` block that says so, never an error.
+// record beside it. An unreadable, absent or unmeasurable trace yields the
+// reported value and a `measurements` block that says so, never an error; a
+// refused one (a committed link, #363) throws, so finalize fails environment.
 function measureRun({ projectRoot, runId, reported }) {
-  const derived = deriveRun(readTrace(runTracePath(projectRoot, runId)));
+  const derived = deriveRun(readTrace(runTracePath(projectRoot, runId), { projectRoot }));
   const reportedSeconds = reported === undefined ? null : Number(reported);
   const hasReported = reportedSeconds !== null && Number.isFinite(reportedSeconds);
 

@@ -14,7 +14,8 @@ const path = require('path');
 
 const { atCap } = require('./sinks/file');
 const { logsDir, runTracePath, RUN_TRACE_PREFIX } = require('./paths');
-const { userDir } = require('../workspace/safe-fs');
+const { MAX_LOG_BYTES } = require('../util/log-rotate');
+const { userDir, readUserFile, UnsafePathError } = require('../workspace/safe-fs');
 
 // A device failure in the envelope's own taxonomy. `deviceFail` (src/output/device-fail.js) is
 // the ONLY producer of these two kinds, so counting them needs no list of which
@@ -43,16 +44,32 @@ function parseTrace(text) {
   return events;
 }
 
-function readTrace(tracePath, { fs = realFs } = {}) {
+// The most readTrace takes in. The sink stops appending at MAX_LOG_BYTES (its
+// 'cap' bound), but the check is before a line, so the last line can run past
+// the cap; a MiB of headroom covers any line it writes. A trace larger than
+// that was not written by mauto, and is refused (too_large).
+const TRACE_READ_MAX_BYTES = MAX_LOG_BYTES + 1024 * 1024;
+
+// The run trace at `tracePath`, read through safe-fs's readUserFile under
+// `projectRoot` (#363): a trace in the workspace is a checked walk and leaf, a
+// MAUTO_LOG_DIR outside the project is the user's own. null when there is no
+// trace or it cannot be read. A refused path (a committed `.logs -> /outside`
+// or a linked trace) throws its UnsafePathError, as readWorkspaceFileOrNull
+// does: a planted link is never "no trace", and finalize fails environment.
+function readTrace(tracePath, { projectRoot, fs = realFs } = {}) {
   if (!tracePath) return null;
+  // Required: without it every read would fail and silently read as no trace.
+  if (!projectRoot) throw new TypeError('readTrace: projectRoot is required');
   let text;
   try {
-    text = fs.readFileSync(tracePath, 'utf8');
-  } catch (_) {
-    // No trace for this run: an ordinary, expected state (MAUTO_RUN_ID unset,
-    // logging silenced, no workspace, or an id that could not name a file).
-    return null;
+    text = readUserFile(projectRoot, tracePath, { maxBytes: TRACE_READ_MAX_BYTES }, { fs });
+  } catch (err) {
+    if (err instanceof UnsafePathError) throw err;
+    text = null;
   }
+  // No trace for this run: an ordinary, expected state (MAUTO_RUN_ID unset,
+  // logging silenced, no workspace, or an id that could not name a file).
+  if (text === null) return null;
   return { events: parseTrace(text), truncated: atCap(tracePath, { fs }) };
 }
 

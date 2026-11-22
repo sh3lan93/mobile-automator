@@ -42,6 +42,16 @@ const CASES = [
     },
   },
   {
+    // #363: the run trace finalize measures is read through the checked walk.
+    name: 'result finalize with .logs/run-<id>.ndjson -> outside file',
+    argv: ['result', 'finalize', '--run-id', 'r1'],
+    plant: (ws, outside) => {
+      fs.writeFileSync(path.join(outside, 'trace.ndjson'), `${JSON.stringify({ ts: '2026-01-01T00:00:00.000Z', event: CANARY })}\n`);
+      fs.mkdirSync(path.join(ws, '.logs'));
+      fs.symlinkSync(path.join(outside, 'trace.ndjson'), path.join(ws, '.logs', 'run-r1.ndjson'));
+    },
+  },
+  {
     name: 'devices use with .session/ -> outside dir',
     argv: ['devices', 'use', 'emulator-5554'],
     plant: (ws, outside) => {

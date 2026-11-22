@@ -1343,13 +1343,26 @@ describe('cli handlers', () => {
       expect(r.envelope.data.measurements.failure_screenshots).toEqual(['/p/tap.png']);
     });
 
-    test('never lets an unreadable trace fail the finalize', () => {
+    // Root reads a mode-000 file anyway, so the case proves nothing there.
+    (process.getuid() === 0 ? test.skip : test)('never lets an unreadable trace fail the finalize', () => {
       const root = project();
-      // A directory where the trace file should be: readFileSync throws EISDIR.
-      fs.mkdirSync(path.join(root, '.mobile-automator', '.logs', 'run-run_20260905_141506.ndjson'));
+      // A trace nobody may read: the open fails EACCES.
+      const file = path.join(root, '.mobile-automator', '.logs', 'run-run_20260905_141506.ndjson');
+      fs.writeFileSync(file, '{}\n');
+      fs.chmodSync(file, 0o000);
       const r = handleResultFinalize(deps(root), { runId: 'run_20260905_141506', duration: '9' });
       expect(r.exitKind).toBe('ok');
       expect(r.envelope.data.duration_seconds).toBe(9);
+    });
+
+    // #363: a refused trace is not "no trace". A directory or a link where the
+    // trace should be is a planted path, and finalize fails environment
+    // without writing the result.
+    test('a refused trace fails the finalize environment', () => {
+      const root = project();
+      fs.mkdirSync(path.join(root, '.mobile-automator', '.logs', 'run-run_20260905_141508.ndjson'));
+      expect(() => handleResultFinalize(deps(root), { runId: 'run_20260905_141508', duration: '9' }))
+        .toThrow(expect.objectContaining({ code: 'EUNSAFEPATH', kind: 'environment' }));
     });
 
     test('prunes stale traces but never the one it just measured', () => {
