@@ -1021,15 +1021,9 @@ function handleConfigSet({ projectRoot, env = process.env, store = selectionStor
     };
   }
   if (key === 'engine') return setEngine({ projectRoot, env, store }, value);
+  if (key === 'telemetry.enabled') return setTelemetryKey({ projectRoot, env }, value);
   configManager.set(projectRoot, key, value);
-  // #348: `config set` changes the project's config and nothing else, so
-  // setting the opt-in key here records no consent. Said in-band, because the
-  // write succeeding reads like telemetry turning on.
-  const hint =
-    key === 'telemetry.enabled' && value === true
-      ? 'This changes only the project config; it records no consent. Telemetry stays off on this machine unless `mauto telemetry enable` has recorded your consent, outside the repository.'
-      : null;
-  return { envelope: ok({ key, value }, hint), exitKind: 'ok' };
+  return { envelope: ok({ key, value }, null), exitKind: 'ok' };
 }
 
 // #251: switching the engine invalidates device ids — the default robot lists
@@ -1140,6 +1134,19 @@ const DISABLE_SESSION_HINT =
 function handleTelemetryDisable({ projectRoot, env = process.env }) {
   observeTelemetry.setEnabled(projectRoot, false, env);
   return { envelope: ok(telemetryReport({ projectRoot, env }), DISABLE_SESSION_HINT), exitKind: 'ok' };
+}
+
+// `mauto config set telemetry.enabled <value>` (#348). By decision it changes
+// the project's config and nothing else, so setting the opt-in key here
+// records no consent. Said in-band, because the write succeeding reads like
+// telemetry turning on.
+const CONFIG_OPT_IN_HINT =
+  'This changes only the project config; it records no consent. Telemetry stays off on this machine unless `mauto telemetry enable` has recorded your consent, outside the repository.';
+
+function setTelemetryKey({ projectRoot }, value) {
+  observeTelemetry.setConfigOptIn(projectRoot, value);
+  const hint = value === true ? CONFIG_OPT_IN_HINT : null;
+  return { envelope: ok({ key: 'telemetry.enabled', value }, hint), exitKind: 'ok' };
 }
 
 // The explicit escape hatch. This is the ONE verb allowed a network round trip,

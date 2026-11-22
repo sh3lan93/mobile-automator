@@ -170,15 +170,25 @@ function decideForProject(projectRoot, env = process.env) {
 // failed write cannot leave a stale decision, and it is surgical: the affected
 // root's key only; other roots' cached decisions survive.
 //
-// `config set` cannot route through this: its raw CLI strings need coerceValue
-// first, so that write stays in cli.js. It writes the config key only, never
-// the consent record. That path does not invalidate, and stays harmless for as
-// long as nothing seeds the cache before a handler's own report in a one-shot
-// verb process.
+// `mauto config set telemetry.enabled` does not come through here, by
+// decision (#348): it changes the project's config, and consent is a separate,
+// per-user act that only `mauto telemetry enable` records. It goes through
+// setConfigOptIn below.
 function setEnabled(projectRoot, value, env = process.env) {
   try {
     configManager.set(projectRoot, 'telemetry.enabled', value);
     setLocalConsent(projectRoot, value, { env });
+  } finally {
+    cache.delete(String(projectRoot));
+  }
+}
+
+// The write behind `mauto config set telemetry.enabled`: the config key only,
+// never the consent record. Owned here so it invalidates the cached decision
+// like setEnabled does.
+function setConfigOptIn(projectRoot, value) {
+  try {
+    configManager.set(projectRoot, 'telemetry.enabled', value);
   } finally {
     cache.delete(String(projectRoot));
   }
@@ -212,6 +222,7 @@ module.exports = {
   decideForProject,
   DECISION_MAX_AGE_MS,
   setEnabled,
+  setConfigOptIn,
   _resetMemo,
   sentFields,
   neverSentFields,

@@ -1578,6 +1578,26 @@ describe('cli handlers', () => {
         expect(r.envelope.hint).toBeUndefined();
       });
 
+      test('false invalidates a cached decision for that project at once', () => {
+        const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-tel-'));
+        fs.mkdirSync(path.join(projectRoot, '.mobile-automator'), { recursive: true });
+        fs.writeFileSync(
+          path.join(projectRoot, '.mobile-automator', 'config.json'),
+          JSON.stringify({ telemetry: { enabled: true } }, null, 2)
+        );
+        const env = userConfigEnv({ MAUTO_TELEMETRY_TOKEN: 'phc_real' });
+        grantLocalConsent(projectRoot, env);
+        // Frozen clock: only the write can end the cached decision, not its age.
+        jest.useFakeTimers();
+        try {
+          expect(telemetry.decideForProject(projectRoot, env)).toEqual({ enabled: true, reason: 'enabled' });
+          handleConfigSet({ projectRoot, env }, 'telemetry.enabled', 'false');
+          expect(telemetry.decideForProject(projectRoot, env)).toEqual({ enabled: false, reason: 'not_configured' });
+        } finally {
+          jest.useRealTimers();
+        }
+      });
+
       test('other keys carry no hint', () => {
         const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cfg-tel-'));
         const r = handleConfigSet({ projectRoot, env: userConfigEnv() }, 'project_name', 'Demo');
