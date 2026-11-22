@@ -52,7 +52,7 @@ describe('the hash is byte-exact (#275)', () => {
   test.each([
     ['LF, non-ASCII', JSON.stringify(SCENARIO, null, 2) + '\n'],
     ['CRLF, non-ASCII', JSON.stringify(SCENARIO, null, 2).replace(/\n/g, '\r\n') + '\r\n'],
-    ['escaped non-ASCII, no newline', JSON.stringify(SCENARIO).replace(/[^\x00-\x7f]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`)],
+    ['escaped non-ASCII, no newline', JSON.stringify(SCENARIO).replace(/[^ -~\s]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`)],
   ])('%s', (_name, text) => {
     for (const file of [path.join(ws, 'scenarios', 'x.json'), path.join(root, 'x.json'), path.join(outside, 'x.json')]) {
       fs.writeFileSync(file, text);
