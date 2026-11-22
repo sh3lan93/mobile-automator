@@ -20,23 +20,15 @@ const path = require('path');
 
 const { TypedRefusal } = require('../output/typed-refusal');
 const { isInside, openUserLeaf, safeDir, userFile } = require('./safe-fs');
+// realpath or null, not realOrResolved: a root with no realpath is skipped,
+// since it cannot contain a directory that exists.
+const { realpathOrNull } = require('../util/real-or-resolved');
 
 // A path the user chose that the rule refuses: their input is wrong, not the
 // checkout, so invalid_input (exit 3), with a hint naming the allowed roots.
 class OutputPathRefusal extends TypedRefusal {
   constructor(message, hint) {
     super('invalid_input', message, hint);
-  }
-}
-
-// realpath, or null when there is none. Unlike session-paths' realOrResolved,
-// which falls back to the resolved path, a root with no realpath is skipped:
-// it cannot contain a directory that exists.
-function realpathOrNull(p) {
-  try {
-    return fs.realpathSync(p);
-  } catch (_) {
-    return null;
   }
 }
 
