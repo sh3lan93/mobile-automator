@@ -46,7 +46,7 @@ const mode = (p) => fs.lstatSync(p).mode & 0o777;
 function shortRoot() {
   const root = path.join(base, 'p');
   fs.mkdirSync(root);
-  if (paths.socketPath(root, { env: {} }) !== paths.workspaceSocketPath(root)) {
+  if (!paths.socketLocation(root, { env: {} }).inWorkspace) {
     throw new Error(`os.tmpdir() is too long for an in-workspace socket fixture: ${root}`);
   }
   return root;
@@ -60,8 +60,11 @@ function longRoot() {
   const xdg = path.join(base, 'xdg');
   fs.mkdirSync(xdg, { mode: 0o700 });
   const deps = { env: { XDG_RUNTIME_DIR: xdg } };
-  expect(Buffer.byteLength(paths.workspaceSocketPath(root))).toBeGreaterThan(paths.SOCKET_PATH_LIMIT);
-  expect(paths.socketPath(root, deps)).toBe(path.join(xdg, 'mauto', `${paths.workspaceKey(root)}.sock`));
+  expect(paths.socketLocation(root, deps)).toEqual({
+    file: path.join(xdg, 'mauto', `${paths.workspaceKey(root)}.sock`),
+    dir: path.join(xdg, 'mauto'),
+    inWorkspace: false,
+  });
   return { root, deps, fallbackDir: path.join(xdg, 'mauto') };
 }
 

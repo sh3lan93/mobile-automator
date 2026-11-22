@@ -188,12 +188,12 @@ function countingServer() {
 // os.tmpdir(): macOS's long tmpdir pushes the in-workspace socket past the limit.
 function shortRoot() {
   const root = fs.mkdtempSync(path.join('/tmp', 'mc-'));
-  expect(paths.socketPath(root)).toBe(paths.workspaceSocketPath(root));
+  expect(paths.socketLocation(root).inWorkspace).toBe(true);
   return root;
 }
 function deepRoot() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-client-deep-'.padEnd(60, 'x')));
-  expect(paths.socketPath(root)).not.toBe(paths.workspaceSocketPath(root));
+  expect(paths.socketLocation(root).inWorkspace).toBe(false);
   return root;
 }
 

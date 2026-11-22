@@ -8,9 +8,7 @@ const { openDaemonLog, IGNORED, MAX_LOG_BYTES } = require('../../../src/device/s
 const {
   sessionDir,
   logFilePath,
-  socketPath,
-  workspaceSocketPath,
-  privateSocketDir,
+  socketLocation,
 } = require('../../../src/device/session-paths');
 const { usePrivateRuntimeDir } = require('../../helpers/private-runtime-dir');
 
@@ -279,8 +277,8 @@ describe('session-log', () => {
   test('a deep root whose fallback socket directory is refused still gets its log', () => {
     const root = path.join(newRoot(), 'd'.repeat(80));
     fs.mkdirSync(root);
-    expect(socketPath(root)).not.toBe(workspaceSocketPath(root));
-    const fallbackDir = privateSocketDir();
+    const { dir: fallbackDir, inWorkspace } = socketLocation(root);
+    expect(inWorkspace).toBe(false);
     // The fallback directory reads as another user's. Only lstat is wrapped, and
     // only for that path, so nothing is created or changed there.
     const fsx = {

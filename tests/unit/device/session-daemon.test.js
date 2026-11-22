@@ -259,9 +259,9 @@ describe('session-daemon private files (#346)', () => {
     const { createCall } = makeFakeCreateCall();
     const daemon = await startDaemon({ projectRoot: root, idleMs: 0, createCall });
     try {
-      const sock = daemon.socketPath;
-      const inWorkspace = sock === paths.workspaceSocketPath(root);
-      expect(inWorkspace || sock.startsWith(runtimeDir() + path.sep)).toBe(true);
+      const { file, inWorkspace } = paths.socketLocation(root);
+      expect(daemon.socketPath).toBe(file);
+      expect(inWorkspace || file.startsWith(runtimeDir() + path.sep)).toBe(true);
     } finally {
       await daemon.stop();
     }

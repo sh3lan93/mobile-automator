@@ -64,13 +64,26 @@ function privateSocketDir({ env = process.env, getuid = process.getuid } = {}) {
   return path.join(os.tmpdir(), `mauto-${getuid()}`);
 }
 
-// The path the daemon binds and the client connects to. Deterministic from the
-// project root (and, for the fallback, the user's env and uid) so both sides
-// agree without reading the handle. `deps` ({ env, getuid }) is for tests.
+// Where the session socket lives, decided once, here (#346). `file` is the
+// path the daemon binds and the client connects to; `dir` is the directory
+// that must be private; `inWorkspace` says which of the two it is: the
+// workspace's .session/ (checked by a workspace walk) or the per-user fallback
+// (checked outside the workspace, with no owner override). Deterministic from
+// the project root (and, for the fallback, the user's env and uid) so both
+// sides agree without reading the handle. `deps` ({ env, getuid }) is for
+// tests. The limit is in bytes, as the kernel counts it.
+function socketLocation(projectRoot, deps = {}) {
+  const file = workspaceSocketPath(projectRoot);
+  if (Buffer.byteLength(file) <= SOCKET_PATH_LIMIT) {
+    return { file, dir: sessionDir(projectRoot), inWorkspace: true };
+  }
+  const dir = privateSocketDir(deps);
+  return { file: path.join(dir, `${workspaceKey(projectRoot)}.sock`), dir, inWorkspace: false };
+}
+
+// The socket path alone, for callers that only bind, connect or unlink it.
 function socketPath(projectRoot, deps = {}) {
-  const inWorkspace = workspaceSocketPath(projectRoot);
-  if (Buffer.byteLength(inWorkspace) <= SOCKET_PATH_LIMIT) return inWorkspace;
-  return path.join(privateSocketDir(deps), `${workspaceKey(projectRoot)}.sock`);
+  return socketLocation(projectRoot, deps).file;
 }
 
 // A short, deterministic name for a workspace: the first 16 hex chars of
@@ -214,6 +227,7 @@ module.exports = {
   sessionDir,
   workspaceSocketPath,
   privateSocketDir,
+  socketLocation,
   socketPath,
   logFilePath,
   pidFilePath,

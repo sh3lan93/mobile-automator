@@ -19,14 +19,8 @@
 //
 // Every check is safe-fs's; this module only says which apply where.
 
-const path = require('path');
-
 const paths = require('./session-paths');
 const { safeDir, privateDir, privateWorkspaceDir, checkOwnSocket } = require('../workspace/safe-fs');
-
-function usesFallback(projectRoot, deps) {
-  return paths.socketPath(projectRoot, deps) !== paths.workspaceSocketPath(projectRoot);
-}
 
 // Create (or tighten, from the 0755 an older mauto made) .session/ alone, and
 // return only once it is proven link-free and 0700. Throws UnsafePathError on
@@ -43,7 +37,8 @@ function ensureSessionDir(projectRoot, deps = {}) {
 // reaches session-paths.
 function ensureSessionDirs(projectRoot, deps = {}) {
   ensureSessionDir(projectRoot, deps);
-  if (usesFallback(projectRoot, deps)) privateDir(paths.privateSocketDir(deps), { create: true }, deps);
+  const { dir, inWorkspace } = paths.socketLocation(projectRoot, deps);
+  if (!inWorkspace) privateDir(dir, { create: true }, deps);
 }
 
 // May the client connect to this workspace's socket? True only when its
@@ -54,13 +49,10 @@ function ensureSessionDirs(projectRoot, deps = {}) {
 // is false.
 function verifySocket(projectRoot, deps = {}) {
   try {
-    const sock = paths.socketPath(projectRoot, deps);
-    if (usesFallback(projectRoot, deps)) {
-      privateDir(path.dirname(sock), {}, deps);
-    } else {
-      safeDir(projectRoot, paths.sessionDir(projectRoot), { private: true }, deps);
-    }
-    checkOwnSocket(sock, deps);
+    const { file, dir, inWorkspace } = paths.socketLocation(projectRoot, deps);
+    if (inWorkspace) safeDir(projectRoot, dir, { private: true }, deps);
+    else privateDir(dir, {}, deps);
+    checkOwnSocket(file, deps);
     return true;
   } catch (_) {
     return false;

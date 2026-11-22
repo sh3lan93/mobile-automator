@@ -43,7 +43,7 @@ describe('session-paths', () => {
     // log file must NOT follow the socket out to os.tmpdir().
     const deepRoot = '/' + 'deeply-nested-project-dir/'.repeat(6) + 'app';
     const deps = { env: {} };
-    expect(paths.socketPath(deepRoot, deps)).not.toBe(paths.workspaceSocketPath(deepRoot));
+    expect(paths.socketLocation(deepRoot, deps).inWorkspace).toBe(false);
     expect(paths.socketPath(deepRoot, deps).startsWith(os.tmpdir())).toBe(true);
 
     expect(paths.logFilePath(deepRoot)).toBe(
@@ -102,6 +102,58 @@ describe('socketPath fallback in a per-user directory (#346)', () => {
       xdg && path.isAbsolute(xdg) ? path.join(xdg, 'mauto') : path.join(os.tmpdir(), `mauto-${process.getuid()}`);
     expect(paths.privateSocketDir()).toBe(expected);
     expect(paths.socketPath(deepRoot)).toBe(path.join(expected, `${key()}.sock`));
+  });
+});
+
+// #346: one decision for where the socket lives, read by both the daemon
+// (ensureSessionDirs) and the client (verifySocket), so they can never disagree.
+describe('socketLocation (#346)', () => {
+  const deepRoot = '/' + 'deeply-nested-project-dir/'.repeat(6) + 'app';
+  const deps = { env: { XDG_RUNTIME_DIR: '/run/user/1234' }, getuid: () => 1234 };
+  // A root whose in-workspace socket path is exactly `bytes` long.
+  const rootOfSocketBytes = (bytes) => {
+    const tail = paths.workspaceSocketPath('/r').length - '/r'.length;
+    return '/' + 'r'.repeat(bytes - tail - 1);
+  };
+
+  test('a short root: the socket is in .session/, whatever the env says', () => {
+    for (const env of [{}, { XDG_RUNTIME_DIR: '/run/user/1234' }]) {
+      expect(paths.socketLocation('/tmp/proj', { env, getuid: () => 1234 })).toEqual({
+        file: paths.workspaceSocketPath('/tmp/proj'),
+        dir: paths.sessionDir('/tmp/proj'),
+        inWorkspace: true,
+      });
+    }
+  });
+
+  test('a deep root: the socket is in the per-user fallback directory', () => {
+    expect(paths.socketLocation(deepRoot, deps)).toEqual({
+      file: path.join('/run/user/1234', 'mauto', `${paths.workspaceKey(deepRoot)}.sock`),
+      dir: path.join('/run/user/1234', 'mauto'),
+      inWorkspace: false,
+    });
+    expect(paths.socketLocation(deepRoot, { env: {}, getuid: () => 1234 }).dir).toBe(
+      path.join(os.tmpdir(), 'mauto-1234')
+    );
+  });
+
+  test('dir is always the directory holding file, and socketPath is file', () => {
+    for (const root of ['/tmp/proj', deepRoot]) {
+      const loc = paths.socketLocation(root, deps);
+      expect(path.dirname(loc.file)).toBe(loc.dir);
+      expect(paths.socketPath(root, deps)).toBe(loc.file);
+    }
+  });
+
+  test('the limit is inclusive and counted in bytes', () => {
+    const atLimit = rootOfSocketBytes(paths.SOCKET_PATH_LIMIT);
+    expect(Buffer.byteLength(paths.workspaceSocketPath(atLimit))).toBe(paths.SOCKET_PATH_LIMIT);
+    expect(paths.socketLocation(atLimit, deps).inWorkspace).toBe(true);
+    expect(paths.socketLocation(rootOfSocketBytes(paths.SOCKET_PATH_LIMIT + 1), deps).inWorkspace).toBe(false);
+    // The same character count as atLimit, but one character takes two bytes.
+    const wide = '/\u00e9' + atLimit.slice(2);
+    expect(wide.length).toBe(atLimit.length);
+    expect(paths.socketLocation(wide, deps).inWorkspace).toBe(false);
   });
 });
 
