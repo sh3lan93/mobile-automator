@@ -292,6 +292,45 @@ function checkDir(dir, policy, { create = false, mode } = {}, deps = {}) {
   checkDirComponent(dir, lstatOrMkdir(d.fs, dir, create, mode), d, policy);
 }
 
+// The two scopes a path can be confined to, one row each, keyed by the SCOPES
+// name that words their refusals: the bound the directory walk stays within,
+// and whether a destination another process writes (the engine's screenshot)
+// gets its missing directories made. Every confined open, check-only walk and
+// destination check below is one function over this table, so the workspace
+// and the project differ only here.
+//   - workspace: bounded by .mobile-automator/; a destination's directories
+//     are made, like every workspace write.
+//   - path: bounded by the project root (#347, #362); a destination's
+//     directories are not made, as none are for a path the user chose outside
+//     the workspace, so a missing one is reported by the writer as before.
+const CONFINED_SCOPES = Object.freeze({
+  workspace: Object.freeze({ within: (root) => workspaceDir(root), destCreates: true }),
+  path: Object.freeze({ within: (root) => root, destCreates: false }),
+});
+
+// The directory walk of `dir` under a confined scope's bound (see walkDirs).
+// Its refusals are not re-worded here: an entry point wraps them in withScope.
+function walkScope(projectRoot, scope, dir, opts, deps) {
+  return walkDirs(projectRoot, CONFINED_SCOPES[scope].within(projectRoot), dir, opts, resolveDeps(deps));
+}
+
+// A confined open: the walk of the file's directory (creating the missing
+// ones under O_CREAT), then the checked leaf. Returns an fd the caller closes.
+function openInScope(projectRoot, scope, file, flags, mode, deps) {
+  const resolved = path.resolve(file);
+  walkScope(projectRoot, scope, path.dirname(resolved), { create: Boolean(flags & nodeFs.constants.O_CREAT) }, deps);
+  return openOwnedLeaf(resolved, flags, { mode }, deps);
+}
+
+// A confined destination another process writes: the walk of its directory
+// (created or check-only, per the scope's row), then checkDestLeaf. Returns
+// `resolved`.
+function destInScope(projectRoot, scope, resolved, deps) {
+  const dirOpts = CONFINED_SCOPES[scope].destCreates ? { create: true } : { missingOk: true };
+  walkScope(projectRoot, scope, path.dirname(resolved), dirOpts, deps);
+  return checkDestLeaf(resolved, resolveDeps(deps));
+}
+
 // Lexical containment of two resolved paths. The filesystem root is the one
 // parent that already ends in a separator; appending another would make it
 // `//`, inside which nothing lies.
@@ -363,7 +402,7 @@ function checkDeepestExisting(existing, bound, fs) {
 // `dir` itself is checked under `policy` (default WORKSPACE_DIR), every
 // component above it as a WORKSPACE_DIR.
 function safeDir(projectRoot, dir, { create = false, mode, missingOk = false, policy = WORKSPACE_DIR } = {}, deps = {}) {
-  return walkDirs(projectRoot, workspaceDir(projectRoot), dir, { create, mode, missingOk, policy }, resolveDeps(deps));
+  return walkScope(projectRoot, 'workspace', dir, { create, mode, missingOk, policy }, deps);
 }
 
 const OPEN_SYMLINK_CODES = new Set([
@@ -443,9 +482,7 @@ function openOwnedLeaf(file, flags, { mode = 0o666, singleLink = false } = {}, d
 // Returns an fd the caller closes. O_CREAT also creates the missing
 // directories.
 function openWorkspaceFile(projectRoot, file, flags, mode = 0o666, deps = {}) {
-  const resolved = path.resolve(file);
-  safeDir(projectRoot, path.dirname(resolved), { create: Boolean(flags & nodeFs.constants.O_CREAT) }, deps);
-  return openOwnedLeaf(resolved, flags, { mode }, deps);
+  return openInScope(projectRoot, 'workspace', file, flags, mode, deps);
 }
 
 // THE way to create a new workspace file (a temp file, a lock, a sidecar).
@@ -530,14 +567,12 @@ function readWorkspaceFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES } =
 // the way is ours and not world-writable, so only a process already running
 // as the user could swap the leaf in between. Returns the resolved path.
 function safeWorkspaceDest(projectRoot, file, deps = {}) {
-  const resolved = path.resolve(file);
-  safeDir(projectRoot, path.dirname(resolved), { create: true }, deps);
-  return checkDestLeaf(resolved, resolveDeps(deps));
+  return destInScope(projectRoot, 'workspace', path.resolve(file), deps);
 }
 
 // The leaf of a destination another process writes, lstat'd, never opened:
 // absent is fine, anything there must be a regular file of ours with one
-// link. Shared by safeWorkspaceDest and userDest's project scope. Returns
+// link. The leaf half of destInScope, for every confined scope. Returns
 // `resolved`.
 function checkDestLeaf(resolved, d) {
   let st;
@@ -607,10 +642,7 @@ function inWorkspace(projectRoot, file, deps = {}) {
 // instead of the workspace, then the checked leaf. A refusal from either is
 // worded for the 'path' scope (by its callers, which wrap it in withScope).
 function openProjectFile(projectRoot, file, flags, mode, deps) {
-  const resolved = path.resolve(file);
-  const create = Boolean(flags & nodeFs.constants.O_CREAT);
-  walkDirs(projectRoot, projectRoot, path.dirname(resolved), { create }, resolveDeps(deps));
-  return openOwnedLeaf(resolved, flags, { mode }, deps);
+  return openInScope(projectRoot, 'path', file, flags, mode, deps);
 }
 
 // readWorkspaceFile's project-rooted twin: utf8, null when the file or a
@@ -662,29 +694,23 @@ function userDir(projectRoot, dir, { create = false } = {}, deps = {}) {
 }
 
 // A file another process writes at a path the user chose (the engine's
-// screenshot). In the workspace, safeWorkspaceDest. In the project, the
-// project walk, creating nothing (a missing directory is nothing to refuse,
-// and the engine reports it as it always has), then safeWorkspaceDest's leaf
-// check, worded in the 'path' scope (#362). Outside, the resolved path
-// byte-for-byte. Returns the path to hand over.
+// screenshot). In the workspace or the project, destInScope under its row of
+// CONFINED_SCOPES (#362: in the project the walk creates nothing, then the
+// same leaf check), a refusal worded for the scope. Outside, the resolved
+// path byte-for-byte. Returns the path to hand over.
 function userDest(projectRoot, file, deps = {}) {
-  const target = userPath(projectRoot, file, deps);
-  if (target.scope === 'workspace') return safeWorkspaceDest(projectRoot, target.path, deps);
-  if (target.scope === 'outside') return target.path;
-  const d = resolveDeps(deps);
-  return withScope('path', () => {
-    walkDirs(projectRoot, projectRoot, path.dirname(target.path), { missingOk: true }, d);
-    return checkDestLeaf(target.path, d);
-  });
+  const { path: dest, scope } = userPath(projectRoot, file, deps);
+  if (scope === 'outside') return dest;
+  return withScope(scope, () => destInScope(projectRoot, scope, dest, deps));
 }
 
 // A file mauto writes itself at a path the user chose: userPath's `path`,
 // and `scope`, plus
 //   - `open(file, flags, mode)` for it or a sibling in the same directory (a
-//     temp file). In the workspace openWorkspaceFile; in the project
-//     openProjectFile (#362), a refusal worded in the 'path' scope. Both walk
-//     every directory (created under O_CREAT, never through a link) and then
-//     open the checked leaf. Outside, O_CREAT makes the directory with a plain
+//     temp file). In the workspace or the project (#362), openInScope under
+//     its row of CONFINED_SCOPES, a refusal worded for the scope: every
+//     directory walked (created under O_CREAT, never through a link), then
+//     the checked leaf. Outside, O_CREAT makes the directory with a plain
 //     recursive mkdir and the leaf is still opened O_NOFOLLOW, ours and with
 //     one link, a refusal worded in the 'path' scope. Returns an fd the
 //     caller closes.
@@ -694,22 +720,14 @@ function userDest(projectRoot, file, deps = {}) {
 //     no-op outside the project.
 function userFile(projectRoot, file, deps = {}) {
   const target = userPath(projectRoot, file, deps);
-  const dir = path.dirname(target.path);
-  if (target.scope === 'workspace') {
+  const { scope } = target;
+  if (scope !== 'outside') {
+    const dir = path.dirname(target.path);
     return {
       ...target,
-      open: (f, flags, mode = 0o666) => openWorkspaceFile(projectRoot, f, flags, mode, deps),
+      open: (f, flags, mode = 0o666) => withScope(scope, () => openInScope(projectRoot, scope, f, flags, mode, deps)),
       preflight: () => {
-        safeDir(projectRoot, dir, { missingOk: true }, deps);
-      },
-    };
-  }
-  if (target.scope === 'path') {
-    return {
-      ...target,
-      open: (f, flags, mode = 0o666) => withScope('path', () => openProjectFile(projectRoot, f, flags, mode, deps)),
-      preflight: () => {
-        withScope('path', () => walkDirs(projectRoot, projectRoot, dir, { missingOk: true }, resolveDeps(deps)));
+        withScope(scope, () => walkScope(projectRoot, scope, dir, { missingOk: true }, deps));
       },
     };
   }
