@@ -330,6 +330,51 @@ describe('findWorkspaceRoot refuses an unsafe workspace (#346)', () => {
     expect(r.searched).toEqual([child]);
   });
 
+  // Only a planted path is refused, and only a known fs condition adopts:
+  // anything else is not quietly read as "safe" (#346).
+  test('an unreadable marker (EACCES) adopts the workspace', () => {
+    const root = tmpProject();
+    makeWorkspace(root);
+    const denied = {
+      ...fs,
+      openSync: () => {
+        throw Object.assign(new Error('EACCES: permission denied'), { code: 'EACCES' });
+      },
+    };
+    expect(findWorkspaceRoot(root, { fs: denied })).toEqual({ root, searched: [root], legacy: null });
+  });
+
+  test('a marker that raced away after existsSync (ENOENT) adopts the workspace', () => {
+    const root = tmpProject();
+    makeWorkspace(root);
+    const raced = {
+      ...fs,
+      openSync: () => {
+        throw Object.assign(new Error('ENOENT: no such file'), { code: 'ENOENT' });
+      },
+    };
+    expect(findWorkspaceRoot(root, { fs: raced }).root).toBe(root);
+  });
+
+  test('any other error propagates: a TypeError from an incomplete injected fs', () => {
+    const root = tmpProject();
+    makeWorkspace(root);
+    const incomplete = { existsSync: fs.existsSync };
+    expect(() => findWorkspaceRoot(root, { fs: incomplete })).toThrow(TypeError);
+  });
+
+  test('so does an unknown fs code (EMFILE)', () => {
+    const root = tmpProject();
+    makeWorkspace(root);
+    const exhausted = {
+      ...fs,
+      openSync: () => {
+        throw Object.assign(new Error('EMFILE: too many open files'), { code: 'EMFILE' });
+      },
+    };
+    expect(() => findWorkspaceRoot(root, { fs: exhausted })).toThrow('EMFILE');
+  });
+
   test('workspaceFailure renders environment with the refusal message and hint', () => {
     const root = tmpProject();
     makeWorkspace(root);

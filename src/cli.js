@@ -2771,7 +2771,16 @@ async function run(argv) {
   // No workspace found falls back to cwd for the verbs that tolerate that;
   // buildProgram fails the ones that cannot (#188).
   const cwd = process.cwd();
-  const workspace = findWorkspaceRoot(cwd);
+  let workspace;
+  try {
+    workspace = findWorkspaceRoot(cwd);
+  } catch (err) {
+    // Discovery throws only what it cannot classify (EMFILE, a bug): the
+    // normal fatal envelope, rooted at cwd, never an unhandled rejection.
+    activeEmitters = makeEmitters({ projectRoot: cwd });
+    activeEmitters.emitFatal(err, argv.slice(2).includes('--human'));
+    return;
+  }
   const projectRoot = workspace.root || cwd;
   const emitters = makeEmitters({ projectRoot });
   activeEmitters = emitters;

@@ -39,17 +39,27 @@ function legacyMarkerPath(dir) {
   return path.join(dir, LEGACY_WORKSPACE_DIRNAME, 'config.json');
 }
 
-// The refusal for a workspace at `dir`, or null when it is safe (or the
-// vetting failed some other way: see findWorkspaceRoot).
+// The fs codes that let discovery adopt a workspace it could not finish
+// vetting: the marker raced away after existsSync saw it (ENOENT), or a
+// directory or the marker is unreadable (EACCES, EPERM). None of them is a
+// planted path, and the verb's own safe-fs read reports the real problem.
+const ADOPT_UNVETTED_CODES = new Set(['ENOENT', 'EACCES', 'EPERM']);
+
+// Is the workspace at `dir` safe to adopt? `{ adopt: true }` when it is (or
+// could not be vetted for one of the reasons above); `{ adopt: false, unsafe }`
+// with the refusal when it is not. Any other error (EMFILE, a bug) propagates:
+// discovery never reads an unknown failure as "safe".
 function vetWorkspace(dir, deps) {
   try {
     safeDir(dir, workspaceDir(dir), {}, deps);
     const fd = openWorkspaceFile(dir, markerPath(dir), fsConstants.O_RDONLY, 0o666, deps);
     deps.fs.closeSync(fd);
   } catch (err) {
-    if (err instanceof UnsafePathError) return err;
+    if (err instanceof UnsafePathError) return { adopt: false, unsafe: err };
+    if (err && ADOPT_UNVETTED_CODES.has(err.code)) return { adopt: true };
+    throw err;
   }
-  return null;
+  return { adopt: true };
 }
 
 // Walk up from `startDir` and return the NEAREST directory holding a workspace.
@@ -77,8 +87,8 @@ function vetWorkspace(dir, deps) {
 // the directory walk, then a read-only open of config.json. An unsafe
 // workspace STOPS the walk with `unsafe` set (the refusal itself) and no root;
 // continuing to a safe ancestor would silently run against the wrong project.
-// Any other vetting error (a race, EACCES) adopts it as before: the verb's own
-// read will report the real problem.
+// A race or an unreadable path (ENOENT, EACCES, EPERM) adopts it as before:
+// the verb's own read will report the real problem. Any other error throws.
 function findWorkspaceRoot(startDir, { fs = require('fs'), getuid, env } = {}) {
   const deps = { fs, getuid, env };
   const searched = [];
@@ -86,8 +96,8 @@ function findWorkspaceRoot(startDir, { fs = require('fs'), getuid, env } = {}) {
   for (;;) {
     searched.push(dir);
     if (fs.existsSync(markerPath(dir))) {
-      const unsafe = vetWorkspace(dir, deps);
-      if (unsafe) return { root: null, searched, legacy: null, unsafe };
+      const vetted = vetWorkspace(dir, deps);
+      if (!vetted.adopt) return { root: null, searched, legacy: null, unsafe: vetted.unsafe };
       return { root: dir, searched, legacy: null };
     }
     if (fs.existsSync(legacyMarkerPath(dir))) return { root: null, searched, legacy: dir };
