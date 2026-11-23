@@ -16,7 +16,8 @@ const { atCap } = require('./sinks/file');
 const { settledLeaf } = require('./append');
 const { logsDir, runTracePath, RUN_TRACE_PREFIX } = require('./paths');
 const { MAX_LOG_BYTES } = require('../util/log-rotate');
-const { userDir, UnsafePathError } = require('../workspace/safe-fs');
+const { userDir } = require('../workspace/safe-fs');
+const { isTypedRefusal } = require('../output/typed-refusal');
 
 // A device failure in the envelope's own taxonomy. `deviceFail` (src/output/device-fail.js) is
 // the ONLY producer of these two kinds, so counting them needs no list of which
@@ -69,7 +70,7 @@ function readTrace(tracePath, { projectRoot, fs = realFs } = {}) {
   } catch (err) {
     // Required: safe-fs's TypeError for a missing projectRoot is a bug, never
     // "no trace".
-    if (err instanceof TypeError || err instanceof UnsafePathError) throw err;
+    if (err instanceof TypeError || isTypedRefusal(err)) throw err;
     text = null;
   }
   // No trace for this run: an ordinary, expected state (MAUTO_RUN_ID unset,
