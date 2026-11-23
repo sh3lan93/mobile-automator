@@ -31,26 +31,20 @@ const fs = require('fs');
 const path = require('path');
 const { isDeepStrictEqual } = require('util');
 
+const { parseVersion, compareVersions, compareCores, highestRelease } = require('./version-order');
+const { gitTags } = require('./version-gate');
+
 const CHANGELOG = 'CHANGELOG.md';
 const PACKAGE = 'package.json';
 const LOCK = 'package-lock.json';
 
 class HandMerge extends Error {}
 
-function parseVersion(version) {
-  const match = /^(\d+)\.(\d+)\.(\d+)(-.+)?$/.exec(version);
-  if (!match) throw new HandMerge(`cannot parse version "${version}"`);
-  return {
-    core: [Number(match[1]), Number(match[2]), Number(match[3])],
-    prerelease: Boolean(match[4]),
-  };
-}
-
-function compareCores(a, b) {
-  for (let i = 0; i < 3; i += 1) {
-    if (a[i] !== b[i]) return a[i] - b[i];
-  }
-  return 0;
+// An unparseable version is left to a human.
+function parseOrHandMerge(version) {
+  const parsed = parseVersion(version);
+  if (!parsed) throw new HandMerge(`cannot parse version "${version}"`);
+  return parsed;
 }
 
 // The position (0 major, 1 minor, 2 patch) of the first number the branch moved.
@@ -66,23 +60,49 @@ function bump(core, level) {
   });
 }
 
+const LEVELS = ['major', 'minor', 'patch'];
+
 // The version the branch should carry once `theirs` is merged: its own if that
-// is still free and ahead, otherwise the same size of bump on top of the base.
-function nextVersion({ ancestor, ours, theirs, isTagged }) {
+// is still ahead of the base and above the highest release tag, otherwise the
+// same size of bump on top of the base, or failing that on top of the highest
+// tag. It is computed once from highestRelease(tags), never probed for.
+//
+// "Above the highest tag" is the version gate's rule (#369): the gate accepts a
+// version that is untagged and greater than the highest tag, and a tagged one
+// is never greater, so greater-than alone is the same rule. sync never picks a
+// version the gate would then reject: see sync() below.
+//
+// When the base's bump is not above the highest tag, the answer is the same
+// bump on the tag itself, provided the tag agrees with the bump above its size.
+// If the tag is on a newer minor or major than the branch's bump size (an rc
+// line, 0.41.0-rc.1, past a patch bump), no bump of that size reaches it and a
+// human chooses.
+function nextVersion({ ancestor, ours, theirs, tags }) {
   if (ours === ancestor) return theirs;
 
-  const o = parseVersion(ours);
-  const t = parseVersion(theirs);
-  if (compareCores(o.core, t.core) > 0 && !isTagged(ours)) return ours;
+  const highest = highestRelease(tags);
+  const above = (version) => highest === null || compareVersions(version, highest.version) > 0;
+  const o = parseOrHandMerge(ours);
+  const t = parseOrHandMerge(theirs);
+  if (compareCores(o.core, t.core) > 0 && above(ours)) return ours;
 
-  if (o.prerelease || t.prerelease) {
+  if (o.prerelease.length > 0 || t.prerelease.length > 0) {
     throw new HandMerge(`rc version ${ours} needs a number chosen by hand (base is ${theirs})`);
   }
 
-  const level = bumpLevel(parseVersion(ancestor).core, o.core);
-  let candidate = bump(t.core, level);
-  while (isTagged(candidate.join('.'))) candidate = bump(candidate, level);
-  return candidate.join('.');
+  const level = bumpLevel(parseOrHandMerge(ancestor).core, o.core);
+  const candidate = bump(t.core, level);
+  if (above(candidate.join('.'))) return candidate.join('.');
+
+  // Not above, so some tag is at or above candidate: highest is never null here.
+  if (highest.parsed.core.some((n, i) => i < level && n !== candidate[i])) {
+    throw new HandMerge(
+      `highest release tag ${highest.tag} is past a ${LEVELS[level]} bump on ${theirs}; choose the version by hand`,
+    );
+  }
+  // The tag agrees with candidate above `level` and is at or above it, so
+  // bumping the tag at `level` moves past it (prerelease or not).
+  return bump(highest.parsed.core, level).join('.');
 }
 
 // Split into the text before the first `## [` heading and one entry per section,
@@ -219,6 +239,10 @@ function sync({ cwd, base = 'origin/main', fetch = true, npm = refreshLockfile, 
     };
   })();
 
+  // Free means what the version gate accepts: above every release tag, read
+  // once through the gate's own tag reader.
+  const tags = gitTags(cwd);
+
   raw('merge', '--no-commit', '--no-ff', '--no-edit', base);
   if (raw('rev-parse', '-q', '--verify', 'MERGE_HEAD').status !== 0) {
     throw new Error(`git could not start merging ${base}`);
@@ -244,10 +268,7 @@ function sync({ cwd, base = 'origin/main', fetch = true, npm = refreshLockfile, 
 
   let newVersion;
   try {
-    newVersion = nextVersion({
-      ...versions,
-      isTagged: (v) => run('tag', '--list', `v${v}`) !== '',
-    });
+    newVersion = nextVersion({ ...versions, tags });
   } catch (err) {
     if (!(err instanceof HandMerge)) throw err;
     log(`left for you: version (${err.message})`);

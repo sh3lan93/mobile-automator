@@ -55,35 +55,12 @@ jobs:
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
           echo "Detected version: $VERSION (tag: v$VERSION)"
 
-      - name: Check version is not already tagged
-        run: |
-          VERSION="${{ steps.get_version.outputs.version }}"
-          TAG="${{ steps.get_version.outputs.tag }}"
+      - name: Fetch release tags
+        run: git fetch --tags
 
-          # Fetch all remote tags
-          git fetch --tags
-
-          if git rev-parse "$TAG" > /dev/null 2>&1; then
-            echo ""
-            echo "❌ Version check failed"
-            echo "────────────────────────────────────────"
-            echo "  Version $VERSION is already released (tag '$TAG' exists)."
-            echo ""
-            echo "  PRs that change CLI code must bump the version in"
-            echo "  package.json to a value not yet in the tags."
-            echo ""
-            echo "  CLI code paths:"
-            echo "    src/, bin/, package.json"
-            echo ""
-            echo "  Current tags:"
-            git tag --sort=-version:refname | head -10
-            echo "────────────────────────────────────────"
-            exit 1
-          else
-            echo ""
-            echo "✅ Version check passed"
-            echo "────────────────────────────────────────"
-            echo "  Version $VERSION (tag '$TAG') is not yet released."
-            echo "  This PR is clear to merge."
-            echo "────────────────────────────────────────"
-          fi
+      # Fails when the version is already tagged or is not greater than the
+      # highest release tag (#369): 0.40.13 once passed after v0.40.14 shipped.
+      - name: Check version is ahead of every release tag
+        env:
+          VERSION: ${{ steps.get_version.outputs.version }}
+        run: node scripts/version-gate.js "$VERSION" --mode pr

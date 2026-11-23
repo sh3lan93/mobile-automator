@@ -11,45 +11,81 @@ const {
   sync,
   main,
 } = require('../../scripts/sync-branch');
+const { decide } = require('../../scripts/version-gate');
 
 const changelog = (...sections) =>
   `# Changelog\n\nIntro.\n\n---\n\n${sections.map(([v, body]) => `## [${v}]\n\n${body}\n\n---\n\n`).join('')}`;
 
 describe('nextVersion', () => {
-  const none = () => false;
-
-  test('keeps the branch version when it is ahead of base and untagged', () => {
-    expect(nextVersion({ ancestor: '0.37.0', ours: '0.38.0', theirs: '0.37.1', isTagged: none })).toBe('0.38.0');
+  test('keeps the branch version when it is ahead of base and free', () => {
+    expect(nextVersion({ ancestor: '0.37.0', ours: '0.38.0', theirs: '0.37.1', tags: [] })).toBe('0.38.0');
   });
 
   test('re-applies a patch bump on top of a base that took the same version', () => {
-    expect(nextVersion({ ancestor: '0.37.0', ours: '0.37.1', theirs: '0.37.1', isTagged: none })).toBe('0.37.2');
+    expect(nextVersion({ ancestor: '0.37.0', ours: '0.37.1', theirs: '0.37.1', tags: [] })).toBe('0.37.2');
   });
 
   test('re-applies a minor bump on top of a base that moved past it', () => {
-    expect(nextVersion({ ancestor: '0.37.0', ours: '0.38.0', theirs: '0.38.1', isTagged: none })).toBe('0.39.0');
+    expect(nextVersion({ ancestor: '0.37.0', ours: '0.38.0', theirs: '0.38.1', tags: [] })).toBe('0.39.0');
   });
 
-  test('skips a version that is already tagged', () => {
-    const isTagged = (v) => v === '0.37.2';
-    expect(nextVersion({ ancestor: '0.37.0', ours: '0.37.1', theirs: '0.37.1', isTagged })).toBe('0.37.3');
+  test('skips a version that is not free', () => {
+    expect(nextVersion({ ancestor: '0.37.0', ours: '0.37.1', theirs: '0.37.1', tags: ['v0.37.2'] })).toBe('0.37.3');
   });
 
-  test('a kept version that is already tagged is renumbered', () => {
-    const isTagged = (v) => v === '0.38.0';
-    expect(nextVersion({ ancestor: '0.37.0', ours: '0.38.0', theirs: '0.37.1', isTagged })).toBe('0.39.0');
+  test('a kept version that is not free is renumbered', () => {
+    expect(nextVersion({ ancestor: '0.37.0', ours: '0.38.0', theirs: '0.37.1', tags: ['v0.38.0'] })).toBe('0.39.0');
+  });
+
+  // #369 review: 0.40.15 is untagged and ahead of main's 0.40.13, but v0.40.16
+  // shipped, so the gate would reject it. Free means what the gate accepts.
+  test('free is the gate\'s rule: an untagged version below the highest tag is not kept', () => {
+    const tags = ['v0.40.12', 'v0.40.14', 'v0.40.16'];
+    expect(nextVersion({ ancestor: '0.40.12', ours: '0.40.15', theirs: '0.40.13', tags })).toBe('0.40.17');
+  });
+
+  test('every version it picks is one the gate accepts', () => {
+    const tags = ['v0.40.12', 'v0.40.14', 'v0.40.16'];
+    const picked = nextVersion({ ancestor: '0.40.12', ours: '0.40.15', theirs: '0.40.13', tags });
+    expect(decide(picked, tags).decision).toBe('ahead');
+  });
+
+  // #369 review: a patch bump can never step past an rc on the next minor, so
+  // probing patch after patch looped forever. It is computed now, with no loop.
+  test('a patch bump below a higher-minor rc tag is left to a human, not probed forever', () => {
+    const tags = ['v0.40.19', 'v0.41.0-rc.1'];
+    const call = () => nextVersion({ ancestor: '0.40.18', ours: '0.40.19', theirs: '0.40.19', tags });
+    expect(call).toThrow(HandMerge);
+    expect(call).toThrow(/v0\.41\.0-rc\.1/);
+  });
+
+  test('a patch bump below a higher-major tag is left to a human', () => {
+    const tags = ['v0.40.19', 'v1.0.0'];
+    expect(() => nextVersion({ ancestor: '0.40.18', ours: '0.40.19', theirs: '0.40.19', tags })).toThrow(HandMerge);
+  });
+
+  // The gate orders 0.41.0 above 0.41.0-rc.1, so graduating the rc line is a
+  // version it accepts; sync picks it rather than skipping to 0.42.0.
+  test('a minor bump past a same-minor rc tag graduates it', () => {
+    const tags = ['v0.40.19', 'v0.41.0-rc.1'];
+    expect(nextVersion({ ancestor: '0.40.18', ours: '0.41.0', theirs: '0.40.19', tags })).toBe('0.41.0');
+  });
+
+  test('a minor bump lands one minor above a higher-minor tag', () => {
+    const tags = ['v0.40.19', 'v0.42.0'];
+    expect(nextVersion({ ancestor: '0.40.18', ours: '0.41.0', theirs: '0.40.19', tags })).toBe('0.43.0');
   });
 
   test('a branch that never bumped follows the base', () => {
-    expect(nextVersion({ ancestor: '0.37.0', ours: '0.37.0', theirs: '0.37.4', isTagged: none })).toBe('0.37.4');
+    expect(nextVersion({ ancestor: '0.37.0', ours: '0.37.0', theirs: '0.37.4', tags: [] })).toBe('0.37.4');
   });
 
   test('keeps an rc that is ahead of the base', () => {
-    expect(nextVersion({ ancestor: '0.37.0', ours: '0.38.0-rc.2', theirs: '0.37.1', isTagged: none })).toBe('0.38.0-rc.2');
+    expect(nextVersion({ ancestor: '0.37.0', ours: '0.38.0-rc.2', theirs: '0.37.1', tags: [] })).toBe('0.38.0-rc.2');
   });
 
   test('refuses to invent a number for an rc the base overtook', () => {
-    expect(() => nextVersion({ ancestor: '0.37.0', ours: '0.38.0-rc.2', theirs: '0.38.0', isTagged: none })).toThrow(HandMerge);
+    expect(() => nextVersion({ ancestor: '0.37.0', ours: '0.38.0-rc.2', theirs: '0.38.0', tags: [] })).toThrow(HandMerge);
   });
 });
 
@@ -225,6 +261,24 @@ describe('sync over real git repositories', () => {
     expect(git('diff', '--name-only', '--diff-filter=U')).toBe('src.txt');
     expect(JSON.parse(read('package.json')).version).toBe('0.37.2');
     expect(read('CHANGELOG.md')).not.toContain('<<<<<<<');
+    git('rev-parse', '--verify', 'MERGE_HEAD');
+  });
+
+  // A free version is one the version gate would accept: not merely untagged,
+  // but greater than the highest release tag (#369).
+  test('renumbers past the highest release tag, not just past tagged versions', () => {
+    bothBumpTo0371();
+    git('tag', 'v0.37.3', 'main');
+    expect(run()).toMatchObject({ status: 'synced', version: '0.37.4' });
+    expect(JSON.parse(read('package.json')).version).toBe('0.37.4');
+  });
+
+  test('a patch bump below a higher-minor rc tag leaves the version for a human', () => {
+    bothBumpTo0371();
+    git('tag', 'v0.38.0-rc.1', 'main');
+    const lines = [];
+    expect(run({ log: (line) => lines.push(line) })).toMatchObject({ status: 'conflicts' });
+    expect(lines.join('\n')).toMatch(/left for you: version \(.*v0\.38\.0-rc\.1/);
     git('rev-parse', '--verify', 'MERGE_HEAD');
   });
 
