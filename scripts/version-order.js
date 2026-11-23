@@ -2,7 +2,8 @@
 
 // The one version comparison in the repo (#369). scripts/version-gate.js
 // orders package.json's version against the release tags with it, and
-// scripts/sync-branch.js compares release cores with it; neither keeps its own.
+// scripts/sync-branch.js compares release cores with it (and decides which
+// version is free through version-gate.js); neither keeps its own.
 //
 // Precedence is SemVer 2.0's: the numeric core first, then a version with a
 // prerelease sorts below the same core without one (0.41.0-rc.1 < 0.41.0), and

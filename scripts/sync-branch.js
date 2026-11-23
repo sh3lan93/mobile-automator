@@ -31,9 +31,8 @@ const fs = require('fs');
 const path = require('path');
 const { isDeepStrictEqual } = require('util');
 
-const versionOrder = require('./version-order');
-
-const { compareCores } = versionOrder;
+const { parseVersion, compareCores } = require('./version-order');
+const { decide, gitTags } = require('./version-gate');
 
 const CHANGELOG = 'CHANGELOG.md';
 const PACKAGE = 'package.json';
@@ -41,11 +40,11 @@ const LOCK = 'package-lock.json';
 
 class HandMerge extends Error {}
 
-// The shared parser (#369), with an unparseable version left to a human.
-function parseVersion(version) {
-  const parsed = versionOrder.parseVersion(version);
+// An unparseable version is left to a human.
+function parseOrHandMerge(version) {
+  const parsed = parseVersion(version);
   if (!parsed) throw new HandMerge(`cannot parse version "${version}"`);
-  return { core: parsed.core, prerelease: parsed.prerelease.length > 0 };
+  return parsed;
 }
 
 // The position (0 major, 1 minor, 2 patch) of the first number the branch moved.
@@ -63,20 +62,22 @@ function bump(core, level) {
 
 // The version the branch should carry once `theirs` is merged: its own if that
 // is still free and ahead, otherwise the same size of bump on top of the base.
-function nextVersion({ ancestor, ours, theirs, isTagged }) {
+// `isFree(v)` is the version gate's rule (#369), so sync never picks a version
+// the gate would then reject: see sync() below.
+function nextVersion({ ancestor, ours, theirs, isFree }) {
   if (ours === ancestor) return theirs;
 
-  const o = parseVersion(ours);
-  const t = parseVersion(theirs);
-  if (compareCores(o.core, t.core) > 0 && !isTagged(ours)) return ours;
+  const o = parseOrHandMerge(ours);
+  const t = parseOrHandMerge(theirs);
+  if (compareCores(o.core, t.core) > 0 && isFree(ours)) return ours;
 
-  if (o.prerelease || t.prerelease) {
+  if (o.prerelease.length > 0 || t.prerelease.length > 0) {
     throw new HandMerge(`rc version ${ours} needs a number chosen by hand (base is ${theirs})`);
   }
 
-  const level = bumpLevel(parseVersion(ancestor).core, o.core);
+  const level = bumpLevel(parseOrHandMerge(ancestor).core, o.core);
   let candidate = bump(t.core, level);
-  while (isTagged(candidate.join('.'))) candidate = bump(candidate, level);
+  while (!isFree(candidate.join('.'))) candidate = bump(candidate, level);
   return candidate.join('.');
 }
 
@@ -214,6 +215,10 @@ function sync({ cwd, base = 'origin/main', fetch = true, npm = refreshLockfile, 
     };
   })();
 
+  // Free means what the version gate accepts: above every release tag, read
+  // once through the gate's own tag reader.
+  const tags = gitTags(cwd);
+
   raw('merge', '--no-commit', '--no-ff', '--no-edit', base);
   if (raw('rev-parse', '-q', '--verify', 'MERGE_HEAD').status !== 0) {
     throw new Error(`git could not start merging ${base}`);
@@ -241,7 +246,7 @@ function sync({ cwd, base = 'origin/main', fetch = true, npm = refreshLockfile, 
   try {
     newVersion = nextVersion({
       ...versions,
-      isTagged: (v) => run('tag', '--list', `v${v}`) !== '',
+      isFree: (v) => decide(v, tags).decision === 'ahead',
     });
   } catch (err) {
     if (!(err instanceof HandMerge)) throw err;
