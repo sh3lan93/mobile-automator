@@ -14,7 +14,7 @@
 //
 // Every host path sits in a checkout a clone can fill with symlinks
 // (.claude/skills -> ~/.ssh, a dangling .mcp.json -> anywhere), so it is read
-// and written only through safe-fs's project scope (#347): a link on the way,
+// and written only through safe-fs's 'path' scope (#347): a link on the way,
 // or at the leaf, dangling or not, throws UnsafePathError and its target is
 // never read, written or created.
 

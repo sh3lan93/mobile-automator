@@ -4,8 +4,9 @@
 // symlink out of it. atomicWorkspaceWrite walks the directory with safe-fs;
 // every writer creates the temp file O_EXCL|O_NOFOLLOW under a random name.
 // #347: atomicProjectWrite confines a project file the same way, and
-// atomicOutputWrite confines a user-chosen path only when it lands in the
-// workspace; anywhere else it writes unconfined, by design.
+// atomicOutputWrite confines a user-chosen path in the workspace, and (#362)
+// elsewhere in the project too; outside the project it writes unconfined, by
+// design.
 
 const fs = require('fs');
 const os = require('os');
@@ -242,13 +243,27 @@ describe('atomicOutputWrite (#347: a path the user chose)', () => {
     expect(fs.readFileSync(file, 'utf8')).toBe('<x/>');
   });
 
-  test('a path outside the workspace is written unconfined (outside the project too)', () => {
+  test('a clean path outside the workspace is written, in the project or outside it', () => {
     const { root } = fixture();
     const out = elsewhere();
     atomicOutputWrite(root, path.join(out, 'deep', 'junit.xml'), '<x/>');
     expect(fs.readFileSync(path.join(out, 'deep', 'junit.xml'), 'utf8')).toBe('<x/>');
     atomicOutputWrite(root, path.join(root, 'reports', 'junit.xml'), '<y/>');
     expect(fs.readFileSync(path.join(root, 'reports', 'junit.xml'), 'utf8')).toBe('<y/>');
+  });
+
+  // #362: inside the project, outside the workspace, a committed directory
+  // link is refused too; only a path outside the project is the user's call.
+  test('a project path under a linked reports/ is refused, the outside dir left empty', () => {
+    const { root } = fixture();
+    const out = elsewhere();
+    fs.symlinkSync(out, path.join(root, 'reports'));
+    const err = thrown(() => atomicOutputWrite(root, path.join(root, 'reports', 'junit.xml'), '<x/>'));
+    expect(err).toBeInstanceOf(UnsafePathError);
+    expect(err.reason).toBe('symlink');
+    expect(err.scope).toBe('path');
+    expect(err.kind).toBe('environment');
+    expect(fs.readdirSync(out)).toEqual([]);
   });
 
   test('a workspace path reached through an aliased root is confined', () => {

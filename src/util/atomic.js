@@ -24,10 +24,12 @@ const { createProjectFile, createWorkspaceFile, openUserLeaf, userFile } = requi
 //     files `mauto init` writes). Same walk, bounded by the project root, via
 //     createProjectFile (#347).
 //   - atomicOutputWrite: a path the user chose (`result export --out`,
-//     `run --junit`). safe-fs's userFile decides: confined like
-//     atomicWorkspaceWrite when it lands in the workspace, written unconfined
-//     (a plain recursive mkdir) anywhere else: an explicit path outside the
-//     workspace is the user's call (#347). There is no exported unconfined
+//     `run --junit`). safe-fs's userFile decides by scope: in the workspace
+//     confined like atomicWorkspaceWrite (#347); elsewhere in the project the
+//     same walk bounded by the project root, like atomicProjectWrite, so a
+//     committed `reports` link is refused, never written through (#362);
+//     outside the project written unconfined (a plain recursive mkdir): an
+//     explicit path there is the user's call. There is no exported unconfined
 //     writer, so no write can skip that decision.
 //   - atomicUserLeafWrite: mauto's own file outside every project (the
 //     per-user telemetry consent record), in a directory the caller settled

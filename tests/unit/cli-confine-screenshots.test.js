@@ -5,8 +5,10 @@
 // fd. A destination inside .mobile-automator/ is checked first (a cloned repo
 // can commit `screenshots/` as a link to anywhere) and a refusal is one
 // `environment` envelope naming the workspace path, with the bridge never
-// asked. A destination anywhere else is the user's own call and reaches the
-// bridge exactly as resolved (Review Focus 5: `mauto screenshot /tmp/x.png`).
+// asked. One elsewhere in the project gets the same walk in the path scope
+// (#362). A destination outside the project is the user's own call and
+// reaches the bridge exactly as resolved (Review Focus 5: `mauto screenshot
+// /tmp/x.png`).
 
 const fs = require('fs');
 const path = require('path');
@@ -161,5 +163,42 @@ describe('handleScreenshot confinement (#347)', () => {
     expect(exitKind).toBe('ok');
     expect(shots).toEqual([path.join(root, 'docs', 'shot.png')]);
     expect(fs.existsSync(path.join(root, 'docs'))).toBe(false);
+  });
+});
+
+// #362: a destination inside the project but outside the workspace, through a
+// committed `reports` link: refused before the bridge is asked, in the path
+// scope. A plain directory there still reaches the bridge.
+describe('screenshot checks a project destination outside the workspace (#362)', () => {
+  test('screenshot reports/a.png with reports -> outside fails environment, the bridge never asked', async () => {
+    const { root, outside } = fixture(() => {});
+    const elsewhere = tmpDir('mauto-cli-shot-362-');
+    fs.symlinkSync(elsewhere, path.join(root, 'reports'));
+    const before = snapshot(outside);
+    const { shots, factory } = recordingFactory();
+
+    const { calls, written } = await runIn(root, ['screenshot', 'reports/a.png'], { deviceBridgeFactory: factory });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].exitKind).toBe('environment');
+    expect(calls[0].envelope.error.kind).toBe('environment');
+    expect(calls[0].envelope.error.message).toMatch(/^Refusing to use path /);
+    expect(calls[0].envelope.error.message).toContain(path.join(root, 'reports'));
+    expect(calls[0].envelope.error.message).not.toContain(elsewhere);
+    expect(written).not.toContain(CANARY);
+    expect(shots).toEqual([]);
+    expect(fs.readdirSync(elsewhere)).toEqual([]);
+    expect(snapshot(outside)).toEqual(before);
+  });
+
+  test('screenshot reports/a.png into a plain reports/ reaches the bridge as resolved', async () => {
+    const { root } = fixture(() => {});
+    fs.mkdirSync(path.join(root, 'reports'));
+    const { shots, factory } = recordingFactory();
+
+    const { calls } = await runIn(root, ['screenshot', 'reports/a.png'], { deviceBridgeFactory: factory });
+
+    expect(calls[0].exitKind).toBe('ok');
+    expect(shots).toEqual([path.join(root, 'reports', 'a.png')]);
   });
 });
