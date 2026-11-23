@@ -104,7 +104,7 @@ describe('socketPath fallback in a per-user directory (#346)', () => {
 });
 
 // #346: one decision for where the socket lives, read by both the daemon
-// (ensureSessionDirs) and the client (verifySocket), so they can never disagree.
+// (ensureSessionDirs) and the client (connectPinned), so they can never disagree.
 describe('socketLocation (#346)', () => {
   const deepRoot = '/' + 'deeply-nested-project-dir/'.repeat(6) + 'app';
   const deps = { getuid: () => 1234, tmpdir: () => '/t' };
