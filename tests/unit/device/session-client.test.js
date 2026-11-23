@@ -9,7 +9,7 @@ const { startDaemon } = require('../../../src/device/session-daemon');
 const { tryConnect, isAlive, requestShutdown, getSessionStatus } = require('../../../src/device/session-client');
 const paths = require('../../../src/device/session-paths');
 const { ensureSessionDirs } = require('../../../src/device/session-dir');
-const { FrameParser } = require('../../../src/device/session-protocol');
+const { FrameParser, sessionProof } = require('../../../src/device/session-protocol');
 const { ensureSalt } = require('../../../src/device/session-salt');
 const { useSocketDeps } = require('../../helpers/socket-deps');
 
@@ -23,7 +23,7 @@ function tmpRoot() {
 
 // The reply a daemon of `root` holding `salt` gives a hello (#361).
 function helloReply(frame, salt, root) {
-  return FrameParser.encode({ id: frame.id, ok: true, result: { proof: paths.sessionProof(salt, root, frame.nonce) } });
+  return FrameParser.encode({ id: frame.id, ok: true, result: { proof: sessionProof(salt, root, frame.nonce) } });
 }
 
 function fakeCreateCall() {

@@ -16,21 +16,19 @@
 //     private (0700, ours, no links on the way) and the socket a real socket
 //     of ours, and then connects through that very directory, never through a
 //     path that could name another directory by the time it is used;
-//   - the first frame on every connection is a hello: the peer must answer
-//     the client's fresh nonce with sessionProof(salt, root, nonce), keyed by
-//     the workspace secret (.session/marker.salt) read from the same checked
+//   - the first frame on every connection is a hello (session-protocol.js):
+//     the peer must answer the client's fresh nonce with a proof keyed by the
+//     workspace secret (.session/marker.salt) read from the same checked
 //     directory. Nothing else is sent until it does.
 // Any failure (no socket, a refused directory, no salt, a wrong or missing
 // proof, a timeout, a daemon too old to know hello) reads as "no daemon here":
 // the verb starts its own or runs one-shot, and the peer received only a
 // nonce.
 
-const crypto = require('crypto');
 const net = require('net');
 
 const { connectPinned } = require('./session-dir');
-const { sessionProof } = require('./session-paths');
-const { FrameParser } = require('./session-protocol');
+const { FrameParser, helloRequest, verifyHello } = require('./session-protocol');
 
 const DEFAULT_TIMEOUT_MS = 30000;
 const HELLO_TIMEOUT_MS = 2000;
@@ -47,15 +45,6 @@ function awaitConnect(socket) {
     socket.once('connect', () => done(socket));
     socket.once('error', () => done(null));
   });
-}
-
-// Does the peer's proof equal the expected one? Constant-time, and false for
-// anything that is not a string of the same length.
-function proofMatches(got, want) {
-  if (typeof got !== 'string') return false;
-  const a = Buffer.from(got, 'utf8');
-  const b = Buffer.from(want, 'utf8');
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
 // The ONE place the client opens a connection: connectPinned's, through the
@@ -76,11 +65,10 @@ async function connectVerified(projectRoot, socketDeps = {}) {
   const socket = await awaitConnect(pinned.socket);
   if (!socket) return null;
   const client = wrapSocket(socket);
-  const nonce = crypto.randomBytes(32).toString('hex');
+  const hello = helloRequest();
   try {
-    const res = await client.request({ type: 'hello', nonce }, { timeoutMs: HELLO_TIMEOUT_MS });
-    const proof = res && res.ok && res.result ? res.result.proof : null;
-    if (proofMatches(proof, sessionProof(pinned.salt, projectRoot, nonce))) return client;
+    const res = await client.request(hello, { timeoutMs: HELLO_TIMEOUT_MS });
+    if (verifyHello(pinned.salt, projectRoot, hello.nonce, res)) return client;
   } catch (_) {
     // timed out or the connection dropped: not a daemon we can vouch for
   }

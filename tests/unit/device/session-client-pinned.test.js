@@ -26,7 +26,7 @@ const { tryConnect, isAlive, requestShutdown, getSessionStatus } = require('../.
 const paths = require('../../../src/device/session-paths');
 const { ensureSessionDirs } = require('../../../src/device/session-dir');
 const { ensureSalt } = require('../../../src/device/session-salt');
-const { FrameParser } = require('../../../src/device/session-protocol');
+const { FrameParser, sessionProof } = require('../../../src/device/session-protocol');
 const { useSocketDeps } = require('../../helpers/socket-deps');
 
 const socketDeps = useSocketDeps();
@@ -99,7 +99,7 @@ function fakePeer(sockPath, onHello) {
 const proofReply = (salt, root) => (req) => ({
   id: req.id,
   ok: true,
-  result: { proof: paths.sessionProof(salt, root, req.nonce) },
+  result: { proof: sessionProof(salt, root, req.nonce) },
 });
 
 // An attacker directory beside .session/: its own salt and a listener that

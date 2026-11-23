@@ -186,36 +186,6 @@ describe('daemon workspace marker (#156, #236)', () => {
     expect(argv).not.toContain(sha16('/a/proj'));
   });
 
-  // #361: the daemon's answer to the client's hello. Pinned: a change to the
-  // message format strands every running daemon, so it must be deliberate
-  // (bump the v1 tag).
-  test('sessionProof is HMAC-SHA256(salt, tagged real root + nonce), pinned', () => {
-    const root = '/nonexistent-mauto-proof-root';
-    expect(paths.sessionProof('s3cret', root, 'n0nce')).toBe(
-      'fd01870555e8efc7047c05fe52ca436fe2adff378a31124e2ac9ad36b1ca56fb'
-    );
-    expect(paths.sessionProof('s3cret', `${root}/`, 'n0nce')).toBe(paths.sessionProof('s3cret', root, 'n0nce'));
-  });
-
-  test('sessionProof differs per salt, root and nonce', () => {
-    const p = paths.sessionProof(SALT, '/a/proj', 'n');
-    expect(paths.sessionProof(OTHER_SALT, '/a/proj', 'n')).not.toBe(p);
-    expect(paths.sessionProof(SALT, '/a/proj2', 'n')).not.toBe(p);
-    expect(paths.sessionProof(SALT, '/a/proj', 'm')).not.toBe(p);
-  });
-
-  test('sessionProof keys by realpath, so one root reached two ways agrees', () => {
-    const real = fs.mkdtempSync(path.join(os.tmpdir(), 'proof-'));
-    const link = `${real}-link`;
-    fs.symlinkSync(real, link);
-    try {
-      expect(paths.sessionProof(SALT, link, 'n')).toBe(paths.sessionProof(SALT, real, 'n'));
-    } finally {
-      fs.unlinkSync(link);
-      fs.rmSync(real, { recursive: true, force: true });
-    }
-  });
-
   test('the salt lives in the session dir, beside daemon.pid', () => {
     expect(paths.SALT_NAME).toBe('marker.salt');
     expect(paths.saltPath('/a/proj')).toBe(path.join(paths.sessionDir('/a/proj'), 'marker.salt'));

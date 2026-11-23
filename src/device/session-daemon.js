@@ -24,7 +24,7 @@ const fs = require('fs');
 const net = require('net');
 
 const paths = require('./session-paths');
-const { FrameParser } = require('./session-protocol');
+const { FrameParser, answerHello } = require('./session-protocol');
 const { newSessionId } = require('./session-id');
 const { makeDeviceCall } = require('./device-call');
 const { safeObserve: guardObserve } = require('../observe/recorder');
@@ -37,8 +37,6 @@ const { createWorkspaceFile } = require('../workspace/safe-fs');
 const { atomicWorkspaceWrite } = require('../util/atomic');
 
 const DEFAULT_IDLE_MS = 5 * 60 * 1000;
-// The longest hello nonce the daemon answers (#361). The client sends 64 hex.
-const MAX_NONCE_LENGTH = 256;
 
 // Per-call timeout for the shared mobile-mcp connection. Deliberately BELOW the
 // client's DEFAULT_TIMEOUT_MS (30000) so the daemon's timeout error always wins
@@ -651,14 +649,8 @@ async function startDaemon({
         }
         if (req.type === 'hello') {
           // The handshake (#361, session-protocol.js): prove we hold this
-          // workspace's salt. The nonce is the client's; bound its size so a
-          // peer cannot make us HMAC an arbitrary amount.
-          const { nonce } = req;
-          if (typeof nonce !== 'string' || nonce.length === 0 || nonce.length > MAX_NONCE_LENGTH) {
-            await reply({ id: req.id, ok: false, error: { message: 'hello needs a nonce: a string of 1 to 256 characters' } });
-          } else {
-            await reply({ id: req.id, ok: true, result: { proof: paths.sessionProof(salt, projectRoot, nonce) } });
-          }
+          // workspace's salt.
+          await reply({ id: req.id, ...answerHello(salt, projectRoot, req) });
           armIdle();
           continue;
         }

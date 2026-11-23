@@ -7,6 +7,7 @@ const path = require('path');
 const { startDaemon, cleanStale } = require('../../../src/device/session-daemon');
 const sessionClient = require('../../../src/device/session-client');
 const paths = require('../../../src/device/session-paths');
+const { sessionProof } = require('../../../src/device/session-protocol');
 const { ensureSalt, readSalt } = require('../../../src/device/session-salt');
 const { ensureSessionDirs } = require('../../../src/device/session-dir');
 const { UnsafePathError } = require('../../../src/workspace/safe-fs');
@@ -480,8 +481,8 @@ describe('session-daemon hello (#361)', () => {
         { id: 1, type: 'hello', nonce: 'abc' },
         { id: 2, type: 'hello', nonce: 'def' },
       ]);
-      expect(a).toEqual({ id: 1, ok: true, result: { proof: paths.sessionProof(salt, root, 'abc') } });
-      expect(b).toEqual({ id: 2, ok: true, result: { proof: paths.sessionProof(salt, root, 'def') } });
+      expect(a).toEqual({ id: 1, ok: true, result: { proof: sessionProof(salt, root, 'abc') } });
+      expect(b).toEqual({ id: 2, ok: true, result: { proof: sessionProof(salt, root, 'def') } });
     } finally {
       await daemon.stop();
     }

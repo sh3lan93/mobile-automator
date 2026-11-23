@@ -68,7 +68,7 @@ const PINNED_SALT = 'pinned-salt-from-the-checked-directory';
 // Answers hello with the proof for PINNED_SALT, then closes.
 function listen(sock, root) {
   const { FrameParser } = require('../../../src/device/session-protocol');
-  const { sessionProof } = require('../../../src/device/session-paths');
+  const { sessionProof } = require('../../../src/device/session-protocol');
   const server = net.createServer((c) => {
     const parser = new FrameParser();
     c.setEncoding('utf8');
