@@ -52,6 +52,8 @@ class KtorTmdbClientTest {
         assertEquals("api.themoviedb.org", request.url.host)
         assertEquals("/3/movie/popular", request.url.encodedPath)
         assertEquals("k1", request.url.parameters["api_key"])
+        assertEquals("en-US", request.url.parameters["language"])
+        assertEquals("1", request.url.parameters["page"])
         assertNull(request.headers[HttpHeaders.Authorization])
     }
 

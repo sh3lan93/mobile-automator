@@ -3,6 +3,7 @@ package io.github.sh3lan93.mobileautomator.showcase.data
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.expectSuccess
+import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.client.statement.HttpResponse
@@ -22,18 +23,25 @@ class KtorTmdbClient(private val http: HttpClient, apiKey: String) : TmdbClient 
     private val apiKey = apiKey.trim()
 
     override suspend fun popularMovies(): TmdbResult<List<Movie>> =
-        call("movie/popular") { response ->
+        call("movie/popular", params = {
+            parameter("language", "en-US")
+            parameter("page", 1)
+        }) { response ->
             response.body<PageDto>().results.map { it.toMovie() }
         }
 
-    private suspend fun <T> call(path: String, parse: suspend (HttpResponse) -> T): TmdbResult<T> {
+    /** Sends `api_key` on every request; [params] adds the endpoint's own query parameters. */
+    private suspend fun <T> call(
+        path: String,
+        params: HttpRequestBuilder.() -> Unit = {},
+        parse: suspend (HttpResponse) -> T,
+    ): TmdbResult<T> {
         if (apiKey.isEmpty()) return TmdbResult.Failed(TmdbFailure.MissingKey)
         return try {
             val response = http.get("$BASE_URL/$path") {
                 expectSuccess = false
                 parameter("api_key", apiKey)
-                parameter("language", "en-US")
-                parameter("page", 1)
+                params()
             }
             when {
                 response.status == HttpStatusCode.Unauthorized -> TmdbResult.Failed(TmdbFailure.RejectedKey)
