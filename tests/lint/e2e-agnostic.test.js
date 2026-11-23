@@ -30,6 +30,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { REPO_ROOT } = require('./docs-corpus');
+const { OS_ID_TOKEN, targetValues } = require('./scenario-targets');
 
 const SCRIPTS = path.join(REPO_ROOT, 'sample-app', 'scripts');
 const SCENARIOS = path.join(REPO_ROOT, 'sample-app', 'scenarios');
@@ -61,9 +62,9 @@ const loadScenario = (p) => JSON.parse(read(p));
 
 // --- 1. No OS-id vocabulary ---------------------------------------------------
 
-// Comments included: a comment explaining "match on the id when the label is
-// missing" is the first draft of the regression.
-const OS_ID_TOKEN = /identifier|resource[-_]id/i;
+// OS_ID_TOKEN (tests/lint/scenario-targets.js) is checked against comments too:
+// a comment explaining "match on the id when the label is missing" is the
+// first draft of the regression.
 
 describe('E2E harness — no OS element ids', () => {
   test('the harness source exists (the rules below are not vacuous)', () => {
@@ -168,10 +169,6 @@ function semanticsIds() {
   return { exact, prefixes };
 }
 
-// The scenario fields that name or describe an element.
-const STEP_FIELDS = ['target'];
-const ASSERTION_FIELDS = ['target', 'element_description', 'expected_value', 'expected_substring', 'expected_text', 'label_value'];
-
 describe('E2E scenarios — on-screen strings, not Semantics ids', () => {
   const ids = semanticsIds();
 
@@ -182,14 +179,10 @@ describe('E2E scenarios — on-screen strings, not Semantics ids', () => {
   test('no step target or assertion target/expected value equals a Semantics id', () => {
     const offenders = [];
     for (const file of scenarioFiles) {
-      const sc = loadScenario(file);
-      const check = (where, value) => {
-        if (typeof value !== 'string') return;
+      for (const { where, value } of targetValues(loadScenario(file))) {
         const hit = ids.exact.has(value) || [...ids.prefixes].some((p) => value.startsWith(p));
         if (hit) offenders.push(`${rel(file)} ${where}: ${JSON.stringify(value)}`);
-      };
-      for (const step of sc.steps || []) for (const f of STEP_FIELDS) check(`step ${step.id}.${f}`, step[f]);
-      for (const a of sc.assertions || []) for (const f of ASSERTION_FIELDS) check(`assertion ${a.id}.${f}`, a[f]);
+      }
     }
     expect(offenders).toEqual([]);
   });
