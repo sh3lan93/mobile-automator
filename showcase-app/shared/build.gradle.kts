@@ -80,6 +80,7 @@ kotlin {
         androidResources {
             enable = true
         }
+        withHostTestBuilder {}
     }
 
     sourceSets {
@@ -114,6 +115,11 @@ kotlin {
             implementation(libs.coil.network.ktor)
             implementation(libs.koin.core)
             implementation(libs.koin.compose.viewmodel)
+        }
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+            implementation(libs.ktor.client.mock)
+            implementation(libs.kotlinx.coroutines.test)
         }
     }
 }
