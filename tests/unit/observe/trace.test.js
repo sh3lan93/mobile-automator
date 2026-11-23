@@ -89,6 +89,55 @@ describe('readTrace refuses a linked trace (#363)', () => {
   });
 });
 
+// #363: a MAUTO_LOG_DIR inside the project but outside .mobile-automator/ is
+// the environment's choice (safe-fs's two-way userDir), and the sink writes
+// the trace there through userDirLeaves: the directory used as given, the
+// leaf under STRICT_LEAF. readTrace reads it through the same settled leaf,
+// so the reader and the writer share one rule.
+describe('readTrace in a MAUTO_LOG_DIR in the project, outside the workspace (#363)', () => {
+  const fileSink = require('../../../src/observe/sinks/file');
+  const { UnsafePathError } = require('../../../src/workspace/safe-fs');
+  const event = at('2026-09-05T10:00:00.000Z');
+
+  it('reads the trace the sink wrote through a linked logs directory', () => {
+    const root = logsRoot();
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-trace-out-'));
+    const logs = path.join(root, 'logs');
+    fs.symlinkSync(outside, logs);
+    const tracePath = path.join(logs, 'run-x.ndjson');
+    fileSink.write(event, { projectRoot: root, env: { MAUTO_LOG_DIR: logs }, logPath: tracePath, bound: 'cap' });
+    expect(fs.existsSync(path.join(outside, 'run-x.ndjson'))).toBe(true);
+    expect(readTrace(tracePath, { projectRoot: root }).events).toEqual([event]);
+  });
+
+  it('refuses a foreign-owned trace there as the sink does, MAUTO_TRUST_WORKSPACE_OWNER=1 or not', () => {
+    const root = logsRoot();
+    const logs = path.join(root, 'logs');
+    fs.mkdirSync(logs);
+    const tracePath = path.join(logs, 'run-x.ndjson');
+    fs.writeFileSync(tracePath, `${JSON.stringify(event)}\n`);
+    const foreign = {
+      ...fs,
+      fstatSync: (fd, ...rest) => Object.assign(fs.fstatSync(fd, ...rest), { uid: process.getuid() + 1 }),
+    };
+    const saved = process.env.MAUTO_TRUST_WORKSPACE_OWNER;
+    process.env.MAUTO_TRUST_WORKSPACE_OWNER = '1';
+    try {
+      let err;
+      try {
+        readTrace(tracePath, { projectRoot: root, fs: foreign });
+      } catch (e) {
+        err = e;
+      }
+      expect(err).toBeInstanceOf(UnsafePathError);
+      expect(err.reason).toBe('foreign_owner');
+    } finally {
+      if (saved === undefined) delete process.env.MAUTO_TRUST_WORKSPACE_OWNER;
+      else process.env.MAUTO_TRUST_WORKSPACE_OWNER = saved;
+    }
+  });
+});
+
 describe('deriveRun', () => {
   it('measures the span between the first and last recorded event', () => {
     const root = logsRoot();

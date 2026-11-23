@@ -49,9 +49,11 @@
   a Docker container created) is refused too: `chown` it, `chmod o-w` it, write the
   report outside the project, or set `MAUTO_TRUST_WORKSPACE_OWNER=1` for the owner case.
 - The same checks cover the files mauto reads at a path you name (#363): the scenario
-  `validate`, `run` and `result finalize --scenario` read, a reference screenshot, and
-  the run trace. Inside the project a link is refused, for example a committed
+  `validate`, `run` and `result finalize --scenario` read, and a reference screenshot.
+  Inside the project a link is refused, for example a committed
   `flows -> /elsewhere`. Outside the project the file is yours and is read as named.
+  The run trace is read the way it was written: checked in `.mobile-automator/.logs/`,
+  used as given in a `MAUTO_LOG_DIR` anywhere else.
 - `(symlink)` / `(escape)`: replace the link with a real directory or file. For
   example, `rm .mobile-automator/memory && mkdir .mobile-automator/memory`, or
   `rm .claude/skills && mkdir .claude/skills` before re-running `mauto init`.

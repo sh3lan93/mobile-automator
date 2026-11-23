@@ -47,8 +47,8 @@
 // userDir stays two-way (workspace, or the user's call): its one caller is
 // MAUTO_LOG_DIR, which the environment chooses, not the checkout.
 //
-// A path the user named to read (a scenario, a reference screenshot, a run
-// trace) goes through readUserFile, on the same userPath scopes: inside the
+// A path the user named to read (a scenario, a reference screenshot) goes
+// through readUserFile, on the same userPath scopes: inside the
 // workspace or the project it is the checked walk and leaf of that scope;
 // outside the project it is the user's own file, read as named (links
 // followed), only size-capped (#363).
@@ -60,14 +60,21 @@
 // directory group-writable; only `o+w` lets a stranger plant a link. Root in a
 // CI container over a checkout owned by another uid can set
 // MAUTO_TRUST_WORKSPACE_OWNER=1, which skips the owner comparison and nothing
-// else, like git's safe.directory. It trusts the checkout, so it applies only
-// to directories and leaves inside it (the workspace and the project scopes);
-// never to a leaf outside the project (an --out or --junit target, a
-// MAUTO_LOG_DIR outside the workspace, the per-user consent file), whose leaf
-// opens run under STRICT_LEAF (#363), nor to the device session, whose
-// policy (src/device/session-dir.js) compares the owner outright. Which rule a
-// leaf in a directory the user chose gets is decided once, where
-// userDirLeaves settles that directory.
+// else, like git's safe.directory. It trusts the checkout, so it applies
+// where the checkout's own rules run: every directory and leaf of the
+// workspace and project scopes (their walks, their leaf opens and
+// destinations), and a log or spool leaf only when its directory lands in the
+// workspace. Every other leaf is opened under STRICT_LEAF (#363), where it
+// never applies: an --out or --junit target outside the project, the
+// per-user consent file, and a leaf in a MAUTO_LOG_DIR outside the
+// workspace. Such a MAUTO_LOG_DIR may lie inside the project: userDir is
+// two-way, so there it is the environment's choice, used as given with no
+// walk, and its leaves get the strict rule whatever the checkout's trust.
+// Nor does the override apply to the device session, whose policy
+// (src/device/session-dir.js) compares the owner outright. Which rule a leaf
+// in a directory the user chose gets is decided once, where userDirLeaves
+// settles that directory, and its writer and reader (the log sink, readTrace)
+// both go through it.
 //
 // Every directory check runs under a policy (dirPolicy, below): the owner rule,
 // the forbidden mode bits, and what a refusal says. WORKSPACE_DIR is the
@@ -187,16 +194,18 @@ const PROJECT_PATH = dirPolicy({
 
 // The leaf owner rule, stated once (#363). A leaf is opened under a policy,
 // and its owner is compared under that policy's trustOverride, the same field
-// every directory check reads: a confined row's policy for a leaf inside the
-// checkout (the override applies, as it does to the directory the leaf sits
-// in), else STRICT_LEAF, the default. STRICT_LEAF is the one strict leaf rule:
-// the override never applies, and its foreign_owner refusal never offers it.
+// every directory check reads: a confined row's policy for a leaf the
+// workspace or project scope opens (the override applies, as it does to the
+// directory the leaf sits in), else STRICT_LEAF, the default. STRICT_LEAF is
+// the one strict leaf rule: the override never applies, and its foreign_owner
+// refusal never offers it.
 //
 // It is the 'outside' row's policy. Its wording is its own and path-neutral
-// (subject 'path', reported as the path scope), because a strict leaf is
-// outside the checkout (an --out target, a MAUTO_LOG_DIR leaf, the per-user
-// consent file). Only the owner hint differs from the path scope's, and only
-// the escape hint, which no leaf open throws, names the project.
+// (subject 'path', reported as the path scope), because a strict leaf is one
+// no checked walk vouches for (an --out target outside the project, a leaf in
+// a MAUTO_LOG_DIR outside the workspace, the per-user consent file). Only the
+// owner hint differs from the path scope's, and only the escape hint, which
+// no leaf open throws, names the project.
 const STRICT_LEAF = dirPolicy({
   ...PROJECT_PATH,
   trustOverride: false,
@@ -379,8 +388,8 @@ function lstatOrMkdir(fs, p, create, mode) {
 }
 
 // The leaf rules shared by every leaf mauto opens or hands to a writer: it is
-// ours under `policy`'s owner rule (a confined row's policy inside the
-// checkout, STRICT_LEAF outside it) and, when it will be written, has exactly
+// ours under `policy`'s owner rule (a confined row's policy, else
+// STRICT_LEAF: see STRICT_LEAF) and, when it will be written, has exactly
 // one hard link (a second one would be a file elsewhere by another name).
 function checkLeafOwnership(p, st, writes, d, policy) {
   checkOwner(p, st, d, policy);
@@ -564,8 +573,8 @@ function closeQuietly(fs, fd) {
 // read a file elsewhere by another name: its contents would ship as ours.
 //
 // `policy` is the leaf owner rule (see STRICT_LEAF): STRICT_LEAF by default,
-// a confined row's policy only for a leaf inside the checkout whose directory
-// the caller walked. A caller that leaves it out gets the owner compared
+// a confined row's policy only for a leaf whose directory a confined walk
+// settled (a workspace or project scope's). A caller that leaves it out gets the owner compared
 // outright. Only safe-fs's own entry points and userDirLeaves's leaves pass
 // one.
 function openOwnedLeaf(file, flags, { mode = 0o666, singleLink = false, policy = STRICT_LEAF } = {}, deps = {}) {
@@ -775,8 +784,8 @@ function readProjectFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES, enco
   return withScope('path', () => readCapped(open, file, { maxBytes, encoding, throwIfAbsent }, deps));
 }
 
-// A file the user named to read (#363): a scenario, a reference screenshot, a
-// run trace. utf8, or the Buffer with `encoding: null`; null when it (or a
+// A file the user named to read (#363): a scenario, a reference screenshot.
+// utf8, or the Buffer with `encoding: null`; null when it (or a
 // parent dir) does not exist, or the fs's own ENOENT with `throwIfAbsent`;
 // refused past maxBytes (too_large).
 //   - in the workspace or elsewhere in the project: openInScope on the path
@@ -899,7 +908,8 @@ function userFile(projectRoot, file, deps = {}) {
 // directory the caller has settled itself (the per-user telemetry consent
 // record): openLeafInScope('outside'), so it is the same open userFile uses
 // outside the project, minus the walk. O_NOFOLLOW, ours under STRICT_LEAF
-// (outside the checkout, so the owner override never applies, #363), one link
+// (no checked walk vouches for it, so the owner override never applies,
+// #363), one link
 // for a write, the truncate deferred; a refusal worded under STRICT_LEAF
 // (err.scope 'path'). Creates no directory. Returns an fd the caller closes.
 function openUserLeaf(file, flags, mode = 0o666, deps = {}) {

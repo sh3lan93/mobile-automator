@@ -13,9 +13,10 @@ const realFs = require('fs');
 const path = require('path');
 
 const { atCap } = require('./sinks/file');
+const { settledLeaf } = require('./append');
 const { logsDir, runTracePath, RUN_TRACE_PREFIX } = require('./paths');
 const { MAX_LOG_BYTES } = require('../util/log-rotate');
-const { userDir, readUserFile, UnsafePathError } = require('../workspace/safe-fs');
+const { userDir, UnsafePathError } = require('../workspace/safe-fs');
 
 // A device failure in the envelope's own taxonomy. `deviceFail` (src/output/device-fail.js) is
 // the ONLY producer of these two kinds, so counting them needs no list of which
@@ -50,19 +51,23 @@ function parseTrace(text) {
 // that was not written by mauto, and is refused (too_large).
 const TRACE_READ_MAX_BYTES = MAX_LOG_BYTES + 1024 * 1024;
 
-// The run trace at `tracePath`, read through safe-fs's readUserFile under
-// `projectRoot` (#363): a trace in the workspace is a checked walk and leaf, a
-// MAUTO_LOG_DIR outside the project is the user's own. null when there is no
-// trace or it cannot be read. A refused path (a committed `.logs -> /outside`
-// or a linked trace) throws its UnsafePathError, as readWorkspaceFileOrNull
-// does: a planted link is never "no trace", and finalize fails environment.
+// The run trace at `tracePath`, read as the sink wrote it (#363): the same
+// settledLeaf, so its directory is settled by safe-fs's userDirLeaves under
+// the one rule the writer used. A logs dir in the workspace is the checked
+// walk and a WORKSPACE_DIR leaf; a MAUTO_LOG_DIR anywhere else, the project
+// included, is the environment's choice, used as given, its leaf opened
+// under STRICT_LEAF. null when there is no trace or it cannot be read. A
+// refused path (a committed `.logs -> /outside` or a linked trace) throws
+// its UnsafePathError, as readWorkspaceFileOrNull does: a planted link is
+// never "no trace", and finalize fails environment.
 function readTrace(tracePath, { projectRoot, fs = realFs } = {}) {
   if (!tracePath) return null;
   // Required: without it every read would fail and silently read as no trace.
   if (!projectRoot) throw new TypeError('readTrace: projectRoot is required');
   let text;
   try {
-    text = readUserFile(projectRoot, tracePath, { maxBytes: TRACE_READ_MAX_BYTES }, { fs });
+    const leaf = settledLeaf(projectRoot, path.dirname(tracePath), tracePath, {}, { fs });
+    text = leaf.read({ maxBytes: TRACE_READ_MAX_BYTES });
   } catch (err) {
     if (err instanceof UnsafePathError) throw err;
     text = null;
