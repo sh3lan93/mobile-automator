@@ -160,6 +160,45 @@ describe('mauto run — refusals before any device work', () => {
     }
   });
 
+  test('--junit reports/r.xml with reports -> outside the project is refused before any device work (#362)', async () => {
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-run-verb-outside-'));
+    try {
+      fs.symlinkSync(outside, path.join(root, 'reports'));
+      const { r, factory, bridge } = await runCli([
+        writeScenario(scenario()), '--run-id', RUN_ID, '--junit', path.join(root, 'reports', 'r.xml'),
+      ]);
+      expect(r.exitKind).toBe('environment');
+      expect(r.envelope.error.kind).toBe('environment');
+      expect(r.envelope.error.message).toMatch(/^Refusing to use path /);
+      expect(r.envelope.error.message).toContain(path.join(root, 'reports'));
+      expect(r.envelope.error.message).not.toContain(outside);
+      expect(factory).not.toHaveBeenCalled();
+      expect(bridge.calls).toEqual([]);
+      expect(fs.readdirSync(outside)).toEqual([]);
+      expect(fs.existsSync(path.join(root, '.mobile-automator', 'results'))).toBe(false);
+    } finally {
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  test('--junit into a plain project reports/ and to an explicit path outside the project both write (#362)', async () => {
+    const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-run-verb-elsewhere-'));
+    try {
+      fs.mkdirSync(path.join(root, 'reports'));
+      const inProject = path.join(root, 'reports', 'r.xml');
+      const first = await runCli([writeScenario(scenario()), '--run-id', RUN_ID, '--junit', inProject]);
+      expect(first.r.exitKind).toBe('ok');
+      expect(fs.readFileSync(inProject, 'utf8')).toMatch(/<testsuites/);
+
+      const out = path.join(elsewhere, 'r.xml');
+      const second = await runCli([writeScenario(scenario()), '--run-id', 'run_20261111_093001', '--junit', out]);
+      expect(second.r.exitKind).toBe('ok');
+      expect(fs.readFileSync(out, 'utf8')).toMatch(/<testsuites/);
+    } finally {
+      fs.rmSync(elsewhere, { recursive: true, force: true });
+    }
+  });
+
   test('a --junit file that is a link in the workspace passes the preflight and is replaced, its target unchanged (#347)', async () => {
     const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-run-verb-outside-'));
     try {

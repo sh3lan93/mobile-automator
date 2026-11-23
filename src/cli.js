@@ -220,11 +220,13 @@ async function handleElements({ deviceBridge }) {
 // The engine writes the file, so the destination is checked before it is
 // handed over (#347). One inside .mobile-automator/ (through a symlinked alias
 // of the project root too) gets the workspace rules: its directories are
-// walked and created, a planted link refused. Anything else is the user's own
-// choice and reaches the bridge exactly as resolved; the engine applies its
-// own allowed-directories rule there. A refusal is thrown, before the bridge
-// is asked and outside the device catch below, so the envelope boundary
-// reports it environment with its own hint, as for every other verb.
+// walked and created, a planted link refused. One elsewhere in the project
+// gets the same walk in the path scope, creating nothing (#362). One outside
+// the project is the user's own choice and reaches the bridge exactly as
+// resolved; the engine applies its own allowed-directories rule there. A
+// refusal is thrown, before the bridge is asked and outside the device catch
+// below, so the envelope boundary reports it environment with its own hint,
+// as for every other verb.
 async function handleScreenshot({ deviceBridge, projectRoot, cwd = process.cwd() }, destPath) {
   const dest = userDest(projectRoot, path.resolve(cwd, destPath));
   try {
@@ -921,9 +923,10 @@ function handleResultExport({ projectRoot, cwd = process.cwd() }, opts = {}) {
     return { envelope: ok({ format: opts.format, path: null, ...counts, xml }), exitKind: 'ok' };
   }
 
-  // A path the user chose: confined to the workspace rules when it lands in
-  // .mobile-automator/, where a committed link is refused (#347); written as
-  // given anywhere else.
+  // A path the user chose: the workspace rules when it lands in
+  // .mobile-automator/ (#347), the path-scope ones elsewhere in the project
+  // (#362), so a committed link is refused; written as given outside the
+  // project.
   const outPath = path.resolve(cwd, opts.out);
   try {
     atomicOutputWrite(projectRoot, outPath, xml);
@@ -1838,14 +1841,16 @@ function crashWriteFailure(given, err) {
 // It is a path the caller chose in an untrusted checkout (#347), resolved
 // against the caller's cwd as handleScreenshot's is (#214). Inside
 // .mobile-automator/ (through a symlinked alias of the root too) it gets the
-// workspace rules: every directory walked and a link on the way refused
-// before the device is asked; the write creates the missing directories and
-// refuses a link at the report itself. Anywhere else it must land in one of
-// the roots src/workspace/output-roots.js allows, checked before the device
-// is asked. A bad --out costs no device work, and the pre-check creates
-// nothing. A filesystem error is the write failure; anything else, a refusal
-// (that rule's or a link's) included, propagates to toEnvelope. `outRootsHost` is passed through to that module
-// untouched (its host facts, which it defaults; tests inject them).
+// workspace rules, elsewhere in the project the path-scope ones (#362): every
+// directory walked and a link on the way refused before the device is asked;
+// the write creates the missing directories and refuses a link at the report
+// itself. Outside the workspace it must also land in one of the roots
+// src/workspace/output-roots.js allows, checked before the device is asked.
+// A bad --out costs no device work, and the pre-check creates nothing. A
+// filesystem error is the write failure; anything else, a refusal (that
+// rule's or a link's) included, propagates to toEnvelope. `outRootsHost` is
+// passed through to that module untouched (its host facts, which it
+// defaults; tests inject them).
 async function handleCrashGet({ deviceBridge, projectRoot, cwd = process.cwd(), outRootsHost }, id, opts = {}) {
   let target = null;
   if (opts.out) {

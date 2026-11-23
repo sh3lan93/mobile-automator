@@ -1,9 +1,10 @@
 'use strict';
 
-// safe-fs for paths the user chose (#347): userPath, the userDir /
-// userDirLeaves / userDest / userFile entry points, safeWorkspaceDest and isInside. Inside
-// the workspace they get the workspace rules; elsewhere they are the user's
-// call. Fixture: tests/helpers/safe-fs-fixture.js.
+// safe-fs for paths the user chose (#347): the userPath scopes, the userDir /
+// userDirLeaves / userDest / userFile entry points, readUserFile (#363),
+// safeWorkspaceDest and isInside. Inside the workspace they get the workspace
+// rules; elsewhere they are the user's call. Fixture:
+// tests/helpers/safe-fs-fixture.js.
 
 const os = require('os');
 const fs = require('fs');
@@ -11,7 +12,6 @@ const path = require('path');
 
 const {
   inProject,
-  userPath,
   readUserFile,
   safeWorkspaceDest,
   isInside,
@@ -47,33 +47,37 @@ afterEach(() => {
   removeSafeFsFixture(base);
 });
 
-// userPath's workspace scope: what inWorkspace used to answer, now one
-// label of the one classifier.
-const wsPath = (root_, p, deps) => {
-  const at = userPath(root_, p, deps);
-  return at.scope === 'workspace' ? at.path : null;
+// userPath is private: its classification is read off the userFile target,
+// which every writer gets. workspacePath is that target's path when it lands
+// in the workspace scope, else null (what the deleted inWorkspace returned).
+const userPath = (root_, file, deps) => {
+  const { path: p, scope } = userFile(root_, file, deps);
+  return { path: p, scope };
+};
+const workspacePath = (root_, file, deps) => {
+  const t = userPath(root_, file, deps);
+  return t.scope === 'workspace' ? t.path : null;
 };
 
 describe('userPath: the workspace scope', () => {
   it('returns a path inside the workspace as is', () => {
     const p = path.join(ws, 'screenshots', 'a.png');
-    expect(wsPath(root, p)).toBe(p);
-    expect(wsPath(root, ws)).toBe(ws);
+    expect(workspacePath(root, p)).toBe(p);
+    expect(workspacePath(root, ws)).toBe(ws);
   });
 
-  it('is not the workspace for a project file outside it', () => {
-    expect(userPath(root, path.join(root, 'shots', 'a.png')).scope).toBe('path');
-    expect(userPath(root, path.join(root, '.mobile-automator-old', 'a.png')).scope).toBe('path');
-    expect(userPath(root, root).scope).toBe('path');
+  it('is null for a project file outside the workspace', () => {
+    expect(workspacePath(root, path.join(root, 'shots', 'a.png'))).toBeNull();
+    expect(workspacePath(root, path.join(root, '.mobile-automator-old', 'a.png'))).toBeNull();
+    expect(workspacePath(root, root)).toBeNull();
   });
 
-  it('is outside for a path outside the project (an explicit /tmp/x.png)', () => {
+  it('is null for a path outside the project (an explicit /tmp/x.png)', () => {
     const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-elsewhere-'));
     try {
-      for (const p of [path.join(elsewhere, 'x.png'), path.join(outside, 'x.png'), path.join(base, 'nope', 'deeper', 'x.png')]) {
-        expect(userPath(root, p)).toEqual({ path: p, scope: 'outside' });
-        expect(inProject(root, p)).toBeNull();
-      }
+      expect(workspacePath(root, path.join(elsewhere, 'x.png'))).toBeNull();
+      expect(workspacePath(root, path.join(outside, 'x.png'))).toBeNull();
+      expect(workspacePath(root, path.join(base, 'nope', 'deeper', 'x.png'))).toBeNull();
     } finally {
       fs.rmSync(elsewhere, { recursive: true, force: true });
     }
@@ -81,24 +85,21 @@ describe('userPath: the workspace scope', () => {
 
   it('maps a workspace path reached through a symlinked parent onto the real root', () => {
     const { realRoot, alias, realWs } = aliasedRoot(base, root);
-    expect(wsPath(realRoot, path.join(alias, '.mobile-automator', 'screenshots', 'a.png'))).toBe(
+    expect(workspacePath(realRoot, path.join(alias, '.mobile-automator', 'screenshots', 'a.png'))).toBe(
       path.join(realWs, 'screenshots', 'a.png')
     );
-    expect(wsPath(realRoot, path.join(alias, '.mobile-automator'))).toBe(realWs);
+    expect(workspacePath(realRoot, path.join(alias, '.mobile-automator'))).toBe(realWs);
   });
 
-  it('is the path scope, re-rooted, for a project file outside the workspace reached through the alias', () => {
+  it('is null for a project file outside the workspace reached through the alias', () => {
     const { realRoot, alias } = aliasedRoot(base, root);
-    expect(userPath(realRoot, path.join(alias, 'shots', 'a.png'))).toEqual({
-      path: path.join(realRoot, 'shots', 'a.png'),
-      scope: 'path',
-    });
+    expect(workspacePath(realRoot, path.join(alias, 'shots', 'a.png'))).toBeNull();
   });
 
   it('still maps a symlinked .mobile-automator/screenshots reached through the alias, so a walk refuses it', () => {
     const { realRoot, alias, realWs } = aliasedRoot(base, root);
     fs.symlinkSync(outside, path.join(realWs, 'screenshots'));
-    const got = wsPath(realRoot, path.join(alias, '.mobile-automator', 'screenshots', 'a.png'));
+    const got = workspacePath(realRoot, path.join(alias, '.mobile-automator', 'screenshots', 'a.png'));
     expect(got).toBe(path.join(realWs, 'screenshots', 'a.png'));
     expectUnsafe(() => safeWorkspaceDest(realRoot, got), 'symlink');
   });
@@ -109,7 +110,7 @@ describe('userPath: the workspace scope', () => {
   it('maps through the shallowest ancestor that is the root, not a workspace link back to it', () => {
     const { realRoot, alias, realWs } = aliasedRoot(base, root);
     fs.symlinkSync('..', path.join(realWs, 'screenshots'));
-    const got = wsPath(realRoot, path.join(alias, '.mobile-automator', 'screenshots', 'a.png'));
+    const got = workspacePath(realRoot, path.join(alias, '.mobile-automator', 'screenshots', 'a.png'));
     expect(got).toBe(path.join(realWs, 'screenshots', 'a.png'));
     expectUnsafe(() => safeWorkspaceDest(realRoot, got), 'symlink');
   });
@@ -118,8 +119,8 @@ describe('userPath: the workspace scope', () => {
     const { realRoot, alias } = aliasedRoot(base, root);
     const lookOnly = { realpathSync: fs.realpathSync };
     const p = path.join(alias, '.mobile-automator', 'screenshots', 'a.png');
-    expect(wsPath(realRoot, p, { fs: lookOnly })).toBe(path.join(realRoot, '.mobile-automator', 'screenshots', 'a.png'));
-    expect(userPath(realRoot, path.join(outside, 'x.png'), { fs: lookOnly }).scope).toBe('outside');
+    expect(workspacePath(realRoot, p, { fs: lookOnly })).toBe(path.join(realRoot, '.mobile-automator', 'screenshots', 'a.png'));
+    expect(workspacePath(realRoot, path.join(outside, 'x.png'), { fs: lookOnly })).toBeNull();
   });
 });
 
@@ -149,10 +150,37 @@ describe('userPath', () => {
     const p = path.join(ws, 'scenarios', 'a.json');
     expect(userPath(null, p)).toEqual({ path: p, scope: 'outside' });
   });
+
+  it('names a sibling of the workspace the path scope, and outside the project outside', () => {
+    expect(userPath(root, path.join(root, '.mobile-automator-old', 'a.png')).scope).toBe('path');
+    const p = path.join(base, 'nope', 'deeper', 'x.png');
+    expect(userPath(root, p)).toEqual({ path: p, scope: 'outside' });
+    expect(inProject(root, p)).toBeNull();
+  });
 });
 
-// The entry points for a path the user chose: each makes the userPath
+// The entry points for a path the user chose: each makes the workspace-scope
 // choice itself and hands back the path to use.
+// userDir's one caller is MAUTO_LOG_DIR, chosen by the environment, not the
+// checkout, so #362 leaves it out: in the project, outside the workspace, it
+// stays the user's call, made by a plain mkdir and used as given.
+describe('userDir in the project, outside the workspace (#362: unchanged)', () => {
+  it('follows a linked directory as the user chose it, never refusing it', () => {
+    const linked = path.join(root, 'logs');
+    fs.symlinkSync(outside, linked);
+    expect(userDir(root, linked)).toBe(linked);
+    expect(userDir(root, path.join(linked, 'deeper'), { create: true })).toBe(path.join(linked, 'deeper'));
+    expect(fs.existsSync(path.join(outside, 'deeper'))).toBe(true);
+  });
+
+  it('returns the path as given through an aliased root, not re-rooted', () => {
+    const { realRoot, alias } = aliasedRoot(base, root);
+    const given = path.join(alias, 'logs');
+    expect(userDir(realRoot, given, { create: true })).toBe(given);
+    expect(fs.existsSync(path.join(realRoot, 'logs'))).toBe(true);
+  });
+});
+
 describe('userDir / userDest / userFile (#347)', () => {
   it('userDir walks a workspace directory, refusing a link; elsewhere it only mkdirs', () => {
     fs.symlinkSync(outside, path.join(ws, '.logs'));
@@ -185,15 +213,182 @@ describe('userDir / userDest / userFile (#347)', () => {
   it('userFile confines a workspace file and words an outside refusal in the path scope', () => {
     fs.symlinkSync(outside, path.join(ws, 'results'));
     const inside = userFile(root, path.join(ws, 'results', 'r.txt'));
-    expect(inside.confined).toBe(true);
+    expect(inside.scope).toBe('workspace');
     expect(expectUnsafe(() => inside.open(inside.path, O_WRONLY | O_CREAT), 'symlink').scope).toBe('workspace');
 
     const leaf = path.join(outside, 'r.txt');
     fs.symlinkSync(canaryFile, leaf);
     const out = userFile(root, leaf);
-    expect(out).toMatchObject({ confined: false, path: leaf });
+    expect(out).toMatchObject({ path: leaf, scope: 'outside' });
     expect(expectUnsafe(() => out.open(out.path, O_WRONLY | O_CREAT), 'symlink').scope).toBe('path');
     expect(snapshot(outside)).toEqual({ 'r.txt': CANARY, 'secret.txt': CANARY });
+  });
+});
+
+// #362: a path inside the project but outside the workspace (`reports/r.xml`,
+// with `reports` a committed link to anywhere) gets the project walk, worded
+// in the 'path' scope. Only a path outside the project is the user's own call.
+describe('inProject / userPath scopes (#362)', () => {
+  it('classifies a workspace, a project and an outside path', () => {
+    const elsewhere = path.join(outside, 'r.xml');
+    expect(userPath(root, path.join(ws, 'reports', 'r.xml'))).toEqual({
+      path: path.join(ws, 'reports', 'r.xml'),
+      scope: 'workspace',
+    });
+    expect(userPath(root, path.join(root, 'reports', 'r.xml'))).toEqual({
+      path: path.join(root, 'reports', 'r.xml'),
+      scope: 'path',
+    });
+    expect(userPath(root, root)).toMatchObject({ path: root, scope: 'path' });
+    expect(userPath(root, elsewhere)).toEqual({ path: elsewhere, scope: 'outside' });
+  });
+
+  it('inProject keeps a lexical project path and is null outside the project', () => {
+    expect(inProject(root, path.join(root, 'reports', 'r.xml'))).toBe(path.join(root, 'reports', 'r.xml'));
+    expect(inProject(root, path.join(ws, 'a'))).toBe(path.join(ws, 'a'));
+    expect(inProject(root, path.join(outside, 'r.xml'))).toBeNull();
+    expect(inProject(root, path.join(base, 'r.xml'))).toBeNull();
+  });
+
+  it('re-roots a project path reached through a symlinked parent onto the real root', () => {
+    const { realRoot, alias } = aliasedRoot(base, root);
+    expect(inProject(realRoot, path.join(alias, 'reports', 'r.xml'))).toBe(path.join(realRoot, 'reports', 'r.xml'));
+    expect(userPath(realRoot, path.join(alias, 'reports', 'r.xml'))).toEqual({
+      path: path.join(realRoot, 'reports', 'r.xml'),
+      scope: 'path',
+    });
+  });
+});
+
+describe('userFile in the project, outside the workspace (#362)', () => {
+  const reports = () => path.join(root, 'reports');
+  const openIn = (t) => t.open(t.path, O_WRONLY | O_CREAT);
+
+  it('refuses a linked reports/ (symlink, path scope), the outside untouched', () => {
+    fs.symlinkSync(outside, reports());
+    const before = snapshot(outside);
+    const t = userFile(root, path.join(reports(), 'r.xml'));
+    expect(t.scope).toBe('path');
+    const err = expectUnsafe(() => openIn(t), 'symlink');
+    expect(err.kind).toBe('environment');
+    expect(err.scope).toBe('path');
+    expect(err.message).toMatch(/^Refusing to use path /);
+    expect(err.message).not.toContain(outside);
+    expect(snapshot(outside)).toEqual(before);
+  });
+
+  it('refuses a nested link (reports/sub -> outside)', () => {
+    fs.mkdirSync(reports());
+    fs.symlinkSync(outside, path.join(reports(), 'sub'));
+    const before = snapshot(outside);
+    const t = userFile(root, path.join(reports(), 'sub', 'r.xml'));
+    expect(expectUnsafe(() => openIn(t), 'symlink').scope).toBe('path');
+    expect(snapshot(outside)).toEqual(before);
+  });
+
+  it('refuses a world-writable directory', () => {
+    fs.mkdirSync(reports());
+    fs.chmodSync(reports(), 0o777);
+    const t = userFile(root, path.join(reports(), 'r.xml'));
+    expect(expectUnsafe(() => openIn(t), 'world_writable').scope).toBe('path');
+    expect(fs.readdirSync(reports())).toEqual([]);
+  });
+
+  it('refuses a foreign-owned directory; MAUTO_TRUST_WORKSPACE_OWNER=1 skips the owner check only', () => {
+    fs.mkdirSync(reports());
+    const file = path.join(reports(), 'r.xml');
+    expect(expectUnsafe(() => openIn(userFile(root, file, { fs: foreignAt(reports()) })), 'foreign_owner').scope).toBe(
+      'path'
+    );
+    const trusted = userFile(root, file, { fs: foreignAt(reports()), env: { MAUTO_TRUST_WORKSPACE_OWNER: '1' } });
+    fs.closeSync(openIn(trusted));
+    expect(fs.existsSync(file)).toBe(true);
+
+    const linked = path.join(root, 'linked');
+    fs.symlinkSync(outside, linked);
+    const t = userFile(root, path.join(linked, 'r.xml'), { env: { MAUTO_TRUST_WORKSPACE_OWNER: '1' } });
+    expectUnsafe(() => openIn(t), 'symlink');
+  });
+
+  it('a plain reports/ works, its missing directories created by an O_CREAT open', () => {
+    const file = path.join(reports(), 'deep', 'r.xml');
+    const t = userFile(root, file);
+    const fd = openIn(t);
+    fs.writeSync(fd, '<x/>');
+    fs.closeSync(fd);
+    expect(fs.lstatSync(path.join(reports(), 'deep')).isDirectory()).toBe(true);
+    expect(fs.readFileSync(file, 'utf8')).toBe('<x/>');
+  });
+
+  it('preflight creates nothing and refuses a link, in every scope', () => {
+    userFile(root, path.join(reports(), 'deep', 'r.xml')).preflight();
+    expect(fs.existsSync(reports())).toBe(false);
+
+    fs.symlinkSync(outside, reports());
+    expect(expectUnsafe(() => userFile(root, path.join(reports(), 'r.xml')).preflight(), 'symlink').scope).toBe('path');
+
+    fs.symlinkSync(outside, path.join(ws, 'results'));
+    expect(
+      expectUnsafe(() => userFile(root, path.join(ws, 'results', 'r.xml')).preflight(), 'symlink').scope
+    ).toBe('workspace');
+    userFile(root, path.join(ws, 'absent', 'r.xml')).preflight();
+    expect(fs.existsSync(path.join(ws, 'absent'))).toBe(false);
+
+    const out = path.join(outside, 'none', 'r.xml');
+    userFile(root, out).preflight();
+    expect(fs.existsSync(path.dirname(out))).toBe(false);
+  });
+
+  it('an outside path is unchanged: a linked directory there is the user\'s call', () => {
+    const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-elsewhere-'));
+    try {
+      const link = path.join(elsewhere, 'link');
+      fs.symlinkSync(outside, link);
+      const t = userFile(root, path.join(link, 'r.xml'));
+      expect(t.scope).toBe('outside');
+      t.preflight();
+      fs.closeSync(openIn(t));
+      expect(fs.existsSync(path.join(outside, 'r.xml'))).toBe(true);
+    } finally {
+      fs.rmSync(elsewhere, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('userDest in the project, outside the workspace (#362)', () => {
+  const reports = () => path.join(root, 'reports');
+
+  it('refuses a linked reports/ (symlink, path scope), the outside untouched', () => {
+    fs.symlinkSync(outside, reports());
+    const before = snapshot(outside);
+    const err = expectUnsafe(() => userDest(root, path.join(reports(), 'a.png')), 'symlink');
+    expect(err.scope).toBe('path');
+    expect(err.kind).toBe('environment');
+    expect(snapshot(outside)).toEqual(before);
+  });
+
+  it('refuses a symlink leaf, a non-regular leaf and a foreign-owned directory', () => {
+    fs.mkdirSync(reports());
+    fs.symlinkSync(canaryFile, path.join(reports(), 'a.png'));
+    expect(expectUnsafe(() => userDest(root, path.join(reports(), 'a.png')), 'symlink').scope).toBe('path');
+    fs.mkdirSync(path.join(reports(), 'b.png'));
+    expectUnsafe(() => userDest(root, path.join(reports(), 'b.png')), 'not_regular');
+    expectUnsafe(() => userDest(root, path.join(reports(), 'c.png'), { fs: foreignAt(reports()) }), 'foreign_owner');
+    expect(fs.readFileSync(canaryFile, 'utf8')).toBe(CANARY);
+  });
+
+  it('a plain directory works; a missing one is not created', () => {
+    fs.mkdirSync(reports());
+    expect(userDest(root, path.join(reports(), 'a.png'))).toBe(path.join(reports(), 'a.png'));
+    const missing = path.join(root, 'shots', 'deep', 'a.png');
+    expect(userDest(root, missing)).toBe(missing);
+    expect(fs.existsSync(path.join(root, 'shots'))).toBe(false);
+  });
+
+  it('an explicit path outside the project is returned byte-for-byte, nothing checked or made', () => {
+    const given = path.join(outside, 'deeper', 'a.png');
+    expect(userDest(root, given)).toBe(given);
+    expect(fs.existsSync(path.dirname(given))).toBe(false);
   });
 });
 

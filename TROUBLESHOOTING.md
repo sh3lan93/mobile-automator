@@ -41,8 +41,13 @@
 - "Refusing to use path …" is the same check for a file mauto writes elsewhere in the
   project (#347). This covers the host files `mauto init` installs (`.claude/`, `.cursor/`,
   `.gemini/`, `.github/`, `.agents/`, `.mcp.json`), a reference screenshot outside the
-  workspace, and a `crash get --out` file. Every directory below the project root is
-  checked, as well as the file itself.
+  workspace, and a report or screenshot path you name inside the project
+  (`result export --out`, `run --junit`, `crash get --out`, `mauto screenshot <path>`,
+  #362). Every directory below the project root is checked, as well as the file itself.
+  A path outside the project (for example `/tmp/r.xml`) is not checked.
+- A project directory owned by root or writable by everyone (for example a `build/`
+  a Docker container created) is refused too: `chown` it, `chmod o-w` it, write the
+  report outside the project, or set `MAUTO_TRUST_WORKSPACE_OWNER=1` for the owner case.
 - The same checks cover the files mauto reads at a path you name (#363): the scenario
   `validate`, `run` and `result finalize --scenario` read, a reference screenshot, and
   the run trace. Inside the project a link is refused, for example a committed

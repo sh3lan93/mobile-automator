@@ -17,11 +17,13 @@ const { makeFakeBridge, makeFakeClock, el } = require('../../helpers/fake-bridge
 const RUN_ID = 'run_20261111_110000';
 
 let root;
+const afterEachCleanup = [];
 beforeEach(() => {
   root = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-handle-run-'));
 });
 afterEach(() => {
   fs.rmSync(root, { recursive: true, force: true });
+  for (const d of afterEachCleanup.splice(0)) fs.rmSync(d, { recursive: true, force: true });
 });
 
 const scenario = {
@@ -286,9 +288,12 @@ describe('--junit (#282)', () => {
   });
 
   test('a write that fails is environment, after finalize, with the full data and junit_path null', async () => {
-    const junitPath = path.join(root, 'gone', 'report.xml');
+    // Outside the project: in it, the walk would refuse the file itself (#362).
+    const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-handle-run-elsewhere-'));
+    afterEachCleanup.push(elsewhere);
+    const junitPath = path.join(elsewhere, 'gone', 'report.xml');
     // The parent turns into a file after prepareRun checked it.
-    fs.writeFileSync(path.join(root, 'gone'), 'x');
+    fs.writeFileSync(path.join(elsewhere, 'gone'), 'x');
     const d = deps((args) => new ResultStore(args));
     const r = await handleRun(d, { ...prepared(scenario), junitPath });
     expect(r.exitKind).toBe('environment');
