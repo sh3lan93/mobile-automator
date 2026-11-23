@@ -31,26 +31,21 @@ const fs = require('fs');
 const path = require('path');
 const { isDeepStrictEqual } = require('util');
 
+const versionOrder = require('./version-order');
+
+const { compareCores } = versionOrder;
+
 const CHANGELOG = 'CHANGELOG.md';
 const PACKAGE = 'package.json';
 const LOCK = 'package-lock.json';
 
 class HandMerge extends Error {}
 
+// The shared parser (#369), with an unparseable version left to a human.
 function parseVersion(version) {
-  const match = /^(\d+)\.(\d+)\.(\d+)(-.+)?$/.exec(version);
-  if (!match) throw new HandMerge(`cannot parse version "${version}"`);
-  return {
-    core: [Number(match[1]), Number(match[2]), Number(match[3])],
-    prerelease: Boolean(match[4]),
-  };
-}
-
-function compareCores(a, b) {
-  for (let i = 0; i < 3; i += 1) {
-    if (a[i] !== b[i]) return a[i] - b[i];
-  }
-  return 0;
+  const parsed = versionOrder.parseVersion(version);
+  if (!parsed) throw new HandMerge(`cannot parse version "${version}"`);
+  return { core: parsed.core, prerelease: parsed.prerelease.length > 0 };
 }
 
 // The position (0 major, 1 minor, 2 patch) of the first number the branch moved.
