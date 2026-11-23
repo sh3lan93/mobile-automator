@@ -32,6 +32,14 @@ describe('readTrace', () => {
     expect(readTrace(null, { projectRoot: root })).toBeNull();
   });
 
+  // Without it every read would fail and silently read as no trace: safe-fs's
+  // one projectRoot guard throws, and readTrace lets it through.
+  it('throws TypeError without a projectRoot', () => {
+    const file = path.join(logsRoot(), '.mobile-automator', '.logs', 'run-x.ndjson');
+    expect(() => readTrace(file, {})).toThrow(TypeError);
+    expect(() => readTrace(file, { projectRoot: '' })).toThrow(/projectRoot must be a non-empty path/);
+  });
+
   // A trailing partial line is NORMAL, not corruption: a SIGKILLed process can
   // be interrupted mid-append, and the trace of a run that died is the trace
   // most worth reading.

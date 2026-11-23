@@ -151,6 +151,21 @@ describe('userPath', () => {
     expect(userPath(null, p)).toEqual({ path: p, scope: 'outside' });
   });
 
+  // The one projectRoot guard: every entry point that classifies a path
+  // refuses anything but a non-empty path or null, the same way.
+  it.each([undefined, '', 0, {}])('refuses a projectRoot of %p in every entry point (TypeError)', (bad) => {
+    const p = path.join(outside, 'a.json');
+    for (const call of [
+      () => readUserFile(bad, p),
+      () => userDirLeaves(bad, outside),
+      () => userDir(bad, outside),
+      () => userDest(bad, p),
+      () => userFile(bad, p),
+    ]) {
+      expect(call).toThrow(new TypeError('safe-fs: projectRoot must be a non-empty path, or null for no checkout'));
+    }
+  });
+
   it('names a sibling of the workspace the path scope, and outside the project outside', () => {
     expect(userPath(root, path.join(root, '.mobile-automator-old', 'a.png')).scope).toBe('path');
     const p = path.join(base, 'nope', 'deeper', 'x.png');

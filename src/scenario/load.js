@@ -30,12 +30,10 @@ const cannotRead = (message) => ({
 // the message naming the path and never what it points at, while a file
 // outside the project is the user's own and is read as named. An explicit
 // null means there is no checkout (validate without a workspace): every file
-// is then outside it. Leaving it out is a bug, and throws.
+// is then outside it. Leaving it out is a bug: readUserFile's TypeError
+// propagates.
 function loadScenario(validator, file, opts = {}) {
   const { projectRoot } = opts;
-  if (projectRoot !== null && (typeof projectRoot !== 'string' || projectRoot === '')) {
-    throw new TypeError('loadScenario: projectRoot is required (a path, or null for no checkout)');
-  }
   let raw;
   let sha256;
   try {
@@ -43,6 +41,7 @@ function loadScenario(validator, file, opts = {}) {
     sha256 = crypto.createHash('sha256').update(bytes).digest('hex');
     raw = bytes.toString('utf8');
   } catch (err) {
+    if (err instanceof TypeError) throw err;
     if (isTypedRefusal(err)) return { failure: typedFail(err) };
     return cannotRead(err.message);
   }

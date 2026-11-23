@@ -62,14 +62,14 @@ const TRACE_READ_MAX_BYTES = MAX_LOG_BYTES + 1024 * 1024;
 // never "no trace", and finalize fails environment.
 function readTrace(tracePath, { projectRoot, fs = realFs } = {}) {
   if (!tracePath) return null;
-  // Required: without it every read would fail and silently read as no trace.
-  if (!projectRoot) throw new TypeError('readTrace: projectRoot is required');
   let text;
   try {
     const leaf = settledLeaf(projectRoot, path.dirname(tracePath), tracePath, {}, { fs });
     text = leaf.read({ maxBytes: TRACE_READ_MAX_BYTES });
   } catch (err) {
-    if (err instanceof UnsafePathError) throw err;
+    // Required: safe-fs's TypeError for a missing projectRoot is a bug, never
+    // "no trace".
+    if (err instanceof TypeError || err instanceof UnsafePathError) throw err;
     text = null;
   }
   // No trace for this run: an ordinary, expected state (MAUTO_RUN_ID unset,

@@ -128,7 +128,10 @@ describe('unreadable files stay invalid_input', () => {
 
   test('projectRoot is required', () => {
     expect(() => loadScenario(validator, path.join(outside, 'x.json'), {})).toThrow(TypeError);
-    expect(() => loadScenario(validator, path.join(outside, 'x.json'), {})).toThrow(/projectRoot/);
+    expect(() => loadScenario(validator, path.join(outside, 'x.json'), {})).toThrow(
+      'safe-fs: projectRoot must be a non-empty path, or null for no checkout'
+    );
+    expect(() => loadScenario(validator, path.join(outside, 'x.json'), { projectRoot: '' })).toThrow(TypeError);
   });
 });
 

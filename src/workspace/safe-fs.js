@@ -818,8 +818,14 @@ function createProjectFile(projectRoot, file, { mode = 0o666 } = {}, deps = {}) 
 // paths or swaps in its own open; a caller may read `scope` only for a policy
 // of its own on top (crash get --out's roots apply outside the workspace).
 // A null projectRoot means there is no checkout (validate run where no
-// workspace was found): everything is 'outside', the user's own.
+// workspace was found): everything is 'outside', the user's own. Anything
+// else but a non-empty path is a caller's bug, and throws TypeError: the one
+// projectRoot guard, so every entry point (readUserFile, userDirLeaves,
+// userDir, userDest, userFile) checks it the same way.
 function userPath(projectRoot, file, deps) {
+  if (projectRoot !== null && (typeof projectRoot !== 'string' || projectRoot === '')) {
+    throw new TypeError('safe-fs: projectRoot must be a non-empty path, or null for no checkout');
+  }
   if (projectRoot === null) return { path: path.resolve(file), scope: 'outside' };
   const p = inProject(projectRoot, file, deps);
   if (!p) return { path: path.resolve(file), scope: 'outside' };
