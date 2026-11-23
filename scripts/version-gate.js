@@ -32,7 +32,7 @@
 const { spawnSync } = require('child_process');
 const fs = require('fs');
 
-const { parseVersion, compareVersions } = require('./version-order');
+const { parseVersion, compareVersions, highestRelease } = require('./version-order');
 
 const MODES = ['pr', 'tag'];
 const RULE = '────────────────────────────────────────';
@@ -50,13 +50,10 @@ const SHIPPING_PATHS = ['src', 'bin', 'package.json'];
  * @returns {{ decision: 'tagged'|'behind'|'ahead', highest: string|null }}
  */
 function decide(version, tags) {
-  const releases = tags.filter((t) => t.startsWith('v') && parseVersion(t.slice(1)));
-  const highest = releases.reduce(
-    (best, t) => (best === null || compareVersions(t.slice(1), best.slice(1)) > 0 ? t : best),
-    null,
-  );
-  if (releases.includes(`v${version}`)) return { decision: 'tagged', highest };
-  if (highest !== null && compareVersions(version, highest.slice(1)) <= 0) return { decision: 'behind', highest };
+  const top = highestRelease(tags);
+  const highest = top === null ? null : top.tag;
+  if (tags.includes(`v${version}`)) return { decision: 'tagged', highest };
+  if (top !== null && compareVersions(version, top.version) <= 0) return { decision: 'behind', highest };
   return { decision: 'ahead', highest };
 }
 

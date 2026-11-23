@@ -31,8 +31,8 @@ const fs = require('fs');
 const path = require('path');
 const { isDeepStrictEqual } = require('util');
 
-const { parseVersion, compareCores } = require('./version-order');
-const { decide, gitTags } = require('./version-gate');
+const { parseVersion, compareVersions, compareCores, highestRelease } = require('./version-order');
+const { gitTags } = require('./version-gate');
 
 const CHANGELOG = 'CHANGELOG.md';
 const PACKAGE = 'package.json';
@@ -63,22 +63,28 @@ function bump(core, level) {
 const LEVELS = ['major', 'minor', 'patch'];
 
 // The version the branch should carry once `theirs` is merged: its own if that
-// is still free and ahead, otherwise the same size of bump on top of the base.
-// Free is the version gate's rule (#369), decide() over the release `tags`, so
-// sync never picks a version the gate would then reject: see sync() below.
+// is still ahead of the base and above the highest release tag, otherwise the
+// same size of bump on top of the base, or failing that on top of the highest
+// tag. It is computed once from highestRelease(tags), never probed for.
 //
-// The next free version is computed, not probed for. When the base's bump is
-// not free, the only bar left is the highest tag, so the answer is the same
-// bump on top of it. If that tag is on a newer minor or major than the branch's
-// bump size (an rc line, 0.41.0-rc.1, past a patch bump), the bump cannot reach
-// it at that size and a human chooses: probing bump after bump never ended.
+// "Above the highest tag" is the version gate's rule (#369): the gate accepts a
+// version that is untagged and greater than the highest tag, and a tagged one
+// is never greater, so greater-than alone is the same rule. sync never picks a
+// version the gate would then reject: see sync() below.
+//
+// When the base's bump is not above the highest tag, the answer is the same
+// bump on the tag itself, provided the tag agrees with the bump above its size.
+// If the tag is on a newer minor or major than the branch's bump size (an rc
+// line, 0.41.0-rc.1, past a patch bump), no bump of that size reaches it and a
+// human chooses.
 function nextVersion({ ancestor, ours, theirs, tags }) {
   if (ours === ancestor) return theirs;
 
-  const free = (version) => decide(version, tags).decision === 'ahead';
+  const highest = highestRelease(tags);
+  const above = (version) => highest === null || compareVersions(version, highest.version) > 0;
   const o = parseOrHandMerge(ours);
   const t = parseOrHandMerge(theirs);
-  if (compareCores(o.core, t.core) > 0 && free(ours)) return ours;
+  if (compareCores(o.core, t.core) > 0 && above(ours)) return ours;
 
   if (o.prerelease.length > 0 || t.prerelease.length > 0) {
     throw new HandMerge(`rc version ${ours} needs a number chosen by hand (base is ${theirs})`);
@@ -86,24 +92,17 @@ function nextVersion({ ancestor, ours, theirs, tags }) {
 
   const level = bumpLevel(parseOrHandMerge(ancestor).core, o.core);
   const candidate = bump(t.core, level);
-  if (free(candidate.join('.'))) return candidate.join('.');
+  if (above(candidate.join('.'))) return candidate.join('.');
 
-  // Not free, so some tag is at or above candidate: highest is never null here.
-  const { highest } = decide(candidate.join('.'), tags);
-  const h = parseOrHandMerge(highest.slice(1));
-  if (h.core.some((n, i) => i < level && n !== candidate[i])) {
+  // Not above, so some tag is at or above candidate: highest is never null here.
+  if (highest.parsed.core.some((n, i) => i < level && n !== candidate[i])) {
     throw new HandMerge(
-      `highest release tag ${highest} is past a ${LEVELS[level]} bump on ${theirs}; choose the version by hand`,
+      `highest release tag ${highest.tag} is past a ${LEVELS[level]} bump on ${theirs}; choose the version by hand`,
     );
   }
-
-  // h.core agrees with candidate above `level` and bumping it at `level` moves
-  // past h itself (prerelease or not), so this is above every tag.
-  const above = bump(h.core, level);
-  if (!free(above.join('.'))) {
-    throw new HandMerge(`no free ${LEVELS[level]} bump above ${highest}; choose the version by hand`);
-  }
-  return above.join('.');
+  // The tag agrees with candidate above `level` and is at or above it, so
+  // bumping the tag at `level` moves past it (prerelease or not).
+  return bump(highest.parsed.core, level).join('.');
 }
 
 // Split into the text before the first `## [` heading and one entry per section,

@@ -2,8 +2,8 @@
 
 // The one version comparison in the repo (#369). scripts/version-gate.js
 // orders package.json's version against the release tags with it, and
-// scripts/sync-branch.js compares release cores with it (and decides which
-// version is free through version-gate.js); neither keeps its own.
+// scripts/sync-branch.js picks its next version with it; both find the highest
+// release tag through highestRelease() here, and neither keeps its own.
 //
 // Precedence is SemVer 2.0's: the numeric core first, then a version with a
 // prerelease sorts below the same core without one (0.41.0-rc.1 < 0.41.0), and
@@ -83,4 +83,24 @@ function compareVersions(a, b) {
   return compareCores(pa.core, pb.core) || comparePrereleases(pa.prerelease, pb.prerelease);
 }
 
-module.exports = { parseVersion, compareVersions, compareCores };
+/**
+ * The highest release tag among `tags`, by compareVersions.
+ *
+ * @param {string[]} tags  tag names; anything not `v` + a parseable version is ignored
+ * @returns {{ tag: string, version: string, parsed: { core: number[], prerelease: string[] } } | null}
+ *   `tag` is the name as given (`v0.41.0-rc.1`), `version` the same without
+ *   the `v`, `parsed` its parseVersion(); null when no tag is a release.
+ */
+function highestRelease(tags) {
+  let best = null;
+  for (const tag of tags) {
+    if (typeof tag !== 'string' || !tag.startsWith('v')) continue;
+    const version = tag.slice(1);
+    const parsed = parseVersion(version);
+    if (!parsed) continue;
+    if (best === null || compareVersions(version, best.version) > 0) best = { tag, version, parsed };
+  }
+  return best;
+}
+
+module.exports = { parseVersion, compareVersions, compareCores, highestRelease };

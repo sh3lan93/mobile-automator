@@ -3,7 +3,7 @@
 // #369: the one version comparison in the repo. The version gate and
 // scripts/sync-branch.js both read it, so the cases here are the whole
 // ordering contract (SemVer 2.0 precedence, build metadata refused).
-const { parseVersion, compareVersions, compareCores } = require('../../scripts/version-order');
+const { parseVersion, compareVersions, compareCores, highestRelease } = require('../../scripts/version-order');
 
 const sign = (n) => Math.sign(n);
 
@@ -55,5 +55,40 @@ describe('compareCores', () => {
     expect(sign(compareCores([0, 40, 9], [0, 40, 10]))).toBe(-1);
     expect(sign(compareCores([1, 0, 0], [0, 99, 99]))).toBe(1);
     expect(compareCores([0, 41, 0], [0, 41, 0])).toBe(0);
+  });
+});
+
+describe('highestRelease', () => {
+  test('no release tags is null', () => {
+    expect(highestRelease([])).toBeNull();
+    expect(highestRelease(['junk', '1.2.3', 'v1.2', 'v1.2.3+b'])).toBeNull();
+  });
+
+  test('ignores tags that are not v + a parseable version', () => {
+    expect(highestRelease(['v0.40.1', 'junk', 'release-9.9.9', '9.9.9', 'v9.9'])).toEqual({
+      tag: 'v0.40.1',
+      version: '0.40.1',
+      parsed: { core: [0, 40, 1], prerelease: [] },
+    });
+  });
+
+  test('orders numerically, not by string or list position', () => {
+    expect(highestRelease(['v0.40.10', 'v0.40.9', 'v0.40.2']).tag).toBe('v0.40.10');
+    expect(highestRelease(['v0.40.2', 'v0.40.9', 'v0.40.10']).tag).toBe('v0.40.10');
+  });
+
+  test('a release sorts above its own rc, an rc above the previous core', () => {
+    expect(highestRelease(['v0.41.0', 'v0.41.0-rc.3']).tag).toBe('v0.41.0');
+    expect(highestRelease(['v0.41.0-rc.3', 'v0.41.0']).tag).toBe('v0.41.0');
+    expect(highestRelease(['v0.40.19', 'v0.41.0-rc.1'])).toEqual({
+      tag: 'v0.41.0-rc.1',
+      version: '0.41.0-rc.1',
+      parsed: { core: [0, 41, 0], prerelease: ['rc', '1'] },
+    });
+  });
+
+  test('rc counters compare numerically: rc.2 < rc.10', () => {
+    expect(highestRelease(['v0.41.0-rc.10', 'v0.41.0-rc.2']).tag).toBe('v0.41.0-rc.10');
+    expect(highestRelease(['v0.41.0-rc.2', 'v0.41.0-rc.10']).tag).toBe('v0.41.0-rc.10');
   });
 });
