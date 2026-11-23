@@ -9,8 +9,8 @@
 // regressions a build failure:
 //
 //   1. at least one scenario exists, so the per-file rules are not vacuous;
-//   2. every scenario passes the CLI's own schema validation and has no
-//      finding `mauto validate --strict` would fail on;
+//   2. every scenario passes `mauto validate --strict`, through the same
+//      loader (`src/scenario/load.js`) the CLI and `mauto run` use;
 //   3. every scenario is schema 2.1, platform-agnostic and cross-platform,
 //      uses only mechanical assertion types, and names no OS element id;
 //   4. every scenario launches the id both platforms build, and the Android
@@ -24,7 +24,7 @@ const path = require('path');
 const { REPO_ROOT, repoFiles } = require('./docs-corpus');
 const { OS_ID_TOKEN, targetValues } = require('./scenario-targets');
 const { ScenarioValidator } = require('../../src/scenario/validator');
-const { findReplayWarnings, isBlocking } = require('../../src/scenario/replayability');
+const { loadScenario } = require('../../src/scenario/load');
 const { MECHANICAL_TYPES } = require('../../src/assertion/evaluator');
 
 const APP = 'showcase-app';
@@ -70,14 +70,11 @@ for (const file of scenarioFiles) describe(file, () => {
   const raw = read(file);
   const scenario = JSON.parse(raw);
 
-  test('passes schema validation', () => {
-    const { valid, errors } = validator.validate(scenario);
-    expect(errors).toEqual([]);
-    expect(valid).toBe(true);
-  });
-
-  test('has no finding that would fail validate --strict', () => {
-    expect(findReplayWarnings(scenario).filter(isBlocking)).toEqual([]);
+  // The exact path `mauto validate --strict` and `mauto run` take: one call to
+  // the shared loader, so a new strict-mode rule reaches this guard unrestated.
+  test('passes mauto validate --strict', () => {
+    const { failure } = loadScenario(validator, path.join(REPO_ROOT, file), { projectRoot: REPO_ROOT, strict: true });
+    expect(failure && failure.envelope).toBeUndefined();
   });
 
   test('is schema 2.1, platform-agnostic and cross-platform', () => {
