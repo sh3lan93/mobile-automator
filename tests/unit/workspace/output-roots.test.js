@@ -13,6 +13,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { OutputPathRefusal, crashOutRoots, crashOutTarget } = require('../../../src/workspace/output-roots');
+const { UnsafePathError } = require('../../../src/workspace/safe-fs');
 const { tmpDir } = require('../../helpers/workspace-safety');
 
 // A project one level below its own temp dir, plus a temp dir, a home and an
@@ -37,6 +38,17 @@ function refusal(fn) {
     return err;
   }
   throw new Error('expected an OutputPathRefusal');
+}
+
+function unsafe(fn) {
+  try {
+    fn();
+  } catch (err) {
+    expect(err).toBeInstanceOf(UnsafePathError);
+    expect(err.kind).toBe('environment');
+    return err;
+  }
+  throw new Error('expected an UnsafePathError');
 }
 
 describe('crashOutRoots', () => {
@@ -104,7 +116,7 @@ describe('crashOutTarget', () => {
     fs.mkdirSync(path.join(s.root, 'sub'));
     for (const out of [path.join(s.root, 'c.txt'), path.join(s.tmp, 'c.txt'), path.join(s.root, 'sub', 'c.txt')]) {
       const t = crashOutTarget(s.root, out, s.host);
-      expect(t).toMatchObject({ path: out, confined: false });
+      expect(t).toMatchObject({ path: out });
     }
   });
 
@@ -122,19 +134,37 @@ describe('crashOutTarget', () => {
     refusal(() => crashOutTarget(s.root, path.join(s.base, 'c.txt'), s.host));
   });
 
-  it('compares realpaths: a project directory linking outside every root is refused, by its own name', () => {
+  // #362: a project directory link is refused by the project walk before the
+  // roots are compared, wherever it points, by its own name.
+  it('a project directory linking outside every root is refused, by its own name', () => {
     const s = setup();
     fs.symlinkSync(s.outside, path.join(s.root, 'docs'));
-    const err = refusal(() => crashOutTarget(s.root, path.join(s.root, 'docs', 'c.txt'), s.host));
-    expect(err.message).toContain(path.join(s.root, 'docs', 'c.txt'));
+    const err = unsafe(() => crashOutTarget(s.root, path.join(s.root, 'docs', 'c.txt'), s.host));
+    expect(err.message).toContain(path.join(s.root, 'docs'));
     expect(err.message).not.toContain(s.outside);
+  });
+
+  it('a project reports/ linking into the temp dir (an allowed root) is refused, the temp dir left empty', () => {
+    const s = setup();
+    fs.symlinkSync(s.tmp, path.join(s.root, 'reports'));
+    const err = unsafe(() => crashOutTarget(s.root, path.join(s.root, 'reports', 'c.txt'), s.host));
+    expect(err.reason).toBe('symlink');
+    expect(err.scope).toBe('path');
+    expect(fs.readdirSync(s.tmp)).toEqual([]);
+  });
+
+  it('a plain project reports/ is allowed, in the project scope', () => {
+    const s = setup();
+    fs.mkdirSync(path.join(s.root, 'reports'));
+    const out = path.join(s.root, 'reports', 'c.txt');
+    expect(crashOutTarget(s.root, out, s.host)).toMatchObject({ path: out, scope: 'path' });
   });
 
   it('a root that does not resolve is skipped, not matched', () => {
     const s = setup();
     const host = { ...s.host, tmpdir: () => path.join(s.base, 'no-such-tmp') };
     refusal(() => crashOutTarget(s.root, path.join(s.outside, 'c.txt'), host));
-    expect(crashOutTarget(s.root, path.join(s.root, 'c.txt'), host).confined).toBe(false);
+    expect(crashOutTarget(s.root, path.join(s.root, 'c.txt'), host).scope).toBe('path');
   });
 
   it('a project that is home: its paths are refused, the temp dir still allowed, and the hint says why', () => {
@@ -144,7 +174,7 @@ describe('crashOutTarget', () => {
     expect(err.hint).toContain('The project directory is not allowed');
     expect(err.hint).not.toContain(s.root);
     expect(err.hint).toContain(s.tmp);
-    expect(crashOutTarget(s.root, path.join(s.tmp, 'c.txt'), host).confined).toBe(false);
+    expect(crashOutTarget(s.root, path.join(s.tmp, 'c.txt'), host).scope).toBe('outside');
   });
 
   describe('/tmp on macOS', () => {
@@ -169,7 +199,6 @@ describe('crashOutTarget', () => {
       const out = path.join(s.root, '.mobile-automator', 'c.txt');
       expect(crashOutTarget(s.root, out, { ...s.host, homedir: () => s.root })).toMatchObject({
         path: out,
-        confined: true,
       });
     });
 
@@ -178,7 +207,7 @@ describe('crashOutTarget', () => {
       const alias = path.join(tmpDir('mauto-out-roots-root-alias-'), 'p');
       fs.symlinkSync(s.root, alias);
       const t = crashOutTarget(s.root, path.join(alias, '.mobile-automator', 'c.txt'), s.host);
-      expect(t).toMatchObject({ path: path.join(s.root, '.mobile-automator', 'c.txt'), confined: true });
+      expect(t).toMatchObject({ path: path.join(s.root, '.mobile-automator', 'c.txt') });
     });
   });
 

@@ -160,16 +160,25 @@ describe('cli handlers', () => {
 
     // #214: the daemon's cwd is not the caller's, so a relative path is
     // resolved here, against the directory the verb was run from.
+    // A real project root: a path inside it is walked (#362).
+    const realWork = () => {
+      const work = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-cli-shot-')));
+      fs.mkdirSync(path.join(work, 'sub'));
+      return work;
+    };
+
     test('resolves a relative path against the caller cwd', async () => {
+      const work = realWork();
       const calls = [];
       const fakeBridge = { screenshot: async (p) => { calls.push(p); return p; } };
       const { envelope, exitKind } = await handleScreenshot(
-        { deviceBridge: fakeBridge, projectRoot: '/work', cwd: '/work/sub' },
+        { deviceBridge: fakeBridge, projectRoot: work, cwd: path.join(work, 'sub') },
         'shots/home.png'
       );
       expect(exitKind).toBe('ok');
-      expect(calls).toEqual(['/work/sub/shots/home.png']);
-      expect(envelope.data).toEqual({ path: '/work/sub/shots/home.png' });
+      expect(calls).toEqual([path.join(work, 'sub', 'shots', 'home.png')]);
+      expect(envelope.data).toEqual({ path: path.join(work, 'sub', 'shots', 'home.png') });
+      fs.rmSync(work, { recursive: true, force: true });
     });
 
     test('passes an absolute path through unchanged', async () => {
@@ -180,10 +189,12 @@ describe('cli handlers', () => {
     });
 
     test('normalizes .. segments', async () => {
+      const work = realWork();
       const calls = [];
       const fakeBridge = { screenshot: async (p) => { calls.push(p); return p; } };
-      await handleScreenshot({ deviceBridge: fakeBridge, projectRoot: '/work', cwd: '/work/sub' }, '../x.png');
-      expect(calls).toEqual(['/work/x.png']);
+      await handleScreenshot({ deviceBridge: fakeBridge, projectRoot: work, cwd: path.join(work, 'sub') }, '../x.png');
+      expect(calls).toEqual([path.join(work, 'x.png')]);
+      fs.rmSync(work, { recursive: true, force: true });
     });
   });
 

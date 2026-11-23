@@ -3,9 +3,10 @@
 // Where `mauto crash get --out` may write (#347). The report is a path the
 // caller chose in an untrusted checkout. Inside .mobile-automator/ (through a
 // symlinked alias of the root too) safe-fs's userFile gives it the workspace
-// rules. Anywhere else it must land in one of the roots the device engine
-// allows for the files it writes itself (mobile-mcp's getAllowedRoots), so a
-// crash report goes no further than a screenshot could.
+// rules; elsewhere in the project, the path-scope ones (#362). Outside the
+// workspace it must also land in one of the roots the device engine allows
+// for the files it writes itself (mobile-mcp's getAllowedRoots), so a crash
+// report goes no further than a screenshot could.
 //
 // Its own module rather than safe-fs: safe-fs is the generic "never through a
 // link" layer, shared by every reader and writer; this is one verb's policy on
@@ -19,7 +20,7 @@ const os = require('os');
 const path = require('path');
 
 const { TypedRefusal } = require('../output/typed-refusal');
-const { isInside, openUserLeaf, safeDir, userFile } = require('./safe-fs');
+const { isInside, userFile } = require('./safe-fs');
 // realpath or null, not realOrResolved: a root with no realpath is skipped,
 // since it cannot contain a directory that exists.
 const { realpathOrNull } = require('../util/real-or-resolved');
@@ -56,29 +57,33 @@ function crashOutRoots(
   return { roots, projectTooBroad };
 }
 
-// Where the report for `out` (absolute) goes, `{ path, confined, open }`,
-// checked before the device is asked so a bad --out costs no device work, and
-// creating nothing: a failed device call leaves no trace.
+// Where the report for `out` (absolute) goes, userFile's `{ path, scope,
+// open }`, checked before the device is asked so a bad --out costs no
+// device work, and creating nothing: a failed device call leaves no trace.
 //
-// Inside the workspace its directory is walked check-only, so a planted
-// directory link is refused (UnsafePathError) before the device call; a
-// directory that does not exist yet is nothing to refuse. The write's open
-// (userFile's openWorkspaceFile under O_CREAT) is the one place that creates
-// the missing directories, walking again, and checks the leaf, so a link at
-// the report itself is refused there, before anything is written.
+// First, in every scope, userFile's preflight: in the project (workspace or
+// not) its directory is walked check-only, so a planted directory link is
+// refused (UnsafePathError) before the device call, wherever it points (a
+// `reports` link into the temp dir, an allowed root, included); a directory
+// that does not exist yet is nothing to refuse. Outside the project it checks
+// nothing.
 //
-// Outside the workspace its directory must already exist and realpath inside
-// one of the roots. Throws OutputPathRefusal when it does not; a directory
-// that does not exist (or cannot be realpath'd) throws its own fs error, which
-// the caller reports as the write failure it always was. Its open creates no
-// directory (the realpath just proved it exists): openUserLeaf, the checked
-// leaf alone.
+// In the workspace the roots do not apply. The write's open (userFile's
+// confined open under O_CREAT) is the one place that creates the missing
+// directories, walking again, and checks the leaf, so a link at the report
+// itself is refused there, before anything is written.
+//
+// Anywhere else its directory must already exist and realpath inside one of
+// the roots. Throws OutputPathRefusal when it does not; a directory that does
+// not exist (or cannot be realpath'd) throws its own fs error, which the
+// caller reports as the write failure it always was. The open is userFile's
+// in every scope: in the project the walk again, then the checked leaf;
+// outside it the checked leaf, after a recursive mkdir that is a no-op there
+// (the realpath just proved the directory exists), so nothing is created.
 function crashOutTarget(projectRoot, out, host = {}) {
   const target = userFile(projectRoot, out);
-  if (target.confined) {
-    safeDir(projectRoot, path.dirname(target.path), { missingOk: true });
-    return target;
-  }
+  target.preflight();
+  if (target.scope === 'workspace') return target;
 
   const { roots, projectTooBroad } = crashOutRoots(projectRoot, host);
   const dir = fs.realpathSync(path.dirname(target.path));
@@ -86,7 +91,7 @@ function crashOutTarget(projectRoot, out, host = {}) {
     const real = realpathOrNull(root);
     return real !== null && isInside(dir, real);
   };
-  if (roots.some(holdsDir)) return { ...target, open: openUserLeaf };
+  if (roots.some(holdsDir)) return target;
   throw new OutputPathRefusal(
     `--out resolves outside the directories a crash report may be written to: ${target.path}`,
     projectTooBroad
