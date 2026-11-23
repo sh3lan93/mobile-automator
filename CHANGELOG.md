@@ -36,6 +36,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the per-user telemetry consent file. A refusal there no longer suggests
   the override.
 
+## [0.40.18]
+
+### ⚠️ Upgrade note
+
+- **Run `mauto session end` once after upgrading if a device session is
+  running.** A daemon started by an older mauto does not answer the new
+  handshake below, so it reads as "no daemon": each device verb waits about
+  15 s for a new one, then runs one-shot, until the old daemon idles out
+  (5 minutes) or is ended.
+
+### 🔒 Security
+
+- **The device-session client talks only to this workspace's daemon**
+  ([#361](https://github.com/sh3lan93/mobile-automator/issues/361)).
+  The client checked `.mobile-automator/.session/` and the socket by path and
+  then connected by path, and `.mobile-automator/` may be group-writable, so
+  the directory it checked was not necessarily the one it connected through.
+  Now:
+  - the client connects only through the session directory it checked: it
+    enters that directory, checks it, and reads the session secret, checks the
+    socket and connects by relative names, all in one synchronous step;
+  - every connection starts with a handshake: the daemon must prove it holds
+    the workspace's session secret (`.session/marker.salt`) for this project
+    root and a fresh nonce before the client sends anything else. Anything
+    less reads as "no daemon".
+
 ## [0.40.17]
 
 ### 🔒 Security

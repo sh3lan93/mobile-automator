@@ -24,7 +24,7 @@ const fs = require('fs');
 const net = require('net');
 
 const paths = require('./session-paths');
-const { FrameParser } = require('./session-protocol');
+const { FrameParser, answerHello } = require('./session-protocol');
 const { newSessionId } = require('./session-id');
 const { makeDeviceCall } = require('./device-call');
 const { safeObserve: guardObserve } = require('../observe/recorder');
@@ -32,6 +32,7 @@ const { FLUSH_INTERVAL_MS } = require('../observe/flush');
 const { pidIdentity, readPidFile } = require('./process-identity');
 const { DEFAULT_ENGINE } = require('./engine');
 const { ensureSessionDirs, listenOwnerOnly } = require('./session-dir');
+const { ensureSalt } = require('./session-salt');
 const { createWorkspaceFile } = require('../workspace/safe-fs');
 const { atomicWorkspaceWrite } = require('../util/atomic');
 
@@ -209,9 +210,14 @@ async function startDaemon({
   // It also decides, once, the socket path this daemon binds, sweeps, unlinks
   // and records in its handle (#346): the directory it checked is the
   // directory of that path, with nothing recomputed in between.
+  //
+  // The workspace salt is read (or created) here once and kept in memory: it is
+  // the secret this daemon proves it holds when a client says hello (#361).
   let socketPath;
+  let salt;
   try {
     socketPath = ensureSessionDirs(projectRoot, socketDeps);
+    salt = ensureSalt(projectRoot);
   } catch (err) {
     safeObserve({
       level: 'error',
@@ -638,6 +644,13 @@ async function startDaemon({
             ok: true,
             result: { pong: true, device, in_flight: inFlight, engine_alive: engineAlive },
           });
+          armIdle();
+          continue;
+        }
+        if (req.type === 'hello') {
+          // The handshake (#361, session-protocol.js): prove we hold this
+          // workspace's salt.
+          await reply({ id: req.id, ...answerHello(salt, projectRoot, req) });
           armIdle();
           continue;
         }

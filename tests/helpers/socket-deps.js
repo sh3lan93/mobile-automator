@@ -14,7 +14,7 @@
 // test file; it returns a getter for `{ tmpdir }` pointing at a fresh temp dir
 // of this file's own (removed afterwards). Pass that one value everywhere the
 // suite resolves the socket: startDaemon({ socketDeps }), the session-client
-// entry points' second argument, ensureSessionDirs, verifySocket and
+// entry points' second argument, ensureSessionDirs, connectPinned and
 // paths.socketPath/socketLocation. The same value on both sides is what makes
 // the client find the daemon. A spawned daemon has no seam: give its child
 // env a TMPDIR instead.

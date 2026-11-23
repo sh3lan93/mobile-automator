@@ -570,6 +570,13 @@ function closeQuietly(fs, fd) {
 // settled (a workspace or project scope's). A caller that leaves it out gets the owner compared
 // outright. Only safe-fs's own entry points and userDirLeaves's leaves pass
 // one.
+//
+// `file` reaches open(2) exactly as given: a relative name is opened relative
+// to the process's current directory itself, never through a path rebuilt
+// from that directory's name (path.resolve), which another process could have
+// renamed meanwhile. The session client relies on this to read a leaf in a
+// directory it has entered and checked (#361). `resolved` only names the leaf
+// in a refusal.
 function openOwnedLeaf(file, flags, { mode = 0o666, singleLink = false, policy = STRICT_LEAF } = {}, deps = {}) {
   const d = resolveDeps(deps);
   const { O_WRONLY, O_RDWR, O_TRUNC } = nodeFs.constants;
@@ -580,11 +587,11 @@ function openOwnedLeaf(file, flags, { mode = 0o666, singleLink = false, policy =
   // without it and truncate only once every check has passed.
   let opened;
   try {
-    opened = openLeaf(resolved, flags & ~O_TRUNC, mode, deps);
+    opened = openLeaf(file, flags & ~O_TRUNC, mode, deps);
   } catch (err) {
     // openLeaf has no policy: its refusal is worded under the leaf's, like
-    // every other refusal of this open.
-    if (err instanceof UnsafePathError) throw new UnsafePathError(err.path, err.reason, { policy });
+    // every other refusal of this open, and names the resolved leaf.
+    if (err instanceof UnsafePathError) throw new UnsafePathError(resolved, err.reason, { policy });
     throw err;
   }
   const { fd, stat } = opened;

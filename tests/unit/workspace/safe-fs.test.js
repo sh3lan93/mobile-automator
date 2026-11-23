@@ -657,6 +657,41 @@ describe('openOwnedLeaf', () => {
     expectUnsafe(() => openOwnedLeaf(p, O_RDONLY, { singleLink: true }), 'hardlink');
   });
 
+  // #361: the session client opens marker.salt relative to a directory it has
+  // chdir'd into and checked. Resolving the name against the cwd's NAME would
+  // reach whatever directory carries that name now, not the one checked.
+  it('opens a relative leaf by the relative name, never a path rebuilt from the cwd', () => {
+    const p = path.join(ws, 'a');
+    fs.writeFileSync(p, 'abc');
+    const opened = [];
+    const spy = { ...fs, openSync: (f, ...rest) => (opened.push(f), fs.openSync(f, ...rest)) };
+    const prev = process.cwd();
+    process.chdir(ws);
+    try {
+      fs.closeSync(openOwnedLeaf('a', O_RDONLY, {}, { fs: spy }));
+      expect(readOwnedLeaf('a', {}, { fs: spy })).toBe('abc');
+    } finally {
+      process.chdir(prev);
+    }
+    expect(opened).toEqual(['a', 'a']);
+  });
+
+  it('a refusal of a relative leaf still names the absolute path', () => {
+    const link = path.join(ws, 'a');
+    fs.symlinkSync(canaryFile, link);
+    const prev = process.cwd();
+    process.chdir(ws);
+    let err;
+    let absolute;
+    try {
+      absolute = path.resolve('a');
+      err = expectUnsafe(() => openOwnedLeaf('a', O_RDONLY), 'symlink');
+    } finally {
+      process.chdir(prev);
+    }
+    expect(err.path).toBe(absolute);
+  });
+
   it('opens a one-link leaf for a read with singleLink', () => {
     const p = path.join(ws, 'a');
     fs.writeFileSync(p, 'x');
