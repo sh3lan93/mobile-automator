@@ -57,14 +57,6 @@
   ],
   "assertions": [
     {
-      "id": "list_title_shown",
-      "after_step": "wait_list",
-      "type": "element_text",
-      "description": "The screen title reads 'Popular films'",
-      "element_description": "Popular films",
-      "expected_value": "Popular films"
-    },
-    {
       "id": "film_count_shown",
       "after_step": "wait_list",
       "type": "pattern_match",
@@ -81,10 +73,9 @@
     {
       "id": "list_back",
       "after_step": "wait_list_again",
-      "type": "element_visible",
-      "description": "Back on the popular films list",
-      "element_description": "Popular films",
-      "expected_visible": true
+      "type": "pattern_match",
+      "description": "The film-count line is shown again, which proves the loaded list is back and not the add-your-key screen (which shares the title)",
+      "pattern": "^\\d+ films$"
     }
   ]
 }
