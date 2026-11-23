@@ -380,7 +380,14 @@ function walkScope(projectRoot, scope, dir, opts, deps) {
 function openInScope(projectRoot, scope, file, flags, mode, deps) {
   const resolved = path.resolve(file);
   walkScope(projectRoot, scope, path.dirname(resolved), { create: Boolean(flags & nodeFs.constants.O_CREAT) }, deps);
-  return openOwnedLeaf(resolved, flags, { mode }, deps);
+  return openLeafInScope(scope, resolved, flags, mode, deps);
+}
+
+// The leaf half of openInScope, for a leaf whose directory is settled: the
+// checked leaf open (openOwnedLeaf), a refusal worded for the scope. Returns
+// an fd the caller closes.
+function openLeafInScope(scope, file, flags, mode, deps) {
+  return withScope(scope, () => openOwnedLeaf(path.resolve(file), flags, { mode }, deps));
 }
 
 // A destination another process writes, under a scope: the row's walk of its
@@ -776,12 +783,15 @@ function userFile(projectRoot, file, deps = {}) {
   };
 }
 
-// The leaf open for a path the user chose outside the workspace, whose
-// directory the caller has settled itself: openOwnedLeaf (O_NOFOLLOW, ours,
-// one link for a write, the truncate deferred), a refusal worded in the 'path'
-// scope. Creates no directory. Returns an fd the caller closes.
+// The outside row's leaf open, for a file outside any project whose
+// directory the caller has settled itself (the per-user telemetry consent
+// record): openLeafInScope('outside'), so it is the same open userFile uses
+// outside the project, minus the walk. O_NOFOLLOW, ours, one link for a
+// write, the truncate deferred; a refusal worded under the outside row's
+// policy (err.scope 'path'). Creates no directory. Returns an fd the caller
+// closes.
 function openUserLeaf(file, flags, mode = 0o666, deps = {}) {
-  return withScope('path', () => openOwnedLeaf(file, flags, { mode }, deps));
+  return openLeafInScope('outside', file, flags, mode, deps);
 }
 
 // The lenient readers, for state files where absent or garbled is a normal
