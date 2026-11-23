@@ -16,6 +16,8 @@ module.exports = [
       '**/node_modules/**',
       'sample-app/*',
       '!sample-app/scripts/',
+      // Kotlin/Swift app; its only JS is Gradle's git-ignored test-report output.
+      'showcase-app/**',
       '.claude/**',
       '.worktrees/**',
       'coverage/**',

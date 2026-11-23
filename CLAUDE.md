@@ -49,7 +49,7 @@ There is also a **three-layer model** worth keeping straight: (1) the CLI contra
 | Milestone | PRD / gate | Branch prefix | State |
 |---|---|---|---|
 | `production-ready` | gate issue [#168](https://github.com/sh3lan93/mobile-automator/issues/168) | `fix/<issue>-<slug>`, `feat/…`, `docs/…`, `chore/…` | **complete** (gate closed 2026-10-25) |
-| `sample-app` | PRD [#44](https://github.com/sh3lan93/mobile-automator/issues/44), slices #45–#49 | `sample-app/<issue-number>-<short-slug>` | active — slices 4–5 open |
+| `sample-app` | PRD [#44](https://github.com/sh3lan93/mobile-automator/issues/44), slices #45–#49; showcase PRD [#304](https://github.com/sh3lan93/mobile-automator/issues/304) (slices #305–#313, `showcase-app/`) uses the same prefix | `sample-app/<issue-number>-<short-slug>` | active — slices 4–5 open |
 | `cli` | PRD [#69](https://github.com/sh3lan93/mobile-automator/issues/69), slices #70–#78 | — | **complete** (all 23 closed) |
 | `interactive-recording` | — | — | **dead** — recorder excised in v0.20.0 (PR #110) |
 | `replay` | PRD [#271](https://github.com/sh3lan93/mobile-automator/issues/271), slices #272–#284 + follow-ups; plan `docs/plans/2026-10-27-replay-plan.md` | `replay/<issue-number>-<short-slug>` | **graduated** in v0.40.0 (#284): `mauto run` is ungated; follow-ups stay on Project #4 |
