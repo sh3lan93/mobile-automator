@@ -173,35 +173,18 @@ const PROJECT_PATH = dirPolicy({
 });
 
 // The one scope table: a scope name -> everything that scope means, so a
-// scope is added or renamed in one row and nowhere else, and no entry point
-// below tests a scope by name.
-//   - policy: the directory rules and the wording of every refusal under it
-//     (UnsafePathError, withScope). A refusal's `err.scope` is always its
-//     row's `policy.scope`.
-//   - walk(projectRoot, dir, opts, d): what happens to a file's directory
-//     (walkScope): `opts` as walkDirs takes them (`create`, `missingOk`,
-//     `mode`, `policy`).
-//   - destCreates: whether a destination another process writes (the
-//     engine's screenshot) gets its missing directories made (destInScope).
-//   - destLeaf: whether that destination's leaf is checked (checkDestLeaf).
-//   - userDir(projectRoot, { path, given }, { create }, d): what userDir does
-//     with a directory the user chose, `path` userPath's, `given` the path as
-//     the caller resolved it. Its one caller is MAUTO_LOG_DIR, which the
-//     environment chooses, not the checkout, so only the workspace row
-//     confines it; the other two leave it the user's call (usersOwnDir),
-//     exactly as before #362.
+// scope is added or renamed in one row and no entry point below tests a scope
+// by name. A row's fields are named for the helper that reads them (walk:
+// walkScope; destCreates, destLeaf: destInScope; userDir: userDir), and a
+// refusal's `err.scope` is always its row's `policy.scope`.
 //
-//   - workspace: walked, bounded by .mobile-automator/; a destination's
-//     directories are made, like every workspace write, and its leaf checked.
-//   - path: walked, bounded by the project root (#347, #362); a destination's
-//     directories are not made, as none are for a path the user chose outside
-//     the workspace (a missing one is reported by the writer as before), and
-//     its leaf is checked.
-//   - outside: a path the user chose outside the project, the user's own
-//     call. Nothing is walked: `create` is a plain recursive mkdir, anything
-//     else a no-op. A destination is handed over byte-for-byte (Review Focus
-//     5: `mauto screenshot /tmp/x.png`). The leaf open is still checked, worded
-//     under the path policy, so its refusals read `err.scope === 'path'`.
+// Why the rows differ: 'workspace' and 'path' are confined, walked within
+// .mobile-automator/ and the project root (#347, #362). 'outside' is the
+// user's own call: nothing is walked, and a destination is handed over
+// byte-for-byte (`mauto screenshot /tmp/x.png` keeps working), but its leaf
+// open is still checked, under the path policy. userDir's one caller is
+// MAUTO_LOG_DIR, which the environment chooses, not the checkout, so only
+// the workspace row confines it (out of #362's scope).
 //
 // An unknown scope's wording reads as the workspace one. A caller's own policy
 // (src/device/session-dir.js) is handed to the check as `policy` and never

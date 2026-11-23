@@ -223,9 +223,10 @@ async function handleElements({ deviceBridge }) {
 // walked and created, a planted link refused. One elsewhere in the project
 // gets the same walk in the path scope, creating nothing (#362). One outside
 // the project is the user's own choice and reaches the bridge exactly as
-// resolved; the engine applies its own allowed-directories rule there. A refusal is thrown, before the bridge
-// is asked and outside the device catch below, so the envelope boundary
-// reports it environment with its own hint, as for every other verb.
+// resolved; the engine applies its own allowed-directories rule there. A
+// refusal is thrown, before the bridge is asked and outside the device catch
+// below, so the envelope boundary reports it environment with its own hint,
+// as for every other verb.
 async function handleScreenshot({ deviceBridge, projectRoot, cwd = process.cwd() }, destPath) {
   const dest = userDest(projectRoot, path.resolve(cwd, destPath));
   try {
@@ -1838,10 +1839,12 @@ function crashWriteFailure(given, err) {
 // directory walked and a link on the way refused before the device is asked;
 // the write creates the missing directories and refuses a link at the report
 // itself. Outside the workspace it must also land in one of the roots
-// src/workspace/output-roots.js allows, checked before the device is asked. A bad --out costs no device work, and the pre-check creates
-// nothing. A filesystem error is the write failure; anything else, a refusal
-// (that rule's or a link's) included, propagates to toEnvelope. `outRootsHost` is passed through to that module
-// untouched (its host facts, which it defaults; tests inject them).
+// src/workspace/output-roots.js allows, checked before the device is asked.
+// A bad --out costs no device work, and the pre-check creates nothing. A
+// filesystem error is the write failure; anything else, a refusal (that
+// rule's or a link's) included, propagates to toEnvelope. `outRootsHost` is
+// passed through to that module untouched (its host facts, which it
+// defaults; tests inject them).
 async function handleCrashGet({ deviceBridge, projectRoot, cwd = process.cwd(), outRootsHost }, id, opts = {}) {
   let target = null;
   if (opts.out) {
