@@ -68,10 +68,10 @@ function write(event, { projectRoot, env = process.env, fs = realFs, logPath, bo
     if (!append.allowed(projectRoot, env, fs)) return;
     const given = logPath || mainLogPath(projectRoot, env);
     const deps = { fs, env };
-    const target = append.inSettledDir(projectRoot, path.dirname(given), given, { create: true }, deps);
+    const leaf = append.settledLeaf(projectRoot, path.dirname(given), given, { create: true }, deps);
     const capped = bound === 'cap';
-    if (!capped) rotateIfLarge(target, { fs });
-    append.appendLine(target, format(event), { ...deps, capBytes: capped ? MAX_LOG_BYTES : undefined });
+    if (!capped) rotateIfLarge(leaf.path, { fs });
+    append.appendLine(leaf, format(event), { fs, capBytes: capped ? MAX_LOG_BYTES : undefined });
   } catch (_) {
     // Observability must never be load-bearing. Losing a log line is always
     // preferable to failing the verb the user actually asked for.

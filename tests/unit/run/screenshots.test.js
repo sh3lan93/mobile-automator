@@ -237,3 +237,52 @@ describe('assertArtifacts', () => {
     expect(fs.readdirSync(root)).toEqual([]);
   });
 });
+
+// #363: every PNG read here goes through readUserFile.
+describe('readPng / writeReference read through the checked walk (#363)', () => {
+  const { readPng } = require('../../../src/run/screenshots');
+
+  test('readPng decodes a workspace PNG, and an absent one throws ENOENT', () => {
+    const p = writePng(path.join(workspaceDir(root), 'screenshots', 'a.png'), solidPng(3, 2));
+    expect(readPng(root, p)).toMatchObject({ width: 3, height: 2 });
+    let caught;
+    try {
+      readPng(root, path.join(workspaceDir(root), 'screenshots', 'none.png'));
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught.code).toBe('ENOENT');
+  });
+
+  test('readPng refuses a leaf link in the workspace', () => {
+    const outside = outsideDir();
+    const secret = writePng(path.join(outside, 's.png'), solidPng(3, 2));
+    const p = path.join(workspaceDir(root), 'screenshots', 'a.png');
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    fs.symlinkSync(secret, p);
+    expect(() => readPng(root, p)).toThrow(UnsafePathError);
+  });
+
+  test('writeReference refuses an actual that is a link, writing no baseline', () => {
+    const outside = outsideDir();
+    const secret = writePng(path.join(outside, 's.png'), solidPng(3, 2));
+    const actual = path.join(workspaceDir(root), 'screenshots', 'a.png');
+    fs.mkdirSync(path.dirname(actual), { recursive: true });
+    fs.symlinkSync(secret, actual);
+    const ref = referencePathFor(root, 'login', 'a1');
+    expect(() => writeReference(root, actual, ref)).toThrow(UnsafePathError);
+    expect(fs.existsSync(ref)).toBe(false);
+  });
+
+  test('captureStable refuses a captured frame that is a link, as environment', async () => {
+    const outside = outsideDir();
+    const secret = writePng(path.join(outside, 's.png'), solidPng(3, 2));
+    // An engine that leaves a link where the frame should be.
+    const bridge = {
+      screenshot: async (file) => fs.symlinkSync(secret, file),
+    };
+    const dest = path.join(workspaceDir(root), 'screenshots', 'login', 'run_1', 'assert_a.png');
+    await expect(captureStable({ projectRoot: root, bridge, dest, clock: makeFakeClock(), timeoutMs: 100, pollMs: 10 }))
+      .rejects.toBeInstanceOf(UnsafePathError);
+  });
+});

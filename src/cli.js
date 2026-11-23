@@ -244,8 +244,13 @@ async function handleScreenshot({ deviceBridge, projectRoot, cwd = process.cwd()
   }
 }
 
-function handleValidate({ validator }, file, opts = {}) {
-  const loaded = loadScenario(validator, file, opts);
+// `projectRoot` is the DISCOVERED workspace root, or null when none was found
+// (never the cwd fallback): validate runs without a workspace, and then there
+// is no checkout to bound the read, so the scenario is the user's own file and
+// is read as named (#363). Inside a found workspace it is read through the
+// checked walk, a committed link refused.
+function handleValidate({ validator, projectRoot }, file, opts = {}) {
+  const loaded = loadScenario(validator, file, { ...opts, projectRoot });
   if (loaded.failure) return loaded.failure;
   if (loaded.warnings.length === 0) {
     return { envelope: ok({ valid: true }), exitKind: 'ok' };
@@ -747,10 +752,11 @@ const DURATION_TOLERANCE_SECONDS = 1;
 const DURATION_TOLERANCE_RATIO = 0.1;
 
 // Turn the run's trace into the duration to record and the measurement block to
-// record beside it. Total: an unreadable, absent or unmeasurable trace yields
-// the reported value and a `measurements` block that says so, never an error.
+// record beside it. An unreadable, absent or unmeasurable trace yields the
+// reported value and a `measurements` block that says so, never an error; a
+// refused one (a committed link, #363) throws, so finalize fails environment.
 function measureRun({ projectRoot, runId, reported }) {
-  const derived = deriveRun(readTrace(runTracePath(projectRoot, runId)));
+  const derived = deriveRun(readTrace(runTracePath(projectRoot, runId), { projectRoot }));
   const reportedSeconds = reported === undefined ? null : Number(reported);
   const hasReported = reportedSeconds !== null && Number.isFinite(reportedSeconds);
 
@@ -2168,7 +2174,7 @@ function buildProgram(deps = {}) {
     .description('Validate a scenario JSON file against the scenario schema')
     .option('--strict', 'fail (instead of warn) when the scenario cannot replay unattended')
     .action(withEnvelope((file, opts) => {
-      const r = handleValidate({ validator }, file, { strict: Boolean(opts && opts.strict) });
+      const r = handleValidate({ validator, projectRoot: foundRoot }, file, { strict: Boolean(opts && opts.strict) });
       emit(r, humanFlag());
     }));
 

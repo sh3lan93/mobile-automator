@@ -25,8 +25,9 @@
 // through safe-fs the way the file sink does, and through the same append
 // (append.js): every operation first settles its directory with userDir (the
 // checked walk in the workspace, created only by write), then opens the leaf
-// with openOwnedLeaf / readOwnedLeaf (O_NOFOLLOW, a regular file, ours, one
-// hard link, a read included). And
+// through that settled leaf's open / read (safe-fs's openOwnedLeaf /
+// readOwnedLeaf: O_NOFOLLOW, a regular file, ours, one hard link, a read
+// included). And
 // every line read back passes the field catalog again (shippablePayload), even
 // though the writer already applied it: a committed or hand-edited spool never
 // went through the writer.
@@ -40,8 +41,7 @@ const crypto = require('crypto');
 const path = require('path');
 
 const { spoolPath } = require('./paths');
-const { allowed, inSettledDir, appendLine } = require('./append');
-const { readOwnedLeaf } = require('../workspace/safe-fs');
+const { allowed, settledLeaf, appendLine } = require('./append');
 const { telemetryPayload, shippablePayload } = require('./event');
 
 // ~1000 lines at ~250 bytes. Not rotateIfLarge: that policy is for LOGS, and
@@ -82,13 +82,15 @@ function isSelfReferential(event) {
   return typeof event.event === 'string' && event.event.startsWith('telemetry.');
 }
 
-// `name`'s path inside the spool directory, settled through append.js's
-// inSettledDir (safe-fs's userDir, created only when `create`). Every
-// operation names its file by basename inside the spool directory, never by
-// the path it was handed, so none reaches a file through a directory it has
-// not checked. Throws on a refusal; each caller reads that as "nothing here".
-function inSpoolDir(name, { projectRoot, env, fs, getuid }, { create = false } = {}) {
-  return inSettledDir(projectRoot, path.dirname(spoolPath(projectRoot, env)), name, { create }, { fs, env, getuid });
+// `name` inside the spool directory, settled through append.js's settledLeaf
+// (safe-fs's userDirLeaves, created only when `create`): `{ path, open, read }`,
+// the owner rule bound by userDirLeaves (#363). Every operation names its file by
+// basename inside the spool directory, never by the path it was handed, so
+// none reaches a file through a directory it has not checked; one that opens
+// nothing (a rename, a list, an unlink) uses `.path`. Throws on a refusal;
+// each caller reads that as "nothing here".
+function spoolLeaf(name, { projectRoot, env, fs, getuid }, { create = false } = {}) {
+  return settledLeaf(projectRoot, path.dirname(spoolPath(projectRoot, env)), name, { create }, { fs, env, getuid });
 }
 
 // The append is append.js's appendLine, the one the log sink uses (#348).
@@ -110,9 +112,9 @@ function write(event, { projectRoot, env = process.env, fs = realFs, getuid } = 
     if (!allowed(projectRoot, env, fs)) return;
 
     const deps = { fs, env, getuid };
-    const file = inSpoolDir(spoolPath(projectRoot, env), { projectRoot, ...deps }, { create: true });
+    const leaf = spoolLeaf(spoolPath(projectRoot, env), { projectRoot, ...deps }, { create: true });
     const payload = telemetryPayload({ ...event, msg_id: newMessageId() });
-    appendLine(file, JSON.stringify(payload) + '\n', { ...deps, capBytes: SPOOL_MAX_BYTES });
+    appendLine(leaf, JSON.stringify(payload) + '\n', { fs, capBytes: SPOOL_MAX_BYTES });
   } catch (_) {
     // Observability is never load-bearing. Losing a telemetry line is always
     // preferable to failing the verb the user actually asked for.
@@ -149,7 +151,7 @@ function nextClaimStamp() {
 // belongs to another user, it would rename and delete files elsewhere.
 function claim({ projectRoot, env = process.env, fs = realFs, getuid } = {}) {
   try {
-    const source = inSpoolDir(spoolPath(projectRoot, env), { projectRoot, env, fs, getuid });
+    const source = spoolLeaf(spoolPath(projectRoot, env), { projectRoot, env, fs, getuid }).path;
     const target = `${source}${CLAIM_SUFFIX}.${process.pid}.${nextClaimStamp()}`;
     fs.renameSync(source, target);
     return target;
@@ -167,7 +169,7 @@ function listClaimed({ projectRoot, env = process.env, fs = realFs, getuid } = {
   let dir;
   let names;
   try {
-    dir = path.dirname(inSpoolDir(spoolPath(projectRoot, env), { projectRoot, env, fs, getuid }));
+    dir = path.dirname(spoolLeaf(spoolPath(projectRoot, env), { projectRoot, env, fs, getuid }).path);
     names = fs.readdirSync(dir);
   } catch (_) {
     return [];
@@ -203,18 +205,16 @@ function shippableLines(text) {
 // One spool file, by its name inside the settled spool directory: its size and
 // the payloads in it that may ship. A refused, absent, oversized or unreadable
 // file is { bytes: 0, payloads: [] }, never a throw: observability is never
-// load-bearing. The read is capped (readOwnedLeaf reads at most
+// load-bearing. The read is capped (the leaf's read takes at most
 // SPOOL_READ_MAX_BYTES + 1), and it refuses a second hard link: a batch is
 // read to be uploaded and then unlinked, and a second link is a file elsewhere
 // by another name whose contents would ship as this workspace's telemetry.
 function readSpool(file, { projectRoot, env = process.env, fs = realFs, getuid } = {}) {
   try {
-    const deps = { fs, env, getuid };
-    const text = readOwnedLeaf(
-      inSpoolDir(file, { projectRoot, ...deps }),
-      { maxBytes: SPOOL_READ_MAX_BYTES, singleLink: true },
-      deps
-    );
+    const text = spoolLeaf(file, { projectRoot, env, fs, getuid }).read({
+      maxBytes: SPOOL_READ_MAX_BYTES,
+      singleLink: true,
+    });
     if (text === null) return { bytes: 0, payloads: [] };
     return { bytes: Buffer.byteLength(text), payloads: shippableLines(text) };
   } catch (_) {
@@ -236,7 +236,7 @@ function readBatch(file, { projectRoot, env = process.env, fs = realFs, getuid }
 // the file for the next flush's MAX_CLAIMED prune.
 function remove(file, { projectRoot, env = process.env, fs = realFs, getuid } = {}) {
   try {
-    fs.unlinkSync(inSpoolDir(file, { projectRoot, env, fs, getuid }));
+    fs.unlinkSync(spoolLeaf(file, { projectRoot, env, fs, getuid }).path);
   } catch (_) {
     // the prune is the backstop
   }

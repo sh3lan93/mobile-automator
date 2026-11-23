@@ -258,3 +258,17 @@ describe('a planted link is refused environment (#347)', () => {
     expect(snapshot(outside)).toEqual(before);
   });
 });
+
+// #363: a --reference that is a committed link is refused environment by
+// `mauto assert`, its target never decoded nor named.
+test('a linked --reference fails environment', async () => {
+  const outside = tmpDir('mauto-assert-out-');
+  const secret = writePng(path.join(outside, 'secret.png'), solidPng(20, 20, BLACK));
+  fs.mkdirSync(path.dirname(refFile()), { recursive: true });
+  fs.symlinkSync(secret, refFile());
+  const r = await assertShot(makeFakeBridge({ screenshots: [solidPng(20, 20, WHITE)] }), { reference: 'ref/home.png' });
+  expect(r.exitKind).toBe('environment');
+  expect(r.envelope.error.kind).toBe('environment');
+  expect(r.envelope.error.message).toMatch(/^Refusing to use workspace path /);
+  expect(JSON.stringify(r)).not.toContain(outside);
+});

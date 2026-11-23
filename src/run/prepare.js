@@ -114,7 +114,7 @@ function prepareRun({
     if (unsafe) return unsafe;
   }
 
-  const loaded = loadScenario(validator, file, { strict: true });
+  const loaded = loadScenario(validator, file, { strict: true, projectRoot });
   if (loaded.failure) return { failure: loaded.failure };
 
   const runId = flag || resolveRunId(env) || makeRunId(now());

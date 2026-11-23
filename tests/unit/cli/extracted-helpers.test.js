@@ -40,7 +40,7 @@ function writeTmp(contents) {
 
 describe('loadScenario', () => {
   test('a clean scenario -> the parsed scenario, no warnings, no hint', () => {
-    const r = loadScenario(validator, writeTmp(JSON.stringify(scenario())));
+    const r = loadScenario(validator, writeTmp(JSON.stringify(scenario())), { projectRoot: os.tmpdir() });
     expect(r.failure).toBeUndefined();
     expect(r.scenario.scenario_id).toBe('login_smoke');
     expect(r.warnings).toEqual([]);
@@ -48,14 +48,14 @@ describe('loadScenario', () => {
   });
 
   test('a replay warning is returned with its hint when not strict', () => {
-    const r = loadScenario(validator, writeTmp(JSON.stringify(scenario([WIPE]))));
+    const r = loadScenario(validator, writeTmp(JSON.stringify(scenario([WIPE]))), { projectRoot: os.tmpdir() });
     expect(r.failure).toBeUndefined();
     expect(r.warnings.map((w) => w.code)).toContain('unsupported_action');
     expect(typeof r.hint).toBe('string');
   });
 
   test('strict + a blocking finding -> invalid_input failure', () => {
-    const r = loadScenario(validator, writeTmp(JSON.stringify(scenario([WIPE]))), { strict: true });
+    const r = loadScenario(validator, writeTmp(JSON.stringify(scenario([WIPE]))), { strict: true, projectRoot: os.tmpdir() });
     expect(r.scenario).toBeUndefined();
     expect(r.failure.exitKind).toBe('invalid_input');
     expect(r.failure.envelope.data.valid).toBe(false);
@@ -69,7 +69,7 @@ describe('loadScenario', () => {
   ])('returns the SHA-256 of the raw bytes (%s)', (_name, doc) => {
     const text = `${JSON.stringify({ ...doc, description: 'Café ✓' }, null, 2)}\n`;
     const file = writeTmp(text);
-    const r = loadScenario(validator, file);
+    const r = loadScenario(validator, file, { projectRoot: os.tmpdir() });
     const expected = require('crypto').createHash('sha256').update(fs.readFileSync(file)).digest('hex');
     expect(r.sha256).toBe(expected);
     expect(r.sha256).toMatch(/^[0-9a-f]{64}$/);
@@ -81,7 +81,7 @@ describe('loadScenario', () => {
       writeTmp('{ nope'),
       writeTmp(JSON.stringify({ scenario_id: 'x' })),
     ]) {
-      const r = loadScenario(validator, file);
+      const r = loadScenario(validator, file, { projectRoot: os.tmpdir() });
       expect(r.failure.exitKind).toBe('invalid_input');
       expect(r.failure.envelope.ok).toBe(false);
     }

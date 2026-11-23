@@ -69,9 +69,9 @@ const fmt = (n) => n.toFixed(3);
 // The pixel rects the masks cover on `actualPath`, or `{ missing }` naming the
 // first element description nothing on screen matches. The screen size is
 // asked for only when there is a mask to scale.
-async function pixelMasks(masks, { bridge, actualPath, findFirst }) {
+async function pixelMasks(masks, { bridge, projectRoot, actualPath, findFirst }) {
   if (masks.length === 0) return { rects: [] };
-  const factor = scaleFactor(pngSize(actualPath).width, await bridge.getScreenSize());
+  const factor = scaleFactor(pngSize(projectRoot, actualPath).width, await bridge.getScreenSize());
   let elements = null;
   const rects = [];
   for (const mask of masks) {
@@ -146,7 +146,7 @@ async function decideReferenceScreenshot({
     };
   }
 
-  const { rects, missing } = await pixelMasks(checkedMasks, { bridge, actualPath: paths.actual, findFirst });
+  const { rects, missing } = await pixelMasks(checkedMasks, { bridge, projectRoot, actualPath: paths.actual, findFirst });
   if (missing !== undefined) {
     return decided('failed', `mask element "${missing}" was not found on screen, so the comparison cannot ignore it`);
   }

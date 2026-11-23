@@ -36,7 +36,7 @@ test('start() then step(ok) stamp run.start and run.step into the run trace, tag
   trace.start();
   trace.step(true);
   trace.step(false);
-  const events = readTrace(runTracePath(root, RUN_ID)).events;
+  const events = readTrace(runTracePath(root, RUN_ID), { projectRoot: root }).events;
   expect(events.map((e) => e.event)).toEqual(['run.start', 'run.step', 'run.step']);
   expect(events.every((e) => e.verb === 'run' && e.run_id === RUN_ID)).toBe(true);
   expect(events.slice(1).map((e) => e.ok)).toEqual([true, false]);

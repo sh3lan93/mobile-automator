@@ -10,18 +10,18 @@
 //   ./scale.js) that the comparison ignores: the reference's pixels are copied
 //   over the actual's under each one, and masked pixels are not counted.
 // - similarity = 1 - diffPixels / comparedPixels (1 when everything is masked).
+// - Both PNGs are read through ./screenshots.js readPng (#363): a link to
+//   either inside the checkout is refused environment, never decoded.
 
-const fs = require('fs');
 const { PNG } = require('pngjs');
 const pixelmatch = require('pixelmatch');
 
 const { atomicWorkspaceWrite } = require('../util/atomic');
+const { readPng } = require('./screenshots');
 
 const DEFAULT_TOLERANCE = 0.9;
 // pixelmatch's per-pixel colour threshold (0..1): smaller is more sensitive.
 const DEFAULT_THRESHOLD = 0.1;
-
-const read = (file) => PNG.sync.read(fs.readFileSync(file));
 
 // Whether a similarity meets the tolerance. A null similarity (nothing was
 // compared) never does.
@@ -53,13 +53,13 @@ function applyMasks(reference, actual, masks) {
   return count;
 }
 
-// `projectRoot` is needed only to write the diff (when `diffPath` is given).
+// `projectRoot` bounds both reads and the diff write (when `diffPath` is given).
 function compareScreenshots({
   projectRoot, referencePath, actualPath, tolerance = DEFAULT_TOLERANCE, masks = [], diffPath = null,
   threshold = DEFAULT_THRESHOLD,
 }) {
-  const reference = read(referencePath);
-  const actual = read(actualPath);
+  const reference = readPng(projectRoot, referencePath);
+  const actual = readPng(projectRoot, actualPath);
   if (reference.width !== actual.width || reference.height !== actual.height) {
     return {
       similarity: 0,

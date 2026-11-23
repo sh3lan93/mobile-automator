@@ -1,9 +1,10 @@
 'use strict';
 
 // safe-fs for paths the user chose (#347): the userPath scopes, the userDir /
-// userDest / userFile entry points, safeWorkspaceDest and isInside. Inside
-// the workspace they get the workspace rules; elsewhere they are the user's
-// call. Fixture: tests/helpers/safe-fs-fixture.js.
+// userDirLeaves / userDest / userFile entry points, readUserFile (#363),
+// safeWorkspaceDest and isInside. Inside the workspace they get the workspace
+// rules; elsewhere they are the user's call. Fixture:
+// tests/helpers/safe-fs-fixture.js.
 
 const os = require('os');
 const fs = require('fs');
@@ -11,9 +12,11 @@ const path = require('path');
 
 const {
   inProject,
+  readUserFile,
   safeWorkspaceDest,
   isInside,
   userDir,
+  userDirLeaves,
   userDest,
   userFile,
 } = require('../../../src/workspace/safe-fs');
@@ -121,6 +124,56 @@ describe('userPath: the workspace scope', () => {
   });
 });
 
+// The one classifier every membership decision goes through (#363).
+describe('userPath', () => {
+  it('names the workspace, the rest of the project, and outside', () => {
+    const inWs = path.join(ws, 'scenarios', 'a.json');
+    expect(userPath(root, inWs)).toEqual({ path: inWs, scope: 'workspace' });
+    const inProj = path.join(root, 'flows', 'a.json');
+    expect(userPath(root, inProj)).toEqual({ path: inProj, scope: 'path' });
+    const out = path.join(base, 'elsewhere', 'a.json');
+    expect(userPath(root, out)).toEqual({ path: out, scope: 'outside' });
+  });
+
+  it('re-roots a path through an aliased root, agreeing with inProject', () => {
+    const { realRoot, alias, realWs } = aliasedRoot(base, root);
+    const p = path.join(alias, '.mobile-automator', 'a.json');
+    expect(userPath(realRoot, p)).toEqual({ path: path.join(realWs, 'a.json'), scope: 'workspace' });
+    expect(inProject(realRoot, p)).toBe(userPath(realRoot, p).path);
+    expect(userPath(realRoot, path.join(alias, 'flows', 'a.json'))).toEqual({
+      path: path.join(realRoot, 'flows', 'a.json'),
+      scope: 'path',
+    });
+  });
+
+  it('a null projectRoot (no checkout) is outside, the path as named', () => {
+    const p = path.join(ws, 'scenarios', 'a.json');
+    expect(userPath(null, p)).toEqual({ path: p, scope: 'outside' });
+  });
+
+  // The one projectRoot guard: every entry point that classifies a path
+  // refuses anything but a non-empty path or null, the same way.
+  it.each([undefined, '', 0, {}])('refuses a projectRoot of %p in every entry point (TypeError)', (bad) => {
+    const p = path.join(outside, 'a.json');
+    for (const call of [
+      () => readUserFile(bad, p),
+      () => userDirLeaves(bad, outside),
+      () => userDir(bad, outside),
+      () => userDest(bad, p),
+      () => userFile(bad, p),
+    ]) {
+      expect(call).toThrow(new TypeError('safe-fs: projectRoot must be a non-empty path, or null for no checkout'));
+    }
+  });
+
+  it('names a sibling of the workspace the path scope, and outside the project outside', () => {
+    expect(userPath(root, path.join(root, '.mobile-automator-old', 'a.png')).scope).toBe('path');
+    const p = path.join(base, 'nope', 'deeper', 'x.png');
+    expect(userPath(root, p)).toEqual({ path: p, scope: 'outside' });
+    expect(inProject(root, p)).toBeNull();
+  });
+});
+
 // The entry points for a path the user chose: each makes the workspace-scope
 // choice itself and hands back the path to use.
 // userDir's one caller is MAUTO_LOG_DIR, chosen by the environment, not the
@@ -157,6 +210,9 @@ describe('userDir / userDest / userFile (#347)', () => {
   it('userDir and userDest return the re-rooted path through an aliased root', () => {
     const { realRoot, alias, realWs } = aliasedRoot(base, root);
     expect(userDir(realRoot, path.join(alias, '.mobile-automator', 'a'), { create: true })).toBe(path.join(realWs, 'a'));
+    expect(userDirLeaves(realRoot, path.join(alias, '.mobile-automator', 'a')).leaf('x/f.txt').path).toBe(
+      path.join(realWs, 'a', 'f.txt')
+    );
     expect(userDest(realRoot, path.join(alias, '.mobile-automator', 'b', 'x.png'))).toBe(path.join(realWs, 'b', 'x.png'));
   });
 
@@ -432,5 +488,132 @@ describe('isInside', () => {
     ['/', '/', true],
   ])('isInside(%s, %s) is %s', (child, parent, expected) => {
     expect(isInside(child, parent)).toBe(expected);
+  });
+});
+
+describe('inProject (#363)', () => {
+  it('returns a path lexically inside the project as is, the workspace included', () => {
+    expect(inProject(root, path.join(root, 'flows', 'x.json'))).toBe(path.join(root, 'flows', 'x.json'));
+    expect(inProject(root, path.join(ws, 'scenarios', 'x.json'))).toBe(path.join(ws, 'scenarios', 'x.json'));
+    expect(inProject(root, root)).toBe(path.resolve(root));
+  });
+
+  it('is null for a path outside the project', () => {
+    expect(inProject(root, path.join(outside, 'x.json'))).toBeNull();
+    expect(inProject(root, path.join(base, 'nope', 'x.json'))).toBeNull();
+    expect(inProject(root, `${root}-sibling/x.json`)).toBeNull();
+  });
+
+  it('re-roots a project path reached through a symlinked ancestor', () => {
+    const { realRoot, alias } = aliasedRoot(base, root);
+    expect(inProject(realRoot, path.join(alias, 'flows', 'x.json'))).toBe(path.join(realRoot, 'flows', 'x.json'));
+    expect(inProject(realRoot, path.join(alias, '.mobile-automator', 'a'))).toBe(path.join(realRoot, '.mobile-automator', 'a'));
+  });
+});
+
+// The read for a path the user named (#363): a scenario, a baseline, a trace.
+// Inside the checkout it is a checked walk and a checked leaf; outside the
+// project it is the user's own file, read as they named it.
+describe('readUserFile (#363)', () => {
+  const BYTES = Buffer.from([0xef, 0xbb, 0xbf, 0x7b, 0x0d, 0x0a, 0xff, 0xfe, 0xc3, 0xa9, 0x7d]);
+
+  it('returns the exact bytes with encoding null, and utf8 text by default', () => {
+    fs.mkdirSync(path.join(ws, 'scenarios'));
+    const p = path.join(ws, 'scenarios', 'x.json');
+    fs.writeFileSync(p, BYTES);
+    const got = readUserFile(root, p, { encoding: null });
+    expect(Buffer.isBuffer(got)).toBe(true);
+    expect(got.equals(BYTES)).toBe(true);
+    fs.writeFileSync(p, '{"a":1}');
+    expect(readUserFile(root, p)).toBe('{"a":1}');
+  });
+
+  it('reads a project file and a file outside the project byte-exact', () => {
+    fs.mkdirSync(path.join(root, 'flows'));
+    fs.writeFileSync(path.join(root, 'flows', 'x.json'), BYTES);
+    expect(readUserFile(root, path.join(root, 'flows', 'x.json'), { encoding: null }).equals(BYTES)).toBe(true);
+    fs.writeFileSync(path.join(outside, 'y.json'), BYTES);
+    expect(readUserFile(root, path.join(outside, 'y.json'), { encoding: null }).equals(BYTES)).toBe(true);
+  });
+
+  it('refuses a symlink leaf in the workspace, in the workspace scope', () => {
+    fs.mkdirSync(path.join(ws, 'scenarios'));
+    fs.symlinkSync(canaryFile, path.join(ws, 'scenarios', 'x.json'));
+    const err = expectUnsafe(() => readUserFile(root, path.join(ws, 'scenarios', 'x.json')), 'symlink');
+    expect(err.scope).toBe('workspace');
+    expect(err.message).not.toContain(CANARY);
+    expect(err.message).not.toContain(canaryFile);
+  });
+
+  it('refuses a directory link inside the project, in the path scope', () => {
+    fs.writeFileSync(path.join(outside, 'x.json'), CANARY);
+    fs.symlinkSync(outside, path.join(root, 'flows'));
+    const err = expectUnsafe(() => readUserFile(root, path.join(root, 'flows', 'x.json')), 'symlink');
+    expect(err.scope).toBe('path');
+    expect(err.message).toMatch(/^Refusing to use path /);
+    expect(err.message).not.toContain(CANARY);
+    expect(err.message).not.toContain(outside);
+  });
+
+  it('refuses a symlink leaf inside the project, dangling or not', () => {
+    fs.symlinkSync(canaryFile, path.join(root, 'x.json'));
+    expectUnsafe(() => readUserFile(root, path.join(root, 'x.json')), 'symlink');
+    fs.symlinkSync(path.join(outside, 'gone.json'), path.join(root, 'y.json'));
+    expectUnsafe(() => readUserFile(root, path.join(root, 'y.json')), 'symlink');
+  });
+
+  it("follows the user's own link outside the project", () => {
+    const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-elsewhere-'));
+    try {
+      const link = path.join(elsewhere, 'mine.json');
+      fs.symlinkSync(canaryFile, link);
+      expect(readUserFile(root, link)).toBe(CANARY);
+    } finally {
+      fs.rmSync(elsewhere, { recursive: true, force: true });
+    }
+  });
+
+  it('is null for an absent file or parent, in every scope', () => {
+    expect(readUserFile(root, path.join(ws, 'scenarios', 'none.json'))).toBeNull();
+    expect(readUserFile(root, path.join(root, 'flows', 'none.json'))).toBeNull();
+    expect(readUserFile(root, path.join(outside, 'none', 'none.json'))).toBeNull();
+  });
+
+  it("with throwIfAbsent, lets the fs's own ENOENT through, in every scope", () => {
+    fs.mkdirSync(path.join(ws, 'scenarios'));
+    fs.mkdirSync(path.join(root, 'flows'));
+    for (const p of [
+      path.join(ws, 'scenarios', 'none.json'),
+      path.join(root, 'flows', 'none.json'),
+      path.join(outside, 'none.json'),
+    ]) {
+      let err;
+      try {
+        readUserFile(root, p, { throwIfAbsent: true });
+      } catch (e) {
+        err = e;
+      }
+      expect(err).toBeDefined();
+      expect(err.code).toBe('ENOENT');
+      expect(err.syscall).toBe('open');
+      expect(err.message).toBe(`ENOENT: no such file or directory, open '${p}'`);
+    }
+  });
+
+  it('refuses a file past the cap (too_large), in every scope', () => {
+    fs.writeFileSync(path.join(ws, 'big'), 'x'.repeat(11));
+    fs.writeFileSync(path.join(root, 'big'), 'x'.repeat(11));
+    fs.writeFileSync(path.join(outside, 'big'), 'x'.repeat(11));
+    expectUnsafe(() => readUserFile(root, path.join(ws, 'big'), { maxBytes: 10 }), 'too_large');
+    expectUnsafe(() => readUserFile(root, path.join(root, 'big'), { maxBytes: 10 }), 'too_large');
+    const err = expectUnsafe(() => readUserFile(root, path.join(outside, 'big'), { maxBytes: 10 }), 'too_large');
+    expect(err.message).toMatch(/^Refusing to use path /);
+    expect(readUserFile(root, path.join(outside, 'big'), { maxBytes: 11 })).toBe('x'.repeat(11));
+  });
+
+  it('re-roots a workspace path reached through an aliased root before the walk', () => {
+    const { realRoot, alias, realWs } = aliasedRoot(base, root);
+    fs.symlinkSync(outside, path.join(realWs, 'scenarios'));
+    expectUnsafe(() => readUserFile(realRoot, path.join(alias, '.mobile-automator', 'scenarios', 'secret.txt')), 'symlink');
   });
 });

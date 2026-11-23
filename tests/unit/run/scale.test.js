@@ -53,6 +53,18 @@ describe('pngSize', () => {
   test('reads width and height from a PNG file', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scale-'));
     const file = writePng(path.join(dir, 'a.png'), solidPng(30, 12));
-    expect(pngSize(file)).toEqual({ width: 30, height: 12 });
+    expect(pngSize(dir, file)).toEqual({ width: 30, height: 12 });
+  });
+});
+
+describe('pngSize reads through the checked walk (#363)', () => {
+  test('a PNG linked into the workspace is refused', () => {
+    const { UnsafePathError } = require('../../../src/workspace/safe-fs');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scale-'));
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-scale-out-'));
+    const secret = writePng(path.join(outside, 's.png'), solidPng(30, 12));
+    fs.mkdirSync(path.join(dir, '.mobile-automator'));
+    fs.symlinkSync(secret, path.join(dir, '.mobile-automator', 'a.png'));
+    expect(() => pngSize(dir, path.join(dir, '.mobile-automator', 'a.png'))).toThrow(UnsafePathError);
   });
 });

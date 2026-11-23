@@ -202,7 +202,7 @@ describe('cli handlers', () => {
     test('valid scenario -> ok envelope, exitKind ok', () => {
       const file = writeTmp('s.json', JSON.stringify(validScenario()));
       const validator = new ScenarioValidator({ schemaPath: SCHEMA_PATH });
-      const { envelope, exitKind } = handleValidate({ validator }, file);
+      const { envelope, exitKind } = handleValidate({ validator, projectRoot: path.dirname(file) }, file);
       expect(exitKind).toBe('ok');
       expect(envelope.ok).toBe(true);
       expect(envelope.data).toEqual({ valid: true });
@@ -217,7 +217,7 @@ describe('cli handlers', () => {
       const run = (scenario, opts) => {
         const file = writeTmp('u.json', JSON.stringify(scenario));
         const validator = new ScenarioValidator({ schemaPath: SCHEMA_PATH });
-        return handleValidate({ validator }, file, opts);
+        return handleValidate({ validator, projectRoot: path.dirname(file) }, file, opts);
       };
 
       test('clean scenario -> no warnings key, no hint', () => {
@@ -287,7 +287,7 @@ describe('cli handlers', () => {
       const run = (scenario, opts) => {
         const file = writeTmp('l.json', JSON.stringify(scenario));
         const validator = new ScenarioValidator({ schemaPath: SCHEMA_PATH });
-        return handleValidate({ validator }, file, opts);
+        return handleValidate({ validator, projectRoot: path.dirname(file) }, file, opts);
       };
 
       test('advisory only -> ok with the warning and an advisory hint', () => {
@@ -327,7 +327,7 @@ describe('cli handlers', () => {
       delete bad.app_package;
       const file = writeTmp('bad.json', JSON.stringify(bad));
       const validator = new ScenarioValidator({ schemaPath: SCHEMA_PATH });
-      const { envelope, exitKind } = handleValidate({ validator }, file);
+      const { envelope, exitKind } = handleValidate({ validator, projectRoot: path.dirname(file) }, file);
       expect(exitKind).toBe('invalid_input');
       expect(envelope.ok).toBe(false);
       expect(envelope.error.kind).toBe('invalid_input');
@@ -338,7 +338,7 @@ describe('cli handlers', () => {
     test('unreadable / unparseable file -> invalid_input fail', () => {
       const file = writeTmp('broken.json', '{ not valid json');
       const validator = new ScenarioValidator({ schemaPath: SCHEMA_PATH });
-      const { envelope, exitKind } = handleValidate({ validator }, file);
+      const { envelope, exitKind } = handleValidate({ validator, projectRoot: path.dirname(file) }, file);
       expect(exitKind).toBe('invalid_input');
       expect(envelope.ok).toBe(false);
       expect(envelope.error.kind).toBe('invalid_input');
@@ -347,7 +347,7 @@ describe('cli handlers', () => {
     test('missing file -> invalid_input fail', () => {
       const validator = new ScenarioValidator({ schemaPath: SCHEMA_PATH });
       const { envelope, exitKind } = handleValidate(
-        { validator },
+        { validator, projectRoot: os.tmpdir() },
         '/no/such/file/here.json'
       );
       expect(exitKind).toBe('invalid_input');
@@ -1354,13 +1354,26 @@ describe('cli handlers', () => {
       expect(r.envelope.data.measurements.failure_screenshots).toEqual(['/p/tap.png']);
     });
 
-    test('never lets an unreadable trace fail the finalize', () => {
+    // Root reads a mode-000 file anyway, so the case proves nothing there.
+    (process.getuid() === 0 ? test.skip : test)('never lets an unreadable trace fail the finalize', () => {
       const root = project();
-      // A directory where the trace file should be: readFileSync throws EISDIR.
-      fs.mkdirSync(path.join(root, '.mobile-automator', '.logs', 'run-run_20260905_141506.ndjson'));
+      // A trace nobody may read: the open fails EACCES.
+      const file = path.join(root, '.mobile-automator', '.logs', 'run-run_20260905_141506.ndjson');
+      fs.writeFileSync(file, '{}\n');
+      fs.chmodSync(file, 0o000);
       const r = handleResultFinalize(deps(root), { runId: 'run_20260905_141506', duration: '9' });
       expect(r.exitKind).toBe('ok');
       expect(r.envelope.data.duration_seconds).toBe(9);
+    });
+
+    // #363: a refused trace is not "no trace". A directory or a link where the
+    // trace should be is a planted path, and finalize fails environment
+    // without writing the result.
+    test('a refused trace fails the finalize environment', () => {
+      const root = project();
+      fs.mkdirSync(path.join(root, '.mobile-automator', '.logs', 'run-run_20260905_141508.ndjson'));
+      expect(() => handleResultFinalize(deps(root), { runId: 'run_20260905_141508', duration: '9' }))
+        .toThrow(expect.objectContaining({ code: 'EUNSAFEPATH', kind: 'environment' }));
     });
 
     test('prunes stale traces but never the one it just measured', () => {

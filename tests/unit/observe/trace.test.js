@@ -19,12 +19,25 @@ function writeTrace(root, runId, events) {
   return file;
 }
 
+// The project root a trace under <root>/.mobile-automator/.logs/ belongs to.
+const rootOf = (file) => path.resolve(file, '..', '..', '..');
+
 const at = (iso, extra = {}) => ({ ts: iso, v: 1, src: 'cli', event: 'verb.end', ok: true, ...extra });
 
 describe('readTrace', () => {
   it('returns null for a run that left no trace', () => {
-    expect(readTrace(path.join(logsRoot(), 'nope.ndjson'))).toBeNull();
-    expect(readTrace(null)).toBeNull();
+    const root = logsRoot();
+    expect(readTrace(path.join(root, '.mobile-automator', '.logs', 'nope.ndjson'), { projectRoot: root })).toBeNull();
+    expect(readTrace(path.join(root, 'nope', 'deeper.ndjson'), { projectRoot: root })).toBeNull();
+    expect(readTrace(null, { projectRoot: root })).toBeNull();
+  });
+
+  // Without it every read would fail and silently read as no trace: safe-fs's
+  // one projectRoot guard throws, and readTrace lets it through.
+  it('throws TypeError without a projectRoot', () => {
+    const file = path.join(logsRoot(), '.mobile-automator', '.logs', 'run-x.ndjson');
+    expect(() => readTrace(file, {})).toThrow(TypeError);
+    expect(() => readTrace(file, { projectRoot: '' })).toThrow(/projectRoot must be a non-empty path/);
   });
 
   // A trailing partial line is NORMAL, not corruption: a SIGKILLed process can
@@ -34,7 +47,7 @@ describe('readTrace', () => {
     const root = logsRoot();
     const file = path.join(root, '.mobile-automator', '.logs', 'run-x.ndjson');
     fs.writeFileSync(file, `${JSON.stringify(at('2026-09-05T10:00:00.000Z'))}\n{"ts":"2026-09`);
-    const trace = readTrace(file);
+    const trace = readTrace(file, { projectRoot: rootOf(file) });
     expect(trace.events).toHaveLength(1);
     expect(trace.truncated).toBe(false);
   });
@@ -43,7 +56,93 @@ describe('readTrace', () => {
     const root = logsRoot();
     const file = path.join(root, '.mobile-automator', '.logs', 'run-x.ndjson');
     fs.writeFileSync(file, `${JSON.stringify(at('2026-09-05T10:00:00.000Z'))}\n`.padEnd(MAX_LOG_BYTES, ' '));
-    expect(readTrace(file).truncated).toBe(true);
+    expect(readTrace(file, { projectRoot: rootOf(file) }).truncated).toBe(true);
+  });
+});
+
+// #363: the trace is read through the checked walk. A committed link at the
+// trace (or at .logs/) is refused, never read as "no trace": finalize fails
+// environment rather than measure a file outside the workspace.
+describe('readTrace refuses a linked trace (#363)', () => {
+  const { UnsafePathError } = require('../../../src/workspace/safe-fs');
+
+  it('a trace leaf that is a link', () => {
+    const root = logsRoot();
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-trace-out-'));
+    fs.writeFileSync(path.join(outside, 't.ndjson'), `${JSON.stringify(at('2026-09-05T10:00:00.000Z'))}\n`);
+    const file = path.join(root, '.mobile-automator', '.logs', 'run-x.ndjson');
+    fs.symlinkSync(path.join(outside, 't.ndjson'), file);
+    expect(() => readTrace(file, { projectRoot: root })).toThrow(UnsafePathError);
+  });
+
+  it('a .logs/ directory that is a link', () => {
+    const root = logsRoot();
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-trace-out-'));
+    fs.writeFileSync(path.join(outside, 'run-x.ndjson'), `${JSON.stringify(at('2026-09-05T10:00:00.000Z'))}\n`);
+    fs.rmSync(path.join(root, '.mobile-automator', '.logs'), { recursive: true });
+    fs.symlinkSync(outside, path.join(root, '.mobile-automator', '.logs'));
+    expect(() => readTrace(path.join(root, '.mobile-automator', '.logs', 'run-x.ndjson'), { projectRoot: root }))
+      .toThrow(UnsafePathError);
+  });
+
+  it('an ordinary read error is still "no trace"', () => {
+    const root = logsRoot();
+    const file = path.join(root, '.mobile-automator', '.logs', 'run-x.ndjson');
+    fs.mkdirSync(file);
+    // A directory where the trace should be is refused (not_regular): it is a
+    // path in the workspace, so the leaf check runs.
+    expect(() => readTrace(file, { projectRoot: root })).toThrow(UnsafePathError);
+    const failing = { ...fs, openSync: () => { throw Object.assign(new Error('EIO'), { code: 'EIO' }); } };
+    expect(readTrace(path.join(root, 'x.ndjson'), { projectRoot: root, fs: failing })).toBeNull();
+  });
+});
+
+// #363: a MAUTO_LOG_DIR inside the project but outside .mobile-automator/ is
+// the environment's choice (safe-fs's two-way userDir), and the sink writes
+// the trace there through userDirLeaves: the directory used as given, the
+// leaf under STRICT_LEAF. readTrace reads it through the same settled leaf,
+// so the reader and the writer share one rule.
+describe('readTrace in a MAUTO_LOG_DIR in the project, outside the workspace (#363)', () => {
+  const fileSink = require('../../../src/observe/sinks/file');
+  const { UnsafePathError } = require('../../../src/workspace/safe-fs');
+  const event = at('2026-09-05T10:00:00.000Z');
+
+  it('reads the trace the sink wrote through a linked logs directory', () => {
+    const root = logsRoot();
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mauto-trace-out-'));
+    const logs = path.join(root, 'logs');
+    fs.symlinkSync(outside, logs);
+    const tracePath = path.join(logs, 'run-x.ndjson');
+    fileSink.write(event, { projectRoot: root, env: { MAUTO_LOG_DIR: logs }, logPath: tracePath, bound: 'cap' });
+    expect(fs.existsSync(path.join(outside, 'run-x.ndjson'))).toBe(true);
+    expect(readTrace(tracePath, { projectRoot: root }).events).toEqual([event]);
+  });
+
+  it('refuses a foreign-owned trace there as the sink does, MAUTO_TRUST_WORKSPACE_OWNER=1 or not', () => {
+    const root = logsRoot();
+    const logs = path.join(root, 'logs');
+    fs.mkdirSync(logs);
+    const tracePath = path.join(logs, 'run-x.ndjson');
+    fs.writeFileSync(tracePath, `${JSON.stringify(event)}\n`);
+    const foreign = {
+      ...fs,
+      fstatSync: (fd, ...rest) => Object.assign(fs.fstatSync(fd, ...rest), { uid: process.getuid() + 1 }),
+    };
+    const saved = process.env.MAUTO_TRUST_WORKSPACE_OWNER;
+    process.env.MAUTO_TRUST_WORKSPACE_OWNER = '1';
+    try {
+      let err;
+      try {
+        readTrace(tracePath, { projectRoot: root, fs: foreign });
+      } catch (e) {
+        err = e;
+      }
+      expect(err).toBeInstanceOf(UnsafePathError);
+      expect(err.reason).toBe('foreign_owner');
+    } finally {
+      if (saved === undefined) delete process.env.MAUTO_TRUST_WORKSPACE_OWNER;
+      else process.env.MAUTO_TRUST_WORKSPACE_OWNER = saved;
+    }
   });
 });
 
@@ -55,7 +154,7 @@ describe('deriveRun', () => {
       at('2026-09-05T10:00:41.500Z', { verb: 'tap' }),
       at('2026-09-05T10:02:20.250Z', { verb: 'result' }),
     ]);
-    const d = deriveRun(readTrace(file));
+    const d = deriveRun(readTrace(file, { projectRoot: rootOf(file) }));
     expect(d.duration_seconds).toBe(140.25);
     expect(d.trace_events).toBe(3);
     expect(d.trace_truncated).toBe(false);
@@ -71,7 +170,7 @@ describe('deriveRun', () => {
       at('2026-09-05T10:00:06.000Z', { verb: 'tap', ok: false, error_kind: 'invalid_input' }),
       at('2026-09-05T10:00:07.000Z', { verb: 'tap', ok: true }),
     ]);
-    expect(deriveRun(readTrace(file)).device_failures).toBe(2);
+    expect(deriveRun(readTrace(file, { projectRoot: rootOf(file) })).device_failures).toBe(2);
   });
 
   it('collects the failure screenshots the capture recorded', () => {
@@ -82,7 +181,7 @@ describe('deriveRun', () => {
       { ts: '2026-09-05T10:00:02.000Z', event: 'screenshot.capture_failed', message: 'boom' },
       at('2026-09-05T10:00:03.000Z'),
     ]);
-    expect(deriveRun(readTrace(file)).failure_screenshots).toEqual(['/p/a.png']);
+    expect(deriveRun(readTrace(file, { projectRoot: rootOf(file) })).failure_screenshots).toEqual(['/p/a.png']);
   });
 
   // Two stamps or nothing. A single-event trace spans zero time, and reporting
@@ -91,7 +190,7 @@ describe('deriveRun', () => {
   it('refuses to measure a duration from fewer than two stamps', () => {
     const root = logsRoot();
     const file = writeTrace(root, 'x', [at('2026-09-05T10:00:00.000Z')]);
-    const d = deriveRun(readTrace(file));
+    const d = deriveRun(readTrace(file, { projectRoot: rootOf(file) }));
     expect(d.duration_seconds).toBeNull();
     expect(d.trace_events).toBe(1);
   });
@@ -104,7 +203,7 @@ describe('deriveRun', () => {
       { ts: 'not-a-date', event: 'verb.end', ok: true },
       at('2026-09-05T10:00:10.000Z'),
     ]);
-    expect(deriveRun(readTrace(file)).duration_seconds).toBe(10);
+    expect(deriveRun(readTrace(file, { projectRoot: rootOf(file) })).duration_seconds).toBe(10);
   });
 
   it('returns null for no trace and for an empty one', () => {

@@ -46,13 +46,13 @@ describe('compareScreenshots', () => {
     expect(r.diffPath).toBe(diffPath);
     expect(fs.existsSync(diffPath)).toBe(true);
     expect(r.pass).toBe(false);
-    expect(compareScreenshots({ referencePath, actualPath, tolerance: 0.7 }).pass).toBe(true);
+    expect(compareScreenshots({ projectRoot: dir, referencePath, actualPath, tolerance: 0.7 }).pass).toBe(true);
   });
 
   test('masking the changed quadrant makes it similarity 1.0 and excludes the masked pixels', () => {
     const referencePath = file('ref.png', solidPng(40, 40, WHITE));
     const actualPath = file('act.png', quadrantPng(40, 40, WHITE, { quadrant: 'br', rgba: BLACK }));
-    const r = compareScreenshots({ referencePath, actualPath, masks: [{ x: 20, y: 20, width: 20, height: 20 }] });
+    const r = compareScreenshots({ projectRoot: dir, referencePath, actualPath, masks: [{ x: 20, y: 20, width: 20, height: 20 }] });
     expect(r.similarity).toBe(1);
     expect(r.diffPixels).toBe(0);
     expect(r.comparedPixels).toBe(1200);
@@ -64,6 +64,7 @@ describe('compareScreenshots', () => {
     const referencePath = file('ref.png', solidPng(10, 10, WHITE));
     const actualPath = file('act.png', solidPng(10, 10, WHITE));
     const r = compareScreenshots({
+      projectRoot: dir,
       referencePath,
       actualPath,
       masks: [{ x: 5, y: 5, width: 50, height: 50 }, { x: 0, y: 0, width: 7, height: 7 }],
@@ -75,7 +76,7 @@ describe('compareScreenshots', () => {
   test('everything masked compares nothing and is similarity 1', () => {
     const referencePath = file('ref.png', solidPng(10, 10, WHITE));
     const actualPath = file('act.png', solidPng(10, 10, BLACK));
-    const r = compareScreenshots({ referencePath, actualPath, masks: [{ x: 0, y: 0, width: 10, height: 10 }] });
+    const r = compareScreenshots({ projectRoot: dir, referencePath, actualPath, masks: [{ x: 0, y: 0, width: 10, height: 10 }] });
     expect(r).toMatchObject({ similarity: 1, comparedPixels: 0, diffPixels: 0 });
   });
 
@@ -98,7 +99,7 @@ describe('compareScreenshots', () => {
   test('a mismatch with no diffPath writes nothing', () => {
     const referencePath = file('ref.png', solidPng(10, 10, WHITE));
     const actualPath = file('act.png', solidPng(10, 10, BLACK));
-    const r = compareScreenshots({ referencePath, actualPath });
+    const r = compareScreenshots({ projectRoot: dir, referencePath, actualPath });
     expect(r.diffPath).toBeNull();
     expect(fs.readdirSync(dir).sort()).toEqual(['.mobile-automator', 'act.png', 'ref.png']);
     expect(fs.readdirSync(shots)).toEqual([]);
@@ -128,7 +129,7 @@ describe('compareScreenshots', () => {
     const referencePath = path.join(dir, 'bad.png');
     fs.writeFileSync(referencePath, Buffer.from('nope'));
     const actualPath = file('act.png', solidPng(10, 10, WHITE));
-    expect(() => compareScreenshots({ referencePath, actualPath })).toThrow();
+    expect(() => compareScreenshots({ projectRoot: dir, referencePath, actualPath })).toThrow();
   });
 });
 
@@ -141,5 +142,45 @@ describe('pass', () => {
 
   test('a null similarity (dimension mismatch) never passes', () => {
     expect(pass(null, 0)).toBe(false);
+  });
+});
+
+// #363: both PNGs are read through the checked walk, so a committed link to a
+// file outside is refused, never decoded and diffed against the screen.
+describe('a linked PNG is refused (#363)', () => {
+  const { UnsafePathError } = require('../../../src/workspace/safe-fs');
+
+  test.each([
+    ['the baseline', 'referencePath'],
+    ['the actual', 'actualPath'],
+  ])('%s, as a leaf link in the workspace', (_name, which) => {
+    const outside = tmpDir('mauto-refshot-outside-');
+    const secret = writePng(path.join(outside, 'secret.png'), solidPng(10, 10, BLACK));
+    const paths = {
+      referencePath: path.join(shots, 'ref.png'),
+      actualPath: path.join(shots, 'act.png'),
+    };
+    writePng(paths.referencePath, solidPng(10, 10, WHITE));
+    writePng(paths.actualPath, solidPng(10, 10, WHITE));
+    fs.rmSync(paths[which]);
+    fs.symlinkSync(secret, paths[which]);
+    let caught;
+    try {
+      compareScreenshots({ projectRoot: dir, ...paths });
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(UnsafePathError);
+    expect(caught).toMatchObject({ kind: 'environment', reason: 'symlink' });
+    expect(caught.message).not.toContain(outside);
+  });
+
+  test('a baseline under a project directory linked outside', () => {
+    const outside = tmpDir('mauto-refshot-outside-');
+    writePng(path.join(outside, 'ref.png'), solidPng(10, 10, BLACK));
+    fs.symlinkSync(outside, path.join(dir, 'baselines'));
+    const actualPath = writePng(path.join(shots, 'act.png'), solidPng(10, 10, WHITE));
+    expect(() => compareScreenshots({ projectRoot: dir, referencePath: path.join(dir, 'baselines', 'ref.png'), actualPath }))
+      .toThrow(UnsafePathError);
   });
 });

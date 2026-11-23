@@ -1,10 +1,19 @@
 'use strict';
 
 const crypto = require('crypto');
-const fs = require('fs');
 
 const { fail } = require('../output/envelope');
+const { typedFail } = require('../output/typed-fail');
+const { isTypedRefusal } = require('../output/typed-refusal');
+const { readUserFile } = require('../workspace/safe-fs');
 const { findReplayWarnings, summarize } = require('./replayability');
+
+const cannotRead = (message) => ({
+  failure: {
+    envelope: fail('invalid_input', `cannot read file: ${message}`, 'Check that the path exists and is readable.'),
+    exitKind: 'invalid_input',
+  },
+});
 
 // Read, parse, schema-validate and replay-check a scenario file. Returns
 // `{ scenario, sha256, warnings, hint }` (hint null when there are no
@@ -14,24 +23,27 @@ const { findReplayWarnings, summarize } = require('./replayability');
 // of the bytes read — the one place a scenario is hashed, so the runner and
 // finalize can never disagree on what "the same scenario" means (#275).
 // `strict` fails on blocking replayability findings instead of warning.
+//
+// `projectRoot` (required) bounds the read (#363): the file is read through
+// safe-fs's readUserFile, so a scenario inside the checkout reached through a
+// committed link (a linked leaf, `flows -> /outside`) is refused environment,
+// the message naming the path and never what it points at, while a file
+// outside the project is the user's own and is read as named. An explicit
+// null means there is no checkout (validate without a workspace): every file
+// is then outside it. Leaving it out is a bug: readUserFile's TypeError
+// propagates.
 function loadScenario(validator, file, opts = {}) {
+  const { projectRoot } = opts;
   let raw;
   let sha256;
   try {
-    const bytes = fs.readFileSync(file);
+    const bytes = readUserFile(projectRoot, file, { encoding: null, throwIfAbsent: true });
     sha256 = crypto.createHash('sha256').update(bytes).digest('hex');
     raw = bytes.toString('utf8');
   } catch (err) {
-    return {
-      failure: {
-        envelope: fail(
-          'invalid_input',
-          `cannot read file: ${err.message}`,
-          'Check that the path exists and is readable.'
-        ),
-        exitKind: 'invalid_input',
-      },
-    };
+    if (err instanceof TypeError) throw err;
+    if (isTypedRefusal(err)) return { failure: typedFail(err) };
+    return cannotRead(err.message);
   }
 
   let scenario;

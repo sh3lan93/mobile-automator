@@ -47,6 +47,12 @@
 // userDir stays two-way (workspace, or the user's call): its one caller is
 // MAUTO_LOG_DIR, which the environment chooses, not the checkout.
 //
+// A path the user named to read (a scenario, a reference screenshot) goes
+// through readUserFile, on the same userPath scopes: inside the
+// workspace or the project it is the checked walk and leaf of that scope;
+// outside the project it is the user's own file, read as named (links
+// followed), only size-capped (#363).
+//
 // Components above and including the project root are never checked: a
 // project reached through a symlinked parent (macOS /tmp -> /private/tmp, a
 // symlinked checkout) is the user's own choice, and containment compares
@@ -54,7 +60,21 @@
 // directory group-writable; only `o+w` lets a stranger plant a link. Root in a
 // CI container over a checkout owned by another uid can set
 // MAUTO_TRUST_WORKSPACE_OWNER=1, which skips the owner comparison and nothing
-// else, like git's safe.directory.
+// else, like git's safe.directory. It trusts the checkout, so it applies
+// where the checkout's own rules run: every directory and leaf of the
+// workspace and project scopes (their walks, their leaf opens and
+// destinations), and a log or spool leaf only when its directory lands in the
+// workspace. Every other leaf is opened under STRICT_LEAF (#363), where it
+// never applies: an --out or --junit target outside the project, the
+// per-user consent file, and a leaf in a MAUTO_LOG_DIR outside the
+// workspace. Such a MAUTO_LOG_DIR may lie inside the project: userDir is
+// two-way, so there it is the environment's choice, used as given with no
+// walk, and its leaves get the strict rule whatever the checkout's trust.
+// Nor does the override apply to the device session, whose policy
+// (src/device/session-dir.js) compares the owner outright. Which rule a leaf
+// in a directory the user chose gets is decided once, where userDirLeaves
+// settles that directory, and its writer and reader (the log sink, readTrace)
+// both go through it.
 //
 // Every directory check runs under a policy (dirPolicy, below): the owner rule,
 // the forbidden mode bits, and what a refusal says. WORKSPACE_DIR is the
@@ -172,19 +192,50 @@ const PROJECT_PATH = dirPolicy({
   fallbackHint: 'Inspect the path and replace it with a real file or directory inside the project.',
 });
 
+// The leaf owner rule, stated once (#363). A leaf is opened under a policy,
+// and its owner is compared under that policy's trustOverride, the same field
+// every directory check reads: a confined row's policy for a leaf the
+// workspace or project scope opens (the override applies, as it does to the
+// directory the leaf sits in), else STRICT_LEAF, the default. STRICT_LEAF is
+// the one strict leaf rule: the override never applies, and its foreign_owner
+// refusal never offers it.
+//
+// It is the 'outside' row's policy, so withScope('outside') re-words a strict
+// refusal into the same words, and no other scope wraps a strict open. Its
+// wording is its own and path-neutral (subject 'path', reported as the path
+// scope), because a strict leaf is one no checked walk vouches for (an --out
+// target outside the project, a leaf in a MAUTO_LOG_DIR outside the
+// workspace, the per-user consent file). Only the owner hint differs from the
+// path scope's, and only the escape hint, which no leaf open throws, names
+// the project.
+const STRICT_LEAF = dirPolicy({
+  ...PROJECT_PATH,
+  trustOverride: false,
+  hints: {
+    ...PROJECT_PATH.hints,
+    foreign_owner:
+      'Files mauto uses outside the checkout must belong to the user running mauto. Fix the ownership (chown), or choose a path of your own.',
+  },
+  fallbackHint: 'Inspect the path and replace it with a regular file of your own.',
+});
+
 // The one scope table: a scope name -> everything that scope means, so a
 // scope is added or renamed in one row and no entry point below tests a scope
 // by name. A row's fields are named for the helper that reads them (walk:
-// walkScope; destCreates, destLeaf: destInScope; userDir: userDir), and a
-// refusal's `err.scope` is always its row's `policy.scope`.
+// walkScope; destCreates, destLeaf: destInScope; userDir, userDirLeaf:
+// userDirLeaves), and a refusal's `err.scope` is always its row's
+// `policy.scope`. `policy` also holds the owner rule of a leaf opened in the
+// scope (openLeafInScope, checkDestLeaf).
 //
 // Why the rows differ: 'workspace' and 'path' are confined, walked within
 // .mobile-automator/ and the project root (#347, #362). 'outside' is the
 // user's own call: nothing is walked, and a destination is handed over
 // byte-for-byte (`mauto screenshot /tmp/x.png` keeps working), but its leaf
-// open is still checked, under the path policy. userDir's one caller is
+// open is still checked, under STRICT_LEAF. userDir's one caller is
 // MAUTO_LOG_DIR, which the environment chooses, not the checkout, so only
-// the workspace row confines it (out of #362's scope).
+// the workspace row confines it (out of #362's scope); `userDirLeaf` is the
+// owner rule of a leaf in that directory, WORKSPACE_DIR where it is confined,
+// STRICT_LEAF where it is the user's own (#363).
 //
 // An unknown scope's wording reads as the workspace one. A caller's own policy
 // (src/device/session-dir.js) is handed to the check as `policy` and never
@@ -207,6 +258,7 @@ const SCOPES = Object.freeze({
       walkDirs(root, workspaceDir(root), p, { create }, d);
       return p;
     },
+    userDirLeaf: WORKSPACE_DIR,
   }),
   path: Object.freeze({
     policy: PROJECT_PATH,
@@ -214,9 +266,10 @@ const SCOPES = Object.freeze({
     destCreates: false,
     destLeaf: true,
     userDir: usersOwnDir,
+    userDirLeaf: STRICT_LEAF,
   }),
   outside: Object.freeze({
-    policy: PROJECT_PATH,
+    policy: STRICT_LEAF,
     walk: (root, dir, { create = false } = {}, d) => {
       if (create) d.fs.mkdirSync(dir, { recursive: true });
       return null;
@@ -224,6 +277,7 @@ const SCOPES = Object.freeze({
     destCreates: false,
     destLeaf: false,
     userDir: usersOwnDir,
+    userDirLeaf: STRICT_LEAF,
   }),
 });
 
@@ -282,8 +336,7 @@ function resolveDeps(deps = {}) {
   };
 }
 
-// The one owner comparison. `trustOverride` is the policy's (or the leaf
-// rule's): whether MAUTO_TRUST_WORKSPACE_OWNER=1 may skip it.
+// The one owner comparison. `trustOverride` is the policy's: whether MAUTO_TRUST_WORKSPACE_OWNER=1 may skip it.
 function ownedByUs(st, { getuid, env }, trustOverride) {
   if (trustOverride && env.MAUTO_TRUST_WORKSPACE_OWNER === '1') return true;
   return st.uid === getuid();
@@ -328,12 +381,12 @@ function lstatOrMkdir(fs, p, create, mode) {
 }
 
 // The leaf rules shared by every leaf mauto opens or hands to a writer: it is
-// ours and, when it will be written, has exactly one hard link (a second one
-// would be a file elsewhere by another name). The leaf is owned under the same
-// rule as the workspace directory it sits in.
-function checkLeafOwnership(p, st, writes, d) {
-  checkOwner(p, st, d, WORKSPACE_DIR);
-  if (writes && st.nlink !== 1) throw new UnsafePathError(p, 'hardlink');
+// ours under `policy`'s owner rule (a confined row's policy, else
+// STRICT_LEAF: see STRICT_LEAF) and, when it will be written, has exactly
+// one hard link (a second one would be a file elsewhere by another name).
+function checkLeafOwnership(p, st, writes, d, policy) {
+  checkOwner(p, st, d, policy);
+  if (writes && st.nlink !== 1) throw new UnsafePathError(p, 'hardlink', { policy });
 }
 
 // Check ONE directory under a caller-supplied policy, making it first (`mode`,
@@ -367,10 +420,11 @@ function openInScope(projectRoot, scope, file, flags, mode, deps) {
 }
 
 // The leaf half of openInScope, for a leaf whose directory is settled: the
-// checked leaf open (openOwnedLeaf), a refusal worded for the scope. Returns
-// an fd the caller closes.
+// checked leaf open (openOwnedLeaf) under the row's policy, a refusal worded
+// for the scope. Returns an fd the caller closes.
 function openLeafInScope(scope, file, flags, mode, deps) {
-  return withScope(scope, () => openOwnedLeaf(path.resolve(file), flags, { mode }, deps));
+  const { policy } = SCOPES[scope];
+  return withScope(scope, () => openOwnedLeaf(path.resolve(file), flags, { mode, policy }, deps));
 }
 
 // A destination another process writes, under a scope: the row's walk of its
@@ -379,7 +433,7 @@ function openLeafInScope(scope, file, flags, mode, deps) {
 function destInScope(projectRoot, scope, resolved, deps) {
   const row = SCOPES[scope];
   walkScope(projectRoot, scope, path.dirname(resolved), row.destCreates ? { create: true } : { missingOk: true }, deps);
-  return row.destLeaf ? checkDestLeaf(resolved, resolveDeps(deps)) : resolved;
+  return row.destLeaf ? checkDestLeaf(resolved, resolveDeps(deps), row.policy) : resolved;
 }
 
 // Lexical containment of two resolved paths. The filesystem root is the one
@@ -511,13 +565,19 @@ function closeQuietly(fs, fd) {
 // uploads and then deletes what it read (the telemetry spool, #348) must not
 // read a file elsewhere by another name: its contents would ship as ours.
 //
+// `policy` is the leaf owner rule (see STRICT_LEAF): STRICT_LEAF by default,
+// a confined row's policy only for a leaf whose directory a confined walk
+// settled (a workspace or project scope's). A caller that leaves it out gets the owner compared
+// outright. Only safe-fs's own entry points and userDirLeaves's leaves pass
+// one.
+//
 // `file` reaches open(2) exactly as given: a relative name is opened relative
 // to the process's current directory itself, never through a path rebuilt
 // from that directory's name (path.resolve), which another process could have
 // renamed meanwhile. The session client relies on this to read a leaf in a
 // directory it has entered and checked (#361). `resolved` only names the leaf
 // in a refusal.
-function openOwnedLeaf(file, flags, { mode = 0o666, singleLink = false } = {}, deps = {}) {
+function openOwnedLeaf(file, flags, { mode = 0o666, singleLink = false, policy = STRICT_LEAF } = {}, deps = {}) {
   const d = resolveDeps(deps);
   const { O_WRONLY, O_RDWR, O_TRUNC } = nodeFs.constants;
   const resolved = path.resolve(file);
@@ -529,12 +589,14 @@ function openOwnedLeaf(file, flags, { mode = 0o666, singleLink = false } = {}, d
   try {
     opened = openLeaf(file, flags & ~O_TRUNC, mode, deps);
   } catch (err) {
-    if (err instanceof UnsafePathError && file !== resolved) throw new UnsafePathError(resolved, err.reason);
+    // openLeaf has no policy: its refusal is worded under the leaf's, like
+    // every other refusal of this open, and names the resolved leaf.
+    if (err instanceof UnsafePathError) throw new UnsafePathError(resolved, err.reason, { policy });
     throw err;
   }
   const { fd, stat } = opened;
   try {
-    checkLeafOwnership(resolved, stat, writes || singleLink, d);
+    checkLeafOwnership(resolved, stat, writes || singleLink, d, policy);
     if (writes && flags & O_TRUNC) d.fs.ftruncateSync(fd, 0);
   } catch (err) {
     closeQuietly(d.fs, fd);
@@ -581,16 +643,22 @@ function removeWorkspaceFile(projectRoot, file, deps = {}) {
   return true;
 }
 
-// The one capped read: `open()` returns the checked fd. null when the file (or
-// a parent dir) does not exist. Reads at most maxBytes + 1 so a planted huge
-// file costs nothing.
-function readCapped(open, file, maxBytes, deps) {
+// The one capped read: `open()` returns the fd. When the file (or a parent
+// dir) does not exist it returns null (a state file that is simply not there
+// yet), or with `throwIfAbsent` lets the fs's own ENOENT through, its message
+// intact, for a caller that reports a missing file the user named (a
+// scenario, a PNG).
+// Reads at most maxBytes + 1 so a planted huge file costs nothing. Decoded
+// with `encoding`; null returns the Buffer, byte for byte (a scenario is
+// hashed on exactly what was read, #275). A too_large refusal is worded under
+// `policy` (the leaf's, for readOwnedLeaf).
+function readCapped(open, file, { maxBytes, encoding = 'utf8', throwIfAbsent = false, policy = WORKSPACE_DIR }, deps) {
   const { fs } = resolveDeps(deps);
   let fd;
   try {
     fd = open();
   } catch (err) {
-    if (err.code === 'ENOENT') return null;
+    if (err.code === 'ENOENT' && !throwIfAbsent) return null;
     throw err;
   }
   try {
@@ -604,24 +672,28 @@ function readCapped(open, file, maxBytes, deps) {
       chunks.push(n === buf.length ? buf : buf.subarray(0, n));
       total += n;
     }
-    if (total > maxBytes) throw new UnsafePathError(path.resolve(file), 'too_large');
-    return Buffer.concat(chunks, total).toString('utf8');
+    if (total > maxBytes) throw new UnsafePathError(path.resolve(file), 'too_large', { policy });
+    const bytes = Buffer.concat(chunks, total);
+    return encoding === null ? bytes : bytes.toString(encoding);
   } finally {
     closeQuietly(fs, fd);
   }
 }
 
-// The capped utf8 read of a leaf whose directory the caller has settled
-// itself (userDir): openOwnedLeaf read-only, null when it does not exist,
-// too_large past maxBytes. `singleLink` as for openOwnedLeaf.
-function readOwnedLeaf(file, { maxBytes = DEFAULT_MAX_BYTES, singleLink = false } = {}, deps = {}) {
-  return readCapped(() => openOwnedLeaf(file, nodeFs.constants.O_RDONLY, { singleLink }, deps), file, maxBytes, deps);
+// The capped utf8 read of a leaf whose directory has been settled (a
+// userDirLeaves leaf's read): openOwnedLeaf read-only, null when it does not
+// exist, too_large past maxBytes. `singleLink` and `policy` as for
+// openOwnedLeaf.
+function readOwnedLeaf(file, { maxBytes = DEFAULT_MAX_BYTES, singleLink = false, policy = STRICT_LEAF } = {}, deps = {}) {
+  const open = () => openOwnedLeaf(file, nodeFs.constants.O_RDONLY, { singleLink, policy }, deps);
+  return readCapped(open, file, { maxBytes, policy }, deps);
 }
 
-// Read a workspace file as utf8. null when it (or a parent dir) does not exist.
-function readWorkspaceFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES } = {}, deps = {}) {
+// Read a workspace file (utf8, or the Buffer with `encoding: null`). null when
+// it (or a parent dir) does not exist; its ENOENT with `throwIfAbsent`.
+function readWorkspaceFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES, encoding = 'utf8', throwIfAbsent = false } = {}, deps = {}) {
   const open = () => openWorkspaceFile(projectRoot, file, nodeFs.constants.O_RDONLY, 0o666, deps);
-  return readCapped(open, file, maxBytes, deps);
+  return readCapped(open, file, { maxBytes, encoding, throwIfAbsent }, deps);
 }
 
 // A workspace destination another process writes: the engine saves a
@@ -637,9 +709,9 @@ function safeWorkspaceDest(projectRoot, file, deps = {}) {
 
 // The leaf of a destination another process writes, lstat'd, never opened:
 // absent is fine, anything there must be a regular file of ours with one
-// link. The leaf half of destInScope, for every confined scope. Returns
-// `resolved`.
-function checkDestLeaf(resolved, d) {
+// link, owned under the row's `policy`. The leaf half of destInScope, for
+// every confined scope. Returns `resolved`.
+function checkDestLeaf(resolved, d, policy) {
   let st;
   try {
     st = d.fs.lstatSync(resolved);
@@ -649,7 +721,7 @@ function checkDestLeaf(resolved, d) {
   }
   if (st.isSymbolicLink()) throw new UnsafePathError(resolved, 'symlink');
   if (!st.isFile()) throw new UnsafePathError(resolved, 'not_regular');
-  checkLeafOwnership(resolved, st, true, d);
+  checkLeafOwnership(resolved, st, true, d, policy);
   return resolved;
 }
 
@@ -703,12 +775,35 @@ function openProjectFile(projectRoot, file, flags, mode, deps) {
   return openInScope(projectRoot, 'path', file, flags, mode, deps);
 }
 
-// readWorkspaceFile's project-rooted twin: utf8, null when the file or a
-// parent dir does not exist, capped at maxBytes. A symlink leaf, dangling or
-// not, is refused, never read as absent.
-function readProjectFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES } = {}, deps = {}) {
+// readWorkspaceFile's project-rooted twin: utf8 (the Buffer with `encoding:
+// null`), null when the file or a parent dir does not exist, capped at
+// maxBytes (`throwIfAbsent` as for readWorkspaceFile). A symlink leaf,
+// dangling or not, is refused, never read as absent.
+function readProjectFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES, encoding = 'utf8', throwIfAbsent = false } = {}, deps = {}) {
   const open = () => openProjectFile(projectRoot, file, nodeFs.constants.O_RDONLY, 0o666, deps);
-  return withScope('path', () => readCapped(open, file, maxBytes, deps));
+  return withScope('path', () => readCapped(open, file, { maxBytes, encoding, throwIfAbsent }, deps));
+}
+
+// A file the user named to read (#363): a scenario, a reference screenshot.
+// utf8, or the Buffer with `encoding: null`; null when it (or a
+// parent dir) does not exist, or the fs's own ENOENT with `throwIfAbsent`;
+// refused past maxBytes (too_large).
+//   - in the workspace or elsewhere in the project: openInScope on the path
+//     userPath re-roots, so a committed `flows -> /outside` or a leaf link is
+//     refused, never followed;
+//   - outside the project, or anywhere when projectRoot is null (no
+//     checkout): the user's own file, read as they named it. A link is
+//     followed, and only the size cap applies: no owner, link or regular-file
+//     check, as `cat` would read it. Its one refusal, too_large, is worded
+//     under the outside row's policy (the path scope).
+function readUserFile(projectRoot, file, { maxBytes = DEFAULT_MAX_BYTES, encoding = 'utf8', throwIfAbsent = false } = {}, deps = {}) {
+  const { O_RDONLY } = nodeFs.constants;
+  const { path: p, scope } = userPath(projectRoot, file, deps);
+  const open =
+    scope === 'outside'
+      ? () => resolveDeps(deps).fs.openSync(p, O_RDONLY)
+      : () => openInScope(projectRoot, scope, p, O_RDONLY, 0o666, deps);
+  return withScope(scope, () => readCapped(open, p, { maxBytes, encoding, throwIfAbsent }, deps));
 }
 
 // createWorkspaceFile's project-rooted twin: exclusive (O_WRONLY|O_CREAT|
@@ -729,7 +824,16 @@ function createProjectFile(projectRoot, file, { mode = 0o666 } = {}, deps = {}) 
 // points below make the choice, so no caller tests a scope's bound, swaps
 // paths or swaps in its own open; a caller may read `scope` only for a policy
 // of its own on top (crash get --out's roots apply outside the workspace).
+// A null projectRoot means there is no checkout (validate run where no
+// workspace was found): everything is 'outside', the user's own. Anything
+// else but a non-empty path is a caller's bug, and throws TypeError: the one
+// projectRoot guard, so every entry point (readUserFile, userDirLeaves,
+// userDir, userDest, userFile) checks it the same way.
 function userPath(projectRoot, file, deps) {
+  if (projectRoot !== null && (typeof projectRoot !== 'string' || projectRoot === '')) {
+    throw new TypeError('safe-fs: projectRoot must be a non-empty path, or null for no checkout');
+  }
+  if (projectRoot === null) return { path: path.resolve(file), scope: 'outside' };
   const p = inProject(projectRoot, file, deps);
   if (!p) return { path: path.resolve(file), scope: 'outside' };
   return { path: p, scope: isInside(p, path.resolve(workspaceDir(projectRoot))) ? 'workspace' : 'path' };
@@ -738,11 +842,37 @@ function userPath(projectRoot, file, deps) {
 // A directory the user chose: its row's userDir (see SCOPES). The checked
 // walk when it lands in the workspace; anywhere else, the project included, a
 // plain recursive mkdir when `create` (MAUTO_LOG_DIR stays out of #362: see
-// the header). Returns the path to use (re-rooted inside the workspace, as
-// given anywhere else), not its realpath.
-function userDir(projectRoot, dir, { create = false } = {}, deps = {}) {
+// the header). Returns the settled directory:
+//   - `path`: the one to use (re-rooted inside the workspace, as given
+//     anywhere else), not its realpath, for a caller that lists or renames in
+//     it;
+//   - `leaf(name)`: `name`'s basename inside it, as `{ path, open, read }`.
+//     `open(flags, { mode, singleLink })` is openOwnedLeaf and returns an fd
+//     the caller closes; `read({ maxBytes, singleLink })` is readOwnedLeaf.
+// The leaf owner rule is the row's `userDirLeaf`, bound here once from where
+// the directory landed (#363): WORKSPACE_DIR in the workspace
+// (MAUTO_TRUST_WORKSPACE_OWNER=1 applies), STRICT_LEAF anywhere else. No
+// caller passes it.
+function userDirLeaves(projectRoot, dir, { create = false } = {}, deps = {}) {
   const { path: p, scope } = userPath(projectRoot, dir, deps);
-  return SCOPES[scope].userDir(projectRoot, { path: p, given: path.resolve(dir) }, { create }, resolveDeps(deps));
+  const row = SCOPES[scope];
+  const settled = row.userDir(projectRoot, { path: p, given: path.resolve(dir) }, { create }, resolveDeps(deps));
+  const policy = row.userDirLeaf;
+  const leaf = (name) => {
+    const file = path.join(settled, path.basename(name));
+    return {
+      path: file,
+      open: (flags, { mode, singleLink } = {}) => openOwnedLeaf(file, flags, { mode, singleLink, policy }, deps),
+      read: ({ maxBytes, singleLink } = {}) => readOwnedLeaf(file, { maxBytes, singleLink, policy }, deps),
+    };
+  };
+  return { path: settled, leaf };
+}
+
+// userDirLeaves's directory alone, as a string, for a caller that only walks
+// or lists the directory (a trace prune) and opens no leaf through it.
+function userDir(projectRoot, dir, opts = {}, deps = {}) {
+  return userDirLeaves(projectRoot, dir, opts, deps).path;
 }
 
 // A file another process writes at a path the user chose (the engine's
@@ -783,10 +913,11 @@ function userFile(projectRoot, file, deps = {}) {
 // The outside row's leaf open, for a file outside any project whose
 // directory the caller has settled itself (the per-user telemetry consent
 // record): openLeafInScope('outside'), so it is the same open userFile uses
-// outside the project, minus the walk. O_NOFOLLOW, ours, one link for a
-// write, the truncate deferred; a refusal worded under the outside row's
-// policy (err.scope 'path'). Creates no directory. Returns an fd the caller
-// closes.
+// outside the project, minus the walk. O_NOFOLLOW, ours under STRICT_LEAF
+// (no checked walk vouches for it, so the owner override never applies,
+// #363), one link
+// for a write, the truncate deferred; a refusal worded under STRICT_LEAF
+// (err.scope 'path'). Creates no directory. Returns an fd the caller closes.
 function openUserLeaf(file, flags, mode = 0o666, deps = {}) {
   return openLeafInScope('outside', file, flags, mode, deps);
 }
@@ -841,14 +972,18 @@ module.exports = {
   // null: the one re-root, which userPath builds on.
   inProject,
   // Paths the user chose: each entry point classifies the path (userPath,
-  // private) and applies its scope's rules.
+  // private) and applies its scope's rules. userDir is the directory alone;
+  // userDirLeaves adds its owner-bound leaves.
   userDir,
+  userDirLeaves,
   userDest,
   userFile,
   openUserLeaf,
   // The one containment test (`child` is `parent` or below it), for a caller
   // that bounds a path the user chose by roots of its own (crash get --out).
   isInside,
+  // A file the user named to read: checked inside the checkout, as named outside.
+  readUserFile,
   // The path scope: project files outside the workspace.
   readProjectFile,
   createProjectFile,

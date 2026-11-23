@@ -48,13 +48,21 @@
 - A project directory owned by root or writable by everyone (for example a `build/`
   a Docker container created) is refused too: `chown` it, `chmod o-w` it, write the
   report outside the project, or set `MAUTO_TRUST_WORKSPACE_OWNER=1` for the owner case.
+- The same checks cover the files mauto reads at a path you name (#363): the scenario
+  `validate`, `run` and `result finalize --scenario` read, and a reference screenshot.
+  Inside the project a link is refused, for example a committed
+  `flows -> /elsewhere`. Outside the project the file is yours and is read as named.
+  The run trace is read the way it was written: checked in `.mobile-automator/.logs/`,
+  used as given in a `MAUTO_LOG_DIR` anywhere else.
 - `(symlink)` / `(escape)`: replace the link with a real directory or file. For
   example, `rm .mobile-automator/memory && mkdir .mobile-automator/memory`, or
   `rm .claude/skills && mkdir .claude/skills` before re-running `mauto init`.
 - `(foreign_owner)`: the path belongs to another uid. Fix it with
   `chown -R "$(id -u)" .mobile-automator`. In a CI container that runs as root over a
   checkout owned by another uid, set `MAUTO_TRUST_WORKSPACE_OWNER=1` instead. It skips
-  the owner check only, never the symlink checks.
+  the owner check only, never the symlink checks, and only inside the checkout: a file
+  outside the project (an `--out` or `--junit` target, a `MAUTO_LOG_DIR` outside the
+  workspace, the telemetry consent file) must still be yours.
   For the session socket directory (the per-user `mauto-<uid>` directory in the temp
   directory), remove it, and mauto recreates it 0700. Its owner or root may have to
   remove it. The override does not apply there.
