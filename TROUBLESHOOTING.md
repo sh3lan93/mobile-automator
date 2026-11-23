@@ -89,7 +89,7 @@
   after `mauto session end`, which you need to run only once.
 - For that 0.40.15 change, with the socket in `.session/` there is nothing to do: the first device verb
   tightens it to 0700 and finds the old daemon again.
-- After upgrading to 0.40.17 or later, a daemon started by an older version no longer
+- After upgrading to 0.40.18 or later, a daemon started by an older version no longer
   answers the client's handshake, wherever its socket is. Each device verb waits about
   15 s, then runs one-shot, until the old daemon idles out (5 minutes) or after
   `mauto session end`, which you need to run only once.
