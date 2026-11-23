@@ -128,3 +128,7 @@ kotlin {
 dependencies {
     androidRuntimeClasspath(libs.compose.uiTooling)
 }
+
+compose.resources {
+    packageOfResClass = "io.github.sh3lan93.mobileautomator.showcase.resources"
+}
