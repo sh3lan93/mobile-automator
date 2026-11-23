@@ -84,8 +84,6 @@ kotlin {
             kotlin.srcDir(generateTmdbKey.map { it.outputDir })
         }
         androidMain.dependencies {
-            implementation(libs.compose.uiToolingPreview)
-            implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
         }
         iosMain.dependencies {
@@ -97,7 +95,6 @@ kotlin {
             implementation(libs.compose.material3)
             implementation(libs.compose.ui)
             implementation(libs.compose.components.resources)
-            implementation(libs.compose.uiToolingPreview)
 
             implementation(libs.navigation.compose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
@@ -119,10 +116,6 @@ kotlin {
             implementation(libs.kotlinx.coroutines.test)
         }
     }
-}
-
-dependencies {
-    androidRuntimeClasspath(libs.compose.uiTooling)
 }
 
 compose.resources {
