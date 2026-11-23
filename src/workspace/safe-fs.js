@@ -200,12 +200,14 @@ const PROJECT_PATH = dirPolicy({
 // the one strict leaf rule: the override never applies, and its foreign_owner
 // refusal never offers it.
 //
-// It is the 'outside' row's policy. Its wording is its own and path-neutral
-// (subject 'path', reported as the path scope), because a strict leaf is one
-// no checked walk vouches for (an --out target outside the project, a leaf in
-// a MAUTO_LOG_DIR outside the workspace, the per-user consent file). Only the
-// owner hint differs from the path scope's, and only the escape hint, which
-// no leaf open throws, names the project.
+// It is the 'outside' row's policy, so withScope('outside') re-words a strict
+// refusal into the same words, and no other scope wraps a strict open. Its
+// wording is its own and path-neutral (subject 'path', reported as the path
+// scope), because a strict leaf is one no checked walk vouches for (an --out
+// target outside the project, a leaf in a MAUTO_LOG_DIR outside the
+// workspace, the per-user consent file). Only the owner hint differs from the
+// path scope's, and only the escape hint, which no leaf open throws, names
+// the project.
 const STRICT_LEAF = dirPolicy({
   ...PROJECT_PATH,
   trustOverride: false,
@@ -279,10 +281,6 @@ const SCOPES = Object.freeze({
   }),
 });
 
-// The policies a scope's checks throw under. A refusal thrown under any other
-// policy (STRICT_LEAF, session-dir.js's) already says what its own rule means.
-const SCOPE_POLICIES = new Set([WORKSPACE_DIR, PROJECT_PATH]);
-
 // A refusal carries its own envelope fields, like the repo's other typed
 // errors: `kind` is always environment (the checkout is wrong, not the verb's
 // input), `message` and `hint` are the envelope text verbatim. So any boundary
@@ -310,15 +308,10 @@ class UnsafePathError extends TypedRefusal {
     this.reason = reason;
     this.scope = policy.scope;
     this.detail = detail;
-    // Not enumerable: the rule, not a field of the refusal's envelope.
-    Object.defineProperty(this, 'policy', { value: policy });
   }
 
-  // The same refusal (path, reason, detail, code, kind) worded for `scope`,
-  // when it was thrown under a scope's own policy (SCOPE_POLICIES). A refusal
-  // thrown under any other policy is returned as it is.
+  // The same refusal (path, reason, detail, code, kind) worded for `scope`.
   inScope(scope) {
-    if (!SCOPE_POLICIES.has(this.policy)) return this;
     return new UnsafePathError(this.path, this.reason, { scope, detail: this.detail });
   }
 }

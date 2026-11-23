@@ -740,17 +740,6 @@ describe('openOwnedLeaf', () => {
     expect(err.message).toContain(detail);
     expect(err.inScope('path').message).toBe(`Refusing to use path ${p}: ${detail} (foreign_owner).`);
   });
-
-  // A refusal under a rule of its own already says what that rule means: a
-  // strict leaf's re-scoped to the workspace would offer the very override
-  // its rule refuses.
-  it('inScope leaves a refusal under a policy that is not a scope as it is', () => {
-    const p = path.join(ws, 'a');
-    fs.writeFileSync(p, 'x');
-    const err = expectUnsafe(() => openOwnedLeaf(p, O_RDONLY, {}, { fs: foreignFs(['fstatSync']) }), 'foreign_owner');
-    expect(err.inScope('workspace')).toBe(err);
-    expect(err.inScope('workspace').hint).not.toContain('MAUTO_TRUST_WORKSPACE_OWNER');
-  });
 });
 
 describe('readOwnedLeaf', () => {

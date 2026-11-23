@@ -88,8 +88,8 @@ describe('outside the project the override never applies', () => {
     expect(err.message).toContain(`you are uid ${REAL_UID + 1}`);
   });
 
-  // A strict leaf is outside the checkout, and its refusal is never
-  // re-scoped: it must not call itself a workspace path, nor offer the
+  // A strict leaf is one no checked walk vouches for, and its refusal keeps
+  // its own wording: it must not call itself a workspace path, nor offer the
   // override its rule refuses. The consent read is readOwnedLeaf's default
   // (consent.js), a MAUTO_LOG_DIR leaf is a userDirLeaves leaf (append.js).
   it('a strict-leaf refusal says neither "workspace path" nor the override', () => {
