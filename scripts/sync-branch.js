@@ -60,25 +60,50 @@ function bump(core, level) {
   });
 }
 
+const LEVELS = ['major', 'minor', 'patch'];
+
 // The version the branch should carry once `theirs` is merged: its own if that
 // is still free and ahead, otherwise the same size of bump on top of the base.
-// `isFree(v)` is the version gate's rule (#369), so sync never picks a version
-// the gate would then reject: see sync() below.
-function nextVersion({ ancestor, ours, theirs, isFree }) {
+// Free is the version gate's rule (#369), decide() over the release `tags`, so
+// sync never picks a version the gate would then reject: see sync() below.
+//
+// The next free version is computed, not probed for. When the base's bump is
+// not free, the only bar left is the highest tag, so the answer is the same
+// bump on top of it. If that tag is on a newer minor or major than the branch's
+// bump size (an rc line, 0.41.0-rc.1, past a patch bump), the bump cannot reach
+// it at that size and a human chooses: probing bump after bump never ended.
+function nextVersion({ ancestor, ours, theirs, tags }) {
   if (ours === ancestor) return theirs;
 
+  const free = (version) => decide(version, tags).decision === 'ahead';
   const o = parseOrHandMerge(ours);
   const t = parseOrHandMerge(theirs);
-  if (compareCores(o.core, t.core) > 0 && isFree(ours)) return ours;
+  if (compareCores(o.core, t.core) > 0 && free(ours)) return ours;
 
   if (o.prerelease.length > 0 || t.prerelease.length > 0) {
     throw new HandMerge(`rc version ${ours} needs a number chosen by hand (base is ${theirs})`);
   }
 
   const level = bumpLevel(parseOrHandMerge(ancestor).core, o.core);
-  let candidate = bump(t.core, level);
-  while (!isFree(candidate.join('.'))) candidate = bump(candidate, level);
-  return candidate.join('.');
+  const candidate = bump(t.core, level);
+  if (free(candidate.join('.'))) return candidate.join('.');
+
+  // Not free, so some tag is at or above candidate: highest is never null here.
+  const { highest } = decide(candidate.join('.'), tags);
+  const h = parseOrHandMerge(highest.slice(1));
+  if (h.core.some((n, i) => i < level && n !== candidate[i])) {
+    throw new HandMerge(
+      `highest release tag ${highest} is past a ${LEVELS[level]} bump on ${theirs}; choose the version by hand`,
+    );
+  }
+
+  // h.core agrees with candidate above `level` and bumping it at `level` moves
+  // past h itself (prerelease or not), so this is above every tag.
+  const above = bump(h.core, level);
+  if (!free(above.join('.'))) {
+    throw new HandMerge(`no free ${LEVELS[level]} bump above ${highest}; choose the version by hand`);
+  }
+  return above.join('.');
 }
 
 // Split into the text before the first `## [` heading and one entry per section,
@@ -244,10 +269,7 @@ function sync({ cwd, base = 'origin/main', fetch = true, npm = refreshLockfile, 
 
   let newVersion;
   try {
-    newVersion = nextVersion({
-      ...versions,
-      isFree: (v) => decide(v, tags).decision === 'ahead',
-    });
+    newVersion = nextVersion({ ...versions, tags });
   } catch (err) {
     if (!(err instanceof HandMerge)) throw err;
     log(`left for you: version (${err.message})`);
