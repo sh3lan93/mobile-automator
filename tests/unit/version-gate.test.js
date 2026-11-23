@@ -37,6 +37,12 @@ describe('decide', () => {
     expect(decide('0.40.3', tags)).toEqual({ decision: 'behind', highest: 'v0.40.10' });
   });
 
+  // Not tagged by name, but equal in precedence (leading zeros parse): shipping
+  // it would publish a version npm already has, so it is behind, not ahead.
+  test('a tag equal in precedence but spelled differently is behind', () => {
+    expect(decide('0.40.14', ['v0.40.014'])).toEqual({ decision: 'behind', highest: 'v0.40.014' });
+  });
+
   test('ignores tags that are not v + a parseable version', () => {
     const tags = ['v9.9.9-', 'latest', '99.0.0', 'v1.2', 'release-1', 'v0.40.1'];
     expect(decide('0.40.2', tags)).toEqual({ decision: 'ahead', highest: 'v0.40.1' });
