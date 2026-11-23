@@ -31,6 +31,7 @@ const APP = 'showcase-app';
 const SCENARIOS = `${APP}/scenarios/`;
 const ANDROID_GRADLE = `${APP}/androidApp/build.gradle.kts`;
 const IOS_XCCONFIG = `${APP}/iosApp/Configuration/Config.xcconfig`;
+const IOS_PBXPROJ = `${APP}/iosApp/iosApp.xcodeproj/project.pbxproj`;
 const APP_SOURCE = `${APP}/shared/src/`;
 
 const read = (rel) => fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
@@ -45,9 +46,18 @@ function androidApplicationId() {
   return m ? m[1] : null;
 }
 
+// The bundle id the iOS build actually produces: every PRODUCT_BUNDLE_IDENTIFIER
+// in the project, with its ${VAR} / $(VAR) references filled from
+// Config.xcconfig's KEY=VALUE lines. All build configurations must resolve to
+// one id; anything else (no setting, or two different ids) returns null.
 function iosBundleId() {
-  const m = read(IOS_XCCONFIG).match(/^\s*BUNDLE_ID\s*=\s*(\S+)\s*$/m);
-  return m ? m[1] : null;
+  const vars = {};
+  for (const m of read(IOS_XCCONFIG).matchAll(/^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*(.*?)[ \t]*$/gm)) vars[m[1]] = m[2];
+  const values = [...read(IOS_PBXPROJ).matchAll(/PRODUCT_BUNDLE_IDENTIFIER\s*=\s*("(?:[^"\\]|\\.)*"|[^;\s]+)\s*;/g)]
+    .map((m) => m[1].replace(/^"(.*)"$/, '$1'))
+    .map((v) => v.replace(/\$(?:\{([A-Za-z_][A-Za-z0-9_]*)\}|\(([A-Za-z_][A-Za-z0-9_]*)\))/g, (_, a, b) => vars[a || b] ?? ''));
+  const ids = new Set(values);
+  return ids.size === 1 ? [...ids][0] : null;
 }
 
 describe('showcase scenarios — present', () => {
