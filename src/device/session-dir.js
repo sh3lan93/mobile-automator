@@ -212,15 +212,15 @@ function connectOwnSocket(name, connect, deps) {
 // and the socket share one pin when the socket is in .session/; the fallback
 // socket gets a pin of its own.
 function connectPinned(projectRoot, connect, deps = {}) {
+  const sessionDir = paths.sessionDir(projectRoot);
   // The path prefilter: the location, or null when a check refuses it.
   const loc = nullOnRefusal(() => {
     const l = paths.socketLocation(projectRoot, deps);
-    safeDir(projectRoot, paths.sessionDir(projectRoot), { policy: SESSION_DIR }, deps);
+    safeDir(projectRoot, sessionDir, { policy: SESSION_DIR }, deps);
     if (!l.inWorkspace) checkDir(l.dir, SOCKET_DIR, {}, deps);
     return l;
   });
   if (!loc) return null;
-  const sessionDir = paths.sessionDir(projectRoot);
   const name = path.basename(loc.file);
   // Set the moment the connection is opened, so a pin that throws afterwards
   // (its working-directory restore) cannot leak it.
