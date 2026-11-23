@@ -8,9 +8,12 @@
 //   node scripts/version-gate.js <version> --mode pr    version-check.yml, on a PR
 //   node scripts/version-gate.js <version> --mode tag   auto-tag.yml, before tagging
 //
-//   exit 0  pr: ahead of every tag. tag: ahead (exists=false) or already
-//           tagged (exists=true, a re-run of the same merge, nothing to do)
-//   exit 1  pr: tagged or behind. tag: behind, so nothing is tagged
+//   exit 0  pr: ahead of every tag. tag: ahead (exists=false), or already
+//           tagged with no shipping path changed since that tag
+//           (exists=true: a re-run, or a docs-only merge; nothing to do)
+//   exit 1  pr: tagged or behind. tag: behind, or tagged with shipping paths
+//           changed since the tag (a stale branch reused a released
+//           version), so nothing is tagged
 //   exit 2  could not run: bad arguments, unparseable version, git failed
 //
 // In tag mode `exists=…` is appended to $GITHUB_OUTPUT for the tag step's `if:`;
@@ -19,7 +22,10 @@
 // Tag mode re-checks what PR mode already did because a PR's last CI run can
 // predate the latest merge to main: a stale branch can merge with a version
 // that was ahead when its checks ran. Failing here stops it before a tag is
-// pushed, instead of inside npm publish.
+// pushed, instead of inside npm publish. The same stale branch can also reuse
+// a version that has since shipped; skipping it as a re-run would leave its
+// code unreleased, so a tagged version only skips when SHIPPING_PATHS are
+// unchanged between v<version> and HEAD.
 //
 // The ordering is scripts/version-order.js, the one comparison in the repo.
 
@@ -31,6 +37,10 @@ const { parseVersion, compareVersions } = require('./version-order');
 const MODES = ['pr', 'tag'];
 const RULE = '────────────────────────────────────────';
 const USAGE = 'usage: node scripts/version-gate.js <version> --mode pr|tag';
+
+// What ships: the `cli` paths-filter list in version-check.yml, as git
+// pathspecs. tests/lint/version-gate.test.js keeps the two equal.
+const SHIPPING_PATHS = ['src', 'bin', 'package.json'];
 
 /**
  * Where `version` stands against the release tags.
@@ -66,6 +76,18 @@ function gitTags(cwd = process.cwd()) {
   if (res.error) throw new Error(`could not run git: ${res.error.message}`);
   if (res.status !== 0) throw new Error(`git tag --list failed (exit ${res.status}): ${(res.stderr || '').trim()}`);
   return res.stdout.split('\n').map((t) => t.trim()).filter(Boolean);
+}
+
+/**
+ * Whether any SHIPPING_PATHS differ between `tag` and HEAD in the repo at cwd.
+ * Throws when git fails (an unknown tag included).
+ */
+function gitChangedSinceTag(tag, cwd = process.cwd()) {
+  const res = spawnSync('git', ['diff', '--quiet', tag, 'HEAD', '--', ...SHIPPING_PATHS], { cwd, encoding: 'utf8' });
+  if (res.error) throw new Error(`could not run git: ${res.error.message}`);
+  if (res.status === 0) return false;
+  if (res.status === 1) return true;
+  throw new Error(`git diff ${tag} HEAD failed (exit ${res.status}): ${(res.stderr || '').trim()}`);
 }
 
 /** Append one `key=value` line to $GITHUB_OUTPUT; a no-op when it is unset. */
@@ -118,10 +140,30 @@ function prResult(version, { decision, highest }) {
   };
 }
 
-function tagResult(version, { decision, highest }) {
+function tagResult(version, { decision, highest }, changedSinceTag) {
   const tag = `v${version}`;
   if (decision === 'tagged') {
-    return { code: 0, output: 'exists=true', stream: 'log', text: `⚠️ Tag ${tag} already exists — skipping tag creation.` };
+    if (!changedSinceTag(tag)) {
+      return {
+        code: 0,
+        output: 'exists=true',
+        stream: 'log',
+        text: `⚠️ Tag ${tag} already exists and no CLI code changed since — skipping tag creation.`,
+      };
+    }
+    return {
+      code: 1,
+      stream: 'error',
+      text: box('❌ Refusing to tag', [
+        `Version ${version} is already released (tag '${tag}' exists).`,
+        'Nothing was tagged and nothing will be published.',
+        '',
+        `CLI code changed since ${tag} was released (${SHIPPING_PATHS.join(', ')}),`,
+        'but the version was not bumped: a stale branch merged with a version',
+        'that shipped before it landed. Fix it on a new PR that bumps the version',
+        '(`node scripts/sync-branch.js` picks the next free one).',
+      ]),
+    };
   }
   if (decision === 'behind') {
     return {
@@ -152,19 +194,24 @@ function tagResult(version, { decision, highest }) {
  */
 function main(
   argv,
-  { readTags = gitTags, log = console.log, error = console.error, writeOutput = appendGithubOutput } = {},
+  {
+    readTags = gitTags,
+    changedSinceTag = gitChangedSinceTag,
+    log = console.log,
+    error = console.error,
+    writeOutput = appendGithubOutput,
+  } = {},
 ) {
   let args;
-  let tags;
+  let result;
   try {
     args = parseArgs(argv);
-    tags = readTags();
+    const verdict = decide(args.version, readTags());
+    result = args.mode === 'pr' ? prResult(args.version, verdict) : tagResult(args.version, verdict, changedSinceTag);
   } catch (err) {
     error(`version-gate: ${err.message}`);
     return 2;
   }
-  const verdict = decide(args.version, tags);
-  const result = args.mode === 'pr' ? prResult(args.version, verdict) : tagResult(args.version, verdict);
   if (result.output) {
     try {
       writeOutput(result.output);
@@ -179,4 +226,4 @@ function main(
 
 if (require.main === module) process.exitCode = main(process.argv.slice(2));
 
-module.exports = { decide, main, gitTags, appendGithubOutput };
+module.exports = { decide, main, gitTags, gitChangedSinceTag, appendGithubOutput, SHIPPING_PATHS };

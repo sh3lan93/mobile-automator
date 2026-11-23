@@ -57,12 +57,13 @@ describe('decide', () => {
 describe('main', () => {
   const TAGS = ['v0.40.12', 'v0.40.14'];
 
-  function run(argv, { tags = TAGS, readTags } = {}) {
+  function run(argv, { tags = TAGS, readTags, changedSinceTag = () => false } = {}) {
     const logs = [];
     const errors = [];
     const outputs = [];
     const code = main(argv, {
       readTags: readTags || (() => tags),
+      changedSinceTag,
       log: (m) => logs.push(m),
       error: (m) => errors.push(m),
       writeOutput: (l) => outputs.push(l),
@@ -77,6 +78,13 @@ describe('main', () => {
       expect(r.err).toMatch(/Version 0\.40\.13 is not greater than the highest release tag v0\.40\.14/);
       expect(r.err).toMatch(/node scripts\/sync-branch\.js/);
       expect(r.outputs).toEqual([]);
+    });
+
+    test('tagged fails whether or not shipping paths changed since the tag', () => {
+      const changedSinceTag = jest.fn(() => false);
+      const r = run(['0.40.14', '--mode', 'pr'], { changedSinceTag });
+      expect(r.code).toBe(1);
+      expect(changedSinceTag).not.toHaveBeenCalled();
     });
 
     test('tagged fails, naming the tag', () => {
@@ -97,11 +105,44 @@ describe('main', () => {
   });
 
   describe('--mode tag', () => {
-    test('tagged skips: exit 0 and exists=true', () => {
-      const r = run(['0.40.14', '--mode', 'tag']);
+    test('tagged with no shipping change since the tag skips: exit 0 and exists=true', () => {
+      const changedSinceTag = jest.fn(() => false);
+      const r = run(['0.40.14', '--mode', 'tag'], { changedSinceTag });
+      expect(changedSinceTag).toHaveBeenCalledWith('v0.40.14');
       expect(r.code).toBe(0);
       expect(r.outputs).toEqual(['exists=true']);
       expect(r.out).toMatch(/skipping/i);
+    });
+
+    // Two PRs bump to 0.40.14; the first ships v0.40.14, the stale second
+    // merges at 0.40.14 with new CLI code. Skipping would never release it.
+    test('tagged with shipping changes since the tag fails: exit 1, no output', () => {
+      const r = run(['0.40.14', '--mode', 'tag'], { changedSinceTag: () => true });
+      expect(r.code).toBe(1);
+      expect(r.outputs).toEqual([]);
+      expect(r.err).toMatch(/v0\.40\.14/);
+      expect(r.err).toMatch(/Nothing was tagged/);
+      expect(r.err).toMatch(/CLI code changed since v0\.40\.14 was released/);
+      expect(r.err).toMatch(/stale branch/);
+      expect(r.err).toMatch(/sync-branch\.js/);
+    });
+
+    test('ahead and behind never ask what changed since a tag', () => {
+      const changedSinceTag = jest.fn(() => true);
+      expect(run(['0.40.15', '--mode', 'tag'], { changedSinceTag }).code).toBe(0);
+      expect(run(['0.40.13', '--mode', 'tag'], { changedSinceTag }).code).toBe(1);
+      expect(changedSinceTag).not.toHaveBeenCalled();
+    });
+
+    test('a git failure while diffing against the tag exits 2', () => {
+      const r = run(['0.40.14', '--mode', 'tag'], {
+        changedSinceTag: () => {
+          throw new Error('git diff failed (exit 128): bad revision');
+        },
+      });
+      expect(r.code).toBe(2);
+      expect(r.err).toMatch(/bad revision/);
+      expect(r.outputs).toEqual([]);
     });
 
     test('ahead tags: exit 0 and exists=false', () => {
@@ -239,5 +280,72 @@ describe('the CLI against a real git repo', () => {
     } finally {
       fs.rmSync(bare, { recursive: true, force: true });
     }
+  });
+});
+
+// Tag mode's `tagged` skip, against real commits after a real tag.
+describe('the CLI: tag mode on an already-tagged version (real git)', () => {
+  let repo;
+
+  const git = (...args) => {
+    const res = spawnSync('git', args, { cwd: repo, encoding: 'utf8' });
+    if (res.status !== 0) throw new Error(`git ${args.join(' ')}: ${res.stderr}`);
+  };
+  const commitFile = (rel, text) => {
+    fs.mkdirSync(path.dirname(path.join(repo, rel)), { recursive: true });
+    fs.writeFileSync(path.join(repo, rel), text);
+    git('add', '-A');
+    git('commit', '-q', '-m', `change ${rel}`);
+  };
+  const cli = () => {
+    const outFile = path.join(os.tmpdir(), `version-gate-out-${Date.now()}-${Math.random()}`);
+    fs.writeFileSync(outFile, '');
+    try {
+      const res = spawnSync(process.execPath, [SCRIPT, '0.40.14', '--mode', 'tag'], {
+        cwd: repo,
+        encoding: 'utf8',
+        env: { ...process.env, GITHUB_OUTPUT: outFile },
+      });
+      return { code: res.status, stderr: res.stderr, output: fs.readFileSync(outFile, 'utf8') };
+    } finally {
+      fs.rmSync(outFile, { force: true });
+    }
+  };
+
+  beforeEach(() => {
+    repo = fs.mkdtempSync(path.join(os.tmpdir(), 'version-gate-tagged-'));
+    git('init', '-q');
+    git('config', 'user.name', 'Version Gate Test');
+    git('config', 'user.email', 'version-gate@example.invalid');
+    git('config', 'commit.gpgsign', 'false');
+    git('config', 'tag.gpgsign', 'false');
+    commitFile('package.json', '{"version":"0.40.14"}\n');
+    commitFile('src/cli.js', 'one\n');
+    git('tag', '-a', 'v0.40.14', '-m', 'Release v0.40.14');
+  });
+
+  afterEach(() => {
+    fs.rmSync(repo, { recursive: true, force: true });
+  });
+
+  test('HEAD is the tagged commit (a re-run): exit 0, exists=true', () => {
+    const r = cli();
+    expect(r.code).toBe(0);
+    expect(r.output).toBe('exists=true\n');
+  });
+
+  test('a docs-only commit after the tag: exit 0, exists=true', () => {
+    commitFile('docs/index.md', 'docs\n');
+    const r = cli();
+    expect(r.code).toBe(0);
+    expect(r.output).toBe('exists=true\n');
+  });
+
+  test('a src/ change after the tag at the same version: exit 1, no exists line', () => {
+    commitFile('src/cli.js', 'two\n');
+    const r = cli();
+    expect(r.code).toBe(1);
+    expect(r.output).toBe('');
+    expect(r.stderr).toMatch(/CLI code changed since v0\.40\.14 was released/);
   });
 });

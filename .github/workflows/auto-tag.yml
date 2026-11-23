@@ -81,7 +81,10 @@ jobs:
       # #369: a PR's last CI run can predate the latest merge, so a stale
       # branch can reach main with a version below one already released. Re-check here and fail
       # before tagging, rather than inside npm publish. Writes exists=true|false
-      # for the step below; exits 1 on a version behind the highest tag.
+      # for the step below; exits 1 on a version behind the highest tag, or on
+      # one already tagged when src/, bin/ or package.json changed since that
+      # tag (a stale branch reused a released version; skipping would never
+      # release its code). exists=true only when nothing shipping changed.
       - name: Check version is ahead of every release tag
         id: tag_check
         env:

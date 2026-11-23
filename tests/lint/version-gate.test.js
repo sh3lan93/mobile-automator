@@ -7,9 +7,11 @@
 // because a stale branch can merge with a PR run that predates the latest
 // merge. This guard fails the build if either run is unwired or neutralised,
 // and drives the gate's own decide() through the issue's cases.
+const yaml = require('js-yaml');
+
 const { loadWorkflow, runs, findStep, findJobWithRun } = require('./workflow-guard');
 
-const { decide } = require('../../scripts/version-gate');
+const { decide, SHIPPING_PATHS } = require('../../scripts/version-gate');
 
 const PR_GATE = 'node scripts/version-gate.js "$VERSION" --mode pr';
 const TAG_GATE = 'node scripts/version-gate.js "$VERSION" --mode tag';
@@ -48,6 +50,26 @@ describe('version-check.yml runs the ordering gate on PRs (#369)', () => {
 
   test('its checkout fetches full history and tags', () => {
     expect(checkoutOf(job.steps).with['fetch-depth']).toBe(0);
+  });
+});
+
+// Tag mode skips an already-tagged version only when nothing under the
+// shipping paths changed since that tag; those paths must be exactly the
+// ones the PR gate treats as shipping CLI code, or one side drifts.
+describe('the tag-mode shipping paths match the version-check.yml cli filter (#369)', () => {
+  // The filter globs, spelled as the git pathspecs the gate diffs.
+  const AS_PATHSPEC = { 'src/**': 'src', 'bin/**': 'bin', 'package.json': 'package.json' };
+
+  test('SHIPPING_PATHS equals the cli filter list', () => {
+    const wf = loadWorkflow('.github/workflows/version-check.yml');
+    const filterStep = wf.jobs['detect-cli-changes'].steps.find(
+      (s) => typeof s.uses === 'string' && s.uses.startsWith('dorny/paths-filter@'),
+    );
+    expect(filterStep).toBeDefined();
+    const { cli } = yaml.load(filterStep.with.filters);
+    expect(Array.isArray(cli)).toBe(true);
+    cli.forEach((glob) => expect(Object.keys(AS_PATHSPEC)).toContain(glob));
+    expect([...SHIPPING_PATHS].sort()).toEqual(cli.map((glob) => AS_PATHSPEC[glob]).sort());
   });
 });
 
