@@ -75,19 +75,18 @@ jobs:
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
           echo "Detected version: $VERSION (tag: v$VERSION)"
 
-      - name: Check if tag already exists
-        id: tag_check
-        run: |
-          TAG="${{ steps.get_version.outputs.tag }}"
-          git fetch --tags
+      - name: Fetch release tags
+        run: git fetch --tags
 
-          if git rev-parse "$TAG" > /dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "⚠️ Tag $TAG already exists — skipping tag creation."
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "✅ Tag $TAG does not exist — will create it."
-          fi
+      # #369: a PR's last CI run can predate the latest merge, so a stale
+      # branch can reach main with a version below one already released. Re-check here and fail
+      # before tagging, rather than inside npm publish. Writes exists=true|false
+      # for the step below; exits 1 on a version behind the highest tag.
+      - name: Check version is ahead of every release tag
+        id: tag_check
+        env:
+          VERSION: ${{ steps.get_version.outputs.version }}
+        run: node scripts/version-gate.js "$VERSION" --mode tag
 
       - name: Create and push tag
         if: steps.tag_check.outputs.exists == 'false'
