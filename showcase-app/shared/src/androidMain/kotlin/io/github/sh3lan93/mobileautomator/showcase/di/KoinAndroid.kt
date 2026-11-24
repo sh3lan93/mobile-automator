@@ -9,7 +9,7 @@ import org.koin.dsl.module
 fun initKoinAndroid(context: Context) = initKoin(
     module {
         single<KeyValueStorage> {
-            SharedPreferencesStorage(context.getSharedPreferences("reel_tracker_store", Context.MODE_PRIVATE))
+            SharedPreferencesStorage(context.applicationContext.getSharedPreferences("reel_tracker_store", Context.MODE_PRIVATE))
         }
     },
 )
