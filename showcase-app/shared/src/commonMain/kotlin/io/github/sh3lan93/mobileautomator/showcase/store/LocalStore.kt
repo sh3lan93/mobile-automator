@@ -43,6 +43,9 @@ class LocalStore(private val storage: KeyValueStorage) {
     val simulateOffline = boolean("simulate_offline")
     val simulateServerError = boolean("simulate_server_error")
 
+    /** The TMDB guest session ratings are made under; `null` until the first rating. */
+    val guestSessionId = string("guest_session_id")
+
     /** The switches as the client reads them before each request; a snapshot, never a second copy of state. */
     fun simulation() = Simulation(simulateOffline.value.value, simulateServerError.value.value)
 
@@ -52,7 +55,6 @@ class LocalStore(private val storage: KeyValueStorage) {
     private fun boolean(key: String, default: Boolean = false) =
         register(key, default, Codec({ it.toString() }, String::toBooleanStrictOrNull))
 
-    @Suppress("unused") // first used by #309 (guest session id)
     private fun string(key: String) = register<String?>(key, null, Codec({ it }, { it }))
 
     @Suppress("unused") // first used by #310 (watchlist)
