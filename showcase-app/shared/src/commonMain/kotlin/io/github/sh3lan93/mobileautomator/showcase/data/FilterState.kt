@@ -35,6 +35,24 @@ data class FilterState(
 ) {
     val isDefault: Boolean get() = this == FilterState()
 
+    // The chip tap rules: tapping a chip selects its value, tapping the selected one clears it.
+
+    /** Selects [sort]; when it is already the order, goes back to [Sort.MostPopular]. */
+    fun withSortToggled(sort: Sort): FilterState =
+        copy(sort = if (this.sort == sort) Sort.MostPopular else sort)
+
+    /** Sets the minimum rating to [rating]; when it is already set, clears it. */
+    fun withRatingToggled(rating: Int): FilterState =
+        copy(minRating = if (minRating == rating) null else rating)
+
+    /** Sets the release year to [year]; when it is already set, clears it. */
+    fun withYearToggled(year: Int): FilterState =
+        copy(year = if (this.year == year) null else year)
+
+    /** Selects [genre]; when a genre with its id is already selected, clears it. */
+    fun withGenreToggled(genre: Genre): FilterState =
+        copy(genre = if (this.genre?.id == genre.id) null else genre)
+
     /** The discover endpoint's query parameters for this state. Never carries `api_key`. */
     fun toDiscoverQuery(): Map<String, String> = buildMap {
         put("sort_by", sort.sortBy)

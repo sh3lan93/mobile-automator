@@ -34,7 +34,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.sh3lan93.mobileautomator.showcase.data.FilterState
-import io.github.sh3lan93.mobileautomator.showcase.data.Genre
 import io.github.sh3lan93.mobileautomator.showcase.data.RATING_STEPS
 import io.github.sh3lan93.mobileautomator.showcase.data.Sort
 import io.github.sh3lan93.mobileautomator.showcase.data.decadeLabel
@@ -95,9 +94,7 @@ fun FiltersScreen(
                 Section("Sort by") {
                     Sort.entries.forEach { sort ->
                         Chip(sort.label, selected = filters.sort == sort) {
-                            // Deselecting the sort goes back to the default order.
-                            val next = if (filters.sort == sort) Sort.MostPopular else sort
-                            apply(filters.copy(sort = next))
+                            apply(filters.withSortToggled(sort))
                         }
                     }
                 }
@@ -107,7 +104,7 @@ fun FiltersScreen(
                     }
                     RATING_STEPS.forEach { rating ->
                         Chip("$rating+", selected = filters.minRating == rating) {
-                            apply(filters.copy(minRating = if (filters.minRating == rating) null else rating))
+                            apply(filters.withRatingToggled(rating))
                         }
                     }
                 }
@@ -124,7 +121,7 @@ fun FiltersScreen(
                     ChipRow {
                         yearsOf(start, viewModel.currentYear).forEach { year ->
                             Chip(year.toString(), selected = filters.year == year) {
-                                apply(filters.copy(year = if (filters.year == year) null else year))
+                                apply(filters.withYearToggled(year))
                             }
                         }
                     }
@@ -140,19 +137,17 @@ fun FiltersScreen(
                             Chip("Any genre", selected = filters.genre == null) {
                                 apply(filters.copy(genre = null))
                             }
-                            g.genres.forEach { genre -> GenreChip(genre, filters, apply) }
+                            g.genres.forEach { genre ->
+                                Chip(genre.name, selected = filters.genre?.id == genre.id) {
+                                    apply(filters.withGenreToggled(genre))
+                                }
+                            }
                         }
                     }
                 }
             }
         }
     }
-}
-
-@Composable
-private fun GenreChip(genre: Genre, filters: FilterState, apply: (FilterState) -> Unit) {
-    val selected = filters.genre?.id == genre.id
-    Chip(genre.name, selected) { apply(filters.copy(genre = if (selected) null else genre)) }
 }
 
 @Composable

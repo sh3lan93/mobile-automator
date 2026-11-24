@@ -157,4 +157,52 @@ class FilterStateTest {
     fun yearsOf_pastDecade_isTenYears() {
         assertEquals((1990..1999).toList(), yearsOf(1990, 2026))
     }
+
+    // A state with every field set, so each toggle can show it leaves the others alone.
+    private val full = FilterState(genre = drama, year = 1994, minRating = 7, sort = Sort.MostVotes)
+
+    @Test
+    fun withSortToggled_otherSort_selectsItAndKeepsTheRest() {
+        assertEquals(full.copy(sort = Sort.TopGrossing), full.withSortToggled(Sort.TopGrossing))
+    }
+
+    @Test
+    fun withSortToggled_selectedSort_goesBackToMostPopular() {
+        assertEquals(full.copy(sort = Sort.MostPopular), full.withSortToggled(Sort.MostVotes))
+    }
+
+    @Test
+    fun withRatingToggled_otherRating_selectsItAndKeepsTheRest() {
+        assertEquals(full.copy(minRating = 9), full.withRatingToggled(9))
+    }
+
+    @Test
+    fun withRatingToggled_selectedRating_clearsIt() {
+        assertEquals(full.copy(minRating = null), full.withRatingToggled(7))
+    }
+
+    @Test
+    fun withYearToggled_otherYear_selectsItAndKeepsTheRest() {
+        assertEquals(full.copy(year = 2001), full.withYearToggled(2001))
+    }
+
+    @Test
+    fun withYearToggled_selectedYear_clearsIt() {
+        assertEquals(full.copy(year = null), full.withYearToggled(1994))
+    }
+
+    @Test
+    fun withGenreToggled_otherGenre_selectsItAndKeepsTheRest() {
+        assertEquals(full.copy(genre = animation), full.withGenreToggled(animation))
+    }
+
+    @Test
+    fun withGenreToggled_selectedGenre_clearsIt() {
+        assertEquals(full.copy(genre = null), full.withGenreToggled(drama))
+    }
+
+    @Test
+    fun withGenreToggled_sameIdOtherName_countsAsSelected() {
+        assertEquals(full.copy(genre = null), full.withGenreToggled(Genre(18, "Dramas")))
+    }
 }
