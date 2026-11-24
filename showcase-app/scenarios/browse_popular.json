@@ -26,6 +26,14 @@
       "on_failure": "fail"
     },
     {
+      "id": "list_loaded",
+      "action": "wait_for_element_gone",
+      "description": "Wait for the list to finish loading (the title shows while it loads)",
+      "target": "Loading films…",
+      "wait_config": { "type": "element_gone", "timeout_ms": 30000 },
+      "on_failure": "fail"
+    },
+    {
       "id": "open_about",
       "action": "tap",
       "description": "Open the About screen",
@@ -58,7 +66,7 @@
   "assertions": [
     {
       "id": "film_count_shown",
-      "after_step": "wait_list",
+      "after_step": "list_loaded",
       "type": "pattern_match",
       "description": "The film-count line is shown, which proves the list loaded (the add-your-key screen also carries the title, but no count)",
       "pattern": "^\\d+ films$"
