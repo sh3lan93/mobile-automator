@@ -16,16 +16,19 @@
 //   4. every scenario launches the id both platforms build, and the Android
 //      applicationId and iOS bundle id are the same string;
 //   5. no scenario target or expected value is a Compose testTag literal;
-//   6. the showcase declares no UI test dependency or UI test source set.
+//   6. no target, expected value or pattern after a `type` step matches the
+//      text typed before it (see typedTextOffenders);
+//   7. the showcase declares no UI test dependency or UI test source set.
 
 const fs = require('fs');
 const path = require('path');
 
 const { REPO_ROOT, repoFiles } = require('./docs-corpus');
-const { OS_ID_TOKEN, targetValues } = require('./scenario-targets');
+const { OS_ID_TOKEN, targetValues, patternValues } = require('./scenario-targets');
 const { ScenarioValidator } = require('../../src/scenario/validator');
 const { loadScenario } = require('../../src/scenario/load');
-const { MECHANICAL_TYPES } = require('../../src/assertion/evaluator');
+const { flattenSteps } = require('../../src/scenario/steps');
+const { MECHANICAL_TYPES, matches } = require('../../src/assertion/evaluator');
 
 const APP = 'showcase-app';
 const SCENARIOS = `${APP}/scenarios/`;
@@ -137,6 +140,62 @@ describe('showcase scenarios — on-screen strings, not testTags', () => {
         if (tags.has(value)) offenders.push(`${file} ${where}: ${JSON.stringify(value)}`);
       }
     }
+    expect(offenders).toEqual([]);
+  });
+});
+
+// The CLI matches a target against an element's text or label (`matches`),
+// and a regex field (`target_pattern`, `pattern`) by testing it
+// against the element's text. Android exposes a text field's typed text as the
+// field's text while iOS does not, so a target the typed text contains, or a
+// pattern the typed text matches, would hit the text field itself on Android
+// only: the step or assertion passes there without the effect of typing ever
+// appearing, and fails on iOS. So nothing positioned after a `type` step (a
+// later step, or an assertion whose `after_step` is that step or later) may
+// match a value typed earlier. Returns one line per offending value.
+//
+// Step order is `flattenSteps`' (depth-first, sub_steps included), the same
+// order every other step-order check reads. A value anchored to a step id the
+// walk does not know cannot be placed, so it is reported, not skipped.
+function typedTextOffenders(scenario) {
+  const steps = flattenSteps(scenario).map(({ step }) => step);
+  const order = new Map(steps.map((s, i) => [s.id, i]));
+  const typed = steps
+    .map((s, i) => ({ i, id: s.id, action: s.action, value: s.value }))
+    .filter((t) => t.action === 'type' && typeof t.value === 'string' && t.value.trim() !== '');
+  // Targets go through the CLI's own matcher (`matches`, the one
+  // src/run/resolve.js is given), against an element whose text is what was
+  // typed: exactly what the Android text field shows. Patterns are compiled as
+  // the runner and the evaluator compile them. `matches` treats an empty
+  // target as matching everything, which is right for an assertion scope and
+  // meaningless here, so empty values are skipped.
+  const values = [
+    ...targetValues(scenario).map((v) => ({ ...v, verb: 'is matched by', hits: (text) => matches({ text }, v.value) })),
+    ...patternValues(scenario).map((v) => ({ ...v, verb: 'matches', hits: (text) => new RegExp(v.value).test(text) })),
+  ];
+  const offenders = [];
+  for (const { where, value, kind, step, verb, hits } of values) {
+    const at = order.get(step);
+    if (at === undefined) {
+      offenders.push(`${where}: anchored to step ${JSON.stringify(step)}, which the scenario does not have`);
+      continue;
+    }
+    if (value === '') continue;
+    // A step runs after type steps before it; an assertion runs after its
+    // after_step, so a type step at that same index is already done.
+    for (const t of typed.filter((earlier) => (kind === 'assertion' ? earlier.i <= at : earlier.i < at))) {
+      if (hits(t.value)) {
+        offenders.push(`${where}: ${JSON.stringify(value)} ${verb} the text typed by step ${t.id} (${JSON.stringify(t.value)})`);
+      }
+    }
+  }
+  return offenders;
+}
+
+describe('showcase scenarios — the effect of typing, never the typed text', () => {
+  test('no target, expected value or pattern after a type step matches text typed before it', () => {
+    const offenders = scenarioFiles.flatMap((file) =>
+      typedTextOffenders(JSON.parse(read(file))).map((line) => `${file} ${line}`));
     expect(offenders).toEqual([]);
   });
 });

@@ -1,0 +1,78 @@
+{
+  "$schema_version": "2.1",
+  "scenario_id": "search_no_results",
+  "name": "Search with no matching films",
+  "description": "Launches Reel Tracker, opens Search, types a title no film has and checks the no-match message replaces the idle prompt. Needs a configured TMDB key (showcase-app/tmdb.properties): without one the app shows the add-your-key screen and the search never runs.",
+  "platform": "cross-platform",
+  "app_package": "io.github.sh3lan93.mobileautomator.showcase",
+  "mode": "platform-agnostic",
+  "metadata": {
+    "app_version": "debug",
+    "environment": "local"
+  },
+  "tags": ["showcase", "search"],
+  "steps": [
+    {
+      "id": "launch",
+      "action": "launch_app",
+      "description": "Launch Reel Tracker"
+    },
+    {
+      "id": "wait_list",
+      "action": "wait_for_element",
+      "description": "Wait for the popular films screen title",
+      "target": "Popular films",
+      "wait_config": { "type": "element_visible", "timeout_ms": 30000 },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_search",
+      "action": "tap",
+      "description": "Open the Search screen",
+      "target": "Search",
+      "on_failure": "retry",
+      "retry_policy": { "max_attempts": 2, "backoff_ms": 1500 }
+    },
+    {
+      "id": "focus_field",
+      "action": "tap",
+      "description": "Focus the search field",
+      "target": "Search films"
+    },
+    {
+      "id": "type_query",
+      "action": "type",
+      "description": "Type a title no film has",
+      "value": "xqzvbnmkw"
+    },
+    {
+      "id": "hide_keyboard",
+      "action": "dismiss_keyboard",
+      "description": "Hide the keyboard so the message is not covered"
+    },
+    {
+      "id": "wait_empty",
+      "action": "wait_for_element",
+      "description": "Wait for the no-match message",
+      "target": "No films match your search",
+      "wait_config": { "type": "element_visible", "timeout_ms": 15000 },
+      "on_failure": "fail"
+    }
+  ],
+  "assertions": [
+    {
+      "id": "no_match_shown",
+      "after_step": "wait_empty",
+      "type": "element_visible",
+      "description": "The no-match message is shown",
+      "element_description": "No films match your search"
+    },
+    {
+      "id": "idle_prompt_gone",
+      "after_step": "wait_empty",
+      "type": "element_not_exists",
+      "description": "The idle prompt is gone, which proves the search ran rather than the screen sitting idle",
+      "element_description": "Type a film title to search"
+    }
+  ]
+}

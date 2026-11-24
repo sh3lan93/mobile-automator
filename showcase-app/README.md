@@ -41,7 +41,17 @@ The app has no UI test code by design: no Espresso, no XCUITest, no Compose UI t
 
 ## Scenarios
 
-Scenarios live in `scenarios/`. Each is platform-agnostic and runs unchanged on both platforms, because the Android application id and the iOS bundle id are the same string. Check one from the repo root:
+Scenarios live in `scenarios/`. Each is platform-agnostic and runs unchanged on both platforms, because the Android application id and the iOS bundle id are the same string:
+
+| Scenario | Flow |
+|---|---|
+| `browse_popular.json` | The popular films list, then About and back |
+| `search_open_details.json` | Search `Shawshank`, open The Shawshank Redemption, check its release year, go back to the results |
+| `search_no_results.json` | Search for a title nothing matches and see the empty message |
+
+The search scenarios check what typing caused (the result count, the film shown), never the search field's own text: Android exposes what was typed, iOS does not.
+
+Check one from the repo root:
 
 ```bash
 mauto validate --strict showcase-app/scenarios/browse_popular.json
