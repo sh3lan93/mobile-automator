@@ -31,13 +31,33 @@ const ASSERTION_FIELDS = ['target', 'element_description', 'expected_value', 'ex
  * @returns {{ where: string, value: string, kind: 'step'|'assertion', step: string }[]}
  */
 function targetValues(scenario) {
+  return valuesOf(scenario, STEP_FIELDS, ASSERTION_FIELDS);
+}
+
+// The regex fields matched against element text: a step's `target_pattern`
+// (src/run/resolve.js) and a `pattern_match` assertion's `pattern`.
+const STEP_PATTERN_FIELDS = ['target_pattern'];
+const ASSERTION_PATTERN_FIELDS = ['pattern'];
+
+/**
+ * Every regex a scenario matches against element text, in the same shape as
+ * `targetValues`.
+ *
+ * @param {object} scenario
+ * @returns {{ where: string, value: string, kind: 'step'|'assertion', step: string }[]}
+ */
+function patternValues(scenario) {
+  return valuesOf(scenario, STEP_PATTERN_FIELDS, ASSERTION_PATTERN_FIELDS);
+}
+
+function valuesOf(scenario, stepFields, assertionFields) {
   const out = [];
   const add = (where, value, kind, step) => {
     if (typeof value === 'string') out.push({ where, value, kind, step });
   };
-  for (const { step } of flattenSteps(scenario)) for (const f of STEP_FIELDS) add(`step ${step.id}.${f}`, step[f], 'step', step.id);
-  for (const a of scenario.assertions || []) for (const f of ASSERTION_FIELDS) add(`assertion ${a.id}.${f}`, a[f], 'assertion', a.after_step);
+  for (const { step } of flattenSteps(scenario)) for (const f of stepFields) add(`step ${step.id}.${f}`, step[f], 'step', step.id);
+  for (const a of scenario.assertions || []) for (const f of assertionFields) add(`assertion ${a.id}.${f}`, a[f], 'assertion', a.after_step);
   return out;
 }
 
-module.exports = { OS_ID_TOKEN, STEP_FIELDS, ASSERTION_FIELDS, targetValues };
+module.exports = { OS_ID_TOKEN, STEP_FIELDS, ASSERTION_FIELDS, targetValues, patternValues };
