@@ -5,9 +5,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -28,6 +32,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun PopularScreen(
     onSearch: () -> Unit,
+    onSettings: () -> Unit,
     onAbout: () -> Unit,
     onOpen: (Int) -> Unit,
     onFilters: () -> Unit,
@@ -41,6 +46,11 @@ fun PopularScreen(
                 title = { Text("Popular films") },
                 actions = {
                     TextButton(onClick = onSearch) { Text("Search") }
+                    // Reloads the list, so a scenario can trigger a load right after turning a switch on.
+                    IconButton(onClick = viewModel::retry) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                    }
+                    TextButton(onClick = onSettings) { Text("Settings") }
                     TextButton(onClick = onAbout) { Text("About") }
                 },
             )

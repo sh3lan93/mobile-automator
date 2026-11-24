@@ -25,12 +25,13 @@ class KtorTmdbClientTest {
 
     private fun client(
         key: String,
+        simulation: () -> Simulation = { Simulation() },
         handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,
     ): KtorTmdbClient {
         val http = HttpClient(MockEngine { request -> handler(request) }) {
             install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
         }
-        return KtorTmdbClient(http, key)
+        return KtorTmdbClient(http, key, simulation)
     }
 
     private fun MockRequestHandleScope.json(body: String, status: HttpStatusCode = HttpStatusCode.OK) =
@@ -110,6 +111,57 @@ class KtorTmdbClientTest {
         assertFailsWith<CancellationException> {
             client("k") { throw CancellationException() }.popularMovies()
         }
+    }
+
+    @Test
+    fun simulateOffline_returnsNoConnection_withoutCallingNetwork() = runTest {
+        var calls = 0
+        val result = client("k", { Simulation(offline = true) }) { calls++; json("""{"results":[]}""") }.popularMovies()
+        assertEquals(TmdbResult.Failed(TmdbFailure.NoConnection), result)
+        assertEquals(0, calls)
+    }
+
+    @Test
+    fun simulateServerError_returnsServerError_withoutCallingNetwork() = runTest {
+        var calls = 0
+        val result = client("k", { Simulation(serverError = true) }) { calls++; json("""{"results":[]}""") }.popularMovies()
+        assertEquals(TmdbResult.Failed(TmdbFailure.ServerError), result)
+        assertEquals(0, calls)
+    }
+
+    @Test
+    fun bothSwitches_offlineWins() = runTest {
+        val both = Simulation(offline = true, serverError = true)
+        val result = client("k", { both }) { json("""{"results":[]}""") }.popularMovies()
+        assertEquals(TmdbResult.Failed(TmdbFailure.NoConnection), result)
+    }
+
+    @Test
+    fun blankKey_beatsSimulation() = runTest {
+        val both = Simulation(offline = true, serverError = true)
+        val result = client(" ", { both }) { json("""{"results":[]}""") }.popularMovies()
+        assertEquals(TmdbResult.Failed(TmdbFailure.MissingKey), result)
+    }
+
+    @Test
+    fun switchReadPerCall() = runTest {
+        var simulation = Simulation(offline = true)
+        val client = client("k", { simulation }) { json("""{"results":[]}""") }
+        assertEquals(TmdbResult.Failed(TmdbFailure.NoConnection), client.popularMovies())
+        simulation = Simulation()
+        assertEquals(TmdbResult.Ok(emptyList()), client.popularMovies())
+    }
+
+    @Test
+    fun simulation_appliesToSearchAndDetails_withoutCallingNetwork() = runTest {
+        var calls = 0
+        val offline = client("k", { Simulation(offline = true) }) { calls++; json("{}") }
+        assertEquals(TmdbResult.Failed(TmdbFailure.NoConnection), offline.searchMovies("matrix"))
+        assertEquals(TmdbResult.Failed(TmdbFailure.NoConnection), offline.movieDetails(278))
+        val failing = client("k", { Simulation(serverError = true) }) { calls++; json("{}") }
+        assertEquals(TmdbResult.Failed(TmdbFailure.ServerError), failing.searchMovies("matrix"))
+        assertEquals(TmdbResult.Failed(TmdbFailure.ServerError), failing.movieDetails(278))
+        assertEquals(0, calls)
     }
 
     @Test
