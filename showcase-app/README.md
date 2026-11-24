@@ -48,6 +48,7 @@ Scenarios live in `scenarios/`. Each is platform-agnostic and runs unchanged on 
 | `browse_popular.json` | The popular films list, then About and back |
 | `search_open_details.json` | Search `Shawshank`, open The Shawshank Redemption, check its release year, go back to the results |
 | `search_no_results.json` | Search for a title nothing matches and see the empty message |
+| `rate_and_remove.json` | Reset app data, rate The Shawshank Redemption 8/10, see the rating on its details and in My ratings, then remove it and see both cleared |
 
 The search scenarios check what typing caused (the result count, the film shown), never the search field's own text: Android exposes what was typed, iOS does not.
 
@@ -66,6 +67,10 @@ mauto run showcase-app/scenarios/browse_popular.json
 ## Settings
 
 mauto cannot clear an app's saved data or turn a device's network off, so the app does both itself. Settings (on the popular films screen) has a "Reset app data" button, which clears everything the app saved on the device and returns to the start, and two switches, "Simulate offline" and "Simulate server error", which make every TMDB request fail with the matching message until you turn them off. Scenarios that depend on saved state start with Reset app data, so they begin from the first-launch state whatever ran before them: `simulate_offline.json` and `simulate_server_error.json` both do, and both leave their switch off.
+
+## Ratings
+
+Rating a film needs no TMDB account: the app rates through a TMDB guest session, which it creates the first time you rate a film. TMDB stores the rating, and "My ratings" (the star on the popular films screen) lists the films the session has rated, read back from TMDB. The session id is the only thing the app keeps on the device, and Reset app data clears it, so the next rating starts a new session with no ratings. `rate_and_remove.json` starts with Reset app data and removes the rating it adds.
 
 ## Attribution
 
