@@ -23,6 +23,8 @@ class PopularViewModelTest {
         override suspend fun popularMovies(): TmdbResult<List<Movie>> = next
         override suspend fun searchMovies(query: String) = error("not used")
         override suspend fun movieDetails(id: Int) = error("not used")
+        override suspend fun discoverMovies(query: Map<String, String>) = error("not used")
+        override suspend fun movieGenres() = error("not used")
     }
 
     private val dispatcher = StandardTestDispatcher()

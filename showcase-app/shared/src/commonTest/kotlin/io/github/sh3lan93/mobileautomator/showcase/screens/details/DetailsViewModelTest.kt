@@ -29,6 +29,8 @@ class DetailsViewModelTest {
 
         override suspend fun popularMovies() = error("not used")
         override suspend fun searchMovies(query: String) = error("not used")
+        override suspend fun discoverMovies(query: Map<String, String>) = error("not used")
+        override suspend fun movieGenres() = error("not used")
     }
 
     private val dispatcher = StandardTestDispatcher()

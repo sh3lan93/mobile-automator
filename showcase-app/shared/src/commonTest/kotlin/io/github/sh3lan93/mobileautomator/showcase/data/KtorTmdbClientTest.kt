@@ -207,4 +207,89 @@ class KtorTmdbClientTest {
         val result = client("k") { json(body, HttpStatusCode.NotFound) }.movieDetails(1)
         assertEquals(TmdbResult.Failed(TmdbFailure.ServerError), result)
     }
+
+    @Test
+    fun discover_sendsEveryQueryParamAndApiKey() = runTest {
+        var seen: HttpRequestData? = null
+        val query = mapOf(
+            "sort_by" to "vote_average.desc",
+            "include_adult" to "false",
+            "language" to "en-US",
+            "page" to "1",
+            "with_genres" to "18",
+            "primary_release_year" to "1994",
+            "vote_average.gte" to "8",
+            "vote_count.gte" to "200",
+        )
+        client("k1") { request -> seen = request; json("""{"results":[]}""") }.discoverMovies(query)
+        val request = requireNotNull(seen)
+        assertEquals("api.themoviedb.org", request.url.host)
+        assertEquals("/3/discover/movie", request.url.encodedPath)
+        for ((name, value) in query) assertEquals(value, request.url.parameters[name], "for $name")
+        assertEquals("k1", request.url.parameters["api_key"])
+        assertEquals(query.keys + "api_key", request.url.parameters.names())
+        assertNull(request.headers[HttpHeaders.Authorization])
+    }
+
+    @Test
+    fun discover_parsesResultsAndTotal() = runTest {
+        val body = """{"page":1,"total_results":312,"total_pages":16,"results":[
+            |{"id":278,"title":"The Shawshank Redemption","release_date":"1994-09-23","poster_path":"/s.jpg"},
+            |{"id":9,"title":"Bare","release_date":"","poster_path":null}]}""".trimMargin()
+        val result = client("k") { json(body) }.discoverMovies(mapOf("sort_by" to "popularity.desc"))
+        assertEquals(
+            TmdbResult.Ok(
+                SearchPage(
+                    listOf(
+                        Movie(278, "The Shawshank Redemption", "1994", "https://image.tmdb.org/t/p/w342/s.jpg"),
+                        Movie(9, "Bare", null, null),
+                    ),
+                    312,
+                ),
+            ),
+            result,
+        )
+    }
+
+    @Test
+    fun discover_blankKey_returnsMissingKey_withoutCallingNetwork() = runTest {
+        var calls = 0
+        val result = client(" ") { calls++; json("""{"results":[]}""") }.discoverMovies(mapOf("page" to "1"))
+        assertEquals(TmdbResult.Failed(TmdbFailure.MissingKey), result)
+        assertEquals(0, calls)
+    }
+
+    @Test
+    fun discover_http401_returnsRejectedKey() = runTest {
+        val result = client("bad") { json("{}", HttpStatusCode.Unauthorized) }.discoverMovies(mapOf("page" to "1"))
+        assertEquals(TmdbResult.Failed(TmdbFailure.RejectedKey), result)
+    }
+
+    @Test
+    fun genres_sendsPathAndLanguage() = runTest {
+        var seen: HttpRequestData? = null
+        client("k1") { request -> seen = request; json("""{"genres":[]}""") }.movieGenres()
+        val request = requireNotNull(seen)
+        assertEquals("api.themoviedb.org", request.url.host)
+        assertEquals("/3/genre/movie/list", request.url.encodedPath)
+        assertEquals("en-US", request.url.parameters["language"])
+        assertEquals("k1", request.url.parameters["api_key"])
+        assertNull(request.headers[HttpHeaders.Authorization])
+    }
+
+    @Test
+    fun genres_parses() = runTest {
+        val body = """{"genres":[{"id":28,"name":"Action"},{"id":16,"name":"Animation"},{"id":18,"name":"Drama"}]}"""
+        val result = client("k") { json(body) }.movieGenres()
+        assertEquals(
+            TmdbResult.Ok(listOf(Genre(28, "Action"), Genre(16, "Animation"), Genre(18, "Drama"))),
+            result,
+        )
+    }
+
+    @Test
+    fun genres_http500_returnsServerError() = runTest {
+        val result = client("k") { json("{}", HttpStatusCode.InternalServerError) }.movieGenres()
+        assertEquals(TmdbResult.Failed(TmdbFailure.ServerError), result)
+    }
 }
