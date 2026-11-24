@@ -67,5 +67,11 @@ data class FilterState(
 /** Every decade's first year from the 1930s up to [currentYear]'s decade. */
 fun decades(currentYear: Int): List<Int> = (FIRST_DECADE..(currentYear - currentYear % 10) step 10).toList()
 
+/**
+ * [decade]'s chip text: an apostrophe, its last two digits and `s` (`1990` -> `'90s`). A target
+ * matches as a substring, so a `1990s` label would also match a search for the year `1990`.
+ */
+fun decadeLabel(decade: Int): String = "'" + (decade % 100).toString().padStart(2, '0') + "s"
+
 /** [decade]'s years, none later than [currentYear]. */
 fun yearsOf(decade: Int, currentYear: Int): List<Int> = (decade..minOf(decade + 9, currentYear)).toList()

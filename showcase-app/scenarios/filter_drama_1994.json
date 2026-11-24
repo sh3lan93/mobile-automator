@@ -69,7 +69,7 @@
       "id": "decade_1990s",
       "action": "tap",
       "description": "Open the 1990s years",
-      "target": "1990s"
+      "target": "'90s"
     },
     {
       "id": "year_1994",

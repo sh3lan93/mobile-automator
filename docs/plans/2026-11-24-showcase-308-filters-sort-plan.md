@@ -85,11 +85,12 @@ const val MIN_VOTES_FOR_RATING = 200
 val RATING_STEPS = 5..9
 fun decades(currentYear: Int): List<Int>               // 1930, 1940, … up to currentYear's decade
 fun yearsOf(decade: Int, currentYear: Int): List<Int>   // decade..decade+9, capped at currentYear
+fun decadeLabel(decade: Int): String                   // 1990 -> '90s (no year is a substring of it)
 ```
 
 - `toDiscoverQuery()`: always `sort_by`, `include_adult=false`, `language=en-US`, `page=1`; `with_genres=<id>`, `primary_release_year=<y>`, `vote_average.gte=<n>` when set; `vote_count.gte=200` whenever `minRating` is set or the sort is `HighestRated` (otherwise one-vote 10/10 films top the list). Never `api_key`: that stays in `call(...)`.
 - `activeFiltersText()`: the set parts joined by ` · ` in the order genre name, year, `Rated <n>+`, sort label, the sort included only when not the default. Default state → `All films`. Examples: `Drama · 1994 · Rated 8+ · Highest rated`, `Most votes`, `Animation · 1931 · Rated 9+`.
-- Tests (`FilterStateTest`): default query (popularity, no filter keys) and `isDefault`; each field alone; the vote floor for a rating and for `HighestRated` and its absence otherwise; full combination; each text example above plus default; `decades(2026)` = 1930…2020; `yearsOf(2020, 2026)` = 2020…2026; `yearsOf(1990, 2026)` = 1990…1999.
+- Tests (`FilterStateTest`): default query (popularity, no filter keys) and `isDefault`; each field alone; the vote floor for a rating and for `HighestRated` and its absence otherwise; full combination; each text example above plus default; `decades(2026)` = 1930…2020; `yearsOf(2020, 2026)` = 2020…2026; `yearsOf(1990, 2026)` = 1990…1999; `decadeLabel` 1990 → `'90s`, 2000 → `'00s`, 2020 → `'20s`, and no year of any decade is a substring of any decade label.
 - [ ] Red, implement, green on `./gradlew :shared:testAndroidHostTest :shared:iosSimulatorArm64Test`.
 - [ ] **Commit** `feat(showcase): filter state with its discover query and active-filters text`.
 
@@ -144,7 +145,7 @@ class FiltersViewModel(client: TmdbClient, val currentYear: Int) {
 |---|---|
 | `Sort by` | `Most popular`, `Highest rated`, `Most votes`, `Top grossing` |
 | `Minimum rating` | `Any rating`, `5+` … `9+` |
-| `Release year` | `Any year`, decades `1930s` … `2020s`; once a decade is chosen, its years (`1990` … `1999`) below |
+| `Release year` | `Any year`, decades `'30s` … `'20s`; once a decade is chosen, its years (`1990` … `1999`) below |
 | `Genre` | `Any genre`, then TMDB's genres in TMDB's order; while loading `Loading genres…`; on failure `Genres could not load` + `Retry` |
 
 Top bar: back (`contentDescription` `Back`), title `Filters`, actions `Clear` (→ `FilterState()`) and `Done`.
@@ -162,7 +163,7 @@ Copy rules (Review Focus 3): the active-filters text appears only on the popular
 
 Same shape as the search scenarios (schema 2.1, platform-agnostic, cross-platform, shared `app_package`, descriptions say a TMDB key is needed). No `type` step, so the typed-text rule is vacuous for them.
 
-**`filter_drama_1994.json`** (`tags: ["showcase","filters"]`): `launch` → `wait_list` (`Popular films`, 30 s) → `open_filters` (tap `Filters`, retry policy as `open_search`) → `wait_filters` (`Minimum rating`, 15 s) → `sort_rating` (tap `Highest rated`) → `rating_8` (tap `8+`) → `decade_1990s` (tap `1990s`) → `year_1994` (tap `1994`) → `wait_genres` (`Drama`, 15 s) → `genre_drama` (tap `Drama`) → `done` (tap `Done`) → `wait_filtered` (`Drama · 1994 · Rated 8+ · Highest rated`, 15 s) → `wait_film` (`The Shawshank Redemption`, 15 s).
+**`filter_drama_1994.json`** (`tags: ["showcase","filters"]`): `launch` → `wait_list` (`Popular films`, 30 s) → `open_filters` (tap `Filters`, retry policy as `open_search`) → `wait_filters` (`Minimum rating`, 15 s) → `sort_rating` (tap `Highest rated`) → `rating_8` (tap `8+`) → `decade_1990s` (tap `'90s`) → `year_1994` (tap `1994`) → `wait_genres` (`Drama`, 15 s) → `genre_drama` (tap `Drama`) → `done` (tap `Done`) → `wait_filtered` (`Drama · 1994 · Rated 8+ · Highest rated`, 15 s) → `wait_film` (`The Shawshank Redemption`, 15 s).
 Assertions after `wait_film`: `element_visible` `Drama · 1994 · Rated 8+ · Highest rated`; `pattern_match` `^\d+ films?$`; `element_visible` `The Shawshank Redemption` (a long-settled fact: a 1994 drama rated far above 8 with tens of thousands of votes, first in that list for years).
 
 **`filter_no_results.json`** (`tags: ["showcase","filters"]`): launch → wait list → open filters → wait filters → `rating_9` (tap `9+`) → `decade_1930s` → `year_1931` → wait genres (`Animation`) → `genre_animation` → done → `wait_empty` (`No films match this combination`, 15 s) → `open_filters_again` → `clear` (tap `Clear`) → `done_again` → `wait_all` (`All films`, 15 s).

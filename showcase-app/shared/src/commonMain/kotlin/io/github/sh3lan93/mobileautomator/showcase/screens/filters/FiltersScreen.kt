@@ -37,6 +37,7 @@ import io.github.sh3lan93.mobileautomator.showcase.data.FilterState
 import io.github.sh3lan93.mobileautomator.showcase.data.Genre
 import io.github.sh3lan93.mobileautomator.showcase.data.RATING_STEPS
 import io.github.sh3lan93.mobileautomator.showcase.data.Sort
+import io.github.sh3lan93.mobileautomator.showcase.data.decadeLabel
 import io.github.sh3lan93.mobileautomator.showcase.data.decades
 import io.github.sh3lan93.mobileautomator.showcase.data.yearsOf
 import io.github.sh3lan93.mobileautomator.showcase.screens.popular.PopularViewModel
@@ -116,7 +117,7 @@ fun FiltersScreen(
                         apply(filters.copy(year = null))
                     }
                     decades(viewModel.currentYear).forEach { start ->
-                        Chip("${start}s", selected = decade == start) { decade = start }
+                        Chip(decadeLabel(start), selected = decade == start) { decade = start }
                     }
                 }
                 decade?.let { start ->

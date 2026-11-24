@@ -63,7 +63,7 @@
       "id": "decade_1930s",
       "action": "tap",
       "description": "Open the 1930s years",
-      "target": "1930s"
+      "target": "'30s"
     },
     {
       "id": "year_1931",

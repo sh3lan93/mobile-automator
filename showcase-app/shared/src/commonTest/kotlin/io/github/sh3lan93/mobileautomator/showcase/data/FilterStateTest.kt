@@ -132,6 +132,23 @@ class FilterStateTest {
     }
 
     @Test
+    fun decadeLabel_isApostropheTwoDigitsAndS() {
+        assertEquals("'90s", decadeLabel(1990))
+        assertEquals("'00s", decadeLabel(2000))
+        assertEquals("'20s", decadeLabel(2020))
+    }
+
+    @Test
+    fun noYear_isASubstringOfAnyDecadeLabel() {
+        val labels = decades(2026).map(::decadeLabel)
+        for (year in decades(2026).flatMap { yearsOf(it, 2026) }) {
+            for (label in labels) {
+                assertFalse(label.contains(year.toString(), ignoreCase = true), "$year inside $label")
+            }
+        }
+    }
+
+    @Test
     fun yearsOf_currentDecade_isCappedAtCurrentYear() {
         assertEquals((2020..2026).toList(), yearsOf(2020, 2026))
     }
