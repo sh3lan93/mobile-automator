@@ -1,7 +1,8 @@
 package io.github.sh3lan93.mobileautomator.showcase.screens.details
 
+import io.github.sh3lan93.mobileautomator.showcase.data.FakeTmdbClient
 import io.github.sh3lan93.mobileautomator.showcase.data.MovieDetails
-import io.github.sh3lan93.mobileautomator.showcase.data.TmdbClient
+import io.github.sh3lan93.mobileautomator.showcase.data.TmdbCall
 import io.github.sh3lan93.mobileautomator.showcase.data.TmdbFailure
 import io.github.sh3lan93.mobileautomator.showcase.data.TmdbResult
 import kotlinx.coroutines.Dispatchers
@@ -19,17 +20,11 @@ import kotlin.test.assertEquals
 @OptIn(ExperimentalCoroutinesApi::class)
 class DetailsViewModelTest {
 
-    private class FakeTmdbClient(var next: TmdbResult<MovieDetails>) : TmdbClient {
-        val ids = mutableListOf<Int>()
+    /** A client whose details call answers [result]. */
+    private fun fake(result: TmdbResult<MovieDetails>) = FakeTmdbClient(onMovieDetails = { result })
 
-        override suspend fun movieDetails(id: Int): TmdbResult<MovieDetails> {
-            ids += id
-            return next
-        }
-
-        override suspend fun popularMovies() = error("not used")
-        override suspend fun searchMovies(query: String) = error("not used")
-    }
+    /** The ids the details call was made with, in order. */
+    private val FakeTmdbClient.ids: List<Int> get() = calls.map { (it as TmdbCall.Details).id }
 
     private val dispatcher = StandardTestDispatcher()
     private val details = MovieDetails(
@@ -50,7 +45,7 @@ class DetailsViewModelTest {
 
     @Test
     fun loadsTheGivenId() = runTest(dispatcher) {
-        val client = FakeTmdbClient(TmdbResult.Ok(details))
+        val client = fake(TmdbResult.Ok(details))
         DetailsViewModel(278, client)
         advanceUntilIdle()
         assertEquals(listOf(278), client.ids)
@@ -58,7 +53,7 @@ class DetailsViewModelTest {
 
     @Test
     fun loaded() = runTest(dispatcher) {
-        val vm = DetailsViewModel(278, FakeTmdbClient(TmdbResult.Ok(details)))
+        val vm = DetailsViewModel(278, fake(TmdbResult.Ok(details)))
         assertEquals(DetailsUiState.Loading, vm.state.value)
         advanceUntilIdle()
         assertEquals(DetailsUiState.Loaded(details), vm.state.value)
@@ -67,7 +62,7 @@ class DetailsViewModelTest {
     @Test
     fun failure_isFailed() = runTest(dispatcher) {
         for (failure in TmdbFailure.entries) {
-            val vm = DetailsViewModel(278, FakeTmdbClient(TmdbResult.Failed(failure)))
+            val vm = DetailsViewModel(278, fake(TmdbResult.Failed(failure)))
             advanceUntilIdle()
             assertEquals(DetailsUiState.Failed(failure), vm.state.value, "for $failure")
         }
@@ -75,12 +70,12 @@ class DetailsViewModelTest {
 
     @Test
     fun retry_afterFailure_loadsAgain() = runTest(dispatcher) {
-        val client = FakeTmdbClient(TmdbResult.Failed(TmdbFailure.ServerError))
+        val client = fake(TmdbResult.Failed(TmdbFailure.ServerError))
         val vm = DetailsViewModel(278, client)
         advanceUntilIdle()
         assertEquals(DetailsUiState.Failed(TmdbFailure.ServerError), vm.state.value)
 
-        client.next = TmdbResult.Ok(details)
+        client.onMovieDetails = { TmdbResult.Ok(details) }
         vm.retry()
         assertEquals(DetailsUiState.Loading, vm.state.value)
         advanceUntilIdle()

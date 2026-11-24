@@ -13,4 +13,10 @@ interface TmdbClient {
     suspend fun popularMovies(): TmdbResult<List<Movie>>
     suspend fun searchMovies(query: String): TmdbResult<SearchPage>
     suspend fun movieDetails(id: Int): TmdbResult<MovieDetails>
+
+    /** TMDB's discover endpoint with [query] as its parameters (see [FilterState.toDiscoverQuery]). */
+    suspend fun discoverMovies(query: Map<String, String>): TmdbResult<SearchPage>
+
+    /** TMDB's film genres, in TMDB's order. */
+    suspend fun movieGenres(): TmdbResult<List<Genre>>
 }

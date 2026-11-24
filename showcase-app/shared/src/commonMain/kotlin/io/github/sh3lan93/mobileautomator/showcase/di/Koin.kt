@@ -4,6 +4,7 @@ import io.github.sh3lan93.mobileautomator.showcase.TMDB_API_KEY
 import io.github.sh3lan93.mobileautomator.showcase.data.KtorTmdbClient
 import io.github.sh3lan93.mobileautomator.showcase.data.TmdbClient
 import io.github.sh3lan93.mobileautomator.showcase.screens.details.DetailsViewModel
+import io.github.sh3lan93.mobileautomator.showcase.screens.filters.FiltersViewModel
 import io.github.sh3lan93.mobileautomator.showcase.screens.popular.PopularViewModel
 import io.github.sh3lan93.mobileautomator.showcase.screens.search.SearchViewModel
 import io.github.sh3lan93.mobileautomator.showcase.screens.settings.SettingsViewModel
@@ -11,6 +12,9 @@ import io.github.sh3lan93.mobileautomator.showcase.store.LocalStore
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
+import kotlin.time.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 import kotlinx.serialization.json.Json
 import org.koin.core.context.startKoin
 import org.koin.core.module.Module
@@ -36,6 +40,8 @@ val appModule = module {
     viewModelOf(::SearchViewModel)
     // The film id comes from the details route: koinViewModel { parametersOf(id) }.
     viewModel { (id: Int) -> DetailsViewModel(id, get()) }
+    // The current year bounds the release-year choices.
+    viewModel { FiltersViewModel(get(), Clock.System.todayIn(TimeZone.currentSystemDefault()).year) }
     viewModelOf(::SettingsViewModel)
 }
 

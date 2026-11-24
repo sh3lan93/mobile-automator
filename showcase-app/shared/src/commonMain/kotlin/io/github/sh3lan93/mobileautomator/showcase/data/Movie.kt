@@ -20,5 +20,5 @@ data class MovieDetails(
     val posterUrl: String?,
 )
 
-/** First page of a search, and TMDB's count of every match (shown as the count line). */
+/** A first page of results (a search or a discover call), and TMDB's count of every match (shown as the count line). */
 data class SearchPage(val movies: List<Movie>, val totalResults: Int)

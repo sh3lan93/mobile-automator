@@ -1,0 +1,199 @@
+{
+  "$schema_version": "2.1",
+  "scenario_id": "filter_drama_1994",
+  "name": "Filter by genre, year, rating and sort",
+  "description": "Launches Reel Tracker, resets app data, opens Filters and picks Highest rated, 8+, 1994 and Drama, then checks the list shows those filters as text, a film count, and The Shawshank Redemption, a 1994 drama rated far above 8 for decades. Needs a configured TMDB key (showcase-app/tmdb.properties): without one the app shows the add-your-key screen and no filter call runs.",
+  "platform": "cross-platform",
+  "app_package": "io.github.sh3lan93.mobileautomator.showcase",
+  "mode": "platform-agnostic",
+  "metadata": {
+    "app_version": "debug",
+    "environment": "local"
+  },
+  "tags": [
+    "showcase",
+    "filters"
+  ],
+  "steps": [
+    {
+      "id": "launch",
+      "action": "launch_app",
+      "description": "Launch Reel Tracker"
+    },
+    {
+      "id": "wait_list",
+      "action": "wait_for_element",
+      "description": "Wait for the popular films screen title",
+      "target": "Popular films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 30000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_settings",
+      "action": "tap",
+      "description": "Open the Settings screen",
+      "target": "Settings",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "wait_settings",
+      "action": "wait_for_element",
+      "description": "Wait for the Reset app data button on the Settings screen",
+      "target": "Reset app data",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "reset",
+      "action": "tap",
+      "description": "Reset app data, which clears everything the app saved and returns to the start",
+      "target": "Reset app data"
+    },
+    {
+      "id": "wait_reset",
+      "action": "wait_for_element",
+      "description": "Wait for the popular films screen after the reset",
+      "target": "Popular films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 30000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "reset_loaded",
+      "action": "wait_for_element_gone",
+      "description": "Wait for the fresh list to finish loading (the title shows while it loads)",
+      "target": "Loading films…",
+      "wait_config": {
+        "type": "element_gone",
+        "timeout_ms": 30000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_filters",
+      "action": "tap",
+      "description": "Open the Filters screen",
+      "target": "Filters",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "wait_filters",
+      "action": "wait_for_element",
+      "description": "Wait for the Filters screen",
+      "target": "Minimum rating",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 15000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "sort_rating",
+      "action": "tap",
+      "description": "Sort by highest rated",
+      "target": "Highest rated"
+    },
+    {
+      "id": "rating_8",
+      "action": "tap",
+      "description": "Require a rating of 8 or more",
+      "target": "8+"
+    },
+    {
+      "id": "decade_1990s",
+      "action": "tap",
+      "description": "Open the 1990s years",
+      "target": "'90s"
+    },
+    {
+      "id": "year_1994",
+      "action": "tap",
+      "description": "Pick 1994",
+      "target": "1994"
+    },
+    {
+      "id": "wait_genres",
+      "action": "wait_for_element",
+      "description": "Wait for the genre list to load",
+      "target": "Drama",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 15000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "genre_drama",
+      "action": "tap",
+      "description": "Pick the Drama genre",
+      "target": "Drama"
+    },
+    {
+      "id": "done",
+      "action": "tap",
+      "description": "Back to the film list",
+      "target": "Done"
+    },
+    {
+      "id": "wait_filtered",
+      "action": "wait_for_element",
+      "description": "Wait for the active filters line",
+      "target": "Drama · 1994 · Rated 8+ · Highest rated",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 15000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "wait_film",
+      "action": "wait_for_element",
+      "description": "Wait for a film that has matched these filters for decades",
+      "target": "The Shawshank Redemption",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 15000
+      },
+      "on_failure": "fail"
+    }
+  ],
+  "assertions": [
+    {
+      "id": "filters_shown",
+      "after_step": "wait_film",
+      "type": "element_visible",
+      "description": "The active filters are shown as text",
+      "element_description": "Drama · 1994 · Rated 8+ · Highest rated"
+    },
+    {
+      "id": "count_shown",
+      "after_step": "wait_film",
+      "type": "pattern_match",
+      "description": "The film-count line is shown, which proves the filtered call returned results",
+      "pattern": "^\\d+ films?$"
+    },
+    {
+      "id": "settled_film_listed",
+      "after_step": "wait_film",
+      "type": "element_visible",
+      "description": "The Shawshank Redemption is in the filtered list",
+      "element_description": "The Shawshank Redemption"
+    }
+  ]
+}
