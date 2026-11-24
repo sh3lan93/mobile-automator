@@ -30,6 +30,24 @@ class KtorTmdbClient(private val http: HttpClient, apiKey: String) : TmdbClient 
             response.body<PageDto>().results.map { it.toMovie() }
         }
 
+    override suspend fun searchMovies(query: String): TmdbResult<SearchPage> =
+        call("search/movie", params = {
+            parameter("query", query)
+            parameter("include_adult", false)
+            parameter("language", "en-US")
+            parameter("page", 1)
+        }) { response ->
+            val page = response.body<PageDto>()
+            SearchPage(page.results.map { it.toMovie() }, page.totalResults)
+        }
+
+    override suspend fun movieDetails(id: Int): TmdbResult<MovieDetails> =
+        call("movie/$id", params = {
+            parameter("language", "en-US")
+        }) { response ->
+            response.body<DetailsDto>().toDetails()
+        }
+
     /** Sends `api_key` on every request; [params] adds the endpoint's own query parameters. */
     private suspend fun <T> call(
         path: String,
@@ -60,7 +78,10 @@ class KtorTmdbClient(private val http: HttpClient, apiKey: String) : TmdbClient 
     }
 
     @Serializable
-    private data class PageDto(val results: List<MovieDto> = emptyList())
+    private data class PageDto(
+        val results: List<MovieDto> = emptyList(),
+        @SerialName("total_results") val totalResults: Int = 0,
+    )
 
     @Serializable
     private data class MovieDto(
@@ -72,13 +93,44 @@ class KtorTmdbClient(private val http: HttpClient, apiKey: String) : TmdbClient 
         fun toMovie() = Movie(
             id = id,
             title = title,
-            releaseYear = releaseDate?.trim()?.takeIf { it.length >= 4 }?.take(4),
-            posterUrl = posterPath?.takeIf { it.isNotBlank() }?.let { POSTER_BASE_URL + it },
+            releaseYear = releaseYearOf(releaseDate),
+            posterUrl = posterUrlOf(posterPath),
         )
     }
+
+    @Serializable
+    private data class DetailsDto(
+        val id: Int,
+        val title: String,
+        @SerialName("release_date") val releaseDate: String? = null,
+        @SerialName("poster_path") val posterPath: String? = null,
+        val runtime: Int? = null,
+        val genres: List<GenreDto> = emptyList(),
+        val overview: String? = null,
+    ) {
+        fun toDetails() = MovieDetails(
+            id = id,
+            title = title,
+            releaseYear = releaseYearOf(releaseDate),
+            runtimeMinutes = runtime?.takeIf { it > 0 },
+            genres = genres.map { it.name },
+            overview = overview?.trim()?.takeIf { it.isNotEmpty() },
+            posterUrl = posterUrlOf(posterPath),
+        )
+    }
+
+    @Serializable
+    private data class GenreDto(val name: String)
 
     private companion object {
         const val BASE_URL = "https://api.themoviedb.org/3"
         const val POSTER_BASE_URL = "https://image.tmdb.org/t/p/w342"
+
+        /** `"1999-03-31"` → `"1999"`; blank or short dates → `null`. */
+        fun releaseYearOf(releaseDate: String?): String? =
+            releaseDate?.trim()?.takeIf { it.length >= 4 }?.take(4)
+
+        fun posterUrlOf(posterPath: String?): String? =
+            posterPath?.takeIf { it.isNotBlank() }?.let { POSTER_BASE_URL + it }
     }
 }

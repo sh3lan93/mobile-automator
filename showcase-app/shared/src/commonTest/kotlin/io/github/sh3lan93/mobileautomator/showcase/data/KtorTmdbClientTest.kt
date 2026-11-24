@@ -111,4 +111,100 @@ class KtorTmdbClientTest {
             client("k") { throw CancellationException() }.popularMovies()
         }
     }
+
+    @Test
+    fun search_sendsQueryAndApiKey() = runTest {
+        var seen: HttpRequestData? = null
+        client("k1") { request -> seen = request; json("""{"results":[]}""") }.searchMovies("the matrix")
+        val request = requireNotNull(seen)
+        assertEquals("api.themoviedb.org", request.url.host)
+        assertEquals("/3/search/movie", request.url.encodedPath)
+        assertEquals("the matrix", request.url.parameters["query"])
+        assertEquals("false", request.url.parameters["include_adult"])
+        assertEquals("en-US", request.url.parameters["language"])
+        assertEquals("1", request.url.parameters["page"])
+        assertEquals("k1", request.url.parameters["api_key"])
+        assertNull(request.headers[HttpHeaders.Authorization])
+    }
+
+    @Test
+    fun search_parsesResults() = runTest {
+        val results = (1..20).joinToString(",") { id ->
+            if (id == 1) """{"id":603,"title":"The Matrix","release_date":"1999-03-31","poster_path":"/m.jpg"}"""
+            else """{"id":$id,"title":"Film $id","release_date":"","poster_path":null}"""
+        }
+        val body = """{"page":1,"total_results":57,"total_pages":3,"results":[$results]}"""
+        val result = client("k") { json(body) }.searchMovies("matrix")
+        val page = (result as TmdbResult.Ok<SearchPage>).value
+        assertEquals(57, page.totalResults)
+        assertEquals(20, page.movies.size)
+        assertEquals(Movie(603, "The Matrix", "1999", "https://image.tmdb.org/t/p/w342/m.jpg"), page.movies[0])
+        assertEquals(Movie(2, "Film 2", null, null), page.movies[1])
+    }
+
+    @Test
+    fun search_blankKey_returnsMissingKey_withoutCallingNetwork() = runTest {
+        var calls = 0
+        val result = client(" ") { calls++; json("""{"results":[]}""") }.searchMovies("matrix")
+        assertEquals(TmdbResult.Failed(TmdbFailure.MissingKey), result)
+        assertEquals(0, calls)
+    }
+
+    @Test
+    fun search_http401_returnsRejectedKey() = runTest {
+        val result = client("bad") { json("{}", HttpStatusCode.Unauthorized) }.searchMovies("matrix")
+        assertEquals(TmdbResult.Failed(TmdbFailure.RejectedKey), result)
+    }
+
+    @Test
+    fun details_sendsIdInPath() = runTest {
+        var seen: HttpRequestData? = null
+        client("k1") { request -> seen = request; json("""{"id":278,"title":"T"}""") }.movieDetails(278)
+        val request = requireNotNull(seen)
+        assertEquals("/3/movie/278", request.url.encodedPath)
+        assertEquals("k1", request.url.parameters["api_key"])
+        assertEquals("en-US", request.url.parameters["language"])
+    }
+
+    @Test
+    fun details_parsesAllFields() = runTest {
+        val body = """{"id":278,"title":"The Shawshank Redemption","release_date":"1994-09-23","poster_path":"/s.jpg",
+            |"runtime":142,"genres":[{"id":18,"name":"Drama"},{"id":80,"name":"Crime"}],
+            |"overview":"Two imprisoned men bond.","tagline":"x"}""".trimMargin()
+        val result = client("k") { json(body) }.movieDetails(278)
+        assertEquals(
+            TmdbResult.Ok(
+                MovieDetails(
+                    id = 278,
+                    title = "The Shawshank Redemption",
+                    releaseYear = "1994",
+                    runtimeMinutes = 142,
+                    genres = listOf("Drama", "Crime"),
+                    overview = "Two imprisoned men bond.",
+                    posterUrl = "https://image.tmdb.org/t/p/w342/s.jpg",
+                ),
+            ),
+            result,
+        )
+    }
+
+    @Test
+    fun details_missingOptionalFields_areNullOrEmpty() = runTest {
+        val missing = MovieDetails(9, "Bare", null, null, emptyList(), null, null)
+        val bodies = listOf(
+            """{"id":9,"title":"Bare","runtime":null,"overview":"   ","release_date":"","poster_path":null}""",
+            """{"id":9,"title":"Bare","runtime":0,"overview":""}""",
+            """{"id":9,"title":"Bare"}""",
+        )
+        for (body in bodies) {
+            assertEquals(TmdbResult.Ok(missing), client("k") { json(body) }.movieDetails(9), "for $body")
+        }
+    }
+
+    @Test
+    fun details_http404_returnsServerError() = runTest {
+        val body = """{"success":false,"status_code":34,"status_message":"The resource you requested could not be found."}"""
+        val result = client("k") { json(body, HttpStatusCode.NotFound) }.movieDetails(1)
+        assertEquals(TmdbResult.Failed(TmdbFailure.ServerError), result)
+    }
 }

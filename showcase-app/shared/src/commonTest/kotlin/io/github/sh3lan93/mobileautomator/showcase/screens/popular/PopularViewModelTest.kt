@@ -21,6 +21,8 @@ class PopularViewModelTest {
 
     private class FakeTmdbClient(var next: TmdbResult<List<Movie>>) : TmdbClient {
         override suspend fun popularMovies(): TmdbResult<List<Movie>> = next
+        override suspend fun searchMovies(query: String) = error("not used")
+        override suspend fun movieDetails(id: Int) = error("not used")
     }
 
     private val dispatcher = StandardTestDispatcher()
