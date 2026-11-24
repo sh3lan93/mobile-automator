@@ -33,8 +33,11 @@ val appModule = module {
     viewModelOf(::SettingsViewModel)
 }
 
-/** [platformModule] provides the platform's `KeyValueStorage`; it is required so no platform can forget it. */
-fun initKoin(platformModule: Module) {
+/**
+ * [platformModule] provides the platform's `KeyValueStorage`; it is required so no platform can forget it.
+ * The apps call `initKoinAndroid` / `initKoinIos`, which own their platform's bindings.
+ */
+internal fun initKoin(platformModule: Module) {
     startKoin {
         modules(platformModule, appModule)
     }

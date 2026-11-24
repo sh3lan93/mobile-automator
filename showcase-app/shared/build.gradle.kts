@@ -107,8 +107,7 @@ kotlin {
 
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor)
-            // api: initKoin(Module) exposes Koin to the apps, which supply their platform module.
-            api(libs.koin.core)
+            implementation(libs.koin.core)
             implementation(libs.koin.compose.viewmodel)
         }
         commonTest.dependencies {
