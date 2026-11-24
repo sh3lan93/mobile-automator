@@ -72,6 +72,17 @@
       "on_failure": "fail"
     },
     {
+      "id": "reset_loaded",
+      "action": "wait_for_element_gone",
+      "description": "Wait for the fresh list to finish loading (the title shows while it loads)",
+      "target": "Loading films…",
+      "wait_config": {
+        "type": "element_gone",
+        "timeout_ms": 30000
+      },
+      "on_failure": "fail"
+    },
+    {
       "id": "open_settings_again",
       "action": "tap",
       "description": "Open the Settings screen again",
@@ -160,11 +171,22 @@
     },
     {
       "id": "wait_recovered",
-      "action": "wait_for_element",
-      "description": "Wait for the popular films list to load again",
-      "target": "Popular films",
+      "action": "wait_for_element_gone",
+      "description": "Wait for the server-error message to go, which shows the retry started",
+      "target": "Something went wrong",
       "wait_config": {
-        "type": "element_visible",
+        "type": "element_gone",
+        "timeout_ms": 15000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "recovered_loaded",
+      "action": "wait_for_element_gone",
+      "description": "Wait for the recovered list to finish loading",
+      "target": "Loading films…",
+      "wait_config": {
+        "type": "element_gone",
         "timeout_ms": 30000
       },
       "on_failure": "fail"
@@ -173,7 +195,7 @@
   "assertions": [
     {
       "id": "fresh_list_shown",
-      "after_step": "wait_reset",
+      "after_step": "reset_loaded",
       "type": "pattern_match",
       "description": "The film-count line is shown after the reset, which proves the fresh first-launch list loaded (the add-your-key screen shares the title, but has no count)",
       "pattern": "^\\d+ films$"
@@ -210,7 +232,7 @@
     },
     {
       "id": "list_recovered",
-      "after_step": "wait_recovered",
+      "after_step": "recovered_loaded",
       "type": "pattern_match",
       "description": "The film-count line is shown again, which proves Retry recovered the list once the switch was off",
       "pattern": "^\\d+ films$"
