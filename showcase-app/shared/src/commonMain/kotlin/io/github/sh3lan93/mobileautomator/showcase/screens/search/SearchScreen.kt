@@ -22,6 +22,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.sh3lan93.mobileautomator.showcase.screens.common.Centered
 import io.github.sh3lan93.mobileautomator.showcase.screens.common.FailureContent
 import io.github.sh3lan93.mobileautomator.showcase.screens.common.MovieList
+import io.github.sh3lan93.mobileautomator.showcase.screens.common.MovieRowData
 import io.github.sh3lan93.mobileautomator.showcase.screens.common.filmCount
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -59,7 +60,7 @@ fun SearchScreen(onBack: () -> Unit, onOpen: (Int) -> Unit, viewModel: SearchVie
                     Text("Searching…")
                 }
                 // The search count is TMDB's total of every match, not the page listed.
-                is SearchUiState.Results -> MovieList(s.movies, filmCount(s.totalResults), onOpen, modifier)
+                is SearchUiState.Results -> MovieList(s.movies.map(::MovieRowData), filmCount(s.totalResults), onOpen, modifier)
                 SearchUiState.NoMatches -> Centered(modifier) { Text("No films match your search") }
                 is SearchUiState.Failed -> FailureContent(s.failure, viewModel::retry, modifier)
             }

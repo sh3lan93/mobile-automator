@@ -26,6 +26,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.sh3lan93.mobileautomator.showcase.screens.common.Centered
 import io.github.sh3lan93.mobileautomator.showcase.screens.common.FailureContent
 import io.github.sh3lan93.mobileautomator.showcase.screens.common.MovieList
+import io.github.sh3lan93.mobileautomator.showcase.screens.common.MovieRowData
 import io.github.sh3lan93.mobileautomator.showcase.screens.common.filmCount
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -72,7 +73,7 @@ fun PopularScreen(
                 PopularUiState.Empty -> Centered(modifier) { Text("No films found") }
                 PopularUiState.NoMatches -> Centered(modifier) { Text("No films match this combination") }
                 // The films listed for the popular list (one page); TMDB's total for a discover call.
-                is PopularUiState.Loaded -> MovieList(s.movies, filmCount(s.count), onOpen, modifier)
+                is PopularUiState.Loaded -> MovieList(s.movies.map(::MovieRowData), filmCount(s.count), onOpen, modifier)
                 is PopularUiState.Failed -> FailureContent(s.failure, viewModel::retry, modifier)
             }
         }

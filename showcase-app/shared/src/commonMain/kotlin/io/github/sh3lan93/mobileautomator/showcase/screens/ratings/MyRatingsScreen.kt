@@ -19,6 +19,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.sh3lan93.mobileautomator.showcase.screens.common.Centered
 import io.github.sh3lan93.mobileautomator.showcase.screens.common.FailureContent
 import io.github.sh3lan93.mobileautomator.showcase.screens.common.MovieList
+import io.github.sh3lan93.mobileautomator.showcase.screens.common.MovieRowData
 import io.github.sh3lan93.mobileautomator.showcase.screens.common.ratedFilmCount
 import io.github.sh3lan93.mobileautomator.showcase.screens.common.ratingText
 import org.koin.compose.viewmodel.koinViewModel
@@ -56,16 +57,12 @@ fun MyRatingsScreen(
                 Text("Loading your ratings…")
             }
             MyRatingsUiState.Empty -> Centered(modifier) { Text("You have not rated any films yet") }
-            is MyRatingsUiState.Loaded -> {
-                val ratingById = s.films.associate { it.movie.id to it.rating }
-                MovieList(
-                    movies = s.films.map { it.movie },
-                    countLine = ratedFilmCount(s.films.size),
-                    onOpen = onOpen,
-                    modifier = modifier,
-                    supporting = { movie -> ratingById[movie.id]?.let(::ratingText) },
-                )
-            }
+            is MyRatingsUiState.Loaded -> MovieList(
+                rows = s.films.map { MovieRowData(it.movie, ratingText(it.rating)) },
+                countLine = ratedFilmCount(s.films.size),
+                onOpen = onOpen,
+                modifier = modifier,
+            )
             is MyRatingsUiState.Failed -> FailureContent(s.failure, viewModel::refresh, modifier)
         }
     }

@@ -32,17 +32,16 @@ fun ratingText(value: Double): String {
     return "Your rating: $number/10"
 }
 
-/**
- * A count line ([countLine]) above one clickable row per film; a row opens the film by id.
- * Each row's second line is [supporting] (the release year unless a screen says otherwise).
- */
+/** One row of a [MovieList]: the film and its second line, the release year unless a screen says otherwise. */
+data class MovieRowData(val movie: Movie, val supporting: String? = movie.releaseYear)
+
+/** A count line ([countLine]) above one clickable row per film; a row opens the film by id. */
 @Composable
 fun MovieList(
-    movies: List<Movie>,
+    rows: List<MovieRowData>,
     countLine: String,
     onOpen: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    supporting: (Movie) -> String? = { it.releaseYear },
 ) {
     LazyColumn(modifier = modifier) {
         item {
@@ -52,15 +51,16 @@ fun MovieList(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }
-        items(movies, key = { it.id }) { movie ->
-            MovieRow(movie, onClick = { onOpen(movie.id) }, supporting = supporting)
+        items(rows, key = { it.movie.id }) { row ->
+            MovieRow(row, onClick = { onOpen(row.movie.id) })
             HorizontalDivider()
         }
     }
 }
 
 @Composable
-private fun MovieRow(movie: Movie, onClick: () -> Unit, supporting: (Movie) -> String? = { it.releaseYear }) {
+private fun MovieRow(row: MovieRowData, onClick: () -> Unit) {
+    val movie = row.movie
     Row(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -75,7 +75,7 @@ private fun MovieRow(movie: Movie, onClick: () -> Unit, supporting: (Movie) -> S
         Column {
             Text(movie.title, style = MaterialTheme.typography.titleMedium)
             // No supporting text (a film with no release date) shows no second line at all.
-            supporting(movie)?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+            row.supporting?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
         }
     }
 }
