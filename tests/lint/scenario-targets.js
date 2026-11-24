@@ -20,18 +20,20 @@ const ASSERTION_FIELDS = ['target', 'element_description', 'expected_value', 'ex
 
 /**
  * Every string a scenario uses to name or describe an element, with where it
- * sits (`step <id>.<field>` / `assertion <id>.<field>`).
+ * sits (`step <id>.<field>` / `assertion <id>.<field>`) and the top-level step
+ * it is anchored to: `kind` is `step` or `assertion`, and `step` is the step's
+ * own id or the assertion's `after_step`.
  *
  * @param {object} scenario
- * @returns {{ where: string, value: string }[]}
+ * @returns {{ where: string, value: string, kind: 'step'|'assertion', step: string }[]}
  */
 function targetValues(scenario) {
   const out = [];
-  const add = (where, value) => {
-    if (typeof value === 'string') out.push({ where, value });
+  const add = (where, value, kind, step) => {
+    if (typeof value === 'string') out.push({ where, value, kind, step });
   };
-  for (const step of scenario.steps || []) for (const f of STEP_FIELDS) add(`step ${step.id}.${f}`, step[f]);
-  for (const a of scenario.assertions || []) for (const f of ASSERTION_FIELDS) add(`assertion ${a.id}.${f}`, a[f]);
+  for (const step of scenario.steps || []) for (const f of STEP_FIELDS) add(`step ${step.id}.${f}`, step[f], 'step', step.id);
+  for (const a of scenario.assertions || []) for (const f of ASSERTION_FIELDS) add(`assertion ${a.id}.${f}`, a[f], 'assertion', a.after_step);
   return out;
 }
 

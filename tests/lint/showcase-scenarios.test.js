@@ -16,7 +16,9 @@
 //   4. every scenario launches the id both platforms build, and the Android
 //      applicationId and iOS bundle id are the same string;
 //   5. no scenario target or expected value is a Compose testTag literal;
-//   6. the showcase declares no UI test dependency or UI test source set.
+//   6. no target or expected value after a `type` step is contained in the
+//      text typed before it (see typedTextOffenders);
+//   7. the showcase declares no UI test dependency or UI test source set.
 
 const fs = require('fs');
 const path = require('path');
@@ -137,6 +139,44 @@ describe('showcase scenarios — on-screen strings, not testTags', () => {
         if (tags.has(value)) offenders.push(`${file} ${where}: ${JSON.stringify(value)}`);
       }
     }
+    expect(offenders).toEqual([]);
+  });
+});
+
+// The CLI matches a target as a case-insensitive substring of an element's
+// text or label, and Android exposes a text field's typed text as the field's
+// text while iOS does not. A target that the typed text contains would
+// therefore hit the text field itself on Android only: the step or assertion
+// passes there without the effect of typing ever appearing, and fails on iOS.
+// So nothing positioned after a `type` step (a later step's target, or an
+// assertion whose `after_step` is that step or later) may be contained in a
+// value typed earlier. Returns one line per offending value.
+function typedTextOffenders(scenario) {
+  const steps = scenario.steps || [];
+  const order = new Map(steps.map((s, i) => [s.id, i]));
+  const typed = steps
+    .map((s, i) => ({ i, id: s.id, value: s.value }))
+    .filter((t, i) => steps[i].action === 'type' && typeof t.value === 'string' && t.value.trim() !== '');
+  const offenders = [];
+  for (const { where, value, kind, step } of targetValues(scenario)) {
+    const at = order.get(step);
+    const needle = value.trim().toLowerCase();
+    if (at === undefined || needle === '') continue;
+    // A step runs after type steps before it; an assertion runs after its
+    // after_step, so a type step at that same index is already done.
+    for (const t of typed.filter((t) => (kind === 'assertion' ? t.i <= at : t.i < at))) {
+      if (t.value.toLowerCase().includes(needle)) {
+        offenders.push(`${where}: ${JSON.stringify(value)} is contained in the text typed by step ${t.id} (${JSON.stringify(t.value)})`);
+      }
+    }
+  }
+  return offenders;
+}
+
+describe('showcase scenarios — the effect of typing, never the typed text', () => {
+  test('no target or expected value after a type step is contained in text typed before it', () => {
+    const offenders = scenarioFiles.flatMap((file) =>
+      typedTextOffenders(JSON.parse(read(file))).map((line) => `${file} ${line}`));
     expect(offenders).toEqual([]);
   });
 });
