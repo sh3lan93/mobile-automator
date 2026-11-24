@@ -11,4 +11,6 @@ sealed interface TmdbResult<out T> {
 /** Every remote TMDB call goes through here; transport and HTTP outcomes are mapped to [TmdbFailure]. */
 interface TmdbClient {
     suspend fun popularMovies(): TmdbResult<List<Movie>>
+    suspend fun searchMovies(query: String): TmdbResult<SearchPage>
+    suspend fun movieDetails(id: Int): TmdbResult<MovieDetails>
 }

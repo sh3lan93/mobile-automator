@@ -1,0 +1,120 @@
+{
+  "$schema_version": "2.1",
+  "scenario_id": "search_open_details",
+  "name": "Search for a film and open its details",
+  "description": "Launches Reel Tracker, opens Search, types a film title and waits for The Shawshank Redemption in the results with a film-count line, opens it to check the details screen's title and release year, then goes back to the same results. Needs a configured TMDB key (showcase-app/tmdb.properties): without one the app shows the add-your-key screen and the search never runs.",
+  "platform": "cross-platform",
+  "app_package": "io.github.sh3lan93.mobileautomator.showcase",
+  "mode": "platform-agnostic",
+  "metadata": {
+    "app_version": "debug",
+    "environment": "local"
+  },
+  "tags": ["showcase", "search", "details"],
+  "steps": [
+    {
+      "id": "launch",
+      "action": "launch_app",
+      "description": "Launch Reel Tracker"
+    },
+    {
+      "id": "wait_list",
+      "action": "wait_for_element",
+      "description": "Wait for the popular films screen title",
+      "target": "Popular films",
+      "wait_config": { "type": "element_visible", "timeout_ms": 30000 },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_search",
+      "action": "tap",
+      "description": "Open the Search screen",
+      "target": "Search",
+      "on_failure": "retry",
+      "retry_policy": { "max_attempts": 2, "backoff_ms": 1500 }
+    },
+    {
+      "id": "focus_field",
+      "action": "tap",
+      "description": "Focus the search field",
+      "target": "Search films"
+    },
+    {
+      "id": "type_title",
+      "action": "type",
+      "description": "Type part of a film title",
+      "value": "Shawshank"
+    },
+    {
+      "id": "hide_keyboard",
+      "action": "dismiss_keyboard",
+      "description": "Hide the keyboard so the results are not covered"
+    },
+    {
+      "id": "wait_result",
+      "action": "wait_for_element",
+      "description": "Wait for the film in the search results",
+      "target": "The Shawshank Redemption",
+      "wait_config": { "type": "element_visible", "timeout_ms": 15000 },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_film",
+      "action": "tap",
+      "description": "Open the film's details; the pattern skips other results that only mention the title, such as a documentary about it",
+      "target": "The Shawshank Redemption",
+      "target_pattern": "^The Shawshank Redemption"
+    },
+    {
+      "id": "wait_details",
+      "action": "wait_for_element",
+      "description": "Wait for the release year on the details screen",
+      "target": "Released 1994",
+      "wait_config": { "type": "element_visible", "timeout_ms": 15000 },
+      "on_failure": "fail"
+    },
+    {
+      "id": "back",
+      "action": "press_back",
+      "description": "Go back to the search results"
+    },
+    {
+      "id": "wait_results_again",
+      "action": "wait_for_element",
+      "description": "Wait for the film in the search results again",
+      "target": "The Shawshank Redemption",
+      "wait_config": { "type": "element_visible", "timeout_ms": 10000 },
+      "on_failure": "fail"
+    }
+  ],
+  "assertions": [
+    {
+      "id": "result_count_shown",
+      "after_step": "wait_result",
+      "type": "pattern_match",
+      "description": "The film-count line is shown, which proves the search ran and returned results",
+      "pattern": "^\\d+ films?$"
+    },
+    {
+      "id": "details_title",
+      "after_step": "wait_details",
+      "type": "screen_title",
+      "description": "The details screen is titled with the film's title",
+      "expected_text": "The Shawshank Redemption"
+    },
+    {
+      "id": "details_year",
+      "after_step": "wait_details",
+      "type": "element_visible",
+      "description": "The details screen shows the release year",
+      "element_description": "Released 1994"
+    },
+    {
+      "id": "results_back",
+      "after_step": "wait_results_again",
+      "type": "pattern_match",
+      "description": "The film-count line is shown again, which proves the same results are back after leaving the details screen",
+      "pattern": "^\\d+ films?$"
+    }
+  ]
+}
