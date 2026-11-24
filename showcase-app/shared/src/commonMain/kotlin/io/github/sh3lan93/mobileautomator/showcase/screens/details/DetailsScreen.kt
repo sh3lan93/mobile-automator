@@ -80,5 +80,6 @@ private fun DetailsContent(details: MovieDetails, modifier: Modifier) {
             Text(details.genres.joinToString(", "), style = MaterialTheme.typography.bodyLarge)
         }
         details.overview?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+        RatingSection(details.id)
     }
 }
