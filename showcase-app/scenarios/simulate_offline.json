@@ -1,0 +1,241 @@
+{
+  "$schema_version": "2.1",
+  "scenario_id": "simulate_offline",
+  "name": "Simulated offline shows No connection, and Retry recovers",
+  "description": "Resets app data from Settings, turns Simulate offline on, reloads the popular films list and checks the No connection screen with its Retry button, then turns the switch off and checks that Retry loads the list again. Starts by resetting app data and leaves the switch off. Needs a configured TMDB key (showcase-app/tmdb.properties): without one the app shows the add-your-key screen and the film-count checks fail.",
+  "platform": "cross-platform",
+  "app_package": "io.github.sh3lan93.mobileautomator.showcase",
+  "mode": "platform-agnostic",
+  "metadata": {
+    "app_version": "debug",
+    "environment": "local"
+  },
+  "tags": [
+    "showcase",
+    "settings",
+    "failure"
+  ],
+  "steps": [
+    {
+      "id": "launch",
+      "action": "launch_app",
+      "description": "Launch Reel Tracker"
+    },
+    {
+      "id": "wait_list",
+      "action": "wait_for_element",
+      "description": "Wait for the popular films screen title",
+      "target": "Popular films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 30000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_settings",
+      "action": "tap",
+      "description": "Open the Settings screen",
+      "target": "Settings",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "wait_settings",
+      "action": "wait_for_element",
+      "description": "Wait for the Reset app data button on the Settings screen",
+      "target": "Reset app data",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "reset",
+      "action": "tap",
+      "description": "Reset app data, which clears everything the app saved and returns to the start",
+      "target": "Reset app data"
+    },
+    {
+      "id": "wait_reset",
+      "action": "wait_for_element",
+      "description": "Wait for the popular films screen after the reset",
+      "target": "Popular films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 30000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "reset_loaded",
+      "action": "wait_for_element_gone",
+      "description": "Wait for the fresh list to finish loading (the title shows while it loads)",
+      "target": "Loading films…",
+      "wait_config": {
+        "type": "element_gone",
+        "timeout_ms": 30000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_settings_again",
+      "action": "tap",
+      "description": "Open the Settings screen again",
+      "target": "Settings",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "switch_on",
+      "action": "tap",
+      "description": "Turn Simulate offline on",
+      "target": "Simulate offline",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "back_to_list",
+      "action": "press_back",
+      "description": "Go back to the popular films list"
+    },
+    {
+      "id": "refresh",
+      "action": "tap",
+      "description": "Reload the popular films list",
+      "target": "Refresh",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "wait_failure",
+      "action": "wait_for_element",
+      "description": "Wait for the No connection message",
+      "target": "No connection",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 15000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_settings_off",
+      "action": "tap",
+      "description": "Open the Settings screen from the failure screen",
+      "target": "Settings",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "switch_off",
+      "action": "tap",
+      "description": "Turn Simulate offline off",
+      "target": "Simulate offline",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "back_to_failure",
+      "action": "press_back",
+      "description": "Go back to the No connection screen"
+    },
+    {
+      "id": "retry",
+      "action": "tap",
+      "description": "Retry loading the popular films list",
+      "target": "Retry",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "wait_recovered",
+      "action": "wait_for_element_gone",
+      "description": "Wait for the no-connection message to go, which shows the retry started",
+      "target": "No connection",
+      "wait_config": {
+        "type": "element_gone",
+        "timeout_ms": 15000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "recovered_loaded",
+      "action": "wait_for_element_gone",
+      "description": "Wait for the recovered list to finish loading",
+      "target": "Loading films…",
+      "wait_config": {
+        "type": "element_gone",
+        "timeout_ms": 30000
+      },
+      "on_failure": "fail"
+    }
+  ],
+  "assertions": [
+    {
+      "id": "fresh_list_shown",
+      "after_step": "reset_loaded",
+      "type": "pattern_match",
+      "description": "The film-count line is shown after the reset, which proves the fresh first-launch list loaded (the add-your-key screen shares the title, but has no count)",
+      "pattern": "^\\d+ films$"
+    },
+    {
+      "id": "switch_on_shown",
+      "after_step": "switch_on",
+      "type": "text_contains",
+      "description": "The status line says Simulate offline is on",
+      "expected_substring": "Offline simulation is on"
+    },
+    {
+      "id": "failure_message_shown",
+      "after_step": "wait_failure",
+      "type": "element_visible",
+      "description": "The No connection message is shown",
+      "element_description": "No connection",
+      "expected_visible": true
+    },
+    {
+      "id": "retry_shown",
+      "after_step": "wait_failure",
+      "type": "element_visible",
+      "description": "The Retry button is shown on the failure screen",
+      "element_description": "Retry",
+      "expected_visible": true
+    },
+    {
+      "id": "switch_off_shown",
+      "after_step": "switch_off",
+      "type": "text_contains",
+      "description": "The status line says Simulate offline is off, so the scenario leaves the switch off",
+      "expected_substring": "Offline simulation is off"
+    },
+    {
+      "id": "list_recovered",
+      "after_step": "recovered_loaded",
+      "type": "pattern_match",
+      "description": "The film-count line is shown again, which proves Retry recovered the list once the switch was off",
+      "pattern": "^\\d+ films$"
+    }
+  ]
+}

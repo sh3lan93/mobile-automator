@@ -17,8 +17,13 @@ import kotlinx.serialization.Serializable
 /**
  * [TmdbClient] over Ktor. Uses the v3 `api_key` query parameter, never a bearer token.
  * [http] must have ContentNegotiation with a JSON that ignores unknown keys.
+ * [simulation] is a function rather than the store so the client stays independent of persistence.
  */
-class KtorTmdbClient(private val http: HttpClient, apiKey: String) : TmdbClient {
+class KtorTmdbClient(
+    private val http: HttpClient,
+    apiKey: String,
+    private val simulation: () -> Simulation = { Simulation() },
+) : TmdbClient {
 
     private val apiKey = apiKey.trim()
 
@@ -55,6 +60,10 @@ class KtorTmdbClient(private val http: HttpClient, apiKey: String) : TmdbClient 
         parse: suspend (HttpResponse) -> T,
     ): TmdbResult<T> {
         if (apiKey.isEmpty()) return TmdbResult.Failed(TmdbFailure.MissingKey)
+        // Read per call so turning a switch off makes the next retry reach the network.
+        val simulated = simulation()
+        if (simulated.offline) return TmdbResult.Failed(TmdbFailure.NoConnection)
+        if (simulated.serverError) return TmdbResult.Failed(TmdbFailure.ServerError)
         return try {
             val response = http.get("$BASE_URL/$path") {
                 expectSuccess = false

@@ -15,10 +15,12 @@ import io.github.sh3lan93.mobileautomator.showcase.screens.about.AboutScreen
 import io.github.sh3lan93.mobileautomator.showcase.screens.details.DetailsScreen
 import io.github.sh3lan93.mobileautomator.showcase.screens.popular.PopularScreen
 import io.github.sh3lan93.mobileautomator.showcase.screens.search.SearchScreen
+import io.github.sh3lan93.mobileautomator.showcase.screens.settings.SettingsScreen
 
 private const val ROUTE_POPULAR = "popular"
 private const val ROUTE_ABOUT = "about"
 private const val ROUTE_SEARCH = "search"
+private const val ROUTE_SETTINGS = "settings"
 private const val ARG_MOVIE_ID = "movieId"
 private const val ROUTE_DETAILS = "details/{$ARG_MOVIE_ID}"
 
@@ -35,8 +37,21 @@ fun App() {
                 composable(ROUTE_POPULAR) {
                     PopularScreen(
                         onSearch = { navController.navigate(ROUTE_SEARCH) },
+                        onSettings = { navController.navigate(ROUTE_SETTINGS) },
                         onAbout = { navController.navigate(ROUTE_ABOUT) },
                         onOpen = { id -> navController.navigate(detailsRoute(id)) },
+                    )
+                }
+                composable(ROUTE_SETTINGS) {
+                    SettingsScreen(
+                        onBack = { navController.popBackStack() },
+                        // Clearing the whole back stack recreates every screen's view model, so nothing
+                        // shown before the reset survives it: the app is back at its first-launch state.
+                        onReset = {
+                            navController.navigate(ROUTE_POPULAR) {
+                                popUpTo(navController.graph.id) { inclusive = true }
+                            }
+                        },
                     )
                 }
                 composable(ROUTE_ABOUT) {
