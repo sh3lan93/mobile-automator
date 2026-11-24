@@ -19,7 +19,7 @@ sealed interface PopularUiState {
      * [count] is the count line's number: the films listed for the popular list (one page),
      * TMDB's total of every match for a discover call.
      */
-    data class Loaded(val movies: List<Movie>, val count: Int = movies.size) : PopularUiState
+    data class Loaded(val movies: List<Movie>, val count: Int) : PopularUiState
     /** The popular list came back empty. */
     data object Empty : PopularUiState
     /** A discover call (any non-default filters) came back empty. */
@@ -69,7 +69,8 @@ class PopularViewModel(private val client: TmdbClient) : ViewModel() {
 
     private suspend fun loadPopular(): PopularUiState = when (val result = client.popularMovies()) {
         is TmdbResult.Ok ->
-            if (result.value.isEmpty()) PopularUiState.Empty else PopularUiState.Loaded(result.value)
+            if (result.value.isEmpty()) PopularUiState.Empty
+            else PopularUiState.Loaded(result.value, count = result.value.size)
         is TmdbResult.Failed -> PopularUiState.Failed(result.failure)
     }
 
@@ -77,7 +78,7 @@ class PopularViewModel(private val client: TmdbClient) : ViewModel() {
         when (val result = client.discoverMovies(filters.toDiscoverQuery())) {
             is TmdbResult.Ok ->
                 if (result.value.movies.isEmpty()) PopularUiState.NoMatches
-                else PopularUiState.Loaded(result.value.movies, result.value.totalResults)
+                else PopularUiState.Loaded(result.value.movies, count = result.value.totalResults)
             is TmdbResult.Failed -> PopularUiState.Failed(result.failure)
         }
 }

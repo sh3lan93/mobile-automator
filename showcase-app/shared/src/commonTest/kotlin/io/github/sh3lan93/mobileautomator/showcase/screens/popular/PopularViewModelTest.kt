@@ -48,7 +48,7 @@ class PopularViewModelTest {
         val vm = PopularViewModel(fake(TmdbResult.Ok(listOf(movie))))
         assertEquals(PopularUiState.Loading, vm.state.value)
         advanceUntilIdle()
-        assertEquals(PopularUiState.Loaded(listOf(movie)), vm.state.value)
+        assertEquals(PopularUiState.Loaded(listOf(movie), count = 1), vm.state.value)
     }
 
     @Test
@@ -78,7 +78,7 @@ class PopularViewModelTest {
         vm.retry()
         assertEquals(PopularUiState.Loading, vm.state.value)
         advanceUntilIdle()
-        assertEquals(PopularUiState.Loaded(listOf(movie)), vm.state.value)
+        assertEquals(PopularUiState.Loaded(listOf(movie), count = 1), vm.state.value)
     }
 
     @Test
@@ -141,7 +141,7 @@ class PopularViewModelTest {
             listOf<TmdbCall>(TmdbCall.Popular, TmdbCall.Discover(drama1994.toDiscoverQuery()), TmdbCall.Popular),
             client.calls,
         )
-        assertEquals(PopularUiState.Loaded(listOf(movie)), vm.state.value)
+        assertEquals(PopularUiState.Loaded(listOf(movie), count = 1), vm.state.value)
     }
 
     @Test
