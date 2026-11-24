@@ -39,6 +39,10 @@ class SearchViewModelTest {
 
         override suspend fun popularMovies() = error("not used")
         override suspend fun movieDetails(id: Int) = error("not used")
+        override suspend fun createGuestSession() = error("not used")
+        override suspend fun rateMovie(sessionId: String, movieId: Int, value: Double) = error("not used")
+        override suspend fun removeRating(sessionId: String, movieId: Int) = error("not used")
+        override suspend fun ratedMovies(sessionId: String) = error("not used")
     }
 
     private val dispatcher = StandardTestDispatcher()
