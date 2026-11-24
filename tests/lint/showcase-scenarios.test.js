@@ -164,7 +164,7 @@ function typedTextOffenders(scenario) {
     if (at === undefined || needle === '') continue;
     // A step runs after type steps before it; an assertion runs after its
     // after_step, so a type step at that same index is already done.
-    for (const t of typed.filter((t) => (kind === 'assertion' ? t.i <= at : t.i < at))) {
+    for (const t of typed.filter((earlier) => (kind === 'assertion' ? earlier.i <= at : earlier.i < at))) {
       if (t.value.toLowerCase().includes(needle)) {
         offenders.push(`${where}: ${JSON.stringify(value)} is contained in the text typed by step ${t.id} (${JSON.stringify(t.value)})`);
       }
