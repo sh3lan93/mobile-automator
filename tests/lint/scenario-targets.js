@@ -12,6 +12,8 @@
 // OS element-id vocabulary. Comments included where it is applied: a comment
 // explaining "match on the id when the label is missing" is the first draft of
 // the regression.
+const { flattenSteps } = require('../../src/scenario/steps');
+
 const OS_ID_TOKEN = /identifier|resource[-_]id/i;
 
 // The scenario fields that name or describe an element.
@@ -20,9 +22,10 @@ const ASSERTION_FIELDS = ['target', 'element_description', 'expected_value', 'ex
 
 /**
  * Every string a scenario uses to name or describe an element, with where it
- * sits (`step <id>.<field>` / `assertion <id>.<field>`) and the top-level step
- * it is anchored to: `kind` is `step` or `assertion`, and `step` is the step's
- * own id or the assertion's `after_step`.
+ * sits (`step <id>.<field>` / `assertion <id>.<field>`) and the step it is
+ * anchored to: `kind` is `step` or `assertion`, and `step` is the step's own
+ * id or the assertion's `after_step`. Steps come from `flattenSteps`
+ * (`src/scenario/steps.js`), so `sub_steps` are included, in document order.
  *
  * @param {object} scenario
  * @returns {{ where: string, value: string, kind: 'step'|'assertion', step: string }[]}
@@ -32,7 +35,7 @@ function targetValues(scenario) {
   const add = (where, value, kind, step) => {
     if (typeof value === 'string') out.push({ where, value, kind, step });
   };
-  for (const step of scenario.steps || []) for (const f of STEP_FIELDS) add(`step ${step.id}.${f}`, step[f], 'step', step.id);
+  for (const { step } of flattenSteps(scenario)) for (const f of STEP_FIELDS) add(`step ${step.id}.${f}`, step[f], 'step', step.id);
   for (const a of scenario.assertions || []) for (const f of ASSERTION_FIELDS) add(`assertion ${a.id}.${f}`, a[f], 'assertion', a.after_step);
   return out;
 }

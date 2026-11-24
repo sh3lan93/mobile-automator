@@ -27,6 +27,7 @@ const { REPO_ROOT, repoFiles } = require('./docs-corpus');
 const { OS_ID_TOKEN, targetValues } = require('./scenario-targets');
 const { ScenarioValidator } = require('../../src/scenario/validator');
 const { loadScenario } = require('../../src/scenario/load');
+const { flattenSteps } = require('../../src/scenario/steps');
 const { MECHANICAL_TYPES } = require('../../src/assertion/evaluator');
 
 const APP = 'showcase-app';
@@ -151,17 +152,24 @@ describe('showcase scenarios — on-screen strings, not testTags', () => {
 // So nothing positioned after a `type` step (a later step's target, or an
 // assertion whose `after_step` is that step or later) may be contained in a
 // value typed earlier. Returns one line per offending value.
+// Step order is `flattenSteps`' (depth-first, sub_steps included), the same
+// order every other step-order check reads. A value anchored to a step id the
+// walk does not know cannot be placed, so it is reported, not skipped.
 function typedTextOffenders(scenario) {
-  const steps = scenario.steps || [];
+  const steps = flattenSteps(scenario).map(({ step }) => step);
   const order = new Map(steps.map((s, i) => [s.id, i]));
   const typed = steps
-    .map((s, i) => ({ i, id: s.id, value: s.value }))
-    .filter((t, i) => steps[i].action === 'type' && typeof t.value === 'string' && t.value.trim() !== '');
+    .map((s, i) => ({ i, id: s.id, action: s.action, value: s.value }))
+    .filter((t) => t.action === 'type' && typeof t.value === 'string' && t.value.trim() !== '');
   const offenders = [];
   for (const { where, value, kind, step } of targetValues(scenario)) {
     const at = order.get(step);
+    if (at === undefined) {
+      offenders.push(`${where}: anchored to step ${JSON.stringify(step)}, which the scenario does not have`);
+      continue;
+    }
     const needle = value.trim().toLowerCase();
-    if (at === undefined || needle === '') continue;
+    if (needle === '') continue;
     // A step runs after type steps before it; an assertion runs after its
     // after_step, so a type step at that same index is already done.
     for (const t of typed.filter((earlier) => (kind === 'assertion' ? earlier.i <= at : earlier.i < at))) {
