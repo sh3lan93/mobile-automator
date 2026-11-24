@@ -90,9 +90,9 @@ class RatingViewModelTest {
     @Test
     fun checksOnInit_notRated() = runTest(dispatcher) {
         val vm = RatingViewModel(278, ratings)
-        assertEquals(RatingUiState.Checking, vm.state.value)
+        assertEquals(RatingUiState(rating = null), vm.state.value)
         advanceUntilIdle()
-        assertEquals(RatingUiState.NotRated, vm.state.value)
+        assertEquals(RatingUiState(KnownRating.NotRated), vm.state.value)
     }
 
     @Test
@@ -100,7 +100,7 @@ class RatingViewModelTest {
         ratedBefore(278 to 8.0, 550 to 6.5)
         val vm = RatingViewModel(278, ratings)
         advanceUntilIdle()
-        assertEquals(RatingUiState.Rated(8.0), vm.state.value)
+        assertEquals(RatingUiState(KnownRating.Rated(8.0)), vm.state.value)
     }
 
     @Test
@@ -108,9 +108,9 @@ class RatingViewModelTest {
         val vm = RatingViewModel(278, ratings)
         advanceUntilIdle()
         vm.rate(8)
-        assertEquals(RatingUiState.Saving, vm.state.value)
+        assertEquals(RatingUiState(KnownRating.NotRated, saving = true), vm.state.value)
         advanceUntilIdle()
-        assertEquals(RatingUiState.Rated(8.0), vm.state.value)
+        assertEquals(RatingUiState(KnownRating.Rated(8.0)), vm.state.value)
         assertEquals(mapOf(278 to 8.0), client.server.toMap())
     }
 
@@ -128,7 +128,7 @@ class RatingViewModelTest {
         gate.complete(Unit)
         advanceUntilIdle()
         assertEquals(1, client.writes)
-        assertEquals(RatingUiState.Rated(8.0), vm.state.value)
+        assertEquals(RatingUiState(KnownRating.Rated(8.0)), vm.state.value)
     }
 
     @Test
@@ -137,9 +137,10 @@ class RatingViewModelTest {
         val vm = RatingViewModel(278, ratings)
         advanceUntilIdle()
         vm.remove()
-        assertEquals(RatingUiState.Saving, vm.state.value)
+        // The known rating stays while saving, so Remove rating stays on screen (disabled).
+        assertEquals(RatingUiState(KnownRating.Rated(8.0), saving = true), vm.state.value)
         advanceUntilIdle()
-        assertEquals(RatingUiState.NotRated, vm.state.value)
+        assertEquals(RatingUiState(KnownRating.NotRated), vm.state.value)
         assertEquals(emptyMap(), client.server.toMap())
     }
 
@@ -151,13 +152,14 @@ class RatingViewModelTest {
         client.writeFailure = TmdbFailure.NoConnection
         vm.rate(4)
         advanceUntilIdle()
-        assertEquals(RatingUiState.Failed(TmdbFailure.NoConnection, RatingUiState.Rated(8.0)), vm.state.value)
+        assertEquals(RatingUiState(KnownRating.Rated(8.0), failure = TmdbFailure.NoConnection), vm.state.value)
+        assertEquals(false, vm.state.value.firstCheckFailed)
 
         // A later tap is accepted again and settles normally.
         client.writeFailure = null
         vm.rate(4)
         advanceUntilIdle()
-        assertEquals(RatingUiState.Rated(4.0), vm.state.value)
+        assertEquals(RatingUiState(KnownRating.Rated(4.0)), vm.state.value)
     }
 
     @Test
@@ -166,13 +168,20 @@ class RatingViewModelTest {
         client.readFailure = TmdbFailure.ServerError
         val vm = RatingViewModel(278, ratings)
         advanceUntilIdle()
-        assertEquals(RatingUiState.Failed(TmdbFailure.ServerError, RatingUiState.Checking), vm.state.value)
+        assertEquals(RatingUiState(rating = null, failure = TmdbFailure.ServerError), vm.state.value)
+        assertEquals(true, vm.state.value.firstCheckFailed)
+
+        // Taps before anything is known are ignored.
+        vm.rate(5)
+        vm.remove()
+        advanceUntilIdle()
+        assertEquals(0, client.writes)
 
         client.readFailure = null
         vm.retry()
-        assertEquals(RatingUiState.Checking, vm.state.value)
+        assertEquals(RatingUiState(rating = null), vm.state.value)
         advanceUntilIdle()
-        assertEquals(RatingUiState.Rated(8.0), vm.state.value)
+        assertEquals(RatingUiState(KnownRating.Rated(8.0)), vm.state.value)
         assertEquals(2, client.log.count { it == "rated" })
     }
 }

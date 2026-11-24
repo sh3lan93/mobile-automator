@@ -34,63 +34,66 @@ import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
-sealed interface RatingUiState {
-    data object Checking : RatingUiState
-    data object NotRated : RatingUiState
-    data class Rated(val value: Double) : RatingUiState
-    data object Saving : RatingUiState
+/** What the guest's rating of a film is known to be. */
+sealed interface KnownRating {
+    data object NotRated : KnownRating
+    data class Rated(val value: Double) : KnownRating
+}
 
-    /**
-     * A check or write failed. [last] is what stays on screen: the last known [Rated] / [NotRated]
-     * after a failed write, or [Checking] when the first check failed (nothing is known yet).
-     */
-    data class Failed(val failure: TmdbFailure, val last: RatingUiState) : RatingUiState
+/**
+ * The rating section's state. [rating] is `null` until the first check answers; [saving] is set
+ * while a write is in flight (the known [rating] stays); [failure] is the last check or write that
+ * failed, cleared by the next one.
+ */
+data class RatingUiState(
+    val rating: KnownRating?,
+    val saving: Boolean = false,
+    val failure: TmdbFailure? = null,
+) {
+    /** The first check failed, so nothing is known and only Retry helps. */
+    val firstCheckFailed: Boolean get() = rating == null && failure != null
 }
 
 /**
  * The guest's rating of one film. Checks [movieId]'s rating on creation; [rate] and [remove]
- * show [RatingUiState.Saving] until TMDB confirms the write, and taps while saving are ignored.
+ * set [RatingUiState.saving] until TMDB confirms the write, and taps while saving are ignored.
  */
 class RatingViewModel(private val movieId: Int, private val ratings: GuestRatings) : ViewModel() {
 
-    private val _state = MutableStateFlow<RatingUiState>(RatingUiState.Checking)
+    private val _state = MutableStateFlow(RatingUiState(rating = null))
     val state: StateFlow<RatingUiState> = _state.asStateFlow()
-
-    // The last settled answer (Rated / NotRated, or Checking before the first), kept through a failed write.
-    private var settled: RatingUiState = RatingUiState.Checking
 
     init {
         check()
     }
 
-    fun rate(value: Int) = write { ratings.rate(movieId, value.toDouble()).map { RatingUiState.Rated(value.toDouble()) } }
+    fun rate(value: Int) = write { ratings.rate(movieId, value.toDouble()).map { KnownRating.Rated(value.toDouble()) } }
 
-    fun remove() = write { ratings.remove(movieId).map { RatingUiState.NotRated } }
+    fun remove() = write { ratings.remove(movieId).map { KnownRating.NotRated } }
 
     fun retry() {
-        if (_state.value.let { it is RatingUiState.Failed && it.last == RatingUiState.Checking }) check()
+        if (_state.value.firstCheckFailed) check()
     }
 
     private fun check() {
-        _state.value = RatingUiState.Checking
+        _state.value = RatingUiState(rating = null)
         viewModelScope.launch {
-            settle(ratings.ratingFor(movieId).map { it?.let(RatingUiState::Rated) ?: RatingUiState.NotRated })
+            settle(ratings.ratingFor(movieId).map { it?.let(KnownRating::Rated) ?: KnownRating.NotRated })
         }
     }
 
-    private fun write(block: suspend () -> TmdbResult<RatingUiState>) {
-        // Only from a settled answer: never while saving (double taps) or before the first check.
+    private fun write(block: suspend () -> TmdbResult<KnownRating>) {
+        // Only from a known rating: never while saving (double taps) or before the first check answers.
         val current = _state.value
-        if (current is RatingUiState.Saving || current is RatingUiState.Checking) return
-        if (current is RatingUiState.Failed && current.last == RatingUiState.Checking) return
-        _state.value = RatingUiState.Saving
+        if (current.saving || current.rating == null) return
+        _state.value = current.copy(saving = true, failure = null)
         viewModelScope.launch { settle(block()) }
     }
 
-    private fun settle(result: TmdbResult<RatingUiState>) {
+    private fun settle(result: TmdbResult<KnownRating>) {
         _state.value = when (result) {
-            is TmdbResult.Ok -> result.value.also { settled = it }
-            is TmdbResult.Failed -> RatingUiState.Failed(result.failure, settled)
+            is TmdbResult.Ok -> RatingUiState(rating = result.value)
+            is TmdbResult.Failed -> _state.value.copy(saving = false, failure = result.failure)
         }
     }
 
@@ -108,32 +111,31 @@ fun RatingSection(
     viewModel: RatingViewModel = koinViewModel(key = "rating-$movieId") { parametersOf(movieId) },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val shown = (state as? RatingUiState.Failed)?.last ?: state
+    val rating = state.rating
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            when (shown) {
-                RatingUiState.Checking -> "Checking your rating…"
-                RatingUiState.NotRated -> "You have not rated this film"
-                is RatingUiState.Rated -> ratingText(shown.value)
-                RatingUiState.Saving -> "Saving your rating…"
-                is RatingUiState.Failed -> ""
+            if (state.saving) "Saving your rating…"
+            else when (rating) {
+                null -> "Checking your rating…"
+                KnownRating.NotRated -> "You have not rated this film"
+                is KnownRating.Rated -> ratingText(rating.value)
             },
             style = MaterialTheme.typography.titleMedium,
         )
-        (state as? RatingUiState.Failed)?.let { failed ->
+        state.failure?.let { failure ->
             Text(
-                if (failed.failure == TmdbFailure.NoConnection) "Could not reach TMDB. Try again."
+                if (failure == TmdbFailure.NoConnection) "Could not reach TMDB. Try again."
                 else "Could not update your rating. Try again.",
                 color = MaterialTheme.colorScheme.error,
             )
-            if (failed.last == RatingUiState.Checking) Button(onClick = viewModel::retry) { Text("Retry") }
+            if (state.firstCheckFailed) Button(onClick = viewModel::retry) { Text("Retry") }
         }
-        if (shown != RatingUiState.Checking) {
-            val enabled = shown != RatingUiState.Saving
+        if (rating != null) {
+            val enabled = !state.saving
             FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (score in 1..10) ScoreButton(score, enabled) { viewModel.rate(score) }
             }
-            if (shown is RatingUiState.Rated) {
+            if (rating is KnownRating.Rated) {
                 OutlinedButton(onClick = viewModel::remove, enabled = enabled) { Text("Remove rating") }
             }
         }
