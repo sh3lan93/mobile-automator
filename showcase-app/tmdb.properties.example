@@ -1,0 +1,2 @@
+# Get a TMDB v3 API key at https://www.themoviedb.org/settings/api, copy this file to tmdb.properties and paste the key below.
+TMDB_API_KEY=

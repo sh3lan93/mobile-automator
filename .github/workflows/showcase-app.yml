@@ -1,0 +1,56 @@
+name: Showcase App
+
+# Builds the showcase app (showcase-app/, PRD #304) and runs its unit tests.
+# No secrets and no TMDB key: the build generates an empty key, which the app
+# answers with its add-your-key screen. Not a required check.
+
+on:
+  pull_request:
+    paths:
+      - 'showcase-app/**'
+      - '.github/workflows/showcase-app.yml'
+
+jobs:
+  android:
+    name: 'Showcase: Android build and unit tests'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: showcase-app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Unit tests and debug APK
+        run: ./gradlew :shared:testAndroidHostTest :androidApp:assembleDebug
+
+  ios:
+    name: 'Showcase: iOS build and unit tests'
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: showcase-app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Unit tests (iOS simulator)
+        run: ./gradlew :shared:iosSimulatorArm64Test
+
+      - name: Build the iOS app
+        run: >-
+          xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp
+          -configuration Debug -sdk iphonesimulator -derivedDataPath build/ios
+          CODE_SIGNING_ALLOWED=NO build

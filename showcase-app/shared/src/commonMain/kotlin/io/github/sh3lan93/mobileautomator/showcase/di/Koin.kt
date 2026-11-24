@@ -1,0 +1,32 @@
+package io.github.sh3lan93.mobileautomator.showcase.di
+
+import io.github.sh3lan93.mobileautomator.showcase.TMDB_API_KEY
+import io.github.sh3lan93.mobileautomator.showcase.data.KtorTmdbClient
+import io.github.sh3lan93.mobileautomator.showcase.data.TmdbClient
+import io.github.sh3lan93.mobileautomator.showcase.screens.popular.PopularViewModel
+import io.ktor.client.HttpClient
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.json.Json
+import org.koin.core.context.startKoin
+import org.koin.core.module.dsl.viewModelOf
+import org.koin.dsl.module
+
+val appModule = module {
+    // No engine argument: Ktor picks the platform engine on the classpath (OkHttp on Android, Darwin on iOS).
+    single {
+        HttpClient {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+        }
+    }
+    single<TmdbClient> { KtorTmdbClient(get(), TMDB_API_KEY) }
+    viewModelOf(::PopularViewModel)
+}
+
+fun initKoin() {
+    startKoin {
+        modules(appModule)
+    }
+}

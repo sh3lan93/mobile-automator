@@ -1,0 +1,81 @@
+{
+  "$schema_version": "2.1",
+  "scenario_id": "browse_popular",
+  "name": "Browse popular films and the About screen",
+  "description": "Launches Reel Tracker, waits for the popular films list and checks its film count, opens About to check the TMDB attribution notice and logo, then goes back to the list. Needs a configured TMDB key (showcase-app/tmdb.properties): without one the app shows the add-your-key screen and the film-count check fails.",
+  "platform": "cross-platform",
+  "app_package": "io.github.sh3lan93.mobileautomator.showcase",
+  "mode": "platform-agnostic",
+  "metadata": {
+    "app_version": "debug",
+    "environment": "local"
+  },
+  "tags": ["showcase", "browse"],
+  "steps": [
+    {
+      "id": "launch",
+      "action": "launch_app",
+      "description": "Launch Reel Tracker"
+    },
+    {
+      "id": "wait_list",
+      "action": "wait_for_element",
+      "description": "Wait for the popular films screen title",
+      "target": "Popular films",
+      "wait_config": { "type": "element_visible", "timeout_ms": 30000 },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_about",
+      "action": "tap",
+      "description": "Open the About screen",
+      "target": "About",
+      "on_failure": "retry",
+      "retry_policy": { "max_attempts": 2, "backoff_ms": 1500 }
+    },
+    {
+      "id": "wait_about",
+      "action": "wait_for_element",
+      "description": "Wait for the TMDB logo on the About screen",
+      "target": "TMDB logo",
+      "wait_config": { "type": "element_visible", "timeout_ms": 10000 },
+      "on_failure": "fail"
+    },
+    {
+      "id": "back",
+      "action": "press_back",
+      "description": "Go back to the popular films list"
+    },
+    {
+      "id": "wait_list_again",
+      "action": "wait_for_element",
+      "description": "Wait for the popular films screen title again",
+      "target": "Popular films",
+      "wait_config": { "type": "element_visible", "timeout_ms": 10000 },
+      "on_failure": "fail"
+    }
+  ],
+  "assertions": [
+    {
+      "id": "film_count_shown",
+      "after_step": "wait_list",
+      "type": "pattern_match",
+      "description": "The film-count line is shown, which proves the list loaded (the add-your-key screen also carries the title, but no count)",
+      "pattern": "^\\d+ films$"
+    },
+    {
+      "id": "tmdb_notice_shown",
+      "after_step": "wait_about",
+      "type": "text_contains",
+      "description": "The About screen shows the TMDB attribution notice",
+      "expected_substring": "This application uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB."
+    },
+    {
+      "id": "list_back",
+      "after_step": "wait_list_again",
+      "type": "pattern_match",
+      "description": "The film-count line is shown again, which proves the loaded list is back and not the add-your-key screen (which shares the title)",
+      "pattern": "^\\d+ films$"
+    }
+  ]
+}
