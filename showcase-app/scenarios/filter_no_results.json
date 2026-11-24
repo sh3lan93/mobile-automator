@@ -2,7 +2,7 @@
   "$schema_version": "2.1",
   "scenario_id": "filter_no_results",
   "name": "Filter with no matching films, then clear",
-  "description": "Launches Reel Tracker, opens Filters and picks 9+, 1931 and Animation, a combination no film has ever matched, checks the no-match message and the active filters, then clears the filters and checks the full list is back. Needs a configured TMDB key (showcase-app/tmdb.properties): without one the app shows the add-your-key screen and no filter call runs.",
+  "description": "Launches Reel Tracker, resets app data, opens Filters and picks 9+, 1931 and Animation, a combination no film has ever matched, checks the no-match message and the active filters, then clears the filters and checks the full list is back. Needs a configured TMDB key (showcase-app/tmdb.properties): without one the app shows the add-your-key screen and no filter call runs.",
   "platform": "cross-platform",
   "app_package": "io.github.sh3lan93.mobileautomator.showcase",
   "mode": "platform-agnostic",
@@ -27,6 +27,56 @@
       "target": "Popular films",
       "wait_config": {
         "type": "element_visible",
+        "timeout_ms": 30000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_settings",
+      "action": "tap",
+      "description": "Open the Settings screen",
+      "target": "Settings",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "wait_settings",
+      "action": "wait_for_element",
+      "description": "Wait for the Reset app data button on the Settings screen",
+      "target": "Reset app data",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "reset",
+      "action": "tap",
+      "description": "Reset app data, which clears everything the app saved and returns to the start",
+      "target": "Reset app data"
+    },
+    {
+      "id": "wait_reset",
+      "action": "wait_for_element",
+      "description": "Wait for the popular films screen after the reset",
+      "target": "Popular films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 30000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "reset_loaded",
+      "action": "wait_for_element_gone",
+      "description": "Wait for the fresh list to finish loading (the title shows while it loads)",
+      "target": "Loading films…",
+      "wait_config": {
+        "type": "element_gone",
         "timeout_ms": 30000
       },
       "on_failure": "fail"
