@@ -78,67 +78,71 @@ class KtorTmdbClient(
     override suspend fun rateMovie(sessionId: String, movieId: Int, value: Double): TmdbResult<GuestCall<Unit>> =
         guestCall(
             "movie/$movieId/rating",
-            sessionId,
             method = HttpMethod.Post,
+            params = { parameter("guest_session_id", sessionId) },
             body = RatingBodyDto(value),
         ) { GuestCall.Done(Unit) }
 
     override suspend fun removeRating(sessionId: String, movieId: Int): TmdbResult<GuestCall<Unit>> =
-        guestCall("movie/$movieId/rating", sessionId, method = HttpMethod.Delete) { GuestCall.Done(Unit) }
+        guestCall(
+            "movie/$movieId/rating",
+            method = HttpMethod.Delete,
+            params = { parameter("guest_session_id", sessionId) },
+        ) { GuestCall.Done(Unit) }
 
     override suspend fun ratedMovies(sessionId: String): TmdbResult<GuestCall<List<RatedMovie>>> =
         guestCall(
             "guest_session/$sessionId/rated/movies",
-            sessionId = null,
             params = {
                 parameter("language", "en-US")
                 parameter("page", 1)
                 parameter("sort_by", "created_at.asc")
             },
             // TMDB answers 404 (status_code 34), not an empty page, for a session that rated nothing.
-            notFound = { GuestCall.Done(emptyList()) },
+            notFound = GuestCall.Done(emptyList()),
         ) { response ->
             GuestCall.Done(response.body<PageDto>().results.mapNotNull { dto -> dto.rating?.let { RatedMovie(dto.toMovie(), it) } })
         }
 
     /**
-     * A call that acts on a guest session: [sessionId], when given, goes in the `guest_session_id`
-     * query parameter, and a session TMDB no longer accepts becomes [GuestCall.SessionExpired].
+     * A call that acts on a guest session (the caller puts the session id in [path] or [params]).
+     * A 401 whose body says status_code 3 (an unknown or expired guest session) is
+     * [GuestCall.SessionExpired]; with [notFound], a 404 is that value. Every other non-2xx keeps
+     * [call]'s mapping, so a 401 for a bad key (TMDB's 7) is still [TmdbFailure.RejectedKey].
      */
     private suspend fun <T> guestCall(
         path: String,
-        sessionId: String?,
         method: HttpMethod = HttpMethod.Get,
         params: HttpRequestBuilder.() -> Unit = {},
         body: Any? = null,
-        notFound: (() -> GuestCall<T>)? = null,
+        notFound: GuestCall<T>? = null,
         parse: suspend (HttpResponse) -> GuestCall<T>,
     ): TmdbResult<GuestCall<T>> = call(
         path,
-        params = {
-            if (sessionId != null) parameter("guest_session_id", sessionId)
-            params()
-        },
+        params = params,
         method = method,
         body = body,
-        notFound = notFound,
-        sessionExpired = { GuestCall.SessionExpired },
+        recover = { response ->
+            when (response.status) {
+                HttpStatusCode.Unauthorized -> GuestCall.SessionExpired.takeIf { statusCodeOf(response) == SESSION_DENIED }
+                HttpStatusCode.NotFound -> notFound
+                else -> null
+            }
+        },
         parse = parse,
     )
 
     /**
      * Sends `api_key` on every request; [params] adds the endpoint's own query parameters.
-     * [body] is sent as JSON. With [notFound], a 404 is that value instead of a failure.
-     * With [sessionExpired], a 401 whose body says status_code 3 (an unknown or expired guest
-     * session) is that value; every other 401 is [TmdbFailure.RejectedKey] (TMDB uses 7 for a bad key).
+     * [body] is sent as JSON. A non-2xx response goes to [recover] first; when it returns `null`,
+     * a 401 is [TmdbFailure.RejectedKey] and any other non-2xx [TmdbFailure.ServerError].
      */
-    private suspend fun <T> call(
+    private suspend fun <T : Any> call(
         path: String,
         params: HttpRequestBuilder.() -> Unit = {},
         method: HttpMethod = HttpMethod.Get,
         body: Any? = null,
-        notFound: (() -> T)? = null,
-        sessionExpired: (() -> T)? = null,
+        recover: suspend (HttpResponse) -> T? = { null },
         parse: suspend (HttpResponse) -> T,
     ): TmdbResult<T> {
         if (apiKey.isEmpty()) return TmdbResult.Failed(TmdbFailure.MissingKey)
@@ -157,16 +161,12 @@ class KtorTmdbClient(
                     setBody(body)
                 }
             }
-            when {
-                response.status == HttpStatusCode.Unauthorized ->
-                    if (sessionExpired != null && statusCodeOf(response) == SESSION_DENIED) {
-                        TmdbResult.Ok(sessionExpired())
-                    } else {
-                        TmdbResult.Failed(TmdbFailure.RejectedKey)
-                    }
-                response.status == HttpStatusCode.NotFound && notFound != null -> TmdbResult.Ok(notFound())
-                !response.status.isSuccess() -> TmdbResult.Failed(TmdbFailure.ServerError)
-                else -> TmdbResult.Ok(parse(response))
+            if (response.status.isSuccess()) {
+                TmdbResult.Ok(parse(response))
+            } else {
+                recover(response)?.let { TmdbResult.Ok(it) } ?: TmdbResult.Failed(
+                    if (response.status == HttpStatusCode.Unauthorized) TmdbFailure.RejectedKey else TmdbFailure.ServerError,
+                )
             }
         } catch (e: CancellationException) {
             throw e
