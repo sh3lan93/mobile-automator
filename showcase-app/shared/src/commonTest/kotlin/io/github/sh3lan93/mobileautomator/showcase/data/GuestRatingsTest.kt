@@ -208,12 +208,4 @@ class GuestRatingsTest {
         assertEquals("s2", store.guestSessionId.value.value)
         assertEquals(TmdbResult.Ok(listOf(RatedMovie(Movie(550, "Film 550", null, null), 7.0))), ratings.rated())
     }
-
-    @Test
-    fun ratingText_formatsWholeAndHalf() {
-        assertEquals("Your rating: 8/10", ratingText(8.0))
-        assertEquals("Your rating: 10/10", ratingText(10.0))
-        assertEquals("Your rating: 6.5/10", ratingText(6.5))
-        assertEquals("Your rating: 0.5/10", ratingText(0.5))
-    }
 }

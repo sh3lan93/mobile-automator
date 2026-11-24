@@ -8,6 +8,12 @@ sealed interface TmdbResult<out T> {
     data class Failed(val failure: TmdbFailure) : TmdbResult<Nothing>
 }
 
+/** [transform]s an [TmdbResult.Ok] value; a [TmdbResult.Failed] passes through unchanged. */
+inline fun <T, R> TmdbResult<T>.map(transform: (T) -> R): TmdbResult<R> = when (this) {
+    is TmdbResult.Ok -> TmdbResult.Ok(transform(value))
+    is TmdbResult.Failed -> this
+}
+
 /** A guest-session call either did its work or found that TMDB no longer accepts the session. */
 sealed interface GuestCall<out T> {
     data class Done<T>(val value: T) : GuestCall<T>

@@ -23,6 +23,15 @@ import io.github.sh3lan93.mobileautomator.showcase.data.Movie
 /** The count line both list screens show: `1 film`, `<n> films`. */
 fun filmCount(n: Int): String = if (n == 1) "1 film" else "$n films"
 
+/** The count line on My ratings: `1 rated film`, `<n> rated films`. */
+fun ratedFilmCount(n: Int): String = if (n == 1) "1 rated film" else "$n rated films"
+
+/** `8.0` → `"Your rating: 8/10"`, `6.5` → `"Your rating: 6.5/10"`: the one formatter both screens use. */
+fun ratingText(value: Double): String {
+    val number = if (value % 1.0 == 0.0) value.toInt().toString() else value.toString()
+    return "Your rating: $number/10"
+}
+
 /**
  * A count line ([countLine]) above one clickable row per film; a row opens the film by id.
  * Each row's second line is [supporting] (the release year unless a screen says otherwise).

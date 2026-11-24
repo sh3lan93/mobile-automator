@@ -16,14 +16,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.sh3lan93.mobileautomator.showcase.data.ratingText
 import io.github.sh3lan93.mobileautomator.showcase.screens.common.Centered
 import io.github.sh3lan93.mobileautomator.showcase.screens.common.FailureContent
 import io.github.sh3lan93.mobileautomator.showcase.screens.common.MovieList
+import io.github.sh3lan93.mobileautomator.showcase.screens.common.ratedFilmCount
+import io.github.sh3lan93.mobileautomator.showcase.screens.common.ratingText
 import org.koin.compose.viewmodel.koinViewModel
-
-/** The count line on My ratings: `1 rated film`, `<n> rated films`. */
-fun ratedFilmCount(n: Int): String = if (n == 1) "1 rated film" else "$n rated films"
 
 /** The films the guest rated, each with its rating; a row opens the film's details. */
 @OptIn(ExperimentalMaterial3Api::class)

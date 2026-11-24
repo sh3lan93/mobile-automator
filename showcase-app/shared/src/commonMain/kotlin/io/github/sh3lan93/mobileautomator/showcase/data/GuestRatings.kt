@@ -10,9 +10,10 @@ import kotlinx.coroutines.sync.withLock
  *
  * A session is created on the first rating, never to read, so launching the app mints none.
  * When TMDB stops accepting the session, its id is dropped: reads are then empty (a new session
- * has no ratings) and a rating starts a new session. A write is reported only once the rated
- * list shows it, up to [confirmAttempts] reads [confirmIntervalMs] apart, so a screen that reads
- * straight afterwards never sees TMDB's read-back lag.
+ * has no ratings) and a rating starts a new session. After a write is accepted, the rated list
+ * is read back up to [confirmAttempts] times, [confirmIntervalMs] apart, until it shows the write,
+ * so a screen that reads straight afterwards does not see TMDB's read-back lag. If it never shows
+ * (or a read fails), the write is still reported Ok: TMDB accepted it.
  */
 class GuestRatings(
     private val client: TmdbClient,
@@ -40,10 +41,8 @@ class GuestRatings(
         }
     }
 
-    suspend fun ratingFor(movieId: Int): TmdbResult<Double?> = when (val result = rated()) {
-        is TmdbResult.Failed -> result
-        is TmdbResult.Ok -> TmdbResult.Ok(result.value.firstOrNull { it.movie.id == movieId }?.rating)
-    }
+    suspend fun ratingFor(movieId: Int): TmdbResult<Double?> =
+        rated().map { films -> films.firstOrNull { it.movie.id == movieId }?.rating }
 
     suspend fun rate(movieId: Int, value: Double): TmdbResult<Unit> = writes.withLock {
         // One retry: a session that expired is replaced once; a new one expiring at once is a server fault.
@@ -96,10 +95,4 @@ class GuestRatings(
     private fun forget(id: String) {
         if (sessionId == id) store.guestSessionId.set(null)
     }
-}
-
-/** `8.0` → `"Your rating: 8/10"`, `6.5` → `"Your rating: 6.5/10"`: the one formatter both screens use. */
-fun ratingText(value: Double): String {
-    val number = if (value % 1.0 == 0.0) value.toInt().toString() else value.toString()
-    return "Your rating: $number/10"
 }
