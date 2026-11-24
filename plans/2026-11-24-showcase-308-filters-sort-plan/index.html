@@ -1,0 +1,1726 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Intelligent mobile QA automation for any AI coding agent via the mauto CLI - auto-generate test scenarios and execute them with AI-powered assertions on real devices and emulators">
+      
+      
+      
+        <link rel="canonical" href="https://sh3lan93.github.io/mobile-automator/plans/2026-11-24-showcase-308-filters-sort-plan/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
+    
+    
+      
+        <title>Showcase Filters and Sort (#308) Implementation Plan - mobile-automator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Showcase Filters and Sort (#308) Implementation Plan - mobile-automator" />
+  <meta property="og:description" content="Intelligent mobile QA automation for any AI coding agent via the mauto CLI - auto-generate test scenarios and execute them with AI-powered assertions on real devices and emulators" />
+  <meta property="og:url" content="https://sh3lan93.github.io/mobile-automator/plans/2026-11-24-showcase-308-filters-sort-plan/" />
+  <meta property="og:site_name" content="mobile-automator" />
+  <meta property="og:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Showcase Filters and Sort (#308) Implementation Plan - mobile-automator" />
+  <meta name="twitter:description" content="Intelligent mobile QA automation for any AI coding agent via the mauto CLI - auto-generate test scenarios and execute them with AI-powered assertions on real devices and emulators" />
+  <meta name="twitter:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
+  
+
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#showcase-filters-and-sort-308-implementation-plan" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="mobile-automator" class="md-header__button md-logo" aria-label="mobile-automator" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="mobile-automator logo" width="32" height="32">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            mobile-automator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Showcase Filters and Sort (#308) Implementation Plan
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/sh3lan93/mobile-automator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sh3lan93/mobile-automator
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="mobile-automator" class="md-nav__button md-logo" aria-label="mobile-automator" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="mobile-automator logo" width="32" height="32">
+
+    </a>
+    mobile-automator
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/sh3lan93/mobile-automator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sh3lan93/mobile-automator
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Core Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/three-tier-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Layered Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How Skills Work
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cross-Session Memory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command Guides
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup Command
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/generate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Generate Command
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/execute/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execute Command
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli-verbs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Verbs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/assertions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Assertion Types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test Scenario Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/result-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test Result Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/mcp-tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internal Engine (mobile-mcp)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/telemetry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Telemetry & Privacy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Example Scenarios
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/android/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Android Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/ios/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    iOS Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ & Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of Contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of Contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#global-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Global Constraints
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#review-focus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Review Focus
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#file-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File Structure
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="File Structure">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#task-1-filter-state-pure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 1: Filter state (pure)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-2-discover-and-genres-in-the-tmdb-client" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 2: Discover and genres in the TMDB client
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-3-filters-on-the-lists-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 3: Filters on the list's state
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-4-filters-screen-and-the-filter-row" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 4: Filters screen and the filter row
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-5-scenarios" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 5: Scenarios
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-6-docs-and-full-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 6: Docs and full verification
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#acceptance-map-308" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Acceptance map (#308)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="showcase-filters-and-sort-308-implementation-plan">Showcase Filters and Sort (#308) Implementation Plan<a class="headerlink" href="#showcase-filters-and-sort-308-implementation-plan" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development. Steps use checkbox (<code>- [ ]</code>) syntax for tracking.</p>
+</blockquote>
+<p><strong>Goal:</strong> Filter the popular film list by genre, release year and minimum rating, and change its sort order, each change being a TMDB discover call; show the active filters and the result count as visible text; ship two filter scenarios, one ending on the no-results message. Record on PRD #304 whether a filter chip's selected state reaches <code>mauto elements</code> on Android and iOS.</p>
+<p><strong>Architecture:</strong> A pure <code>FilterState</code> value (<code>data/FilterState.kt</code>) with <code>toDiscoverQuery()</code> and <code>activeFiltersText()</code>. Two new <code>TmdbClient</code> calls (<code>discoverMovies</code>, <code>movieGenres</code>) through <code>KtorTmdbClient</code>'s one private <code>call(...)</code>, so key handling, failure mapping and #307's simulation switches reach them unchanged. <code>PopularViewModel</code> owns the current <code>FilterState</code>: default state → <code>popularMovies()</code> as today; anything else → <code>discoverMovies(state.toDiscoverQuery())</code>. A new Filters screen (route <code>filters</code>) edits that same view model (obtained from the popular back-stack entry) and has a small <code>FiltersViewModel</code> of its own that loads the genre list. The popular screen gains one filter row above the list: the active-filters text and a <code>Filters</code> button.</p>
+<p><strong>Spec:</strong> issue #308, PRD #304 (and its comments), <code>docs/plans/2026-11-11-movie-tracker-showcase-design.md</code>. Conventions from the #305 and #306 plans (Global Constraints apply unchanged).</p>
+<h2 id="global-constraints">Global Constraints<a class="headerlink" href="#global-constraints" title="Permanent link">&para;</a></h2>
+<p>All of #305's and #306's, plus:</p>
+<ul>
+<li>Work only in worktree <code>sample-app-308-filters-sort</code> on branch <code>sample-app/308-filters-sort</code> (subagents: <code>cd</code> there and check <code>git branch --show-current</code> before any commit).</li>
+<li>Extend <code>TmdbClient</code>, <code>KtorTmdbClient</code>, <code>di/Koin.kt</code>, <code>App.kt</code> and <code>PopularScreen.kt</code> <strong>additively</strong>: #307 (PR #376) edits the same files and lands first or in parallel. Do not reshape <code>call(...)</code>, <code>TmdbResult</code>, <code>TmdbFailure</code>, the top bar actions, or the <code>PopularScreen</code> parameter list beyond adding one parameter.</li>
+<li>No UI test dependency, no <code>testTag</code>.</li>
+<li>Nothing under <code>src/</code>, <code>bin/</code> or <code>package.json</code>: no version bump, no CHANGELOG entry.</li>
+<li>Default engine (mobilecli). Switch to <code>engine: legacy</code> only if <code>mauto elements</code> shows a missing label or hidden content, and say so in the PR (#379).</li>
+<li>Never print, copy or commit the TMDB key. No device work without asking the maintainer first.</li>
+</ul>
+<h2 id="review-focus">Review Focus<a class="headerlink" href="#review-focus" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Fast chip taps.</strong> Every change cancels the in-flight load; a slow earlier response never overwrites a later filter's results. → Task 3.</li>
+<li><strong>Back to the default state</strong> (Clear, or deselecting everything) goes back to the popular endpoint, not a discover call. → Task 3.</li>
+<li><strong>Target collisions.</strong> The CLI matches targets as case-insensitive substrings, first match wins. No chip label may be a substring of other text on the Filters screen, and the popular screen's <code>Filters</code> button must not collide with any other text there. → Task 4 copy table.</li>
+<li><strong>Rating sorts without a vote floor</strong> return 10/10 films with one vote. → Task 1.</li>
+<li><strong>Everything on the Filters screen fits one phone screen</strong>, so no scenario needs a scroll. → Task 4 Step 5.</li>
+</ol>
+<hr />
+<h2 id="file-structure">File Structure<a class="headerlink" href="#file-structure" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>showcase-app/gradle/libs.versions.toml                     # + kotlinx-datetime
+showcase-app/shared/build.gradle.kts                       # + kotlinx-datetime in commonMain
+showcase-app/shared/src/commonMain/kotlin/io/github/sh3lan93/mobileautomator/showcase/
+  data/FilterState.kt          # NEW: FilterState, Sort, Genre, decades/years helpers
+  data/Movie.kt                # SearchPage doc generalised ("a first page and TMDB's total"); no shape change
+  data/TmdbClient.kt           # + discoverMovies, movieGenres
+  data/KtorTmdbClient.kt       # + two endpoints over the existing call(...)
+  di/Koin.kt                   # + FiltersViewModel (with the current year)
+  App.kt                       # + route filters
+  screens/popular/PopularViewModel.kt   # + filters: StateFlow&lt;FilterState&gt;, setFilters, NoMatches, count
+  screens/popular/PopularScreen.kt      # + filter row (active-filters text, Filters button); + onFilters
+  screens/filters/FiltersViewModel.kt   # NEW: genre list loading
+  screens/filters/FiltersScreen.kt      # NEW
+showcase-app/shared/src/commonTest/kotlin/.../
+  data/FilterStateTest.kt               # NEW
+  data/KtorTmdbClientTest.kt            # + discover and genres tests
+  screens/popular/PopularViewModelTest.kt  # + filter tests (fake gains the two members)
+  screens/filters/FiltersViewModelTest.kt  # NEW
+  (Search/Details test fakes gain the two members, error("not used"))
+showcase-app/scenarios/filter_drama_1994.json     # NEW
+showcase-app/scenarios/filter_no_results.json     # NEW
+showcase-app/README.md                            # scenarios list
+</code></pre></div>
+<hr />
+<h3 id="task-1-filter-state-pure">Task 1: Filter state (pure)<a class="headerlink" href="#task-1-filter-state-pure" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kd">data</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="nc">Genre</span><span class="p">(</span><span class="kd">val</span><span class="w"> </span><span class="nv">id</span><span class="p">:</span><span class="w"> </span><span class="kt">Int</span><span class="p">,</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="nv">name</span><span class="p">:</span><span class="w"> </span><span class="kt">String</span><span class="p">)</span>
+
+<span class="kd">enum</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="nc">Sort</span><span class="p">(</span><span class="kd">val</span><span class="w"> </span><span class="nv">label</span><span class="p">:</span><span class="w"> </span><span class="kt">String</span><span class="p">,</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="nv">sortBy</span><span class="p">:</span><span class="w"> </span><span class="kt">String</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">MostPopular</span><span class="p">(</span><span class="s">"Most popular"</span><span class="p">,</span><span class="w"> </span><span class="s">"popularity.desc"</span><span class="p">),</span><span class="w">     </span><span class="c1">// default</span>
+<span class="w">    </span><span class="n">HighestRated</span><span class="p">(</span><span class="s">"Highest rated"</span><span class="p">,</span><span class="w"> </span><span class="s">"vote_average.desc"</span><span class="p">),</span>
+<span class="w">    </span><span class="n">MostVotes</span><span class="p">(</span><span class="s">"Most votes"</span><span class="p">,</span><span class="w"> </span><span class="s">"vote_count.desc"</span><span class="p">),</span>
+<span class="w">    </span><span class="n">TopGrossing</span><span class="p">(</span><span class="s">"Top grossing"</span><span class="p">,</span><span class="w"> </span><span class="s">"revenue.desc"</span><span class="p">),</span>
+<span class="p">}</span>
+
+<span class="kd">data</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="nc">FilterState</span><span class="p">(</span>
+<span class="w">    </span><span class="kd">val</span><span class="w"> </span><span class="nv">genre</span><span class="p">:</span><span class="w"> </span><span class="n">Genre?</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">    </span><span class="kd">val</span><span class="w"> </span><span class="nv">year</span><span class="p">:</span><span class="w"> </span><span class="kt">Int?</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">    </span><span class="kd">val</span><span class="w"> </span><span class="nv">minRating</span><span class="p">:</span><span class="w"> </span><span class="kt">Int?</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">          </span><span class="c1">// 5..9, "N+" meaning vote_average &gt;= N</span>
+<span class="w">    </span><span class="kd">val</span><span class="w"> </span><span class="nv">sort</span><span class="p">:</span><span class="w"> </span><span class="n">Sort</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Sort</span><span class="p">.</span><span class="na">MostPopular</span><span class="p">,</span>
+<span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">val</span><span class="w"> </span><span class="nv">isDefault</span><span class="p">:</span><span class="w"> </span><span class="kt">Boolean</span><span class="w">               </span><span class="c1">// == FilterState()</span>
+<span class="w">    </span><span class="kd">fun</span><span class="w"> </span><span class="nf">toDiscoverQuery</span><span class="p">():</span><span class="w"> </span><span class="n">Map</span><span class="o">&lt;</span><span class="kt">String</span><span class="p">,</span><span class="w"> </span><span class="kt">String</span><span class="o">&gt;</span>
+<span class="w">    </span><span class="kd">fun</span><span class="w"> </span><span class="nf">activeFiltersText</span><span class="p">():</span><span class="w"> </span><span class="kt">String</span>
+<span class="p">}</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="nv">MIN_VOTES_FOR_RATING</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">200</span>
+<span class="kd">val</span><span class="w"> </span><span class="nv">RATING_STEPS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">5.</span><span class="p">.</span><span class="m">9</span>
+<span class="kd">fun</span><span class="w"> </span><span class="nf">decades</span><span class="p">(</span><span class="n">currentYear</span><span class="p">:</span><span class="w"> </span><span class="kt">Int</span><span class="p">):</span><span class="w"> </span><span class="n">List</span><span class="o">&lt;</span><span class="kt">Int</span><span class="o">&gt;</span><span class="w">               </span><span class="c1">// 1930, 1940, … up to currentYear's decade</span>
+<span class="kd">fun</span><span class="w"> </span><span class="nf">yearsOf</span><span class="p">(</span><span class="n">decade</span><span class="p">:</span><span class="w"> </span><span class="kt">Int</span><span class="p">,</span><span class="w"> </span><span class="n">currentYear</span><span class="p">:</span><span class="w"> </span><span class="kt">Int</span><span class="p">):</span><span class="w"> </span><span class="n">List</span><span class="o">&lt;</span><span class="kt">Int</span><span class="o">&gt;</span><span class="w">   </span><span class="c1">// decade..decade+9, capped at currentYear</span>
+<span class="kd">fun</span><span class="w"> </span><span class="nf">decadeLabel</span><span class="p">(</span><span class="n">decade</span><span class="p">:</span><span class="w"> </span><span class="kt">Int</span><span class="p">):</span><span class="w"> </span><span class="kt">String</span><span class="w">                   </span><span class="c1">// 1990 -&gt; '90s (no year is a substring of it)</span>
+</code></pre></div>
+<ul>
+<li><code>toDiscoverQuery()</code>: always <code>sort_by</code>, <code>include_adult=false</code>, <code>language=en-US</code>, <code>page=1</code>; <code>with_genres=&lt;id&gt;</code>, <code>primary_release_year=&lt;y&gt;</code>, <code>vote_average.gte=&lt;n&gt;</code> when set; <code>vote_count.gte=200</code> whenever <code>minRating</code> is set or the sort is <code>HighestRated</code> (otherwise one-vote 10/10 films top the list). Never <code>api_key</code>: that stays in <code>call(...)</code>.</li>
+<li><code>activeFiltersText()</code>: the set parts joined by <code>·</code> in the order genre name, year, <code>Rated &lt;n&gt;+</code>, sort label, the sort included only when not the default. Default state → <code>All films</code>. Examples: <code>Drama · 1994 · Rated 8+ · Highest rated</code>, <code>Most votes</code>, <code>Animation · 1931 · Rated 9+</code>.</li>
+<li>Tests (<code>FilterStateTest</code>): default query (popularity, no filter keys) and <code>isDefault</code>; each field alone; the vote floor for a rating and for <code>HighestRated</code> and its absence otherwise; full combination; each text example above plus default; <code>decades(2026)</code> = 1930…2020; <code>yearsOf(2020, 2026)</code> = 2020…2026; <code>yearsOf(1990, 2026)</code> = 1990…1999; <code>decadeLabel</code> 1990 → <code>'90s</code>, 2000 → <code>'00s</code>, 2020 → <code>'20s</code>, and no year of any decade is a substring of any decade label.</li>
+<li>[ ] Red, implement, green on <code>./gradlew :shared:testAndroidHostTest :shared:iosSimulatorArm64Test</code>.</li>
+<li>[ ] <strong>Commit</strong> <code>feat(showcase): filter state with its discover query and active-filters text</code>.</li>
+</ul>
+<h3 id="task-2-discover-and-genres-in-the-tmdb-client">Task 2: Discover and genres in the TMDB client<a class="headerlink" href="#task-2-discover-and-genres-in-the-tmdb-client" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kd">interface</span><span class="w"> </span><span class="nc">TmdbClient</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// existing three unchanged</span>
+<span class="w">    </span><span class="kd">suspend</span><span class="w"> </span><span class="kd">fun</span><span class="w"> </span><span class="nf">discoverMovies</span><span class="p">(</span><span class="n">query</span><span class="p">:</span><span class="w"> </span><span class="n">Map</span><span class="o">&lt;</span><span class="kt">String</span><span class="p">,</span><span class="w"> </span><span class="kt">String</span><span class="o">&gt;</span><span class="p">):</span><span class="w"> </span><span class="n">TmdbResult</span><span class="o">&lt;</span><span class="n">SearchPage</span><span class="o">&gt;</span>
+<span class="w">    </span><span class="kd">suspend</span><span class="w"> </span><span class="kd">fun</span><span class="w"> </span><span class="nf">movieGenres</span><span class="p">():</span><span class="w"> </span><span class="n">TmdbResult</span><span class="o">&lt;</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Genre</span><span class="o">&gt;&gt;</span>
+<span class="p">}</span>
+</code></pre></div>
+<ul>
+<li><code>GET /3/discover/movie</code> with every entry of <code>query</code> as a parameter, parsed with the existing <code>PageDto</code> (so <code>totalResults</code> is TMDB's full count). <code>GET /3/genre/movie/list?language=en-US</code> → <code>{"genres":[{id,name}]}</code>.</li>
+<li>Tests: <code>discover_sendsEveryQueryParamAndApiKey</code>, <code>discover_parsesResultsAndTotal</code>, <code>discover_blankKey_returnsMissingKey_withoutCallingNetwork</code>, <code>discover_http401_returnsRejectedKey</code>, <code>genres_sendsPathAndLanguage</code>, <code>genres_parses</code>, <code>genres_http500_returnsServerError</code>.</li>
+<li>[ ] Red, implement, green on both runtimes. <strong>Commit</strong> <code>feat(showcase): discover and genre list in the TMDB client</code>.</li>
+</ul>
+<h3 id="task-3-filters-on-the-lists-state">Task 3: Filters on the list's state<a class="headerlink" href="#task-3-filters-on-the-lists-state" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kd">sealed</span><span class="w"> </span><span class="kd">interface</span><span class="w"> </span><span class="nc">PopularUiState</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">data</span><span class="w"> </span><span class="kd">object</span><span class="w"> </span><span class="nc">Loading</span>
+<span class="w">    </span><span class="kd">data</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="nc">Loaded</span><span class="p">(</span><span class="kd">val</span><span class="w"> </span><span class="nv">movies</span><span class="p">:</span><span class="w"> </span><span class="n">List</span><span class="o">&lt;</span><span class="n">Movie</span><span class="o">&gt;</span><span class="p">,</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="nv">count</span><span class="p">:</span><span class="w"> </span><span class="kt">Int</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">movies</span><span class="p">.</span><span class="na">size</span><span class="p">)</span><span class="w">   </span><span class="c1">// count: listed (popular) or total_results (discover)</span>
+<span class="w">    </span><span class="kd">data</span><span class="w"> </span><span class="kd">object</span><span class="w"> </span><span class="nc">Empty</span><span class="w">          </span><span class="c1">// popular returned nothing (unchanged)</span>
+<span class="w">    </span><span class="kd">data</span><span class="w"> </span><span class="kd">object</span><span class="w"> </span><span class="nc">NoMatches</span><span class="w">      </span><span class="c1">// discover returned nothing</span>
+<span class="w">    </span><span class="kd">data</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="nc">Failed</span><span class="p">(</span><span class="kd">val</span><span class="w"> </span><span class="nv">failure</span><span class="p">:</span><span class="w"> </span><span class="n">TmdbFailure</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">class</span><span class="w"> </span><span class="nc">PopularViewModel</span><span class="p">(</span><span class="n">client</span><span class="p">:</span><span class="w"> </span><span class="n">TmdbClient</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">val</span><span class="w"> </span><span class="nv">filters</span><span class="p">:</span><span class="w"> </span><span class="n">StateFlow</span><span class="o">&lt;</span><span class="n">FilterState</span><span class="o">&gt;</span><span class="w">     </span><span class="c1">// FilterState() initially</span>
+<span class="w">    </span><span class="kd">fun</span><span class="w"> </span><span class="nf">setFilters</span><span class="p">(</span><span class="n">state</span><span class="p">:</span><span class="w"> </span><span class="n">FilterState</span><span class="p">)</span><span class="w">      </span><span class="c1">// no-op when equal; else cancels the in-flight load and loads</span>
+<span class="w">    </span><span class="kd">fun</span><span class="w"> </span><span class="nf">retry</span><span class="p">()</span><span class="w">                             </span><span class="c1">// reloads the current filters (unchanged signature)</span>
+<span class="p">}</span>
+
+<span class="kd">class</span><span class="w"> </span><span class="nc">FiltersViewModel</span><span class="p">(</span><span class="n">client</span><span class="p">:</span><span class="w"> </span><span class="n">TmdbClient</span><span class="p">,</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="nv">currentYear</span><span class="p">:</span><span class="w"> </span><span class="kt">Int</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">val</span><span class="w"> </span><span class="nv">genres</span><span class="p">:</span><span class="w"> </span><span class="n">StateFlow</span><span class="o">&lt;</span><span class="n">GenresUiState</span><span class="o">&gt;</span><span class="w">    </span><span class="c1">// Loading | Loaded(List&lt;Genre&gt;) | Failed(TmdbFailure); loads on init</span>
+<span class="w">    </span><span class="kd">fun</span><span class="w"> </span><span class="nf">retry</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></div>
+<ul>
+<li>Tests added to <code>PopularViewModelTest</code> (fake records every call): <code>default_usesPopular_notDiscover</code>; <code>setFilters_loadsDiscoverWithThatQuery</code>; <code>discoverCount_isTotalResults</code>; <code>emptyDiscover_isNoMatches</code>; <code>backToDefault_usesPopularAgain</code>; <code>lastChangeWins</code> (fake suspends the first discover; a second change lands; first must not win); <code>sameFilters_noReload</code>; <code>retry_reloadsCurrentFilters</code>; <code>discoverFailure_isFailed</code>. Existing tests stay green (the <code>Loaded</code> default keeps them).</li>
+<li><code>FiltersViewModelTest</code>: loads genres; failure; retry after failure.</li>
+<li>[ ] Red, implement, green on both runtimes. <strong>Commit</strong> <code>feat(showcase): filtered list state</code>.</li>
+</ul>
+<h3 id="task-4-filters-screen-and-the-filter-row">Task 4: Filters screen and the filter row<a class="headerlink" href="#task-4-filters-screen-and-the-filter-row" title="Permanent link">&para;</a></h3>
+<p><strong>Popular screen:</strong> a row above the list in every state: the active-filters text (<code>filters.activeFiltersText()</code>) and a <code>Filters</code> text button. <code>PopularScreen</code> gains <code>onFilters: () -&gt; Unit</code>; nothing else in its signature or top bar changes. <code>NoMatches</code> shows <code>No films match this combination</code>. The <code>Loaded</code> count line is <code>filmCount(count)</code>.</p>
+<p><strong>Filters screen</strong> (route <code>filters</code>, <code>koinViewModel&lt;PopularViewModel&gt;(viewModelStoreOwner = popular back-stack entry)</code> plus its own <code>FiltersViewModel</code>). Every chip tap calls <code>setFilters(...)</code> at once (a live discover call); <code>Done</code> and back pop to the list. Sections top to bottom, single-select <code>FilterChip</code>s in <code>FlowRow</code>s:</p>
+<table>
+<thead>
+<tr>
+<th>Section heading</th>
+<th>Chips</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Sort by</code></td>
+<td><code>Most popular</code>, <code>Highest rated</code>, <code>Most votes</code>, <code>Top grossing</code></td>
+</tr>
+<tr>
+<td><code>Minimum rating</code></td>
+<td><code>Any rating</code>, <code>5+</code> … <code>9+</code></td>
+</tr>
+<tr>
+<td><code>Release year</code></td>
+<td><code>Any year</code>, decades <code>'30s</code> … <code>'20s</code>; once a decade is chosen, its years (<code>1990</code> … <code>1999</code>) below</td>
+</tr>
+<tr>
+<td><code>Genre</code></td>
+<td><code>Any genre</code>, then TMDB's genres in TMDB's order; while loading <code>Loading genres…</code>; on failure <code>Genres could not load</code> + <code>Retry</code></td>
+</tr>
+</tbody>
+</table>
+<p>Top bar: back (<code>contentDescription</code> <code>Back</code>), title <code>Filters</code>, actions <code>Clear</code> (→ <code>FilterState()</code>) and <code>Done</code>.</p>
+<p>Copy rules (Review Focus 3): the active-filters text appears only on the popular screen, never on the Filters screen (it contains chip labels); the default text is <code>All films</code> and the empty message avoids the word "filters", so the <code>Filters</code> button is the only "filters" match on the popular screen; chip labels are unique substrings on the Filters screen (<code>Any rating</code> / <code>Any year</code> / <code>Any genre</code>, not <code>Any</code>).</p>
+<ul>
+<li>[ ] <strong>Step 1:</strong> Filter row, <code>NoMatches</code>, <code>onFilters</code>; Filters screen and route; Koin <code>viewModel { FiltersViewModel(get(), Clock.System.todayIn(TimeZone.currentSystemDefault()).year) }</code>.</li>
+<li>[ ] <strong>Step 2:</strong> <code>./gradlew :shared:testAndroidHostTest :shared:iosSimulatorArm64Test :androidApp:assembleDebug</code> and #305's <code>xcodebuild</code> command.</li>
+<li>[ ] <strong>Step 3: Chip selected state (ask before device work).</strong> On each platform, open Filters, select <code>Drama</code>, run <code>node bin/mauto.js elements</code> and record what the <code>Drama</code> chip element carries (text, label, type) against an unselected chip. The normalised element model (<code>src/device/element-model.js</code>) keeps only <code>text</code>, <code>accessibility_label</code>, <code>type</code> and bounds, so the expected answer is "not exposed" unless a platform folds the state into the label; the device says. Post the answer on PRD #304 as a comment. Also report whether any label is missing or content hidden on the default engine (#379).</li>
+<li>[ ] <strong>Step 4: By-hand check</strong> through <code>mauto</code> verbs only, on whichever device is free: the two scenario paths below, plus Clear → <code>All films</code> and the popular count line.</li>
+<li>[ ] <strong>Step 5:</strong> On the same device, confirm every Filters-screen chip a scenario taps is in <code>mauto elements</code> without scrolling. If not, tighten spacing/section order until it is; scenarios never scroll.</li>
+<li>[ ] <strong>Commit</strong> <code>feat(showcase): filters screen and the active-filters row</code>.</li>
+</ul>
+<h3 id="task-5-scenarios">Task 5: Scenarios<a class="headerlink" href="#task-5-scenarios" title="Permanent link">&para;</a></h3>
+<p>Same shape as the search scenarios (schema 2.1, platform-agnostic, cross-platform, shared <code>app_package</code>, descriptions say a TMDB key is needed). No <code>type</code> step, so the typed-text rule is vacuous for them.</p>
+<p><strong><code>filter_drama_1994.json</code></strong> (<code>tags: ["showcase","filters"]</code>): <code>launch</code> → <code>wait_list</code> (<code>Popular films</code>, 30 s) → <code>open_filters</code> (tap <code>Filters</code>, retry policy as <code>open_search</code>) → <code>wait_filters</code> (<code>Minimum rating</code>, 15 s) → <code>sort_rating</code> (tap <code>Highest rated</code>) → <code>rating_8</code> (tap <code>8+</code>) → <code>decade_1990s</code> (tap <code>'90s</code>) → <code>year_1994</code> (tap <code>1994</code>) → <code>wait_genres</code> (<code>Drama</code>, 15 s) → <code>genre_drama</code> (tap <code>Drama</code>) → <code>done</code> (tap <code>Done</code>) → <code>wait_filtered</code> (<code>Drama · 1994 · Rated 8+ · Highest rated</code>, 15 s) → <code>wait_film</code> (<code>The Shawshank Redemption</code>, 15 s).
+Assertions after <code>wait_film</code>: <code>element_visible</code> <code>Drama · 1994 · Rated 8+ · Highest rated</code>; <code>pattern_match</code> <code>^\d+ films?$</code>; <code>element_visible</code> <code>The Shawshank Redemption</code> (a long-settled fact: a 1994 drama rated far above 8 with tens of thousands of votes, first in that list for years).</p>
+<p><strong><code>filter_no_results.json</code></strong> (<code>tags: ["showcase","filters"]</code>): launch → wait list → open filters → wait filters → <code>rating_9</code> (tap <code>9+</code>) → <code>decade_1930s</code> → <code>year_1931</code> → wait genres (<code>Animation</code>) → <code>genre_animation</code> → done → <code>wait_empty</code> (<code>No films match this combination</code>, 15 s) → <code>open_filters_again</code> → <code>clear</code> (tap <code>Clear</code>) → <code>done_again</code> → <code>wait_all</code> (<code>All films</code>, 15 s).
+Assertions: after <code>wait_empty</code>, <code>element_visible</code> <code>No films match this combination</code> and <code>element_visible</code> <code>Animation · 1931 · Rated 9+</code> (no 1931 animated film has 200 votes, let alone a 9 average: settled); after <code>wait_all</code>, <code>pattern_match</code> <code>^\d+ films$</code> and <code>element_not_exists</code> <code>No films match this combination</code>.</p>
+<ul>
+<li>[ ] Write both; <code>npx jest tests/lint/showcase-scenarios.test.js</code> green; <code>node bin/mauto.js validate --strict showcase-app/scenarios/&lt;file&gt;</code> → <code>"ok":true</code> for each.</li>
+<li>[ ] <strong>Commit</strong> <code>test(showcase): filter scenarios</code>.</li>
+</ul>
+<h3 id="task-6-docs-and-full-verification">Task 6: Docs and full verification<a class="headerlink" href="#task-6-docs-and-full-verification" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] <code>showcase-app/README.md</code>: list the two scenarios.</li>
+<li>[ ] Full verification, output in the PR: <code>npm test</code>, <code>npm run lint</code>, <code>npm run lint:guides</code>, the Gradle and <code>xcodebuild</code> commands, <code>validate --strict</code> on every scenario, <code>git ls-files showcase-app | grep tmdb.properties$</code> (only <code>.example</code>).</li>
+<li>[ ] Mutation check: drop the vote floor and the <code>isDefault</code> → popular branch; the tests that guard them go red; restore.</li>
+<li>[ ] <strong>Commit</strong> <code>docs(showcase): filter scenarios in the README</code>.</li>
+</ul>
+<hr />
+<h2 id="acceptance-map-308">Acceptance map (#308)<a class="headerlink" href="#acceptance-map-308" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Criterion</th>
+<th>Task</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Genre, year, minimum rating and sort each change the list through discover</td>
+<td>1, 2, 3, 4</td>
+</tr>
+<tr>
+<td>Active filters and result count are visible text on both platforms</td>
+<td>4 (+ Step 3 on both platforms)</td>
+</tr>
+<tr>
+<td>Chip selected state on Android and iOS recorded on the PRD</td>
+<td>4 Step 3</td>
+</tr>
+<tr>
+<td>Filter state is a pure value with unit tests for its query and text</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Long-settled combinations; a no-result filter shows the empty message</td>
+<td>5</td>
+</tr>
+<tr>
+<td>No UI test dependency</td>
+<td>existing guard</td>
+</tr>
+<tr>
+<td>Scenarios pass <code>validate --strict</code>, mechanical only, no OS id</td>
+<td>existing guard, 5</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/sh3lan93/mobile-automator" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+    
+  </body>
+</html>
