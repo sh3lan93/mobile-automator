@@ -6,14 +6,3 @@ interface KeyValueStorage {
     fun putString(key: String, value: String)
     fun remove(key: String)
 }
-
-/** For tests only; the apps persist through their platform storage. */
-class InMemoryKeyValueStorage : KeyValueStorage {
-    private val entries = mutableMapOf<String, String>()
-
-    fun keys(): Set<String> = entries.keys.toSet()
-
-    override fun getString(key: String): String? = entries[key]
-    override fun putString(key: String, value: String) { entries[key] = value }
-    override fun remove(key: String) { entries.remove(key) }
-}
