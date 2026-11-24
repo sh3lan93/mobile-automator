@@ -15,7 +15,6 @@ class StoredValue<T> internal constructor(
     private val default: T,
     private val codec: Codec<T>,
     private val storage: KeyValueStorage,
-    private val onChange: () -> Unit,
 ) {
     // A stored string that does not decode (corrupt or from another version) reads as the default.
     private val state = MutableStateFlow(storage.getString(key)?.let(codec.decode) ?: default)
@@ -25,13 +24,11 @@ class StoredValue<T> internal constructor(
         val encoded = codec.encode(newValue)
         if (encoded == null) storage.remove(key) else storage.putString(key, encoded)
         state.value = newValue
-        onChange()
     }
 
     internal fun clear() {
         storage.remove(key)
         state.value = default
-        onChange()
     }
 }
 
@@ -46,17 +43,11 @@ class LocalStore(private val storage: KeyValueStorage) {
     val simulateOffline = boolean("simulate_offline")
     val simulateServerError = boolean("simulate_server_error")
 
-    private val _simulation = MutableStateFlow(currentSimulation())
-    val simulation: StateFlow<Simulation> = _simulation.asStateFlow()
+    /** The switches as the client reads them before each request; a snapshot, never a second copy of state. */
+    fun simulation() = Simulation(simulateOffline.value.value, simulateServerError.value.value)
 
     /** Removes every registered key; every value is back to its default. */
     fun reset() = registry.forEach { it.clear() }
-
-    private fun currentSimulation() = Simulation(simulateOffline.value.value, simulateServerError.value.value)
-
-    private fun onValueChanged() {
-        _simulation.value = currentSimulation()
-    }
 
     private fun boolean(key: String, default: Boolean = false) =
         register(key, default, Codec({ it.toString() }, String::toBooleanStrictOrNull))
@@ -72,7 +63,7 @@ class LocalStore(private val storage: KeyValueStorage) {
     )
 
     private fun <T> register(key: String, default: T, codec: Codec<T>) =
-        StoredValue("$KEY_PREFIX$key", default, codec, storage, ::onValueChanged).also { registry += it }
+        StoredValue("$KEY_PREFIX$key", default, codec, storage).also { registry += it }
 
     private companion object {
         const val KEY_PREFIX = "reel_tracker."

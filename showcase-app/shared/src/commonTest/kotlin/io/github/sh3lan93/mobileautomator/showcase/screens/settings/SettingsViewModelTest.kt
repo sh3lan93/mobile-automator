@@ -15,29 +15,29 @@ class SettingsViewModelTest {
 
     @Test
     fun startsWithBothSwitchesOff() {
-        assertEquals(Simulation(), vm.simulation.value)
+        assertEquals(Simulation(), vm.switches())
     }
 
     @Test
     fun setSimulateOffline_updatesSimulation() {
         vm.setSimulateOffline(true)
-        assertEquals(Simulation(offline = true), vm.simulation.value)
+        assertEquals(Simulation(offline = true), vm.switches())
         vm.setSimulateOffline(false)
-        assertEquals(Simulation(), vm.simulation.value)
+        assertEquals(Simulation(), vm.switches())
     }
 
     @Test
     fun setSimulateServerError_updatesSimulation() {
         vm.setSimulateServerError(true)
-        assertEquals(Simulation(serverError = true), vm.simulation.value)
+        assertEquals(Simulation(serverError = true), vm.switches())
         vm.setSimulateServerError(false)
-        assertEquals(Simulation(), vm.simulation.value)
+        assertEquals(Simulation(), vm.switches())
     }
 
     @Test
     fun toggling_persistsToTheStore() {
         vm.setSimulateOffline(true)
-        assertEquals(Simulation(offline = true), LocalStore(storage).simulation.value)
+        assertEquals(Simulation(offline = true), LocalStore(storage).simulation())
     }
 
     @Test
@@ -45,8 +45,10 @@ class SettingsViewModelTest {
         vm.setSimulateOffline(true)
         vm.setSimulateServerError(true)
         vm.resetAppData()
-        assertEquals(Simulation(), vm.simulation.value)
+        assertEquals(Simulation(), vm.switches())
         assertTrue(storage.keys().isEmpty(), "storage still holds ${storage.keys()}")
-        assertEquals(Simulation(), LocalStore(storage).simulation.value)
+        assertEquals(Simulation(), LocalStore(storage).simulation())
     }
+
+    private fun SettingsViewModel.switches() = Simulation(simulateOffline.value, simulateServerError.value)
 }

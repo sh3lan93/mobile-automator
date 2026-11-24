@@ -43,7 +43,7 @@ class LocalStoreTest {
         store.reset()
         assertFalse(store.simulateOffline.value.value)
         assertFalse(store.simulateServerError.value.value)
-        assertEquals(Simulation(), store.simulation.value)
+        assertEquals(Simulation(), store.simulation())
         assertTrue(storage.keys().none { it.startsWith("reel_tracker.") })
     }
 
@@ -69,10 +69,10 @@ class LocalStoreTest {
     fun simulation_combinesBothSwitches() {
         val store = LocalStore(storage)
         store.simulateOffline.set(true)
-        assertEquals(Simulation(offline = true, serverError = false), store.simulation.value)
+        assertEquals(Simulation(offline = true, serverError = false), store.simulation())
         store.simulateServerError.set(true)
-        assertEquals(Simulation(offline = true, serverError = true), store.simulation.value)
+        assertEquals(Simulation(offline = true, serverError = true), store.simulation())
         store.simulateOffline.set(false)
-        assertEquals(Simulation(offline = false, serverError = true), store.simulation.value)
+        assertEquals(Simulation(offline = false, serverError = true), store.simulation())
     }
 }

@@ -1,14 +1,15 @@
 package io.github.sh3lan93.mobileautomator.showcase.screens.settings
 
 import androidx.lifecycle.ViewModel
-import io.github.sh3lan93.mobileautomator.showcase.data.Simulation
 import io.github.sh3lan93.mobileautomator.showcase.store.LocalStore
 import kotlinx.coroutines.flow.StateFlow
 
 /** The simulation switches and Reset app data; all state lives in [LocalStore]. */
 class SettingsViewModel(private val store: LocalStore) : ViewModel() {
 
-    val simulation: StateFlow<Simulation> = store.simulation
+    val simulateOffline: StateFlow<Boolean> = store.simulateOffline.value
+
+    val simulateServerError: StateFlow<Boolean> = store.simulateServerError.value
 
     fun setSimulateOffline(on: Boolean) = store.simulateOffline.set(on)
 

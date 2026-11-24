@@ -30,7 +30,8 @@ import org.koin.compose.viewmodel.koinViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(onBack: () -> Unit, onReset: () -> Unit, viewModel: SettingsViewModel = koinViewModel()) {
-    val simulation by viewModel.simulation.collectAsStateWithLifecycle()
+    val offline by viewModel.simulateOffline.collectAsStateWithLifecycle()
+    val serverError by viewModel.simulateServerError.collectAsStateWithLifecycle()
     Scaffold(
         topBar = {
             TopAppBar(
@@ -55,14 +56,14 @@ fun SettingsScreen(onBack: () -> Unit, onReset: () -> Unit, viewModel: SettingsV
             // Each row states its own on/off in text, so scenarios assert the words, never the switch state.
             SwitchRow(
                 label = "Simulate offline",
-                status = if (simulation.offline) "Offline simulation is on" else "Offline simulation is off",
-                checked = simulation.offline,
+                status = if (offline) "Offline simulation is on" else "Offline simulation is off",
+                checked = offline,
                 onCheckedChange = viewModel::setSimulateOffline,
             )
             SwitchRow(
                 label = "Simulate server error",
-                status = if (simulation.serverError) "Server error simulation is on" else "Server error simulation is off",
-                checked = simulation.serverError,
+                status = if (serverError) "Server error simulation is on" else "Server error simulation is off",
+                checked = serverError,
                 onCheckedChange = viewModel::setSimulateServerError,
             )
             Column(

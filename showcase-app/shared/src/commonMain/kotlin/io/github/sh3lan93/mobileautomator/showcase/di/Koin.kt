@@ -27,7 +27,7 @@ val appModule = module {
     single { LocalStore(get()) }
     single<TmdbClient> {
         val store = get<LocalStore>()
-        KtorTmdbClient(get(), TMDB_API_KEY) { store.simulation.value }
+        KtorTmdbClient(get(), TMDB_API_KEY) { store.simulation() }
     }
     viewModelOf(::PopularViewModel)
     viewModelOf(::SettingsViewModel)
