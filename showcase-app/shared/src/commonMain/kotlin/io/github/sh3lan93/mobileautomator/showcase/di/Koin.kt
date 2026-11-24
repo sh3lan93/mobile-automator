@@ -7,6 +7,7 @@ import io.github.sh3lan93.mobileautomator.showcase.data.TmdbClient
 import io.github.sh3lan93.mobileautomator.showcase.screens.details.DetailsViewModel
 import io.github.sh3lan93.mobileautomator.showcase.screens.details.RatingViewModel
 import io.github.sh3lan93.mobileautomator.showcase.screens.popular.PopularViewModel
+import io.github.sh3lan93.mobileautomator.showcase.screens.ratings.MyRatingsViewModel
 import io.github.sh3lan93.mobileautomator.showcase.screens.search.SearchViewModel
 import io.github.sh3lan93.mobileautomator.showcase.screens.settings.SettingsViewModel
 import io.github.sh3lan93.mobileautomator.showcase.store.LocalStore
@@ -41,6 +42,7 @@ val appModule = module {
     viewModel { (id: Int) -> DetailsViewModel(id, get()) }
     viewModel { (id: Int) -> RatingViewModel(id, get()) }
     viewModelOf(::SettingsViewModel)
+    viewModelOf(::MyRatingsViewModel)
 }
 
 /**

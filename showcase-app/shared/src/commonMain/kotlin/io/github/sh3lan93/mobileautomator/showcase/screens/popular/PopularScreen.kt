@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -29,6 +30,7 @@ fun PopularScreen(
     onSettings: () -> Unit,
     onAbout: () -> Unit,
     onOpen: (Int) -> Unit,
+    onRatings: () -> Unit,
     viewModel: PopularViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -41,6 +43,9 @@ fun PopularScreen(
                     // Reloads the list, so a scenario can trigger a load right after turning a switch on.
                     IconButton(onClick = viewModel::retry) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                    }
+                    IconButton(onClick = onRatings) {
+                        Icon(Icons.Default.Star, contentDescription = "My ratings")
                     }
                     TextButton(onClick = onSettings) { Text("Settings") }
                     TextButton(onClick = onAbout) { Text("About") }

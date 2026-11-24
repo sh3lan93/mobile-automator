@@ -23,9 +23,18 @@ import io.github.sh3lan93.mobileautomator.showcase.data.Movie
 /** The count line both list screens show: `1 film`, `<n> films`. */
 fun filmCount(n: Int): String = if (n == 1) "1 film" else "$n films"
 
-/** A count line ([countLine]) above one clickable row per film; a row opens the film by id. */
+/**
+ * A count line ([countLine]) above one clickable row per film; a row opens the film by id.
+ * Each row's second line is [supporting] (the release year unless a screen says otherwise).
+ */
 @Composable
-fun MovieList(movies: List<Movie>, countLine: String, onOpen: (Int) -> Unit, modifier: Modifier = Modifier) {
+fun MovieList(
+    movies: List<Movie>,
+    countLine: String,
+    onOpen: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    supporting: (Movie) -> String? = { it.releaseYear },
+) {
     LazyColumn(modifier = modifier) {
         item {
             Text(
@@ -35,14 +44,14 @@ fun MovieList(movies: List<Movie>, countLine: String, onOpen: (Int) -> Unit, mod
             )
         }
         items(movies, key = { it.id }) { movie ->
-            MovieRow(movie, onClick = { onOpen(movie.id) })
+            MovieRow(movie, onClick = { onOpen(movie.id) }, supporting = supporting)
             HorizontalDivider()
         }
     }
 }
 
 @Composable
-private fun MovieRow(movie: Movie, onClick: () -> Unit) {
+private fun MovieRow(movie: Movie, onClick: () -> Unit, supporting: (Movie) -> String? = { it.releaseYear }) {
     Row(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -56,8 +65,8 @@ private fun MovieRow(movie: Movie, onClick: () -> Unit) {
         )
         Column {
             Text(movie.title, style = MaterialTheme.typography.titleMedium)
-            // A film with no release date shows no year line at all.
-            movie.releaseYear?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+            // No supporting text (a film with no release date) shows no second line at all.
+            supporting(movie)?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
         }
     }
 }
