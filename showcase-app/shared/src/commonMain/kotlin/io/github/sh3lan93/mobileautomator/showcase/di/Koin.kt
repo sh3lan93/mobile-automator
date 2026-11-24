@@ -4,6 +4,7 @@ import io.github.sh3lan93.mobileautomator.showcase.TMDB_API_KEY
 import io.github.sh3lan93.mobileautomator.showcase.data.KtorTmdbClient
 import io.github.sh3lan93.mobileautomator.showcase.data.TmdbClient
 import io.github.sh3lan93.mobileautomator.showcase.screens.popular.PopularViewModel
+import io.github.sh3lan93.mobileautomator.showcase.screens.settings.SettingsViewModel
 import io.github.sh3lan93.mobileautomator.showcase.store.LocalStore
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -29,6 +30,7 @@ val appModule = module {
         KtorTmdbClient(get(), TMDB_API_KEY) { store.simulation.value }
     }
     viewModelOf(::PopularViewModel)
+    viewModelOf(::SettingsViewModel)
 }
 
 /** [platformModule] provides the platform's `KeyValueStorage`; it is required so no platform can forget it. */

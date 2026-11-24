@@ -11,9 +11,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import io.github.sh3lan93.mobileautomator.showcase.screens.about.AboutScreen
 import io.github.sh3lan93.mobileautomator.showcase.screens.popular.PopularScreen
+import io.github.sh3lan93.mobileautomator.showcase.screens.settings.SettingsScreen
 
 private const val ROUTE_POPULAR = "popular"
 private const val ROUTE_ABOUT = "about"
+private const val ROUTE_SETTINGS = "settings"
 
 @Composable
 fun App() {
@@ -24,7 +26,22 @@ fun App() {
             val navController = rememberNavController()
             NavHost(navController = navController, startDestination = ROUTE_POPULAR) {
                 composable(ROUTE_POPULAR) {
-                    PopularScreen(onAbout = { navController.navigate(ROUTE_ABOUT) })
+                    PopularScreen(
+                        onSettings = { navController.navigate(ROUTE_SETTINGS) },
+                        onAbout = { navController.navigate(ROUTE_ABOUT) },
+                    )
+                }
+                composable(ROUTE_SETTINGS) {
+                    SettingsScreen(
+                        onBack = { navController.popBackStack() },
+                        // Clearing the whole back stack recreates every screen's view model, so nothing
+                        // shown before the reset survives it: the app is back at its first-launch state.
+                        onReset = {
+                            navController.navigate(ROUTE_POPULAR) {
+                                popUpTo(navController.graph.id) { inclusive = true }
+                            }
+                        },
+                    )
                 }
                 composable(ROUTE_ABOUT) {
                     AboutScreen(onBack = { navController.popBackStack() })

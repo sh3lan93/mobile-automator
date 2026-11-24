@@ -9,10 +9,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -33,13 +37,24 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PopularScreen(onAbout: () -> Unit, viewModel: PopularViewModel = koinViewModel()) {
+fun PopularScreen(
+    onSettings: () -> Unit,
+    onAbout: () -> Unit,
+    viewModel: PopularViewModel = koinViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Popular films") },
-                actions = { TextButton(onClick = onAbout) { Text("About") } },
+                actions = {
+                    // Reloads the list, so a scenario can trigger a load right after turning a switch on.
+                    IconButton(onClick = viewModel::retry) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                    }
+                    TextButton(onClick = onSettings) { Text("Settings") }
+                    TextButton(onClick = onAbout) { Text("About") }
+                },
             )
         },
     ) { padding ->
