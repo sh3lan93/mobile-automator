@@ -45,8 +45,9 @@ fun PopularScreen(
                 Text("Loading films…")
             }
             PopularUiState.Empty -> Centered(modifier) { Text("No films found") }
-            // The popular count is the films listed (one page).
-            is PopularUiState.Loaded -> MovieList(s.movies, filmCount(s.movies.size), onOpen, modifier)
+            PopularUiState.NoMatches -> Centered(modifier) { Text("No films match this combination") }
+            // The films listed for the popular list (one page); TMDB's total for a discover call.
+            is PopularUiState.Loaded -> MovieList(s.movies, filmCount(s.count), onOpen, modifier)
             is PopularUiState.Failed -> FailureContent(s.failure, viewModel::retry, modifier)
         }
     }
