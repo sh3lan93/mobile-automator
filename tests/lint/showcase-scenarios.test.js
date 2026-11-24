@@ -16,7 +16,7 @@
 //   4. every scenario launches the id both platforms build, and the Android
 //      applicationId and iOS bundle id are the same string;
 //   5. no scenario target or expected value is a Compose testTag literal;
-//   6. no target or expected value after a `type` step is contained in the
+//   6. no target, expected value or pattern after a `type` step matches the
 //      text typed before it (see typedTextOffenders);
 //   7. the showcase declares no UI test dependency or UI test source set.
 
@@ -28,7 +28,7 @@ const { OS_ID_TOKEN, targetValues, patternValues } = require('./scenario-targets
 const { ScenarioValidator } = require('../../src/scenario/validator');
 const { loadScenario } = require('../../src/scenario/load');
 const { flattenSteps } = require('../../src/scenario/steps');
-const { MECHANICAL_TYPES } = require('../../src/assertion/evaluator');
+const { MECHANICAL_TYPES, matches } = require('../../src/assertion/evaluator');
 
 const APP = 'showcase-app';
 const SCENARIOS = `${APP}/scenarios/`;
@@ -144,8 +144,8 @@ describe('showcase scenarios — on-screen strings, not testTags', () => {
   });
 });
 
-// The CLI matches a target as a case-insensitive substring of an element's
-// text or label, and a regex field (`target_pattern`, `pattern`) by testing it
+// The CLI matches a target against an element's text or label (`matches`),
+// and a regex field (`target_pattern`, `pattern`) by testing it
 // against the element's text. Android exposes a text field's typed text as the
 // field's text while iOS does not, so a target the typed text contains, or a
 // pattern the typed text matches, would hit the text field itself on Android
@@ -163,35 +163,29 @@ function typedTextOffenders(scenario) {
   const typed = steps
     .map((s, i) => ({ i, id: s.id, action: s.action, value: s.value }))
     .filter((t) => t.action === 'type' && typeof t.value === 'string' && t.value.trim() !== '');
-  // How each kind of value matches a typed string, the way the CLI matches it
-  // against element text (src/assertion/evaluator.js, src/run/resolve.js).
-  const substring = (value) => {
-    const needle = value.trim().toLowerCase();
-    return needle === '' ? null : { hits: (text) => text.toLowerCase().includes(needle), verb: 'is contained in' };
-  };
-  const regex = (value) => {
-    if (value === '') return null;
-    const re = new RegExp(value);
-    return { hits: (text) => re.test(text), verb: 'matches' };
-  };
+  // Targets go through the CLI's own matcher (`matches`, the one
+  // src/run/resolve.js is given), against an element whose text is what was
+  // typed: exactly what the Android text field shows. Patterns are compiled as
+  // the runner and the evaluator compile them. `matches` treats an empty
+  // target as matching everything, which is right for an assertion scope and
+  // meaningless here, so empty values are skipped.
   const values = [
-    ...targetValues(scenario).map((v) => ({ ...v, matcher: substring })),
-    ...patternValues(scenario).map((v) => ({ ...v, matcher: regex })),
+    ...targetValues(scenario).map((v) => ({ ...v, verb: 'is matched by', hits: (text) => matches({ text }, v.value) })),
+    ...patternValues(scenario).map((v) => ({ ...v, verb: 'matches', hits: (text) => new RegExp(v.value).test(text) })),
   ];
   const offenders = [];
-  for (const { where, value, kind, step, matcher } of values) {
+  for (const { where, value, kind, step, verb, hits } of values) {
     const at = order.get(step);
     if (at === undefined) {
       offenders.push(`${where}: anchored to step ${JSON.stringify(step)}, which the scenario does not have`);
       continue;
     }
-    const m = matcher(value);
-    if (!m) continue;
+    if (value === '') continue;
     // A step runs after type steps before it; an assertion runs after its
     // after_step, so a type step at that same index is already done.
     for (const t of typed.filter((earlier) => (kind === 'assertion' ? earlier.i <= at : earlier.i < at))) {
-      if (m.hits(t.value)) {
-        offenders.push(`${where}: ${JSON.stringify(value)} ${m.verb} the text typed by step ${t.id} (${JSON.stringify(t.value)})`);
+      if (hits(t.value)) {
+        offenders.push(`${where}: ${JSON.stringify(value)} ${verb} the text typed by step ${t.id} (${JSON.stringify(t.value)})`);
       }
     }
   }
