@@ -1,8 +1,9 @@
 package io.github.sh3lan93.mobileautomator.showcase.screens.search
 
+import io.github.sh3lan93.mobileautomator.showcase.data.FakeTmdbClient
 import io.github.sh3lan93.mobileautomator.showcase.data.Movie
 import io.github.sh3lan93.mobileautomator.showcase.data.SearchPage
-import io.github.sh3lan93.mobileautomator.showcase.data.TmdbClient
+import io.github.sh3lan93.mobileautomator.showcase.data.TmdbCall
 import io.github.sh3lan93.mobileautomator.showcase.data.TmdbFailure
 import io.github.sh3lan93.mobileautomator.showcase.data.TmdbResult
 import kotlinx.coroutines.CompletableDeferred
@@ -24,26 +25,21 @@ import kotlin.test.assertEquals
 @OptIn(ExperimentalCoroutinesApi::class)
 class SearchViewModelTest {
 
-    /** Records every query. A query with a gate suspends until the test completes it. */
-    private class FakeTmdbClient : TmdbClient {
-        val queries = mutableListOf<String>()
-        val responses = mutableMapOf<String, TmdbResult<SearchPage>>()
-        val gates = mutableMapOf<String, CompletableDeferred<Unit>>()
-        var next: TmdbResult<SearchPage> = TmdbResult.Ok(SearchPage(emptyList(), 0))
+    /**
+     * A search client: a query in [responses] answers that, any other [otherwise]. A query with a
+     * gate suspends until the test completes it.
+     */
+    private fun fake(
+        responses: Map<String, TmdbResult<SearchPage>> = emptyMap(),
+        gates: Map<String, CompletableDeferred<Unit>> = emptyMap(),
+        otherwise: TmdbResult<SearchPage> = TmdbResult.Ok(SearchPage(emptyList(), 0)),
+    ) = FakeTmdbClient(onSearchMovies = { query ->
+        gates[query]?.await()
+        responses[query] ?: otherwise
+    })
 
-        override suspend fun searchMovies(query: String): TmdbResult<SearchPage> {
-            queries += query
-            gates[query]?.await()
-            return responses[query] ?: next
-        }
-
-        override suspend fun popularMovies() = error("not used")
-        override suspend fun movieDetails(id: Int) = error("not used")
-        override suspend fun createGuestSession() = error("not used")
-        override suspend fun rateMovie(sessionId: String, movieId: Int, value: Double) = error("not used")
-        override suspend fun removeRating(sessionId: String, movieId: Int) = error("not used")
-        override suspend fun ratedMovies(sessionId: String) = error("not used")
-    }
+    /** Every query searched, in order. */
+    private val FakeTmdbClient.queries: List<String> get() = calls.map { (it as TmdbCall.Search).query }
 
     private val dispatcher = StandardTestDispatcher()
     private val shawshank = Movie(278, "The Shawshank Redemption", "1994", null)
@@ -65,7 +61,7 @@ class SearchViewModelTest {
 
     @Test
     fun startsIdle_noRequest() = runTest(dispatcher) {
-        val client = FakeTmdbClient()
+        val client = fake()
         val vm = SearchViewModel(client)
         advanceUntilIdle()
         assertEquals(SearchUiState.Idle, vm.state.value)
@@ -75,10 +71,8 @@ class SearchViewModelTest {
 
     @Test
     fun typing_searchesAfterDebounce() = runTest(dispatcher) {
-        val client = FakeTmdbClient().apply {
-            responses["Shawshank"] = shawshankPage
-            gates["Shawshank"] = CompletableDeferred()
-        }
+        val gate = CompletableDeferred<Unit>()
+        val client = fake(responses = mapOf("Shawshank" to shawshankPage), gates = mapOf("Shawshank" to gate))
         val vm = SearchViewModel(client)
         vm.onQueryChange("Shawshank")
         assertEquals("Shawshank", vm.query.value)
@@ -92,14 +86,14 @@ class SearchViewModelTest {
         assertEquals(listOf("Shawshank"), client.queries)
         assertEquals(SearchUiState.Searching, vm.state.value)
 
-        client.gates.getValue("Shawshank").complete(Unit)
+        gate.complete(Unit)
         advanceUntilIdle()
         assertEquals(SearchUiState.Results(listOf(shawshank), 3), vm.state.value)
     }
 
     @Test
     fun fastTyping_searchesOnlyTheLastQuery() = runTest(dispatcher) {
-        val client = FakeTmdbClient().apply { responses["Shawshank"] = shawshankPage }
+        val client = fake(responses = mapOf("Shawshank" to shawshankPage))
         val vm = SearchViewModel(client)
         vm.onQueryChange("S")
         advanceTimeBy(100)
@@ -114,11 +108,10 @@ class SearchViewModelTest {
     @Test
     fun slowEarlierResponse_doesNotOverwriteLaterQuery() = runTest(dispatcher) {
         val slowMatrix = CompletableDeferred<Unit>()
-        val client = FakeTmdbClient().apply {
-            responses["Matrix"] = matrixPage
-            responses["Shawshank"] = shawshankPage
-            gates["Matrix"] = slowMatrix
-        }
+        val client = fake(
+            responses = mapOf("Matrix" to matrixPage, "Shawshank" to shawshankPage),
+            gates = mapOf("Matrix" to slowMatrix),
+        )
         val vm = SearchViewModel(client)
         vm.onQueryChange("Matrix")
         passDebounce()
@@ -137,7 +130,7 @@ class SearchViewModelTest {
 
     @Test
     fun blankOrSpacesQuery_isIdle_noRequest() = runTest(dispatcher) {
-        val client = FakeTmdbClient().apply { responses["Shawshank"] = shawshankPage }
+        val client = fake(responses = mapOf("Shawshank" to shawshankPage))
         val vm = SearchViewModel(client)
         for (text in listOf("", "   ")) {
             vm.onQueryChange(text)
@@ -160,10 +153,7 @@ class SearchViewModelTest {
     @Test
     fun clearingDuringPendingOrInFlightSearch_staysIdle() = runTest(dispatcher) {
         val inFlight = CompletableDeferred<Unit>()
-        val client = FakeTmdbClient().apply {
-            responses["Shawshank"] = shawshankPage
-            gates["Shawshank"] = inFlight
-        }
+        val client = fake(responses = mapOf("Shawshank" to shawshankPage), gates = mapOf("Shawshank" to inFlight))
         val vm = SearchViewModel(client)
 
         vm.onQueryChange("Shaw") // cleared before the debounce fires
@@ -183,7 +173,7 @@ class SearchViewModelTest {
 
     @Test
     fun queryIsTrimmed() = runTest(dispatcher) {
-        val client = FakeTmdbClient().apply { responses["Shawshank"] = shawshankPage }
+        val client = fake(responses = mapOf("Shawshank" to shawshankPage))
         val vm = SearchViewModel(client)
         vm.onQueryChange("  Shawshank  ")
         advanceUntilIdle()
@@ -194,7 +184,7 @@ class SearchViewModelTest {
 
     @Test
     fun emptyResult_isNoMatches() = runTest(dispatcher) {
-        val client = FakeTmdbClient().apply { next = TmdbResult.Ok(SearchPage(emptyList(), 4)) }
+        val client = fake(otherwise = TmdbResult.Ok(SearchPage(emptyList(), 4)))
         val vm = SearchViewModel(client)
         vm.onQueryChange("xqzvbnmkw")
         advanceUntilIdle()
@@ -204,7 +194,7 @@ class SearchViewModelTest {
     @Test
     fun failure_isFailed() = runTest(dispatcher) {
         for (failure in TmdbFailure.entries) {
-            val client = FakeTmdbClient().apply { next = TmdbResult.Failed(failure) }
+            val client = fake(otherwise = TmdbResult.Failed(failure))
             val vm = SearchViewModel(client)
             vm.onQueryChange("Shawshank")
             advanceUntilIdle()
@@ -214,13 +204,13 @@ class SearchViewModelTest {
 
     @Test
     fun retry_rerunsCurrentQuery() = runTest(dispatcher) {
-        val client = FakeTmdbClient().apply { next = TmdbResult.Failed(TmdbFailure.NoConnection) }
+        val client = fake(otherwise = TmdbResult.Failed(TmdbFailure.NoConnection))
         val vm = SearchViewModel(client)
         vm.onQueryChange(" Shawshank ")
         advanceUntilIdle()
         assertEquals(SearchUiState.Failed(TmdbFailure.NoConnection), vm.state.value)
 
-        client.next = shawshankPage
+        client.onSearchMovies = { shawshankPage }
         vm.retry()
         runCurrent() // now: no debounce on retry
         assertEquals(listOf("Shawshank", "Shawshank"), client.queries)

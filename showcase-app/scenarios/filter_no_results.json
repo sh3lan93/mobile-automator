@@ -1,0 +1,229 @@
+{
+  "$schema_version": "2.1",
+  "scenario_id": "filter_no_results",
+  "name": "Filter with no matching films, then clear",
+  "description": "Launches Reel Tracker, resets app data, opens Filters and picks 9+, 1931 and Animation, a combination no film has ever matched, checks the no-match message and the active filters, then clears the filters and checks the full list is back. Needs a configured TMDB key (showcase-app/tmdb.properties): without one the app shows the add-your-key screen and no filter call runs.",
+  "platform": "cross-platform",
+  "app_package": "io.github.sh3lan93.mobileautomator.showcase",
+  "mode": "platform-agnostic",
+  "metadata": {
+    "app_version": "debug",
+    "environment": "local"
+  },
+  "tags": [
+    "showcase",
+    "filters"
+  ],
+  "steps": [
+    {
+      "id": "launch",
+      "action": "launch_app",
+      "description": "Launch Reel Tracker"
+    },
+    {
+      "id": "wait_list",
+      "action": "wait_for_element",
+      "description": "Wait for the popular films screen title",
+      "target": "Popular films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 30000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_settings",
+      "action": "tap",
+      "description": "Open the Settings screen",
+      "target": "Settings",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "wait_settings",
+      "action": "wait_for_element",
+      "description": "Wait for the Reset app data button on the Settings screen",
+      "target": "Reset app data",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "reset",
+      "action": "tap",
+      "description": "Reset app data, which clears everything the app saved and returns to the start",
+      "target": "Reset app data"
+    },
+    {
+      "id": "wait_reset",
+      "action": "wait_for_element",
+      "description": "Wait for the popular films screen after the reset",
+      "target": "Popular films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 30000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "reset_loaded",
+      "action": "wait_for_element_gone",
+      "description": "Wait for the fresh list to finish loading (the title shows while it loads)",
+      "target": "Loading films…",
+      "wait_config": {
+        "type": "element_gone",
+        "timeout_ms": 30000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_filters",
+      "action": "tap",
+      "description": "Open the Filters screen",
+      "target": "Filters",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "wait_filters",
+      "action": "wait_for_element",
+      "description": "Wait for the Filters screen",
+      "target": "Minimum rating",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 15000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "rating_9",
+      "action": "tap",
+      "description": "Require a rating of 9 or more",
+      "target": "9+"
+    },
+    {
+      "id": "decade_1930s",
+      "action": "tap",
+      "description": "Open the 1930s years",
+      "target": "'30s"
+    },
+    {
+      "id": "year_1931",
+      "action": "tap",
+      "description": "Pick 1931",
+      "target": "1931"
+    },
+    {
+      "id": "wait_genres",
+      "action": "wait_for_element",
+      "description": "Wait for the genre list to load",
+      "target": "Animation",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 15000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "genre_animation",
+      "action": "tap",
+      "description": "Pick the Animation genre",
+      "target": "Animation"
+    },
+    {
+      "id": "done",
+      "action": "tap",
+      "description": "Back to the film list",
+      "target": "Done"
+    },
+    {
+      "id": "wait_empty",
+      "action": "wait_for_element",
+      "description": "Wait for the no-match message",
+      "target": "No films match this combination",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 15000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_filters_again",
+      "action": "tap",
+      "description": "Open the Filters screen again",
+      "target": "Filters"
+    },
+    {
+      "id": "wait_filters_again",
+      "action": "wait_for_element",
+      "description": "Wait for the Filters screen",
+      "target": "Minimum rating",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 15000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "clear",
+      "action": "tap",
+      "description": "Clear every filter",
+      "target": "Clear"
+    },
+    {
+      "id": "done_again",
+      "action": "tap",
+      "description": "Back to the film list",
+      "target": "Done"
+    },
+    {
+      "id": "wait_all",
+      "action": "wait_for_element",
+      "description": "Wait for the no-filters line",
+      "target": "All films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 15000
+      },
+      "on_failure": "fail"
+    }
+  ],
+  "assertions": [
+    {
+      "id": "no_match_shown",
+      "after_step": "wait_empty",
+      "type": "element_visible",
+      "description": "The no-match message is shown",
+      "element_description": "No films match this combination"
+    },
+    {
+      "id": "filters_shown",
+      "after_step": "wait_empty",
+      "type": "element_visible",
+      "description": "The active filters are shown as text",
+      "element_description": "Animation · 1931 · Rated 9+"
+    },
+    {
+      "id": "count_back",
+      "after_step": "wait_all",
+      "type": "pattern_match",
+      "description": "The film-count line is back, which proves clearing reloaded the list",
+      "pattern": "^\\d+ films$"
+    },
+    {
+      "id": "no_match_gone",
+      "after_step": "wait_all",
+      "type": "element_not_exists",
+      "description": "The no-match message is gone",
+      "element_description": "No films match this combination"
+    }
+  ]
+}

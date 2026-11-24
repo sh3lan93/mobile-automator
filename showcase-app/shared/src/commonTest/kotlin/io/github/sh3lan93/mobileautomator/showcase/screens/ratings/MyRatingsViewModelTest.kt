@@ -36,6 +36,8 @@ class MyRatingsViewModelTest {
         override suspend fun popularMovies() = error("not used")
         override suspend fun searchMovies(query: String) = error("not used")
         override suspend fun movieDetails(id: Int) = error("not used")
+        override suspend fun discoverMovies(query: Map<String, String>) = error("not used")
+        override suspend fun movieGenres() = error("not used")
         override suspend fun createGuestSession() = error("not used")
         override suspend fun rateMovie(sessionId: String, movieId: Int, value: Double) = error("not used")
         override suspend fun removeRating(sessionId: String, movieId: Int) = error("not used")

@@ -6,6 +6,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -13,14 +14,17 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import io.github.sh3lan93.mobileautomator.showcase.screens.about.AboutScreen
 import io.github.sh3lan93.mobileautomator.showcase.screens.details.DetailsScreen
+import io.github.sh3lan93.mobileautomator.showcase.screens.filters.FiltersScreen
 import io.github.sh3lan93.mobileautomator.showcase.screens.popular.PopularScreen
 import io.github.sh3lan93.mobileautomator.showcase.screens.ratings.MyRatingsScreen
 import io.github.sh3lan93.mobileautomator.showcase.screens.search.SearchScreen
+import org.koin.compose.viewmodel.koinViewModel
 import io.github.sh3lan93.mobileautomator.showcase.screens.settings.SettingsScreen
 
 private const val ROUTE_POPULAR = "popular"
 private const val ROUTE_ABOUT = "about"
 private const val ROUTE_SEARCH = "search"
+private const val ROUTE_FILTERS = "filters"
 private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_RATINGS = "ratings"
 private const val ARG_MOVIE_ID = "movieId"
@@ -43,12 +47,21 @@ fun App() {
                         onAbout = { navController.navigate(ROUTE_ABOUT) },
                         onOpen = { id -> navController.navigate(detailsRoute(id)) },
                         onRatings = { navController.navigate(ROUTE_RATINGS) },
+                        onFilters = { navController.navigate(ROUTE_FILTERS) },
                     )
                 }
                 composable(ROUTE_RATINGS) {
                     MyRatingsScreen(
                         onBack = { navController.popBackStack() },
                         onOpen = { id -> navController.navigate(detailsRoute(id)) },
+                    )
+                }
+                // Filters edits the list's own view model, the one scoped to the popular entry.
+                composable(ROUTE_FILTERS) { entry ->
+                    val popularEntry = remember(entry) { navController.getBackStackEntry(ROUTE_POPULAR) }
+                    FiltersScreen(
+                        onBack = { navController.popBackStack() },
+                        popularViewModel = koinViewModel(viewModelStoreOwner = popularEntry),
                     )
                 }
                 composable(ROUTE_SETTINGS) {

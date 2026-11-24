@@ -46,8 +46,7 @@ class KtorTmdbClient(
             parameter("language", "en-US")
             parameter("page", 1)
         }) { response ->
-            val page = response.body<PageDto>()
-            SearchPage(page.results.map { it.toMovie() }, page.totalResults)
+            response.body<PageDto>().toSearchPage()
         }
 
     override suspend fun movieDetails(id: Int): TmdbResult<MovieDetails> =
@@ -55,6 +54,20 @@ class KtorTmdbClient(
             parameter("language", "en-US")
         }) { response ->
             response.body<DetailsDto>().toDetails()
+        }
+
+    override suspend fun discoverMovies(query: Map<String, String>): TmdbResult<SearchPage> =
+        call("discover/movie", params = {
+            query.forEach { (name, value) -> parameter(name, value) }
+        }) { response ->
+            response.body<PageDto>().toSearchPage()
+        }
+
+    override suspend fun movieGenres(): TmdbResult<List<Genre>> =
+        call("genre/movie/list", params = {
+            parameter("language", "en-US")
+        }) { response ->
+            response.body<GenresDto>().genres.map { Genre(it.id, it.name) }
         }
 
     override suspend fun createGuestSession(): TmdbResult<String> =
@@ -188,7 +201,9 @@ class KtorTmdbClient(
     private data class PageDto(
         val results: List<MovieDto> = emptyList(),
         @SerialName("total_results") val totalResults: Int = 0,
-    )
+    ) {
+        fun toSearchPage() = SearchPage(results.map { it.toMovie() }, totalResults)
+    }
 
     @Serializable
     private data class MovieDto(
@@ -230,6 +245,12 @@ class KtorTmdbClient(
 
     @Serializable
     private data class GenreDto(val name: String)
+
+    @Serializable
+    private data class GenresDto(val genres: List<GenreListItemDto> = emptyList())
+
+    @Serializable
+    private data class GenreListItemDto(val id: Int, val name: String)
 
     private companion object {
         const val BASE_URL = "https://api.themoviedb.org/3"

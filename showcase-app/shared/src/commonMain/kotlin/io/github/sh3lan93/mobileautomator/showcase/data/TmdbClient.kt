@@ -26,4 +26,10 @@ interface TmdbClient {
     suspend fun removeRating(sessionId: String, movieId: Int): TmdbResult<GuestCall<Unit>>
     /** The session's rated films, oldest rating first; empty when it has rated none. */
     suspend fun ratedMovies(sessionId: String): TmdbResult<GuestCall<List<RatedMovie>>>
+
+    /** TMDB's discover endpoint with [query] as its parameters (see [FilterState.toDiscoverQuery]). */
+    suspend fun discoverMovies(query: Map<String, String>): TmdbResult<SearchPage>
+
+    /** TMDB's film genres, in TMDB's order. */
+    suspend fun movieGenres(): TmdbResult<List<Genre>>
 }
