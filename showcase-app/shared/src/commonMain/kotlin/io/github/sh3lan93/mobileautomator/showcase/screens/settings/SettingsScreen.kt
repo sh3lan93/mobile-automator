@@ -6,9 +6,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -26,13 +30,15 @@ import org.koin.compose.viewmodel.koinViewModel
 fun SettingsScreen(onBack: () -> Unit, onReset: () -> Unit, viewModel: SettingsViewModel = koinViewModel()) {
     val offline by viewModel.simulateOffline.collectAsStateWithLifecycle()
     val serverError by viewModel.simulateServerError.collectAsStateWithLifecycle()
+    val compactDetails by viewModel.compactDetails.collectAsStateWithLifecycle()
+    val confirmRemoval by viewModel.confirmWatchlistRemoval.collectAsStateWithLifecycle()
     Scaffold(
         topBar = {
             BackTopBar("Settings", onBack)
         },
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(vertical = 16.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
@@ -66,7 +72,64 @@ fun SettingsScreen(onBack: () -> Unit, onReset: () -> Unit, viewModel: SettingsV
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
+            // Below Reset app data, so the button every scenario taps never moves.
+            Text(
+                "Feature flags",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(horizontal = 24.dp),
+            )
+            ChoiceGroup(
+                label = "Details screen",
+                options = "Classic layout" to "Compact layout",
+                second = compactDetails,
+                status = if (compactDetails) "Details layout in use: compact" else "Details layout in use: classic",
+                onSelect = viewModel::setCompactDetails,
+            )
+            ChoiceGroup(
+                label = "Removing from the watchlist",
+                options = "Remove at once" to "Ask first",
+                second = confirmRemoval,
+                status = if (confirmRemoval) "Watchlist removal needs confirmation" else "Watchlist removal is immediate",
+                onSelect = viewModel::setConfirmWatchlistRemoval,
+            )
         }
+    }
+}
+
+/**
+ * One flag: its label, two radio-style options ([second] is whether the second one is chosen) and
+ * a status line that states the setting in words, since selected state does not reach scenarios.
+ * Choosing the option already chosen is a no-op.
+ */
+@Composable
+private fun ChoiceGroup(
+    label: String,
+    options: Pair<String, String>,
+    second: Boolean,
+    status: String,
+    onSelect: (second: Boolean) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(horizontal = 24.dp))
+        OptionRow(options.first, selected = !second) { onSelect(false) }
+        OptionRow(options.second, selected = second) { onSelect(true) }
+        Text(status, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 24.dp))
+    }
+}
+
+/** One selectable row, so tapping the option text selects it too. */
+@Composable
+private fun OptionRow(text: String, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = null)
+        Text(text, style = MaterialTheme.typography.bodyLarge)
     }
 }
 
