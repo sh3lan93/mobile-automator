@@ -29,6 +29,7 @@ const yaml = require('js-yaml');
 
 const { REPO_ROOT, shippingDocs } = require('./docs-corpus');
 const { loadWorkflow, runs } = require('./workflow-guard');
+const { fencedBlocks, section } = require('./markdown');
 
 const FAQ = 'docs/faq.md';
 const WORKFLOW_DIR = '.github/workflows';
@@ -62,50 +63,17 @@ function workflowRefs() {
   return refs;
 }
 
-// --- Fenced blocks ----------------------------------------------------------
+// --- Sections ----------------------------------------------------------------
 
 /**
- * Every fenced code block in a blob of markdown, as
- * `{ lang, startLine, lines }`; `startLine` is the 1-based line of the first
- * line inside the fence.
- */
-function fencedBlocks(text) {
-  const blocks = [];
-  let open = null;
-  text.split('\n').forEach((line, i) => {
-    const m = /^\s*(`{3,}|~{3,})\s*([\w-]*)/.exec(line);
-    if (!open) {
-      if (m) open = { fence: m[1], lang: m[2], startLine: i + 2, lines: [] };
-      return;
-    }
-    if (m && m[1][0] === open.fence[0] && m[1].length >= open.fence.length && !m[2]) {
-      blocks.push({ lang: open.lang, startLine: open.startLine, lines: open.lines });
-      open = null;
-      return;
-    }
-    open.lines.push(line);
-  });
-  return blocks;
-}
-
-/**
- * The body of one `### <heading>` answer: everything up to the next heading
- * of the same or a higher level (outside a fence). Throws when the heading is gone, so a renamed
- * question fails with its name rather than as "expected 0 to be 1".
+ * The body of one `### <heading>` answer (`section` from ./markdown). Throws
+ * when the heading is gone, so a renamed question fails with its name rather
+ * than as "expected 0 to be 1".
  */
 function answer(text, heading) {
-  const lines = text.split('\n');
-  const start = lines.findIndex((l) => l.trim() === `### ${heading}`);
-  if (start === -1) throw new Error(`${FAQ}: no "### ${heading}" answer found`);
-  const rest = lines.slice(start + 1);
-  // A `# comment` inside a fenced shell block is not a heading.
-  let fence = null;
-  const end = rest.findIndex((l) => {
-    const m = /^\s*(`{3,}|~{3,})/.exec(l);
-    if (m) fence = fence === null ? m[1][0] : fence === m[1][0] ? null : fence;
-    return fence === null && !m && /^#{1,3} /.test(l);
-  });
-  return (end === -1 ? rest : rest.slice(0, end)).join('\n');
+  const body = section(text, `### ${heading}`);
+  if (body === null) throw new Error(`${FAQ}: no "### ${heading}" answer found`);
+  return body;
 }
 
 const runsMautoWithJunit = (block) =>
