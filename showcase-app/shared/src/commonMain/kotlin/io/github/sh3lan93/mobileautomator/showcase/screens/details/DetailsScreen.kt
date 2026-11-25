@@ -7,16 +7,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -26,13 +20,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import io.github.sh3lan93.mobileautomator.showcase.data.MovieDetails
 import io.github.sh3lan93.mobileautomator.showcase.data.toMovie
+import io.github.sh3lan93.mobileautomator.showcase.screens.common.BackTopBar
 import io.github.sh3lan93.mobileautomator.showcase.screens.common.Centered
 import io.github.sh3lan93.mobileautomator.showcase.screens.common.FailureContent
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 /** One film's details; the top bar carries the film title once loaded. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetailsScreen(
     movieId: Int,
@@ -42,14 +36,7 @@ fun DetailsScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text((state as? DetailsUiState.Loaded)?.details?.title ?: "") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-            )
+            BackTopBar((state as? DetailsUiState.Loaded)?.details?.title ?: "", onBack)
         },
     ) { padding ->
         val modifier = Modifier.fillMaxSize().padding(padding)

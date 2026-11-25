@@ -18,7 +18,9 @@
 //   5. no scenario target or expected value is a Compose testTag literal;
 //   6. no target, expected value or pattern after a `type` step matches the
 //      text typed before it (see typedTextOffenders);
-//   7. the showcase declares no UI test dependency or UI test source set.
+//   7. the showcase declares no UI test dependency or UI test source set;
+//   8. no screen copies the back-arrow top bar: only screens/common/BackTopBar.kt
+//      (and PopularScreen.kt, which has no back arrow) names ArrowBack.
 
 const fs = require('fs');
 const path = require('path');
@@ -219,5 +221,23 @@ describe('showcase app — no UI test tooling', () => {
     }
     const dirs = appFiles.filter((f) => f.split('/').slice(0, -1).some(UI_TEST_DIR));
     expect({ offenders, dirs }).toEqual({ offenders: [], dirs: [] });
+  });
+});
+
+describe('showcase app — one shared back-arrow top bar', () => {
+  // The back arrow lives in screens/common/BackTopBar.kt (#311); Popular has no
+  // back arrow and keeps its own bar. A screen naming ArrowBack has copied the bar.
+  const SCREENS = `${APP_SOURCE}commonMain/`;
+  const ALLOWED = [`${SCREENS}kotlin/io/github/sh3lan93/mobileautomator/showcase/screens/common/BackTopBar.kt`,
+    `${SCREENS}kotlin/io/github/sh3lan93/mobileautomator/showcase/screens/popular/PopularScreen.kt`];
+  const sources = appFiles.filter((f) => f.startsWith(SCREENS) && f.endsWith('.kt'));
+
+  test('the shared bar exists (the rule below is not vacuous)', () => {
+    expect(sources).toEqual(expect.arrayContaining(ALLOWED));
+  });
+
+  test('no screen other than BackTopBar.kt and PopularScreen.kt names ArrowBack', () => {
+    const offenders = sources.filter((f) => !ALLOWED.includes(f) && read(f).includes('ArrowBack'));
+    expect(offenders).toEqual([]);
   });
 });

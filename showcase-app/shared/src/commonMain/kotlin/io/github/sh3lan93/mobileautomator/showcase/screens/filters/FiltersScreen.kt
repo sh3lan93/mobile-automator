@@ -10,18 +10,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -39,6 +33,7 @@ import io.github.sh3lan93.mobileautomator.showcase.data.Sort
 import io.github.sh3lan93.mobileautomator.showcase.data.decadeLabel
 import io.github.sh3lan93.mobileautomator.showcase.data.decades
 import io.github.sh3lan93.mobileautomator.showcase.data.yearsOf
+import io.github.sh3lan93.mobileautomator.showcase.screens.common.BackTopBar
 import io.github.sh3lan93.mobileautomator.showcase.screens.popular.PopularViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -48,7 +43,6 @@ import org.koin.compose.viewmodel.koinViewModel
  * a selected chip clears that choice. The active-filters text is deliberately not shown here: it
  * repeats chip labels, and a scenario tapping a label must find only the chip.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FiltersScreen(
     onBack: () -> Unit,
@@ -63,21 +57,13 @@ fun FiltersScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Filters") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    TextButton(onClick = {
-                        decade = null
-                        apply(FilterState())
-                    }) { Text("Clear") }
-                    TextButton(onClick = onBack) { Text("Done") }
-                },
-            )
+            BackTopBar("Filters", onBack) {
+                TextButton(onClick = {
+                    decade = null
+                    apply(FilterState())
+                }) { Text("Clear") }
+                TextButton(onClick = onBack) { Text("Done") }
+            }
         },
     ) { padding ->
         // Compact chips (no 48dp touch-target padding) so every section fits one phone screen
