@@ -20,7 +20,7 @@
 //      text typed before it (see typedTextOffenders);
 //   7. the showcase declares no UI test dependency or UI test source set;
 //   8. no screen copies the back-arrow top bar: only screens/common/BackTopBar.kt
-//      (and PopularScreen.kt, which has no back arrow) names ArrowBack.
+//      names ArrowBack, and it does.
 
 const fs = require('fs');
 const path = require('path');
@@ -225,19 +225,19 @@ describe('showcase app — no UI test tooling', () => {
 });
 
 describe('showcase app — one shared back-arrow top bar', () => {
-  // The back arrow lives in screens/common/BackTopBar.kt (#311); Popular has no
-  // back arrow and keeps its own bar. A screen naming ArrowBack has copied the bar.
-  const SCREENS = `${APP_SOURCE}commonMain/`;
-  const ALLOWED = [`${SCREENS}kotlin/io/github/sh3lan93/mobileautomator/showcase/screens/common/BackTopBar.kt`,
-    `${SCREENS}kotlin/io/github/sh3lan93/mobileautomator/showcase/screens/popular/PopularScreen.kt`];
-  const sources = appFiles.filter((f) => f.startsWith(SCREENS) && f.endsWith('.kt'));
+  // The back arrow lives only in screens/common/BackTopBar.kt (#311). Any other
+  // source naming ArrowBack has copied the bar.
+  const COMMON_MAIN = `${APP_SOURCE}commonMain/`;
+  const BACK_TOP_BAR = `${COMMON_MAIN}kotlin/io/github/sh3lan93/mobileautomator/showcase/screens/common/BackTopBar.kt`;
+  const sources = appFiles.filter((f) => f.startsWith(COMMON_MAIN) && f.endsWith('.kt'));
 
-  test('the shared bar exists (the rule below is not vacuous)', () => {
-    expect(sources).toEqual(expect.arrayContaining(ALLOWED));
+  test('the shared bar draws the back arrow (the rule below is not vacuous)', () => {
+    expect(sources).toContain(BACK_TOP_BAR);
+    expect(read(BACK_TOP_BAR)).toContain('ArrowBack');
   });
 
-  test('no screen other than BackTopBar.kt and PopularScreen.kt names ArrowBack', () => {
-    const offenders = sources.filter((f) => !ALLOWED.includes(f) && read(f).includes('ArrowBack'));
+  test('no source other than BackTopBar.kt names ArrowBack', () => {
+    const offenders = sources.filter((f) => f !== BACK_TOP_BAR && read(f).includes('ArrowBack'));
     expect(offenders).toEqual([]);
   });
 });
