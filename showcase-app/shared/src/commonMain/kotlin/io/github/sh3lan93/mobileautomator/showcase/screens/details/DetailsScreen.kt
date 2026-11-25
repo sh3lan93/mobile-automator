@@ -43,47 +43,44 @@ fun DetailsScreen(
         val modifier = Modifier.fillMaxSize().padding(padding)
         when (val s = state) {
             DetailsUiState.Loading -> Centered(modifier) { CircularProgressIndicator() }
-            is DetailsUiState.Loaded ->
-                if (compact) CompactDetailsContent(s.details, modifier) else DetailsContent(s.details, modifier)
+            is DetailsUiState.Loaded -> DetailsContent(s.details, compact, modifier)
             is DetailsUiState.Failed -> FailureContent(s.failure, viewModel::retry, modifier)
         }
     }
 }
 
+/** The film; [compact] (a feature flag) changes only the facts and overview block between the poster and the sections. */
 @Composable
-private fun DetailsContent(details: MovieDetails, modifier: Modifier) {
+private fun DetailsContent(details: MovieDetails, compact: Boolean, modifier: Modifier) {
     Column(
         modifier = modifier.verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Poster(details)
-        // Each line only when TMDB sent it: never `null` or `0 min`.
-        details.releaseYear?.let { Text("Released $it", style = MaterialTheme.typography.bodyLarge) }
-        details.runtimeMinutes?.let { Text("$it min", style = MaterialTheme.typography.bodyLarge) }
-        if (details.genres.isNotEmpty()) {
-            Text(details.genres.joinToString(", "), style = MaterialTheme.typography.bodyLarge)
-        }
-        details.overview?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+        if (compact) CompactFacts(details) else ClassicFacts(details)
         WatchlistSection(details.toMovie())
         RatingSection(details.id)
     }
 }
 
-/** The compact layout (feature flag): the same film with one facts line and an `Overview` heading. */
+/** The classic layout: each fact on its own line, only when TMDB sent it (never `null` or `0 min`). */
 @Composable
-private fun CompactDetailsContent(details: MovieDetails, modifier: Modifier) {
-    Column(
-        modifier = modifier.verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Poster(details)
-        compactFacts(details)?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
-        details.overview?.let {
-            Text("Overview", style = MaterialTheme.typography.titleMedium)
-            Text(it, style = MaterialTheme.typography.bodyMedium)
-        }
-        WatchlistSection(details.toMovie())
-        RatingSection(details.id)
+private fun ClassicFacts(details: MovieDetails) {
+    details.releaseYear?.let { Text("Released $it", style = MaterialTheme.typography.bodyLarge) }
+    details.runtimeMinutes?.let { Text("$it min", style = MaterialTheme.typography.bodyLarge) }
+    if (details.genres.isNotEmpty()) {
+        Text(details.genres.joinToString(", "), style = MaterialTheme.typography.bodyLarge)
+    }
+    details.overview?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+}
+
+/** The compact layout: one facts line, then the overview under an `Overview` heading. */
+@Composable
+private fun CompactFacts(details: MovieDetails) {
+    compactFacts(details)?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
+    details.overview?.let {
+        Text("Overview", style = MaterialTheme.typography.titleMedium)
+        Text(it, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
