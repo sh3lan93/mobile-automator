@@ -75,6 +75,10 @@ That's it. Scenarios land in `.mobile-automator/scenarios/`, results in `.mobile
 
 **Upgrading:** after `npm i -g mobile-automator@latest`, re-run `mauto init --agent <host>` in each project to refresh the skills, rules and commands it installed. Until you do, `mauto guide` starts with a notice that the host integration is out of date, and `mauto doctor` reports which hosts need refreshing.
 
+## 🎬 See it on a real app
+
+[Reel Tracker](showcase-app/) is a Compose Multiplatform movie app in this repo, with live TMDB data. Its [walkthrough](showcase-app/README.md#walkthrough) replays a shipped scenario on Android, replays the same file on iOS, then has you record a flow of your own with your agent. The app has no UI test code: every on-device check is a JSON scenario.
+
 ---
 
 ## 🧠 How it works

@@ -10,6 +10,7 @@ Real-world test scenario examples for Android and iOS platforms. These comprehen
 
 - **[Android Examples](android.md)** — Android app test scenarios with detailed implementations
 - **[iOS Examples](ios.md)** — iOS app test scenarios with detailed implementations
+- **[Showcase App: Reel Tracker](showcase.md)** — a real Compose Multiplatform app with one set of scenarios for Android and iOS, and a walkthrough from clone to recording your own
 
 ## Example Scenarios
 

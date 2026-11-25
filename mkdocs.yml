@@ -93,6 +93,7 @@ nav:
       - Telemetry & Privacy: reference/telemetry.md
   - Examples:
       - Example Scenarios: examples/index.md
+      - Showcase App: examples/showcase.md
       - Android Examples: examples/android.md
       - iOS Examples: examples/ios.md
   - FAQ & Troubleshooting: faq.md

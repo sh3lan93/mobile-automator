@@ -2,9 +2,30 @@
 
 A small Compose Multiplatform movie tracker for Android and iOS, built on [TMDB](https://www.themoviedb.org). It sits beside the Sample Shop fixture in `sample-app/`: Sample Shop is the deterministic target the CI E2E drives, while this app shows mauto driving a real cross-platform app with live data, one scenario for both platforms. PRD: https://github.com/sh3lan93/mobile-automator/issues/304
 
-The full walkthrough arrives with #312. This README covers the key, the build and the scenarios.
+The [walkthrough](#walkthrough) below goes from a fresh clone to replaying a shipped scenario on Android and iOS, then recording a flow of your own and replaying it on the other platform. The reference sections after it describe the scenarios and the app's test hooks.
 
-## Your TMDB key
+## No UI test code
+
+The app has no UI test code by design: no Espresso, no XCUITest, no Compose UI tests, and no UI test dependency or source set. Its on-device behaviour is checked only by the JSON scenarios in `scenarios/`, which target what a person sees (on-screen text and accessibility labels), never a test tag.
+
+You can check it yourself. From `showcase-app/`, both of these print nothing:
+
+```bash
+grep -rniE 'espresso|androidx\.test|ui-test|uiTest|xcuitest|UITests' \
+  --include='*.kts' --include='*.toml' --include='*.pbxproj' .
+find . -type d \( -name androidTest -o -name androidInstrumentedTest -o -name '*UITests' \) -not -path '*/build/*'
+```
+
+`tests/lint/showcase-scenarios.test.js` fails the build if a UI test dependency or source set is added.
+
+## Walkthrough
+
+### 1. Clone and add your TMDB key
+
+```bash
+git clone https://github.com/sh3lan93/mobile-automator
+cd mobile-automator/showcase-app
+```
 
 The app calls TMDB with your own free key; no key is committed.
 
@@ -13,9 +34,17 @@ The app calls TMDB with your own free key; no key is committed.
 
 Without a key the app opens on an "Add your TMDB key" screen; a key TMDB rejects gets its own message.
 
-## Build and install
+### 2. Build and install on an emulator and a simulator
 
 Requires JDK 17 and the Android SDK; the iOS build also needs Xcode. Run from `showcase-app/`.
+
+Gradle needs to know where the Android SDK is. Either export `ANDROID_HOME`, or create `showcase-app/local.properties` (git-ignored) with one line:
+
+```properties
+sdk.dir=/path/to/Android/sdk
+```
+
+Without one of them the build fails with "SDK location not found".
 
 Android (a booted emulator):
 
@@ -37,7 +66,93 @@ Unit tests (non-UI logic only):
 ./gradlew :shared:testAndroidHostTest :shared:iosSimulatorArm64Test
 ```
 
-The app has no UI test code by design: no Espresso, no XCUITest, no Compose UI tests. Its on-device behaviour is checked by mauto scenarios, which target what a person sees (on-screen text and accessibility labels), never a test tag. `tests/lint/showcase-scenarios.test.js` fails the build if either changes.
+### 3. Install mauto and create a workspace
+
+```bash
+npm i -g mobile-automator
+```
+
+Then, still in `showcase-app/`:
+
+```bash
+mauto init --agent claude      # or: cursor | gemini | copilot | agents
+mauto setup --mode agnostic
+mauto devices
+```
+
+`mauto init` installs the skills and commands your agent uses to record scenarios (step 6). `mauto setup --mode agnostic` creates the workspace `showcase-app/.mobile-automator/`, which holds your config, recorded scenarios, results and screenshots. `showcase-app/.gitignore` keeps it out of git. `mauto devices` lists the booted emulator and simulator with their ids; you pass an id to `--device` below.
+
+The default device engine works for this app. Switch to the legacy engine only if `mauto elements` on a screen shows a missing label or content from a screen that is not on display:
+
+```bash
+mauto config set engine legacy
+```
+
+The setup guide may suggest legacy more often than this app needs it (#379).
+
+### 4. Replay a shipped scenario on Android
+
+```bash
+mauto run scenarios/browse_popular.json --device <android-id>
+```
+
+Use the emulator's id from `mauto devices`, for example `Pixel_9_Pro` (an emulator is listed by its AVD name).
+
+No agent is involved: `mauto run` replays the scenario by itself and prints one JSON envelope. In it:
+
+- `data.status` is `passed`, `failed` or `incomplete`.
+- The exit code is 0 when the run passed, 6 when a check failed (`test_failed`), and 7 when the run is incomplete because a step needed an agent. The shipped scenarios never need one.
+- `data.result_path` is the result file, under `.mobile-automator/results/`.
+- On a failing step the runner saves a screenshot of the screen as `step_<id>_failure.png` under `.mobile-automator/screenshots/<scenario_id>/<run_id>/`, and `data.failed_step` and `data.failures` say what broke.
+
+The shipped scenarios are curated fixtures, written by hand from the app's plans. They are not recordings made with mauto. Step 6 shows how to record one.
+
+### 5. Replay the same file on iOS
+
+```bash
+mauto run scenarios/browse_popular.json --device <ios-simulator-id>
+```
+
+The file is the same, unchanged. It works because the Android application id and the iOS bundle id are the same string, and the scenarios target visible text and accessibility labels, never an OS element id.
+
+The first iOS launch after an install can report success without bringing the app to the front. If the first step times out, run the command again.
+
+### 6. Record a flow of your own
+
+Recording needs an AI agent today. The agent follows `mauto guide generate`: in Claude Code run `/mobile-automator-generate`; in other hosts ask the agent to run `mauto guide generate` and follow it. The agent drives the app through mauto verbs and writes the scenario to `.mobile-automator/scenarios/<id>.json` in your workspace, here `showcase-app/.mobile-automator/scenarios/`.
+
+Pick a flow that is not already shipped. Avoid changing a search field's text after typing in it: clearing a text field from a scenario does not work on iOS yet (#378). Two flows that work:
+
+- Reset app data, open Filters, pick Animation, 2001 and Highest rated, then check that Spirited Away is listed.
+- Reset app data, search for `Spirited Away`, open it, add it to the watchlist, then open Watchlist and check it is listed.
+
+Ask the agent to check facts that do not change, such as a title or a release year, never the order of the popular list or a vote average: TMDB's live data moves.
+
+Begin the recording with Reset app data in Settings, so it starts from a known state.
+
+Check the file your agent wrote:
+
+```bash
+mauto validate --strict .mobile-automator/scenarios/<id>.json
+```
+
+### 7. Replay your recording on the other platform
+
+If you recorded on Android, replay on the simulator, or the other way round:
+
+```bash
+mauto run .mobile-automator/scenarios/<id>.json --device <other-id>
+```
+
+If it fails, read `data.failed_step` and `data.failures` in the envelope and look at the failure screenshot. To have an agent diagnose the run, ask it to follow `mauto guide execute`.
+
+### 8. Replay in CI
+
+A workflow file to copy into your own repo arrives with #313. It replays scenarios with `mauto run` on an Android emulator and an iOS simulator. A CI job branches on the exit codes from step 4: 0 passed, 6 failed, 7 incomplete.
+
+### When something gets stuck
+
+After a session on the default engine, the emulator's UI automation stays held by the engine, so other tools such as `uiautomator dump` or Appium fail until it is released. [TROUBLESHOOTING.md](../TROUBLESHOOTING.md#-uiautomator-dump-is-killed-appium-dies-or-elements-fails-with-reading-node) has the commands that release it; more fixes are in the rest of that file.
 
 ## Scenarios
 
@@ -52,6 +167,8 @@ Scenarios live in `scenarios/`. Each is platform-agnostic and runs unchanged on 
 | `filter_no_results.json` | Filter by 9+, 1931 and Animation, see the empty message, then clear the filters |
 | `rate_and_remove.json` | Reset app data, rate The Shawshank Redemption 8/10, see the rating on its details and in My ratings, then remove it and see both cleared |
 | `watchlist_add_remove.json` | Reset app data, add The Shawshank Redemption to the watchlist, restart the app and see it still listed, then remove it and see the watchlist empty |
+| `simulate_offline.json` | Reset app data, turn on "Simulate offline" in Settings, reload the list and see No connection with its Retry button, then turn the switch off and see Retry load the list again |
+| `simulate_server_error.json` | Reset app data, turn on "Simulate server error" in Settings, reload the list and see Something went wrong with its Retry button, then turn the switch off and see Retry load the list again |
 | `details_layout_classic.json` | Reset app data, choose the classic details layout in Settings, open The Shawshank Redemption and see `Released 1994` and `142 min` |
 | `details_layout_compact.json` | Reset app data, choose the compact details layout in Settings, open The Shawshank Redemption and see the one-line `1994 · 2h 22m` facts and the Overview heading |
 | `watchlist_remove_at_once.json` | Reset app data, choose "Remove at once" in Settings, add The Shawshank Redemption to the watchlist and remove it with one tap |
@@ -61,16 +178,16 @@ The filter scenarios check the active-filters line the app shows above the list 
 
 The search scenarios check what typing caused (the result count, the film shown), never the search field's own text: Android exposes what was typed, iOS does not.
 
-Check one from the repo root:
+Check one from `showcase-app/`:
 
 ```bash
-mauto validate --strict showcase-app/scenarios/browse_popular.json
+mauto validate --strict scenarios/browse_popular.json
 ```
 
-Replay it (needs a configured key, a booted device or emulator, and a workspace created with `mauto setup`):
+Replay it from `showcase-app/` (needs a configured key, a booted emulator or simulator, and the workspace from step 3 of the walkthrough):
 
 ```bash
-mauto run showcase-app/scenarios/browse_popular.json
+mauto run scenarios/browse_popular.json --device <device-id>
 ```
 
 ## Settings
