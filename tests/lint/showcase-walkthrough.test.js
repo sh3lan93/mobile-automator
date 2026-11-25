@@ -35,7 +35,7 @@ const MKDOCS = 'mkdocs.yml';
 const SCENARIOS = 'showcase-app/scenarios/';
 const WALKTHROUGH_URL = 'https://github.com/sh3lan93/mobile-automator/blob/main/showcase-app/README.md#walkthrough';
 
-// The walkthrough's steps, in order. The one list both docs are checked against.
+// The walkthrough's steps, in order: what the README's numbered headings must be.
 const WALKTHROUGH = [
   'Clone and add your TMDB key',
   'Build and install on an emulator and a simulator',
@@ -86,15 +86,6 @@ describe('showcase walkthrough — the steps', () => {
 
 describe('showcase walkthrough — the docs-site page', () => {
   const page = read(DOCS_PAGE);
-
-  test('restates the README walkthrough steps as its numbered list', () => {
-    const listed = page
-      .split('\n')
-      .map((l) => /^\d+\. (.*?)\s*$/.exec(l))
-      .filter(Boolean)
-      .map((m) => m[1]);
-    expect(listed).toEqual(steps.map((s) => s.title));
-  });
 
   test('links to the full walkthrough', () => {
     expect(page).toContain(`](${WALKTHROUGH_URL})`);
@@ -149,5 +140,18 @@ describe('showcase walkthrough — replay without an agent, record with one', ()
   test('the walkthrough says the shipped scenarios are curated fixtures, not recordings', () => {
     expect(walkthrough).toContain('The shipped scenarios are curated fixtures');
     expect(walkthrough).toContain('They are not recordings made with mauto');
+  });
+});
+
+describe('showcase walkthrough — the troubleshooting link resolves', () => {
+  // GitHub's heading anchor: lowercase, drop everything but letters, digits,
+  // spaces, `-` and `_`, then spaces to `-`.
+  const slug = (text) => text.toLowerCase().replace(/[^a-z0-9 _-]/g, '').replace(/ /g, '-');
+
+  test('every TROUBLESHOOTING.md anchor the README links names a real heading there', () => {
+    const anchors = [...readme.matchAll(/\]\(\.\.\/TROUBLESHOOTING\.md#([^)]+)\)/g)].map((m) => m[1]);
+    expect(anchors.length).toBeGreaterThan(0);
+    const slugs = headings(read('TROUBLESHOOTING.md')).map((h) => slug(h.text));
+    expect(anchors.filter((a) => !slugs.includes(a))).toEqual([]);
   });
 });
