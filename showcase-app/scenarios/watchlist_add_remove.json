@@ -1,0 +1,359 @@
+{
+  "$schema_version": "2.1",
+  "scenario_id": "watchlist_add_remove",
+  "name": "Add a film to the watchlist, see it after a restart, and remove it",
+  "description": "Resets app data from Settings and checks the watchlist is empty. Then it searches for The Shawshank Redemption, adds it to the watchlist from its details screen and checks the details screen says so. It restarts the app, checks the film is still listed on the Watchlist screen (the list is stored on the device), removes the film from its details screen, and checks the watchlist is empty again. Starts by resetting app data and leaves the watchlist empty. Needs a configured TMDB key (showcase-app/tmdb.properties): without one the app shows the add-your-key screen and the search never runs.",
+  "platform": "cross-platform",
+  "app_package": "io.github.sh3lan93.mobileautomator.showcase",
+  "mode": "platform-agnostic",
+  "metadata": {
+    "app_version": "debug",
+    "environment": "local"
+  },
+  "tags": [
+    "showcase",
+    "watchlist"
+  ],
+  "steps": [
+    {
+      "id": "launch",
+      "action": "launch_app",
+      "description": "Launch Reel Tracker"
+    },
+    {
+      "id": "wait_list",
+      "action": "wait_for_element",
+      "description": "Wait for the popular films screen title",
+      "target": "Popular films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 30000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_settings",
+      "action": "tap",
+      "description": "Open the Settings screen",
+      "target": "Settings",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "wait_settings",
+      "action": "wait_for_element",
+      "description": "Wait for the Reset app data button on the Settings screen",
+      "target": "Reset app data",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "reset",
+      "action": "tap",
+      "description": "Reset app data, which empties the watchlist",
+      "target": "Reset app data"
+    },
+    {
+      "id": "wait_reset",
+      "action": "wait_for_element",
+      "description": "Wait for the popular films screen after the reset",
+      "target": "Popular films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 30000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_watchlist",
+      "action": "tap",
+      "description": "Open the Watchlist screen from the filter row",
+      "target": "Watchlist",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "wait_empty_start",
+      "action": "wait_for_element",
+      "description": "Wait for the empty watchlist the reset left",
+      "target": "Your watchlist is empty",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "back_from_empty",
+      "action": "press_back",
+      "description": "Go back to the popular films list"
+    },
+    {
+      "id": "wait_list_again",
+      "action": "wait_for_element",
+      "description": "Wait for the popular films screen",
+      "target": "Popular films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_search",
+      "action": "tap",
+      "description": "Open the Search screen",
+      "target": "Search",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "wait_search",
+      "action": "wait_for_element",
+      "description": "Wait for the search field, so the screen has settled before the tap that focuses it",
+      "target": "Search films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "focus_field",
+      "action": "tap",
+      "description": "Focus the search field",
+      "target": "Search films"
+    },
+    {
+      "id": "type_title",
+      "action": "type",
+      "description": "Type part of a film title",
+      "value": "Shawshank"
+    },
+    {
+      "id": "hide_keyboard",
+      "action": "dismiss_keyboard",
+      "description": "Hide the keyboard so the results are not covered"
+    },
+    {
+      "id": "wait_result",
+      "action": "wait_for_element",
+      "description": "Wait for the film in the search results",
+      "target": "The Shawshank Redemption",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 15000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_film",
+      "action": "tap",
+      "description": "Open the film's details; the pattern skips other results that only mention the title, such as a documentary about it",
+      "target": "The Shawshank Redemption",
+      "target_pattern": "^The Shawshank Redemption"
+    },
+    {
+      "id": "wait_not_saved",
+      "action": "wait_for_element",
+      "description": "Wait for the details screen to show the film is not on the watchlist",
+      "target": "Not saved to your watchlist",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 15000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "add",
+      "action": "tap",
+      "description": "Add the film to the watchlist",
+      "target": "Add to watchlist"
+    },
+    {
+      "id": "wait_saved",
+      "action": "wait_for_element",
+      "description": "Wait for the details screen to show the film is on the watchlist",
+      "target": "In your watchlist",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "relaunch",
+      "action": "launch_app",
+      "description": "Restart the app (a cold launch), so the watchlist must come back from the device's storage",
+      "cold": true
+    },
+    {
+      "id": "wait_list_relaunch",
+      "action": "wait_for_element",
+      "description": "Wait for the popular films screen after the restart",
+      "target": "Popular films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 30000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_watchlist_again",
+      "action": "tap",
+      "description": "Open the Watchlist screen after the restart",
+      "target": "Watchlist",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "wait_listed",
+      "action": "wait_for_element",
+      "description": "Wait for the saved film on the Watchlist screen",
+      "target": "The Shawshank Redemption",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_saved_film",
+      "action": "tap",
+      "description": "Open the saved film's details from the watchlist",
+      "target": "The Shawshank Redemption",
+      "target_pattern": "^The Shawshank Redemption"
+    },
+    {
+      "id": "wait_saved_again",
+      "action": "wait_for_element",
+      "description": "Wait for the details screen to show the film is on the watchlist",
+      "target": "In your watchlist",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 15000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "remove",
+      "action": "tap",
+      "description": "Remove the film this scenario added",
+      "target": "Remove from watchlist"
+    },
+    {
+      "id": "wait_removed",
+      "action": "wait_for_element",
+      "description": "Wait for the details screen to show the film is no longer on the watchlist",
+      "target": "Not saved to your watchlist",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "back_to_watchlist",
+      "action": "press_back",
+      "description": "Go back to the Watchlist screen"
+    },
+    {
+      "id": "wait_empty_end",
+      "action": "wait_for_element",
+      "description": "Wait for the empty watchlist",
+      "target": "Your watchlist is empty",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    }
+  ],
+  "assertions": [
+    {
+      "id": "empty_after_reset",
+      "after_step": "wait_empty_start",
+      "type": "element_visible",
+      "description": "The watchlist is empty, because the reset cleared it",
+      "element_description": "Your watchlist is empty",
+      "expected_visible": true
+    },
+    {
+      "id": "not_saved_initially",
+      "after_step": "wait_not_saved",
+      "type": "element_visible",
+      "description": "The film shows as not on the watchlist",
+      "element_description": "Not saved to your watchlist",
+      "expected_visible": true
+    },
+    {
+      "id": "saved_shown",
+      "after_step": "wait_saved",
+      "type": "element_visible",
+      "description": "The details screen shows the film is on the watchlist",
+      "element_description": "In your watchlist",
+      "expected_visible": true
+    },
+    {
+      "id": "remove_offered",
+      "after_step": "wait_saved",
+      "type": "element_visible",
+      "description": "The details screen offers to remove the film from the watchlist",
+      "element_description": "Remove from watchlist",
+      "expected_visible": true
+    },
+    {
+      "id": "listed_after_restart",
+      "after_step": "wait_listed",
+      "type": "element_visible",
+      "description": "The film the scenario added is listed after the restart",
+      "element_description": "The Shawshank Redemption",
+      "expected_visible": true
+    },
+    {
+      "id": "listed_count",
+      "after_step": "wait_listed",
+      "type": "text_contains",
+      "description": "The watchlist counts exactly one film, the one this scenario added",
+      "expected_substring": "1 film"
+    },
+    {
+      "id": "removed_shown",
+      "after_step": "wait_removed",
+      "type": "element_visible",
+      "description": "The details screen shows the film is no longer on the watchlist",
+      "element_description": "Not saved to your watchlist",
+      "expected_visible": true
+    },
+    {
+      "id": "empty_at_end",
+      "after_step": "wait_empty_end",
+      "type": "element_visible",
+      "description": "The watchlist is empty again",
+      "element_description": "Your watchlist is empty",
+      "expected_visible": true
+    },
+    {
+      "id": "film_gone",
+      "after_step": "wait_empty_end",
+      "type": "element_not_exists",
+      "description": "The removed film is no longer listed",
+      "element_description": "The Shawshank Redemption"
+    }
+  ]
+}

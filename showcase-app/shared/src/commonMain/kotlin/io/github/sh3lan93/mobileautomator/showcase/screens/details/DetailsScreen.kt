@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import io.github.sh3lan93.mobileautomator.showcase.data.MovieDetails
+import io.github.sh3lan93.mobileautomator.showcase.data.toMovie
 import io.github.sh3lan93.mobileautomator.showcase.screens.common.Centered
 import io.github.sh3lan93.mobileautomator.showcase.screens.common.FailureContent
 import org.koin.compose.viewmodel.koinViewModel
@@ -80,6 +81,7 @@ private fun DetailsContent(details: MovieDetails, modifier: Modifier) {
             Text(details.genres.joinToString(", "), style = MaterialTheme.typography.bodyLarge)
         }
         details.overview?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+        WatchlistSection(details.toMovie())
         RatingSection(details.id)
     }
 }

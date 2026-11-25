@@ -25,3 +25,6 @@ data class SearchPage(val movies: List<Movie>, val totalResults: Int)
 
 /** A film the guest session rated; [rating] is TMDB's value, 0.5..10. */
 data class RatedMovie(val movie: Movie, val rating: Double)
+
+/** The film as lists and the watchlist hold it: the fields a row shows. */
+fun MovieDetails.toMovie() = Movie(id, title, releaseYear, posterUrl)

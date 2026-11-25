@@ -3,14 +3,18 @@ package io.github.sh3lan93.mobileautomator.showcase.di
 import io.github.sh3lan93.mobileautomator.showcase.TMDB_API_KEY
 import io.github.sh3lan93.mobileautomator.showcase.data.GuestRatings
 import io.github.sh3lan93.mobileautomator.showcase.data.KtorTmdbClient
+import io.github.sh3lan93.mobileautomator.showcase.data.Movie
 import io.github.sh3lan93.mobileautomator.showcase.data.TmdbClient
+import io.github.sh3lan93.mobileautomator.showcase.data.Watchlist
 import io.github.sh3lan93.mobileautomator.showcase.screens.details.DetailsViewModel
 import io.github.sh3lan93.mobileautomator.showcase.screens.details.RatingViewModel
+import io.github.sh3lan93.mobileautomator.showcase.screens.details.WatchlistSectionViewModel
 import io.github.sh3lan93.mobileautomator.showcase.screens.filters.FiltersViewModel
 import io.github.sh3lan93.mobileautomator.showcase.screens.popular.PopularViewModel
 import io.github.sh3lan93.mobileautomator.showcase.screens.ratings.MyRatingsViewModel
 import io.github.sh3lan93.mobileautomator.showcase.screens.search.SearchViewModel
 import io.github.sh3lan93.mobileautomator.showcase.screens.settings.SettingsViewModel
+import io.github.sh3lan93.mobileautomator.showcase.screens.watchlist.WatchlistViewModel
 import io.github.sh3lan93.mobileautomator.showcase.store.LocalStore
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -40,15 +44,18 @@ val appModule = module {
         KtorTmdbClient(get(), TMDB_API_KEY) { store.simulation() }
     }
     single { GuestRatings(get(), get()) }
+    single { Watchlist(get()) }
     viewModelOf(::PopularViewModel)
     viewModelOf(::SearchViewModel)
     // The film id comes from the details route: koinViewModel { parametersOf(id) }.
     viewModel { (id: Int) -> DetailsViewModel(id, get()) }
     viewModel { (id: Int) -> RatingViewModel(id, get()) }
+    viewModel { (movie: Movie) -> WatchlistSectionViewModel(movie, get()) }
     // The current year bounds the release-year choices.
     viewModel { FiltersViewModel(get(), Clock.System.todayIn(TimeZone.currentSystemDefault()).year) }
     viewModelOf(::SettingsViewModel)
     viewModelOf(::MyRatingsViewModel)
+    viewModelOf(::WatchlistViewModel)
 }
 
 /**

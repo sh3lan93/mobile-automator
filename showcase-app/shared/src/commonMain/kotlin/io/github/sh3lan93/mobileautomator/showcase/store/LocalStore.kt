@@ -5,6 +5,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 
 /** Turns a value into its stored string and back; `encode` returning `null` removes the key. */
@@ -46,6 +48,9 @@ class LocalStore(private val storage: KeyValueStorage) {
     /** The TMDB guest session ratings are made under; `null` until the first rating. */
     val guestSessionId = string("guest_session_id")
 
+    /** The films saved to the watchlist, oldest first; empty until the first add. Cleared by [reset]. */
+    val watchlist = json("watchlist", emptyList<WatchlistEntry>(), ListSerializer(WatchlistEntry.serializer()))
+
     /** The switches as the client reads them before each request; a snapshot, never a second copy of state. */
     fun simulation() = Simulation(simulateOffline.value.value, simulateServerError.value.value)
 
@@ -57,7 +62,6 @@ class LocalStore(private val storage: KeyValueStorage) {
 
     private fun string(key: String) = register<String?>(key, null, Codec({ it }, { it }))
 
-    @Suppress("unused") // first used by #310 (watchlist)
     private fun <T> json(key: String, default: T, serializer: KSerializer<T>) = register(
         key,
         default,
@@ -71,3 +75,7 @@ class LocalStore(private val storage: KeyValueStorage) {
         const val KEY_PREFIX = "reel_tracker."
     }
 }
+
+/** A watchlisted film as stored on the device: the fields the Watchlist screen shows, nothing more. */
+@Serializable
+data class WatchlistEntry(val id: Int, val title: String, val releaseYear: String? = null, val posterUrl: String? = null)
