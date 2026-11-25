@@ -29,7 +29,7 @@ const yaml = require('js-yaml');
 
 const { REPO_ROOT, shippingDocs } = require('./docs-corpus');
 const { loadWorkflow, runs } = require('./workflow-guard');
-const { fencedBlocks, section } = require('./markdown');
+const { fencedBlocks, requireSection } = require('./markdown');
 
 const FAQ = 'docs/faq.md';
 const WORKFLOW_DIR = '.github/workflows';
@@ -65,16 +65,8 @@ function workflowRefs() {
 
 // --- Sections ----------------------------------------------------------------
 
-/**
- * The body of one `### <heading>` answer (`section` from ./markdown). Throws
- * when the heading is gone, so a renamed question fails with its name rather
- * than as "expected 0 to be 1".
- */
-function answer(text, heading) {
-  const body = section(text, `### ${heading}`);
-  if (body === null) throw new Error(`${FAQ}: no "### ${heading}" answer found`);
-  return body;
-}
+// The body of one `### <heading>` answer in the FAQ.
+const answer = (text, heading) => requireSection(text, `### ${heading}`, FAQ);
 
 const runsMautoWithJunit = (block) =>
   block.lines.some((l) => !/^\s*#/.test(l) && /\bmauto run\b/.test(l) && /--junit\b/.test(l));
@@ -190,7 +182,7 @@ describe('docs-ci-recipe helpers', () => {
     const md = ['### A?', 'one', '### B?', 'two', '## C', 'three'].join('\n');
     expect(answer(md, 'A?')).toBe('one');
     expect(answer(md, 'B?')).toBe('two');
-    expect(() => answer(md, 'Z?')).toThrow(/no "### Z\?" answer/);
+    expect(() => answer(md, 'Z?')).toThrow(/no "### Z\?" section/);
     const fenced = ['### A?', '```bash', '# not a heading', 'x', '```', '### B?'].join('\n');
     expect(answer(fenced, 'A?')).toBe(['```bash', '# not a heading', 'x', '```'].join('\n'));
   });

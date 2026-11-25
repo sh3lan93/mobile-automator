@@ -79,4 +79,15 @@ function section(text, heading) {
   return lines.slice(start + 1, end).join('\n');
 }
 
-module.exports = { fencedBlocks, headings, section };
+/**
+ * `section`, for a guard that needs the heading to exist: throws naming the
+ * file and the heading when it is gone, so a renamed heading fails with its
+ * name rather than as an empty match further down.
+ */
+function requireSection(text, heading, file) {
+  const body = section(text, heading);
+  if (body === null) throw new Error(`${file}: no "${heading}" section found`);
+  return body;
+}
+
+module.exports = { fencedBlocks, headings, section, requireSection };

@@ -4,7 +4,7 @@
 // docs with, so its fence handling is pinned here: a `#` line inside any fence
 // (a shell comment, a nested or stray fence) is never a heading (#312).
 
-const { fencedBlocks, headings, section } = require('./markdown');
+const { fencedBlocks, headings, section, requireSection } = require('./markdown');
 
 const NESTED = [
   '## A',
@@ -41,5 +41,10 @@ describe('tests/lint/markdown.js — one fence state machine', () => {
   test('section ignores a heading-shaped line inside a fence', () => {
     expect(section('```\n## A\n```\n## A\nbody\n## Z', '## A')).toBe('body');
     expect(section('```\n## A\n```\n', '## A')).toBeNull();
+  });
+
+  test('requireSection returns the body, and throws naming the file and heading when it is gone', () => {
+    expect(requireSection('## A\nbody', '## A', 'x.md')).toBe('body');
+    expect(() => requireSection('## A\nbody', '## Z', 'x.md')).toThrow('x.md: no "## Z" section found');
   });
 });

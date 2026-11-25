@@ -28,7 +28,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { REPO_ROOT, repoFiles, shippingDocs } = require('./docs-corpus');
-const { fencedBlocks, headings, section } = require('./markdown');
+const { fencedBlocks, headings, requireSection } = require('./markdown');
 
 const README = 'showcase-app/README.md';
 const DOCS_PAGE = 'docs/examples/showcase.md';
@@ -50,14 +50,8 @@ const WALKTHROUGH = [
 
 const read = (rel) => fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
 
-function mustSection(text, heading, file) {
-  const body = section(text, heading);
-  if (body === null) throw new Error(`${file}: no "${heading}" heading found`);
-  return body;
-}
-
 const readme = read(README);
-const walkthrough = mustSection(readme, '## Walkthrough', README);
+const walkthrough = requireSection(readme, '## Walkthrough', README);
 const steps = headings(walkthrough)
   .filter((h) => h.level === 3)
   .map((h) => /^(\d+)\. (.*)$/.exec(h.text))
@@ -66,7 +60,7 @@ const steps = headings(walkthrough)
 const step = (n) => {
   const s = steps.find((x) => x.n === n);
   if (!s) throw new Error(`${README}: the walkthrough has no step ${n}`);
-  return mustSection(walkthrough, `### ${s.n}. ${s.title}`, README);
+  return requireSection(walkthrough, `### ${s.n}. ${s.title}`, README);
 };
 
 describe('showcase walkthrough — in the shipping-doc corpus', () => {
@@ -101,7 +95,7 @@ describe('showcase walkthrough — the Scenarios table', () => {
   const files = repoFiles(SCENARIOS)
     .filter((f) => f.endsWith('.json') && !f.slice(SCENARIOS.length).includes('/'))
     .map((f) => f.slice(SCENARIOS.length));
-  const rows = [...mustSection(readme, '## Scenarios', README).matchAll(/^\| `([^`]+)` \|/gm)].map((m) => m[1]);
+  const rows = [...requireSection(readme, '## Scenarios', README).matchAll(/^\| `([^`]+)` \|/gm)].map((m) => m[1]);
 
   test('showcase-app/scenarios holds at least one scenario (the rule below is not vacuous)', () => {
     expect(files.length).toBeGreaterThan(0);
