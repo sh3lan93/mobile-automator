@@ -2,6 +2,11 @@
 
 A deterministic Flutter e-commerce **fixture** for the mobile-automator CLI. It is **not** a user-facing product — it exists so contributors and CI can drive `mauto` end-to-end against a stable target. See PRD: https://github.com/sh3lan93/mobile-automator/issues/44
 
+## Which app is for what
+
+- **Sample Shop** (this app) is a deterministic Flutter fixture with no network. The CI E2E drives it.
+- **Reel Tracker** in [`../showcase-app/`](../showcase-app/) is for trying mauto yourself on a realistic app with live data, on Android and iOS. Follow its [walkthrough](../showcase-app/README.md#walkthrough).
+
 ## Why it exists
 
 The CLI had zero automated coverage of the real mobile-mcp execution path. This app is the known-good target the real-device E2E drives in CI.
