@@ -96,7 +96,7 @@ The setup guide may suggest legacy more often than this app needs it (#379).
 mauto run scenarios/browse_popular.json --device <android-id>
 ```
 
-Use the emulator's id from `mauto devices`, for example `emulator-5554`.
+Use the emulator's id from `mauto devices`, for example `Pixel_9_Pro` (an emulator is listed by its AVD name).
 
 No agent is involved: `mauto run` replays the scenario by itself and prints one JSON envelope. In it:
 
@@ -123,8 +123,10 @@ Recording needs an AI agent today. The agent follows `mauto guide generate`: in 
 
 Pick a flow that is not already shipped. Avoid changing a search field's text after typing in it: clearing a text field from a scenario does not work on iOS yet (#378). Two flows that work:
 
-- Open Settings, turn on "Simulate server error", go back, see the error and its Retry button, then turn the switch off.
-- Reset app data, open a film from the popular list and add it to the watchlist.
+- Reset app data, open Filters, pick Animation, 2001 and Highest rated, then check that Spirited Away is listed.
+- Reset app data, search for `Spirited Away`, open it, add it to the watchlist, then open Watchlist and check it is listed.
+
+Ask the agent to check facts that do not change, such as a title or a release year, never the order of the popular list or a vote average: TMDB's live data moves.
 
 Begin the recording with Reset app data in Settings, so it starts from a known state.
 
