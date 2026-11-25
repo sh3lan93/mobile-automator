@@ -16,6 +16,7 @@ import io.github.sh3lan93.mobileautomator.showcase.screens.about.AboutScreen
 import io.github.sh3lan93.mobileautomator.showcase.screens.details.DetailsScreen
 import io.github.sh3lan93.mobileautomator.showcase.screens.filters.FiltersScreen
 import io.github.sh3lan93.mobileautomator.showcase.screens.popular.PopularScreen
+import io.github.sh3lan93.mobileautomator.showcase.screens.ratings.MyRatingsScreen
 import io.github.sh3lan93.mobileautomator.showcase.screens.search.SearchScreen
 import org.koin.compose.viewmodel.koinViewModel
 import io.github.sh3lan93.mobileautomator.showcase.screens.settings.SettingsScreen
@@ -25,6 +26,7 @@ private const val ROUTE_ABOUT = "about"
 private const val ROUTE_SEARCH = "search"
 private const val ROUTE_FILTERS = "filters"
 private const val ROUTE_SETTINGS = "settings"
+private const val ROUTE_RATINGS = "ratings"
 private const val ARG_MOVIE_ID = "movieId"
 private const val ROUTE_DETAILS = "details/{$ARG_MOVIE_ID}"
 
@@ -44,7 +46,14 @@ fun App() {
                         onSettings = { navController.navigate(ROUTE_SETTINGS) },
                         onAbout = { navController.navigate(ROUTE_ABOUT) },
                         onOpen = { id -> navController.navigate(detailsRoute(id)) },
+                        onRatings = { navController.navigate(ROUTE_RATINGS) },
                         onFilters = { navController.navigate(ROUTE_FILTERS) },
+                    )
+                }
+                composable(ROUTE_RATINGS) {
+                    MyRatingsScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpen = { id -> navController.navigate(detailsRoute(id)) },
                     )
                 }
                 // Filters edits the list's own view model, the one scoped to the popular entry.

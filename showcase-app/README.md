@@ -50,6 +50,7 @@ Scenarios live in `scenarios/`. Each is platform-agnostic and runs unchanged on 
 | `search_no_results.json` | Search for a title nothing matches and see the empty message |
 | `filter_drama_1994.json` | Filter by Highest rated, 8+, 1994 and Drama; check the active-filters line, the count and The Shawshank Redemption |
 | `filter_no_results.json` | Filter by 9+, 1931 and Animation, see the empty message, then clear the filters |
+| `rate_and_remove.json` | Reset app data, rate The Shawshank Redemption 8/10, see the rating on its details and in My ratings, then remove it and see both cleared |
 
 The filter scenarios check the active-filters line the app shows above the list (for example `Drama · 1994 · Rated 8+ · Highest rated`), not a chip's selected state, and pick combinations whose results have not changed in years.
 
@@ -70,6 +71,10 @@ mauto run showcase-app/scenarios/browse_popular.json
 ## Settings
 
 mauto cannot clear an app's saved data or turn a device's network off, so the app does both itself. Settings (on the popular films screen) has a "Reset app data" button, which clears everything the app saved on the device and returns to the start, and two switches, "Simulate offline" and "Simulate server error", which make every TMDB request fail with the matching message until you turn them off. Scenarios that depend on saved state start with Reset app data, so they begin from the first-launch state whatever ran before them: `simulate_offline.json`, `simulate_server_error.json` and both filter scenarios do, and the simulation scenarios leave their switch off.
+
+## Ratings
+
+Rating a film needs no TMDB account: the app rates through a TMDB guest session, which it creates the first time you rate a film. TMDB stores the rating, and "My ratings" (the star on the popular films screen) lists the films the session has rated, read back from TMDB. The session id is the only thing the app keeps on the device, and Reset app data clears it, so the next rating starts a new session with no ratings. `rate_and_remove.json` starts with Reset app data and removes the rating it adds.
 
 ## Attribution
 

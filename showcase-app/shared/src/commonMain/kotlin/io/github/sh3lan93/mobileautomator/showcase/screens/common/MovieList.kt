@@ -23,9 +23,26 @@ import io.github.sh3lan93.mobileautomator.showcase.data.Movie
 /** The count line both list screens show: `1 film`, `<n> films`. */
 fun filmCount(n: Int): String = if (n == 1) "1 film" else "$n films"
 
+/** The count line on My ratings: `1 rated film`, `<n> rated films`. */
+fun ratedFilmCount(n: Int): String = if (n == 1) "1 rated film" else "$n rated films"
+
+/** `8.0` → `"Your rating: 8/10"`, `6.5` → `"Your rating: 6.5/10"`: the one formatter both screens use. */
+fun ratingText(value: Double): String {
+    val number = if (value % 1.0 == 0.0) value.toInt().toString() else value.toString()
+    return "Your rating: $number/10"
+}
+
+/** One row of a [MovieList]: the film and its second line, the release year unless a screen says otherwise. */
+data class MovieRowData(val movie: Movie, val supporting: String? = movie.releaseYear)
+
 /** A count line ([countLine]) above one clickable row per film; a row opens the film by id. */
 @Composable
-fun MovieList(movies: List<Movie>, countLine: String, onOpen: (Int) -> Unit, modifier: Modifier = Modifier) {
+fun MovieList(
+    rows: List<MovieRowData>,
+    countLine: String,
+    onOpen: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     LazyColumn(modifier = modifier) {
         item {
             Text(
@@ -34,15 +51,16 @@ fun MovieList(movies: List<Movie>, countLine: String, onOpen: (Int) -> Unit, mod
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }
-        items(movies, key = { it.id }) { movie ->
-            MovieRow(movie, onClick = { onOpen(movie.id) })
+        items(rows, key = { it.movie.id }) { row ->
+            MovieRow(row, onClick = { onOpen(row.movie.id) })
             HorizontalDivider()
         }
     }
 }
 
 @Composable
-private fun MovieRow(movie: Movie, onClick: () -> Unit) {
+private fun MovieRow(row: MovieRowData, onClick: () -> Unit) {
+    val movie = row.movie
     Row(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -56,8 +74,8 @@ private fun MovieRow(movie: Movie, onClick: () -> Unit) {
         )
         Column {
             Text(movie.title, style = MaterialTheme.typography.titleMedium)
-            // A film with no release date shows no year line at all.
-            movie.releaseYear?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+            // No supporting text (a film with no release date) shows no second line at all.
+            row.supporting?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
         }
     }
 }

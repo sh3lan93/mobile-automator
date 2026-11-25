@@ -4,6 +4,7 @@ import io.github.sh3lan93.mobileautomator.showcase.data.Simulation
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class LocalStoreTest {
@@ -74,5 +75,16 @@ class LocalStoreTest {
         assertEquals(Simulation(offline = true, serverError = true), store.simulation())
         store.simulateOffline.set(false)
         assertEquals(Simulation(offline = false, serverError = true), store.simulation())
+    }
+
+    @Test
+    fun guestSessionId_persistsAndResetClearsIt() {
+        val store = LocalStore(storage)
+        assertNull(store.guestSessionId.value.value)
+        store.guestSessionId.set("g1")
+        assertEquals("g1", LocalStore(storage).guestSessionId.value.value)
+        store.reset()
+        assertNull(store.guestSessionId.value.value)
+        assertNull(LocalStore(storage).guestSessionId.value.value)
     }
 }

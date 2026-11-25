@@ -1,0 +1,308 @@
+{
+  "$schema_version": "2.1",
+  "scenario_id": "rate_and_remove",
+  "name": "Rate a film, see it on My ratings, and remove the rating",
+  "description": "Resets app data from Settings, searches for The Shawshank Redemption, rates it 8 out of 10 on its details screen, checks the rating there and on the My ratings screen (read back from TMDB), then removes the rating from the details screen and checks that My ratings is empty again. Starts by resetting app data, which starts a new TMDB guest session with no ratings, and removes the rating it adds. Needs a configured TMDB key (showcase-app/tmdb.properties): without one the app shows the add-your-key screen and the search never runs.",
+  "platform": "cross-platform",
+  "app_package": "io.github.sh3lan93.mobileautomator.showcase",
+  "mode": "platform-agnostic",
+  "metadata": {
+    "app_version": "debug",
+    "environment": "local"
+  },
+  "tags": [
+    "showcase",
+    "ratings"
+  ],
+  "steps": [
+    {
+      "id": "launch",
+      "action": "launch_app",
+      "description": "Launch Reel Tracker"
+    },
+    {
+      "id": "wait_list",
+      "action": "wait_for_element",
+      "description": "Wait for the popular films screen title",
+      "target": "Popular films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 30000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_settings",
+      "action": "tap",
+      "description": "Open the Settings screen",
+      "target": "Settings",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "wait_settings",
+      "action": "wait_for_element",
+      "description": "Wait for the Reset app data button on the Settings screen",
+      "target": "Reset app data",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "reset",
+      "action": "tap",
+      "description": "Reset app data, which clears the saved guest session so the next rating starts a new one with no ratings",
+      "target": "Reset app data"
+    },
+    {
+      "id": "wait_reset",
+      "action": "wait_for_element",
+      "description": "Wait for the popular films screen after the reset",
+      "target": "Popular films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 30000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_search",
+      "action": "tap",
+      "description": "Open the Search screen",
+      "target": "Search",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "focus_field",
+      "action": "tap",
+      "description": "Focus the search field",
+      "target": "Search films"
+    },
+    {
+      "id": "type_title",
+      "action": "type",
+      "description": "Type part of a film title",
+      "value": "Shawshank"
+    },
+    {
+      "id": "hide_keyboard",
+      "action": "dismiss_keyboard",
+      "description": "Hide the keyboard so the results are not covered"
+    },
+    {
+      "id": "wait_result",
+      "action": "wait_for_element",
+      "description": "Wait for the film in the search results",
+      "target": "The Shawshank Redemption",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 15000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_film",
+      "action": "tap",
+      "description": "Open the film's details; the pattern skips other results that only mention the title, such as a documentary about it",
+      "target": "The Shawshank Redemption",
+      "target_pattern": "^The Shawshank Redemption"
+    },
+    {
+      "id": "wait_not_rated",
+      "action": "wait_for_element",
+      "description": "Wait for the rating check to finish on the details screen",
+      "target": "You have not rated this film",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 15000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "rate_8",
+      "action": "tap",
+      "description": "Rate the film 8 out of 10",
+      "target": "Rate 8 out of 10"
+    },
+    {
+      "id": "wait_rated",
+      "action": "wait_for_element",
+      "description": "Wait for the saved rating to show on the details screen",
+      "target": "Your rating: 8/10",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 20000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "back_to_results",
+      "action": "press_back",
+      "description": "Go back to the search results"
+    },
+    {
+      "id": "wait_results_again",
+      "action": "wait_for_element",
+      "description": "Wait for the search screen",
+      "target": "Search films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "back_to_list",
+      "action": "press_back",
+      "description": "Go back to the popular films list"
+    },
+    {
+      "id": "wait_list_again",
+      "action": "wait_for_element",
+      "description": "Wait for the popular films screen",
+      "target": "Popular films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_ratings",
+      "action": "tap",
+      "description": "Open the My ratings screen",
+      "target": "My ratings",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "wait_ratings",
+      "action": "wait_for_element",
+      "description": "Wait for the rated film on the My ratings screen",
+      "target": "The Shawshank Redemption",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 15000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_rated_film",
+      "action": "tap",
+      "description": "Open the rated film's details from My ratings",
+      "target": "The Shawshank Redemption"
+    },
+    {
+      "id": "wait_rated_again",
+      "action": "wait_for_element",
+      "description": "Wait for the rating on the details screen",
+      "target": "Your rating: 8/10",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 15000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "remove",
+      "action": "tap",
+      "description": "Remove the rating this scenario added",
+      "target": "Remove rating"
+    },
+    {
+      "id": "wait_removed",
+      "action": "wait_for_element",
+      "description": "Wait for the details screen to show the film is no longer rated",
+      "target": "You have not rated this film",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 20000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "back_to_ratings",
+      "action": "press_back",
+      "description": "Go back to the My ratings screen"
+    },
+    {
+      "id": "wait_empty",
+      "action": "wait_for_element",
+      "description": "Wait for the empty My ratings screen",
+      "target": "You have not rated any films yet",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 15000
+      },
+      "on_failure": "fail"
+    }
+  ],
+  "assertions": [
+    {
+      "id": "not_rated_after_reset",
+      "after_step": "wait_not_rated",
+      "type": "element_visible",
+      "description": "The film shows as not rated, because the reset dropped the guest session",
+      "element_description": "You have not rated this film",
+      "expected_visible": true
+    },
+    {
+      "id": "rating_shown",
+      "after_step": "wait_rated",
+      "type": "element_visible",
+      "description": "The details screen shows the rating the scenario set",
+      "element_description": "Your rating: 8/10",
+      "expected_visible": true
+    },
+    {
+      "id": "rating_listed",
+      "after_step": "wait_ratings",
+      "type": "element_visible",
+      "description": "My ratings shows the rating read back from TMDB",
+      "element_description": "Your rating: 8/10",
+      "expected_visible": true
+    },
+    {
+      "id": "rated_count",
+      "after_step": "wait_ratings",
+      "type": "text_contains",
+      "description": "My ratings counts exactly one rated film, the one this scenario rated",
+      "expected_substring": "1 rated film"
+    },
+    {
+      "id": "rating_removed",
+      "after_step": "wait_removed",
+      "type": "element_visible",
+      "description": "The details screen shows the film is no longer rated",
+      "element_description": "You have not rated this film",
+      "expected_visible": true
+    },
+    {
+      "id": "ratings_empty",
+      "after_step": "wait_empty",
+      "type": "element_visible",
+      "description": "My ratings is empty again, read back from TMDB",
+      "element_description": "You have not rated any films yet",
+      "expected_visible": true
+    },
+    {
+      "id": "rating_gone",
+      "after_step": "wait_empty",
+      "type": "element_not_exists",
+      "description": "The removed rating is no longer listed",
+      "element_description": "Your rating: 8/10"
+    }
+  ]
+}

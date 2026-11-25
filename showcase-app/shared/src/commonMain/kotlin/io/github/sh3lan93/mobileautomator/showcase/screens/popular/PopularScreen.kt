@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -25,6 +26,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.sh3lan93.mobileautomator.showcase.screens.common.Centered
 import io.github.sh3lan93.mobileautomator.showcase.screens.common.FailureContent
 import io.github.sh3lan93.mobileautomator.showcase.screens.common.MovieList
+import io.github.sh3lan93.mobileautomator.showcase.screens.common.MovieRowData
 import io.github.sh3lan93.mobileautomator.showcase.screens.common.filmCount
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -35,6 +37,7 @@ fun PopularScreen(
     onSettings: () -> Unit,
     onAbout: () -> Unit,
     onOpen: (Int) -> Unit,
+    onRatings: () -> Unit,
     onFilters: () -> Unit,
     viewModel: PopularViewModel = koinViewModel(),
 ) {
@@ -49,6 +52,9 @@ fun PopularScreen(
                     // Reloads the list, so a scenario can trigger a load right after turning a switch on.
                     IconButton(onClick = viewModel::retry) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                    }
+                    IconButton(onClick = onRatings) {
+                        Icon(Icons.Default.Star, contentDescription = "My ratings")
                     }
                     TextButton(onClick = onSettings) { Text("Settings") }
                     TextButton(onClick = onAbout) { Text("About") }
@@ -67,7 +73,7 @@ fun PopularScreen(
                 PopularUiState.Empty -> Centered(modifier) { Text("No films found") }
                 PopularUiState.NoMatches -> Centered(modifier) { Text("No films match this combination") }
                 // The films listed for the popular list (one page); TMDB's total for a discover call.
-                is PopularUiState.Loaded -> MovieList(s.movies, filmCount(s.count), onOpen, modifier)
+                is PopularUiState.Loaded -> MovieList(s.movies.map(::MovieRowData), filmCount(s.count), onOpen, modifier)
                 is PopularUiState.Failed -> FailureContent(s.failure, viewModel::retry, modifier)
             }
         }
