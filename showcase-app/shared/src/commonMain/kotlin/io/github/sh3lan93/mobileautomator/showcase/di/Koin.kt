@@ -48,9 +48,9 @@ val appModule = module {
     viewModelOf(::PopularViewModel)
     viewModelOf(::SearchViewModel)
     // The film id comes from the details route: koinViewModel { parametersOf(id) }.
-    viewModel { (id: Int) -> DetailsViewModel(id, get()) }
+    viewModel { (id: Int) -> DetailsViewModel(id, get(), get()) }
     viewModel { (id: Int) -> RatingViewModel(id, get()) }
-    viewModel { (movie: Movie) -> WatchlistSectionViewModel(movie, get()) }
+    viewModel { (movie: Movie) -> WatchlistSectionViewModel(movie, get(), get()) }
     // The current year bounds the release-year choices.
     viewModel { FiltersViewModel(get(), Clock.System.todayIn(TimeZone.currentSystemDefault()).year) }
     viewModelOf(::SettingsViewModel)

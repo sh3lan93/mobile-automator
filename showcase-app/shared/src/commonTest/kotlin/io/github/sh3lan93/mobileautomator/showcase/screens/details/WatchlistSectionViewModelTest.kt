@@ -26,7 +26,7 @@ class WatchlistSectionViewModelTest {
     private val watchlist = Watchlist(store)
     private val shawshank = Movie(278, "The Shawshank Redemption", "1994", null)
 
-    private fun viewModel() = WatchlistSectionViewModel(shawshank, watchlist)
+    private fun viewModel() = WatchlistSectionViewModel(shawshank, watchlist, store)
 
     @BeforeTest
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -48,13 +48,51 @@ class WatchlistSectionViewModelTest {
     }
 
     @Test
-    fun remove_notSaved() = runTest {
+    fun requestRemove_flagOff_removesAtOnce() = runTest {
         watchlist.add(shawshank)
         val vm = viewModel()
         assertTrue(vm.saved.value)
-        vm.remove()
+        vm.requestRemove()
+        assertFalse(vm.saved.value)
+        assertFalse(vm.confirming.value)
+        assertEquals(emptyList(), watchlist.films.first())
+    }
+
+    @Test
+    fun requestRemove_flagOn_asksAndKeeps() = runTest {
+        watchlist.add(shawshank)
+        val vm = viewModel()
+        assertFalse(vm.confirming.value)
+        // Set after the view model exists: the flag is read when the tap happens, not at creation.
+        store.confirmWatchlistRemoval.set(true)
+        vm.requestRemove()
+        assertTrue(vm.confirming.value)
+        assertTrue(vm.saved.value)
+        assertEquals(listOf(shawshank), watchlist.films.first())
+    }
+
+    @Test
+    fun confirmRemove_removesAndCloses() = runTest {
+        watchlist.add(shawshank)
+        store.confirmWatchlistRemoval.set(true)
+        val vm = viewModel()
+        vm.requestRemove()
+        vm.confirmRemove()
+        assertFalse(vm.confirming.value)
         assertFalse(vm.saved.value)
         assertEquals(emptyList(), watchlist.films.first())
+    }
+
+    @Test
+    fun keep_closesAndKeeps() = runTest {
+        watchlist.add(shawshank)
+        store.confirmWatchlistRemoval.set(true)
+        val vm = viewModel()
+        vm.requestRemove()
+        vm.keep()
+        assertFalse(vm.confirming.value)
+        assertTrue(vm.saved.value)
+        assertEquals(listOf(shawshank), watchlist.films.first())
     }
 
     @Test

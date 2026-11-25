@@ -51,6 +51,12 @@ class LocalStore(private val storage: KeyValueStorage) {
     /** The films saved to the watchlist, oldest first; empty until the first add. Cleared by [reset]. */
     val watchlist = json("watchlist", emptyList<WatchlistEntry>(), ListSerializer(WatchlistEntry.serializer()))
 
+    /** Feature flag: Details shows the compact layout (one facts line, an Overview heading); off is classic. */
+    val compactDetails = boolean("compact_details")
+
+    /** Feature flag: removing from the watchlist asks first; off removes at once. */
+    val confirmWatchlistRemoval = boolean("confirm_watchlist_removal")
+
     /** The switches as the client reads them before each request; a snapshot, never a second copy of state. */
     fun simulation() = Simulation(simulateOffline.value.value, simulateServerError.value.value)
 

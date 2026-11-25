@@ -52,6 +52,10 @@ Scenarios live in `scenarios/`. Each is platform-agnostic and runs unchanged on 
 | `filter_no_results.json` | Filter by 9+, 1931 and Animation, see the empty message, then clear the filters |
 | `rate_and_remove.json` | Reset app data, rate The Shawshank Redemption 8/10, see the rating on its details and in My ratings, then remove it and see both cleared |
 | `watchlist_add_remove.json` | Reset app data, add The Shawshank Redemption to the watchlist, restart the app and see it still listed, then remove it and see the watchlist empty |
+| `details_layout_classic.json` | Reset app data, choose the classic details layout in Settings, open The Shawshank Redemption and see `Released 1994` and `142 min` |
+| `details_layout_compact.json` | Reset app data, choose the compact details layout in Settings, open The Shawshank Redemption and see the one-line `1994 · 2h 22m` facts and the Overview heading |
+| `watchlist_remove_at_once.json` | Reset app data, choose "Remove at once" in Settings, add The Shawshank Redemption to the watchlist and remove it with one tap |
+| `watchlist_remove_ask_first.json` | Reset app data, choose "Ask first" in Settings, add The Shawshank Redemption, keep it once from the confirmation, then confirm the removal |
 
 The filter scenarios check the active-filters line the app shows above the list (for example `Drama · 1994 · Rated 8+ · Highest rated`), not a chip's selected state, and pick combinations whose results have not changed in years.
 
@@ -71,7 +75,7 @@ mauto run showcase-app/scenarios/browse_popular.json
 
 ## Settings
 
-mauto cannot clear an app's saved data or turn a device's network off, so the app does both itself. Settings (on the popular films screen) has a "Reset app data" button, which clears everything the app saved on the device and returns to the start, and two switches, "Simulate offline" and "Simulate server error", which make every TMDB request fail with the matching message until you turn them off. Scenarios that depend on saved state start with Reset app data, so they begin from the first-launch state whatever ran before them: `simulate_offline.json`, `simulate_server_error.json`, both filter scenarios, `rate_and_remove.json` and `watchlist_add_remove.json` do, and the simulation scenarios leave their switch off.
+mauto cannot clear an app's saved data or turn a device's network off, so the app does both itself. Settings (on the popular films screen) has a "Reset app data" button, which clears everything the app saved on the device and returns to the start, and two switches, "Simulate offline" and "Simulate server error", which make every TMDB request fail with the matching message until you turn them off. Scenarios that depend on saved state start with Reset app data, so they begin from the first-launch state whatever ran before them: `simulate_offline.json`, `simulate_server_error.json`, both filter scenarios, `rate_and_remove.json`, `watchlist_add_remove.json` and the four feature-flag scenarios do, and the simulation scenarios leave their switch off.
 
 ## Ratings
 
@@ -80,6 +84,17 @@ Rating a film needs no TMDB account: the app rates through a TMDB guest session,
 ## Watchlist
 
 The watchlist is kept on the device, not on TMDB. TMDB's own watchlist needs a signed-in account, and a guest session cannot use it (checked on #304). Add or remove a film on its details screen, which says whether the film is in your watchlist. "Watchlist", beside "Filters" on the popular films screen, lists the films you saved. The list survives an app restart, and Reset app data empties it. `watchlist_add_remove.json` starts with Reset app data, restarts the app to show the film is still saved, and leaves the watchlist empty.
+
+## Feature flags
+
+One flow often turns into several through feature flags, and each variant needs testing on both platforms. Settings has a "Feature flags" section, below Reset app data, with two flags:
+
+- **Details screen:** "Classic layout" shows the release year, runtime and genres on separate lines (`Released 1994`, `142 min`). "Compact layout" puts them on one line (`1994 · 2h 22m · Drama, Crime`) with an Overview heading above the overview.
+- **Removing from the watchlist:** "Remove at once" removes a film with one tap on its details screen. "Ask first" adds a step: a confirmation asks before removing, with "Yes, remove" and "Keep it".
+
+Each flag has two options instead of an on/off switch, and Settings states the setting in words under each flag. Both default to the first option, and Reset app data puts them back. The values are stored on the device and survive a restart.
+
+Each setting has its own scenario, so four scenarios cover the two flags. Each one resets app data and then picks its setting in Settings before the flow starts, so a run never depends on what an earlier run left behind. All four are meant to pass: they show variant coverage, one file per variant, not a failure.
 
 ## Attribution
 

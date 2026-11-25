@@ -116,6 +116,37 @@ class LocalStoreTest {
         assertEquals(emptyList(), LocalStore(storage).watchlist.value.value)
     }
 
+    @Test
+    fun flags_freshStore_areOff() {
+        val store = LocalStore(storage)
+        assertFalse(store.compactDetails.value.value)
+        assertFalse(store.confirmWatchlistRemoval.value.value)
+    }
+
+    @Test
+    fun flags_persistAcrossStoreInstances() {
+        LocalStore(storage).apply {
+            compactDetails.set(true)
+            confirmWatchlistRemoval.set(true)
+        }
+        val relaunched = LocalStore(storage)
+        assertTrue(relaunched.compactDetails.value.value)
+        assertTrue(relaunched.confirmWatchlistRemoval.value.value)
+    }
+
+    @Test
+    fun reset_clearsFlags() {
+        val store = LocalStore(storage)
+        store.compactDetails.set(true)
+        store.confirmWatchlistRemoval.set(true)
+        store.reset()
+        assertFalse(store.compactDetails.value.value)
+        assertFalse(store.confirmWatchlistRemoval.value.value)
+        assertFalse(LocalStore(storage).compactDetails.value.value)
+        assertFalse(LocalStore(storage).confirmWatchlistRemoval.value.value)
+        assertTrue(storage.keys().none { it.startsWith("reel_tracker.") }, "storage still holds ${storage.keys()}")
+    }
+
     private companion object {
         val shawshank = WatchlistEntry(278, "The Shawshank Redemption", "1994", "https://image.tmdb.org/t/p/w154/a.jpg")
         val fightClub = WatchlistEntry(550, "Fight Club", null, null)

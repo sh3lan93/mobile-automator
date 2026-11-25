@@ -5,6 +5,7 @@ import io.github.sh3lan93.mobileautomator.showcase.store.InMemoryKeyValueStorage
 import io.github.sh3lan93.mobileautomator.showcase.store.LocalStore
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class SettingsViewModelTest {
@@ -48,6 +49,38 @@ class SettingsViewModelTest {
         assertEquals(Simulation(), vm.switches())
         assertTrue(storage.keys().isEmpty(), "storage still holds ${storage.keys()}")
         assertEquals(Simulation(), LocalStore(storage).simulation())
+    }
+
+    @Test
+    fun setCompactDetails_updatesStore() {
+        assertFalse(vm.compactDetails.value)
+        vm.setCompactDetails(true)
+        assertTrue(vm.compactDetails.value)
+        assertTrue(LocalStore(storage).compactDetails.value.value)
+        vm.setCompactDetails(false)
+        assertFalse(vm.compactDetails.value)
+        assertFalse(LocalStore(storage).compactDetails.value.value)
+    }
+
+    @Test
+    fun setConfirmRemoval_updatesStore() {
+        assertFalse(vm.confirmWatchlistRemoval.value)
+        vm.setConfirmWatchlistRemoval(true)
+        assertTrue(vm.confirmWatchlistRemoval.value)
+        assertTrue(LocalStore(storage).confirmWatchlistRemoval.value.value)
+        vm.setConfirmWatchlistRemoval(false)
+        assertFalse(vm.confirmWatchlistRemoval.value)
+        assertFalse(LocalStore(storage).confirmWatchlistRemoval.value.value)
+    }
+
+    @Test
+    fun reset_turnsFlagsOff() {
+        vm.setCompactDetails(true)
+        vm.setConfirmWatchlistRemoval(true)
+        vm.resetAppData()
+        assertFalse(vm.compactDetails.value)
+        assertFalse(vm.confirmWatchlistRemoval.value)
+        assertTrue(storage.keys().isEmpty(), "storage still holds ${storage.keys()}")
     }
 
     private fun SettingsViewModel.switches() = Simulation(simulateOffline.value, simulateServerError.value)

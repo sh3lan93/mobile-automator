@@ -1,0 +1,231 @@
+{
+  "$schema_version": "2.1",
+  "scenario_id": "details_layout_classic",
+  "name": "Details screen in the classic layout",
+  "description": "Resets app data from Settings, then chooses Classic layout for the Details screen feature flag (the default, set explicitly) and checks the setting's status line. It searches for The Shawshank Redemption, opens its details and checks the classic layout: the release year and the runtime on lines of their own, and no compact facts line. Starts by resetting app data. Needs a configured TMDB key (showcase-app/tmdb.properties): without one the app shows the add-your-key screen and the search never runs.",
+  "platform": "cross-platform",
+  "app_package": "io.github.sh3lan93.mobileautomator.showcase",
+  "mode": "platform-agnostic",
+  "metadata": {
+    "app_version": "debug",
+    "environment": "local"
+  },
+  "tags": [
+    "showcase",
+    "flags",
+    "details"
+  ],
+  "steps": [
+    {
+      "id": "launch",
+      "action": "launch_app",
+      "description": "Launch Reel Tracker"
+    },
+    {
+      "id": "wait_list",
+      "action": "wait_for_element",
+      "description": "Wait for the popular films screen title",
+      "target": "Popular films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 30000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_settings",
+      "action": "tap",
+      "description": "Open the Settings screen",
+      "target": "Settings",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "wait_settings",
+      "action": "wait_for_element",
+      "description": "Wait for the Reset app data button on the Settings screen",
+      "target": "Reset app data",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "reset",
+      "action": "tap",
+      "description": "Reset app data, which turns every feature flag back to its default",
+      "target": "Reset app data"
+    },
+    {
+      "id": "wait_reset",
+      "action": "wait_for_element",
+      "description": "Wait for the popular films screen after the reset",
+      "target": "Popular films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 30000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_settings_again",
+      "action": "tap",
+      "description": "Open the Settings screen again to choose the flag setting",
+      "target": "Settings",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "wait_option",
+      "action": "wait_for_element",
+      "description": "Wait for the Classic layout option under Details screen",
+      "target": "Classic layout",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "choose_option",
+      "action": "tap",
+      "description": "Choose Classic layout",
+      "target": "Classic layout"
+    },
+    {
+      "id": "wait_status",
+      "action": "wait_for_element",
+      "description": "Wait for the status line that states the setting in words",
+      "target": "Details layout in use: classic",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "back_from_settings",
+      "action": "press_back",
+      "description": "Go back to the popular films list"
+    },
+    {
+      "id": "wait_list_again",
+      "action": "wait_for_element",
+      "description": "Wait for the popular films screen",
+      "target": "Popular films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_search",
+      "action": "tap",
+      "description": "Open the Search screen",
+      "target": "Search",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "wait_search",
+      "action": "wait_for_element",
+      "description": "Wait for the search field, so the screen has settled before the tap that focuses it",
+      "target": "Search films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "focus_field",
+      "action": "tap",
+      "description": "Focus the search field",
+      "target": "Search films"
+    },
+    {
+      "id": "type_title",
+      "action": "type",
+      "description": "Type part of a film title",
+      "value": "Shawshank"
+    },
+    {
+      "id": "hide_keyboard",
+      "action": "dismiss_keyboard",
+      "description": "Hide the keyboard so the results are not covered"
+    },
+    {
+      "id": "wait_result",
+      "action": "wait_for_element",
+      "description": "Wait for the film in the search results",
+      "target": "The Shawshank Redemption",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 15000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_film",
+      "action": "tap",
+      "description": "Open the film's details; the pattern skips other results that only mention the title, such as a documentary about it",
+      "target": "The Shawshank Redemption",
+      "target_pattern": "^The Shawshank Redemption"
+    },
+    {
+      "id": "wait_details",
+      "action": "wait_for_element",
+      "description": "Wait for the release year line of the classic layout",
+      "target": "Released 1994",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 15000
+      },
+      "on_failure": "fail"
+    }
+  ],
+  "assertions": [
+    {
+      "id": "status_shown",
+      "after_step": "wait_status",
+      "type": "element_visible",
+      "description": "Settings states the chosen setting in words",
+      "element_description": "Details layout in use: classic",
+      "expected_visible": true
+    },
+    {
+      "id": "year_line",
+      "after_step": "wait_details",
+      "type": "element_visible",
+      "description": "The classic layout shows the release year on its own line",
+      "element_description": "Released 1994",
+      "expected_visible": true
+    },
+    {
+      "id": "runtime_line",
+      "after_step": "wait_details",
+      "type": "element_visible",
+      "description": "The classic layout shows the runtime in minutes",
+      "element_description": "142 min",
+      "expected_visible": true
+    },
+    {
+      "id": "no_compact_runtime",
+      "after_step": "wait_details",
+      "type": "element_not_exists",
+      "description": "The compact runtime format is not shown",
+      "element_description": "2h 22m"
+    }
+  ]
+}
