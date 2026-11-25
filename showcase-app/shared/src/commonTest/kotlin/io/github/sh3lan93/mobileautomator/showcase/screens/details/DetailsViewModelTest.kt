@@ -5,6 +5,8 @@ import io.github.sh3lan93.mobileautomator.showcase.data.MovieDetails
 import io.github.sh3lan93.mobileautomator.showcase.data.TmdbCall
 import io.github.sh3lan93.mobileautomator.showcase.data.TmdbFailure
 import io.github.sh3lan93.mobileautomator.showcase.data.TmdbResult
+import io.github.sh3lan93.mobileautomator.showcase.store.InMemoryKeyValueStorage
+import io.github.sh3lan93.mobileautomator.showcase.store.LocalStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -16,6 +18,8 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DetailsViewModelTest {
@@ -27,6 +31,7 @@ class DetailsViewModelTest {
     private val FakeTmdbClient.ids: List<Int> get() = calls.map { (it as TmdbCall.Details).id }
 
     private val dispatcher = StandardTestDispatcher()
+    private val store = LocalStore(InMemoryKeyValueStorage())
     private val details = MovieDetails(
         id = 278,
         title = "The Shawshank Redemption",
@@ -46,14 +51,14 @@ class DetailsViewModelTest {
     @Test
     fun loadsTheGivenId() = runTest(dispatcher) {
         val client = fake(TmdbResult.Ok(details))
-        DetailsViewModel(278, client)
+        DetailsViewModel(278, client, store)
         advanceUntilIdle()
         assertEquals(listOf(278), client.ids)
     }
 
     @Test
     fun loaded() = runTest(dispatcher) {
-        val vm = DetailsViewModel(278, fake(TmdbResult.Ok(details)))
+        val vm = DetailsViewModel(278, fake(TmdbResult.Ok(details)), store)
         assertEquals(DetailsUiState.Loading, vm.state.value)
         advanceUntilIdle()
         assertEquals(DetailsUiState.Loaded(details), vm.state.value)
@@ -62,7 +67,7 @@ class DetailsViewModelTest {
     @Test
     fun failure_isFailed() = runTest(dispatcher) {
         for (failure in TmdbFailure.entries) {
-            val vm = DetailsViewModel(278, fake(TmdbResult.Failed(failure)))
+            val vm = DetailsViewModel(278, fake(TmdbResult.Failed(failure)), store)
             advanceUntilIdle()
             assertEquals(DetailsUiState.Failed(failure), vm.state.value, "for $failure")
         }
@@ -71,7 +76,7 @@ class DetailsViewModelTest {
     @Test
     fun retry_afterFailure_loadsAgain() = runTest(dispatcher) {
         val client = fake(TmdbResult.Failed(TmdbFailure.ServerError))
-        val vm = DetailsViewModel(278, client)
+        val vm = DetailsViewModel(278, client, store)
         advanceUntilIdle()
         assertEquals(DetailsUiState.Failed(TmdbFailure.ServerError), vm.state.value)
 
@@ -81,5 +86,15 @@ class DetailsViewModelTest {
         advanceUntilIdle()
         assertEquals(DetailsUiState.Loaded(details), vm.state.value)
         assertEquals(listOf(278, 278), client.ids)
+    }
+
+    @Test
+    fun compactLayout_followsStore() = runTest(dispatcher) {
+        val vm = DetailsViewModel(278, fake(TmdbResult.Ok(details)), store)
+        assertFalse(vm.compactLayout.value)
+        store.compactDetails.set(true)
+        assertTrue(vm.compactLayout.value)
+        store.compactDetails.set(false)
+        assertFalse(vm.compactLayout.value)
     }
 }

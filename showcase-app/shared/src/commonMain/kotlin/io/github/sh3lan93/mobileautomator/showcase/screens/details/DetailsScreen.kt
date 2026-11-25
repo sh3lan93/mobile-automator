@@ -34,6 +34,7 @@ fun DetailsScreen(
     viewModel: DetailsViewModel = koinViewModel { parametersOf(movieId) },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val compact by viewModel.compactLayout.collectAsStateWithLifecycle()
     Scaffold(
         topBar = {
             BackTopBar((state as? DetailsUiState.Loaded)?.details?.title ?: "", onBack)
@@ -42,7 +43,8 @@ fun DetailsScreen(
         val modifier = Modifier.fillMaxSize().padding(padding)
         when (val s = state) {
             DetailsUiState.Loading -> Centered(modifier) { CircularProgressIndicator() }
-            is DetailsUiState.Loaded -> DetailsContent(s.details, modifier)
+            is DetailsUiState.Loaded ->
+                if (compact) CompactDetailsContent(s.details, modifier) else DetailsContent(s.details, modifier)
             is DetailsUiState.Failed -> FailureContent(s.failure, viewModel::retry, modifier)
         }
     }
@@ -54,13 +56,7 @@ private fun DetailsContent(details: MovieDetails, modifier: Modifier) {
         modifier = modifier.verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        // "Poster", not the title, so the title is one element on the screen (the top bar).
-        AsyncImage(
-            model = details.posterUrl,
-            contentDescription = "Poster",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.size(width = 154.dp, height = 231.dp),
-        )
+        Poster(details)
         // Each line only when TMDB sent it: never `null` or `0 min`.
         details.releaseYear?.let { Text("Released $it", style = MaterialTheme.typography.bodyLarge) }
         details.runtimeMinutes?.let { Text("$it min", style = MaterialTheme.typography.bodyLarge) }
@@ -71,4 +67,33 @@ private fun DetailsContent(details: MovieDetails, modifier: Modifier) {
         WatchlistSection(details.toMovie())
         RatingSection(details.id)
     }
+}
+
+/** The compact layout (feature flag): the same film with one facts line and an `Overview` heading. */
+@Composable
+private fun CompactDetailsContent(details: MovieDetails, modifier: Modifier) {
+    Column(
+        modifier = modifier.verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Poster(details)
+        compactFacts(details)?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
+        details.overview?.let {
+            Text("Overview", style = MaterialTheme.typography.titleMedium)
+            Text(it, style = MaterialTheme.typography.bodyMedium)
+        }
+        WatchlistSection(details.toMovie())
+        RatingSection(details.id)
+    }
+}
+
+/** "Poster", not the title, so the title is one element on the screen (the top bar). */
+@Composable
+private fun Poster(details: MovieDetails) {
+    AsyncImage(
+        model = details.posterUrl,
+        contentDescription = "Poster",
+        contentScale = ContentScale.Crop,
+        modifier = Modifier.size(width = 154.dp, height = 231.dp),
+    )
 }
