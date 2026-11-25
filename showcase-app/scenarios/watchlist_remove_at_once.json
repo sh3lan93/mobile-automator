@@ -1,0 +1,287 @@
+{
+  "$schema_version": "2.1",
+  "scenario_id": "watchlist_remove_at_once",
+  "name": "Remove from the watchlist at once",
+  "description": "Resets app data from Settings, then chooses Remove at once for the watchlist removal feature flag (the default, set explicitly) and checks the setting's status line. It searches for The Shawshank Redemption, adds it to the watchlist from its details screen, removes it, and checks it was removed straight away with no confirmation dialog. Starts by resetting app data and leaves the watchlist empty. Needs a configured TMDB key (showcase-app/tmdb.properties): without one the app shows the add-your-key screen and the search never runs.",
+  "platform": "cross-platform",
+  "app_package": "io.github.sh3lan93.mobileautomator.showcase",
+  "mode": "platform-agnostic",
+  "metadata": {
+    "app_version": "debug",
+    "environment": "local"
+  },
+  "tags": [
+    "showcase",
+    "flags",
+    "watchlist"
+  ],
+  "steps": [
+    {
+      "id": "launch",
+      "action": "launch_app",
+      "description": "Launch Reel Tracker"
+    },
+    {
+      "id": "wait_list",
+      "action": "wait_for_element",
+      "description": "Wait for the popular films screen title",
+      "target": "Popular films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 30000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_settings",
+      "action": "tap",
+      "description": "Open the Settings screen",
+      "target": "Settings",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "wait_settings",
+      "action": "wait_for_element",
+      "description": "Wait for the Reset app data button on the Settings screen",
+      "target": "Reset app data",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "reset",
+      "action": "tap",
+      "description": "Reset app data, which turns every feature flag back to its default",
+      "target": "Reset app data"
+    },
+    {
+      "id": "wait_reset",
+      "action": "wait_for_element",
+      "description": "Wait for the popular films screen after the reset",
+      "target": "Popular films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 30000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_settings_again",
+      "action": "tap",
+      "description": "Open the Settings screen again to choose the flag setting",
+      "target": "Settings",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "wait_option",
+      "action": "wait_for_element",
+      "description": "Wait for the Remove at once option under Removing from the watchlist",
+      "target": "Remove at once",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "choose_option",
+      "action": "tap",
+      "description": "Choose Remove at once",
+      "target": "Remove at once"
+    },
+    {
+      "id": "wait_status",
+      "action": "wait_for_element",
+      "description": "Wait for the status line that states the setting in words",
+      "target": "Watchlist removal is immediate",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "back_from_settings",
+      "action": "press_back",
+      "description": "Go back to the popular films list"
+    },
+    {
+      "id": "wait_list_again",
+      "action": "wait_for_element",
+      "description": "Wait for the popular films screen",
+      "target": "Popular films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_search",
+      "action": "tap",
+      "description": "Open the Search screen",
+      "target": "Search",
+      "on_failure": "retry",
+      "retry_policy": {
+        "max_attempts": 2,
+        "backoff_ms": 1500
+      }
+    },
+    {
+      "id": "wait_search",
+      "action": "wait_for_element",
+      "description": "Wait for the search field, so the screen has settled before the tap that focuses it",
+      "target": "Search films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "focus_field",
+      "action": "tap",
+      "description": "Focus the search field",
+      "target": "Search films"
+    },
+    {
+      "id": "type_title",
+      "action": "type",
+      "description": "Type part of a film title",
+      "value": "Shawshank"
+    },
+    {
+      "id": "hide_keyboard",
+      "action": "dismiss_keyboard",
+      "description": "Hide the keyboard so the results are not covered"
+    },
+    {
+      "id": "wait_result",
+      "action": "wait_for_element",
+      "description": "Wait for the film in the search results",
+      "target": "The Shawshank Redemption",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 15000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "open_film",
+      "action": "tap",
+      "description": "Open the film's details; the pattern skips other results that only mention the title, such as a documentary about it",
+      "target": "The Shawshank Redemption",
+      "target_pattern": "^The Shawshank Redemption"
+    },
+    {
+      "id": "wait_not_saved",
+      "action": "wait_for_element",
+      "description": "Wait for the details screen to show the film is not on the watchlist",
+      "target": "Not saved to your watchlist",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 15000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "wait_add",
+      "action": "wait_for_element",
+      "description": "Wait for the Add to watchlist button",
+      "target": "Add to watchlist",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "add",
+      "action": "tap",
+      "description": "Add the film to the watchlist",
+      "target": "Add to watchlist"
+    },
+    {
+      "id": "wait_saved",
+      "action": "wait_for_element",
+      "description": "Wait for the details screen to show the film is on the watchlist",
+      "target": "In your watchlist",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "wait_remove",
+      "action": "wait_for_element",
+      "description": "Wait for the Remove from watchlist button",
+      "target": "Remove from watchlist",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
+      "id": "remove",
+      "action": "tap",
+      "description": "Remove the film; with this setting it goes at once, with no question",
+      "target": "Remove from watchlist"
+    },
+    {
+      "id": "wait_removed",
+      "action": "wait_for_element",
+      "description": "Wait for the details screen to show the film is no longer on the watchlist",
+      "target": "Not saved to your watchlist",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    }
+  ],
+  "assertions": [
+    {
+      "id": "status_shown",
+      "after_step": "wait_status",
+      "type": "element_visible",
+      "description": "Settings states the chosen setting in words",
+      "element_description": "Watchlist removal is immediate",
+      "expected_visible": true
+    },
+    {
+      "id": "saved_shown",
+      "after_step": "wait_saved",
+      "type": "element_visible",
+      "description": "The details screen shows the film is on the watchlist",
+      "element_description": "In your watchlist",
+      "expected_visible": true
+    },
+    {
+      "id": "removed_shown",
+      "after_step": "wait_removed",
+      "type": "element_visible",
+      "description": "The film is no longer on the watchlist",
+      "element_description": "Not saved to your watchlist",
+      "expected_visible": true
+    },
+    {
+      "id": "no_dialog",
+      "after_step": "wait_removed",
+      "type": "element_not_exists",
+      "description": "No confirmation dialog was shown",
+      "element_description": "Yes, remove"
+    }
+  ]
+}
