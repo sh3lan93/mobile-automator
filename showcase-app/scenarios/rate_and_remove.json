@@ -216,6 +216,13 @@
       "on_failure": "fail"
     },
     {
+      "id": "reveal_remove",
+      "action": "scroll_to_element",
+      "description": "Bring Remove rating on screen: below the watchlist section it can sit under the bottom edge on a shorter screen",
+      "target": "Remove rating",
+      "on_failure": "fail"
+    },
+    {
       "id": "remove",
       "action": "tap",
       "description": "Remove the rating this scenario added",
