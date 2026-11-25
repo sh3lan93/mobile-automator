@@ -1,0 +1,1801 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Intelligent mobile QA automation for any AI coding agent via the mauto CLI - auto-generate test scenarios and execute them with AI-powered assertions on real devices and emulators">
+      
+      
+      
+        <link rel="canonical" href="https://sh3lan93.github.io/mobile-automator/plans/2026-11-25-showcase-310-watchlist-plan/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
+    
+    
+      
+        <title>Showcase watchlist: add, remove and view, stored on the device (#310) Implementation Plan - mobile-automator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Showcase watchlist: add, remove and view, stored on the device (#310) Implementation Plan - mobile-automator" />
+  <meta property="og:description" content="Intelligent mobile QA automation for any AI coding agent via the mauto CLI - auto-generate test scenarios and execute them with AI-powered assertions on real devices and emulators" />
+  <meta property="og:url" content="https://sh3lan93.github.io/mobile-automator/plans/2026-11-25-showcase-310-watchlist-plan/" />
+  <meta property="og:site_name" content="mobile-automator" />
+  <meta property="og:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Showcase watchlist: add, remove and view, stored on the device (#310) Implementation Plan - mobile-automator" />
+  <meta name="twitter:description" content="Intelligent mobile QA automation for any AI coding agent via the mauto CLI - auto-generate test scenarios and execute them with AI-powered assertions on real devices and emulators" />
+  <meta name="twitter:image" content="https://sh3lan93.github.io/mobile-automator/assets/logo.svg" />
+  
+
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#showcase-watchlist-add-remove-and-view-stored-on-the-device-310-implementation-plan" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="mobile-automator" class="md-header__button md-logo" aria-label="mobile-automator" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="mobile-automator logo" width="32" height="32">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            mobile-automator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Showcase watchlist: add, remove and view, stored on the device (#310) Implementation Plan
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/sh3lan93/mobile-automator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sh3lan93/mobile-automator
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="mobile-automator" class="md-nav__button md-logo" aria-label="mobile-automator" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="mobile-automator logo" width="32" height="32">
+
+    </a>
+    mobile-automator
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/sh3lan93/mobile-automator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sh3lan93/mobile-automator
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Core Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/three-tier-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Layered Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How Skills Work
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cross-Session Memory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command Guides
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup Command
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/generate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Generate Command
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/execute/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execute Command
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli-verbs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Verbs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/assertions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Assertion Types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test Scenario Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/result-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test Result Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/mcp-tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internal Engine (mobile-mcp)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/telemetry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Telemetry & Privacy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Example Scenarios
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/android/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Android Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/ios/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    iOS Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ & Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of Contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of Contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#tmdb-check-can-a-guest-session-use-the-server-side-watchlist-done-while-planning-2026-11-25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TMDB check: can a guest session use the server-side watchlist? (done while planning, 2026-11-25)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#global-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Global Constraints
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#review-focus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Review Focus
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-the-watchlist-entry-goes-the-popular-top-bar-is-crowded" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where the Watchlist entry goes (the popular top bar is crowded)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#file-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File Structure
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="File Structure">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#task-1-watchlist-value-in-the-local-store" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 1: Watchlist value in the local store
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-2-watchlist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 2: Watchlist
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-3-watchlist-section-on-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 3: Watchlist section on Details
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-4-watchlist-screen-navigation-and-copy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 4: Watchlist screen, navigation and copy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-5-scenario-then-the-device-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 5: Scenario, then the device check
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-6-docs-prd-note-full-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 6: Docs, PRD note, full verification
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#acceptance-map-310" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Acceptance map (#310)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="showcase-watchlist-add-remove-and-view-stored-on-the-device-310-implementation-plan">Showcase watchlist: add, remove and view, stored on the device (#310) Implementation Plan<a class="headerlink" href="#showcase-watchlist-add-remove-and-view-stored-on-the-device-310-implementation-plan" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development. Steps use checkbox (<code>- [ ]</code>) syntax for tracking.</p>
+</blockquote>
+<p><strong>Goal:</strong> Add a film to a watchlist from its Details screen, remove it, and view the watchlist on its own screen. The list is stored on the device in the existing <code>LocalStore</code>, survives an app restart, and is emptied by Reset app data. Membership is visible text on Details. Ship one scenario that resets, adds a film, sees it in the watchlist after a cold restart, and removes it.</p>
+<p><strong>Architecture:</strong> One new <code>LocalStore</code> declaration, <code>watchlist</code>, built with the store's existing <code>json(...)</code> factory (its first use). Because the declaration registers itself, <code>reset()</code> clears it with no edit. A small <code>Watchlist</code> class in <code>data/</code> sits over that value: it maps between <code>Movie</code> and a private serializable entry, prevents duplicates, and removes by id. Details gets a <code>WatchlistSection</code> beside <code>RatingSection</code>, with its own view model and the same one-line call pattern #309 set up. The Watchlist screen reuses <code>MovieList</code>/<code>MovieRowData</code> and <code>filmCount</code>. Nothing in <code>TmdbClient</code>, <code>KtorTmdbClient</code> or <code>GuestRatings</code> changes.</p>
+<p><strong>Spec:</strong> issue #310, PRD #304 (and its comments), <code>docs/plans/2026-11-11-movie-tracker-showcase-design.md</code>, and the #305–#309 plans, whose Global Constraints apply unchanged.</p>
+<h2 id="tmdb-check-can-a-guest-session-use-the-server-side-watchlist-done-while-planning-2026-11-25">TMDB check: can a guest session use the server-side watchlist? (done while planning, 2026-11-25)<a class="headerlink" href="#tmdb-check-can-a-guest-session-use-the-server-side-watchlist-done-while-planning-2026-11-25" title="Permanent link">&para;</a></h2>
+<p><strong>Reference</strong> (developer.themoviedb.org): <code>POST /3/account/{account_id}/watchlist</code> and <code>GET /3/account/{account_id}/watchlist/movies</code> take a path <code>account_id</code> and a query <code>session_id</code>, which is a signed-in user's session. Neither endpoint takes <code>guest_session_id</code>. The only guest-session list endpoint is <code>GET /3/guest_session/{id}/rated/movies</code>.</p>
+<p><strong>Live</strong> (<code>curl</code>, v3 <code>api_key</code>; key read into a shell variable and never printed; one throwaway guest session, nothing written):</p>
+<table>
+<thead>
+<tr>
+<th>Call</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST account/{0,null}/watchlist?guest_session_id=…</code>, <code>POST account/watchlist?guest_session_id=…</code></td>
+<td>401, status_code 3 ("Authentication failed: You do not have permissions")</td>
+</tr>
+<tr>
+<td><code>POST account/0/watchlist?session_id=&lt;guest id&gt;</code></td>
+<td>401, status_code 3</td>
+</tr>
+<tr>
+<td><code>GET account/0/watchlist/movies?guest_session_id=…</code></td>
+<td>401, status_code 3</td>
+</tr>
+<tr>
+<td><code>GET account?session_id=&lt;guest id&gt;</code></td>
+<td>401, status_code 3: a guest session has no account</td>
+</tr>
+<tr>
+<td><code>GET guest_session/{id}/watchlist/movies</code></td>
+<td>404, status_code 34: no such resource</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Outcome:</strong> a guest session cannot use TMDB's watchlist. It needs a signed-in account, which the PRD rules out of scope. The watchlist stays on the device, as the PRD and the orchestrator's notes already decided. Task 6 posts this on #304.</p>
+<h2 id="global-constraints">Global Constraints<a class="headerlink" href="#global-constraints" title="Permanent link">&para;</a></h2>
+<ul>
+<li>All of the #305–#309 plans' constraints apply: Android and iOS only, no UI test dependency, no <code>testTag</code>, no committed key, schema 2.1 platform-agnostic scenarios with mechanical assertions only, facts shown as visible text, devices driven only through <code>mauto</code> verbs.</li>
+<li><strong>One store.</strong> The watchlist is a <code>LocalStore</code> value built with the existing <code>json(...)</code> helper. Add no second store, no new <code>KeyValueStorage</code> and no new codec. <code>reset()</code> is not edited.</li>
+<li><strong>Reuse, do not copy.</strong> <code>MovieList</code>, <code>MovieRowData</code>, <code>filmCount</code>, <code>Centered</code> and <code>FailureContent</code> come from <code>screens/common/</code>. Tests use the existing <code>InMemoryKeyValueStorage</code>. No client change means the shared <code>FakeTmdbClient</code>/<code>FakeGuestTmdb</code> need no new members. Any test that does need a client uses the shared fake.</li>
+<li>Nothing under <code>src/</code>, <code>bin/</code> or <code>package.json</code> changes: no version bump and no CHANGELOG entry.</li>
+<li>Default engine (mobilecli). Switch to <code>engine: legacy</code> only if <code>mauto elements</code> shows a missing label or hidden content, and say so in the PR (#379).</li>
+<li>Both devices are this worker's: the Android emulator and the iOS simulator. When done, release the Android DeviceServer and the host <code>mobilecli daemon</code> (<code>pkill -f 'mobilecli.* daemon'</code>, then <code>mauto session end</code>).</li>
+<li>Worktree <code>sample-app-310-watchlist</code>, branch <code>sample-app/310-watchlist</code>. Subagents <code>cd</code> there and check <code>git branch --show-current</code> before any commit. Per-task commits end with the repo's <code>Co-Authored-By</code> line.</li>
+</ul>
+<h2 id="review-focus">Review Focus<a class="headerlink" href="#review-focus" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Reset that misses the watchlist.</strong> It is declared through the registering factory, never by hand. → Task 1 test: reset empties it and leaves no <code>reel_tracker.</code> key.</li>
+<li><strong>Membership state that goes stale.</strong> Details and the Watchlist screen both read one <code>StateFlow</code> from the store. Back from Details shows the change, and neither screen keeps a copy. → Task 2/3/4 tests.</li>
+<li><strong>Duplicates.</strong> Adding twice, for example a double tap, keeps one entry. → Task 2 test.</li>
+<li><strong>Corrupt stored JSON</strong> reads as an empty list and never crashes, through the <code>json(...)</code> helper's existing fallback. → Task 1 test.</li>
+<li><strong>Target collisions.</strong> CLI targets and element descriptions are case-insensitive substrings, and the first match wins. The two membership lines must not contain each other. → Task 4 copy table.</li>
+<li><strong>The crowded popular top bar.</strong> It is left unchanged; the entry goes in the filter row (decision below). The active-filters text keeps its <code>weight(1f)</code>, so a long filter line wraps and never pushes the buttons off. → Task 5 device check.</li>
+</ol>
+<h2 id="where-the-watchlist-entry-goes-the-popular-top-bar-is-crowded">Where the Watchlist entry goes (the popular top bar is crowded)<a class="headerlink" href="#where-the-watchlist-entry-goes-the-popular-top-bar-is-crowded" title="Permanent link">&para;</a></h2>
+<p>Today the bar has <code>Search</code> (text), <code>Refresh</code> (icon), <code>My ratings</code> (star icon), <code>Settings</code> (text) and <code>About</code> (text). Every shipped scenario taps <code>Settings</code> and waits on the <code>Popular films</code> title, so neither may move or be squeezed off the screen.</p>
+<p><strong>Decision (maintainer, 2026-11-25, at plan approval): the filter row, not the top bar.</strong> A <code>Watchlist</code> text button goes in the row under the bar, between the active-filters text and <code>Filters</code>. The top bar does not change. Reasons:
+- The bar is already full, and every scenario relies on <code>Settings</code> and the <code>Popular films</code> title. Leaving the bar alone means no scenario can break because of the new entry.
+- The filter row is shown in every state of the popular screen (loading, empty, failure), so the entry is always reachable.
+- An overflow menu was rejected because it would hide <code>Settings</code> and break every scenario.</p>
+<hr />
+<h2 id="file-structure">File Structure<a class="headerlink" href="#file-structure" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>showcase-app/shared/src/commonMain/kotlin/io/github/sh3lan93/mobileautomator/showcase/
+  store/LocalStore.kt                     # + watchlist = json(...) (drop the @Suppress("unused")); + private @Serializable entry
+  data/Watchlist.kt                       # NEW: films StateFlow&lt;List&lt;Movie&gt;&gt;, contains, add, remove
+  data/Movie.kt                           # + MovieDetails.toMovie()
+  screens/details/WatchlistSection.kt     # NEW: WatchlistSectionViewModel + WatchlistSection composable
+  screens/details/DetailsScreen.kt        # one line: WatchlistSection(details.toMovie()) beside RatingSection
+  screens/watchlist/WatchlistViewModel.kt # NEW
+  screens/watchlist/WatchlistScreen.kt    # NEW: MovieList + filmCount, empty state
+  screens/popular/PopularScreen.kt        # + Watchlist text button in FilterRow, + onWatchlist
+  App.kt                                  # + route watchlist
+  di/Koin.kt                              # + Watchlist, WatchlistSectionViewModel, WatchlistViewModel
+showcase-app/shared/src/commonTest/kotlin/.../
+  store/LocalStoreTest.kt                 # + watchlist persists, reset empties it, corrupt JSON reads empty
+  data/WatchlistTest.kt                   # NEW
+  screens/details/WatchlistSectionViewModelTest.kt  # NEW
+  screens/watchlist/WatchlistViewModelTest.kt       # NEW
+showcase-app/scenarios/watchlist_add_remove.json    # NEW
+showcase-app/README.md                              # scenario row + a Watchlist paragraph
+</code></pre></div>
+<hr />
+<h3 id="task-1-watchlist-value-in-the-local-store">Task 1: Watchlist value in the local store<a class="headerlink" href="#task-1-watchlist-value-in-the-local-store" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// store/LocalStore.kt</span>
+<span class="cm">/** The films saved to the watchlist, oldest first; empty until the first add. Cleared by reset(). */</span>
+<span class="kd">val</span><span class="w"> </span><span class="nv">watchlist</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">json</span><span class="p">(</span><span class="s">"watchlist"</span><span class="p">,</span><span class="w"> </span><span class="n">emptyList</span><span class="o">&lt;</span><span class="n">WatchlistEntry</span><span class="o">&gt;</span><span class="p">(),</span><span class="w"> </span><span class="n">ListSerializer</span><span class="p">(</span><span class="n">WatchlistEntry</span><span class="p">.</span><span class="na">serializer</span><span class="p">()))</span>
+
+<span class="cm">/** A watchlisted film as stored on the device: the fields the Watchlist screen shows, nothing more. */</span>
+<span class="nd">@Serializable</span>
+<span class="kd">data</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="nc">WatchlistEntry</span><span class="p">(</span><span class="kd">val</span><span class="w"> </span><span class="nv">id</span><span class="p">:</span><span class="w"> </span><span class="kt">Int</span><span class="p">,</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="nv">title</span><span class="p">:</span><span class="w"> </span><span class="kt">String</span><span class="p">,</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="nv">releaseYear</span><span class="p">:</span><span class="w"> </span><span class="kt">String?</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="nv">posterUrl</span><span class="p">:</span><span class="w"> </span><span class="kt">String?</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span>
+</code></pre></div>
+<ul>
+<li><code>WatchlistEntry</code> is the stored format. It lives in <code>store/</code>, so the domain <code>Movie</code> never takes on a serialization annotation. Its optional fields have defaults so a later field can be added without breaking old data.</li>
+<li>
+<p>Per the TMDB terms comment on #304 (s.1.C), the store keeps only the id, title, year and poster path of films the user chose. That matches the design.</p>
+</li>
+<li>
+<p>[ ] <strong>Step 1: Failing tests</strong> in <code>LocalStoreTest</code>:</p>
+</li>
+<li><code>watchlist_freshStore_isEmpty</code></li>
+<li><code>watchlist_persistsAcrossStoreInstances</code>: set two entries, build a new store over the same storage, and read both back in order. This stands in for an app restart.</li>
+<li><code>reset_emptiesWatchlist</code>: the existing reset test extended, so no <code>reel_tracker.</code> key remains.</li>
+<li><code>watchlist_undecodableJson_readsEmpty</code>: storage pre-seeded with <code>reel_tracker.watchlist = "{not json"</code>.</li>
+<li>[ ] <strong>Step 2–4:</strong> red, implement, green on <code>./gradlew :shared:testAndroidHostTest :shared:iosSimulatorArm64Test</code>. The iOS <code>UserDefaultsStorageTest</code> stays green.</li>
+<li>[ ] <strong>Step 5: Commit</strong> <code>feat(showcase): watchlist value in the local store</code>.</li>
+</ul>
+<h3 id="task-2-watchlist">Task 2: <code>Watchlist</code><a class="headerlink" href="#task-2-watchlist" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// data/Watchlist.kt</span>
+<span class="kd">class</span><span class="w"> </span><span class="nc">Watchlist</span><span class="p">(</span><span class="kd">private</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="nv">store</span><span class="p">:</span><span class="w"> </span><span class="n">LocalStore</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="cm">/** Saved films, oldest first, as the screens show them. */</span>
+<span class="w">    </span><span class="kd">val</span><span class="w"> </span><span class="nv">films</span><span class="p">:</span><span class="w"> </span><span class="n">StateFlow</span><span class="o">&lt;</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Movie</span><span class="o">&gt;&gt;</span>
+<span class="w">    </span><span class="kd">fun</span><span class="w"> </span><span class="nf">contains</span><span class="p">(</span><span class="n">movieId</span><span class="p">:</span><span class="w"> </span><span class="kt">Int</span><span class="p">):</span><span class="w"> </span><span class="n">StateFlow</span><span class="o">&lt;</span><span class="kt">Boolean</span><span class="o">&gt;</span>
+<span class="w">    </span><span class="kd">fun</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span><span class="n">movie</span><span class="p">:</span><span class="w"> </span><span class="n">Movie</span><span class="p">)</span><span class="w">        </span><span class="c1">// no-op when already saved</span>
+<span class="w">    </span><span class="kd">fun</span><span class="w"> </span><span class="nf">remove</span><span class="p">(</span><span class="n">movieId</span><span class="p">:</span><span class="w"> </span><span class="kt">Int</span><span class="p">)</span><span class="w">     </span><span class="c1">// no-op when not saved</span>
+<span class="p">}</span>
+
+<span class="c1">// data/Movie.kt</span>
+<span class="kd">fun</span><span class="w"> </span><span class="n">MovieDetails</span><span class="p">.</span><span class="nf">toMovie</span><span class="p">()</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Movie</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">releaseYear</span><span class="p">,</span><span class="w"> </span><span class="n">posterUrl</span><span class="p">)</span>
+</code></pre></div>
+<ul>
+<li><code>films</code> and <code>contains</code> are mapped from <code>store.watchlist.value</code> with <code>map(...).stateIn(...)</code>, or with a derived <code>StateFlow</code> that has no scope. Use one mechanism for both, and do not cache a copy. The implementer picks whichever keeps the reads synchronous in tests.</li>
+<li>[ ] <strong>Step 1: Failing tests</strong> <code>WatchlistTest</code> (real <code>LocalStore</code> over <code>InMemoryKeyValueStorage</code>): <code>add_thenListed</code>, <code>addTwice_keepsOne</code>, <code>remove_dropsOnlyThatFilm</code>, <code>remove_notSaved_noChange</code>, <code>contains_followsAddAndRemove</code>, <code>order_isOldestFirst</code>, <code>reset_emptiesFilms</code>.</li>
+<li>[ ] <strong>Step 2–4:</strong> red, implement, green.</li>
+<li>[ ] <strong>Step 5: Commit</strong> <code>feat(showcase): watchlist over the local store</code>.</li>
+</ul>
+<h3 id="task-3-watchlist-section-on-details">Task 3: Watchlist section on Details<a class="headerlink" href="#task-3-watchlist-section-on-details" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kd">class</span><span class="w"> </span><span class="nc">WatchlistSectionViewModel</span><span class="p">(</span><span class="kd">private</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="nv">movie</span><span class="p">:</span><span class="w"> </span><span class="n">Movie</span><span class="p">,</span><span class="w"> </span><span class="kd">private</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="nv">watchlist</span><span class="p">:</span><span class="w"> </span><span class="n">Watchlist</span><span class="p">)</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">ViewModel</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">val</span><span class="w"> </span><span class="nv">saved</span><span class="p">:</span><span class="w"> </span><span class="n">StateFlow</span><span class="o">&lt;</span><span class="kt">Boolean</span><span class="o">&gt;</span>
+<span class="w">    </span><span class="kd">fun</span><span class="w"> </span><span class="nf">add</span><span class="p">()</span>
+<span class="w">    </span><span class="kd">fun</span><span class="w"> </span><span class="nf">remove</span><span class="p">()</span>
+<span class="p">}</span>
+<span class="nd">@Composable</span><span class="w"> </span><span class="kd">fun</span><span class="w"> </span><span class="nf">WatchlistSection</span><span class="p">(</span><span class="n">movie</span><span class="p">:</span><span class="w"> </span><span class="n">Movie</span><span class="p">,</span><span class="w"> </span><span class="n">viewModel</span><span class="p">:</span><span class="w"> </span><span class="n">WatchlistSectionViewModel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">koinViewModel</span><span class="p">(</span><span class="n">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"watchlist-</span><span class="si">${</span><span class="n">movie</span><span class="p">.</span><span class="na">id</span><span class="si">}</span><span class="s">"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">parametersOf</span><span class="p">(</span><span class="n">movie</span><span class="p">)</span><span class="w"> </span><span class="p">})</span>
+</code></pre></div>
+<ul>
+<li><code>DetailsContent</code> calls <code>WatchlistSection(details.toMovie())</code> once, between the details lines and <code>RatingSection</code>. That one line is the only edit to <code>DetailsScreen</code>. <code>RatingSection</code>, <code>DetailsViewModel</code> and their tests do not change. The writes are local and synchronous, so there is no saving or failure state.</li>
+<li>[ ] <strong>Step 1: Failing tests</strong> <code>WatchlistSectionViewModelTest</code>: <code>notSaved_initially</code>, <code>add_saved</code>, <code>remove_notSaved</code>, <code>savedElsewhere_isReflected</code> (the store is changed directly and the view model follows).</li>
+<li>[ ] <strong>Step 2–4:</strong> red, implement, green.</li>
+<li>[ ] <strong>Step 5: Commit</strong> <code>feat(showcase): add to and remove from the watchlist on the details screen</code>.</li>
+</ul>
+<h3 id="task-4-watchlist-screen-navigation-and-copy">Task 4: Watchlist screen, navigation and copy<a class="headerlink" href="#task-4-watchlist-screen-navigation-and-copy" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kd">class</span><span class="w"> </span><span class="nc">WatchlistViewModel</span><span class="p">(</span><span class="n">watchlist</span><span class="p">:</span><span class="w"> </span><span class="n">Watchlist</span><span class="p">)</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">ViewModel</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="nv">films</span><span class="p">:</span><span class="w"> </span><span class="n">StateFlow</span><span class="o">&lt;</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Movie</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="p">}</span>
+<span class="nd">@Composable</span><span class="w"> </span><span class="kd">fun</span><span class="w"> </span><span class="nf">WatchlistScreen</span><span class="p">(</span><span class="n">onBack</span><span class="p">:</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="kt">Unit</span><span class="p">,</span><span class="w"> </span><span class="n">onOpen</span><span class="p">:</span><span class="w"> </span><span class="p">(</span><span class="kt">Int</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="kt">Unit</span><span class="p">,</span><span class="w"> </span><span class="n">viewModel</span><span class="p">:</span><span class="w"> </span><span class="n">WatchlistViewModel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">koinViewModel</span><span class="p">())</span>
+</code></pre></div>
+<ul>
+<li>Rows use <code>MovieList(films.map(::MovieRowData), filmCount(n), onOpen)</code>, with the release year as the second line. There is no new list composable and no new count helper.</li>
+<li>Route <code>watchlist</code>. A row opens <code>details/&lt;id&gt;</code>, and back pops one entry. The screen collects the store's flow, so a film removed on Details is gone when the user comes back, with no reload.</li>
+</ul>
+<p>Exact visible copy (scenario contracts):</p>
+<table>
+<thead>
+<tr>
+<th>Where</th>
+<th>Text</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Popular filter row</td>
+<td>text button <code>Watchlist</code>, before <code>Filters</code>; top bar unchanged</td>
+</tr>
+<tr>
+<td>Watchlist top bar / back</td>
+<td><code>Watchlist</code> / <code>Back</code></td>
+</tr>
+<tr>
+<td>Watchlist count line</td>
+<td><code>1 film</code> / <code>&lt;n&gt; films</code> (shared <code>filmCount</code>)</td>
+</tr>
+<tr>
+<td>Watchlist row</td>
+<td>film title; second line the release year</td>
+</tr>
+<tr>
+<td>Watchlist empty</td>
+<td><code>Your watchlist is empty</code></td>
+</tr>
+<tr>
+<td>Details membership line</td>
+<td><code>In your watchlist</code> / <code>Not saved to your watchlist</code></td>
+</tr>
+<tr>
+<td>Details button</td>
+<td><code>Add to watchlist</code> (when not saved) / <code>Remove from watchlist</code> (when saved)</td>
+</tr>
+</tbody>
+</table>
+<p>Collision check: <code>In your watchlist</code> is not a substring of <code>Not saved to your watchlist</code>, and the reverse holds too. That is why the second line does not read "Not in your watchlist". <code>Add to watchlist</code> and <code>Remove from watchlist</code> share no substring with either membership line. The <code>Watchlist</code> target appears only on Popular, which shows none of the Details text, and no active-filters text contains <code>watchlist</code>. On the Watchlist screen the title <code>Watchlist</code> is not a tap target.</p>
+<ul>
+<li>[ ] <strong>Step 1: Failing tests</strong> <code>WatchlistViewModelTest</code>: <code>empty_initially</code>, <code>listsSavedFilms</code>, <code>followsRemoval</code>.</li>
+<li>[ ] <strong>Step 2–3:</strong> red, implement the screen, the popular action, the route and Koin.</li>
+<li>[ ] <strong>Step 4:</strong> <code>./gradlew :shared:testAndroidHostTest :shared:iosSimulatorArm64Test :androidApp:assembleDebug</code> and the #305 <code>xcodebuild</code> command.</li>
+<li>[ ] <strong>Step 5: Commit</strong> <code>feat(showcase): watchlist screen</code>.</li>
+</ul>
+<h3 id="task-5-scenario-then-the-device-check">Task 5: Scenario, then the device check<a class="headerlink" href="#task-5-scenario-then-the-device-check" title="Permanent link">&para;</a></h3>
+<p><code>watchlist_add_remove.json</code> (schema 2.1, <code>platform-agnostic</code>, <code>cross-platform</code>, the shared <code>app_package</code>, tags <code>["showcase","watchlist"]</code>). The description says it needs a TMDB key, starts from Reset app data and leaves the watchlist empty. Steps reuse <code>rate_and_remove.json</code>'s shapes, including its retry policy and its <code>target_pattern</code>:</p>
+<ol>
+<li><code>launch</code>; <code>wait_list</code> (<code>Popular films</code>, 30 s)</li>
+<li><code>open_settings</code>; <code>wait_settings</code>; <code>reset</code>; <code>wait_reset</code> (as in <code>rate_and_remove</code>)</li>
+<li><code>open_watchlist</code> (tap <code>Watchlist</code>); <code>wait_empty_start</code> (<code>Your watchlist is empty</code>). Assertion <code>element_visible</code> <code>Your watchlist is empty</code>, caused by the reset. Then <code>back_from_empty</code> (<code>press_back</code>) and <code>wait_list_again</code>.</li>
+<li><code>open_search</code>; <code>focus_field</code>; <code>type_title</code> (<code>Shawshank</code>); <code>hide_keyboard</code>; <code>wait_result</code>; <code>open_film</code> (<code>target_pattern</code> <code>^The Shawshank Redemption</code>)</li>
+<li><code>wait_not_saved</code> (<code>Not saved to your watchlist</code>, 15 s); assertion <code>element_visible</code>. Then <code>add</code> (tap <code>Add to watchlist</code>) and <code>wait_saved</code> (<code>In your watchlist</code>); assertions <code>element_visible</code> <code>In your watchlist</code> and <code>element_visible</code> <code>Remove from watchlist</code>.</li>
+<li><code>relaunch</code> (<code>launch_app</code>, a cold restart by default) and <code>wait_list_relaunch</code> (<code>Popular films</code>, 30 s). This proves the restart criterion.</li>
+<li><code>open_watchlist_again</code> (tap <code>Watchlist</code>) and <code>wait_listed</code> (<code>The Shawshank Redemption</code>, 10 s); assertions <code>element_visible</code> <code>The Shawshank Redemption</code> and <code>text_contains</code> <code>1 film</code>.</li>
+<li><code>open_saved_film</code> (tap the title, same pattern); <code>wait_saved_again</code> (<code>In your watchlist</code>); <code>remove</code> (tap <code>Remove from watchlist</code>); <code>wait_removed</code> (<code>Not saved to your watchlist</code>); assertion <code>element_visible</code>.</li>
+<li><code>back_to_watchlist</code> (<code>press_back</code>) and <code>wait_empty_end</code> (<code>Your watchlist is empty</code>); assertions <code>element_visible</code> <code>Your watchlist is empty</code> and <code>element_not_exists</code> <code>The Shawshank Redemption</code>.</li>
+</ol>
+<p>It asserts only text the scenario caused (the reset's empty list, the add, the removal) and the long-settled title. <code>1 film</code> is the count the scenario's own single add produced. If it fails part-way, the next run's Reset empties the list.</p>
+<ul>
+<li>[ ] <strong>Step 1:</strong> write the file. <code>npx jest tests/lint/showcase-scenarios.test.js</code> must be green (strict validation, mechanical types, OS ids, the typed-text rule). No guard change is expected; if <code>Shawshank</code> trips the typed-text rule on a later target, use <code>target_pattern</code> as #309 did. <code>node bin/mauto.js validate --strict showcase-app/scenarios/watchlist_add_remove.json</code> → <code>"ok":true</code> with no blocking warning.</li>
+<li>[ ] <strong>Step 2: Commit</strong> <code>test(showcase): watchlist add and remove scenario</code>.</li>
+<li>[ ] <strong>Step 3: Device check</strong>, through <code>mauto</code> verbs only, on the default engine, with the real key, on both the Pixel 9 Pro emulator and the iPhone 17 Pro simulator. Install a fresh build; run <code>mauto elements</code> on Popular (<code>Watchlist</code> and <code>Filters</code> both present beside the active-filters line), on Details (membership line and button labels) and on Watchlist. Then <code>mauto run showcase-app/scenarios/watchlist_add_remove.json</code> on each device, and <code>mauto run</code> of <code>filter_drama_1994.json</code> on Android, which shows the longest active-filters line beside the two buttons. Record exactly what ran in the PR. If a label is missing or content is hidden, report it and consider <code>engine: legacy</code> per #379.</li>
+<li>[ ] <strong>Step 4:</strong> release the devices: <code>mauto session end</code>, <code>pkill -f 'mobilecli.* daemon'</code>, and check that <code>adb shell pidof</code> finds no <code>com.mobilenext.mobilecli.DeviceServer</code>.</li>
+</ul>
+<h3 id="task-6-docs-prd-note-full-verification">Task 6: Docs, PRD note, full verification<a class="headerlink" href="#task-6-docs-prd-note-full-verification" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] <code>showcase-app/README.md</code>: add a <code>watchlist_add_remove.json</code> row to the scenario table, and a short "Watchlist" paragraph. It should say the list is kept on the device because TMDB's watchlist needs a signed-in account and a guest session cannot use it, that Reset app data empties it, and that the scenario restarts the app to show the list survives a restart and leaves it empty. Also add the scenario to the README's list of scenarios that start with Reset app data.</li>
+<li>[ ] Comment on #304: the TMDB check table above, the outcome (the list stays on the device) and <code>Refs #310</code>.</li>
+<li>[ ] Full verification, output in the PR: <code>npm test</code>, <code>npm run lint</code>, <code>npm run lint:guides</code>, the Gradle and <code>xcodebuild</code> commands, <code>validate --strict</code> on every showcase scenario, and <code>git ls-files showcase-app | grep tmdb.properties$</code> (only <code>.example</code>).</li>
+<li>[ ] Mutation checks, each turning a named test red, then restored:</li>
+<li>construct <code>watchlist</code>'s <code>StoredValue</code> directly, so it skips the registry, and check <code>reset_emptiesWatchlist</code> goes red;</li>
+<li>drop the duplicate check in <code>add</code> and check <code>addTwice_keepsOne</code> goes red;</li>
+<li>make <code>remove</code> a no-op and check <code>remove_dropsOnlyThatFilm</code> goes red;</li>
+<li>have the section view model read the store once instead of following it, and check <code>savedElsewhere_isReflected</code> goes red.</li>
+<li>[ ] <strong>Commit</strong> <code>docs(showcase): watchlist in the README</code>; push; update the draft PR.</li>
+</ul>
+<hr />
+<h2 id="acceptance-map-310">Acceptance map (#310)<a class="headerlink" href="#acceptance-map-310" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Criterion</th>
+<th>Task</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Add and remove work from Details; membership is visible text</td>
+<td>2, 3, 4</td>
+</tr>
+<tr>
+<td>The Watchlist screen lists saved films and survives an app restart</td>
+<td>1 (persistence test), 4, 5 (cold <code>launch_app</code> in the scenario)</td>
+</tr>
+<tr>
+<td>Reset app data empties the watchlist</td>
+<td>1, 2, 5</td>
+</tr>
+<tr>
+<td>Whether guest sessions can use TMDB's watchlist is recorded on the PRD</td>
+<td>TMDB check, 6</td>
+</tr>
+<tr>
+<td>The scenario starts from reset and leaves the watchlist empty</td>
+<td>5</td>
+</tr>
+<tr>
+<td>No UI test dependency</td>
+<td>existing guard</td>
+</tr>
+<tr>
+<td>Scenario passes <code>validate --strict</code>, mechanical only, no OS id</td>
+<td>existing guard, 5</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/sh3lan93/mobile-automator" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+    
+  </body>
+</html>
