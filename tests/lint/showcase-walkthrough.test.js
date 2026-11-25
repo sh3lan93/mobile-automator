@@ -4,24 +4,25 @@
 //
 // The showcase README walks a newcomer from a fresh clone to replaying their
 // own recording on the other platform, and three other pages point into it.
-// Prose drifts quietly: a step gets renamed and the docs-site page that
-// restates the steps keeps the old list, a scenario is added without a row (or
-// a row outlives its file), a link to `#walkthrough` dies with a heading
-// rename, or a rewrite starts implying the shipped scenarios were recorded or
-// that replay needs an agent. Each rule below makes one of those a failure:
+// Prose drifts quietly: a step gets renamed or dropped, a scenario is added
+// without a row (or a row outlives its file), a link to `#walkthrough` or into
+// TROUBLESHOOTING.md dies with a heading rename, or a rewrite starts implying
+// the shipped scenarios were recorded or that replay needs an agent. Each rule
+// below makes one of those a failure:
 //
 //   1. the README and the docs page are in the shipping-doc corpus, so every
 //      prose guard scans them too;
 //   2. the README's numbered `###` steps under `## Walkthrough` are exactly
 //      WALKTHROUGH, in order and numbered 1..N;
-//   3. docs/examples/showcase.md restates the same steps, links to the full
-//      walkthrough, and is in the mkdocs nav;
+//   3. docs/examples/showcase.md links to the full walkthrough and is in the
+//      mkdocs nav (it is a pointer and restates none of the steps);
 //   4. the Scenarios table has one row per file in showcase-app/scenarios/,
 //      and no row for a file that is not there;
 //   5. README.md and sample-app/README.md link to the walkthrough;
 //   6. steps 4, 5 and 7 replay with `mauto run`, step 6 says recording needs an
 //      AI agent following `mauto guide generate`, and the walkthrough says the
-//      shipped scenarios are curated fixtures, not recordings.
+//      shipped scenarios are curated fixtures, not recordings;
+//   7. every TROUBLESHOOTING.md anchor the README links names a real heading.
 
 const fs = require('fs');
 const path = require('path');
