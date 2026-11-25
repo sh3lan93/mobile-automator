@@ -152,14 +152,7 @@ A workflow file to copy into your own repo arrives with #313. It replays scenari
 
 ### When something gets stuck
 
-After a session on the default engine, the host's `mobilecli` daemon keeps holding the emulator's UI automation, so other tools such as `uiautomator dump` or Appium fail. Release it:
-
-```bash
-mauto session end
-pkill -f 'mobilecli.* daemon'
-```
-
-Or run `adb shell pkill -f com.mobilenext.mobilecli.DeviceServer`, or wait 30 minutes. More fixes are in [TROUBLESHOOTING.md](../TROUBLESHOOTING.md).
+After a session on the default engine, the emulator's UI automation stays held by the engine, so other tools such as `uiautomator dump` or Appium fail until it is released. [TROUBLESHOOTING.md](../TROUBLESHOOTING.md#-uiautomator-dump-is-killed-appium-dies-or-elements-fails-with-reading-node) has the commands that release it; more fixes are in the rest of that file.
 
 ## Scenarios
 
