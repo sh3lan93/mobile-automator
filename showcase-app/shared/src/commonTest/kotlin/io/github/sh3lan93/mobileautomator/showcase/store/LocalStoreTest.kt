@@ -49,6 +49,17 @@ class LocalStoreTest {
     }
 
     @Test
+    fun reset_emptiesWatchlist() {
+        val store = LocalStore(storage)
+        store.simulateOffline.set(true)
+        store.watchlist.set(listOf(shawshank))
+        store.reset()
+        assertEquals(emptyList(), store.watchlist.value.value)
+        assertEquals(emptyList(), LocalStore(storage).watchlist.value.value)
+        assertTrue(storage.keys().none { it.startsWith("reel_tracker.") })
+    }
+
+    @Test
     fun reset_clearsPersistedState() {
         LocalStore(storage).apply {
             simulateOffline.set(true)
@@ -86,5 +97,27 @@ class LocalStoreTest {
         store.reset()
         assertNull(store.guestSessionId.value.value)
         assertNull(LocalStore(storage).guestSessionId.value.value)
+    }
+
+    @Test
+    fun watchlist_freshStore_isEmpty() {
+        assertEquals(emptyList(), LocalStore(storage).watchlist.value.value)
+    }
+
+    @Test
+    fun watchlist_persistsAcrossStoreInstances() {
+        LocalStore(storage).watchlist.set(listOf(shawshank, fightClub))
+        assertEquals(listOf(shawshank, fightClub), LocalStore(storage).watchlist.value.value)
+    }
+
+    @Test
+    fun watchlist_undecodableJson_readsEmpty() {
+        storage.putString("reel_tracker.watchlist", "{not json")
+        assertEquals(emptyList(), LocalStore(storage).watchlist.value.value)
+    }
+
+    private companion object {
+        val shawshank = WatchlistEntry(278, "The Shawshank Redemption", "1994", "https://image.tmdb.org/t/p/w154/a.jpg")
+        val fightClub = WatchlistEntry(550, "Fight Club", null, null)
     }
 }
