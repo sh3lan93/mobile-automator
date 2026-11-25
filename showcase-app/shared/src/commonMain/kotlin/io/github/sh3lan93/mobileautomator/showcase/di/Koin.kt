@@ -14,6 +14,7 @@ import io.github.sh3lan93.mobileautomator.showcase.screens.popular.PopularViewMo
 import io.github.sh3lan93.mobileautomator.showcase.screens.ratings.MyRatingsViewModel
 import io.github.sh3lan93.mobileautomator.showcase.screens.search.SearchViewModel
 import io.github.sh3lan93.mobileautomator.showcase.screens.settings.SettingsViewModel
+import io.github.sh3lan93.mobileautomator.showcase.screens.watchlist.WatchlistViewModel
 import io.github.sh3lan93.mobileautomator.showcase.store.LocalStore
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -54,6 +55,7 @@ val appModule = module {
     viewModel { FiltersViewModel(get(), Clock.System.todayIn(TimeZone.currentSystemDefault()).year) }
     viewModelOf(::SettingsViewModel)
     viewModelOf(::MyRatingsViewModel)
+    viewModelOf(::WatchlistViewModel)
 }
 
 /**

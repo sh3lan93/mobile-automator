@@ -18,6 +18,7 @@ import io.github.sh3lan93.mobileautomator.showcase.screens.filters.FiltersScreen
 import io.github.sh3lan93.mobileautomator.showcase.screens.popular.PopularScreen
 import io.github.sh3lan93.mobileautomator.showcase.screens.ratings.MyRatingsScreen
 import io.github.sh3lan93.mobileautomator.showcase.screens.search.SearchScreen
+import io.github.sh3lan93.mobileautomator.showcase.screens.watchlist.WatchlistScreen
 import org.koin.compose.viewmodel.koinViewModel
 import io.github.sh3lan93.mobileautomator.showcase.screens.settings.SettingsScreen
 
@@ -27,6 +28,7 @@ private const val ROUTE_SEARCH = "search"
 private const val ROUTE_FILTERS = "filters"
 private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_RATINGS = "ratings"
+private const val ROUTE_WATCHLIST = "watchlist"
 private const val ARG_MOVIE_ID = "movieId"
 private const val ROUTE_DETAILS = "details/{$ARG_MOVIE_ID}"
 
@@ -48,6 +50,13 @@ fun App() {
                         onOpen = { id -> navController.navigate(detailsRoute(id)) },
                         onRatings = { navController.navigate(ROUTE_RATINGS) },
                         onFilters = { navController.navigate(ROUTE_FILTERS) },
+                        onWatchlist = { navController.navigate(ROUTE_WATCHLIST) },
+                    )
+                }
+                composable(ROUTE_WATCHLIST) {
+                    WatchlistScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpen = { id -> navController.navigate(detailsRoute(id)) },
                     )
                 }
                 composable(ROUTE_RATINGS) {

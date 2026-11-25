@@ -39,6 +39,7 @@ fun PopularScreen(
     onOpen: (Int) -> Unit,
     onRatings: () -> Unit,
     onFilters: () -> Unit,
+    onWatchlist: () -> Unit,
     viewModel: PopularViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -63,7 +64,7 @@ fun PopularScreen(
         },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            FilterRow(filters.activeFiltersText(), onFilters)
+            FilterRow(filters.activeFiltersText(), onWatchlist, onFilters)
             val modifier = Modifier.fillMaxSize()
             when (val s = state) {
                 PopularUiState.Loading -> Centered(modifier) {
@@ -80,14 +81,18 @@ fun PopularScreen(
     }
 }
 
-/** Shown above the list in every state: the active filters as text, and the way to change them. */
+/**
+ * Shown above the list in every state: the active filters as text, the way to the watchlist, and
+ * the way to change the filters. The text takes the spare width and wraps, so the buttons stay on screen.
+ */
 @Composable
-private fun FilterRow(activeFilters: String, onFilters: () -> Unit) {
+private fun FilterRow(activeFilters: String, onWatchlist: () -> Unit, onFilters: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(activeFilters, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        TextButton(onClick = onWatchlist) { Text("Watchlist") }
         TextButton(onClick = onFilters) { Text("Filters") }
     }
 }
