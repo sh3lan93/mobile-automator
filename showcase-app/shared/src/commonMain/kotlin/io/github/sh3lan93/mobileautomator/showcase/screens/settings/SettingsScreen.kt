@@ -80,40 +80,44 @@ fun SettingsScreen(onBack: () -> Unit, onReset: () -> Unit, viewModel: SettingsV
             )
             ChoiceGroup(
                 label = "Details screen",
-                options = "Classic layout" to "Compact layout",
-                second = compactDetails,
-                status = if (compactDetails) "Details layout in use: compact" else "Details layout in use: classic",
+                choices = listOf(
+                    Choice("Classic layout", false, status = "Details layout in use: classic"),
+                    Choice("Compact layout", true, status = "Details layout in use: compact"),
+                ),
+                selected = compactDetails,
                 onSelect = viewModel::setCompactDetails,
             )
             ChoiceGroup(
                 label = "Removing from the watchlist",
-                options = "Remove at once" to "Ask first",
-                second = confirmRemoval,
-                status = if (confirmRemoval) "Watchlist removal needs confirmation" else "Watchlist removal is immediate",
+                choices = listOf(
+                    Choice("Remove at once", false, status = "Watchlist removal is immediate"),
+                    Choice("Ask first", true, status = "Watchlist removal needs confirmation"),
+                ),
+                selected = confirmRemoval,
                 onSelect = viewModel::setConfirmWatchlistRemoval,
             )
         }
     }
 }
 
+/** One option of a flag: the text to tap, the flag value it sets, and the status line shown while it is chosen. */
+private class Choice<T>(val text: String, val value: T, val status: String)
+
 /**
- * One flag: its label, two radio-style options ([second] is whether the second one is chosen) and
- * a status line that states the setting in words, since selected state does not reach scenarios.
+ * One flag: its label, one radio-style row per [choices] entry, and the chosen entry's status line,
+ * which states the setting in words since selected state does not reach scenarios.
  * Choosing the option already chosen is a no-op.
  */
 @Composable
-private fun ChoiceGroup(
-    label: String,
-    options: Pair<String, String>,
-    second: Boolean,
-    status: String,
-    onSelect: (second: Boolean) -> Unit,
-) {
+private fun <T> ChoiceGroup(label: String, choices: List<Choice<T>>, selected: T, onSelect: (T) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(horizontal = 24.dp))
-        OptionRow(options.first, selected = !second) { onSelect(false) }
-        OptionRow(options.second, selected = second) { onSelect(true) }
-        Text(status, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 24.dp))
+        choices.forEach { choice ->
+            OptionRow(choice.text, selected = choice.value == selected) { onSelect(choice.value) }
+        }
+        choices.firstOrNull { it.value == selected }?.let {
+            Text(it.status, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 24.dp))
+        }
     }
 }
 
