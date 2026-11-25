@@ -120,6 +120,17 @@
       }
     },
     {
+      "id": "wait_search",
+      "action": "wait_for_element",
+      "description": "Wait for the search field, so the screen has settled before the tap that focuses it",
+      "target": "Search films",
+      "wait_config": {
+        "type": "element_visible",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
       "id": "focus_field",
       "action": "tap",
       "description": "Focus the search field",
