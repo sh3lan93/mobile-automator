@@ -11,7 +11,8 @@ name: Showcase Replay
 #   - Steps marked `app-specific` (the builds, the TMDB job and the probe) are
 #     the showcase's own: replace them with your app's build and your own
 #     live-dependency check, or drop the check.
-#   - Copy showcase-app/ci/replay.sh (generic) next to your scenarios.
+#   - Copy showcase-app/ci/replay.sh and ci/device-id.sh (both generic) next
+#     to your scenarios.
 #
 # Secret: TMDB_API_KEY, a TMDB v3 key. Where it is unavailable (forks), every
 # job after `key` is skipped and the run stays green.
@@ -154,15 +155,14 @@ jobs:
           disable-animations: true
           emulator-boot-timeout: 300
           working-directory: ${{ env.APP_DIR }}
-          # Each line runs as its own `sh -c`, so keep commands single-line.
-          # The device id comes from `mauto devices` (the engine may name the
-          # emulator by its AVD, not `emulator-5554`): the last line starting
-          # with `{` is the envelope (#385 can print an engine log line too),
-          # and its `data` is a list of {id, name, platform, state}.
+          # Each line runs as its own `sh -c`, so keep commands single-line
+          # (the id and the replay share one line). ci/device-id.sh reads the
+          # id from `mauto devices`: the engine may name the emulator by its
+          # AVD, not `emulator-5554`.
           # $SCENARIOS is unquoted on purpose: the shell expands the glob.
           script: |
             adb install "$ANDROID_APK"
-            ID="$(mauto devices | grep '^{' | tail -n 1 | jq -er '[.data[]? | select((.platform // "") | ascii_downcase == "android") | .id][0] // empty')" || { echo "::error title=No Android device::mauto devices listed no Android device"; exit 1; }; bash ci/replay.sh "$ID" "$RUNNER_TEMP/replay-android" $SCENARIOS
+            ID="$(bash ci/device-id.sh android)" && bash ci/replay.sh "$ID" "$RUNNER_TEMP/replay-android" $SCENARIOS
 
       - name: Upload the replay report (generic)
         if: always()
@@ -223,8 +223,7 @@ jobs:
       - name: Create the mauto workspace (generic)
         run: mauto setup --mode agnostic
 
-      # generic: the newest available iPhone on the newest iOS runtime. Its
-      # simctl UDID is the id mauto uses for a simulator.
+      # generic: the newest available iPhone on the newest iOS runtime.
       - name: Boot an iPhone simulator and install the app (generic)
         run: |
           UDID="$(xcrun simctl list -j devices available | jq -er '
@@ -238,7 +237,6 @@ jobs:
           xcrun simctl boot "$UDID"
           xcrun simctl bootstatus "$UDID" -b
           xcrun simctl install "$UDID" "$IOS_APP"
-          echo "UDID=$UDID" >> "$GITHUB_ENV"
 
       - name: Replay every scenario on the simulator (generic)
         env:
@@ -247,8 +245,12 @@ jobs:
           # it empty.
           REPLAY_PROBE: bash ci/tmdb-check.sh --reachability
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+        # The id comes from `mauto devices` (ci/device-id.sh), as on Android,
+        # so the replay targets the device mauto reports.
         # $SCENARIOS is unquoted on purpose: the shell expands the glob.
-        run: bash ci/replay.sh "$UDID" "$RUNNER_TEMP/replay-ios" $SCENARIOS
+        run: |
+          ID="$(bash ci/device-id.sh ios)"
+          bash ci/replay.sh "$ID" "$RUNNER_TEMP/replay-ios" $SCENARIOS
 
       - name: Upload the replay report (generic)
         if: always()

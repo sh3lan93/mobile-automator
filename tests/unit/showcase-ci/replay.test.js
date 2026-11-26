@@ -7,13 +7,11 @@
 // is exercised without a device.
 
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
-const { spawnSync } = require('child_process');
 
-const SCRIPT = path.resolve(__dirname, '../../../showcase-app/ci/replay.sh');
-const hasBash = spawnSync('bash', ['--version']).status === 0;
-const describeIfBash = hasBash ? describe : describe.skip;
+const { CI_DIR, describeIfBash, sandbox, runScript, cleanup } = require('./fake-mauto');
+
+const SCRIPT = path.join(CI_DIR, 'replay.sh');
 
 // Fake mauto: logs its argv (one line per call) and exits with the code
 // mapped to the scenario's basename in codes.txt (default 0). It prints an
@@ -29,32 +27,26 @@ echo '{"ok":true,"data":{},"error":null,"hint":null,"schema_version":"1"}'
 exit "\${code:-0}"
 `;
 
-let tmp;
-
 function setup(codes) {
-  tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'replay-sh-'));
-  const bin = path.join(tmp, 'bin');
-  fs.mkdirSync(bin);
-  const mauto = path.join(bin, 'fake-mauto');
-  fs.writeFileSync(mauto, FAKE_MAUTO, { mode: 0o755 });
+  const { root, bin, mauto } = sandbox('replay-sh-', FAKE_MAUTO);
   fs.writeFileSync(
     path.join(bin, 'codes.txt'),
     Object.entries(codes).map(([n, c]) => `${n} ${c}\n`).join(''),
   );
   const scenarios = Object.keys(codes).map((n) => {
-    const file = path.join(tmp, 'scenarios', `${n}.json`);
+    const file = path.join(root, 'scenarios', `${n}.json`);
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, '{}');
     return file;
   });
-  return { bin, mauto, scenarios, out: path.join(tmp, 'out'), summary: path.join(tmp, 'summary.md') };
+  return { bin, mauto, scenarios, out: path.join(root, 'out'), summary: path.join(root, 'summary.md') };
 }
 
 function run(ctx, { args, env = {} } = {}) {
   const argv = args || ['emulator-5554', ctx.out, ...ctx.scenarios];
-  const res = spawnSync('bash', [SCRIPT, ...argv], {
-    encoding: 'utf8',
-    env: { PATH: process.env.PATH, MAUTO: ctx.mauto, GITHUB_STEP_SUMMARY: ctx.summary, ...env },
+  const res = runScript('replay.sh', argv, {
+    mauto: ctx.mauto,
+    env: { GITHUB_STEP_SUMMARY: ctx.summary, ...env },
   });
   const read = (f) => (fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '');
   return {
@@ -66,10 +58,7 @@ function run(ctx, { args, env = {} } = {}) {
   };
 }
 
-afterEach(() => {
-  if (tmp) fs.rmSync(tmp, { recursive: true, force: true });
-  tmp = undefined;
-});
+afterEach(cleanup);
 
 describeIfBash('showcase-app/ci/replay.sh', () => {
   test('all scenarios pass: exit 0, a heading and one table row each, no annotations', () => {

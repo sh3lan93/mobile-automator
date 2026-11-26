@@ -34,6 +34,9 @@
 //      MIN_VOTES_FOR_RATING must equal the Kotlin ones.
 //   9. mauto installs from npm at `MAUTO_VERSION`, never a packed tarball: a
 //      copy of this workflow has no mauto source tree to pack.
+//  10. Each device job resolves the replay's device id with the generic
+//      `ci/device-id.sh <its platform>`, and no workflow script runs jq over
+//      `mauto devices` output: that parsing lives in one tested script.
 
 const fs = require('fs');
 const path = require('path');
@@ -51,6 +54,7 @@ const SCENARIO_DIR = 'showcase-app/scenarios';
 const TEMP_BRANCH = 'sample-app/313-ci-workflow';
 const TEMP_MARKER = 'TEMPORARY(#313)';
 const DEVICE_JOBS = ['android', 'ios'];
+const DEVICE_JOB_PLATFORM = { android: 'android', ios: 'ios' };
 
 const read = (rel) => fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
 
@@ -220,5 +224,19 @@ describe('showcase replay workflow (#313)', () => {
       expect(all.some((s) => /npm i(nstall)? -g "?mobile-automator@\$\{?MAUTO_VERSION\}?"?/.test(s))).toBe(true);
       expect(all.filter((s) => /npm pack|\.tgz\b/.test(s))).toEqual([]);
     }
+  });
+
+  test('10. each device job resolves its id with ci/device-id.sh, and no script parses mauto devices itself', () => {
+    for (const id of DEVICE_JOBS) {
+      const platform = DEVICE_JOB_PLATFORM[id];
+      const lines = scripts(jobs[id]).flatMap((s) => s.split('\n'));
+      expect(lines.some((l) => new RegExp(`\\bci/device-id\\.sh ${platform}\\b`).test(l))).toBe(true);
+    }
+    const parsing = Object.entries(jobs).flatMap(([id, job]) =>
+      scripts(job)
+        .filter((s) => /\bmauto devices\b/.test(s) && /\bjq\b/.test(s))
+        .map((s) => `${id}: ${s.trim().split('\n')[0]}`),
+    );
+    expect(parsing).toEqual([]);
   });
 });
