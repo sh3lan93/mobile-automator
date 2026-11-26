@@ -37,12 +37,17 @@
 //  10. Each device job resolves the replay's device id with the generic
 //      `ci/device-id.sh <its platform>`, and no workflow script runs jq over
 //      `mauto devices` output: that parsing lives in one tested script.
+//  11. replay.sh's exit-code case labels for passed, failed and needs_agent
+//      equal mauto's own EXIT.OK, EXIT.TEST_FAILED and EXIT.INCOMPLETE
+//      (src/output/envelope.js), so a renumbered exit code cannot leave the
+//      copyable script classifying by stale numbers.
 
 const fs = require('fs');
 const path = require('path');
 
 const { REPO_ROOT } = require('./docs-corpus');
 const { loadWorkflow, asList } = require('./workflow-guard');
+const { EXIT } = require('../../src/output/envelope');
 
 const WORKFLOW = '.github/workflows/showcase-replay.yml';
 const REQUIRED_FILE = '.github/required-checks.json';
@@ -238,5 +243,14 @@ describe('showcase replay workflow (#313)', () => {
         .map((s) => `${id}: ${s.trim().split('\n')[0]}`),
     );
     expect(parsing).toEqual([]);
+  });
+
+  test("11. replay.sh's exit-code labels equal mauto's EXIT codes", () => {
+    const sh = read(REPLAY_SH);
+    // Each case arm: a numeric label line, then the `class=<name>;` it sets.
+    const arms = Object.fromEntries(
+      [...sh.matchAll(/^\s*(\d+)\)\s*\n\s*class=(passed|failed|needs_agent);/gm)].map((m) => [m[2], Number(m[1])]),
+    );
+    expect(arms).toEqual({ passed: EXIT.OK, failed: EXIT.TEST_FAILED, needs_agent: EXIT.INCOMPLETE });
   });
 });
