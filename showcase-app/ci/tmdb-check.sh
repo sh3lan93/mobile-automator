@@ -24,8 +24,9 @@
 # The key goes to curl through a config on stdin, so it is never in argv, a URL that is
 # printed, or the output. curl's own error text is discarded; failures name only the path.
 #
-# The discover parameter names below are literal on purpose: a lint guard compares them
-# with the `put("...")` keys and MIN_VOTES_FOR_RATING in the app's FilterState.kt.
+# The discover and search parameter names below are literal on purpose: a lint guard
+# compares them with the `put("...")` keys and MIN_VOTES_FOR_RATING in the app's
+# FilterState.kt, and with the `parameter("...")` names KtorTmdbClient.searchMovies sends.
 
 set -uo pipefail
 

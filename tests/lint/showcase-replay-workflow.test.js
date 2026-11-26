@@ -29,8 +29,9 @@
 //   6. `replay.sh` really runs `mauto run` with `--device` and `--junit`.
 //   7. The artifacts upload with `if: always()`: the report matters most when
 //      the replay failed, which is when a plain upload step is skipped.
-//   8. `tmdb-check.sh` restates FilterState.kt's discover query in shell (a
-//      second copy, decision 4 of the plan), so its parameter names and
+//   8. `tmdb-check.sh` restates FilterState.kt's discover query and
+//      KtorTmdbClient.searchMovies's search query in shell (a second copy,
+//      decision 4 of the plan), so its parameter names and
 //      MIN_VOTES_FOR_RATING must equal the Kotlin ones.
 //   9. mauto installs from npm at `MAUTO_VERSION`, never a packed tarball: a
 //      copy of this workflow has no mauto source tree to pack.
@@ -59,6 +60,8 @@ const TMDB_CHECK = 'showcase-app/ci/tmdb-check.sh';
 const DEVICE_ID_SH = 'showcase-app/ci/device-id.sh';
 const FILTER_STATE =
   'showcase-app/shared/src/commonMain/kotlin/io/github/sh3lan93/mobileautomator/showcase/data/FilterState.kt';
+const TMDB_CLIENT =
+  'showcase-app/shared/src/commonMain/kotlin/io/github/sh3lan93/mobileautomator/showcase/data/KtorTmdbClient.kt';
 const SCENARIO_DIR = 'showcase-app/scenarios';
 const TEMP_BRANCH = 'sample-app/313-ci-workflow';
 const TEMP_MARKER = 'TEMPORARY(#313)';
@@ -204,7 +207,7 @@ describe('showcase replay workflow (#313)', () => {
     }
   });
 
-  test("8. tmdb-check.sh's discover parameters and vote floor equal FilterState.kt's", () => {
+  test("8. tmdb-check.sh's discover and search parameters and vote floor equal the Kotlin client's", () => {
     const sh = read(TMDB_CHECK);
     const kt = read(FILTER_STATE);
 
@@ -219,6 +222,20 @@ describe('showcase replay workflow (#313)', () => {
 
     expect(ktKeys.size).toBeGreaterThan(0);
     expect([...shKeys].sort()).toEqual([...ktKeys].sort());
+
+    // search/movie: every call sends exactly the names KtorTmdbClient.searchMovies does.
+    const search = /fun searchMovies\([\s\S]*?call\("search\/movie", params = \{([\s\S]*?)\n\s*\}\)/.exec(
+      read(TMDB_CLIENT),
+    );
+    expect(search).not.toBeNull();
+    const ktSearch = [...search[1].matchAll(/parameter\("([^"]+)"/g)].map((m) => m[1]).sort();
+    expect(ktSearch.length).toBeGreaterThan(0);
+    const searchCalls = [...sh.matchAll(/^tmdb search\/movie (.*)$/gm)];
+    expect(searchCalls.length).toBeGreaterThan(0);
+    for (const c of searchCalls) {
+      const names = c[1].trim().split(/\s+/).map((arg) => arg.replace(/^"/, '').split('=')[0]).sort();
+      expect(names).toEqual(ktSearch);
+    }
 
     const ktVotes = /const val MIN_VOTES_FOR_RATING = (\d+)/.exec(kt);
     const shVotes = /readonly MIN_VOTES_FOR_RATING=(\d+)/m.exec(sh);
