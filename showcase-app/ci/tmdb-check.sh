@@ -58,7 +58,7 @@ drift=0
 
 outage() { # <path> <reason>
   echo "OUTAGE $1: $2"
-  echo "::error title=TMDB outage, not mauto::$1: $2"
+  echo "::error title=TMDB outage (not mauto)::$1: $2"
   exit "$EXIT_OUTAGE"
 }
 

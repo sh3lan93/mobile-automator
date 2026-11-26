@@ -95,7 +95,7 @@ describeIfBash('showcase-app/ci/replay.sh', () => {
     const r = run(ctx, { env: { REPLAY_PROBE: 'echo probing; exit 10' } });
     expect(r.status).toBe(1);
     expect(r.tsv).toEqual([['alpha', 'outage', '6']]);
-    expect(r.stdout).toContain('::error title=Outage, not mauto::alpha: external service outage');
+    expect(r.stdout).toContain('::error title=Outage (not mauto)::alpha: external service outage');
     expect(fs.readFileSync(path.join(ctx.out, 'logs', 'alpha.log'), 'utf8')).toContain('probing');
   });
 

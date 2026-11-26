@@ -41,6 +41,9 @@
 //      equal mauto's own EXIT.OK, EXIT.TEST_FAILED and EXIT.INCOMPLETE
 //      (src/output/envelope.js), so a renumbered exit code cannot leave the
 //      copyable script classifying by stale numbers.
+//  12. No annotation title in the workflow or its ci/ scripts contains a
+//      comma: GitHub splits workflow-command properties on `,`, so
+//      `::error title=Outage, not mauto::` shows the title "Outage".
 
 const fs = require('fs');
 const path = require('path');
@@ -53,6 +56,7 @@ const WORKFLOW = '.github/workflows/showcase-replay.yml';
 const REQUIRED_FILE = '.github/required-checks.json';
 const REPLAY_SH = 'showcase-app/ci/replay.sh';
 const TMDB_CHECK = 'showcase-app/ci/tmdb-check.sh';
+const DEVICE_ID_SH = 'showcase-app/ci/device-id.sh';
 const FILTER_STATE =
   'showcase-app/shared/src/commonMain/kotlin/io/github/sh3lan93/mobileautomator/showcase/data/FilterState.kt';
 const SCENARIO_DIR = 'showcase-app/scenarios';
@@ -252,5 +256,18 @@ describe('showcase replay workflow (#313)', () => {
       [...sh.matchAll(/^\s*(\d+)\)\s*\n\s*class=(passed|failed|needs_agent);/gm)].map((m) => [m[2], Number(m[1])]),
     );
     expect(arms).toEqual({ passed: EXIT.OK, failed: EXIT.TEST_FAILED, needs_agent: EXIT.INCOMPLETE });
+  });
+
+  test('12. no annotation title contains a comma', () => {
+    const titles = [];
+    for (const file of [WORKFLOW, REPLAY_SH, TMDB_CHECK, DEVICE_ID_SH]) {
+      const text = read(file);
+      for (const m of text.matchAll(/::(error|warning|notice) title=([^:]*)::/g)) titles.push({ file, title: m[2] });
+      // replay.sh builds its annotation from a `title="…"` variable.
+      for (const m of text.matchAll(/\btitle="([^"]*)"/g)) titles.push({ file, title: m[1] });
+    }
+    expect(titles.length).toBeGreaterThan(0);
+    expect(titles.some((t) => t.title === '$title')).toBe(true);
+    expect(titles.filter((t) => t.title.includes(','))).toEqual([]);
   });
 });

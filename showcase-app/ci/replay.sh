@@ -70,7 +70,7 @@ for file in "$@"; do
       if [ -n "$probe" ]; then
         echo "--- REPLAY_PROBE: $probe" >> "$log"
         if ! bash -c "$probe" >> "$log" 2>&1; then
-          class=outage; label="external service outage"; title="Outage, not mauto"
+          class=outage; label="external service outage"; title="Outage (not mauto)"
         fi
       fi
       ;;
