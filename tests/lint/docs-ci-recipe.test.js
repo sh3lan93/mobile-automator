@@ -28,7 +28,7 @@ const path = require('path');
 const yaml = require('js-yaml');
 
 const { REPO_ROOT, shippingDocs } = require('./docs-corpus');
-const { loadWorkflow, runs } = require('./workflow-guard');
+const { loadWorkflow, executedScripts, isAlways } = require('./workflow-guard');
 
 const FAQ = 'docs/faq.md';
 const WORKFLOW_DIR = '.github/workflows';
@@ -177,8 +177,7 @@ describe('the FAQ CI answers execute a scenario (#277)', () => {
     test('runs the scenario in a step, not in a comment', () => {
       // The emulator runner takes its commands as `with.script`, so both the
       // `run:` of a plain step and that script count as executed text.
-      const executed = [...runs(steps), ...steps.map((s) => String((s.with && s.with.script) || ''))];
-      const hits = executed.filter((cmd) => /\bmauto run\b[^\n]*--junit\b/.test(cmd));
+      const hits = executedScripts(steps).filter((cmd) => /\bmauto run\b[^\n]*--junit\b/.test(cmd));
       expect(hits.length).toBeGreaterThan(0);
     });
 
@@ -187,7 +186,7 @@ describe('the FAQ CI answers execute a scenario (#277)', () => {
       if (uploads.length === 0) {
         throw new Error(`${FAQ}: the GitHub Actions example has no actions/upload-artifact step`);
       }
-      const conditional = uploads.filter((s) => !/^(\$\{\{\s*)?always\(\)(\s*\}\})?$/.test(String(s.if || '').trim()));
+      const conditional = uploads.filter((s) => !isAlways(s.if));
       expect(conditional.map((s) => `${s.name || s.uses}: if: ${s.if === undefined ? '(none)' : s.if}`)).toEqual([]);
     });
   });
@@ -225,6 +224,28 @@ describe('docs-ci-recipe helpers', () => {
     expect(() => answer(md, 'Z?')).toThrow(/no "### Z\?" answer/);
     const fenced = ['### A?', '```bash', '# not a heading', 'x', '```', '### B?'].join('\n');
     expect(answer(fenced, 'A?')).toBe(['```bash', '# not a heading', 'x', '```'].join('\n'));
+  });
+
+  // workflow-guard's shared helpers, pinned here because both this guard and
+  // showcase-replay-workflow.test.js only ever feed them compliant workflows:
+  // an isAlways that accepted everything would leave both green.
+  test('isAlways accepts only always(), bare or in ${{ }}', () => {
+    for (const ok of ['always()', '${{ always() }}', ' ${{always()}} ']) expect(isAlways(ok)).toBe(true);
+    for (const bad of [undefined, '', 'success()', 'failure()', 'always() && success()', '!always()']) {
+      expect(isAlways(bad)).toBe(false);
+    }
+  });
+
+  test('executedScripts returns each run and with.script, skipping uses-only steps', () => {
+    const steps = [
+      { uses: 'actions/checkout@v7' },
+      { run: 'a' },
+      null,
+      { uses: 'emu@v2', with: { script: 'b' } },
+      { run: 'c', with: { script: 'd' } },
+    ];
+    expect(executedScripts(steps)).toEqual(['a', 'b', 'c', 'd']);
+    expect(executedScripts(undefined)).toEqual([]);
   });
 
   test('a commented-out run does not count as running the scenario', () => {

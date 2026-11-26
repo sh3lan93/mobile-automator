@@ -50,7 +50,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { REPO_ROOT } = require('./docs-corpus');
-const { loadWorkflow, asList } = require('./workflow-guard');
+const { loadWorkflow, asList, executedScripts, isAlways } = require('./workflow-guard');
 const { EXIT } = require('../../src/output/envelope');
 
 const WORKFLOW = '.github/workflows/showcase-replay.yml';
@@ -83,15 +83,8 @@ function leaves(node, at = []) {
   return [];
 }
 
-/** Every shell script a job runs: `run:` steps plus emulator-runner `script:` inputs. */
-function scripts(job) {
-  return (job.steps || []).filter(Boolean).flatMap((s) => {
-    const out = [];
-    if (typeof s.run === 'string') out.push(s.run);
-    if (s.with && typeof s.with.script === 'string') out.push(s.with.script);
-    return out;
-  });
-}
+/** Every shell script a job runs (see workflow-guard's executedScripts). */
+const scripts = (job) => executedScripts(job.steps);
 
 /** `dir/*.json`-style glob → the file names it matches. Only `*` is supported, loudly. */
 function resolveGlob(baseDir, glob) {
@@ -104,8 +97,6 @@ function resolveGlob(baseDir, glob) {
   const abs = path.join(REPO_ROOT, baseDir, dir);
   return fs.readdirSync(abs).filter((f) => re.test(f)).map((f) => path.posix.join(baseDir, dir, f)).sort();
 }
-
-const isAlways = (cond) => /^\s*(\$\{\{\s*)?always\(\)(\s*\}\})?\s*$/.test(String(cond || ''));
 
 describe('showcase replay workflow (#313)', () => {
   const raw = read(WORKFLOW);

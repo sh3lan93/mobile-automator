@@ -42,6 +42,37 @@ function runs(steps) {
 }
 
 /**
+ * Every shell script these steps execute, in step order: each step's `run:`
+ * and, for actions that take their commands as an input (the Android emulator
+ * runner's `with.script`), that input too. Steps with neither contribute
+ * nothing, so a rule asking "does any executed script do X" never sees a
+ * comment or a `uses:` step as executed text.
+ *
+ * @param {object[]} steps
+ * @returns {string[]}
+ */
+function executedScripts(steps) {
+  return (steps || []).filter(Boolean).flatMap((s) => {
+    const out = [];
+    if (typeof s.run === 'string') out.push(s.run);
+    if (s.with && typeof s.with.script === 'string') out.push(s.with.script);
+    return out;
+  });
+}
+
+/**
+ * Whether an `if:` condition is exactly `always()`, bare or wrapped in
+ * `${{ }}` — the one condition that still runs a step after an earlier step
+ * failed, which is when an artifact upload matters most.
+ *
+ * @param {string|undefined} cond
+ * @returns {boolean}
+ */
+function isAlways(cond) {
+  return /^\s*(\$\{\{\s*)?always\(\)(\s*\}\})?\s*$/.test(String(cond || ''));
+}
+
+/**
  * The step that runs exactly this command. Throws rather than returning
  * undefined, so a removed step fails the test with a named cause instead of a
  * TypeError one frame further from the real problem.
@@ -157,4 +188,14 @@ function expandJobNames(job, id) {
   return combos.map((c) => name.replace(EXPRESSION, (_, expr) => String(c[MATRIX_REF.exec(expr)[1]])));
 }
 
-module.exports = { loadWorkflow, runs, findStep, findJobWithRun, findProducer, asList, expandJobNames };
+module.exports = {
+  loadWorkflow,
+  runs,
+  executedScripts,
+  isAlways,
+  findStep,
+  findJobWithRun,
+  findProducer,
+  asList,
+  expandJobNames,
+};
