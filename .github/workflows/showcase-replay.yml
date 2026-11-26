@@ -6,10 +6,12 @@ name: Showcase Replay
 # required check, so a TMDB outage cannot block a merge.
 #
 # Written to be copied into your own app's repo:
-#   - Per-app values live in the top-level `env:` block below.
-#   - Steps marked `generic` work unchanged for any app.
-#   - Steps marked `app-specific` (the builds, the TMDB job and the probe) are
-#     the showcase's own: replace them with your app's build and your own
+#   - Per-app values live in the top-level `env:` block below, including
+#     REPLAY_PROBE, the live-dependency check replay.sh runs after a failure.
+#   - Steps marked `generic` work unchanged for any app, except the secret the
+#     probe reads, which the two replay steps pass in their own `env:`.
+#   - Steps marked `app-specific` (the builds and the TMDB job) are the
+#     showcase's own: replace them with your app's build and your own
 #     live-dependency check, or drop the check.
 #   - Copy showcase-app/ci/replay.sh and ci/device-id.sh (both generic) next
 #     to your scenarios.
@@ -36,7 +38,8 @@ concurrency:
   group: showcase-replay
   cancel-in-progress: false
 
-# Per-app values: the only block a copy has to edit besides the app-specific steps.
+# Per-app values: the only block a copy has to edit besides the app-specific
+# steps and the probe's secret in the two replay steps.
 env:
   # The app's directory; every path below is relative to it.
   APP_DIR: showcase-app
@@ -47,6 +50,14 @@ env:
   IOS_APP: build/ios/Build/Products/Debug-iphonesimulator/Reel Tracker.app
   # The mobile-automator release from npm: `latest`, or pin one like `0.41.0`.
   MAUTO_VERSION: latest
+  # app-specific: ci/replay.sh runs REPLAY_PROBE after a failed scenario; a
+  # non-zero exit reclassifies the failure as an outage of the app's live
+  # dependency. This is the showcase's TMDB check: set your own probe, or
+  # leave it empty to classify every failure as a failure.
+  REPLAY_PROBE: bash ci/tmdb-check.sh --reachability
+  # Keep the device engine and mauto from sending usage telemetry from CI.
+  MOBILEMCP_DISABLE_TELEMETRY: '1'
+  MAUTO_TELEMETRY: '0'
 
 jobs:
   # generic: skip the run cleanly when the secret is not available (forks).
@@ -65,7 +76,7 @@ jobs:
             echo "has_key=true" >> "$GITHUB_OUTPUT"
           else
             echo "has_key=false" >> "$GITHUB_OUTPUT"
-            msg="Replay skipped: the TMDB_API_KEY secret is unavailable (it is never passed to forks)."
+            msg="Replay skipped: the replay secret is unavailable (secrets are never passed to forks)."
             echo "::notice title=Replay skipped::$msg"
             echo "$msg" >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -96,10 +107,6 @@ jobs:
     if: needs.key.outputs.has_key == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    env:
-      # Keep the device engine and mauto from sending usage telemetry from CI.
-      MOBILEMCP_DISABLE_TELEMETRY: '1'
-      MAUTO_TELEMETRY: '0'
     defaults:
       run:
         working-directory: ${{ env.APP_DIR }}
@@ -143,10 +150,8 @@ jobs:
       - name: Replay every scenario on the emulator (generic)
         uses: reactivecircus/android-emulator-runner@v2
         env:
-          # app-specific: REPLAY_PROBE runs after a failed scenario; a non-zero
-          # exit reclassifies the failure as an outage. Set your own, or leave
-          # it empty.
-          REPLAY_PROBE: bash ci/tmdb-check.sh --reachability
+          # The secret REPLAY_PROBE reads, scoped to this step: swap in your
+          # probe's secret, or drop it with the probe.
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
         with:
           api-level: 36
@@ -181,10 +186,6 @@ jobs:
     if: needs.key.outputs.has_key == 'true'
     runs-on: macos-latest
     timeout-minutes: 60
-    env:
-      # Keep the device engine and mauto from sending usage telemetry from CI.
-      MOBILEMCP_DISABLE_TELEMETRY: '1'
-      MAUTO_TELEMETRY: '0'
     defaults:
       run:
         working-directory: ${{ env.APP_DIR }}
@@ -240,10 +241,8 @@ jobs:
 
       - name: Replay every scenario on the simulator (generic)
         env:
-          # app-specific: REPLAY_PROBE runs after a failed scenario; a non-zero
-          # exit reclassifies the failure as an outage. Set your own, or leave
-          # it empty.
-          REPLAY_PROBE: bash ci/tmdb-check.sh --reachability
+          # The secret REPLAY_PROBE reads, scoped to this step: swap in your
+          # probe's secret, or drop it with the probe.
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
         # The id comes from `mauto devices` (ci/device-id.sh), as on Android,
         # so the replay targets the device mauto reports.

@@ -45,6 +45,12 @@
 //  12. No annotation title in the workflow or its ci/ scripts contains a
 //      comma: GitHub splits workflow-command properties on `,`, so
 //      `::error title=Outage, not mauto::` shows the title "Outage".
+//  13. Steps named `(generic)` stay copyable: none names `tmdb` (any case,
+//      so `ci/tmdb-check.sh` too) in its `run:`, `with.script` or `env:`, and
+//      none sets REPLAY_PROBE. The probe is the top-level env's REPLAY_PROBE,
+//      the per-app block a copy edits. The one exemption is an env entry that
+//      only passes a secret through (`KEY: ${{ secrets.X }}`): secrets must
+//      stay step-scoped (rule 3), so the replay steps carry the probe's.
 
 const fs = require('fs');
 const path = require('path');
@@ -277,5 +283,30 @@ describe('showcase replay workflow (#313)', () => {
     expect(titles.length).toBeGreaterThan(0);
     expect(titles.some((t) => t.title === '$title')).toBe(true);
     expect(titles.filter((t) => t.title.includes(','))).toEqual([]);
+  });
+
+  test('13. generic steps name no TMDB and set no probe; the probe is top-level REPLAY_PROBE', () => {
+    expect(typeof env.REPLAY_PROBE).toBe('string');
+    expect(Object.keys(env)).toContain('REPLAY_PROBE');
+
+    const generic = Object.entries(jobs).flatMap(([id, job]) =>
+      (job.steps || []).filter((s) => s && String(s.name || '').includes('(generic)')).map((s) => ({ id, s })),
+    );
+    expect(generic.length).toBeGreaterThan(0);
+
+    const secretPassthrough = (value) => /^\$\{\{\s*secrets\.[A-Za-z_][A-Za-z0-9_]*\s*\}\}$/.test(String(value).trim());
+    const offenders = [];
+    for (const { id, s } of generic) {
+      const where = `${id} / ${s.name}`;
+      for (const text of executedScripts([s])) {
+        if (/tmdb/i.test(text)) offenders.push(`${where}: script names tmdb`);
+      }
+      for (const [name, value] of Object.entries(s.env || {})) {
+        if (name === 'REPLAY_PROBE') offenders.push(`${where}: env sets REPLAY_PROBE`);
+        if (secretPassthrough(value)) continue;
+        if (/tmdb/i.test(name) || /tmdb/i.test(String(value))) offenders.push(`${where}: env ${name} names tmdb`);
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });
