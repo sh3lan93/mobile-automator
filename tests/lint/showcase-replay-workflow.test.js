@@ -51,6 +51,9 @@
 //      the per-app block a copy edits. The one exemption is an env entry that
 //      only passes a secret through (`KEY: ${{ secrets.X }}`): secrets must
 //      stay step-scoped (rule 3), so the replay steps carry the probe's.
+//  14. The emulator step sets a device `profile`: without one the AVD is
+//      320x640, where the app's top bar hides the "Popular films" title every
+//      scenario waits for, so every Android replay fails at its first wait.
 
 const fs = require('fs');
 const path = require('path');
@@ -308,5 +311,11 @@ describe('showcase replay workflow (#313)', () => {
       }
     }
     expect(offenders).toEqual([]);
+  });
+
+  test('14. the emulator step sets a device profile, not the 320x640 default', () => {
+    const emulator = (jobs.android.steps || []).filter((s) => /^reactivecircus\/android-emulator-runner@/.test(String(s.uses || '')));
+    expect(emulator).toHaveLength(1);
+    expect(String((emulator[0].with || {}).profile || '').trim()).not.toBe('');
   });
 });

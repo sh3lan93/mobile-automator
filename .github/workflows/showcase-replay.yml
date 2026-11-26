@@ -157,6 +157,12 @@ jobs:
           api-level: 36
           arch: x86_64
           target: default
+          # A phone-sized device. Without a profile the AVD is 320x640, where
+          # the top bar's actions take the whole width and the "Popular films"
+          # title every scenario waits for is not on screen. pixel_6 is in the
+          # device list of the runner's cmdline-tools (12.0); pixel_9_pro, the
+          # local AVD, is not.
+          profile: pixel_6
           disable-animations: true
           emulator-boot-timeout: 300
           working-directory: ${{ env.APP_DIR }}
