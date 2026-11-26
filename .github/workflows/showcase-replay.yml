@@ -245,6 +245,17 @@ jobs:
           xcrun simctl bootstatus "$UDID" -b
           xcrun simctl install "$UDID" "$IOS_APP"
 
+      # generic: a freshly booted CI simulator can fail the app's first network
+      # request (the first scenario saw "No connection" while the host reached
+      # the API). One throwaway launch lets that first request happen before the
+      # replay; every scenario relaunches the app, so nothing carries over.
+      - name: Warm up the simulator with one app launch (generic)
+        run: |
+          BUNDLE_ID="$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$IOS_APP/Info.plist")"
+          xcrun simctl launch booted "$BUNDLE_ID"
+          sleep 30
+          xcrun simctl terminate booted "$BUNDLE_ID" || true
+
       - name: Replay every scenario on the simulator (generic)
         env:
           # The secret REPLAY_PROBE reads, scoped to this step: swap in your
