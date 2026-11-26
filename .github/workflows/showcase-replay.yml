@@ -1,0 +1,259 @@
+name: Showcase Replay
+
+# Replays every shipped showcase scenario (showcase-app/, PRD #304, #313) with
+# agent-free `mauto run` on an Android emulator and an iOS simulator, against
+# the live TMDB API. Weekly and on demand; never on a pull request and never a
+# required check, so a TMDB outage cannot block a merge.
+#
+# Written to be copied into your own app's repo:
+#   - Per-app values live in the top-level `env:` block below.
+#   - Steps marked `generic` work unchanged for any app.
+#   - Steps marked `app-specific` (the builds, the TMDB job and the probe) are
+#     the showcase's own: replace them with your app's build and your own
+#     live-dependency check, or drop the check.
+#   - Copy showcase-app/ci/replay.sh (generic) next to your scenarios.
+#
+# Secret: TMDB_API_KEY, a TMDB v3 key. Where it is unavailable (forks), every
+# job after `key` is skipped and the run stays green.
+#
+# Each scenario's result is classified by its exit code (see ci/replay.sh):
+# passed, scenario failed, external service outage, needs agent, or a mauto /
+# device error. TMDB drift is caught before any device boots by the `tmdb` job.
+
+on:
+  schedule:
+    - cron: '23 4 * * 1' # Mondays 04:23 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: showcase-replay
+  cancel-in-progress: false
+
+# Per-app values: the only block a copy has to edit besides the app-specific steps.
+env:
+  # The app's directory; every path below is relative to it.
+  APP_DIR: showcase-app
+  # The scenarios to replay, relative to APP_DIR. A glob, so a new scenario is
+  # replayed without editing this file.
+  SCENARIOS: 'scenarios/*.json'
+  ANDROID_APK: androidApp/build/outputs/apk/debug/androidApp-debug.apk
+  IOS_APP: build/ios/Build/Products/Debug-iphonesimulator/Reel Tracker.app
+  # The mobile-automator release from npm: `latest`, or pin one like `0.41.0`.
+  MAUTO_VERSION: latest
+
+jobs:
+  # generic: skip the run cleanly when the secret is not available (forks).
+  key:
+    name: Check for the TMDB_API_KEY secret
+    runs-on: ubuntu-latest
+    outputs:
+      has_key: ${{ steps.check.outputs.has_key }}
+    steps:
+      - name: Is the secret set? (generic)
+        id: check
+        env:
+          KEY: ${{ secrets.TMDB_API_KEY }}
+        run: |
+          if [ -n "$KEY" ]; then
+            echo "has_key=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_key=false" >> "$GITHUB_OUTPUT"
+            msg="Replay skipped: the TMDB_API_KEY secret is unavailable (it is never passed to forks)."
+            echo "::notice title=Replay skipped::$msg"
+            echo "$msg" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # app-specific: the showcase's live-data contract with TMDB. A red job here
+  # is TMDB (an outage or drifted data), not mauto; both device jobs skip.
+  tmdb:
+    name: TMDB live data (outage or drift, not mauto)
+    needs: key
+    if: needs.key.outputs.has_key == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ${{ env.APP_DIR }}
+    steps:
+      - name: Checkout (generic)
+        uses: actions/checkout@v7
+
+      - name: Check TMDB's live data (app-specific)
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+        run: bash ci/tmdb-check.sh
+
+  android:
+    name: Replay on Android emulator (API 36)
+    needs: [key, tmdb]
+    if: needs.key.outputs.has_key == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # Keep the device engine and mauto from sending usage telemetry from CI.
+      MOBILEMCP_DISABLE_TELEMETRY: '1'
+      MAUTO_TELEMETRY: '0'
+    defaults:
+      run:
+        working-directory: ${{ env.APP_DIR }}
+    steps:
+      - name: Checkout (generic)
+        uses: actions/checkout@v7
+
+      - name: Set up Java (app-specific)
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # shared/build.gradle.kts reads the key from this env var.
+      - name: Build the debug APK (app-specific)
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+        run: ./gradlew :androidApp:assembleDebug
+
+      - name: Set up Node (generic)
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Install mauto from npm (generic)
+        run: |
+          npm i -g "mobile-automator@${MAUTO_VERSION}"
+          mauto --version
+
+      # generic. The showcase's .mobile-automator/ workspace is git-ignored, so
+      # CI creates it. If you commit your workspace, drop this step.
+      - name: Create the mauto workspace (generic)
+        run: mauto setup --mode agnostic
+
+      - name: Enable KVM (generic)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Replay every scenario on the emulator (generic)
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          # app-specific: REPLAY_PROBE runs after a failed scenario; a non-zero
+          # exit reclassifies the failure as an outage. Set your own, or leave
+          # it empty.
+          REPLAY_PROBE: bash ci/tmdb-check.sh --reachability
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+        with:
+          api-level: 36
+          arch: x86_64
+          target: default
+          disable-animations: true
+          emulator-boot-timeout: 300
+          working-directory: ${{ env.APP_DIR }}
+          # Each line runs as its own `sh -c`, so keep commands single-line.
+          # The device id comes from `mauto devices` (the engine may name the
+          # emulator by its AVD, not `emulator-5554`): the last line starting
+          # with `{` is the envelope (#385 can print an engine log line too),
+          # and its `data` is a list of {id, name, platform, state}.
+          # $SCENARIOS is unquoted on purpose: the shell expands the glob.
+          script: |
+            adb install "$ANDROID_APK"
+            ID="$(mauto devices | grep '^{' | tail -n 1 | jq -er '[.data[]? | select((.platform // "") | ascii_downcase == "android") | .id][0] // empty')" || { echo "::error title=No Android device::mauto devices listed no Android device"; exit 1; }; bash ci/replay.sh "$ID" "$RUNNER_TEMP/replay-android" $SCENARIOS
+
+      - name: Upload the replay report (generic)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: showcase-replay-android
+          path: |
+            ${{ runner.temp }}/replay-android
+            ${{ env.APP_DIR }}/.mobile-automator/results
+            ${{ env.APP_DIR }}/.mobile-automator/screenshots
+          if-no-files-found: warn
+
+  ios:
+    name: Replay on iOS simulator
+    needs: [key, tmdb]
+    if: needs.key.outputs.has_key == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    env:
+      # Keep the device engine and mauto from sending usage telemetry from CI.
+      MOBILEMCP_DISABLE_TELEMETRY: '1'
+      MAUTO_TELEMETRY: '0'
+    defaults:
+      run:
+        working-directory: ${{ env.APP_DIR }}
+    steps:
+      - name: Checkout (generic)
+        uses: actions/checkout@v7
+
+      - name: Set up Java (app-specific)
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # The Xcode build runs Gradle for the shared framework, which reads the
+      # key from this env var.
+      - name: Build the iOS app (app-specific)
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+        run: >-
+          xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp
+          -configuration Debug -sdk iphonesimulator -derivedDataPath build/ios
+          CODE_SIGNING_ALLOWED=NO build
+
+      - name: Set up Node (generic)
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Install mauto from npm (generic)
+        run: |
+          npm i -g "mobile-automator@${MAUTO_VERSION}"
+          mauto --version
+
+      # generic. The showcase's .mobile-automator/ workspace is git-ignored, so
+      # CI creates it. If you commit your workspace, drop this step.
+      - name: Create the mauto workspace (generic)
+        run: mauto setup --mode agnostic
+
+      # generic: the newest available iPhone on the newest iOS runtime. Its
+      # simctl UDID is the id mauto uses for a simulator.
+      - name: Boot an iPhone simulator and install the app (generic)
+        run: |
+          UDID="$(xcrun simctl list -j devices available | jq -er '
+            [ .devices | to_entries[]
+              | select(.key | test("SimRuntime\\.iOS-"))
+              | (.key | capture("iOS-(?<v>[0-9-]+)$").v | split("-") | map(tonumber)) as $v
+              | .value[] | select(.name | startswith("iPhone"))
+              | { v: $v, udid } ]
+            | sort_by(.v) | last | .udid')" || { echo "::error title=No iPhone simulator::no available iPhone simulator"; exit 1; }
+          xcrun simctl list devices | grep "$UDID"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" "$IOS_APP"
+          echo "UDID=$UDID" >> "$GITHUB_ENV"
+
+      - name: Replay every scenario on the simulator (generic)
+        env:
+          # app-specific: REPLAY_PROBE runs after a failed scenario; a non-zero
+          # exit reclassifies the failure as an outage. Set your own, or leave
+          # it empty.
+          REPLAY_PROBE: bash ci/tmdb-check.sh --reachability
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+        # $SCENARIOS is unquoted on purpose: the shell expands the glob.
+        run: bash ci/replay.sh "$UDID" "$RUNNER_TEMP/replay-ios" $SCENARIOS
+
+      - name: Upload the replay report (generic)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: showcase-replay-ios
+          path: |
+            ${{ runner.temp }}/replay-ios
+            ${{ env.APP_DIR }}/.mobile-automator/results
+            ${{ env.APP_DIR }}/.mobile-automator/screenshots
+          if-no-files-found: warn
