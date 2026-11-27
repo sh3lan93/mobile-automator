@@ -40,8 +40,9 @@
 //      `mauto devices` output: that parsing lives in one tested script.
 //  11. replay.sh's exit-code case labels for passed, failed and needs_agent
 //      equal mauto's own EXIT.OK, EXIT.TEST_FAILED and EXIT.INCOMPLETE
-//      (src/output/envelope.js), so a renumbered exit code cannot leave the
-//      copyable script classifying by stale numbers.
+//      (src/output/envelope.js), and the codes its retry skips are exactly
+//      EXIT.OK and EXIT.INCOMPLETE, so a renumbered exit code cannot leave the
+//      copyable script classifying (or retrying) by stale numbers.
 //  12. No annotation title in the workflow or its ci/ scripts contains a
 //      comma: GitHub splits workflow-command properties on `,`, so
 //      `::error title=Outage, not mauto::` shows the title "Outage".
@@ -273,6 +274,12 @@ describe('showcase replay workflow (#313)', () => {
       [...sh.matchAll(/^\s*(\d+)\)\s*\n\s*class=(passed|failed|needs_agent);/gm)].map((m) => [m[2], Number(m[1])]),
     );
     expect(arms).toEqual({ passed: EXIT.OK, failed: EXIT.TEST_FAILED, needs_agent: EXIT.INCOMPLETE });
+
+    // The retry condition: `[ "$code" -ne N ]` tests on the line that gates it.
+    const retry = sh.split('\n').filter((l) => /\$retries"?\s+-eq\s+1/.test(l));
+    expect(retry).toHaveLength(1);
+    const skipped = [...retry[0].matchAll(/"\$code"\s+-ne\s+(\d+)/g)].map((m) => Number(m[1])).sort();
+    expect(skipped).toEqual([EXIT.OK, EXIT.INCOMPLETE].sort());
   });
 
   test('12. no annotation title contains a comma', () => {

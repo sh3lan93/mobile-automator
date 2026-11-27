@@ -20,8 +20,11 @@ name: Showcase Replay
 # job after `key` is skipped and the run stays green.
 #
 # Each scenario's result is classified by its exit code (see ci/replay.sh):
-# passed, scenario failed, external service outage, needs agent, or a mauto /
-# device error. TMDB drift is caught before any device boots by the `tmdb` job.
+# passed, flaky (passed only when re-run once, a warning and not a failure),
+# scenario failed, external service outage, needs agent, or a mauto / device
+# error. Any exit but 0 or 7 is re-run once (REPLAY_RETRIES=0 turns that off),
+# since an iOS engine timeout can hit once and then clear. TMDB drift is
+# caught before any device boots by the `tmdb` job.
 
 on:
   schedule:
