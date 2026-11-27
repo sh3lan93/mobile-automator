@@ -79,6 +79,14 @@
       "description": "Go back to the search results"
     },
     {
+      "id": "details_gone",
+      "action": "wait_for_element_gone",
+      "description": "Wait for the details screen to close: the film's title is also the details screen's title, so waiting for the title alone can pass before the results are back",
+      "target": "Released 1994",
+      "wait_config": { "type": "element_gone", "timeout_ms": 10000 },
+      "on_failure": "fail"
+    },
+    {
       "id": "wait_results_again",
       "action": "wait_for_element",
       "description": "Wait for the film in the search results again",

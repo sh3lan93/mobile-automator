@@ -166,6 +166,17 @@
       "description": "Go back to the popular films list"
     },
     {
+      "id": "results_gone",
+      "action": "wait_for_element_gone",
+      "description": "Wait for the search results screen to close (its Search films field goes): the list is already in the element tree during the back transition, so the title wait passes at once and the next tap can land mid-animation and be lost",
+      "target": "Search films",
+      "wait_config": {
+        "type": "element_gone",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
       "id": "wait_list_again",
       "action": "wait_for_element",
       "description": "Wait for the popular films screen",

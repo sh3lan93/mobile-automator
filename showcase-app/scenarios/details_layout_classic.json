@@ -116,6 +116,17 @@
       "description": "Go back to the popular films list"
     },
     {
+      "id": "settings_gone",
+      "action": "wait_for_element_gone",
+      "description": "Wait for the Settings screen to close (its status line goes): the list is already in the element tree during the back transition, so the title wait passes at once and the next tap can land mid-animation and be lost",
+      "target": "Details layout in use: classic",
+      "wait_config": {
+        "type": "element_gone",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
       "id": "wait_list_again",
       "action": "wait_for_element",
       "description": "Wait for the popular films screen",

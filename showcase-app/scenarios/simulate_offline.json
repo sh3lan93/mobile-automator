@@ -110,6 +110,17 @@
       "description": "Go back to the popular films list"
     },
     {
+      "id": "settings_gone",
+      "action": "wait_for_element_gone",
+      "description": "Wait for the Settings screen to close (its status line goes): the list is already in the element tree during the back transition, so the Refresh tap can land mid-animation and be lost",
+      "target": "Offline simulation is on",
+      "wait_config": {
+        "type": "element_gone",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
+    },
+    {
       "id": "refresh",
       "action": "tap",
       "description": "Reload the popular films list",
@@ -157,6 +168,17 @@
       "id": "back_to_failure",
       "action": "press_back",
       "description": "Go back to the No connection screen"
+    },
+    {
+      "id": "settings_gone_again",
+      "action": "wait_for_element_gone",
+      "description": "Wait for the Settings screen to close (its status line goes): the No connection screen is already in the element tree during the back transition, so the Retry tap can land mid-animation and be lost",
+      "target": "Offline simulation is off",
+      "wait_config": {
+        "type": "element_gone",
+        "timeout_ms": 10000
+      },
+      "on_failure": "fail"
     },
     {
       "id": "retry",
