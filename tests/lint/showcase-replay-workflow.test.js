@@ -12,10 +12,8 @@
 //   1. Triggers are exactly `schedule` + `workflow_dispatch`. It talks to a
 //      live API with a repository secret, so it must never run on
 //      `pull_request` / `pull_request_target` (a fork's PR would either fail
-//      without the key or, with `_target`, run untrusted code with it). A
-//      `push` trigger is tolerated only as the pre-merge branch-only trigger
-//      marked `TEMPORARY(#313)`, because `workflow_dispatch` is offered only
-//      for files on the default branch.
+//      without the key or, with `_target`, run untrusted code with it), and
+//      not on `push`.
 //   2. It is never a required check: a TMDB outage must not block merges.
 //   3. The TMDB key reaches steps only through `env:` mappings, never
 //      interpolated into a `run:` script (where it lands in the script file
@@ -73,8 +71,6 @@ const FILTER_STATE =
 const TMDB_CLIENT =
   'showcase-app/shared/src/commonMain/kotlin/io/github/sh3lan93/mobileautomator/showcase/data/KtorTmdbClient.kt';
 const SCENARIO_DIR = 'showcase-app/scenarios';
-const TEMP_BRANCH = 'sample-app/313-ci-workflow';
-const TEMP_MARKER = 'TEMPORARY(#313)';
 const DEVICE_JOBS = ['android', 'ios'];
 const DEVICE_JOB_PLATFORM = { android: 'android', ios: 'ios' };
 
@@ -109,26 +105,15 @@ function resolveGlob(baseDir, glob) {
 }
 
 describe('showcase replay workflow (#313)', () => {
-  const raw = read(WORKFLOW);
   const wf = loadWorkflow(WORKFLOW);
   const jobs = wf.jobs || {};
   const env = wf.env || {};
 
-  test('1. triggers are schedule + workflow_dispatch; push only as the marked temporary trigger', () => {
+  test('1. triggers are exactly schedule + workflow_dispatch', () => {
     const on = wf.on;
     expect(on && typeof on === 'object' && !Array.isArray(on)).toBe(true);
-    const events = Object.keys(on);
-    expect(events).toEqual(expect.arrayContaining(['schedule', 'workflow_dispatch']));
-    expect(events).not.toContain('pull_request');
-    expect(events).not.toContain('pull_request_target');
-    expect(events.filter((e) => !['schedule', 'workflow_dispatch', 'push'].includes(e))).toEqual([]);
+    expect(Object.keys(on).sort()).toEqual(['schedule', 'workflow_dispatch']);
     expect(asList(on.schedule).map((s) => s.cron)).toEqual(['23 4 * * 1']);
-    if ('push' in on) {
-      // The pre-merge trigger: one branch, nothing else, and marked for removal.
-      expect(Object.keys(on.push || {})).toEqual(['branches']);
-      expect(asList(on.push.branches)).toEqual([TEMP_BRANCH]);
-      expect(raw).toContain(TEMP_MARKER);
-    }
   });
 
   test('2. no job of this workflow is a required check', () => {
